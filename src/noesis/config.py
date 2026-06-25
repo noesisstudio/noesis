@@ -13,8 +13,9 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 
-# La base de datos vive en la raíz del proyecto.
-DB_PATH = ROOT / "noesis.db"
+# La base de datos vive en la raíz del proyecto por defecto. En producción se
+# apunta a un volumen persistente con NOESIS_DB_PATH (en hosts el disco es efímero).
+DB_PATH = Path(os.getenv("NOESIS_DB_PATH", str(ROOT / "noesis.db")))
 
 # IVA por defecto en España (servicios generales).
 DEFAULT_VAT_RATE = 21

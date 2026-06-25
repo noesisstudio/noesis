@@ -11,6 +11,7 @@ usa la vista de grafo para navegar.
 - [[Arquitectura]] — cómo está construido el sistema.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
+- [[Despliegue]] — cómo poner Noesis online 24/7 en bynoesis.com.
 - [[Decisiones]] — registro de decisiones importantes (y por qué).
 
 ## Estado en una frase

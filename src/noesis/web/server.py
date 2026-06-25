@@ -335,8 +335,13 @@ async def whatsapp_inbound(request: Request):
 
 
 def main() -> None:
+    import os
     import uvicorn
-    uvicorn.run("noesis.web.server:app", host="127.0.0.1", port=8000, reload=False)
+    # En local: 127.0.0.1:8000. En producción el host (Railway/Render) inyecta
+    # PORT y necesita escuchar en 0.0.0.0.
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("noesis.web.server:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":
