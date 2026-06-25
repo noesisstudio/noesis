@@ -1,0 +1,5 @@
+# Normaliza saltos de línea a LF en el repo (evita diffs falsos entre agentes/SO).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
