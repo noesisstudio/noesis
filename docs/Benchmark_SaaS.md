@@ -20,6 +20,11 @@ interfaz ni funcionalidades propietarias.
 - Housecall Pro: servicios de campo; agenda, estimaciones, pagos, app móvil y ahorro de
   tiempo operativo.
   https://www.housecallpro.com/field-service-management-software/
+- Guías recientes de landing SaaS/IA: claridad inmediata, producto visible en el hero,
+  precios transparentes, FAQ, prueba de confianza y CTA repetido.
+  https://www.saasframe.io/blog/10-saas-landing-page-trends-for-2026-with-real-examples
+  https://www.wearetenet.com/blog/saas-landing-page-examples
+  https://grooic.com/blog/best-ai-saas-landing-page-examples
 
 ## Patrones aplicados a Noesis
 
@@ -31,6 +36,10 @@ interfaz ni funcionalidades propietarias.
 - Mantener lenguaje de confianza: fiscalidad clara, WhatsApp oficial futuro, datos
   exportables y mínimo uso de APIs externas.
 - Cuidar móvil y tablas con scroll horizontal cuando la densidad de datos lo exige.
+- Landing pública con hero orientado al resultado, captura real del producto, misión,
+  visión, precios, FAQ y CTA hacia registro/login.
+- Asistente con lectura contextual del negocio: no solo comandos, también criterio sobre
+  cobros, agenda, margen y concentración de clientes.
 
 ## Límite consciente
 

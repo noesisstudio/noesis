@@ -5,12 +5,17 @@
     <div class="page-title">
       <div class="kicker">Copiloto operativo</div>
       <h1>Asistente</h1>
-      <p>Lo mismo que harías por WhatsApp, aquí. Habla normal: facturas, agenda,
-         gastos, cobros y resumen del día. Lo rutinario se resuelve en local.</p>
+      <p>Noesis mira tu negocio como una oficina pequeña: caja, agenda, margen y
+         siguiente acción. Habla normal; si puede resolverlo en local, lo hace.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn primary" onclick="send('¿Qué harías tú ahora con mi negocio?')">Pedir criterio</button>
     </div>
   </div>
 
   <div class="chips" id="chips">
+    <span class="chip">¿Qué harías tú ahora con mi negocio?</span>
+    <span class="chip">Dame un diagnóstico rápido</span>
     <span class="chip">¿Qué tengo hoy?</span>
     <span class="chip">¿Quién me debe dinero?</span>
     <span class="chip">Factura a Juan por cambio de grifo 95 euros</span>
@@ -64,6 +69,6 @@ async function send(preset) {
 document.getElementById('chips').addEventListener('click', e => {
   if (e.target.classList.contains('chip')) send(e.target.textContent);
 });
-bubble('Hola, soy Noesis. Puedo ayudarte a registrar trabajo, emitir facturas, revisar cobros o resumir cómo va el mes. Prueba con una acción concreta.', 'bot');
+bubble('Estoy despierto. Puedo registrar tareas, pero también mirar tu negocio y decirte qué priorizar: cobros, agenda, margen o clientes. Pregúntame “qué harías tú ahora” y empiezo por ahí.', 'bot');
 </script>
 {% endblock %}

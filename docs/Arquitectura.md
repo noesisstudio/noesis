@@ -15,7 +15,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 
 ## Piezas (código en `src/noesis/`)
 - `web/server.py` — FastAPI: páginas, API JSON, login, onboarding, webhook.
+- `web/templates/landing.html` — página pública de producto en `/` con CTA a login/registro.
 - `web/static/app.css` — sistema de diseño propio (sin Tailwind ni CDNs).
+- `web/static/noesis-product-preview.png` — captura real del panel usada como visual de producto.
 - `web/static/vendor/chart.umd.min.js` — Chart.js servido en local.
 - `nlu.py` — **cerebro local** por reglas (sin coste/API).
 - `web/chat.py` — orquesta: local primero, IA (Claude) de respaldo.

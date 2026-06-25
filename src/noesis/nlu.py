@@ -163,13 +163,14 @@ def _eur(n) -> str:
 
 
 def help_text() -> str:
-    return ("👋 Soy Noesis. Puedo ayudarte con:\n"
-            "• «Factura a Juan por cambio de grifo 95 euros» — crea una factura.\n"
-            "• «Agenda a Marta el jueves por la mañana en Badalona» — agenda un trabajo.\n"
-            "• «Gasté 45 euros en gasolina» — registra un gasto.\n"
-            "• «¿Qué tengo hoy?» — tu agenda del día.\n"
-            "• «¿Quién me debe?» — cobros pendientes.\n"
-            "• «¿Cuánto he facturado este mes?» — resumen del negocio.")
+    return ("Soy Noesis. No soy un chat para entretenerte: soy tu oficina pequeña.\n\n"
+            "Puedo registrar cosas y también ayudarte a decidir qué toca mirar:\n"
+            "• «Factura a Juan por cambio de grifo 95 euros»\n"
+            "• «Agenda a Marta el jueves por la mañana en Badalona»\n"
+            "• «Gasté 45 euros en gasolina»\n"
+            "• «¿Qué tengo hoy?»\n"
+            "• «¿Quién me debe?»\n"
+            "• «¿Qué harías tú ahora?»")
 
 
 def format_reply(tool: str, result: dict) -> str:
@@ -182,37 +183,41 @@ def format_reply(tool: str, result: dict) -> str:
         if f.get("irpf_amount"):
             desglose += f" − IRPF {_eur(f['irpf_amount'])}"
         return (f"🧾 Factura preparada para {f['client_name']}: **{_eur(f['total'])}** "
-                f"({desglose}). Está en borrador; dime «envíala» cuando quieras mandarla.")
+                f"({desglose}). La dejo en borrador para que puedas revisarla antes de enviarla.")
     if tool == "registrar_gasto":
         g = result["gasto"]
-        return f"📉 Gasto registrado: {g['concept']} — {_eur(g['amount'])}."
+        return (f"📉 Gasto registrado: {g['concept']} — {_eur(g['amount'])}.\n"
+                "Bien hecho: gasto apuntado al momento, beneficio más real.")
     if tool == "agendar_trabajo":
         t = result["trabajo"]
         cuando = t["scheduled_for"].replace("T", " a las ") if t.get("scheduled_for") else "—"
-        return f"📅 Agendado: {result['cliente']['name']} · {cuando}."
+        return (f"📅 Agendado: {result['cliente']['name']} · {cuando}.\n"
+                "Lo importante ahora: que no se quede sin facturar cuando termines.")
     if tool == "ver_agenda":
         jobs = result["trabajos"]
         if not jobs:
-            return "📅 Hoy no tienes trabajos agendados."
-        lines = [f"📅 Tienes {len(jobs)} trabajo(s) hoy:"]
+            return "📅 Hoy no tienes trabajos agendados. Buen momento para revisar cobros o registrar gastos pendientes."
+        lines = [f"📅 Tienes {len(jobs)} trabajo(s) hoy. Yo prepararía el día así:"]
         for j in jobs:
             h = j["scheduled_for"].split("T")[1] if j.get("scheduled_for") and "T" in j["scheduled_for"] else ""
             lines.append(f"• {h} {j.get('client_name') or ''} — {j['description']}")
+        lines.append("Al cerrar cada trabajo, deja la factura preparada. Ahí se escapa mucho dinero.")
         return "\n".join(lines)
     if tool == "ver_cobros_pendientes":
         if result["n"] == 0:
-            return "✅ No tienes cobros pendientes. ¡Todo al día!"
-        lines = [f"💸 {result['n']} factura(s) sin cobrar — **{_eur(result['total_pendiente'])}**:"]
+            return "✅ No tienes cobros pendientes. Caja limpia. Mantén el hábito: revisarlo una vez al día basta."
+        lines = [f"💸 Hay {result['n']} factura(s) sin cobrar: **{_eur(result['total_pendiente'])}**."]
         for p in result["facturas"]:
             d = p.get("days_outstanding")
             lines.append(f"• {p['client_name']}: {_eur(p['total'])}" + (f" ({d} días)" if d else ""))
+        lines.append("Mi consejo: reclama primero las de más de 7 días, corto y sin disculparte.")
         return "\n".join(lines)
     if tool == "resumen_negocio":
         r = result
-        return (f"📊 Este mes: facturado **{_eur(r['invoiced'])}**, cobrado {_eur(r['collected'])}, "
-                f"pendiente {_eur(r['pending'])}. Gastos {_eur(r['expenses'])}. "
-                f"IVA estimado {_eur(r['vat_estimated'])}. "
-                f"Beneficio estimado **{_eur(r['estimated_profit'])}**.")
+        return (f"📊 Lectura del mes: facturado **{_eur(r['invoiced'])}**, cobrado {_eur(r['collected'])}, "
+                f"pendiente {_eur(r['pending'])}, gastos {_eur(r['expenses'])}.\n\n"
+                f"Beneficio estimado: **{_eur(r['estimated_profit'])}**. "
+                f"Aparta al menos {_eur(r['vat_estimated'])} de IVA para no confundirte: no es caja libre.")
     if tool == "listar_clientes":
         cs = result["clientes"]
         if not cs:

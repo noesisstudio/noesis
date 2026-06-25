@@ -85,7 +85,7 @@ _PAGES = {
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     bid = request.session.get("bid")
-    return RedirectResponse(f"/b/{bid}/resumen" if bid else "/login")
+    return TEMPLATES.TemplateResponse(request, "landing.html", {"business_id": bid})
 
 
 # ================================================================ AUTH ====== #
