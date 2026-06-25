@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-head">
-  <h1>Costes</h1>
-  <p>Dónde se va tu dinero. Controlar el gasto es la forma más rápida de ganar más
-     sin trabajar más: cada euro que ahorras es beneficio limpio.</p>
+  <div class="page-title">
+    <div class="kicker">Margen y gastos</div>
+    <h1>Costes</h1>
+    <p>Dónde se va tu dinero. Controlar el gasto es la forma más rápida de ganar más
+       sin trabajar más: cada euro que ahorras es beneficio limpio.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">Descargar CSV</a>
+    <a class="btn primary" href="#registrar-gasto">Registrar gasto</a>
+  </div>
 </div>
 
 <div class="grid g4">
@@ -34,7 +41,7 @@
     <div class="card-h"><h2>Gasto por categoría</h2><span class="hint">acumulado</span></div>
     <div class="card-b"><div style="height:260px"><canvas id="ch-cat"></canvas></div></div>
   </div>
-  <div class="card">
+  <div class="card" id="registrar-gasto">
     <div class="card-h"><h2>Registrar gasto</h2></div>
     <div class="card-b">
       <label class="fld">Concepto</label>
@@ -47,25 +54,27 @@
         <option>Herramientas</option><option>Seguros</option><option>Cuota autónomo</option>
         <option>Telefonía</option><option>Otros</option>
       </select>
-      <button class="btn primary" style="margin-top:14px;width:100%" onclick="addExpense()">Añadir gasto</button>
+      <button class="btn primary full" style="margin-top:14px" onclick="addExpense()">Añadir gasto</button>
+      <div id="c-form-msg" class="meta" style="margin-top:10px"></div>
     </div>
   </div>
 </div>
 
 <div class="card" style="margin-top:16px">
-  <div class="card-h"><h2>Detalle de gastos</h2>
-    <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">⬇ Descargar CSV</a></div>
-  <div class="card-b" style="padding-top:6px">
-    <table>
-      <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="t-right">IVA</th><th class="t-right">Importe</th><th></th></tr></thead>
-      <tbody id="c-body"></tbody>
-    </table>
+  <div class="card-h"><h2>Detalle de gastos</h2><span class="hint">más recientes primero</span></div>
+  <div class="card-b table-pad" style="padding-top:6px">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="t-right">IVA</th><th class="t-right">Importe</th><th></th></tr></thead>
+        <tbody id="c-body"></tbody>
+      </table>
+    </div>
     <div id="c-empty"></div>
   </div>
 </div>
 
 <div class="insight" style="margin-top:16px">
-  💡 <b>Cómo leer esta página:</b> si tus costes superan el <b>60-70%</b> de lo que
+  <b>Cómo leer esta página:</b> si tus costes superan el <b>60-70%</b> de lo que
   facturas, el problema no es vender más, es el margen. Mira tu mayor categoría:
   ahí está tu primera palanca de ahorro.
 </div>
@@ -73,6 +82,7 @@
 
 {% block scripts %}
 <script>
+let catChart = null;
 async function load() {
   const s = await api('/summary');
   const cats = await api('/costs/breakdown');
@@ -89,9 +99,10 @@ async function load() {
 
   if (cats.length) { el('c-top').textContent = cats[0].category;
     el('c-top-val').textContent = eur(cats[0].total); }
-  else { el('c-top').textContent = '—'; }
+  else { el('c-top').textContent = '—'; el('c-top-val').textContent = ''; }
 
-  new Chart(el('ch-cat'), {
+  if (catChart) catChart.destroy();
+  catChart = new Chart(el('ch-cat'), {
     type: 'bar',
     data: { labels: cats.map(c=>c.category), datasets: [{
       label: 'Gasto (€)', data: cats.map(c=>c.total),
@@ -101,20 +112,21 @@ async function load() {
   });
 
   el('c-body').innerHTML = ex.map(e => `<tr>
-    <td class="meta">${e.created_at.slice(0,10)}</td><td>${e.concept}</td>
-    <td><span class="badge b-gray">${e.category||'—'}</span></td>
-    <td class="t-right num">${e.vat_rate? e.vat_rate+'%':'—'}</td>
+    <td class="meta">${dateIso(e.created_at)}</td><td>${esc(e.concept)}</td>
+    <td><span class="badge b-gray">${esc(e.category||'—')}</span></td>
+    <td class="t-right num">${e.vat_rate ? e.vat_rate+'%' : '—'}</td>
     <td class="t-right num">${eur(e.amount)}</td>
-    <td class="t-right"><button class="iconbtn" title="Borrar" onclick="del(${e.id})">${TRASH}</button></td></tr>`).join('');
-  el('c-empty').innerHTML = ex.length ? '' : '<div class="empty">Aún no has registrado gastos. Añade el primero arriba 👆</div>';
+    <td class="t-right table-actions"><button class="iconbtn" title="Borrar" onclick="del(${e.id})">${TRASH}</button></td></tr>`).join('');
+  el('c-empty').innerHTML = ex.length ? '' : emptyState('Aún no has registrado gastos', 'Añade el primero para ver margen, categorías y CSV.', '#registrar-gasto', 'Registrar gasto');
 }
 async function del(id){ if(confirm('¿Borrar este gasto?')){ await apiDelete('/expenses/'+id); load(); } }
 async function addExpense() {
   const concept = el('f-concept').value.trim();
   const amount = parseFloat(el('f-amount').value);
-  if (!concept || !amount) return;
+  const msg = el('c-form-msg');
+  if (!concept || !amount) { msg.textContent = 'Concepto e importe son obligatorios.'; return; }
   await apiPost('/expenses', { concept, amount, category: el('f-cat').value });
-  el('f-concept').value=''; el('f-amount').value='';
+  el('f-concept').value=''; el('f-amount').value=''; msg.textContent = 'Gasto añadido.';
   load();
 }
 load();

@@ -1,25 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-head">
-  <h1>Clientes</h1>
-  <p>Tu activo más importante. Aquí ves quién te da más trabajo y más ingresos, para
-     que sepas a quién cuidar.</p>
+  <div class="page-title">
+    <div class="kicker">Relación con clientes</div>
+    <h1>Clientes</h1>
+    <p>Tu activo más importante. Aquí ves quién te da trabajo, quién factura más y
+       dónde tienes relación comercial que cuidar.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/b/{{ business.id }}/agenda">Ver agenda</a>
+    <a class="btn primary" href="/b/{{ business.id }}/asistente">Añadir por chat</a>
+  </div>
 </div>
 
 <div class="grid g3">
-  <div class="metric"><div class="label">Total clientes</div><div class="value" id="cl-total">—</div></div>
-  <div class="metric"><div class="label">Facturación media/cliente</div><div class="value" id="cl-avg">—</div></div>
+  <div class="metric"><div class="label">Total clientes</div><div class="value" id="cl-total">—</div><div class="sub" id="cl-active"></div></div>
+  <div class="metric"><div class="label">Facturación media/cliente</div><div class="value" id="cl-avg">—</div><div class="sub">Sobre facturación emitida</div></div>
   <div class="metric"><div class="label">Cliente top</div><div class="value" id="cl-top" style="font-size:20px">—</div><div class="sub" id="cl-top-v"></div></div>
 </div>
 
-<div class="card" style="margin-top:16px">
-  <div class="card-h"><h2>Tus clientes</h2><span class="hint">ordenados por facturación</span></div>
-  <div class="card-b" style="padding-top:6px">
-    <table>
-      <thead><tr><th>Cliente</th><th>Zona</th><th class="t-right">Trabajos</th><th class="t-right">Facturas</th><th class="t-right">Facturado</th><th></th></tr></thead>
-      <tbody id="cl-body"></tbody>
-    </table>
-    <div id="cl-empty"></div>
+<div class="split" style="margin-top:16px">
+  <div class="card">
+    <div class="card-h"><h2>Tus clientes</h2><span class="hint">ordenados por facturación</span></div>
+    <div class="card-b table-pad" style="padding-top:6px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Zona</th><th class="t-right">Trabajos</th><th class="t-right">Facturas</th><th class="t-right">Facturado</th><th></th></tr></thead>
+          <tbody id="cl-body"></tbody>
+        </table>
+      </div>
+      <div id="cl-empty"></div>
+    </div>
+  </div>
+  <div class="card card-action">
+    <div class="card-h"><h2>Lectura rápida</h2><span id="cl-badge" class="priority low">cartera</span></div>
+    <div class="card-b"><div id="cl-plan">...</div></div>
   </div>
 </div>
 {% endblock %}
@@ -29,22 +44,35 @@
 async function load() {
   const cs = await api('/clients/stats');
   el('cl-total').textContent = cs.length;
+  el('cl-active').textContent = cs.filter(c => c.n_trabajos || c.n_facturas).length + ' con actividad';
   const totFact = cs.reduce((a,b)=>a+(b.facturado||0),0);
   el('cl-avg').textContent = eur(cs.length ? totFact/cs.length : 0);
   if (cs.length && cs[0].facturado) { el('cl-top').textContent = cs[0].name; el('cl-top-v').textContent = eur(cs[0].facturado); }
   else el('cl-top').textContent = '—';
 
   el('cl-body').innerHTML = cs.map(c => `<tr>
-    <td><b>${c.name}</b><br><span class="meta">${c.phone||''}</span></td>
-    <td>${c.zone? `<span class="badge b-gray">${c.zone}</span>`:'—'}</td>
+    <td><b>${esc(c.name)}</b><br><span class="meta">${esc(c.phone||'Sin teléfono')}</span></td>
+    <td>${c.zone ? `<span class="badge b-gray">${esc(c.zone)}</span>`:'—'}</td>
     <td class="t-right num">${c.n_trabajos}</td>
     <td class="t-right num">${c.n_facturas}</td>
     <td class="t-right num"><b>${eur(c.facturado)}</b></td>
-    <td class="t-right" style="white-space:nowrap">
+    <td class="t-right table-actions">
       <button class="btn sm" onclick='edit(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone||"")}, ${JSON.stringify(c.zone||"")})'>Editar</button>
       <button class="iconbtn" title="Borrar" onclick="del(${c.id})">${TRASH}</button>
     </td></tr>`).join('');
-  el('cl-empty').innerHTML = cs.length ? '' : '<div class="empty">Aún no tienes clientes. Se crean solos cuando facturas o agendas.</div>';
+  el('cl-empty').innerHTML = cs.length ? '' : emptyState('Aún no tienes clientes', 'Se crean solos cuando facturas o agendas desde el asistente.', '/b/{{ business.id }}/asistente', 'Añadir por chat');
+
+  const badge = el('cl-badge');
+  if (!cs.length) {
+    badge.textContent = 'empezar'; badge.className = 'priority medium';
+    el('cl-plan').innerHTML = `<b>Crea tu primer cliente desde una acción real.</b><p class="muted" style="margin:6px 0 12px">Por ejemplo: “agenda a Marta mañana” o “factura a Taller Norte”.</p>`;
+  } else if (cs[0].facturado && totFact && cs[0].facturado / totFact > .4) {
+    badge.textContent = 'riesgo'; badge.className = 'priority high';
+    el('cl-plan').innerHTML = `<b>${esc(cs[0].name)} concentra ${pct(cs[0].facturado / totFact * 100)} de la facturación.</b><p class="muted" style="margin:6px 0 12px">No es malo, pero conviene no depender de un solo cliente.</p><a class="btn primary full" href="/b/{{ business.id }}/ingresos">Ver ingresos</a>`;
+  } else {
+    badge.textContent = 'sana'; badge.className = 'priority low';
+    el('cl-plan').innerHTML = `<b>Cartera repartida.</b><p class="muted" style="margin:6px 0 12px">Mantén teléfonos y zonas actualizados para que agenda, cobros y facturas no se ensucien.</p>`;
+  }
 }
 async function edit(id, name, phone, zone){
   const n = prompt('Nombre del cliente:', name); if(n===null) return;

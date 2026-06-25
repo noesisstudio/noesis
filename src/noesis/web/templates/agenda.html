@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-head">
-  <h1>Agenda</h1>
-  <p>Tus próximos 7 días de trabajo de un vistazo. Noesis puede agrupar tus trabajos
-     por zona para que pierdas el mínimo tiempo en desplazamientos.</p>
+  <div class="page-title">
+    <div class="kicker">Operativa de campo</div>
+    <h1>Agenda</h1>
+    <p>Tus próximos 7 días de trabajo de un vistazo. La prioridad es llegar a tiempo,
+       evitar huecos tontos y no dejar trabajos sin facturar.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/b/{{ business.id }}/asistente">Añadir por chat</a>
+    <a class="btn primary" href="/b/{{ business.id }}/clientes">Ver clientes</a>
+  </div>
 </div>
 
 <div class="grid g4">
@@ -13,11 +20,18 @@
   <div class="metric"><div class="label">Ingreso estimado semana</div><div class="value green" id="a-income">—</div></div>
 </div>
 
-<div id="week" class="grid" style="margin-top:16px"></div>
+<div class="split" style="margin-top:16px">
+  <div id="week" class="grid g3"></div>
+  <div class="card card-action">
+    <div class="card-h"><h2>Preparación</h2><span id="a-badge" class="priority low">semana</span></div>
+    <div class="card-b"><div id="a-plan">...</div></div>
+  </div>
+</div>
 
 <div class="insight" style="margin-top:16px">
-  💡 Dile a Noesis <b>«agenda a Marta el jueves por la mañana en Badalona»</b> y la
-  cita aparece aquí. Si tienes varios trabajos el mismo día, te sugiere el mejor orden.
+  Dile a Noesis <b>“agenda a Marta el jueves por la mañana en Badalona”</b> y la
+  cita aparece aquí. Cuando haya varios trabajos el mismo día, el siguiente paso es
+  sugerir el orden por zona.
 </div>
 {% endblock %}
 
@@ -27,12 +41,13 @@ const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábad
 async function load() {
   const jobs = await api('/agenda?week=true');
   const today = new Date().toISOString().slice(0,10);
+  const todayJobs = jobs.filter(j => (j.scheduled_for||'').slice(0,10)===today);
+  const unconfirmed = jobs.filter(j => j.status==='pendiente');
   el('a-total').textContent = jobs.length;
-  el('a-today').textContent = jobs.filter(j => (j.scheduled_for||'').slice(0,10)===today).length;
-  el('a-unconf').textContent = jobs.filter(j => j.status==='pendiente').length;
+  el('a-today').textContent = todayJobs.length;
+  el('a-unconf').textContent = unconfirmed.length;
   el('a-income').textContent = eur(jobs.reduce((a,b)=>a+(b.price_estimate||0),0));
 
-  // Agrupar por día
   const byDay = {};
   jobs.forEach(j => { const d=(j.scheduled_for||'').slice(0,10); (byDay[d]=byDay[d]||[]).push(j); });
   const days = [];
@@ -43,17 +58,29 @@ async function load() {
     const dt = new Date(d+'T12:00');
     const head = `${DIAS[dt.getDay()]} ${dt.getDate()}` + (d===today?' · hoy':'');
     const body = list.length ? list.map(j => {
-      const h = j.scheduled_for.includes('T') ? j.scheduled_for.split('T')[1].slice(0,5) : '';
-      return `<div class="lrow"><span><b>${h}</b> ${j.client_name||''}<br><span class="meta">${j.description}</span></span>
-              <span style="display:flex;align-items:center;gap:6px"><span class="meta">${j.zone||''}</span>
+      const h = timeShort(j.scheduled_for);
+      return `<div class="lrow"><span><b>${esc(h)}</b> ${esc(j.client_name||'')}<br><span class="meta">${esc(j.description)}</span></span>
+              <span style="display:flex;align-items:center;gap:6px"><span class="meta">${esc(j.zone||'')}</span>
               <button class="iconbtn" title="Borrar" onclick="del(${j.id})">${TRASH}</button></span></div>`;
     }).join('') : '<div class="empty">Libre</div>';
     return `<div class="card"><div class="card-h"><h2 style="font-size:14px;text-transform:capitalize">${head}</h2>
-            <span class="hint">${list.length||''}</span></div><div class="card-b" style="padding-top:6px">${body}</div></div>`;
+            <span class="hint">${list.length || ''}</span></div><div class="card-b" style="padding-top:6px">${body}</div></div>`;
   }).join('');
+
+  const badge = el('a-badge');
+  if (todayJobs.length) {
+    badge.textContent = 'hoy'; badge.className = 'priority medium';
+    el('a-plan').innerHTML = `<b>${todayJobs.length} trabajo(s) hoy.</b><p class="muted" style="margin:6px 0 12px">Revisa dirección, zona e importe estimado antes de salir.</p>
+      <div class="action-list">${todayJobs.map(j => `<div class="action-item"><span><strong>${esc(timeShort(j.scheduled_for) || 'Sin hora')} ${esc(j.client_name || '')}</strong><small>${esc(j.zone || 'Sin zona')}</small></span><b class="num">${j.price_estimate ? eur(j.price_estimate) : '—'}</b></div>`).join('')}</div>`;
+  } else if (unconfirmed.length) {
+    badge.textContent = 'confirmar'; badge.className = 'priority high';
+    el('a-plan').innerHTML = `<b>${unconfirmed.length} trabajo(s) sin confirmar.</b><p class="muted" style="margin:6px 0 12px">Conviene cerrar hora y zona para evitar llamadas de última hora.</p><a class="btn primary full" href="/b/{{ business.id }}/asistente">Preparar mensajes</a>`;
+  } else {
+    badge.textContent = 'limpio'; badge.className = 'priority low';
+    el('a-plan').innerHTML = `<b>Semana ordenada.</b><p class="muted" style="margin:6px 0 12px">Si entra un trabajo por WhatsApp, regístralo al momento para no fiarlo a memoria.</p><a class="btn primary full" href="/b/{{ business.id }}/asistente">Añadir trabajo</a>`;
+  }
 }
 async function del(id){ if(confirm('¿Borrar este trabajo?')){ await apiDelete('/jobs/'+id); load(); } }
-document.getElementById('week').className = 'grid g3';
 load();
 </script>
 {% endblock %}

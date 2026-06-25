@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-head">
-  <h1>Cobros</h1>
-  <p>El dinero que ya has ganado pero todavía no ha entrado. Cobrar a tiempo es lo que
-     mantiene vivo tu negocio: aquí lo tienes bajo control.</p>
+  <div class="page-title">
+    <div class="kicker">Caja y seguimiento</div>
+    <h1>Cobros</h1>
+    <p>El dinero que ya has ganado pero todavía no ha entrado. Lo importante aquí es
+       saber a quién reclamar, cuánto está en riesgo y qué puedes cerrar hoy.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/b/{{ business.id }}/asistente">Pedir recordatorio</a>
+    <a class="btn primary" href="/b/{{ business.id }}/facturas">Ver facturas</a>
+  </div>
 </div>
 
 <div class="grid g3">
@@ -24,20 +31,28 @@
   </div>
 </div>
 
-<div class="card" style="margin-top:16px">
-  <div class="card-h"><h2>Facturas pendientes</h2><span class="hint">de más antigua a más reciente</span></div>
-  <div class="card-b" style="padding-top:6px">
-    <table>
-      <thead><tr><th>Cliente</th><th>Concepto</th><th>Emitida</th><th class="t-right">Importe</th><th>Estado</th><th></th></tr></thead>
-      <tbody id="p-body"></tbody>
-    </table>
-    <div id="p-empty"></div>
+<div class="split" style="margin-top:16px">
+  <div class="card">
+    <div class="card-h"><h2>Facturas pendientes</h2><span class="hint">de más antigua a más reciente</span></div>
+    <div class="card-b table-pad" style="padding-top:6px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Concepto</th><th>Emitida</th><th class="t-right">Importe</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="p-body"></tbody>
+        </table>
+      </div>
+      <div id="p-empty"></div>
+    </div>
+  </div>
+  <div class="card card-action">
+    <div class="card-h"><h2>Plan de cobro</h2><span id="p-plan-badge" class="priority low">listo</span></div>
+    <div class="card-b"><div id="p-plan">...</div></div>
   </div>
 </div>
 
 <div class="insight" style="margin-top:16px">
-  💡 Noesis puede avisarte solo por WhatsApp cuando una factura lleve más de X días
-  sin cobrar, e incluso redactar el mensaje de recordatorio al cliente por ti.
+  Noesis debe comportarse como una oficina pequeña: detectar retrasos, preparar el
+  mensaje adecuado y dejarte confirmar antes de contactar con el cliente.
 </div>
 {% endblock %}
 
@@ -45,21 +60,40 @@
 <script>
 async function load() {
   const p = await api('/pending');
-  el('p-total').textContent = eur(p.reduce((a,b)=>a+b.total,0));
+  const total = p.reduce((a,b)=>a+b.total,0);
+  const late = p.filter(x => (x.days_outstanding || 0) > 7);
+  el('p-total').textContent = eur(total);
   el('p-count').textContent = p.length + ' factura(s)';
-  const late = p.filter(x => (x.days_outstanding||0) > 7);
   el('p-late').textContent = eur(late.reduce((a,b)=>a+b.total,0));
   const avg = p.length ? Math.round(p.reduce((a,b)=>a+(b.days_outstanding||0),0)/p.length) : 0;
   el('p-avg').textContent = avg + ' días';
 
   el('p-body').innerHTML = p.map(x => `<tr>
-    <td><b>${x.client_name}</b></td><td class="meta">${x.concept}</td>
-    <td class="meta">${(x.issued_at||'').slice(0,10)}</td>
+    <td><b>${esc(x.client_name)}</b></td><td class="meta">${esc(x.concept)}</td>
+    <td class="meta">${dateIso(x.issued_at)}</td>
     <td class="t-right num"><b>${eur(x.total)}</b></td>
-    <td><span class="badge ${x.days_outstanding>7?'b-red':'b-amber'}">${x.days_outstanding ?? 0} días</span></td>
-    <td class="t-right"><button class="btn green" onclick="pay(${x.id})">He cobrado</button></td>
+    <td><span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-amber'}">${daysText(x.days_outstanding)}</span></td>
+    <td class="t-right table-actions"><button class="btn green" onclick="pay(${x.id})">He cobrado</button></td>
   </tr>`).join('');
-  el('p-empty').innerHTML = p.length ? '' : '<div class="empty">No tienes cobros pendientes. ¡Vas al día! 🎉</div>';
+  el('p-empty').innerHTML = p.length ? '' : emptyState('Caja al día', 'No tienes cobros pendientes ahora mismo.', '/b/{{ business.id }}/facturas', 'Ver facturas');
+
+  const badge = el('p-plan-badge');
+  if (late.length) {
+    badge.textContent = 'reclamar'; badge.className = 'priority high';
+    el('p-plan').innerHTML = `<div class="action-list">${late.slice(0,3).map(x => `
+      <div class="action-item">
+        <span><strong>${esc(x.client_name)}</strong><small>${esc(x.concept)} · ${daysText(x.days_outstanding)}</small></span>
+        <b class="num">${eur(x.total)}</b>
+      </div>`).join('')}</div>
+      <p class="muted" style="margin:12px 0">Empieza por la factura más antigua. Un mensaje corto y claro suele bastar.</p>
+      <a class="btn primary full" href="/b/{{ business.id }}/asistente">Redactar mensaje</a>`;
+  } else if (p.length) {
+    badge.textContent = 'vigilar'; badge.className = 'priority medium';
+    el('p-plan').innerHTML = `<b>${p.length} factura(s) pendiente(s), ninguna atrasada.</b><p class="muted" style="margin:6px 0 12px">Revísalas una vez al día y márcalas como cobradas en cuanto entre el dinero.</p>`;
+  } else {
+    badge.textContent = 'listo'; badge.className = 'priority low';
+    el('p-plan').innerHTML = `<b>Sin deuda pendiente.</b><p class="muted" style="margin:6px 0 12px">Buen momento para emitir lo que falte y no dejar trabajos sin facturar.</p><a class="btn primary full" href="/b/{{ business.id }}/asistente">Crear factura por chat</a>`;
+  }
 }
 async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
 load();

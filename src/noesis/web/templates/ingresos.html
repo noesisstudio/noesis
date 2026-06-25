@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-head">
-  <h1>Ingresos</h1>
-  <p>Lo que entra en tu negocio. No es lo mismo facturar que cobrar: aquí ves ambas
-     cosas y de dónde viene de verdad tu dinero.</p>
+  <div class="page-title">
+    <div class="kicker">Ventas y caja</div>
+    <h1>Ingresos</h1>
+    <p>Lo que entra en tu negocio. No es lo mismo facturar que cobrar: aquí ves ambas
+       cosas y de dónde viene de verdad tu dinero.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/b/{{ business.id }}/cobros">Ver cobros</a>
+    <a class="btn primary" href="/b/{{ business.id }}/asistente">Crear factura</a>
+  </div>
 </div>
 
 <div class="grid g4">
@@ -36,12 +43,12 @@
   </div>
   <div class="card">
     <div class="card-h"><h2>Mejores clientes</h2><span class="hint">por facturación</span></div>
-    <div class="card-b"><div id="i-clients">…</div></div>
+    <div class="card-b"><div id="i-clients">...</div></div>
   </div>
 </div>
 
 <div class="insight" style="margin-top:16px">
-  💡 <b>Regla de oro:</b> si un solo cliente es más del <b>40%</b> de tus ingresos,
+  <b>Regla de oro:</b> si un solo cliente es más del <b>40%</b> de tus ingresos,
   tienes un riesgo de concentración. Si ese cliente se va, te tambaleas. Diversifica.
 </div>
 {% endblock %}
@@ -52,7 +59,7 @@ async function load() {
   const s = await api('/summary');
   el('i-invoiced').textContent = eur(s.invoiced);
   el('i-collected').textContent = eur(s.collected);
-  el('i-collected-pct').textContent = s.invoiced ? Math.round(s.collected/s.invoiced*100)+'% cobrado' : '';
+  el('i-collected-pct').textContent = s.invoiced ? pct(s.collected/s.invoiced*100)+' cobrado' : '';
   el('i-pending').textContent = eur(s.pending_total);
 
   const inv = await api('/invoices');
@@ -72,9 +79,9 @@ async function load() {
 
   const byc = await api('/income/by-client');
   el('i-clients').innerHTML = byc.length ? byc.map(c =>
-    `<div class="lrow"><span>${c.client_name}<br><span class="meta">${c.n} factura(s)</span></span>
+    `<div class="lrow"><span>${esc(c.client_name)}<br><span class="meta">${c.n} factura(s)</span></span>
      <b class="num">${eur(c.total)}</b></div>`).join('')
-    : '<div class="empty">Sin ingresos todavía.</div>';
+    : emptyState('Sin ingresos todavía', 'Crea una factura desde el asistente para ver esta vista en marcha.', '/b/{{ business.id }}/asistente', 'Crear factura');
 }
 load();
 </script>

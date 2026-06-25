@@ -20,7 +20,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Noesis · {{ page_title }}</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/app.css?v=ux-piloto">
   <script>window.NOESIS_BIZ = {{ business.id }};</script>
 </head>
 <body>
@@ -58,13 +58,15 @@
   <div class="main">
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:12px">
-        <button class="burger" aria-label="Menú" onclick="document.body.classList.toggle('nav-open')">☰</button>
+        <button class="burger" aria-label="Menú" onclick="document.body.classList.toggle('nav-open')">
+          <span></span><span></span><span></span>
+        </button>
         <div class="crumb">Noesis · <b>{{ page_title }}</b></div>
       </div>
       {% if business.whatsapp_status == 'conectado' %}
-        <span class="wa-pill wa-on">● WhatsApp conectado</span>
+        <span class="wa-pill wa-on"><span class="dot"></span> WhatsApp conectado</span>
       {% else %}
-        <a href="/b/{{ business.id }}/ajustes" class="wa-pill wa-off">● Conectar WhatsApp</a>
+        <a href="/b/{{ business.id }}/ajustes" class="wa-pill wa-off"><span class="dot"></span> Conectar WhatsApp</a>
       {% endif %}
     </div>
     <div class="content">
@@ -74,7 +76,7 @@
 </div>
 
 <script src="/static/vendor/chart.umd.min.js"></script>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=ux-piloto"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
