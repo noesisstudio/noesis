@@ -8,3 +8,4 @@ build/
 dist/
 .obsidian/
 .DS_Store
+.claude/launch.json
