@@ -4,8 +4,8 @@
   <div class="page-title">
     <div class="kicker">Operativa de campo</div>
     <h1>Agenda</h1>
-    <p>Tus próximos 7 días de trabajo de un vistazo. La prioridad es llegar a tiempo,
-       evitar huecos tontos y no dejar trabajos sin facturar.</p>
+    <p>Tu mes de un vistazo, como un calendario de verdad. Entra en cualquier día
+       para ver las citas, los servicios y lo que tienes que preparar.</p>
   </div>
   <div class="page-actions">
     <a class="btn" href="/b/{{ business.id }}/asistente">Añadir por chat</a>
@@ -14,73 +14,121 @@
 </div>
 
 <div class="grid g4">
-  <div class="metric"><div class="label">Trabajos esta semana</div><div class="value" id="a-total">—</div></div>
+  <div class="metric"><div class="label">Trabajos este mes</div><div class="value" id="a-total">—</div></div>
   <div class="metric"><div class="label">Hoy</div><div class="value" id="a-today">—</div></div>
   <div class="metric"><div class="label">Sin confirmar</div><div class="value amber" id="a-unconf">—</div></div>
-  <div class="metric"><div class="label">Ingreso estimado semana</div><div class="value green" id="a-income">—</div></div>
+  <div class="metric"><div class="label">Ingreso estimado mes</div><div class="value green" id="a-income">—</div></div>
 </div>
 
 <div class="split" style="margin-top:16px">
-  <div id="week" class="grid g3"></div>
+  <div class="card">
+    <div class="card-h">
+      <div class="cal-head">
+        <div class="cal-nav">
+          <button onclick="move(-1)" aria-label="Mes anterior">&#8249;</button>
+          <button onclick="move(1)" aria-label="Mes siguiente">&#8250;</button>
+        </div>
+        <h2 id="cal-title">—</h2>
+      </div>
+      <button class="btn sm" onclick="goToday()">Hoy</button>
+    </div>
+    <div class="card-b">
+      <div class="cal-grid" id="cal-wd"></div>
+      <div class="cal-grid" id="cal" style="margin-top:6px"></div>
+    </div>
+  </div>
   <div class="card card-action">
-    <div class="card-h"><h2>Preparación</h2><span id="a-badge" class="priority low">semana</span></div>
-    <div class="card-b"><div id="a-plan">...</div></div>
+    <div class="card-h"><h2 id="day-title">Selecciona un día</h2><span id="day-count" class="hint"></span></div>
+    <div class="card-b"><div id="day-detail"><div class="empty">Toca un día del calendario para ver sus citas.</div></div></div>
   </div>
 </div>
 
 <div class="insight" style="margin-top:16px">
-  Dile a Noesis <b>“agenda a Marta el jueves por la mañana en Badalona”</b> y la
-  cita aparece aquí. Cuando haya varios trabajos el mismo día, el siguiente paso es
-  sugerir el orden por zona.
+  Dile a Noesis <b>“agenda a Marta el jueves por la mañana en Badalona”</b> y la cita
+  aparece en su día. Cuando haya varios trabajos la misma jornada, el siguiente paso es
+  ordenarlos por zona para no cruzar la ciudad dos veces.
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-async function load() {
-  const jobs = await api('/agenda?week=true');
-  const today = new Date().toISOString().slice(0,10);
-  const todayJobs = jobs.filter(j => (j.scheduled_for||'').slice(0,10)===today);
-  const unconfirmed = jobs.filter(j => j.status==='pendiente');
-  el('a-total').textContent = jobs.length;
-  el('a-today').textContent = todayJobs.length;
-  el('a-unconf').textContent = unconfirmed.length;
-  el('a-income').textContent = eur(jobs.reduce((a,b)=>a+(b.price_estimate||0),0));
+const WD = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+             'septiembre','octubre','noviembre','diciembre'];
+const TODAY = new Date().toISOString().slice(0,10);
+let view = new Date(); view.setDate(1);
+let selected = TODAY;
+let byDay = {};
 
-  const byDay = {};
+el('cal-wd').innerHTML = WD.map(d => `<div class="cal-wd">${d}</div>`).join('');
+
+function iso(d){ return d.toISOString().slice(0,10); }
+function monIndex(d){ return (d.getDay()+6)%7; }  // lunes = 0
+
+async function loadMonth() {
+  const y = view.getFullYear(), m = view.getMonth();
+  el('cal-title').textContent = MES[m] + ' ' + y;
+
+  // Rango visible: 42 celdas desde el lunes anterior al día 1.
+  const first = new Date(y, m, 1);
+  const startCell = new Date(first); startCell.setDate(1 - monIndex(first));
+  const endCell = new Date(startCell); endCell.setDate(startCell.getDate() + 41);
+
+  const jobs = await api(`/agenda?start=${iso(startCell)}&end=${iso(endCell)}`);
+  byDay = {};
   jobs.forEach(j => { const d=(j.scheduled_for||'').slice(0,10); (byDay[d]=byDay[d]||[]).push(j); });
-  const days = [];
-  for (let i=0;i<7;i++){ const d=new Date(); d.setDate(d.getDate()+i); days.push(d.toISOString().slice(0,10)); }
+  Object.values(byDay).forEach(l => l.sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||'')));
 
-  el('week').innerHTML = days.map(d => {
-    const list = (byDay[d]||[]).sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||''));
-    const dt = new Date(d+'T12:00');
-    const head = `${DIAS[dt.getDay()]} ${dt.getDate()}` + (d===today?' · hoy':'');
-    const body = list.length ? list.map(j => {
-      const h = timeShort(j.scheduled_for);
-      return `<div class="lrow"><span><b>${esc(h)}</b> ${esc(j.client_name||'')}<br><span class="meta">${esc(j.description)}</span></span>
-              <span style="display:flex;align-items:center;gap:6px"><span class="meta">${esc(j.zone||'')}</span>
-              <button class="iconbtn" title="Borrar" onclick="del(${j.id})">${TRASH}</button></span></div>`;
-    }).join('') : '<div class="empty">Libre</div>';
-    return `<div class="card"><div class="card-h"><h2 style="font-size:14px;text-transform:capitalize">${head}</h2>
-            <span class="hint">${list.length || ''}</span></div><div class="card-b" style="padding-top:6px">${body}</div></div>`;
-  }).join('');
+  // KPIs del mes en curso (solo días de este mes).
+  const monthJobs = jobs.filter(j => { const d=new Date((j.scheduled_for||'')+''); return d.getMonth()===m && d.getFullYear()===y; });
+  el('a-total').textContent = monthJobs.length;
+  el('a-today').textContent = (byDay[TODAY]||[]).length;
+  el('a-unconf').textContent = monthJobs.filter(j => j.status==='pendiente').length;
+  el('a-income').textContent = eur(monthJobs.reduce((a,b)=>a+(b.price_estimate||0),0));
 
-  const badge = el('a-badge');
-  if (todayJobs.length) {
-    badge.textContent = 'hoy'; badge.className = 'priority medium';
-    el('a-plan').innerHTML = `<b>${todayJobs.length} trabajo(s) hoy.</b><p class="muted" style="margin:6px 0 12px">Revisa dirección, zona e importe estimado antes de salir.</p>
-      <div class="action-list">${todayJobs.map(j => `<div class="action-item"><span><strong>${esc(timeShort(j.scheduled_for) || 'Sin hora')} ${esc(j.client_name || '')}</strong><small>${esc(j.zone || 'Sin zona')}</small></span><b class="num">${j.price_estimate ? eur(j.price_estimate) : '—'}</b></div>`).join('')}</div>`;
-  } else if (unconfirmed.length) {
-    badge.textContent = 'confirmar'; badge.className = 'priority high';
-    el('a-plan').innerHTML = `<b>${unconfirmed.length} trabajo(s) sin confirmar.</b><p class="muted" style="margin:6px 0 12px">Conviene cerrar hora y zona para evitar llamadas de última hora.</p><a class="btn primary full" href="/b/{{ business.id }}/asistente">Preparar mensajes</a>`;
-  } else {
-    badge.textContent = 'limpio'; badge.className = 'priority low';
-    el('a-plan').innerHTML = `<b>Semana ordenada.</b><p class="muted" style="margin:6px 0 12px">Si entra un trabajo por WhatsApp, regístralo al momento para no fiarlo a memoria.</p><a class="btn primary full" href="/b/{{ business.id }}/asistente">Añadir trabajo</a>`;
+  // Celdas.
+  let cells = '';
+  for (let i=0;i<42;i++){
+    const d = new Date(startCell); d.setDate(startCell.getDate()+i);
+    const di = iso(d);
+    const list = byDay[di] || [];
+    const out = d.getMonth()!==m;
+    const cls = ['cal-cell', out?'out':'', di===TODAY?'today':'', di===selected?'sel':'', list.length?'has':''].filter(Boolean).join(' ');
+    const evs = list.slice(0,2).map(j =>
+      `<div class="cal-ev"><b>${esc(timeShort(j.scheduled_for)||'·')}</b> ${esc(j.client_name||j.description||'')}</div>`).join('');
+    const more = list.length>2 ? `<div class="cal-more">+${list.length-2} más</div>` : '';
+    cells += `<button class="${cls}" onclick="selectDay('${di}')"><span class="cal-date">${d.getDate()}</span>${evs}${more}</button>`;
   }
+  el('cal').innerHTML = cells;
+  renderDay();
 }
-async function del(id){ if(confirm('¿Borrar este trabajo?')){ await apiDelete('/jobs/'+id); load(); } }
-load();
+
+function renderDay() {
+  const list = byDay[selected] || [];
+  const d = new Date(selected+'T12:00');
+  el('day-title').textContent = `${WD[monIndex(d)]} ${d.getDate()} ${MES[d.getMonth()].slice(0,3)}` + (selected===TODAY?' · hoy':'');
+  el('day-count').textContent = list.length ? `${list.length} cita(s)` : '';
+  el('day-detail').innerHTML = list.length ? `<div class="action-list">${list.map(j => `
+    <div class="action-item">
+      <span><strong>${esc(timeShort(j.scheduled_for)||'Sin hora')} · ${esc(j.client_name||'Cliente')}</strong>
+      <small>${esc(j.description||'Servicio')}${j.zone?' — '+esc(j.zone):''}</small></span>
+      <span style="display:flex;align-items:center;gap:8px">
+        <b class="num">${j.price_estimate?eur(j.price_estimate):'—'}</b>
+        <button class="iconbtn" title="Borrar" onclick="del(${j.id})">${TRASH}</button>
+      </span>
+    </div>`).join('')}</div>`
+    : emptyState('Día libre', 'No hay trabajos para este día.', '/b/{{ business.id }}/asistente', 'Añadir trabajo');
+}
+
+function selectDay(di){
+  selected = di;
+  document.querySelectorAll('.cal-cell.sel').forEach(c=>c.classList.remove('sel'));
+  event.currentTarget.classList.add('sel');
+  renderDay();
+}
+function move(n){ view.setMonth(view.getMonth()+n); loadMonth(); }
+function goToday(){ view = new Date(); view.setDate(1); selected = TODAY; loadMonth(); }
+async function del(id){ if(confirm('¿Borrar este trabajo?')){ await apiDelete('/jobs/'+id); loadMonth(); } }
+loadMonth();
 </script>
 {% endblock %}

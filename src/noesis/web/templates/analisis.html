@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Salud financiera</div>
+    <h1>Análisis</h1>
+    <p>Tu negocio leído como un balance: márgenes, solvencia, ratios de cobro y
+       riesgo. No solo cuánto entra, sino si entra <b>sano</b>.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/b/{{ business.id }}/costes">Ver costes</a>
+    <a class="btn primary" href="/b/{{ business.id }}/cobros">Revisar cobros</a>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="metric feature">
+    <div class="label">Beneficio neto</div>
+    <div class="value" id="k-profit">—</div>
+    <div class="sub" id="k-margin-sub">Ingresos menos gastos (histórico)</div>
+  </div>
+  <div class="metric">
+    <div class="label">Margen neto <span class="dot-help" title="Beneficio sobre lo facturado">?</span></div>
+    <div class="value" id="k-margin">—</div>
+    <div class="sub">Cuánto te queda de cada euro facturado</div>
+  </div>
+  <div class="metric">
+    <div class="label">Solvencia operativa</div>
+    <div class="value" id="k-solv">—</div>
+    <div class="sub">Veces que la caja cobrada cubre tus gastos</div>
+  </div>
+  <div class="metric">
+    <div class="label">Días de cobro (DSO)</div>
+    <div class="value" id="k-dso">—</div>
+    <div class="sub">Lo que tardas de media en cobrar</div>
+  </div>
+</div>
+
+<div class="split" style="margin-top:16px">
+  <div class="card">
+    <div class="card-h"><h2>Ingresos, gastos y beneficio</h2><span class="hint">últimos 12 meses</span></div>
+    <div class="card-b"><div style="height:280px"><canvas id="ch-fin"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Posición de IVA</h2><span class="hint">estimada</span></div>
+    <div class="card-b">
+      <div class="lrow"><span>IVA repercutido (cobras)</span><b class="num" id="v-rep">—</b></div>
+      <div class="lrow"><span>IVA soportado (pagas)</span><b class="num" id="v-sop">—</b></div>
+      <div class="lrow"><span><b>A liquidar con Hacienda</b></span><b class="num" id="v-liq">—</b></div>
+      <div class="insight" style="margin-top:14px">
+        Aparta este importe en cuanto cobras. Es dinero de Hacienda, no beneficio tuyo.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h"><h2>Ratios y diagnóstico</h2><span class="hint">interpretación automática</span></div>
+  <div class="card-b"><div id="ratios" class="ratios">...</div></div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h"><h2>Riesgo de concentración</h2><span class="hint">dependencia de clientes</span></div>
+  <div class="card-b"><div id="conc">...</div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function band(value, good, ok, invert) {
+  // Devuelve 'good' | 'ok' | 'bad'. Si invert, valores altos son malos.
+  if (invert) {
+    if (value <= good) return 'good';
+    if (value <= ok) return 'ok';
+    return 'bad';
+  }
+  if (value >= good) return 'good';
+  if (value >= ok) return 'ok';
+  return 'bad';
+}
+const LABEL = { good: 'sano', ok: 'vigilar', bad: 'riesgo' };
+
+function ratioRow(name, display, state, text) {
+  return `<div class="ratio">
+    <div class="ratio-top">
+      <span class="ratio-name">${name}</span>
+      <span class="ratio-val num">${display}</span>
+      <span class="health h-${state}">${LABEL[state]}</span>
+    </div>
+    <div class="ratio-text">${text}</div>
+  </div>`;
+}
+
+async function load() {
+  const a = await api('/analysis');
+
+  el('k-profit').textContent = eur(a.beneficio);
+  el('k-margin-sub').textContent = a.invoiced ? 'Sobre ' + eur(a.invoiced) + ' facturados' : 'Aún sin facturas';
+  el('k-margin').textContent = a.margen_pct + '%';
+  el('k-solv').textContent = a.solvencia == null ? '—' : a.solvencia + '×';
+  el('k-dso').textContent = a.dso + ' d';
+
+  el('v-rep').textContent = eur(a.vat_repercutido);
+  el('v-sop').textContent = eur(a.vat_soportado);
+  el('v-liq').textContent = eur(a.vat_liquidar);
+
+  // Color de KPIs según salud.
+  const mB = band(a.margen_pct, 25, 10);
+  el('k-margin').className = 'value ' + (mB==='good'?'green':mB==='bad'?'red':'amber');
+  const dB = band(a.dso, 15, 45, true);
+  el('k-dso').className = 'value ' + (dB==='good'?'green':dB==='bad'?'red':'amber');
+
+  // Gráfico ingresos/gastos/beneficio.
+  const s = a.series;
+  new Chart(el('ch-fin'), {
+    data: {
+      labels: s.map(x=>x.month),
+      datasets: [
+        { type:'bar', label:'Ingresos', data:s.map(x=>x.invoiced), backgroundColor:CHART.brand, borderRadius:6, maxBarThickness:22 },
+        { type:'bar', label:'Gastos', data:s.map(x=>x.expenses), backgroundColor:CHART.red, borderRadius:6, maxBarThickness:22 },
+        { type:'line', label:'Beneficio', data:s.map(x=>round2(x.invoiced-x.expenses)),
+          borderColor:'#2e8b74', backgroundColor:'#2e8b74', tension:.35, pointRadius:3, borderWidth:2, fill:false },
+      ]
+    },
+    options: CHART.base()
+  });
+
+  // Ratios con diagnóstico.
+  const rows = [];
+  rows.push(ratioRow('Margen neto', a.margen_pct+'%', band(a.margen_pct,25,10),
+    a.margen_pct>=25 ? 'Margen saludable: el negocio convierte bien el trabajo en beneficio.'
+    : a.margen_pct>=10 ? 'Margen ajustado. Revisa precios o gastos para ganar holgura.'
+    : 'Margen bajo: estás trabajando mucho para quedarte poco. Sube precios o recorta gastos.'));
+
+  rows.push(ratioRow('Peso de gastos', a.ratio_gasto+'%', band(a.ratio_gasto,50,70,true),
+    a.ratio_gasto<=50 ? 'Estructura de costes ligera. Buen control del gasto.'
+    : a.ratio_gasto<=70 ? 'Los gastos empiezan a pesar. Vigila material y desplazamientos.'
+    : 'Los gastos se comen lo facturado. Aquí está tu mayor palanca de mejora.'));
+
+  rows.push(ratioRow('Tasa de cobro', a.cobro_pct+'%', band(a.cobro_pct,85,60),
+    a.cobro_pct>=85 ? 'Cobras casi todo lo que facturas. Disciplina de caja excelente.'
+    : a.cobro_pct>=60 ? 'Cobras la mayoría, pero queda dinero en la calle. Aprieta el seguimiento.'
+    : 'Facturas mucho más de lo que cobras. El riesgo no es vender, es cobrar.'));
+
+  rows.push(ratioRow('Días de cobro (DSO)', a.dso+' días', band(a.dso,15,45,true),
+    a.dso<=15 ? 'Cobras rápido. Tu caja respira.'
+    : a.dso<=45 ? 'Plazos razonables, pero acórtalos: pide por adelantado o a 15 días.'
+    : 'Tardas demasiado en cobrar. Eso es financiar gratis a tus clientes.'));
+
+  rows.push(ratioRow('Morosidad (>30 días)', a.morosidad_pct+'%', band(a.morosidad_pct,5,15,true),
+    a.morosidad_pct<=5 ? 'Morosidad mínima. Sigue reclamando temprano.'
+    : a.morosidad_pct<=15 ? 'Hay facturas envejeciendo. Reclama las de más de 30 días esta semana.'
+    : 'Morosidad alta: '+eur(a.morosidad)+' atascados. Prioriza recuperarlos antes de vender más.'));
+
+  rows.push(ratioRow('Solvencia operativa', a.solvencia==null?'—':a.solvencia+'×', a.solvencia==null?'ok':band(a.solvencia,1.5,1),
+    a.solvencia==null ? 'Aún sin gastos registrados para medir solvencia.'
+    : a.solvencia>=1.5 ? 'La caja cobrada cubre de sobra tus gastos. Posición cómoda.'
+    : a.solvencia>=1 ? 'Cubres los gastos, pero con poco margen. Cuida la liquidez.'
+    : 'La caja no cubre los gastos. Acelera cobros y frena gasto no esencial.'));
+
+  el('ratios').innerHTML = rows.join('');
+
+  // Concentración.
+  const cB = band(a.concentracion, 30, 45, true);
+  el('conc').innerHTML = a.top_cliente ? `
+    <div class="lrow"><span>Cliente principal</span><b>${esc(a.top_cliente)}</b></div>
+    <div class="lrow"><span>Su peso sobre tu facturación</span>
+      <span><b class="num">${a.concentracion}%</b> <span class="health h-${cB}">${LABEL[cB]}</span></span></div>
+    <div class="progress" style="margin:14px 0 0"><span style="width:${Math.min(a.concentracion,100)}%;
+      background:${cB==='bad'?'var(--red)':cB==='ok'?'var(--amber)':'var(--brand-2)'}"></span></div>
+    <div class="insight" style="margin-top:14px">
+      ${a.concentracion>40 ? 'Dependes demasiado de un solo cliente. Si se va, te tambaleas: abre una segunda fuente.'
+        : 'Dependencia bajo control. Aun así, no dejes que un cliente supere el 40% de tus ingresos.'}
+    </div>` : emptyState('Sin datos de clientes', 'Registra facturas para medir tu concentración de ingresos.');
+}
+function round2(n){ return Math.round((n+Number.EPSILON)*100)/100; }
+load();
+</script>
+{% endblock %}

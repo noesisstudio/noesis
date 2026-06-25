@@ -76,9 +76,10 @@ def _startup() -> None:
 
 # ============================================================== PÁGINAS ===== #
 _PAGES = {
-    "resumen": "Resumen", "ingresos": "Ingresos", "costes": "Costes",
-    "facturas": "Facturas", "cobros": "Cobros", "agenda": "Agenda",
-    "clientes": "Clientes", "asistente": "Asistente", "ajustes": "Ajustes",
+    "resumen": "Resumen", "analisis": "Análisis", "ingresos": "Ingresos",
+    "costes": "Costes", "facturas": "Facturas", "cobros": "Cobros",
+    "agenda": "Agenda", "clientes": "Clientes", "asistente": "Asistente",
+    "ajustes": "Ajustes",
 }
 
 
@@ -137,6 +138,12 @@ def api_summary(business_id: int):
 @app.get("/api/{business_id}/series")
 def api_series(business_id: int):
     return db.monthly_series(business_id)
+
+
+@app.get("/api/{business_id}/analysis")
+def api_analysis(business_id: int):
+    return {**db.financial_analysis(business_id),
+            "series": db.monthly_series(business_id, months=12)}
 
 
 @app.get("/api/{business_id}/clients")
@@ -235,11 +242,13 @@ def api_pending(business_id: int):
 
 
 @app.get("/api/{business_id}/agenda")
-def api_agenda(business_id: int, week: bool = False):
+def api_agenda(business_id: int, week: bool = False, start: str = "", end: str = ""):
+    if start and end:
+        return db.jobs_between(start, end, business_id)
     if week:
-        start = date.today()
-        return db.jobs_between(start.isoformat(),
-                               (start + timedelta(days=6)).isoformat(), business_id)
+        today = date.today()
+        return db.jobs_between(today.isoformat(),
+                               (today + timedelta(days=6)).isoformat(), business_id)
     return db.jobs_for_date(date.today().isoformat(), business_id)
 
 

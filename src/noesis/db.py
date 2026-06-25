@@ -526,6 +526,63 @@ def client_stats(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def financial_analysis(business_id=DEFAULT_BUSINESS_ID) -> dict:
+    """Cuadro de mando financiero: KPIs, márgenes, solvencia y morosidad.
+
+    Se calcula sobre TODO el histórico (más significativo que un solo mes) a partir
+    de los ayudantes ya existentes, para no duplicar SQL ni inventar fórmulas.
+    Total de cada factura = base + IVA − IRPF. Ver docs/Fiscalidad.md.
+    """
+    invoices = [i for i in list_invoices(business_id) if i.get("status") != "borrador"]
+    expenses = list_expenses(business_id)
+    pend = pending_payments(business_id)
+    clients = client_stats(business_id)
+
+    invoiced = round(sum(i["total"] for i in invoices), 2)
+    collected = round(sum(i["total"] for i in invoices if i["status"] == "cobrada"), 2)
+    pending = round(sum(i["total"] for i in invoices if i["status"] == "enviada"), 2)
+    gastos = round(sum(e["amount"] for e in expenses), 2)
+    beneficio = round(invoiced - gastos, 2)
+    vat_repercutido = round(sum(i.get("vat_amount") or 0 for i in invoices), 2)
+    # IVA soportado solo si el gasto guarda su tipo; si no, queda en 0 (no se inventa).
+    vat_soportado = round(sum(
+        (e["amount"] - e["amount"] / (1 + (e["vat_rate"] or 0) / 100)) if e.get("vat_rate") else 0
+        for e in expenses), 2)
+
+    n = len(invoices)
+    ticket_medio = round(invoiced / n, 2) if n else 0.0
+    margen_pct = round(beneficio / invoiced * 100, 1) if invoiced else 0.0
+    ratio_gasto = round(gastos / invoiced * 100, 1) if invoiced else 0.0
+    cobro_pct = round(collected / invoiced * 100, 1) if invoiced else 0.0
+
+    # DSO (días medios de cobro), ponderado por importe pendiente.
+    tot_pend = sum(p["total"] for p in pend) or 0
+    dso = round(sum((p.get("days_outstanding") or 0) * p["total"] for p in pend) / tot_pend) if tot_pend else 0
+    morosidad = round(sum(p["total"] for p in pend if (p.get("days_outstanding") or 0) > 30), 2)
+    morosidad_pct = round(morosidad / invoiced * 100, 1) if invoiced else 0.0
+
+    # Solvencia operativa: cuántas veces cubre la caja cobrada los gastos del negocio.
+    solvencia = round(collected / gastos, 2) if gastos else None
+
+    # Concentración del mejor cliente sobre el total facturado.
+    fact_total = sum(c.get("facturado") or 0 for c in clients) or 0
+    top = clients[0] if clients else None
+    concentracion = round(top["facturado"] / fact_total * 100) if (top and fact_total) else 0
+
+    return {
+        "invoiced": invoiced, "collected": collected, "pending": pending,
+        "gastos": gastos, "beneficio": beneficio, "n_facturas": n,
+        "ticket_medio": ticket_medio, "margen_pct": margen_pct,
+        "ratio_gasto": ratio_gasto, "cobro_pct": cobro_pct,
+        "dso": dso, "morosidad": morosidad, "morosidad_pct": morosidad_pct,
+        "solvencia": solvencia, "concentracion": concentracion,
+        "top_cliente": top["name"] if top else None,
+        "vat_repercutido": vat_repercutido, "vat_soportado": vat_soportado,
+        "vat_liquidar": round(vat_repercutido - vat_soportado, 2),
+        "clientes_activos": len(clients),
+    }
+
+
 def monthly_series(business_id=DEFAULT_BUSINESS_ID, months: int = 6) -> list[dict]:
     """Serie de los últimos N meses: ingresos vs gastos (para el gráfico)."""
     today = date.today()
