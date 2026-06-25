@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Agenda</h1>
+  <p>Tus próximos 7 días de trabajo de un vistazo. Noesis puede agrupar tus trabajos
+     por zona para que pierdas el mínimo tiempo en desplazamientos.</p>
+</div>
+
+<div class="grid g4">
+  <div class="metric"><div class="label">Trabajos esta semana</div><div class="value" id="a-total">—</div></div>
+  <div class="metric"><div class="label">Hoy</div><div class="value" id="a-today">—</div></div>
+  <div class="metric"><div class="label">Sin confirmar</div><div class="value amber" id="a-unconf">—</div></div>
+  <div class="metric"><div class="label">Ingreso estimado semana</div><div class="value green" id="a-income">—</div></div>
+</div>
+
+<div id="week" class="grid" style="margin-top:16px"></div>
+
+<div class="insight" style="margin-top:16px">
+  💡 Dile a Noesis <b>«agenda a Marta el jueves por la mañana en Badalona»</b> y la
+  cita aparece aquí. Si tienes varios trabajos el mismo día, te sugiere el mejor orden.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+async function load() {
+  const jobs = await api('/agenda?week=true');
+  const today = new Date().toISOString().slice(0,10);
+  el('a-total').textContent = jobs.length;
+  el('a-today').textContent = jobs.filter(j => (j.scheduled_for||'').slice(0,10)===today).length;
+  el('a-unconf').textContent = jobs.filter(j => j.status==='pendiente').length;
+  el('a-income').textContent = eur(jobs.reduce((a,b)=>a+(b.price_estimate||0),0));
+
+  // Agrupar por día
+  const byDay = {};
+  jobs.forEach(j => { const d=(j.scheduled_for||'').slice(0,10); (byDay[d]=byDay[d]||[]).push(j); });
+  const days = [];
+  for (let i=0;i<7;i++){ const d=new Date(); d.setDate(d.getDate()+i); days.push(d.toISOString().slice(0,10)); }
+
+  el('week').innerHTML = days.map(d => {
+    const list = (byDay[d]||[]).sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||''));
+    const dt = new Date(d+'T12:00');
+    const head = `${DIAS[dt.getDay()]} ${dt.getDate()}` + (d===today?' · hoy':'');
+    const body = list.length ? list.map(j => {
+      const h = j.scheduled_for.includes('T') ? j.scheduled_for.split('T')[1].slice(0,5) : '';
+      return `<div class="lrow"><span><b>${h}</b> ${j.client_name||''}<br><span class="meta">${j.description}</span></span>
+              <span style="display:flex;align-items:center;gap:6px"><span class="meta">${j.zone||''}</span>
+              <button class="iconbtn" title="Borrar" onclick="del(${j.id})">${TRASH}</button></span></div>`;
+    }).join('') : '<div class="empty">Libre</div>';
+    return `<div class="card"><div class="card-h"><h2 style="font-size:14px;text-transform:capitalize">${head}</h2>
+            <span class="hint">${list.length||''}</span></div><div class="card-b" style="padding-top:6px">${body}</div></div>`;
+  }).join('');
+}
+async function del(id){ if(confirm('¿Borrar este trabajo?')){ await apiDelete('/jobs/'+id); load(); } }
+document.getElementById('week').className = 'grid g3';
+load();
+</script>
+{% endblock %}

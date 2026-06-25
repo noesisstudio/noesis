@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Facturas</h1>
+  <p>Todas tus facturas y su estado. Desde aquí puedes ver el ciclo completo:
+     borrador → enviada → cobrada.</p>
+</div>
+
+<div class="grid g3">
+  <div class="metric"><div class="label">Total emitido</div><div class="value" id="f-total">—</div></div>
+  <div class="metric"><div class="label">Cobradas</div><div class="value green" id="f-paid">—</div></div>
+  <div class="metric"><div class="label">Pendientes</div><div class="value amber" id="f-pend">—</div></div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h">
+    <div class="row" id="filters">
+      <button class="btn" data-f="todas">Todas</button>
+      <button class="btn" data-f="enviada">Enviadas</button>
+      <button class="btn" data-f="cobrada">Cobradas</button>
+      <button class="btn" data-f="borrador">Borradores</button>
+    </div>
+    <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">⬇ Descargar CSV</a>
+  </div>
+  <div class="card-b" style="padding-top:6px">
+    <table>
+      <thead><tr><th>Nº</th><th>Cliente</th><th>Concepto</th><th class="t-right">Base</th>
+        <th class="t-right">IVA</th><th class="t-right">IRPF</th>
+        <th class="t-right">Total</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="f-body"></tbody>
+    </table>
+    <div id="f-empty"></div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  💡 Con Noesis no hace falta entrar aquí para facturar: dile por WhatsApp
+  <b>«factura a Juan por la caldera 180 €»</b> y aparece sola en esta lista.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let ALL = [];
+async function load() {
+  ALL = await api('/invoices');
+  const emit = ALL.filter(i=>i.status!=='borrador');
+  el('f-total').textContent = eur(emit.reduce((a,b)=>a+b.total,0));
+  el('f-paid').textContent = eur(ALL.filter(i=>i.status==='cobrada').reduce((a,b)=>a+b.total,0));
+  el('f-pend').textContent = eur(ALL.filter(i=>i.status==='enviada').reduce((a,b)=>a+b.total,0));
+  render('todas');
+}
+function badge(s){ return s==='cobrada'?'b-green':s==='enviada'?'b-amber':'b-gray'; }
+function render(f) {
+  const rows = ALL.filter(i => f==='todas' || i.status===f);
+  el('f-body').innerHTML = rows.map(i => `<tr>
+    <td class="meta">${i.number||'—'}</td><td>${i.client_name||''}</td><td>${i.concept}</td>
+    <td class="t-right num">${eur(i.base)}</td>
+    <td class="t-right num">${eur(i.vat_amount)}</td>
+    <td class="t-right num">${i.irpf_amount?'−'+eur(i.irpf_amount):'—'}</td>
+    <td class="t-right num"><b>${eur(i.total)}</b></td>
+    <td><span class="badge ${badge(i.status)}">${i.status}</span></td>
+    <td class="t-right" style="white-space:nowrap">
+      <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
+      ${i.status==='enviada'?`<button class="btn sm" onclick="pay(${i.id})">Cobrada</button>`:''}
+      <button class="iconbtn" title="Borrar" onclick="del(${i.id})">${TRASH}</button>
+    </td>
+  </tr>`).join('');
+  el('f-empty').innerHTML = rows.length ? '' : '<div class="empty">No hay facturas en este estado.</div>';
+}
+async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
+async function del(id){ if(confirm('¿Borrar esta factura?')){ await apiDelete('/invoices/'+id); load(); } }
+document.getElementById('filters').addEventListener('click', e => {
+  if (e.target.dataset.f) {
+    [...e.currentTarget.children].forEach(b=>b.classList.remove('primary'));
+    e.target.classList.add('primary'); render(e.target.dataset.f);
+  }
+});
+load();
+</script>
+{% endblock %}

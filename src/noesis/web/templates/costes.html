@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Costes</h1>
+  <p>Dónde se va tu dinero. Controlar el gasto es la forma más rápida de ganar más
+     sin trabajar más: cada euro que ahorras es beneficio limpio.</p>
+</div>
+
+<div class="grid g4">
+  <div class="metric">
+    <div class="label">Gasto del mes</div>
+    <div class="value red" id="c-month">—</div>
+    <div class="sub" id="c-count"></div>
+  </div>
+  <div class="metric">
+    <div class="label">% sobre ingresos</div>
+    <div class="value" id="c-ratio">—</div>
+    <div class="sub">Cuánto de lo que facturas se va en gastos</div>
+  </div>
+  <div class="metric">
+    <div class="label">Ticket medio de gasto</div>
+    <div class="value" id="c-avg">—</div>
+    <div class="sub">Importe medio por gasto</div>
+  </div>
+  <div class="metric">
+    <div class="label">Mayor categoría</div>
+    <div class="value" id="c-top" style="font-size:20px">—</div>
+    <div class="sub" id="c-top-val"></div>
+  </div>
+</div>
+
+<div class="grid g3" style="margin-top:16px">
+  <div class="card col-2">
+    <div class="card-h"><h2>Gasto por categoría</h2><span class="hint">acumulado</span></div>
+    <div class="card-b"><div style="height:260px"><canvas id="ch-cat"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Registrar gasto</h2></div>
+    <div class="card-b">
+      <label class="fld">Concepto</label>
+      <input class="input" id="f-concept" placeholder="Ej. Gasolina furgoneta">
+      <label class="fld" style="margin-top:10px">Importe (€)</label>
+      <input class="input" id="f-amount" type="number" step="0.01" placeholder="45">
+      <label class="fld" style="margin-top:10px">Categoría</label>
+      <select id="f-cat">
+        <option>Material</option><option>Combustible</option><option>Vehículo</option>
+        <option>Herramientas</option><option>Seguros</option><option>Cuota autónomo</option>
+        <option>Telefonía</option><option>Otros</option>
+      </select>
+      <button class="btn primary" style="margin-top:14px;width:100%" onclick="addExpense()">Añadir gasto</button>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h"><h2>Detalle de gastos</h2>
+    <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">⬇ Descargar CSV</a></div>
+  <div class="card-b" style="padding-top:6px">
+    <table>
+      <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="t-right">IVA</th><th class="t-right">Importe</th><th></th></tr></thead>
+      <tbody id="c-body"></tbody>
+    </table>
+    <div id="c-empty"></div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  💡 <b>Cómo leer esta página:</b> si tus costes superan el <b>60-70%</b> de lo que
+  facturas, el problema no es vender más, es el margen. Mira tu mayor categoría:
+  ahí está tu primera palanca de ahorro.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load() {
+  const s = await api('/summary');
+  const cats = await api('/costs/breakdown');
+
+  el('c-month').textContent = eur(s.expenses);
+  const ratio = s.invoiced ? Math.round(s.expenses / s.invoiced * 100) : 0;
+  el('c-ratio').textContent = ratio + '%';
+  el('c-ratio').className = 'value ' + (ratio > 65 ? 'red' : ratio > 45 ? 'amber' : 'green');
+
+  const ex = await api('/expenses');
+  el('c-count').textContent = ex.length + ' gasto(s) este mes';
+  const avg = ex.length ? ex.reduce((a,b)=>a+b.amount,0)/ex.length : 0;
+  el('c-avg').textContent = eur(avg);
+
+  if (cats.length) { el('c-top').textContent = cats[0].category;
+    el('c-top-val').textContent = eur(cats[0].total); }
+  else { el('c-top').textContent = '—'; }
+
+  new Chart(el('ch-cat'), {
+    type: 'bar',
+    data: { labels: cats.map(c=>c.category), datasets: [{
+      label: 'Gasto (€)', data: cats.map(c=>c.total),
+      backgroundColor: CHART.brand, borderRadius: 6, maxBarThickness: 30 }] },
+    options: CHART.base({ indexAxis: 'y', plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero:true, grid:{color:CHART.grid}, border:{display:false} }, y:{ grid:{display:false} } } })
+  });
+
+  el('c-body').innerHTML = ex.map(e => `<tr>
+    <td class="meta">${e.created_at.slice(0,10)}</td><td>${e.concept}</td>
+    <td><span class="badge b-gray">${e.category||'—'}</span></td>
+    <td class="t-right num">${e.vat_rate? e.vat_rate+'%':'—'}</td>
+    <td class="t-right num">${eur(e.amount)}</td>
+    <td class="t-right"><button class="iconbtn" title="Borrar" onclick="del(${e.id})">${TRASH}</button></td></tr>`).join('');
+  el('c-empty').innerHTML = ex.length ? '' : '<div class="empty">Aún no has registrado gastos. Añade el primero arriba 👆</div>';
+}
+async function del(id){ if(confirm('¿Borrar este gasto?')){ await apiDelete('/expenses/'+id); load(); } }
+async function addExpense() {
+  const concept = el('f-concept').value.trim();
+  const amount = parseFloat(el('f-amount').value);
+  if (!concept || !amount) return;
+  await apiPost('/expenses', { concept, amount, category: el('f-cat').value });
+  el('f-concept').value=''; el('f-amount').value='';
+  load();
+}
+load();
+</script>
+{% endblock %}

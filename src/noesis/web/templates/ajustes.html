@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Ajustes</h1>
+  <p>Configura tu negocio y conecta los canales. Noesis está diseñado para funcionar
+     con el mínimo de servicios externos: tus datos viven en tu servidor.</p>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="card-h"><h2>Datos fiscales</h2><span class="hint">salen en tus facturas</span></div>
+    <div class="card-b">
+      <form method="post" action="/b/{{ business.id }}/fiscal">
+        <label class="fld">Nombre / Razón social</label>
+        <input class="input" name="name" value="{{ business.name }}">
+        <div class="grid g2" style="margin-top:10px">
+          <div><label class="fld">NIF / DNI</label>
+            <input class="input" name="nif" value="{{ business.nif or '' }}" placeholder="12345678Z"></div>
+          <div><label class="fld">Dirección</label>
+            <input class="input" name="address" value="{{ business.address or '' }}" placeholder="Calle, ciudad"></div>
+        </div>
+        <div class="grid g2" style="margin-top:10px">
+          <div><label class="fld">IVA por defecto</label>
+            <select name="default_vat">
+              {% for v in [21, 10, 4, 0] %}
+              <option value="{{ v }}" {{ 'selected' if business.default_vat == v }}>{{ v }}%</option>
+              {% endfor %}
+            </select></div>
+          <div><label class="fld">Retención IRPF por defecto</label>
+            <select name="default_irpf">
+              {% for v in [0, 7, 15, 19] %}
+              <option value="{{ v }}" {{ 'selected' if business.default_irpf == v }}>{{ v }}%</option>
+              {% endfor %}
+            </select></div>
+        </div>
+        <button class="btn primary" style="margin-top:14px">Guardar datos fiscales</button>
+      </form>
+      <div class="insight" style="margin-top:14px">
+        💡 ¿Facturas a empresas? Suele aplicarse <b>retención de IRPF</b> (15%, o 7% los
+        primeros años). ¿A particulares? Normalmente 0%. Noesis lo aplica solo según
+        lo que pongas aquí, y puedes cambiarlo en cada factura.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>WhatsApp</h2>
+      {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>
+      {% else %}<span class="badge b-amber">no conectado</span>{% endif %}</div>
+    <div class="card-b">
+      {% if business.whatsapp_status == 'conectado' %}
+        <p class="meta">Número vinculado: <b>{{ business.whatsapp_phone }}</b></p>
+        <p>Ya puedes gestionar tu negocio por WhatsApp con texto o audio.</p>
+      {% else %}
+        <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.</p>
+        <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
+          <label class="fld">Tu número de WhatsApp</label>
+          <input class="input" name="phone" placeholder="+34 6XX XXX XXX" required>
+          <button class="btn primary" style="margin-top:12px">Conectar</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid g2" style="margin-top:16px">
+  <div class="card">
+    <div class="card-h"><h2>Datos e informes</h2></div>
+    <div class="card-b">
+      <p style="margin-top:0" class="meta">Descarga toda tu información cuando quieras. Es tuya.</p>
+      <div class="row">
+        <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">⬇ Facturas (CSV)</a>
+        <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">⬇ Costes (CSV)</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Privacidad y costes</h2><span class="badge b-gray">interno</span></div>
+    <div class="card-b">
+      <div class="lrow"><span>Base de datos</span><b>local (en tu servidor)</b></div>
+      <div class="lrow"><span>Asistente</span><b>local + IA opcional</b></div>
+      <div class="lrow"><span>Gráficos y diseño</span><b>sin CDN externo</b></div>
+      <div class="insight" style="margin-top:14px">
+        🔒 Noesis usa el mínimo de APIs externas. Lo rutinario se resuelve dentro del
+        servidor; solo las consultas complejas (si lo activas) usan IA en la nube.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

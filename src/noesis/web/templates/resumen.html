@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Hola, {{ business.name }} 👋</h1>
+  <p>Esto es lo que pasa en tu negocio ahora mismo. Lo importante primero; cada
+     apartado del menú lo desarrolla en detalle.</p>
+</div>
+
+<div class="grid g4">
+  <div class="metric feature">
+    <div class="label">Beneficio estimado (mes)</div>
+    <div class="value" id="m-profit">—</div>
+    <div class="sub">Ingresos menos gastos del mes en curso</div>
+  </div>
+  <div class="metric">
+    <div class="label">Facturado</div>
+    <div class="value" id="m-invoiced">—</div>
+    <div class="sub" id="m-collected"></div>
+  </div>
+  <div class="metric">
+    <div class="label">Gastos</div>
+    <div class="value red" id="m-expenses">—</div>
+    <div class="sub">Registrados este mes</div>
+  </div>
+  <div class="metric">
+    <div class="label">Pendiente de cobro</div>
+    <div class="value amber" id="m-pending">—</div>
+    <div class="sub" id="m-pending-n"></div>
+  </div>
+</div>
+
+<div class="grid g3" style="margin-top:16px">
+  <div class="card col-2">
+    <div class="card-h"><h2>Ingresos vs gastos</h2><span class="hint">últimos 6 meses</span></div>
+    <div class="card-b"><div style="height:260px"><canvas id="ch-main"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Hoy</h2></div>
+    <div class="card-b"><div id="today">…</div></div>
+  </div>
+</div>
+
+<div class="grid g2" style="margin-top:16px">
+  <div class="card">
+    <div class="card-h"><h2>Cobros que vigilar</h2>
+      <a class="hint" href="/b/{{ business.id }}/cobros">ver todos →</a></div>
+    <div class="card-b"><div id="pending">…</div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>IVA y salud fiscal</h2></div>
+    <div class="card-b">
+      <div class="lrow"><span>IVA repercutido estimado (mes)</span><b id="m-vat" class="num">—</b></div>
+      <div class="lrow"><span>Clientes activos</span><b id="m-clients" class="num">—</b></div>
+      <div class="insight" style="margin-top:14px">
+        💡 Aparta el IVA en cuanto cobras una factura. Es dinero de Hacienda, no tuyo:
+        así no te llevas sustos en el trimestre.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load() {
+  const s = await api('/summary');
+  el('m-profit').textContent = eur(s.estimated_profit);
+  el('m-invoiced').textContent = eur(s.invoiced);
+  el('m-collected').textContent = 'Cobrado: ' + eur(s.collected);
+  el('m-expenses').textContent = eur(s.expenses);
+  el('m-pending').textContent = eur(s.pending_total);
+  el('m-pending-n').textContent = s.pending_count + ' factura(s)';
+  el('m-vat').textContent = eur(s.vat_estimated);
+  el('m-clients').textContent = s.clients;
+
+  const series = await api('/series');
+  new Chart(el('ch-main'), {
+    type: 'bar',
+    data: { labels: series.map(x => x.month), datasets: [
+      { label: 'Ingresos', data: series.map(x => x.invoiced), backgroundColor: CHART.brand, borderRadius: 6, maxBarThickness: 26 },
+      { label: 'Gastos', data: series.map(x => x.expenses), backgroundColor: CHART.red, borderRadius: 6, maxBarThickness: 26 },
+    ]}, options: CHART.base()
+  });
+
+  const ag = await api('/agenda');
+  el('today').innerHTML = ag.length ? ag.map(j => {
+    const h = j.scheduled_for && j.scheduled_for.includes('T') ? j.scheduled_for.split('T')[1].slice(0,5) : '';
+    return `<div class="lrow"><span><b>${h}</b> ${j.client_name||''}<br><span class="meta">${j.description}</span></span><span class="meta">${j.zone||''}</span></div>`;
+  }).join('') : '<div class="empty">Sin trabajos hoy 🌤️</div>';
+
+  const p = await api('/pending');
+  el('pending').innerHTML = p.length ? p.map(x =>
+    `<div class="lrow"><span>${x.client_name}<br><span class="meta">${x.concept}</span></span>
+     <span style="text-align:right">${eur(x.total)}<br>
+     <span class="badge ${x.days_outstanding>7?'b-red':'b-gray'}">${x.days_outstanding ?? 0} días</span></span></div>`
+  ).join('') : '<div class="empty">Todo cobrado 🎉</div>';
+}
+load();
+</script>
+{% endblock %}

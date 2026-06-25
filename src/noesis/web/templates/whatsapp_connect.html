@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Conecta tu WhatsApp</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <style>
+    .center { min-height:100vh; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; padding:24px; }
+    .steps { display:flex; align-items:center; gap:8px; font-size:13px;
+      color:var(--faint); margin-bottom:22px; }
+    .step-n { width:24px; height:24px; border-radius:50%; display:flex;
+      align-items:center; justify-content:center; font-size:12px; }
+    .on { background:var(--brand); color:#fff; } .ok { background:var(--green); color:#fff; }
+    .line { flex:1; border-top:1px solid var(--border-strong); }
+    ol.guide { padding-left:0; list-style:none; margin:0 0 18px; }
+    ol.guide li { display:flex; gap:11px; margin-bottom:12px; font-size:14px; }
+    ol.guide .n { color:var(--brand); font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div style="text-align:center; margin-bottom:24px">
+      <div style="font-size:24px; font-weight:700">¡Casi listo, {{ business.name }}! 🎉</div>
+      <p style="color:var(--muted); margin-top:6px">Conecta tu WhatsApp y Noesis empezará a trabajar para ti.</p>
+    </div>
+
+    <div class="card pad" style="width:100%; max-width:500px">
+      <div class="steps">
+        <span class="step-n ok">✓</span><span style="color:var(--text)">Cuenta creada</span>
+        <span class="line"></span>
+        <span class="step-n on">2</span><b style="color:var(--text)">Conecta WhatsApp</b>
+      </div>
+
+      <ol class="guide">
+        <li><span class="n">1.</span> Guarda el número de Noesis: <b style="user-select:all">+34 600 00 00 00</b></li>
+        <li><span class="n">2.</span> Escribe abajo tu número de WhatsApp para vincularlo.</li>
+        <li><span class="n">3.</span> Envía <b>“Hola Noesis”</b> y empieza a darle órdenes por voz o texto.</li>
+      </ol>
+
+      <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
+        <label class="fld">Tu número de WhatsApp *</label>
+        <input class="input" name="phone" required placeholder="+34 6XX XXX XXX">
+        <button class="btn green" style="width:100%; margin-top:14px; justify-content:center">Conectar y entrar al panel →</button>
+      </form>
+
+      <p style="color:var(--faint); font-size:12px; margin:14px 0 0; text-align:center">
+        En esta versión la conexión es simulada. La integración real con la API oficial
+        de WhatsApp (Meta) se activa al dar de alta el número de empresa.</p>
+    </div>
+  </div>
+</body>
+</html>

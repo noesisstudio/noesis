@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="chat-wrap">
+  <div class="page-head" style="margin-bottom:14px">
+    <h1>Asistente</h1>
+    <p>Lo mismo que harías por WhatsApp, aquí. Háblale normal: facturas, agenda,
+       gastos, cobros… Funciona en local (sin coste) y solo usa IA si hace falta.</p>
+  </div>
+
+  <div class="chips" id="chips">
+    <span class="chip">¿Qué tengo hoy?</span>
+    <span class="chip">Factura a Juan por cambio de grifo 95 euros</span>
+    <span class="chip">¿Quién me debe?</span>
+    <span class="chip">Gasté 45 euros en gasolina</span>
+    <span class="chip">¿Cuánto he facturado este mes?</span>
+  </div>
+
+  <div class="chat-log" id="log"></div>
+
+  <div class="chat-input">
+    <input class="input" id="msg" placeholder="Escribe a Noesis…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')send()">
+    <button class="btn primary" onclick="send()">Enviar</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const log = el('log');
+function bubble(text, who, src) {
+  const d = document.createElement('div');
+  d.className = 'bubble ' + who;
+  d.innerHTML = text.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')
+    + (src ? `<span class="src">${src==='ia'?'✦ IA':'⚡ local'}</span>` : '');
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  return d;
+}
+async function send(preset) {
+  const input = el('msg');
+  const text = preset || input.value.trim();
+  if (!text) return;
+  input.value = '';
+  bubble(text, 'me');
+  const typing = bubble('…', 'bot');
+  try {
+    const r = await apiPost('/chat', { message: text });
+    typing.remove();
+    bubble(r.reply, 'bot', r.source);
+  } catch(e) { typing.remove(); bubble('Ups, no he podido procesar eso.', 'bot'); }
+}
+document.getElementById('chips').addEventListener('click', e => {
+  if (e.target.classList.contains('chip')) send(e.target.textContent);
+});
+bubble('👋 Hola, soy Noesis. ¿En qué te ayudo? Prueba con uno de los botones de arriba.', 'bot');
+</script>
+{% endblock %}

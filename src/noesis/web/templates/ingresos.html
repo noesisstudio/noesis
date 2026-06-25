@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Ingresos</h1>
+  <p>Lo que entra en tu negocio. No es lo mismo facturar que cobrar: aquí ves ambas
+     cosas y de dónde viene de verdad tu dinero.</p>
+</div>
+
+<div class="grid g4">
+  <div class="metric feature">
+    <div class="label">Facturado (mes)</div>
+    <div class="value" id="i-invoiced">—</div>
+    <div class="sub">Total emitido este mes</div>
+  </div>
+  <div class="metric">
+    <div class="label">Cobrado</div>
+    <div class="value green" id="i-collected">—</div>
+    <div class="sub" id="i-collected-pct"></div>
+  </div>
+  <div class="metric">
+    <div class="label">Pendiente de cobro</div>
+    <div class="value amber" id="i-pending">—</div>
+    <div class="sub">Dinero que ya es tuyo pero no ha llegado</div>
+  </div>
+  <div class="metric">
+    <div class="label">Ticket medio</div>
+    <div class="value" id="i-avg">—</div>
+    <div class="sub">Importe medio por factura</div>
+  </div>
+</div>
+
+<div class="grid g3" style="margin-top:16px">
+  <div class="card col-2">
+    <div class="card-h"><h2>Evolución de ingresos</h2><span class="hint">últimos 6 meses</span></div>
+    <div class="card-b"><div style="height:260px"><canvas id="ch-trend"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Mejores clientes</h2><span class="hint">por facturación</span></div>
+    <div class="card-b"><div id="i-clients">…</div></div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  💡 <b>Regla de oro:</b> si un solo cliente es más del <b>40%</b> de tus ingresos,
+  tienes un riesgo de concentración. Si ese cliente se va, te tambaleas. Diversifica.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load() {
+  const s = await api('/summary');
+  el('i-invoiced').textContent = eur(s.invoiced);
+  el('i-collected').textContent = eur(s.collected);
+  el('i-collected-pct').textContent = s.invoiced ? Math.round(s.collected/s.invoiced*100)+'% cobrado' : '';
+  el('i-pending').textContent = eur(s.pending_total);
+
+  const inv = await api('/invoices');
+  const emitidas = inv.filter(i => i.status !== 'borrador');
+  const avg = emitidas.length ? emitidas.reduce((a,b)=>a+b.total,0)/emitidas.length : 0;
+  el('i-avg').textContent = eur(avg);
+
+  const series = await api('/series');
+  new Chart(el('ch-trend'), {
+    type: 'line',
+    data: { labels: series.map(x=>x.month), datasets: [{
+      label: 'Ingresos', data: series.map(x=>x.invoiced),
+      borderColor: CHART.brand, backgroundColor: 'rgba(46,139,116,.14)',
+      fill: true, tension: .35, pointRadius: 4, pointBackgroundColor: CHART.brand }] },
+    options: CHART.base({ plugins: { legend: { display:false } } })
+  });
+
+  const byc = await api('/income/by-client');
+  el('i-clients').innerHTML = byc.length ? byc.map(c =>
+    `<div class="lrow"><span>${c.client_name}<br><span class="meta">${c.n} factura(s)</span></span>
+     <b class="num">${eur(c.total)}</b></div>`).join('')
+    : '<div class="empty">Sin ingresos todavía.</div>';
+}
+load();
+</script>
+{% endblock %}

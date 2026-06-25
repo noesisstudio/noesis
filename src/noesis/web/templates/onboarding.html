@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Empieza</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css">
+  <style>
+    .center { min-height:100vh; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; padding:24px; }
+    .auth { width:100%; max-width:440px; }
+    .steps { display:flex; align-items:center; gap:8px; font-size:13px;
+      color:var(--faint); margin-bottom:22px; }
+    .step-n { width:24px; height:24px; border-radius:50%; display:flex;
+      align-items:center; justify-content:center; font-size:12px; }
+    .on { background:var(--brand); color:#fff; } .off { background:#e8e8ef; }
+    .line { flex:1; border-top:1px solid var(--border-strong); }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div style="text-align:center; margin-bottom:26px">
+      <img src="/static/noesis-mark.svg" width="52" height="52" alt="" style="margin-bottom:8px">
+      <div style="font-size:30px; font-weight:700; letter-spacing:-.02em; color:var(--brand)">Noesis</div>
+      <p style="color:var(--muted); max-width:30ch; margin:8px auto 0">
+        El copiloto que gestiona tu negocio por WhatsApp. Tú solo haz tu trabajo.</p>
+    </div>
+
+    <div class="card pad auth">
+      <div class="steps">
+        <span class="step-n on">1</span><b style="color:var(--text)">Crea tu cuenta</b>
+        <span class="line"></span>
+        <span class="step-n off">2</span><span>Conecta WhatsApp</span>
+      </div>
+
+      {% if error == 'email' %}<div style="background:var(--red-soft);color:var(--red);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px">Ese email ya tiene cuenta. <a href="/login" style="text-decoration:underline">Entra aquí</a>.</div>{% endif %}
+      {% if error == 'password' %}<div style="background:var(--red-soft);color:var(--red);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px">La contraseña debe tener al menos 6 caracteres.</div>{% endif %}
+      <form method="post" action="/onboarding/signup">
+        <label class="fld">Nombre de tu negocio *</label>
+        <input class="input" name="name" required placeholder="Ej. Fontanería García">
+        <label class="fld" style="margin-top:14px">Email *</label>
+        <input class="input" name="email" type="email" required placeholder="tu@email.com">
+        <label class="fld" style="margin-top:14px">Contraseña *</label>
+        <input class="input" name="password" type="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+        <label class="fld" style="margin-top:14px">Sector</label>
+        <select name="sector">
+          <option value="">Selecciona…</option>
+          <option>Fontanería</option><option>Electricidad</option><option>Reformas</option>
+          <option>Climatización</option><option>Limpieza</option><option>Jardinería</option>
+          <option>Mantenimiento</option><option>Otro</option>
+        </select>
+        <button class="btn primary" style="width:100%; margin-top:18px; justify-content:center">Continuar →</button>
+      </form>
+    </div>
+    <a href="/b/1/resumen" style="color:var(--faint); font-size:13px; margin-top:22px">Ver el panel de demostración →</a>
+  </div>
+</body>
+</html>
