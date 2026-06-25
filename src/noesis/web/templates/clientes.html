@@ -74,12 +74,21 @@ async function load() {
     el('cl-plan').innerHTML = `<b>Cartera repartida.</b><p class="muted" style="margin:6px 0 12px">Mantén teléfonos y zonas actualizados para que agenda, cobros y facturas no se ensucien.</p>`;
   }
 }
-async function edit(id, name, phone, zone){
-  const n = prompt('Nombre del cliente:', name); if(n===null) return;
-  const p = prompt('Teléfono:', phone); if(p===null) return;
-  const z = prompt('Zona:', zone); if(z===null) return;
-  await apiPost('/clients/'+id, { name:n.trim(), phone:p.trim(), zone:z.trim() });
-  load();
+function edit(id, name, phone, zone){
+  formModal({
+    title: 'Editar cliente',
+    submitLabel: 'Guardar cambios',
+    fields: [
+      { name:'name', label:'Nombre', value:name, placeholder:'Nombre del cliente' },
+      { name:'phone', label:'Teléfono', value:phone, placeholder:'600 000 000' },
+      { name:'zone', label:'Zona', value:zone, placeholder:'Badalona' },
+    ],
+    onSubmit: async (v) => {
+      if (!v.name) return;
+      await apiPost('/clients/'+id, { name:v.name, phone:v.phone, zone:v.zone });
+      load();
+    }
+  });
 }
 async function del(id){ if(confirm('¿Borrar este cliente?')){ await apiDelete('/clients/'+id); load(); } }
 load();

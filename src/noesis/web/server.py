@@ -30,6 +30,21 @@ from .scheduler import start_scheduler
 HERE = Path(__file__).parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 
+
+def _asset_version() -> str:
+    """Versión de los assets a partir de su fecha de modificación, para romper la
+    caché del navegador automáticamente cada vez que cambian CSS/JS (clave en
+    producción: si no, los usuarios verían estilos viejos tras un despliegue)."""
+    paths = [HERE / "static" / "app.css", HERE / "static" / "app.js"]
+    try:
+        return str(int(max(p.stat().st_mtime for p in paths if p.exists())))
+    except ValueError:
+        return "1"
+
+
+# Disponible en todas las plantillas como {{ asset_v }}.
+TEMPLATES.env.globals["asset_v"] = _asset_version()
+
 app = FastAPI(title="Noesis", version="0.3.0")
 app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 

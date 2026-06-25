@@ -275,6 +275,22 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
   color: var(--brand-ink); }
 .insight b { font-weight: 700; }
 
+/* ---------- Modal ---------- */
+.modal-overlay { position:fixed; inset:0; background:rgba(8,20,16,.5); z-index:100;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  animation:fade .12s ease; }
+@keyframes fade { from { opacity:0; } to { opacity:1; } }
+.modal { background:var(--surface); border-radius:16px; width:100%; max-width:440px;
+  box-shadow:0 24px 60px rgba(8,20,16,.32); overflow:hidden; }
+.modal-h { display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px; border-bottom:1px solid var(--border); }
+.modal-h h2 { font-family:var(--serif); font-weight:500; font-size:19px; }
+.modal-x { font-size:15px; }
+.modal-x:hover { color:var(--text); background:var(--surface-2); }
+.modal-b { padding:6px 20px 18px; }
+.modal-f { display:flex; justify-content:flex-end; gap:8px; padding:14px 20px;
+  border-top:1px solid var(--border); background:var(--surface-2); }
+
 /* ---------- Ratios / análisis financiero ---------- */
 .ratios { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 @media (max-width: 720px) { .ratios { grid-template-columns:1fr; } }

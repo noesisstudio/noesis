@@ -46,6 +46,42 @@ const emptyState = (title, text, href, action) => `
     ${href ? `<br><a class="btn sm" href="${href}">${esc(action || 'Ver')}</a>` : ''}
   </div>`;
 
+/* Modal de formulario reutilizable (sustituye a los prompt() del navegador). */
+function closeModal() {
+  const m = document.querySelector('.modal-overlay');
+  if (m) m.remove();
+}
+function formModal(opts) {
+  closeModal();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  const fields = (opts.fields || []).map(f => `
+    <label class="fld" style="margin-top:10px">${esc(f.label)}</label>
+    <input class="input" data-name="${f.name}" type="${f.type || 'text'}"
+      value="${esc(f.value ?? '')}" placeholder="${esc(f.placeholder || '')}">`).join('');
+  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-h"><h2>${esc(opts.title)}</h2>
+      <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
+    <div class="modal-b">${fields}</div>
+    <div class="modal-f"><button class="btn modal-cancel">Cancelar</button>
+      <button class="btn primary modal-save">${esc(opts.submitLabel || 'Guardar')}</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });
+  ov.querySelector('.modal-x').onclick = closeModal;
+  ov.querySelector('.modal-cancel').onclick = closeModal;
+  ov.querySelector('.modal-save').onclick = async () => {
+    const values = {};
+    ov.querySelectorAll('input[data-name]').forEach(i => values[i.dataset.name] = i.value.trim());
+    await opts.onSubmit(values);
+    closeModal();
+  };
+  const onEsc = e => { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); } };
+  document.addEventListener('keydown', onEsc);
+  const first = ov.querySelector('input');
+  if (first) first.focus();
+}
+
 /* Paleta para gráficos (coherente con el sistema de diseño). */
 const CHART = {
   brand: '#2e8b74', brandSoft: '#a9d2c5', forest: '#14463b',

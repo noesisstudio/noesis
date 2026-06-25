@@ -21,7 +21,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Noesis · {{ page_title }}</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/app.css?v=ux-piloto">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <script>window.NOESIS_BIZ = {{ business.id }};</script>
 </head>
 <body>
@@ -78,7 +78,7 @@
 </div>
 
 <script src="/static/vendor/chart.umd.min.js"></script>
-<script src="/static/app.js?v=ux-piloto"></script>
+<script src="/static/app.js?v={{ asset_v }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
