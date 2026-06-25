@@ -294,6 +294,9 @@ def onboarding_signup(request: Request, name: str = Form(...),
 
 @app.get("/onboarding/whatsapp/{business_id}", response_class=HTMLResponse)
 def onboarding_whatsapp(request: Request, business_id: int):
+    # Aislamiento: solo el dueño de ESTE negocio puede ver su onboarding.
+    if request.session.get("bid") != business_id:
+        return RedirectResponse("/login", status_code=303)
     biz = db.get_business(business_id)
     return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html", {"business": biz})
 
@@ -309,7 +312,10 @@ def update_fiscal(business_id: int, name: str = Form(""), nif: str = Form(""),
 
 
 @app.post("/onboarding/whatsapp/{business_id}/connect")
-def onboarding_whatsapp_connect(business_id: int, phone: str = Form(...)):
+def onboarding_whatsapp_connect(request: Request, business_id: int, phone: str = Form(...)):
+    # Aislamiento: nadie puede conectar el WhatsApp de un negocio ajeno.
+    if request.session.get("bid") != business_id:
+        return RedirectResponse("/login", status_code=303)
     db.set_whatsapp_status(business_id, "conectado", phone=phone)
     db.finish_onboarding(business_id)
     return RedirectResponse(f"/b/{business_id}/resumen", status_code=303)
