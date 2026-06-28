@@ -115,6 +115,16 @@ def home(request: Request):
     return TEMPLATES.TemplateResponse(request, "landing.html", {"business_id": bid})
 
 
+@app.get("/privacidad", response_class=HTMLResponse)
+def privacidad(request: Request):
+    return TEMPLATES.TemplateResponse(request, "privacidad.html", {})
+
+
+@app.get("/terminos", response_class=HTMLResponse)
+def terminos(request: Request):
+    return TEMPLATES.TemplateResponse(request, "terminos.html", {})
+
+
 # ================================================================ AUTH ====== #
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str = ""):
