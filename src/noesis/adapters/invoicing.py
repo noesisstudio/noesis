@@ -2,12 +2,14 @@
 
 Define una interfaz común (`InvoicingProvider`) y dos implementaciones:
 
-  - MockInvoicingProvider  -> simula la emisión (para el prototipo, sin cuentas)
-  - HoldedInvoicingProvider -> stub listo para conectar la API real de Holded
-                               (https://developers.holded.com) cuando toque.
+  - InternalInvoicingProvider -> emisión REAL interna: numeración correlativa por
+                                 negocio + PDF real (web/invoice_pdf.py). No registra
+                                 en Verifactu (eso lo hará el proveedor homologado).
+  - HoldedInvoicingProvider   -> conexión real con la API de Holded (Verifactu),
+                                 se activa cuando hay HOLDED_API_KEY.
 
-Verifactu/TicketBAI NO se construyen aquí: los resuelve el proveedor real
-(Holded/Quipu) que ya está homologado. Nosotros solo le pasamos los datos.
+Verifactu/TicketBAI NO se construyen aquí: los resuelve el proveedor homologado
+(Holded/Quipu). Nosotros solo le pasamos los datos.
 """
 
 from __future__ import annotations
@@ -24,28 +26,38 @@ class InvoicingProvider(Protocol):
         ...
 
 
-class MockInvoicingProvider:
-    """Emisión simulada para el prototipo. No envía nada de verdad."""
+class InternalInvoicingProvider:
+    """Emisión real interna, sin proveedor externo.
+
+    Asigna un número de factura CORRELATIVO POR NEGOCIO (cada autónomo tiene su
+    propia serie, como exige la ley) y el PDF real se genera bajo demanda. El
+    registro en Verifactu queda pendiente del proveedor homologado (no es
+    obligatorio para autónomos hasta jul-2027).
+    """
 
     def __init__(self, payment_term_days: int = 15):
         self.payment_term_days = payment_term_days
 
-    def _next_number(self) -> str:
-        """Siguiente número correlativo basado en las facturas ya emitidas."""
+    def _next_number(self, business_id: int) -> str:
+        """Siguiente número correlativo de ESTE negocio (serie por año)."""
         from .. import db
+        year = date.today().year
         with db.get_conn() as conn:
             n = conn.execute(
-                "SELECT COUNT(*) FROM invoices WHERE number IS NOT NULL"
+                "SELECT COUNT(*) FROM invoices WHERE business_id=? "
+                "AND number IS NOT NULL AND number LIKE ?",
+                (business_id, f"{year}/%"),
             ).fetchone()[0]
-        return f"F-{date.today().year}-{n + 1:04d}"
+        return f"{year}/{n + 1:04d}"
 
     def issue(self, invoice: dict, client: dict) -> dict:
-        number = self._next_number()
+        business_id = invoice.get("business_id")
+        number = self._next_number(business_id)
         due = (date.today() + timedelta(days=self.payment_term_days)).isoformat()
         return {
             "number": number,
-            "pdf_url": f"(simulado) factura_{number}.pdf",
-            "verifactu_id": f"MOCK-{number}",
+            "pdf_url": f"/api/{business_id}/invoices/{invoice.get('id')}/pdf",
+            "verifactu_id": None,
             "due_date": due,
             "sent_to": client.get("phone") or client.get("name"),
         }
@@ -73,5 +85,8 @@ class HoldedInvoicingProvider:
 
 
 def get_provider() -> InvoicingProvider:
-    """Devuelve el proveedor activo. Hoy: mock. Mañana: Holded según config."""
-    return MockInvoicingProvider()
+    """Proveedor activo: Holded si hay API key configurada; si no, emisión interna real."""
+    from .. import config
+    if config.HOLDED_API_KEY:
+        return HoldedInvoicingProvider(config.HOLDED_API_KEY)
+    return InternalInvoicingProvider()

@@ -90,13 +90,31 @@ if config.IS_PRODUCTION and config.SECRET_KEY == "dev-secret-cambiar-en-producci
 
 @app.on_event("startup")
 def _startup() -> None:
-    db.init_db()
-    if not db.list_clients():
-        from .. import demo
-        demo.seed()
-    # Usuario de demostración para el negocio 1 (para que puedas entrar y probar).
-    if not db.get_user_by_email("demo@bynoesis.com"):
-        db.create_user("demo@bynoesis.com", auth.hash_password("demo1234"), 1)
+    import logging
+    log = logging.getLogger("uvicorn.error")
+    if config.RESET_DB:
+        # Reinicio de UN SOLO USO: borra todo una vez y deja un marcador, para que
+        # aunque olvides quitar la variable NO se vuelva a borrar en cada despliegue.
+        marker = Path(config.DB_PATH).parent / ".db_reset_done"
+        if marker.exists():
+            db.init_db()
+            log.info("NOESIS_RESET_DB presente, pero ya se reinició antes: no se borra.")
+        else:
+            db.reset_db()
+            try:
+                marker.write_text("done")
+            except OSError:
+                pass
+            log.warning("NOESIS_RESET_DB: base de datos REINICIADA (una sola vez).")
+    else:
+        db.init_db()
+    # Datos demo solo si se piden explícitamente (producción arranca limpia y real).
+    if config.SEED_DEMO:
+        if not db.list_clients():
+            from .. import demo
+            demo.seed()
+        if not db.get_user_by_email("demo@bynoesis.com"):
+            db.create_user("demo@bynoesis.com", auth.hash_password("demo1234"), 1)
     start_scheduler()
 
 

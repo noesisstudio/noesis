@@ -29,3 +29,14 @@ HTTPS_ONLY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("NOESIS_HTTPS"))
 
 # True cuando estamos en un entorno expuesto (para exigir configuración segura).
 IS_PRODUCTION = HTTPS_ONLY
+
+# Datos de demostración: solo se siembran si se pide explícitamente (por defecto NO,
+# para que producción arranque limpia con cuentas reales).
+SEED_DEMO = bool(os.getenv("NOESIS_SEED_DEMO"))
+
+# Reinicio de base de datos: si se activa, BORRA todo al arrancar (para empezar de
+# cero). Úsalo una vez y quita la variable después.
+RESET_DB = bool(os.getenv("NOESIS_RESET_DB"))
+
+# Clave de Holded para facturación real (Verifactu). Si está, se usa Holded.
+HOLDED_API_KEY = os.getenv("HOLDED_API_KEY", "")
