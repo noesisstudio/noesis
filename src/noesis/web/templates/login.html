@@ -23,7 +23,8 @@
       </div>
 
       <div class="card pad">
-        {% if error %}<div class="err">Email o contraseña incorrectos.</div>{% endif %}
+        {% if error == 'throttle' %}<div class="err">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>
+        {% elif error %}<div class="err">Email o contraseña incorrectos.</div>{% endif %}
         <form method="post" action="/login">
           <label class="fld">Email</label>
           <input class="input" name="email" type="email" required placeholder="tu@email.com">

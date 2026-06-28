@@ -153,19 +153,22 @@ def _crear_factura(business_id, cliente, concepto, base, iva=None, irpf=None):
 
 def _enviar_factura(business_id, factura_id):
     inv = db.get_invoice(factura_id)
-    if not inv:
+    # Aislamiento: solo se puede operar sobre facturas del propio negocio.
+    if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
     client = db.get_client(inv["client_id"])
     issued = _provider.issue(inv, client or {})
-    inv = db.mark_invoice_sent(factura_id, issued["number"], issued["due_date"])
+    inv = db.mark_invoice_sent(factura_id, issued["number"], issued["due_date"],
+                               business_id=business_id)
     return {"ok": True, "factura": inv, "emision": issued}
 
 
 def _registrar_pago(business_id, factura_id):
     inv = db.get_invoice(factura_id)
-    if not inv:
+    # Aislamiento: solo se puede operar sobre facturas del propio negocio.
+    if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
-    return {"ok": True, "factura": db.mark_invoice_paid(factura_id)}
+    return {"ok": True, "factura": db.mark_invoice_paid(factura_id, business_id)}
 
 
 def _ver_cobros_pendientes(business_id):

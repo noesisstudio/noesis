@@ -75,6 +75,7 @@ function render(f) {
     <td><span class="badge ${badge(i.status)}">${esc(i.status)}</span></td>
     <td class="t-right table-actions">
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
+      ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Enviar</button>`:''}
       ${i.status==='enviada'?`<button class="btn sm" onclick="pay(${i.id})">Cobrada</button>`:''}
       <button class="iconbtn" title="Borrar" onclick="del(${i.id})">${TRASH}</button>
     </td>
@@ -85,6 +86,11 @@ function render(f) {
     '/b/{{ business.id }}/asistente',
     'Crear por chat'
   );
+}
+async function send(id){
+  if(!confirm('¿Emitir y enviar esta factura? Se le asignará número y fecha.')) return;
+  try { await apiPost('/invoices/'+id+'/send', {}); load(); }
+  catch(e){ alert('No se pudo enviar: ' + e.message); }
 }
 async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
 async function del(id){ if(confirm('¿Borrar esta factura?')){ await apiDelete('/invoices/'+id); load(); } }

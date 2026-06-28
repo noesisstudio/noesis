@@ -41,8 +41,12 @@
           <span class="step-n off">2</span><span>Conecta WhatsApp</span>
         </div>
 
-        {% if error == 'email' %}<div style="background:var(--red-soft);color:var(--red);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px">Ese email ya tiene cuenta. <a href="/login" style="text-decoration:underline">Entra aquí</a>.</div>{% endif %}
-        {% if error == 'password' %}<div style="background:var(--red-soft);color:var(--red);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px">La contraseña debe tener al menos 6 caracteres.</div>{% endif %}
+        {% set errbox = 'background:var(--red-soft);color:var(--red);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px' %}
+        {% if error == 'email' %}<div style="{{ errbox }}">Ese email ya tiene cuenta. <a href="/login" style="text-decoration:underline">Entra aquí</a>.</div>{% endif %}
+        {% if error == 'email_format' %}<div style="{{ errbox }}">El email no tiene un formato válido.</div>{% endif %}
+        {% if error == 'name' %}<div style="{{ errbox }}">Pon el nombre de tu negocio.</div>{% endif %}
+        {% if error == 'password' %}<div style="{{ errbox }}">La contraseña debe tener al menos 6 caracteres.</div>{% endif %}
+        {% if error == 'throttle' %}<div style="{{ errbox }}">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% endif %}
         <form method="post" action="/onboarding/signup">
           <label class="fld">Nombre de tu negocio *</label>
           <input class="input" name="name" required placeholder="Ej. Fontanería García">

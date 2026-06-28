@@ -28,6 +28,7 @@ def seed() -> None:
     db.mark_invoice_sent(
         inv["id"], "F-2026-0001",
         due_date=(today - timedelta(days=2)).isoformat(),
+        business_id=db.DEFAULT_BUSINESS_ID,
     )
     # La marcamos como emitida hace 12 días para que salga el aviso de retraso.
     with db.get_conn() as conn:

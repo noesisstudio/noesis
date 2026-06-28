@@ -307,9 +307,10 @@ def get_job(job_id) -> dict | None:
         return dict(row) if row else None
 
 
-def update_job_status(job_id, status) -> None:
+def update_job_status(job_id, status, business_id) -> None:
     with get_conn() as conn:
-        conn.execute("UPDATE jobs SET status=? WHERE id=?", (status, job_id))
+        conn.execute("UPDATE jobs SET status=? WHERE id=? AND business_id=?",
+                     (status, job_id, business_id))
 
 
 def delete_job(job_id, business_id) -> None:
@@ -388,21 +389,28 @@ def list_invoices(business_id=DEFAULT_BUSINESS_ID, status=None) -> list[dict]:
         return [dict(r) for r in conn.execute(q, params).fetchall()]
 
 
-def mark_invoice_sent(invoice_id, number, due_date=None) -> dict:
+def mark_invoice_sent(invoice_id, number, due_date=None, business_id=None) -> dict | None:
+    """Marca una factura como enviada. Filtra por business_id (aislamiento): si la
+    factura no es de ese negocio, no toca nada y devuelve None."""
     with get_conn() as conn:
-        conn.execute(
+        cur = conn.execute(
             "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=? "
-            "WHERE id=?",
-            (number, _now(), due_date, invoice_id),
+            "WHERE id=? AND business_id=?",
+            (number, _now(), due_date, invoice_id, business_id),
         )
-    return get_invoice(invoice_id)
+        ok = cur.rowcount > 0
+    return get_invoice(invoice_id) if ok else None
 
 
-def mark_invoice_paid(invoice_id) -> dict:
+def mark_invoice_paid(invoice_id, business_id) -> dict | None:
+    """Marca una factura como cobrada. Filtra por business_id (aislamiento): si la
+    factura no es de ese negocio, no toca nada y devuelve None."""
     with get_conn() as conn:
-        conn.execute("UPDATE invoices SET status='cobrada', paid_at=? WHERE id=?",
-                     (_now(), invoice_id))
-    return get_invoice(invoice_id)
+        cur = conn.execute(
+            "UPDATE invoices SET status='cobrada', paid_at=? WHERE id=? AND business_id=?",
+            (_now(), invoice_id, business_id))
+        ok = cur.rowcount > 0
+    return get_invoice(invoice_id) if ok else None
 
 
 def delete_invoice(invoice_id, business_id) -> None:

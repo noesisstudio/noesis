@@ -22,3 +22,10 @@ DEFAULT_VAT_RATE = 21
 
 # Clave para firmar las sesiones (cookies). En producción, ponla en el .env.
 SECRET_KEY = os.getenv("NOESIS_SECRET", "dev-secret-cambiar-en-produccion")
+
+# En producción (Railway inyecta RAILWAY_ENVIRONMENT) las cookies de sesión deben
+# viajar solo por HTTPS. En local (http://127.0.0.1) se desactiva para poder entrar.
+HTTPS_ONLY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("NOESIS_HTTPS"))
+
+# True cuando estamos en un entorno expuesto (para exigir configuración segura).
+IS_PRODUCTION = HTTPS_ONLY

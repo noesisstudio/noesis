@@ -14,6 +14,7 @@ Producción: uvicorn noesis.web.server:app --host 0.0.0.0 --port 8000
 
 from __future__ import annotations
 
+import json
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from .. import config, db
+from ..tools import run_tool
 from . import auth, chat, reports
 from .scheduler import start_scheduler
 
@@ -74,7 +76,16 @@ async def auth_guard(request: Request, call_next):
 
 
 app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY,
-                   max_age=60 * 60 * 24 * 14)  # 14 días
+                   max_age=60 * 60 * 24 * 14,        # 14 días
+                   same_site="lax", https_only=config.HTTPS_ONLY)
+
+# Aviso de seguridad: en producción no se puede usar la clave por defecto (las
+# sesiones serían falsificables). Se registra alto y claro en el arranque.
+if config.IS_PRODUCTION and config.SECRET_KEY == "dev-secret-cambiar-en-produccion":
+    import logging
+    logging.getLogger("uvicorn.error").critical(
+        "NOESIS_SECRET no está configurada en producción: las sesiones son "
+        "INSEGURAS. Define la variable de entorno NOESIS_SECRET ya.")
 
 
 @app.on_event("startup")
@@ -112,7 +123,9 @@ def login_page(request: Request, error: str = ""):
 
 @app.post("/login")
 def login_submit(request: Request, email: str = Form(...), password: str = Form(...)):
-    user = db.get_user_by_email(email)
+    if auth.too_many_attempts(f"login:{auth.client_ip(request)}"):
+        return RedirectResponse("/login?error=throttle", status_code=303)
+    user = db.get_user_by_email((email or "").strip().lower())
     if not user or not auth.verify_password(password, user["password_hash"]):
         return RedirectResponse("/login?error=1", status_code=303)
     request.session["uid"] = user["id"]
@@ -269,7 +282,21 @@ def api_agenda(business_id: int, week: bool = False, start: str = "", end: str =
 
 @app.post("/api/{business_id}/invoices/{invoice_id}/pay")
 def api_mark_paid(business_id: int, invoice_id: int):
-    return db.mark_invoice_paid(invoice_id)
+    inv = db.mark_invoice_paid(invoice_id, business_id)
+    if inv is None:
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    return inv
+
+
+@app.post("/api/{business_id}/invoices/{invoice_id}/send")
+def api_send_invoice(business_id: int, invoice_id: int):
+    # Emite una factura borrador desde la web (mismo flujo que el chat, aislado).
+    result = json.loads(run_tool("enviar_factura",
+                                 {"factura_id": invoice_id}, business_id))
+    if not result.get("ok"):
+        return JSONResponse({"error": result.get("error", "No se pudo enviar.")},
+                            status_code=400)
+    return result["factura"]
 
 
 @app.post("/api/{business_id}/chat")
@@ -305,6 +332,14 @@ def onboarding(request: Request, error: str = ""):
 def onboarding_signup(request: Request, name: str = Form(...),
                       email: str = Form(...), password: str = Form(...),
                       sector: str = Form("")):
+    if auth.too_many_attempts(f"signup:{auth.client_ip(request)}"):
+        return RedirectResponse("/onboarding?error=throttle", status_code=303)
+    email = (email or "").strip().lower()
+    name = (name or "").strip()
+    if not name:
+        return RedirectResponse("/onboarding?error=name", status_code=303)
+    if not auth.valid_email(email):
+        return RedirectResponse("/onboarding?error=email_format", status_code=303)
     if len(password) < 6:
         return RedirectResponse("/onboarding?error=password", status_code=303)
     if db.get_user_by_email(email):
@@ -353,9 +388,13 @@ def whatsapp_verify(hub_challenge: str = ""):
 
 @app.post("/webhook/whatsapp")
 async def whatsapp_inbound(request: Request):
-    payload = await request.json()
-    # TODO: identificar negocio por número y enrutar a chat.handle(...).
-    return {"status": "received", "echo": payload}
+    # Stub: aún no conectado a Meta. No reflejamos la entrada ni reventamos si el
+    # cuerpo no es JSON válido. TODO: verificar firma e identificar negocio por número.
+    try:
+        await request.json()
+    except Exception:  # noqa: BLE001
+        pass
+    return {"status": "received"}
 
 
 def main() -> None:
