@@ -9,7 +9,7 @@
   </div>
   <div class="page-actions">
     <a class="btn" href="/b/{{ business.id }}/agenda">Ver agenda</a>
-    <a class="btn primary" href="/b/{{ business.id }}/asistente">Añadir por chat</a>
+    <button class="btn primary" onclick="addClient()">Añadir cliente</button>
   </div>
 </div>
 
@@ -90,6 +90,28 @@ function edit(id, name, phone, zone, nif, address, email){
     onSubmit: async (v) => {
       if (!v.name) return;
       await apiPost('/clients/'+id, {
+        name:v.name, phone:v.phone, email:v.email, nif:v.nif,
+        address:v.address, zone:v.zone
+      });
+      load();
+    }
+  });
+}
+function addClient(){
+  formModal({
+    title: 'Nuevo cliente',
+    submitLabel: 'Crear cliente',
+    fields: [
+      { name:'name', label:'Nombre', value:'', placeholder:'Nombre o razón social' },
+      { name:'phone', label:'Teléfono', value:'', placeholder:'600 000 000' },
+      { name:'email', label:'Email', value:'', placeholder:'cliente@empresa.es' },
+      { name:'nif', label:'NIF / CIF', value:'', placeholder:'12345678Z' },
+      { name:'address', label:'Domicilio fiscal', value:'', placeholder:'Calle, nº, CP, ciudad' },
+      { name:'zone', label:'Zona', value:'', placeholder:'Badalona' },
+    ],
+    onSubmit: async (v) => {
+      if (!v.name) return;
+      await apiPost('/clients', {
         name:v.name, phone:v.phone, email:v.email, nif:v.nif,
         address:v.address, zone:v.zone
       });

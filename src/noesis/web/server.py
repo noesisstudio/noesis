@@ -357,6 +357,20 @@ def api_delete_expense(business_id: int, expense_id: int):
     return {"ok": True}
 
 
+@app.post("/api/{business_id}/clients")
+async def api_create_client(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "El nombre es obligatorio."}, status_code=400)
+    return db.add_client(name, phone=body.get("phone"), address=body.get("address"),
+                         zone=body.get("zone"), nif=body.get("nif"),
+                         email=body.get("email"), business_id=business_id)
+
+
 @app.post("/api/{business_id}/clients/{client_id}")
 async def api_update_client(business_id: int, client_id: int, request: Request):
     try:
