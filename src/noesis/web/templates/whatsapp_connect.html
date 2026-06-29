@@ -22,7 +22,7 @@
     <div class="connect">
       <div style="text-align:center; margin-bottom:24px">
         <img src="/static/noesis-mark.svg" width="52" height="52" alt="" style="margin-bottom:10px">
-        <div class="kicker">Último paso</div>
+        <div class="kicker">Tu canal diario</div>
         <h1 style="font-size:28px">Conecta WhatsApp</h1>
         <p style="color:var(--muted); margin-top:6px">Noesis vive donde ya trabajas: en el móvil, entre clientes, obras y avisos.</p>
       </div>
@@ -31,7 +31,9 @@
         <div class="steps">
           <span class="step-n ok">✓</span><span style="color:var(--text)">Cuenta creada</span>
           <span class="line"></span>
-          <span class="step-n on">2</span><b style="color:var(--text)">Conecta WhatsApp</b>
+          <span class="step-n ok">✓</span><span style="color:var(--text)">Personalizado</span>
+          <span class="line"></span>
+          <span class="step-n on">3</span><b style="color:var(--text)">WhatsApp</b>
         </div>
 
         <ul class="steps-list" style="margin-bottom:18px">
@@ -50,7 +52,7 @@
         </p>
 
         <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect" style="margin-top:18px">
-          <button class="btn full">Continuar sin WhatsApp por ahora</button>
+          <button class="btn full">Entrar al panel y conectarlo después</button>
         </form>
       </div>
     </div>

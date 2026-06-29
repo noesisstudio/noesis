@@ -25,12 +25,13 @@
     <div class="auth-shell">
       <div class="auth-copy">
         <img src="/static/noesis-mark.svg" width="54" height="54" alt="" style="margin-bottom:12px">
-        <h1>Noesis te quita el papeleo diario.</h1>
-        <p>Agenda, clientes, cobros y facturas para autónomos de servicios que ya trabajan por WhatsApp.</p>
+        <h1>Cierra el ciclo de cada trabajo.</h1>
+        <p>De la primera petición al cobro, para pequeños negocios de instalaciones,
+          mantenimiento y servicios que ya trabajan por WhatsApp.</p>
         <div class="proof">
-          <div class="lrow"><span>Facturas con IVA e IRPF</span><b>correctas</b></div>
-          <div class="lrow"><span>Cobros pendientes</span><b>a la vista</b></div>
-          <div class="lrow"><span>Asistente local</span><b>sin coste por defecto</b></div>
+          <div class="lrow"><span>Configuración inicial</span><b>menos de 5 min</b></div>
+          <div class="lrow"><span>Prueba completa</span><b>14 días sin tarjeta</b></div>
+          <div class="lrow"><span>Tus datos</span><b>siempre exportables</b></div>
         </div>
       </div>
 
@@ -38,7 +39,9 @@
         <div class="steps">
           <span class="step-n on">1</span><b style="color:var(--text)">Crea tu cuenta</b>
           <span class="line"></span>
-          <span class="step-n off">2</span><span>Conecta WhatsApp</span>
+          <span class="step-n off">2</span><span>Personaliza</span>
+          <span class="line"></span>
+          <span class="step-n off">3</span><span>WhatsApp</span>
         </div>
 
         {% set errbox = 'background:var(--red-soft);color:var(--red);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px' %}
@@ -54,14 +57,14 @@
           <input class="input" name="email" type="email" required placeholder="tu@email.com">
           <label class="fld" style="margin-top:14px">Contraseña *</label>
           <input class="input" name="password" type="password" required minlength="12" maxlength="1024" placeholder="Mínimo 12 caracteres">
-          <label class="fld" style="margin-top:14px">Sector</label>
-          <select name="sector">
-            <option value="">Selecciona...</option>
+          <label class="fld" style="margin-top:14px">Sector *</label>
+          <select name="sector" required>
+            <option value="">Selecciona tu actividad...</option>
             <option>Fontanería</option><option>Electricidad</option><option>Reformas</option>
             <option>Climatización</option><option>Limpieza</option><option>Jardinería</option>
             <option>Mantenimiento</option><option>Otro</option>
           </select>
-          <button class="btn primary full" style="margin-top:18px">Continuar</button>
+          <button class="btn primary full" style="margin-top:18px">Crear cuenta y personalizar</button>
           <p style="font-size:12px;color:var(--faint);text-align:center;margin:12px 0 0">
             Al crear la cuenta aceptas los
             <a href="/terminos" style="text-decoration:underline">Términos</a> y la

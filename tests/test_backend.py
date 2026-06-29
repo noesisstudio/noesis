@@ -148,6 +148,47 @@ class BackendTestCase(unittest.TestCase):
         db.set_password(user["id"], auth.hash_password("password-nueva-456"))
         self.assertGreater(db.get_user(user["id"])["session_version"], old_version)
 
+    def test_activation_tracks_first_value_and_first_payment(self):
+        business = db.create_business("Clima Norte", "clima@example.com", "Climatización")
+        first = db.activation_snapshot(business["id"])
+        self.assertEqual(first["progress"], 0)
+        self.assertFalse(first["activated"])
+
+        db.update_business_profile(
+            business["id"], sector="Climatización", team_size="2-5",
+            province="Asturias", primary_goal="facturar",
+        )
+        db.update_fiscal(
+            business["id"], nif="B12345678", address="Calle Taller 1"
+        )
+        client = db.add_client(
+            "Hotel Costa", nif="A12345678", address="Avenida Mar 4",
+            business_id=business["id"],
+        )
+        db.add_job(
+            client["id"], "Revisión de climatización",
+            scheduled_for=date.today().isoformat(), business_id=business["id"],
+        )
+        invoice = db.add_invoice(
+            client["id"], "Mantenimiento", 180, business_id=business["id"]
+        )
+
+        activated = db.activation_snapshot(business["id"])
+        self.assertTrue(activated["activated"])
+        self.assertFalse(activated["outcome_reached"])
+        self.assertEqual(activated["progress"], 67)
+
+        db.issue_invoice(invoice["id"], business["id"])
+        db.mark_invoice_paid(invoice["id"], business["id"])
+        db.set_whatsapp_status(business["id"], "conectado", phone="600123456")
+        completed = db.activation_snapshot(business["id"])
+        self.assertTrue(completed["outcome_reached"])
+        self.assertEqual(completed["progress"], 100)
+
+        db.record_product_event(business["id"], "activation_test")
+        exported = db.export_business_data(business["id"])
+        self.assertEqual(exported["product_events"][0]["event_name"], "activation_test")
+
     def test_portal_token_reuse_resolve_and_revoke(self):
         business, client = self.make_business()
         token = db.get_or_create_portal_token(business["id"], client["id"])
@@ -268,6 +309,57 @@ class PortalHttpTestCase(BackendTestCase):
                     db.get_invoice(accepted["invoice_id"], business_a["id"])["status"],
                     "borrador",
                 )
+
+    def test_saas_health_and_profile_onboarding_flow(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                self.assertEqual(client.get("/health").json()["status"], "ok")
+                self.assertEqual(client.get("/ready").json()["status"], "ready")
+                signup = client.post(
+                    "/onboarding/signup",
+                    data={
+                        "name": "Clima Piloto",
+                        "email": "piloto@example.com",
+                        "password": "password-segura-123",
+                        "sector": "Climatización",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(signup.status_code, 303)
+                setup_url = signup.headers["location"]
+                self.assertIn("/onboarding/setup/", setup_url)
+                self.assertEqual(client.get(setup_url).status_code, 200)
+
+                profile = client.post(
+                    setup_url,
+                    data={
+                        "sector": "Climatización",
+                        "team_size": "2-5",
+                        "primary_goal": "facturar",
+                        "province": "Valencia",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(profile.status_code, 303)
+                self.assertIn("/onboarding/whatsapp/", profile.headers["location"])
+
+                other = db.create_business(
+                    "Negocio ajeno", "ajeno@example.com", "Electricidad"
+                )
+                forbidden = client.get(
+                    f"/onboarding/setup/{other['id']}", follow_redirects=False
+                )
+                self.assertEqual(forbidden.status_code, 303)
+                self.assertEqual(forbidden.headers["location"], "/login")
+
+                user = db.get_user_by_email("piloto@example.com")
+                db.set_password(user["id"], auth.hash_password("password-cambiada-456"))
+                revoked = client.get(setup_url, follow_redirects=False)
+                self.assertEqual(revoked.status_code, 303)
+                self.assertEqual(revoked.headers["location"], "/login")
 
 
 if __name__ == "__main__":

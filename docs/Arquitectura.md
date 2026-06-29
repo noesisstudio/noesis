@@ -23,6 +23,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `web/chat.py` — orquesta: local primero, IA (Claude) de respaldo.
 - `agent.py` + `tools.py` — agente IA y acciones (multi-negocio).
 - `db.py` — SQLite (multi-tenant). Futuro: Postgres/Supabase.
+- `db.py` también persiste eventos de producto y calcula el recorrido de activación
+  por negocio sin depender de una plataforma analítica externa.
 - `adapters/invoicing.py` — facturación: mock hoy → Holded mañana. Ver [[Fiscalidad]].
 - `web/auth.py` — login (PBKDF2, sesiones firmadas). Aislamiento por dueño.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
@@ -39,6 +41,21 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
 - El scheduler registra cada ejecución para evitar duplicados entre réplicas.
+- `/health` comprueba que el proceso responde y `/ready` que la base de datos está
+  disponible; ambos están pensados para despliegue y monitorización.
+- Los eventos de producto se almacenan siempre con `business_id`. La activación se
+  deriva de datos operativos reales, no de clics o páginas visitadas.
+
+## Flujo SaaS de alta
+```
+Cuenta → perfil operativo → WhatsApp → panel
+                              │
+                              └─► recorrido: cliente → trabajo → factura → cobro
+```
+
+El alta recoge sector, tamaño del equipo, provincia y objetivo principal. Estos
+campos permiten segmentar activación, retención y conversión sin mezclar negocios ni
+exponer información personal en herramientas de terceros.
 
 Detalle y pendientes: [[Backend_Hardening]].
 

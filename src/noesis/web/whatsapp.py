@@ -61,6 +61,7 @@ def _try_link(from_phone: str, text: str) -> str | None:
             try:
                 db.set_whatsapp_status(business_id, "conectado", phone=from_phone)
                 db.finish_onboarding(business_id)
+                db.record_product_event(business_id, "whatsapp_connected")
             except Exception:  # noqa: BLE001
                 log.exception("No se pudo vincular WhatsApp al negocio %s.", business_id)
                 return (

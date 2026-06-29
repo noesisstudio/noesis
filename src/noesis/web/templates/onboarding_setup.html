@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Personaliza tu negocio</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body>
+  <div class="onboarding-center">
+    <div class="onboarding-card">
+      <a class="site-brand onboarding-brand" href="/">
+        <img src="/static/noesis-mark.svg" alt="">
+        <span>Noesis</span>
+      </a>
+
+      <div class="onboarding-steps" aria-label="Progreso del alta">
+        <span class="onboarding-step complete">1</span><span>Cuenta</span>
+        <span class="onboarding-line"></span>
+        <span class="onboarding-step current">2</span><b>Personaliza</b>
+        <span class="onboarding-line"></span>
+        <span class="onboarding-step">3</span><span>WhatsApp</span>
+      </div>
+
+      <div class="kicker">Adapta Noesis a tu operativa</div>
+      <h1>¿Cómo funciona {{ business.name }}?</h1>
+      <p class="onboarding-lead">Usamos estas respuestas para priorizar tu primer
+        recorrido y entender qué tipo de negocio obtiene más valor de Noesis.</p>
+
+      {% if error %}
+      <div class="form-error">Revisa el sector, el tamaño del equipo y tu objetivo principal.</div>
+      {% endif %}
+
+      <form method="post" action="/onboarding/setup/{{ business.id }}">
+        <label class="fld">Actividad principal *</label>
+        <select name="sector" required>
+          {% for sector in ['Fontanería', 'Electricidad', 'Reformas', 'Climatización',
+                            'Limpieza', 'Jardinería', 'Mantenimiento', 'Otro'] %}
+          <option value="{{ sector }}" {{ 'selected' if business.sector == sector }}>{{ sector }}</option>
+          {% endfor %}
+        </select>
+
+        <label class="fld" style="margin-top:16px">Personas que trabajan en el negocio *</label>
+        <div class="choice-grid">
+          {% for value, label in [('solo','Solo yo'), ('2-5','De 2 a 5'),
+                                  ('6-10','De 6 a 10'), ('11+','Más de 10')] %}
+          <label class="choice-card">
+            <input type="radio" name="team_size" value="{{ value }}" required
+                   {{ 'checked' if business.team_size == value }}>
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <label class="fld" style="margin-top:16px">¿Qué quieres resolver primero? *</label>
+        <select name="primary_goal" required>
+          <option value="">Selecciona el resultado más urgente...</option>
+          <option value="facturar" {{ 'selected' if business.primary_goal == 'facturar' }}>No dejar trabajos sin facturar</option>
+          <option value="agenda" {{ 'selected' if business.primary_goal == 'agenda' }}>Ordenar agenda y trabajos</option>
+          <option value="cobros" {{ 'selected' if business.primary_goal == 'cobros' }}>Cobrar antes y controlar vencimientos</option>
+          <option value="control" {{ 'selected' if business.primary_goal == 'control' }}>Ver con claridad cómo va el negocio</option>
+        </select>
+
+        <label class="fld" style="margin-top:16px">Provincia <span class="hint">opcional</span></label>
+        <input class="input" name="province" maxlength="80"
+               value="{{ business.province or '' }}" placeholder="Ej. Valencia">
+
+        <button class="btn primary full" style="margin-top:20px">Guardar y conectar WhatsApp</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

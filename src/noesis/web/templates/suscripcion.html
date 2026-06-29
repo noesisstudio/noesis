@@ -31,7 +31,7 @@
 
 <div class="plan-grid">
   <div class="plan">
-    <h3>Autónomo</h3>
+    <h3>Solo</h3>
     <p class="price">29 €<small>/mes</small></p>
     <ul>
       <li>Agenda, clientes y presupuestos</li>
@@ -42,22 +42,22 @@
     </ul>
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="autonomo">
-      <button class="btn primary full" type="submit">Activar plan Autónomo</button>
+      <button class="btn primary full" type="submit">Activar plan Solo</button>
     </form>
   </div>
   <div class="plan featured">
-    <h3>Pro</h3>
+    <h3>Negocio</h3>
     <p class="price">39 €<small>/mes</small></p>
     <ul>
       <li>Todo lo del plan Autónomo</li>
       <li>Más volumen de facturación</li>
       <li>Alertas avanzadas de cobro</li>
-      <li>Integraciones reales (próximamente)</li>
+      <li>Análisis de rentabilidad y cartera</li>
       <li>Soporte prioritario</li>
     </ul>
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="pro">
-      <button class="btn primary full" type="submit">Activar plan Pro</button>
+      <button class="btn primary full" type="submit">Activar plan Negocio</button>
     </form>
   </div>
 </div>

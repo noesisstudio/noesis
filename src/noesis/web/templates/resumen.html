@@ -12,6 +12,35 @@
   </div>
 </div>
 
+{% if activation.progress < 100 %}
+<section class="activation-card" aria-labelledby="activation-title">
+  <div class="activation-head">
+    <div>
+      <div class="kicker">Puesta en marcha</div>
+      <h2 id="activation-title">Completa tu primer ciclo de trabajo</h2>
+      <p>Configura lo esencial y lleva un trabajo desde el cliente hasta el cobro.</p>
+    </div>
+    <div class="activation-score">
+      <b>{{ activation.completed }}/{{ activation.total }}</b>
+      <span>pasos</span>
+    </div>
+  </div>
+  <div class="activation-progress" aria-label="{{ activation.progress }}% completado">
+    <span style="width:{{ activation.progress }}%"></span>
+  </div>
+  <div class="activation-steps">
+    {% for step in activation.steps %}
+    <a class="activation-step {{ 'done' if step.done else 'next' if activation.next_step and activation.next_step.key == step.key }}"
+       href="{{ step.href }}">
+      <span class="activation-index">{{ loop.index }}</span>
+      <span><b>{{ step.label }}</b><small>{{ step.detail }}</small></span>
+      <span class="activation-state">{{ 'Completado' if step.done else 'Abrir' }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <div class="hero-band">
   <div>
     <div class="hb-label">Beneficio estimado · este mes</div>
