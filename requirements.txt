@@ -9,3 +9,7 @@ apscheduler>=3.10.0
 python-multipart>=0.0.9
 itsdangerous>=2.1.0
 fpdf2>=2.7.0
+# Audio -> texto (Whisper local). OPCIONAL: instálalo para activar las notas de voz
+# (necesita más RAM; en Railway conviene subir un poco el plan). Quítale el # cuando
+# quieras activarlo, o instálalo aparte con: pip install faster-whisper
+# faster-whisper>=1.0.0

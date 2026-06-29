@@ -15,10 +15,11 @@ Producción: uvicorn noesis.web.server:app --host 0.0.0.0 --port 8000
 from __future__ import annotations
 
 import json
+import os
 from datetime import date, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -26,7 +27,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .. import config, db
 from ..tools import run_tool
-from . import auth, chat, reports
+from . import auth, chat, reports, whatsapp
 from .scheduler import start_scheduler
 
 HERE = Path(__file__).parent
@@ -333,6 +334,27 @@ async def api_chat(business_id: int, request: Request):
     return chat.handle(business_id, body.get("message", ""))
 
 
+@app.post("/api/{business_id}/chat/audio")
+async def api_chat_audio(business_id: int, audio: UploadFile = File(...)):
+    # Nota de voz -> texto (Whisper local, sin coste por uso) -> cerebro local.
+    from ..adapters import transcription
+    tr = transcription.get_transcriber()
+    if tr is None:
+        return JSONResponse(
+            {"error": "Transcripción de voz no disponible en este servidor."},
+            status_code=503)
+    data = await audio.read()
+    try:
+        text = tr.transcribe(data, audio.filename or "audio")
+    except Exception:  # noqa: BLE001
+        return JSONResponse({"error": "No he podido entender el audio."}, status_code=422)
+    if not text:
+        return JSONResponse({"error": "El audio estaba vacío o no se entendió."},
+                            status_code=422)
+    result = chat.handle(business_id, text)
+    return {"transcription": text, **result}
+
+
 # ============================================================= INFORMES ===== #
 def _csv_response(text: str, filename: str) -> Response:
     return Response(content="﻿" + text,
@@ -385,7 +407,9 @@ def onboarding_whatsapp(request: Request, business_id: int):
     if request.session.get("bid") != business_id:
         return RedirectResponse("/login", status_code=303)
     biz = db.get_business(business_id)
-    return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html", {"business": biz})
+    link = whatsapp.start_link(business_id)
+    return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html",
+                                      {"business": biz, "wa": link})
 
 
 @app.post("/b/{business_id}/fiscal")
@@ -410,19 +434,25 @@ def onboarding_whatsapp_connect(request: Request, business_id: int, phone: str =
 
 # ============================================================== WEBHOOK ===== #
 @app.get("/webhook/whatsapp")
-def whatsapp_verify(hub_challenge: str = ""):
-    return Response(content=hub_challenge or "ok")
+def whatsapp_verify(request: Request):
+    # Verificación del webhook de Meta: devuelve el challenge solo si el token coincide.
+    params = request.query_params
+    expected = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
+    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == expected:
+        return Response(content=params.get("hub.challenge", ""))
+    if not expected:  # aún sin configurar: no bloquea las pruebas
+        return Response(content=params.get("hub.challenge", "ok"))
+    return JSONResponse({"error": "token inválido"}, status_code=403)
 
 
 @app.post("/webhook/whatsapp")
 async def whatsapp_inbound(request: Request):
-    # Stub: aún no conectado a Meta. No reflejamos la entrada ni reventamos si el
-    # cuerpo no es JSON válido. TODO: verificar firma e identificar negocio por número.
+    # Enruta el mensaje entrante: vincula por código o lo pasa al cerebro del negocio.
     try:
-        await request.json()
+        payload = await request.json()
     except Exception:  # noqa: BLE001
-        pass
-    return {"status": "received"}
+        return {"status": "ignored"}
+    return whatsapp.handle_inbound(payload)
 
 
 def main() -> None:

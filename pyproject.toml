@@ -20,6 +20,11 @@ dependencies = [
     "fpdf2>=2.7.0",
 ]
 
+[project.optional-dependencies]
+# Transcripción de voz local (notas de voz -> factura/agenda). Pesa y pide RAM,
+# por eso es opcional: pip install -e ".[audio]"
+audio = ["faster-whisper>=1.0.0"]
+
 [project.scripts]
 noesis = "noesis.cli:main"
 noesis-web = "noesis.web.server:main"

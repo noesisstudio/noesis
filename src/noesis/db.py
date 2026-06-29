@@ -159,6 +159,27 @@ def get_business(business_id) -> dict | None:
         return dict(row) if row else None
 
 
+def normalize_phone(phone: str) -> str:
+    """Deja solo dígitos y se queda con los últimos 9 (España), para comparar
+    teléfonos escritos de mil formas (+34 600..., 0034..., 600 00 00 00)."""
+    digits = "".join(c for c in (phone or "") if c.isdigit())
+    return digits[-9:] if len(digits) >= 9 else digits
+
+
+def get_business_by_phone(phone: str) -> dict | None:
+    """Encuentra el negocio cuyo WhatsApp coincide con el teléfono que escribe."""
+    target = normalize_phone(phone)
+    if not target:
+        return None
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM businesses WHERE whatsapp_phone IS NOT NULL").fetchall()
+    for r in rows:
+        if normalize_phone(r["whatsapp_phone"]) == target:
+            return dict(r)
+    return None
+
+
 def list_businesses() -> list[dict]:
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(
