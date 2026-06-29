@@ -60,8 +60,15 @@ RESET_DB = env_bool("NOESIS_RESET_DB")
 # Clave de Holded para facturación real (Verifactu). Si está, se usa Holded.
 HOLDED_API_KEY = os.getenv("HOLDED_API_KEY", "")
 
-# URL pública (para enlaces en emails y vueltas de pago). En local, localhost.
-BASE_URL = os.getenv("NOESIS_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+# URL pública para emails y vueltas de pago. Railway inyecta su dominio público;
+# NOESIS_BASE_URL sigue teniendo prioridad cuando hay un dominio propio.
+_RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+_DEFAULT_BASE_URL = (
+    f"https://{_RAILWAY_PUBLIC_DOMAIN}"
+    if _RAILWAY_PUBLIC_DOMAIN
+    else "http://127.0.0.1:8000"
+)
+BASE_URL = os.getenv("NOESIS_BASE_URL", _DEFAULT_BASE_URL).strip().rstrip("/")
 
 # Email del fundador con acceso al panel de administración (/admin).
 ADMIN_EMAIL = os.getenv("NOESIS_ADMIN_EMAIL", "").strip().lower()

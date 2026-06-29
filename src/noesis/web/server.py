@@ -143,7 +143,11 @@ def _startup() -> None:
             "NOESIS_SECRET es obligatoria en producción y debe ser larga y aleatoria."
         )
     if config.IS_PRODUCTION and not config.BASE_URL.startswith("https://"):
-        raise RuntimeError("NOESIS_BASE_URL debe usar HTTPS en producción.")
+        log.error(
+            "NOESIS_BASE_URL no usa HTTPS. La app continuará disponible, pero los "
+            "enlaces de recuperación y Stripe pueden ser incorrectos. Configura "
+            "NOESIS_BASE_URL o habilita un dominio público en Railway."
+        )
     if config.IS_PRODUCTION and os.getenv("WHATSAPP_TOKEN") and not config.WHATSAPP_APP_SECRET:
         raise RuntimeError(
             "WHATSAPP_APP_SECRET es obligatorio al activar WhatsApp en producción."
