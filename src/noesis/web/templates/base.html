@@ -21,6 +21,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Noesis · {{ page_title }}</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <meta name="theme-color" content="#14463b">
+  <link rel="apple-touch-icon" href="/static/noesis-mark.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Noesis">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <script>window.NOESIS_BIZ = {{ business.id }};</script>
 </head>
@@ -79,6 +84,7 @@
 
 <script src="/static/vendor/chart.umd.min.js"></script>
 <script src="/static/app.js?v={{ asset_v }}"></script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

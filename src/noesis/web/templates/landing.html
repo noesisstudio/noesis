@@ -6,6 +6,9 @@
   <title>Noesis · Copiloto de negocio por WhatsApp</title>
   <meta name="description" content="Noesis ayuda a autónomos de servicios a gestionar agenda, clientes, cobros y facturas desde WhatsApp.">
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <meta name="theme-color" content="#14463b">
+  <link rel="apple-touch-icon" href="/static/noesis-mark.svg">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
 <body class="landing-body">
@@ -194,5 +197,6 @@
     <span>Noesis · Copiloto de negocio por WhatsApp para autónomos de servicios.</span>
     <span><a href="/privacidad">Privacidad</a> · <a href="/terminos">Términos</a></span>
   </footer>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>
 </html>

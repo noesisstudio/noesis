@@ -134,6 +134,13 @@ def home(request: Request):
     return TEMPLATES.TemplateResponse(request, "landing.html", {"business_id": bid})
 
 
+@app.get("/sw.js")
+def service_worker():
+    # Servido desde la raíz para que el service worker controle toda la app (scope /).
+    return Response(content=(HERE / "static" / "sw.js").read_text(encoding="utf-8"),
+                    media_type="application/javascript")
+
+
 @app.get("/privacidad", response_class=HTMLResponse)
 def privacidad(request: Request):
     return TEMPLATES.TemplateResponse(request, "privacidad.html", {})

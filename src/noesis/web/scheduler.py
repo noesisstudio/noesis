@@ -21,8 +21,13 @@ _scheduler: BackgroundScheduler | None = None
 
 
 def _deliver(business: dict, text: str, kind: str) -> None:
-    # TODO: enviar por WhatsApp (Meta Cloud API) al business['whatsapp_phone'].
-    log.info("[ALERTA %s] -> %s\n%s", kind, business["name"], text)
+    # Envía por el WhatsApp de Noesis al teléfono del autónomo (un solo canal para
+    # todo: comandos, facturas y alertas). Si no hay token, whatsapp.send hace log.
+    from . import whatsapp
+    phone = business.get("whatsapp_phone")
+    if phone:
+        whatsapp.send(phone, text)
+    log.info("[ALERTA %s] -> %s", kind, business["name"])
 
 
 def _active_businesses() -> list[dict]:

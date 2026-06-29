@@ -64,30 +64,80 @@ def _try_link(from_phone: str, text: str) -> str | None:
 
 
 # ------------------------------------------------------------------- Entrantes --
-def _extract_messages(payload: dict) -> list[tuple[str, str]]:
-    """Saca (telefono, texto) del payload. Soporta el formato de Meta Cloud API y
-    un formato simple {from, text} para pruebas."""
-    out: list[tuple[str, str]] = []
+def _extract_messages(payload: dict) -> list[dict]:
+    """Saca los mensajes del payload (texto o audio). Soporta el formato de Meta
+    Cloud API y uno simple {from, text} para pruebas."""
+    out: list[dict] = []
     if not isinstance(payload, dict):
         return out
-    if payload.get("from") and payload.get("text") is not None:  # formato de prueba
-        out.append((str(payload["from"]), str(payload["text"])))
+    if payload.get("from") and (payload.get("text") is not None or payload.get("audio_id")):
+        out.append({"phone": str(payload["from"]), "text": str(payload.get("text") or ""),
+                    "audio_id": payload.get("audio_id")})
         return out
     for entry in payload.get("entry", []) or []:
         for change in entry.get("changes", []) or []:
             value = change.get("value", {}) or {}
             for msg in value.get("messages", []) or []:
                 phone = msg.get("from", "")
-                body = (msg.get("text", {}) or {}).get("body", "")
-                if phone:
-                    out.append((phone, body))
+                if not phone:
+                    continue
+                text = (msg.get("text", {}) or {}).get("body", "")
+                audio_id = (msg.get("audio", {}) or {}).get("id")
+                out.append({"phone": phone, "text": text, "audio_id": audio_id})
     return out
 
 
+def _download_media(media_id: str) -> bytes | None:
+    """Descarga un audio de WhatsApp por su media_id (necesita WHATSAPP_TOKEN)."""
+    if not _TOKEN:
+        return None
+    import json as _json
+    import urllib.request
+    try:
+        meta_req = urllib.request.Request(
+            f"https://graph.facebook.com/v20.0/{media_id}",
+            headers={"Authorization": f"Bearer {_TOKEN}"})
+        info = _json.loads(urllib.request.urlopen(meta_req, timeout=10).read())
+        media_req = urllib.request.Request(
+            info["url"], headers={"Authorization": f"Bearer {_TOKEN}"})
+        return urllib.request.urlopen(media_req, timeout=20).read()
+    except Exception as e:  # noqa: BLE001
+        log.warning("Fallo descargando audio %s: %s", media_id, e)
+        return None
+
+
+def _audio_to_text(audio_id: str) -> str | None:
+    """Descarga el audio y lo transcribe con Whisper local (sin coste por uso)."""
+    from ..adapters import transcription
+    tr = transcription.get_transcriber()
+    if tr is None:
+        return None
+    data = _download_media(audio_id)
+    if not data:
+        return None
+    try:
+        return tr.transcribe(data, "voz.ogg")
+    except Exception as e:  # noqa: BLE001
+        log.warning("Fallo transcribiendo audio: %s", e)
+        return None
+
+
 def handle_inbound(payload: dict) -> dict:
-    """Procesa los mensajes entrantes: vincula por código o enruta al cerebro."""
+    """Procesa los mensajes entrantes (texto y notas de voz): vincula por código o
+    los enruta al cerebro del negocio que escribe."""
     results = []
-    for phone, text in _extract_messages(payload):
+    for msg in _extract_messages(payload):
+        phone, text, audio_id = msg["phone"], msg["text"], msg.get("audio_id")
+
+        # Nota de voz: transcribir a texto (Whisper local) antes de procesar.
+        if audio_id and not text:
+            text = _audio_to_text(audio_id) or ""
+            if not text:
+                send(phone, "He recibido tu nota de voz pero no he podido transcribirla. "
+                            "Escríbeme la orden en texto, por favor.")
+                results.append({"phone": phone, "audio": True, "transcribed": False})
+                continue
+
         linked = _try_link(phone, text)
         if linked is not None:
             send(phone, linked)
@@ -101,7 +151,7 @@ def handle_inbound(payload: dict) -> dict:
             continue
         reply = chat.handle(biz["id"], text).get("reply", "")
         send(phone, reply)
-        results.append({"phone": phone, "business_id": biz["id"]})
+        results.append({"phone": phone, "business_id": biz["id"], "voice": bool(audio_id)})
     return {"processed": len(results), "results": results}
 
 

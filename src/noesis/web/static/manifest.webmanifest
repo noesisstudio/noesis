@@ -1,0 +1,19 @@
+{
+  "name": "Noesis",
+  "short_name": "Noesis",
+  "description": "Copiloto de negocio por WhatsApp para autónomos de servicios.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f1e8",
+  "theme_color": "#14463b",
+  "icons": [
+    {
+      "src": "/static/noesis-mark.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}
