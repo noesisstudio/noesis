@@ -15,10 +15,16 @@ escala bien al principio. Coste estimado: ~5 €/mes.
 3. Railway detecta `Procfile` (`web: noesis-web`) y `requirements.txt` y construye solo.
 4. **Variables de entorno** (Settings → Variables):
    - `NOESIS_SECRET` → una cadena larga y aleatoria (firma las sesiones; **obligatoria**).
+   - `NOESIS_BASE_URL` → `https://bynoesis.com` (obligatoria en producción).
    - `HOST` → `0.0.0.0`
    - `NOESIS_DB_PATH` → `/data/noesis.db` (apunta al volumen, ver paso 5).
+   - `NOESIS_BACKUP_DIR` → `/data/backups`.
    - `ANTHROPIC_API_KEY` → opcional (solo si se quiere IA en el chat; sin ella va el
      cerebro local gratis).
+   - Al activar WhatsApp: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`,
+     `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` y `NOESIS_WHATSAPP_NUMBER`.
+   - Al activar Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+     `STRIPE_PRICE_AUTONOMO` y `STRIPE_PRICE_PRO`.
    - `PORT` lo inyecta Railway automáticamente.
 5. **Volumen persistente**: añadir un Volume montado en `/data`. Sin esto, en cada
    despliegue se borraría la base de datos SQLite (el disco del contenedor es efímero).
@@ -33,7 +39,11 @@ escala bien al principio. Coste estimado: ~5 €/mes.
 
 ## Checklist antes de exponer
 - [ ] `NOESIS_SECRET` puesta y aleatoria (nunca la de por defecto).
+- [ ] `NOESIS_BASE_URL` usa el dominio HTTPS definitivo.
 - [ ] Volumen montado y `NOESIS_DB_PATH` apuntando a él.
+- [ ] `NOESIS_BACKUP_DIR` apunta al volumen persistente.
+- [ ] Si WhatsApp está activo, `WHATSAPP_APP_SECRET` está configurado.
+- [ ] Si Stripe está activo, `STRIPE_WEBHOOK_SECRET` está configurado.
 - [ ] Probar alta de un autónomo nuevo y confirmar que NO ve datos de otro.
 - [ ] Página de privacidad/términos (RGPD) antes de meter datos reales de clientes.
 - [ ] Quitar/!proteger el negocio y usuario demo si se considera necesario.
