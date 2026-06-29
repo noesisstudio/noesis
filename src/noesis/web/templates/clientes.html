@@ -58,7 +58,8 @@ async function load() {
     <td class="t-right num"><b>${eur(c.facturado)}</b></td>
     <td class="t-right table-actions">
       <button class="btn sm" onclick='edit(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone||"")}, ${JSON.stringify(c.zone||"")})'>Editar</button>
-      <button class="iconbtn" title="Borrar" onclick="del(${c.id})">${TRASH}</button>
+      <a class="btn sm" href="/api/${BIZ}/clients/${c.id}/export" title="Descargar sus datos (RGPD)">Datos</a>
+      <button class="iconbtn" title="Borrar y olvidar (RGPD)" onclick="erase(${c.id})">${TRASH}</button>
     </td></tr>`).join('');
   el('cl-empty').innerHTML = cs.length ? '' : emptyState('Aún no tienes clientes', 'Se crean solos cuando facturas o agendas desde el asistente.', '/b/{{ business.id }}/asistente', 'Añadir por chat');
 
@@ -90,7 +91,11 @@ function edit(id, name, phone, zone){
     }
   });
 }
-async function del(id){ if(confirm('¿Borrar este cliente?')){ await apiDelete('/clients/'+id); load(); } }
+async function erase(id){
+  if(confirm('¿Borrar este cliente y TODOS sus datos asociados (citas, presupuestos, facturas)? No se puede deshacer.')){
+    await apiDelete('/clients/'+id+'/erase'); load();
+  }
+}
 load();
 </script>
 {% endblock %}

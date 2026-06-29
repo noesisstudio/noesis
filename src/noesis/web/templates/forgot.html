@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Recuperar contraseña</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  <style>
+    .center { min-height:100vh; display:grid; place-items:center; padding:24px; }
+    .login-shell { width:100%; max-width:420px; }
+    .ok { background:var(--green-soft); color:var(--green); border-radius:8px;
+      padding:10px 12px; font-size:13.5px; margin-bottom:14px; }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="login-shell">
+      <div style="text-align:center; margin-bottom:24px">
+        <img src="/static/noesis-mark.svg" width="52" height="52" alt="">
+        <div style="font-size:30px; font-weight:700; color:var(--brand)">Noesis</div>
+        <p style="color:var(--muted); margin-top:6px">Te enviamos un enlace para crear una contraseña nueva.</p>
+      </div>
+      <div class="card pad">
+        {% if sent %}<div class="ok">Si ese email tiene una cuenta, recibirás un enlace en unos minutos. Revisa también el spam.</div>{% endif %}
+        <form method="post" action="/recuperar">
+          <label class="fld">Email</label>
+          <input class="input" name="email" type="email" required placeholder="tu@email.com">
+          <button class="btn primary full" style="margin-top:18px">Enviar enlace</button>
+        </form>
+      </div>
+      <a href="/login" style="display:block;text-align:center;color:var(--faint); font-size:13px; margin-top:22px">Volver a entrar</a>
+    </div>
+  </div>
+</body>
+</html>

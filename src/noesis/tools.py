@@ -68,6 +68,25 @@ TOOLS: list[dict] = [
         },
     },
     {
+        "name": "crear_presupuesto",
+        "description": (
+            "Prepara un PRESUPUESTO para un cliente con un concepto e importe BASE "
+            "(sin IVA). No es una factura: es una oferta que el cliente puede aceptar. "
+            "Al aceptarse se convierte en factura. Crea el cliente si no existe."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "cliente": {"type": "string"},
+                "concepto": {"type": "string"},
+                "base": {"type": "number", "description": "Importe SIN IVA."},
+                "iva": {"type": "number"},
+                "irpf": {"type": "number"},
+            },
+            "required": ["cliente", "concepto", "base"],
+        },
+    },
+    {
         "name": "enviar_factura",
         "description": "Emite y envía una factura borrador (le da número y vencimiento).",
         "input_schema": {
@@ -151,6 +170,16 @@ def _crear_factura(business_id, cliente, concepto, base, iva=None, irpf=None):
     return {"ok": True, "factura": inv, "mensaje": msg + ")."}
 
 
+def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None):
+    biz = db.get_business(business_id) or {}
+    c = db.get_or_create_client(cliente, business_id=business_id)
+    rate = biz.get("default_vat", 21) if iva is None else iva
+    irpf_rate = biz.get("default_irpf", 0) if irpf is None else irpf
+    q = db.add_quote(c["id"], concepto, base, vat_rate=rate, irpf_rate=irpf_rate,
+                     business_id=business_id)
+    return {"ok": True, "presupuesto": q}
+
+
 def _enviar_factura(business_id, factura_id):
     inv = db.get_invoice(factura_id)
     # Aislamiento: solo se puede operar sobre facturas del propio negocio.
@@ -194,6 +223,7 @@ _DISPATCH = {
     "agendar_trabajo": _agendar_trabajo,
     "ver_agenda": _ver_agenda,
     "crear_factura": _crear_factura,
+    "crear_presupuesto": _crear_presupuesto,
     "enviar_factura": _enviar_factura,
     "registrar_pago": _registrar_pago,
     "ver_cobros_pendientes": _ver_cobros_pendientes,

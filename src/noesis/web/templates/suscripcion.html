@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Tu cuenta</div>
+    <h1>Suscripción</h1>
+    <p>Tu plan de Noesis. Empiezas con una prueba gratuita; cuando quieras, activas el
+       plan y se cobra automáticamente cada mes.</p>
+  </div>
+  <div class="page-actions">
+    {% set st = business.subscription_status or 'trial' %}
+    <span class="sub-state {{ st }}">
+      {% if st == 'active' %}Suscripción activa
+      {% elif st == 'trial' %}En prueba{% if business.trial_ends_at %} · hasta {{ business.trial_ends_at }}{% endif %}
+      {% elif st == 'past_due' %}Pago pendiente
+      {% else %}Cancelada{% endif %}
+    </span>
+  </div>
+</div>
+
+{% if status == 'ok' %}
+<div class="insight" style="margin-bottom:16px">✅ ¡Suscripción activada! Gracias por confiar en Noesis.</div>
+{% elif status == 'cancel' %}
+<div class="insight" style="margin-bottom:16px">Has cancelado el pago. Puedes intentarlo cuando quieras.</div>
+{% elif status == 'manual' %}
+<div class="insight" style="margin-bottom:16px">El cobro automático aún no está activo en este servidor.
+  Hemos anotado tu interés: te activamos el plan a mano y te avisamos.</div>
+{% elif status == 'noportal' %}
+<div class="insight" style="margin-bottom:16px">El portal de gestión estará disponible cuando tengas una suscripción activa.</div>
+{% endif %}
+
+<div class="plan-grid">
+  <div class="plan">
+    <h3>Autónomo</h3>
+    <p class="price">29 €<small>/mes</small></p>
+    <ul>
+      <li>Agenda, clientes y presupuestos</li>
+      <li>Facturas con IVA/IRPF y PDF</li>
+      <li>Cobros y recordatorios automáticos</li>
+      <li>Resumen diario por WhatsApp</li>
+      <li>Impuestos trimestrales (303/130)</li>
+    </ul>
+    <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
+      <input type="hidden" name="plan" value="autonomo">
+      <button class="btn primary full" type="submit">Activar plan Autónomo</button>
+    </form>
+  </div>
+  <div class="plan featured">
+    <h3>Pro</h3>
+    <p class="price">39 €<small>/mes</small></p>
+    <ul>
+      <li>Todo lo del plan Autónomo</li>
+      <li>Más volumen de facturación</li>
+      <li>Alertas avanzadas de cobro</li>
+      <li>Integraciones reales (próximamente)</li>
+      <li>Soporte prioritario</li>
+    </ul>
+    <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
+      <input type="hidden" name="plan" value="pro">
+      <button class="btn primary full" type="submit">Activar plan Pro</button>
+    </form>
+  </div>
+</div>
+
+{% if business.subscription_status == 'active' %}
+<div class="card" style="margin-top:16px"><div class="card-b">
+  <b>Gestionar mi suscripción</b>
+  <p class="hint" style="margin:6px 0 12px">Cambia de plan, actualiza la tarjeta o cancela cuando quieras.</p>
+  <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+    <button class="btn" type="submit">Abrir portal de pago</button>
+  </form>
+</div></div>
+{% endif %}
+
+{% if not billing_on %}
+<p class="hint" style="margin-top:16px">Nota: el cobro con tarjeta se activa cuando conectemos Stripe.
+  Hasta entonces, “activar” registra tu interés y lo gestionamos contigo.</p>
+{% endif %}
+{% endblock %}

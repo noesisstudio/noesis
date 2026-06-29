@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Fiscalidad</div>
+    <h1>Impuestos</h1>
+    <p>Lo que tendrías que liquidar este trimestre, estimado a partir de tus facturas
+       y gastos. Pensado para llevárselo claro a tu gestor, no para presentarlo solo.</p>
+  </div>
+  <div class="page-actions">
+    <select class="input" id="q-sel" style="max-width:160px"></select>
+    <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">Facturas CSV</a>
+    <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">Gastos CSV</a>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="card-h"><b>IVA · Modelo 303</b><span class="hint" id="t-303-n"></span></div>
+    <div class="card-b">
+      <div class="taxrow"><span>IVA repercutido (cobrado en facturas)</span><b id="t-rep">—</b></div>
+      <div class="taxrow"><span>IVA soportado (de gastos con IVA)</span><b id="t-sop">—</b></div>
+      <div class="taxrow total"><span>Resultado a liquidar</span><b id="t-303">—</b></div>
+      <p class="hint" style="margin-top:10px">Resultado = repercutido − soportado. Si sale
+         positivo, es lo que ingresas a Hacienda; si es negativo, queda a tu favor.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><b>IRPF · Modelo 130</b><span class="hint">pago fraccionado</span></div>
+    <div class="card-b">
+      <div class="taxrow"><span>Ingresos (base)</span><b id="t-ing">—</b></div>
+      <div class="taxrow"><span>Gastos deducibles (base)</span><b id="t-gas">—</b></div>
+      <div class="taxrow"><span>Rendimiento neto</span><b id="t-rend">—</b></div>
+      <div class="taxrow"><span>Retenciones ya soportadas</span><b id="t-ret">—</b></div>
+      <div class="taxrow total"><span>Pago fraccionado estimado (20%)</span><b id="t-130">—</b></div>
+    </div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  ⚠️ Son <b>cifras de apoyo</b> calculadas automáticamente. La presentación oficial
+  (303, 130, 390, 347…) revísala siempre con tu gestor: aquí te la dejamos masticada.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const sel = el('q-sel');
+function quarterOptions(){
+  const now = new Date(); const y = now.getFullYear();
+  const cq = Math.floor(now.getMonth()/3)+1;
+  let html = '';
+  for (let yy=y; yy>=y-1; yy--){
+    for (let q=4; q>=1; q--){
+      if (yy===y && q>cq) continue;
+      html += `<option value="${yy}-${q}">${q}T ${yy}</option>`;
+    }
+  }
+  sel.innerHTML = html;
+}
+async function load(){
+  const [y,q] = sel.value.split('-');
+  const d = await api(`/taxes?year=${y}&quarter=${q}`);
+  el('t-rep').textContent = eur(d.iva_repercutido);
+  el('t-sop').textContent = eur(d.iva_soportado);
+  el('t-303').textContent = eur(d.iva_resultado);
+  el('t-303-n').textContent = `${d.n_facturas} factura(s), ${d.n_gastos} gasto(s)`;
+  el('t-ing').textContent = eur(d.ingresos);
+  el('t-gas').textContent = eur(d.base_gastos);
+  el('t-rend').textContent = eur(d.rendimiento);
+  el('t-ret').textContent = '−'+eur(d.irpf_retenido);
+  el('t-130').textContent = eur(d.irpf_pago);
+}
+quarterOptions();
+sel.addEventListener('change', load);
+load();
+</script>
+{% endblock %}

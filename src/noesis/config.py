@@ -40,3 +40,23 @@ RESET_DB = bool(os.getenv("NOESIS_RESET_DB"))
 
 # Clave de Holded para facturación real (Verifactu). Si está, se usa Holded.
 HOLDED_API_KEY = os.getenv("HOLDED_API_KEY", "")
+
+# URL pública (para enlaces en emails y vueltas de pago). En local, localhost.
+BASE_URL = os.getenv("NOESIS_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+
+# Email del fundador con acceso al panel de administración (/admin).
+ADMIN_EMAIL = os.getenv("NOESIS_ADMIN_EMAIL", "").strip().lower()
+
+# Envío de emails (reset de contraseña, avisos). Si no hay SMTP, se registra en log.
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "Noesis <no-reply@bynoesis.com>")
+
+# Cobro de la suscripción (Stripe). Si no hay clave, el alta entra en prueba manual.
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_AUTONOMO = os.getenv("STRIPE_PRICE_AUTONOMO", "")  # price_xxx mensual 29€
+STRIPE_PRICE_PRO = os.getenv("STRIPE_PRICE_PRO", "")            # price_xxx mensual 39€
+TRIAL_DAYS = int(os.getenv("NOESIS_TRIAL_DAYS", "14"))

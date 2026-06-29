@@ -8,6 +8,7 @@
        con el mínimo de servicios externos: tus datos viven en tu servidor.</p>
   </div>
   <div class="page-actions">
+    <a class="btn primary" href="/b/{{ business.id }}/suscripcion">Mi suscripción</a>
     <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">Facturas CSV</a>
     <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">Costes CSV</a>
   </div>
@@ -67,8 +68,9 @@
         </form>
       {% endif %}
       <div class="insight" style="margin-top:14px">
-        En producción se usará la API oficial de Meta. Esta pantalla deja preparado el
-        flujo de usuario sin adelantar lógica sensible de integración.
+        Funciona con la API oficial de Meta (WhatsApp Cloud API). Cuando esté el número
+        de empresa activo, podrás dar órdenes —y enviar notas de voz— y recibir tus
+        avisos de cobro y resúmenes por aquí.
       </div>
     </div>
   </div>
@@ -76,13 +78,16 @@
 
 <div class="grid g2" style="margin-top:16px">
   <div class="card">
-    <div class="card-h"><h2>Datos e informes</h2><span class="hint">exportación</span></div>
+    <div class="card-h"><h2>Datos e informes</h2><span class="hint">RGPD · portabilidad</span></div>
     <div class="card-b">
       <p style="margin-top:0" class="muted">Descarga toda tu información cuando quieras. Es tuya.</p>
       <div class="row">
         <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">Facturas (CSV)</a>
         <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">Costes (CSV)</a>
+        <a class="btn" href="/api/{{ business.id }}/export">Toda la cuenta (JSON)</a>
       </div>
+      <p class="hint" style="margin-top:12px">Para borrar los datos de un cliente concreto
+        (derecho al olvido), entra en <a href="/b/{{ business.id }}/clientes">Clientes</a>.</p>
     </div>
   </div>
 
@@ -95,8 +100,22 @@
       <div class="insight" style="margin-top:14px">
         Noesis usa el mínimo de APIs externas. Lo rutinario se resuelve dentro del
         servidor; solo las consultas complejas, si lo activas, usan IA en la nube.
+        Hacemos copia de seguridad automática de tus datos cada día.
       </div>
     </div>
   </div>
+</div>
+
+<div class="danger-zone">
+  <h3>Dar de baja la cuenta</h3>
+  <p class="muted" style="margin:0 0 12px">Esto borra <b>de forma permanente</b> tu cuenta y
+    todos tus datos (clientes, agenda, presupuestos, facturas y gastos). No se puede deshacer.
+    Antes, te recomendamos <a href="/api/{{ business.id }}/export">descargar una copia</a>.</p>
+  <form method="post" action="/b/{{ business.id }}/account/delete"
+        onsubmit="return confirm('¿Seguro? Se borrará TODO de forma permanente.');"
+        style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+    <input class="input" name="confirm" placeholder="Escribe BORRAR" style="max-width:200px" required>
+    <button class="btn" style="background:var(--red);border-color:var(--red);color:#fff">Eliminar mi cuenta</button>
+  </form>
 </div>
 {% endblock %}

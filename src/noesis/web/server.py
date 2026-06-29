@@ -26,6 +26,8 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from .. import config, db
+from ..adapters import billing as billing_adapter
+from ..adapters import email as email_adapter
 from ..tools import run_tool
 from . import auth, chat, reports, whatsapp
 from .scheduler import start_scheduler
@@ -122,9 +124,9 @@ def _startup() -> None:
 # ============================================================== PÁGINAS ===== #
 _PAGES = {
     "resumen": "Resumen", "analisis": "Análisis", "ingresos": "Ingresos",
-    "costes": "Costes", "facturas": "Facturas", "cobros": "Cobros",
-    "agenda": "Agenda", "clientes": "Clientes", "asistente": "Asistente",
-    "ajustes": "Ajustes",
+    "costes": "Costes", "presupuestos": "Presupuestos", "facturas": "Facturas",
+    "cobros": "Cobros", "impuestos": "Impuestos", "agenda": "Agenda",
+    "clientes": "Clientes", "asistente": "Asistente", "ajustes": "Ajustes",
 }
 
 
@@ -173,6 +175,16 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+
+@app.get("/b/{business_id}/suscripcion", response_class=HTMLResponse)
+def subscription_page(request: Request, business_id: int, status: str = ""):
+    # Definida ANTES de la ruta genérica /b/{id}/{page} para que no la capture ésta.
+    biz = db.get_business(business_id)
+    return TEMPLATES.TemplateResponse(request, "suscripcion.html", {
+        "business": biz, "active": "ajustes", "page_title": "Suscripción",
+        "status": status, "billing_on": billing_adapter.get_provider().available(),
+        "prices": billing_adapter.PLAN_PRICES})
 
 
 @app.get("/b/{business_id}/{page}", response_class=HTMLResponse)
@@ -335,6 +347,76 @@ def api_send_invoice(business_id: int, invoice_id: int):
     return result["factura"]
 
 
+# ----------------------------------------------------------- Presupuestos ---
+@app.get("/api/{business_id}/quotes")
+def api_quotes(business_id: int):
+    return db.list_quotes(business_id)
+
+
+@app.post("/api/{business_id}/quotes")
+async def api_add_quote(business_id: int, request: Request):
+    body = await request.json()
+    cliente = (body.get("cliente") or "").strip()
+    concepto = (body.get("concepto") or "").strip()
+    try:
+        base = float(body.get("base"))
+    except (TypeError, ValueError):
+        base = 0
+    if not cliente or not concepto or base <= 0:
+        return JSONResponse({"error": "Cliente, concepto e importe (>0) son obligatorios."},
+                            status_code=400)
+    args = {"cliente": cliente, "concepto": concepto, "base": base}
+    if body.get("iva") is not None:
+        args["iva"] = body["iva"]
+    if body.get("irpf") is not None:
+        args["irpf"] = body["irpf"]
+    result = json.loads(run_tool("crear_presupuesto", args, business_id))
+    if not result.get("ok"):
+        return JSONResponse({"error": result.get("error", "No se pudo crear.")},
+                            status_code=400)
+    return result["presupuesto"]
+
+
+@app.post("/api/{business_id}/quotes/{quote_id}/send")
+def api_send_quote(business_id: int, quote_id: int):
+    q = db.mark_quote_sent(quote_id, business_id)
+    if q is None:
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    return q
+
+
+@app.post("/api/{business_id}/quotes/{quote_id}/accept")
+def api_accept_quote(business_id: int, quote_id: int):
+    res = db.accept_quote(quote_id, business_id)
+    if res is None:
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    return res
+
+
+@app.post("/api/{business_id}/quotes/{quote_id}/reject")
+def api_reject_quote(business_id: int, quote_id: int):
+    q = db.reject_quote(quote_id, business_id)
+    if q is None:
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    return q
+
+
+@app.delete("/api/{business_id}/quotes/{quote_id}")
+def api_delete_quote(business_id: int, quote_id: int):
+    db.delete_quote(quote_id, business_id)
+    return {"ok": True}
+
+
+# -------------------------------------------------------------- Impuestos ---
+@app.get("/api/{business_id}/taxes")
+def api_taxes(business_id: int, year: int = 0, quarter: int = 0):
+    today = date.today()
+    year = year or today.year
+    quarter = quarter or (today.month - 1) // 3 + 1
+    return {**db.tax_quarter(year, quarter, business_id),
+            "current_year": today.year}
+
+
 @app.post("/api/{business_id}/chat")
 async def api_chat(business_id: int, request: Request):
     body = await request.json()
@@ -379,6 +461,47 @@ def report_invoices(business_id: int):
     return _csv_response(reports.invoices_csv(business_id), "noesis_facturas.csv")
 
 
+# ================================================================ RGPD ====== #
+def _json_download(data: dict, filename: str) -> Response:
+    return Response(content=json.dumps(data, ensure_ascii=False, indent=2, default=str),
+                    media_type="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@app.get("/api/{business_id}/export")
+def api_export_account(business_id: int):
+    """Portabilidad RGPD: descarga TODOS los datos de la cuenta en JSON."""
+    return _json_download(db.export_business_data(business_id),
+                          "noesis_datos_cuenta.json")
+
+
+@app.get("/api/{business_id}/clients/{client_id}/export")
+def api_export_client(business_id: int, client_id: int):
+    data = db.export_client_data(client_id, business_id)
+    if data is None:
+        return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)
+    return _json_download(data, f"noesis_cliente_{client_id}.json")
+
+
+@app.delete("/api/{business_id}/clients/{client_id}/erase")
+def api_erase_client(business_id: int, client_id: int):
+    """Derecho al olvido: borra el cliente y TODO lo asociado (citas, facturas...)."""
+    ok = db.delete_client_cascade(client_id, business_id)
+    if not ok:
+        return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)
+    return {"ok": True}
+
+
+@app.post("/b/{business_id}/account/delete")
+def delete_account(request: Request, business_id: int, confirm: str = Form("")):
+    """Baja total de la cuenta del autónomo (RGPD). Pide escribir BORRAR."""
+    if confirm.strip().upper() != "BORRAR":
+        return RedirectResponse(f"/b/{business_id}/ajustes?error=confirma", status_code=303)
+    db.delete_business_cascade(business_id)
+    request.session.clear()
+    return RedirectResponse("/?bye=1", status_code=303)
+
+
 # =========================================================== ONBOARDING ===== #
 @app.get("/onboarding", response_class=HTMLResponse)
 def onboarding(request: Request, error: str = ""):
@@ -402,6 +525,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
     if db.get_user_by_email(email):
         return RedirectResponse("/onboarding?error=email", status_code=303)
     biz = db.create_business(name, owner_email=email, sector=sector or None)
+    db.set_trial(biz["id"], config.TRIAL_DAYS)  # prueba gratuita al darse de alta
     user = db.create_user(email, auth.hash_password(password), biz["id"])
     request.session["uid"] = user["id"]
     request.session["bid"] = biz["id"]
@@ -460,6 +584,127 @@ async def whatsapp_inbound(request: Request):
     except Exception:  # noqa: BLE001
         return {"status": "ignored"}
     return whatsapp.handle_inbound(payload)
+
+
+# ============================================================ SUSCRIPCIÓN === #
+@app.post("/b/{business_id}/suscripcion/checkout")
+def subscription_checkout(request: Request, business_id: int, plan: str = Form("autonomo")):
+    biz = db.get_business(business_id)
+    provider = billing_adapter.get_provider()
+    base = f"{config.BASE_URL}/b/{business_id}/suscripcion"
+    url = provider.checkout_url(biz, plan, f"{base}?status=ok", f"{base}?status=cancel")
+    if not url:
+        # Sin Stripe configurado: deja constancia de la intención (alta manual).
+        return RedirectResponse(f"{base}?status=manual", status_code=303)
+    return RedirectResponse(url, status_code=303)
+
+
+@app.post("/b/{business_id}/suscripcion/portal")
+def subscription_portal(request: Request, business_id: int):
+    biz = db.get_business(business_id)
+    url = billing_adapter.get_provider().portal_url(
+        biz, f"{config.BASE_URL}/b/{business_id}/suscripcion")
+    if not url:
+        return RedirectResponse(f"/b/{business_id}/suscripcion?status=noportal",
+                                status_code=303)
+    return RedirectResponse(url, status_code=303)
+
+
+@app.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Recibe eventos de Stripe y actualiza el estado de la suscripción del negocio."""
+    payload = await request.body()
+    event = billing_adapter.verify_webhook(payload, request.headers.get("stripe-signature", ""))
+    if event is None:
+        return JSONResponse({"error": "firma inválida"}, status_code=400)
+    obj = event.get("data", {}).get("object", {})
+    etype = event.get("type", "")
+    bid = (obj.get("metadata") or {}).get("business_id") or obj.get("client_reference_id")
+    try:
+        bid = int(bid) if bid else None
+    except (TypeError, ValueError):
+        bid = None
+    if etype == "checkout.session.completed" and bid:
+        db.set_subscription(bid, "active",
+                            plan=(obj.get("metadata") or {}).get("plan"),
+                            customer_id=obj.get("customer"),
+                            subscription_id=obj.get("subscription"))
+    elif etype in ("customer.subscription.deleted", "customer.subscription.canceled"):
+        biz = db.get_business_by_stripe_customer(obj.get("customer"))
+        if biz:
+            db.set_subscription(biz["id"], "canceled")
+    elif etype == "invoice.payment_failed":
+        biz = db.get_business_by_stripe_customer(obj.get("customer"))
+        if biz:
+            db.set_subscription(biz["id"], "past_due")
+    return {"received": True}
+
+
+# ========================================================= ADMIN (fundador) = #
+def _is_admin(request: Request) -> bool:
+    user = auth.current_user(request)
+    if not user:
+        return False
+    if user.get("is_admin"):
+        return True
+    return bool(config.ADMIN_EMAIL) and user["email"].lower() == config.ADMIN_EMAIL
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_panel(request: Request):
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "admin.html",
+                                      {"data": db.admin_overview()})
+
+
+# ===================================================== RESET DE CONTRASEÑA == #
+import hashlib  # noqa: E402
+import secrets  # noqa: E402
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+@app.get("/recuperar", response_class=HTMLResponse)
+def forgot_page(request: Request, sent: str = ""):
+    return TEMPLATES.TemplateResponse(request, "forgot.html", {"sent": sent})
+
+
+@app.post("/recuperar")
+def forgot_submit(request: Request, email: str = Form(...)):
+    if auth.too_many_attempts(f"forgot:{auth.client_ip(request)}"):
+        return RedirectResponse("/recuperar?sent=1", status_code=303)
+    email = (email or "").strip().lower()
+    user = db.get_user_by_email(email)
+    if user:  # Si no existe, no lo revelamos (respuesta idéntica).
+        token = secrets.token_urlsafe(32)
+        db.create_password_reset(user["id"], _hash_token(token), ttl_minutes=60)
+        link = f"{config.BASE_URL}/restablecer?token={token}"
+        email_adapter.send_email(
+            email, "Restablecer tu contraseña de Noesis",
+            f"Hola,\n\nPara crear una contraseña nueva, abre este enlace (válido 1 hora):\n"
+            f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Noesis")
+    return RedirectResponse("/recuperar?sent=1", status_code=303)
+
+
+@app.get("/restablecer", response_class=HTMLResponse)
+def reset_page(request: Request, token: str = "", error: str = ""):
+    return TEMPLATES.TemplateResponse(request, "reset.html",
+                                      {"token": token, "error": error})
+
+
+@app.post("/restablecer")
+def reset_submit(request: Request, token: str = Form(...), password: str = Form(...)):
+    if len(password) < 6:
+        return RedirectResponse(f"/restablecer?token={token}&error=password",
+                                status_code=303)
+    row = db.use_password_reset(_hash_token(token))
+    if not row:
+        return RedirectResponse("/restablecer?error=token", status_code=303)
+    db.set_password(row["user_id"], auth.hash_password(password))
+    return RedirectResponse("/login?error=reset_ok", status_code=303)
 
 
 def main() -> None:

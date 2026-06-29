@@ -473,3 +473,40 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
   .site-footer { display:block; padding-left:18px; padding-right:18px; }
   .site-footer span { display:block; margin-top:6px; }
 }
+
+/* ---- Impuestos: filas de liquidación ---- */
+.taxrow { display:flex; justify-content:space-between; align-items:center; gap:16px;
+  padding:11px 2px; border-bottom:1px solid var(--border); font-size:14px; }
+.taxrow:last-child { border-bottom:none; }
+.taxrow span { color:var(--muted); }
+.taxrow b { font-variant-numeric:tabular-nums; font-size:15px; }
+.taxrow.total { margin-top:6px; border-top:2px solid var(--border-strong); border-bottom:none;
+  padding-top:13px; }
+.taxrow.total span { color:var(--text); font-weight:600; }
+.taxrow.total b { font-family:var(--serif); font-size:20px; color:var(--brand); }
+
+/* ---- Suscripción: planes ---- */
+.plan-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:8px; }
+@media (max-width:720px){ .plan-grid { grid-template-columns:1fr; } }
+.plan { border:1px solid var(--border); border-radius:var(--radius); padding:22px;
+  background:var(--surface); box-shadow:var(--shadow-sm); }
+.plan.featured { border-color:var(--brand-2); box-shadow:0 6px 24px rgba(20,70,59,.10); }
+.plan h3 { margin:0 0 4px; font-size:18px; }
+.plan .price { font-size:34px; margin:6px 0 4px; }
+.plan .price small { font-size:14px; color:var(--muted); font-family:var(--font); }
+.plan ul { list-style:none; padding:0; margin:14px 0 18px; }
+.plan li { padding:6px 0 6px 24px; position:relative; color:var(--muted); font-size:13.8px; }
+.plan li::before { content:"✓"; position:absolute; left:0; color:var(--green); font-weight:700; }
+.sub-state { display:inline-flex; align-items:center; gap:8px; padding:7px 14px;
+  border-radius:999px; font-size:13px; font-weight:600; }
+.sub-state.trial { background:var(--amber-soft); color:var(--amber); }
+.sub-state.active { background:var(--green-soft); color:var(--green); }
+.sub-state.past_due, .sub-state.canceled { background:var(--red-soft); color:var(--red); }
+
+/* ---- Panel admin (fundador) ---- */
+.admin-wrap { max-width:1100px; margin:40px auto; padding:0 24px; }
+.admin-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:20px 0; }
+@media (max-width:720px){ .admin-grid { grid-template-columns:1fr 1fr; } }
+.danger-zone { border:1px solid var(--red); border-radius:var(--radius); padding:18px 20px;
+  background:var(--red-soft); margin-top:20px; }
+.danger-zone h3 { margin:0 0 6px; color:var(--red); }

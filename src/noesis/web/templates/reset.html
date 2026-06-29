@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Nueva contraseña</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  <style>
+    .center { min-height:100vh; display:grid; place-items:center; padding:24px; }
+    .login-shell { width:100%; max-width:420px; }
+    .err { background:var(--red-soft); color:var(--red); border-radius:8px;
+      padding:10px 12px; font-size:13.5px; margin-bottom:14px; }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="login-shell">
+      <div style="text-align:center; margin-bottom:24px">
+        <img src="/static/noesis-mark.svg" width="52" height="52" alt="">
+        <div style="font-size:30px; font-weight:700; color:var(--brand)">Noesis</div>
+        <p style="color:var(--muted); margin-top:6px">Crea tu contraseña nueva.</p>
+      </div>
+      <div class="card pad">
+        {% if error == 'token' %}<div class="err">El enlace no es válido o ha caducado. Pide uno nuevo.</div>
+        {% elif error == 'password' %}<div class="err">La contraseña debe tener al menos 6 caracteres.</div>{% endif %}
+        {% if token %}
+        <form method="post" action="/restablecer">
+          <input type="hidden" name="token" value="{{ token }}">
+          <label class="fld">Nueva contraseña</label>
+          <input class="input" name="password" type="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+          <button class="btn primary full" style="margin-top:18px">Guardar contraseña</button>
+        </form>
+        {% else %}
+        <p style="color:var(--muted)">Falta el enlace de recuperación. <a href="/recuperar">Pide uno nuevo</a>.</p>
+        {% endif %}
+      </div>
+      <a href="/login" style="display:block;text-align:center;color:var(--faint); font-size:13px; margin-top:22px">Volver a entrar</a>
+    </div>
+  </div>
+</body>
+</html>

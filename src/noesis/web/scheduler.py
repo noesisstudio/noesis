@@ -1,20 +1,24 @@
-"""Alertas programadas: resumen diario y semanal (sin ser pesado).
+"""Tareas programadas de Noesis.
 
-Hoy escriben en el log (y quedan listas para enviarse por WhatsApp). Cuando
-conectemos Meta Cloud API, se cambia `_deliver` por el envío real.
+Se envían por el WhatsApp de Noesis al teléfono del autónomo (un solo canal). Si no
+hay token de WhatsApp configurado, `whatsapp.send` registra en el log.
 
-  - Resumen diario:  cada día a las 08:00
-  - Resumen semanal: lunes a las 08:00
+  - Resumen diario:        cada día a las 08:00
+  - Recordatorios de cobro: cada día a las 09:00 (facturas vencidas)
+  - Resumen semanal:       lunes a las 08:00
+  - Copia de seguridad:    cada día a las 03:30
 """
 
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from .. import db
 from ..agent import daily_summary_text
+from . import backups
 
 log = logging.getLogger("noesis.alerts")
 _scheduler: BackgroundScheduler | None = None
@@ -39,6 +43,37 @@ def send_daily_summaries() -> None:
         _deliver(biz, daily_summary_text(biz["id"]), "diario")
 
 
+def _eur(n) -> str:
+    return f"{(n or 0):,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def send_payment_reminders() -> None:
+    """Avisa al autónomo de las facturas vencidas, con un texto listo para reenviar
+    a cada cliente. No reclama más de una vez por semana la misma factura."""
+    for biz in _active_businesses():
+        overdue = db.overdue_invoices(biz["id"])
+        pending_reminder = []
+        for inv in overdue:
+            last = inv.get("last_reminder_at")
+            recent = last and (datetime.now() - datetime.fromisoformat(last)).days < 7
+            if not recent:
+                pending_reminder.append(inv)
+        if not pending_reminder:
+            continue
+        total = sum(i["total"] for i in pending_reminder)
+        lines = [f"🔔 Cobros vencidos en {biz['name']}: "
+                 f"{len(pending_reminder)} factura(s), {_eur(total)} por reclamar.\n"]
+        for inv in pending_reminder[:6]:
+            who = inv.get("client_name") or "cliente"
+            lines.append(
+                f"• {who} — {_eur(inv['total'])} (vencida hace {inv['days_late']} días). "
+                f"Mensaje sugerido: «Hola {who}, te recuerdo la factura "
+                f"{inv.get('number') or ''} de {_eur(inv['total'])}. ¿La puedes abonar "
+                f"esta semana? Gracias.»")
+            db.mark_reminder_sent(inv["id"], biz["id"])
+        _deliver(biz, "\n".join(lines), "cobros")
+
+
 def send_weekly_summaries() -> None:
     for biz in _active_businesses():
         m = db.month_billing(business_id=biz["id"])
@@ -57,9 +92,12 @@ def start_scheduler() -> BackgroundScheduler:
         return _scheduler
     sched = BackgroundScheduler(timezone="Europe/Madrid")
     sched.add_job(send_daily_summaries, "cron", hour=8, minute=0, id="daily")
+    sched.add_job(send_payment_reminders, "cron", hour=9, minute=0, id="reminders")
     sched.add_job(send_weekly_summaries, "cron", day_of_week="mon", hour=8,
                   minute=0, id="weekly")
+    sched.add_job(backups.run_backup, "cron", hour=3, minute=30, id="backup")
     sched.start()
     _scheduler = sched
-    log.info("Scheduler de alertas iniciado (diario 08:00, semanal lun 08:00).")
+    log.info("Scheduler iniciado (diario 08:00, cobros 09:00, semanal lun 08:00, "
+             "backup 03:30).")
     return sched

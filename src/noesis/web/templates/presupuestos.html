@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Ventas</div>
+    <h1>Presupuestos</h1>
+    <p>El primer paso de casi todo trabajo: ofreces un precio, el cliente acepta y,
+       con un clic, el presupuesto se convierte en factura sin reescribir nada.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn primary" onclick="nuevo()">Nuevo presupuesto</button>
+  </div>
+</div>
+
+<div class="grid g3">
+  <div class="metric"><div class="label">Enviados</div><div class="value amber" id="q-sent">—</div><div class="sub">Esperando respuesta</div></div>
+  <div class="metric"><div class="label">Aceptados</div><div class="value green" id="q-acc">—</div><div class="sub" id="q-acc-rate"></div></div>
+  <div class="metric"><div class="label">Importe en juego</div><div class="value" id="q-open">—</div><div class="sub">Enviados sin responder</div></div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-b table-pad" style="padding-top:6px">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nº</th><th>Cliente</th><th>Concepto</th>
+          <th class="t-right">Total</th><th>Válido hasta</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="q-body"></tbody>
+      </table>
+    </div>
+    <div id="q-empty"></div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  También por WhatsApp: <b>“presupuesto a Ana por reforma de baño 1200 €”</b>
+  y aparece aquí listo para enviar.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let ALL = [];
+async function load() {
+  ALL = await api('/quotes');
+  const sent = ALL.filter(q=>q.status==='enviado');
+  const acc = ALL.filter(q=>q.status==='aceptado');
+  const resolved = ALL.filter(q=>['aceptado','rechazado'].includes(q.status));
+  el('q-sent').textContent = sent.length;
+  el('q-acc').textContent = acc.length;
+  el('q-acc-rate').textContent = resolved.length ? pct(acc.length/resolved.length*100)+' de conversión' : 'Sin respuestas aún';
+  el('q-open').textContent = eur(sent.reduce((a,b)=>a+b.total,0));
+  render();
+}
+function badge(s){ return s==='aceptado'?'b-green':s==='enviado'?'b-amber':s==='rechazado'?'b-red':'b-gray'; }
+function render() {
+  el('q-body').innerHTML = ALL.map(q => `<tr>
+    <td class="meta">${esc(q.number||'—')}</td><td>${esc(q.client_name||'')}</td><td>${esc(q.concept)}</td>
+    <td class="t-right num"><b>${eur(q.total)}</b></td>
+    <td class="meta">${dateIso(q.valid_until)}</td>
+    <td><span class="badge ${badge(q.status)}">${esc(q.status)}</span></td>
+    <td class="t-right table-actions">
+      ${q.status==='borrador'?`<button class="btn sm" onclick="send(${q.id})">Enviar</button>`:''}
+      ${q.status==='enviado'?`<button class="btn sm" onclick="accept(${q.id})">Aceptado → factura</button>
+        <button class="btn sm" onclick="reject(${q.id})">Rechazado</button>`:''}
+      ${q.status==='aceptado'?`<a class="btn sm" href="/b/${BIZ}/facturas">Ver factura</a>`:''}
+      <button class="iconbtn" title="Borrar" onclick="del(${q.id})">${TRASH}</button>
+    </td>
+  </tr>`).join('');
+  el('q-empty').innerHTML = ALL.length ? '' : emptyState(
+    'Sin presupuestos todavía',
+    'Crea el primero: es la forma natural de empezar un trabajo y de no dejar dinero sobre la mesa.',
+    null);
+}
+function nuevo(){
+  formModal({
+    title: 'Nuevo presupuesto', submitLabel: 'Crear',
+    fields: [
+      {name:'cliente', label:'Cliente', placeholder:'Nombre del cliente'},
+      {name:'concepto', label:'Concepto', placeholder:'Ej. Reforma de baño'},
+      {name:'base', label:'Importe sin IVA (€)', type:'number', placeholder:'1200'},
+    ],
+    onSubmit: async (v) => {
+      try {
+        await apiPost('/quotes', {cliente:v.cliente, concepto:v.concepto, base:parseFloat(v.base)});
+        load();
+      } catch(e){ alert('No se pudo crear: ' + e.message); }
+    }
+  });
+}
+async function send(id){ await apiPost('/quotes/'+id+'/send', {}); load(); }
+async function reject(id){ await apiPost('/quotes/'+id+'/reject', {}); load(); }
+async function accept(id){
+  if(!confirm('¿Marcar como aceptado? Se creará la factura en borrador automáticamente.')) return;
+  try { await apiPost('/quotes/'+id+'/accept', {}); alert('Factura creada en borrador. La tienes en Facturas.'); load(); }
+  catch(e){ alert('No se pudo: ' + e.message); }
+}
+async function del(id){ if(confirm('¿Borrar este presupuesto?')){ await apiDelete('/quotes/'+id); load(); } }
+load();
+</script>
+{% endblock %}

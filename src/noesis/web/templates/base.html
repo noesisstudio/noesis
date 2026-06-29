@@ -5,8 +5,10 @@
   'analisis': '<path d="M22 12h-4l-3 8L9 4l-3 8H2"/>',
   'ingresos': '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
   'costes': '<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>',
+  'presupuestos': '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   'facturas': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>',
   'cobros': '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  'impuestos': '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
   'agenda': '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/>',
   'clientes': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   'asistente': '<path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z"/>',
@@ -41,8 +43,10 @@
       <a class="nav-item {{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis"><span class="ic">{{ ic('analisis') }}</span> Análisis</a>
       <a class="nav-item {{ 'active' if active=='ingresos' }}" href="/b/{{ b }}/ingresos"><span class="ic">{{ ic('ingresos') }}</span> Ingresos</a>
       <a class="nav-item {{ 'active' if active=='costes' }}" href="/b/{{ b }}/costes"><span class="ic">{{ ic('costes') }}</span> Costes</a>
+      <a class="nav-item {{ 'active' if active=='presupuestos' }}" href="/b/{{ b }}/presupuestos"><span class="ic">{{ ic('presupuestos') }}</span> Presupuestos</a>
       <a class="nav-item {{ 'active' if active=='facturas' }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturas</a>
       <a class="nav-item {{ 'active' if active=='cobros' }}" href="/b/{{ b }}/cobros"><span class="ic">{{ ic('cobros') }}</span> Cobros</a>
+      <a class="nav-item {{ 'active' if active=='impuestos' }}" href="/b/{{ b }}/impuestos"><span class="ic">{{ ic('impuestos') }}</span> Impuestos</a>
       <div class="section-label">Operativa</div>
       <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Agenda</a>
       <a class="nav-item {{ 'active' if active=='clientes' }}" href="/b/{{ b }}/clientes"><span class="ic">{{ ic('clientes') }}</span> Clientes</a>

@@ -93,6 +93,17 @@ def parse(text: str) -> tuple[str, dict] | None:
     if norm in {"hola", "hey", "buenas", "ayuda", "help"} or "que puedes hacer" in norm:
         return (HELP, {})
 
+    # --- Crear presupuesto: "presupuesto a X por Y 95 euros"
+    if "presupuest" in norm:
+        m = re.search(r"presupuest(?:o|ar|a|ame)?\s+(?:a|para)\s+(.+?)\s+por\s+(.+?)[,]?\s*"
+                      r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?", text, re.I)
+        if m:
+            return ("crear_presupuesto", {
+                "cliente": m.group(1).strip(),
+                "concepto": m.group(2).strip(),
+                "base": float(m.group(3).replace(",", ".")),
+            })
+
     # --- Crear factura: "factura a X por Y 95 euros [más iva]"
     if "factura" in norm:
         m = re.search(r"factura(?:r)?\s+a\s+(.+?)\s+por\s+(.+?)[,]?\s*"
@@ -166,6 +177,7 @@ def help_text() -> str:
     return ("Soy Noesis. No soy un chat para entretenerte: soy tu oficina pequeña.\n\n"
             "Puedo registrar cosas y también ayudarte a decidir qué toca mirar:\n"
             "• «Factura a Juan por cambio de grifo 95 euros»\n"
+            "• «Presupuesto a Ana por reforma de baño 1200 euros»\n"
             "• «Agenda a Marta el jueves por la mañana en Badalona»\n"
             "• «Gasté 45 euros en gasolina»\n"
             "• «¿Qué tengo hoy?»\n"
@@ -184,6 +196,14 @@ def format_reply(tool: str, result: dict) -> str:
             desglose += f" − IRPF {_eur(f['irpf_amount'])}"
         return (f"🧾 Factura preparada para {f['client_name']}: **{_eur(f['total'])}** "
                 f"({desglose}). La dejo en borrador para que puedas revisarla antes de enviarla.")
+    if tool == "crear_presupuesto":
+        q = result["presupuesto"]
+        desglose = f"base {_eur(q['base'])} + IVA {_eur(q['vat_amount'])}"
+        if q.get("irpf_amount"):
+            desglose += f" − IRPF {_eur(q['irpf_amount'])}"
+        return (f"📝 Presupuesto preparado para {q['client_name']}: **{_eur(q['total'])}** "
+                f"({desglose}). Lo tienes en Presupuestos: envíalo y, si lo aceptan, "
+                "se convierte en factura con un clic.")
     if tool == "registrar_gasto":
         g = result["gasto"]
         return (f"📉 Gasto registrado: {g['concept']} — {_eur(g['amount'])}.\n"

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from . import config
@@ -95,7 +95,48 @@ CREATE TABLE IF NOT EXISTS expenses (
     spent_on    TEXT,
     created_at  TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS quotes (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL DEFAULT 1,
+    number      TEXT,
+    client_id   INTEGER REFERENCES clients(id),
+    concept     TEXT NOT NULL,
+    base        REAL NOT NULL,
+    vat_rate    REAL NOT NULL,
+    vat_amount  REAL NOT NULL,
+    irpf_rate   REAL NOT NULL DEFAULT 0,
+    irpf_amount REAL NOT NULL DEFAULT 0,
+    total       REAL NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'borrador',  -- borrador|enviado|aceptado|rechazado
+    valid_until TEXT,
+    invoice_id  INTEGER REFERENCES invoices(id),   -- factura creada al aceptar
+    created_at  TEXT NOT NULL,
+    accepted_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    token_hash  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    used        INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL
+);
 """
+
+# Migraciones suaves: columnas añadidas después del esquema inicial. Se aplican con
+# ALTER TABLE solo si faltan, para no perder datos de las cuentas ya creadas.
+_MIGRATIONS: list[tuple[str, str, str]] = [
+    ("businesses", "plan", "TEXT NOT NULL DEFAULT 'trial'"),
+    ("businesses", "subscription_status", "TEXT NOT NULL DEFAULT 'trial'"),  # trial|active|past_due|canceled
+    ("businesses", "trial_ends_at", "TEXT"),
+    ("businesses", "stripe_customer_id", "TEXT"),
+    ("businesses", "stripe_subscription_id", "TEXT"),
+    ("users", "is_admin", "INTEGER NOT NULL DEFAULT 0"),
+    ("invoices", "last_reminder_at", "TEXT"),
+    ("invoices", "reminders_sent", "INTEGER NOT NULL DEFAULT 0"),
+]
 
 
 @contextmanager
@@ -115,9 +156,19 @@ def get_conn():
         conn.close()
 
 
+def _migrate() -> None:
+    """Aplica columnas nuevas a tablas existentes sin perder datos (idempotente)."""
+    with get_conn() as conn:
+        for table, column, decl in _MIGRATIONS:
+            cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+            if column not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
 def init_db() -> None:
     with get_conn() as conn:
         conn.executescript(SCHEMA)
+    _migrate()
     _ensure_default_business()
 
 
@@ -627,3 +678,319 @@ def monthly_series(business_id=DEFAULT_BUSINESS_ID, months: int = 6) -> list[dic
         series.append({"month": key, "invoiced": b["invoiced"],
                        "expenses": b["expenses"], "profit": b["estimated_profit"]})
     return series
+
+
+# ----------------------------------------------------------- Presupuestos ---
+def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
+              irpf_rate=0, valid_days=30, business_id=DEFAULT_BUSINESS_ID) -> dict:
+    """Crea un presupuesto (mismo cálculo que una factura, pero sin valor fiscal
+    hasta que se acepta y se convierte en factura)."""
+    base = round(float(base), 2)
+    vat_amount = round(base * vat_rate / 100, 2)
+    irpf_amount = round(base * (irpf_rate or 0) / 100, 2)
+    total = round(base + vat_amount - irpf_amount, 2)
+    valid_until = (date.today() + timedelta(days=valid_days)).isoformat()
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO quotes (business_id, client_id, concept, base, vat_rate, "
+            "vat_amount, irpf_rate, irpf_amount, total, status, valid_until, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?)",
+            (business_id, client_id, concept, base, vat_rate, vat_amount,
+             irpf_rate or 0, irpf_amount, total, valid_until, _now()),
+        )
+        new_id = cur.lastrowid
+    return get_quote(new_id)
+
+
+def get_quote(quote_id) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT q.*, c.name AS client_name FROM quotes q "
+            "LEFT JOIN clients c ON c.id = q.client_id WHERE q.id=?",
+            (quote_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def list_quotes(business_id=DEFAULT_BUSINESS_ID, status=None) -> list[dict]:
+    q = ("SELECT q.*, c.name AS client_name FROM quotes q "
+         "LEFT JOIN clients c ON c.id = q.client_id WHERE q.business_id=?")
+    params: list = [business_id]
+    if status:
+        q += " AND q.status=?"
+        params.append(status)
+    q += " ORDER BY q.created_at DESC"
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(q, params).fetchall()]
+
+
+def _next_quote_number(conn, business_id) -> str:
+    year = date.today().year
+    n = conn.execute(
+        "SELECT COUNT(*) FROM quotes WHERE business_id=? AND number IS NOT NULL "
+        "AND number LIKE ?", (business_id, f"P{year}/%")).fetchone()[0]
+    return f"P{year}/{n + 1:04d}"
+
+
+def mark_quote_sent(quote_id, business_id) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM quotes WHERE id=? AND business_id=?",
+                           (quote_id, business_id)).fetchone()
+        if not row:
+            return None
+        number = row["number"] or _next_quote_number(conn, business_id)
+        conn.execute("UPDATE quotes SET status='enviado', number=? "
+                     "WHERE id=? AND business_id=?", (number, quote_id, business_id))
+    return get_quote(quote_id)
+
+
+def reject_quote(quote_id, business_id) -> dict | None:
+    with get_conn() as conn:
+        cur = conn.execute("UPDATE quotes SET status='rechazado' "
+                           "WHERE id=? AND business_id=?", (quote_id, business_id))
+        ok = cur.rowcount > 0
+    return get_quote(quote_id) if ok else None
+
+
+def accept_quote(quote_id, business_id) -> dict | None:
+    """Acepta un presupuesto y crea la factura borrador equivalente. Aislado por
+    negocio: si el presupuesto no es de ese negocio, no hace nada."""
+    q = get_quote(quote_id)
+    if not q or q.get("business_id") != business_id:
+        return None
+    inv = add_invoice(q["client_id"], q["concept"], q["base"], vat_rate=q["vat_rate"],
+                      irpf_rate=q["irpf_rate"], business_id=business_id)
+    with get_conn() as conn:
+        conn.execute("UPDATE quotes SET status='aceptado', accepted_at=?, invoice_id=? "
+                     "WHERE id=? AND business_id=?",
+                     (_now(), inv["id"], quote_id, business_id))
+    return {"quote": get_quote(quote_id), "invoice": inv}
+
+
+def delete_quote(quote_id, business_id) -> None:
+    with get_conn() as conn:
+        conn.execute("DELETE FROM quotes WHERE id=? AND business_id=?",
+                     (quote_id, business_id))
+
+
+# -------------------------------------------------------- Impuestos (303/130) ---
+_QUARTERS = {1: ("01", "03"), 2: ("04", "06"), 3: ("07", "09"), 4: ("10", "12")}
+
+
+def tax_quarter(year: int, quarter: int, business_id=DEFAULT_BUSINESS_ID) -> dict:
+    """Resumen fiscal de un trimestre: IVA (modelo 303) e IRPF pago fraccionado
+    (modelo 130, estimación directa simplificada). Son CIFRAS DE APOYO para el
+    gestor, no una presentación oficial."""
+    m0, m1 = _QUARTERS[quarter]
+    start, end = f"{year}-{m0}", f"{year}-{m1}"
+
+    def _in_range(d: str | None) -> bool:
+        return bool(d) and start <= d[:7] <= end
+
+    invoices = [i for i in list_invoices(business_id)
+                if i.get("status") in ("enviada", "cobrada")
+                and _in_range(i.get("issued_at") or i.get("created_at"))]
+    expenses = [e for e in list_expenses(business_id)
+                if _in_range(e.get("spent_on") or e.get("created_at"))]
+
+    ingresos = round(sum(i["base"] for i in invoices), 2)
+    iva_repercutido = round(sum(i.get("vat_amount") or 0 for i in invoices), 2)
+    irpf_retenido = round(sum(i.get("irpf_amount") or 0 for i in invoices), 2)
+    gastos = round(sum(e["amount"] for e in expenses), 2)
+    # IVA soportado solo de gastos que registran su tipo (no se inventa).
+    iva_soportado = round(sum(
+        (e["amount"] - e["amount"] / (1 + (e["vat_rate"] or 0) / 100)) if e.get("vat_rate") else 0
+        for e in expenses), 2)
+    base_gastos = round(sum(
+        (e["amount"] / (1 + (e["vat_rate"] or 0) / 100)) if e.get("vat_rate") else e["amount"]
+        for e in expenses), 2)
+
+    iva_resultado = round(iva_repercutido - iva_soportado, 2)          # modelo 303
+    rendimiento = round(ingresos - base_gastos, 2)
+    # Modelo 130: 20% del rendimiento neto del trimestre, menos retenciones soportadas.
+    irpf_pago = round(max(rendimiento * 0.20 - irpf_retenido, 0), 2)
+
+    return {
+        "year": year, "quarter": quarter, "label": f"{quarter}T {year}",
+        "ingresos": ingresos, "iva_repercutido": iva_repercutido,
+        "gastos": gastos, "base_gastos": base_gastos, "iva_soportado": iva_soportado,
+        "iva_resultado": iva_resultado, "irpf_retenido": irpf_retenido,
+        "rendimiento": rendimiento, "irpf_pago": irpf_pago,
+        "n_facturas": len(invoices), "n_gastos": len(expenses),
+    }
+
+
+# ----------------------------------------------------------- Recordatorios ---
+def overdue_invoices(business_id=DEFAULT_BUSINESS_ID, min_days: int = 1) -> list[dict]:
+    """Facturas enviadas cuyo vencimiento ya pasó (para reclamar el cobro)."""
+    out = []
+    for p in pending_payments(business_id):
+        due = p.get("due_date")
+        days_late = None
+        if due:
+            days_late = (date.today() - date.fromisoformat(due[:10])).days
+        if days_late is not None and days_late >= min_days:
+            p["days_late"] = days_late
+            out.append(p)
+    return out
+
+
+def mark_reminder_sent(invoice_id, business_id) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE invoices SET last_reminder_at=?, "
+            "reminders_sent=COALESCE(reminders_sent,0)+1 "
+            "WHERE id=? AND business_id=?", (_now(), invoice_id, business_id))
+
+
+# ------------------------------------------------- Reset de contraseña ---
+def set_password(user_id, password_hash) -> None:
+    with get_conn() as conn:
+        conn.execute("UPDATE users SET password_hash=? WHERE id=?",
+                     (password_hash, user_id))
+
+
+def create_password_reset(user_id, token_hash, ttl_minutes: int = 60) -> None:
+    expires = (datetime.now() + timedelta(minutes=ttl_minutes)).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) "
+            "VALUES (?, ?, ?, ?)", (user_id, token_hash, expires, _now()))
+
+
+def use_password_reset(token_hash) -> dict | None:
+    """Devuelve el reset válido (no usado, no caducado) y lo marca usado."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM password_resets WHERE token_hash=? AND used=0",
+            (token_hash,)).fetchone()
+        if not row:
+            return None
+        if row["expires_at"] < datetime.now().isoformat(timespec="seconds"):
+            return None
+        conn.execute("UPDATE password_resets SET used=1 WHERE id=?", (row["id"],))
+        return dict(row)
+
+
+# --------------------------------------------------------- Suscripción ---
+def set_trial(business_id, days: int = 14) -> None:
+    ends = (date.today() + timedelta(days=days)).isoformat()
+    with get_conn() as conn:
+        conn.execute("UPDATE businesses SET subscription_status='trial', plan='trial', "
+                     "trial_ends_at=? WHERE id=?", (ends, business_id))
+
+
+def set_subscription(business_id, status, plan=None, customer_id=None,
+                     subscription_id=None) -> dict | None:
+    fields, params = ["subscription_status=?"], [status]
+    for col, val in [("plan", plan), ("stripe_customer_id", customer_id),
+                     ("stripe_subscription_id", subscription_id)]:
+        if val is not None:
+            fields.append(f"{col}=?")
+            params.append(val)
+    params.append(business_id)
+    with get_conn() as conn:
+        conn.execute(f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params)
+    return get_business(business_id)
+
+
+def get_business_by_stripe_customer(customer_id) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM businesses WHERE stripe_customer_id=?",
+                           (customer_id,)).fetchone()
+        return dict(row) if row else None
+
+
+# ----------------------------------------------------- Panel de administración ---
+def admin_overview() -> dict:
+    """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
+    operativos de cada autónomo, solo metadatos de cuenta y agregados."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT b.id, b.name, b.sector, b.owner_email, b.created_at, "
+            "b.whatsapp_status, b.plan, b.subscription_status, b.trial_ends_at, "
+            "(SELECT COUNT(*) FROM invoices i WHERE i.business_id=b.id) AS n_facturas, "
+            "(SELECT COUNT(*) FROM clients c WHERE c.business_id=b.id) AS n_clientes, "
+            "(SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.business_id=b.id "
+            "  AND i.status IN ('enviada','cobrada')) AS facturado "
+            "FROM businesses b WHERE b.id<>1 ORDER BY b.created_at DESC").fetchall()
+    biz = [dict(r) for r in rows]
+    PRICES = {"trial": 0, "autonomo": 29, "pro": 39}
+    activos = [b for b in biz if b["subscription_status"] == "active"]
+    mrr = sum(PRICES.get(b["plan"], 0) for b in activos)
+    return {
+        "total": len(biz), "activos": len(activos),
+        "en_prueba": len([b for b in biz if b["subscription_status"] == "trial"]),
+        "whatsapp_conectados": len([b for b in biz if b["whatsapp_status"] == "conectado"]),
+        "mrr": mrr, "businesses": biz,
+    }
+
+
+# ----------------------------------------------------------- RGPD (export/borrado) ---
+def export_business_data(business_id) -> dict:
+    """Vuelca TODOS los datos de un negocio (derecho de portabilidad RGPD)."""
+    return {
+        "business": get_business(business_id),
+        "clients": list_clients(business_id),
+        "jobs": [dict(r) for r in _rows(
+            "SELECT * FROM jobs WHERE business_id=?", business_id)],
+        "invoices": list_invoices(business_id),
+        "quotes": list_quotes(business_id),
+        "expenses": list_expenses(business_id),
+        "exported_at": _now(),
+    }
+
+
+def export_client_data(client_id, business_id) -> dict | None:
+    """Vuelca los datos de un cliente final concreto (RGPD por persona)."""
+    client = get_client(client_id)
+    if not client or client.get("business_id") != business_id:
+        return None
+    return {
+        "client": client,
+        "jobs": [dict(r) for r in _rows(
+            "SELECT * FROM jobs WHERE business_id=? AND client_id=?",
+            business_id, client_id)],
+        "invoices": [dict(r) for r in _rows(
+            "SELECT * FROM invoices WHERE business_id=? AND client_id=?",
+            business_id, client_id)],
+        "quotes": [dict(r) for r in _rows(
+            "SELECT * FROM quotes WHERE business_id=? AND client_id=?",
+            business_id, client_id)],
+        "exported_at": _now(),
+    }
+
+
+def _rows(sql: str, *params):
+    with get_conn() as conn:
+        return conn.execute(sql, params).fetchall()
+
+
+def delete_client_cascade(client_id, business_id) -> bool:
+    """Borra un cliente y todo lo asociado (derecho al olvido RGPD)."""
+    client = get_client(client_id)
+    if not client or client.get("business_id") != business_id:
+        return False
+    with get_conn() as conn:
+        conn.execute("DELETE FROM quotes WHERE business_id=? AND client_id=?",
+                     (business_id, client_id))
+        conn.execute("DELETE FROM invoices WHERE business_id=? AND client_id=?",
+                     (business_id, client_id))
+        conn.execute("DELETE FROM jobs WHERE business_id=? AND client_id=?",
+                     (business_id, client_id))
+        conn.execute("DELETE FROM clients WHERE id=? AND business_id=?",
+                     (client_id, business_id))
+    return True
+
+
+def delete_business_cascade(business_id) -> None:
+    """Borra una cuenta entera y todos sus datos (baja RGPD del autónomo)."""
+    if business_id == DEFAULT_BUSINESS_ID:
+        return
+    with get_conn() as conn:
+        for table in ("quotes", "invoices", "jobs", "clients", "expenses"):
+            conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
+        conn.execute("DELETE FROM password_resets WHERE user_id IN "
+                     "(SELECT id FROM users WHERE business_id=?)", (business_id,))
+        conn.execute("DELETE FROM users WHERE business_id=?", (business_id,))
+        conn.execute("DELETE FROM businesses WHERE id=?", (business_id,))
