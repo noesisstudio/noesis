@@ -3,9 +3,8 @@
 <div class="page-head">
   <div class="page-title">
     <div class="kicker">Panel diario</div>
-    <h1>Hola, {{ business.name }}</h1>
-    <p>Tu mesa de trabajo para decidir rápido: dinero pendiente, agenda de hoy,
-       margen del mes y fiscalidad básica bajo control.</p>
+    <h1>Resumen de {{ business.name }}</h1>
+    <div class="page-count" id="hd-sub">Tu situación de un vistazo</div>
   </div>
   <div class="page-actions">
     <a class="btn" href="/b/{{ business.id }}/asistente">Hablar con Noesis</a>
@@ -13,49 +12,50 @@
   </div>
 </div>
 
-<div class="grid g4">
-  <div class="metric feature">
-    <div class="label">Beneficio estimado (mes)</div>
-    <div class="value" id="m-profit">—</div>
-    <div class="sub">Ingresos menos gastos del mes en curso</div>
+<div class="hero-band">
+  <div>
+    <div class="hb-label">Beneficio estimado · este mes</div>
+    <div class="hb-value" id="hb-profit">—</div>
+    <div class="hb-chip" id="hb-chip">Ingresos menos gastos del mes en curso</div>
   </div>
-  <div class="metric">
-    <div class="label">Facturado</div>
-    <div class="value" id="m-invoiced">—</div>
-    <div class="sub" id="m-collected"></div>
+  <div class="hb-side">
+    <div class="r"><span>Facturado</span><b id="hb-inv">—</b></div>
+    <div class="r"><span>Cobrado</span><b id="hb-col">—</b></div>
+    <div class="r"><span>Pendiente</span><b id="hb-pend">—</b></div>
   </div>
-  <div class="metric">
-    <div class="label">Gastos</div>
-    <div class="value red" id="m-expenses">—</div>
-    <div class="sub">Registrados este mes</div>
-  </div>
-  <div class="metric">
-    <div class="label">Pendiente de cobro</div>
-    <div class="value amber" id="m-pending">—</div>
-    <div class="sub" id="m-pending-n"></div>
-  </div>
+</div>
+
+<div class="grid g4" style="margin-top:16px">
+  <div class="stat"><div class="lbl">Facturado (mes)</div><div class="val" id="s-inv">—</div>
+    <div class="delta flat" id="s-inv-d">—</div></div>
+  <div class="stat"><div class="lbl">Gastos (mes)</div><div class="val" id="s-exp">—</div>
+    <div class="delta flat" id="s-exp-d">registrados este mes</div></div>
+  <div class="stat"><div class="lbl">Pendiente de cobro</div><div class="val" id="s-pend">—</div>
+    <div class="delta flat" id="s-pend-d">—</div></div>
+  <div class="stat"><div class="lbl">Hoy</div><div class="val" id="s-today">—</div>
+    <div class="delta flat" id="s-today-d">—</div></div>
 </div>
 
 <div class="split" style="margin-top:16px">
   <div class="card">
     <div class="card-h"><h2>Ingresos vs gastos</h2><span class="hint">últimos 6 meses</span></div>
-    <div class="card-b"><div style="height:260px"><canvas id="ch-main"></canvas></div></div>
+    <div class="card-b"><div style="height:264px"><canvas id="ch-main"></canvas></div></div>
   </div>
   <div class="card card-action">
-    <div class="card-h"><h2>Próxima acción</h2><span id="next-priority" class="priority low">listo</span></div>
-    <div class="card-b"><div id="next-action">...</div></div>
+    <div class="card-h"><h2>Tu plan para hoy</h2>
+      <a class="hint" href="/b/{{ business.id }}/asistente">abrir copiloto</a></div>
+    <div class="card-b"><ul class="plan-list" id="plan"><li class="muted">Calculando…</li></ul></div>
   </div>
 </div>
 
 <div class="grid g3" style="margin-top:16px">
   <div class="card">
-    <div class="card-h"><h2>Hoy</h2><a class="hint" href="/b/{{ business.id }}/agenda">agenda</a></div>
-    <div class="card-b"><div id="today">...</div></div>
+    <div class="card-h"><h2>Top clientes</h2><span class="hint">por facturación</span></div>
+    <div class="card-b"><div class="barlist" id="top-clients"></div></div>
   </div>
   <div class="card">
-    <div class="card-h"><h2>Cobros que vigilar</h2>
-      <a class="hint" href="/b/{{ business.id }}/cobros">ver todos</a></div>
-    <div class="card-b"><div id="pending">...</div></div>
+    <div class="card-h"><h2>Gastos por categoría</h2><a class="hint" href="/b/{{ business.id }}/costes">ver costes</a></div>
+    <div class="card-b"><div class="barlist" id="cost-cats"></div></div>
   </div>
   <div class="card">
     <div class="card-h"><h2>IVA y salud fiscal</h2>
@@ -70,20 +70,52 @@
     </div>
   </div>
 </div>
+
+<div class="grid g2" style="margin-top:16px">
+  <div class="card">
+    <div class="card-h"><h2>Trabajos de hoy</h2><a class="hint" href="/b/{{ business.id }}/agenda">agenda</a></div>
+    <div class="card-b"><div id="today">…</div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Cobros que vigilar</h2>
+      <a class="hint" href="/b/{{ business.id }}/cobros">ver todos</a></div>
+    <div class="card-b"><div id="pending">…</div></div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+function barlist(items, cls) {
+  if (!items.length) return '<div class="empty">Sin datos todavía.</div>';
+  const max = Math.max(1, ...items.map(i => i.value || 0));
+  return items.map(i => `<div class="b-row">
+    <span class="b-name">${esc(i.name)}</span>
+    <span class="b-val">${esc(i.valText)}</span>
+    <span class="b-track"><span class="b-fill ${cls || ''}" style="width:${Math.round((i.value || 0) / max * 100)}%"></span></span>
+  </div>`).join('');
+}
+
 async function load() {
   const s = await api('/summary');
-  el('m-profit').textContent = eur(s.estimated_profit);
-  el('m-invoiced').textContent = eur(s.invoiced);
-  el('m-collected').textContent = 'Cobrado: ' + eur(s.collected);
-  el('m-expenses').textContent = eur(s.expenses);
-  el('m-pending').textContent = eur(s.pending_total);
-  el('m-pending-n').textContent = s.pending_count + ' factura(s)';
+  el('hb-profit').textContent = eur(s.estimated_profit);
+  el('hb-inv').textContent = eur(s.invoiced);
+  el('hb-col').textContent = eur(s.collected);
+  el('hb-pend').textContent = eur(s.pending_total);
+
+  el('s-inv').textContent = eur(s.invoiced);
+  const rate = s.invoiced ? Math.round(s.collected / s.invoiced * 100) : 0;
+  el('s-inv-d').textContent = rate + '% ya cobrado';
+  el('s-inv-d').className = 'delta ' + (rate >= 70 ? 'up' : rate >= 40 ? 'flat' : 'down');
+  el('s-exp').textContent = eur(s.expenses);
+  el('s-pend').textContent = eur(s.pending_total);
+  el('s-pend-d').textContent = s.pending_count + ' factura(s) sin cobrar';
+  el('s-pend-d').className = 'delta ' + (s.pending_count ? 'down' : 'up');
+  el('s-today').textContent = s.jobs_today;
+  el('s-today-d').textContent = s.jobs_today ? 'trabajo(s) agendados' : 'día despejado';
   el('m-vat').textContent = eur(s.vat_estimated);
   el('m-clients').textContent = s.clients;
+  el('hd-sub').textContent = `${eur(s.invoiced)} facturado · ${s.clients} cliente(s) · ${s.jobs_today} trabajo(s) hoy`;
 
   const series = await api('/series');
   new Chart(el('ch-main'), {
@@ -94,32 +126,39 @@ async function load() {
     ]}, options: CHART.base()
   });
 
-  const ag = await api('/agenda');
-  el('today').innerHTML = ag.length ? ag.map(j => {
-    const h = timeShort(j.scheduled_for);
-    return `<div class="lrow"><span><b>${esc(h)}</b> ${esc(j.client_name || '')}<br><span class="meta">${esc(j.description)}</span></span><span class="meta">${esc(j.zone || '')}</span></div>`;
-  }).join('') : emptyState('Día despejado', 'No tienes trabajos registrados para hoy.', '/b/{{ business.id }}/agenda', 'Ver agenda');
+  api('/plan').then(plan => {
+    el('plan').innerHTML = plan.slice(0, 4).map((p, i) => `<li>
+      <span class="pl-n">${i + 1}</span>
+      <div><div class="pl-do">${esc(p.do)}</div><div class="pl-why">${esc(p.why)}</div></div>
+    </li>`).join('');
+  });
 
-  const p = await api('/pending');
-  el('pending').innerHTML = p.length ? p.map(x =>
-    `<div class="lrow"><span>${esc(x.client_name)}<br><span class="meta">${esc(x.concept)}</span></span>
-     <span style="text-align:right">${eur(x.total)}<br>
-     <span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-gray'}">${daysText(x.days_outstanding)}</span></span></div>`
-  ).join('') : emptyState('Todo cobrado', 'No hay facturas pendientes ahora mismo.');
+  api('/income/by-client').then(rows => {
+    el('top-clients').innerHTML = barlist(rows.slice(0, 5).map(r => ({
+      name: r.client_name || '—', value: r.total, valText: eur(r.total)
+    })));
+  });
 
-  const late = p.filter(x => (x.days_outstanding || 0) > 7);
-  const action = el('next-action');
-  const prio = el('next-priority');
-  if (late.length) {
-    prio.textContent = 'urgente'; prio.className = 'priority high';
-    action.innerHTML = `<b>Reclama ${late.length} factura(s) atrasada(s)</b><p class="muted" style="margin:6px 0 12px">Hay ${eur(late.reduce((a,b)=>a+b.total,0))} que ya debería estar en caja.</p><a class="btn primary full" href="/b/{{ business.id }}/cobros">Abrir cobros</a>`;
-  } else if (ag.length) {
-    prio.textContent = 'hoy'; prio.className = 'priority medium';
-    action.innerHTML = `<b>Prepara los trabajos de hoy</b><p class="muted" style="margin:6px 0 12px">Tienes ${ag.length} cita(s). Revisa cliente, zona e importe estimado antes de salir.</p><a class="btn primary full" href="/b/{{ business.id }}/agenda">Ver agenda</a>`;
-  } else {
-    prio.textContent = 'al día'; prio.className = 'priority low';
-    action.innerHTML = `<b>Negocio bajo control</b><p class="muted" style="margin:6px 0 12px">Sin urgencias registradas. Puedes pedirle a Noesis un resumen o registrar el siguiente gasto/trabajo.</p><a class="btn primary full" href="/b/{{ business.id }}/asistente">Abrir asistente</a>`;
-  }
+  api('/costs/breakdown').then(rows => {
+    el('cost-cats').innerHTML = barlist(rows.slice(0, 5).map(r => ({
+      name: r.category, value: r.total, valText: eur(r.total)
+    })), 'warn');
+  });
+
+  api('/agenda').then(ag => {
+    el('today').innerHTML = ag.length ? ag.map(j => {
+      const h = timeShort(j.scheduled_for);
+      return `<div class="lrow"><span><b>${esc(h)}</b> ${esc(j.client_name || '')}<br><span class="meta">${esc(j.description)}</span></span><span class="meta">${esc(j.zone || '')}</span></div>`;
+    }).join('') : emptyState('Día despejado', 'No tienes trabajos registrados para hoy.', '/b/{{ business.id }}/agenda', 'Ver agenda');
+  });
+
+  api('/pending').then(p => {
+    el('pending').innerHTML = p.length ? p.slice(0, 6).map(x =>
+      `<div class="lrow"><span>${esc(x.client_name)}<br><span class="meta">${esc(x.concept)}</span></span>
+       <span style="text-align:right">${eur(x.total)}<br>
+       <span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-gray'}">${daysText(x.days_outstanding)}</span></span></div>`
+    ).join('') : emptyState('Todo cobrado', 'No hay facturas pendientes ahora mismo.');
+  });
 }
 load();
 </script>

@@ -39,6 +39,16 @@
 
 {% block scripts %}
 <script>
+const BIZ_NAME = {{ business.name|tojson }};
+async function shareQuote(clientId, clientName){
+  if(!clientId){ alert('Este presupuesto no tiene cliente asociado.'); return; }
+  let link;
+  try { link = await api(`/clients/${clientId}/portal-link`); }
+  catch(e){ alert('No se pudo generar el enlace del portal.'); return; }
+  const message = `Hola ${clientName}, aquí tienes tu presupuesto de ${BIZ_NAME}. `
+    + `Puedes aprobarlo o rechazarlo desde aquí: `;
+  shareLink(link.url, { message, title: 'Enviar a ' + clientName });
+}
 let ALL = [];
 async function load() {
   ALL = await api('/quotes');
@@ -60,6 +70,7 @@ function render() {
     <td><span class="badge ${badge(q.status)}">${esc(q.status)}</span></td>
     <td class="t-right table-actions">
       ${q.status==='borrador'?`<button class="btn sm" onclick="send(${q.id})">Enviar</button>`:''}
+      ${(q.status==='enviado'||q.status==='aceptado')?`<button class="btn sm" onclick='shareQuote(${q.client_id||'null'}, ${JSON.stringify(q.client_name||"")})' title="Enviarle el enlace para aprobarlo">Enviar al cliente</button>`:''}
       ${q.status==='enviado'?`<button class="btn sm" onclick="accept(${q.id})">Aceptado → factura</button>
         <button class="btn sm" onclick="reject(${q.id})">Rechazado</button>`:''}
       ${q.status==='aceptado'?`<a class="btn sm" href="/b/${BIZ}/facturas">Ver factura</a>`:''}

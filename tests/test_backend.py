@@ -148,6 +148,127 @@ class BackendTestCase(unittest.TestCase):
         db.set_password(user["id"], auth.hash_password("password-nueva-456"))
         self.assertGreater(db.get_user(user["id"])["session_version"], old_version)
 
+    def test_portal_token_reuse_resolve_and_revoke(self):
+        business, client = self.make_business()
+        token = db.get_or_create_portal_token(business["id"], client["id"])
+        # Mismo enlace mientras esté vigente (el autónomo puede reenviarlo).
+        self.assertEqual(
+            token, db.get_or_create_portal_token(business["id"], client["id"])
+        )
+        self.assertEqual(
+            db.resolve_portal_token(token),
+            {"business_id": business["id"], "client_id": client["id"]},
+        )
+        self.assertIsNone(db.resolve_portal_token("token-inventado"))
+        db.revoke_portal_tokens(client["id"], business["id"])
+        self.assertIsNone(db.resolve_portal_token(token))
+
+    def test_unbilled_jobs_detects_clears_and_isolates(self):
+        from datetime import timedelta
+
+        business_a, client_a = self.make_business("Negocio A")
+        business_b, client_b = self.make_business("Negocio B")
+        past = (date.today() - timedelta(days=2)).isoformat()
+        db.add_job(client_a["id"], "Cambio de grifo", scheduled_for=past,
+                   business_id=business_a["id"])
+        db.add_job(client_b["id"], "Trabajo ajeno", scheduled_for=past,
+                   business_id=business_b["id"])
+
+        unbilled = db.unbilled_jobs(business_a["id"])
+        self.assertEqual(len(unbilled), 1)
+        self.assertEqual(unbilled[0]["client_name"], client_a["name"])
+        # No filtra trabajos de otro negocio.
+        self.assertTrue(all(j["business_id"] == business_a["id"] for j in unbilled))
+
+        # Cancelado no cuenta.
+        dead = db.add_job(client_a["id"], "Visita anulada", scheduled_for=past,
+                          business_id=business_a["id"])
+        db.update_job_status(dead["id"], "cancelado", business_a["id"])
+        self.assertEqual(len(db.unbilled_jobs(business_a["id"])), 1)
+
+        # Al facturar a ese cliente, el trabajo deja de aparecer.
+        db.add_invoice(client_a["id"], "Cambio de grifo", 120,
+                       business_id=business_a["id"])
+        self.assertEqual(db.unbilled_jobs(business_a["id"]), [])
+
+    def test_daily_plan_is_prioritised_and_explained(self):
+        from datetime import timedelta
+
+        business, client = self.make_business()
+        db.add_job(client["id"], "Cambio de grifo",
+                   scheduled_for=(date.today() - timedelta(days=3)).isoformat(),
+                   business_id=business["id"])
+        plan_reply = chat.handle(business["id"], "¿cuál es mi plan de hoy?")
+        self.assertEqual(plan_reply["source"], "local")
+        self.assertIn("plan para hoy", plan_reply["reply"].lower())
+        self.assertIn("Por qué", plan_reply["reply"])  # explica el motivo
+
+        unbilled_reply = chat.handle(business["id"], "¿qué tengo sin facturar?")
+        self.assertIn("Cambio de grifo", unbilled_reply["reply"])
+
+    def test_portal_token_never_crosses_clients(self):
+        business_a, client_a = self.make_business("Negocio A")
+        business_b, client_b = self.make_business("Negocio B")
+        # Un token solo se emite para un cliente del propio negocio.
+        self.assertIsNone(
+            db.get_or_create_portal_token(business_a["id"], client_b["id"])
+        )
+        token_a = db.get_or_create_portal_token(business_a["id"], client_a["id"])
+        ref = db.resolve_portal_token(token_a)
+        self.assertEqual(ref["business_id"], business_a["id"])
+        self.assertEqual(ref["client_id"], client_a["id"])
+        self.assertNotEqual(ref["business_id"], business_b["id"])
+
+
+class PortalHttpTestCase(BackendTestCase):
+    """El portal público (/p/) no debe dejar que un cliente toque documentos de otro."""
+
+    def _quote(self, business_id, client_id):
+        quote = db.add_quote(client_id, "Reforma de baño", 1000, business_id=business_id)
+        db.mark_quote_sent(quote["id"], business_id)
+        return quote
+
+    def test_portal_accept_is_isolated_and_closes_cycle(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business_a, client_a = self.make_business("Negocio A")
+        business_b, client_b = self.make_business("Negocio B")
+        quote_a = self._quote(business_a["id"], client_a["id"])
+        quote_b = self._quote(business_b["id"], client_b["id"])
+        token_a = db.get_or_create_portal_token(business_a["id"], client_a["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                self.assertEqual(client.get(f"/p/{token_a}").status_code, 200)
+                self.assertEqual(client.get("/p/token-malo").status_code, 404)
+
+                # Con el token de A NO se puede aceptar el presupuesto de B.
+                blocked = client.post(
+                    f"/p/{token_a}/quotes/{quote_b['id']}/accept",
+                    follow_redirects=False,
+                )
+                self.assertEqual(blocked.status_code, 303)
+                self.assertIn("nojusto", blocked.headers["location"])
+                self.assertEqual(
+                    db.get_quote(quote_b["id"], business_b["id"])["status"], "enviado"
+                )
+
+                # Aceptar el propio presupuesto cierra el ciclo: crea factura borrador.
+                ok = client.post(
+                    f"/p/{token_a}/quotes/{quote_a['id']}/accept",
+                    follow_redirects=False,
+                )
+                self.assertEqual(ok.status_code, 303)
+                self.assertIn("aceptado", ok.headers["location"])
+                accepted = db.get_quote(quote_a["id"], business_a["id"])
+                self.assertEqual(accepted["status"], "aceptado")
+                self.assertTrue(accepted["invoice_id"])
+                self.assertEqual(
+                    db.get_invoice(accepted["invoice_id"], business_a["id"])["status"],
+                    "borrador",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

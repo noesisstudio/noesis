@@ -15,6 +15,7 @@ import sqlite3
 import logging
 import math
 import re
+import secrets
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -154,6 +155,15 @@ CREATE TABLE IF NOT EXISTS scheduled_job_runs (
     run_key      TEXT PRIMARY KEY,
     created_at   TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS portal_tokens (
+    token        TEXT PRIMARY KEY,
+    business_id  INTEGER NOT NULL REFERENCES businesses(id),
+    client_id    INTEGER NOT NULL REFERENCES clients(id),
+    expires_at   TEXT NOT NULL,
+    revoked      INTEGER NOT NULL DEFAULT 0,
+    created_at   TEXT NOT NULL
+);
 """
 
 # Migraciones suaves: columnas añadidas después del esquema inicial. Se aplican con
@@ -223,6 +233,8 @@ def _ensure_indexes() -> None:
         "ON quotes(business_id, number) WHERE number IS NOT NULL",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_phone "
         "ON businesses(whatsapp_phone_norm) WHERE whatsapp_phone_norm IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_portal_tokens_client "
+        "ON portal_tokens(business_id, client_id)",
     ]
     with get_conn() as conn:
         for statement in statements:
@@ -578,6 +590,44 @@ def jobs_between(start: str, end: str, business_id=DEFAULT_BUSINESS_ID) -> list[
             (business_id, start, end + "T23:59"),
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# Estados que indican que un trabajo ya se realizó.
+_JOB_DONE_STATES = ("hecho", "hecha", "completado", "completada", "realizado",
+                    "realizada", "terminado", "terminada", "finalizado", "finalizada")
+_JOB_DEAD_STATES = ("cancelado", "cancelada", "anulado", "anulada")
+
+
+def unbilled_jobs(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+    """Trabajos que probablemente están SIN FACTURAR: o ya pasó su fecha o están
+    marcados como hechos, y el cliente no tiene ninguna factura creada desde
+    entonces. Es una SEÑAL de apoyo para el copiloto (puede tener falsos positivos
+    si se factura en bloque), no un dato fiscal. Aislado por business_id."""
+    today = date.today().isoformat()
+    done_ph = ",".join("?" for _ in _JOB_DONE_STATES)
+    dead_ph = ",".join("?" for _ in _JOB_DEAD_STATES)
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT j.*, c.name AS client_name FROM jobs j "
+            "LEFT JOIN clients c ON c.id=j.client_id AND c.business_id=j.business_id "
+            "WHERE j.business_id=? AND j.client_id IS NOT NULL "
+            f"AND j.status NOT IN ({dead_ph}) "
+            f"AND (j.status IN ({done_ph}) OR substr(j.scheduled_for,1,10) < ?) "
+            "ORDER BY j.scheduled_for",
+            (business_id, *_JOB_DEAD_STATES, *_JOB_DONE_STATES, today),
+        ).fetchall()
+        jobs = [dict(r) for r in rows]
+        out = []
+        for j in jobs:
+            day = (j.get("scheduled_for") or j.get("created_at") or "")[:10]
+            billed = conn.execute(
+                "SELECT 1 FROM invoices WHERE business_id=? AND client_id=? "
+                "AND substr(created_at,1,10) >= ? LIMIT 1",
+                (business_id, j["client_id"], day),
+            ).fetchone()
+            if not billed:
+                out.append(j)
+        return out
 
 
 # --------------------------------------------------------------- Facturas ---
@@ -1354,6 +1404,83 @@ def consume_whatsapp_link(code_hash: str) -> int | None:
         return row["business_id"]
 
 
+# ---------------------------------------------------- Portal del cliente (Hub) ---
+# Enlace privado sin contraseña: una URL-capacidad por cliente. El autónomo la envía
+# (por WhatsApp) y su cliente entra a aprobar presupuestos, ver facturas y descargar
+# PDF. El token va siempre ligado a (business_id, client_id): no cruza datos de otro
+# cliente ni de otro negocio. Es revocable y caduca.
+_PORTAL_TTL_DAYS = 120
+
+
+def get_or_create_portal_token(business_id: int, client_id: int,
+                               ttl_days: int = _PORTAL_TTL_DAYS) -> str | None:
+    """Devuelve el enlace vigente del cliente o crea uno nuevo. Reutiliza el mismo
+    token mientras no haya caducado ni se haya revocado, para que el enlace que el
+    autónomo ya envió siga funcionando."""
+    if not get_client(client_id, business_id):
+        return None
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT token FROM portal_tokens WHERE business_id=? AND client_id=? "
+            "AND revoked=0 AND expires_at>=? ORDER BY created_at DESC LIMIT 1",
+            (business_id, client_id, now),
+        ).fetchone()
+        if row:
+            return row["token"]
+        token = secrets.token_urlsafe(24)
+        expires = (datetime.now() + timedelta(days=ttl_days)).isoformat(timespec="seconds")
+        conn.execute(
+            "INSERT INTO portal_tokens (token, business_id, client_id, expires_at, "
+            "revoked, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+            (token, business_id, client_id, expires, now),
+        )
+        return token
+
+
+def resolve_portal_token(token: str) -> dict | None:
+    """Resuelve un token de portal a (business_id, client_id) si es válido. None si
+    no existe, está revocado o caducado."""
+    if not token:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT business_id, client_id FROM portal_tokens "
+            "WHERE token=? AND revoked=0 AND expires_at>=?",
+            (token, _now()),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def revoke_portal_tokens(client_id: int, business_id: int) -> None:
+    """Invalida todos los enlaces de portal de un cliente (p. ej. al borrarlo)."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE portal_tokens SET revoked=1 WHERE client_id=? AND business_id=?",
+            (client_id, business_id),
+        )
+
+
+def client_portal_view(business_id: int, client_id: int) -> dict | None:
+    """Datos que ve el cliente en su portal: el negocio que le atiende, sus
+    presupuestos (para aprobar/rechazar) y sus facturas (para ver/descargar).
+    Todo filtrado por (business_id, client_id): nada de otros clientes."""
+    biz = get_business(business_id)
+    client = get_client(client_id, business_id)
+    if not biz or not client:
+        return None
+    quotes = [q for q in list_quotes(business_id) if q.get("client_id") == client_id]
+    invoices = [i for i in list_invoices(business_id) if i.get("client_id") == client_id]
+    return {
+        "business": {"name": biz.get("name"), "nif": biz.get("nif"),
+                     "address": biz.get("address")},
+        "client": {"id": client["id"], "name": client.get("name")},
+        "quotes": quotes,
+        "invoices": invoices,
+    }
+
+
 def claim_scheduled_run(run_key: str) -> bool:
     try:
         with get_conn() as conn:
@@ -1442,6 +1569,8 @@ def delete_client_cascade(client_id, business_id) -> bool:
             "AND status IN ('enviada','cobrada')",
             (business_id, client_id),
         ).fetchone()[0]
+        conn.execute("DELETE FROM portal_tokens WHERE business_id=? AND client_id=?",
+                     (business_id, client_id))
         conn.execute("DELETE FROM quotes WHERE business_id=? AND client_id=?",
                      (business_id, client_id))
         conn.execute(
@@ -1481,7 +1610,7 @@ def delete_business_cascade(business_id) -> bool:
                 "La cuenta tiene facturas emitidas que deben conservarse. "
                 "Solicita una baja con conservación fiscal."
             )
-        for table in ("quotes", "invoices", "jobs", "clients", "expenses"):
+        for table in ("portal_tokens", "quotes", "invoices", "jobs", "clients", "expenses"):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "
                      "(SELECT id FROM users WHERE business_id=?)", (business_id,))

@@ -82,6 +82,53 @@ function formModal(opts) {
   if (first) first.focus();
 }
 
+/* Compartir un enlace privado (portal del cliente): copiar o enviar por WhatsApp.
+   Modal accesible: atrapa Escape, devuelve el foco a quien lo abrió. */
+function shareLink(url, opts = {}) {
+  closeModal();
+  const opener = document.activeElement;
+  const phone = String(opts.phone || '').replace(/\D/g, '');
+  const text = (opts.message || '') + url;
+  const wa = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true"
+      aria-label="${esc(opts.title || 'Compartir enlace')}">
+    <div class="modal-h"><h2>${esc(opts.title || 'Compartir enlace')}</h2>
+      <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
+    <div class="modal-b">
+      <p class="muted" style="margin:0 0 10px">Enlace privado de tu cliente. Cualquiera
+        con el enlace puede verlo, así que envíaselo solo a él.</p>
+      <input class="input" id="share-url" readonly value="${esc(url)}"
+        aria-label="Enlace del portal" onclick="this.select()">
+    </div>
+    <div class="modal-f">
+      <button class="btn modal-copy" type="button">Copiar enlace</button>
+      <a class="btn primary" href="${esc(wa)}" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const close = () => {
+    ov.remove();
+    document.removeEventListener('keydown', onEsc);
+    if (opener && opener.focus) opener.focus();
+  };
+  const onEsc = e => { if (e.key === 'Escape') close(); };
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  ov.querySelector('.modal-x').onclick = close;
+  const copyBtn = ov.querySelector('.modal-copy');
+  copyBtn.onclick = async () => {
+    try { await navigator.clipboard.writeText(url); }
+    catch { const i = el('share-url'); i.select(); document.execCommand('copy'); }
+    copyBtn.textContent = '¡Copiado!';
+    setTimeout(() => { copyBtn.textContent = 'Copiar enlace'; }, 1500);
+  };
+  document.addEventListener('keydown', onEsc);
+  copyBtn.focus();
+}
+
 /* Paleta para gráficos (coherente con el sistema de diseño). */
 const CHART = {
   brand: '#2e8b74', brandSoft: '#a9d2c5', forest: '#14463b',

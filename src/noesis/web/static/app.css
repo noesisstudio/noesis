@@ -3,15 +3,15 @@
    Estética: profesional, minimalista cálida, mucho aire, jerarquía clara.
    ========================================================================== */
 :root {
-  /* Paleta de marca Noesis: verde bosque + teal sobre crema. */
-  --bg: #f4f1e8;
+  /* Paleta Noesis: verde bosque de marca sobre un lienzo fintech frío y limpio. */
+  --bg: #f5f6f8;
   --surface: #ffffff;
-  --surface-2: #faf8f1;
-  --border: #e9e5d9;
-  --border-strong: #ddd8c8;
-  --text: #16271f;
-  --muted: #5f6b63;
-  --faint: #96a09a;
+  --surface-2: #f6f7f9;
+  --border: #e7e9ee;
+  --border-strong: #d9dce3;
+  --text: #15211c;
+  --muted: #5d6b66;
+  --faint: #98a0a6;
   --brand: #14463b;          /* verde bosque (acciones, nav activo) */
   --brand-2: #2e8b74;        /* teal (acentos, gráficos) */
   --brand-soft: #e4efe9;     /* sage muy claro (fondos suaves) */
@@ -510,3 +510,67 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
 .danger-zone { border:1px solid var(--red); border-radius:var(--radius); padding:18px 20px;
   background:var(--red-soft); margin-top:20px; }
 .danger-zone h3 { margin:0 0 6px; color:var(--red); }
+
+/* ==========================================================================
+   Capa "fintech": dashboards densos y legibles dentro de la app (no landing).
+   Cabeceras sans, KPIs limpios, banda destacada, mini-barras tipo "Top X".
+   ========================================================================== */
+.content .page-head h1 { font-family: var(--font); font-weight: 750; font-size: 23px;
+  letter-spacing: -.02em; }
+.page-count { color: var(--faint); font-size: 13px; font-weight: 500; margin-top: 3px; }
+
+/* Banda destacada (resumen): el "saldo/beneficio" como héroe oscuro de marca. */
+.hero-band { background: linear-gradient(135deg, #103229, #18483c 60%, #1d5446);
+  color: #fff; border-radius: 16px; padding: 22px 24px; display: grid;
+  grid-template-columns: 1.3fr 1fr; gap: 22px; box-shadow: 0 8px 26px rgba(16,50,41,.18); }
+.hero-band .hb-label { font-size: 12.5px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: rgba(255,255,255,.72); }
+.hero-band .hb-value { font-family: var(--serif); font-weight: 500; font-size: 40px;
+  line-height: 1.05; margin-top: 8px; letter-spacing: -.01em; }
+.hero-band .hb-chip { display:inline-flex; align-items:center; gap:6px; margin-top:12px;
+  background: rgba(255,255,255,.12); border-radius:999px; padding:5px 11px; font-size:12.5px;
+  font-weight:650; }
+.hero-band .hb-side { display:flex; flex-direction:column; justify-content:center; gap:12px;
+  border-left:1px solid rgba(255,255,255,.16); padding-left:22px; }
+.hero-band .hb-side .r { display:flex; justify-content:space-between; align-items:baseline; gap:14px; }
+.hero-band .hb-side .r span { color: rgba(255,255,255,.74); font-size:13px; }
+.hero-band .hb-side .r b { font-size:16px; font-variant-numeric:tabular-nums; }
+@media (max-width: 720px) { .hero-band { grid-template-columns:1fr; }
+  .hero-band .hb-side { border-left:none; padding-left:0; border-top:1px solid rgba(255,255,255,.16);
+    padding-top:14px; } }
+
+/* KPI limpio (más fintech que .metric: borde fino, número grande, delta con color). */
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 15px 18px; }
+.stat .lbl { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--faint); font-weight: 600; }
+.stat .val { font-size: 25px; font-weight: 750; letter-spacing: -.02em; margin-top: 7px;
+  font-variant-numeric: tabular-nums; }
+.stat .delta { font-size: 12px; font-weight: 650; margin-top: 6px; display:inline-flex;
+  align-items:center; gap:5px; }
+.delta.up { color: var(--green); } .delta.down { color: var(--red); }
+.delta.flat { color: var(--faint); }
+
+/* Mini-barras tipo "Top clientes / por categoría / canales de venta". */
+.barlist { display:flex; flex-direction:column; gap: 13px; }
+.barlist .b-row { display:grid; grid-template-columns: 1fr auto; gap: 5px 12px; align-items:center; }
+.barlist .b-name { font-size: 13.5px; font-weight: 600; min-width:0; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.barlist .b-val { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted);
+  text-align:right; white-space:nowrap; }
+.barlist .b-track { grid-column: 1 / -1; height: 7px; background: var(--border);
+  border-radius: 999px; overflow:hidden; }
+.barlist .b-fill { height: 100%; border-radius: 999px; background: var(--brand-2);
+  transition: width .5s ease; }
+.barlist .b-fill.alt { background: #6b8cff; }
+.barlist .b-fill.warn { background: var(--amber); }
+
+/* Mini-leyenda de "cómo va" para el plan del copiloto en el dashboard. */
+.plan-list { display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none; }
+.plan-list li { display:flex; gap:11px; align-items:flex-start; padding:11px 12px;
+  border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); }
+.plan-list .pl-n { flex:0 0 22px; width:22px; height:22px; border-radius:7px; background:var(--brand-soft);
+  color:var(--brand); font-size:12px; font-weight:750; display:flex; align-items:center;
+  justify-content:center; margin-top:1px; }
+.plan-list .pl-do { font-size:13.6px; font-weight:600; }
+.plan-list .pl-why { font-size:12.4px; color:var(--muted); margin-top:2px; line-height:1.45; }

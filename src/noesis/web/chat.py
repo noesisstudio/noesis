@@ -43,24 +43,63 @@ def _business_state(business_id: int) -> dict:
         "agenda": agenda,
         "clients": clients,
         "expenses": expenses,
+        "unbilled": db.unbilled_jobs(business_id),
+        "quotes_sent": db.list_quotes(business_id, status="enviado"),
     }
 
 
-def _next_action(state: dict) -> tuple[str, str]:
-    late = state["late"]
-    agenda = state["agenda"]
+def _daily_plan(state: dict) -> list[dict]:
+    """Plan priorizado con el PORQUÉ de cada acción. El orden importa: primero el
+    dinero que ya es tuyo, luego el trabajo hecho sin cobrar, luego lo de hoy."""
+    plan: list[dict] = []
+    if state["late"]:
+        total = sum(p["total"] for p in state["late"])
+        plan.append({
+            "topic": "cobros",
+            "do": f"Reclama {len(state['late'])} cobro(s) atrasado(s) por {_eur(total)}.",
+            "why": "Es dinero que ya es tuyo y lleva más de una semana fuera de caja.",
+        })
+    if state["unbilled"]:
+        names = ", ".join(dict.fromkeys(
+            (j.get("client_name") or "—") for j in state["unbilled"][:3]))
+        plan.append({
+            "topic": "facturas",
+            "do": f"Factura {len(state['unbilled'])} trabajo(s) ya hechos ({names}).",
+            "why": "Trabajo terminado sin factura: es donde más dinero se escapa sin que te des cuenta.",
+        })
+    if state["agenda"]:
+        plan.append({
+            "topic": "agenda",
+            "do": f"Prepara los {len(state['agenda'])} trabajo(s) de hoy.",
+            "why": "Si dejas la factura lista al cerrar cada uno, no se te queda ninguno sin cobrar.",
+        })
+    if state["quotes_sent"]:
+        total = sum(q["total"] for q in state["quotes_sent"])
+        plan.append({
+            "topic": "presupuestos",
+            "do": f"Haz seguimiento de {len(state['quotes_sent'])} presupuesto(s) enviados ({_eur(total)} en juego).",
+            "why": "Un recordatorio amable a tiempo sube mucho la conversión.",
+        })
     billing = state["billing"]
-    expenses = state["expenses"]
-    if late:
-        total = sum(p["total"] for p in late)
-        return ("cobros", f"Reclamar {len(late)} factura(s) atrasada(s): {_eur(total)} que ya debería estar en caja.")
-    if agenda:
-        return ("agenda", f"Preparar {len(agenda)} trabajo(s) de hoy: cliente, zona, material y posible factura.")
     if billing["invoiced"] and billing["expenses"] / max(billing["invoiced"], 1) > .65:
-        return ("margen", "Revisar gastos: este mes el coste pesa demasiado sobre lo facturado.")
-    if not expenses:
-        return ("gastos", "Registrar gastos recientes para que el beneficio no sea una foto demasiado optimista.")
-    return ("orden", "Mantener el hábito: registrar lo nuevo en cuanto ocurra y revisar cobros una vez al día.")
+        plan.append({
+            "topic": "costes",
+            "do": "Revisa los gastos del mes.",
+            "why": "El coste pesa demasiado sobre lo facturado; el margen se está estrechando.",
+        })
+    if not plan:
+        plan.append({
+            "topic": "orden",
+            "do": "Registra lo nuevo en cuanto ocurra y revisa cobros una vez al día.",
+            "why": "Vas al día. Mantener el hábito es lo que evita los sustos.",
+        })
+    return plan
+
+
+def daily_plan(business_id: int) -> list[dict]:
+    """Plan diario priorizado (con el porqué) para alimentar el dashboard. Mismo
+    cerebro que el asistente: una sola fuente de verdad para la recomendación."""
+    return _daily_plan(_business_state(business_id))
 
 
 def _coach_reply(business_id: int, message: str = "") -> str:
@@ -68,34 +107,59 @@ def _coach_reply(business_id: int, message: str = "") -> str:
     state = _business_state(business_id)
     billing = state["billing"]
     pending = state["pending"]
-    clients = state["clients"]
-    topic, action = _next_action(state)
-    top_client = clients[0] if clients else None
-    concentration = ""
-    total_client_income = sum(c.get("facturado") or 0 for c in clients)
-    if top_client and total_client_income and top_client.get("facturado", 0) / total_client_income > .4:
-        concentration = (f"\n\nVeo una dependencia fuerte de {top_client['name']}: "
-                         f"{round(top_client['facturado'] / total_client_income * 100)}% de lo facturado. "
-                         "No es malo, pero conviene cuidarlo y abrir segunda fuente.")
+    plan = _daily_plan(state)
+    top = plan[0]
 
-    return (
-        f"Estoy mirando {biz.get('name', 'tu negocio')} como lo miraría una oficina pequeña: "
-        "caja, agenda, margen y próximos pasos.\n\n"
-        f"Ahora mismo has facturado **{_eur(billing['invoiced'])}** este mes, "
-        f"has cobrado {_eur(billing['collected'])}, tienes pendiente {_eur(sum(p['total'] for p in pending))} "
-        f"y el beneficio estimado va por **{_eur(billing['estimated_profit'])}**.\n\n"
-        f"Mi prioridad para ti: **{action}**\n\n"
-        f"Si quieres, te lo convierto en acción: dime **“ver {topic}”**, "
-        "**“qué tengo hoy”**, **“quién me debe”** o háblame con una frase normal "
-        "para registrar factura, gasto o trabajo."
-        f"{concentration}"
-    )
+    lines = [
+        f"Así veo {biz.get('name', 'tu negocio')} ahora mismo: facturado "
+        f"**{_eur(billing['invoiced'])}** este mes, cobrado {_eur(billing['collected'])}, "
+        f"pendiente {_eur(sum(p['total'] for p in pending))} y beneficio estimado "
+        f"**{_eur(billing['estimated_profit'])}**.",
+        "",
+        "**Tu plan para hoy**, por orden de prioridad:",
+    ]
+    for i, item in enumerate(plan[:4], 1):
+        lines.append(f"{i}. {item['do']}")
+        lines.append(f"   _Por qué:_ {item['why']}")
+
+    clients = state["clients"]
+    total_client_income = sum(c.get("facturado") or 0 for c in clients)
+    top_client = clients[0] if clients else None
+    if top_client and total_client_income and \
+            top_client.get("facturado", 0) / total_client_income > .4:
+        lines += ["", f"Ojo a la concentración: {top_client['name']} es el "
+                  f"{round(top_client['facturado'] / total_client_income * 100)}% de lo "
+                  "facturado. No es malo, pero conviene cuidarlo y abrir una segunda fuente."]
+
+    lines += ["", f"Dime **“ver {top['topic']}”** para ir directo, o háblame con una "
+              "frase normal para registrar factura, gasto o trabajo."]
+    return "\n".join(lines)
+
+
+def _unbilled_reply(business_id: int) -> str:
+    jobs = db.unbilled_jobs(business_id)
+    if not jobs:
+        return ("No veo trabajos hechos sin facturar. Buena señal: vas al día con la "
+                "facturación. Cuando cierres uno nuevo, dímelo y te dejo la factura lista.")
+    lines = [f"Tienes **{len(jobs)} trabajo(s)** que parecen hechos y aún sin factura:"]
+    for j in jobs[:8]:
+        when = (j.get("scheduled_for") or "")[:10]
+        est = f" · ~{_eur(j['price_estimate'])}" if j.get("price_estimate") else ""
+        lines.append(f"• {j.get('client_name') or '—'} — {j['description']}"
+                     + (f" ({when})" if when else "") + est)
+    lines.append("Si alguno ya lo cobraste o no procede facturarlo, ignóralo. Para el "
+                 "resto: «factura a [cliente] por [concepto] [importe]».")
+    return "\n".join(lines)
 
 
 def handle(business_id: int, message: str) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
-    if any(x in norm for x in ("que harias", "prioridad", "aconsej", "recomiend", "diagnostico",
-                               "como lo ves", "mente", "piensa")):
+    if any(x in norm for x in ("sin facturar", "pendiente de facturar", "por facturar",
+                               "que me falta facturar", "trabajos sin cobrar")):
+        return {"reply": _unbilled_reply(business_id), "source": "local"}
+    if any(x in norm for x in ("que harias", "prioridad", "aconsej", "recomiend",
+                               "diagnostico", "como lo ves", "mente", "piensa", "plan",
+                               "que hago", "por donde empiezo", "que toca")):
         return {"reply": _coach_reply(business_id, message), "source": "local"}
 
     parsed = nlu.parse(message)

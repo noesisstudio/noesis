@@ -53,6 +53,19 @@ def _asset_version() -> str:
 # Disponible en todas las plantillas como {{ asset_v }}.
 TEMPLATES.env.globals["asset_v"] = _asset_version()
 
+
+def _eur(value) -> str:
+    """Formato de dinero en español (1.234,56 €) para las plantillas."""
+    try:
+        n = float(value or 0)
+    except (TypeError, ValueError):
+        n = 0.0
+    return f"{n:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+# Disponible en plantillas como {{ importe | eur }}.
+TEMPLATES.env.filters["eur"] = _eur
+
 app = FastAPI(title="Noesis", version="0.3.0")
 app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 
@@ -214,6 +227,74 @@ def terminos(request: Request):
     return TEMPLATES.TemplateResponse(request, "terminos.html", {})
 
 
+# ====================================================== PORTAL DEL CLIENTE === #
+# Enlace privado SIN contraseña (estilo "client hub" de Jobber). Es público a
+# propósito: el cliente del autónomo no tiene cuenta. El token va ligado a un único
+# (negocio, cliente) y solo da acceso a SUS presupuestos y facturas — nunca a los de
+# otro cliente. Las rutas /p/ quedan FUERA del auth_guard (no son /b/ ni /api/).
+@app.get("/p/{token}", response_class=HTMLResponse)
+def portal_home(request: Request, token: str, ok: str = ""):
+    ref = db.resolve_portal_token(token)
+    if not ref:
+        return TEMPLATES.TemplateResponse(
+            request, "portal.html", {"token": token, "data": None, "ok": ""},
+            status_code=404)
+    data = db.client_portal_view(ref["business_id"], ref["client_id"])
+    if data is None:
+        return TEMPLATES.TemplateResponse(
+            request, "portal.html", {"token": token, "data": None, "ok": ""},
+            status_code=404)
+    return TEMPLATES.TemplateResponse(
+        request, "portal.html", {"token": token, "data": data, "ok": ok})
+
+
+@app.post("/p/{token}/quotes/{quote_id}/accept")
+def portal_accept_quote(request: Request, token: str, quote_id: int):
+    ref = db.resolve_portal_token(token)
+    if not ref:
+        return RedirectResponse(f"/p/{token}", status_code=303)
+    q = db.get_quote(quote_id, ref["business_id"])
+    if not q or q.get("client_id") != ref["client_id"]:
+        return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
+    try:
+        db.accept_quote(quote_id, ref["business_id"])
+    except ValueError:
+        return RedirectResponse(f"/p/{token}?ok=error", status_code=303)
+    return RedirectResponse(f"/p/{token}?ok=aceptado", status_code=303)
+
+
+@app.post("/p/{token}/quotes/{quote_id}/reject")
+def portal_reject_quote(request: Request, token: str, quote_id: int):
+    ref = db.resolve_portal_token(token)
+    if not ref:
+        return RedirectResponse(f"/p/{token}", status_code=303)
+    q = db.get_quote(quote_id, ref["business_id"])
+    if not q or q.get("client_id") != ref["client_id"]:
+        return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
+    db.reject_quote(quote_id, ref["business_id"])
+    return RedirectResponse(f"/p/{token}?ok=rechazado", status_code=303)
+
+
+@app.get("/p/{token}/invoices/{invoice_id}/pdf")
+def portal_invoice_pdf(token: str, invoice_id: int):
+    ref = db.resolve_portal_token(token)
+    if not ref:
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    inv = db.get_invoice(invoice_id, ref["business_id"])
+    if not inv or inv.get("client_id") != ref["client_id"]:
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    if inv.get("status") not in {"enviada", "cobrada"}:
+        return JSONResponse({"error": "La factura aún no está disponible."},
+                            status_code=404)
+    from .invoice_pdf import build_invoice_pdf
+    data = build_invoice_pdf(invoice_id, ref["business_id"])
+    if data is None:
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    name = f"factura_{inv.get('number') or invoice_id}.pdf"
+    return Response(content=data, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{name}"'})
+
+
 # ================================================================ AUTH ====== #
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str = ""):
@@ -303,6 +384,12 @@ def api_series(business_id: int):
     return db.monthly_series(business_id)
 
 
+@app.get("/api/{business_id}/plan")
+def api_plan(business_id: int):
+    # Plan diario del copiloto (mismo cerebro que el asistente), para el dashboard.
+    return chat.daily_plan(business_id)
+
+
 @app.get("/api/{business_id}/analysis")
 def api_analysis(business_id: int):
     return {**db.financial_analysis(business_id),
@@ -317,6 +404,16 @@ def api_clients(business_id: int):
 @app.get("/api/{business_id}/clients/stats")
 def api_clients_stats(business_id: int):
     return db.client_stats(business_id)
+
+
+@app.get("/api/{business_id}/clients/{client_id}/portal-link")
+def api_portal_link(business_id: int, client_id: int):
+    """Enlace privado del cliente (Client Hub) para que el autónomo lo envíe por
+    WhatsApp. Reutiliza el mismo enlace si ya existe uno vigente."""
+    token = db.get_or_create_portal_token(business_id, client_id)
+    if not token:
+        return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)
+    return {"url": f"{config.BASE_URL}/p/{token}", "path": f"/p/{token}"}
 
 
 @app.get("/api/{business_id}/invoices")
