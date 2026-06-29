@@ -11,6 +11,8 @@ aparece en las consultas realmente complejas.
 from __future__ import annotations
 
 import json
+import logging
+import threading
 from datetime import date
 
 from .. import config, db, nlu
@@ -18,6 +20,8 @@ from ..tools import run_tool
 
 # Agentes IA por negocio (solo se crean si hay API key y se usan en el fallback).
 _agents: dict[int, object] = {}
+_agents_lock = threading.Lock()
+log = logging.getLogger("noesis.chat")
 
 
 def _eur(n) -> str:
@@ -104,16 +108,30 @@ def handle(business_id: int, message: str) -> dict:
             return {"reply": "Te lo puedo agendar, pero me falta el día. Dímelo como lo dirías por WhatsApp: "
                              "**mañana por la mañana**, **el jueves a las 10** o "
                              "**el lunes por la tarde en Badalona**.", "source": "local"}
+        if tool in {"crear_factura", "crear_presupuesto"} and "iva incluido" in norm:
+            business = db.get_business(business_id) or {}
+            rate = float(business.get("default_vat") or 21)
+            args["base"] = round(float(args["base"]) / (1 + rate / 100), 2)
+            args["iva"] = rate
         result = json.loads(run_tool(tool, args, business_id))
         return {"reply": nlu.format_reply(tool, result), "source": "local"}
 
     # Fallback a la IA (solo si está configurada).
     if config.ANTHROPIC_API_KEY:
         from ..agent import NoesisAgent
-        agent = _agents.get(business_id)
-        if agent is None:
-            agent = NoesisAgent(business_id)
-            _agents[business_id] = agent
-        return {"reply": agent.send(message), "source": "ia"}
+        with _agents_lock:
+            agent = _agents.get(business_id)
+            if agent is None:
+                agent = NoesisAgent(business_id)
+                _agents[business_id] = agent
+        try:
+            return {"reply": agent.send(message), "source": "ia"}
+        except Exception:  # noqa: BLE001
+            log.exception("El proveedor de IA falló para el negocio %s.", business_id)
+            return {
+                "reply": "Ahora mismo no puedo usar la IA externa. "
+                         "Las órdenes habituales siguen disponibles.",
+                "source": "local",
+            }
 
     return {"reply": _coach_reply(business_id, message), "source": "local"}

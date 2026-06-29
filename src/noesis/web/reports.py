@@ -8,11 +8,18 @@ import io
 from .. import db
 
 
+def _cell(value):
+    """Evita que Excel interprete contenido del usuario como una fórmula."""
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
+
 def _csv(headers: list[str], rows: list[list]) -> str:
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";")  # ; para que Excel español lo abra bien
     w.writerow(headers)
-    w.writerows(rows)
+    w.writerows([[_cell(value) for value in row] for row in rows])
     return buf.getvalue()
 
 

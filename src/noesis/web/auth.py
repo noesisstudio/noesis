@@ -16,7 +16,7 @@ import time
 
 from .. import db
 
-_ITERS = 200_000
+_ITERS = 600_000
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -30,23 +30,58 @@ def valid_email(email: str) -> bool:
 _ATTEMPTS: dict[str, list[float]] = {}
 _WINDOW = 300        # 5 minutos
 _MAX_ATTEMPTS = 8    # intentos permitidos por ventana
+_MAX_KEYS = 10_000
 
 
 def client_ip(request) -> str:
     """IP del cliente teniendo en cuenta el proxy de Railway (X-Forwarded-For)."""
+    from .. import config
     fwd = request.headers.get("x-forwarded-for", "")
-    if fwd:
+    if config.TRUST_PROXY_HEADERS and fwd:
         return fwd.split(",")[0].strip()
     return request.client.host if request.client else "?"
 
 
-def too_many_attempts(key: str) -> bool:
-    """True si 'key' (p.ej. 'login:1.2.3.4') ha superado el límite en la ventana."""
+def _prune_attempts(now: float) -> None:
+    stale = [
+        key for key, hits in _ATTEMPTS.items()
+        if not hits or now - hits[-1] >= _WINDOW
+    ]
+    for key in stale:
+        _ATTEMPTS.pop(key, None)
+    if len(_ATTEMPTS) > _MAX_KEYS:
+        oldest = sorted(_ATTEMPTS, key=lambda key: _ATTEMPTS[key][-1])
+        for key in oldest[:len(_ATTEMPTS) - _MAX_KEYS]:
+            _ATTEMPTS.pop(key, None)
+
+
+def is_rate_limited(key: str) -> bool:
+    """Comprueba el límite sin contabilizar peticiones que finalmente sean válidas."""
     now = time.time()
+    _prune_attempts(now)
+    hits = [t for t in _ATTEMPTS.get(key, []) if now - t < _WINDOW]
+    _ATTEMPTS[key] = hits
+    return len(hits) >= _MAX_ATTEMPTS
+
+
+def record_failed_attempt(key: str) -> None:
+    now = time.time()
+    _prune_attempts(now)
     hits = [t for t in _ATTEMPTS.get(key, []) if now - t < _WINDOW]
     hits.append(now)
-    _ATTEMPTS[key] = hits
-    return len(hits) > _MAX_ATTEMPTS
+    _ATTEMPTS[key] = hits[-_MAX_ATTEMPTS:]
+
+
+def clear_attempts(key: str) -> None:
+    _ATTEMPTS.pop(key, None)
+
+
+def too_many_attempts(key: str) -> bool:
+    """Compatibilidad: registra el intento y devuelve si se ha superado el límite."""
+    limited = is_rate_limited(key)
+    if not limited:
+        record_failed_attempt(key)
+    return limited
 
 
 def hash_password(password: str) -> str:
@@ -68,4 +103,9 @@ def verify_password(password: str, stored: str) -> bool:
 def current_user(request) -> dict | None:
     """Devuelve el usuario de la sesión actual, o None si no hay sesión válida."""
     uid = request.session.get("uid")
-    return db.get_user(uid) if uid else None
+    user = db.get_user(uid) if uid else None
+    if not user:
+        return None
+    if request.session.get("sv", 0) != user.get("session_version", 0):
+        return None
+    return user

@@ -45,7 +45,7 @@
         {% if error == 'email' %}<div style="{{ errbox }}">Ese email ya tiene cuenta. <a href="/login" style="text-decoration:underline">Entra aquí</a>.</div>{% endif %}
         {% if error == 'email_format' %}<div style="{{ errbox }}">El email no tiene un formato válido.</div>{% endif %}
         {% if error == 'name' %}<div style="{{ errbox }}">Pon el nombre de tu negocio.</div>{% endif %}
-        {% if error == 'password' %}<div style="{{ errbox }}">La contraseña debe tener al menos 6 caracteres.</div>{% endif %}
+        {% if error == 'password' %}<div style="{{ errbox }}">La contraseña debe tener al menos 12 caracteres.</div>{% endif %}
         {% if error == 'throttle' %}<div style="{{ errbox }}">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% endif %}
         <form method="post" action="/onboarding/signup">
           <label class="fld">Nombre de tu negocio *</label>
@@ -53,7 +53,7 @@
           <label class="fld" style="margin-top:14px">Email *</label>
           <input class="input" name="email" type="email" required placeholder="tu@email.com">
           <label class="fld" style="margin-top:14px">Contraseña *</label>
-          <input class="input" name="password" type="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+          <input class="input" name="password" type="password" required minlength="12" maxlength="1024" placeholder="Mínimo 12 caracteres">
           <label class="fld" style="margin-top:14px">Sector</label>
           <select name="sector">
             <option value="">Selecciona...</option>

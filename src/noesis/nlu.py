@@ -61,10 +61,8 @@ def parse_date(text: str, base: date | None = None) -> str | None:
     day: date | None = None
     if "pasado manana" in norm:
         day = base + timedelta(days=2)
-    elif "manana" in norm and "por la manana" not in norm.replace("manana", "manana", 1):
-        # "mañana" como día (evita confundir con "por la mañana")
-        if re.search(r"\bmanana\b", norm) and "a las" not in norm or "manana" in norm:
-            day = base + timedelta(days=1)
+    elif re.search(r"\bmanana\b", norm.replace("por la manana", "")):
+        day = base + timedelta(days=1)
     if "hoy" in norm:
         day = base
     for name, wd in _WEEKDAYS.items():
@@ -87,6 +85,15 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 HELP = "__help__"
 
 
+def _add_tax_rates(norm: str, args: dict) -> None:
+    vat = re.search(r"\biva\s*(?:del|al)?\s*(0|4|10|21)\s*%?", norm)
+    irpf = re.search(r"\birpf\s*(?:del|al)?\s*(0|7|15)\s*%?", norm)
+    if vat:
+        args["iva"] = float(vat.group(1))
+    if irpf:
+        args["irpf"] = float(irpf.group(1))
+
+
 def parse(text: str) -> tuple[str, dict] | None:
     norm = _norm(text)
 
@@ -98,22 +105,26 @@ def parse(text: str) -> tuple[str, dict] | None:
         m = re.search(r"presupuest(?:o|ar|a|ame)?\s+(?:a|para)\s+(.+?)\s+por\s+(.+?)[,]?\s*"
                       r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?", text, re.I)
         if m:
-            return ("crear_presupuesto", {
+            args = {
                 "cliente": m.group(1).strip(),
                 "concepto": m.group(2).strip(),
                 "base": float(m.group(3).replace(",", ".")),
-            })
+            }
+            _add_tax_rates(norm, args)
+            return ("crear_presupuesto", args)
 
     # --- Crear factura: "factura a X por Y 95 euros [más iva]"
     if "factura" in norm:
         m = re.search(r"factura(?:r)?\s+a\s+(.+?)\s+por\s+(.+?)[,]?\s*"
                       r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?", text, re.I)
         if m:
-            return ("crear_factura", {
+            args = {
                 "cliente": m.group(1).strip(),
                 "concepto": m.group(2).strip(),
                 "base": float(m.group(3).replace(",", ".")),
-            })
+            }
+            _add_tax_rates(norm, args)
+            return ("crear_factura", args)
 
     # --- Registrar gasto: "gasto 45 en gasolina", "gasté 45 euros de material"
     if re.search(r"\bgast", norm) or norm.startswith("gasto"):

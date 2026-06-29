@@ -24,14 +24,17 @@ log = logging.getLogger("noesis.alerts")
 _scheduler: BackgroundScheduler | None = None
 
 
-def _deliver(business: dict, text: str, kind: str) -> None:
+def _deliver(business: dict, text: str, kind: str) -> bool:
     # Envía por el WhatsApp de Noesis al teléfono del autónomo (un solo canal para
     # todo: comandos, facturas y alertas). Si no hay token, whatsapp.send hace log.
     from . import whatsapp
     phone = business.get("whatsapp_phone")
     if phone:
-        whatsapp.send(phone, text)
-    log.info("[ALERTA %s] -> %s", kind, business["name"])
+        sent = whatsapp.send(phone, text)
+        log.info("[ALERTA %s] -> %s | enviada=%s", kind, business["name"], sent)
+        return sent
+    log.warning("[ALERTA %s] sin teléfono -> %s", kind, business["name"])
+    return False
 
 
 def _active_businesses() -> list[dict]:
@@ -39,6 +42,8 @@ def _active_businesses() -> list[dict]:
 
 
 def send_daily_summaries() -> None:
+    if not db.claim_scheduled_run(f"daily:{datetime.now():%Y-%m-%d}"):
+        return
     for biz in _active_businesses():
         _deliver(biz, daily_summary_text(biz["id"]), "diario")
 
@@ -50,6 +55,8 @@ def _eur(n) -> str:
 def send_payment_reminders() -> None:
     """Avisa al autónomo de las facturas vencidas, con un texto listo para reenviar
     a cada cliente. No reclama más de una vez por semana la misma factura."""
+    if not db.claim_scheduled_run(f"reminders:{datetime.now():%Y-%m-%d}"):
+        return
     for biz in _active_businesses():
         overdue = db.overdue_invoices(biz["id"])
         pending_reminder = []
@@ -70,11 +77,15 @@ def send_payment_reminders() -> None:
                 f"Mensaje sugerido: «Hola {who}, te recuerdo la factura "
                 f"{inv.get('number') or ''} de {_eur(inv['total'])}. ¿La puedes abonar "
                 f"esta semana? Gracias.»")
-            db.mark_reminder_sent(inv["id"], biz["id"])
-        _deliver(biz, "\n".join(lines), "cobros")
+        if _deliver(biz, "\n".join(lines), "cobros"):
+            for inv in pending_reminder[:6]:
+                db.mark_reminder_sent(inv["id"], biz["id"])
 
 
 def send_weekly_summaries() -> None:
+    year, week, _ = datetime.now().isocalendar()
+    if not db.claim_scheduled_run(f"weekly:{year}-W{week:02d}"):
+        return
     for biz in _active_businesses():
         m = db.month_billing(business_id=biz["id"])
         pend = db.pending_payments(biz["id"])
@@ -86,6 +97,11 @@ def send_weekly_summaries() -> None:
         _deliver(biz, text, "semanal")
 
 
+def run_daily_backup() -> None:
+    if db.claim_scheduled_run(f"backup:{datetime.now():%Y-%m-%d}"):
+        backups.run_backup()
+
+
 def start_scheduler() -> BackgroundScheduler:
     global _scheduler
     if _scheduler:
@@ -95,7 +111,7 @@ def start_scheduler() -> BackgroundScheduler:
     sched.add_job(send_payment_reminders, "cron", hour=9, minute=0, id="reminders")
     sched.add_job(send_weekly_summaries, "cron", day_of_week="mon", hour=8,
                   minute=0, id="weekly")
-    sched.add_job(backups.run_backup, "cron", hour=3, minute=30, id="backup")
+    sched.add_job(run_daily_backup, "cron", hour=3, minute=30, id="backup")
     sched.start()
     _scheduler = sched
     log.info("Scheduler iniciado (diario 08:00, cobros 09:00, semanal lun 08:00, "

@@ -25,11 +25,20 @@ def _eur(n) -> str:
 
 
 def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
-    inv = db.get_invoice(invoice_id)
-    if not inv or inv["business_id"] != business_id:
+    inv = db.get_invoice(invoice_id, business_id)
+    if not inv:
         return None
     biz = db.get_business(business_id) or {}
-    client = db.get_client(inv["client_id"]) or {}
+    client = db.get_client(inv["client_id"], business_id) or {}
+    issuer_name = inv.get("issuer_name") or biz.get("name") or "Mi Negocio"
+    issuer_nif = inv.get("issuer_nif") or biz.get("nif")
+    issuer_address = inv.get("issuer_address") or biz.get("address")
+    recipient_name = (
+        inv.get("recipient_name") or client.get("name")
+        or inv.get("client_name") or "Cliente"
+    )
+    recipient_nif = inv.get("recipient_nif") or client.get("nif")
+    recipient_address = inv.get("recipient_address") or client.get("address")
 
     pdf = FPDF(format="A4")
     pdf.set_auto_page_break(True, 18)
@@ -39,7 +48,7 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     # --- Cabecera: negocio + título FACTURA ---
     pdf.set_font("Helvetica", "B", 22)
     pdf.set_text_color(*FOREST)
-    pdf.cell(110, 10, biz.get("name", "Mi Negocio"))
+    pdf.cell(110, 10, issuer_name)
     pdf.set_font("Helvetica", "B", 20)
     pdf.set_text_color(*INK)
     pdf.cell(0, 10, "FACTURA", align="R")
@@ -48,10 +57,10 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*MUTED)
     datos = []
-    if biz.get("nif"):
-        datos.append(f"NIF: {biz['nif']}")
-    if biz.get("address"):
-        datos.append(biz["address"])
+    if issuer_nif:
+        datos.append(f"NIF: {issuer_nif}")
+    if issuer_address:
+        datos.append(issuer_address)
     pdf.cell(110, 5, "  |  ".join(datos))
     numero = inv.get("number") or "(borrador)"
     pdf.cell(0, 5, f"Nº {numero}", align="R")
@@ -69,8 +78,17 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     pdf.cell(0, 6, "FACTURAR A", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(*INK)
-    pdf.cell(0, 7, client.get("name", inv.get("client_name") or "Cliente"),
+    pdf.cell(0, 7, recipient_name,
              new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*MUTED)
+    recipient_data = []
+    if recipient_nif:
+        recipient_data.append(f"NIF: {recipient_nif}")
+    if recipient_address:
+        recipient_data.append(recipient_address)
+    if recipient_data:
+        pdf.multi_cell(0, 5, "  |  ".join(recipient_data))
     pdf.ln(8)
 
     # --- Tabla de conceptos ---
@@ -113,10 +131,11 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     pdf.ln(14)
     pdf.set_font("Helvetica", "", 8)
     pdf.set_text_color(*MUTED)
-    pdf.multi_cell(0, 4,
-                   "Factura generada con Noesis. Documento de prueba: la emision "
-                   "legal definitiva (Verifactu) se realiza al integrar el proveedor "
-                   "homologado.")
+    pdf.multi_cell(
+        0, 4,
+        "Factura generada con Noesis. Conserva este documento junto con los "
+        "registros y justificantes de la operacion.",
+    )
 
     out = pdf.output()
     return bytes(out)

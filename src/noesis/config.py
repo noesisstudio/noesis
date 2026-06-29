@@ -9,6 +9,19 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / ".env")
 
+
+def env_bool(name: str, default: bool = False) -> bool:
+    """Interpreta booleanos de entorno sin tratar "false" o "0" como verdaderos."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    if value in {"1", "true", "yes", "on", "si", "sí"}:
+        return True
+    if value in {"0", "false", "no", "off", ""}:
+        return False
+    raise ValueError(f"{name} debe ser un booleano (true/false o 1/0).")
+
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
@@ -25,18 +38,24 @@ SECRET_KEY = os.getenv("NOESIS_SECRET", "dev-secret-cambiar-en-produccion")
 
 # En producción (Railway inyecta RAILWAY_ENVIRONMENT) las cookies de sesión deben
 # viajar solo por HTTPS. En local (http://127.0.0.1) se desactiva para poder entrar.
-HTTPS_ONLY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("NOESIS_HTTPS"))
+HTTPS_ONLY = bool(os.getenv("RAILWAY_ENVIRONMENT")) or env_bool("NOESIS_HTTPS")
 
 # True cuando estamos en un entorno expuesto (para exigir configuración segura).
-IS_PRODUCTION = HTTPS_ONLY
+IS_PRODUCTION = (
+    HTTPS_ONLY
+    or os.getenv("NOESIS_ENV", "").strip().lower() in {"production", "produccion"}
+)
+TRUST_PROXY_HEADERS = bool(os.getenv("RAILWAY_ENVIRONMENT")) or env_bool(
+    "NOESIS_TRUST_PROXY_HEADERS"
+)
 
 # Datos de demostración: solo se siembran si se pide explícitamente (por defecto NO,
 # para que producción arranque limpia con cuentas reales).
-SEED_DEMO = bool(os.getenv("NOESIS_SEED_DEMO"))
+SEED_DEMO = env_bool("NOESIS_SEED_DEMO")
 
 # Reinicio de base de datos: si se activa, BORRA todo al arrancar (para empezar de
 # cero). Úsalo una vez y quita la variable después.
-RESET_DB = bool(os.getenv("NOESIS_RESET_DB"))
+RESET_DB = env_bool("NOESIS_RESET_DB")
 
 # Clave de Holded para facturación real (Verifactu). Si está, se usa Holded.
 HOLDED_API_KEY = os.getenv("HOLDED_API_KEY", "")
@@ -60,3 +79,15 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_AUTONOMO = os.getenv("STRIPE_PRICE_AUTONOMO", "")  # price_xxx mensual 29€
 STRIPE_PRICE_PRO = os.getenv("STRIPE_PRICE_PRO", "")            # price_xxx mensual 39€
 TRIAL_DAYS = int(os.getenv("NOESIS_TRIAL_DAYS", "14"))
+
+# Firma de webhooks y límites de entrada.
+WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
+META_GRAPH_VERSION = os.getenv("META_GRAPH_VERSION", "v23.0")
+MAX_JSON_BYTES = int(os.getenv("NOESIS_MAX_JSON_BYTES", "262144"))
+MAX_AUDIO_BYTES = int(os.getenv("NOESIS_MAX_AUDIO_BYTES", str(12 * 1024 * 1024)))
+MAX_CHAT_CHARS = int(os.getenv("NOESIS_MAX_CHAT_CHARS", "4000"))
+
+# Las copias pueden apuntar a un volumen o directorio distinto del archivo principal.
+BACKUP_DIR = Path(
+    os.getenv("NOESIS_BACKUP_DIR", str(DB_PATH.parent / "backups"))
+)

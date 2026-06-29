@@ -10,6 +10,7 @@ Es el mismo bucle que usaremos cuando el canal sea WhatsApp en vez de la consola
 from __future__ import annotations
 
 from datetime import date, datetime
+import threading
 
 import anthropic
 
@@ -19,7 +20,7 @@ from .tools import TOOLS, run_tool
 _DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 
 
-def _system_prompt() -> str:
+def _system_prompt(business_name: str) -> str:
     hoy = date.today()
     return f"""Eres Noesis, el copiloto de negocio de un autónomo de servicios \
 (fontanero, electricista, reformas, limpieza, jardinería...). Hablas por WhatsApp.
@@ -32,7 +33,7 @@ CONTEXTO TEMPORAL
 - Cuando el usuario diga "mañana", "el jueves", "esta tarde"... calcula tú la \
 fecha real y pásala a las herramientas en formato ISO (YYYY-MM-DD o YYYY-MM-DDTHH:MM).
 
-NEGOCIO ({config.BUSINESS_NAME})
+NEGOCIO ({business_name})
 - Los importes de las facturas que te dictan suelen ser SIN IVA ("180 más IVA"). \
 Si dicen "180 con IVA incluido", ajústalo. El IVA por defecto es 21%.
 - Flujo de factura: primero 'crear_factura' (borrador) y MUESTRA el total para que \
@@ -56,19 +57,34 @@ class NoesisAgent:
                 "(https://console.anthropic.com)."
             )
         self.business_id = business_id
+        business = db.get_business(business_id) or {}
+        self.business_name = business.get("name") or config.BUSINESS_NAME
         self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
         self.messages: list[dict] = []
+        self._lock = threading.Lock()
 
     def send(self, user_text: str) -> str:
         """Procesa un mensaje del autónomo y devuelve la respuesta de Noesis."""
+        with self._lock:
+            return self._send_locked(user_text)
+
+    def _send_locked(self, user_text: str) -> str:
+        if len(self.messages) > 32:
+            self.messages = self.messages[-24:]
+            while self.messages and self.messages[0].get("role") != "user":
+                self.messages.pop(0)
         self.messages.append({"role": "user", "content": user_text})
 
-        while True:
+        safe_tools = [
+            tool for tool in TOOLS
+            if tool["name"] not in {"enviar_factura", "registrar_pago"}
+        ]
+        for _round in range(6):
             resp = self.client.messages.create(
                 model=config.MODEL,
                 max_tokens=1024,
-                system=_system_prompt(),
-                tools=TOOLS,
+                system=_system_prompt(self.business_name),
+                tools=safe_tools,
                 messages=self.messages,
             )
             self.messages.append({"role": "assistant", "content": resp.content})
@@ -90,6 +106,10 @@ class NoesisAgent:
                         "content": output,
                     })
             self.messages.append({"role": "user", "content": tool_results})
+        return (
+            "He detenido la operación porque necesitó demasiados pasos. "
+            "Prueba a pedírmelo de una forma más concreta."
+        )
 
 
 def daily_summary_text(business_id: int = db.DEFAULT_BUSINESS_ID) -> str:
