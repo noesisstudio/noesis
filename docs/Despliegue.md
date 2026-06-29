@@ -15,7 +15,8 @@ escala bien al principio. Coste estimado: ~5 €/mes.
 3. Railway detecta `Procfile` (`web: noesis-web`) y `requirements.txt` y construye solo.
 4. **Variables de entorno** (Settings → Variables):
    - `NOESIS_SECRET` → una cadena larga y aleatoria (firma las sesiones; **obligatoria**).
-   - `NOESIS_BASE_URL` → `https://bynoesis.com` (obligatoria en producción).
+   - `NOESIS_BASE_URL` → `https://bynoesis.com` cuando el dominio propio esté
+     conectado. Mientras tanto se usa automáticamente `RAILWAY_PUBLIC_DOMAIN`.
    - `HOST` → `0.0.0.0`
    - `NOESIS_DB_PATH` → `/data/noesis.db` (apunta al volumen, ver paso 5).
    - `NOESIS_BACKUP_DIR` → `/data/backups`.
