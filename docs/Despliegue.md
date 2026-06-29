@@ -20,15 +20,20 @@ escala bien al principio. Coste estimado: ~5 €/mes.
    - `HOST` → `0.0.0.0`
    - `NOESIS_DB_PATH` → `/data/noesis.db` (apunta al volumen, ver paso 5).
    - `NOESIS_BACKUP_DIR` → `/data/backups`.
+   - `NOESIS_DOCS_PATH` → `/data/uploads` (los documentos/papeles subidos van también
+     al volumen; si no, se borrarían en cada despliegue).
    - `ANTHROPIC_API_KEY` → opcional (solo si se quiere IA en el chat; sin ella va el
      cerebro local gratis).
    - Al activar WhatsApp: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`,
      `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` y `NOESIS_WHATSAPP_NUMBER`.
    - Al activar Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
      `STRIPE_PRICE_AUTONOMO` y `STRIPE_PRICE_PRO`.
+   - Email (SMTP): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
+   - Facturación legal: `HOLDED_API_KEY` (cuando se active Verifactu vía Holded).
    - `PORT` lo inyecta Railway automáticamente.
 5. **Volumen persistente**: añadir un Volume montado en `/data`. Sin esto, en cada
-   despliegue se borraría la base de datos SQLite (el disco del contenedor es efímero).
+   despliegue se borrarían la base de datos SQLite y los documentos subidos (el disco
+   del contenedor es efímero). La versión de Python la fija `.python-version` (3.12).
 6. **Dominio**: Settings → Networking → Custom Domain → `bynoesis.com`, y apuntar el
    DNS según indique Railway. HTTPS es automático.
 

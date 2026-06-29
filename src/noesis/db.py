@@ -238,6 +238,9 @@ def _ensure_indexes() -> None:
 def init_db() -> None:
     with get_conn() as conn:
         conn.executescript(SCHEMA)
+        # Tabla de documentos ("papeles"): vive en el módulo aislado documents/.
+        from .documents import ensure_schema
+        ensure_schema(conn)
     _migrate()
     _ensure_default_business()
     _backfill_phone_norms()
@@ -1402,8 +1405,15 @@ def export_business_data(business_id) -> dict:
         "invoices": list_invoices(business_id),
         "quotes": list_quotes(business_id),
         "expenses": list_expenses(business_id),
+        "documents": _documents_repo().export_for_business(business_id),
         "exported_at": _now(),
     }
+
+
+def _documents_repo():
+    """Acceso perezoso al repositorio de documentos (módulo aislado)."""
+    from .documents import repo
+    return repo
 
 
 def export_client_data(client_id, business_id) -> dict | None:
@@ -1436,6 +1446,11 @@ def delete_client_cascade(client_id, business_id) -> bool:
     client = get_client(client_id, business_id)
     if not client:
         return False
+    # Borra antes los ficheros físicos de los documentos del cliente (derecho al olvido).
+    from .documents import repo as _docrepo, storage as _docstore
+    for stored in _docrepo.stored_names_for_client(business_id, client_id):
+        _docstore.delete(business_id, stored)
+    _docrepo.purge_for_client(business_id, client_id)
     with get_conn() as conn:
         issued = conn.execute(
             "SELECT COUNT(*) FROM invoices WHERE business_id=? AND client_id=? "
@@ -1481,7 +1496,10 @@ def delete_business_cascade(business_id) -> bool:
                 "La cuenta tiene facturas emitidas que deben conservarse. "
                 "Solicita una baja con conservación fiscal."
             )
-        for table in ("quotes", "invoices", "jobs", "clients", "expenses"):
+        # Borra los ficheros físicos de los documentos antes que sus metadatos (RGPD).
+        from .documents import storage as _docstore
+        _docstore.delete_business_dir(business_id)
+        for table in ("documents", "quotes", "invoices", "jobs", "clients", "expenses"):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "
                      "(SELECT id FROM users WHERE business_id=?)", (business_id,))

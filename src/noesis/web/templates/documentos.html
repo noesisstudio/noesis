@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Tus papeles, en orden</div>
+    <h1>Documentos</h1>
+    <p>Guarda aquí los papeles de tu negocio: recibos, contratos, facturas de
+       proveedor o la foto de un ticket. Quedan ligados a un cliente si quieres y se
+       incluyen en tu copia de datos (RGPD). Una foto de un ticket se puede convertir
+       en gasto con un clic.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn primary" href="#subir">Subir documento</a>
+  </div>
+</div>
+
+<div class="grid g3">
+  <div class="card" id="subir">
+    <div class="card-h"><h2>Subir un documento</h2></div>
+    <div class="card-b">
+      <label class="fld">Archivo (PDF o foto)</label>
+      <input class="input" id="d-file" type="file"
+             accept=".pdf,.jpg,.jpeg,.png,.webp,.heic">
+      <label class="fld" style="margin-top:10px">Tipo</label>
+      <select id="d-kind">
+        <option value="documento">Documento</option>
+        <option value="ticket">Ticket / recibo</option>
+        <option value="contrato">Contrato</option>
+        <option value="proveedor">Factura de proveedor</option>
+      </select>
+      <label class="fld" style="margin-top:10px">Cliente (opcional)</label>
+      <select id="d-client"><option value="">— Sin cliente —</option></select>
+      <label class="fld" style="margin-top:10px">Nota (opcional)</label>
+      <input class="input" id="d-note" placeholder="Ej. Garantía de la caldera">
+      <button class="btn primary full" style="margin-top:14px" onclick="uploadDoc()">Subir</button>
+      <div id="d-msg" class="meta" style="margin-top:10px"></div>
+      <div id="d-ocr" class="meta" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div class="card col-2">
+    <div class="card-h"><h2>Tus documentos</h2><span class="hint">más recientes primero</span></div>
+    <div class="card-b table-pad" style="padding-top:6px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Archivo</th><th>Tipo</th><th>Cliente</th>
+            <th class="t-right">Importe leído</th><th></th></tr></thead>
+          <tbody id="d-body"></tbody>
+        </table>
+      </div>
+      <div id="d-empty"></div>
+    </div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  <b>Privacidad (RGPD):</b> tus documentos solo los ves tú. Se guardan ligados a tu
+  cuenta, se exportan en «Ajustes → Descargar mis datos» y se borran del todo si das
+  de baja la cuenta o eliminas un cliente.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const KINDS = { documento:'Documento', ticket:'Ticket', contrato:'Contrato', proveedor:'Proveedor' };
+
+async function load() {
+  // Clientes para el desplegable (opcional al subir).
+  try {
+    const clients = await api('/clients');
+    el('d-client').innerHTML = '<option value="">— Sin cliente —</option>' +
+      clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  } catch (e) {}
+  // Aviso de OCR (lectura de fotos).
+  try {
+    const st = await api('/documents/ocr-status');
+    el('d-ocr').textContent = st.ocr
+      ? 'Lectura de fotos activa: de un ticket sacaré el importe automáticamente.'
+      : 'Lectura automática de fotos no disponible en este servidor: podrás poner el importe a mano.';
+  } catch (e) {}
+  renderList();
+}
+
+async function renderList() {
+  const docs = await api('/documents');
+  el('d-body').innerHTML = docs.map(d => {
+    const importe = d.ocr_amount ? eur(d.ocr_amount) : '—';
+    const toExpense = (d.kind === 'ticket' || d.kind === 'proveedor')
+      ? `<button class="iconbtn" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">€→</button>` : '';
+    return `<tr>
+      <td class="meta">${dateIso(d.created_at)}</td>
+      <td><a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener">${esc(d.filename)}</a></td>
+      <td><span class="badge b-gray">${esc(KINDS[d.kind] || d.kind)}</span></td>
+      <td>${esc(d.client_name || '—')}</td>
+      <td class="t-right num">${importe}</td>
+      <td class="t-right table-actions">${toExpense}
+        <button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button></td>
+    </tr>`;
+  }).join('');
+  el('d-empty').innerHTML = docs.length ? '' :
+    emptyState('Aún no has subido documentos', 'Sube un PDF o la foto de un ticket para empezar.', '#subir', 'Subir documento');
+}
+
+async function uploadDoc() {
+  const input = el('d-file');
+  const msg = el('d-msg');
+  if (!input.files || !input.files.length) { msg.textContent = 'Elige un archivo primero.'; return; }
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  fd.append('kind', el('d-kind').value);
+  fd.append('client_id', el('d-client').value);
+  fd.append('note', el('d-note').value);
+  msg.textContent = 'Subiendo…';
+  const r = await fetch(`/api/${BIZ}/documents`, { method: 'POST', body: fd });
+  const data = await r.json();
+  if (!r.ok) { msg.textContent = data.error || 'No se pudo subir.'; return; }
+  input.value = ''; el('d-note').value = '';
+  msg.textContent = 'Documento guardado.' + (data.ocr_amount ? ` Importe detectado: ${eur(data.ocr_amount)}.` : '');
+  renderList();
+}
+
+async function toExpense(id, amount) {
+  let amt = amount;
+  if (!amt) {
+    const v = prompt('No he leído el importe. ¿Cuánto es el gasto (€)?');
+    if (!v) return;
+    amt = parseFloat(v.replace(',', '.'));
+    if (!amt) return;
+  }
+  try {
+    await apiPost(`/documents/${id}/to-expense`, { amount: amt });
+    el('d-msg').textContent = 'Gasto registrado desde el documento.';
+  } catch (e) { el('d-msg').textContent = e.message; }
+}
+
+async function delDoc(id) {
+  if (!confirm('¿Borrar este documento? Se elimina el archivo definitivamente.')) return;
+  await apiDelete('/documents/' + id);
+  renderList();
+}
+
+load();
+</script>
+{% endblock %}

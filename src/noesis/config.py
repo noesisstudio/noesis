@@ -33,6 +33,14 @@ DB_PATH = Path(os.getenv("NOESIS_DB_PATH", str(ROOT / "noesis.db")))
 # IVA por defecto en España (servicios generales).
 DEFAULT_VAT_RATE = 21
 
+# Documentos ("papeles"): carpeta donde se guardan los archivos subidos por los
+# autónomos (recibos, contratos, fotos de tickets...). En producción apunta a un
+# volumen persistente con NOESIS_DOCS_PATH (igual que la BD). Por defecto, ./uploads
+# en la raíz del proyecto (ignorada por git).
+DOCS_PATH = Path(os.getenv("NOESIS_DOCS_PATH", str(ROOT / "uploads")))
+# Tamaño máximo por archivo subido (MB). Evita llenar el disco con un único fichero.
+MAX_UPLOAD_MB = int(os.getenv("NOESIS_MAX_UPLOAD_MB", "15"))
+
 # Clave para firmar las sesiones (cookies). En producción, ponla en el .env.
 SECRET_KEY = os.getenv("NOESIS_SECRET", "dev-secret-cambiar-en-produccion")
 
