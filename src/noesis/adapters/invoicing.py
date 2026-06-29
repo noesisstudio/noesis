@@ -14,7 +14,6 @@ Verifactu/TicketBAI NO se construyen aquí: los resuelve el proveedor homologado
 
 from __future__ import annotations
 
-from datetime import date, timedelta
 from typing import Protocol
 
 
@@ -38,27 +37,17 @@ class InternalInvoicingProvider:
     def __init__(self, payment_term_days: int = 15):
         self.payment_term_days = payment_term_days
 
-    def _next_number(self, business_id: int) -> str:
-        """Siguiente número correlativo de ESTE negocio (serie por año)."""
-        from .. import db
-        year = date.today().year
-        with db.get_conn() as conn:
-            n = conn.execute(
-                "SELECT COUNT(*) FROM invoices WHERE business_id=? "
-                "AND number IS NOT NULL AND number LIKE ?",
-                (business_id, f"{year}/%"),
-            ).fetchone()[0]
-        return f"{year}/{n + 1:04d}"
-
     def issue(self, invoice: dict, client: dict) -> dict:
+        from .. import db
         business_id = invoice.get("business_id")
-        number = self._next_number(business_id)
-        due = (date.today() + timedelta(days=self.payment_term_days)).isoformat()
+        issued = db.issue_invoice(
+            invoice["id"], business_id, payment_term_days=self.payment_term_days
+        )
         return {
-            "number": number,
+            "number": issued["number"],
             "pdf_url": f"/api/{business_id}/invoices/{invoice.get('id')}/pdf",
             "verifactu_id": None,
-            "due_date": due,
+            "due_date": issued["due_date"],
             "sent_to": client.get("phone") or client.get("name"),
         }
 
@@ -85,8 +74,12 @@ class HoldedInvoicingProvider:
 
 
 def get_provider() -> InvoicingProvider:
-    """Proveedor activo: Holded si hay API key configurada; si no, emisión interna real."""
+    """Emisión interna hasta que el adaptador Holded esté implementado por negocio."""
     from .. import config
     if config.HOLDED_API_KEY:
-        return HoldedInvoicingProvider(config.HOLDED_API_KEY)
+        import logging
+        logging.getLogger("noesis.invoicing").warning(
+            "HOLDED_API_KEY está configurada, pero Holded aún no está implementado. "
+            "Se mantiene la emisión interna para evitar interrumpir facturas."
+        )
     return InternalInvoicingProvider()

@@ -77,7 +77,7 @@ function render(f) {
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
       ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Enviar</button>`:''}
       ${i.status==='enviada'?`<button class="btn sm" onclick="pay(${i.id})">Cobrada</button>`:''}
-      <button class="iconbtn" title="Borrar" onclick="del(${i.id})">${TRASH}</button>
+      ${i.status==='borrador'?`<button class="iconbtn" title="Borrar borrador" onclick="del(${i.id})">${TRASH}</button>`:''}
     </td>
   </tr>`).join('');
   el('f-empty').innerHTML = rows.length ? '' : emptyState(

@@ -23,12 +23,12 @@
       </div>
       <div class="card pad">
         {% if error == 'token' %}<div class="err">El enlace no es válido o ha caducado. Pide uno nuevo.</div>
-        {% elif error == 'password' %}<div class="err">La contraseña debe tener al menos 6 caracteres.</div>{% endif %}
+        {% elif error == 'password' %}<div class="err">La contraseña debe tener al menos 12 caracteres.</div>{% endif %}
         {% if token %}
         <form method="post" action="/restablecer">
           <input type="hidden" name="token" value="{{ token }}">
           <label class="fld">Nueva contraseña</label>
-          <input class="input" name="password" type="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+          <input class="input" name="password" type="password" required minlength="12" maxlength="1024" placeholder="Mínimo 12 caracteres">
           <button class="btn primary full" style="margin-top:18px">Guardar contraseña</button>
         </form>
         {% else %}

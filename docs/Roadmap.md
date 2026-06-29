@@ -11,6 +11,8 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 - Marca aplicada (verde bosque + teal + crema), iconos SVG propios, logo, móvil.
 - **Login y seguridad**: contraseñas cifradas, sesiones, aislamiento por dueño.
 - Informes CSV, alertas programadas (diaria/semanal).
+- Suite de regresión del backend: aislamiento multiempresa, facturación idempotente,
+  webhooks firmados, sesiones revocables y validación fiscal.
 - **Fase 1 completa**: editar/borrar (clientes, facturas, gastos, trabajos),
   **PDF de factura** (fpdf2) con datos fiscales, validaciones de formularios.
 
@@ -24,11 +26,11 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 - [ ] Integración Holded (Verifactu real). Ver [[Fiscalidad]].
 - [ ] WhatsApp real (Meta Cloud API) — requiere verificación de empresa (founder).
 - [ ] Despliegue 24/7 con HTTPS en **bynoesis.com** + RGPD (privacidad/términos).
-- [ ] Transcripción de audios (Whisper).
+- [x] Transcripción de audios (Whisper, instalación opcional).
 
 ## 🚀 Fase 3 — validar
 - [ ] Piloto con 5-10 autónomos reales antes de escalar.
 
 ## 🌱 Más adelante
 Optimización de rutas por zona · agente de voz telefónico · inventario y
-trabajadores · modelos 303/130 estimados · tests automáticos.
+  trabajadores · modelos 303/130 estimados.

@@ -34,5 +34,9 @@ y degrada con elegancia cuando falta una clave externa (mismo patrón que WhatsA
 - Stripe y email se hablan por HTTPS/SMTP con la **stdlib** (sin dependencias nuevas).
 - Las facturas siguen teniendo serie correlativa por negocio; los presupuestos usan
   serie propia `P{año}/{NNNN}`.
-- La baja de cuenta y el "olvido" de cliente borran en cascada; recuerda que las
-  facturas tienen obligación de conservación fiscal (valóralo antes de borrar).
+- El "olvido" elimina agenda, borradores y datos operativos, pero conserva la
+  instantánea fiscal de facturas emitidas. La baja automática se bloquea si existen
+  facturas sujetas a conservación y debe tramitarse como baja con retención fiscal.
+- WhatsApp exige `WHATSAPP_APP_SECRET` en producción y deduplica cada `message.id`.
+- Holded sigue desactivado hasta disponer de credenciales separadas por negocio; una
+  clave global nunca debe mezclar la facturación de varios autónomos.

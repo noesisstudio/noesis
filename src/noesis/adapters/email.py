@@ -27,7 +27,14 @@ def send_email(to: str, subject: str, body: str) -> bool:
     """Envía un email de texto. Devuelve True si salió por SMTP; False si solo se
     registró en log (sin SMTP configurado o ante un fallo de envío)."""
     if not available():
-        log.warning("[EMAIL sin SMTP] Para: %s | Asunto: %s\n%s", to, subject, body)
+        if config.IS_PRODUCTION:
+            log.error(
+                "SMTP no está configurado: no se pudo enviar '%s' a %s.",
+                subject, to,
+            )
+        else:
+            log.warning("[EMAIL local sin SMTP] Para: %s | Asunto: %s\n%s",
+                        to, subject, body)
         return False
     msg = EmailMessage()
     msg["From"] = config.SMTP_FROM

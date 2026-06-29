@@ -57,7 +57,7 @@ async function load() {
     <td class="t-right num">${c.n_facturas}</td>
     <td class="t-right num"><b>${eur(c.facturado)}</b></td>
     <td class="t-right table-actions">
-      <button class="btn sm" onclick='edit(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone||"")}, ${JSON.stringify(c.zone||"")})'>Editar</button>
+      <button class="btn sm" onclick='edit(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone||"")}, ${JSON.stringify(c.zone||"")}, ${JSON.stringify(c.nif||"")}, ${JSON.stringify(c.address||"")}, ${JSON.stringify(c.email||"")})'>Editar</button>
       <a class="btn sm" href="/api/${BIZ}/clients/${c.id}/export" title="Descargar sus datos (RGPD)">Datos</a>
       <button class="iconbtn" title="Borrar y olvidar (RGPD)" onclick="erase(${c.id})">${TRASH}</button>
     </td></tr>`).join('');
@@ -75,24 +75,30 @@ async function load() {
     el('cl-plan').innerHTML = `<b>Cartera repartida.</b><p class="muted" style="margin:6px 0 12px">Mantén teléfonos y zonas actualizados para que agenda, cobros y facturas no se ensucien.</p>`;
   }
 }
-function edit(id, name, phone, zone){
+function edit(id, name, phone, zone, nif, address, email){
   formModal({
     title: 'Editar cliente',
     submitLabel: 'Guardar cambios',
     fields: [
       { name:'name', label:'Nombre', value:name, placeholder:'Nombre del cliente' },
       { name:'phone', label:'Teléfono', value:phone, placeholder:'600 000 000' },
+      { name:'email', label:'Email', value:email, placeholder:'cliente@empresa.es' },
+      { name:'nif', label:'NIF / CIF', value:nif, placeholder:'12345678Z' },
+      { name:'address', label:'Domicilio fiscal', value:address, placeholder:'Calle, número y localidad' },
       { name:'zone', label:'Zona', value:zone, placeholder:'Badalona' },
     ],
     onSubmit: async (v) => {
       if (!v.name) return;
-      await apiPost('/clients/'+id, { name:v.name, phone:v.phone, zone:v.zone });
+      await apiPost('/clients/'+id, {
+        name:v.name, phone:v.phone, email:v.email, nif:v.nif,
+        address:v.address, zone:v.zone
+      });
       load();
     }
   });
 }
 async function erase(id){
-  if(confirm('¿Borrar este cliente y TODOS sus datos asociados (citas, presupuestos, facturas)? No se puede deshacer.')){
+  if(confirm('¿Eliminar sus datos operativos? Las facturas emitidas conservarán únicamente los datos exigidos por ley.')){
     await apiDelete('/clients/'+id+'/erase'); load();
   }
 }

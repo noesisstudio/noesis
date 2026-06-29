@@ -25,6 +25,22 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `db.py` — SQLite (multi-tenant). Futuro: Postgres/Supabase.
 - `adapters/invoicing.py` — facturación: mock hoy → Holded mañana. Ver [[Fiscalidad]].
 - `web/auth.py` — login (PBKDF2, sesiones firmadas). Aislamiento por dueño.
+- `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
+  fiscalidad, NLU y revocación de sesiones.
+
+## Garantías del backend
+- El aislamiento se valida en la ruta y de nuevo en `db.py`; una mutación nunca
+  devuelve una entidad de otro `business_id`.
+- La emisión de factura es atómica e idempotente. La secuencia se persiste por
+  negocio/año y los datos fiscales quedan congelados en la factura.
+- Facturas emitidas no se borran ni se renumeran. Los borrados RGPD conservan los
+  documentos sujetos a obligación fiscal.
+- Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs.
+- Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
+  solo conservan acceso a pago, exportación y baja.
+- El scheduler registra cada ejecución para evitar duplicados entre réplicas.
+
+Detalle y pendientes: [[Backend_Hardening]].
 
 ## Principios
 - Datos en local; solo el LLM (si se activa) sale fuera.

@@ -23,7 +23,7 @@ KEEP = 14  # copias diarias conservadas (~2 semanas)
 
 
 def _backup_dir() -> Path:
-    d = Path(config.DB_PATH).parent / "backups"
+    d = Path(config.BACKUP_DIR)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -34,12 +34,8 @@ def run_backup() -> Path | None:
         return None
     dest = _backup_dir() / f"noesis-{datetime.now():%Y%m%d-%H%M%S}.db"
     try:
-        source = sqlite3.connect(str(src))
-        target = sqlite3.connect(str(dest))
-        with target:
+        with sqlite3.connect(str(src)) as source, sqlite3.connect(str(dest)) as target:
             source.backup(target)
-        source.close()
-        target.close()
         _rotate()
         log.info("Copia de seguridad creada: %s", dest.name)
         return dest

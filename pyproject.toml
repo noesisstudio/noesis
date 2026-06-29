@@ -8,22 +8,22 @@ version = "0.1.0"
 description = "Copiloto de negocio por WhatsApp para autónomos de servicios"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=0.40.0",
-    "python-dotenv>=1.0.0",
-    "rich>=13.7.0",
-    "fastapi>=0.110.0",
-    "uvicorn[standard]>=0.29.0",
-    "jinja2>=3.1.0",
-    "apscheduler>=3.10.0",
-    "python-multipart>=0.0.9",
-    "itsdangerous>=2.1.0",
-    "fpdf2>=2.7.0",
+    "anthropic>=0.40.0,<1",
+    "python-dotenv>=1.0.0,<2",
+    "rich>=13.7.0,<15",
+    "fastapi>=0.110.0,<1",
+    "uvicorn[standard]>=0.29.0,<1",
+    "jinja2>=3.1.0,<4",
+    "apscheduler>=3.10.0,<4",
+    "python-multipart>=0.0.9,<1",
+    "itsdangerous>=2.1.0,<3",
+    "fpdf2>=2.7.0,<3",
 ]
 
 [project.optional-dependencies]
 # Transcripción de voz local (notas de voz -> factura/agenda). Pesa y pide RAM,
 # por eso es opcional: pip install -e ".[audio]"
-audio = ["faster-whisper>=1.0.0"]
+audio = ["faster-whisper>=1.0.0,<2"]
 
 [project.scripts]
 noesis = "noesis.cli:main"

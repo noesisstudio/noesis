@@ -49,14 +49,8 @@
           el enrutado ya está listo.){% endif %}
         </p>
 
-        <div style="display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--faint); font-size:12px">
-          <span class="line" style="flex:1; border-top:1px solid var(--border)"></span>o introdúcelo a mano<span class="line" style="flex:1; border-top:1px solid var(--border)"></span>
-        </div>
-
-        <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
-          <label class="fld">Tu número de WhatsApp</label>
-          <input class="input" name="phone" required placeholder="+34 6XX XXX XXX">
-          <button class="btn full" style="margin-top:14px">Vincular número y entrar al panel</button>
+        <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect" style="margin-top:18px">
+          <button class="btn full">Continuar sin WhatsApp por ahora</button>
         </form>
       </div>
     </div>

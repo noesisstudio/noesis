@@ -16,9 +16,12 @@ from __future__ import annotations
 import logging
 import os
 import secrets
-import time
+import hashlib
+import hmac
+from datetime import datetime, timedelta
 
 from .. import db
+from .. import config
 from . import chat
 
 log = logging.getLogger("uvicorn.error")
@@ -28,9 +31,6 @@ NOESIS_NUMBER = os.getenv("NOESIS_WHATSAPP_NUMBER", "")
 _TOKEN = os.getenv("WHATSAPP_TOKEN", "")
 _PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
 
-# Códigos de vinculación pendientes: code -> (business_id, timestamp). En memoria;
-# la verificación ocurre a los pocos minutos del onboarding.
-_PENDING: dict[str, tuple[int, float]] = {}
 _CODE_TTL = 1800  # 30 min
 
 
@@ -38,7 +38,11 @@ _CODE_TTL = 1800  # 30 min
 def start_link(business_id: int) -> dict:
     """Genera un código de vinculación y el enlace wa.me para enviarlo."""
     code = secrets.token_hex(3).upper()  # 6 caracteres
-    _PENDING[code] = (business_id, time.time())
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+    expires = (
+        datetime.now() + timedelta(seconds=_CODE_TTL)
+    ).isoformat(timespec="seconds")
+    db.create_whatsapp_link(code_hash, business_id, expires)
     text = f"NOESIS {code}"
     number = NOESIS_NUMBER or "TUNUMERO"
     link = f"https://wa.me/{number}?text={text.replace(' ', '%20')}"
@@ -50,11 +54,19 @@ def _try_link(from_phone: str, text: str) -> str | None:
     parts = (text or "").strip().split()
     if len(parts) == 2 and parts[0].upper() == "NOESIS":
         code = parts[1].upper()
-        entry = _PENDING.get(code)
-        if entry and time.time() - entry[1] < _CODE_TTL:
-            business_id = entry[0]
-            db.set_whatsapp_status(business_id, "conectado", phone=from_phone)
-            _PENDING.pop(code, None)
+        business_id = db.consume_whatsapp_link(
+            hashlib.sha256(code.encode()).hexdigest()
+        )
+        if business_id:
+            try:
+                db.set_whatsapp_status(business_id, "conectado", phone=from_phone)
+                db.finish_onboarding(business_id)
+            except Exception:  # noqa: BLE001
+                log.exception("No se pudo vincular WhatsApp al negocio %s.", business_id)
+                return (
+                    "Ese teléfono ya está vinculado o no es válido. "
+                    "Revísalo desde Ajustes."
+                )
             biz = db.get_business(business_id) or {}
             return (f"WhatsApp conectado a {biz.get('name', 'tu negocio')}. "
                     "Ya puedes pedirme cosas: «¿qué tengo hoy?», «factura a Juan 95€»…")
@@ -71,8 +83,12 @@ def _extract_messages(payload: dict) -> list[dict]:
     if not isinstance(payload, dict):
         return out
     if payload.get("from") and (payload.get("text") is not None or payload.get("audio_id")):
-        out.append({"phone": str(payload["from"]), "text": str(payload.get("text") or ""),
-                    "audio_id": payload.get("audio_id")})
+        out.append({
+            "id": str(payload.get("id") or ""),
+            "phone": str(payload["from"]),
+            "text": str(payload.get("text") or ""),
+            "audio_id": payload.get("audio_id"),
+        })
         return out
     for entry in payload.get("entry", []) or []:
         for change in entry.get("changes", []) or []:
@@ -83,7 +99,10 @@ def _extract_messages(payload: dict) -> list[dict]:
                     continue
                 text = (msg.get("text", {}) or {}).get("body", "")
                 audio_id = (msg.get("audio", {}) or {}).get("id")
-                out.append({"phone": phone, "text": text, "audio_id": audio_id})
+                out.append({
+                    "id": str(msg.get("id") or ""),
+                    "phone": phone, "text": text, "audio_id": audio_id,
+                })
     return out
 
 
@@ -95,12 +114,15 @@ def _download_media(media_id: str) -> bytes | None:
     import urllib.request
     try:
         meta_req = urllib.request.Request(
-            f"https://graph.facebook.com/v20.0/{media_id}",
+            f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{media_id}",
             headers={"Authorization": f"Bearer {_TOKEN}"})
         info = _json.loads(urllib.request.urlopen(meta_req, timeout=10).read())
         media_req = urllib.request.Request(
             info["url"], headers={"Authorization": f"Bearer {_TOKEN}"})
-        return urllib.request.urlopen(media_req, timeout=20).read()
+        data = urllib.request.urlopen(media_req, timeout=20).read(
+            config.MAX_AUDIO_BYTES + 1
+        )
+        return data if len(data) <= config.MAX_AUDIO_BYTES else None
     except Exception as e:  # noqa: BLE001
         log.warning("Fallo descargando audio %s: %s", media_id, e)
         return None
@@ -127,6 +149,10 @@ def handle_inbound(payload: dict) -> dict:
     los enruta al cerebro del negocio que escribe."""
     results = []
     for msg in _extract_messages(payload):
+        message_id = msg.get("id")
+        if message_id and not db.claim_webhook_event("whatsapp", message_id):
+            results.append({"id": message_id, "duplicate": True})
+            continue
         phone, text, audio_id = msg["phone"], msg["text"], msg.get("audio_id")
 
         # Nota de voz: transcribir a texto (Whisper local) antes de procesar.
@@ -162,7 +188,10 @@ def send(to: str, text: str) -> bool:
         return False
     import urllib.request
     import json as _json
-    url = f"https://graph.facebook.com/v20.0/{_PHONE_ID}/messages"
+    url = (
+        f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/"
+        f"{_PHONE_ID}/messages"
+    )
     body = _json.dumps({"messaging_product": "whatsapp", "to": to,
                         "type": "text", "text": {"body": text}}).encode()
     req = urllib.request.Request(url, data=body, headers={
@@ -173,3 +202,14 @@ def send(to: str, text: str) -> bool:
     except Exception as e:  # noqa: BLE001
         log.warning("Fallo enviando WhatsApp a %s: %s", to, e)
         return False
+
+
+def verify_signature(payload: bytes, header: str) -> bool:
+    """Verifica que el POST procede de Meta usando el secreto de la aplicación."""
+    secret = config.WHATSAPP_APP_SECRET
+    if not secret:
+        return not config.IS_PRODUCTION
+    expected = "sha256=" + hmac.new(
+        secret.encode(), payload, hashlib.sha256
+    ).hexdigest()
+    return bool(header) and hmac.compare_digest(expected, header)

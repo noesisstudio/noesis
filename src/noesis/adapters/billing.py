@@ -72,6 +72,7 @@ class StripeBillingProvider:
             "metadata[business_id]": str(business["id"]),
             "metadata[plan]": plan,
             "subscription_data[metadata][business_id]": str(business["id"]),
+            "subscription_data[metadata][plan]": plan,
         }
         if business.get("stripe_customer_id"):
             data["customer"] = business["stripe_customer_id"]
@@ -120,14 +121,23 @@ def verify_webhook(payload: bytes, sig_header: str) -> dict | None:
     secret = config.STRIPE_WEBHOOK_SECRET
     if not secret or not sig_header:
         return None
-    parts = dict(p.split("=", 1) for p in sig_header.split(",") if "=" in p)
-    ts, v1 = parts.get("t"), parts.get("v1")
-    if not ts or not v1:
+    parts = [p.split("=", 1) for p in sig_header.split(",") if "=" in p]
+    ts = next((value for key, value in parts if key == "t"), None)
+    signatures = [value for key, value in parts if key == "v1"]
+    if not ts or not signatures:
         return None
-    if abs(time.time() - int(ts)) > 300:  # rechaza eventos viejos (anti-replay)
+    try:
+        timestamp = int(ts)
+    except ValueError:
+        return None
+    if abs(time.time() - timestamp) > 300:  # rechaza eventos viejos (anti-replay)
         return None
     signed = f"{ts}.".encode() + payload
     expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, v1):
+    if not any(hmac.compare_digest(expected, signature) for signature in signatures):
         return None
-    return json.loads(payload.decode())
+    try:
+        event = json.loads(payload.decode())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return event if isinstance(event, dict) else None

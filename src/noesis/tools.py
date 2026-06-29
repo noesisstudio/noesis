@@ -11,11 +11,13 @@ el CLI. El cerebro (agente o NLU local) decide cuál usar; aquí solo se ejecuta
 from __future__ import annotations
 
 import json
+import logging
 
 from . import db
 from .adapters import invoicing
 
 _provider = invoicing.get_provider()
+log = logging.getLogger("noesis.tools")
 
 DEFAULT_BUSINESS_ID = db.DEFAULT_BUSINESS_ID
 
@@ -181,23 +183,27 @@ def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None
 
 
 def _enviar_factura(business_id, factura_id):
-    inv = db.get_invoice(factura_id)
+    inv = db.get_invoice(factura_id, business_id)
     # Aislamiento: solo se puede operar sobre facturas del propio negocio.
     if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
-    client = db.get_client(inv["client_id"])
+    client = db.get_client(inv["client_id"], business_id)
     issued = _provider.issue(inv, client or {})
-    inv = db.mark_invoice_sent(factura_id, issued["number"], issued["due_date"],
-                               business_id=business_id)
+    inv = db.get_invoice(factura_id, business_id)
     return {"ok": True, "factura": inv, "emision": issued}
 
 
 def _registrar_pago(business_id, factura_id):
-    inv = db.get_invoice(factura_id)
+    inv = db.get_invoice(factura_id, business_id)
     # Aislamiento: solo se puede operar sobre facturas del propio negocio.
     if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
-    return {"ok": True, "factura": db.mark_invoice_paid(factura_id, business_id)}
+    if inv["status"] == "cobrada":
+        return {"ok": True, "factura": inv}
+    paid = db.mark_invoice_paid(factura_id, business_id)
+    if not paid:
+        return {"ok": False, "error": "Solo se puede cobrar una factura emitida."}
+    return {"ok": True, "factura": paid}
 
 
 def _ver_cobros_pendientes(business_id):
@@ -240,8 +246,9 @@ def run_tool(name: str, tool_input: dict, business_id: int = DEFAULT_BUSINESS_ID
         return json.dumps({"error": f"Herramienta desconocida: {name}"})
     try:
         result = fn(business_id=business_id, **tool_input)
-    except TypeError as e:
+    except (TypeError, ValueError) as e:
         result = {"error": f"Parámetros inválidos para {name}: {e}"}
-    except Exception as e:  # noqa: BLE001
-        result = {"error": f"Fallo ejecutando {name}: {e}"}
+    except Exception:  # noqa: BLE001
+        log.exception("Fallo ejecutando la herramienta %s.", name)
+        result = {"error": f"No se pudo ejecutar {name}. Inténtalo de nuevo."}
     return json.dumps(result, ensure_ascii=False, default=str)
