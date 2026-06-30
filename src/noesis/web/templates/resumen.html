@@ -86,16 +86,6 @@
 
 {% block scripts %}
 <script>
-function barlist(items, cls) {
-  if (!items.length) return '<div class="empty">Sin datos todavía.</div>';
-  const max = Math.max(1, ...items.map(i => i.value || 0));
-  return items.map(i => `<div class="b-row">
-    <span class="b-name">${esc(i.name)}</span>
-    <span class="b-val">${esc(i.valText)}</span>
-    <span class="b-track"><span class="b-fill ${cls || ''}" style="width:${Math.round((i.value || 0) / max * 100)}%"></span></span>
-  </div>`).join('');
-}
-
 async function load() {
   const s = await api('/summary');
   el('hb-profit').textContent = eur(s.estimated_profit);

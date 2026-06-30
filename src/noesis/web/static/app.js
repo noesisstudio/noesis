@@ -82,6 +82,17 @@ function formModal(opts) {
   if (first) first.focus();
 }
 
+/* Mini-barras "Top X" (clientes, categorías, canales). items: {name, value, valText}. */
+function barlist(items, cls) {
+  if (!items || !items.length) return '<div class="empty">Sin datos todavía.</div>';
+  const max = Math.max(1, ...items.map(i => i.value || 0));
+  return items.map(i => `<div class="b-row">
+    <span class="b-name">${esc(i.name)}</span>
+    <span class="b-val">${esc(i.valText)}</span>
+    <span class="b-track"><span class="b-fill ${cls || ''}" style="width:${Math.round((i.value || 0) / max * 100)}%"></span></span>
+  </div>`).join('');
+}
+
 /* Compartir un enlace privado (portal del cliente): copiar o enviar por WhatsApp.
    Modal accesible: atrapa Escape, devuelve el foco a quien lo abrió. */
 function shareLink(url, opts = {}) {

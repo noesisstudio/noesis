@@ -13,14 +13,15 @@
   </div>
 </div>
 
-<div class="grid g3">
-  <div class="metric"><div class="label">Total clientes</div><div class="value" id="cl-total">—</div><div class="sub" id="cl-active"></div></div>
-  <div class="metric"><div class="label">Facturación media/cliente</div><div class="value" id="cl-avg">—</div><div class="sub">Sobre facturación emitida</div></div>
-  <div class="metric"><div class="label">Cliente top</div><div class="value" id="cl-top" style="font-size:20px">—</div><div class="sub" id="cl-top-v"></div></div>
+<div class="grid g4">
+  <div class="stat"><div class="lbl">Total clientes</div><div class="val" id="cl-total">—</div><div class="delta flat" id="cl-active"></div></div>
+  <div class="stat"><div class="lbl">Con actividad</div><div class="val" id="cl-act">—</div><div class="delta flat">facturan o tienen trabajos</div></div>
+  <div class="stat"><div class="lbl">Facturación media</div><div class="val" id="cl-avg">—</div><div class="delta flat">por cliente</div></div>
+  <div class="stat"><div class="lbl">Cliente top</div><div class="val" id="cl-top" style="font-size:18px">—</div><div class="delta up" id="cl-top-v"></div></div>
 </div>
 
-<div class="split" style="margin-top:16px">
-  <div class="card">
+<div class="grid g3" style="margin-top:16px">
+  <div class="card col-2">
     <div class="card-h"><h2>Tus clientes</h2><span class="hint">ordenados por facturación</span></div>
     <div class="card-b table-pad" style="padding-top:6px">
       <div class="table-wrap">
@@ -32,10 +33,15 @@
       <div id="cl-empty"></div>
     </div>
   </div>
-  <div class="card card-action">
-    <div class="card-h"><h2>Lectura rápida</h2><span id="cl-badge" class="priority low">cartera</span></div>
-    <div class="card-b"><div id="cl-plan">...</div></div>
+  <div class="card">
+    <div class="card-h"><h2>Top clientes</h2><span class="hint">por facturación</span></div>
+    <div class="card-b"><div class="barlist" id="cl-bars"></div></div>
   </div>
+</div>
+
+<div class="card card-action" style="margin-top:16px">
+  <div class="card-h"><h2>Lectura rápida de tu cartera</h2><span id="cl-badge" class="priority low">cartera</span></div>
+  <div class="card-b"><div id="cl-plan">…</div></div>
 </div>
 {% endblock %}
 
@@ -52,12 +58,18 @@ async function sharePortal(id, name, phone){
 }
 async function load() {
   const cs = await api('/clients/stats');
+  const active = cs.filter(c => c.n_trabajos || c.n_facturas).length;
   el('cl-total').textContent = cs.length;
-  el('cl-active').textContent = cs.filter(c => c.n_trabajos || c.n_facturas).length + ' con actividad';
+  el('cl-active').textContent = active + ' con actividad';
+  el('cl-act').textContent = active;
   const totFact = cs.reduce((a,b)=>a+(b.facturado||0),0);
   el('cl-avg').textContent = eur(cs.length ? totFact/cs.length : 0);
   if (cs.length && cs[0].facturado) { el('cl-top').textContent = cs[0].name; el('cl-top-v').textContent = eur(cs[0].facturado); }
-  else el('cl-top').textContent = '—';
+  else { el('cl-top').textContent = '—'; el('cl-top-v').textContent = ''; }
+
+  el('cl-bars').innerHTML = barlist(cs.filter(c => c.facturado).slice(0, 5).map(c => ({
+    name: c.name, value: c.facturado, valText: eur(c.facturado)
+  })));
 
   el('cl-body').innerHTML = cs.map(c => `<tr>
     <td><b>${esc(c.name)}</b><br><span class="meta">${esc(c.phone||'Sin teléfono')}</span></td>
