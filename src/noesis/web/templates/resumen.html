@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-head">
-  <div class="page-title">
-    <div class="kicker">Panel diario</div>
-    <h1>Resumen de {{ business.name }}</h1>
-    <div class="page-count" id="hd-sub">Tu situación de un vistazo</div>
+<div class="daily-head">
+  <div class="daily-greet">
+    <div class="avatar" id="hd-ini">··</div>
+    <div>
+      <h1 id="hd-greet">Hola, {{ business.name }}</h1>
+      <div class="date" id="hd-date">—</div>
+    </div>
   </div>
   <div class="page-actions">
     <a class="btn" href="/b/{{ business.id }}/asistente">Hablar con Noesis</a>
@@ -41,34 +43,35 @@
 </section>
 {% endif %}
 
-<div class="hero-band">
+<div class="cmd-hero">
   <div>
-    <div class="hb-label">Beneficio estimado · este mes</div>
-    <div class="hb-value" id="hb-profit">—</div>
-    <div class="hb-chip" id="hb-chip">Ingresos menos gastos del mes en curso</div>
+    <div class="ch-kicker">Lo primero hoy</div>
+    <div class="ch-focus" id="ch-focus">Calculando tu prioridad…</div>
+    <a class="ch-btn" id="ch-btn" href="/b/{{ business.id }}/cobros" style="display:none">Ir →</a>
   </div>
-  <div class="hb-side">
+  <div class="ch-side">
     <div class="r"><span>Facturado</span><b id="hb-inv">—</b></div>
     <div class="r"><span>Cobrado</span><b id="hb-col">—</b></div>
     <div class="r"><span>Pendiente</span><b id="hb-pend">—</b></div>
   </div>
 </div>
 
-<div class="grid g4" style="margin-top:16px">
-  <div class="stat"><div class="lbl">Facturado (mes)</div><div class="val" id="s-inv">—</div>
-    <div class="delta flat" id="s-inv-d">—</div></div>
-  <div class="stat"><div class="lbl">Gastos (mes)</div><div class="val" id="s-exp">—</div>
-    <div class="delta flat" id="s-exp-d">registrados este mes</div></div>
+<div class="grid g4" style="margin-top:14px">
+  <div class="stat"><div class="lbl">Beneficio (mes)</div><div class="val" id="s-profit">—</div>
+    <div class="delta flat" id="s-profit-d">ingresos menos gastos</div></div>
   <div class="stat"><div class="lbl">Pendiente de cobro</div><div class="val" id="s-pend">—</div>
     <div class="delta flat" id="s-pend-d">—</div></div>
-  <div class="stat"><div class="lbl">Hoy</div><div class="val" id="s-today">—</div>
+  <div class="stat"><div class="lbl">Trabajos hoy</div><div class="val" id="s-today">—</div>
     <div class="delta flat" id="s-today-d">—</div></div>
+  <div class="stat"><div class="lbl">Facturado (mes)</div><div class="val" id="s-inv">—</div>
+    <div class="delta flat" id="s-inv-d">—</div></div>
 </div>
 
-<div class="split" style="margin-top:16px">
+<div class="split" style="margin-top:14px">
   <div class="card">
-    <div class="card-h"><h2>Ingresos vs gastos</h2><span class="hint">últimos 6 meses</span></div>
-    <div class="card-b"><div style="height:264px"><canvas id="ch-main"></canvas></div></div>
+    <div class="card-h"><h2>Hoy, por horas</h2>
+      <a class="hint" href="/b/{{ business.id }}/agenda">agenda</a></div>
+    <div class="card-b"><div id="today">…</div></div>
   </div>
   <div class="card card-action">
     <div class="card-h"><h2>Tu plan para hoy</h2>
@@ -77,33 +80,20 @@
   </div>
 </div>
 
-<div class="grid g3" style="margin-top:16px">
+<div class="card" style="margin-top:14px">
+  <div class="card-h"><h2>Ingresos vs gastos</h2><span class="hint">últimos 6 meses</span></div>
+  <div class="card-b"><div style="height:248px"><canvas id="ch-main"></canvas></div></div>
+</div>
+
+<div class="grid g3" style="margin-top:14px">
   <div class="card">
     <div class="card-h"><h2>Top clientes</h2><span class="hint">por facturación</span></div>
     <div class="card-b"><div class="barlist" id="top-clients"></div></div>
   </div>
   <div class="card">
-    <div class="card-h"><h2>Gastos por categoría</h2><a class="hint" href="/b/{{ business.id }}/costes">ver costes</a></div>
+    <div class="card-h"><h2>Gastos por categoría</h2>
+      <a class="hint" href="/b/{{ business.id }}/costes">ver costes</a></div>
     <div class="card-b"><div class="barlist" id="cost-cats"></div></div>
-  </div>
-  <div class="card">
-    <div class="card-h"><h2>IVA y salud fiscal</h2>
-      <a class="hint" href="/b/{{ business.id }}/analisis">ver análisis</a></div>
-    <div class="card-b">
-      <div class="lrow"><span>IVA repercutido estimado (mes)</span><b id="m-vat" class="num">—</b></div>
-      <div class="lrow"><span>Clientes activos</span><b id="m-clients" class="num">—</b></div>
-      <div class="insight" style="margin-top:14px">
-        Aparta el IVA en cuanto cobras una factura. Es dinero de Hacienda, no tuyo:
-        así no te llevas sustos en el trimestre.
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="grid g2" style="margin-top:16px">
-  <div class="card">
-    <div class="card-h"><h2>Trabajos de hoy</h2><a class="hint" href="/b/{{ business.id }}/agenda">agenda</a></div>
-    <div class="card-b"><div id="today">…</div></div>
   </div>
   <div class="card">
     <div class="card-h"><h2>Cobros que vigilar</h2>
@@ -115,26 +105,40 @@
 
 {% block scripts %}
 <script>
+function initials(name){
+  const w = (name || '').trim().split(/\s+/).filter(Boolean);
+  const a = (w[0] || '·')[0] || '·';
+  const b = (w[1] || '')[0] || '';
+  return (a + b).toUpperCase().slice(0, 2) || '··';
+}
+function greeting(){
+  const h = new Date().getHours();
+  return h < 12 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
+}
+(function head(){
+  const name = {{ business.name|tojson }};
+  el('hd-ini').textContent = initials(name);
+  el('hd-greet').textContent = `${greeting()}, ${name}`;
+  el('hd-date').textContent = new Date().toLocaleDateString('es-ES',
+    { weekday:'long', day:'numeric', month:'long' });
+})();
+
 async function load() {
   const s = await api('/summary');
-  el('hb-profit').textContent = eur(s.estimated_profit);
   el('hb-inv').textContent = eur(s.invoiced);
   el('hb-col').textContent = eur(s.collected);
   el('hb-pend').textContent = eur(s.pending_total);
 
-  el('s-inv').textContent = eur(s.invoiced);
-  const rate = s.invoiced ? Math.round(s.collected / s.invoiced * 100) : 0;
-  el('s-inv-d').textContent = rate + '% ya cobrado';
-  el('s-inv-d').className = 'delta ' + (rate >= 70 ? 'up' : rate >= 40 ? 'flat' : 'down');
-  el('s-exp').textContent = eur(s.expenses);
+  el('s-profit').textContent = eur(s.estimated_profit);
   el('s-pend').textContent = eur(s.pending_total);
   el('s-pend-d').textContent = s.pending_count + ' factura(s) sin cobrar';
   el('s-pend-d').className = 'delta ' + (s.pending_count ? 'down' : 'up');
   el('s-today').textContent = s.jobs_today;
   el('s-today-d').textContent = s.jobs_today ? 'trabajo(s) agendados' : 'día despejado';
-  el('m-vat').textContent = eur(s.vat_estimated);
-  el('m-clients').textContent = s.clients;
-  el('hd-sub').textContent = `${eur(s.invoiced)} facturado · ${s.clients} cliente(s) · ${s.jobs_today} trabajo(s) hoy`;
+  el('s-inv').textContent = eur(s.invoiced);
+  const rate = s.invoiced ? Math.round(s.collected / s.invoiced * 100) : 0;
+  el('s-inv-d').textContent = rate + '% ya cobrado';
+  el('s-inv-d').className = 'delta ' + (rate >= 70 ? 'up' : rate >= 40 ? 'flat' : 'down');
 
   const series = await api('/series');
   new Chart(el('ch-main'), {
@@ -146,6 +150,17 @@ async function load() {
   });
 
   api('/plan').then(plan => {
+    const top = plan[0];
+    if (top) {
+      el('ch-focus').textContent = top.do;
+      const btn = el('ch-btn');
+      if (top.topic && top.topic !== 'orden') {
+        btn.style.display = 'inline-flex';
+        btn.textContent = 'Ver ' + top.topic + ' →';
+        btn.href = '/b/{{ business.id }}/' + top.topic;
+        btn.onclick = () => { if (top.id) { try { apiPost('/recommendations/'+top.id+'/status', {status:'aceptado'}); } catch(e){} } };
+      }
+    }
     el('plan').innerHTML = plan.slice(0, 4).map((p, i) => `<li id="rec-${p.id || ('x'+i)}">
       <span class="pl-n">${i + 1}</span>
       <div style="flex:1;min-width:0">
@@ -176,7 +191,10 @@ async function load() {
   api('/agenda').then(ag => {
     el('today').innerHTML = ag.length ? ag.map(j => {
       const h = timeShort(j.scheduled_for);
-      return `<div class="lrow"><span><b>${esc(h)}</b> ${esc(j.client_name || '')}<br><span class="meta">${esc(j.description)}</span></span><span class="meta">${esc(j.zone || '')}</span></div>`;
+      return `<div class="tl-row"><span class="tl-time">${esc(h || '—')}</span>
+        <div class="tl-body"><div class="t1">${esc(j.client_name || 'Trabajo')} · ${esc(j.description)}</div>
+        <div class="t2">${esc(j.zone || 'sin zona')}</div></div>
+        <span class="ti-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>`;
     }).join('') : emptyState('Día despejado', 'No tienes trabajos registrados para hoy.', '/b/{{ business.id }}/agenda', 'Ver agenda');
   });
 
@@ -184,7 +202,7 @@ async function load() {
     el('pending').innerHTML = p.length ? p.slice(0, 6).map(x =>
       `<div class="lrow"><span>${esc(x.client_name)}<br><span class="meta">${esc(x.concept)}</span></span>
        <span style="text-align:right">${eur(x.total)}<br>
-       <span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-gray'}">${daysText(x.days_outstanding)}</span></span></div>`
+       <span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-amber'}">${daysText(x.days_outstanding)}</span></span></div>`
     ).join('') : emptyState('Todo cobrado', 'No hay facturas pendientes ahora mismo.');
   });
 }
