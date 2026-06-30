@@ -142,8 +142,10 @@ def parse(text: str) -> tuple[str, dict] | None:
             _add_tax_rates(norm, args)
             return ("crear_factura", args)
 
-    # --- Registrar gasto: "gasto 45 en gasolina", "gasté 45 euros de material"
-    if re.search(r"\bgast", norm) or norm.startswith("gasto"):
+    # --- Registrar gasto: "gasto 45 en gasolina", "gasté 45 de material",
+    #     "me he gastado 45", "compré 30 de tornillos", "ticket de 12"
+    if re.search(r"\bgast", norm) or re.search(r"\bcompr[eaoé]", norm) \
+            or re.search(r"\b(ticket|recibo)\b", norm) or norm.startswith("gasto"):
         amount = _parse_amount(text)
         if amount is not None:
             cm = re.search(r"(?:en|de|por)\s+([a-záéíóúñ ]+)", text, re.I)
@@ -173,17 +175,18 @@ def parse(text: str) -> tuple[str, dict] | None:
         return ("__need_date__", {})
 
     # --- Ver agenda de hoy
-    if re.search(r"(que tengo|que hay).*(hoy)", norm) or "agenda de hoy" in norm \
-            or norm in {"hoy", "que tengo hoy"}:
+    if re.search(r"(que tengo|que hay|trabajos|citas|que toca).*hoy", norm) \
+            or "agenda de hoy" in norm or norm in {"hoy", "que tengo hoy"}:
         return ("ver_agenda", {"fecha": date.today().isoformat()})
 
     # --- Cobros pendientes
-    if re.search(r"(cobr|por cobrar|quien me debe|pendiente de cobro|me deben|deudas?)", norm):
+    if re.search(r"(cobr|por cobrar|quien me debe|pendiente de cobro|me deben|"
+                 r"deudas?|sin cobrar|impagad|moroso|facturas? pendientes?)", norm):
         return ("ver_cobros_pendientes", {})
 
     # --- Resumen / ingresos
-    if re.search(r"(cuanto.*facturad|ingresos|resumen|como va|balance|beneficio|"
-                 r"facturacion|este mes)", norm):
+    if re.search(r"(cuanto.*facturad|ingresos|resumen|como va|como voy|que tal va|"
+                 r"balance|beneficio|facturacion|este mes|mis numeros|cuanto llevo)", norm):
         return ("resumen_negocio", {})
 
     # --- Clientes

@@ -71,13 +71,16 @@ desplazamientos.
 
 
 class NoesisAgent:
-    def __init__(self, business_id: int = db.DEFAULT_BUSINESS_ID):
+    def __init__(self, business_id: int = db.DEFAULT_BUSINESS_ID, model: str | None = None):
         if not config.ANTHROPIC_API_KEY:
             raise RuntimeError(
                 "Falta ANTHROPIC_API_KEY. Copia .env.example a .env y pon tu clave "
                 "(https://console.anthropic.com)."
             )
         self.business_id = business_id
+        # Por defecto el modelo principal; el chat web pasa el barato (Haiku) para
+        # abaratar el respaldo (lo común ya se resuelve gratis en local).
+        self.model = model or config.MODEL
         self.business = db.get_business(business_id) or {}
         self.business_name = self.business.get("name") or config.BUSINESS_NAME
         self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
@@ -102,7 +105,7 @@ class NoesisAgent:
         ]
         for _round in range(6):
             resp = self.client.messages.create(
-                model=config.MODEL,
+                model=self.model,
                 max_tokens=1024,
                 system=_system_prompt(self.business),
                 tools=safe_tools,

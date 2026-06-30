@@ -127,6 +127,15 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(invoice["base"], 100.0)
         self.assertEqual(invoice["total"], 121.0)
 
+    def test_nlu_extended_synonyms_stay_local(self):
+        # Más formas naturales que el cerebro local resuelve gratis (sin IA).
+        self.assertEqual(nlu.parse("compré 30 de tornillos")[0], "registrar_gasto")
+        self.assertEqual(nlu.parse("me he gastado 45 en gasolina")[0], "registrar_gasto")
+        self.assertEqual(nlu.parse("¿qué trabajos tengo hoy?")[0], "ver_agenda")
+        self.assertEqual(nlu.parse("tengo facturas pendientes de cobrar")[0],
+                         "ver_cobros_pendientes")
+        self.assertEqual(nlu.parse("¿cómo voy este mes?")[0], "resumen_negocio")
+
     def test_invalid_tax_quarter_and_csv_formula(self):
         business, _ = self.make_business()
         with self.assertRaises(ValueError):

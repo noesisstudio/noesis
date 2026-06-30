@@ -136,11 +136,50 @@ construir más features.
 
 ---
 
-## 6. Próximas tareas sugeridas (orden recomendado)
-1. (Fundador) Poner `ANTHROPIC_API_KEY` y las variables de WhatsApp en Railway.
-2. Probar el ciclo completo con un negocio real y anotar fricciones.
-3. Postgres + aislamiento en BD (quitar `business_id=1` por defecto).
-4. WhatsApp fiable (cola + reintentos + estados de entrega).
-5. Partir `server.py` en módulos + CI.
+## 6. TAREAS PARA CODEX (backend) — lista accionable
+> El fundador continuará con Codex para llevar la empresa al máximo. Estas son las
+> tareas de backend, en orden de prioridad, con criterio de "hecho". Coordínate:
+> avisa de qué archivos tocas y verifica `git branch --show-current` antes de operar.
+
+1. **Postgres + aislamiento real en BD** (la más importante para escalar).
+   - Migrar de SQLite a Postgres (Railway lo ofrece gestionado). `db.py` es el único
+     punto de contacto: cambiar `get_conn` y los `?`→`%s`/SQLAlchemy si se prefiere.
+   - **Quitar `DEFAULT_BUSINESS_ID = 1`** y los getters que lo asumen; exigir
+     `business_id` siempre. Añadir constraints/RLS para que dos negocios no se crucen.
+   - Hecho cuando: la app corre en Postgres en Railway, migraciones aplicadas, y un
+     test demuestra que un negocio no puede leer/escribir datos de otro ni por error.
+
+2. **Migraciones versionadas** (Alembic o equivalente) en vez de los `ALTER` en
+   `_MIGRATIONS`. Hecho cuando: el esquema se versiona y se puede subir/bajar.
+
+3. **WhatsApp fiable (producción, no piloto).**
+   - Cola durable de salida + reintentos con backoff + registro del estado de entrega
+     (sent/delivered/read) usando los webhooks de estado de Meta.
+   - Plantillas aprobadas por Meta para los mensajes proactivos (resúmenes, avisos de
+     cobro) — fuera de la ventana de 24 h solo se puede con plantilla.
+   - Hecho cuando: un mensaje que falla se reintenta y queda trazado; los proactivos
+     usan plantilla aprobada.
+
+4. **Partir `server.py`** (~70 rutas) en routers por dominio (auth, negocio, api,
+   onboarding, webhooks, documentos). Hecho cuando: cada dominio en su módulo y los
+   tests siguen verdes.
+
+5. **CI en GitHub Actions**: lint + `python -m unittest` en cada push/PR, y bloquear
+   merge a `main` si fallan. Hecho cuando: el badge está verde y un PR rojo no mergea.
+
+6. **Endurecer fiscalidad/Verifactu**: cuando haya un cliente que facture oficialmente,
+   activar Holded real (`HOLDED_API_KEY`) y validar numeración/series y Verifactu.
+
+7. **Backups verificados + monitorización**: probar de verdad una restauración del
+   backup; añadir alertas básicas (errores 5xx, caída de `/ready`).
+
+Notas: el coste de IA ya está minimizado (cerebro local gratis + respaldo en Haiku vía
+`NOESIS_FALLBACK_MODEL`). El audio (Whisper) es local y sin coste por uso.
+
+## 7. Próximos pasos del fundador (no técnicos)
+1. Poner `ANTHROPIC_API_KEY` y las variables de WhatsApp en Railway.
+2. Verificar el número de WhatsApp en Meta y conectar `bynoesis.com`.
+3. Probar el ciclo completo con un negocio real y anotar fricciones.
+4. Dar de alta 3-5 autónomos del mismo perfil para el piloto.
 
 Ver también: `docs/Roadmap.md`, `docs/Arquitectura.md`, `docs/Producto.md`.

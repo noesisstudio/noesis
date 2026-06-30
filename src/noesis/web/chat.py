@@ -195,7 +195,9 @@ def handle(business_id: int, message: str) -> dict:
         with _agents_lock:
             agent = _agents.get(business_id)
             if agent is None:
-                agent = NoesisAgent(business_id)
+                # Respaldo barato (Haiku): solo lo paga lo que el cerebro local
+                # no resuelve. La mayoría de mensajes ni llegan aquí.
+                agent = NoesisAgent(business_id, model=config.FALLBACK_MODEL)
                 _agents[business_id] = agent
         try:
             return {"reply": agent.send(message), "source": "ia"}

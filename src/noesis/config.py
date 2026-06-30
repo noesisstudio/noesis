@@ -24,6 +24,10 @@ def env_bool(name: str, default: bool = False) -> bool:
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
+# Modelo BARATO para el respaldo del chat (cuando el cerebro local no entiende la
+# frase). Haiku minimiza el coste: el 90% se resuelve gratis en local y solo lo
+# realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
+FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 
 # La base de datos vive en la raíz del proyecto por defecto. En producción se
