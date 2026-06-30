@@ -67,22 +67,22 @@
     <div class="delta flat" id="s-inv-d">—</div></div>
 </div>
 
+<div class="card today-card" style="margin-top:14px">
+  <div class="card-h"><h2>Hoy · ¿dónde tienes que ir?</h2>
+    <a class="hint" href="/b/{{ business.id }}/agenda">ver agenda</a></div>
+  <div class="card-b"><div id="today">…</div></div>
+</div>
+
 <div class="split" style="margin-top:14px">
   <div class="card">
-    <div class="card-h"><h2>Hoy, por horas</h2>
-      <a class="hint" href="/b/{{ business.id }}/agenda">agenda</a></div>
-    <div class="card-b"><div id="today">…</div></div>
+    <div class="card-h"><h2>Ingresos vs gastos</h2><span class="hint">últimos 6 meses</span></div>
+    <div class="card-b"><div style="height:248px"><canvas id="ch-main"></canvas></div></div>
   </div>
   <div class="card card-action">
     <div class="card-h"><h2>Tu plan para hoy</h2>
       <span class="hint" id="rec-count"></span></div>
     <div class="card-b"><ul class="plan-list" id="plan"><li class="muted">Calculando…</li></ul></div>
   </div>
-</div>
-
-<div class="card" style="margin-top:14px">
-  <div class="card-h"><h2>Ingresos vs gastos</h2><span class="hint">últimos 6 meses</span></div>
-  <div class="card-b"><div style="height:248px"><canvas id="ch-main"></canvas></div></div>
 </div>
 
 <div class="grid g3" style="margin-top:14px">
@@ -189,13 +189,22 @@ async function load() {
   });
 
   api('/agenda').then(ag => {
-    el('today').innerHTML = ag.length ? ag.map(j => {
+    const t = el('today');
+    if (!ag.length) {
+      t.innerHTML = emptyState('Día despejado', 'No tienes trabajos registrados para hoy.', '/b/{{ business.id }}/agenda', 'Ver agenda');
+      return;
+    }
+    const zones = [...new Set(ag.map(j => j.zone).filter(Boolean))];
+    const pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    const summary = `<div class="today-summary">${ag.length} trabajo(s) hoy${zones.length ? ' · ' + zones.map(esc).join(' · ') : ''}</div>`;
+    t.innerHTML = summary + ag.map(j => {
       const h = timeShort(j.scheduled_for);
+      const price = j.price_estimate ? `<span class="tl-price">${eur(j.price_estimate)}</span>` : '';
       return `<div class="tl-row"><span class="tl-time">${esc(h || '—')}</span>
         <div class="tl-body"><div class="t1">${esc(j.client_name || 'Trabajo')} · ${esc(j.description)}</div>
-        <div class="t2">${esc(j.zone || 'sin zona')}</div></div>
-        <span class="ti-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>`;
-    }).join('') : emptyState('Día despejado', 'No tienes trabajos registrados para hoy.', '/b/{{ business.id }}/agenda', 'Ver agenda');
+        <div class="t2"><span class="tl-where">${pin} ${esc(j.zone || 'sin zona')}</span></div></div>
+        ${price}</div>`;
+    }).join('');
   });
 
   api('/pending').then(p => {

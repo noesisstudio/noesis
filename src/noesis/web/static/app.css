@@ -704,3 +704,55 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
 .tl-body .t1 { font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tl-body .t2 { font-size:12px; color:var(--faint); margin-top:1px; }
 .tl-row .ti-chev { color:var(--faint); flex:0 0 auto; }
+
+/* ==========================================================================
+   Capa final de refinamiento premium (2026) — plano, nítido, mucho aire.
+   Sube TODAS las pantallas a la vez (todas usan estos componentes). Lenguaje
+   Tabler/Linear/Stripe: hairlines limpios, sombra mínima, tipografía confiada.
+   ========================================================================== */
+:root {
+  --border: #e8eaf0;
+  --border-strong: #dde0e7;
+  --shadow-sm: 0 1px 2px rgba(18,28,23,.035);
+  --shadow: 0 1px 3px rgba(18,28,23,.05), 0 6px 16px rgba(18,28,23,.04);
+}
+body { font-size: 14px; }
+
+/* Cabeceras de página consistentes y confiadas. */
+.content .page-head h1 { font-size: 22px; font-weight: 750; letter-spacing: -.02em; }
+
+/* Tarjetas: borde nítido, sombra casi imperceptible, ritmo interno claro. */
+.card-h { padding: 15px 18px 12px; }
+.card-h h2 { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.card-h .hint { font-size: 12px; }
+.card-b { padding: 16px 18px; }
+
+/* KPIs: aire y jerarquía. */
+.stat { padding: 16px 18px; border-radius: 13px; }
+.stat .lbl { font-size: 11px; letter-spacing: .055em; }
+.stat .val { font-size: 24px; margin-top: 8px; }
+
+/* Tablas con acabado de producto serio. */
+thead th { font-size: 11px; letter-spacing: .05em; color: var(--faint);
+  padding: 2px 14px 11px; }
+tbody td { padding: 13px 14px; font-size: 13.5px; }
+tbody tr:hover { background: #fafbfc; }
+
+/* Controles: radios y pesos coherentes. */
+.btn { border-radius: 9px; font-weight: 650; }
+.btn.primary:hover { background: #103a31; }
+.badge { font-weight: 650; padding: 3px 10px; }
+.input, select, textarea { border-radius: 9px; }
+
+/* Filas de lista: respiración. */
+.lrow { padding: 12px 0; }
+.lrow .meta { font-size: 12px; }
+
+/* "Trabajos de hoy" destacado en el inicio (¿dónde tengo que ir?). */
+.today-summary { font-size: 12.5px; color: var(--muted); font-weight: 600;
+  padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+.tl-where { display: inline-flex; align-items: center; gap: 4px; }
+.tl-where svg { width: 13px; height: 13px; opacity: .8; }
+.tl-price { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--brand); flex: 0 0 auto; }
+.today-card .tl-time { color: var(--brand); }
