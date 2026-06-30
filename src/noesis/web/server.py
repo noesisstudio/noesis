@@ -894,6 +894,34 @@ def update_fiscal(business_id: int, name: str = Form(""), nif: str = Form(""),
     return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
 
 
+@app.post("/b/{business_id}/branding")
+async def update_branding(business_id: int, template: str = Form("clasica"),
+                          brand_color: str = Form(""), remove_logo: str = Form(""),
+                          logo: UploadFile = File(None)):
+    """Personalización de documentos: plantilla, color de marca y logo (o monograma
+    automático si no se sube ninguno). El logo se guarda en base64 en la BD."""
+    import base64
+    logo_data = logo_mime = None
+    clear = bool(remove_logo)
+    if not clear and logo is not None and logo.filename:
+        if logo.content_type not in ("image/png", "image/jpeg"):
+            return RedirectResponse(
+                f"/b/{business_id}/ajustes?error=logo", status_code=303)
+        raw = await logo.read(db.MAX_LOGO_B64)  # límite de lectura defensivo
+        if not raw or len(raw) >= db.MAX_LOGO_B64:
+            return RedirectResponse(
+                f"/b/{business_id}/ajustes?error=logo", status_code=303)
+        logo_data = base64.b64encode(raw).decode()
+        logo_mime = logo.content_type
+    try:
+        db.update_branding(business_id, template=template, brand_color=brand_color,
+                           logo_data=logo_data, logo_mime=logo_mime, clear_logo=clear)
+    except ValueError:
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=marca", status_code=303)
+    return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
+
+
 @app.post("/onboarding/whatsapp/{business_id}/connect")
 def onboarding_whatsapp_connect(request: Request, business_id: int):
     # La vinculación real solo ocurre al recibir el código desde ese WhatsApp.

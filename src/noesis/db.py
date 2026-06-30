@@ -186,6 +186,10 @@ _MIGRATIONS: list[tuple[str, str, str]] = [
     ("businesses", "team_size", "TEXT"),
     ("businesses", "province", "TEXT"),
     ("businesses", "primary_goal", "TEXT"),
+    ("businesses", "invoice_template", "TEXT NOT NULL DEFAULT 'clasica'"),
+    ("businesses", "brand_color", "TEXT"),
+    ("businesses", "logo_data", "TEXT"),
+    ("businesses", "logo_mime", "TEXT"),
     ("users", "is_admin", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "session_version", "INTEGER NOT NULL DEFAULT 0"),
     ("clients", "nif", "TEXT"),
@@ -545,6 +549,61 @@ def activation_snapshot(business_id: int) -> dict:
         "outcome_reached": has_paid,
         "next_step": first_pending,
     }
+
+
+# --------------------------------------------------------- Marca / plantillas ---
+BRAND_COLOR_DEFAULT = "#14463b"
+INVOICE_TEMPLATES = {"clasica", "minimal", "editorial"}
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+MAX_LOGO_B64 = 400_000  # ~300 KB de imagen
+
+
+def business_initials(name: str | None) -> str:
+    """Iniciales para el monograma automático (cuando el negocio no sube logo)."""
+    parts = [p for p in re.split(r"\s+", (name or "").strip()) if p]
+    if not parts:
+        return "N"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[1][0]).upper()
+
+
+def business_brand_color(business: dict | None) -> str:
+    """Color de marca del negocio, con el verde Noesis como valor por defecto."""
+    color = (business or {}).get("brand_color")
+    return color if color and _HEX_RE.match(color) else BRAND_COLOR_DEFAULT
+
+
+def update_branding(business_id, *, template=None, brand_color=None,
+                    logo_data=None, logo_mime=None, clear_logo=False) -> dict | None:
+    """Guarda la personalización de documentos: plantilla, color y logo/monograma."""
+    fields: list[str] = []
+    params: list = []
+    if template is not None:
+        if template not in INVOICE_TEMPLATES:
+            raise ValueError("La plantilla seleccionada no es válida.")
+        fields.append("invoice_template=?")
+        params.append(template)
+    if brand_color is not None:
+        color = (brand_color or "").strip()
+        if color and not _HEX_RE.match(color):
+            raise ValueError("El color de marca debe ser un hexadecimal tipo #14463b.")
+        fields.append("brand_color=?")
+        params.append(color or None)
+    if clear_logo:
+        fields += ["logo_data=?", "logo_mime=?"]
+        params += [None, None]
+    elif logo_data is not None:
+        if len(logo_data) > MAX_LOGO_B64:
+            raise ValueError("El logo es demasiado grande (máximo ~300 KB).")
+        fields += ["logo_data=?", "logo_mime=?"]
+        params += [logo_data, logo_mime]
+    if not fields:
+        return get_business(business_id)
+    params.append(business_id)
+    with get_conn() as conn:
+        conn.execute(f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params)
+    return get_business(business_id)
 
 
 # ---------------------------------------------------------------- Usuarios ---
@@ -1614,9 +1673,15 @@ def client_portal_view(business_id: int, client_id: int) -> dict | None:
         return None
     quotes = [q for q in list_quotes(business_id) if q.get("client_id") == client_id]
     invoices = [i for i in list_invoices(business_id) if i.get("client_id") == client_id]
+    logo = None
+    if biz.get("logo_data") and biz.get("logo_mime"):
+        logo = f"data:{biz['logo_mime']};base64,{biz['logo_data']}"
     return {
         "business": {"name": biz.get("name"), "nif": biz.get("nif"),
-                     "address": biz.get("address")},
+                     "address": biz.get("address"),
+                     "brand_color": business_brand_color(biz),
+                     "logo": logo,
+                     "initials": business_initials(biz.get("name"))},
         "client": {"id": client["id"], "name": client.get("name")},
         "quotes": quotes,
         "invoices": invoices,

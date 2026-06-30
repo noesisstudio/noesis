@@ -15,10 +15,11 @@
       box-shadow: var(--shadow-sm); margin-bottom: 18px; }
     .portal-head .mark { width:40px; height:40px; border-radius:10px; background:#fff;
       display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
-    .portal-head .mark img { width:26px; height:26px; }
-    .portal-head .kicker { color: var(--brand-soft); }
+    .portal-head .mark img { width:30px; height:30px; border-radius:7px; object-fit:cover; }
+    .portal-head .mark .mono { font-weight:800; font-size:18px; }
+    .portal-head .kicker { color: rgba(255,255,255,.85); }
     .portal-head h1 { margin: 2px 0 0; font-size: 21px; line-height:1.15; }
-    .portal-head .sub { color:#cfe3da; font-size:13px; margin-top:3px; }
+    .portal-head .sub { color: rgba(255,255,255,.8); font-size:13px; margin-top:3px; }
     .sec-title { font-size:13px; font-weight:700; letter-spacing:.04em;
       text-transform:uppercase; color: var(--muted); margin: 26px 4px 12px; }
     .doc { background:#fff; border:1px solid var(--border); border-radius: var(--radius);
@@ -60,8 +61,11 @@
   {% set pend = quotes | selectattr('status', 'equalto', 'enviado') | list %}
   {% set invoices = data.invoices | selectattr('status', 'in', ['enviada', 'cobrada']) | list %}
   <div class="portal">
-    <div class="portal-head">
-      <div class="mark"><img src="/static/noesis-mark.svg" alt=""></div>
+    <div class="portal-head" style="background:{{ data.business.brand_color }}">
+      <div class="mark">
+        {% if data.business.logo %}<img src="{{ data.business.logo }}" alt="">
+        {% else %}<span class="mono" style="color:{{ data.business.brand_color }}">{{ data.business.initials }}</span>{% endif %}
+      </div>
       <div>
         <div class="kicker">{{ data.business.name }}</div>
         <h1>Hola, {{ data.client.name }}</h1>

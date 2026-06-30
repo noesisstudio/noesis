@@ -77,6 +77,49 @@
   </div>
 </div>
 
+<div class="card" style="margin-top:16px">
+  <div class="card-h"><h2>Marca y plantillas</h2><span class="hint">en tus facturas y en el portal del cliente</span></div>
+  <div class="card-b">
+    <form method="post" action="/b/{{ business.id }}/branding" enctype="multipart/form-data">
+      <label class="fld">Plantilla del documento</label>
+      <div class="choice-grid" style="grid-template-columns:repeat(3,1fr)">
+        {% for key, name in [('clasica','Clásica'), ('minimal','Minimal'), ('editorial','Editorial')] %}
+        <label class="choice-card">
+          <input type="radio" name="template" value="{{ key }}"
+            {{ 'checked' if (business.invoice_template or 'clasica') == key }}>
+          <span>{{ name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="grid g2" style="margin-top:12px">
+        <div><label class="fld">Color de marca</label>
+          <input class="input" type="color" name="brand_color"
+            value="{{ business.brand_color or '#14463b' }}" style="height:42px;padding:4px"></div>
+        <div><label class="fld">Logo (PNG o JPG, opcional)</label>
+          <input class="input" type="file" name="logo" accept="image/png,image/jpeg"></div>
+      </div>
+      {% if business.logo_data %}
+      <div class="lrow" style="margin-top:12px">
+        <span style="display:flex;align-items:center;gap:10px">
+          <img src="data:{{ business.logo_mime }};base64,{{ business.logo_data }}" alt="Logo actual"
+            style="width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
+          Logo actual</span>
+        <label style="font-size:13px;display:flex;align-items:center;gap:7px">
+          <input type="checkbox" name="remove_logo" value="1"> Quitar logo</label>
+      </div>
+      {% else %}
+      <p class="hint" style="margin-top:12px">Si no subes logo, usamos un <b>monograma</b>
+        automático con tus iniciales (<b>{{ business.name[:2] | upper }}</b>) sobre tu color de marca.</p>
+      {% endif %}
+      <button class="btn primary" style="margin-top:14px">Guardar marca</button>
+    </form>
+    <div class="insight" style="margin-top:14px">
+      Elige cómo se ven tus presupuestos y facturas. Tu cliente verá el mismo logo y
+      color en el portal donde aprueba presupuestos y descarga facturas.
+    </div>
+  </div>
+</div>
+
 <div class="grid g2" style="margin-top:16px">
   <div class="card">
     <div class="card-h"><h2>Datos e informes</h2><span class="hint">RGPD · portabilidad</span></div>

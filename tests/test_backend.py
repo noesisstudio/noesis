@@ -247,6 +247,22 @@ class BackendTestCase(unittest.TestCase):
         unbilled_reply = chat.handle(business["id"], "¿qué tengo sin facturar?")
         self.assertIn("Cambio de grifo", unbilled_reply["reply"])
 
+    def test_branding_validation_and_portal_exposure(self):
+        business, client = self.make_business()
+        db.update_branding(business["id"], template="editorial", brand_color="#7a1f4b")
+        biz = db.get_business(business["id"])
+        self.assertEqual(biz["invoice_template"], "editorial")
+        self.assertEqual(db.business_brand_color(biz), "#7a1f4b")
+        with self.assertRaises(ValueError):
+            db.update_branding(business["id"], template="rara")
+        with self.assertRaises(ValueError):
+            db.update_branding(business["id"], brand_color="rojo")
+        self.assertEqual(db.business_initials("Reformas Garcia"), "RG")
+        # El portal expone color e iniciales del negocio que atiende, aislado.
+        view = db.client_portal_view(business["id"], client["id"])
+        self.assertEqual(view["business"]["brand_color"], "#7a1f4b")
+        self.assertTrue(view["business"]["initials"])
+
     def test_portal_token_never_crosses_clients(self):
         business_a, client_a = self.make_business("Negocio A")
         business_b, client_b = self.make_business("Negocio B")
