@@ -17,7 +17,8 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
   **PDF de factura** (fpdf2) con datos fiscales, validaciones de formularios.
 - Alta SaaS en tres pasos, recorrido de activación hasta el primer cobro, eventos de
   producto internos y embudo operativo en administración.
-- Posicionamiento inicial enfocado en equipos de instalaciones y mantenimiento.
+- Posicionamiento alrededor del ciclo "del trabajo terminado al dinero cobrado",
+  para autónomos y pequeños negocios de servicios (público amplio).
 - Endpoints de salud y disponibilidad para despliegue (`/health` y `/ready`).
 
 ## 🚧 Fase 1 — núcleo sólido (COMPLETA ✅)
@@ -33,7 +34,7 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 - [x] Transcripción de audios (Whisper, instalación opcional).
 
 ## 🚀 Fase 3 — validar
-- [ ] Piloto con 5-10 negocios de instalaciones/mantenimiento antes de escalar.
+- [ ] Piloto con 5-10 negocios de servicios antes de escalar.
 - [ ] Medir semanalmente: alta → perfil → cliente → trabajo → factura → cobro.
 - [ ] Entrevistar abandonos y activados; corregir el paso con mayor caída.
 - [ ] Validar disposición a pagar y retención antes de ampliar sectores o funciones.

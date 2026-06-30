@@ -11,14 +11,14 @@ mensajes, se olvidan de facturar y cobran tarde:
 fontaneros, electricistas, reformas, climatización, limpieza, jardinería,
 mantenimiento, instaladores, talleres pequeños.
 
-### Segmento inicial
-La entrada al mercado se concentra en **equipos de 1 a 10 personas de instalaciones
-y mantenimiento**: fontanería, electricidad, climatización, instalaciones y
-mantenimiento técnico. Comparten un flujo repetible y medible:
+### Enfoque inicial
+El público es **amplio**: autónomos y micro-pymes de servicios (1 a 10 personas).
+El producto se construye alrededor de un **flujo repetible y medible** común a casi
+todos ellos:
 petición → presupuesto → agenda/trabajo → factura → cobro.
 
-La expansión a otros servicios se hará después de demostrar retención y adquisición
-rentable en este segmento, no añadiendo verticales a la vez.
+El piloto arranca con unos pocos negocios para validar retención y adquisición
+rentable antes de escalar, **sin cerrarse a ningún sector**.
 
 ## Propuesta de valor (el hueco real)
 No competir en "facturar por WhatsApp" (ahí está [[Competencia|Forjia]]), sino ser el
