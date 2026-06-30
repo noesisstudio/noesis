@@ -35,19 +35,19 @@ def _banner() -> None:
 def main() -> None:
     db.init_db()
     # Si la base está vacía, carga la demo para tener algo que ver.
-    if not db.list_clients():
-        demo.seed()
+    businesses = db.list_businesses()
+    business_id = businesses[0]["id"] if businesses else demo.seed(reset=False)
 
     _banner()
 
     try:
-        agent = NoesisAgent()
+        agent = NoesisAgent(business_id)
     except RuntimeError as e:
         console.print(f"[bold red]{e}[/bold red]")
         sys.exit(1)
 
     # Arranca mostrando el parte del día (la función estrella).
-    console.print(Panel(daily_summary_text(), border_style="blue", title="Resumen de hoy"))
+    console.print(Panel(daily_summary_text(business_id), border_style="blue", title="Resumen de hoy"))
 
     while True:
         try:
@@ -63,10 +63,11 @@ def main() -> None:
             console.print("¡Hasta luego! 👋")
             break
         if low == "resumen":
-            console.print(Panel(daily_summary_text(), border_style="blue", title="Resumen de hoy"))
+            console.print(Panel(daily_summary_text(business_id), border_style="blue", title="Resumen de hoy"))
             continue
         if low == "reset":
-            demo.seed()
+            business_id = demo.seed()
+            agent = NoesisAgent(business_id)
             console.print("[yellow]Demo recargada.[/yellow]")
             continue
 

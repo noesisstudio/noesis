@@ -1,4 +1,4 @@
-"""Copias de seguridad de la base de datos.
+"""Copias locales de SQLite.
 
 Cada copia se hace con la API de backup de SQLite (consistente aunque la app esté
 escribiendo) en una carpeta `backups/` junto a la base de datos —que en producción
@@ -29,6 +29,10 @@ def _backup_dir() -> Path:
 
 
 def run_backup() -> Path | None:
+    if config.DATABASE_URL:
+        # Postgres usa las copias gestionadas del proveedor. No se intenta volcar una
+        # base remota desde el proceso web.
+        return None
     src = Path(config.DB_PATH)
     if not src.exists():
         return None

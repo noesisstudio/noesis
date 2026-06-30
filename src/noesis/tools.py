@@ -19,8 +19,6 @@ from .adapters import invoicing
 _provider = invoicing.get_provider()
 log = logging.getLogger("noesis.tools")
 
-DEFAULT_BUSINESS_ID = db.DEFAULT_BUSINESS_ID
-
 
 TOOLS: list[dict] = [
     {
@@ -213,7 +211,7 @@ def _ver_cobros_pendientes(business_id):
 
 
 def _resumen_negocio(business_id, mes=None):
-    return db.month_billing(mes, business_id)
+    return db.month_billing(mes, business_id=business_id)
 
 
 def _registrar_gasto(business_id, concepto, importe, iva=None, categoria=None):
@@ -239,7 +237,7 @@ _DISPATCH = {
 }
 
 
-def run_tool(name: str, tool_input: dict, business_id: int = DEFAULT_BUSINESS_ID) -> str:
+def run_tool(name: str, tool_input: dict, business_id: int) -> str:
     """Ejecuta una herramienta para un negocio y devuelve JSON (para Claude/NLU)."""
     fn = _DISPATCH.get(name)
     if fn is None:

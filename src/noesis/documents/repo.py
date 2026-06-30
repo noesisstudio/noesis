@@ -27,14 +27,14 @@ def add(business_id: int, *, filename: str, stored_name: str, mime: str, size: i
         ocr_amount: float | None = None, note: str | None = None) -> dict:
     kind = kind if kind in KINDS else "documento"
     with _conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO documents (business_id, client_id, invoice_id, kind, "
             "filename, stored_name, mime, size, ocr_text, ocr_amount, note, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, client_id, invoice_id, kind, filename, stored_name, mime,
              int(size), ocr_text, ocr_amount, note, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     return get(new_id, business_id)
 
 
@@ -48,7 +48,8 @@ def get(doc_id: int, business_id: int) -> dict | None:
 
 def list_for_business(business_id: int, client_id: int | None = None) -> list[dict]:
     q = ("SELECT d.*, c.name AS client_name FROM documents d "
-         "LEFT JOIN clients c ON c.id = d.client_id WHERE d.business_id=?")
+         "LEFT JOIN clients c ON c.id = d.client_id "
+         "AND c.business_id=d.business_id WHERE d.business_id=?")
     params: list = [business_id]
     if client_id is not None:
         q += " AND d.client_id=?"

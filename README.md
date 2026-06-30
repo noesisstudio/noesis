@@ -24,7 +24,7 @@ Y Noesis entiende, ejecuta y te responde como lo haría el asistente real.
 ## Arquitectura (modular a propósito)
 
 ```
-WhatsApp / CLI  ─►  Agente (Claude)  ─►  Herramientas  ─►  Base de datos (SQLite)
+WhatsApp / CLI  ─►  Agente (Claude)  ─►  Herramientas  ─►  Postgres / SQLite local
                                             │
                                             └─►  Facturación (Mock hoy → Holded/Quipu mañana)
 ```

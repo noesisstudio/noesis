@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import inspect
 import os
 import tempfile
 import unittest
@@ -9,7 +10,7 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
-from noesis import config, db, nlu
+from noesis import config, db, migrations, nlu
 from noesis.web import auth, chat, reports, whatsapp
 
 
@@ -18,6 +19,8 @@ class BackendTestCase(unittest.TestCase):
         self.tempdir = tempfile.TemporaryDirectory()
         self.original_db_path = config.DB_PATH
         self.original_backup_dir = config.BACKUP_DIR
+        self.original_database_url = config.DATABASE_URL
+        config.DATABASE_URL = ""
         config.DB_PATH = Path(self.tempdir.name) / "test.db"
         config.BACKUP_DIR = Path(self.tempdir.name) / "backups"
         db.init_db()
@@ -25,6 +28,7 @@ class BackendTestCase(unittest.TestCase):
     def tearDown(self):
         config.DB_PATH = self.original_db_path
         config.BACKUP_DIR = self.original_backup_dir
+        config.DATABASE_URL = self.original_database_url
         self.tempdir.cleanup()
 
     def make_business(self, name="Taller Seguro"):
@@ -61,6 +65,57 @@ class BackendTestCase(unittest.TestCase):
             db.get_client(private["id"], business_b["id"])["name"],
             "Cliente privado",
         )
+
+    def test_business_id_is_required_and_foreign_keys_block_cross_tenant_writes(self):
+        business_a, client_a = self.make_business("Negocio A")
+        business_b, client_b = self.make_business("Negocio B")
+
+        scoped_functions = (
+            db.get_client, db.find_client, db.list_clients, db.get_job,
+            db.jobs_for_date, db.get_invoice, db.list_invoices,
+            db.pending_payments, db.list_expenses, db.month_billing,
+            db.get_quote, db.list_quotes, db.tax_quarter,
+        )
+        for function in scoped_functions:
+            with self.subTest(function=function.__name__):
+                parameter = inspect.signature(function).parameters["business_id"]
+                self.assertIs(parameter.default, inspect.Parameter.empty)
+
+        self.assertIsNone(db.get_client(client_b["id"], business_a["id"]))
+        with self.assertRaises(ValueError):
+            db.add_job(
+                client_b["id"], "Cruce por API", business_id=business_a["id"]
+            )
+
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "INSERT INTO jobs "
+                    "(business_id, client_id, description, created_at) "
+                    "VALUES (?, ?, ?, ?)",
+                    (business_a["id"], client_b["id"], "Cruce", "2026-06-30"),
+                )
+
+        own_job = db.add_job(
+            client_a["id"], "Trabajo propio", business_id=business_a["id"]
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE jobs SET client_id=? WHERE id=? AND business_id=?",
+                    (client_b["id"], own_job["id"], business_a["id"]),
+                )
+        self.assertEqual(
+            db.get_job(own_job["id"], business_a["id"])["client_id"],
+            client_a["id"],
+        )
+        self.assertIsNone(db.get_job(own_job["id"], business_b["id"]))
+
+    def test_versioned_migrations_can_move_down_and_up(self):
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
+        self.assertEqual(migrations.downgrade(1), 1)
+        self.assertEqual(migrations.current_version(), 1)
+        self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
 
     def test_invoice_issue_is_idempotent_and_immutable(self):
         business, client = self.make_business()

@@ -39,7 +39,8 @@ Archivos clave (`src/noesis/`):
 - `web/templates/` — `base.html` (layout) + una plantilla por apartado.
 - `nlu.py` — cerebro local por reglas. `web/chat.py` — orquestador local+IA.
 - `tools.py` / `agent.py` — acciones y agente IA (multi-negocio).
-- `db.py` — SQLite multi-tenant. `web/auth.py` — login/seguridad.
+- `db.py` — acceso único SQLite/Postgres. `migrations.py` — esquema versionado.
+  `web/auth.py` — login/seguridad.
 - `adapters/invoicing.py` — facturación (mock → Holded).
 
 ## 4. Reglas de oro (NO romper)
@@ -82,5 +83,7 @@ editar los mismos archivos en paralelo.
 
 ## 7. Estado actual
 Fase 1 "núcleo sólido" **completa** (login, fiscalidad, editar/borrar, PDF,
-validaciones, marca, móvil). Siguiente: **Fase 2** (Postgres, Holded real, WhatsApp
-Meta, despliegue 24/7 en bynoesis.com, RGPD). Detalle y checklist en `docs/Roadmap.md`.
+validaciones, marca, móvil). La compatibilidad Postgres y las migraciones están en
+`codex/postgres`, pendientes de revisión/despliegue. Siguiente: completar **Fase 2**
+(activar Postgres, Holded real, WhatsApp Meta, bynoesis.com, RGPD). Detalle en
+`docs/Roadmap.md`.

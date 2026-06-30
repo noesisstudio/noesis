@@ -71,7 +71,7 @@ desplazamientos.
 
 
 class NoesisAgent:
-    def __init__(self, business_id: int = db.DEFAULT_BUSINESS_ID, model: str | None = None):
+    def __init__(self, business_id: int, model: str | None = None):
         if not config.ANTHROPIC_API_KEY:
             raise RuntimeError(
                 "Falta ANTHROPIC_API_KEY. Copia .env.example a .env y pon tu clave "
@@ -136,7 +136,7 @@ class NoesisAgent:
         )
 
 
-def daily_summary_text(business_id: int = db.DEFAULT_BUSINESS_ID) -> str:
+def daily_summary_text(business_id: int) -> str:
     """Genera el resumen proactivo del día (el 'parte de la mañana').
 
     Esto es lo que Noesis enviaría solo cada mañana por WhatsApp: la función

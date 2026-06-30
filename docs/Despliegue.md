@@ -12,14 +12,14 @@ escala bien al principio. Coste estimado: ~5 €/mes.
 ### Pasos (los hace el founder; el código ya está preparado)
 1. Crear cuenta en [railway.app](https://railway.app) con el GitHub de Noesis.
 2. **New Project → Deploy from GitHub repo** → elegir `noesisstudio/noesis`.
-3. Railway detecta `Procfile` (`web: noesis-web`) y `requirements.txt` y construye solo.
+3. Railway detecta `railway.json`: ejecuta las migraciones en pre-deploy, arranca
+   Uvicorn y usa `/ready` como healthcheck.
 4. **Variables de entorno** (Settings → Variables):
    - `NOESIS_SECRET` → una cadena larga y aleatoria (firma las sesiones; **obligatoria**).
    - `NOESIS_BASE_URL` → `https://bynoesis.com` cuando el dominio propio esté
      conectado. Mientras tanto se usa automáticamente `RAILWAY_PUBLIC_DOMAIN`.
    - `HOST` → `0.0.0.0`
-   - `NOESIS_DB_PATH` → `/data/noesis.db` (apunta al volumen, ver paso 5).
-   - `NOESIS_BACKUP_DIR` → `/data/backups`.
+   - `DATABASE_URL` → referencia `${{Postgres.DATABASE_URL}}` del servicio Postgres.
    - `NOESIS_DOCS_PATH` → `/data/uploads` (los documentos/papeles subidos van también
      al volumen; si no, se borrarían en cada despliegue).
    - `ANTHROPIC_API_KEY` → opcional (solo si se quiere IA en el chat; sin ella va el
@@ -31,22 +31,34 @@ escala bien al principio. Coste estimado: ~5 €/mes.
    - Email (SMTP): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
    - Facturación legal: `HOLDED_API_KEY` (cuando se active Verifactu vía Holded).
    - `PORT` lo inyecta Railway automáticamente.
-5. **Volumen persistente**: añadir un Volume montado en `/data`. Sin esto, en cada
-   despliegue se borrarían la base de datos SQLite y los documentos subidos (el disco
-   del contenedor es efímero). La versión de Python la fija `.python-version` (3.12).
+5. **Volumen persistente**: se mantiene montado en `/data` para documentos, modelos
+   y la copia histórica de SQLite. La base operativa vive en Postgres.
 6. **Dominio**: Settings → Networking → Custom Domain → `bynoesis.com`, y apuntar el
    DNS según indique Railway. HTTPS es automático.
 
-## Persistencia de datos
-- Corto plazo (piloto): **SQLite en volumen** `/data/noesis.db`. Suficiente para los
-  primeros autónomos y mantiene la filosofía de mínimas dependencias.
-- Medio plazo (al escalar): migrar a **Postgres/Supabase** + copias de seguridad.
-  Es trabajo de [[Arquitectura|capa de datos]], no urgente para el primer piloto.
+## Activación de Postgres (solo tras aprobar el PR)
+1. En el servicio web, pestaña **Backups**, crea y bloquea un backup manual del
+   volumen que contiene `/data/noesis.db`. No cambies aún ninguna variable.
+2. Añade un servicio PostgreSQL gestionado al mismo proyecto y entorno. Debe empezar
+   limpio: esta migración no importa datos reales automáticamente.
+3. En el servicio web, define `DATABASE_URL=${{Postgres.DATABASE_URL}}`. Conserva el
+   volumen y `NOESIS_DB_PATH=/data/noesis.db` hasta verificar la transición.
+4. Fusiona el PR. El `preDeployCommand` ejecuta
+   `python -m noesis.migrations upgrade`; si falla, Railway no inicia el despliegue.
+5. Comprueba `/health`, `/ready`, alta/login y aislamiento con dos negocios. Solo
+   después retira la variable SQLite que ya no haga falta.
+
+Para desarrollo y tests, si `DATABASE_URL` está vacía se usa SQLite. Sus migraciones
+se aplican con `python -m noesis.migrations upgrade`; se pueden revertir con
+`python -m noesis.migrations downgrade <versión>`.
 
 ## Checklist antes de exponer
 - [ ] `NOESIS_SECRET` puesta y aleatoria (nunca la de por defecto).
 - [ ] `NOESIS_BASE_URL` usa el dominio HTTPS definitivo.
-- [ ] Volumen montado y `NOESIS_DB_PATH` apuntando a él.
+- [ ] Backup manual bloqueado del volumen SQLite anterior.
+- [ ] Postgres limpio enlazado mediante `DATABASE_URL`.
+- [ ] Migración pre-deploy en versión actual y `/ready` en 200.
+- [ ] Volumen mantenido para `NOESIS_DOCS_PATH` y otros ficheros.
 - [ ] `NOESIS_BACKUP_DIR` apunta al volumen persistente.
 - [ ] Si WhatsApp está activo, `WHATSAPP_APP_SECRET` está configurado.
 - [ ] Si Stripe está activo, `STRIPE_WEBHOOK_SECRET` está configurado.

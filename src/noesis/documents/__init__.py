@@ -18,6 +18,4 @@ crear ciclos de importación.
 from __future__ import annotations
 
 from . import ocr, repo, service, storage  # noqa: F401
-from .schema import ensure_schema  # noqa: F401
-
-__all__ = ["ensure_schema", "service", "repo", "storage", "ocr"]
+__all__ = ["service", "repo", "storage", "ocr"]
