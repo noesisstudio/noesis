@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
@@ -177,6 +176,8 @@ def _startup() -> None:
             "STRIPE_WEBHOOK_SECRET es obligatorio al activar Stripe en producción."
         )
     if config.RESET_DB:
+        if config.DATABASE_URL:
+            raise RuntimeError("NOESIS_RESET_DB no se admite con Postgres.")
         # Reinicio de UN SOLO USO: borra todo una vez y deja un marcador, para que
         # aunque olvides quitar la variable NO se vuelva a borrar en cada despliegue.
         marker = Path(config.DB_PATH).parent / ".db_reset_done"
@@ -194,11 +195,14 @@ def _startup() -> None:
         db.init_db()
     # Datos demo solo si se piden explícitamente (producción arranca limpia y real).
     if config.SEED_DEMO:
-        if not db.list_clients():
+        demo_user = db.get_user_by_email("demo@bynoesis.com")
+        if not demo_user:
             from .. import demo
-            demo.seed()
-        if not db.get_user_by_email("demo@bynoesis.com"):
-            db.create_user("demo@bynoesis.com", auth.hash_password("demo1234"), 1)
+            demo_business_id = demo.seed(reset=False)
+            db.create_user(
+                "demo@bynoesis.com", auth.hash_password("demo1234"),
+                demo_business_id,
+            )
     start_scheduler()
 
 
@@ -228,10 +232,11 @@ def health():
 def readiness():
     """Readiness: comprueba que el almacenamiento está inicializado y accesible."""
     try:
-        business = db.get_business(db.DEFAULT_BUSINESS_ID)
-    except sqlite3.Error:
-        return JSONResponse({"status": "not_ready"}, status_code=503)
-    if not business:
+        from .. import migrations
+        ready = migrations.is_current()
+    except db.DatabaseError:
+        ready = False
+    if not ready:
         return JSONResponse({"status": "not_ready"}, status_code=503)
     return {"status": "ready"}
 
@@ -364,7 +369,9 @@ def subscription_page(request: Request, business_id: int, status: str = ""):
 def page(request: Request, business_id: int, page: str):
     if page not in _PAGES:
         return RedirectResponse(f"/b/{business_id}/resumen")
-    biz = db.get_business(business_id) or db.get_business(1)
+    biz = db.get_business(business_id)
+    if not biz:
+        return RedirectResponse("/login")
     context = {
         "business": biz,
         "active": page,
@@ -547,7 +554,7 @@ async def api_update_client(business_id: int, client_id: int, request: Request):
 def api_delete_client(business_id: int, client_id: int):
     try:
         db.delete_client(client_id, business_id)
-    except sqlite3.IntegrityError:
+    except db.IntegrityError:
         return JSONResponse(
             {"error": "El cliente tiene datos asociados y no se puede borrar así."},
             status_code=409,
@@ -931,7 +938,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
             name, email, auth.hash_password(password), sector or None,
             trial_days=config.TRIAL_DAYS,
         )
-    except (ValueError, sqlite3.IntegrityError):
+    except (ValueError, *db.IntegrityError):
         auth.record_failed_attempt(key)
         return RedirectResponse("/onboarding?error=email", status_code=303)
     auth.clear_attempts(key)

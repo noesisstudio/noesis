@@ -32,7 +32,7 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
   recordatorios, NLU flexible, módulo `documents/` ("papeles": recibos/tickets + OCR
   opcional) y datos fiscales del cliente.
 
-**Pruebas:** 34/34 en `tests/test_backend.py`.
+**Pruebas:** 40/40 en `tests/test_backend.py` (SQLite local).
 
 ---
 
@@ -40,7 +40,8 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 
 | Archivo | Qué es |
 |---|---|
-| `src/noesis/db.py` | Único punto de contacto con la BD (SQLite). Todas las tablas y consultas, aisladas por `business_id`. |
+| `src/noesis/db.py` | Único punto de contacto con SQLite/Postgres. Selecciona Postgres con `DATABASE_URL`. |
+| `src/noesis/migrations.py` | Esquema versionado, incluidas FKs multiempresa y `documents`. |
 | `src/noesis/agent.py` | **El cerebro IA**: bucle de tool-use con Claude. Sistema acotado al negocio. Solo se activa con `ANTHROPIC_API_KEY`. |
 | `src/noesis/nlu.py` | Cerebro local por reglas (gratis, sin API): resuelve los comandos frecuentes. |
 | `src/noesis/web/chat.py` | Orquestador híbrido: intenta NLU local → si no, agente IA. Aquí vive el copiloto (plan diario, sin-facturar, ledger). |
@@ -112,10 +113,8 @@ construir más features.
    cobro. Cazar fricciones reales.
 
 ### P1 — Para fiarse con varios clientes (1–3 semanas)
-5. **Postgres** (en vez de SQLite) con restricciones multiempresa en la BD y quitar el
-   `DEFAULT_BUSINESS_ID = 1`. Es lo que evita que dos clientes se crucen bajo carga.
-   *(Para un piloto de 1–5 muy controlado, SQLite-en-volumen aguanta; pero esto es lo
-   primero de la fase de escalar.)*
+5. **Postgres**: implementación terminada en `codex/postgres`, pendiente de revisión
+   y activación en Railway. No se ha tocado la SQLite ni la BD de producción.
 6. **WhatsApp fiable:** cola durable + reintentos + plantillas aprobadas por Meta +
    estado de entrega. El scheduler actual sirve para piloto, no para producción seria.
 7. **Verifactu real (Holded)** en cuanto un cliente facture oficialmente.
@@ -130,9 +129,10 @@ construir más features.
 ### Deuda técnica concreta (de la lista de Codex)
 - [x] `/health` y `/ready` — **hecho**.
 - [x] `@app.on_event` → `lifespan` — **hecho**.
-- [ ] Postgres + quitar `DEFAULT_BUSINESS_ID=1` (P1.5).
+- [x] Código Postgres + quitar `DEFAULT_BUSINESS_ID=1` (pendiente activar en Railway).
 - [ ] Partir las ~70 rutas de `server.py` en módulos por dominio.
-- [ ] CI + migraciones versionadas + restaurar backups + e2e.
+- [x] Migraciones versionadas con upgrade/downgrade.
+- [ ] CI + restaurar backups + e2e Postgres.
 
 ---
 
@@ -141,13 +141,11 @@ construir más features.
 > tareas de backend, en orden de prioridad, con criterio de "hecho". Coordínate:
 > avisa de qué archivos tocas y verifica `git branch --show-current` antes de operar.
 
-1. **Postgres + aislamiento real en BD** (la más importante para escalar).
-   - Migrar de SQLite a Postgres (Railway lo ofrece gestionado). `db.py` es el único
-     punto de contacto: cambiar `get_conn` y los `?`→`%s`/SQLAlchemy si se prefiere.
-   - **Quitar `DEFAULT_BUSINESS_ID = 1`** y los getters que lo asumen; exigir
-     `business_id` siempre. Añadir constraints/RLS para que dos negocios no se crucen.
-   - Hecho cuando: la app corre en Postgres en Railway, migraciones aplicadas, y un
-     test demuestra que un negocio no puede leer/escribir datos de otro ni por error.
+1. **Activar Postgres en Railway tras revisar `codex/postgres`.**
+   - Código listo: `psycopg`, SQLite fallback, migraciones 1→2, FKs compuestas,
+     `business_id` obligatorio y tests de lectura/escritura cruzada.
+   - Pendiente operativo: backup manual del volumen, provisionar Postgres limpio,
+     enlazar `DATABASE_URL`, fusionar el PR y validar `/health` + `/ready`.
 
 2. **Migraciones versionadas** (Alembic o equivalente) en vez de los `ALTER` en
    `_MIGRATIONS`. Hecho cuando: el esquema se versiona y se puede subir/bajar.

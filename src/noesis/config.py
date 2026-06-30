@@ -30,8 +30,12 @@ MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
 FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 
-# La base de datos vive en la raíz del proyecto por defecto. En producción se
-# apunta a un volumen persistente con NOESIS_DB_PATH (en hosts el disco es efímero).
+# Railway inyecta DATABASE_URL al enlazar el servicio Postgres. Sin esa variable,
+# Noesis conserva SQLite para desarrollo local y pruebas.
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+# Fallback SQLite local. NOESIS_DB_PATH sigue siendo útil para conservar/copiar una
+# instalación anterior, pero no se usa cuando DATABASE_URL está configurada.
 DB_PATH = Path(os.getenv("NOESIS_DB_PATH", str(ROOT / "noesis.db")))
 
 # IVA por defecto en España (servicios generales).

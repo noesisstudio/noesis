@@ -1,295 +1,167 @@
-"""Almacenamiento (SQLite) — multi-negocio (multi-tenant).
+"""Acceso único a SQLite/Postgres con aislamiento multiempresa.
 
 Cada autónomo que se da de alta es un "business". Todos sus datos (clientes,
 agenda, facturas, gastos) van marcados con su business_id, de modo que los datos
 de un cliente nunca se mezclan con los de otro.
 
-Es deliberadamente sencillo: el día de mañana esto se migra a Postgres/Supabase
-sin cambiar la lógica de negocio (las funciones de aquí son el único punto de
-contacto con la base de datos).
+Postgres se activa con ``DATABASE_URL``. SQLite se mantiene como fallback local.
+El esquema no se crea aquí: lo gestionan las migraciones versionadas.
 """
 
 from __future__ import annotations
 
-import sqlite3
 import logging
 import math
 import re
 import secrets
+import sqlite3
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 from . import config
 
-DEFAULT_BUSINESS_ID = 1
 log = logging.getLogger("noesis.db")
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS businesses (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    name            TEXT NOT NULL,
-    owner_email     TEXT,
-    sector          TEXT,
-    nif             TEXT,
-    address         TEXT,
-    default_vat     REAL NOT NULL DEFAULT 21,
-    default_irpf    REAL NOT NULL DEFAULT 0,
-    whatsapp_phone  TEXT,
-    whatsapp_status TEXT NOT NULL DEFAULT 'no_conectado',  -- no_conectado|pendiente|conectado
-    onboarding_done INTEGER NOT NULL DEFAULT 0,
-    created_at      TEXT NOT NULL
-);
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except ImportError:  # SQLite local no necesita cargar el driver.
+    psycopg = None
+    dict_row = None
 
-CREATE TABLE IF NOT EXISTS users (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    email         TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    business_id   INTEGER NOT NULL REFERENCES businesses(id),
-    created_at    TEXT NOT NULL
-);
 
-CREATE TABLE IF NOT EXISTS clients (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    business_id INTEGER NOT NULL DEFAULT 1,
-    name        TEXT NOT NULL,
-    phone       TEXT,
-    address     TEXT,
-    zone        TEXT,
-    created_at  TEXT NOT NULL
-);
+IntegrityError = (
+    (sqlite3.IntegrityError, psycopg.IntegrityError)
+    if psycopg
+    else (sqlite3.IntegrityError,)
+)
+DatabaseError = (
+    (sqlite3.Error, psycopg.Error) if psycopg else (sqlite3.Error,)
+)
 
-CREATE TABLE IF NOT EXISTS jobs (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    business_id     INTEGER NOT NULL DEFAULT 1,
-    client_id       INTEGER REFERENCES clients(id),
-    description     TEXT NOT NULL,
-    scheduled_for   TEXT,
-    zone            TEXT,
-    price_estimate  REAL,
-    status          TEXT NOT NULL DEFAULT 'pendiente',
-    created_at      TEXT NOT NULL
-);
 
-CREATE TABLE IF NOT EXISTS invoices (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    business_id INTEGER NOT NULL DEFAULT 1,
-    number      TEXT,
-    client_id   INTEGER REFERENCES clients(id),
-    concept     TEXT NOT NULL,
-    base        REAL NOT NULL,
-    vat_rate    REAL NOT NULL,
-    vat_amount  REAL NOT NULL,
-    irpf_rate   REAL NOT NULL DEFAULT 0,
-    irpf_amount REAL NOT NULL DEFAULT 0,
-    total       REAL NOT NULL,
-    status      TEXT NOT NULL DEFAULT 'borrador',
-    due_date    TEXT,
-    issued_at   TEXT,
-    paid_at     TEXT,
-    created_at  TEXT NOT NULL
-);
+class Record(dict):
+    """Fila común: acceso por nombre y compatibilidad puntual por índice."""
 
-CREATE TABLE IF NOT EXISTS expenses (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    business_id INTEGER NOT NULL DEFAULT 1,
-    concept     TEXT NOT NULL,
-    amount      REAL NOT NULL,
-    vat_rate    REAL,
-    category    TEXT,
-    spent_on    TEXT,
-    created_at  TEXT NOT NULL
-);
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return tuple(self.values())[key]
+        return super().__getitem__(key)
 
-CREATE TABLE IF NOT EXISTS quotes (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    business_id INTEGER NOT NULL DEFAULT 1,
-    number      TEXT,
-    client_id   INTEGER REFERENCES clients(id),
-    concept     TEXT NOT NULL,
-    base        REAL NOT NULL,
-    vat_rate    REAL NOT NULL,
-    vat_amount  REAL NOT NULL,
-    irpf_rate   REAL NOT NULL DEFAULT 0,
-    irpf_amount REAL NOT NULL DEFAULT 0,
-    total       REAL NOT NULL,
-    status      TEXT NOT NULL DEFAULT 'borrador',  -- borrador|enviado|aceptado|rechazado
-    valid_until TEXT,
-    invoice_id  INTEGER REFERENCES invoices(id),   -- factura creada al aceptar
-    created_at  TEXT NOT NULL,
-    accepted_at TEXT
-);
 
-CREATE TABLE IF NOT EXISTS password_resets (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id     INTEGER NOT NULL REFERENCES users(id),
-    token_hash  TEXT NOT NULL,
-    expires_at  TEXT NOT NULL,
-    used        INTEGER NOT NULL DEFAULT 0,
-    created_at  TEXT NOT NULL
-);
+def _normalise_value(value: Any) -> Any:
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
 
-CREATE TABLE IF NOT EXISTS document_sequences (
-    business_id INTEGER NOT NULL,
-    kind        TEXT NOT NULL,
-    year        INTEGER NOT NULL,
-    last_number INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (business_id, kind, year)
-);
 
-CREATE TABLE IF NOT EXISTS webhook_events (
-    source       TEXT NOT NULL,
-    event_id     TEXT NOT NULL,
-    created_at   TEXT NOT NULL,
-    PRIMARY KEY (source, event_id)
-);
+def _normalise_row(row) -> Record | None:
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        values = row.items()
+    elif hasattr(row, "keys"):
+        values = ((key, row[key]) for key in row.keys())
+    else:
+        values = ((str(index), value) for index, value in enumerate(row))
+    return Record((key, _normalise_value(value)) for key, value in values)
 
-CREATE TABLE IF NOT EXISTS product_events (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    business_id INTEGER NOT NULL REFERENCES businesses(id),
-    event_name  TEXT NOT NULL,
-    event_data  TEXT,
-    created_at  TEXT NOT NULL
-);
 
-CREATE TABLE IF NOT EXISTS whatsapp_links (
-    code_hash    TEXT PRIMARY KEY,
-    business_id INTEGER NOT NULL REFERENCES businesses(id),
-    expires_at   TEXT NOT NULL,
-    created_at   TEXT NOT NULL
-);
+class Cursor:
+    def __init__(self, cursor):
+        self._cursor = cursor
 
-CREATE TABLE IF NOT EXISTS scheduled_job_runs (
-    run_key      TEXT PRIMARY KEY,
-    created_at   TEXT NOT NULL
-);
+    @property
+    def rowcount(self) -> int:
+        return self._cursor.rowcount
 
-CREATE TABLE IF NOT EXISTS portal_tokens (
-    token        TEXT PRIMARY KEY,
-    business_id  INTEGER NOT NULL REFERENCES businesses(id),
-    client_id    INTEGER NOT NULL REFERENCES clients(id),
-    expires_at   TEXT NOT NULL,
-    revoked      INTEGER NOT NULL DEFAULT 0,
-    created_at   TEXT NOT NULL
-);
+    def fetchone(self) -> Record | None:
+        return _normalise_row(self._cursor.fetchone())
 
-CREATE TABLE IF NOT EXISTS copilot_recommendations (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    business_id INTEGER NOT NULL REFERENCES businesses(id),
-    topic       TEXT NOT NULL,
-    summary     TEXT NOT NULL,
-    status      TEXT NOT NULL DEFAULT 'recomendado',  -- recomendado|aceptado|completado|descartado
-    created_at  TEXT NOT NULL,
-    updated_at  TEXT NOT NULL
-);
-"""
+    def fetchall(self) -> list[Record]:
+        return [_normalise_row(row) for row in self._cursor.fetchall()]
 
-# Migraciones suaves: columnas añadidas después del esquema inicial. Se aplican con
-# ALTER TABLE solo si faltan, para no perder datos de las cuentas ya creadas.
-_MIGRATIONS: list[tuple[str, str, str]] = [
-    ("businesses", "plan", "TEXT NOT NULL DEFAULT 'trial'"),
-    ("businesses", "subscription_status", "TEXT NOT NULL DEFAULT 'trial'"),  # trial|active|past_due|canceled
-    ("businesses", "trial_ends_at", "TEXT"),
-    ("businesses", "stripe_customer_id", "TEXT"),
-    ("businesses", "stripe_subscription_id", "TEXT"),
-    ("businesses", "whatsapp_phone_norm", "TEXT"),
-    ("businesses", "team_size", "TEXT"),
-    ("businesses", "province", "TEXT"),
-    ("businesses", "primary_goal", "TEXT"),
-    ("businesses", "invoice_template", "TEXT NOT NULL DEFAULT 'clasica'"),
-    ("businesses", "brand_color", "TEXT"),
-    ("businesses", "logo_data", "TEXT"),
-    ("businesses", "logo_mime", "TEXT"),
-    ("users", "is_admin", "INTEGER NOT NULL DEFAULT 0"),
-    ("users", "session_version", "INTEGER NOT NULL DEFAULT 0"),
-    ("clients", "nif", "TEXT"),
-    ("clients", "email", "TEXT"),
-    ("invoices", "last_reminder_at", "TEXT"),
-    ("invoices", "reminders_sent", "INTEGER NOT NULL DEFAULT 0"),
-    ("invoices", "issuer_name", "TEXT"),
-    ("invoices", "issuer_nif", "TEXT"),
-    ("invoices", "issuer_address", "TEXT"),
-    ("invoices", "recipient_name", "TEXT"),
-    ("invoices", "recipient_nif", "TEXT"),
-    ("invoices", "recipient_address", "TEXT"),
-]
+
+class Connection:
+    def __init__(self, raw, dialect: str):
+        self.raw = raw
+        self.dialect = dialect
+
+    def execute(self, sql: str, params=()) -> Cursor:
+        if self.dialect == "postgres":
+            if sql.strip().upper() == "BEGIN IMMEDIATE":
+                sql = "SELECT 1"
+            sql = sql.replace("?", "%s")
+        return Cursor(self.raw.execute(sql, params))
+
+    def executescript(self, script: str) -> None:
+        if self.dialect == "sqlite":
+            self.raw.executescript(script)
+            return
+        for statement in script.split(";"):
+            if statement.strip():
+                self.execute(statement)
+
+    def commit(self) -> None:
+        self.raw.commit()
+
+    def rollback(self) -> None:
+        self.raw.rollback()
+
+    def close(self) -> None:
+        self.raw.close()
 
 
 @contextmanager
 def get_conn():
-    """Conexión a SQLite que hace commit al salir y SIEMPRE cierra.
-
-    Cerrar es importante en Windows: una conexión abierta bloquea el fichero
-    y luego no se puede borrar/recrear la base de datos.
-    """
-    conn = sqlite3.connect(config.DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA busy_timeout = 10000")
-    conn.execute("PRAGMA journal_mode = WAL")
+    """Abre la BD configurada, confirma al salir y siempre cierra."""
+    if config.DATABASE_URL:
+        if psycopg is None:
+            raise RuntimeError(
+                "DATABASE_URL está configurada pero falta psycopg."
+            )
+        raw = psycopg.connect(config.DATABASE_URL, row_factory=dict_row)
+        conn = Connection(raw, "postgres")
+    else:
+        raw = sqlite3.connect(config.DB_PATH)
+        raw.row_factory = sqlite3.Row
+        raw.execute("PRAGMA foreign_keys = ON")
+        raw.execute("PRAGMA busy_timeout = 10000")
+        raw.execute("PRAGMA journal_mode = WAL")
+        conn = Connection(raw, "sqlite")
     try:
         yield conn
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
 
-def _migrate() -> None:
-    """Aplica columnas nuevas a tablas existentes sin perder datos (idempotente)."""
-    with get_conn() as conn:
-        for table, column, decl in _MIGRATIONS:
-            cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
-            if column not in cols:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
-    _ensure_indexes()
+def init_db(*, auto_migrate: bool | None = None) -> None:
+    """Prepara SQLite local o valida que Postgres ya fue migrada en pre-deploy."""
+    from . import migrations
 
-
-def _ensure_indexes() -> None:
-    """Crea índices de aislamiento y rendimiento sin impedir abrir datos heredados."""
-    statements = [
-        "CREATE INDEX IF NOT EXISTS idx_clients_business ON clients(business_id)",
-        "CREATE INDEX IF NOT EXISTS idx_jobs_business_date ON jobs(business_id, scheduled_for)",
-        "CREATE INDEX IF NOT EXISTS idx_invoices_business_status ON invoices(business_id, status)",
-        "CREATE INDEX IF NOT EXISTS idx_expenses_business_date ON expenses(business_id, spent_on)",
-        "CREATE INDEX IF NOT EXISTS idx_quotes_business_status ON quotes(business_id, status)",
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_invoice_number "
-        "ON invoices(business_id, number) WHERE number IS NOT NULL",
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_quote_number "
-        "ON quotes(business_id, number) WHERE number IS NOT NULL",
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_phone "
-        "ON businesses(whatsapp_phone_norm) WHERE whatsapp_phone_norm IS NOT NULL",
-        "CREATE INDEX IF NOT EXISTS idx_portal_tokens_client "
-        "ON portal_tokens(business_id, client_id)",
-        "CREATE INDEX IF NOT EXISTS idx_copilot_recs_business "
-        "ON copilot_recommendations(business_id, status)",
-        "CREATE INDEX IF NOT EXISTS idx_product_events_business_date "
-        "ON product_events(business_id, created_at)",
-        "CREATE INDEX IF NOT EXISTS idx_product_events_name_date "
-        "ON product_events(event_name, created_at)",
-    ]
-    with get_conn() as conn:
-        for statement in statements:
-            try:
-                conn.execute(statement)
-            except sqlite3.IntegrityError:
-                log.error(
-                    "No se pudo crear un índice único por datos duplicados existentes: %s",
-                    statement,
-                )
-
-
-def init_db() -> None:
-    with get_conn() as conn:
-        conn.executescript(SCHEMA)
-        # Tabla de documentos ("papeles"): vive en el módulo aislado documents/.
-        from .documents import ensure_schema
-        ensure_schema(conn)
-    _migrate()
-    _ensure_default_business()
+    if auto_migrate is None:
+        auto_migrate = not bool(config.DATABASE_URL)
+    if auto_migrate:
+        migrations.upgrade()
+    elif not migrations.is_current():
+        raise RuntimeError(
+            "El esquema no está actualizado. Ejecuta: python -m noesis.migrations upgrade"
+        )
     _backfill_phone_norms()
 
 
 def reset_db() -> None:
+    if config.DATABASE_URL:
+        raise RuntimeError("No se permite reset_db sobre Postgres.")
     Path(config.DB_PATH).unlink(missing_ok=True)
     init_db()
 
@@ -320,25 +192,14 @@ def _tax_rate(value, label: str, allowed: set[float]) -> float:
 
 
 # --------------------------------------------------------------- Negocios ---
-def _ensure_default_business() -> None:
-    with get_conn() as conn:
-        row = conn.execute("SELECT id FROM businesses WHERE id=?",
-                           (DEFAULT_BUSINESS_ID,)).fetchone()
-        if not row:
-            conn.execute(
-                "INSERT INTO businesses (id, name, created_at) VALUES (?, ?, ?)",
-                (DEFAULT_BUSINESS_ID, config.BUSINESS_NAME, _now()),
-            )
-
-
 def create_business(name, owner_email=None, sector=None) -> dict:
     with get_conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO businesses (name, owner_email, sector, created_at) "
-            "VALUES (?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?) RETURNING id",
             (name, owner_email, sector, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     return get_business(new_id)
 
 
@@ -370,7 +231,7 @@ def _backfill_phone_norms() -> None:
                     "UPDATE businesses SET whatsapp_phone_norm=? WHERE id=?",
                     (norm, row["id"]),
                 )
-            except sqlite3.IntegrityError:
+            except IntegrityError:
                 log.error(
                     "El teléfono de WhatsApp está duplicado en el negocio %s.",
                     row["id"],
@@ -415,7 +276,7 @@ def set_whatsapp_status(business_id, status, phone=None) -> dict:
 
 def finish_onboarding(business_id) -> dict:
     with get_conn() as conn:
-        conn.execute("UPDATE businesses SET onboarding_done=1 WHERE id=?", (business_id,))
+        conn.execute("UPDATE businesses SET onboarding_done=TRUE WHERE id=?", (business_id,))
     return get_business(business_id)
 
 
@@ -629,12 +490,9 @@ REC_STATES = {"recomendado", "aceptado", "completado", "descartado"}
 _REC_ACTIVE = ("recomendado", "aceptado")
 
 
-def get_recommendation(rec_id, business_id=None) -> dict | None:
-    sql = "SELECT * FROM copilot_recommendations WHERE id=?"
-    params: list = [rec_id]
-    if business_id is not None:
-        sql += " AND business_id=?"
-        params.append(business_id)
+def get_recommendation(rec_id, business_id) -> dict | None:
+    sql = "SELECT * FROM copilot_recommendations WHERE id=? AND business_id=?"
+    params = [rec_id, business_id]
     with get_conn() as conn:
         row = conn.execute(sql, params).fetchone()
         return dict(row) if row else None
@@ -656,13 +514,13 @@ def record_recommendation(business_id: int, topic: str, summary: str) -> dict:
         ).fetchone()
         if row:
             return dict(row)
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO copilot_recommendations "
             "(business_id, topic, summary, status, created_at, updated_at) "
-            "VALUES (?, ?, ?, 'recomendado', ?, ?)",
+            "VALUES (?, ?, ?, 'recomendado', ?, ?) RETURNING id",
             (business_id, topic, summary, now, now),
-        )
-        rec_id = cur.lastrowid
+        ).fetchone()
+        rec_id = row["id"]
     return get_recommendation(rec_id, business_id)
 
 
@@ -681,7 +539,7 @@ def set_recommendation_status(rec_id, business_id, status) -> dict | None:
     return get_recommendation(rec_id, business_id)
 
 
-def list_recommendations(business_id=DEFAULT_BUSINESS_ID, status=None,
+def list_recommendations(business_id, status=None,
                          limit: int = 50) -> list[dict]:
     sql = "SELECT * FROM copilot_recommendations WHERE business_id=?"
     params: list = [business_id]
@@ -694,7 +552,7 @@ def list_recommendations(business_id=DEFAULT_BUSINESS_ID, status=None,
         return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
 
-def recommendation_stats(business_id=DEFAULT_BUSINESS_ID) -> dict:
+def recommendation_stats(business_id) -> dict:
     """Conteo por estado: cuántas se recomendaron, aceptaron y completaron."""
     with get_conn() as conn:
         rows = conn.execute(
@@ -716,12 +574,12 @@ def recommendation_stats(business_id=DEFAULT_BUSINESS_ID) -> dict:
 # ---------------------------------------------------------------- Usuarios ---
 def create_user(email, password_hash, business_id) -> dict:
     with get_conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO users (email, password_hash, business_id, created_at) "
-            "VALUES (?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?) RETURNING id",
             (email.lower().strip(), password_hash, business_id, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     return get_user(new_id)
 
 
@@ -733,19 +591,19 @@ def create_account(name, email, password_hash, sector=None, trial_days: int = 14
         conn.execute("BEGIN IMMEDIATE")
         if conn.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
             raise ValueError("Ya existe una cuenta con ese email.")
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO businesses (name, owner_email, sector, created_at, plan, "
             "subscription_status, trial_ends_at) "
-            "VALUES (?, ?, ?, ?, 'trial', 'trial', ?)",
+            "VALUES (?, ?, ?, ?, 'trial', 'trial', ?) RETURNING id",
             (name, email, sector, _now(), ends),
-        )
-        business_id = cur.lastrowid
-        user_cur = conn.execute(
+        ).fetchone()
+        business_id = row["id"]
+        user_row = conn.execute(
             "INSERT INTO users (email, password_hash, business_id, created_at) "
-            "VALUES (?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?) RETURNING id",
             (email, password_hash, business_id, _now()),
-        )
-        user_id = user_cur.lastrowid
+        ).fetchone()
+        user_id = user_row["id"]
     return get_business(business_id), get_user(user_id)
 
 
@@ -764,42 +622,39 @@ def get_user_by_email(email) -> dict | None:
 
 # ---------------------------------------------------------------- Clientes ---
 def add_client(name, phone=None, address=None, zone=None, nif=None, email=None,
-               business_id=DEFAULT_BUSINESS_ID) -> dict:
+               *, business_id: int) -> dict:
     name = (name or "").strip()
     if not name:
         raise ValueError("El nombre del cliente es obligatorio.")
     with get_conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO clients (business_id, name, phone, address, zone, nif, email, "
-            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, name, phone, address, zone, nif, email, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     return get_client(new_id, business_id)
 
 
-def get_client(client_id, business_id=None) -> dict | None:
-    sql = "SELECT * FROM clients WHERE id=?"
-    params: list = [client_id]
-    if business_id is not None:
-        sql += " AND business_id=?"
-        params.append(business_id)
+def get_client(client_id, business_id) -> dict | None:
+    sql = "SELECT * FROM clients WHERE id=? AND business_id=?"
+    params = [client_id, business_id]
     with get_conn() as conn:
         row = conn.execute(sql, params).fetchone()
         return dict(row) if row else None
 
 
-def find_client(name, business_id=DEFAULT_BUSINESS_ID) -> dict | None:
+def find_client(name, business_id) -> dict | None:
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM clients WHERE business_id=? AND name = ? COLLATE NOCASE "
+            "SELECT * FROM clients WHERE business_id=? AND LOWER(name)=LOWER(?) "
             "ORDER BY id LIMIT 1",
             (business_id, (name or "").strip()),
         ).fetchone()
         return dict(row) if row else None
 
 
-def list_clients(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def list_clients(business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM clients WHERE business_id=? ORDER BY name",
@@ -808,7 +663,7 @@ def list_clients(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
         return [dict(r) for r in rows]
 
 
-def get_or_create_client(name, business_id=DEFAULT_BUSINESS_ID, **kw) -> dict:
+def get_or_create_client(name, business_id, **kw) -> dict:
     return find_client(name, business_id) or add_client(name, business_id=business_id, **kw)
 
 
@@ -836,26 +691,23 @@ def delete_client(client_id, business_id) -> None:
 
 # ------------------------------------------------------------------ Agenda ---
 def add_job(client_id, description, scheduled_for=None, zone=None,
-            price_estimate=None, business_id=DEFAULT_BUSINESS_ID) -> dict:
+            price_estimate=None, *, business_id: int) -> dict:
     if not get_client(client_id, business_id):
         raise ValueError("El cliente no pertenece a este negocio.")
     with get_conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO jobs (business_id, client_id, description, scheduled_for, "
-            "zone, price_estimate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "zone, price_estimate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, client_id, description, scheduled_for, zone,
              price_estimate, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     return get_job(new_id, business_id)
 
 
-def get_job(job_id, business_id=None) -> dict | None:
-    sql = "SELECT * FROM jobs WHERE id=?"
-    params: list = [job_id]
-    if business_id is not None:
-        sql += " AND business_id=?"
-        params.append(business_id)
+def get_job(job_id, business_id) -> dict | None:
+    sql = "SELECT * FROM jobs WHERE id=? AND business_id=?"
+    params = [job_id, business_id]
     with get_conn() as conn:
         row = conn.execute(sql, params).fetchone()
         return dict(row) if row else None
@@ -873,20 +725,20 @@ def delete_job(job_id, business_id) -> None:
                      (job_id, business_id))
 
 
-def jobs_for_date(day: str, business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def jobs_for_date(day: str, business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT j.*, c.name AS client_name, c.zone AS client_zone "
             "FROM jobs j LEFT JOIN clients c ON c.id = j.client_id "
             "AND c.business_id = j.business_id "
-            "WHERE j.business_id=? AND j.scheduled_for LIKE ? "
+            "WHERE j.business_id=? AND CAST(j.scheduled_for AS TEXT) LIKE ? "
             "ORDER BY j.scheduled_for",
             (business_id, f"{day}%"),
         ).fetchall()
         return [dict(r) for r in rows]
 
 
-def jobs_between(start: str, end: str, business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def jobs_between(start: str, end: str, business_id) -> list[dict]:
     """Trabajos entre dos fechas ISO (para el calendario semanal)."""
     with get_conn() as conn:
         rows = conn.execute(
@@ -906,7 +758,7 @@ _JOB_DONE_STATES = ("hecho", "hecha", "completado", "completada", "realizado",
 _JOB_DEAD_STATES = ("cancelado", "cancelada", "anulado", "anulada")
 
 
-def unbilled_jobs(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def unbilled_jobs(business_id) -> list[dict]:
     """Trabajos que probablemente están SIN FACTURAR: o ya pasó su fecha o están
     marcados como hechos, y el cliente no tiene ninguna factura creada desde
     entonces. Es una SEÑAL de apoyo para el copiloto (puede tener falsos positivos
@@ -920,7 +772,8 @@ def unbilled_jobs(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
             "LEFT JOIN clients c ON c.id=j.client_id AND c.business_id=j.business_id "
             "WHERE j.business_id=? AND j.client_id IS NOT NULL "
             f"AND j.status NOT IN ({dead_ph}) "
-            f"AND (j.status IN ({done_ph}) OR substr(j.scheduled_for,1,10) < ?) "
+            f"AND (j.status IN ({done_ph}) "
+            "OR substr(CAST(j.scheduled_for AS TEXT),1,10) < ?) "
             "ORDER BY j.scheduled_for",
             (business_id, *_JOB_DEAD_STATES, *_JOB_DONE_STATES, today),
         ).fetchall()
@@ -930,7 +783,7 @@ def unbilled_jobs(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
             day = (j.get("scheduled_for") or j.get("created_at") or "")[:10]
             billed = conn.execute(
                 "SELECT 1 FROM invoices WHERE business_id=? AND client_id=? "
-                "AND substr(created_at,1,10) >= ? LIMIT 1",
+                "AND substr(CAST(created_at AS TEXT),1,10) >= ? LIMIT 1",
                 (business_id, j["client_id"], day),
             ).fetchone()
             if not billed:
@@ -940,7 +793,7 @@ def unbilled_jobs(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
 
 # --------------------------------------------------------------- Facturas ---
 def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
-                irpf_rate=0, business_id=DEFAULT_BUSINESS_ID) -> dict:
+                irpf_rate=0, *, business_id: int) -> dict:
     """Crea una factura calculando IVA y retención de IRPF.
 
     Total = base + IVA − IRPF retenido (así sale el importe que el cliente paga).
@@ -957,23 +810,20 @@ def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     irpf_amount = round(base * (irpf_rate or 0) / 100, 2)
     total = round(base + vat_amount - irpf_amount, 2)
     with get_conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
             "vat_amount, irpf_rate, irpf_amount, total, status, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?) RETURNING id",
             (business_id, client_id, concept, base, vat_rate, vat_amount,
              irpf_rate or 0, irpf_amount, total, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     return get_invoice(new_id, business_id)
 
 
-def get_invoice(invoice_id, business_id=None) -> dict | None:
-    where = "i.id=?"
-    params: list = [invoice_id]
-    if business_id is not None:
-        where += " AND i.business_id=?"
-        params.append(business_id)
+def get_invoice(invoice_id, business_id) -> dict | None:
+    where = "i.id=? AND i.business_id=?"
+    params = [invoice_id, business_id]
     with get_conn() as conn:
         row = conn.execute(
             "SELECT i.*, c.name AS client_name FROM invoices i "
@@ -984,7 +834,7 @@ def get_invoice(invoice_id, business_id=None) -> dict | None:
         return dict(row) if row else None
 
 
-def list_invoices(business_id=DEFAULT_BUSINESS_ID, status=None) -> list[dict]:
+def list_invoices(business_id, status=None) -> list[dict]:
     q = ("SELECT i.*, COALESCE(i.recipient_name, c.name) AS client_name FROM invoices i "
          "LEFT JOIN clients c ON c.id = i.client_id AND c.business_id=i.business_id "
          "WHERE i.business_id=?")
@@ -999,20 +849,6 @@ def list_invoices(business_id=DEFAULT_BUSINESS_ID, status=None) -> list[dict]:
 
 def _next_document_number(conn, business_id: int, kind: str) -> int:
     year = date.today().year
-    row = conn.execute(
-        "SELECT last_number FROM document_sequences "
-        "WHERE business_id=? AND kind=? AND year=?",
-        (business_id, kind, year),
-    ).fetchone()
-    if row:
-        number = row[0] + 1
-        conn.execute(
-            "UPDATE document_sequences SET last_number=? "
-            "WHERE business_id=? AND kind=? AND year=?",
-            (number, business_id, kind, year),
-        )
-        return number
-
     table = "invoices" if kind == "invoice" else "quotes"
     prefix = f"{year}/" if kind == "invoice" else f"P{year}/"
     existing = conn.execute(
@@ -1025,13 +861,16 @@ def _next_document_number(conn, business_id: int, kind: str) -> int:
             used.append(int(item["number"].rsplit("/", 1)[1]))
         except (AttributeError, IndexError, ValueError):
             continue
-    number = max(used, default=0) + 1
-    conn.execute(
+    initial = max(used, default=0) + 1
+    row = conn.execute(
         "INSERT INTO document_sequences (business_id, kind, year, last_number) "
-        "VALUES (?, ?, ?, ?)",
-        (business_id, kind, year, number),
-    )
-    return number
+        "VALUES (?, ?, ?, ?) "
+        "ON CONFLICT (business_id, kind, year) DO UPDATE "
+        "SET last_number=document_sequences.last_number+1 "
+        "RETURNING last_number",
+        (business_id, kind, year, initial),
+    ).fetchone()
+    return row["last_number"]
 
 
 def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int = 15) -> dict:
@@ -1096,7 +935,7 @@ def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int = 15
     return get_invoice(invoice_id, business_id)
 
 
-def mark_invoice_sent(invoice_id, number, due_date=None, business_id=None) -> dict | None:
+def mark_invoice_sent(invoice_id, number, due_date=None, *, business_id: int) -> dict | None:
     """Marca una factura como enviada. Filtra por business_id (aislamiento): si la
     factura no es de ese negocio, no toca nada y devuelve None."""
     with get_conn() as conn:
@@ -1130,7 +969,7 @@ def delete_invoice(invoice_id, business_id) -> bool:
         return cur.rowcount > 0
 
 
-def pending_payments(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def pending_payments(business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT i.*, c.name AS client_name FROM invoices i "
@@ -1153,7 +992,7 @@ def pending_payments(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
 
 # ----------------------------------------------------------------- Gastos ---
 def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None,
-                business_id=DEFAULT_BUSINESS_ID) -> dict:
+                *, business_id: int) -> dict:
     concept = (concept or "").strip()
     if not concept or len(concept) > 500:
         raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
@@ -1163,15 +1002,18 @@ def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None,
     else:
         vat_rate = None
     with get_conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO expenses (business_id, concept, amount, vat_rate, category, "
-            "spent_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "spent_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, concept, amount, vat_rate, category,
              spent_on, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     with get_conn() as conn:
-        return dict(conn.execute("SELECT * FROM expenses WHERE id=?", (new_id,)).fetchone())
+        return dict(conn.execute(
+            "SELECT * FROM expenses WHERE id=? AND business_id=?",
+            (new_id, business_id),
+        ).fetchone())
 
 
 def delete_expense(expense_id, business_id) -> None:
@@ -1180,7 +1022,7 @@ def delete_expense(expense_id, business_id) -> None:
                      (expense_id, business_id))
 
 
-def list_expenses(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def list_expenses(business_id) -> list[dict]:
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(
             "SELECT * FROM expenses WHERE business_id=? ORDER BY created_at DESC",
@@ -1188,8 +1030,7 @@ def list_expenses(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
 
 
 # --------------------------------------------------------------- Resúmenes ---
-def month_billing(month: str | None = None,
-                  business_id=DEFAULT_BUSINESS_ID) -> dict:
+def month_billing(month: str | None = None, *, business_id: int) -> dict:
     month = month or date.today().strftime("%Y-%m")
     if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
         raise ValueError("El mes debe tener formato YYYY-MM.")
@@ -1197,20 +1038,20 @@ def month_billing(month: str | None = None,
         invoices = [
             dict(row) for row in conn.execute(
                 "SELECT * FROM invoices WHERE business_id=? "
-                "AND COALESCE(issued_at, created_at) LIKE ? "
+                "AND CAST(COALESCE(issued_at, created_at) AS TEXT) LIKE ? "
                 "AND status IN ('enviada','cobrada')",
                 (business_id, f"{month}%"),
             ).fetchall()
         ]
         collected_rows = conn.execute(
-            "SELECT COALESCE(SUM(total),0) FROM invoices WHERE business_id=? "
-            "AND paid_at LIKE ? AND status='cobrada'",
+            "SELECT COALESCE(SUM(total),0) AS total FROM invoices WHERE business_id=? "
+            "AND CAST(paid_at AS TEXT) LIKE ? AND status='cobrada'",
             (business_id, f"{month}%"),
-        ).fetchone()[0]
+        ).fetchone()["total"]
         expense_rows = [
             dict(row) for row in conn.execute(
                 "SELECT * FROM expenses WHERE business_id=? "
-                "AND COALESCE(spent_on, created_at) LIKE ?",
+                "AND CAST(COALESCE(spent_on, created_at) AS TEXT) LIKE ?",
                 (business_id, f"{month}%"),
             ).fetchall()
         ]
@@ -1242,7 +1083,7 @@ def month_billing(month: str | None = None,
     }
 
 
-def expenses_by_category(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def expenses_by_category(business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT COALESCE(NULLIF(category,''),'Sin categoría') AS category, "
@@ -1253,11 +1094,12 @@ def expenses_by_category(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
         return [dict(r) for r in rows]
 
 
-def income_by_client(business_id=DEFAULT_BUSINESS_ID, limit: int = 8) -> list[dict]:
+def income_by_client(business_id, limit: int = 8) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT c.name AS client_name, SUM(i.total) AS total, COUNT(*) AS n "
             "FROM invoices i LEFT JOIN clients c ON c.id=i.client_id "
+            "AND c.business_id=i.business_id "
             "WHERE i.business_id=? AND i.status IN ('enviada','cobrada') "
             "GROUP BY i.client_id ORDER BY total DESC LIMIT ?",
             (business_id, limit),
@@ -1265,22 +1107,25 @@ def income_by_client(business_id=DEFAULT_BUSINESS_ID, limit: int = 8) -> list[di
         return [dict(r) for r in rows]
 
 
-def client_stats(business_id=DEFAULT_BUSINESS_ID) -> list[dict]:
+def client_stats(business_id) -> list[dict]:
     """Cada cliente con su facturación total, nº facturas y nº trabajos."""
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT c.*, "
             " (SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.client_id=c.id "
+            "   AND i.business_id=c.business_id "
             "   AND i.status IN ('enviada','cobrada')) AS facturado, "
-            " (SELECT COUNT(*) FROM invoices i WHERE i.client_id=c.id) AS n_facturas, "
-            " (SELECT COUNT(*) FROM jobs j WHERE j.client_id=c.id) AS n_trabajos "
+            " (SELECT COUNT(*) FROM invoices i WHERE i.client_id=c.id "
+            "   AND i.business_id=c.business_id) AS n_facturas, "
+            " (SELECT COUNT(*) FROM jobs j WHERE j.client_id=c.id "
+            "   AND j.business_id=c.business_id) AS n_trabajos "
             "FROM clients c WHERE c.business_id=? ORDER BY facturado DESC",
             (business_id,),
         ).fetchall()
         return [dict(r) for r in rows]
 
 
-def financial_analysis(business_id=DEFAULT_BUSINESS_ID) -> dict:
+def financial_analysis(business_id) -> dict:
     """Cuadro de mando financiero: KPIs, márgenes, solvencia y morosidad.
 
     Se calcula sobre TODO el histórico (más significativo que un solo mes) a partir
@@ -1345,7 +1190,7 @@ def financial_analysis(business_id=DEFAULT_BUSINESS_ID) -> dict:
     }
 
 
-def monthly_series(business_id=DEFAULT_BUSINESS_ID, months: int = 6) -> list[dict]:
+def monthly_series(business_id, months: int = 6) -> list[dict]:
     """Serie de los últimos N meses: ingresos vs gastos (para el gráfico)."""
     today = date.today()
     series = []
@@ -1356,7 +1201,7 @@ def monthly_series(business_id=DEFAULT_BUSINESS_ID, months: int = 6) -> list[dic
             m += 12
             y -= 1
         key = f"{y:04d}-{m:02d}"
-        b = month_billing(key, business_id)
+        b = month_billing(key, business_id=business_id)
         series.append({"month": key, "invoiced": b["invoiced"],
                        "expenses": b["expenses"], "profit": b["estimated_profit"]})
     return series
@@ -1364,7 +1209,7 @@ def monthly_series(business_id=DEFAULT_BUSINESS_ID, months: int = 6) -> list[dic
 
 # ----------------------------------------------------------- Presupuestos ---
 def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
-              irpf_rate=0, valid_days=30, business_id=DEFAULT_BUSINESS_ID) -> dict:
+              irpf_rate=0, valid_days=30, *, business_id: int) -> dict:
     """Crea un presupuesto (mismo cálculo que una factura, pero sin valor fiscal
     hasta que se acepta y se convierte en factura)."""
     if not get_client(client_id, business_id):
@@ -1380,23 +1225,20 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     total = round(base + vat_amount - irpf_amount, 2)
     valid_until = (date.today() + timedelta(days=valid_days)).isoformat()
     with get_conn() as conn:
-        cur = conn.execute(
+        row = conn.execute(
             "INSERT INTO quotes (business_id, client_id, concept, base, vat_rate, "
             "vat_amount, irpf_rate, irpf_amount, total, status, valid_until, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?) RETURNING id",
             (business_id, client_id, concept, base, vat_rate, vat_amount,
              irpf_rate or 0, irpf_amount, total, valid_until, _now()),
-        )
-        new_id = cur.lastrowid
+        ).fetchone()
+        new_id = row["id"]
     return get_quote(new_id, business_id)
 
 
-def get_quote(quote_id, business_id=None) -> dict | None:
-    where = "q.id=?"
-    params: list = [quote_id]
-    if business_id is not None:
-        where += " AND q.business_id=?"
-        params.append(business_id)
+def get_quote(quote_id, business_id) -> dict | None:
+    where = "q.id=? AND q.business_id=?"
+    params = [quote_id, business_id]
     with get_conn() as conn:
         row = conn.execute(
             "SELECT q.*, c.name AS client_name FROM quotes q "
@@ -1407,7 +1249,7 @@ def get_quote(quote_id, business_id=None) -> dict | None:
         return dict(row) if row else None
 
 
-def list_quotes(business_id=DEFAULT_BUSINESS_ID, status=None) -> list[dict]:
+def list_quotes(business_id, status=None) -> list[dict]:
     q = ("SELECT q.*, c.name AS client_name FROM quotes q "
          "LEFT JOIN clients c ON c.id = q.client_id "
          "AND c.business_id=q.business_id WHERE q.business_id=?")
@@ -1470,16 +1312,16 @@ def accept_quote(quote_id, business_id) -> dict | None:
             }
         if q["status"] != "enviado":
             raise ValueError("Primero debes enviar el presupuesto antes de aceptarlo.")
-        cur = conn.execute(
+        invoice_row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
             "vat_amount, irpf_rate, irpf_amount, total, status, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?) RETURNING id",
             (
                 business_id, q["client_id"], q["concept"], q["base"], q["vat_rate"],
                 q["vat_amount"], q["irpf_rate"], q["irpf_amount"], q["total"], _now(),
             ),
-        )
-        invoice_id = cur.lastrowid
+        ).fetchone()
+        invoice_id = invoice_row["id"]
         conn.execute(
             "UPDATE quotes SET status='aceptado', accepted_at=?, invoice_id=? "
             "WHERE id=? AND business_id=? AND status='enviado'",
@@ -1504,7 +1346,7 @@ def delete_quote(quote_id, business_id) -> bool:
 _QUARTERS = {1: ("01", "03"), 2: ("04", "06"), 3: ("07", "09"), 4: ("10", "12")}
 
 
-def tax_quarter(year: int, quarter: int, business_id=DEFAULT_BUSINESS_ID) -> dict:
+def tax_quarter(year: int, quarter: int, business_id) -> dict:
     """Resumen fiscal de un trimestre: IVA (modelo 303) e IRPF pago fraccionado
     (modelo 130, estimación directa simplificada). Son CIFRAS DE APOYO para el
     gestor, no una presentación oficial."""
@@ -1576,7 +1418,7 @@ def tax_quarter(year: int, quarter: int, business_id=DEFAULT_BUSINESS_ID) -> dic
 
 
 # ----------------------------------------------------------- Recordatorios ---
-def overdue_invoices(business_id=DEFAULT_BUSINESS_ID, min_days: int = 1) -> list[dict]:
+def overdue_invoices(business_id, min_days: int = 1) -> list[dict]:
     """Facturas enviadas cuyo vencimiento ya pasó (para reclamar el cobro)."""
     out = []
     for p in pending_payments(business_id):
@@ -1618,13 +1460,13 @@ def use_password_reset(token_hash) -> dict | None:
     """Devuelve el reset válido (no usado, no caducado) y lo marca usado."""
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM password_resets WHERE token_hash=? AND used=0",
+            "SELECT * FROM password_resets WHERE token_hash=? AND used=FALSE",
             (token_hash,)).fetchone()
         if not row:
             return None
         if row["expires_at"] < datetime.now().isoformat(timespec="seconds"):
             return None
-        conn.execute("UPDATE password_resets SET used=1 WHERE id=?", (row["id"],))
+        conn.execute("UPDATE password_resets SET used=TRUE WHERE id=?", (row["id"],))
         return dict(row)
 
 
@@ -1658,8 +1500,8 @@ def get_business_by_stripe_customer(customer_id) -> dict | None:
 
 
 def subscription_allows_access(business: dict | None) -> bool:
-    if not business or business.get("id") == DEFAULT_BUSINESS_ID:
-        return True
+    if not business:
+        return False
     status = business.get("subscription_status") or "trial"
     if status == "active":
         return True
@@ -1681,7 +1523,7 @@ def claim_webhook_event(source: str, event_id: str) -> bool:
                 (source, event_id, _now()),
             )
         return True
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         return False
 
 
@@ -1732,7 +1574,7 @@ def get_or_create_portal_token(business_id: int, client_id: int,
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute(
             "SELECT token FROM portal_tokens WHERE business_id=? AND client_id=? "
-            "AND revoked=0 AND expires_at>=? ORDER BY created_at DESC LIMIT 1",
+            "AND revoked=FALSE AND expires_at>=? ORDER BY created_at DESC LIMIT 1",
             (business_id, client_id, now),
         ).fetchone()
         if row:
@@ -1741,7 +1583,7 @@ def get_or_create_portal_token(business_id: int, client_id: int,
         expires = (datetime.now() + timedelta(days=ttl_days)).isoformat(timespec="seconds")
         conn.execute(
             "INSERT INTO portal_tokens (token, business_id, client_id, expires_at, "
-            "revoked, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+            "revoked, created_at) VALUES (?, ?, ?, ?, FALSE, ?)",
             (token, business_id, client_id, expires, now),
         )
         return token
@@ -1755,7 +1597,7 @@ def resolve_portal_token(token: str) -> dict | None:
     with get_conn() as conn:
         row = conn.execute(
             "SELECT business_id, client_id FROM portal_tokens "
-            "WHERE token=? AND revoked=0 AND expires_at>=?",
+            "WHERE token=? AND revoked=FALSE AND expires_at>=?",
             (token, _now()),
         ).fetchone()
         return dict(row) if row else None
@@ -1765,7 +1607,7 @@ def revoke_portal_tokens(client_id: int, business_id: int) -> None:
     """Invalida todos los enlaces de portal de un cliente (p. ej. al borrarlo)."""
     with get_conn() as conn:
         conn.execute(
-            "UPDATE portal_tokens SET revoked=1 WHERE client_id=? AND business_id=?",
+            "UPDATE portal_tokens SET revoked=TRUE WHERE client_id=? AND business_id=?",
             (client_id, business_id),
         )
 
@@ -1803,7 +1645,7 @@ def claim_scheduled_run(run_key: str) -> bool:
                 (run_key, _now()),
             )
         return True
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         return False
 
 
@@ -1820,7 +1662,7 @@ def admin_overview() -> dict:
             "(SELECT COUNT(*) FROM clients c WHERE c.business_id=b.id) AS n_clientes, "
             "(SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.business_id=b.id "
             "  AND i.status IN ('enviada','cobrada')) AS facturado "
-            "FROM businesses b WHERE b.id<>1 ORDER BY b.created_at DESC").fetchall()
+            "FROM businesses b ORDER BY b.created_at DESC").fetchall()
     biz = [dict(r) for r in rows]
     for business in biz:
         activation = activation_snapshot(business["id"])
@@ -1910,10 +1752,10 @@ def delete_client_cascade(client_id, business_id) -> bool:
     _docrepo.purge_for_client(business_id, client_id)
     with get_conn() as conn:
         issued = conn.execute(
-            "SELECT COUNT(*) FROM invoices WHERE business_id=? AND client_id=? "
+            "SELECT COUNT(*) AS total FROM invoices WHERE business_id=? AND client_id=? "
             "AND status IN ('enviada','cobrada')",
             (business_id, client_id),
-        ).fetchone()[0]
+        ).fetchone()["total"]
         conn.execute("DELETE FROM portal_tokens WHERE business_id=? AND client_id=?",
                      (business_id, client_id))
         conn.execute("DELETE FROM quotes WHERE business_id=? AND client_id=?",
@@ -1942,14 +1784,12 @@ def delete_client_cascade(client_id, business_id) -> bool:
 
 def delete_business_cascade(business_id) -> bool:
     """Borra una cuenta entera y todos sus datos (baja RGPD del autónomo)."""
-    if business_id == DEFAULT_BUSINESS_ID:
-        return False
     with get_conn() as conn:
         issued = conn.execute(
-            "SELECT COUNT(*) FROM invoices WHERE business_id=? "
+            "SELECT COUNT(*) AS total FROM invoices WHERE business_id=? "
             "AND status IN ('enviada','cobrada')",
             (business_id,),
-        ).fetchone()[0]
+        ).fetchone()["total"]
         if issued:
             raise ValueError(
                 "La cuenta tiene facturas emitidas que deben conservarse. "
