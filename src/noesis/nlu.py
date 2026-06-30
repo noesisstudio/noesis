@@ -85,6 +85,34 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 HELP = "__help__"
 
 
+def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
+    """Parser flexible para facturas y presupuestos. Acepta varios órdenes naturales:
+      - "factura a Juan por reparación de grifo 95 euros"  (concepto antes de importe)
+      - "factura a Juan 95€ por reparación de grifo"       (importe antes de concepto)
+      - "factura a Juan 95 euros"                          (sin concepto explícito)
+    """
+    # Orden 1: verbo a CLIENTE por CONCEPTO IMPORTE
+    m = re.search(verb_re + r"\s+(?:a|para)\s+(.+?)\s+(?:por|de)\s+(.+?)[,]?\s*"
+                  r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?$", text, re.I)
+    if m:
+        return {"cliente": m.group(1).strip(), "concepto": m.group(2).strip(),
+                "base": float(m.group(3).replace(",", "."))}
+    # Orden 2: verbo a CLIENTE IMPORTE por CONCEPTO
+    m = re.search(verb_re + r"\s+(?:a|para)\s+(.+?)\s+"
+                  r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)\s+"
+                  r"(?:por|de)\s+(.+)", text, re.I)
+    if m:
+        return {"cliente": m.group(1).strip(), "concepto": m.group(3).strip(),
+                "base": float(m.group(2).replace(",", "."))}
+    # Orden 3: verbo a CLIENTE IMPORTE (sin concepto, "Servicio" por defecto)
+    m = re.search(verb_re + r"\s+(?:a|para)\s+(.+?)\s+"
+                  r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)", text, re.I)
+    if m:
+        return {"cliente": m.group(1).strip(), "concepto": "Servicio",
+                "base": float(m.group(2).replace(",", "."))}
+    return None
+
+
 def _add_tax_rates(norm: str, args: dict) -> None:
     vat = re.search(r"\biva\s*(?:del|al)?\s*(0|4|10|21)\s*%?", norm)
     irpf = re.search(r"\birpf\s*(?:del|al)?\s*(0|7|15)\s*%?", norm)
@@ -100,29 +128,17 @@ def parse(text: str) -> tuple[str, dict] | None:
     if norm in {"hola", "hey", "buenas", "ayuda", "help"} or "que puedes hacer" in norm:
         return (HELP, {})
 
-    # --- Crear presupuesto: "presupuesto a X por Y 95 euros"
+    # --- Crear presupuesto: acepta varios órdenes naturales ---
     if "presupuest" in norm:
-        m = re.search(r"presupuest(?:o|ar|a|ame)?\s+(?:a|para)\s+(.+?)\s+por\s+(.+?)[,]?\s*"
-                      r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?", text, re.I)
-        if m:
-            args = {
-                "cliente": m.group(1).strip(),
-                "concepto": m.group(2).strip(),
-                "base": float(m.group(3).replace(",", ".")),
-            }
+        args = _parse_doc_command(text, norm, r"presupuest(?:o|ar|a|ame)?")
+        if args:
             _add_tax_rates(norm, args)
             return ("crear_presupuesto", args)
 
-    # --- Crear factura: "factura a X por Y 95 euros [más iva]"
+    # --- Crear factura: acepta varios órdenes naturales ---
     if "factura" in norm:
-        m = re.search(r"factura(?:r)?\s+a\s+(.+?)\s+por\s+(.+?)[,]?\s*"
-                      r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?", text, re.I)
-        if m:
-            args = {
-                "cliente": m.group(1).strip(),
-                "concepto": m.group(2).strip(),
-                "base": float(m.group(3).replace(",", ".")),
-            }
+        args = _parse_doc_command(text, norm, r"factura(?:r|me)?")
+        if args:
             _add_tax_rates(norm, args)
             return ("crear_factura", args)
 

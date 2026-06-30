@@ -205,6 +205,50 @@ def send(to: str, text: str) -> bool:
         return False
 
 
+def send_template(to: str, template_name: str, params: list[str] | None = None,
+                  language: str = "es") -> bool:
+    """Envía un mensaje de plantilla (template) aprobado por Meta.
+
+    Las plantillas son obligatorias para iniciar conversación con un usuario (fuera
+    de la ventana de 24h). El autónomo debe tener aprobadas las plantillas en su
+    cuenta de Meta Business. Si no hay token, se simula en log.
+    """
+    if not (_TOKEN and _PHONE_ID):
+        log.info("[whatsapp:template:simulado] -> %s: %s %s", to, template_name, params)
+        return False
+    import json as _json
+    import urllib.request
+    url = f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{_PHONE_ID}/messages"
+    components = []
+    if params:
+        components.append({
+            "type": "body",
+            "parameters": [{"type": "text", "text": p} for p in params],
+        })
+    body = _json.dumps({
+        "messaging_product": "whatsapp", "to": to, "type": "template",
+        "template": {"name": template_name, "language": {"code": language},
+                     "components": components},
+    }).encode()
+    req = urllib.request.Request(url, data=body, headers={
+        "Authorization": f"Bearer {_TOKEN}", "Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception as e:  # noqa: BLE001
+        log.warning("Fallo enviando template '%s' a %s: %s", template_name, to, e)
+        return False
+
+
+def send_payment_reminder(to: str, client_name: str, amount: str,
+                          invoice_number: str) -> bool:
+    """Envía un recordatorio de cobro por WhatsApp (plantilla o texto libre)."""
+    text = (f"Hola, te escribo desde Noesis en nombre de tu proveedor. "
+            f"La factura {invoice_number} de {amount} está pendiente de cobro. "
+            f"¿Podrías confirmar cuándo lo gestionas? Gracias.")
+    return send(to, text)
+
+
 def verify_signature(payload: bytes, header: str) -> bool:
     """Verifica que el POST procede de Meta usando el secreto de la aplicación."""
     secret = config.WHATSAPP_APP_SECRET

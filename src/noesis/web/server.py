@@ -200,7 +200,8 @@ _PAGES = {
     "resumen": "Resumen", "analisis": "Análisis", "ingresos": "Ingresos",
     "costes": "Costes", "presupuestos": "Presupuestos", "facturas": "Facturas",
     "cobros": "Cobros", "impuestos": "Impuestos", "agenda": "Agenda",
-    "clientes": "Clientes", "asistente": "Asistente", "ajustes": "Ajustes",
+    "clientes": "Clientes", "documentos": "Documentos",
+    "asistente": "Asistente", "ajustes": "Ajustes",
 }
 
 
@@ -481,6 +482,20 @@ def api_delete_expense(business_id: int, expense_id: int):
     return {"ok": True}
 
 
+@app.post("/api/{business_id}/clients")
+async def api_create_client(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "El nombre es obligatorio."}, status_code=400)
+    return db.add_client(name, phone=body.get("phone"), address=body.get("address"),
+                         zone=body.get("zone"), nif=body.get("nif"),
+                         email=body.get("email"), business_id=business_id)
+
+
 @app.post("/api/{business_id}/clients/{client_id}")
 async def api_update_client(business_id: int, client_id: int, request: Request):
     try:
@@ -726,6 +741,84 @@ def report_costs(business_id: int):
 @app.get("/api/{business_id}/reports/invoices.csv")
 def report_invoices(business_id: int):
     return _csv_response(reports.invoices_csv(business_id), "noesis_facturas.csv")
+
+
+# =========================================================== DOCUMENTOS ===== #
+@app.get("/api/{business_id}/documents")
+def api_documents(business_id: int, client_id: int = 0):
+    from ..documents import repo as docrepo
+    return docrepo.list_for_business(business_id, client_id or None)
+
+
+@app.get("/api/{business_id}/documents/ocr-status")
+def api_ocr_status(business_id: int):
+    """Indica si la lectura de fotos (OCR) está activa en este servidor."""
+    from ..documents import ocr
+    return {"ocr": ocr.available()}
+
+
+@app.post("/api/{business_id}/documents")
+async def api_upload_document(business_id: int, file: UploadFile = File(...),
+                              kind: str = Form("documento"),
+                              client_id: str = Form(""), invoice_id: str = Form(""),
+                              note: str = Form("")):
+    from ..documents import service as docservice
+    data = await file.read()
+
+    def _opt_int(v):
+        try:
+            return int(v) if str(v).strip() else None
+        except (TypeError, ValueError):
+            return None
+
+    try:
+        doc = docservice.upload(business_id, file.filename or "documento", data,
+                                kind=kind, client_id=_opt_int(client_id),
+                                invoice_id=_opt_int(invoice_id), note=note or None)
+    except docservice.UploadError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return doc
+
+
+@app.get("/api/{business_id}/documents/{doc_id}/file")
+def api_document_file(business_id: int, doc_id: int):
+    from ..documents import service as docservice
+    got = docservice.file_bytes(business_id, doc_id)
+    if got is None:
+        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+    data, mime, filename = got
+    return Response(content=data, media_type=mime,
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
+@app.delete("/api/{business_id}/documents/{doc_id}")
+def api_delete_document(business_id: int, doc_id: int):
+    from ..documents import service as docservice
+    if not docservice.delete(business_id, doc_id):
+        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+    return {"ok": True}
+
+
+@app.post("/api/{business_id}/documents/{doc_id}/to-expense")
+async def api_document_to_expense(business_id: int, doc_id: int, request: Request):
+    """Convierte un ticket/factura escaneada en un gasto (usa el importe del OCR)."""
+    from ..documents import service as docservice
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    amount = body.get("amount")
+    try:
+        amount = float(amount) if amount not in (None, "") else None
+    except (TypeError, ValueError):
+        amount = None
+    gasto = docservice.convert_ticket_to_expense(
+        business_id, doc_id, concept=body.get("concept"), amount=amount)
+    if gasto is None:
+        return JSONResponse(
+            {"error": "No hay importe para registrar. Indica uno o sube una foto legible."},
+            status_code=400)
+    return gasto
 
 
 # ================================================================ RGPD ====== #

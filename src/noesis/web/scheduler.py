@@ -80,6 +80,25 @@ def send_payment_reminders() -> None:
         if _deliver(biz, "\n".join(lines), "cobros"):
             for inv in pending_reminder[:6]:
                 db.mark_reminder_sent(inv["id"], biz["id"])
+        # Enviar también recordatorio por email al cliente final (si tiene email).
+        _send_client_reminders(biz, pending_reminder[:6])
+
+
+def _send_client_reminders(biz: dict, invoices: list[dict]) -> None:
+    """Envía recordatorios directos a los clientes finales por email (si disponible)."""
+    from ..adapters import email as email_adapter
+    if not email_adapter.available():
+        return
+    for inv in invoices:
+        client = db.get_client(inv.get("client_id"), biz["id"]) if inv.get("client_id") else None
+        if not client or not client.get("email"):
+            continue
+        email_adapter.send_reminder_email(
+            client["email"], biz.get("name", "Tu proveedor"),
+            client.get("name", "Cliente"),
+            inv.get("number") or str(inv["id"]),
+            _eur(inv["total"]),
+            inv.get("days_late") or 0)
 
 
 def send_weekly_summaries() -> None:
