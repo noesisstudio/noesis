@@ -5,6 +5,10 @@ trabaje en este repositorio (Claude Code, Codex, etc.). Léelo entero antes de t
 nada. La visión y el contexto completos están en el *vault* de Obsidian: **`docs/`**
 (empieza por [`docs/Inicio.md`](docs/Inicio.md)).
 
+> 🔄 **¿Retomas el trabajo (p. ej. continuando desde otro agente)?** Lee primero
+> [`docs/Estado-traspaso-MVP.md`](docs/Estado-traspaso-MVP.md): dice qué está hecho,
+> qué hay desplegado, qué falta para el MVP y qué tocar a continuación.
+
 ---
 
 ## 1. Qué es Noesis

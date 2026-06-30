@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -66,7 +67,14 @@ def _eur(value) -> str:
 # Disponible en plantillas como {{ importe | eur }}.
 TEMPLATES.env.filters["eur"] = _eur
 
-app = FastAPI(title="Noesis", version="0.3.0")
+@asynccontextmanager
+async def lifespan(app: "FastAPI"):
+    # Arranque de la app (sustituye al obsoleto @app.on_event("startup")).
+    _startup()
+    yield
+
+
+app = FastAPI(title="Noesis", version="0.3.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 
 
@@ -147,7 +155,6 @@ async def security_headers(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
 def _startup() -> None:
     import logging
     log = logging.getLogger("uvicorn.error")

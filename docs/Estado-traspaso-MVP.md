@@ -1,0 +1,146 @@
+# Estado, traspaso y camino al MVP
+
+> Documento vivo para **continuar el trabajo desde cualquier agente** (Claude o Codex)
+> sin perder el hilo. Si lo retomas: lee esto entero, luego `AGENTS.md`.
+> Última actualización: **2026-06-30**.
+
+---
+
+## 1. Dónde estamos (resumen en 30 segundos)
+
+Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. Está
+**desplegado y vivo 24/7** en Railway (`web-production-2d617.up.railway.app`). La rama
+`main` (= `claude/portal-cliente`) tiene integrado el trabajo de los dos agentes.
+
+**Hecho y en producción:**
+- Núcleo: agenda, clientes, presupuestos, facturas (con IVA/IRPF + PDF), cobros,
+  gastos, impuestos (303/130), análisis financiero. Multi-negocio aislado por
+  `business_id`. Login propio (PBKDF2 + sesiones firmadas).
+- **Cuña diferencial:** portal del cliente sin contraseña (`/p/{token}`: aprobar
+  presupuestos, ver/descargar facturas) + envío del enlace por WhatsApp (wa.me).
+- **Copiloto proactivo:** detecta trabajos hechos sin facturar, da un plan diario
+  priorizado con el "porqué", y registra el ciclo del consejo
+  (recomendado→aceptado→completado, "ledger").
+- **Diseño fintech** en las 12 pantallas (paleta fría + verde de marca, KPIs,
+  mini-barras, banda destacada).
+- **Personalización:** 3 plantillas de factura (clásica/minimal/editorial) + logo o
+  monograma automático, reflejado en PDF y portal.
+- **Fundaciones SaaS:** `/health` y `/ready`, modelo de activación (6 pasos
+  cliente→cobro), analítica interna `product_events`, onboarding de 3 pasos, embudo
+  en el panel de fundador.
+- **De Codex en `main`:** Holded real (adapter), plantillas de WhatsApp, emails,
+  recordatorios, NLU flexible, módulo `documents/` ("papeles": recibos/tickets + OCR
+  opcional) y datos fiscales del cliente.
+
+**Pruebas:** 34/34 en `tests/test_backend.py`.
+
+---
+
+## 2. Mapa rápido del código
+
+| Archivo | Qué es |
+|---|---|
+| `src/noesis/db.py` | Único punto de contacto con la BD (SQLite). Todas las tablas y consultas, aisladas por `business_id`. |
+| `src/noesis/agent.py` | **El cerebro IA**: bucle de tool-use con Claude. Sistema acotado al negocio. Solo se activa con `ANTHROPIC_API_KEY`. |
+| `src/noesis/nlu.py` | Cerebro local por reglas (gratis, sin API): resuelve los comandos frecuentes. |
+| `src/noesis/web/chat.py` | Orquestador híbrido: intenta NLU local → si no, agente IA. Aquí vive el copiloto (plan diario, sin-facturar, ledger). |
+| `src/noesis/tools.py` | Acciones que el agente sabe ejecutar (agendar, facturar, cobrar, consultar…). |
+| `src/noesis/web/whatsapp.py` | Webhook + enrutado de mensajes/audios de WhatsApp; vinculación por código. |
+| `src/noesis/web/server.py` | App FastAPI: ~70 rutas (páginas, API, onboarding, webhooks). |
+| `src/noesis/web/invoice_pdf.py` | PDF de factura con marca (plantillas + logo/monograma). |
+| `src/noesis/documents/` | Módulo de "papeles" (Codex): subir/guardar/leer documentos. |
+| `src/noesis/adapters/` | `invoicing.py` (mock→Holded), `email.py` (SMTP), `transcription.py` (Whisper local). |
+| `config.py` | Lee todas las variables de entorno (`.env`). |
+
+---
+
+## 3. Cómo continuar (protocolo multi-agente)
+
+- **Una rama por agente** (`claude/*`, `codex/*`). Fusionar a `main` revisando el diff.
+- **REGLA DE ORO que casi se salta el 2026-06-30:** no editar los mismos archivos a
+  la vez, y **verificar siempre `git branch --show-current` antes de operar git** (una
+  vez quedó `main` checked-out en la copia local y provocó confusión). Avisa de qué
+  archivos vas a tocar.
+- Railway **auto-despliega en cada push a `main`**. `/health` y `/ready` sirven de
+  señal de "deploy vivo".
+- Reparto histórico: Claude = backend/seguridad/fiscalidad/integraciones/diseño;
+  Codex = frontend/UI/contenido + Holded/documentos. (Hoy ya se solapa; coordinad.)
+
+---
+
+## 4. Qué hay que CONFIGURAR para conectarlo todo
+
+Copia `.env.example` a `.env` (y en Railway, ponlo como variables de entorno). Claves:
+
+| Variable | Para qué | ¿Bloqueante? |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | **Enciende el cerebro IA** (sin ella solo va el NLU local por reglas). | Sí, para "que entienda cualquier frase". |
+| `NOESIS_WHATSAPP_NUMBER`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | WhatsApp Cloud API real (recibir/enviar). | Sí, para el canal WhatsApp. |
+| `NOESIS_WHISPER_MODEL`, `NOESIS_WHISPER_DIR` + `pip install -e ".[audio]"` | Transcribir notas de voz en local. | No (degrada a "mándame texto"). |
+| `STRIPE_*` | Cobro de la suscripción. | No (alta entra en prueba manual). |
+| `HOLDED_API_KEY` | Facturación homologada Verifactu. | No (mock hasta que haya cliente que facture oficialmente). |
+| `SMTP_*` | Emails (reset de contraseña, avisos). | No (si falta, va al log). |
+| `NOESIS_SECRET`, `NOESIS_BASE_URL` | Seguridad y enlaces. | Sí en producción (ya puestas). |
+
+### Conectar WhatsApp de verdad (resumen)
+1. Meta for Developers → app + producto **WhatsApp** → número verificado (el ÚNICO de
+   Noesis; el autónomo se identifica por su teléfono).
+2. Coge `WHATSAPP_TOKEN` (permanente), `WHATSAPP_PHONE_ID`, define `WHATSAPP_VERIFY_TOKEN`
+   y `WHATSAPP_APP_SECRET` (App Secret).
+3. Webhook → `https://<tu-dominio>/webhook/whatsapp` (GET verifica, POST enruta). El
+   código ya está listo en `whatsapp.py`.
+4. El pipeline de **audio ya está cableado**: entra nota de voz → `_audio_to_text`
+   (Whisper) → `chat.handle` → NLU/agente → ejecuta la acción.
+
+---
+
+## 5. ANÁLISIS: qué falta para tener un MVP y empezar con clientes
+
+El producto está **muy completo de funciones**. Lo que falta para pasar de "demo
+impresionante" a "piloto con clientes reales" es sobre todo **conectar y endurecer**, no
+construir más features.
+
+### P0 — Bloqueante para el primer piloto (días)
+1. **Encender el cerebro:** poner `ANTHROPIC_API_KEY` en Railway. Sin ella el chat solo
+   entiende comandos fijos; con ella entiende cualquier frase (acotado al negocio).
+2. **WhatsApp real:** número verificado en Meta + las 5 variables. Es EL canal y EL
+   diferencial; hoy funciona simulado.
+3. **Dominio:** conectar `bynoesis.com` (hoy se sirve por la URL de Railway). Da
+   confianza para vender.
+4. **Probar el ciclo de punta a punta con 1 negocio real:** alta → perfil → cliente →
+   presupuesto → enviar al cliente por WhatsApp → aprobación en el portal → factura →
+   cobro. Cazar fricciones reales.
+
+### P1 — Para fiarse con varios clientes (1–3 semanas)
+5. **Postgres** (en vez de SQLite) con restricciones multiempresa en la BD y quitar el
+   `DEFAULT_BUSINESS_ID = 1`. Es lo que evita que dos clientes se crucen bajo carga.
+   *(Para un piloto de 1–5 muy controlado, SQLite-en-volumen aguanta; pero esto es lo
+   primero de la fase de escalar.)*
+6. **WhatsApp fiable:** cola durable + reintentos + plantillas aprobadas por Meta +
+   estado de entrega. El scheduler actual sirve para piloto, no para producción seria.
+7. **Verifactu real (Holded)** en cuanto un cliente facture oficialmente.
+8. **Emails transaccionales** (SMTP real) y **copias de seguridad verificadas** (probar
+   una restauración, no solo que se hagan).
+
+### P2 — Crecimiento (después de validar)
+9. CI en GitHub + más tests (Stripe, suscripciones, WhatsApp, aislamiento HTTP).
+10. Monitorización/alertas, cohortes de activación/retención, app móvil nativa,
+    automatizaciones de ciclo de vida (avisar si una cuenta no crea cliente/no factura).
+
+### Deuda técnica concreta (de la lista de Codex)
+- [x] `/health` y `/ready` — **hecho**.
+- [x] `@app.on_event` → `lifespan` — **hecho**.
+- [ ] Postgres + quitar `DEFAULT_BUSINESS_ID=1` (P1.5).
+- [ ] Partir las ~70 rutas de `server.py` en módulos por dominio.
+- [ ] CI + migraciones versionadas + restaurar backups + e2e.
+
+---
+
+## 6. Próximas tareas sugeridas (orden recomendado)
+1. (Fundador) Poner `ANTHROPIC_API_KEY` y las variables de WhatsApp en Railway.
+2. Probar el ciclo completo con un negocio real y anotar fricciones.
+3. Postgres + aislamiento en BD (quitar `business_id=1` por defecto).
+4. WhatsApp fiable (cola + reintentos + estados de entrega).
+5. Partir `server.py` en módulos + CI.
+
+Ver también: `docs/Roadmap.md`, `docs/Arquitectura.md`, `docs/Producto.md`.
