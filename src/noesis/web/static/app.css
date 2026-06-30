@@ -756,3 +756,22 @@ tbody tr:hover { background: #fafbfc; }
 .tl-price { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
   color: var(--brand); flex: 0 0 auto; }
 .today-card .tl-time { color: var(--brand); }
+
+/* Balance / posición (debe-haber) en el inicio: el "control de cuentas". */
+.bal-grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:18px; }
+.bal-col { min-width:0; }
+.bal-col + .bal-col { border-left:1px solid var(--border); padding-left:18px; }
+.bal-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--faint); font-weight:700; margin-bottom:9px; }
+.bal-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:6px 0; font-size:13.5px; }
+.bal-row span { color:var(--muted); }
+.bal-row b { font-variant-numeric:tabular-nums; font-weight:700; }
+.bal-col.fav .bal-row b { color:var(--green); }
+.bal-col.pay .bal-row b { color:var(--red); }
+.bal-net { font-size:26px; font-weight:750; letter-spacing:-.02em; color:var(--brand);
+  font-variant-numeric:tabular-nums; }
+.bal-hint { font-size:12px; color:var(--muted); margin-top:7px; line-height:1.45; }
+@media (max-width:760px) { .bal-grid { grid-template-columns:1fr; }
+  .bal-col + .bal-col { border-left:none; padding-left:0;
+    border-top:1px solid var(--border); padding-top:12px; } }

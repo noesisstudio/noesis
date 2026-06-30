@@ -67,6 +67,30 @@
     <div class="delta flat" id="s-inv-d">—</div></div>
 </div>
 
+<div class="card" style="margin-top:14px">
+  <div class="card-h"><h2>Balance · tu posición ahora</h2>
+    <a class="hint" href="/b/{{ business.id }}/analisis">ver análisis</a></div>
+  <div class="card-b">
+    <div class="bal-grid">
+      <div class="bal-col fav">
+        <div class="bal-label">A tu favor</div>
+        <div class="bal-row"><span>Te deben (sin cobrar)</span><b id="bal-due">—</b></div>
+        <div class="bal-row"><span>Cobrado (histórico)</span><b id="bal-cash">—</b></div>
+      </div>
+      <div class="bal-col pay">
+        <div class="bal-label">A pagar / apartar</div>
+        <div class="bal-row"><span>IVA por liquidar</span><b id="bal-vat">—</b></div>
+        <div class="bal-row"><span>En mora (+30 días)</span><b id="bal-mora">—</b></div>
+      </div>
+      <div class="bal-col net">
+        <div class="bal-label">Por entrar (tras IVA)</div>
+        <div class="bal-net" id="bal-net">—</div>
+        <div class="bal-hint" id="bal-hint"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card today-card" style="margin-top:14px">
   <div class="card-h"><h2>Hoy · ¿dónde tienes que ir?</h2>
     <a class="hint" href="/b/{{ business.id }}/agenda">ver agenda</a></div>
@@ -139,6 +163,18 @@ async function load() {
   const rate = s.invoiced ? Math.round(s.collected / s.invoiced * 100) : 0;
   el('s-inv-d').textContent = rate + '% ya cobrado';
   el('s-inv-d').className = 'delta ' + (rate >= 70 ? 'up' : rate >= 40 ? 'flat' : 'down');
+
+  api('/analysis').then(a => {
+    const vat = a.vat_liquidar > 0 ? a.vat_liquidar : 0;
+    el('bal-due').textContent = eur(a.pending);
+    el('bal-cash').textContent = eur(a.collected);
+    el('bal-vat').textContent = eur(vat);
+    el('bal-mora').textContent = eur(a.morosidad);
+    el('bal-net').textContent = eur((a.pending || 0) - vat);
+    el('bal-hint').textContent = vat
+      ? `De lo que te deben, aparta ${eur(vat)} para el IVA. Lo demás es tuyo.`
+      : 'No tienes IVA pendiente de liquidar ahora mismo.';
+  });
 
   const series = await api('/series');
   new Chart(el('ch-main'), {
