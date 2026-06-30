@@ -419,6 +419,28 @@ def api_plan(business_id: int):
     return chat.daily_plan(business_id)
 
 
+@app.get("/api/{business_id}/recommendations")
+def api_recommendations(business_id: int):
+    # Ledger del copiloto: histórico de consejos y conteo por estado.
+    return {"items": db.list_recommendations(business_id),
+            "stats": db.recommendation_stats(business_id)}
+
+
+@app.post("/api/{business_id}/recommendations/{rec_id}/status")
+async def api_recommendation_status(business_id: int, rec_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    try:
+        rec = db.set_recommendation_status(rec_id, business_id, body.get("status"))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if rec is None:
+        return JSONResponse({"error": "Recomendación no encontrada."}, status_code=404)
+    return rec
+
+
 @app.get("/api/{business_id}/analysis")
 def api_analysis(business_id: int):
     return {**db.financial_analysis(business_id),

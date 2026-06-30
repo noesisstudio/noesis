@@ -172,6 +172,16 @@ CREATE TABLE IF NOT EXISTS portal_tokens (
     revoked      INTEGER NOT NULL DEFAULT 0,
     created_at   TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS copilot_recommendations (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    topic       TEXT NOT NULL,
+    summary     TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'recomendado',  -- recomendado|aceptado|completado|descartado
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
 """
 
 # Migraciones suaves: columnas añadidas después del esquema inicial. Se aplican con
@@ -250,6 +260,8 @@ def _ensure_indexes() -> None:
         "ON businesses(whatsapp_phone_norm) WHERE whatsapp_phone_norm IS NOT NULL",
         "CREATE INDEX IF NOT EXISTS idx_portal_tokens_client "
         "ON portal_tokens(business_id, client_id)",
+        "CREATE INDEX IF NOT EXISTS idx_copilot_recs_business "
+        "ON copilot_recommendations(business_id, status)",
         "CREATE INDEX IF NOT EXISTS idx_product_events_business_date "
         "ON product_events(business_id, created_at)",
         "CREATE INDEX IF NOT EXISTS idx_product_events_name_date "
@@ -607,6 +619,98 @@ def update_branding(business_id, *, template=None, brand_color=None,
     with get_conn() as conn:
         conn.execute(f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params)
     return get_business(business_id)
+
+
+# ----------------------------------------------- Ledger del copiloto (consejos) ---
+# Cierra el bucle del consejo: lo que Noesis RECOMIENDA, lo que el autónomo ACEPTA
+# (entra a la acción) y lo que COMPLETA. Permite medir si el copiloto sirve y
+# enseñarle al autónomo qué hizo con lo que le sugerimos.
+REC_STATES = {"recomendado", "aceptado", "completado", "descartado"}
+_REC_ACTIVE = ("recomendado", "aceptado")
+
+
+def get_recommendation(rec_id, business_id=None) -> dict | None:
+    sql = "SELECT * FROM copilot_recommendations WHERE id=?"
+    params: list = [rec_id]
+    if business_id is not None:
+        sql += " AND business_id=?"
+        params.append(business_id)
+    with get_conn() as conn:
+        row = conn.execute(sql, params).fetchone()
+        return dict(row) if row else None
+
+
+def record_recommendation(business_id: int, topic: str, summary: str) -> dict:
+    """Registra una recomendación como 'recomendado'. Idempotente: si ya hay una
+    activa (recomendado/aceptado) con el mismo tema y texto, la reutiliza para no
+    duplicar el plan en cada visita."""
+    topic = (topic or "general").strip()[:40]
+    summary = (summary or "").strip()[:300]
+    now = _now()
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM copilot_recommendations WHERE business_id=? AND topic=? "
+            "AND summary=? AND status IN ('recomendado','aceptado') "
+            "ORDER BY id DESC LIMIT 1",
+            (business_id, topic, summary),
+        ).fetchone()
+        if row:
+            return dict(row)
+        cur = conn.execute(
+            "INSERT INTO copilot_recommendations "
+            "(business_id, topic, summary, status, created_at, updated_at) "
+            "VALUES (?, ?, ?, 'recomendado', ?, ?)",
+            (business_id, topic, summary, now, now),
+        )
+        rec_id = cur.lastrowid
+    return get_recommendation(rec_id, business_id)
+
+
+def set_recommendation_status(rec_id, business_id, status) -> dict | None:
+    """Transición de estado, aislada por negocio."""
+    if status not in REC_STATES:
+        raise ValueError("Estado de recomendación no válido.")
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE copilot_recommendations SET status=?, updated_at=? "
+            "WHERE id=? AND business_id=?",
+            (status, _now(), rec_id, business_id),
+        )
+        if cur.rowcount == 0:
+            return None
+    return get_recommendation(rec_id, business_id)
+
+
+def list_recommendations(business_id=DEFAULT_BUSINESS_ID, status=None,
+                         limit: int = 50) -> list[dict]:
+    sql = "SELECT * FROM copilot_recommendations WHERE business_id=?"
+    params: list = [business_id]
+    if status:
+        sql += " AND status=?"
+        params.append(status)
+    sql += " ORDER BY updated_at DESC LIMIT ?"
+    params.append(limit)
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def recommendation_stats(business_id=DEFAULT_BUSINESS_ID) -> dict:
+    """Conteo por estado: cuántas se recomendaron, aceptaron y completaron."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) AS n FROM copilot_recommendations "
+            "WHERE business_id=? GROUP BY status",
+            (business_id,),
+        ).fetchall()
+    by = {r["status"]: r["n"] for r in rows}
+    total = sum(by.values())
+    return {
+        "total": total,
+        "recomendado": by.get("recomendado", 0),
+        "aceptado": by.get("aceptado", 0),
+        "completado": by.get("completado", 0),
+        "descartado": by.get("descartado", 0),
+    }
 
 
 # ---------------------------------------------------------------- Usuarios ---
@@ -1755,6 +1859,9 @@ def export_business_data(business_id) -> dict:
         "product_events": [dict(r) for r in _rows(
             "SELECT * FROM product_events WHERE business_id=? ORDER BY id",
             business_id)],
+        "copilot_recommendations": [dict(r) for r in _rows(
+            "SELECT * FROM copilot_recommendations WHERE business_id=? ORDER BY id",
+            business_id)],
         "documents": _documents_repo().export_for_business(business_id),
         "exported_at": _now(),
     }
@@ -1852,8 +1959,8 @@ def delete_business_cascade(business_id) -> bool:
         from .documents import storage as _docstore
         _docstore.delete_business_dir(business_id)
         for table in (
-            "portal_tokens", "product_events", "documents", "quotes",
-            "invoices", "jobs", "clients", "expenses"
+            "portal_tokens", "product_events", "copilot_recommendations",
+            "documents", "quotes", "invoices", "jobs", "clients", "expenses"
         ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "

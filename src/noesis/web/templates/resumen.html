@@ -72,7 +72,7 @@
   </div>
   <div class="card card-action">
     <div class="card-h"><h2>Tu plan para hoy</h2>
-      <a class="hint" href="/b/{{ business.id }}/asistente">abrir copiloto</a></div>
+      <span class="hint" id="rec-count"></span></div>
     <div class="card-b"><ul class="plan-list" id="plan"><li class="muted">Calculando…</li></ul></div>
   </div>
 </div>
@@ -146,10 +146,19 @@ async function load() {
   });
 
   api('/plan').then(plan => {
-    el('plan').innerHTML = plan.slice(0, 4).map((p, i) => `<li>
+    el('plan').innerHTML = plan.slice(0, 4).map((p, i) => `<li id="rec-${p.id || ('x'+i)}">
       <span class="pl-n">${i + 1}</span>
-      <div><div class="pl-do">${esc(p.do)}</div><div class="pl-why">${esc(p.why)}</div></div>
+      <div style="flex:1;min-width:0">
+        <div class="pl-do">${esc(p.do)}</div>
+        <div class="pl-why">${esc(p.why)}</div>
+        <div class="pl-acts">
+          <button class="btn sm" onclick="recGo(${p.id || 'null'}, '${esc(p.topic)}')">Ver ${esc(p.topic)}</button>
+          ${p.id ? `<button class="btn sm" onclick="recDone(${p.id})">Hecho</button>
+            <button class="iconbtn" title="Descartar" onclick="recDismiss(${p.id})">✕</button>` : ''}
+        </div>
+      </div>
     </li>`).join('');
+    updateRecCount();
   });
 
   api('/income/by-client').then(rows => {
@@ -177,6 +186,31 @@ async function load() {
        <span style="text-align:right">${eur(x.total)}<br>
        <span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-gray'}">${daysText(x.days_outstanding)}</span></span></div>`
     ).join('') : emptyState('Todo cobrado', 'No hay facturas pendientes ahora mismo.');
+  });
+}
+
+async function recGo(id, topic){
+  if (id) { try { await apiPost('/recommendations/'+id+'/status', {status:'aceptado'}); } catch(e){} }
+  location.href = '/b/{{ business.id }}/' + topic;
+}
+function recDone(id){
+  apiPost('/recommendations/'+id+'/status', {status:'completado'}).then(() => {
+    const li = el('rec-'+id);
+    if (li) { li.querySelector('.pl-acts').innerHTML = '<span class="badge b-green">Hecho ✓</span>'; li.style.opacity = .7; }
+    updateRecCount();
+  });
+}
+function recDismiss(id){
+  apiPost('/recommendations/'+id+'/status', {status:'descartado'}).then(() => {
+    const li = el('rec-'+id); if (li) li.remove();
+  });
+}
+function updateRecCount(){
+  api('/recommendations').then(r => {
+    const s = r.stats;
+    el('rec-count').textContent = s.completado
+      ? `${s.completado} completada(s) de ${s.total}`
+      : (s.total ? `${s.total} sugerida(s)` : '');
   });
 }
 load();

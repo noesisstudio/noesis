@@ -652,3 +652,4 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
   justify-content:center; margin-top:1px; }
 .plan-list .pl-do { font-size:13.6px; font-weight:600; }
 .plan-list .pl-why { font-size:12.4px; color:var(--muted); margin-top:2px; line-height:1.45; }
+.plan-list .pl-acts { display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; align-items:center; }

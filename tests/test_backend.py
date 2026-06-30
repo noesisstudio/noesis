@@ -247,6 +247,34 @@ class BackendTestCase(unittest.TestCase):
         unbilled_reply = chat.handle(business["id"], "¿qué tengo sin facturar?")
         self.assertIn("Cambio de grifo", unbilled_reply["reply"])
 
+    def test_copilot_ledger_records_and_transitions(self):
+        from datetime import timedelta
+
+        business, client = self.make_business()
+        db.add_job(client["id"], "Cambio de grifo",
+                   scheduled_for=(date.today() - timedelta(days=3)).isoformat(),
+                   business_id=business["id"])
+        # daily_plan registra recomendaciones y devuelve sus ids.
+        plan = chat.daily_plan(business["id"])
+        actionable = [p for p in plan if p.get("id")]
+        self.assertTrue(actionable)
+        # Idempotente: regenerar el plan no duplica recomendaciones activas.
+        chat.daily_plan(business["id"])
+        stats = db.recommendation_stats(business["id"])
+        self.assertEqual(stats["total"], len(actionable))
+        self.assertEqual(stats["recomendado"], len(actionable))
+        # Transición recomendado -> completado.
+        rec_id = actionable[0]["id"]
+        done = db.set_recommendation_status(rec_id, business["id"], "completado")
+        self.assertEqual(done["status"], "completado")
+        self.assertEqual(db.recommendation_stats(business["id"])["completado"], 1)
+        # Estado inválido y aislamiento entre negocios.
+        with self.assertRaises(ValueError):
+            db.set_recommendation_status(rec_id, business["id"], "raro")
+        other, _ = self.make_business("Otro Negocio")
+        self.assertIsNone(
+            db.set_recommendation_status(rec_id, other["id"], "descartado"))
+
     def test_branding_validation_and_portal_exposure(self):
         business, client = self.make_business()
         db.update_branding(business["id"], template="editorial", brand_color="#7a1f4b")

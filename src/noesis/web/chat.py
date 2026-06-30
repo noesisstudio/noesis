@@ -98,8 +98,17 @@ def _daily_plan(state: dict) -> list[dict]:
 
 def daily_plan(business_id: int) -> list[dict]:
     """Plan diario priorizado (con el porqué) para alimentar el dashboard. Mismo
-    cerebro que el asistente: una sola fuente de verdad para la recomendación."""
-    return _daily_plan(_business_state(business_id))
+    cerebro que el asistente. Además REGISTRA cada recomendación en el ledger
+    (idempotente) y devuelve su id/estado para poder marcarla aceptada/completada."""
+    plan = _daily_plan(_business_state(business_id))
+    out = []
+    for item in plan:
+        if item["topic"] == "orden":  # "vas al día": no es una acción que registrar.
+            out.append({**item, "id": None, "status": None})
+            continue
+        rec = db.record_recommendation(business_id, item["topic"], item["do"])
+        out.append({**item, "id": rec["id"], "status": rec["status"]})
+    return out
 
 
 def _coach_reply(business_id: int, message: str = "") -> str:
