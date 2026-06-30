@@ -210,6 +210,24 @@ def home(request: Request):
     return TEMPLATES.TemplateResponse(request, "landing.html", {"business_id": bid})
 
 
+@app.get("/health")
+def health():
+    """Liveness para el proveedor cloud: el proceso HTTP está respondiendo."""
+    return {"status": "ok", "service": "noesis", "version": app.version}
+
+
+@app.get("/ready")
+def readiness():
+    """Readiness: comprueba que el almacenamiento está inicializado y accesible."""
+    try:
+        business = db.get_business(db.DEFAULT_BUSINESS_ID)
+    except sqlite3.Error:
+        return JSONResponse({"status": "not_ready"}, status_code=503)
+    if not business:
+        return JSONResponse({"status": "not_ready"}, status_code=503)
+    return {"status": "ready"}
+
+
 @app.get("/sw.js")
 def service_worker():
     # Servido desde la raíz para que el service worker controle toda la app (scope /).
@@ -339,10 +357,15 @@ def page(request: Request, business_id: int, page: str):
     if page not in _PAGES:
         return RedirectResponse(f"/b/{business_id}/resumen")
     biz = db.get_business(business_id) or db.get_business(1)
-    return TEMPLATES.TemplateResponse(
-        request, f"{page}.html",
-        {"business": biz, "active": page, "page_title": _PAGES[page]},
-    )
+    context = {
+        "business": biz,
+        "active": page,
+        "page_title": _PAGES[page],
+        "activation": db.activation_snapshot(business_id),
+    }
+    if page == "ajustes" and biz.get("whatsapp_status") != "conectado":
+        context["wa"] = whatsapp.start_link(business_id)
+    return TEMPLATES.TemplateResponse(request, f"{page}.html", context)
 
 
 # ================================================================= API ====== #
@@ -377,6 +400,11 @@ def api_summary(business_id: int):
             "jobs_today": len(db.jobs_for_date(today, business_id)),
             "pending_count": len(pend),
             "pending_total": round(sum(p["total"] for p in pend), 2)}
+
+
+@app.get("/api/{business_id}/activation")
+def api_activation(business_id: int):
+    return db.activation_snapshot(business_id)
 
 
 @app.get("/api/{business_id}/series")
@@ -789,13 +817,60 @@ def onboarding_signup(request: Request, name: str = Form(...),
     request.session["uid"] = user["id"]
     request.session["bid"] = biz["id"]
     request.session["sv"] = user.get("session_version", 0)
-    return RedirectResponse(f"/onboarding/whatsapp/{biz['id']}", status_code=303)
+    db.record_product_event(biz["id"], "account_created")
+    return RedirectResponse(f"/onboarding/setup/{biz['id']}", status_code=303)
+
+
+@app.get("/onboarding/setup/{business_id}", response_class=HTMLResponse)
+def onboarding_setup(request: Request, business_id: int, error: str = ""):
+    user = auth.current_user(request)
+    if not user or user["business_id"] != business_id:
+        return RedirectResponse("/login", status_code=303)
+    biz = db.get_business(business_id)
+    if not biz:
+        return RedirectResponse("/onboarding", status_code=303)
+    return TEMPLATES.TemplateResponse(
+        request, "onboarding_setup.html", {"business": biz, "error": error}
+    )
+
+
+@app.post("/onboarding/setup/{business_id}")
+def onboarding_setup_submit(
+    request: Request,
+    business_id: int,
+    sector: str = Form(...),
+    team_size: str = Form(...),
+    primary_goal: str = Form(...),
+    province: str = Form(""),
+):
+    user = auth.current_user(request)
+    if not user or user["business_id"] != business_id:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        db.update_business_profile(
+            business_id,
+            sector=sector,
+            team_size=team_size,
+            primary_goal=primary_goal,
+            province=province,
+        )
+    except ValueError:
+        return RedirectResponse(
+            f"/onboarding/setup/{business_id}?error=profile", status_code=303
+        )
+    db.record_product_event(
+        business_id,
+        "business_profile_completed",
+        f"team_size={team_size};goal={primary_goal}",
+    )
+    return RedirectResponse(f"/onboarding/whatsapp/{business_id}", status_code=303)
 
 
 @app.get("/onboarding/whatsapp/{business_id}", response_class=HTMLResponse)
 def onboarding_whatsapp(request: Request, business_id: int):
     # Aislamiento: solo el dueño de ESTE negocio puede ver su onboarding.
-    if request.session.get("bid") != business_id:
+    user = auth.current_user(request)
+    if not user or user["business_id"] != business_id:
         return RedirectResponse("/login", status_code=303)
     biz = db.get_business(business_id)
     link = whatsapp.start_link(business_id)
@@ -815,18 +890,25 @@ def update_fiscal(business_id: int, name: str = Form(""), nif: str = Form(""),
         return RedirectResponse(
             f"/b/{business_id}/ajustes?error=fiscal", status_code=303
         )
+    db.record_product_event(business_id, "fiscal_profile_updated")
     return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
 
 
 @app.post("/onboarding/whatsapp/{business_id}/connect")
 def onboarding_whatsapp_connect(request: Request, business_id: int):
     # La vinculación real solo ocurre al recibir el código desde ese WhatsApp.
-    if request.session.get("bid") != business_id:
+    user = auth.current_user(request)
+    if not user or user["business_id"] != business_id:
         return RedirectResponse("/login", status_code=303)
     business = db.get_business(business_id)
     if not business or business.get("whatsapp_status") != "conectado":
         db.set_whatsapp_status(business_id, "no_conectado")
     db.finish_onboarding(business_id)
+    db.record_product_event(
+        business_id,
+        "onboarding_completed",
+        f"whatsapp={business.get('whatsapp_status') if business else 'unknown'}",
+    )
     return RedirectResponse(f"/b/{business_id}/resumen", status_code=303)
 
 
@@ -869,6 +951,7 @@ def subscription_checkout(request: Request, business_id: int, plan: str = Form("
             f"/b/{business_id}/suscripcion?status=invalid", status_code=303
         )
     biz = db.get_business(business_id)
+    db.record_product_event(business_id, "checkout_started", f"plan={plan}")
     provider = billing_adapter.get_provider()
     base = f"{config.BASE_URL}/b/{business_id}/suscripcion"
     url = provider.checkout_url(biz, plan, f"{base}?status=ok", f"{base}?status=cancel")
@@ -909,10 +992,16 @@ async def stripe_webhook(request: Request):
     except (TypeError, ValueError):
         bid = None
     if etype == "checkout.session.completed" and bid:
-        db.set_subscription(bid, "active",
-                            plan=(obj.get("metadata") or {}).get("plan"),
-                            customer_id=obj.get("customer"),
-                            subscription_id=obj.get("subscription"))
+        biz = db.get_business(bid)
+        if biz:
+            db.set_subscription(
+                bid,
+                "active",
+                plan=(obj.get("metadata") or {}).get("plan"),
+                customer_id=obj.get("customer"),
+                subscription_id=obj.get("subscription"),
+            )
+            db.record_product_event(bid, "subscription_activated")
     elif etype in ("customer.subscription.created", "customer.subscription.updated"):
         biz = db.get_business_by_stripe_customer(obj.get("customer"))
         if not biz and bid:
@@ -930,6 +1019,8 @@ async def stripe_webhook(request: Request):
                 customer_id=obj.get("customer"),
                 subscription_id=obj.get("id"),
             )
+            if status == "active":
+                db.record_product_event(biz["id"], "subscription_active")
     elif etype == "customer.subscription.deleted":
         biz = db.get_business_by_stripe_customer(obj.get("customer"))
         if biz:
@@ -938,10 +1029,12 @@ async def stripe_webhook(request: Request):
         biz = db.get_business_by_stripe_customer(obj.get("customer"))
         if biz:
             db.set_subscription(biz["id"], "past_due")
+            db.record_product_event(biz["id"], "subscription_payment_failed")
     elif etype in ("invoice.paid", "invoice.payment_succeeded"):
         biz = db.get_business_by_stripe_customer(obj.get("customer"))
         if biz:
             db.set_subscription(biz["id"], "active")
+            db.record_product_event(biz["id"], "subscription_invoice_paid")
     return {"received": True}
 
 

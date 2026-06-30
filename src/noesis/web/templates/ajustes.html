@@ -36,7 +36,7 @@
             </select></div>
           <div><label class="fld">Retención IRPF por defecto</label>
             <select name="default_irpf">
-              {% for v in [0, 7, 15, 19] %}
+              {% for v in [0, 7, 15] %}
               <option value="{{ v }}" {{ 'selected' if business.default_irpf == v }}>{{ v }}%</option>
               {% endfor %}
             </select></div>
@@ -61,11 +61,12 @@
         <p class="muted">Ya puedes gestionar tu negocio por WhatsApp con texto o audio.</p>
       {% else %}
         <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.</p>
-        <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
-          <label class="fld">Tu número de WhatsApp</label>
-          <input class="input" name="phone" placeholder="+34 6XX XXX XXX" required>
-          <button class="btn primary full" style="margin-top:12px">Conectar WhatsApp</button>
-        </form>
+        <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener">
+          Abrir WhatsApp y vincular mi número
+        </a>
+        <p class="meta" style="margin:10px 0 0;text-align:center">
+          Envía el mensaje preparado. Código temporal: <b>{{ wa.code }}</b>
+        </p>
       {% endif %}
       <div class="insight" style="margin-top:14px">
         Funciona con la API oficial de Meta (WhatsApp Cloud API). Cuando esté el número

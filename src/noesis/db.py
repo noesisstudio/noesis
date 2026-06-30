@@ -144,6 +144,14 @@ CREATE TABLE IF NOT EXISTS webhook_events (
     PRIMARY KEY (source, event_id)
 );
 
+CREATE TABLE IF NOT EXISTS product_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    event_name  TEXT NOT NULL,
+    event_data  TEXT,
+    created_at  TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS whatsapp_links (
     code_hash    TEXT PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id),
@@ -175,6 +183,9 @@ _MIGRATIONS: list[tuple[str, str, str]] = [
     ("businesses", "stripe_customer_id", "TEXT"),
     ("businesses", "stripe_subscription_id", "TEXT"),
     ("businesses", "whatsapp_phone_norm", "TEXT"),
+    ("businesses", "team_size", "TEXT"),
+    ("businesses", "province", "TEXT"),
+    ("businesses", "primary_goal", "TEXT"),
     ("users", "is_admin", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "session_version", "INTEGER NOT NULL DEFAULT 0"),
     ("clients", "nif", "TEXT"),
@@ -235,6 +246,10 @@ def _ensure_indexes() -> None:
         "ON businesses(whatsapp_phone_norm) WHERE whatsapp_phone_norm IS NOT NULL",
         "CREATE INDEX IF NOT EXISTS idx_portal_tokens_client "
         "ON portal_tokens(business_id, client_id)",
+        "CREATE INDEX IF NOT EXISTS idx_product_events_business_date "
+        "ON product_events(business_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_product_events_name_date "
+        "ON product_events(event_name, created_at)",
     ]
     with get_conn() as conn:
         for statement in statements:
@@ -403,6 +418,133 @@ def update_fiscal(business_id, name=None, nif=None, address=None,
         with get_conn() as conn:
             conn.execute(f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params)
     return get_business(business_id)
+
+
+def update_business_profile(business_id, *, sector=None, team_size=None,
+                            province=None, primary_goal=None) -> dict | None:
+    """Guarda la segmentación mínima que personaliza el producto y permite medir
+    qué perfiles se activan y retienen mejor."""
+    allowed_team_sizes = {"solo", "2-5", "6-10", "11+"}
+    allowed_goals = {"facturar", "agenda", "cobros", "control"}
+    if team_size not in allowed_team_sizes:
+        raise ValueError("El tamaño del equipo no es válido.")
+    if primary_goal not in allowed_goals:
+        raise ValueError("El objetivo principal no es válido.")
+    sector = (sector or "").strip()
+    if not sector:
+        raise ValueError("El sector es obligatorio.")
+    province = (province or "").strip()[:80] or None
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET sector=?, team_size=?, province=?, primary_goal=? "
+            "WHERE id=?",
+            (sector[:80], team_size, province, primary_goal, business_id),
+        )
+    return get_business(business_id)
+
+
+def record_product_event(business_id: int, event_name: str,
+                         event_data: str | None = None) -> None:
+    """Analítica propia y mínima del ciclo SaaS; no incluye datos operativos."""
+    event_name = (event_name or "").strip()
+    if not event_name or len(event_name) > 80:
+        raise ValueError("El nombre del evento no es válido.")
+    if event_data is not None and len(event_data) > 500:
+        raise ValueError("Los datos del evento son demasiado largos.")
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO product_events "
+            "(business_id, event_name, event_data, created_at) VALUES (?, ?, ?, ?)",
+            (business_id, event_name, event_data, _now()),
+        )
+
+
+def activation_snapshot(business_id: int) -> dict:
+    """Estado de activación basado en resultados reales, no en visitas o clics.
+
+    Activado = ya existe cliente + trabajo/presupuesto + factura. Cobrar la primera
+    factura es el primer resultado económico y se muestra como fase posterior.
+    """
+    business = get_business(business_id)
+    if not business:
+        raise ValueError("Negocio no encontrado.")
+    with get_conn() as conn:
+        counts = conn.execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM clients WHERE business_id=?) AS clients, "
+            "(SELECT COUNT(*) FROM jobs WHERE business_id=?) AS jobs, "
+            "(SELECT COUNT(*) FROM quotes WHERE business_id=?) AS quotes, "
+            "(SELECT COUNT(*) FROM invoices WHERE business_id=?) AS invoices, "
+            "(SELECT COUNT(*) FROM invoices WHERE business_id=? "
+            " AND status='cobrada') AS paid",
+            (business_id, business_id, business_id, business_id, business_id),
+        ).fetchone()
+    profile_done = bool(
+        business.get("sector")
+        and business.get("team_size")
+        and business.get("primary_goal")
+    )
+    has_client = counts["clients"] > 0
+    has_work = counts["jobs"] > 0 or counts["quotes"] > 0
+    has_invoice = counts["invoices"] > 0
+    has_paid = counts["paid"] > 0
+    steps = [
+        {
+            "key": "profile",
+            "label": "Personaliza tu negocio",
+            "detail": "Sector, tamaño y objetivo principal",
+            "done": profile_done,
+            "href": f"/onboarding/setup/{business_id}",
+        },
+        {
+            "key": "whatsapp",
+            "label": "Conecta WhatsApp",
+            "detail": "Gestiona el día desde el móvil",
+            "done": business.get("whatsapp_status") == "conectado",
+            "href": f"/b/{business_id}/ajustes",
+        },
+        {
+            "key": "client",
+            "label": "Añade tu primer cliente",
+            "detail": "Crea una ficha para empezar el flujo",
+            "done": has_client,
+            "href": f"/b/{business_id}/clientes",
+        },
+        {
+            "key": "work",
+            "label": "Registra un trabajo o presupuesto",
+            "detail": "Pasa de petición a trabajo organizado",
+            "done": has_work,
+            "href": f"/b/{business_id}/agenda",
+        },
+        {
+            "key": "invoice",
+            "label": "Prepara tu primera factura",
+            "detail": "Convierte el trabajo terminado en facturación",
+            "done": has_invoice,
+            "href": f"/b/{business_id}/facturas",
+        },
+        {
+            "key": "payment",
+            "label": "Registra tu primer cobro",
+            "detail": "Cierra el ciclo con dinero cobrado",
+            "done": has_paid,
+            "href": f"/b/{business_id}/cobros",
+        },
+    ]
+    completed = sum(1 for step in steps if step["done"])
+    first_pending = next((step for step in steps if not step["done"]), None)
+    activated = has_client and has_work and has_invoice
+    return {
+        "steps": steps,
+        "completed": completed,
+        "total": len(steps),
+        "progress": round(completed / len(steps) * 100),
+        "activated": activated,
+        "first_value": activated,
+        "outcome_reached": has_paid,
+        "next_step": first_pending,
+    }
 
 
 # ---------------------------------------------------------------- Usuarios ---
@@ -1501,19 +1643,32 @@ def admin_overview() -> dict:
         rows = conn.execute(
             "SELECT b.id, b.name, b.sector, b.owner_email, b.created_at, "
             "b.whatsapp_status, b.plan, b.subscription_status, b.trial_ends_at, "
+            "b.team_size, b.province, b.primary_goal, "
             "(SELECT COUNT(*) FROM invoices i WHERE i.business_id=b.id) AS n_facturas, "
             "(SELECT COUNT(*) FROM clients c WHERE c.business_id=b.id) AS n_clientes, "
             "(SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.business_id=b.id "
             "  AND i.status IN ('enviada','cobrada')) AS facturado "
             "FROM businesses b WHERE b.id<>1 ORDER BY b.created_at DESC").fetchall()
     biz = [dict(r) for r in rows]
+    for business in biz:
+        activation = activation_snapshot(business["id"])
+        business["activation_progress"] = activation["progress"]
+        business["activated"] = activation["activated"]
+        business["outcome_reached"] = activation["outcome_reached"]
     PRICES = {"trial": 0, "autonomo": 29, "pro": 39}
     activos = [b for b in biz if b["subscription_status"] == "active"]
     mrr = sum(PRICES.get(b["plan"], 0) for b in activos)
+    activated = [b for b in biz if b["activated"]]
     return {
         "total": len(biz), "activos": len(activos),
         "en_prueba": len([b for b in biz if b["subscription_status"] == "trial"]),
         "whatsapp_conectados": len([b for b in biz if b["whatsapp_status"] == "conectado"]),
+        "perfiles_completos": len([
+            b for b in biz if b.get("team_size") and b.get("primary_goal")
+        ]),
+        "activados": len(activated),
+        "resultados": len([b for b in biz if b["outcome_reached"]]),
+        "tasa_activacion": round(len(activated) / len(biz) * 100) if biz else 0,
         "mrr": mrr, "businesses": biz,
     }
 
@@ -1529,6 +1684,9 @@ def export_business_data(business_id) -> dict:
         "invoices": list_invoices(business_id),
         "quotes": list_quotes(business_id),
         "expenses": list_expenses(business_id),
+        "product_events": [dict(r) for r in _rows(
+            "SELECT * FROM product_events WHERE business_id=? ORDER BY id",
+            business_id)],
         "exported_at": _now(),
     }
 
@@ -1610,7 +1768,10 @@ def delete_business_cascade(business_id) -> bool:
                 "La cuenta tiene facturas emitidas que deben conservarse. "
                 "Solicita una baja con conservación fiscal."
             )
-        for table in ("portal_tokens", "quotes", "invoices", "jobs", "clients", "expenses"):
+        for table in (
+            "portal_tokens", "product_events", "quotes", "invoices",
+            "jobs", "clients", "expenses"
+        ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "
                      "(SELECT id FROM users WHERE business_id=?)", (business_id,))

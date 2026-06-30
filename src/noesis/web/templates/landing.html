@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Copiloto de negocio por WhatsApp</title>
-  <meta name="description" content="Noesis ayuda a autónomos de servicios a gestionar agenda, clientes, cobros y facturas desde WhatsApp.">
+  <title>Noesis · Del trabajo terminado al dinero cobrado</title>
+  <meta name="description" content="Noesis convierte mensajes y audios en presupuestos, trabajos, facturas y cobros para autónomos y pequeños negocios de servicios.">
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <meta name="theme-color" content="#14463b">
@@ -20,7 +20,7 @@
     <nav class="site-links" aria-label="Principal">
       <a href="#producto">Producto</a>
       <a href="#precios">Precios</a>
-      <a href="#mision">Misión</a>
+      <a href="#flujo">Cómo funciona</a>
       <a href="#faq">FAQ</a>
     </nav>
     <div class="site-actions">
@@ -32,12 +32,12 @@
   <main>
     <section class="landing-hero">
       <div class="landing-copy">
-        <div class="kicker">Para autónomos de servicios</div>
-        <h1>La oficina ligera que vive en tu WhatsApp.</h1>
-        <p>Noesis organiza agenda, clientes, cobros y facturas para que no tengas que
-          llevar el negocio en la cabeza mientras trabajas.</p>
+        <div class="kicker">Para autónomos y pequeños negocios de servicios</div>
+        <h1>Del trabajo terminado al dinero cobrado.</h1>
+        <p>Convierte mensajes y audios en presupuestos, citas, trabajos, facturas y
+          cobros. Noesis mantiene el negocio al día sin obligarte a abrir un ERP.</p>
         <div class="landing-cta">
-          <a class="btn primary" href="/onboarding">Crear cuenta</a>
+          <a class="btn primary" href="/onboarding">Probar 14 días gratis</a>
           {% if business_id %}
           <a class="btn" href="/b/{{ business_id }}/resumen">Volver al panel</a>
           {% else %}
@@ -45,9 +45,9 @@
           {% endif %}
         </div>
         <div class="trust-row">
-          <span>IVA e IRPF</span>
-          <span>Asistente local</span>
-          <span>Sin CDN externo</span>
+          <span>Sin tarjeta</span>
+          <span>Datos exportables</span>
+          <span>IVA e IRPF correctos</span>
         </div>
       </div>
       <div class="hero-product" aria-label="Vista previa del producto">
@@ -58,84 +58,85 @@
     <section class="logo-strip" aria-label="Sectores">
       <span>Fontanería</span>
       <span>Electricidad</span>
+      <span>Climatización</span>
       <span>Reformas</span>
       <span>Limpieza</span>
       <span>Jardinería</span>
       <span>Mantenimiento</span>
+      <span>Equipos de 1 a 10 personas</span>
     </section>
 
     <section class="landing-section" id="producto">
       <div class="section-intro">
         <div class="kicker">Qué hace</div>
-        <h2>Menos administración. Más trabajo terminado y cobrado.</h2>
-        <p>Noesis no quiere ser otro ERP. Quiere ser la capa práctica que recuerda,
-          ordena y empuja lo importante antes de que se te pase.</p>
+        <h2>Un único flujo desde el primer aviso hasta el cobro.</h2>
+        <p>Noesis conecta las tareas que hoy viven separadas entre WhatsApp, la cabeza,
+          el calendario y las hojas de cálculo.</p>
       </div>
       <div class="feature-grid">
         <article class="feature-card">
           <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>
-          <h3>Agenda que entiende tu día</h3>
-          <p>Registra trabajos desde una frase normal y te muestra qué preparar antes de salir.</p>
+          <h3>Captura cada petición</h3>
+          <p>Convierte una conversación en cliente, presupuesto o trabajo sin volver a copiar datos.</p>
         </article>
         <article class="feature-card">
           <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/><path d="M6 9.5v5M18 9.5v5"/></svg></span>
-          <h3>Cobros sin perseguirte a ti</h3>
-          <p>Detecta facturas pendientes, separa atrasos y prepara el siguiente recordatorio.</p>
+          <h3>Organiza agenda y trabajos</h3>
+          <p>Reúne fecha, cliente, zona, encargo y estado para saber qué toca hacer y qué falta cerrar.</p>
         </article>
         <article class="feature-card">
           <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h9l4 4V21.5H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg></span>
-          <h3>Facturas con fiscalidad clara</h3>
-          <p>Calcula base, IVA e IRPF sin inventar fórmulas y deja PDFs listos para enviar.</p>
+          <h3>Factura al terminar</h3>
+          <p>Prepara documentos con base, IVA e IRPF y evita que un trabajo terminado quede sin facturar.</p>
         </article>
         <article class="feature-card">
           <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 15l3.5-4 3 2.5L20 7"/></svg></span>
-          <h3>Resumen que decide contigo</h3>
-          <p>Beneficio, gastos, IVA estimado y clientes importantes, todo con una próxima acción.</p>
+          <h3>Cobra y vuelve a vender</h3>
+          <p>Detecta vencimientos, prioriza cobros y conserva el historial completo de cada cliente.</p>
         </article>
       </div>
     </section>
 
     <section class="landing-band" id="mision">
       <div>
-        <div class="kicker">Misión</div>
-        <h2>Quitar ruido mental al autónomo que sostiene su negocio solo.</h2>
+        <div class="kicker">La diferencia</div>
+        <h2>Menos software que alimentar. Más negocio que avanza.</h2>
       </div>
       <div class="mission-grid">
         <div>
-          <h3>Misión</h3>
-          <p>Convertir WhatsApp en una pequeña oficina que registra, recuerda y ordena lo
-            esencial sin obligarte a aprender software complejo.</p>
+          <h3>WhatsApp para actuar</h3>
+          <p>Habla como trabajas: Noesis transforma cada orden en una acción estructurada y revisable.</p>
         </div>
         <div>
-          <h3>Visión</h3>
-          <p>Que cualquier profesional de servicios pueda trabajar con la tranquilidad de
-            tener cobros, agenda y facturas vigilados cada día.</p>
+          <h3>Web para controlar</h3>
+          <p>Agenda, clientes, rentabilidad, fiscalidad y cobros reunidos en un panel que señala el siguiente paso.</p>
         </div>
         <div>
-          <h3>Principio</h3>
-          <p>Primero privacidad y coste bajo: lo rutinario se resuelve dentro; la IA externa
-            solo entra cuando aporta valor real.</p>
+          <h3>Tu gestor sigue contigo</h3>
+          <p>Noesis recoge y ordena el dato operativo; tu gestor conserva el criterio fiscal y profesional.</p>
         </div>
       </div>
     </section>
 
-    <section class="landing-section">
+    <section class="landing-section" id="flujo">
       <div class="section-intro">
         <div class="kicker">Cómo funciona</div>
-        <h2>De una frase a una acción de negocio.</h2>
+        <h2>El ciclo completo, sin duplicar trabajo.</h2>
       </div>
-      <div class="flow-grid">
-        <div class="flow-step"><b>1</b><span>Hablas normal: “agenda a Marta mañana” o “gasté 45 euros en gasolina”.</span></div>
-        <div class="flow-step"><b>2</b><span>Noesis interpreta si es agenda, gasto, factura, cobro o resumen.</span></div>
-        <div class="flow-step"><b>3</b><span>El panel queda actualizado y te marca qué conviene hacer después.</span></div>
+      <div class="flow-grid workflow-5">
+        <div class="flow-step"><b>1</b><span>Entra una petición por WhatsApp o web.</span></div>
+        <div class="flow-step"><b>2</b><span>Preparas y compartes el presupuesto.</span></div>
+        <div class="flow-step"><b>3</b><span>Agendas y completas el trabajo.</span></div>
+        <div class="flow-step"><b>4</b><span>Generas la factura con sus impuestos.</span></div>
+        <div class="flow-step"><b>5</b><span>Controlas el cobro y el siguiente servicio.</span></div>
       </div>
     </section>
 
     <section class="landing-section" id="precios">
       <div class="section-intro">
         <div class="kicker">Precios</div>
-        <h2>Simple, transparente y pensado para autónomos.</h2>
-        <p>Empiezas con 14 días gratis, sin tarjeta. Si te quita ruido, te quedas.</p>
+        <h2>Empieza pequeño. Mantén el control cuando crezcas.</h2>
+        <p>Prueba el ciclo completo durante 14 días, sin tarjeta y con tus datos siempre exportables.</p>
       </div>
       <div class="pricing-grid">
         <article class="price-card">
@@ -148,13 +149,13 @@
           <span class="badge b-green">recomendado</span>
           <h3>Autónomo</h3>
           <p class="price">29 €/mes</p>
-          <p>Agenda, presupuestos, facturas, cobros, impuestos y resumen por WhatsApp.</p>
+          <p>Para profesionales que gestionan clientes, agenda, facturas y cobros desde el móvil.</p>
           <a class="btn primary full" href="/onboarding">Empezar gratis</a>
         </article>
         <article class="price-card">
-          <h3>Pro</h3>
+          <h3>Negocio</h3>
           <p class="price">39 €/mes</p>
-          <p>Para más volumen: alertas avanzadas de cobro y soporte prioritario.</p>
+          <p>Para más volumen operativo: alertas avanzadas, análisis y soporte prioritario.</p>
           <a class="btn full" href="/onboarding">Empezar gratis</a>
         </article>
       </div>
@@ -167,34 +168,34 @@
       </div>
       <div class="faq-grid">
         <details open>
-          <summary>¿Sustituye a mi gestor?</summary>
+          <summary>¿Sustituye a mi gestoría?</summary>
           <p>No. Noesis ordena el día a día: agenda, cobros, gastos y facturas. La parte
             fiscal delicada debe seguir revisándose con criterio profesional.</p>
         </details>
         <details>
-          <summary>¿Cómo funciona por WhatsApp?</summary>
+          <summary>¿Necesito instalar una aplicación?</summary>
           <p>Noesis usa la API oficial de Meta (WhatsApp Cloud API). Conectas tu número y
-            ya puedes dar órdenes por texto o nota de voz, y recibir tus avisos de cobro
-            y resúmenes. El panel web funciona desde el primer minuto.</p>
+            puedes dar órdenes por texto o nota de voz. El panel web funciona desde el
+            primer minuto y se puede instalar como acceso directo en el móvil.</p>
         </details>
         <details>
-          <summary>¿Mis datos salen fuera?</summary>
-          <p>Lo rutinario se resuelve en local. Solo las consultas complejas usarán IA externa
-            si se configura una clave y compensa hacerlo.</p>
+          <summary>¿Puedo llevarme mis datos?</summary>
+          <p>Sí. Puedes descargar facturas y costes en CSV y exportar la cuenta completa.
+            Noesis evita que el valor de tu negocio quede encerrado en la plataforma.</p>
         </details>
       </div>
     </section>
 
     <section class="final-cta">
-      <h2>Prueba Noesis con tu forma real de trabajar.</h2>
-      <p>Empieza por registrar agenda, facturas y cobros. Si no te quita ruido en una semana,
-        el producto no está haciendo su trabajo.</p>
-      <a class="btn primary" href="/onboarding">Empezar ahora</a>
+      <h2>Comprueba si facturas antes y cobras mejor.</h2>
+      <p>Configura tu negocio, añade un cliente y recorre el primer trabajo completo.
+        No necesitas tarjeta para empezar.</p>
+      <a class="btn primary" href="/onboarding">Probar el ciclo completo</a>
     </section>
   </main>
 
   <footer class="site-footer">
-    <span>Noesis · Copiloto de negocio por WhatsApp para autónomos de servicios.</span>
+    <span>Noesis · Operaciones y cobros para pequeños negocios de servicios.</span>
     <span><a href="/privacidad">Privacidad</a> · <a href="/terminos">Términos</a></span>
   </footer>
   <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
