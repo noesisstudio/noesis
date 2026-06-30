@@ -293,6 +293,11 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
   border-radius:var(--radius-sm); padding:14px 16px; font-size:13.5px; line-height:1.6; margin:18px 0; }
 .legal .meta-box { background:var(--surface-2); border:1px solid var(--border);
   border-radius:var(--radius-sm); padding:14px 16px; font-size:14px; margin:10px 0; }
+.legal-table { width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px; }
+.legal-table th, .legal-table td { border:1px solid var(--border); padding:9px 12px;
+  text-align:left; vertical-align:top; line-height:1.55; }
+.legal-table th { background:var(--surface-2); color:var(--brand); font-weight:600; }
+.legal-links a { color:var(--brand-2); }
 
 /* ---------- Modal ---------- */
 .modal-overlay { position:fixed; inset:0; background:rgba(8,20,16,.5); z-index:100;

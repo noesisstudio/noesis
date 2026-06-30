@@ -16,7 +16,7 @@
   <main class="legal-wrap legal">
     <a class="legal-back" href="/">&#8249; Volver al inicio</a>
     <h1>Política de privacidad</h1>
-    <p class="updated">Última actualización: 28 de junio de 2026</p>
+    <p class="updated">Última actualización: 30 de junio de 2026</p>
 
     <div class="note">
       Borrador inicial pensado para Noesis. Antes de operar con clientes reales,
@@ -44,7 +44,9 @@
     </ul>
     <p>Respecto a los datos de tus propios clientes, <b>tú eres el responsable</b> y
       Noesis actúa como <b>encargado del tratamiento</b>: solo los procesamos para
-      prestarte el servicio, siguiendo tus instrucciones.</p>
+      prestarte el servicio, siguiendo tus instrucciones. Esta relación se regula en
+      detalle en el <a href="/encargado-tratamiento">Contrato de Encargado del
+      Tratamiento</a>.</p>
 
     <h2>3. Para qué los usamos y base legal</h2>
     <ul>
@@ -61,15 +63,20 @@
       datos de facturación durante los plazos fiscales aplicables).</p>
 
     <h2>5. Con quién los compartimos</h2>
-    <ul>
-      <li><b>Proveedor de alojamiento</b> (servidores donde corre la aplicación), que
-        actúa como encargado bajo contrato.</li>
-      <li><b>Inteligencia artificial (opcional):</b> solo si se activa el asistente con
-        IA externa, las consultas complejas se envían a un proveedor de IA. Por defecto,
-        lo rutinario se resuelve <b>dentro de Noesis</b> sin salir a terceros.</li>
-    </ul>
-    <p>Si algún proveedor está fuera del Espacio Económico Europeo, la transferencia se
-      ampara en las garantías previstas en el RGPD (cláusulas contractuales tipo).</p>
+    <p>No vendemos tus datos. Solo se apoyan en ellos los proveedores necesarios para
+      prestar el servicio, que actúan como encargados bajo contrato:</p>
+    <table class="legal-table">
+      <tr><th>Proveedor</th><th>Para qué</th><th>Ubicación</th></tr>
+      <tr><td>Railway</td><td>Alojamiento de la app y la base de datos</td><td>UE / EE. UU. (garantías RGPD)</td></tr>
+      <tr><td>Anthropic</td><td>Asistente con IA, solo si lo activas</td><td>EE. UU. (cláusulas tipo)</td></tr>
+      <tr><td>Meta</td><td>WhatsApp, solo si lo conectas</td><td>UE / EE. UU. (garantías RGPD)</td></tr>
+      <tr><td>[Proveedor SMTP]</td><td>Correos transaccionales</td><td>[UE]</td></tr>
+    </table>
+    <p>Por defecto, lo rutinario se resuelve <b>dentro de Noesis</b> sin salir a terceros.
+      Si algún proveedor está fuera del Espacio Económico Europeo, la transferencia se
+      ampara en las garantías previstas en el RGPD (cláusulas contractuales tipo). La lista
+      completa de subencargados está en el
+      <a href="/encargado-tratamiento">Contrato de Encargado del Tratamiento</a>.</p>
 
     <h2>6. Tus derechos</h2>
     <p>Puedes ejercer en cualquier momento tus derechos de <b>acceso, rectificación,
@@ -89,9 +96,6 @@
       analítica ni publicidad, por lo que no requiere banner de consentimiento.</p>
   </main>
 
-  <footer class="site-footer">
-    <span>Noesis</span>
-    <span><a href="/privacidad">Privacidad</a> · <a href="/terminos">Términos</a></span>
-  </footer>
+  {% include "_legal_footer.html" %}
 </body>
 </html>

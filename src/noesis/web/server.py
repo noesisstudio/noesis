@@ -258,6 +258,26 @@ def terminos(request: Request):
     return TEMPLATES.TemplateResponse(request, "terminos.html", {})
 
 
+@app.get("/aviso-legal", response_class=HTMLResponse)
+def aviso_legal(request: Request):
+    return TEMPLATES.TemplateResponse(request, "aviso-legal.html", {})
+
+
+@app.get("/cookies", response_class=HTMLResponse)
+def cookies(request: Request):
+    return TEMPLATES.TemplateResponse(request, "cookies.html", {})
+
+
+@app.get("/encargado-tratamiento", response_class=HTMLResponse)
+def encargado_tratamiento(request: Request):
+    return TEMPLATES.TemplateResponse(request, "encargado-tratamiento.html", {})
+
+
+@app.get("/cumplimiento", response_class=HTMLResponse)
+def cumplimiento(request: Request):
+    return TEMPLATES.TemplateResponse(request, "cumplimiento.html", {})
+
+
 # ====================================================== PORTAL DEL CLIENTE === #
 # Enlace privado SIN contraseña (estilo "client hub" de Jobber). Es público a
 # propósito: el cliente del autónomo no tiene cuenta. El token va ligado a un único
@@ -918,7 +938,7 @@ def onboarding(request: Request, error: str = ""):
 @app.post("/onboarding/signup")
 def onboarding_signup(request: Request, name: str = Form(...),
                       email: str = Form(...), password: str = Form(...),
-                      sector: str = Form("")):
+                      sector: str = Form(""), acepto: str = Form("")):
     key = f"signup:{auth.client_ip(request)}"
     if auth.is_rate_limited(key):
         return RedirectResponse("/onboarding?error=throttle", status_code=303)
@@ -926,6 +946,8 @@ def onboarding_signup(request: Request, name: str = Form(...),
     name = (name or "").strip()
     if not name:
         return RedirectResponse("/onboarding?error=name", status_code=303)
+    if not acepto:
+        return RedirectResponse("/onboarding?error=consent", status_code=303)
     if not auth.valid_email(email):
         return RedirectResponse("/onboarding?error=email_format", status_code=303)
     if len(password) < 12 or len(password) > 1024:
@@ -947,6 +969,12 @@ def onboarding_signup(request: Request, name: str = Form(...),
     request.session["bid"] = biz["id"]
     request.session["sv"] = user.get("session_version", 0)
     db.record_product_event(biz["id"], "account_created")
+    # Evidencia de consentimiento: quién aceptó qué versión, cuándo y desde dónde.
+    db.record_product_event(biz["id"], "legal_accepted", json.dumps({
+        "version": "2026-06-30",
+        "documents": ["terminos", "privacidad", "encargado-tratamiento"],
+        "ip": auth.client_ip(request),
+    }))
     return RedirectResponse(f"/onboarding/setup/{biz['id']}", status_code=303)
 
 

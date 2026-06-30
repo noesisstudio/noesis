@@ -573,6 +573,7 @@ class PortalHttpTestCase(BackendTestCase):
                         "email": "piloto@example.com",
                         "password": "password-segura-123",
                         "sector": "Climatización",
+                        "acepto": "1",
                     },
                     follow_redirects=False,
                 )
