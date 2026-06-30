@@ -399,10 +399,59 @@ def _downgrade_tenant_integrity(conn) -> None:
         conn.execute(f"DROP INDEX IF EXISTS {name}")
 
 
+def _upgrade_whatsapp_outbox(conn) -> None:
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS whatsapp_outbox (
+    id                  {t["id"]},
+    business_id         {t["ref"]} REFERENCES businesses(id),
+    to_phone            TEXT NOT NULL,
+    message_type        TEXT NOT NULL,
+    text_body           TEXT,
+    template_name       TEXT,
+    template_language   TEXT,
+    template_params     TEXT,
+    idempotency_key     TEXT UNIQUE,
+    status              TEXT NOT NULL DEFAULT 'queued',
+    attempts            INTEGER NOT NULL DEFAULT 0,
+    max_attempts        INTEGER NOT NULL DEFAULT 5,
+    next_attempt_at     {t["timestamp"]} NOT NULL,
+    locked_at           {t["timestamp"]},
+    meta_message_id     TEXT UNIQUE,
+    last_error          TEXT,
+    sent_at             {t["timestamp"]},
+    delivered_at        {t["timestamp"]},
+    read_at             {t["timestamp"]},
+    created_at          {t["timestamp"]} NOT NULL,
+    updated_at          {t["timestamp"]} NOT NULL,
+    CHECK (message_type IN ('text', 'template')),
+    CHECK (status IN ('queued', 'processing', 'retrying', 'sent',
+                      'delivered', 'read', 'failed'))
+);
+"""
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_whatsapp_outbox_due "
+        "ON whatsapp_outbox(status, next_attempt_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_whatsapp_outbox_business "
+        "ON whatsapp_outbox(business_id, created_at)"
+    )
+
+
+def _downgrade_whatsapp_outbox(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_whatsapp_outbox_business")
+    conn.execute("DROP INDEX IF EXISTS idx_whatsapp_outbox_due")
+    conn.execute("DROP TABLE IF EXISTS whatsapp_outbox")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
+    (3, "cola_whatsapp_durable", _upgrade_whatsapp_outbox, _downgrade_whatsapp_outbox),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

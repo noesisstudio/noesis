@@ -1527,6 +1527,223 @@ def claim_webhook_event(source: str, event_id: str) -> bool:
         return False
 
 
+def enqueue_whatsapp_message(
+    *,
+    business_id: int | None,
+    to_phone: str,
+    message_type: str,
+    text_body: str | None = None,
+    template_name: str | None = None,
+    template_language: str | None = None,
+    template_params: str | None = None,
+    idempotency_key: str | None = None,
+    max_attempts: int = 6,
+    now: str | None = None,
+) -> dict:
+    """Persiste un mensaje antes de intentar enviarlo a Meta."""
+    if message_type not in {"text", "template"}:
+        raise ValueError("Tipo de mensaje de WhatsApp no válido.")
+    if message_type == "text" and not text_body:
+        raise ValueError("Un mensaje de texto necesita contenido.")
+    if message_type == "template" and not template_name:
+        raise ValueError("Un mensaje de plantilla necesita nombre.")
+    if not to_phone:
+        raise ValueError("Falta el teléfono de destino.")
+    created_at = now or _now()
+    try:
+        with get_conn() as conn:
+            row = conn.execute(
+                "INSERT INTO whatsapp_outbox "
+                "(business_id, to_phone, message_type, text_body, template_name, "
+                "template_language, template_params, idempotency_key, status, "
+                "attempts, max_attempts, next_attempt_at, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) "
+                "RETURNING id",
+                (
+                    business_id, to_phone, message_type, text_body, template_name,
+                    template_language, template_params, idempotency_key,
+                    max_attempts, created_at, created_at, created_at,
+                ),
+            ).fetchone()
+            message_id = row["id"]
+    except IntegrityError:
+        if not idempotency_key:
+            raise
+        with get_conn() as conn:
+            existing = conn.execute(
+                "SELECT * FROM whatsapp_outbox WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            if not existing:
+                raise
+            if existing.get("business_id") != business_id:
+                raise ValueError(
+                    "La clave idempotente pertenece a otro negocio."
+                )
+            return dict(existing)
+    return _get_whatsapp_message_internal(message_id)
+
+
+def _get_whatsapp_message_internal(message_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE id=?", (message_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_whatsapp_message(message_id: int, business_id: int) -> dict | None:
+    """Lectura acotada al negocio para paneles, soporte y auditoría."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE id=? AND business_id=?",
+            (message_id, business_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def find_whatsapp_message_by_meta_id(meta_message_id: str) -> dict | None:
+    """Lookup interno para asociar callbacks de Meta, que no incluyen business_id."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE meta_message_id=?",
+            (meta_message_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def list_whatsapp_messages(business_id: int, limit: int = 100) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE business_id=? "
+            "ORDER BY created_at DESC, id DESC LIMIT ?",
+            (business_id, max(1, min(int(limit), 500))),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def claim_next_whatsapp_message(
+    *,
+    now: str,
+    stale_before: str,
+    only_ids: list[int] | None = None,
+) -> dict | None:
+    """Bloquea un mensaje vencido; SKIP LOCKED evita dobles envíos en Postgres."""
+    filters = (
+        "((status IN ('queued', 'retrying') AND next_attempt_at<=?) "
+        "OR (status='processing' AND locked_at<=?))"
+    )
+    params: list[Any] = [now, stale_before]
+    if only_ids:
+        filters += f" AND id IN ({','.join('?' for _ in only_ids)})"
+        params.extend(only_ids)
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE " + filters
+            + " ORDER BY next_attempt_at, id LIMIT 1" + suffix,
+            tuple(params),
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute(
+            "UPDATE whatsapp_outbox SET status='processing', attempts=attempts+1, "
+            "locked_at=?, updated_at=? WHERE id=?",
+            (now, now, row["id"]),
+        )
+        claimed = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE id=?", (row["id"],)
+        ).fetchone()
+        return dict(claimed)
+
+
+def mark_whatsapp_sent(message_id: int, meta_message_id: str, sent_at: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE whatsapp_outbox SET status='sent', meta_message_id=?, "
+            "sent_at=?, last_error=NULL, locked_at=NULL, updated_at=? "
+            "WHERE id=? AND status='processing'",
+            (meta_message_id, sent_at, sent_at, message_id),
+        )
+
+
+def mark_whatsapp_retry(
+    message_id: int,
+    *,
+    error: str,
+    next_attempt_at: str,
+    updated_at: str,
+) -> dict | None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE whatsapp_outbox SET "
+            "status=CASE WHEN attempts>=max_attempts THEN 'failed' ELSE 'retrying' END, "
+            "next_attempt_at=?, last_error=?, locked_at=NULL, updated_at=? "
+            "WHERE id=? AND status='processing'",
+            (next_attempt_at, error[:1000], updated_at, message_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE id=?", (message_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def update_whatsapp_delivery(
+    meta_message_id: str,
+    status: str,
+    event_at: str,
+    error: str | None = None,
+) -> dict | None:
+    """Avanza el estado sin degradarlo si Meta entrega eventos desordenados."""
+    if status not in {"sent", "delivered", "read", "failed"}:
+        return None
+    rank = {"queued": 0, "processing": 0, "retrying": 0, "sent": 1,
+            "delivered": 2, "read": 3, "failed": -1}
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        suffix = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE meta_message_id=?" + suffix,
+            (meta_message_id,),
+        ).fetchone()
+        if not row:
+            return None
+        current = row["status"]
+        next_status = status
+        if status != "failed" and rank.get(current, 0) > rank[status]:
+            next_status = current
+        if status == "failed" and current in {"delivered", "read"}:
+            next_status = current
+        sent_at = (
+            event_at
+            if status == "sent" and not row.get("sent_at")
+            else row.get("sent_at")
+        )
+        delivered_at = (
+            event_at if status == "delivered" and not row.get("delivered_at")
+            else row.get("delivered_at")
+        )
+        read_at = (
+            event_at
+            if status == "read" and not row.get("read_at")
+            else row.get("read_at")
+        )
+        conn.execute(
+            "UPDATE whatsapp_outbox SET status=?, sent_at=?, delivered_at=?, "
+            "read_at=?, last_error=?, updated_at=? WHERE id=?",
+            (
+                next_status, sent_at, delivered_at, read_at,
+                error[:1000] if error else row.get("last_error"),
+                event_at, row["id"],
+            ),
+        )
+        updated = conn.execute(
+            "SELECT * FROM whatsapp_outbox WHERE id=?", (row["id"],)
+        ).fetchone()
+        return dict(updated)
+
+
 def create_whatsapp_link(code_hash: str, business_id: int, expires_at: str) -> None:
     with get_conn() as conn:
         conn.execute(

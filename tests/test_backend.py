@@ -6,12 +6,12 @@ import inspect
 import os
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
 from noesis import config, db, migrations, nlu
-from noesis.web import auth, chat, reports, whatsapp
+from noesis.web import auth, chat, reports, scheduler, whatsapp
 
 
 class BackendTestCase(unittest.TestCase):
@@ -166,6 +166,146 @@ class BackendTestCase(unittest.TestCase):
         finally:
             config.WHATSAPP_APP_SECRET = old_secret
             config.IS_PRODUCTION = old_production
+
+    def test_whatsapp_outbox_retries_with_backoff_and_traces_send(self):
+        business, _ = self.make_business()
+        point = datetime(2026, 6, 30, 10, 0, 0)
+        message = whatsapp.queue_text(
+            "34600111222",
+            "Respuesta dentro de la ventana",
+            business_id=business["id"],
+            now=point,
+        )
+
+        with patch.object(
+            whatsapp,
+            "_post_to_meta",
+            side_effect=[
+                RuntimeError("Meta temporalmente no disponible"),
+                "wamid.retry",
+            ],
+        ) as post:
+            first = whatsapp.process_outbox(now=point)
+            self.assertEqual(first[0]["status"], "retrying")
+            retried = db.get_whatsapp_message(message["id"], business["id"])
+            self.assertEqual(retried["attempts"], 1)
+            self.assertEqual(retried["status"], "retrying")
+            self.assertIn("temporalmente", retried["last_error"])
+
+            self.assertEqual(
+                whatsapp.process_outbox(now=point + timedelta(seconds=29)), []
+            )
+            second = whatsapp.process_outbox(
+                now=point + timedelta(seconds=30)
+            )
+
+        self.assertEqual(post.call_count, 2)
+        self.assertEqual(second[0]["status"], "sent")
+        sent = db.get_whatsapp_message(message["id"], business["id"])
+        self.assertEqual(sent["attempts"], 2)
+        self.assertEqual(sent["status"], "sent")
+        self.assertEqual(sent["meta_message_id"], "wamid.retry")
+        self.assertIsNotNone(sent["sent_at"])
+
+    def test_whatsapp_delivery_webhooks_are_idempotent_and_monotonic(self):
+        business, _ = self.make_business()
+        point = datetime(2026, 6, 30, 11, 0, 0)
+        message = whatsapp.queue_text(
+            "34600111222", "Hola", business_id=business["id"], now=point
+        )
+        with patch.object(whatsapp, "_post_to_meta", return_value="wamid.status"):
+            whatsapp.process_outbox(now=point)
+
+        delivered = {
+            "message_id": "wamid.status",
+            "status": "delivered",
+            "timestamp": "1782817260",
+        }
+        first = whatsapp.handle_inbound(delivered)
+        duplicate = whatsapp.handle_inbound(delivered)
+        read = whatsapp.handle_inbound({
+            "message_id": "wamid.status",
+            "status": "read",
+            "timestamp": "1782817320",
+        })
+
+        self.assertTrue(first["results"][0]["updated"])
+        self.assertTrue(duplicate["results"][0]["duplicate"])
+        self.assertTrue(read["results"][0]["updated"])
+        traced = db.get_whatsapp_message(message["id"], business["id"])
+        self.assertEqual(traced["status"], "read")
+        self.assertIsNotNone(traced["delivered_at"])
+        self.assertIsNotNone(traced["read_at"])
+
+    def test_whatsapp_duplicate_inbound_does_not_repeat_effects(self):
+        business, _ = self.make_business()
+        db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
+        payload = {
+            "id": "wamid.inbound",
+            "from": "34600111222",
+            "text": "resumen",
+        }
+        with (
+            patch.object(chat, "handle", return_value={"reply": "Todo bien"}) as handle,
+            patch.object(whatsapp, "send", return_value=True) as send,
+        ):
+            first = whatsapp.handle_inbound(payload)
+            duplicate = whatsapp.handle_inbound(payload)
+
+        self.assertEqual(first["processed"], 1)
+        self.assertTrue(duplicate["results"][0]["duplicate"])
+        handle.assert_called_once_with(business["id"], "resumen")
+        send.assert_called_once()
+
+    def test_whatsapp_proactives_use_approved_template_and_stable_key(self):
+        business, _ = self.make_business()
+        db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
+        with (
+            patch.object(scheduler, "daily_summary_text", return_value="Tu resumen"),
+            patch.object(whatsapp, "send_template", return_value=True) as template,
+            patch.object(whatsapp, "send") as free_text,
+        ):
+            scheduler.send_daily_summaries()
+
+        free_text.assert_not_called()
+        args, kwargs = template.call_args
+        self.assertEqual(args[1], config.WHATSAPP_TEMPLATE_DAILY_SUMMARY)
+        self.assertEqual(args[2], ["Tu resumen"])
+        self.assertEqual(kwargs["business_id"], business["id"])
+        self.assertIn(f":{business['id']}", kwargs["idempotency_key"])
+
+    def test_whatsapp_outbox_is_idempotent_and_isolated_by_business(self):
+        business_a, _ = self.make_business("Negocio A")
+        business_b, _ = self.make_business("Negocio B")
+        first = whatsapp.queue_template(
+            "34600111222",
+            config.WHATSAPP_TEMPLATE_DAILY_SUMMARY,
+            ["Resumen"],
+            business_id=business_a["id"],
+            idempotency_key=f"daily:2026-06-30:{business_a['id']}",
+        )
+        repeated = whatsapp.queue_template(
+            "34600111222",
+            config.WHATSAPP_TEMPLATE_DAILY_SUMMARY,
+            ["Resumen"],
+            business_id=business_a["id"],
+            idempotency_key=f"daily:2026-06-30:{business_a['id']}",
+        )
+
+        self.assertEqual(first["id"], repeated["id"])
+        self.assertIsNone(db.get_whatsapp_message(first["id"], business_b["id"]))
+        self.assertEqual(
+            db.get_whatsapp_message(first["id"], business_a["id"])["message_type"],
+            "template",
+        )
+        with self.assertRaises(ValueError):
+            whatsapp.queue_template(
+                "34600999888",
+                config.WHATSAPP_TEMPLATE_DAILY_SUMMARY,
+                ["Otro resumen"],
+                business_id=business_b["id"],
+                idempotency_key=f"daily:2026-06-30:{business_a['id']}",
+            )
 
     def test_nlu_understands_tomorrow_morning_and_vat_included(self):
         parsed = nlu.parse_date("mañana por la mañana")

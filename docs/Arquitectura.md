@@ -26,6 +26,10 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   fallback.
 - `migrations.py` — esquema versionado con subida/bajada; Railway lo aplica en
   pre-deploy.
+- `web/whatsapp.py` — entrada idempotente y cola durable de salida. Persiste antes
+  de enviar, reintenta con backoff y aplica estados `sent/delivered/read` de Meta.
+- `web/scheduler.py` — genera los proactivos con plantillas aprobadas y ejecuta el
+  worker de la cola cada 15 segundos.
 - `db.py` también persiste eventos de producto y calcula el recorrido de activación
   por negocio sin depender de una plataforma analítica externa.
 - `adapters/invoicing.py` — facturación: mock hoy → Holded mañana. Ver [[Fiscalidad]].
@@ -43,10 +47,14 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   negocio/año y los datos fiscales quedan congelados en la factura.
 - Facturas emitidas no se borran ni se renumeran. Los borrados RGPD conservan los
   documentos sujetos a obligación fiscal.
-- Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs.
+- Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs. Los eventos
+  de estado de WhatsApp reutilizan `webhook_events`, por lo que una entrega repetida
+  no vuelve a producir efectos.
 - Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
-- El scheduler registra cada ejecución para evitar duplicados entre réplicas.
+- El scheduler registra cada ejecución para evitar duplicados entre réplicas. La
+  outbox de WhatsApp usa claves idempotentes y `FOR UPDATE SKIP LOCKED` en Postgres
+  para que varias réplicas no envíen la misma fila.
 - `/health` comprueba que el proceso responde y `/ready` que la versión de esquema
   esperada está aplicada y la base de datos disponible.
 - Los eventos de producto se almacenan siempre con `business_id`. La activación se

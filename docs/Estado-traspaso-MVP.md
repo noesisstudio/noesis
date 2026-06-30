@@ -32,7 +32,8 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
   recordatorios, NLU flexible, módulo `documents/` ("papeles": recibos/tickets + OCR
   opcional) y datos fiscales del cliente.
 
-**Pruebas:** 40/40 en `tests/test_backend.py` (SQLite local).
+**Pruebas:** 50/50 en `tests/test_backend.py` (SQLite local, rama
+`codex/whatsapp-fiable`).
 
 ---
 
@@ -46,7 +47,7 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 | `src/noesis/nlu.py` | Cerebro local por reglas (gratis, sin API): resuelve los comandos frecuentes. |
 | `src/noesis/web/chat.py` | Orquestador híbrido: intenta NLU local → si no, agente IA. Aquí vive el copiloto (plan diario, sin-facturar, ledger). |
 | `src/noesis/tools.py` | Acciones que el agente sabe ejecutar (agendar, facturar, cobrar, consultar…). |
-| `src/noesis/web/whatsapp.py` | Webhook + enrutado de mensajes/audios de WhatsApp; vinculación por código. |
+| `src/noesis/web/whatsapp.py` | Webhook de mensajes/estados + outbox durable, reintentos y vinculación por código. |
 | `src/noesis/web/server.py` | App FastAPI: ~70 rutas (páginas, API, onboarding, webhooks). |
 | `src/noesis/web/invoice_pdf.py` | PDF de factura con marca (plantillas + logo/monograma). |
 | `src/noesis/documents/` | Módulo de "papeles" (Codex): subir/guardar/leer documentos. |
@@ -92,6 +93,9 @@ Copia `.env.example` a `.env` (y en Railway, ponlo como variables de entorno). C
    código ya está listo en `whatsapp.py`.
 4. El pipeline de **audio ya está cableado**: entra nota de voz → `_audio_to_text`
    (Whisper) → `chat.handle` → NLU/agente → ejecuta la acción.
+5. Antes de activar proactivos, crea y aprueba en Meta las cuatro plantillas cuyo
+   nombre se configura con `WHATSAPP_TEMPLATE_*`. Resúmenes y avisos programados no
+   usan texto libre.
 
 ---
 
@@ -115,8 +119,9 @@ construir más features.
 ### P1 — Para fiarse con varios clientes (1–3 semanas)
 5. **Postgres**: implementación terminada en `codex/postgres`, pendiente de revisión
    y activación en Railway. No se ha tocado la SQLite ni la BD de producción.
-6. **WhatsApp fiable:** cola durable + reintentos + plantillas aprobadas por Meta +
-   estado de entrega. El scheduler actual sirve para piloto, no para producción seria.
+6. **WhatsApp fiable:** implementado en `codex/whatsapp-fiable`, pendiente de
+   revisión y de aprobar/configurar las plantillas reales en Meta. Incluye cola
+   durable, backoff, estados `sent/delivered/read` e idempotencia de webhooks.
 7. **Verifactu real (Holded)** en cuanto un cliente facture oficialmente.
 8. **Emails transaccionales** (SMTP real) y **copias de seguridad verificadas** (probar
    una restauración, no solo que se hagan).
@@ -151,6 +156,8 @@ construir más features.
    `_MIGRATIONS`. Hecho cuando: el esquema se versiona y se puede subir/bajar.
 
 3. **WhatsApp fiable (producción, no piloto).**
+   - Implementado en `codex/whatsapp-fiable`, basado en `codex/postgres`; pendiente
+     de PR/revisión y configuración de las plantillas en Meta.
    - Cola durable de salida + reintentos con backoff + registro del estado de entrega
      (sent/delivered/read) usando los webhooks de estado de Meta.
    - Plantillas aprobadas por Meta para los mensajes proactivos (resúmenes, avisos de
