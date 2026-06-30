@@ -14,26 +14,10 @@
 </div>
 
 <div class="grid g4">
-  <div class="metric">
-    <div class="label">Gasto del mes</div>
-    <div class="value red" id="c-month">—</div>
-    <div class="sub" id="c-count"></div>
-  </div>
-  <div class="metric">
-    <div class="label">% sobre ingresos</div>
-    <div class="value" id="c-ratio">—</div>
-    <div class="sub">Cuánto de lo que facturas se va en gastos</div>
-  </div>
-  <div class="metric">
-    <div class="label">Ticket medio de gasto</div>
-    <div class="value" id="c-avg">—</div>
-    <div class="sub">Importe medio por gasto</div>
-  </div>
-  <div class="metric">
-    <div class="label">Mayor categoría</div>
-    <div class="value" id="c-top" style="font-size:20px">—</div>
-    <div class="sub" id="c-top-val"></div>
-  </div>
+  <div class="stat"><div class="lbl">Gasto del mes</div><div class="val red" id="c-month">—</div><div class="delta flat" id="c-count"></div></div>
+  <div class="stat"><div class="lbl">% sobre ingresos</div><div class="val" id="c-ratio">—</div><div class="delta flat">de lo facturado se va en gastos</div></div>
+  <div class="stat"><div class="lbl">Ticket medio de gasto</div><div class="val" id="c-avg">—</div><div class="delta flat">importe medio por gasto</div></div>
+  <div class="stat"><div class="lbl">Mayor categoría</div><div class="val" id="c-top" style="font-size:18px">—</div><div class="delta flat" id="c-top-val"></div></div>
 </div>
 
 <div class="grid g3" style="margin-top:16px">
@@ -90,7 +74,7 @@ async function load() {
   el('c-month').textContent = eur(s.expenses);
   const ratio = s.invoiced ? Math.round(s.expenses / s.invoiced * 100) : 0;
   el('c-ratio').textContent = ratio + '%';
-  el('c-ratio').className = 'value ' + (ratio > 65 ? 'red' : ratio > 45 ? 'amber' : 'green');
+  el('c-ratio').className = 'val ' + (ratio > 65 ? 'red' : ratio > 45 ? 'amber' : 'green');
 
   const ex = await api('/expenses');
   el('c-count').textContent = ex.length + ' gasto(s) este mes';

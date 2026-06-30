@@ -546,6 +546,9 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
   color: var(--faint); font-weight: 600; }
 .stat .val { font-size: 25px; font-weight: 750; letter-spacing: -.02em; margin-top: 7px;
   font-variant-numeric: tabular-nums; }
+.stat .val.green { color: var(--green); }
+.stat .val.red { color: var(--red); }
+.stat .val.amber { color: var(--amber); }
 .stat .delta { font-size: 12px; font-weight: 650; margin-top: 6px; display:inline-flex;
   align-items:center; gap:5px; }
 .delta.up { color: var(--green); } .delta.down { color: var(--red); }

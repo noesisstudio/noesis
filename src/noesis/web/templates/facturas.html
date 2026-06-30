@@ -13,10 +13,11 @@
   </div>
 </div>
 
-<div class="grid g3">
-  <div class="metric"><div class="label">Total emitido</div><div class="value" id="f-total">—</div><div class="sub" id="f-issued-n"></div></div>
-  <div class="metric"><div class="label">Cobradas</div><div class="value green" id="f-paid">—</div><div class="sub" id="f-paid-pct"></div></div>
-  <div class="metric"><div class="label">Pendientes</div><div class="value amber" id="f-pend">—</div><div class="sub">Enviadas y aún no cobradas</div></div>
+<div class="grid g4">
+  <div class="stat"><div class="lbl">Total emitido</div><div class="val" id="f-total">—</div><div class="delta flat" id="f-issued-n"></div></div>
+  <div class="stat"><div class="lbl">Cobradas</div><div class="val green" id="f-paid">—</div><div class="delta up" id="f-paid-pct"></div></div>
+  <div class="stat"><div class="lbl">Pendientes</div><div class="val amber" id="f-pend">—</div><div class="delta flat">enviadas, aún sin cobrar</div></div>
+  <div class="stat"><div class="lbl">Borradores</div><div class="val" id="f-draft">—</div><div class="delta flat">por revisar y emitir</div></div>
 </div>
 
 <div class="card" style="margin-top:16px">
@@ -60,6 +61,7 @@ async function load() {
   el('f-paid').textContent = eur(paid.reduce((a,b)=>a+b.total,0));
   el('f-paid-pct').textContent = emit.length ? pct(paid.length / emit.length * 100) + ' de facturas' : '';
   el('f-pend').textContent = eur(ALL.filter(i=>i.status==='enviada').reduce((a,b)=>a+b.total,0));
+  el('f-draft').textContent = ALL.filter(i=>i.status==='borrador').length;
   render('todas');
 }
 function badge(s){ return s==='cobrada'?'b-green':s==='enviada'?'b-amber':'b-gray'; }

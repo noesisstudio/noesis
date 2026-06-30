@@ -14,26 +14,10 @@
 </div>
 
 <div class="grid g4">
-  <div class="metric feature">
-    <div class="label">Beneficio neto</div>
-    <div class="value" id="k-profit">—</div>
-    <div class="sub" id="k-margin-sub">Ingresos menos gastos (histórico)</div>
-  </div>
-  <div class="metric">
-    <div class="label">Margen neto <span class="dot-help" title="Beneficio sobre lo facturado">?</span></div>
-    <div class="value" id="k-margin">—</div>
-    <div class="sub">Cuánto te queda de cada euro facturado</div>
-  </div>
-  <div class="metric">
-    <div class="label">Solvencia operativa</div>
-    <div class="value" id="k-solv">—</div>
-    <div class="sub">Veces que la caja cobrada cubre tus gastos</div>
-  </div>
-  <div class="metric">
-    <div class="label">Días de cobro (DSO)</div>
-    <div class="value" id="k-dso">—</div>
-    <div class="sub">Lo que tardas de media en cobrar</div>
-  </div>
+  <div class="stat"><div class="lbl">Beneficio neto</div><div class="val" id="k-profit">—</div><div class="delta flat" id="k-margin-sub">ingresos menos gastos (histórico)</div></div>
+  <div class="stat"><div class="lbl">Margen neto <span class="dot-help" title="Beneficio sobre lo facturado">?</span></div><div class="val" id="k-margin">—</div><div class="delta flat">de cada euro facturado</div></div>
+  <div class="stat"><div class="lbl">Solvencia operativa</div><div class="val" id="k-solv">—</div><div class="delta flat">la caja cobrada cubre gastos</div></div>
+  <div class="stat"><div class="lbl">Días de cobro (DSO)</div><div class="val" id="k-dso">—</div><div class="delta flat">lo que tardas de media</div></div>
 </div>
 
 <div class="split" style="margin-top:16px">
@@ -106,9 +90,9 @@ async function load() {
 
   // Color de KPIs según salud.
   const mB = band(a.margen_pct, 25, 10);
-  el('k-margin').className = 'value ' + (mB==='good'?'green':mB==='bad'?'red':'amber');
+  el('k-margin').className = 'val ' + (mB==='good'?'green':mB==='bad'?'red':'amber');
   const dB = band(a.dso, 15, 45, true);
-  el('k-dso').className = 'value ' + (dB==='good'?'green':dB==='bad'?'red':'amber');
+  el('k-dso').className = 'val ' + (dB==='good'?'green':dB==='bad'?'red':'amber');
 
   // Gráfico ingresos/gastos/beneficio.
   const s = a.series;
