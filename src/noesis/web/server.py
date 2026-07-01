@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import hashlib
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
@@ -138,7 +139,11 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "camera=(), geolocation=(), payment=()"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), geolocation=(self), payment=()"
+        if request.url.path.startswith("/t/")
+        else "camera=(), geolocation=(), payment=()"
+    )
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; img-src 'self' data:; font-src 'self'; "
         "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
@@ -149,8 +154,10 @@ async def security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-    if request.url.path.startswith(("/b/", "/api/", "/admin")):
+    if request.url.path.startswith(("/b/", "/api/", "/admin", "/t/")):
         response.headers["Cache-Control"] = "no-store"
+    if request.url.path.startswith("/t/"):
+        response.headers["Referrer-Policy"] = "no-referrer"
     return response
 
 
@@ -211,7 +218,8 @@ _PAGES = {
     "resumen": "Resumen", "tesoreria": "Tesorería", "analisis": "Análisis",
     "ingresos": "Ingresos", "costes": "Costes", "presupuestos": "Presupuestos",
     "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
-    "agenda": "Agenda", "clientes": "Clientes", "documentos": "Documentos",
+    "agenda": "Agenda", "equipo": "Equipo", "clientes": "Clientes",
+    "documentos": "Documentos",
     "asistente": "Asistente", "ajustes": "Ajustes",
 }
 
@@ -344,6 +352,114 @@ def portal_invoice_pdf(token: str, invoice_id: int):
     name = f"factura_{inv.get('number') or invoice_id}.pdf"
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{name}"'})
+
+
+# ======================================================== PORTAL DE FICHAJE === #
+def _worker_token_verified(request: Request, token: str) -> bool:
+    expected = hashlib.sha256(token.encode()).hexdigest()
+    return request.session.get("worker_token_hash") == expected
+
+
+def _worker_portal_context(request: Request, token: str) -> dict:
+    ref = db.resolve_worker_token(token)
+    if not ref:
+        return {"token": token, "data": None}
+    worker = ref["worker"]
+    business = ref["business"]
+    pin_required = bool(worker.get("pin_hash"))
+    unlocked = not pin_required or _worker_token_verified(request, token)
+    safe_worker = {
+        key: worker.get(key)
+        for key in ("id", "name", "color", "business_id", "has_pin")
+    }
+    initials = "".join(
+        part[0].upper() for part in (business.get("name") or "N").split()[:2]
+    )
+    data = {
+        "worker": safe_worker,
+        "business": {
+            "name": business.get("name"),
+            "brand_color": db.business_brand_color(business),
+            "initials": initials or "N",
+        },
+        "pin_required": pin_required,
+        "unlocked": unlocked,
+        "jobs": (
+            db.jobs_for_worker(worker["id"], business["id"], date.today().isoformat())
+            if unlocked else []
+        ),
+        "open_shift": (
+            db.worker_open_shift(worker["id"], business["id"]) if unlocked else None
+        ),
+    }
+    return {"token": token, "data": data}
+
+
+@app.get("/t/{token}", response_class=HTMLResponse)
+def worker_portal(request: Request, token: str):
+    context = _worker_portal_context(request, token)
+    return TEMPLATES.TemplateResponse(
+        request,
+        "fichaje.html",
+        context,
+        status_code=200 if context["data"] else 404,
+    )
+
+
+@app.post("/t/{token}/pin")
+async def worker_portal_pin(request: Request, token: str):
+    ref = db.resolve_worker_token(token)
+    if not ref:
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    worker = ref["worker"]
+    if not worker.get("pin_hash"):
+        request.session["worker_token_hash"] = hashlib.sha256(token.encode()).hexdigest()
+        return {"ok": True}
+    key = f"worker-pin:{worker['id']}:{auth.client_ip(request)}"
+    if auth.is_rate_limited(key):
+        return JSONResponse(
+            {"error": "Demasiados intentos. Espera unos minutos."}, status_code=429
+        )
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if not auth.verify_password(str(body.get("pin") or ""), worker["pin_hash"]):
+        auth.record_failed_attempt(key)
+        return JSONResponse({"error": "PIN incorrecto."}, status_code=401)
+    auth.clear_attempts(key)
+    request.session["worker_token_hash"] = hashlib.sha256(token.encode()).hexdigest()
+    return {"ok": True}
+
+
+@app.post("/t/{token}/clock")
+async def worker_portal_clock(request: Request, token: str):
+    ref = db.resolve_worker_token(token)
+    if not ref:
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    worker = ref["worker"]
+    if worker.get("pin_hash") and not _worker_token_verified(request, token):
+        return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
+    try:
+        body = await _read_json(request)
+        job_id = body.get("job_id")
+        if job_id in ("", None):
+            job_id = None
+        else:
+            job_id = int(job_id)
+        clockin = db.clock_worker(
+            ref["business"]["id"],
+            worker["id"],
+            str(body.get("action") or ""),
+            "web",
+            job_id=job_id,
+            lat=body.get("lat"),
+            lng=body.get("lng"),
+            accuracy=body.get("accuracy"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "clockin": clockin}
 
 
 # ================================================================ AUTH ====== #
@@ -518,6 +634,152 @@ def api_portal_link(business_id: int, client_id: int):
     if not token:
         return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)
     return {"url": f"{config.BASE_URL}/p/{token}", "path": f"/p/{token}"}
+
+
+def _worker_json(worker: dict) -> dict:
+    return {
+        key: value for key, value in worker.items()
+        if key not in {"pin_hash", "phone_norm"}
+    }
+
+
+@app.get("/api/{business_id}/workers")
+def api_workers(business_id: int):
+    return db.clockins_today(business_id)
+
+
+@app.post("/api/{business_id}/workers")
+async def api_create_worker(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+        worker = db.create_worker(
+            business_id,
+            body.get("name"),
+            phone=body.get("phone"),
+            color=body.get("color"),
+            pin=body.get("pin"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return _worker_json(worker)
+
+
+@app.post("/api/{business_id}/workers/{worker_id}")
+async def api_update_worker(
+    business_id: int, worker_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        worker = db.update_worker(
+            worker_id,
+            business_id,
+            name=body.get("name") if "name" in body else None,
+            phone=body.get("phone") if "phone" in body else None,
+            color=body.get("color") if "color" in body else None,
+        )
+        if worker is not None and "pin" in body:
+            worker = db.set_worker_pin(
+                worker_id, business_id, body.get("pin")
+            )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if worker is None:
+        return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
+    return _worker_json(worker)
+
+
+@app.post("/api/{business_id}/workers/{worker_id}/active")
+async def api_worker_active(
+    business_id: int, worker_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if not isinstance(body.get("active"), bool):
+        return JSONResponse({"error": "El estado activo no es válido."}, status_code=400)
+    worker = db.set_worker_active(worker_id, business_id, body["active"])
+    if worker is None:
+        return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
+    return _worker_json(worker)
+
+
+@app.post("/api/{business_id}/jobs/{job_id}/assign")
+async def api_assign_job_worker(
+    business_id: int, job_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        worker_id = body.get("worker_id")
+        if worker_id in ("", None):
+            worker_id = None
+        else:
+            worker_id = int(worker_id)
+        job = db.assign_job_worker(job_id, worker_id, business_id)
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if job is None:
+        return JSONResponse({"error": "Trabajo no encontrado."}, status_code=404)
+    return job
+
+
+@app.post("/api/{business_id}/workers/{worker_id}/send-day")
+def api_send_worker_day(business_id: int, worker_id: int):
+    worker = db.get_worker(worker_id, business_id)
+    if not worker or not worker.get("active"):
+        return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
+    if not worker.get("phone"):
+        return JSONResponse(
+            {"error": "Añade o vincula el teléfono del trabajador primero."},
+            status_code=400,
+        )
+    today = date.today().isoformat()
+    jobs = db.jobs_for_worker(worker_id, business_id, today)
+    if jobs:
+        lines = []
+        for job in jobs:
+            hour = str(job.get("scheduled_for") or "")[11:16] or "Sin hora"
+            place = job.get("client_zone") or job.get("zone") or ""
+            suffix = f" · {place}" if place else ""
+            lines.append(
+                f"• {hour} — {job.get('client_name') or 'Cliente'}: "
+                f"{job.get('description') or 'Trabajo'}{suffix}"
+            )
+        body = (
+            f"Hola, {worker['name']}. Tu planning de hoy:\n"
+            + "\n".join(lines)
+        )
+    else:
+        body = f"Hola, {worker['name']}. Hoy no tienes trabajos asignados."
+    target_phone = "".join(
+        character for character in worker["phone"] if character.isdigit()
+    )
+    if len(target_phone) == 9:
+        target_phone = "34" + target_phone
+    message = whatsapp.queue_text(
+        target_phone,
+        body,
+        business_id=business_id,
+        idempotency_key=f"worker-day:{business_id}:{worker_id}:{today}",
+    )
+    return {"ok": True, "message_id": message["id"], "status": message["status"]}
+
+
+@app.get("/api/{business_id}/workers/{worker_id}/link")
+def api_worker_link(business_id: int, worker_id: int):
+    worker = db.get_worker(worker_id, business_id)
+    if not worker or not worker.get("active"):
+        return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
+    token = db.get_or_create_worker_token(business_id, worker_id)
+    if not token:
+        return JSONResponse({"error": "No se pudo crear el enlace."}, status_code=400)
+    command = f"NOESIS EQUIPO {business_id} {worker['access_code']}"
+    return {
+        "url": f"{config.BASE_URL}/t/{token}",
+        "path": f"/t/{token}",
+        "access_code": worker["access_code"],
+        "whatsapp_command": command,
+    }
 
 
 @app.get("/api/{business_id}/invoices")

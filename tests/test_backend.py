@@ -611,5 +611,254 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(revoked.headers["location"], "/login")
 
 
+class WorkerDataTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def test_workers_assignment_and_tenant_isolation(self):
+        business_a, client_a = self.make_business("Equipo A")
+        business_b, client_b = self.make_business("Equipo B")
+        worker_a = db.create_worker(
+            business_a["id"], "Ana", phone="600 111 222", color="#14463b"
+        )
+        worker_b = db.create_worker(
+            business_b["id"], "Bruno", phone="600 333 444"
+        )
+        job_a = db.add_job(
+            client_a["id"], "Trabajo A", business_id=business_a["id"]
+        )
+        job_b = db.add_job(
+            client_b["id"], "Trabajo B", business_id=business_b["id"]
+        )
+
+        self.assertEqual(
+            [worker["id"] for worker in db.list_workers(business_a["id"])],
+            [worker_a["id"]],
+        )
+        self.assertIsNone(
+            db.update_worker(worker_b["id"], business_a["id"], name="Cruce")
+        )
+        updated = db.update_worker(
+            worker_a["id"], business_a["id"], name="Ana Ruiz"
+        )
+        self.assertEqual(updated["name"], "Ana Ruiz")
+        self.assertFalse(
+            db.set_worker_active(
+                worker_a["id"], business_a["id"], False
+            )["active"]
+        )
+        self.assertTrue(
+            db.set_worker_active(
+                worker_a["id"], business_a["id"], True
+            )["active"]
+        )
+        assigned = db.assign_job_worker(
+            job_a["id"], worker_a["id"], business_a["id"]
+        )
+        self.assertEqual(assigned["worker_id"], worker_a["id"])
+        self.assertEqual(assigned["worker_name"], "Ana Ruiz")
+        self.assertIsNone(
+            db.assign_job_worker(job_b["id"], worker_a["id"], business_a["id"])
+        )
+        with self.assertRaises(ValueError):
+            db.assign_job_worker(
+                job_a["id"], worker_b["id"], business_a["id"]
+            )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE jobs SET worker_id=? WHERE id=? AND business_id=?",
+                    (worker_b["id"], job_a["id"], business_a["id"]),
+                )
+
+    def test_clocking_gps_rules_tokens_and_phone_binding(self):
+        business, client = self.make_business("Fichajes")
+        worker = db.create_worker(business["id"], "Lucía", pin="2468")
+        other = db.create_worker(business["id"], "Mario")
+        job = db.add_job(
+            client["id"], "Instalación", business_id=business["id"]
+        )
+        db.assign_job_worker(job["id"], worker["id"], business["id"])
+
+        bound = db.bind_worker_phone(
+            business["id"], worker["access_code"], "+34 611 222 333"
+        )
+        self.assertEqual(bound["phone_norm"], "611222333")
+        self.assertEqual(db.get_worker_by_phone("611 222 333")["id"], worker["id"])
+
+        token = db.get_or_create_worker_token(business["id"], worker["id"])
+        resolved = db.resolve_worker_token(token)
+        self.assertEqual(resolved["worker"]["id"], worker["id"])
+        self.assertEqual(resolved["business"]["id"], business["id"])
+
+        entered = db.clock_worker(
+            business["id"], worker["id"], "entrada", "web",
+            job_id=job["id"], lat=41.3874, lng=2.1686, accuracy=12,
+        )
+        self.assertEqual(entered["lat"], 41.3874)
+        with self.assertRaises(ValueError):
+            db.clock_worker(
+                business["id"], worker["id"], "entrada", "web"
+            )
+        with self.assertRaises(ValueError):
+            db.clock_worker(
+                business["id"], other["id"], "entrada", "web",
+                job_id=job["id"],
+            )
+        exited = db.clock_worker(
+            business["id"], worker["id"], "salida", "web"
+        )
+        self.assertIsNone(exited["lat"])
+        with self.assertRaises(ValueError):
+            db.clock_worker(
+                business["id"], worker["id"], "entrada", "web", lat=91, lng=0
+            )
+        summary = {
+            item["id"]: item for item in db.clockins_today(business["id"])
+        }
+        self.assertEqual(summary[worker["id"]]["last_action"], "salida")
+        self.assertEqual(summary[worker["id"]]["last_location"]["lng"], 2.1686)
+
+
+class WorkerPortalHttpTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def _job_for(self, business, client, worker, description="Servicio"):
+        job = db.add_job(
+            client["id"], description,
+            scheduled_for=f"{date.today().isoformat()}T09:00",
+            business_id=business["id"],
+        )
+        db.assign_job_worker(job["id"], worker["id"], business["id"])
+        return job
+
+    def test_worker_token_clocks_only_its_worker_with_optional_gps(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business_a, client_a = self.make_business("Portal Equipo A")
+        business_b, client_b = self.make_business("Portal Equipo B")
+        worker_a = db.create_worker(business_a["id"], "Ana")
+        worker_b = db.create_worker(business_b["id"], "Bruno")
+        job_a = self._job_for(business_a, client_a, worker_a, "Trabajo propio")
+        job_b = self._job_for(business_b, client_b, worker_b, "Trabajo ajeno")
+        token = db.get_or_create_worker_token(business_a["id"], worker_a["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                page = client.get(f"/t/{token}")
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("Al fichar se guarda tu ubicación", page.text)
+                self.assertIn("Trabajo propio", page.text)
+                self.assertNotIn("Trabajo ajeno", page.text)
+
+                blocked = client.post(
+                    f"/t/{token}/clock",
+                    json={"action": "entrada", "job_id": job_b["id"]},
+                )
+                self.assertEqual(blocked.status_code, 400)
+
+                entered = client.post(
+                    f"/t/{token}/clock",
+                    json={
+                        "action": "entrada", "job_id": job_a["id"],
+                        "lat": 40.4168, "lng": -3.7038, "accuracy": 9,
+                    },
+                )
+                self.assertEqual(entered.status_code, 200)
+                exited = client.post(
+                    f"/t/{token}/clock", json={"action": "salida"}
+                )
+                self.assertEqual(exited.status_code, 200)
+
+        with db.get_conn() as conn:
+            rows_a = conn.execute(
+                "SELECT * FROM worker_clockins WHERE business_id=? AND worker_id=? "
+                "ORDER BY id",
+                (business_a["id"], worker_a["id"]),
+            ).fetchall()
+            rows_b = conn.execute(
+                "SELECT * FROM worker_clockins WHERE business_id=?",
+                (business_b["id"],),
+            ).fetchall()
+        self.assertEqual(len(rows_a), 2)
+        self.assertEqual(rows_a[0]["lat"], 40.4168)
+        self.assertIsNone(rows_a[1]["lat"])
+        self.assertEqual(rows_b, [])
+
+    def test_worker_pin_and_durable_send_day(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client_record = self.make_business("Empresa PIN")
+        other_business, _ = self.make_business("Empresa ajena")
+        other_worker = db.create_worker(other_business["id"], "Ajeno")
+        worker = db.create_worker(
+            business["id"], "Sara", phone="+34 622 333 444", pin="1357"
+        )
+        self._job_for(business, client_record, worker, "Revisión")
+        token = db.get_or_create_worker_token(business["id"], worker["id"])
+        db.create_user(
+            "equipo@example.com", auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                locked = client.post(
+                    f"/t/{token}/clock", json={"action": "entrada"}
+                )
+                self.assertEqual(locked.status_code, 403)
+                self.assertEqual(
+                    client.post(f"/t/{token}/pin", json={"pin": "0000"}).status_code,
+                    401,
+                )
+                self.assertEqual(
+                    client.post(f"/t/{token}/pin", json={"pin": "1357"}).status_code,
+                    200,
+                )
+                self.assertEqual(
+                    client.post(
+                        f"/t/{token}/clock", json={"action": "entrada"}
+                    ).status_code,
+                    200,
+                )
+
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": "equipo@example.com",
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                self.assertEqual(
+                    client.get(
+                        f"/api/{other_business['id']}/workers"
+                    ).status_code,
+                    403,
+                )
+                self.assertEqual(
+                    client.get(
+                        f"/api/{business['id']}/workers/{other_worker['id']}/link"
+                    ).status_code,
+                    404,
+                )
+                queued = client.post(
+                    f"/api/{business['id']}/workers/{worker['id']}/send-day",
+                    json={},
+                )
+                self.assertEqual(queued.status_code, 200)
+
+        outbox = db.list_whatsapp_messages(business["id"])
+        self.assertEqual(len(outbox), 1)
+        self.assertEqual(outbox[0]["status"], "queued")
+        self.assertIn("Revisión", outbox[0]["text_body"])
+
+
 if __name__ == "__main__":
     unittest.main()

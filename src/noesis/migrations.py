@@ -267,6 +267,7 @@ LEGACY_COLUMNS = {
         "session_version": "INTEGER NOT NULL DEFAULT 0",
     },
     "clients": {"nif": "TEXT", "email": "TEXT"},
+    "jobs": {"worker_id": "INTEGER"},
     "invoices": {
         "last_reminder_at": "TEXT",
         "reminders_sent": "INTEGER NOT NULL DEFAULT 0",
@@ -328,6 +329,7 @@ INDEXES = (
     "ON businesses(whatsapp_phone_norm) WHERE whatsapp_phone_norm IS NOT NULL",
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_clients_business_id ON clients(business_id, id)",
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_invoices_business_id ON invoices(business_id, id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_jobs_business_id ON jobs(business_id, id)",
     "CREATE INDEX IF NOT EXISTS idx_portal_tokens_client ON portal_tokens(business_id, client_id)",
     "CREATE INDEX IF NOT EXISTS idx_copilot_recs_business "
     "ON copilot_recommendations(business_id, status)",
@@ -337,11 +339,18 @@ INDEXES = (
     "ON product_events(event_name, created_at)",
     "CREATE INDEX IF NOT EXISTS idx_documents_business ON documents(business_id)",
     "CREATE INDEX IF NOT EXISTS idx_documents_client ON documents(business_id, client_id)",
+    "CREATE INDEX IF NOT EXISTS idx_workers_business ON workers(business_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_workers_business_phone "
+    "ON workers(business_id, phone_norm) WHERE phone_norm IS NOT NULL",
+    "CREATE INDEX IF NOT EXISTS idx_jobs_worker ON jobs(business_id, worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_clockins_worker "
+    "ON worker_clockins(business_id, worker_id, at)",
 )
 
 
 SQLITE_TENANT_RELATIONS = (
     ("jobs", "client_id", "clients"),
+    ("jobs", "worker_id", "workers"),
     ("invoices", "client_id", "clients"),
     ("quotes", "client_id", "clients"),
     ("quotes", "invoice_id", "invoices"),
@@ -373,11 +382,15 @@ END;
 
 def _upgrade_tenant_integrity(conn) -> None:
     for statement in INDEXES:
-        conn.execute(statement)
+        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
+        if _table_exists(conn, table):
+            conn.execute(statement)
     # Las instalaciones SQLite heredadas no pueden añadir FKs con ALTER TABLE.
     # Estos triggers aplican la misma restricción a sus relaciones multiempresa.
     if conn.dialect == "sqlite":
         for table, column, parent in SQLITE_TENANT_RELATIONS:
+            if not _table_exists(conn, table) or not _table_exists(conn, parent):
+                continue
             for event in ("INSERT", "UPDATE"):
                 conn.executescript(
                     _sqlite_tenant_trigger(table, column, parent, event)
@@ -461,12 +474,141 @@ def _downgrade_panel_layout(conn) -> None:
         conn.execute("ALTER TABLE businesses DROP COLUMN IF EXISTS panel_layout")
 
 
+def _table_exists(conn, table: str) -> bool:
+    if conn.dialect == "sqlite":
+        row = conn.execute(
+            "SELECT 1 AS found FROM sqlite_master "
+            "WHERE type='table' AND name=?",
+            (table,),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT 1 AS found FROM information_schema.tables "
+            "WHERE table_schema='public' AND table_name=?",
+            (table,),
+        ).fetchone()
+    return bool(row)
+
+
+def _postgres_constraint_exists(conn, name: str) -> bool:
+    if conn.dialect != "postgres":
+        return False
+    row = conn.execute(
+        "SELECT 1 AS found FROM pg_constraint WHERE conname=?",
+        (name,),
+    ).fetchone()
+    return bool(row)
+
+
+def _upgrade_team_clockins(conn) -> None:
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS workers (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    name        TEXT NOT NULL,
+    phone       TEXT,
+    phone_norm  TEXT,
+    color       TEXT,
+    access_code TEXT NOT NULL,
+    pin_hash    TEXT,
+    active      {t["boolean"]} NOT NULL DEFAULT TRUE,
+    created_at  {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (business_id, access_code)
+);
+"""
+    )
+    if "worker_id" not in _column_names(conn, "jobs"):
+        conn.execute(f"ALTER TABLE jobs ADD COLUMN worker_id {t['ref']}")
+
+    # La FK compuesta de fichajes necesita una clave única por negocio en jobs.
+    for statement in INDEXES:
+        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
+        if _table_exists(conn, table):
+            conn.execute(statement)
+
+    if conn.dialect == "postgres" and not _postgres_constraint_exists(
+        conn, "jobs_worker_same_business"
+    ):
+        conn.execute(
+            "ALTER TABLE jobs ADD CONSTRAINT jobs_worker_same_business "
+            "FOREIGN KEY (business_id, worker_id) "
+            "REFERENCES workers(business_id, id)"
+        )
+
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS worker_clockins (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    worker_id   {t["ref"]} NOT NULL,
+    job_id      {t["ref"]},
+    action      TEXT NOT NULL CHECK (action IN ('entrada', 'salida')),
+    at          {t["timestamp"]} NOT NULL,
+    source      TEXT NOT NULL CHECK (source IN ('web', 'whatsapp')),
+    lat         {t["real"]},
+    lng         {t["real"]},
+    accuracy    {t["real"]},
+    created_at  {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id),
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS worker_tokens (
+    token       TEXT PRIMARY KEY,
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    worker_id   {t["ref"]} NOT NULL,
+    expires_at  {t["timestamp"]} NOT NULL,
+    revoked     {t["boolean"]} NOT NULL DEFAULT FALSE,
+    created_at  {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id)
+);
+"""
+    )
+    for statement in INDEXES:
+        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
+        if _table_exists(conn, table):
+            conn.execute(statement)
+
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger("jobs", "worker_id", "workers", event)
+            )
+
+
+def _downgrade_team_clockins(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.execute("UPDATE jobs SET worker_id=NULL")
+        conn.execute("DROP TRIGGER IF EXISTS jobs_worker_id_same_business_insert")
+        conn.execute("DROP TRIGGER IF EXISTS jobs_worker_id_same_business_update")
+    else:
+        conn.execute(
+            "ALTER TABLE jobs DROP CONSTRAINT IF EXISTS jobs_worker_same_business"
+        )
+    for name in (
+        "idx_clockins_worker", "idx_jobs_worker", "idx_workers_business",
+    ):
+        conn.execute(f"DROP INDEX IF EXISTS {name}")
+    conn.execute("DROP TABLE IF EXISTS worker_tokens")
+    conn.execute("DROP TABLE IF EXISTS worker_clockins")
+    conn.execute("DROP TABLE IF EXISTS workers")
+    if conn.dialect != "sqlite":
+        conn.execute("ALTER TABLE jobs DROP COLUMN IF EXISTS worker_id")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
     (3, "cola_whatsapp_durable", _upgrade_whatsapp_outbox, _downgrade_whatsapp_outbox),
     (4, "panel_personalizable", _upgrade_panel_layout, _downgrade_panel_layout),
+    (5, "equipo_fichaje", _upgrade_team_clockins, _downgrade_team_clockins),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

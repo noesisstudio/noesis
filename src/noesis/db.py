@@ -746,6 +746,243 @@ def delete_client(client_id, business_id) -> None:
                      (client_id, business_id))
 
 
+# ------------------------------------------------------------------ Equipo ---
+_WORKER_TOKEN_TTL_DAYS = 120
+_WORKER_DEFAULT_COLOR = "#2e8b74"
+
+
+def _worker_color(value: str | None) -> str:
+    color = (value or _WORKER_DEFAULT_COLOR).strip()
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+        raise ValueError("El color del trabajador no es válido.")
+    return color.lower()
+
+
+def _worker_phone(value: str | None) -> tuple[str | None, str | None]:
+    phone = (value or "").strip()
+    if not phone:
+        return None, None
+    norm = normalize_phone(phone)
+    if len(norm) != 9:
+        raise ValueError("El teléfono del trabajador debe tener 9 dígitos.")
+    return phone, norm
+
+
+def _worker_pin_hash(pin: str | None) -> str | None:
+    clean_pin = (pin or "").strip()
+    if clean_pin and (not clean_pin.isdigit() or not 4 <= len(clean_pin) <= 8):
+        raise ValueError("El PIN debe tener entre 4 y 8 números.")
+    if not clean_pin:
+        return None
+    from .web import auth
+    return auth.hash_password(clean_pin)
+
+
+def _worker_phone_in_use(
+    conn, business_id: int, phone_norm: str | None, exclude_id: int | None = None
+) -> bool:
+    if not phone_norm:
+        return False
+    extra = " AND id<>?" if exclude_id is not None else ""
+    params: list[Any] = [business_id, phone_norm]
+    if exclude_id is not None:
+        params.append(exclude_id)
+    return bool(conn.execute(
+        "SELECT 1 AS found FROM workers "
+        "WHERE business_id=? AND phone_norm=?" + extra,
+        tuple(params),
+    ).fetchone())
+
+
+def list_workers(business_id: int, *, include_inactive: bool = True) -> list[dict]:
+    where = "" if include_inactive else " AND active=TRUE"
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, business_id, name, phone, phone_norm, color, access_code, "
+            "active, created_at, CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END "
+            "AS has_pin FROM workers WHERE business_id=?" + where
+            + " ORDER BY active DESC, name",
+            (business_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_worker(worker_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT *, CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END AS has_pin "
+            "FROM workers WHERE id=? AND business_id=?",
+            (worker_id, business_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def _new_worker_access_code(conn, business_id: int) -> str:
+    for _ in range(20):
+        code = secrets.token_hex(3).upper()
+        exists = conn.execute(
+            "SELECT 1 AS found FROM workers "
+            "WHERE business_id=? AND access_code=?",
+            (business_id, code),
+        ).fetchone()
+        if not exists:
+            return code
+    raise RuntimeError("No se pudo generar un código de acceso único.")
+
+
+def create_worker(
+    business_id: int,
+    name: str,
+    phone: str | None = None,
+    color: str | None = None,
+    pin: str | None = None,
+) -> dict:
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("El nombre del trabajador es obligatorio.")
+    if not get_business(business_id):
+        raise ValueError("El negocio no existe.")
+    phone, phone_norm = _worker_phone(phone)
+    color = _worker_color(color)
+    pin_hash = _worker_pin_hash(pin)
+    with get_conn() as conn:
+        if _worker_phone_in_use(conn, business_id, phone_norm):
+            raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+        access_code = _new_worker_access_code(conn, business_id)
+        row = conn.execute(
+            "INSERT INTO workers "
+            "(business_id, name, phone, phone_norm, color, access_code, pin_hash, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (
+                business_id, name[:120], phone, phone_norm, color,
+                access_code, pin_hash, _now(),
+            ),
+        ).fetchone()
+        worker_id = row["id"]
+    return get_worker(worker_id, business_id)
+
+
+def update_worker(
+    worker_id: int,
+    business_id: int,
+    *,
+    name: str | None = None,
+    phone: str | None = None,
+    color: str | None = None,
+) -> dict | None:
+    if not get_worker(worker_id, business_id):
+        return None
+    fields: list[str] = []
+    params: list[Any] = []
+    if name is not None:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ValueError("El nombre del trabajador es obligatorio.")
+        fields.append("name=?")
+        params.append(clean_name[:120])
+    if phone is not None:
+        clean_phone, phone_norm = _worker_phone(phone)
+        fields.extend(("phone=?", "phone_norm=?"))
+        params.extend((clean_phone, phone_norm))
+    if color is not None:
+        fields.append("color=?")
+        params.append(_worker_color(color))
+    if fields:
+        params.extend((worker_id, business_id))
+        with get_conn() as conn:
+            if (
+                phone is not None
+                and _worker_phone_in_use(
+                    conn, business_id, phone_norm, exclude_id=worker_id
+                )
+            ):
+                raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+            conn.execute(
+                f"UPDATE workers SET {', '.join(fields)} "
+                "WHERE id=? AND business_id=?",
+                tuple(params),
+            )
+    return get_worker(worker_id, business_id)
+
+
+def set_worker_active(worker_id: int, business_id: int, active: bool) -> dict | None:
+    if not get_worker(worker_id, business_id):
+        return None
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE workers SET active=? WHERE id=? AND business_id=?",
+            (bool(active), worker_id, business_id),
+        )
+        if not active:
+            conn.execute(
+                "UPDATE worker_tokens SET revoked=TRUE "
+                "WHERE worker_id=? AND business_id=?",
+                (worker_id, business_id),
+            )
+    return get_worker(worker_id, business_id)
+
+
+def set_worker_pin(
+    worker_id: int, business_id: int, pin: str | None
+) -> dict | None:
+    if not get_worker(worker_id, business_id):
+        return None
+    pin_hash = _worker_pin_hash(pin)
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE workers SET pin_hash=? WHERE id=? AND business_id=?",
+            (pin_hash, worker_id, business_id),
+        )
+    return get_worker(worker_id, business_id)
+
+
+def bind_worker_phone(
+    business_id: int, access_code: str, phone: str
+) -> dict | None:
+    """Vincula el teléfono que escribe por WhatsApp al trabajador del código."""
+    clean_phone, phone_norm = _worker_phone(phone)
+    code = (access_code or "").strip().upper()
+    if not code:
+        return None
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        worker = conn.execute(
+            "SELECT id FROM workers WHERE business_id=? AND access_code=? "
+            "AND active=TRUE",
+            (business_id, code),
+        ).fetchone()
+        if not worker:
+            return None
+        duplicate = conn.execute(
+            "SELECT id FROM workers WHERE business_id=? AND phone_norm=? "
+            "AND id<>? AND active=TRUE",
+            (business_id, phone_norm, worker["id"]),
+        ).fetchone()
+        if duplicate:
+            raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+        conn.execute(
+            "UPDATE workers SET phone=?, phone_norm=? "
+            "WHERE id=? AND business_id=?",
+            (clean_phone, phone_norm, worker["id"], business_id),
+        )
+        worker_id = worker["id"]
+    return get_worker(worker_id, business_id)
+
+
+def get_worker_by_phone(phone: str) -> dict | None:
+    """Resuelve una identidad de trabajador solo si el teléfono no es ambiguo."""
+    phone_norm = normalize_phone(phone)
+    if len(phone_norm) != 9:
+        return None
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT *, CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END AS has_pin "
+            "FROM workers WHERE phone_norm=? AND active=TRUE ORDER BY id",
+            (phone_norm,),
+        ).fetchall()
+        return dict(rows[0]) if len(rows) == 1 else None
+
+
 # ------------------------------------------------------------------ Agenda ---
 def add_job(client_id, description, scheduled_for=None, zone=None,
             price_estimate=None, *, business_id: int) -> dict:
@@ -763,7 +1000,11 @@ def add_job(client_id, description, scheduled_for=None, zone=None,
 
 
 def get_job(job_id, business_id) -> dict | None:
-    sql = "SELECT * FROM jobs WHERE id=? AND business_id=?"
+    sql = (
+        "SELECT j.*, w.name AS worker_name, w.color AS worker_color "
+        "FROM jobs j LEFT JOIN workers w ON w.id=j.worker_id "
+        "AND w.business_id=j.business_id WHERE j.id=? AND j.business_id=?"
+    )
     params = [job_id, business_id]
     with get_conn() as conn:
         row = conn.execute(sql, params).fetchone()
@@ -778,6 +1019,11 @@ def update_job_status(job_id, status, business_id) -> None:
 
 def delete_job(job_id, business_id) -> None:
     with get_conn() as conn:
+        conn.execute(
+            "UPDATE worker_clockins SET job_id=NULL "
+            "WHERE job_id=? AND business_id=?",
+            (job_id, business_id),
+        )
         conn.execute("DELETE FROM jobs WHERE id=? AND business_id=?",
                      (job_id, business_id))
 
@@ -785,9 +1031,12 @@ def delete_job(job_id, business_id) -> None:
 def jobs_for_date(day: str, business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT j.*, c.name AS client_name, c.zone AS client_zone "
+            "SELECT j.*, c.name AS client_name, c.zone AS client_zone, "
+            "w.name AS worker_name, w.color AS worker_color "
             "FROM jobs j LEFT JOIN clients c ON c.id = j.client_id "
             "AND c.business_id = j.business_id "
+            "LEFT JOIN workers w ON w.id=j.worker_id "
+            "AND w.business_id=j.business_id "
             "WHERE j.business_id=? AND CAST(j.scheduled_for AS TEXT) LIKE ? "
             "ORDER BY j.scheduled_for",
             (business_id, f"{day}%"),
@@ -799,14 +1048,268 @@ def jobs_between(start: str, end: str, business_id) -> list[dict]:
     """Trabajos entre dos fechas ISO (para el calendario semanal)."""
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT j.*, c.name AS client_name FROM jobs j "
+            "SELECT j.*, c.name AS client_name, w.name AS worker_name, "
+            "w.color AS worker_color FROM jobs j "
             "LEFT JOIN clients c ON c.id = j.client_id "
             "AND c.business_id = j.business_id "
+            "LEFT JOIN workers w ON w.id=j.worker_id "
+            "AND w.business_id=j.business_id "
             "WHERE j.business_id=? AND j.scheduled_for >= ? AND j.scheduled_for <= ? "
             "ORDER BY j.scheduled_for",
             (business_id, start, end + "T23:59"),
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+def assign_job_worker(
+    job_id: int, worker_id: int | None, business_id: int
+) -> dict | None:
+    job = get_job(job_id, business_id)
+    if not job:
+        return None
+    if worker_id is not None:
+        worker = get_worker(worker_id, business_id)
+        if not worker or not worker.get("active"):
+            raise ValueError("El trabajador no pertenece a este negocio o está inactivo.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE jobs SET worker_id=? WHERE id=? AND business_id=?",
+            (worker_id, job_id, business_id),
+        )
+    return get_job(job_id, business_id)
+
+
+def jobs_for_worker(
+    worker_id: int, business_id: int, day: str | None = None
+) -> list[dict]:
+    if not get_worker(worker_id, business_id):
+        return []
+    day_filter = (
+        " AND CAST(j.scheduled_for AS TEXT) LIKE ?" if day is not None else ""
+    )
+    params: list[Any] = [business_id, worker_id]
+    if day is not None:
+        params.append(f"{day}%")
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT j.*, c.name AS client_name, c.address AS client_address, "
+            "c.zone AS client_zone, w.name AS worker_name, w.color AS worker_color "
+            "FROM jobs j "
+            "LEFT JOIN clients c ON c.id=j.client_id "
+            "AND c.business_id=j.business_id "
+            "JOIN workers w ON w.id=j.worker_id "
+            "AND w.business_id=j.business_id "
+            "WHERE j.business_id=? AND j.worker_id=?" + day_filter
+            + " ORDER BY j.scheduled_for",
+            tuple(params),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+# --------------------------------------------------------------- Fichajes ---
+def _gps_value(value, label: str, lower: float, upper: float) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} no es válido.") from exc
+    if not math.isfinite(number) or not lower <= number <= upper:
+        raise ValueError(f"{label} está fuera de rango.")
+    return number
+
+
+def worker_open_shift(worker_id: int, business_id: int) -> dict | None:
+    if not get_worker(worker_id, business_id):
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM worker_clockins WHERE business_id=? AND worker_id=? "
+            "ORDER BY at DESC, id DESC LIMIT 1",
+            (business_id, worker_id),
+        ).fetchone()
+        return dict(row) if row and row["action"] == "entrada" else None
+
+
+def clock_worker(
+    business_id: int,
+    worker_id: int,
+    action: str,
+    source: str,
+    job_id: int | None = None,
+    lat=None,
+    lng=None,
+    accuracy=None,
+) -> dict:
+    if action not in {"entrada", "salida"}:
+        raise ValueError("La acción de fichaje no es válida.")
+    if source not in {"web", "whatsapp"}:
+        raise ValueError("El origen del fichaje no es válido.")
+    worker = get_worker(worker_id, business_id)
+    if not worker or not worker.get("active"):
+        raise ValueError("El trabajador no está disponible.")
+    if job_id is not None:
+        job = get_job(job_id, business_id)
+        if not job or job.get("worker_id") != worker_id:
+            raise ValueError("Ese trabajo no está asignado al trabajador.")
+    lat = _gps_value(lat, "La latitud", -90, 90)
+    lng = _gps_value(lng, "La longitud", -180, 180)
+    accuracy = _gps_value(accuracy, "La precisión", 0, 100_000)
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        last = conn.execute(
+            "SELECT action FROM worker_clockins "
+            "WHERE business_id=? AND worker_id=? ORDER BY at DESC, id DESC LIMIT 1",
+            (business_id, worker_id),
+        ).fetchone()
+        last_action = last["action"] if last else None
+        if action == "entrada" and last_action == "entrada":
+            raise ValueError("Ya hay una entrada abierta.")
+        if action == "salida" and last_action != "entrada":
+            raise ValueError("No hay una entrada abierta para registrar la salida.")
+        row = conn.execute(
+            "INSERT INTO worker_clockins "
+            "(business_id, worker_id, job_id, action, at, source, lat, lng, "
+            "accuracy, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "RETURNING id",
+            (
+                business_id, worker_id, job_id, action, now, source, lat, lng,
+                accuracy, now,
+            ),
+        ).fetchone()
+        clockin_id = row["id"]
+    with get_conn() as conn:
+        result = conn.execute(
+            "SELECT * FROM worker_clockins "
+            "WHERE id=? AND business_id=? AND worker_id=?",
+            (clockin_id, business_id, worker_id),
+        ).fetchone()
+        return dict(result)
+
+
+def clockins_today(business_id: int) -> list[dict]:
+    today = date.today().isoformat()
+    now = datetime.now()
+    day_start = datetime.fromisoformat(today)
+    workers = list_workers(business_id)
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM worker_clockins WHERE business_id=? "
+            "AND CAST(at AS TEXT) LIKE ? ORDER BY worker_id, at, id",
+            (business_id, f"{today}%"),
+        ).fetchall()
+    by_worker: dict[int, list[dict]] = {}
+    for row in rows:
+        by_worker.setdefault(row["worker_id"], []).append(dict(row))
+    summaries: list[dict] = []
+    for worker in workers:
+        events = by_worker.get(worker["id"], [])
+        with get_conn() as conn:
+            prior_row = conn.execute(
+                "SELECT * FROM worker_clockins WHERE business_id=? AND worker_id=? "
+                "AND at<? ORDER BY at DESC, id DESC LIMIT 1",
+                (business_id, worker["id"], today),
+            ).fetchone()
+        prior = dict(prior_row) if prior_row else None
+        opened: datetime | None = (
+            day_start if prior and prior["action"] == "entrada" else None
+        )
+        seconds = 0.0
+        last_location = (
+            {
+                "lat": prior["lat"], "lng": prior["lng"],
+                "accuracy": prior.get("accuracy"), "at": prior["at"],
+            }
+            if opened is not None
+            and prior.get("lat") is not None and prior.get("lng") is not None
+            else None
+        )
+        for event in events:
+            point = datetime.fromisoformat(str(event["at"]))
+            if event["action"] == "entrada":
+                opened = point
+            elif opened is not None:
+                seconds += max(0.0, (point - opened).total_seconds())
+                opened = None
+            if event.get("lat") is not None and event.get("lng") is not None:
+                last_location = {
+                    "lat": event["lat"], "lng": event["lng"],
+                    "accuracy": event.get("accuracy"), "at": event["at"],
+                }
+        if opened is not None:
+            seconds += max(0.0, (now - opened).total_seconds())
+        last = events[-1] if events else (prior if opened is not None else None)
+        summaries.append({
+            **worker,
+            "hours_today": round(seconds / 3600, 2),
+            "hours": round(seconds / 3600, 2),
+            "last_action": last["action"] if last else None,
+            "last_clock_at": last["at"] if last else None,
+            "last_location": last_location,
+            "open_shift": bool(last and last["action"] == "entrada"),
+        })
+    return summaries
+
+
+# ------------------------------------------------ Enlace de cada trabajador ---
+def get_or_create_worker_token(
+    business_id: int,
+    worker_id: int,
+    ttl_days: int = _WORKER_TOKEN_TTL_DAYS,
+) -> str | None:
+    worker = get_worker(worker_id, business_id)
+    if not worker or not worker.get("active"):
+        return None
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT token FROM worker_tokens "
+            "WHERE business_id=? AND worker_id=? AND revoked=FALSE "
+            "AND expires_at>=? ORDER BY created_at DESC LIMIT 1",
+            (business_id, worker_id, now),
+        ).fetchone()
+        if row:
+            return row["token"]
+        token = secrets.token_urlsafe(24)
+        expires = (
+            datetime.now() + timedelta(days=ttl_days)
+        ).isoformat(timespec="seconds")
+        conn.execute(
+            "INSERT INTO worker_tokens "
+            "(token, business_id, worker_id, expires_at, revoked, created_at) "
+            "VALUES (?, ?, ?, ?, FALSE, ?)",
+            (token, business_id, worker_id, expires, now),
+        )
+        return token
+
+
+def resolve_worker_token(token: str) -> dict | None:
+    if not token:
+        return None
+    with get_conn() as conn:
+        ref = conn.execute(
+            "SELECT business_id, worker_id FROM worker_tokens "
+            "WHERE token=? AND revoked=FALSE AND expires_at>=?",
+            (token, _now()),
+        ).fetchone()
+    if not ref:
+        return None
+    worker = get_worker(ref["worker_id"], ref["business_id"])
+    business = get_business(ref["business_id"])
+    if not worker or not worker.get("active") or not business:
+        return None
+    return {"worker": worker, "business": business}
+
+
+def revoke_worker_tokens(worker_id: int, business_id: int) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE worker_tokens SET revoked=TRUE "
+            "WHERE worker_id=? AND business_id=?",
+            (worker_id, business_id),
+        )
 
 
 # Estados que indican que un trabajo ya se realizó.
@@ -1969,6 +2472,13 @@ def export_business_data(business_id) -> dict:
         "clients": list_clients(business_id),
         "jobs": [dict(r) for r in _rows(
             "SELECT * FROM jobs WHERE business_id=?", business_id)],
+        "workers": [dict(r) for r in _rows(
+            "SELECT id, business_id, name, phone, phone_norm, color, access_code, "
+            "active, created_at FROM workers WHERE business_id=? ORDER BY id",
+            business_id)],
+        "worker_clockins": [dict(r) for r in _rows(
+            "SELECT * FROM worker_clockins WHERE business_id=? ORDER BY at, id",
+            business_id)],
         "invoices": list_invoices(business_id),
         "quotes": list_quotes(business_id),
         "expenses": list_expenses(business_id),
@@ -2039,6 +2549,11 @@ def delete_client_cascade(client_id, business_id) -> bool:
             "AND status='borrador'",
             (business_id, client_id),
         )
+        conn.execute(
+            "UPDATE worker_clockins SET job_id=NULL WHERE business_id=? "
+            "AND job_id IN (SELECT id FROM jobs WHERE business_id=? AND client_id=?)",
+            (business_id, business_id, client_id),
+        )
         conn.execute("DELETE FROM jobs WHERE business_id=? AND client_id=?",
                      (business_id, client_id))
         if issued:
@@ -2073,8 +2588,9 @@ def delete_business_cascade(business_id) -> bool:
         from .documents import storage as _docstore
         _docstore.delete_business_dir(business_id)
         for table in (
-            "portal_tokens", "product_events", "copilot_recommendations",
-            "documents", "quotes", "invoices", "jobs", "clients", "expenses"
+            "worker_tokens", "worker_clockins", "portal_tokens", "product_events",
+            "copilot_recommendations", "documents", "quotes", "invoices",
+            "jobs", "workers", "clients", "expenses"
         ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% if data %}Fichaje · {{ data.business.name }}{% else %}Enlace no válido{% endif %} · Noesis</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body>
+<main class="clock-page">
+  <div class="clock-shell">
+    {% if not data %}
+      <header class="clock-head" style="background:var(--brand)">
+        <div class="clock-mark" style="color:var(--brand)">N</div>
+        <div><div class="kicker">Noesis</div><h1>Enlace no disponible</h1></div>
+      </header>
+      <div class="clock-card">
+        <div class="clock-message warn" style="display:block">Este enlace no es válido,
+          ha caducado o la persona ya no está activa. Pide uno nuevo a tu empresa.</div>
+      </div>
+    {% else %}
+      <header class="clock-head" style="background:{{ data.business.brand_color }}">
+        <div class="clock-mark" style="color:{{ data.business.brand_color }}">{{ data.business.initials }}</div>
+        <div>
+          <div class="kicker">{{ data.business.name }}</div>
+          <h1>Hola, {{ data.worker.name }}</h1>
+        </div>
+      </header>
+
+      {% if data.pin_required and not data.unlocked %}
+        <section class="clock-card">
+          <form class="clock-pin" id="pin-form">
+            <h2>Introduce tu PIN</h2>
+            <p>Confirma que eres tú antes de ver tu jornada y fichar.</p>
+            <label class="fld" for="worker-pin">PIN personal</label>
+            <input class="input" id="worker-pin" type="password" inputmode="numeric"
+              pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" required>
+            <button class="btn primary full" style="margin-top:12px" type="submit">Acceder</button>
+            <div class="clock-message" id="pin-message" role="status"></div>
+          </form>
+        </section>
+      {% else %}
+        <section class="clock-card">
+          <div class="clock-state">
+            <div>
+              <strong>{% if data.open_shift %}Jornada en curso{% else %}Jornada cerrada{% endif %}</strong>
+              <span>{% if data.open_shift %}Entrada a las {{ data.open_shift.at[11:16] }}
+                {% else %}Registra tu entrada cuando empieces{% endif %}</span>
+            </div>
+            {% if data.open_shift %}<span class="badge b-green">Dentro</span>
+            {% else %}<span class="badge b-gray">Fuera</span>{% endif %}
+          </div>
+          <div class="clock-actions">
+            <button class="btn primary" id="clock-in" type="button"
+              onclick="clock('entrada')" {% if data.open_shift %}disabled{% endif %}>Registrar entrada</button>
+            <button class="btn" id="clock-out" type="button"
+              onclick="clock('salida')" {% if not data.open_shift %}disabled{% endif %}>Registrar salida</button>
+          </div>
+          <div class="clock-message" id="clock-message" role="status"></div>
+        </section>
+
+        <section class="clock-card">
+          <div class="kicker">Trabajos de hoy</div>
+          {% if data.jobs %}
+            <label class="clock-job">
+              <input type="radio" name="job" value="" checked>
+              <b>Jornada general</b>
+              <small>Fichaje sin asociarlo a un trabajo concreto.</small>
+            </label>
+            {% for job in data.jobs %}
+              <label class="clock-job">
+                <input type="radio" name="job" value="{{ job.id }}">
+                <b>{{ job.scheduled_for[11:16] if job.scheduled_for and 'T' in job.scheduled_for else 'Sin hora' }}
+                  · {{ job.client_name or 'Cliente' }}</b>
+                <small>{{ job.description }}{% if job.client_zone or job.zone %}
+                  · {{ job.client_zone or job.zone }}{% endif %}</small>
+              </label>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No tienes trabajos asignados para hoy.</div>
+          {% endif %}
+        </section>
+
+        <div class="clock-privacy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="2"/><path d="M12 13v3"/></svg>
+          <span><b>Privacidad:</b> Al fichar se guarda tu ubicación en ese momento
+            para tu empresa. Es opcional y no hay rastreo continuo.</span>
+        </div>
+      {% endif %}
+    {% endif %}
+    <div class="clock-foot">Acceso personal protegido por Noesis</div>
+  </div>
+</main>
+
+{% if data %}
+<script>
+const tokenPath = {{ ('/t/' ~ token) | tojson }};
+const pinForm = document.getElementById('pin-form');
+if (pinForm) pinForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const message = document.getElementById('pin-message');
+  try {
+    const response = await fetch(`${tokenPath}/pin`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pin:document.getElementById('worker-pin').value})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'No se pudo validar el PIN.');
+    location.reload();
+  } catch (error) {
+    message.className = 'clock-message error';
+    message.textContent = error.message;
+  }
+});
+
+function selectedJob() {
+  const checked = document.querySelector('input[name="job"]:checked');
+  return checked && checked.value ? Number(checked.value) : null;
+}
+
+function locateOnce() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve({gps:null, denied:true});
+    navigator.geolocation.getCurrentPosition(
+      position => resolve({gps:{
+        lat:position.coords.latitude,
+        lng:position.coords.longitude,
+        accuracy:position.coords.accuracy
+      }, denied:false}),
+      () => resolve({gps:null, denied:true}),
+      {enableHighAccuracy:true, timeout:8000, maximumAge:0}
+    );
+  });
+}
+
+async function clock(action) {
+  const message = document.getElementById('clock-message');
+  const buttons = [document.getElementById('clock-in'), document.getElementById('clock-out')];
+  buttons.forEach(button => { if (button) button.disabled = true; });
+  message.className = 'clock-message warn';
+  message.textContent = 'Solicitando tu ubicación…';
+  const located = await locateOnce();
+  const body = {action, job_id:selectedJob(), ...(located.gps || {})};
+  try {
+    const response = await fetch(`${tokenPath}/clock`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'No se pudo registrar el fichaje.');
+    message.className = located.denied ? 'clock-message warn' : 'clock-message ok';
+    message.textContent = located.denied
+      ? 'Fichaje guardado sin ubicación porque no se pudo obtener el GPS.'
+      : 'Fichaje guardado con tu ubicación de este momento.';
+    setTimeout(() => location.reload(), 1400);
+  } catch (error) {
+    message.className = 'clock-message error';
+    message.textContent = error.message;
+    buttons.forEach(button => { if (button) button.disabled = false; });
+  }
+}
+</script>
+{% endif %}
+</body>
+</html>

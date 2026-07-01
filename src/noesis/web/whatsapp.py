@@ -74,6 +74,73 @@ def _try_link(from_phone: str, text: str) -> str | None:
     )
 
 
+def _try_worker_link(from_phone: str, text: str) -> dict | None:
+    """Liga ``NOESIS EQUIPO <negocio> <código>`` al teléfono remitente."""
+    parts = (text or "").strip().split()
+    if len(parts) != 4 or [part.upper() for part in parts[:2]] != [
+        "NOESIS", "EQUIPO"
+    ]:
+        return None
+    try:
+        business_id = int(parts[2])
+    except ValueError:
+        return {
+            "business_id": None,
+            "reply": "El código de equipo no es válido. Pide uno nuevo a tu empresa.",
+        }
+    try:
+        worker = db.bind_worker_phone(business_id, parts[3], from_phone)
+    except ValueError as exc:
+        return {"business_id": business_id, "reply": str(exc)}
+    if not worker:
+        return {
+            "business_id": business_id,
+            "reply": "Ese código de equipo no es válido. Pide uno nuevo a tu empresa.",
+        }
+    return {
+        "business_id": business_id,
+        "worker_id": worker["id"],
+        "reply": (
+            f"Hola, {worker['name']}. Tu WhatsApp ya está vinculado. "
+            "Escribe ENTRADA al empezar y SALIDA al terminar."
+        ),
+    }
+
+
+def _try_worker_clock(from_phone: str, text: str) -> dict | None:
+    worker = db.get_worker_by_phone(from_phone)
+    if not worker:
+        return None
+    action = (text or "").strip().lower()
+    if action not in {"entrada", "salida"}:
+        if db.get_business_by_phone(from_phone):
+            return None
+        return {
+            "business_id": worker["business_id"],
+            "worker_id": worker["id"],
+            "reply": "Para fichar escribe ENTRADA o SALIDA.",
+            "clocked": False,
+        }
+    try:
+        clockin = db.clock_worker(
+            worker["business_id"], worker["id"], action, "whatsapp"
+        )
+    except ValueError as exc:
+        return {
+            "business_id": worker["business_id"],
+            "worker_id": worker["id"],
+            "reply": str(exc),
+            "clocked": False,
+        }
+    hour = str(clockin["at"])[11:16]
+    return {
+        "business_id": worker["business_id"],
+        "worker_id": worker["id"],
+        "reply": f"{action.capitalize()} registrada a las {hour}.",
+        "clocked": True,
+    }
+
+
 # ------------------------------------------------------------------- Entrantes --
 def _extract_messages(payload: dict) -> list[dict]:
     """Extrae mensajes de Meta y admite un formato simple para pruebas."""
@@ -241,6 +308,20 @@ def handle_inbound(payload: dict) -> dict:
                 })
                 continue
 
+        worker_link = _try_worker_link(phone, text)
+        if worker_link is not None:
+            send(
+                phone,
+                worker_link["reply"],
+                business_id=worker_link.get("business_id"),
+            )
+            results.append({
+                "phone": phone,
+                "worker_id": worker_link.get("worker_id"),
+                "worker_linked": bool(worker_link.get("worker_id")),
+            })
+            continue
+
         linked = _try_link(phone, text)
         if linked is not None:
             business = db.get_business_by_phone(phone)
@@ -249,6 +330,21 @@ def handle_inbound(payload: dict) -> dict:
                 business_id=business["id"] if business else None,
             )
             results.append({"phone": phone, "linked": True})
+            continue
+
+        worker_clock = _try_worker_clock(phone, text)
+        if worker_clock is not None:
+            send(
+                phone,
+                worker_clock["reply"],
+                business_id=worker_clock["business_id"],
+            )
+            results.append({
+                "phone": phone,
+                "business_id": worker_clock["business_id"],
+                "worker_id": worker_clock["worker_id"],
+                "clocked": worker_clock["clocked"],
+            })
             continue
 
         business = db.get_business_by_phone(phone)

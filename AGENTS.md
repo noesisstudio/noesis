@@ -83,7 +83,9 @@ editar los mismos archivos en paralelo.
 
 ## 7. Estado actual
 Fase 1 "núcleo sólido" **completa** (login, fiscalidad, editar/borrar, PDF,
-validaciones, marca, móvil). La compatibilidad Postgres y las migraciones están en
-`codex/postgres`, pendientes de revisión/despliegue. Siguiente: completar **Fase 2**
-(activar Postgres, Holded real, WhatsApp Meta, bynoesis.com, RGPD). Detalle en
-`docs/Roadmap.md`.
+validaciones, marca, móvil). SQLite/Postgres y las migraciones versionadas ya están en
+`main`; la migración más reciente es la **5** (`equipo_fichaje`). En
+`codex/equipo-fichaje` está el módulo de trabajadores, asignación de trabajos,
+fichaje web/WhatsApp con GPS opcional y PIN. Siguiente: revisar/fusionar ese PR y
+completar **Fase 2** (activar Postgres, Holded real, WhatsApp Meta, bynoesis.com,
+RGPD). Detalle en `docs/Roadmap.md`.

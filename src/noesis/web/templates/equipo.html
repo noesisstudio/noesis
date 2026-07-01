@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Operativa de campo</div>
+    <h1>Equipo</h1>
+    <p>Asigna trabajos, comparte el planning y revisa los fichajes de hoy. Cada
+      persona entra con su enlace privado y solo puede fichar por sí misma.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/b/{{ business.id }}/agenda">Abrir agenda</a>
+    <button class="btn primary" type="button" onclick="newWorker()">Añadir persona</button>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="stat"><div class="lbl">Equipo activo</div><div class="val" id="w-active">—</div><div class="delta flat">personas disponibles</div></div>
+  <div class="stat"><div class="lbl">Trabajando ahora</div><div class="val green" id="w-open">—</div><div class="delta flat">con entrada abierta</div></div>
+  <div class="stat"><div class="lbl">Horas hoy</div><div class="val" id="w-hours">—</div><div class="delta flat">acumuladas por el equipo</div></div>
+  <div class="stat"><div class="lbl">Con ubicación</div><div class="val" id="w-gps">—</div><div class="delta flat">último fichaje de hoy</div></div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h">
+    <h2>Personas y fichajes</h2>
+    <span class="hint" id="w-count">Cargando…</span>
+  </div>
+  <div class="card-b table-pad">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Persona</th><th>Teléfono</th><th>Estado hoy</th><th>Horas</th>
+          <th>Última ubicación</th><th class="t-right">Acciones</th>
+        </tr></thead>
+        <tbody id="workers-body">
+          <tr><td colspan="6"><div class="empty">Cargando equipo…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  La ubicación solo se solicita al pulsar <b>Entrada</b> o <b>Salida</b>. Noesis no
+  hace seguimiento continuo y el fichaje funciona aunque la persona no comparta GPS.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let workers = [];
+
+function statusBadge(w) {
+  if (!w.active) return '<span class="badge b-gray">Inactivo</span>';
+  if (w.open_shift) return '<span class="badge b-green">Trabajando</span>';
+  if (w.last_action === 'salida') return '<span class="badge b-gray">Jornada cerrada</span>';
+  return '<span class="badge b-amber">Sin fichar</span>';
+}
+
+function locationCell(w) {
+  const loc = w.last_location;
+  if (!loc) return '<span class="muted">Sin ubicación</span>';
+  const lat = Number(loc.lat).toFixed(5), lng = Number(loc.lng).toFixed(5);
+  const href = `https://maps.google.com/?q=${lat},${lng}`;
+  return `<span class="coord">${lat}, ${lng}</span><br>
+    <a class="map-link" href="${href}" target="_blank" rel="noopener noreferrer">Ver en el mapa</a>`;
+}
+
+async function loadWorkers() {
+  workers = await api('/workers');
+  const active = workers.filter(w => w.active);
+  el('w-active').textContent = active.length;
+  el('w-open').textContent = active.filter(w => w.open_shift).length;
+  el('w-hours').textContent = active.reduce((sum,w) => sum + Number(w.hours_today || 0), 0)
+    .toLocaleString('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' h';
+  el('w-gps').textContent = active.filter(w => w.last_location).length;
+  el('w-count').textContent = `${workers.length} persona(s)`;
+  el('workers-body').innerHTML = workers.length ? workers.map(w => `
+    <tr class="${w.active ? '' : 'worker-inactive'}">
+      <td><span class="worker-person"><i style="background:${esc(w.color || '#2e8b74')}"></i>
+        <span><strong>${esc(w.name)}</strong><small>Código ${esc(w.access_code)}</small></span></span></td>
+      <td>${w.phone ? esc(w.phone) : '<span class="muted">Sin vincular</span>'}</td>
+      <td>${statusBadge(w)}</td>
+      <td class="num"><strong>${Number(w.hours_today || 0).toLocaleString('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1})} h</strong></td>
+      <td>${locationCell(w)}</td>
+      <td class="t-right table-actions">
+        <button class="btn sm" type="button" onclick="editWorker(${w.id})">Editar</button>
+        ${w.active ? `<button class="btn sm" type="button" onclick="sendDay(${w.id})">Enviar planning</button>
+          <button class="btn sm" type="button" onclick="sendAccess(${w.id})">Enviar acceso</button>` : ''}
+        <button class="btn sm" type="button" onclick="toggleWorker(${w.id}, ${!w.active})">${w.active ? 'Desactivar' : 'Activar'}</button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="6">${emptyState('Aún no hay equipo', 'Añade la primera persona para asignarle trabajos y compartir su acceso.', '', '')}</td></tr>`;
+}
+
+function workerModal(worker) {
+  const editing = Boolean(worker);
+  formModal({
+    title: editing ? 'Editar persona' : 'Añadir persona',
+    submitLabel: editing ? 'Guardar cambios' : 'Añadir al equipo',
+    fields: [
+      {name:'name', label:'Nombre', value:worker?.name || '', placeholder:'Ej. Marta Ruiz'},
+      {name:'phone', label:'Teléfono (opcional)', value:worker?.phone || '', placeholder:'+34 600 000 000'},
+      {name:'color', label:'Color', type:'color', value:worker?.color || '#2e8b74'},
+      {name:'pin', label: editing ? 'Nuevo PIN (vacío para mantenerlo)' : 'PIN de 4–8 números (opcional)',
+       type:'password', value:'', placeholder:'Solo números'}
+    ],
+    onSubmit: async values => {
+      try {
+        const payload = {name:values.name, phone:values.phone, color:values.color};
+        if (values.pin) payload.pin = values.pin;
+        await apiPost(editing ? `/workers/${worker.id}` : '/workers',
+          editing ? payload : {...payload, pin:values.pin});
+        await loadWorkers();
+      } catch (error) {
+        alert(error.message);
+        throw error;
+      }
+    }
+  });
+}
+function newWorker(){ workerModal(null); }
+function editWorker(id){ workerModal(workers.find(w => w.id === id)); }
+
+async function toggleWorker(id, active) {
+  if (!confirm(active ? '¿Reactivar a esta persona?' : '¿Desactivar su acceso y enlaces?')) return;
+  try { await apiPost(`/workers/${id}/active`, {active}); await loadWorkers(); }
+  catch (error) { alert(error.message); }
+}
+
+async function sendDay(id) {
+  try {
+    await apiPost(`/workers/${id}/send-day`, {});
+    alert('Planning encolado para enviar por WhatsApp.');
+  } catch (error) { alert(error.message); }
+}
+
+async function sendAccess(id) {
+  try {
+    const worker = workers.find(w => w.id === id);
+    const link = await api(`/workers/${id}/link`);
+    shareLink(link.url, {
+      title: `Acceso de ${worker.name}`,
+      phone: worker.phone,
+      note: 'Este enlace identifica a una sola persona. Compártelo únicamente con ella.',
+      message: `Hola, ${worker.name}. Este es tu acceso personal para fichar: ${link.url}\n\n` +
+        `Para vincular tu WhatsApp, envía este mensaje a Noesis: ${link.whatsapp_command}\n`
+    });
+  } catch (error) { alert(error.message); }
+}
+
+loadWorkers().catch(error => {
+  el('workers-body').innerHTML = `<tr><td colspan="6"><div class="empty">${esc(error.message)}</div></td></tr>`;
+});
+</script>
+{% endblock %}

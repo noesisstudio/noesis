@@ -59,6 +59,7 @@ const TODAY = new Date().toISOString().slice(0,10);
 let view = new Date(); view.setDate(1);
 let selected = TODAY;
 let byDay = {};
+let workers = [];
 
 el('cal-wd').innerHTML = WD.map(d => `<div class="cal-wd">${d}</div>`).join('');
 
@@ -95,7 +96,8 @@ async function loadMonth() {
     const out = d.getMonth()!==m;
     const cls = ['cal-cell', out?'out':'', di===TODAY?'today':'', di===selected?'sel':'', list.length?'has':''].filter(Boolean).join(' ');
     const evs = list.slice(0,2).map(j =>
-      `<div class="cal-ev"><b>${esc(timeShort(j.scheduled_for)||'·')}</b> ${esc(j.client_name||j.description||'')}</div>`).join('');
+      `<div class="cal-ev" ${j.worker_color ? `style="border-left:3px solid ${esc(j.worker_color)}"` : ''}>
+        <b>${esc(timeShort(j.scheduled_for)||'·')}</b> ${esc(j.client_name||j.description||'')}</div>`).join('');
     const more = list.length>2 ? `<div class="cal-more">+${list.length-2} más</div>` : '';
     cells += `<button class="${cls}" onclick="selectDay('${di}')"><span class="cal-date">${d.getDate()}</span>${evs}${more}</button>`;
   }
@@ -109,10 +111,17 @@ function renderDay() {
   el('day-title').textContent = `${WD[monIndex(d)]} ${d.getDate()} ${MES[d.getMonth()].slice(0,3)}` + (selected===TODAY?' · hoy':'');
   el('day-count').textContent = list.length ? `${list.length} cita(s)` : '';
   el('day-detail').innerHTML = list.length ? `<div class="action-list">${list.map(j => `
-    <div class="action-item">
+    <div class="action-item agenda-job">
       <span><strong>${esc(timeShort(j.scheduled_for)||'Sin hora')} · ${esc(j.client_name||'Cliente')}</strong>
-      <small>${esc(j.description||'Servicio')}${j.zone?' — '+esc(j.zone):''}</small></span>
+      <small>${esc(j.description||'Servicio')}${j.zone?' — '+esc(j.zone):''}</small>
+      <small>${j.worker_name ? `Asignado a ${esc(j.worker_name)}` : 'Sin asignar'}</small></span>
       <span style="display:flex;align-items:center;gap:8px">
+        <select class="job-worker-select" aria-label="Asignar trabajador"
+          onchange="assignWorker(${j.id}, this.value)">
+          <option value="">Sin asignar</option>
+          ${workers.filter(w => w.active || w.id === j.worker_id).map(w =>
+            `<option value="${w.id}" ${w.id === j.worker_id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}
+        </select>
         <b class="num">${j.price_estimate?eur(j.price_estimate):'—'}</b>
         <button class="iconbtn" title="Borrar" onclick="del(${j.id})">${TRASH}</button>
       </span>
@@ -129,6 +138,16 @@ function selectDay(di){
 function move(n){ view.setMonth(view.getMonth()+n); loadMonth(); }
 function goToday(){ view = new Date(); view.setDate(1); selected = TODAY; loadMonth(); }
 async function del(id){ if(confirm('¿Borrar este trabajo?')){ await apiDelete('/jobs/'+id); loadMonth(); } }
-loadMonth();
+async function assignWorker(jobId, workerId) {
+  try {
+    await apiPost(`/jobs/${jobId}/assign`, {worker_id: workerId || null});
+    await loadMonth();
+  } catch (error) { alert(error.message); }
+}
+async function initAgenda() {
+  workers = await api('/workers');
+  await loadMonth();
+}
+initAgenda();
 </script>
 {% endblock %}
