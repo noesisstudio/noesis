@@ -18,7 +18,7 @@ from io import BytesIO
 
 from fpdf import FPDF
 
-from .. import db
+from .. import db, verifactu
 
 INK = (22, 39, 31)
 MUTED = (95, 107, 99)
@@ -69,6 +69,10 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
         return None
     biz = db.get_business(business_id) or {}
     client = db.get_client(inv["client_id"], business_id) or {}
+    record = db.get_invoice_record(invoice_id, business_id)
+    # Una factura que nació con registro conserva siempre su QR aunque el negocio
+    # desactive el modo para futuras emisiones.
+    verifactu_active = bool(record)
     issuer_name = inv.get("issuer_name") or biz.get("name") or "Mi Negocio"
     issuer_nif = inv.get("issuer_nif") or biz.get("nif")
     issuer_address = inv.get("issuer_address") or biz.get("address")
@@ -88,18 +92,32 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     pdf.add_page()
     pdf.set_margins(18, 18, 18)
 
-    # --- Cabecera: marca (logo/monograma) + nombre + título FACTURA ---
-    _draw_brandmark(pdf, biz, 18, 16, 16, brand)
-    pdf.set_xy(38, 17)
+    # --- Cabecera: QR tributario (si procede) + marca + título FACTURA ---
+    header_x = 60 if verifactu_active else 18
+    text_x = 80 if verifactu_active else 38
+    if verifactu_active:
+        pdf.set_xy(18, 10)
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*INK)
+        pdf.cell(35, 5, "QR tributario:", align="C")
+        qr = BytesIO(verifactu.qr_png(record["qr_url"]))
+        pdf.image(qr, x=18, y=15, w=35, h=35)
+        pdf.set_xy(18, 51)
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*INK)
+        pdf.cell(35, 5, "VERI*FACTU", align="C")
+
+    _draw_brandmark(pdf, biz, header_x, 16, 16, brand)
+    pdf.set_xy(text_x, 17)
     pdf.set_font(fam, "B", 21)
     pdf.set_text_color(*brand)
-    pdf.cell(110, 8, issuer_name)
+    pdf.cell(68 if verifactu_active else 110, 8, issuer_name)
     pdf.set_xy(150, 17)
     pdf.set_font(fam, "B", 20)
     pdf.set_text_color(*INK)
-    pdf.cell(24, 8, tpl["title"], align="R")
+    pdf.cell(42, 8, tpl["title"], align="R")
 
-    pdf.set_xy(38, 25)
+    pdf.set_xy(text_x, 25)
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*MUTED)
     datos = []
@@ -107,15 +125,15 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
         datos.append(f"NIF: {issuer_nif}")
     if issuer_address:
         datos.append(issuer_address)
-    pdf.cell(112, 5, "  |  ".join(datos))
+    pdf.cell(68 if verifactu_active else 112, 5, "  |  ".join(datos))
     numero = inv.get("number") or "(borrador)"
     pdf.set_xy(150, 25)
-    pdf.cell(24, 5, f"Nº {numero}", align="R")
+    pdf.cell(42, 5, f"Nº {numero}", align="R")
     fecha = (inv.get("issued_at") or inv.get("created_at") or "")[:10]
     pdf.set_xy(150, 30)
-    pdf.cell(24, 5, f"Fecha: {fecha or date.today().isoformat()}", align="R")
+    pdf.cell(42, 5, f"Fecha: {fecha or date.today().isoformat()}", align="R")
 
-    pdf.set_y(40)
+    pdf.set_y(62 if verifactu_active else 40)
     pdf.set_draw_color(*brand)
     pdf.set_line_width(0.5)
     pdf.line(18, pdf.get_y(), 192, pdf.get_y())
@@ -175,11 +193,12 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
 
     # --- Totales ---
     def total_row(label, value, bold=False, color=INK):
-        pdf.cell(122, 7, "")
+        pdf.cell(85, 7, "")
         pdf.set_font(fam, "B" if bold else "", 11 if bold else 10)
         pdf.set_text_color(*color)
-        pdf.cell(30, 7, label, align="R")
-        pdf.cell(0, 7, _eur(value), align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(40, 7, label, align="R")
+        pdf.cell(49, 7, _eur(value), align="R",
+                 new_x="LMARGIN", new_y="NEXT")
 
     total_row("Base imponible", inv["base"])
     total_row(f"IVA ({inv['vat_rate']:.0f}%)", inv["vat_amount"])

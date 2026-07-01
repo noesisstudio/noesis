@@ -555,6 +555,9 @@ def page(request: Request, business_id: int, page: str):
         context["panel_blocks"] = db.PANEL_BLOCKS
     if page == "ajustes" and biz.get("whatsapp_status") != "conectado":
         context["wa"] = whatsapp.start_link(business_id)
+    if page == "ajustes":
+        context["verifactu_errors"] = db.verifactu_configuration_errors()
+        context["verifactu_ready"] = not context["verifactu_errors"]
     return TEMPLATES.TemplateResponse(request, f"{page}.html", context)
 
 
@@ -923,6 +926,57 @@ def api_worker_report(
 @app.get("/api/{business_id}/invoices")
 def api_invoices(business_id: int):
     return db.list_invoices(business_id)
+
+
+@app.post("/api/{business_id}/invoices/{invoice_id}/rectify")
+async def api_rectify_invoice(
+    business_id: int, invoice_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        invoice = db.create_rectifying_invoice(
+            invoice_id,
+            business_id,
+            concept=body.get("concept"),
+            base=body.get("base"),
+            vat_rate=body.get("vat_rate", 21),
+            irpf_rate=body.get("irpf_rate", 0),
+            invoice_type=body.get("invoice_type", "R1"),
+            reason=body.get("reason"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return invoice
+
+
+@app.get("/api/{business_id}/verifactu/export.xml")
+def api_verifactu_export(
+    business_id: int,
+    from_: str = Query("", alias="from"),
+    to: str = "",
+):
+    try:
+        start = date.fromisoformat(from_).isoformat() if from_ else None
+        end = date.fromisoformat(to).isoformat() if to else None
+        payload = db.export_verifactu_xml(
+            business_id, from_day=start, to_day=end
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return Response(
+        content=payload,
+        media_type="application/xml; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="registros_verifactu.xml"'
+            )
+        },
+    )
+
+
+@app.get("/api/{business_id}/verifactu/integrity")
+def api_verifactu_integrity(business_id: int):
+    return db.verify_invoice_record_chain(business_id)
 
 
 @app.get("/api/{business_id}/expenses")
@@ -1484,6 +1538,22 @@ def update_clockin_policy(
             f"/b/{business_id}/ajustes?error=clockin-policy", status_code=303
         )
     db.record_product_event(business_id, "clockin_policy_updated")
+    return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
+
+
+@app.post("/b/{business_id}/verifactu")
+def update_verifactu_mode(
+    business_id: int, verifactu_enabled: str = Form("")
+):
+    try:
+        db.update_verifactu_mode(
+            business_id, verifactu_enabled in {"1", "true", "on", "si"}
+        )
+    except ValueError:
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=verifactu", status_code=303
+        )
+    db.record_product_event(business_id, "verifactu_mode_updated")
     return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
 
 

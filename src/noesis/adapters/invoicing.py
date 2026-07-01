@@ -3,8 +3,8 @@
 Define una interfaz común (`InvoicingProvider`) y dos implementaciones:
 
   - InternalInvoicingProvider -> emisión REAL interna: numeración correlativa por
-                                 negocio + PDF real (web/invoice_pdf.py). No registra
-                                 en Verifactu (eso lo hará el proveedor homologado).
+                                 negocio + PDF real + registro Veri*Factu cuando el
+                                 negocio activa el modo nativo.
   - HoldedInvoicingProvider   -> conexión real con la API de Holded (Verifactu),
                                  se activa cuando hay HOLDED_API_KEY.
 
@@ -30,8 +30,8 @@ class InternalInvoicingProvider:
 
     Asigna un número de factura CORRELATIVO POR NEGOCIO (cada autónomo tiene su
     propia serie, como exige la ley) y el PDF real se genera bajo demanda. El
-    registro en Verifactu queda pendiente del proveedor homologado (no es
-    obligatorio para autónomos hasta jul-2027).
+    registro Veri*Factu se genera en la misma transacción cuando el negocio activa
+    el modo nativo.
     """
 
     def __init__(self, payment_term_days: int = 15):

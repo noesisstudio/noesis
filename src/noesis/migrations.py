@@ -264,6 +264,7 @@ LEGACY_COLUMNS = {
         "logo_mime": "TEXT",
         "panel_layout": "TEXT",
         "clockin_policy": "TEXT",
+        "verifactu_enabled": "BOOLEAN NOT NULL DEFAULT FALSE",
     },
     "users": {
         "is_admin": "INTEGER NOT NULL DEFAULT 0",
@@ -352,6 +353,10 @@ INDEXES = (
     "ON worker_clockins(business_id, id)",
     "CREATE INDEX IF NOT EXISTS idx_clockin_corrections_clockin "
     "ON worker_clockin_corrections(business_id, clockin_id, id)",
+    "CREATE INDEX IF NOT EXISTS idx_invoice_records_issuer "
+    "ON invoice_records(business_id, issuer_nif, id)",
+    "CREATE INDEX IF NOT EXISTS idx_invoice_events_business "
+    "ON invoice_events(business_id, created_at, id)",
 )
 
 
@@ -794,6 +799,176 @@ def _downgrade_immutable_clockins(conn) -> None:
     # sellos o hacer imposible revertir si ya existen pausas.
 
 
+def _install_invoice_append_only(conn) -> None:
+    tables = ("invoice_records", "invoice_events")
+    if conn.dialect == "sqlite":
+        for table in tables:
+            conn.executescript(
+                f"""
+CREATE TRIGGER IF NOT EXISTS {table}_append_only_update
+BEFORE UPDATE ON {table}
+BEGIN
+    SELECT RAISE(ABORT, 'los registros VeriFactu son inalterables');
+END;
+CREATE TRIGGER IF NOT EXISTS {table}_append_only_delete
+BEFORE DELETE ON {table}
+BEGIN
+    SELECT RAISE(ABORT, 'los registros VeriFactu son inalterables');
+END;
+"""
+            )
+        conn.executescript(
+            """
+CREATE TRIGGER IF NOT EXISTS invoice_records_require_hash
+BEFORE INSERT ON invoice_records
+WHEN NEW.record_hash IS NULL OR NEW.record_hash=''
+BEGIN
+    SELECT RAISE(ABORT, 'todo registro VeriFactu necesita huella');
+END;
+"""
+        )
+        return
+    conn.execute(
+        """
+CREATE OR REPLACE FUNCTION noesis_invoice_records_append_only()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'los registros VeriFactu son inalterables';
+END;
+$$ LANGUAGE plpgsql
+"""
+    )
+    for table in tables:
+        trigger = f"{table}_append_only"
+        conn.execute(f"DROP TRIGGER IF EXISTS {trigger} ON {table}")
+        conn.execute(
+            f"CREATE TRIGGER {trigger} BEFORE UPDATE OR DELETE ON {table} "
+            "FOR EACH ROW EXECUTE FUNCTION noesis_invoice_records_append_only()"
+        )
+
+
+def _upgrade_verifactu_phase1(conn) -> None:
+    t = _types(conn.dialect)
+    business_columns = _column_names(conn, "businesses")
+    if "verifactu_enabled" not in business_columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN "
+            f"verifactu_enabled {t['boolean']} NOT NULL DEFAULT FALSE"
+        )
+
+    invoice_columns = _column_names(conn, "invoices")
+    additions = (
+        ("invoice_type", "TEXT NOT NULL DEFAULT 'F1'"),
+        ("rectifies_invoice_id", t["ref"]),
+        ("rectification_type", "TEXT"),
+        ("rectification_reason", "TEXT"),
+    )
+    for column, definition in additions:
+        if column not in invoice_columns:
+            conn.execute(
+                f"ALTER TABLE invoices ADD COLUMN {column} {definition}"
+            )
+
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS invoice_records (
+    id                       {t["id"]},
+    business_id              {t["ref"]} NOT NULL REFERENCES businesses(id),
+    invoice_id               {t["ref"]} NOT NULL,
+    record_type              TEXT NOT NULL DEFAULT 'alta'
+                             CHECK (record_type IN ('alta')),
+    record_version           TEXT NOT NULL,
+    invoice_type             TEXT NOT NULL,
+    rectification_type       TEXT,
+    rectified_issuer_nif     TEXT,
+    rectified_invoice_number TEXT,
+    rectified_issue_date     TEXT,
+    issuer_nif               TEXT NOT NULL,
+    issuer_name              TEXT NOT NULL,
+    invoice_number           TEXT NOT NULL,
+    issue_date               TEXT NOT NULL,
+    recipient_nif            TEXT NOT NULL,
+    recipient_name           TEXT NOT NULL,
+    description              TEXT NOT NULL,
+    breakdown_json           TEXT NOT NULL,
+    vat_total                {t["real"]} NOT NULL,
+    invoice_total            {t["real"]} NOT NULL,
+    generated_at             TEXT NOT NULL,
+    previous_record_id       {t["ref"]},
+    previous_issuer_nif      TEXT,
+    previous_invoice_number  TEXT,
+    previous_issue_date      TEXT,
+    previous_hash            TEXT,
+    hash_algorithm           TEXT NOT NULL,
+    hash_type                TEXT NOT NULL,
+    hash_spec_version        TEXT NOT NULL,
+    record_hash              TEXT NOT NULL,
+    qr_url                   TEXT NOT NULL,
+    producer_name            TEXT NOT NULL,
+    producer_nif             TEXT NOT NULL,
+    system_name              TEXT NOT NULL,
+    system_id                TEXT NOT NULL,
+    system_version           TEXT NOT NULL,
+    installation_id          TEXT NOT NULL,
+    created_at               TEXT NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (business_id, invoice_id),
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id),
+    FOREIGN KEY (business_id, previous_record_id)
+        REFERENCES invoice_records(business_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS invoice_events (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    invoice_id  {t["ref"]},
+    record_id   {t["ref"]},
+    event_type  TEXT NOT NULL
+                CHECK (event_type IN
+                    ('alta', 'rectificacion', 'exportacion', 'anomalia')),
+    details     TEXT,
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id),
+    FOREIGN KEY (business_id, record_id)
+        REFERENCES invoice_records(business_id, id)
+);
+"""
+    )
+    for statement in INDEXES:
+        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
+        if _table_exists(conn, table):
+            conn.execute(statement)
+    _install_invoice_append_only(conn)
+
+
+def _downgrade_verifactu_phase1(conn) -> None:
+    if conn.dialect == "sqlite":
+        for trigger in (
+            "invoice_records_append_only_update",
+            "invoice_records_append_only_delete",
+            "invoice_events_append_only_update",
+            "invoice_events_append_only_delete",
+            "invoice_records_require_hash",
+        ):
+            conn.execute(f"DROP TRIGGER IF EXISTS {trigger}")
+    else:
+        for table in ("invoice_records", "invoice_events"):
+            conn.execute(
+                f"DROP TRIGGER IF EXISTS {table}_append_only ON {table}"
+            )
+        conn.execute(
+            "DROP FUNCTION IF EXISTS noesis_invoice_records_append_only()"
+        )
+    conn.execute("DROP INDEX IF EXISTS idx_invoice_events_business")
+    conn.execute("DROP INDEX IF EXISTS idx_invoice_records_issuer")
+    conn.execute("DROP TABLE IF EXISTS invoice_events")
+    conn.execute("DROP TABLE IF EXISTS invoice_records")
+    # Las columnas se conservan para no perder la relación de rectificativas ni
+    # reactivar accidentalmente un modo que el negocio hubiera desactivado.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -802,6 +977,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (4, "panel_personalizable", _upgrade_panel_layout, _downgrade_panel_layout),
     (5, "equipo_fichaje", _upgrade_team_clockins, _downgrade_team_clockins),
     (6, "fichaje_inalterable", _upgrade_immutable_clockins, _downgrade_immutable_clockins),
+    (7, "verifactu_fase1", _upgrade_verifactu_phase1, _downgrade_verifactu_phase1),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

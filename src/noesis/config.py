@@ -76,6 +76,47 @@ RESET_DB = env_bool("NOESIS_RESET_DB")
 # Clave de Holded para facturación real (Verifactu). Si está, se usa Holded.
 HOLDED_API_KEY = os.getenv("HOLDED_API_KEY", "")
 
+# Registro Veri*Factu nativo (fase 1: genera y conserva; todavía no transmite).
+# La huella y el QR siguen los documentos técnicos publicados por la AEAT. Se
+# mantienen configurables porque la Agencia puede versionarlos.
+VERIFACTU_HASH_ALGORITHM = os.getenv(
+    "NOESIS_VERIFACTU_HASH_ALGORITHM", "sha256"
+).strip().lower()
+VERIFACTU_HASH_TYPE = os.getenv(
+    "NOESIS_VERIFACTU_HASH_TYPE", "01"
+).strip()
+VERIFACTU_HASH_SPEC_VERSION = os.getenv(
+    "NOESIS_VERIFACTU_HASH_SPEC_VERSION", "0.1.2"
+).strip()
+VERIFACTU_RECORD_VERSION = os.getenv(
+    "NOESIS_VERIFACTU_RECORD_VERSION", "1.0"
+).strip()
+VERIFACTU_QR_BASE_URL = os.getenv(
+    "NOESIS_VERIFACTU_QR_BASE_URL",
+    "https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR",
+).strip().rstrip("?")
+
+# Identificación del productor y del sistema (bloque SistemaInformatico del XSD).
+# El NIF no tiene valor ficticio: debe configurarse antes de activar el modo.
+VERIFACTU_PRODUCER_NAME = os.getenv(
+    "NOESIS_VERIFACTU_PRODUCER_NAME", "Noesis"
+).strip()
+VERIFACTU_PRODUCER_NIF = os.getenv(
+    "NOESIS_VERIFACTU_PRODUCER_NIF", ""
+).strip().upper()
+VERIFACTU_SYSTEM_NAME = os.getenv(
+    "NOESIS_VERIFACTU_SYSTEM_NAME", "Noesis"
+).strip()
+VERIFACTU_SYSTEM_ID = os.getenv(
+    "NOESIS_VERIFACTU_SYSTEM_ID", "NO"
+).strip()
+VERIFACTU_SYSTEM_VERSION = os.getenv(
+    "NOESIS_VERIFACTU_SYSTEM_VERSION", "0.1.0"
+).strip()
+VERIFACTU_INSTALLATION_PREFIX = os.getenv(
+    "NOESIS_VERIFACTU_INSTALLATION_PREFIX", "noesis"
+).strip()
+
 # URL pública para emails y vueltas de pago. Railway inyecta su dominio público;
 # NOESIS_BASE_URL sigue teniendo prioridad cuando hay un dominio propio.
 _RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
