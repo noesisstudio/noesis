@@ -260,6 +260,7 @@ LEGACY_COLUMNS = {
         "brand_color": "TEXT",
         "logo_data": "TEXT",
         "logo_mime": "TEXT",
+        "panel_layout": "TEXT",
     },
     "users": {
         "is_admin": "INTEGER NOT NULL DEFAULT 0",
@@ -447,11 +448,25 @@ def _downgrade_whatsapp_outbox(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS whatsapp_outbox")
 
 
+def _upgrade_panel_layout(conn) -> None:
+    # Guarda cómo cada negocio ordena/oculta los bloques de su panel de inicio.
+    if "panel_layout" not in _column_names(conn, "businesses"):
+        conn.execute("ALTER TABLE businesses ADD COLUMN panel_layout TEXT")
+
+
+def _downgrade_panel_layout(conn) -> None:
+    # SQLite no soporta DROP COLUMN en versiones antiguas; se deja la columna
+    # (es nullable y opcional, no rompe nada al revertir).
+    if conn.dialect != "sqlite":
+        conn.execute("ALTER TABLE businesses DROP COLUMN IF EXISTS panel_layout")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
     (3, "cola_whatsapp_durable", _upgrade_whatsapp_outbox, _downgrade_whatsapp_outbox),
+    (4, "panel_personalizable", _upgrade_panel_layout, _downgrade_panel_layout),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

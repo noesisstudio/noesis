@@ -398,6 +398,11 @@ def page(request: Request, business_id: int, page: str):
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
     }
+    if page == "resumen":
+        layout = db.resolve_panel_layout(biz)
+        context["panel_order"] = layout["order"]
+        context["panel_hidden"] = layout["hidden"]
+        context["panel_blocks"] = db.PANEL_BLOCKS
     if page == "ajustes" and biz.get("whatsapp_status") != "conectado":
         context["wa"] = whatsapp.start_link(business_id)
     return TEMPLATES.TemplateResponse(request, f"{page}.html", context)
@@ -473,6 +478,20 @@ async def api_recommendation_status(business_id: int, rec_id: int, request: Requ
     if rec is None:
         return JSONResponse({"error": "Recomendación no encontrada."}, status_code=404)
     return rec
+
+
+@app.post("/api/{business_id}/panel-layout")
+async def api_panel_layout(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    order = body.get("order")
+    hidden = body.get("hidden")
+    if not isinstance(order, list) or not isinstance(hidden, list):
+        return JSONResponse({"error": "Formato de panel no válido."}, status_code=400)
+    db.update_panel_layout(business_id, order, hidden)
+    return {"ok": True}
 
 
 @app.get("/api/{business_id}/analysis")

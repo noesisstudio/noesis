@@ -1,4 +1,4 @@
-/* build-marker: tesoreria */
+/* build-marker: panel-personalizable */
 /* ==========================================================================
    Noesis — sistema de diseño (hecho a mano, sin frameworks externos).
    Estética: profesional, minimalista cálida, mucho aire, jerarquía clara.
@@ -776,3 +776,43 @@ tbody tr:hover { background: #fafbfc; }
 @media (max-width:760px) { .bal-grid { grid-template-columns:1fr; }
   .bal-col + .bal-col { border-left:none; padding-left:0;
     border-top:1px solid var(--border); padding-top:12px; } }
+
+/* ==========================================================================
+   Panel personalizable — el autónomo ordena y oculta los bloques del inicio.
+   Los bloques se colocan con flex `order`; la barra de control solo aparece
+   en modo edición (body.panel-editing).
+   ========================================================================== */
+.panel-blocks { display:flex; flex-direction:column; gap:14px; margin-top:14px; }
+.pblock { position:relative; }
+.pblock-hidden { display:none; }
+
+/* Barra de control sobre cada bloque (oculta fuera de edición). */
+.pblock-bar { display:none; }
+.pblock-name { font-size:12.5px; font-weight:600; color:var(--text);
+  display:inline-flex; align-items:center; gap:8px; }
+.pblock-flag { display:none; }
+.pblock-tools { display:flex; gap:5px; }
+.pbt { width:30px; height:30px; display:inline-flex; align-items:center;
+  justify-content:center; padding:0; border:1px solid var(--border);
+  background:var(--surface); border-radius:8px; color:var(--muted);
+  cursor:pointer; transition:border-color .12s, color .12s; }
+.pbt:hover { color:var(--text); border-color:var(--muted); }
+.pbt svg { width:16px; height:16px; }
+
+/* Modo edición: se muestra la barra y se marca cada bloque como reordenable. */
+body.panel-editing .pblock-bar { display:flex; align-items:center;
+  justify-content:space-between; gap:10px; margin-bottom:8px;
+  padding:7px 10px; background:var(--brand-soft);
+  border:1px solid var(--border); border-radius:10px; }
+body.panel-editing .pblock { outline:1px dashed var(--border); outline-offset:7px;
+  border-radius:14px; }
+/* Los bloques ocultos siguen visibles (atenuados) para poder reactivarlos. */
+body.panel-editing .pblock-hidden { display:block; }
+body.panel-editing .pblock-hidden .cmd-hero,
+body.panel-editing .pblock-hidden .card,
+body.panel-editing .pblock-hidden .grid,
+body.panel-editing .pblock-hidden .split { opacity:.4; filter:grayscale(.5); }
+body.panel-editing .pblock-hidden .pblock-flag { display:inline-block;
+  font-size:10.5px; font-weight:600; letter-spacing:.02em; text-transform:uppercase;
+  color:var(--red); background:var(--red-soft); border-radius:20px; padding:2px 8px; }
+body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(--red); }

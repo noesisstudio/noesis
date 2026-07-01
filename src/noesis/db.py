@@ -10,6 +10,7 @@ El esquema no se crea aquí: lo gestionan las migraciones versionadas.
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import re
@@ -448,6 +449,62 @@ def business_brand_color(business: dict | None) -> str:
     """Color de marca del negocio, con el verde Noesis como valor por defecto."""
     color = (business or {}).get("brand_color")
     return color if color and _HEX_RE.match(color) else BRAND_COLOR_DEFAULT
+
+
+# ----------------------------------------------------- Panel personalizable ---
+# Bloques del inicio que el autónomo puede ordenar y ocultar a su gusto.
+# El orden de esta tupla es la disposición por defecto (recomendada por Noesis).
+PANEL_BLOCKS = (
+    ("foco", "Lo primero hoy"),
+    ("kpis", "Indicadores del mes"),
+    ("balance", "Balance · tu posición"),
+    ("hoy", "Trabajos de hoy"),
+    ("grafica", "Gráfica y plan del día"),
+    ("detalle", "Clientes, gastos y cobros"),
+)
+PANEL_BLOCK_KEYS = tuple(k for k, _ in PANEL_BLOCKS)
+
+
+def resolve_panel_layout(business: dict | None) -> dict:
+    """Devuelve la disposición del panel de un negocio, siempre válida y completa.
+
+    Tolera datos corruptos o de versiones antiguas: parte del orden por defecto,
+    respeta lo que el usuario haya guardado y descarta claves desconocidas."""
+    order: list[str] = []
+    hidden: set[str] = set()
+    raw = (business or {}).get("panel_layout")
+    if raw:
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else raw
+            if isinstance(data, dict):
+                for key in data.get("order", []):
+                    if key in PANEL_BLOCK_KEYS and key not in order:
+                        order.append(key)
+                hidden = {k for k in data.get("hidden", []) if k in PANEL_BLOCK_KEYS}
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+    # Los bloques nuevos o ausentes se añaden al final en su orden canónico.
+    for key in PANEL_BLOCK_KEYS:
+        if key not in order:
+            order.append(key)
+    return {"order": order, "hidden": sorted(hidden)}
+
+
+def update_panel_layout(business_id, order, hidden) -> dict:
+    """Guarda cómo el negocio ordena y oculta los bloques de su inicio."""
+    seen: list[str] = []
+    for key in order or []:
+        if key in PANEL_BLOCK_KEYS and key not in seen:
+            seen.append(key)
+    for key in PANEL_BLOCK_KEYS:  # completa por si el cliente manda una lista parcial
+        if key not in seen:
+            seen.append(key)
+    hidden_clean = sorted({k for k in (hidden or []) if k in PANEL_BLOCK_KEYS})
+    payload = json.dumps({"order": seen, "hidden": hidden_clean})
+    with get_conn() as conn:
+        conn.execute("UPDATE businesses SET panel_layout=? WHERE id=?",
+                     (payload, business_id))
+    return get_business(business_id)
 
 
 def update_branding(business_id, *, template=None, brand_color=None,
