@@ -41,8 +41,8 @@
 </div>
 
 <div class="insight" style="margin-top:16px">
-  La ubicación solo se solicita al pulsar <b>Entrada</b> o <b>Salida</b>. Noesis no
-  hace seguimiento continuo y el fichaje funciona aunque la persona no comparta GPS.
+  La ubicación solo se solicita al registrar una acción de jornada. Noesis no hace
+  seguimiento continuo y el fichaje funciona aunque la persona no comparta GPS.
 </div>
 {% endblock %}
 
@@ -52,6 +52,7 @@ let workers = [];
 
 function statusBadge(w) {
   if (!w.active) return '<span class="badge b-gray">Inactivo</span>';
+  if (w.open_shift && w.paused) return '<span class="badge b-amber">En pausa</span>';
   if (w.open_shift) return '<span class="badge b-green">Trabajando</span>';
   if (w.last_action === 'salida') return '<span class="badge b-gray">Jornada cerrada</span>';
   return '<span class="badge b-amber">Sin fichar</span>';
@@ -85,6 +86,7 @@ async function loadWorkers() {
       <td>${locationCell(w)}</td>
       <td class="t-right table-actions">
         <button class="btn sm" type="button" onclick="editWorker(${w.id})">Editar</button>
+        <button class="btn sm" type="button" onclick="openClockins(${w.id})">Jornada</button>
         ${w.active ? `<button class="btn sm" type="button" onclick="sendDay(${w.id})">Enviar planning</button>
           <button class="btn sm" type="button" onclick="sendAccess(${w.id})">Enviar acceso</button>` : ''}
         <button class="btn sm" type="button" onclick="toggleWorker(${w.id}, ${!w.active})">${w.active ? 'Desactivar' : 'Activar'}</button>
@@ -147,6 +149,81 @@ async function sendAccess(id) {
         `Para vincular tu WhatsApp, envía este mensaje a Noesis: ${link.whatsapp_command}\n`
     });
   } catch (error) { alert(error.message); }
+}
+
+let clockinCache = {};
+async function openClockins(workerId) {
+  try {
+    const data = await api(`/workers/${workerId}/clockins`);
+    clockinCache = Object.fromEntries(data.items.map(item => [item.id, item]));
+    const worker = workers.find(item => item.id === workerId);
+    const integrity = data.integrity.valid
+      ? `<span class="badge b-green">Cadena válida · ${data.integrity.checked} registros</span>`
+      : `<span class="badge b-red">Cadena alterada en #${esc(data.integrity.broken_at)}</span>`;
+    closeModal();
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.innerHTML = `<div class="modal clockins-modal" role="dialog" aria-modal="true">
+      <div class="modal-h"><div><h2>Jornada de ${esc(worker.name)}</h2>
+        <div style="margin-top:5px">${integrity}</div></div>
+        <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
+      <div class="modal-b">
+        <div class="row" style="margin:12px 0">
+          <a class="btn sm" href="/api/${BIZ}/workers/${workerId}/report?format=pdf" target="_blank">Informe PDF</a>
+          <a class="btn sm" href="/api/${BIZ}/workers/${workerId}/report?format=csv">Informe CSV</a>
+        </div>
+        <div class="clock-admin-list">${data.items.length ? data.items.map(item => `
+          <div class="clock-admin-row ${item.annulled ? 'is-annulled' : ''}">
+            <span><b>${esc(item.action)} · ${esc((item.effective_at || item.at).slice(0,16).replace('T',' '))}</b>
+              <small>${esc(item.source)} · sello ${esc(item.seal.slice(0,12))}…</small>
+              ${item.correction_status ? `<small class="clock-correction">${item.annulled ? 'Anulado' : 'Corregido'} · ${esc(item.correction_reason)}</small>` : ''}
+            </span>
+            <span class="row">
+              <button class="btn sm" type="button" onclick="correctClockin(${workerId},${item.id})">Corregir</button>
+              ${item.annulled ? '' : `<button class="btn sm" type="button" onclick="annulClockin(${workerId},${item.id})">Anular</button>`}
+            </span>
+          </div>`).join('') : '<div class="empty">Sin fichajes en los últimos 30 días.</div>'}
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector('.modal-x').onclick = closeModal;
+    ov.addEventListener('click', event => { if (event.target === ov) closeModal(); });
+  } catch (error) { alert(error.message); }
+}
+
+function correctClockin(workerId, clockinId) {
+  const item = clockinCache[clockinId];
+  formModal({
+    title: 'Corregir hora con auditoría',
+    submitLabel: 'Guardar corrección',
+    fields: [
+      {name:'new_at', label:'Nueva fecha y hora', type:'datetime-local',
+       value:(item.effective_at || item.at).slice(0,16)},
+      {name:'reason', label:'Motivo obligatorio', placeholder:'Explica por qué se corrige'}
+    ],
+    onSubmit: async values => {
+      await apiPost(`/workers/${workerId}/clockins/${clockinId}/correct`, values);
+      await loadWorkers();
+      setTimeout(() => openClockins(workerId), 0);
+    }
+  });
+}
+
+function annulClockin(workerId, clockinId) {
+  formModal({
+    title: 'Anular fichaje con auditoría',
+    submitLabel: 'Registrar anulación',
+    fields: [
+      {name:'reason', label:'Motivo obligatorio', placeholder:'Explica por qué se anula'}
+    ],
+    onSubmit: async values => {
+      await apiPost(`/workers/${workerId}/clockins/${clockinId}/correct`,
+        {new_at:null, reason:values.reason});
+      await loadWorkers();
+      setTimeout(() => openClockins(workerId), 0);
+    }
+  });
 }
 
 loadWorkers().catch(error => {

@@ -6,6 +6,8 @@ import argparse
 from collections.abc import Callable
 from datetime import datetime
 
+from .clockin_integrity import clockin_seal
+
 
 def _types(dialect: str) -> dict[str, str]:
     if dialect == "postgres":
@@ -261,6 +263,7 @@ LEGACY_COLUMNS = {
         "logo_data": "TEXT",
         "logo_mime": "TEXT",
         "panel_layout": "TEXT",
+        "clockin_policy": "TEXT",
     },
     "users": {
         "is_admin": "INTEGER NOT NULL DEFAULT 0",
@@ -345,6 +348,10 @@ INDEXES = (
     "CREATE INDEX IF NOT EXISTS idx_jobs_worker ON jobs(business_id, worker_id)",
     "CREATE INDEX IF NOT EXISTS idx_clockins_worker "
     "ON worker_clockins(business_id, worker_id, at)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_clockins_business_id "
+    "ON worker_clockins(business_id, id)",
+    "CREATE INDEX IF NOT EXISTS idx_clockin_corrections_clockin "
+    "ON worker_clockin_corrections(business_id, clockin_id, id)",
 )
 
 
@@ -602,6 +609,191 @@ def _downgrade_team_clockins(conn) -> None:
         conn.execute("ALTER TABLE jobs DROP COLUMN IF EXISTS worker_id")
 
 
+def _sqlite_rebuild_clockins_v6(conn) -> None:
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE worker_clockins_v6 (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    worker_id   {t["ref"]} NOT NULL,
+    job_id      {t["ref"]},
+    action      TEXT NOT NULL
+                CHECK (action IN ('entrada', 'salida', 'pausa', 'reanudar')),
+    at          {t["timestamp"]} NOT NULL,
+    source      TEXT NOT NULL CHECK (source IN ('web', 'whatsapp')),
+    lat         {t["real"]},
+    lng         {t["real"]},
+    accuracy    {t["real"]},
+    created_at  {t["timestamp"]} NOT NULL,
+    seal        TEXT,
+    prev_seal   TEXT,
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id),
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id)
+);
+INSERT INTO worker_clockins_v6
+    (id, business_id, worker_id, job_id, action, at, source, lat, lng,
+     accuracy, created_at)
+SELECT id, business_id, worker_id, job_id, action, at, source, lat, lng,
+       accuracy, created_at
+FROM worker_clockins;
+DROP TABLE worker_clockins;
+ALTER TABLE worker_clockins_v6 RENAME TO worker_clockins;
+"""
+    )
+
+
+def _backfill_clockin_seals(conn) -> None:
+    rows = conn.execute(
+        "SELECT * FROM worker_clockins "
+        "ORDER BY business_id, worker_id, id"
+    ).fetchall()
+    previous: dict[tuple[int, int], str | None] = {}
+    for row in rows:
+        key = (int(row["business_id"]), int(row["worker_id"]))
+        prev_seal = previous.get(key)
+        seal = clockin_seal(row, prev_seal)
+        conn.execute(
+            "UPDATE worker_clockins SET prev_seal=?, seal=? "
+            "WHERE id=? AND business_id=?",
+            (prev_seal, seal, row["id"], row["business_id"]),
+        )
+        previous[key] = seal
+
+
+def _install_clockin_append_only(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.executescript(
+            """
+CREATE TRIGGER IF NOT EXISTS worker_clockins_require_seal
+BEFORE INSERT ON worker_clockins
+WHEN NEW.seal IS NULL OR NEW.seal=''
+BEGIN
+    SELECT RAISE(ABORT, 'todo fichaje necesita sello');
+END;
+CREATE TRIGGER IF NOT EXISTS worker_clockins_append_only_update
+BEFORE UPDATE ON worker_clockins
+BEGIN
+    SELECT RAISE(ABORT, 'los fichajes son inalterables');
+END;
+CREATE TRIGGER IF NOT EXISTS worker_clockins_append_only_delete
+BEFORE DELETE ON worker_clockins
+BEGIN
+    SELECT RAISE(ABORT, 'los fichajes son inalterables');
+END;
+CREATE TRIGGER IF NOT EXISTS clockin_corrections_append_only_update
+BEFORE UPDATE ON worker_clockin_corrections
+BEGIN
+    SELECT RAISE(ABORT, 'las correcciones son inalterables');
+END;
+CREATE TRIGGER IF NOT EXISTS clockin_corrections_append_only_delete
+BEFORE DELETE ON worker_clockin_corrections
+BEGIN
+    SELECT RAISE(ABORT, 'las correcciones son inalterables');
+END;
+"""
+        )
+        return
+    conn.execute(
+        """
+CREATE OR REPLACE FUNCTION noesis_clockins_append_only()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'los registros de jornada son inalterables';
+END;
+$$ LANGUAGE plpgsql
+"""
+    )
+    for table in ("worker_clockins", "worker_clockin_corrections"):
+        trigger = f"{table}_append_only"
+        conn.execute(f"DROP TRIGGER IF EXISTS {trigger} ON {table}")
+        conn.execute(
+            f"CREATE TRIGGER {trigger} BEFORE UPDATE OR DELETE ON {table} "
+            "FOR EACH ROW EXECUTE FUNCTION noesis_clockins_append_only()"
+        )
+
+
+def _upgrade_immutable_clockins(conn) -> None:
+    t = _types(conn.dialect)
+    if "clockin_policy" not in _column_names(conn, "businesses"):
+        conn.execute("ALTER TABLE businesses ADD COLUMN clockin_policy TEXT")
+
+    columns = _column_names(conn, "worker_clockins")
+    if conn.dialect == "sqlite" and "seal" not in columns:
+        _sqlite_rebuild_clockins_v6(conn)
+    elif conn.dialect == "postgres":
+        if "seal" not in columns:
+            conn.execute("ALTER TABLE worker_clockins ADD COLUMN seal TEXT")
+        if "prev_seal" not in columns:
+            conn.execute("ALTER TABLE worker_clockins ADD COLUMN prev_seal TEXT")
+        conn.execute(
+            "ALTER TABLE worker_clockins "
+            "DROP CONSTRAINT IF EXISTS worker_clockins_action_check"
+        )
+        conn.execute(
+            "ALTER TABLE worker_clockins ADD CONSTRAINT "
+            "worker_clockins_action_check CHECK "
+            "(action IN ('entrada', 'salida', 'pausa', 'reanudar'))"
+        )
+
+    _backfill_clockin_seals(conn)
+    if conn.dialect == "postgres":
+        conn.execute("ALTER TABLE worker_clockins ALTER COLUMN seal SET NOT NULL")
+
+    for statement in INDEXES:
+        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
+        if _table_exists(conn, table):
+            conn.execute(statement)
+
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS worker_clockin_corrections (
+    id             {t["id"]},
+    business_id    {t["ref"]} NOT NULL REFERENCES businesses(id),
+    clockin_id     {t["ref"]} NOT NULL,
+    author_user_id {t["ref"]} NOT NULL REFERENCES users(id),
+    reason         TEXT NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'corregido'
+                   CHECK (status IN ('corregido', 'anulado')),
+    old_at         {t["timestamp"]},
+    new_at         {t["timestamp"]},
+    created_at     {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, clockin_id)
+        REFERENCES worker_clockins(business_id, id)
+);
+"""
+    )
+    for statement in INDEXES:
+        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
+        if _table_exists(conn, table):
+            conn.execute(statement)
+    _install_clockin_append_only(conn)
+
+
+def _downgrade_immutable_clockins(conn) -> None:
+    if conn.dialect == "sqlite":
+        for trigger in (
+            "worker_clockins_require_seal",
+            "worker_clockins_append_only_update",
+            "worker_clockins_append_only_delete",
+            "clockin_corrections_append_only_update",
+            "clockin_corrections_append_only_delete",
+        ):
+            conn.execute(f"DROP TRIGGER IF EXISTS {trigger}")
+    else:
+        for table in ("worker_clockins", "worker_clockin_corrections"):
+            conn.execute(
+                f"DROP TRIGGER IF EXISTS {table}_append_only ON {table}"
+            )
+        conn.execute("DROP FUNCTION IF EXISTS noesis_clockins_append_only()")
+    conn.execute("DROP INDEX IF EXISTS idx_clockin_corrections_clockin")
+    conn.execute("DROP TABLE IF EXISTS worker_clockin_corrections")
+    # Las columnas y el CHECK ampliado se conservan: eliminarlos podría destruir
+    # sellos o hacer imposible revertir si ya existen pausas.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -609,6 +801,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (3, "cola_whatsapp_durable", _upgrade_whatsapp_outbox, _downgrade_whatsapp_outbox),
     (4, "panel_personalizable", _upgrade_panel_layout, _downgrade_panel_layout),
     (5, "equipo_fichaje", _upgrade_team_clockins, _downgrade_team_clockins),
+    (6, "fichaje_inalterable", _upgrade_immutable_clockins, _downgrade_immutable_clockins),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

@@ -860,5 +860,233 @@ class WorkerPortalHttpTestCase(unittest.TestCase):
         self.assertIn("Revisión", outbox[0]["text_body"])
 
 
+class LegalClockinTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def _worker_with_user(self, name="Jornada Legal"):
+        business, client = self.make_business(name)
+        worker = db.create_worker(business["id"], "Laura Legal")
+        user = db.create_user(
+            f"{name.lower().replace(' ', '')}@example.com",
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        return business, client, worker, user
+
+    def test_clockin_chain_is_sealed_and_append_only(self):
+        business, _client, worker, _user = self._worker_with_user()
+        day = date.today().isoformat()
+        moments = [
+            f"{day}T08:00:00", f"{day}T10:00:00",
+            f"{day}T10:30:00", f"{day}T12:00:00",
+        ]
+        with patch("noesis.db._now", side_effect=moments):
+            db.clock_worker(business["id"], worker["id"], "entrada", "web")
+            db.clock_worker(business["id"], worker["id"], "pausa", "web")
+            db.clock_worker(business["id"], worker["id"], "reanudar", "web")
+            db.clock_worker(business["id"], worker["id"], "salida", "web")
+
+        with db.get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM worker_clockins WHERE business_id=? "
+                "AND worker_id=? ORDER BY id",
+                (business["id"], worker["id"]),
+            ).fetchall()
+        self.assertEqual([row["action"] for row in rows],
+                         ["entrada", "pausa", "reanudar", "salida"])
+        self.assertIsNone(rows[0]["prev_seal"])
+        self.assertEqual(rows[1]["prev_seal"], rows[0]["seal"])
+        self.assertEqual(rows[3]["prev_seal"], rows[2]["seal"])
+        self.assertTrue(
+            db.verify_clockin_chain(business["id"], worker["id"])["valid"]
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE worker_clockins SET at=? WHERE id=?",
+                    (f"{day}T09:00:00", rows[0]["id"]),
+                )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "DELETE FROM worker_clockins WHERE id=?", (rows[0]["id"],)
+                )
+
+    def test_chain_verification_detects_external_tampering(self):
+        business, _client, worker, _user = self._worker_with_user("Cadena")
+        clockin = db.clock_worker(
+            business["id"], worker["id"], "entrada", "web", lat=40, lng=-3
+        )
+        with db.get_conn() as conn:
+            conn.execute("DROP TRIGGER worker_clockins_append_only_update")
+            conn.execute(
+                "UPDATE worker_clockins SET lat=? WHERE id=?",
+                (41, clockin["id"]),
+            )
+        result = db.verify_clockin_chain(business["id"], worker["id"])
+        self.assertFalse(result["valid"])
+        self.assertEqual(result["broken_at"], clockin["id"])
+
+    def test_correction_and_annulment_leave_audit_trail(self):
+        business, _client, worker, user = self._worker_with_user("Correcciones")
+        day = date.today().isoformat()
+        with patch("noesis.db._now", return_value=f"{day}T08:00:00"):
+            original = db.clock_worker(
+                business["id"], worker["id"], "entrada", "web"
+            )
+        correction = db.correct_worker_clockin(
+            business["id"], worker["id"], original["id"], user["id"],
+            new_at=f"{day}T08:15:00", reason="Olvidó fichar al llegar",
+        )
+        self.assertEqual(correction["old_at"], f"{day}T08:00:00")
+        self.assertEqual(correction["new_at"], f"{day}T08:15:00")
+        with db.get_conn() as conn:
+            stored = conn.execute(
+                "SELECT * FROM worker_clockins WHERE id=?", (original["id"],)
+            ).fetchone()
+        self.assertEqual(stored["at"], original["at"])
+        self.assertEqual(stored["seal"], original["seal"])
+        self.assertTrue(
+            db.verify_clockin_chain(business["id"], worker["id"])["valid"]
+        )
+        annulment = db.correct_worker_clockin(
+            business["id"], worker["id"], original["id"], user["id"],
+            new_at=None, reason="Fichaje duplicado",
+        )
+        self.assertEqual(annulment["status"], "anulado")
+        trail = db.clockin_corrections(
+            business["id"], worker["id"], original["id"]
+        )
+        self.assertEqual(len(trail), 2)
+        self.assertTrue(
+            db.worker_clockin_history(
+                worker["id"], business["id"],
+                from_day=day, to_day=day,
+            )[0]["annulled"]
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE worker_clockin_corrections SET reason='cambiado' "
+                    "WHERE id=?",
+                    (correction["id"],),
+                )
+
+    def test_pauses_are_discounted_from_worked_hours(self):
+        business, _client, worker, _user = self._worker_with_user("Pausas")
+        day = (date.today() - timedelta(days=1)).isoformat()
+        moments = [
+            f"{day}T08:00:00", f"{day}T10:00:00",
+            f"{day}T10:30:00", f"{day}T12:00:00",
+        ]
+        with patch("noesis.db._now", side_effect=moments):
+            for action in ("entrada", "pausa", "reanudar", "salida"):
+                db.clock_worker(
+                    business["id"], worker["id"], action, "web"
+                )
+        report = db.clockin_report_data(
+            business["id"], worker["id"], day, day
+        )
+        self.assertEqual(report["days"][0]["hours"], 3.5)
+
+    def test_verifiable_report_contains_seals_and_integrity(self):
+        from noesis.web.work_reports import build_clockin_csv, build_clockin_pdf
+
+        business, _client, worker, _user = self._worker_with_user("Informes")
+        day = date.today().isoformat()
+        moments = [f"{day}T08:00:00", f"{day}T16:00:00"]
+        with patch("noesis.db._now", side_effect=moments):
+            db.clock_worker(business["id"], worker["id"], "entrada", "web")
+            db.clock_worker(business["id"], worker["id"], "salida", "web")
+        data = db.clockin_report_data(
+            business["id"], worker["id"], day, day
+        )
+        csv_payload = build_clockin_csv(data).decode("utf-8-sig")
+        pdf_payload = build_clockin_pdf(data)
+        self.assertIn("sello_sha256", csv_payload)
+        self.assertIn("VALIDA", csv_payload)
+        self.assertIn(data["days"][0]["events"][0]["seal"], csv_payload)
+        self.assertTrue(pdf_payload.startswith(b"%PDF"))
+        self.assertGreater(len(pdf_payload), 1500)
+
+    def test_worker_acknowledgement_is_scoped_and_recorded(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _client, worker, _user = self._worker_with_user("Acuse")
+        token = db.get_or_create_worker_token(business["id"], worker["id"])
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                response = client.post(f"/t/{token}/ack")
+                self.assertEqual(response.status_code, 200)
+                page = client.get(f"/t/{token}")
+                self.assertIn("Información recibida", page.text)
+        with db.get_conn() as conn:
+            event = conn.execute(
+                "SELECT * FROM product_events WHERE business_id=? "
+                "AND event_name='fichaje_info_ack'",
+                (business["id"],),
+            ).fetchone()
+        self.assertIsNotNone(event)
+        self.assertIn(str(worker["id"]), event["event_data"])
+
+    def test_correction_and_report_endpoints_are_tenant_scoped(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _client, worker, user = self._worker_with_user("HTTP Legal")
+        other_business, _ = self.make_business("HTTP Ajeno")
+        other_worker = db.create_worker(other_business["id"], "Persona ajena")
+        day = date.today().isoformat()
+        with patch("noesis.db._now", return_value=f"{day}T08:00:00"):
+            clockin = db.clock_worker(
+                business["id"], worker["id"], "entrada", "web"
+            )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": user["email"],
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                corrected = client.post(
+                    f"/api/{business['id']}/workers/{worker['id']}/"
+                    f"clockins/{clockin['id']}/correct",
+                    json={
+                        "new_at": f"{day}T08:05:00",
+                        "reason": "Ajuste solicitado por la trabajadora",
+                    },
+                )
+                self.assertEqual(corrected.status_code, 200)
+                blocked = client.post(
+                    f"/api/{business['id']}/workers/{other_worker['id']}/"
+                    f"clockins/{clockin['id']}/correct",
+                    json={"new_at": None, "reason": "Cruce"},
+                )
+                self.assertEqual(blocked.status_code, 404)
+                csv_report = client.get(
+                    f"/api/{business['id']}/workers/{worker['id']}/report"
+                    f"?from={day}&to={day}&format=csv"
+                )
+                pdf_report = client.get(
+                    f"/api/{business['id']}/workers/{worker['id']}/report"
+                    f"?from={day}&to={day}&format=pdf"
+                )
+                self.assertEqual(csv_report.status_code, 200)
+                self.assertTrue(csv_report.headers["content-type"].startswith("text/csv"))
+                self.assertEqual(pdf_report.status_code, 200)
+                self.assertEqual(pdf_report.headers["content-type"], "application/pdf")
+                forbidden = client.get(
+                    f"/api/{other_business['id']}/workers/{other_worker['id']}/report"
+                )
+                self.assertEqual(forbidden.status_code, 403)
+
+
 if __name__ == "__main__":
     unittest.main()

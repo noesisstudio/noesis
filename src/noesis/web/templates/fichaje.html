@@ -45,18 +45,30 @@
         <section class="clock-card">
           <div class="clock-state">
             <div>
-              <strong>{% if data.open_shift %}Jornada en curso{% else %}Jornada cerrada{% endif %}</strong>
-              <span>{% if data.open_shift %}Entrada a las {{ data.open_shift.at[11:16] }}
+              <strong>{% if data.open_shift and data.open_shift.paused %}Pausa en curso
+                {% elif data.open_shift %}Jornada en curso{% else %}Jornada cerrada{% endif %}</strong>
+              <span>{% if data.open_shift %}Entrada a las {{ data.open_shift.effective_at[11:16] }}
                 {% else %}Registra tu entrada cuando empieces{% endif %}</span>
             </div>
-            {% if data.open_shift %}<span class="badge b-green">Dentro</span>
+            {% if data.open_shift and data.open_shift.paused %}<span class="badge b-amber">En pausa</span>
+            {% elif data.open_shift %}<span class="badge b-green">Dentro</span>
             {% else %}<span class="badge b-gray">Fuera</span>{% endif %}
           </div>
           <div class="clock-actions">
-            <button class="btn primary" id="clock-in" type="button"
-              onclick="clock('entrada')" {% if data.open_shift %}disabled{% endif %}>Registrar entrada</button>
-            <button class="btn" id="clock-out" type="button"
-              onclick="clock('salida')" {% if not data.open_shift %}disabled{% endif %}>Registrar salida</button>
+            {% if not data.open_shift %}
+              <button class="btn primary full" type="button"
+                onclick="clock('entrada')">Registrar entrada</button>
+            {% elif data.open_shift.paused %}
+              <button class="btn primary" type="button"
+                onclick="clock('reanudar')">Reanudar jornada</button>
+              <button class="btn" type="button"
+                onclick="clock('salida')">Registrar salida</button>
+            {% else %}
+              <button class="btn" type="button"
+                onclick="clock('pausa')">Iniciar pausa</button>
+              <button class="btn" type="button"
+                onclick="clock('salida')">Registrar salida</button>
+            {% endif %}
           </div>
           <div class="clock-message" id="clock-message" role="status"></div>
         </section>
@@ -81,6 +93,56 @@
           {% else %}
             <div class="empty">No tienes trabajos asignados para hoy.</div>
           {% endif %}
+        </section>
+
+        <section class="clock-card">
+          <div class="kicker">Mi historial · últimos 30 días</div>
+          {% if data.history %}
+            <div class="clock-history">
+              {% for item in data.history %}
+                <div class="clock-history-row {{ 'is-annulled' if item.annulled }}">
+                  <span class="clock-history-action">{{ item.action }}</span>
+                  <span>
+                    <b>{{ (item.effective_at or item.at)[:10] }} ·
+                      {{ (item.effective_at or item.at)[11:16] }}</b>
+                    <small>{{ item.source }}{% if item.lat is not none and item.lng is not none %}
+                      · GPS {{ '%.5f'|format(item.lat) }}, {{ '%.5f'|format(item.lng) }}{% endif %}</small>
+                    {% if item.correction_status %}
+                      <small class="clock-correction">{{ 'Anulado' if item.annulled else 'Hora corregida' }}
+                        · {{ item.correction_reason }}</small>
+                    {% endif %}
+                  </span>
+                  <code title="{{ item.seal }}">{{ item.seal[:10] }}…</code>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">Todavía no hay fichajes en este periodo.</div>
+          {% endif %}
+        </section>
+
+        <section class="clock-card clock-legal">
+          <div class="kicker">Información sobre el registro de jornada</div>
+          <h2>Qué se registra y para qué</h2>
+          <ul>
+            <li>Hora, tipo de fichaje, origen y sello de integridad.</li>
+            <li>Ubicación GPS solo en el instante de fichar, si la autorizas.</li>
+            <li>Finalidad: controlar y acreditar la jornada laboral.</li>
+            <li>Conservación: cuatro años conforme al artículo 34.9 del Estatuto de los Trabajadores.</li>
+            <li>Acceso: tu empresa, tú y las autoridades competentes cuando proceda.</li>
+          </ul>
+          {% if data.clockin_policy %}
+            <div class="clock-policy"><b>Política de {{ data.business.name }}</b>
+              <p>{{ data.clockin_policy }}</p></div>
+          {% endif %}
+          {% if data.info_ack %}
+            <span class="badge b-green">Información recibida</span>
+          {% else %}
+            <button class="btn sm" id="ack-button" type="button" onclick="ackInfo()">
+              Confirmo que he recibido esta información
+            </button>
+          {% endif %}
+          <div class="clock-message" id="ack-message" role="status"></div>
         </section>
 
         <div class="clock-privacy">
@@ -139,8 +201,8 @@ function locateOnce() {
 
 async function clock(action) {
   const message = document.getElementById('clock-message');
-  const buttons = [document.getElementById('clock-in'), document.getElementById('clock-out')];
-  buttons.forEach(button => { if (button) button.disabled = true; });
+  const buttons = [...document.querySelectorAll('.clock-actions button')];
+  buttons.forEach(button => { button.disabled = true; });
   message.className = 'clock-message warn';
   message.textContent = 'Solicitando tu ubicación…';
   const located = await locateOnce();
@@ -159,7 +221,25 @@ async function clock(action) {
   } catch (error) {
     message.className = 'clock-message error';
     message.textContent = error.message;
-    buttons.forEach(button => { if (button) button.disabled = false; });
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+
+async function ackInfo() {
+  const message = document.getElementById('ack-message');
+  const button = document.getElementById('ack-button');
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch(`${tokenPath}/ack`, {method:'POST'});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'No se pudo guardar el acuse.');
+    message.className = 'clock-message ok';
+    message.textContent = 'Acuse guardado.';
+    setTimeout(() => location.reload(), 700);
+  } catch (error) {
+    message.className = 'clock-message error';
+    message.textContent = error.message;
+    if (button) button.disabled = false;
   }
 }
 </script>

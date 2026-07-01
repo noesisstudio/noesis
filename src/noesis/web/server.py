@@ -22,7 +22,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, Request, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -391,6 +391,19 @@ def _worker_portal_context(request: Request, token: str) -> dict:
         "open_shift": (
             db.worker_open_shift(worker["id"], business["id"]) if unlocked else None
         ),
+        "history": (
+            db.worker_clockin_history(
+                worker["id"],
+                business["id"],
+                from_day=(date.today() - timedelta(days=29)).isoformat(),
+                to_day=date.today().isoformat(),
+            )
+            if unlocked else []
+        ),
+        "clockin_policy": business.get("clockin_policy"),
+        "info_ack": request.session.get("clockin_info_ack") == hashlib.sha256(
+            token.encode()
+        ).hexdigest(),
     }
     return {"token": token, "data": data}
 
@@ -460,6 +473,27 @@ async def worker_portal_clock(request: Request, token: str):
     except (TypeError, ValueError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     return {"ok": True, "clockin": clockin}
+
+
+@app.post("/t/{token}/ack")
+def worker_portal_ack(request: Request, token: str):
+    ref = db.resolve_worker_token(token)
+    if not ref:
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    worker = ref["worker"]
+    if worker.get("pin_hash") and not _worker_token_verified(request, token):
+        return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    db.record_product_event(
+        ref["business"]["id"],
+        "fichaje_info_ack",
+        json.dumps(
+            {"worker_id": worker["id"], "ack_at": date.today().isoformat()},
+            ensure_ascii=False,
+        ),
+    )
+    request.session["clockin_info_ack"] = token_hash
+    return {"ok": True}
 
 
 # ================================================================ AUTH ====== #
@@ -648,6 +682,31 @@ def api_workers(business_id: int):
     return db.clockins_today(business_id)
 
 
+@app.get("/api/{business_id}/workers/{worker_id}/clockins")
+def api_worker_clockins(
+    business_id: int,
+    worker_id: int,
+    from_: str = Query("", alias="from"),
+    to: str = "",
+):
+    if not db.get_worker(worker_id, business_id):
+        return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
+    try:
+        start = (
+            date.fromisoformat(from_).isoformat()
+            if from_ else (date.today() - timedelta(days=29)).isoformat()
+        )
+        end = date.fromisoformat(to).isoformat() if to else date.today().isoformat()
+    except ValueError:
+        return JSONResponse({"error": "El rango de fechas no es válido."}, status_code=400)
+    return {
+        "items": db.worker_clockin_history(
+            worker_id, business_id, from_day=start, to_day=end
+        ),
+        "integrity": db.verify_clockin_chain(business_id, worker_id),
+    }
+
+
 @app.post("/api/{business_id}/workers")
 async def api_create_worker(business_id: int, request: Request):
     try:
@@ -702,6 +761,36 @@ async def api_worker_active(
     if worker is None:
         return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
     return _worker_json(worker)
+
+
+@app.post(
+    "/api/{business_id}/workers/{worker_id}/clockins/{clockin_id}/correct"
+)
+async def api_correct_worker_clockin(
+    request: Request,
+    business_id: int,
+    worker_id: int,
+    clockin_id: int,
+):
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    user = auth.current_user(request)
+    try:
+        correction = db.correct_worker_clockin(
+            business_id,
+            worker_id,
+            clockin_id,
+            user["id"],
+            new_at=body.get("new_at"),
+            reason=body.get("reason"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if correction is None:
+        return JSONResponse({"error": "Fichaje no encontrado."}, status_code=404)
+    return {"ok": True, "correction": correction}
 
 
 @app.post("/api/{business_id}/jobs/{job_id}/assign")
@@ -780,6 +869,55 @@ def api_worker_link(business_id: int, worker_id: int):
         "access_code": worker["access_code"],
         "whatsapp_command": command,
     }
+
+
+@app.get("/api/{business_id}/workers/{worker_id}/report")
+def api_worker_report(
+    business_id: int,
+    worker_id: int,
+    from_: str = Query("", alias="from"),
+    to: str = "",
+    format: str = "pdf",
+):
+    try:
+        start = (
+            date.fromisoformat(from_).isoformat()
+            if from_ else (date.today() - timedelta(days=29)).isoformat()
+        )
+        end = date.fromisoformat(to).isoformat() if to else date.today().isoformat()
+        data = db.clockin_report_data(business_id, worker_id, start, end)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if data is None:
+        return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
+    from .work_reports import build_clockin_csv, build_clockin_pdf
+    safe_name = "".join(
+        character if character.isalnum() else "_"
+        for character in data["worker"]["name"].lower()
+    ).strip("_") or f"trabajador_{worker_id}"
+    if format.lower() == "csv":
+        payload = build_clockin_csv(data)
+        return Response(
+            content=payload,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="jornada_{safe_name}_{start}_{end}.csv"'
+                )
+            },
+        )
+    if format.lower() != "pdf":
+        return JSONResponse({"error": "Formato de informe no válido."}, status_code=400)
+    payload = build_clockin_pdf(data)
+    return Response(
+        content=payload,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": (
+                f'inline; filename="jornada_{safe_name}_{start}_{end}.pdf"'
+            )
+        },
+    )
 
 
 @app.get("/api/{business_id}/invoices")
@@ -875,7 +1013,10 @@ def api_delete_invoice(business_id: int, invoice_id: int):
 
 @app.delete("/api/{business_id}/jobs/{job_id}")
 def api_delete_job(business_id: int, job_id: int):
-    db.delete_job(job_id, business_id)
+    try:
+        db.delete_job(job_id, business_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=409)
     return {"ok": True}
 
 
@@ -1329,6 +1470,20 @@ def update_fiscal(business_id: int, name: str = Form(""), nif: str = Form(""),
             f"/b/{business_id}/ajustes?error=fiscal", status_code=303
         )
     db.record_product_event(business_id, "fiscal_profile_updated")
+    return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
+
+
+@app.post("/b/{business_id}/clockin-policy")
+def update_clockin_policy(
+    business_id: int, clockin_policy: str = Form("")
+):
+    try:
+        db.update_clockin_policy(business_id, clockin_policy)
+    except ValueError:
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=clockin-policy", status_code=303
+        )
+    db.record_product_event(business_id, "clockin_policy_updated")
     return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
 
 
