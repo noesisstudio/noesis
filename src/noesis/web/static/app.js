@@ -98,8 +98,11 @@ function barlist(items, cls) {
 function shareLink(url, opts = {}) {
   closeModal();
   const opener = document.activeElement;
-  const phone = String(opts.phone || '').replace(/\D/g, '');
-  const text = (opts.message || '') + url;
+  let phone = String(opts.phone || '').replace(/\D/g, '');
+  if (phone.length === 9) phone = '34' + phone;
+  const text = opts.message
+    ? (opts.message.includes(url) ? opts.message : opts.message + url)
+    : url;
   const wa = phone
     ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
     : `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -110,8 +113,8 @@ function shareLink(url, opts = {}) {
     <div class="modal-h"><h2>${esc(opts.title || 'Compartir enlace')}</h2>
       <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
     <div class="modal-b">
-      <p class="muted" style="margin:0 0 10px">Enlace privado de tu cliente. Cualquiera
-        con el enlace puede verlo, así que envíaselo solo a él.</p>
+      <p class="muted" style="margin:0 0 10px">${esc(opts.note ||
+        'Enlace privado de tu cliente. Cualquiera con el enlace puede verlo, así que envíaselo solo a él.')}</p>
       <input class="input" id="share-url" readonly value="${esc(url)}"
         aria-label="Enlace del portal" onclick="this.select()">
     </div>
