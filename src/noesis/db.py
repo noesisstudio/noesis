@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config
+from .clockin_integrity import clockin_seal
 
 log = logging.getLogger("noesis.db")
 
@@ -1019,11 +1020,15 @@ def update_job_status(job_id, status, business_id) -> None:
 
 def delete_job(job_id, business_id) -> None:
     with get_conn() as conn:
-        conn.execute(
-            "UPDATE worker_clockins SET job_id=NULL "
-            "WHERE job_id=? AND business_id=?",
+        used = conn.execute(
+            "SELECT 1 AS found FROM worker_clockins "
+            "WHERE job_id=? AND business_id=? LIMIT 1",
             (job_id, business_id),
-        )
+        ).fetchone()
+        if used:
+            raise ValueError(
+                "El trabajo tiene fichajes y debe conservarse como justificante."
+            )
         conn.execute("DELETE FROM jobs WHERE id=? AND business_id=?",
                      (job_id, business_id))
 
@@ -1119,16 +1124,144 @@ def _gps_value(value, label: str, lower: float, upper: float) -> float | None:
     return number
 
 
+def _parse_clockin_at(value: Any, label: str = "La fecha") -> str:
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} no es válida.") from exc
+    if parsed.tzinfo is not None:
+        raise ValueError(f"{label} debe usar la hora local de la empresa.")
+    return parsed.isoformat(timespec="seconds")
+
+
+def _clockin_rows_with_corrections(
+    conn, business_id: int, worker_id: int
+) -> list[dict]:
+    rows = conn.execute(
+        "SELECT wc.*, cor.id AS correction_id, cor.status AS correction_status, "
+        "cor.reason AS correction_reason, cor.old_at AS correction_old_at, "
+        "cor.new_at AS correction_new_at, cor.created_at AS correction_created_at "
+        "FROM worker_clockins wc "
+        "LEFT JOIN worker_clockin_corrections cor ON cor.id=("
+        "SELECT MAX(c2.id) FROM worker_clockin_corrections c2 "
+        "WHERE c2.business_id=wc.business_id AND c2.clockin_id=wc.id"
+        ") WHERE wc.business_id=? AND wc.worker_id=? ORDER BY wc.id",
+        (business_id, worker_id),
+    ).fetchall()
+    result: list[dict] = []
+    for raw in rows:
+        item = dict(raw)
+        item["annulled"] = item.get("correction_status") == "anulado"
+        item["effective_at"] = (
+            item.get("correction_new_at")
+            if item.get("correction_status") == "corregido"
+            else item.get("at")
+        )
+        result.append(item)
+    return result
+
+
+def worker_clockin_history(
+    worker_id: int,
+    business_id: int,
+    *,
+    from_day: str | None = None,
+    to_day: str | None = None,
+) -> list[dict]:
+    if not get_worker(worker_id, business_id):
+        return []
+    with get_conn() as conn:
+        records = _clockin_rows_with_corrections(conn, business_id, worker_id)
+    start = datetime.fromisoformat(from_day) if from_day else None
+    end = (
+        datetime.fromisoformat(to_day) + timedelta(days=1)
+        if to_day else None
+    )
+    filtered = []
+    for record in records:
+        display_at = record.get("effective_at") or record["at"]
+        point = datetime.fromisoformat(str(display_at))
+        if start and point < start:
+            continue
+        if end and point >= end:
+            continue
+        filtered.append(record)
+    return sorted(
+        filtered,
+        key=lambda item: (str(item.get("effective_at") or item["at"]), item["id"]),
+        reverse=True,
+    )
+
+
+def _active_clockin_records(records: list[dict]) -> list[dict]:
+    return sorted(
+        (record for record in records if not record.get("annulled")),
+        key=lambda item: (str(item["effective_at"]), item["id"]),
+    )
+
+
+def _shift_state(records: list[dict]) -> dict:
+    working = False
+    paused = False
+    entry = None
+    for record in _active_clockin_records(records):
+        action = record["action"]
+        if action == "entrada" and not working:
+            working, paused, entry = True, False, record
+        elif action == "pausa" and working and not paused:
+            paused = True
+        elif action == "reanudar" and working and paused:
+            paused = False
+        elif action == "salida" and working:
+            working, paused, entry = False, False, None
+    return {"working": working, "paused": paused, "entry": entry}
+
+
+def _worked_seconds_for_day(
+    records: list[dict], day: str, now: datetime | None = None
+) -> float:
+    now = now or datetime.now()
+    day_start = datetime.fromisoformat(day)
+    day_end = day_start + timedelta(days=1)
+    intervals: list[tuple[datetime, datetime]] = []
+    working = False
+    paused = False
+    segment_start: datetime | None = None
+    for record in _active_clockin_records(records):
+        point = datetime.fromisoformat(str(record["effective_at"]))
+        action = record["action"]
+        if action == "entrada" and not working:
+            working, paused, segment_start = True, False, point
+        elif action == "pausa" and working and not paused:
+            if segment_start is not None and point >= segment_start:
+                intervals.append((segment_start, point))
+            paused, segment_start = True, None
+        elif action == "reanudar" and working and paused:
+            paused, segment_start = False, point
+        elif action == "salida" and working:
+            if not paused and segment_start is not None and point >= segment_start:
+                intervals.append((segment_start, point))
+            working, paused, segment_start = False, False, None
+    if working and not paused and segment_start is not None:
+        intervals.append((segment_start, now))
+    seconds = 0.0
+    for start, finish in intervals:
+        clipped_start = max(start, day_start)
+        clipped_end = min(finish, day_end, now)
+        if clipped_end > clipped_start:
+            seconds += (clipped_end - clipped_start).total_seconds()
+    return seconds
+
+
 def worker_open_shift(worker_id: int, business_id: int) -> dict | None:
     if not get_worker(worker_id, business_id):
         return None
     with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM worker_clockins WHERE business_id=? AND worker_id=? "
-            "ORDER BY at DESC, id DESC LIMIT 1",
-            (business_id, worker_id),
-        ).fetchone()
-        return dict(row) if row and row["action"] == "entrada" else None
+        records = _clockin_rows_with_corrections(conn, business_id, worker_id)
+    state = _shift_state(records)
+    if not state["working"]:
+        return None
+    return {**state["entry"], "paused": state["paused"]}
 
 
 def clock_worker(
@@ -1141,7 +1274,7 @@ def clock_worker(
     lng=None,
     accuracy=None,
 ) -> dict:
-    if action not in {"entrada", "salida"}:
+    if action not in {"entrada", "salida", "pausa", "reanudar"}:
         raise ValueError("La acción de fichaje no es válida.")
     if source not in {"web", "whatsapp"}:
         raise ValueError("El origen del fichaje no es válido.")
@@ -1158,24 +1291,50 @@ def clock_worker(
     now = _now()
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        conn.execute(
+            "SELECT id FROM workers WHERE id=? AND business_id=?" + lock,
+            (worker_id, business_id),
+        ).fetchone()
+        records = _clockin_rows_with_corrections(conn, business_id, worker_id)
+        state = _shift_state(records)
+        if action == "entrada" and state["working"]:
+            raise ValueError("Ya hay una jornada abierta.")
+        if action == "pausa" and (
+            not state["working"] or state["paused"]
+        ):
+            raise ValueError("No se puede iniciar esa pausa.")
+        if action == "reanudar" and (
+            not state["working"] or not state["paused"]
+        ):
+            raise ValueError("No hay una pausa que reanudar.")
+        if action == "salida" and not state["working"]:
+            raise ValueError("No hay una jornada abierta para registrar la salida.")
         last = conn.execute(
-            "SELECT action FROM worker_clockins "
-            "WHERE business_id=? AND worker_id=? ORDER BY at DESC, id DESC LIMIT 1",
+            "SELECT seal FROM worker_clockins "
+            "WHERE business_id=? AND worker_id=? ORDER BY id DESC LIMIT 1",
             (business_id, worker_id),
         ).fetchone()
-        last_action = last["action"] if last else None
-        if action == "entrada" and last_action == "entrada":
-            raise ValueError("Ya hay una entrada abierta.")
-        if action == "salida" and last_action != "entrada":
-            raise ValueError("No hay una entrada abierta para registrar la salida.")
+        prev_seal = last["seal"] if last else None
+        seal = clockin_seal({
+            "business_id": business_id,
+            "worker_id": worker_id,
+            "action": action,
+            "at": now,
+            "source": source,
+            "lat": lat,
+            "lng": lng,
+            "job_id": job_id,
+        }, prev_seal)
         row = conn.execute(
             "INSERT INTO worker_clockins "
             "(business_id, worker_id, job_id, action, at, source, lat, lng, "
-            "accuracy, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "accuracy, created_at, seal, prev_seal) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "RETURNING id",
             (
                 business_id, worker_id, job_id, action, now, source, lat, lng,
-                accuracy, now,
+                accuracy, now, seal, prev_seal,
             ),
         ).fetchone()
         clockin_id = row["id"]
@@ -1188,68 +1347,238 @@ def clock_worker(
         return dict(result)
 
 
+def verify_clockin_chain(business_id: int, worker_id: int) -> dict:
+    if not get_worker(worker_id, business_id):
+        return {
+            "valid": False, "checked": 0, "broken_at": None,
+            "error": "Trabajador no encontrado.",
+        }
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM worker_clockins "
+            "WHERE business_id=? AND worker_id=? ORDER BY id",
+            (business_id, worker_id),
+        ).fetchall()
+    previous = None
+    for index, raw in enumerate(rows):
+        row = dict(raw)
+        expected = clockin_seal(row, previous)
+        if row.get("prev_seal") != previous or row.get("seal") != expected:
+            return {
+                "valid": False,
+                "checked": index,
+                "broken_at": row["id"],
+                "expected_seal": expected,
+                "stored_seal": row.get("seal"),
+            }
+        previous = row["seal"]
+    return {
+        "valid": True,
+        "checked": len(rows),
+        "broken_at": None,
+        "last_seal": previous,
+    }
+
+
+def correct_worker_clockin(
+    business_id: int,
+    worker_id: int,
+    clockin_id: int,
+    author_user_id: int,
+    *,
+    new_at: str | None,
+    reason: str,
+) -> dict | None:
+    reason = (reason or "").strip()
+    if len(reason) < 3:
+        raise ValueError("El motivo de la corrección es obligatorio.")
+    if len(reason) > 1000:
+        raise ValueError("El motivo de la corrección es demasiado largo.")
+    corrected_at = (
+        _parse_clockin_at(new_at, "La nueva fecha") if new_at else None
+    )
+    author = get_user(author_user_id)
+    if not author or author["business_id"] != business_id:
+        raise ValueError("El autor no pertenece a este negocio.")
+    if not get_worker(worker_id, business_id):
+        return None
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        conn.execute(
+            "SELECT id FROM workers WHERE id=? AND business_id=?" + lock,
+            (worker_id, business_id),
+        ).fetchone()
+        clockin = conn.execute(
+            "SELECT * FROM worker_clockins "
+            "WHERE id=? AND business_id=? AND worker_id=?",
+            (clockin_id, business_id, worker_id),
+        ).fetchone()
+        if not clockin:
+            return None
+        latest = conn.execute(
+            "SELECT * FROM worker_clockin_corrections "
+            "WHERE business_id=? AND clockin_id=? ORDER BY id DESC LIMIT 1",
+            (business_id, clockin_id),
+        ).fetchone()
+        old_at = (
+            latest.get("new_at")
+            if latest and latest.get("status") == "corregido"
+            else (None if latest and latest.get("status") == "anulado"
+                  else clockin["at"])
+        )
+        status = "corregido" if corrected_at else "anulado"
+        created_at = _now()
+        row = conn.execute(
+            "INSERT INTO worker_clockin_corrections "
+            "(business_id, clockin_id, author_user_id, reason, status, old_at, "
+            "new_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (
+                business_id, clockin_id, author_user_id, reason, status,
+                old_at, corrected_at, created_at,
+            ),
+        ).fetchone()
+        correction_id = row["id"]
+    with get_conn() as conn:
+        correction = conn.execute(
+            "SELECT * FROM worker_clockin_corrections "
+            "WHERE id=? AND business_id=?",
+            (correction_id, business_id),
+        ).fetchone()
+    return dict(correction)
+
+
+def clockin_corrections(
+    business_id: int, worker_id: int, clockin_id: int
+) -> list[dict]:
+    if not get_worker(worker_id, business_id):
+        return []
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT cor.*, u.email AS author_email "
+            "FROM worker_clockin_corrections cor "
+            "JOIN worker_clockins wc ON wc.id=cor.clockin_id "
+            "AND wc.business_id=cor.business_id "
+            "LEFT JOIN users u ON u.id=cor.author_user_id "
+            "WHERE cor.business_id=? AND wc.worker_id=? AND cor.clockin_id=? "
+            "ORDER BY cor.id",
+            (business_id, worker_id, clockin_id),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
 def clockins_today(business_id: int) -> list[dict]:
     today = date.today().isoformat()
     now = datetime.now()
-    day_start = datetime.fromisoformat(today)
     workers = list_workers(business_id)
-    with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM worker_clockins WHERE business_id=? "
-            "AND CAST(at AS TEXT) LIKE ? ORDER BY worker_id, at, id",
-            (business_id, f"{today}%"),
-        ).fetchall()
-    by_worker: dict[int, list[dict]] = {}
-    for row in rows:
-        by_worker.setdefault(row["worker_id"], []).append(dict(row))
     summaries: list[dict] = []
     for worker in workers:
-        events = by_worker.get(worker["id"], [])
         with get_conn() as conn:
-            prior_row = conn.execute(
-                "SELECT * FROM worker_clockins WHERE business_id=? AND worker_id=? "
-                "AND at<? ORDER BY at DESC, id DESC LIMIT 1",
-                (business_id, worker["id"], today),
-            ).fetchone()
-        prior = dict(prior_row) if prior_row else None
-        opened: datetime | None = (
-            day_start if prior and prior["action"] == "entrada" else None
+            records = _clockin_rows_with_corrections(
+                conn, business_id, worker["id"]
+            )
+        state = _shift_state(records)
+        today_records = [
+            record for record in _active_clockin_records(records)
+            if str(record["effective_at"]).startswith(today)
+        ]
+        last = today_records[-1] if today_records else (
+            state["entry"] if state["working"] else None
         )
-        seconds = 0.0
+        location_record = next(
+            (
+                record for record in reversed(today_records)
+                if record.get("lat") is not None and record.get("lng") is not None
+            ),
+            state["entry"] if state["working"] else None,
+        )
         last_location = (
             {
-                "lat": prior["lat"], "lng": prior["lng"],
-                "accuracy": prior.get("accuracy"), "at": prior["at"],
+                "lat": location_record["lat"], "lng": location_record["lng"],
+                "accuracy": location_record.get("accuracy"),
+                "at": location_record.get("effective_at") or location_record["at"],
             }
-            if opened is not None
-            and prior.get("lat") is not None and prior.get("lng") is not None
+            if location_record
+            and location_record.get("lat") is not None
+            and location_record.get("lng") is not None
             else None
         )
-        for event in events:
-            point = datetime.fromisoformat(str(event["at"]))
-            if event["action"] == "entrada":
-                opened = point
-            elif opened is not None:
-                seconds += max(0.0, (point - opened).total_seconds())
-                opened = None
-            if event.get("lat") is not None and event.get("lng") is not None:
-                last_location = {
-                    "lat": event["lat"], "lng": event["lng"],
-                    "accuracy": event.get("accuracy"), "at": event["at"],
-                }
-        if opened is not None:
-            seconds += max(0.0, (now - opened).total_seconds())
-        last = events[-1] if events else (prior if opened is not None else None)
+        seconds = _worked_seconds_for_day(records, today, now)
         summaries.append({
             **worker,
             "hours_today": round(seconds / 3600, 2),
             "hours": round(seconds / 3600, 2),
             "last_action": last["action"] if last else None,
-            "last_clock_at": last["at"] if last else None,
+            "last_clock_at": (
+                last.get("effective_at") or last["at"] if last else None
+            ),
             "last_location": last_location,
-            "open_shift": bool(last and last["action"] == "entrada"),
+            "open_shift": state["working"],
+            "paused": state["paused"],
         })
     return summaries
+
+
+def clockin_report_data(
+    business_id: int, worker_id: int, from_day: str, to_day: str
+) -> dict | None:
+    worker = get_worker(worker_id, business_id)
+    business = get_business(business_id)
+    if not worker or not business:
+        return None
+    start = datetime.fromisoformat(from_day)
+    end = datetime.fromisoformat(to_day)
+    if end < start:
+        raise ValueError("La fecha final no puede ser anterior a la inicial.")
+    if (end - start).days > 1461:
+        raise ValueError("El informe no puede superar cuatro años.")
+    with get_conn() as conn:
+        records = _clockin_rows_with_corrections(conn, business_id, worker_id)
+    days = []
+    point = start
+    while point <= end:
+        day = point.date().isoformat()
+        day_events = []
+        for record in records:
+            display_at = record.get("effective_at") or record["at"]
+            event_day = str(display_at)[:10]
+            if event_day == day:
+                day_events.append(record)
+        if day_events or _worked_seconds_for_day(records, day) > 0:
+            days.append({
+                "day": day,
+                "hours": round(
+                    _worked_seconds_for_day(records, day) / 3600, 2
+                ),
+                "events": sorted(
+                    day_events,
+                    key=lambda item: (
+                        str(item.get("effective_at") or item["at"]), item["id"]
+                    ),
+                ),
+            })
+        point += timedelta(days=1)
+    return {
+        "business": business,
+        "worker": worker,
+        "from": from_day,
+        "to": to_day,
+        "days": days,
+        "integrity": verify_clockin_chain(business_id, worker_id),
+        "generated_at": _now(),
+    }
+
+
+def update_clockin_policy(business_id: int, policy: str | None) -> dict | None:
+    text = (policy or "").strip()
+    if len(text) > 5000:
+        raise ValueError("La política de registro no puede superar 5.000 caracteres.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET clockin_policy=? WHERE id=?",
+            (text or None, business_id),
+        )
+    return get_business(business_id)
 
 
 # ------------------------------------------------ Enlace de cada trabajador ---
@@ -2479,6 +2808,10 @@ def export_business_data(business_id) -> dict:
         "worker_clockins": [dict(r) for r in _rows(
             "SELECT * FROM worker_clockins WHERE business_id=? ORDER BY at, id",
             business_id)],
+        "worker_clockin_corrections": [dict(r) for r in _rows(
+            "SELECT * FROM worker_clockin_corrections "
+            "WHERE business_id=? ORDER BY id",
+            business_id)],
         "invoices": list_invoices(business_id),
         "quotes": list_quotes(business_id),
         "expenses": list_expenses(business_id),
@@ -2550,12 +2883,15 @@ def delete_client_cascade(client_id, business_id) -> bool:
             (business_id, client_id),
         )
         conn.execute(
-            "UPDATE worker_clockins SET job_id=NULL WHERE business_id=? "
-            "AND job_id IN (SELECT id FROM jobs WHERE business_id=? AND client_id=?)",
-            (business_id, business_id, client_id),
+            "DELETE FROM jobs WHERE business_id=? AND client_id=? "
+            "AND NOT EXISTS (SELECT 1 FROM worker_clockins wc "
+            "WHERE wc.business_id=jobs.business_id AND wc.job_id=jobs.id)",
+            (business_id, client_id),
         )
-        conn.execute("DELETE FROM jobs WHERE business_id=? AND client_id=?",
-                     (business_id, client_id))
+        conn.execute(
+            "UPDATE jobs SET client_id=NULL WHERE business_id=? AND client_id=?",
+            (business_id, client_id),
+        )
         if issued:
             conn.execute(
                 "UPDATE clients SET name='Cliente conservado por obligación fiscal', "
@@ -2584,13 +2920,23 @@ def delete_business_cascade(business_id) -> bool:
                 "La cuenta tiene facturas emitidas que deben conservarse. "
                 "Solicita una baja con conservación fiscal."
             )
+        clockins = conn.execute(
+            "SELECT COUNT(*) AS total FROM worker_clockins WHERE business_id=?",
+            (business_id,),
+        ).fetchone()["total"]
+        if clockins:
+            raise ValueError(
+                "La cuenta tiene registros de jornada que deben conservarse "
+                "durante cuatro años. Solicita una baja con conservación legal."
+            )
         # Borra los ficheros físicos de los documentos antes que sus metadatos (RGPD).
         from .documents import storage as _docstore
         _docstore.delete_business_dir(business_id)
         for table in (
-            "worker_tokens", "worker_clockins", "portal_tokens", "product_events",
-            "copilot_recommendations", "documents", "quotes", "invoices",
-            "jobs", "workers", "clients", "expenses"
+            "worker_tokens", "worker_clockin_corrections", "worker_clockins",
+            "portal_tokens", "product_events", "copilot_recommendations",
+            "documents", "quotes", "invoices", "jobs", "workers", "clients",
+            "expenses"
         ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "

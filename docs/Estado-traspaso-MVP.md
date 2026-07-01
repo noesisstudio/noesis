@@ -31,13 +31,17 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 - **De Codex en `main`:** Holded real (adapter), plantillas de WhatsApp, emails,
   recordatorios, NLU flexible, módulo `documents/` ("papeles": recibos/tickets + OCR
   opcional) y datos fiscales del cliente.
-- **Equipo y fichaje (en `codex/equipo-fichaje`, pendiente de revisión):**
-  trabajadores aislados por negocio, asignación desde Agenda, planning por WhatsApp,
-  acceso personal `/t/{token}`, PIN opcional y fichaje entrada/salida con GPS puntual
-  opcional. Migración 5 compatible con SQLite/Postgres.
+- **Equipo y fichaje (migración 5 en `main`):** trabajadores aislados por negocio,
+  asignación desde Agenda, planning por WhatsApp, acceso personal `/t/{token}`, PIN
+  opcional y fichaje con GPS puntual opcional.
+- **Fichaje justificable (en `codex/fichaje-legal`, pendiente de revisión):**
+  migración 6 con sellos SHA-256 encadenados y protección *append-only*; correcciones
+  y anulaciones auditadas; pausas; historial de 30 días para el trabajador; informes
+  CSV/PDF con verificación de integridad; política de empresa e información RGPD con
+  acuse. Compatible con SQLite/Postgres.
 
-**Pruebas:** 54/54 en `tests/test_backend.py` (SQLite local, rama
-`codex/equipo-fichaje`).
+**Pruebas:** 61/61 en `tests/test_backend.py` (SQLite local, rama
+`codex/fichaje-legal`).
 
 ---
 
@@ -46,7 +50,7 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 | Archivo | Qué es |
 |---|---|
 | `src/noesis/db.py` | Único punto de contacto con SQLite/Postgres. Selecciona Postgres con `DATABASE_URL`. |
-| `src/noesis/migrations.py` | Esquema versionado, incluidas FKs multiempresa, `documents` y migración 5 de equipo/fichajes. |
+| `src/noesis/migrations.py` | Esquema versionado, incluidas FKs multiempresa, `documents` y migración 6 de fichaje inalterable. |
 | `src/noesis/agent.py` | **El cerebro IA**: bucle de tool-use con Claude. Sistema acotado al negocio. Solo se activa con `ANTHROPIC_API_KEY`. |
 | `src/noesis/nlu.py` | Cerebro local por reglas (gratis, sin API): resuelve los comandos frecuentes. |
 | `src/noesis/web/chat.py` | Orquestador híbrido: intenta NLU local → si no, agente IA. Aquí vive el copiloto (plan diario, sin-facturar, ledger). |
@@ -54,8 +58,9 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 | `src/noesis/web/whatsapp.py` | Webhook de mensajes/estados + outbox durable, reintentos y vinculación por código. |
 | `src/noesis/web/server.py` | App FastAPI: ~70 rutas (páginas, API, onboarding, webhooks). |
 | `src/noesis/web/templates/equipo.html` | Gestión del equipo, estado diario, GPS y enlaces personales. |
-| `src/noesis/web/templates/fichaje.html` | Portal móvil público por token para entrada/salida con PIN y GPS opcionales. |
+| `src/noesis/web/templates/fichaje.html` | Portal móvil por token para fichar, consultar el historial y leer la información RGPD. |
 | `src/noesis/web/invoice_pdf.py` | PDF de factura con marca (plantillas + logo/monograma). |
+| `src/noesis/web/work_reports.py` | Informes CSV/PDF verificables de registro de jornada. |
 | `src/noesis/documents/` | Módulo de "papeles" (Codex): subir/guardar/leer documentos. |
 | `src/noesis/adapters/` | `invoicing.py` (mock→Holded), `email.py` (SMTP), `transcription.py` (Whisper local). |
 | `config.py` | Lee todas las variables de entorno (`.env`). |

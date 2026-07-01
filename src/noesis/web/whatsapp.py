@@ -102,7 +102,7 @@ def _try_worker_link(from_phone: str, text: str) -> dict | None:
         "worker_id": worker["id"],
         "reply": (
             f"Hola, {worker['name']}. Tu WhatsApp ya está vinculado. "
-            "Escribe ENTRADA al empezar y SALIDA al terminar."
+            "Escribe ENTRADA, PAUSA, REANUDAR o SALIDA."
         ),
     }
 
@@ -112,13 +112,13 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
     if not worker:
         return None
     action = (text or "").strip().lower()
-    if action not in {"entrada", "salida"}:
+    if action not in {"entrada", "salida", "pausa", "reanudar"}:
         if db.get_business_by_phone(from_phone):
             return None
         return {
             "business_id": worker["business_id"],
             "worker_id": worker["id"],
-            "reply": "Para fichar escribe ENTRADA o SALIDA.",
+            "reply": "Para fichar escribe ENTRADA, PAUSA, REANUDAR o SALIDA.",
             "clocked": False,
         }
     try:
