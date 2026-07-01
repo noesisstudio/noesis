@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Cuentas</div>
+    <h1>Tesorería</h1>
+    <div class="page-count">Tu dinero de un vistazo: lo que entra, lo que debes y tu posición.</div>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/b/{{ business.id }}/impuestos">Impuestos</a>
+    <a class="btn primary" href="/b/{{ business.id }}/cobros">Revisar cobros</a>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="stat"><div class="lbl">Te deben</div><div class="val green" id="k-due">—</div>
+    <div class="delta flat" id="k-due-d">facturas sin cobrar</div></div>
+  <div class="stat"><div class="lbl">IVA a liquidar (trim.)</div><div class="val red" id="k-vat">—</div>
+    <div class="delta flat" id="k-vat-d">este trimestre</div></div>
+  <div class="stat"><div class="lbl">En mora (+30 días)</div><div class="val" id="k-mora">—</div>
+    <div class="delta flat" id="k-mora-d">—</div></div>
+  <div class="stat"><div class="lbl">Por entrar (tras IVA)</div><div class="val" id="k-net">—</div>
+    <div class="delta flat">te deben − IVA</div></div>
+</div>
+
+<div class="split" style="margin-top:14px; grid-template-columns:1fr 1fr">
+  <div class="card">
+    <div class="card-h"><h2>Haber · te deben</h2>
+      <a class="hint" href="/b/{{ business.id }}/cobros">ver cobros</a></div>
+    <div class="card-b table-pad"><div id="haber">…</div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Debe · a pagar / apartar</h2>
+      <a class="hint" href="/b/{{ business.id }}/impuestos">ver impuestos</a></div>
+    <div class="card-b"><div id="debe">…</div></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="card-h"><h2>IVA e impuestos por trimestre</h2>
+    <span class="hint" id="tax-year"></span></div>
+  <div class="card-b table-pad"><div class="table-wrap"><table>
+    <thead><tr>
+      <th>Trimestre</th><th class="t-right">Ingresos</th>
+      <th class="t-right">IVA repercutido</th><th class="t-right">IVA soportado</th>
+      <th class="t-right">IVA a pagar</th><th class="t-right">IRPF (130)</th>
+    </tr></thead>
+    <tbody id="quarters"><tr><td colspan="6" class="empty">Calculando…</td></tr></tbody>
+  </table></div></div>
+</div>
+
+<div class="card subtle" style="margin-top:14px">
+  <div class="card-b"><div class="insight" id="prevision">Calculando tu previsión…</div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load() {
+  const [a, tax] = await Promise.all([api('/analysis'), api('/taxes')]);
+  const vatQ = tax.iva_resultado > 0 ? tax.iva_resultado : 0;
+  const irpfQ = tax.irpf_pago > 0 ? tax.irpf_pago : 0;
+
+  el('k-due').textContent = eur(a.pending);
+  el('k-vat').textContent = eur(vatQ);
+  el('k-vat-d').textContent = tax.label;
+  el('k-mora').textContent = eur(a.morosidad);
+  el('k-mora-d').textContent = a.morosidad ? 'reclámalo ya' : 'sin morosidad';
+  el('k-mora-d').className = 'delta ' + (a.morosidad ? 'down' : 'up');
+  const net = (a.pending || 0) - vatQ;
+  el('k-net').textContent = eur(net);
+
+  // HABER: facturas que te deben.
+  api('/pending').then(rows => {
+    if (!rows.length) {
+      el('haber').innerHTML = emptyState('Todo cobrado', 'Nadie te debe ahora mismo.');
+      return;
+    }
+    const total = rows.reduce((s, r) => s + (r.total || 0), 0);
+    el('haber').innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Cliente</th><th>Concepto</th><th class="t-right">Importe</th><th class="t-right">Días</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td>${esc(r.client_name || '—')}</td>
+        <td class="meta">${esc(r.concept || '')}</td>
+        <td class="t-right num">${eur(r.total)}</td>
+        <td class="t-right"><span class="badge ${r.days_outstanding > 30 ? 'b-red' : r.days_outstanding > 7 ? 'b-amber' : 'b-gray'}">${daysText(r.days_outstanding)}</span></td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="2"><b>Total te deben</b></td><td class="t-right num"><b>${eur(total)}</b></td><td></td></tr></tfoot>
+    </table></div>`;
+  });
+
+  // DEBE: lo que tienes que apartar para Hacienda este trimestre.
+  const totalDebe = vatQ + irpfQ;
+  el('debe').innerHTML = `
+    <div class="lrow"><span>IVA a liquidar · ${esc(tax.label)}<br><span class="meta">modelo 303 (repercutido − soportado)</span></span><b class="num">${eur(vatQ)}</b></div>
+    <div class="lrow"><span>IRPF pago fraccionado<br><span class="meta">modelo 130, estimación</span></span><b class="num">${eur(irpfQ)}</b></div>
+    <div class="lrow"><span><b>Total a apartar</b></span><b class="num" style="color:var(--red)">${eur(totalDebe)}</b></div>
+    <div class="insight" style="margin-top:14px">Son cifras de <b>apoyo</b> para tu gestor, no una presentación oficial. Aparta este dinero en cuanto cobras: es de Hacienda, no tuyo.</div>`;
+
+  // Previsión / colchón.
+  el('prevision').innerHTML = net >= 0
+    ? `Si cobras lo que te deben (<b>${eur(a.pending)}</b>) y apartas el IVA del trimestre (<b>${eur(vatQ)}</b>), te quedan limpios <b>${eur(net)}</b>. Prioriza la mora: ${a.morosidad ? '<b>' + eur(a.morosidad) + '</b> lleva más de 30 días.' : 'no tienes nada en mora, bien.'}`
+    : `El IVA del trimestre (<b>${eur(vatQ)}</b>) supera lo que te deben ahora. Cobra lo pendiente antes de la liquidación para no descuadrar la caja.`;
+
+  // IVA por trimestre (los 4 del año en curso).
+  const year = tax.current_year;
+  el('tax-year').textContent = 'año ' + year;
+  const quarters = await Promise.all([1, 2, 3, 4].map(q => api('/taxes?quarter=' + q + '&year=' + year)));
+  el('quarters').innerHTML = quarters.map(t => `<tr${t.quarter === tax.quarter ? ' style="background:var(--brand-soft)"' : ''}>
+    <td><b>${esc(t.label)}</b></td>
+    <td class="t-right num">${eur(t.ingresos)}</td>
+    <td class="t-right num">${eur(t.iva_repercutido)}</td>
+    <td class="t-right num">${eur(t.iva_soportado)}</td>
+    <td class="t-right num"><b>${eur(t.iva_resultado)}</b></td>
+    <td class="t-right num">${eur(t.irpf_pago)}</td>
+  </tr>`).join('');
+}
+load();
+</script>
+{% endblock %}

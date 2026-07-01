@@ -208,10 +208,10 @@ def _startup() -> None:
 
 # ============================================================== PÁGINAS ===== #
 _PAGES = {
-    "resumen": "Resumen", "analisis": "Análisis", "ingresos": "Ingresos",
-    "costes": "Costes", "presupuestos": "Presupuestos", "facturas": "Facturas",
-    "cobros": "Cobros", "impuestos": "Impuestos", "agenda": "Agenda",
-    "clientes": "Clientes", "documentos": "Documentos",
+    "resumen": "Resumen", "tesoreria": "Tesorería", "analisis": "Análisis",
+    "ingresos": "Ingresos", "costes": "Costes", "presupuestos": "Presupuestos",
+    "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
+    "agenda": "Agenda", "clientes": "Clientes", "documentos": "Documentos",
     "asistente": "Asistente", "ajustes": "Ajustes",
 }
 
