@@ -29,6 +29,35 @@
   </div>
 
   <div class="card">
+    <div class="card-h">
+      <b>Copias de seguridad</b>
+      {% if data.backup.status == 'ok' %}
+        <span class="badge b-green">Verificación OK</span>
+      {% elif data.backup.status == 'error' %}
+        <span class="badge b-red">Error de verificación</span>
+      {% else %}
+        <span class="badge b-gray">Sin copias</span>
+      {% endif %}
+    </div>
+    <div class="card-b">
+      {% if data.backup.created_at %}
+        <p class="meta">
+          Último intento: <b>{{ data.backup.created_at }}</b> ·
+          Tamaño: <b>{{ data.backup.size_human }}</b>
+        </p>
+        {% if data.backup.error %}
+          <p class="notice error">{{ data.backup.error }}</p>
+        {% endif %}
+      {% else %}
+        <p class="meta">Todavía no se ha ejecutado ninguna copia programada.</p>
+      {% endif %}
+      {% if data.backup.download_available %}
+        <a class="btn" href="/admin/backups/latest">Descargar última copia verificada</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-h"><b>Cuentas</b><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp conectado</span></div>
     <div class="card-b table-pad">
       <div class="table-wrap">

@@ -84,13 +84,11 @@ editar los mismos archivos en paralelo.
 ## 7. Estado actual
 Fase 1 "núcleo sólido" **completa** (login, fiscalidad, editar/borrar, PDF,
 validaciones, marca, móvil). SQLite/Postgres y las migraciones versionadas ya están en
-`main`; la migración 5 (`equipo_fichaje`) aporta trabajadores, asignación de
-trabajos y fichaje web/WhatsApp con GPS opcional y PIN. En
-`codex/fichaje-legal`, pendiente de revisión, está la migración **6**
-(`fichaje_inalterable`): sellado encadenado, correcciones auditadas, pausas,
-historial e informes verificables. Sobre esa rama se apila
-`codex/verifactu-fase1`, con la migración **7** (`verifactu_fase1`): registro de
-facturación append-only, huella/QR/XML AEAT, eventos y rectificativas, todavía sin
-transmisión. Siguiente: fusionar en orden las migraciones 6 y 7 y completar
-**Fase 2** (activar Postgres, transmisión AEAT, WhatsApp Meta y bynoesis.com).
+`main`; las migraciones 5–7 aportan equipo y fichaje, registro de jornada
+inalterable y Veri*Factu fase 1. GitHub Actions ejecuta tests y migraciones en cada
+PR y push a `main`. En `codex/backups-verificados`, pendiente de revisión, está la
+migración **8** (`backups_verificados`): copia y restauración comprobada de
+SQLite/Postgres, historial y descarga solo admin, con S3-compatible opcional.
+Siguiente: revisar esa rama y completar **Fase 2** (activar Postgres, transmisión
+AEAT, WhatsApp Meta y bynoesis.com).
 Detalle en `docs/Roadmap.md`.

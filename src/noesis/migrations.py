@@ -290,7 +290,7 @@ def _column_names(conn, table: str) -> set[str]:
         return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
     rows = conn.execute(
         "SELECT column_name FROM information_schema.columns "
-        "WHERE table_schema='public' AND table_name=?",
+        "WHERE table_schema=current_schema() AND table_name=?",
         (table,),
     ).fetchall()
     return {row["column_name"] for row in rows}
@@ -496,7 +496,7 @@ def _table_exists(conn, table: str) -> bool:
     else:
         row = conn.execute(
             "SELECT 1 AS found FROM information_schema.tables "
-            "WHERE table_schema='public' AND table_name=?",
+            "WHERE table_schema=current_schema() AND table_name=?",
             (table,),
         ).fetchone()
     return bool(row)
@@ -506,7 +506,9 @@ def _postgres_constraint_exists(conn, name: str) -> bool:
     if conn.dialect != "postgres":
         return False
     row = conn.execute(
-        "SELECT 1 AS found FROM pg_constraint WHERE conname=?",
+        "SELECT 1 AS found FROM pg_constraint c "
+        "JOIN pg_namespace n ON n.oid=c.connamespace "
+        "WHERE n.nspname=current_schema() AND c.conname=?",
         (name,),
     ).fetchone()
     return bool(row)
@@ -969,6 +971,30 @@ def _downgrade_verifactu_phase1(conn) -> None:
     # reactivar accidentalmente un modo que el negocio hubiera desactivado.
 
 
+def _upgrade_verified_backups(conn) -> None:
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS backup_runs (
+    id          {t["id"]},
+    created_at  {t["timestamp"]} NOT NULL,
+    filename    TEXT,
+    size_bytes  BIGINT NOT NULL DEFAULT 0,
+    status      TEXT NOT NULL CHECK (status IN ('ok', 'error')),
+    storage     TEXT NOT NULL,
+    error       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_backup_runs_created
+    ON backup_runs(created_at);
+"""
+    )
+
+
+def _downgrade_verified_backups(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_backup_runs_created")
+    conn.execute("DROP TABLE IF EXISTS backup_runs")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -978,6 +1004,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (5, "equipo_fichaje", _upgrade_team_clockins, _downgrade_team_clockins),
     (6, "fichaje_inalterable", _upgrade_immutable_clockins, _downgrade_immutable_clockins),
     (7, "verifactu_fase1", _upgrade_verifactu_phase1, _downgrade_verifactu_phase1),
+    (8, "backups_verificados", _upgrade_verified_backups, _downgrade_verified_backups),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
@@ -1000,7 +1027,8 @@ def _version_table_exists(conn) -> bool:
     else:
         row = conn.execute(
             "SELECT 1 AS found FROM information_schema.tables "
-            "WHERE table_schema='public' AND table_name='schema_migrations'"
+            "WHERE table_schema=current_schema() "
+            "AND table_name='schema_migrations'"
         ).fetchone()
     return bool(row)
 
@@ -1021,6 +1049,11 @@ def current_version() -> int:
         return _current_version(conn)
 
 
+def current_version_connection(conn) -> int:
+    """Consulta la versión dentro de una conexión o esquema ya seleccionado."""
+    return _current_version(conn)
+
+
 def is_current() -> bool:
     try:
         return current_version() == LATEST_VERSION
@@ -1028,24 +1061,34 @@ def is_current() -> bool:
         return False
 
 
-def upgrade(target: int | None = None) -> int:
-    from . import db
+def upgrade_connection(conn, target: int | None = None) -> int:
+    """Aplica migraciones sobre una conexión existente.
 
+    La restauración de Postgres la usa con un ``search_path`` temporal para no
+    escribir nunca en el esquema real durante la verificación.
+    """
     target = LATEST_VERSION if target is None else target
     if target < 0 or target > LATEST_VERSION:
         raise ValueError(f"Versión objetivo no válida: {target}")
+    _ensure_version_table(conn)
+    current = _current_version(conn)
+    for version, name, apply, _revert in MIGRATIONS:
+        if current < version <= target:
+            apply(conn)
+            conn.execute(
+                "INSERT INTO schema_migrations (version, name, applied_at) "
+                "VALUES (?, ?, ?)",
+                (version, name, datetime.now().isoformat(timespec="seconds")),
+            )
+            current = version
+    return current
+
+
+def upgrade(target: int | None = None) -> int:
+    from . import db
+
     with db.get_conn() as conn:
-        _ensure_version_table(conn)
-        current = _current_version(conn)
-        for version, name, apply, _revert in MIGRATIONS:
-            if current < version <= target:
-                apply(conn)
-                conn.execute(
-                    "INSERT INTO schema_migrations (version, name, applied_at) "
-                    "VALUES (?, ?, ?)",
-                    (version, name, datetime.now().isoformat(timespec="seconds")),
-                )
-                current = version
+        current = upgrade_connection(conn, target)
     return current
 
 

@@ -3164,6 +3164,80 @@ def claim_scheduled_run(run_key: str) -> bool:
         return False
 
 
+def record_backup_result(
+    filename: str | None,
+    size_bytes: int,
+    status: str,
+    storage: str,
+    error: str | None = None,
+) -> dict:
+    """Guarda el resultado global y deja el mismo evento en cada negocio.
+
+    El backup contiene todos los negocios. Replicar el evento por ``business_id``
+    mantiene la analítica aislada sin inventar un negocio global.
+    """
+    if status not in {"ok", "error"}:
+        raise ValueError("El estado del backup no es válido.")
+    created_at = _now()
+    clean_error = (error or "").strip()[:300] or None
+    event_data = json.dumps(
+        {
+            "created_at": created_at,
+            "filename": filename,
+            "size_bytes": max(0, int(size_bytes)),
+            "status": status,
+            "error": clean_error,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO backup_runs "
+            "(created_at, filename, size_bytes, status, storage, error) "
+            "VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+            (
+                created_at,
+                filename,
+                max(0, int(size_bytes)),
+                status,
+                storage,
+                clean_error,
+            ),
+        ).fetchone()
+        businesses = conn.execute("SELECT id FROM businesses ORDER BY id").fetchall()
+        for business in businesses:
+            conn.execute(
+                "INSERT INTO product_events "
+                "(business_id, event_name, event_data, created_at) "
+                "VALUES (?, 'backup_verificado', ?, ?)",
+                (business["id"], event_data, created_at),
+            )
+    return get_backup_run(row["id"])
+
+
+def get_backup_run(backup_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM backup_runs WHERE id=?", (backup_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def latest_backup_run(*, status: str | None = None) -> dict | None:
+    if status is not None and status not in {"ok", "error"}:
+        raise ValueError("El estado del backup no es válido.")
+    sql = "SELECT * FROM backup_runs"
+    params: tuple = ()
+    if status:
+        sql += " WHERE status=?"
+        params = (status,)
+    sql += " ORDER BY created_at DESC, id DESC LIMIT 1"
+    with get_conn() as conn:
+        row = conn.execute(sql, params).fetchone()
+    return dict(row) if row else None
+
+
 # ----------------------------------------------------- Panel de administración ---
 def admin_overview() -> dict:
     """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
@@ -3198,7 +3272,7 @@ def admin_overview() -> dict:
         "activados": len(activated),
         "resultados": len([b for b in biz if b["outcome_reached"]]),
         "tasa_activacion": round(len(activated) / len(biz) * 100) if biz else 0,
-        "mrr": mrr, "businesses": biz,
+        "mrr": mrr, "businesses": biz, "backup": latest_backup_run(),
     }
 
 

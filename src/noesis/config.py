@@ -175,3 +175,14 @@ MAX_CHAT_CHARS = int(os.getenv("NOESIS_MAX_CHAT_CHARS", "4000"))
 BACKUP_DIR = Path(
     os.getenv("NOESIS_BACKUP_DIR", str(DB_PATH.parent / "backups"))
 )
+# Copia externa opcional compatible con S3. Sin las cuatro variables principales
+# no se realiza ninguna petición ni se incurre en coste.
+BACKUP_S3_ENDPOINT = os.getenv("NOESIS_BACKUP_S3_ENDPOINT", "").strip()
+BACKUP_S3_BUCKET = os.getenv("NOESIS_BACKUP_S3_BUCKET", "").strip()
+BACKUP_S3_ACCESS_KEY = os.getenv("NOESIS_BACKUP_S3_ACCESS_KEY", "").strip()
+BACKUP_S3_SECRET_KEY = os.getenv("NOESIS_BACKUP_S3_SECRET_KEY", "").strip()
+BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "us-east-1").strip()
+BACKUP_S3_PREFIX = os.getenv("NOESIS_BACKUP_S3_PREFIX", "noesis").strip()
+BACKUP_S3_TIMEOUT_SECONDS = int(
+    os.getenv("NOESIS_BACKUP_S3_TIMEOUT_SECONDS", "60")
+)
