@@ -558,6 +558,9 @@ def page(request: Request, business_id: int, page: str):
     if page == "ajustes":
         context["verifactu_errors"] = db.verifactu_configuration_errors()
         context["verifactu_ready"] = not context["verifactu_errors"]
+    if page == "asistente":
+        from ..adapters import transcription
+        context["voice_on"] = transcription.available()
     return TEMPLATES.TemplateResponse(request, f"{page}.html", context)
 
 

@@ -34,8 +34,8 @@
       <div class="landing-copy">
         <div class="kicker">Para autónomos y pequeños negocios de servicios</div>
         <h1>Del trabajo terminado al dinero cobrado.</h1>
-        <p>Convierte mensajes y audios en presupuestos, citas, trabajos, facturas y
-          cobros. Noesis mantiene el negocio al día sin obligarte a abrir un ERP.</p>
+        <p>Dilo por WhatsApp —con texto o nota de voz— y Noesis lo convierte en
+          presupuesto, cita, factura o cobro. Tu negocio al día sin abrir un ERP.</p>
         <div class="landing-cta">
           <a class="btn primary" href="/onboarding">Probar 14 días gratis</a>
           {% if business_id %}
@@ -46,12 +46,31 @@
         </div>
         <div class="trust-row">
           <span>Sin tarjeta</span>
-          <span>Datos exportables</span>
+          <span>Veri*Factu incluido</span>
           <span>IVA e IRPF correctos</span>
+          <span>Datos exportables</span>
         </div>
       </div>
-      <div class="hero-product" aria-label="Vista previa del producto">
-        <img src="/static/noesis-product-preview.png" alt="Panel de Noesis con resumen, cobros y agenda">
+      <div class="hero-phone" role="img" aria-label="Conversación de WhatsApp: una nota de voz se convierte en una factura enviada">
+        <div class="wa-top">
+          <span class="wa-avatar"><img src="/static/noesis-mark.svg" alt=""></span>
+          <div class="wa-who"><b>Noesis</b><span>en línea</span></div>
+        </div>
+        <div class="wa-chat">
+          <div class="wa-day">Hoy</div>
+          <div class="wa-bubble out d1">
+            <span class="wa-voice" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <span class="wa-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              <span class="wa-len">0:06</span>
+            </span>
+            <span class="wa-transcript">«Factura a Marta la reparación de la caldera, doscientos cuarenta euros»</span>
+            <span class="wa-time">18:02 <b>✓✓</b></span>
+          </div>
+          <div class="wa-bubble in d2">Hecho ✅ <b>Factura F-041</b> · Marta Ruiz<br>240 € + IVA = <b>290,40 €</b>, con su QR Veri*Factu.<br>¿Se la envío con tu enlace de portal?<span class="wa-time">18:02</span></div>
+          <div class="wa-bubble out d3">Sí, envíala<span class="wa-time">18:03 <b>✓✓</b></span></div>
+          <div class="wa-bubble in d4">Enviada 📄 Te aviso cuando la vea y cuando cobres.<br>Mañana tienes 2 trabajos: <b>9:00 Sants</b> y <b>12:30 Gràcia</b>. ¿Te paso el plan del día?<span class="wa-time">18:03</span></div>
+        </div>
       </div>
     </section>
 
@@ -132,6 +151,45 @@
       </div>
     </section>
 
+    <section class="landing-section" id="cumplimiento-legal">
+      <div class="section-intro">
+        <div class="kicker">Cumplimiento</div>
+        <h2>En regla con Hacienda e Inspección, sin pensarlo.</h2>
+        <p>La normativa que viene no debería costarte ni una tarde. Noesis la lleva
+          integrada de serie, no como un módulo aparte.</p>
+      </div>
+      <div class="feature-grid compliance-grid">
+        <article class="feature-card">
+          <span class="law-tag">Obligatorio · 1 jul 2027</span>
+          <h3>Veri*Factu de serie</h3>
+          <p>Cada factura queda registrada con huella encadenada y QR tributario según
+            el formato técnico de la AEAT. Los autónomos están obligados a partir del
+            1 de julio de 2027, con sanciones de hasta 50.000 €. Con Noesis, ya lo tienes.</p>
+        </article>
+        <article class="feature-card">
+          <span class="law-tag">Art. 34.9 ET</span>
+          <h3>Fichaje justificable</h3>
+          <p>Registro de jornada de tu equipo con sellado inalterable, correcciones
+            auditadas e informes verificables listos para una Inspección de Trabajo.
+            GPS opcional conforme a los criterios de la AEPD.</p>
+        </article>
+        <article class="feature-card">
+          <span class="law-tag">RGPD</span>
+          <h3>Tus datos, protegidos y tuyos</h3>
+          <p>Consentimiento, contrato de encargado del tratamiento y copias de
+            seguridad diarias verificadas. Y todo exportable: si un día te vas, te lo
+            llevas.</p>
+        </article>
+        <article class="feature-card">
+          <span class="law-tag">IVA · IRPF</span>
+          <h3>Impuestos sin sorpresas</h3>
+          <p>Base, IVA (21/10/4) y retención de IRPF calculados bien en cada documento,
+            con la vista de impuestos trimestral para saber qué apartar antes de que
+            llegue el 303.</p>
+        </article>
+      </div>
+    </section>
+
     <section class="landing-section" id="precios">
       <div class="section-intro">
         <div class="kicker">Precios</div>
@@ -168,14 +226,33 @@
       </div>
       <div class="faq-grid">
         <details open>
+          <summary>¿Está adaptado a Veri*Factu?</summary>
+          <p>Sí. Noesis genera de forma nativa el registro de facturación conforme al
+            formato técnico de la AEAT: huella encadenada, QR tributario y eventos
+            auditables en cada factura. La remisión automática a la AEAT se activa
+            mucho antes de que sea obligatoria para autónomos (1 de julio de 2027).</p>
+        </details>
+        <details>
           <summary>¿Sustituye a mi gestoría?</summary>
           <p>No. Noesis ordena el día a día: agenda, cobros, gastos y facturas. La parte
             fiscal delicada debe seguir revisándose con criterio profesional.</p>
         </details>
         <details>
+          <summary>¿Puedo hablarle con notas de voz?</summary>
+          <p>Sí. Dile «factura a Juan el cambio de grifo, noventa y cinco euros» en una
+            nota de voz y Noesis la entiende, la transcribe y prepara el documento.
+            Funciona por WhatsApp y también con el micrófono del asistente web.</p>
+        </details>
+        <details>
+          <summary>¿Sirve para el fichaje de mi equipo?</summary>
+          <p>Sí. Cada persona tiene su acceso personal para fichar desde el móvil, con
+            registro inalterable e informes verificables que cumplen el artículo 34.9
+            del Estatuto de los Trabajadores. Sin apps que instalar.</p>
+        </details>
+        <details>
           <summary>¿Necesito instalar una aplicación?</summary>
-          <p>Noesis usa la API oficial de Meta (WhatsApp Cloud API). Conectas tu número y
-            puedes dar órdenes por texto o nota de voz. El panel web funciona desde el
+          <p>No. Noesis usa la API oficial de Meta (WhatsApp Cloud API): conectas tu
+            número y hablas como con cualquier contacto. El panel web funciona desde el
             primer minuto y se puede instalar como acceso directo en el móvil.</p>
         </details>
         <details>

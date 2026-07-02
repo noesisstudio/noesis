@@ -29,6 +29,17 @@
   <div class="chat-input">
     <input class="input" id="msg" placeholder="Escribe a Noesis..." autocomplete="off"
            onkeydown="if(event.key==='Enter')send()">
+    {% if voice_on %}
+    <button class="mic-btn" id="mic-btn" onclick="toggleRec()" title="Enviar nota de voz"
+            aria-label="Enviar nota de voz">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/>
+      </svg>
+      <span class="rec-dot" aria-hidden="true"></span>
+    </button>
+    {% endif %}
     <button class="btn primary" id="send-btn" onclick="send()">Enviar</button>
   </div>
 </div>
@@ -69,6 +80,74 @@ async function send(preset) {
 document.getElementById('chips').addEventListener('click', e => {
   if (e.target.classList.contains('chip')) send(e.target.textContent);
 });
+
+/* --- Nota de voz: graba con el micrófono y la envía al cerebro --- */
+let rec = null, recChunks = [], recTimer = null, recStart = 0;
+const MAX_REC_MS = 60000; // notas cortas: 1 minuto máximo
+
+async function toggleRec() {
+  const btn = el('mic-btn');
+  if (!btn) return;
+  if (rec && rec.state === 'recording') { rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    bubble('Tu navegador no permite grabar audio. Prueba desde el móvil o con Chrome.', 'bot');
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    bubble('Necesito permiso del micrófono para escucharte. Actívalo en el candado de la barra del navegador.', 'bot');
+    return;
+  }
+  const mime = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']
+    .find(t => MediaRecorder.isTypeSupported(t)) || '';
+  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  recChunks = [];
+  rec.ondataavailable = e => { if (e.data.size) recChunks.push(e.data); };
+  rec.onstop = async () => {
+    clearTimeout(recTimer);
+    stream.getTracks().forEach(t => t.stop());
+    btn.classList.remove('recording');
+    btn.title = 'Enviar nota de voz';
+    const ms = Date.now() - recStart;
+    const blob = new Blob(recChunks, { type: rec.mimeType || 'audio/webm' });
+    rec = null;
+    if (ms < 600 || !blob.size) return; // toque accidental: no enviamos nada
+    await sendAudio(blob);
+  };
+  rec.start();
+  recStart = Date.now();
+  btn.classList.add('recording');
+  btn.title = 'Parar y enviar';
+  recTimer = setTimeout(() => { if (rec && rec.state === 'recording') rec.stop(); }, MAX_REC_MS);
+}
+
+async function sendAudio(blob) {
+  if (sendBtn.disabled) return;
+  sendBtn.disabled = true;
+  const mine = bubble('🎤 Nota de voz…', 'me');
+  const typing = bubble('Escuchando...', 'bot');
+  try {
+    const ext = (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm');
+    const fd = new FormData();
+    fd.append('audio', blob, 'nota-de-voz.' + ext);
+    const r = await fetch(`/api/${BIZ}/chat/audio`, { method: 'POST', body: fd });
+    const data = await r.json();
+    typing.remove();
+    if (!r.ok) throw new Error(data.error || 'Error de audio');
+    mine.innerHTML = '🎤 ' + esc(data.transcription);
+    bubble(data.reply, 'bot', data.source);
+  } catch(e) {
+    typing.remove();
+    bubble(e.message === 'Failed to fetch'
+      ? 'No he podido enviar el audio. Revisa la conexión.'
+      : (e.message || 'No he podido entender el audio. Prueba a hablar más cerca del micrófono.'), 'bot');
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
 bubble('Estoy despierto. Puedo registrar tareas, pero también mirar tu negocio y decirte qué priorizar: cobros, agenda, margen o clientes. Pregúntame “qué harías tú ahora” y empiezo por ahí.', 'bot');
 </script>
 {% endblock %}

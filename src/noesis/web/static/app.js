@@ -97,8 +97,13 @@ function barlist(items, cls) {
   </div>`).join('');
 }
 
-/* Compartir un enlace privado (portal del cliente): copiar o enviar por WhatsApp.
-   Modal accesible: atrapa Escape, devuelve el foco a quien lo abrió. */
+/* Compartir un enlace privado (portal, presupuesto, acceso del equipo).
+   Es el momento en que Noesis "sale" hacia el cliente final, así que enseña
+   una previsualización de lo que va a recibir, no un campo de texto pelado.
+   Modal accesible: atrapa Escape y devuelve el foco a quien lo abrió. */
+const WA_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 18.2a8.1 8.1 0 0 1-4.2-1.1l-.3-.2-3 .8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.6.8-.8 1-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4 0-.5.1-.7l.4-.5c.1-.2.2-.3.3-.5v-.5c0-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
+const LINK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>';
+
 function shareLink(url, opts = {}) {
   closeModal();
   const opener = document.activeElement;
@@ -110,21 +115,34 @@ function shareLink(url, opts = {}) {
   const wa = phone
     ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
     : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  let host = '', pathHint = '';
+  try { const u = new URL(url); host = u.host; pathHint = u.pathname.slice(0, 14) + '…'; } catch {}
+  const msgPreview = opts.message ? String(opts.message).replace(url, '').trim() : '';
   const ov = document.createElement('div');
   ov.className = 'modal-overlay';
-  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true"
+  ov.innerHTML = `<div class="modal share-modal" role="dialog" aria-modal="true"
       aria-label="${esc(opts.title || 'Compartir enlace')}">
     <div class="modal-h"><h2>${esc(opts.title || 'Compartir enlace')}</h2>
       <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
     <div class="modal-b">
-      <p class="muted" style="margin:0 0 10px">${esc(opts.note ||
-        'Enlace privado de tu cliente. Cualquiera con el enlace puede verlo, así que envíaselo solo a él.')}</p>
-      <input class="input" id="share-url" readonly value="${esc(url)}"
-        aria-label="Enlace del portal" onclick="this.select()">
-    </div>
-    <div class="modal-f">
-      <button class="btn modal-copy" type="button">Copiar enlace</button>
-      <a class="btn primary" href="${esc(wa)}" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+      <div class="share-preview" aria-hidden="true">
+        <span class="share-ic">${LINK_ICON}</span>
+        <div class="share-meta">
+          <b>${esc(opts.title || 'Enlace privado')}</b>
+          <span>${esc(host)}${esc(pathHint)}</span>
+        </div>
+        <span class="share-badge">privado</span>
+      </div>
+      ${msgPreview ? `<p class="share-msg">${esc(msgPreview)}</p>` : ''}
+      <div class="share-copyrow">
+        <input class="input" id="share-url" readonly value="${esc(url)}"
+          aria-label="Enlace para compartir" onclick="this.select()">
+        <button class="btn modal-copy" type="button">Copiar</button>
+      </div>
+      <a class="btn wa-share full" href="${esc(wa)}" target="_blank" rel="noopener">
+        ${WA_ICON} Enviar por WhatsApp${phone ? '' : ' (elige el contacto)'}</a>
+      <p class="share-note">${esc(opts.note ||
+        'Cualquiera con este enlace puede abrirlo: envíaselo solo a la persona correcta.')}</p>
     </div>
   </div>`;
   document.body.appendChild(ov);
@@ -141,7 +159,7 @@ function shareLink(url, opts = {}) {
     try { await navigator.clipboard.writeText(url); }
     catch { const i = el('share-url'); i.select(); document.execCommand('copy'); }
     copyBtn.textContent = '¡Copiado!';
-    setTimeout(() => { copyBtn.textContent = 'Copiar enlace'; }, 1500);
+    setTimeout(() => { copyBtn.textContent = 'Copiar'; }, 1500);
   };
   document.addEventListener('keydown', onEsc);
   copyBtn.focus();
