@@ -1,4 +1,4 @@
-/* build-marker: sidebar-scroll-fix */
+/* build-marker: sidebar-compact */
 /* ==========================================================================
    Noesis — sistema de diseño (hecho a mano, sin frameworks externos).
    Estética: profesional, minimalista cálida, mucho aire, jerarquía clara.
@@ -69,7 +69,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: 0; }
 }
 .sidebar .brand {
   flex-shrink: 0;
-  padding: 22px 22px 18px;
+  padding: 16px 22px 12px;
   color: #fff;
   font-size: 21px;
   font-weight: 700;
@@ -78,19 +78,19 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: 0; }
 }
 .sidebar .brand .mark { width: 34px; height: 34px; background: #f4f1e8;
   border-radius: 9px; padding: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
-.sidebar .section { padding: 6px 14px; flex: 1 1 auto; min-height: 0; overflow-y: auto;
+.sidebar .section { padding: 4px 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto;
   scrollbar-width: thin; scrollbar-color: #1a443c transparent; }
 .sidebar .section::-webkit-scrollbar { width: 8px; }
 .sidebar .section::-webkit-scrollbar-thumb { background: #1a443c; border-radius: 8px; }
 .sidebar .section::-webkit-scrollbar-track { background: transparent; }
 .sidebar .section-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
-  color: #5c7068; padding: 14px 10px 6px;
+  color: #5c7068; padding: 9px 10px 4px;
 }
 .nav-item {
   display: flex; align-items: center; gap: 11px;
-  padding: 9px 11px; border-radius: 10px; margin: 2px 0;
-  color: #a9bcb4; font-weight: 500; font-size: 14px;
+  padding: 7px 11px; border-radius: 9px; margin: 1px 0;
+  color: #a9bcb4; font-weight: 500; font-size: 13.5px;
   transition: background .12s, color .12s;
 }
 .nav-item .ic { width: 18px; height: 18px; display: inline-flex;
@@ -101,9 +101,18 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: 0; }
 .nav-item.active { background: #1d4c43; color: #fff; }
 .nav-item.active .ic { opacity: 1; }
 .sidebar .spacer { flex: 0 0 0; }
-.sidebar .foot { flex-shrink: 0; padding: 14px; border-top: 1px solid #1a443c; }
-.sidebar .biz { font-size: 13px; color: #fff; font-weight: 600; }
-.sidebar .biz small { display:block; color: #6d847b; font-weight: 500; }
+.sidebar .foot { flex-shrink: 0; padding: 10px 14px; border-top: 1px solid #1a443c;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sidebar .biz { font-size: 13px; color: #fff; font-weight: 600; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar .biz small { display:block; color: #6d847b; font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; }
+.logout-btn { flex-shrink: 0; width: 34px; height: 34px; display: inline-flex;
+  align-items: center; justify-content: center; padding: 0; border: 1px solid #1a443c;
+  background: transparent; border-radius: 9px; color: #a9bcb4; cursor: pointer;
+  transition: color .12s, border-color .12s; }
+.logout-btn:hover { color: #fff; border-color: #2e8b74; }
+.logout-btn svg { width: 18px; height: 18px; }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 

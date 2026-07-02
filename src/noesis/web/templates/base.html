@@ -64,9 +64,8 @@
     <div class="foot">
       <div class="biz">{{ business.name }}<small>{{ business.sector or 'Autónomo' }}</small></div>
       <form method="post" action="/logout">
-      <button type="submit" class="nav-item" style="margin-top:8px; font-size:13px; width:100%; border:0; text-align:left">
-        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
-        Cerrar sesión
+      <button type="submit" class="logout-btn" title="Cerrar sesión" aria-label="Cerrar sesión">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
       </form>
     </div>
