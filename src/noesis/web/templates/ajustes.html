@@ -60,12 +60,18 @@
         <div class="lrow"><span>Número vinculado</span><b>{{ business.whatsapp_phone }}</b></div>
         <p class="muted">Ya puedes gestionar tu negocio por WhatsApp con texto o audio.</p>
       {% else %}
-        <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.</p>
-        <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
-          <label class="fld">Tu número de WhatsApp</label>
-          <input class="input" name="phone" placeholder="+34 6XX XXX XXX" required>
-          <button class="btn primary full" style="margin-top:12px">Conectar WhatsApp</button>
-        </form>
+        <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.
+          Pulsa el botón: se abre WhatsApp con un mensaje ya escrito; envíalo tal cual y tu
+          teléfono queda vinculado solo a tu cuenta.</p>
+        {% if wa %}
+        <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener"
+           style="margin-top:8px">Conectar mi WhatsApp ahora</a>
+        <p class="meta" style="margin:10px 0 0; text-align:center">
+          Tu código de vinculación: <b style="user-select:all">{{ wa.code }}</b>
+          {% if not wa.number %}<br>(El número oficial de Noesis se activa al aprobar Meta;
+          el enrutado ya está listo.){% endif %}
+        </p>
+        {% endif %}
       {% endif %}
       <div class="insight" style="margin-top:14px">
         Funciona con la API oficial de Meta (WhatsApp Cloud API). Cuando esté el número

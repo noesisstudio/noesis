@@ -259,10 +259,13 @@ def page(request: Request, business_id: int, page: str):
     if page not in _PAGES:
         return RedirectResponse(f"/b/{business_id}/resumen")
     biz = db.get_business(business_id) or db.get_business(1)
-    return TEMPLATES.TemplateResponse(
-        request, f"{page}.html",
-        {"business": biz, "active": page, "page_title": _PAGES[page]},
-    )
+    ctx = {"business": biz, "active": page, "page_title": _PAGES[page]}
+    # En Ajustes, si el WhatsApp aún no está conectado, generamos un código de
+    # vinculación fresco para que el autónomo pueda conectarlo desde aquí (no solo
+    # durante el onboarding). El código caduca a los 30 min; se regenera en cada visita.
+    if page == "ajustes" and biz and biz.get("whatsapp_status") != "conectado":
+        ctx["wa"] = whatsapp.start_link(biz["id"])
+    return TEMPLATES.TemplateResponse(request, f"{page}.html", ctx)
 
 
 # ================================================================= API ====== #
