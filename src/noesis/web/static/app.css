@@ -1,4 +1,4 @@
-/* build-marker: sitio-apartados */
+/* build-marker: onboarding-primera-factura */
 /* ==========================================================================
    Noesis — sistema de diseño (hecho a mano, sin frameworks externos).
    Estética: profesional, minimalista cálida, mucho aire, jerarquía clara.
@@ -443,6 +443,13 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
 .chip { font-size: 12.5px; padding: 7px 12px; border-radius: 999px;
   background:#fff; border: 1px solid var(--border-strong); cursor: pointer; color: var(--muted); }
 .chip:hover { border-color: var(--brand); color: var(--brand); }
+
+/* Formulario de nueva factura: fila compacta base/IVA/IRPF + total en vivo. */
+.nf-row { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:10px; margin-top:12px; }
+.nf-total { margin-top:12px; padding:10px 12px; background:var(--brand-soft);
+  border-radius:10px; color:var(--brand); font-weight:650; font-size:13.5px; }
+.modal-b .chips { margin-bottom:0; }
+.modal-b .chips .chip { font-size:12px; padding:5px 10px; }
 
 /* ---------- Landing pública ---------- */
 .landing-body { background: var(--bg); }

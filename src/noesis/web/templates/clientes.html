@@ -8,7 +8,7 @@
        dónde tienes relación comercial que cuidar.</p>
   </div>
   <div class="page-actions">
-    <a class="btn" href="/b/{{ business.id }}/agenda">Ver agenda</a>
+    <button class="btn" onclick="importClients()">Importar lista</button>
     <button class="btn primary" onclick="addClient()">Añadir cliente</button>
   </div>
 </div>
@@ -83,7 +83,11 @@ async function load() {
       <a class="btn sm" href="/api/${BIZ}/clients/${c.id}/export" title="Descargar sus datos (RGPD)">Datos</a>
       <button class="iconbtn" title="Borrar y olvidar (RGPD)" onclick="erase(${c.id})">${TRASH}</button>
     </td></tr>`).join('');
-  el('cl-empty').innerHTML = cs.length ? '' : emptyState('Aún no tienes clientes', 'Se crean solos cuando facturas o agendas desde el asistente.', '/b/{{ business.id }}/asistente', 'Añadir por chat');
+  el('cl-empty').innerHTML = cs.length ? '' : `<div class="empty-state">
+    <b>Empieza por tu cartera</b>
+    <span>Añade un cliente, o pega tu lista de siempre (nombre y teléfono) y Noesis la crea de golpe. También aparecen solos cuando facturas o agendas desde el asistente.</span>
+    <br><button class="btn primary sm" onclick="addClient()">Añadir cliente</button>
+    <button class="btn sm" onclick="importClients()">Importar lista</button></div>`;
 
   const badge = el('cl-badge');
   if (!cs.length) {
@@ -140,6 +144,48 @@ function addClient(){
       load();
     }
   });
+}
+function importClients(){
+  closeModal();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Importar clientes">
+    <div class="modal-h"><h2>Importar clientes</h2>
+      <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
+    <div class="modal-b">
+      <p class="muted" style="margin:0 0 10px">Pega tu lista, un cliente por línea. Separa los
+        datos con comas: <b>nombre, teléfono, email, NIF, zona</b>. Solo el nombre es obligatorio.</p>
+      <textarea class="input" id="imp-text" rows="8" style="resize:vertical;font-family:inherit"
+        placeholder="Taller Norte, 600111222, taller@norte.es&#10;María López, 655000111&#10;Comunidad Sol, , , , Badalona"></textarea>
+      <div class="clock-message" id="imp-msg" role="status"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn modal-cancel">Cancelar</button>
+      <button class="btn primary" id="imp-save">Importar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  ov.querySelector('.modal-x').onclick = close;
+  ov.querySelector('.modal-cancel').onclick = close;
+  el('imp-save').onclick = async () => {
+    const text = el('imp-text').value.trim();
+    if (!text) { el('imp-text').focus(); return; }
+    el('imp-save').disabled = true;
+    try {
+      const r = await apiPost('/clients/import', { text });
+      const msg = el('imp-msg');
+      msg.style.display = 'block';
+      msg.textContent = `${r.created} cliente(s) añadido(s)` +
+        (r.skipped ? `, ${r.skipped} omitido(s) (repetidos o sin nombre).` : '.');
+      setTimeout(() => { close(); load(); }, 1200);
+    } catch(e) {
+      const msg = el('imp-msg'); msg.style.display = 'block'; msg.textContent = e.message;
+      el('imp-save').disabled = false;
+    }
+  };
+  el('imp-text').focus();
 }
 async function erase(id){
   if(confirm('¿Eliminar sus datos operativos? Las facturas emitidas conservarán únicamente los datos exigidos por ley.')){

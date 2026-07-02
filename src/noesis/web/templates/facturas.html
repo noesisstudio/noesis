@@ -12,7 +12,8 @@
     {% if business.verifactu_enabled %}
     <a class="btn" href="/api/{{ business.id }}/verifactu/export.xml">XML AEAT</a>
     {% endif %}
-    <a class="btn primary" href="/b/{{ business.id }}/asistente">Crear por chat</a>
+    <a class="btn" href="/b/{{ business.id }}/asistente">Crear por chat</a>
+    <button class="btn primary" onclick="newInvoice()">Nueva factura</button>
   </div>
 </div>
 
@@ -54,7 +55,94 @@
 
 {% block scripts %}
 <script>
+const CONCEPT_SUGGESTIONS = {{ concept_suggestions|tojson }};
 let ALL = [];
+
+// --- Nueva factura directa (sin pasar por el chat): el flujo de la 1ª factura ---
+async function newInvoice(){
+  let clients = [];
+  try { clients = await api('/clients'); } catch(e){}
+  const opts = clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  const chips = CONCEPT_SUGGESTIONS.map(c =>
+    `<button type="button" class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+  closeModal();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Nueva factura">
+    <div class="modal-h"><h2>Nueva factura</h2>
+      <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
+    <div class="modal-b">
+      <label class="fld">Cliente</label>
+      ${clients.length ? `<select class="input" id="nf-client">
+        <option value="">— Escribir un cliente nuevo —</option>${opts}</select>` : ''}
+      <input class="input" id="nf-client-name" style="margin-top:8px;${clients.length?'':''}"
+        placeholder="Nombre del cliente nuevo">
+      <label class="fld" style="margin-top:12px">Concepto</label>
+      <input class="input" id="nf-concept" placeholder="¿Qué trabajo has hecho?">
+      ${chips ? `<div class="chips" style="margin-top:8px" id="nf-chips">${chips}</div>` : ''}
+      <div class="nf-row">
+        <div><label class="fld">Base (€)</label>
+          <input class="input" id="nf-base" type="number" inputmode="decimal" placeholder="180.00"></div>
+        <div><label class="fld">IVA</label>
+          <select class="input" id="nf-vat">
+            <option value="21">21%</option><option value="10">10%</option>
+            <option value="4">4%</option><option value="0">0%</option></select></div>
+        <div><label class="fld">IRPF</label>
+          <select class="input" id="nf-irpf">
+            <option value="0">0%</option><option value="7">7%</option>
+            <option value="15">15%</option></select></div>
+      </div>
+      <div class="nf-total" id="nf-total">Total: —</div>
+      <div class="clock-message" id="nf-msg" role="alert"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn modal-cancel">Cancelar</button>
+      <button class="btn primary" id="nf-save">Crear borrador</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  ov.querySelector('.modal-x').onclick = close;
+  ov.querySelector('.modal-cancel').onclick = close;
+  const sel = el('nf-client'), nameInput = el('nf-client-name');
+  if (sel) {
+    const syncName = () => { nameInput.style.display = sel.value ? 'none' : 'block'; };
+    sel.onchange = syncName; syncName();
+  }
+  const chipBox = el('nf-chips');
+  if (chipBox) chipBox.addEventListener('click', e => {
+    if (e.target.dataset.c) el('nf-concept').value = e.target.dataset.c;
+  });
+  const recalc = () => {
+    const base = parseFloat(el('nf-base').value) || 0;
+    const vat = base * (parseFloat(el('nf-vat').value)||0) / 100;
+    const irpf = base * (parseFloat(el('nf-irpf').value)||0) / 100;
+    el('nf-total').textContent = base ? `Total: ${eur(base + vat - irpf)} (base ${eur(base)} + IVA ${eur(vat)}${irpf?` − IRPF ${eur(irpf)}`:''})` : 'Total: —';
+  };
+  ['nf-base','nf-vat','nf-irpf'].forEach(id => { el(id).oninput = recalc; el(id).onchange = recalc; });
+  el('nf-save').onclick = async () => {
+    const msg = el('nf-msg');
+    const body = {
+      client_id: sel && sel.value ? sel.value : null,
+      client_name: (!sel || !sel.value) ? nameInput.value.trim() : '',
+      concept: el('nf-concept').value.trim(),
+      base: el('nf-base').value,
+      vat_rate: el('nf-vat').value,
+      irpf_rate: el('nf-irpf').value,
+    };
+    el('nf-save').disabled = true;
+    try {
+      await apiPost('/invoices', body);
+      close(); load();
+    } catch(e) {
+      msg.textContent = e.message; msg.style.display = 'block';
+      el('nf-save').disabled = false;
+    }
+  };
+  (nameInput || el('nf-concept')).focus();
+}
+
 async function load() {
   ALL = await api('/invoices');
   const emit = ALL.filter(i=>i.status!=='borrador');
@@ -107,12 +195,16 @@ function render(f) {
       ${i.status==='borrador'?`<button class="iconbtn" title="Borrar borrador" onclick="del(${i.id})">${TRASH}</button>`:''}
     </td>
   </tr>`).join('');
-  el('f-empty').innerHTML = rows.length ? '' : emptyState(
-    f === 'todas' ? 'Sin facturas todavía' : 'Sin facturas en este estado',
-    f === 'todas' ? 'Crea la primera desde el asistente para probar el flujo completo.' : 'Cambia el filtro o crea una nueva factura.',
-    '/b/{{ business.id }}/asistente',
-    'Crear por chat'
-  );
+  if (rows.length) { el('f-empty').innerHTML = ''; return; }
+  if (f === 'todas') {
+    el('f-empty').innerHTML = `<div class="empty-state">
+      <b>Tu primera factura, en un minuto</b>
+      <span>Elige el cliente, el concepto y el importe. Noesis calcula el IVA y el IRPF, y queda en borrador hasta que la emitas.</span>
+      <br><button class="btn primary sm" onclick="newInvoice()">Crear mi primera factura</button></div>`;
+  } else {
+    el('f-empty').innerHTML = emptyState('Sin facturas en este estado',
+      'Cambia el filtro o crea una nueva factura.', '', '');
+  }
 }
 async function send(id){
   if(!confirm('¿Emitir y enviar esta factura? Se le asignará número y fecha.')) return;

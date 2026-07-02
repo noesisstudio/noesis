@@ -621,6 +621,8 @@ def page(request: Request, business_id: int, page: str):
                 "aceptado_con_errores", "rechazado",
             )
         }
+    if page == "facturas":
+        context["concept_suggestions"] = db.invoice_concept_suggestions(biz)
     if page == "asistente":
         from ..adapters import transcription
         context["voice_on"] = transcription.available()
@@ -994,6 +996,43 @@ def api_invoices(business_id: int):
     return db.list_invoices(business_id)
 
 
+@app.post("/api/{business_id}/invoices")
+async def api_create_invoice(business_id: int, request: Request):
+    """Crea una factura en borrador desde la web (además de por el asistente).
+
+    Acepta un cliente existente (client_id) o un nombre nuevo (client_name), que se
+    da de alta al vuelo para que la primera factura no exija crear antes la ficha.
+    """
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    client_id = body.get("client_id")
+    if not client_id:
+        new_name = (body.get("client_name") or "").strip()
+        if not new_name:
+            return JSONResponse(
+                {"error": "Indica un cliente para la factura."}, status_code=400
+            )
+        existing = db.find_client(new_name, business_id)
+        client_id = existing["id"] if existing else db.add_client(
+            new_name, business_id=business_id
+        )["id"]
+    try:
+        client_id = int(client_id)
+        invoice = db.add_invoice(
+            client_id,
+            (body.get("concept") or "").strip(),
+            body.get("base"),
+            vat_rate=body.get("vat_rate", config.DEFAULT_VAT_RATE),
+            irpf_rate=body.get("irpf_rate", 0),
+            business_id=business_id,
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return invoice
+
+
 @app.post("/api/{business_id}/invoices/{invoice_id}/rectify")
 async def api_rectify_invoice(
     business_id: int, invoice_id: int, request: Request
@@ -1089,6 +1128,37 @@ async def api_create_client(business_id: int, request: Request):
     return db.add_client(name, phone=body.get("phone"), address=body.get("address"),
                          zone=body.get("zone"), nif=body.get("nif"),
                          email=body.get("email"), business_id=business_id)
+
+
+@app.post("/api/{business_id}/clients/import")
+async def api_import_clients(business_id: int, request: Request):
+    """Alta en bloque de clientes pegados como texto (una línea por cliente).
+
+    Formato tolerante separado por comas o tabuladores:
+    nombre, teléfono, email, NIF, zona. Solo el nombre es obligatorio.
+    """
+    try:
+        body = await _read_json(request)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    raw = (body.get("text") or "").strip()
+    if not raw:
+        return JSONResponse({"error": "Pega al menos un cliente."}, status_code=400)
+    fields = ("name", "phone", "email", "nif", "zone")
+    rows: list[dict] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        cells = [c.strip() for c in line.replace("\t", ",").split(",")]
+        # Ignora una posible cabecera pegada desde una hoja de cálculo.
+        if not rows and cells[0].lower() in {"nombre", "name", "cliente"}:
+            continue
+        rows.append({fields[i]: cells[i] for i in range(min(len(cells), len(fields)))})
+    if not rows:
+        return JSONResponse({"error": "No se reconoció ningún cliente."},
+                            status_code=400)
+    return db.import_clients(rows, business_id)
 
 
 @app.post("/api/{business_id}/clients/{client_id}")

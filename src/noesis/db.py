@@ -695,6 +695,82 @@ def add_client(name, phone=None, address=None, zone=None, nif=None, email=None,
     return get_client(new_id, business_id)
 
 
+def import_clients(rows: list[dict], business_id: int) -> dict:
+    """Alta en bloque de clientes (p. ej. pegados desde Excel o la agenda).
+
+    Devuelve cuántos se crearon y cuántas líneas se ignoraron. Salta duplicados por
+    nombre (para que reimportar no cree la cartera dos veces) y filas sin nombre.
+    """
+    created = 0
+    skipped = 0
+    existing = {c["name"].strip().lower() for c in list_clients(business_id)}
+    for row in rows[:1000]:  # tope defensivo por si pegan un archivo enorme
+        name = (str(row.get("name") or "")).strip()
+        if not name or name.lower() in existing:
+            skipped += 1
+            continue
+        add_client(
+            name,
+            phone=(str(row.get("phone") or "").strip() or None),
+            email=(str(row.get("email") or "").strip() or None),
+            nif=(str(row.get("nif") or "").strip() or None),
+            zone=(str(row.get("zone") or "").strip() or None),
+            address=(str(row.get("address") or "").strip() or None),
+            business_id=business_id,
+        )
+        existing.add(name.lower())
+        created += 1
+    return {"created": created, "skipped": skipped}
+
+
+# Conceptos frecuentes por oficio: para que la primera factura no parta de una hoja
+# en blanco. Solo sugerencias editables; nunca imponen precio ni IVA.
+INVOICE_CONCEPT_SUGGESTIONS: dict[str, list[str]] = {
+    "Fontanería": [
+        "Reparación de fuga", "Cambio de grifo", "Desatasco de tubería",
+        "Instalación de sanitario", "Sustitución de calentador",
+    ],
+    "Electricidad": [
+        "Reparación de avería eléctrica", "Instalación de puntos de luz",
+        "Cambio de cuadro eléctrico", "Boletín de instalación",
+        "Sustitución de mecanismos",
+    ],
+    "Reformas": [
+        "Reforma de baño", "Reforma de cocina", "Alicatado y solado",
+        "Pintura de vivienda", "Trabajos de albañilería",
+    ],
+    "Climatización": [
+        "Instalación de aire acondicionado", "Mantenimiento de equipo",
+        "Recarga de gas refrigerante", "Reparación de bomba de calor",
+        "Limpieza de filtros y unidades",
+    ],
+    "Limpieza": [
+        "Limpieza de fin de obra", "Limpieza periódica de local",
+        "Limpieza de comunidad", "Limpieza de cristales",
+        "Servicio de limpieza puntual",
+    ],
+    "Jardinería": [
+        "Mantenimiento de jardín", "Poda de árboles y setos",
+        "Siega y desbroce", "Diseño y plantación", "Sistema de riego",
+    ],
+    "Mantenimiento": [
+        "Mantenimiento preventivo", "Reparación general", "Aviso urgente",
+        "Revisión periódica", "Sustitución de piezas",
+    ],
+}
+INVOICE_CONCEPTS_GENERIC = [
+    "Mano de obra", "Desplazamiento", "Material y mano de obra",
+    "Servicio profesional", "Trabajo realizado",
+]
+
+
+def invoice_concept_suggestions(business: dict | None) -> list[str]:
+    """Sugerencias de concepto según el sector del negocio, con genéricas de apoyo."""
+    sector = (business or {}).get("sector") or ""
+    specific = INVOICE_CONCEPT_SUGGESTIONS.get(sector, [])
+    return specific + INVOICE_CONCEPTS_GENERIC
+
+
 def get_client(client_id, business_id) -> dict | None:
     sql = "SELECT * FROM clients WHERE id=? AND business_id=?"
     params = [client_id, business_id]
