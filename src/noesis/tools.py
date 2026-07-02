@@ -186,7 +186,15 @@ def _enviar_factura(business_id, factura_id):
     if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
     client = db.get_client(inv["client_id"], business_id)
-    issued = _provider.issue(inv, client or {})
+    business = db.get_business(business_id) or {}
+    # En modo nativo no se delega en Holded: la emisión y la huella deben quedar
+    # en la misma transacción local.
+    provider = (
+        invoicing.InternalInvoicingProvider()
+        if business.get("verifactu_enabled")
+        else _provider
+    )
+    issued = provider.issue(inv, client or {})
     inv = db.get_invoice(factura_id, business_id)
     return {"ok": True, "factura": inv, "emision": issued}
 

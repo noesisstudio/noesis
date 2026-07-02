@@ -7,10 +7,12 @@ import os
 import tempfile
 import unittest
 from datetime import date, datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
+from xml.etree import ElementTree as ET
 
-from noesis import config, db, migrations, nlu
+from noesis import config, db, migrations, nlu, verifactu
 from noesis.web import auth, chat, reports, scheduler, whatsapp
 
 
@@ -1084,6 +1086,225 @@ class LegalClockinTestCase(unittest.TestCase):
                 self.assertEqual(pdf_report.headers["content-type"], "application/pdf")
                 forbidden = client.get(
                     f"/api/{other_business['id']}/workers/{other_worker['id']}/report"
+                )
+                self.assertEqual(forbidden.status_code, 403)
+
+
+class VerifactuPhase1TestCase(unittest.TestCase):
+    make_business = BackendTestCase.make_business
+
+    def setUp(self):
+        BackendTestCase.setUp(self)
+        self.original_producer_nif = config.VERIFACTU_PRODUCER_NIF
+        config.VERIFACTU_PRODUCER_NIF = "B87654321"
+
+    def tearDown(self):
+        config.VERIFACTU_PRODUCER_NIF = self.original_producer_nif
+        BackendTestCase.tearDown(self)
+
+    def _enabled_business(self, name="Verifactu Legal"):
+        business, client = self.make_business(name)
+        business = db.update_verifactu_mode(business["id"], True)
+        return business, client
+
+    def _issue(self, business, client, concept="Servicio", base=100):
+        invoice = db.add_invoice(
+            client["id"], concept, base, business_id=business["id"]
+        )
+        return db.issue_invoice(invoice["id"], business["id"])
+
+    def test_mode_is_disabled_by_default(self):
+        business, client = self.make_business("Verifactu Desactivado")
+        invoice = self._issue(business, client)
+        self.assertFalse(db.get_business(business["id"])["verifactu_enabled"])
+        self.assertIsNone(db.get_invoice_record(invoice["id"], business["id"]))
+        self.assertEqual(db.list_invoice_events(business["id"]), [])
+
+    def test_official_hash_example_and_qr_parameters(self):
+        digest = verifactu.invoice_record_hash(
+            issuer_nif="89890001K",
+            invoice_number="12345678/G33",
+            issue_date="01-01-2024",
+            invoice_type="F1",
+            vat_total="12.35",
+            invoice_total="123.45",
+            previous_hash=None,
+            generated_at="2024-01-01T19:20:30+01:00",
+        )
+        self.assertEqual(
+            digest,
+            "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60",
+        )
+        with patch.object(
+            config,
+            "VERIFACTU_QR_BASE_URL",
+            "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR",
+        ):
+            url = verifactu.qr_url(
+                issuer_nif="89890001K",
+                invoice_number="12345678&G33",
+                issue_date="2024-01-01",
+                total="241.40",
+            )
+        self.assertEqual(
+            url,
+            "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR"
+            "?nif=89890001K&numserie=12345678%26G33"
+            "&fecha=01-01-2024&importe=241.4",
+        )
+
+    def test_records_are_chained_scoped_and_append_only(self):
+        business, client = self._enabled_business()
+        other_business, other_client = self._enabled_business("Verifactu Ajeno")
+        first = self._issue(business, client, "Primera", 100)
+        second = self._issue(business, client, "Segunda", 200)
+        self._issue(other_business, other_client, "Ajena", 50)
+
+        records = db.list_invoice_records(business["id"])
+        self.assertEqual(len(records), 2)
+        self.assertIsNone(records[0]["previous_hash"])
+        self.assertEqual(records[1]["previous_hash"], records[0]["record_hash"])
+        self.assertTrue(db.verify_invoice_record_chain(business["id"])["valid"])
+        self.assertIsNone(
+            db.get_invoice_record(first["id"], other_business["id"])
+        )
+        self.assertIsNotNone(db.get_invoice_record(second["id"], business["id"]))
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoice_records SET invoice_total=1 WHERE id=?",
+                    (records[0]["id"],),
+                )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "DELETE FROM invoice_records WHERE id=?", (records[0]["id"],)
+                )
+        events = db.list_invoice_events(business["id"])
+        self.assertEqual([event["event_type"] for event in events], ["alta", "alta"])
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoice_events SET details='alterado' WHERE id=?",
+                    (events[0]["id"],),
+                )
+
+    def test_chain_verification_detects_tampering(self):
+        business, client = self._enabled_business("Verifactu Manipulacion")
+        invoice = self._issue(business, client)
+        record = db.get_invoice_record(invoice["id"], business["id"])
+        with db.get_conn() as conn:
+            conn.execute("DROP TRIGGER invoice_records_append_only_update")
+            conn.execute(
+                "UPDATE invoice_records SET invoice_total=? WHERE id=?",
+                (999, record["id"]),
+            )
+        result = db.verify_invoice_record_chain(business["id"])
+        self.assertFalse(result["valid"])
+        self.assertEqual(result["broken_at"], record["id"])
+
+    def test_rectifying_invoice_keeps_original_and_exports_reference(self):
+        business, client = self._enabled_business("Verifactu Rectifica")
+        original = self._issue(business, client, "Instalación", 500)
+        rectifying = db.create_rectifying_invoice(
+            original["id"],
+            business["id"],
+            concept="Corrección de instalación",
+            base=-100,
+            vat_rate=21,
+            irpf_rate=0,
+            invoice_type="R1",
+            reason="Error en la medición",
+        )
+        issued = db.issue_invoice(rectifying["id"], business["id"])
+        self.assertEqual(issued["invoice_type"], "R1")
+        self.assertEqual(issued["rectifies_invoice_id"], original["id"])
+        self.assertEqual(
+            db.get_invoice(original["id"], business["id"])["total"],
+            original["total"],
+        )
+        record = db.get_invoice_record(issued["id"], business["id"])
+        self.assertEqual(record["rectified_invoice_number"], original["number"])
+        xml = db.export_verifactu_xml(business["id"])
+        root = ET.fromstring(xml)
+        ns = {"sum": verifactu.NS_LR, "sum1": verifactu.NS_INFO}
+        rectified_number = root.find(
+            ".//sum1:FacturasRectificadas/"
+            "sum1:IDFacturaRectificada/sum1:NumSerieFactura",
+            ns,
+        )
+        self.assertEqual(rectified_number.text, original["number"])
+        self.assertIn(
+            "rectificacion",
+            [event["event_type"] for event in db.list_invoice_events(business["id"])],
+        )
+
+    def test_qr_png_pdf_and_aeat_xml_are_generated(self):
+        from PIL import Image
+        from noesis.web.invoice_pdf import build_invoice_pdf
+
+        business, client = self._enabled_business("Verifactu Documentos")
+        invoice = self._issue(business, client)
+        record = db.get_invoice_record(invoice["id"], business["id"])
+        png = verifactu.qr_png(record["qr_url"])
+        image = Image.open(BytesIO(png))
+        self.assertEqual(image.format, "PNG")
+        self.assertEqual(image.width, image.height)
+        self.assertGreater(image.width, 100)
+
+        pdf = build_invoice_pdf(invoice["id"], business["id"])
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertGreater(len(pdf), 3000)
+
+        xml = db.export_verifactu_xml(business["id"])
+        root = ET.fromstring(xml)
+        self.assertEqual(
+            root.tag, f"{{{verifactu.NS_LR}}}RegFactuSistemaFacturacion"
+        )
+        ns = {"sum": verifactu.NS_LR, "sum1": verifactu.NS_INFO}
+        alta = root.find("sum:RegistroFactura/sum1:RegistroAlta", ns)
+        self.assertIsNotNone(alta)
+        self.assertEqual(alta.find("sum1:IDVersion", ns).text, "1.0")
+        self.assertEqual(
+            alta.find("sum1:Huella", ns).text, record["record_hash"]
+        )
+        self.assertEqual(
+            db.list_invoice_events(business["id"])[-1]["event_type"],
+            "exportacion",
+        )
+
+    def test_export_endpoint_is_tenant_scoped(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client_record = self._enabled_business("Verifactu HTTP")
+        other_business, _ = self._enabled_business("Verifactu HTTP Ajeno")
+        self._issue(business, client_record)
+        user = db.create_user(
+            "verifactu@example.com",
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": user["email"],
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                exported = client.get(
+                    f"/api/{business['id']}/verifactu/export.xml"
+                )
+                self.assertEqual(exported.status_code, 200)
+                self.assertTrue(
+                    exported.headers["content-type"].startswith("application/xml")
+                )
+                forbidden = client.get(
+                    f"/api/{other_business['id']}/verifactu/export.xml"
                 )
                 self.assertEqual(forbidden.status_code, 403)
 
