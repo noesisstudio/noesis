@@ -1,0 +1,89 @@
+{% extends "site_base.html" %}
+{% block page_title %}Producto{% endblock %}
+{% block meta_description %}Qué hace Noesis: agenda, presupuestos, facturas con Veri*Factu, cobros, equipo y fichaje legal para autónomos de servicios.{% endblock %}
+{% block content %}
+    <section class="page-hero">
+      <div class="kicker">Producto</div>
+      <h1>Un único flujo desde el primer aviso hasta el cobro.</h1>
+      <p>Noesis conecta las tareas que hoy viven separadas entre WhatsApp, la cabeza,
+        el calendario y las hojas de cálculo.</p>
+    </section>
+
+    <section class="landing-section slim" id="que-hace">
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>
+          <h3>Captura cada petición</h3>
+          <p>Convierte una conversación en cliente, presupuesto o trabajo sin volver a copiar datos.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/><path d="M6 9.5v5M18 9.5v5"/></svg></span>
+          <h3>Organiza agenda y trabajos</h3>
+          <p>Reúne fecha, cliente, zona, encargo y estado para saber qué toca hacer y qué falta cerrar.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h9l4 4V21.5H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg></span>
+          <h3>Factura al terminar</h3>
+          <p>Prepara documentos con base, IVA e IRPF y evita que un trabajo terminado quede sin facturar.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 15l3.5-4 3 2.5L20 7"/></svg></span>
+          <h3>Cobra y vuelve a vender</h3>
+          <p>Detecta vencimientos, prioriza cobros y conserva el historial completo de cada cliente.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-section" id="flujo">
+      <div class="section-intro">
+        <div class="kicker">Cómo funciona</div>
+        <h2>El ciclo completo, sin duplicar trabajo.</h2>
+      </div>
+      <div class="flow-grid workflow-5">
+        <div class="flow-step"><b>1</b><span>Entra una petición por WhatsApp o web.</span></div>
+        <div class="flow-step"><b>2</b><span>Preparas y compartes el presupuesto.</span></div>
+        <div class="flow-step"><b>3</b><span>Agendas y completas el trabajo.</span></div>
+        <div class="flow-step"><b>4</b><span>Generas la factura con sus impuestos.</span></div>
+        <div class="flow-step"><b>5</b><span>Controlas el cobro y el siguiente servicio.</span></div>
+      </div>
+    </section>
+
+    <section class="landing-section" id="cumplimiento-legal">
+      <div class="section-intro">
+        <div class="kicker">Cumplimiento</div>
+        <h2>En regla con Hacienda e Inspección, sin pensarlo.</h2>
+        <p>La normativa que viene no debería costarte ni una tarde. Noesis la lleva
+          integrada de serie, no como un módulo aparte.</p>
+      </div>
+      <div class="feature-grid compliance-grid">
+        <article class="feature-card">
+          <span class="law-tag">Obligatorio · 1 jul 2027</span>
+          <h3>Veri*Factu de serie</h3>
+          <p>Cada factura queda registrada con huella encadenada y QR tributario según
+            el formato técnico de la AEAT. Los autónomos están obligados a partir del
+            1 de julio de 2027, con sanciones de hasta 50.000 €. Con Noesis, ya lo tienes.</p>
+        </article>
+        <article class="feature-card">
+          <span class="law-tag">Art. 34.9 ET</span>
+          <h3>Fichaje justificable</h3>
+          <p>Registro de jornada de tu equipo con sellado inalterable, correcciones
+            auditadas e informes verificables listos para una Inspección de Trabajo.
+            GPS opcional conforme a los criterios de la AEPD.</p>
+        </article>
+        <article class="feature-card">
+          <span class="law-tag">RGPD</span>
+          <h3>Tus datos, protegidos y tuyos</h3>
+          <p>Consentimiento, contrato de encargado del tratamiento y copias de
+            seguridad diarias verificadas. Y todo exportable: si un día te vas, te lo
+            llevas.</p>
+        </article>
+        <article class="feature-card">
+          <span class="law-tag">IVA · IRPF</span>
+          <h3>Impuestos sin sorpresas</h3>
+          <p>Base, IVA (21/10/4) y retención de IRPF calculados bien en cada documento,
+            con la vista de impuestos trimestral para saber qué apartar antes de que
+            llegue el 303.</p>
+        </article>
+      </div>
+    </section>
+{% endblock %}

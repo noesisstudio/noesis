@@ -1,4 +1,4 @@
-/* build-marker: saas-impoluto */
+/* build-marker: sitio-apartados */
 /* ==========================================================================
    Noesis — sistema de diseño (hecho a mano, sin frameworks externos).
    Estética: profesional, minimalista cálida, mucho aire, jerarquía clara.
@@ -453,6 +453,49 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
 .site-brand img { width:34px; height:34px; }
 .site-links { display:flex; gap:18px; color:var(--muted); font-size:13.5px; }
 .site-links a:hover { color:var(--brand); }
+.site-links a.active { color:var(--brand); font-weight:700; }
+
+/* Cabecera de las páginas interiores del sitio (producto, precios, preguntas). */
+.page-hero { max-width:1180px; margin:0 auto; padding:56px 24px 8px; }
+.page-hero .kicker { margin-bottom:14px; }
+.page-hero h1 { font-family:var(--serif); font-weight:500; color:var(--brand);
+  font-size:clamp(32px, 4.4vw, 52px); line-height:1.06; letter-spacing:-.01em;
+  max-width:22ch; }
+.page-hero p { color:var(--muted); font-size:17px; max-width:58ch; margin-top:16px;
+  line-height:1.6; }
+.landing-section.slim { padding-top:36px; }
+
+/* Tarjetas-apartado de la home: cada sección del sitio, presentada y enlazada. */
+.explore-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.explore-card { display:flex; flex-direction:column; gap:8px; background:#fff;
+  border:1px solid var(--border); border-radius:14px; padding:24px;
+  transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.explore-card:hover { border-color:var(--brand-2); transform:translateY(-2px);
+  box-shadow:0 10px 26px rgba(20,70,59,.08); }
+.explore-card h3 { font-size:18px; margin:2px 0 0; color:var(--text); }
+.explore-card p { color:var(--muted); margin:0; line-height:1.55; font-size:14px; }
+.explore-more { margin-top:auto; padding-top:12px; color:var(--brand); font-weight:700;
+  font-size:13.5px; }
+
+/* Listas de características en las tarjetas de precio. */
+.price-list { list-style:none; padding:0; margin:14px 0 0; text-align:left; }
+.price-list li { padding:5px 0 5px 22px; position:relative; color:var(--muted);
+  font-size:13.2px; line-height:1.45; }
+.price-list li::before { content:"✓"; position:absolute; left:0; color:var(--green);
+  font-weight:700; }
+.price-card.featured .price-list li { color:#cfe2d8; }
+.price-card.featured .price-list li::before { color:#9fd6bd; }
+.pricing-grid.pricing-3 { grid-template-columns:repeat(3,1fr); max-width:1020px; }
+
+/* Pie del sitio en columnas. */
+.footer-cols { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:24px; width:100%; }
+.footer-col { display:flex; flex-direction:column; gap:7px; font-size:13px; }
+.footer-col b { color:var(--text); font-size:13px; margin-bottom:2px; }
+.footer-col a { color:var(--faint); }
+.footer-col a:hover { color:var(--brand); }
+.footer-col p { color:var(--faint); margin:6px 0 0; max-width:30ch; line-height:1.5; }
+.footer-col .site-brand { font-size:17px; }
+.footer-col .site-brand img { width:26px; height:26px; }
 .site-actions { display:flex; gap:8px; align-items:center; }
 .landing-hero { max-width:1180px; margin:0 auto; min-height:calc(100vh - 86px);
   display:grid; grid-template-columns:minmax(0, .92fr) minmax(0, 1.08fr); gap:34px;
@@ -569,8 +612,8 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
   .site-links { display:none; }
   .landing-hero { grid-template-columns:1fr; min-height:auto; padding-top:20px; }
   .landing-copy h1 { max-width:12ch; }
-  .feature-grid, .pricing-grid, .mission-grid, .flow-grid, .flow-grid.workflow-5,
-  .faq-grid { grid-template-columns:1fr; }
+  .feature-grid, .pricing-grid, .pricing-grid.pricing-3, .mission-grid, .flow-grid,
+  .flow-grid.workflow-5, .faq-grid, .explore-grid, .footer-cols { grid-template-columns:1fr; }
   .landing-band { grid-template-columns:1fr; margin-left:18px; margin-right:18px; padding:28px; }
 }
 @media (max-width: 560px) {
@@ -957,7 +1000,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .clock-head { display:flex; align-items:center; gap:13px; padding:18px;
   border-radius:16px; color:#fff; margin-bottom:14px; }
 .clock-mark { width:42px; height:42px; flex:0 0 42px; display:grid; place-items:center;
-  border-radius:11px; background:#fff; font-weight:800; font-size:17px; }
+  border-radius:11px; background:#fff; font-weight:800; font-size:17px; overflow:hidden; }
+.clock-mark img { width:100%; height:100%; object-fit:contain; padding:4px; }
 .clock-head .kicker { color:rgba(255,255,255,.76); margin:0; }
 .clock-head h1 { font-size:21px; line-height:1.15; margin-top:2px; }
 .clock-card { background:var(--surface); border:1px solid var(--border);

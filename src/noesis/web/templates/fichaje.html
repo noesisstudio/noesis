@@ -22,7 +22,10 @@
       </div>
     {% else %}
       <header class="clock-head" style="background:{{ data.business.brand_color }}">
-        <div class="clock-mark" style="color:{{ data.business.brand_color }}">{{ data.business.initials }}</div>
+        <div class="clock-mark" {% if not data.business.logo %}style="color:{{ data.business.brand_color }}"{% endif %}>
+          {%- if data.business.logo %}<img src="{{ data.business.logo }}" alt="">
+          {%- else %}{{ data.business.initials }}{% endif -%}
+        </div>
         <div>
           <div class="kicker">{{ data.business.name }}</div>
           <h1>Hola, {{ data.worker.name }}</h1>

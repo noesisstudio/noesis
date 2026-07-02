@@ -233,7 +233,27 @@ _PAGES = {
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     bid = request.session.get("bid")
-    return TEMPLATES.TemplateResponse(request, "landing.html", {"business_id": bid})
+    return TEMPLATES.TemplateResponse(request, "landing.html",
+                                      {"business_id": bid, "site_active": "inicio"})
+
+
+# Apartados del sitio público: cada sección es su propia página.
+_SITE_PAGES = {
+    "producto": "site_producto.html",
+    "precios": "site_precios.html",
+    "preguntas": "site_preguntas.html",
+}
+
+
+@app.get("/producto", response_class=HTMLResponse)
+@app.get("/precios", response_class=HTMLResponse)
+@app.get("/preguntas", response_class=HTMLResponse)
+def site_page(request: Request):
+    section = request.url.path.strip("/")
+    return TEMPLATES.TemplateResponse(request, _SITE_PAGES[section], {
+        "business_id": request.session.get("bid"),
+        "site_active": section,
+    })
 
 
 @app.get("/health")
@@ -297,10 +317,23 @@ def cumplimiento(request: Request):
 # propósito: el cliente del autónomo no tiene cuenta. El token va ligado a un único
 # (negocio, cliente) y solo da acceso a SUS presupuestos y facturas — nunca a los de
 # otro cliente. Las rutas /p/ quedan FUERA del auth_guard (no son /b/ ni /api/).
+def _token_scan_blocked(request: Request, kind: str) -> bool:
+    """Frena el escaneo de enlaces públicos: cada token inválido cuenta contra la IP.
+    Los tokens son de 192 bits (imposibles de adivinar); esto solo corta el ruido."""
+    return auth.is_rate_limited(f"token-scan:{kind}:{auth.client_ip(request)}")
+
+
+def _record_token_miss(request: Request, kind: str) -> None:
+    auth.record_failed_attempt(f"token-scan:{kind}:{auth.client_ip(request)}")
+
+
 @app.get("/p/{token}", response_class=HTMLResponse)
 def portal_home(request: Request, token: str, ok: str = ""):
+    if _token_scan_blocked(request, "portal"):
+        return Response("Demasiados intentos. Espera unos minutos.", status_code=429)
     ref = db.resolve_portal_token(token)
     if not ref:
+        _record_token_miss(request, "portal")
         return TEMPLATES.TemplateResponse(
             request, "portal.html", {"token": token, "data": None, "ok": ""},
             status_code=404)
@@ -341,9 +374,12 @@ def portal_reject_quote(request: Request, token: str, quote_id: int):
 
 
 @app.get("/p/{token}/invoices/{invoice_id}/pdf")
-def portal_invoice_pdf(token: str, invoice_id: int):
+def portal_invoice_pdf(request: Request, token: str, invoice_id: int):
+    if _token_scan_blocked(request, "portal"):
+        return Response("Demasiados intentos. Espera unos minutos.", status_code=429)
     ref = db.resolve_portal_token(token)
     if not ref:
+        _record_token_miss(request, "portal")
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
     inv = db.get_invoice(invoice_id, ref["business_id"])
     if not inv or inv.get("client_id") != ref["client_id"]:
@@ -381,12 +417,17 @@ def _worker_portal_context(request: Request, token: str) -> dict:
     initials = "".join(
         part[0].upper() for part in (business.get("name") or "N").split()[:2]
     )
+    # El logo subido en Ajustes también viste el portal del trabajador.
+    logo = None
+    if business.get("logo_data") and business.get("logo_mime"):
+        logo = f"data:{business['logo_mime']};base64,{business['logo_data']}"
     data = {
         "worker": safe_worker,
         "business": {
             "name": business.get("name"),
             "brand_color": db.business_brand_color(business),
             "initials": initials or "N",
+            "logo": logo,
         },
         "pin_required": pin_required,
         "unlocked": unlocked,
@@ -416,7 +457,11 @@ def _worker_portal_context(request: Request, token: str) -> dict:
 
 @app.get("/t/{token}", response_class=HTMLResponse)
 def worker_portal(request: Request, token: str):
+    if _token_scan_blocked(request, "fichaje"):
+        return Response("Demasiados intentos. Espera unos minutos.", status_code=429)
     context = _worker_portal_context(request, token)
+    if not context["data"]:
+        _record_token_miss(request, "fichaje")
     return TEMPLATES.TemplateResponse(
         request,
         "fichaje.html",

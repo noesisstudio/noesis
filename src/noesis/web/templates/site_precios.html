@@ -1,0 +1,78 @@
+{% extends "site_base.html" %}
+{% block page_title %}Precios{% endblock %}
+{% block meta_description %}Planes de Noesis: prueba de 14 días sin tarjeta, plan Autónomo 29 €/mes y plan Negocio 39 €/mes con equipo y fichaje legal.{% endblock %}
+{% block content %}
+    <section class="page-hero">
+      <div class="kicker">Precios</div>
+      <h1>Empieza pequeño. Mantén el control cuando crezcas.</h1>
+      <p>Prueba el ciclo completo durante 14 días, sin tarjeta y con tus datos siempre
+        exportables. Sin permanencia: te vas cuando quieras y te llevas todo.</p>
+    </section>
+
+    <section class="landing-section slim" id="planes">
+      <div class="pricing-grid pricing-3">
+        <article class="price-card">
+          <h3>Prueba</h3>
+          <p class="price">14 días</p>
+          <p>Gratis y sin tarjeta. Todas las funciones para probarlo con tu negocio real.</p>
+          <ul class="price-list">
+            <li>Acceso completo a todo</li>
+            <li>Sin tarjeta ni permanencia</li>
+            <li>Tus datos exportables siempre</li>
+          </ul>
+          <a class="btn full" href="/onboarding">Empezar gratis</a>
+        </article>
+        <article class="price-card featured">
+          <span class="badge b-green">recomendado</span>
+          <h3>Autónomo</h3>
+          <p class="price">29 €<small>/mes</small></p>
+          <p>Para profesionales que gestionan clientes, agenda, facturas y cobros desde el móvil.</p>
+          <ul class="price-list">
+            <li>Agenda, clientes y presupuestos</li>
+            <li>Facturas con IVA/IRPF, PDF y registro Veri*Factu</li>
+            <li>Cobros y recordatorios automáticos</li>
+            <li>Asistente con texto y notas de voz</li>
+            <li>Impuestos trimestrales (303/130)</li>
+          </ul>
+          <a class="btn primary full" href="/onboarding">Empezar gratis</a>
+        </article>
+        <article class="price-card">
+          <h3>Negocio</h3>
+          <p class="price">39 €<small>/mes</small></p>
+          <p>Para equipos y más volumen operativo, con el registro de jornada en regla.</p>
+          <ul class="price-list">
+            <li>Todo lo del plan Autónomo</li>
+            <li>Equipo: asignación de trabajos y planning</li>
+            <li>Fichaje con registro inalterable (art. 34.9 ET)</li>
+            <li>Alertas avanzadas de cobro</li>
+            <li>Análisis de rentabilidad y soporte prioritario</li>
+          </ul>
+          <a class="btn full" href="/onboarding">Empezar gratis</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-section" id="precios-faq">
+      <div class="section-intro">
+        <div class="kicker">Sobre el pago</div>
+        <h2>Claro y sin letra pequeña.</h2>
+      </div>
+      <div class="faq-grid">
+        <details open>
+          <summary>¿Qué pasa cuando acaba la prueba?</summary>
+          <p>Nada automático: nadie te cobra porque no hay tarjeta. Eliges plan si te ha
+            servido; si no, exportas tus datos y listo.</p>
+        </details>
+        <details>
+          <summary>¿Hay permanencia?</summary>
+          <p>No. El plan es mensual y puedes cancelarlo cuando quieras desde tu cuenta.
+            Conservas el acceso hasta el final del período pagado.</p>
+        </details>
+        <details>
+          <summary>¿El precio incluye Veri*Factu?</summary>
+          <p>Sí, en todos los planes. El registro de facturación conforme a la AEAT no es
+            un extra: es parte de facturar bien.</p>
+        </details>
+      </div>
+    </section>
+{% endblock %}

@@ -1,0 +1,74 @@
+{#- Layout compartido del sitio público (landing, producto, precios, preguntas).
+    Cada apartado es una página propia; el nav marca dónde estás. -#}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · {% block page_title %}Del trabajo terminado al dinero cobrado{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Noesis convierte mensajes y audios de WhatsApp en presupuestos, trabajos, facturas y cobros para autónomos y pequeños negocios de servicios.{% endblock %}">
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <meta name="theme-color" content="#14463b">
+  <link rel="apple-touch-icon" href="/static/noesis-mark.svg">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body class="landing-body">
+  <header class="site-nav">
+    <a class="site-brand" href="/">
+      <img src="/static/noesis-mark.svg" alt="">
+      <span>Noesis</span>
+    </a>
+    <nav class="site-links" aria-label="Principal">
+      <a href="/producto" class="{{ 'active' if site_active == 'producto' }}">Producto</a>
+      <a href="/precios" class="{{ 'active' if site_active == 'precios' }}">Precios</a>
+      <a href="/preguntas" class="{{ 'active' if site_active == 'preguntas' }}">Preguntas</a>
+    </nav>
+    <div class="site-actions">
+      {% if business_id %}
+      <a class="btn ghost" href="/b/{{ business_id }}/resumen">Mi panel</a>
+      {% else %}
+      <a class="btn ghost" href="/login">Iniciar sesión</a>
+      {% endif %}
+      <a class="btn primary" href="/onboarding">Empezar</a>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+
+    <section class="final-cta">
+      <h2>{% block cta_title %}Comprueba si facturas antes y cobras mejor.{% endblock %}</h2>
+      <p>{% block cta_text %}Configura tu negocio, añade un cliente y recorre el primer
+        trabajo completo. No necesitas tarjeta para empezar.{% endblock %}</p>
+      <a class="btn primary" href="/onboarding">Probar 14 días gratis</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-cols">
+      <div class="footer-col">
+        <span class="site-brand"><img src="/static/noesis-mark.svg" alt=""> Noesis</span>
+        <p>Operaciones y cobros para autónomos y pequeños negocios de servicios.</p>
+      </div>
+      <div class="footer-col">
+        <b>Producto</b>
+        <a href="/producto">Qué hace</a>
+        <a href="/producto#cumplimiento-legal">Cumplimiento</a>
+        <a href="/precios">Precios</a>
+        <a href="/preguntas">Preguntas frecuentes</a>
+      </div>
+      <div class="footer-col">
+        <b>Legal</b>
+        <a href="/aviso-legal">Aviso legal</a>
+        <a href="/privacidad">Privacidad</a>
+        <a href="/cookies">Cookies</a>
+        <a href="/terminos">Términos</a>
+        <a href="/encargado-tratamiento">Encargado del tratamiento</a>
+        <a href="/cumplimiento">Cumplimiento normativo</a>
+      </div>
+    </div>
+  </footer>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{% extends "site_base.html" %}
+{% block page_title %}Preguntas frecuentes{% endblock %}
+{% block meta_description %}Respuestas sobre Noesis: Veri*Factu, gestoría, notas de voz, fichaje del equipo, instalación y exportación de datos.{% endblock %}
+{% block content %}
+    <section class="page-hero">
+      <div class="kicker">Preguntas</div>
+      <h1>Lo importante antes de probar.</h1>
+      <p>Si te queda alguna duda, escríbenos desde tu cuenta o al empezar la prueba.</p>
+    </section>
+
+    <section class="landing-section slim" id="faq">
+      <div class="faq-grid">
+        <details open>
+          <summary>¿Está adaptado a Veri*Factu?</summary>
+          <p>Sí. Noesis genera de forma nativa el registro de facturación conforme al
+            formato técnico de la AEAT: huella encadenada, QR tributario y eventos
+            auditables en cada factura. La remisión automática a la AEAT se activa
+            mucho antes de que sea obligatoria para autónomos (1 de julio de 2027).</p>
+        </details>
+        <details>
+          <summary>¿Sustituye a mi gestoría?</summary>
+          <p>No. Noesis ordena el día a día: agenda, cobros, gastos y facturas. La parte
+            fiscal delicada debe seguir revisándose con criterio profesional.</p>
+        </details>
+        <details>
+          <summary>¿Puedo hablarle con notas de voz?</summary>
+          <p>Sí. Dile «factura a Juan el cambio de grifo, noventa y cinco euros» en una
+            nota de voz y Noesis la entiende, la transcribe y prepara el documento.
+            Funciona por WhatsApp y también con el micrófono del asistente web.</p>
+        </details>
+        <details>
+          <summary>¿Sirve para el fichaje de mi equipo?</summary>
+          <p>Sí. Cada persona tiene su acceso personal para fichar desde el móvil, con
+            registro inalterable e informes verificables que cumplen el artículo 34.9
+            del Estatuto de los Trabajadores. Sin apps que instalar.</p>
+        </details>
+        <details>
+          <summary>¿Necesito instalar una aplicación?</summary>
+          <p>No. Noesis usa la API oficial de Meta (WhatsApp Cloud API): conectas tu
+            número y hablas como con cualquier contacto. El panel web funciona desde el
+            primer minuto y se puede instalar como acceso directo en el móvil.</p>
+        </details>
+        <details>
+          <summary>¿Puedo llevarme mis datos?</summary>
+          <p>Sí. Puedes descargar facturas y costes en CSV y exportar la cuenta completa.
+            Noesis evita que el valor de tu negocio quede encerrado en la plataforma.</p>
+        </details>
+        <details>
+          <summary>¿Qué ve mi cliente cuando le envío algo?</summary>
+          <p>Un portal privado con la marca de tu negocio (tu logo y tu color) donde puede
+            aprobar presupuestos y descargar facturas. Sin contraseñas ni registros: un
+            enlace que le mandas por WhatsApp.</p>
+        </details>
+        <details>
+          <summary>¿Mis datos están separados de los de otros negocios?</summary>
+          <p>Completamente. Cada negocio vive aislado a nivel de base de datos, con
+            copias de seguridad diarias verificadas. Nadie ve nada que no sea suyo.</p>
+        </details>
+      </div>
+    </section>
+{% endblock %}
+
+{% block cta_title %}¿Resuelto? Pues a probarlo.{% endblock %}
+{% block cta_text %}Catorce días con todo, sin tarjeta. Se configura en menos de cinco minutos.{% endblock %}
