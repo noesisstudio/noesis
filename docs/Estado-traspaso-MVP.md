@@ -34,21 +34,25 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 - **Equipo y fichaje (migración 5 en `main`):** trabajadores aislados por negocio,
   asignación desde Agenda, planning por WhatsApp, acceso personal `/t/{token}`, PIN
   opcional y fichaje con GPS puntual opcional.
-- **Fichaje justificable (en `codex/fichaje-legal`, pendiente de revisión):**
+- **Fichaje justificable (migración 6 en `main`):**
   migración 6 con sellos SHA-256 encadenados y protección *append-only*; correcciones
   y anulaciones auditadas; pausas; historial de 30 días para el trabajador; informes
   CSV/PDF con verificación de integridad; política de empresa e información RGPD con
   acuse. Compatible con SQLite/Postgres.
-- **Veri*Factu fase 1 (en `codex/verifactu-fase1`, apilada sobre fichaje-legal):**
+- **Veri*Factu fase 1 (migración 7 en `main`):**
   migración 7; registro de alta append-only, huella SHA-256 AEAT encadenada por
   emisor, QR tributario, rectificativas R1-R5, eventos y exportación XML validada
   contra el XSD oficial. No transmite a AEAT ni usa certificado.
-- **Backups verificados (en `codex/backups-verificados`, pendiente de revisión):**
+- **Backups verificados (migración 8 en `main`):**
   migración 8; copia SQLite/Postgres, restauración desechable con recuentos,
   historial y descarga solo admin, más subida S3-compatible opcional.
+- **Veri*Factu fase 2 (en `codex/verifactu-fase2`, pendiente de revisión):**
+  migración 9; huellas comprobadas contra los dos vectores oficiales de alta AEAT,
+  cliente SOAP 1.1 con mTLS, cola durable con backoff y control de flujo, respuestas
+  auditadas y estado visible. La remisión queda desactivada sin entorno/certificado.
 
-**Pruebas:** 72/72 en SQLite local, incluidas copia, restauración, fallo de
-verificación, descarga admin y camino Postgres mockeado.
+**Pruebas:** 79/79 en SQLite local, incluidos vectores AEAT, cola Veri*Factu,
+backoff, rechazo terminal, control de flujo, backups y camino Postgres mockeado.
 
 ---
 
@@ -69,6 +73,7 @@ verificación, descarga admin y camino Postgres mockeado.
 | `src/noesis/web/invoice_pdf.py` | PDF de factura con marca (plantillas + logo/monograma). |
 | `src/noesis/web/work_reports.py` | Informes CSV/PDF verificables de registro de jornada. |
 | `src/noesis/verifactu.py` | Huella, QR y XML según especificaciones técnicas AEAT. |
+| `src/noesis/verifactu_client.py` | Cliente SOAP/mTLS y parser de respuestas AEAT. |
 | `src/noesis/documents/` | Módulo de "papeles" (Codex): subir/guardar/leer documentos. |
 | `src/noesis/adapters/` | `invoicing.py` (mock→Holded), `email.py` (SMTP), `transcription.py` (Whisper local). |
 | `config.py` | Lee todas las variables de entorno (`.env`). |
@@ -141,8 +146,8 @@ construir más features.
 6. **WhatsApp fiable:** implementado en `codex/whatsapp-fiable`, pendiente de
    revisión y de aprobar/configurar las plantillas reales en Meta. Incluye cola
    durable, backoff, estados `sent/delivered/read` e idempotencia de webhooks.
-7. **Veri*Factu fase 2:** certificado digital, remisión automática y tratamiento
-   de respuestas/reintentos de la AEAT antes de usar el modo en producción.
+7. **Veri*Factu fase 2:** implementada en `codex/verifactu-fase2`; falta revisión,
+   certificado digital de pruebas y validación real contra el entorno AEAT.
 8. **Emails transaccionales** (SMTP real) y **copias de seguridad verificadas** (probar
    una restauración, no solo que se hagan).
 

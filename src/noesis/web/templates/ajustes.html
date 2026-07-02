@@ -118,9 +118,18 @@
     </p>
     {% endif %}
     <div class="insight" style="margin-top:14px">
-      <b>Fase 1 técnica:</b> Noesis todavía no remite registros a la AEAT ni usa
-      certificado digital. Mantén este modo fuera de uso fiscal real hasta completar
-      la fase de transmisión. La opción está desactivada por defecto.
+      {% if verifactu_transmission_enabled %}
+        <b>Remisión AEAT configurada:</b>
+        entorno <b>{{ verifactu_aeat_env }}</b> con certificado digital.
+        Pendientes: {{ verifactu_queue.pendiente }} ·
+        aceptadas: {{ verifactu_queue.aceptado }} ·
+        aceptadas con errores: {{ verifactu_queue.aceptado_con_errores }} ·
+        rechazadas: {{ verifactu_queue.rechazado }}.
+      {% else %}
+        <b>Remisión AEAT desactivada:</b> Noesis genera y conserva el registro,
+        la huella y el QR, pero no realiza ninguna conexión externa hasta configurar
+        entorno, certificado y clave privada en el servidor.
+      {% endif %}
     </div>
   </div>
 </div>

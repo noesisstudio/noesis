@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import patch
 from xml.etree import ElementTree as ET
 
-from noesis import config, db, migrations, nlu, verifactu
+from noesis import config, db, migrations, nlu, verifactu, verifactu_client
 from noesis.web import auth, chat, reports, scheduler, whatsapp
 
 
@@ -1090,16 +1090,29 @@ class LegalClockinTestCase(unittest.TestCase):
                 self.assertEqual(forbidden.status_code, 403)
 
 
-class VerifactuPhase1TestCase(unittest.TestCase):
+class VerifactuTestCase(unittest.TestCase):
     make_business = BackendTestCase.make_business
 
     def setUp(self):
         BackendTestCase.setUp(self)
         self.original_producer_nif = config.VERIFACTU_PRODUCER_NIF
+        self.original_verifactu_transport = (
+            config.VERIFACTU_CERT_PATH,
+            config.VERIFACTU_KEY_PATH,
+            config.VERIFACTU_AEAT_ENV,
+        )
         config.VERIFACTU_PRODUCER_NIF = "B87654321"
+        config.VERIFACTU_CERT_PATH = ""
+        config.VERIFACTU_KEY_PATH = ""
+        config.VERIFACTU_AEAT_ENV = ""
 
     def tearDown(self):
         config.VERIFACTU_PRODUCER_NIF = self.original_producer_nif
+        (
+            config.VERIFACTU_CERT_PATH,
+            config.VERIFACTU_KEY_PATH,
+            config.VERIFACTU_AEAT_ENV,
+        ) = self.original_verifactu_transport
         BackendTestCase.tearDown(self)
 
     def _enabled_business(self, name="Verifactu Legal"):
@@ -1121,6 +1134,8 @@ class VerifactuPhase1TestCase(unittest.TestCase):
         self.assertEqual(db.list_invoice_events(business["id"]), [])
 
     def test_official_hash_example_and_qr_parameters(self):
+        # Vector 6.1 de la especificación AEAT v0.1.2:
+        # Veri-Factu_especificaciones_huella_hash_registros.pdf.
         digest = verifactu.invoice_record_hash(
             issuer_nif="89890001K",
             invoice_number="12345678/G33",
@@ -1152,6 +1167,191 @@ class VerifactuPhase1TestCase(unittest.TestCase):
             "?nif=89890001K&numserie=12345678%26G33"
             "&fecha=01-01-2024&importe=241.4",
         )
+
+    def test_official_hash_example_with_previous_record(self):
+        # Vector 6.2 de la especificación AEAT v0.1.2.
+        digest = verifactu.invoice_record_hash(
+            issuer_nif="89890001K",
+            invoice_number="12345679/G34",
+            issue_date="01-01-2024",
+            invoice_type="F1",
+            vat_total="12.35",
+            invoice_total="123.45",
+            previous_hash=(
+                "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60"
+            ),
+            generated_at="2024-01-01T19:20:35+01:00",
+        )
+        self.assertEqual(
+            digest,
+            "F7B94CFD8924EDFF273501B01EE5153E4CE8F259766F88CF6ACB8935802A2B97",
+        )
+
+    def test_transport_is_disabled_without_certificate(self):
+        business, client = self._enabled_business("Verifactu Sin Certificado")
+        invoice = self._issue(business, client)
+        queued = db.get_verifactu_outbox(invoice["id"], business["id"])
+        self.assertEqual(queued["status"], "pendiente")
+
+        with patch.object(verifactu_client, "submit_records") as submit:
+            self.assertEqual(scheduler.process_verifactu_outbox(), 0)
+        submit.assert_not_called()
+        self.assertEqual(
+            db.get_invoice(invoice["id"], business["id"])["status"], "enviada"
+        )
+
+    def test_outbox_accepts_response_and_stores_csv(self):
+        business, client = self._enabled_business("Verifactu Aceptada")
+        invoice = self._issue(business, client)
+        result = verifactu_client.SubmissionResult(
+            status="aceptado",
+            csv="CSV-AEAT-001",
+            wait_seconds=0,
+            error_code=None,
+            error_description=None,
+            global_status="Correcto",
+            raw_response="<Respuesta>correcta</Respuesta>",
+        )
+        with (
+            patch.object(verifactu_client, "is_enabled", return_value=True),
+            patch.object(verifactu_client, "submit_records", return_value=result),
+        ):
+            self.assertEqual(scheduler.process_verifactu_outbox(), 1)
+
+        queued = db.get_verifactu_outbox(invoice["id"], business["id"])
+        self.assertEqual(queued["status"], "aceptado")
+        self.assertEqual(queued["aeat_csv"], "CSV-AEAT-001")
+        self.assertIsNone(
+            db.get_verifactu_outbox(invoice["id"], business["id"] + 999)
+        )
+        self.assertEqual(
+            [event["event_type"] for event in db.list_invoice_events(business["id"])],
+            ["alta", "remision", "aceptacion"],
+        )
+        visible = db.list_invoices(business["id"])[0]
+        self.assertEqual(visible["verifactu_status"], "aceptado")
+        self.assertEqual(visible["verifactu_csv"], "CSV-AEAT-001")
+
+    def test_rejected_record_is_not_resent_identically(self):
+        business, client = self._enabled_business("Verifactu Rechazada")
+        invoice = self._issue(business, client)
+        result = verifactu_client.SubmissionResult(
+            status="rechazado",
+            csv=None,
+            wait_seconds=0,
+            error_code="1104",
+            error_description="Huella incorrecta",
+            global_status="Incorrecto",
+            raw_response="<Respuesta>rechazada</Respuesta>",
+        )
+        with (
+            patch.object(verifactu_client, "is_enabled", return_value=True),
+            patch.object(
+                verifactu_client, "submit_records", return_value=result
+            ) as submit,
+        ):
+            self.assertEqual(scheduler.process_verifactu_outbox(), 1)
+            self.assertEqual(scheduler.process_verifactu_outbox(), 0)
+        self.assertEqual(submit.call_count, 1)
+        queued = db.get_verifactu_outbox(invoice["id"], business["id"])
+        self.assertEqual(queued["status"], "rechazado")
+        self.assertEqual(queued["aeat_error_code"], "1104")
+        self.assertIn(
+            "rechazo",
+            [event["event_type"] for event in db.list_invoice_events(business["id"])],
+        )
+
+    def test_transport_errors_use_exponential_backoff(self):
+        business, client = self._enabled_business("Verifactu Reintento")
+        invoice = self._issue(business, client)
+        with (
+            patch.object(verifactu_client, "is_enabled", return_value=True),
+            patch.object(
+                verifactu_client,
+                "submit_records",
+                side_effect=verifactu_client.VerifactuTransportError(
+                    "AEAT temporalmente no disponible"
+                ),
+            ) as submit,
+            patch.object(config, "VERIFACTU_RETRY_BASE_SECONDS", 30),
+            patch.object(config, "VERIFACTU_RETRY_MAX_SECONDS", 3600),
+        ):
+            first_start = datetime.now()
+            self.assertEqual(scheduler.process_verifactu_outbox(), 0)
+            first = db.get_verifactu_outbox(invoice["id"], business["id"])
+            first_delay = (
+                datetime.fromisoformat(first["next_attempt_at"]) - first_start
+            ).total_seconds()
+            self.assertEqual(first["status"], "pendiente")
+            self.assertEqual(first["attempts"], 1)
+            self.assertGreaterEqual(first_delay, 29)
+
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE verifactu_outbox SET next_attempt_at=? "
+                    "WHERE id=? AND business_id=?",
+                    ("2000-01-01T00:00:00", first["id"], business["id"]),
+                )
+            second_start = datetime.now()
+            self.assertEqual(scheduler.process_verifactu_outbox(), 0)
+            second = db.get_verifactu_outbox(invoice["id"], business["id"])
+            second_delay = (
+                datetime.fromisoformat(second["next_attempt_at"]) - second_start
+            ).total_seconds()
+
+        self.assertEqual(submit.call_count, 2)
+        self.assertEqual(second["attempts"], 2)
+        self.assertGreaterEqual(second_delay, 59)
+        self.assertIn("temporalmente", second["last_error"])
+
+    def test_aeat_wait_postpones_the_rest_of_the_queue(self):
+        business, client = self._enabled_business("Verifactu Espera")
+        first = self._issue(business, client, "Primera", 100)
+        second = self._issue(business, client, "Segunda", 200)
+        result = verifactu_client.SubmissionResult(
+            status="aceptado",
+            csv="CSV-ESPERA",
+            wait_seconds=120,
+            error_code=None,
+            error_description=None,
+            global_status="Correcto",
+            raw_response="<Respuesta>espera</Respuesta>",
+        )
+        with (
+            patch.object(verifactu_client, "is_enabled", return_value=True),
+            patch.object(
+                verifactu_client, "submit_records", return_value=result
+            ) as submit,
+        ):
+            self.assertEqual(scheduler.process_verifactu_outbox(limit=25), 1)
+            self.assertEqual(scheduler.process_verifactu_outbox(limit=25), 0)
+        self.assertEqual(submit.call_count, 1)
+        self.assertEqual(
+            db.get_verifactu_outbox(first["id"], business["id"])["status"],
+            "aceptado",
+        )
+        waiting = db.get_verifactu_outbox(second["id"], business["id"])
+        self.assertEqual(waiting["status"], "pendiente")
+        self.assertGreater(waiting["next_attempt_at"], waiting["created_at"])
+
+    def test_soap_response_parser_maps_official_states(self):
+        payload = b"""<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:r="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/RespuestaSuministro.xsd">
+ <soapenv:Body><r:RespuestaRegFactuSistemaFacturacion>
+  <r:CSV>CSV-123</r:CSV><r:TiempoEsperaEnvio>60</r:TiempoEsperaEnvio>
+  <r:EstadoEnvio>ParcialmenteCorrecto</r:EstadoEnvio>
+  <r:RespuestaLinea><r:EstadoRegistro>AceptadoConErrores</r:EstadoRegistro>
+   <r:CodigoErrorRegistro>2000</r:CodigoErrorRegistro>
+   <r:DescripcionErrorRegistro>Aviso admisible</r:DescripcionErrorRegistro>
+  </r:RespuestaLinea>
+ </r:RespuestaRegFactuSistemaFacturacion></soapenv:Body>
+</soapenv:Envelope>"""
+        result = verifactu_client.parse_response(payload)
+        self.assertEqual(result.status, "aceptado_con_errores")
+        self.assertEqual(result.csv, "CSV-123")
+        self.assertEqual(result.wait_seconds, 60)
+        self.assertEqual(result.error_code, "2000")
 
     def test_records_are_chained_scoped_and_append_only(self):
         business, client = self._enabled_business()
@@ -1296,6 +1496,12 @@ class VerifactuPhase1TestCase(unittest.TestCase):
                     follow_redirects=False,
                 )
                 self.assertEqual(login.status_code, 303)
+                invoices_page = client.get(f"/b/{business['id']}/facturas")
+                settings_page = client.get(f"/b/{business['id']}/ajustes")
+                self.assertEqual(invoices_page.status_code, 200)
+                self.assertEqual(settings_page.status_code, 200)
+                self.assertIn("Veri*Factu", invoices_page.text)
+                self.assertIn("Remisión AEAT desactivada", settings_page.text)
                 exported = client.get(
                     f"/api/{business['id']}/verifactu/export.xml"
                 )

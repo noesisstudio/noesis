@@ -38,7 +38,7 @@
       <table>
         <thead><tr><th>Nº</th><th>Cliente</th><th>Concepto</th><th class="t-right">Base</th>
           <th class="t-right">IVA</th><th class="t-right">IRPF</th>
-          <th class="t-right">Total</th><th>Estado</th><th></th></tr></thead>
+          <th class="t-right">Total</th><th>Estado</th><th>Veri*Factu</th><th></th></tr></thead>
         <tbody id="f-body"></tbody>
       </table>
     </div>
@@ -68,6 +68,24 @@ async function load() {
   render('todas');
 }
 function badge(s){ return s==='cobrada'?'b-green':s==='enviada'?'b-amber':'b-gray'; }
+function verifactuState(i) {
+  if (!i.verifactu_registered) return '<span class="meta">—</span>';
+  const states = {
+    pendiente: ['registrada', 'b-gray'],
+    enviado: ['enviada', 'b-amber'],
+    aceptado: ['aceptada', 'b-green'],
+    aceptado_con_errores: ['aceptada con errores', 'b-amber'],
+    rechazado: ['rechazada', 'b-red']
+  };
+  const state = states[i.verifactu_status] || ['registrada', 'b-gray'];
+  const csv = i.verifactu_csv
+    ? `<small class="meta" style="display:block;margin-top:4px">CSV: ${esc(i.verifactu_csv)}</small>`
+    : '';
+  const error = i.verifactu_error
+    ? `<small class="meta" style="display:block;margin-top:4px" title="${esc(i.verifactu_error)}">${esc(i.verifactu_error)}</small>`
+    : '';
+  return `<span class="badge ${state[1]}">${state[0]}</span>${csv}${error}`;
+}
 function render(f) {
   const rows = ALL.filter(i => f==='todas' || i.status===f);
   el('f-filter-hint').textContent = rows.length + ' resultado(s)';
@@ -80,6 +98,7 @@ function render(f) {
     <td class="t-right num">${i.irpf_amount ? '−'+eur(i.irpf_amount) : '—'}</td>
     <td class="t-right num"><b>${eur(i.total)}</b></td>
     <td><span class="badge ${badge(i.status)}">${esc(i.status)}</span></td>
+    <td>${verifactuState(i)}</td>
     <td class="t-right table-actions">
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
       ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Enviar</button>`:''}

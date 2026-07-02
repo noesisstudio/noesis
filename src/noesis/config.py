@@ -76,7 +76,7 @@ RESET_DB = env_bool("NOESIS_RESET_DB")
 # Clave de Holded para facturación real (Verifactu). Si está, se usa Holded.
 HOLDED_API_KEY = os.getenv("HOLDED_API_KEY", "")
 
-# Registro Veri*Factu nativo (fase 1: genera y conserva; todavía no transmite).
+# Registro Veri*Factu nativo. Sin entorno y certificado, solo genera y conserva.
 # La huella y el QR siguen los documentos técnicos publicados por la AEAT. Se
 # mantienen configurables porque la Agencia puede versionarlos.
 VERIFACTU_HASH_ALGORITHM = os.getenv(
@@ -116,6 +116,23 @@ VERIFACTU_SYSTEM_VERSION = os.getenv(
 VERIFACTU_INSTALLATION_PREFIX = os.getenv(
     "NOESIS_VERIFACTU_INSTALLATION_PREFIX", "noesis"
 ).strip()
+
+# Remisión AEAT por SOAP/mTLS. Vacío = desactivado, sin llamadas externas.
+VERIFACTU_CERT_PATH = os.getenv("VERIFACTU_CERT_PATH", "").strip()
+VERIFACTU_KEY_PATH = os.getenv("VERIFACTU_KEY_PATH", "").strip()
+VERIFACTU_AEAT_ENV = os.getenv("VERIFACTU_AEAT_ENV", "").strip().lower()
+VERIFACTU_HTTP_TIMEOUT_SECONDS = int(
+    os.getenv("NOESIS_VERIFACTU_HTTP_TIMEOUT_SECONDS", "30")
+)
+VERIFACTU_RETRY_BASE_SECONDS = int(
+    os.getenv("NOESIS_VERIFACTU_RETRY_BASE_SECONDS", "30")
+)
+VERIFACTU_RETRY_MAX_SECONDS = int(
+    os.getenv("NOESIS_VERIFACTU_RETRY_MAX_SECONDS", "3600")
+)
+VERIFACTU_MAX_ATTEMPTS = int(
+    os.getenv("NOESIS_VERIFACTU_MAX_ATTEMPTS", "6")
+)
 
 # URL pública para emails y vueltas de pago. Railway inyecta su dominio público;
 # NOESIS_BASE_URL sigue teniendo prioridad cuando hay un dominio propio.

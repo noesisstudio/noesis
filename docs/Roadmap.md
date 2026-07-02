@@ -20,8 +20,10 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 - Posicionamiento alrededor del ciclo "del trabajo terminado al dinero cobrado",
   para autónomos y pequeños negocios de servicios (público amplio).
 - Endpoints de salud y disponibilidad para despliegue (`/health` y `/ready`).
-- Registro Veri*Factu nativo fase 1: huella, QR, eventos, rectificativas y XML AEAT
-  (`codex/verifactu-fase1`, pendiente de revisión).
+- Registro Veri*Factu nativo fase 1 en `main`: huella, QR, eventos, rectificativas
+  y XML AEAT.
+- Veri*Factu fase 2 en `codex/verifactu-fase2`: vectores oficiales, SOAP mTLS y
+  cola durable; pendiente de revisión y prueba real con certificado AEAT.
 
 ## 🚧 Fase 1 — núcleo sólido (COMPLETA ✅)
 - [x] Editar / borrar entidades (clientes, facturas, gastos, trabajos).
@@ -31,7 +33,8 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 ## 🔌 Fase 2 — conectar lo real
 - [ ] Base de datos de producción (Postgres/Supabase) + copias de seguridad.
 - [x] Veri*Factu nativo fase 1 (registro local conforme a formato técnico, sin envío).
-- [ ] Veri*Factu fase 2: certificado y remisión automática a AEAT.
+- [x] Veri*Factu fase 2: cliente y remisión automática implementados; falta
+  configurar un certificado y validar el entorno de pruebas antes de producción.
 - [ ] WhatsApp real (Meta Cloud API) — requiere verificación de empresa (founder).
 - [ ] Despliegue 24/7 con HTTPS en **bynoesis.com** + RGPD (privacidad/términos).
 - [x] Transcripción de audios (Whisper, instalación opcional).
