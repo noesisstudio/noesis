@@ -1837,8 +1837,13 @@ def list_invoices(business_id, status=None) -> list[dict]:
         "SELECT i.*, COALESCE(i.recipient_name, c.name) AS client_name, "
         "CASE WHEN EXISTS (SELECT 1 FROM invoice_records vr "
         "WHERE vr.business_id=i.business_id AND vr.invoice_id=i.id) "
-        "THEN TRUE ELSE FALSE END AS verifactu_registered FROM invoices i "
+        "THEN TRUE ELSE FALSE END AS verifactu_registered, "
+        "vo.status AS verifactu_status, vo.aeat_csv AS verifactu_csv, "
+        "vo.aeat_error_description AS verifactu_error "
+        "FROM invoices i "
         "LEFT JOIN clients c ON c.id = i.client_id AND c.business_id=i.business_id "
+        "LEFT JOIN verifactu_outbox vo ON vo.invoice_id=i.id "
+        "AND vo.business_id=i.business_id "
         "WHERE i.business_id=?"
     )
     params: list = [business_id]
@@ -2006,6 +2011,18 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
         record_id=record_id, details=f"huella={record_hash}",
         created_at=generated_at,
     )
+    queued_at = _now()
+    conn.execute(
+        "INSERT INTO verifactu_outbox "
+        "(business_id, invoice_id, record_id, status, attempts, max_attempts, "
+        "next_attempt_at, created_at, updated_at) "
+        "VALUES (?, ?, ?, 'pendiente', 0, ?, ?, ?, ?) "
+        "ON CONFLICT (business_id, record_id) DO NOTHING",
+        (
+            business_id, invoice_id, record_id, config.VERIFACTU_MAX_ATTEMPTS,
+            queued_at, queued_at, queued_at,
+        ),
+    )
     return dict(conn.execute(
         "SELECT * FROM invoice_records WHERE id=? AND business_id=?",
         (record_id, business_id),
@@ -2167,6 +2184,204 @@ def list_invoice_events(business_id: int) -> list[dict]:
             (business_id,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def get_verifactu_outbox(invoice_id: int, business_id: int) -> dict | None:
+    """Consulta el envío de una factura sin permitir cruces entre negocios."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM verifactu_outbox "
+            "WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def list_verifactu_outbox(
+    business_id: int, *, limit: int = 100
+) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE business_id=? "
+            "ORDER BY created_at DESC, id DESC LIMIT ?",
+            (business_id, max(1, min(int(limit), 500))),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def enqueue_missing_verifactu_records(now: str | None = None) -> int:
+    """Crea la cola pendiente para registros anteriores al despliegue de fase 2."""
+    created_at = now or _now()
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "INSERT INTO verifactu_outbox "
+            "(business_id, invoice_id, record_id, status, attempts, max_attempts, "
+            "next_attempt_at, created_at, updated_at) "
+            "SELECT r.business_id, r.invoice_id, r.id, 'pendiente', 0, ?, ?, ?, ? "
+            "FROM invoice_records r "
+            "JOIN businesses b ON b.id=r.business_id "
+            "WHERE b.verifactu_enabled=TRUE AND NOT EXISTS ("
+            "SELECT 1 FROM verifactu_outbox o "
+            "WHERE o.business_id=r.business_id AND o.record_id=r.id)",
+            (
+                config.VERIFACTU_MAX_ATTEMPTS,
+                created_at,
+                created_at,
+                created_at,
+            ),
+        )
+        return max(0, cursor.rowcount)
+
+
+def claim_next_verifactu_submission(
+    *, now: str, stale_before: str
+) -> dict | None:
+    """Reserva un registro vencido; Postgres evita dobles envíos con SKIP LOCKED."""
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE attempts<max_attempts AND "
+            "((status='pendiente' AND next_attempt_at<=?) OR "
+            "(status='enviado' AND locked_at<=?)) "
+            "ORDER BY next_attempt_at, id LIMIT 1" + suffix,
+            (now, stale_before),
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute(
+            "UPDATE verifactu_outbox SET status='enviado', attempts=attempts+1, "
+            "locked_at=?, sent_at=COALESCE(sent_at, ?), last_error=NULL, "
+            "updated_at=? WHERE id=?",
+            (now, now, now, row["id"]),
+        )
+        _record_invoice_event(
+            conn,
+            row["business_id"],
+            "remision",
+            invoice_id=row["invoice_id"],
+            record_id=row["record_id"],
+            details=f"intento={int(row['attempts']) + 1}",
+            created_at=now,
+        )
+        claimed = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE id=?", (row["id"],)
+        ).fetchone()
+        return dict(claimed)
+
+
+def mark_verifactu_retry(
+    outbox_id: int,
+    *,
+    error: str,
+    next_attempt_at: str,
+    updated_at: str,
+) -> dict | None:
+    """Reprograma solo errores temporales; un rechazo AEAT nunca pasa por aquí."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE verifactu_outbox SET status='pendiente', next_attempt_at=?, "
+            "last_error=?, locked_at=NULL, updated_at=? "
+            "WHERE id=? AND status='enviado'",
+            (next_attempt_at, error[:1500], updated_at, outbox_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE id=?", (outbox_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def mark_verifactu_result(
+    outbox_id: int,
+    *,
+    status: str,
+    csv: str | None,
+    global_status: str | None,
+    error_code: str | None,
+    error_description: str | None,
+    response: str,
+    wait_seconds: int,
+    completed_at: str,
+) -> dict | None:
+    if status not in {"aceptado", "aceptado_con_errores", "rechazado"}:
+        raise ValueError("Estado de respuesta Veri*Factu no válido.")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE id=?", (outbox_id,)
+        ).fetchone()
+        if not row or row["status"] != "enviado":
+            return dict(row) if row else None
+        conn.execute(
+            "UPDATE verifactu_outbox SET status=?, aeat_csv=?, "
+            "aeat_global_status=?, aeat_error_code=?, "
+            "aeat_error_description=?, aeat_response=?, wait_seconds=?, "
+            "completed_at=?, locked_at=NULL, last_error=NULL, updated_at=? "
+            "WHERE id=?",
+            (
+                status, csv, global_status, error_code, error_description,
+                response, max(0, int(wait_seconds)), completed_at, completed_at,
+                outbox_id,
+            ),
+        )
+        details = json.dumps(
+            {
+                "estado": status,
+                "csv": csv,
+                "codigo_error": error_code,
+                "descripcion_error": error_description,
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        _record_invoice_event(
+            conn,
+            row["business_id"],
+            "rechazo" if status == "rechazado" else "aceptacion",
+            invoice_id=row["invoice_id"],
+            record_id=row["record_id"],
+            details=details,
+            created_at=completed_at,
+        )
+        updated = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE id=?", (outbox_id,)
+        ).fetchone()
+        return dict(updated)
+
+
+def postpone_verifactu_submissions(until: str, updated_at: str) -> int:
+    """Aplica globalmente el tiempo de espera indicado por la AEAT."""
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "UPDATE verifactu_outbox SET next_attempt_at=?, updated_at=? "
+            "WHERE status='pendiente' AND next_attempt_at<?",
+            (until, updated_at, until),
+        )
+        return max(0, cursor.rowcount)
+
+
+def verifactu_queue_counts() -> dict[str, int]:
+    counts = {
+        "pendiente": 0,
+        "enviado": 0,
+        "aceptado": 0,
+        "aceptado_con_errores": 0,
+        "rechazado": 0,
+        "agotado": 0,
+    }
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) AS total FROM verifactu_outbox "
+            "GROUP BY status"
+        ).fetchall()
+        exhausted = conn.execute(
+            "SELECT COUNT(*) AS total FROM verifactu_outbox "
+            "WHERE status='pendiente' AND attempts>=max_attempts"
+        ).fetchone()
+    for row in rows:
+        counts[row["status"]] = int(row["total"])
+    counts["agotado"] = int(exhausted["total"])
+    return counts
 
 
 def verify_invoice_record_chain(
@@ -3273,6 +3488,7 @@ def admin_overview() -> dict:
         "resultados": len([b for b in biz if b["outcome_reached"]]),
         "tasa_activacion": round(len(activated) / len(biz) * 100) if biz else 0,
         "mrr": mrr, "businesses": biz, "backup": latest_backup_run(),
+        "verifactu_queue": verifactu_queue_counts(),
     }
 
 
@@ -3298,6 +3514,7 @@ def export_business_data(business_id) -> dict:
         "invoices": list_invoices(business_id),
         "invoice_records": list_invoice_records(business_id),
         "invoice_events": list_invoice_events(business_id),
+        "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
         "quotes": list_quotes(business_id),
         "expenses": list_expenses(business_id),
         "product_events": [dict(r) for r in _rows(

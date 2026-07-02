@@ -30,6 +30,26 @@
 
   <div class="card">
     <div class="card-h">
+      <b>Cola Veri*Factu</b>
+      {% if data.verifactu_queue.rechazado %}
+        <span class="badge b-red">{{ data.verifactu_queue.rechazado }} rechazada(s)</span>
+      {% else %}
+        <span class="badge b-green">sin rechazos</span>
+      {% endif %}
+    </div>
+    <div class="card-b">
+      <div class="row">
+        <span class="badge b-gray">Pendientes {{ data.verifactu_queue.pendiente }}</span>
+        <span class="badge b-amber">Enviadas {{ data.verifactu_queue.enviado }}</span>
+        <span class="badge b-green">Aceptadas {{ data.verifactu_queue.aceptado }}</span>
+        <span class="badge b-amber">Con errores {{ data.verifactu_queue.aceptado_con_errores }}</span>
+        <span class="badge b-red">Agotadas {{ data.verifactu_queue.agotado }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">
       <b>Copias de seguridad</b>
       {% if data.backup.status == 'ok' %}
         <span class="badge b-green">Verificación OK</span>

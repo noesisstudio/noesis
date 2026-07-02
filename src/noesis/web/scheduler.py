@@ -8,7 +8,7 @@ plantilla aprobada por Meta. Las respuestas inmediatas al usuario se gestionan e
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -176,6 +176,75 @@ def process_whatsapp_outbox() -> None:
     whatsapp.process_outbox(limit=25)
 
 
+def process_verifactu_outbox(limit: int = 25) -> int:
+    """Remite registros vencidos respetando backoff y control de flujo AEAT."""
+    from .. import verifactu_client
+
+    if not verifactu_client.is_enabled():
+        return 0
+    db.enqueue_missing_verifactu_records()
+    processed = 0
+    for _ in range(max(1, min(int(limit), 1000))):
+        now = datetime.now()
+        item = db.claim_next_verifactu_submission(
+            now=now.isoformat(timespec="seconds"),
+            stale_before=(now - timedelta(minutes=5)).isoformat(timespec="seconds"),
+        )
+        if not item:
+            break
+        business = db.get_business(item["business_id"])
+        record = db.get_invoice_record(item["invoice_id"], item["business_id"])
+        if not business or not record:
+            db.mark_verifactu_retry(
+                item["id"],
+                error="No se encuentra el negocio o el registro de facturación.",
+                next_attempt_at=(
+                    now + timedelta(seconds=config.VERIFACTU_RETRY_MAX_SECONDS)
+                ).isoformat(timespec="seconds"),
+                updated_at=now.isoformat(timespec="seconds"),
+            )
+            break
+        try:
+            result = verifactu_client.submit_records(business, [record])
+        except verifactu_client.VerifactuTransportError as exc:
+            delay = min(
+                config.VERIFACTU_RETRY_MAX_SECONDS,
+                config.VERIFACTU_RETRY_BASE_SECONDS
+                * (2 ** max(0, int(item["attempts"]) - 1)),
+            )
+            db.mark_verifactu_retry(
+                item["id"],
+                error=str(exc),
+                next_attempt_at=(
+                    now + timedelta(seconds=delay)
+                ).isoformat(timespec="seconds"),
+                updated_at=now.isoformat(timespec="seconds"),
+            )
+            log.warning("Remisión Veri*Factu aplazada: %s", exc)
+            break
+        completed_at = datetime.now().isoformat(timespec="seconds")
+        db.mark_verifactu_result(
+            item["id"],
+            status=result.status,
+            csv=result.csv,
+            global_status=result.global_status,
+            error_code=result.error_code,
+            error_description=result.error_description,
+            response=result.raw_response,
+            wait_seconds=result.wait_seconds,
+            completed_at=completed_at,
+        )
+        processed += 1
+        if result.wait_seconds:
+            until = (
+                datetime.fromisoformat(completed_at)
+                + timedelta(seconds=result.wait_seconds)
+            ).isoformat(timespec="seconds")
+            db.postpone_verifactu_submissions(until, completed_at)
+            break
+    return processed
+
+
 def run_daily_backup() -> None:
     if db.claim_scheduled_run(f"backup:{datetime.now():%Y-%m-%d}"):
         backups.run_backup()
@@ -206,11 +275,19 @@ def start_scheduler() -> BackgroundScheduler:
         max_instances=1,
         coalesce=True,
     )
+    scheduler.add_job(
+        process_verifactu_outbox,
+        "interval",
+        seconds=15,
+        id="verifactu-outbox",
+        max_instances=1,
+        coalesce=True,
+    )
     scheduler.add_job(run_daily_backup, "cron", hour=3, minute=30, id="backup")
     scheduler.start()
     _scheduler = scheduler
     log.info(
-        "Scheduler iniciado (WhatsApp cada 15s, diario 08:00, cobros 09:00, "
-        "semanal lun 08:00, backup 03:30)."
+        "Scheduler iniciado (colas WhatsApp/Veri*Factu cada 15s, diario 08:00, "
+        "cobros 09:00, semanal lun 08:00, backup 03:30)."
     )
     return scheduler

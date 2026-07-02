@@ -995,6 +995,106 @@ def _downgrade_verified_backups(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS backup_runs")
 
 
+def _expand_invoice_event_types(conn) -> None:
+    """Añade eventos de remisión sin alterar nunca los eventos existentes."""
+    allowed = (
+        "'alta', 'rectificacion', 'exportacion', 'anomalia', "
+        "'remision', 'aceptacion', 'rechazo'"
+    )
+    if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoice_events_append_only_update")
+        conn.execute("DROP TRIGGER IF EXISTS invoice_events_append_only_delete")
+        conn.execute("DROP INDEX IF EXISTS idx_invoice_events_business")
+        conn.executescript(
+            f"""
+CREATE TABLE invoice_events_v9 (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    invoice_id  INTEGER,
+    record_id   INTEGER,
+    event_type  TEXT NOT NULL CHECK (event_type IN ({allowed})),
+    details     TEXT,
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id),
+    FOREIGN KEY (business_id, record_id)
+        REFERENCES invoice_records(business_id, id)
+);
+INSERT INTO invoice_events_v9
+    (id, business_id, invoice_id, record_id, event_type, details, created_at)
+SELECT id, business_id, invoice_id, record_id, event_type, details, created_at
+FROM invoice_events;
+DROP TABLE invoice_events;
+ALTER TABLE invoice_events_v9 RENAME TO invoice_events;
+"""
+        )
+    else:
+        conn.execute(
+            "ALTER TABLE invoice_events DROP CONSTRAINT IF EXISTS "
+            "invoice_events_event_type_check"
+        )
+        conn.execute(
+            "ALTER TABLE invoice_events ADD CONSTRAINT "
+            f"invoice_events_event_type_check CHECK (event_type IN ({allowed}))"
+        )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_invoice_events_business "
+        "ON invoice_events(business_id, created_at, id)"
+    )
+    _install_invoice_append_only(conn)
+
+
+def _upgrade_verifactu_phase2(conn) -> None:
+    t = _types(conn.dialect)
+    _expand_invoice_event_types(conn)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS verifactu_outbox (
+    id                    {t["id"]},
+    business_id           {t["ref"]} NOT NULL REFERENCES businesses(id),
+    invoice_id            {t["ref"]} NOT NULL,
+    record_id             {t["ref"]} NOT NULL,
+    status                TEXT NOT NULL DEFAULT 'pendiente'
+                          CHECK (status IN (
+                              'pendiente', 'enviado', 'aceptado',
+                              'aceptado_con_errores', 'rechazado'
+                          )),
+    attempts              INTEGER NOT NULL DEFAULT 0,
+    max_attempts          INTEGER NOT NULL DEFAULT 6,
+    next_attempt_at       {t["timestamp"]} NOT NULL,
+    locked_at             {t["timestamp"]},
+    sent_at               {t["timestamp"]},
+    completed_at          {t["timestamp"]},
+    aeat_csv              TEXT,
+    aeat_global_status    TEXT,
+    aeat_error_code       TEXT,
+    aeat_error_description TEXT,
+    aeat_response         TEXT,
+    wait_seconds          INTEGER NOT NULL DEFAULT 0,
+    last_error            TEXT,
+    created_at            {t["timestamp"]} NOT NULL,
+    updated_at            {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, record_id),
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id),
+    FOREIGN KEY (business_id, record_id)
+        REFERENCES invoice_records(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_verifactu_outbox_due
+    ON verifactu_outbox(status, next_attempt_at);
+CREATE INDEX IF NOT EXISTS idx_verifactu_outbox_business
+    ON verifactu_outbox(business_id, invoice_id, id);
+"""
+    )
+
+
+def _downgrade_verifactu_phase2(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_verifactu_outbox_business")
+    conn.execute("DROP INDEX IF EXISTS idx_verifactu_outbox_due")
+    conn.execute("DROP TABLE IF EXISTS verifactu_outbox")
+    # Los nuevos eventos se conservan: estrechar el CHECK podría destruir auditoría.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1005,6 +1105,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (6, "fichaje_inalterable", _upgrade_immutable_clockins, _downgrade_immutable_clockins),
     (7, "verifactu_fase1", _upgrade_verifactu_phase1, _downgrade_verifactu_phase1),
     (8, "backups_verificados", _upgrade_verified_backups, _downgrade_verified_backups),
+    (9, "verifactu_fase2", _upgrade_verifactu_phase2, _downgrade_verifactu_phase2),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

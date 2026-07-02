@@ -35,7 +35,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.concurrency import run_in_threadpool
 
-from .. import config, db
+from .. import config, db, verifactu_client
 from ..adapters import billing as billing_adapter
 from ..adapters import email as email_adapter
 from ..tools import run_tool
@@ -609,6 +609,18 @@ def page(request: Request, business_id: int, page: str):
     if page == "ajustes":
         context["verifactu_errors"] = db.verifactu_configuration_errors()
         context["verifactu_ready"] = not context["verifactu_errors"]
+        context["verifactu_transmission_enabled"] = (
+            verifactu_client.is_enabled()
+        )
+        context["verifactu_aeat_env"] = config.VERIFACTU_AEAT_ENV
+        queue = db.list_verifactu_outbox(business_id, limit=500)
+        context["verifactu_queue"] = {
+            status: sum(1 for item in queue if item["status"] == status)
+            for status in (
+                "pendiente", "enviado", "aceptado",
+                "aceptado_con_errores", "rechazado",
+            )
+        }
     if page == "asistente":
         from ..adapters import transcription
         context["voice_on"] = transcription.available()
@@ -1819,7 +1831,6 @@ def admin_download_latest_backup(request: Request):
 
 
 # ===================================================== RESET DE CONTRASEÑA == #
-import hashlib  # noqa: E402
 import secrets  # noqa: E402
 
 
