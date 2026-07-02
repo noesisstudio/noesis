@@ -1,5 +1,7 @@
 # Noesis
 
+[![CI](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml/badge.svg)](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml)
+
 El copiloto de negocio por WhatsApp para autónomos de servicios (fontaneros,
 electricistas, reformas, limpieza, jardinería…). Hablas con Noesis por texto o
 audio y se ocupa de tu agenda, clientes, cobros y facturas — para que tú solo
