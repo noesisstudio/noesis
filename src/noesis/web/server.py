@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import hashlib
+import re
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
@@ -1431,7 +1432,15 @@ async def api_upload_document(business_id: int, file: UploadFile = File(...),
                               client_id: str = Form(""), invoice_id: str = Form(""),
                               note: str = Form("")):
     from ..documents import service as docservice
-    data = await file.read()
+    # Lectura ACOTADA: nunca cargamos en memoria más de lo permitido. Sin este tope,
+    # un archivo enorme agotaría la RAM antes de que el servicio validara el tamaño.
+    max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        return JSONResponse(
+            {"error": f"El archivo supera el límite de {config.MAX_UPLOAD_MB} MB."},
+            status_code=413,
+        )
 
     def _opt_int(v):
         try:
@@ -1455,8 +1464,10 @@ def api_document_file(business_id: int, doc_id: int):
     if got is None:
         return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
     data, mime, filename = got
+    # Sanea el nombre para la cabecera: sin comillas ni saltos que la rompan.
+    safe_name = re.sub(r'[\r\n"\\]', "_", filename or "documento")[:120]
     return Response(content=data, media_type=mime,
-                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
+                    headers={"Content-Disposition": f'inline; filename="{safe_name}"'})
 
 
 @app.delete("/api/{business_id}/documents/{doc_id}")

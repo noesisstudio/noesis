@@ -64,6 +64,12 @@ IS_PRODUCTION = (
 TRUST_PROXY_HEADERS = bool(os.getenv("RAILWAY_ENVIRONMENT")) or env_bool(
     "NOESIS_TRUST_PROXY_HEADERS"
 )
+# Nº de proxies de confianza delante de la app. La IP real del cliente es la que
+# añade el proxy más cercano: se lee desde la DERECHA de X-Forwarded-For, saltando
+# estos saltos. Así el cliente NO puede falsificar su IP para evadir el rate limit
+# (si envía "X-Forwarded-For: falsa", queda a la izquierda y se ignora). Railway
+# expone un único proxy → 1. Si algún día hay otro delante, súbelo a 2.
+PROXY_HOPS = max(1, int(os.getenv("NOESIS_PROXY_HOPS", "1")))
 
 # Datos de demostración: solo se siembran si se pide explícitamente (por defecto NO,
 # para que producción arranque limpia con cuentas reales).

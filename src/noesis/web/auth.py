@@ -34,11 +34,20 @@ _MAX_KEYS = 10_000
 
 
 def client_ip(request) -> str:
-    """IP del cliente teniendo en cuenta el proxy de Railway (X-Forwarded-For)."""
+    """IP real del cliente, a prueba de falsificación de X-Forwarded-For.
+
+    Detrás de un proxy de confianza, la IP fiable es la que AÑADE el proxy más
+    cercano, que va a la DERECHA de la cadena. Leerla desde la izquierda sería un
+    coladero: cualquiera puede mandar "X-Forwarded-For: lo-que-quiera" y rotar la
+    clave del rate limit. Saltamos `PROXY_HOPS` posiciones desde la derecha.
+    """
     from .. import config
-    fwd = request.headers.get("x-forwarded-for", "")
-    if config.TRUST_PROXY_HEADERS and fwd:
-        return fwd.split(",")[0].strip()
+    if config.TRUST_PROXY_HEADERS:
+        fwd = request.headers.get("x-forwarded-for", "")
+        parts = [p.strip() for p in fwd.split(",") if p.strip()]
+        if parts:
+            idx = len(parts) - config.PROXY_HOPS
+            return parts[max(0, idx)]
     return request.client.host if request.client else "?"
 
 
