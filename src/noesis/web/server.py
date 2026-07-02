@@ -23,7 +23,13 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -33,7 +39,7 @@ from .. import config, db
 from ..adapters import billing as billing_adapter
 from ..adapters import email as email_adapter
 from ..tools import run_tool
-from . import auth, chat, reports, whatsapp
+from . import auth, backups, chat, reports, whatsapp
 from .scheduler import start_scheduler
 
 HERE = Path(__file__).parent
@@ -1743,8 +1749,25 @@ def _is_admin(request: Request) -> bool:
 def admin_panel(request: Request):
     if not _is_admin(request):
         return RedirectResponse("/login", status_code=303)
+    data = db.admin_overview()
+    data["backup"] = backups.admin_backup_status()
     return TEMPLATES.TemplateResponse(request, "admin.html",
-                                      {"data": db.admin_overview()})
+                                      {"data": data})
+
+
+@app.get("/admin/backups/latest")
+def admin_download_latest_backup(request: Request):
+    if not _is_admin(request):
+        return Response("No autorizado.", status_code=403)
+    path = backups.latest_verified_backup()
+    if not path:
+        return Response("No hay ninguna copia verificada disponible.", status_code=404)
+    media_type = (
+        "application/gzip"
+        if path.name.endswith((".gz", ".dump"))
+        else "application/vnd.sqlite3"
+    )
+    return FileResponse(path, media_type=media_type, filename=path.name)
 
 
 # ===================================================== RESET DE CONTRASEÑA == #

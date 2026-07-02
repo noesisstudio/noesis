@@ -2,7 +2,7 @@
 
 > Documento vivo para **continuar el trabajo desde cualquier agente** (Claude o Codex)
 > sin perder el hilo. Si lo retomas: lee esto entero, luego `AGENTS.md`.
-> Última actualización: **2026-07-01**.
+> Última actualización: **2026-07-02**.
 
 ---
 
@@ -43,9 +43,12 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
   migración 7; registro de alta append-only, huella SHA-256 AEAT encadenada por
   emisor, QR tributario, rectificativas R1-R5, eventos y exportación XML validada
   contra el XSD oficial. No transmite a AEAT ni usa certificado.
+- **Backups verificados (en `codex/backups-verificados`, pendiente de revisión):**
+  migración 8; copia SQLite/Postgres, restauración desechable con recuentos,
+  historial y descarga solo admin, más subida S3-compatible opcional.
 
-**Pruebas:** 68/68 en `tests/test_backend.py` (SQLite local, rama
-`codex/verifactu-fase1`).
+**Pruebas:** 72/72 en SQLite local, incluidas copia, restauración, fallo de
+verificación, descarga admin y camino Postgres mockeado.
 
 ---
 
