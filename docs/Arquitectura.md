@@ -32,7 +32,10 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   worker de la cola cada 15 segundos.
 - `db.py` también persiste eventos de producto y calcula el recorrido de activación
   por negocio sin depender de una plataforma analítica externa.
-- `adapters/invoicing.py` — facturación: mock hoy → Holded mañana. Ver [[Fiscalidad]].
+- `adapters/invoicing.py` — selecciona emisión interna o Holded. Cuando un negocio
+  activa el modo nativo, la emisión interna registra Veri*Factu en la misma
+  transacción y no delega en terceros. Ver [[Fiscalidad]].
+- `verifactu.py` — formato técnico AEAT: cadena de huella, SHA-256, URL/QR y XML.
 - `web/auth.py` — login (PBKDF2, sesiones firmadas). Aislamiento por dueño.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
   fiscalidad, NLU y revocación de sesiones.
@@ -45,6 +48,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   con entidades de otra empresa.
 - La emisión de factura es atómica e idempotente. La secuencia se persiste por
   negocio/año y los datos fiscales quedan congelados en la factura.
+- En modo Veri*Factu, la misma transacción añade un registro de alta append-only,
+  encadenado por NIF emisor. Las rectificaciones crean una nueva factura R1-R5 y
+  conservan el original.
 - Facturas emitidas no se borran ni se renumeran. Los borrados RGPD conservan los
   documentos sujetos a obligación fiscal.
 - Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs. Los eventos

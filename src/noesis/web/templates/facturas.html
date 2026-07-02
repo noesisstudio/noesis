@@ -9,6 +9,9 @@
   </div>
   <div class="page-actions">
     <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">Descargar CSV</a>
+    {% if business.verifactu_enabled %}
+    <a class="btn" href="/api/{{ business.id }}/verifactu/export.xml">XML AEAT</a>
+    {% endif %}
     <a class="btn primary" href="/b/{{ business.id }}/asistente">Crear por chat</a>
   </div>
 </div>
@@ -69,7 +72,9 @@ function render(f) {
   const rows = ALL.filter(i => f==='todas' || i.status===f);
   el('f-filter-hint').textContent = rows.length + ' resultado(s)';
   el('f-body').innerHTML = rows.map(i => `<tr>
-    <td class="meta">${esc(i.number||'—')}</td><td>${esc(i.client_name||'')}</td><td>${esc(i.concept)}</td>
+    <td class="meta">${esc(i.number||'—')}
+      ${i.verifactu_registered ? '<span class="badge b-green" style="margin-left:5px">VF</span>' : ''}
+    </td><td>${esc(i.client_name||'')}</td><td>${esc(i.concept)}</td>
     <td class="t-right num">${eur(i.base)}</td>
     <td class="t-right num">${eur(i.vat_amount)}</td>
     <td class="t-right num">${i.irpf_amount ? '−'+eur(i.irpf_amount) : '—'}</td>
@@ -79,6 +84,7 @@ function render(f) {
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
       ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Enviar</button>`:''}
       ${i.status==='enviada'?`<button class="btn sm" onclick="pay(${i.id})">Cobrada</button>`:''}
+      ${i.status!=='borrador'?`<button class="btn sm" onclick="rectify(${i.id})">Rectificar</button>`:''}
       ${i.status==='borrador'?`<button class="iconbtn" title="Borrar borrador" onclick="del(${i.id})">${TRASH}</button>`:''}
     </td>
   </tr>`).join('');
@@ -96,6 +102,30 @@ async function send(id){
 }
 async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
 async function del(id){ if(confirm('¿Borrar esta factura?')){ await apiDelete('/invoices/'+id); load(); } }
+function rectify(id) {
+  formModal({
+    title: 'Crear factura rectificativa',
+    submitLabel: 'Crear borrador rectificativo',
+    fields: [
+      {name:'invoice_type', label:'Causa reglamentaria', options:[
+        {value:'R1', label:'R1 · Error fundado / art. 80.1 y 80.2'},
+        {value:'R2', label:'R2 · Artículo 80.3'},
+        {value:'R3', label:'R3 · Artículo 80.4'},
+        {value:'R4', label:'R4 · Resto de causas'},
+        {value:'R5', label:'R5 · Factura simplificada'}
+      ]},
+      {name:'reason', label:'Motivo', placeholder:'Explica la rectificación'},
+      {name:'concept', label:'Concepto', placeholder:'Corrección de la factura original'},
+      {name:'base', label:'Diferencia de base (€)', type:'number', placeholder:'-100.00'},
+      {name:'vat_rate', label:'IVA (%)', type:'number', value:'21'},
+      {name:'irpf_rate', label:'IRPF (%)', type:'number', value:'0'}
+    ],
+    onSubmit: async values => {
+      await apiPost(`/invoices/${id}/rectify`, values);
+      await load();
+    }
+  });
+}
 document.getElementById('filters').addEventListener('click', e => {
   if (e.target.dataset.f) {
     [...e.currentTarget.children].forEach(b=>b.classList.remove('primary'));

@@ -78,6 +78,54 @@
 </div>
 
 <div class="card" style="margin-top:16px">
+  <div class="card-h">
+    <h2>Registro Veri*Factu nativo</h2>
+    {% if business.verifactu_enabled %}
+      <span class="badge b-green">registro activo</span>
+    {% elif verifactu_ready %}
+      <span class="badge b-gray">desactivado</span>
+    {% else %}
+      <span class="badge b-amber">configuración incompleta</span>
+    {% endif %}
+  </div>
+  <div class="card-b">
+    <form method="post" action="/b/{{ business.id }}/verifactu">
+      <label class="lrow" style="align-items:flex-start;cursor:pointer">
+        <span>
+          <b>Generar registro, huella encadenada y QR al emitir</b>
+          <small style="display:block;margin-top:4px" class="muted">
+            Cada alta queda inalterable y se puede exportar en XML con la estructura AEAT.
+          </small>
+        </span>
+        <input type="checkbox" name="verifactu_enabled" value="1"
+          {{ 'checked' if business.verifactu_enabled }}>
+      </label>
+      <div class="row" style="margin-top:14px">
+        <button class="btn primary"
+          {{ 'disabled' if not verifactu_ready and not business.verifactu_enabled }}>
+          Guardar modo
+        </button>
+        {% if business.verifactu_enabled %}
+        <a class="btn" href="/api/{{ business.id }}/verifactu/export.xml">
+          Exportar XML AEAT
+        </a>
+        {% endif %}
+      </div>
+    </form>
+    {% if verifactu_errors %}
+    <p class="hint" style="margin-top:12px">
+      Falta configuración del servidor: {{ verifactu_errors | join(', ') }}.
+    </p>
+    {% endif %}
+    <div class="insight" style="margin-top:14px">
+      <b>Fase 1 técnica:</b> Noesis todavía no remite registros a la AEAT ni usa
+      certificado digital. Mantén este modo fuera de uso fiscal real hasta completar
+      la fase de transmisión. La opción está desactivada por defecto.
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
   <div class="card-h"><h2>Marca y plantillas</h2><span class="hint">en tus facturas y en el portal del cliente</span></div>
   <div class="card-b">
     <form method="post" action="/b/{{ business.id }}/branding" enctype="multipart/form-data">
@@ -147,6 +195,11 @@
       <div class="row">
         <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">Facturas (CSV)</a>
         <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">Costes (CSV)</a>
+        {% if business.verifactu_enabled %}
+        <a class="btn" href="/api/{{ business.id }}/verifactu/export.xml">
+          Registros AEAT (XML)
+        </a>
+        {% endif %}
         <a class="btn" href="/api/{{ business.id }}/export">Toda la cuenta (JSON)</a>
       </div>
       <p class="hint" style="margin-top:12px">Para borrar los datos de un cliente concreto

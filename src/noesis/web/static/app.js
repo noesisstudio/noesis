@@ -55,10 +55,14 @@ function formModal(opts) {
   closeModal();
   const ov = document.createElement('div');
   ov.className = 'modal-overlay';
-  const fields = (opts.fields || []).map(f => `
-    <label class="fld" style="margin-top:10px">${esc(f.label)}</label>
-    <input class="input" data-name="${f.name}" type="${f.type || 'text'}"
-      value="${esc(f.value ?? '')}" placeholder="${esc(f.placeholder || '')}">`).join('');
+  const fields = (opts.fields || []).map(f => {
+    const control = f.options
+      ? `<select class="input" data-name="${f.name}">${f.options.map(o =>
+          `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}</select>`
+      : `<input class="input" data-name="${f.name}" type="${f.type || 'text'}"
+          value="${esc(f.value ?? '')}" placeholder="${esc(f.placeholder || '')}">`;
+    return `<label class="fld" style="margin-top:10px">${esc(f.label)}</label>${control}`;
+  }).join('');
   ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
     <div class="modal-h"><h2>${esc(opts.title)}</h2>
       <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
@@ -72,13 +76,13 @@ function formModal(opts) {
   ov.querySelector('.modal-cancel').onclick = closeModal;
   ov.querySelector('.modal-save').onclick = async () => {
     const values = {};
-    ov.querySelectorAll('input[data-name]').forEach(i => values[i.dataset.name] = i.value.trim());
+    ov.querySelectorAll('[data-name]').forEach(i => values[i.dataset.name] = i.value.trim());
     await opts.onSubmit(values);
     closeModal();
   };
   const onEsc = e => { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); } };
   document.addEventListener('keydown', onEsc);
-  const first = ov.querySelector('input');
+  const first = ov.querySelector('[data-name]');
   if (first) first.focus();
 }
 

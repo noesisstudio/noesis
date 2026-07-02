@@ -39,9 +39,13 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
   y anulaciones auditadas; pausas; historial de 30 días para el trabajador; informes
   CSV/PDF con verificación de integridad; política de empresa e información RGPD con
   acuse. Compatible con SQLite/Postgres.
+- **Veri*Factu fase 1 (en `codex/verifactu-fase1`, apilada sobre fichaje-legal):**
+  migración 7; registro de alta append-only, huella SHA-256 AEAT encadenada por
+  emisor, QR tributario, rectificativas R1-R5, eventos y exportación XML validada
+  contra el XSD oficial. No transmite a AEAT ni usa certificado.
 
-**Pruebas:** 61/61 en `tests/test_backend.py` (SQLite local, rama
-`codex/fichaje-legal`).
+**Pruebas:** 68/68 en `tests/test_backend.py` (SQLite local, rama
+`codex/verifactu-fase1`).
 
 ---
 
@@ -61,6 +65,7 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 | `src/noesis/web/templates/fichaje.html` | Portal móvil por token para fichar, consultar el historial y leer la información RGPD. |
 | `src/noesis/web/invoice_pdf.py` | PDF de factura con marca (plantillas + logo/monograma). |
 | `src/noesis/web/work_reports.py` | Informes CSV/PDF verificables de registro de jornada. |
+| `src/noesis/verifactu.py` | Huella, QR y XML según especificaciones técnicas AEAT. |
 | `src/noesis/documents/` | Módulo de "papeles" (Codex): subir/guardar/leer documentos. |
 | `src/noesis/adapters/` | `invoicing.py` (mock→Holded), `email.py` (SMTP), `transcription.py` (Whisper local). |
 | `config.py` | Lee todas las variables de entorno (`.env`). |
@@ -133,7 +138,8 @@ construir más features.
 6. **WhatsApp fiable:** implementado en `codex/whatsapp-fiable`, pendiente de
    revisión y de aprobar/configurar las plantillas reales en Meta. Incluye cola
    durable, backoff, estados `sent/delivered/read` e idempotencia de webhooks.
-7. **Verifactu real (Holded)** en cuanto un cliente facture oficialmente.
+7. **Veri*Factu fase 2:** certificado digital, remisión automática y tratamiento
+   de respuestas/reintentos de la AEAT antes de usar el modo en producción.
 8. **Emails transaccionales** (SMTP real) y **copias de seguridad verificadas** (probar
    una restauración, no solo que se hagan).
 

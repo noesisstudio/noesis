@@ -88,6 +88,9 @@ validaciones, marca, móvil). SQLite/Postgres y las migraciones versionadas ya e
 trabajos y fichaje web/WhatsApp con GPS opcional y PIN. En
 `codex/fichaje-legal`, pendiente de revisión, está la migración **6**
 (`fichaje_inalterable`): sellado encadenado, correcciones auditadas, pausas,
-historial e informes verificables. Siguiente: revisar/fusionar ese PR y completar
-**Fase 2** (activar Postgres, Holded real, WhatsApp Meta y bynoesis.com). Detalle en
-`docs/Roadmap.md`.
+historial e informes verificables. Sobre esa rama se apila
+`codex/verifactu-fase1`, con la migración **7** (`verifactu_fase1`): registro de
+facturación append-only, huella/QR/XML AEAT, eventos y rectificativas, todavía sin
+transmisión. Siguiente: fusionar en orden las migraciones 6 y 7 y completar
+**Fase 2** (activar Postgres, transmisión AEAT, WhatsApp Meta y bynoesis.com).
+Detalle en `docs/Roadmap.md`.
