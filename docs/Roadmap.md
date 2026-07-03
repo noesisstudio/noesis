@@ -47,8 +47,9 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 
 ## 💶 Cerrar el ciclo del cobro (siguiente en producto)
 - [x] Datos de pago (IBAN/Bizum) en Ajustes, el PDF de la factura y el portal.
-- [ ] **Cobros parciales** (anticipo + resto) con ledger de pagos aparte —
-  Forjia lo tiene; nosotros solo pagado/no-pagado. Ver `docs/Codex-Backend.md`.
+- [x] **Cobros parciales** (anticipo + resto) con ledger separado, estado derivado
+  y métricas sobre el restante (migración 11 en `codex/cobros-parciales`, pendiente
+  de revisión y fusión).
 - [ ] **Gasto por foto** (OCR sobre el módulo de documentos existente).
 - [ ] Persecución de cobros automática por WhatsApp (bloqueada por Meta).
 

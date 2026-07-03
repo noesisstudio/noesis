@@ -1113,6 +1113,49 @@ def _downgrade_payment_details(conn) -> None:
     # En SQLite se conservan las columnas (DROP COLUMN es frágil); no molestan.
 
 
+def _upgrade_partial_payments(conn) -> None:
+    """Ledger de cobros separado de los registros fiscales inmutables."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS invoice_payments (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    invoice_id  {t["ref"]} NOT NULL,
+    amount      {t["real"]} NOT NULL CHECK (amount > 0),
+    method      TEXT,
+    paid_at     {t["timestamp"]} NOT NULL,
+    note        TEXT,
+    created_at  {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoice
+    ON invoice_payments(business_id, invoice_id, paid_at, id);
+"""
+    )
+    # Las facturas cobradas antes de esta migración entran en el ledger para que
+    # este sea la única fuente de verdad desde ahora.
+    conn.execute(
+        "INSERT INTO invoice_payments "
+        "(business_id, invoice_id, amount, method, paid_at, note, created_at) "
+        "SELECT i.business_id, i.id, i.total, 'registro_anterior', "
+        "COALESCE(i.paid_at, i.issued_at, i.created_at), "
+        "'Cobro migrado desde el estado anterior', "
+        "COALESCE(i.paid_at, i.issued_at, i.created_at) "
+        "FROM invoices i WHERE i.status='cobrada' AND i.total > 0 "
+        "AND NOT EXISTS (SELECT 1 FROM invoice_payments p "
+        "WHERE p.business_id=i.business_id AND p.invoice_id=i.id)"
+    )
+
+
+def _downgrade_partial_payments(conn) -> None:
+    # Sin ledger no se puede representar un cobro parcial.
+    conn.execute("UPDATE invoices SET status='enviada' WHERE status='parcial'")
+    conn.execute("DROP INDEX IF EXISTS idx_invoice_payments_invoice")
+    conn.execute("DROP TABLE IF EXISTS invoice_payments")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1125,6 +1168,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (8, "backups_verificados", _upgrade_verified_backups, _downgrade_verified_backups),
     (9, "verifactu_fase2", _upgrade_verifactu_phase2, _downgrade_verifactu_phase2),
     (10, "datos_cobro", _upgrade_payment_details, _downgrade_payment_details),
+    (11, "cobros_parciales", _upgrade_partial_payments, _downgrade_partial_payments),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
