@@ -57,6 +57,9 @@ terminar. Es el hueco de producto nº 1 identificado.
 
 ## Tarea 2 — Gasto por foto (OCR de tickets) · PRIORIDAD ALTA
 
+> Implementada en `codex/gasto-por-foto` con la migración 12 y pruebas de
+> regresión. Pendiente de revisión y fusión a `main`.
+
 **Por qué**: Forjia lo tiene ("foto al ticket → gasto"). Nosotros ya tenemos el
 módulo `documents/` (subida acotada y saneada); falta la extracción.
 

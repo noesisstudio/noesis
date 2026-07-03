@@ -2799,8 +2799,16 @@ def pending_payments(business_id) -> list[dict]:
 
 
 # ----------------------------------------------------------------- Gastos ---
-def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None,
-                *, business_id: int) -> dict:
+def add_expense(
+    concept,
+    amount,
+    vat_rate=None,
+    category=None,
+    spent_on=None,
+    document_id=None,
+    *,
+    business_id: int,
+) -> dict:
     concept = (concept or "").strip()
     if not concept or len(concept) > 500:
         raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
@@ -2809,7 +2817,35 @@ def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None,
         vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
     else:
         vat_rate = None
+    if spent_on not in (None, ""):
+        try:
+            spent_on = date.fromisoformat(str(spent_on).strip()).isoformat()
+        except ValueError as exc:
+            raise ValueError("La fecha del gasto no es válida.") from exc
+    else:
+        spent_on = None
+    if document_id not in (None, ""):
+        try:
+            document_id = int(document_id)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("El documento no es válido.") from exc
+        if document_id <= 0:
+            raise ValueError("El documento no es válido.")
+    else:
+        document_id = None
     with get_conn() as conn:
+        if document_id is not None:
+            conn.execute("BEGIN IMMEDIATE")
+            lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+            document = conn.execute(
+                "SELECT id, expense_id FROM documents "
+                "WHERE id=? AND business_id=?" + lock,
+                (document_id, business_id),
+            ).fetchone()
+            if not document:
+                raise ValueError("Documento no encontrado.")
+            if document["expense_id"] is not None:
+                raise ValueError("Este documento ya está vinculado a un gasto.")
         row = conn.execute(
             "INSERT INTO expenses (business_id, concept, amount, vat_rate, category, "
             "spent_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
@@ -2817,15 +2853,29 @@ def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None,
              spent_on, _now()),
         ).fetchone()
         new_id = row["id"]
-    with get_conn() as conn:
-        return dict(conn.execute(
+        if document_id is not None:
+            linked = conn.execute(
+                "UPDATE documents SET expense_id=? "
+                "WHERE id=? AND business_id=? AND expense_id IS NULL",
+                (new_id, document_id, business_id),
+            )
+            if linked.rowcount != 1:
+                raise ValueError("No se pudo vincular el documento al gasto.")
+        expense = dict(conn.execute(
             "SELECT * FROM expenses WHERE id=? AND business_id=?",
             (new_id, business_id),
         ).fetchone())
+    expense["document_id"] = document_id
+    return expense
 
 
 def delete_expense(expense_id, business_id) -> None:
     with get_conn() as conn:
+        conn.execute(
+            "UPDATE documents SET expense_id=NULL "
+            "WHERE expense_id=? AND business_id=?",
+            (expense_id, business_id),
+        )
         conn.execute("DELETE FROM expenses WHERE id=? AND business_id=?",
                      (expense_id, business_id))
 

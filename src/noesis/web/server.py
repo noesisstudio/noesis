@@ -1090,6 +1090,61 @@ def api_expenses(business_id: int):
     return db.list_expenses(business_id)
 
 
+@app.post("/api/{business_id}/expenses/from-photo", status_code=201)
+async def api_expense_from_photo(
+    business_id: int, file: UploadFile = File(...)
+):
+    """Guarda la foto y devuelve sugerencias; nunca crea el gasto."""
+    from ..adapters import extraction
+    from ..documents import service as docservice, storage
+
+    filename = file.filename or "ticket"
+    if storage.ext_of(filename) not in storage.IMAGE_EXTS:
+        return JSONResponse(
+            {"error": "Sube una foto JPG, PNG, WEBP o HEIC."},
+            status_code=400,
+        )
+    max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        return JSONResponse(
+            {"error": f"El archivo supera el límite de {config.MAX_UPLOAD_MB} MB."},
+            status_code=413,
+        )
+    try:
+        document = docservice.upload(
+            business_id,
+            filename,
+            data,
+            kind="ticket",
+            run_ocr=False,
+        )
+    except docservice.UploadError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    extracted = await run_in_threadpool(
+        extraction.extract_expense,
+        data,
+        storage.mime_for(filename),
+    )
+    fields = extracted or {
+        "concept": None,
+        "amount": None,
+        "vat_rate": None,
+        "date": None,
+        "supplier": None,
+    }
+    return {
+        "document": document,
+        "extracted": extracted is not None,
+        "draft": {
+            **fields,
+            "category": "Ticket",
+            "document_id": document["id"],
+        },
+    }
+
+
 @app.post("/api/{business_id}/expenses")
 async def api_add_expense(business_id: int, request: Request):
     try:
@@ -1105,8 +1160,15 @@ async def api_add_expense(business_id: int, request: Request):
         return JSONResponse({"error": "Concepto e importe (>0) son obligatorios."},
                             status_code=400)
     try:
-        return db.add_expense(concept, amount, vat_rate=body.get("vat_rate"),
-                              category=body.get("category"), business_id=business_id)
+        return db.add_expense(
+            concept,
+            amount,
+            vat_rate=body.get("vat_rate"),
+            category=body.get("category"),
+            spent_on=body.get("spent_on") or body.get("date"),
+            document_id=body.get("document_id"),
+            business_id=business_id,
+        )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
@@ -1521,8 +1583,17 @@ async def api_document_to_expense(business_id: int, doc_id: int, request: Reques
         amount = float(amount) if amount not in (None, "") else None
     except (TypeError, ValueError):
         amount = None
-    gasto = docservice.convert_ticket_to_expense(
-        business_id, doc_id, concept=body.get("concept"), amount=amount)
+    try:
+        gasto = docservice.convert_ticket_to_expense(
+            business_id,
+            doc_id,
+            concept=body.get("concept"),
+            amount=amount,
+            vat_rate=body.get("vat_rate"),
+            spent_on=body.get("spent_on") or body.get("date"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
     if gasto is None:
         return JSONResponse(
             {"error": "No hay importe para registrar. Indica uno o sube una foto legible."},

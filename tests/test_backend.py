@@ -9,10 +9,12 @@ import unittest
 from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 from xml.etree import ElementTree as ET
 
 from noesis import config, db, migrations, nlu, verifactu, verifactu_client
+from noesis.adapters import extraction
 from noesis.web import auth, chat, reports, scheduler, whatsapp
 
 
@@ -21,15 +23,18 @@ class BackendTestCase(unittest.TestCase):
         self.tempdir = tempfile.TemporaryDirectory()
         self.original_db_path = config.DB_PATH
         self.original_backup_dir = config.BACKUP_DIR
+        self.original_docs_path = config.DOCS_PATH
         self.original_database_url = config.DATABASE_URL
         config.DATABASE_URL = ""
         config.DB_PATH = Path(self.tempdir.name) / "test.db"
         config.BACKUP_DIR = Path(self.tempdir.name) / "backups"
+        config.DOCS_PATH = Path(self.tempdir.name) / "uploads"
         db.init_db()
 
     def tearDown(self):
         config.DB_PATH = self.original_db_path
         config.BACKUP_DIR = self.original_backup_dir
+        config.DOCS_PATH = self.original_docs_path
         config.DATABASE_URL = self.original_database_url
         self.tempdir.cleanup()
 
@@ -614,6 +619,200 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(ref["business_id"], business_a["id"])
         self.assertEqual(ref["client_id"], client_a["id"])
         self.assertNotEqual(ref["business_id"], business_b["id"])
+
+
+class ExpenseExtractionAdapterTestCase(unittest.TestCase):
+    def test_claude_vision_result_is_parsed_and_validated(self):
+        create = MagicMock(return_value=SimpleNamespace(content=[
+            SimpleNamespace(
+                type="text",
+                text=(
+                    '```json\n{"concept":"Material eléctrico","amount":121.0,'
+                    '"vat_rate":21,"date":"2026-07-02",'
+                    '"supplier":"Suministros Norte"}\n```'
+                ),
+            )
+        ]))
+        client = SimpleNamespace(messages=SimpleNamespace(create=create))
+        with (
+            patch.object(config, "ANTHROPIC_API_KEY", "test-key"),
+            patch.object(extraction.anthropic, "Anthropic", return_value=client),
+        ):
+            result = extraction.extract_expense(b"foto-ticket", "image/jpeg")
+
+        self.assertEqual(result["concept"], "Material eléctrico")
+        self.assertEqual(result["amount"], 121)
+        self.assertEqual(result["vat_rate"], 21)
+        self.assertEqual(result["date"], "2026-07-02")
+        self.assertEqual(result["supplier"], "Suministros Norte")
+        self.assertEqual(create.call_args.kwargs["model"], config.FALLBACK_MODEL)
+
+    def test_extraction_without_key_is_free_fallback(self):
+        with (
+            patch.object(config, "ANTHROPIC_API_KEY", ""),
+            patch.object(extraction.anthropic, "Anthropic") as client,
+        ):
+            self.assertIsNone(
+                extraction.extract_expense(b"foto-ticket", "image/jpeg")
+            )
+        client.assert_not_called()
+
+
+class ExpensePhotoHttpTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def _login(self, client, business):
+        email = f"foto-{business['id']}@example.com"
+        db.create_user(
+            email,
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        response = client.post(
+            "/login",
+            data={"email": email, "password": "password-segura-123"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+
+    def test_photo_returns_draft_and_confirmation_links_document(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import repo as docrepo, service as docservice
+        from noesis.web import server
+
+        business_a, _ = self.make_business("Fotos A")
+        business_b, _ = self.make_business("Fotos B")
+        foreign_doc = docservice.upload(
+            business_b["id"],
+            "ajeno.jpg",
+            b"\xff\xd8\xff\xe0ajeno",
+            kind="ticket",
+            run_ocr=False,
+        )
+        extracted = {
+            "concept": "Compra de cable",
+            "amount": 121.0,
+            "vat_rate": 21,
+            "date": "2026-07-02",
+            "supplier": "Almacén eléctrico",
+        }
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(extraction, "extract_expense", return_value=extracted),
+        ):
+            with TestClient(server.app) as client:
+                self._login(client, business_a)
+                uploaded = client.post(
+                    f"/api/{business_a['id']}/expenses/from-photo",
+                    files={"file": ("ticket.jpg", b"\xff\xd8\xff\xe0ticket", "image/jpeg")},
+                )
+                self.assertEqual(uploaded.status_code, 201)
+                payload = uploaded.json()
+                self.assertTrue(payload["extracted"])
+                self.assertEqual(payload["draft"]["amount"], 121)
+                self.assertEqual(db.list_expenses(business_a["id"]), [])
+
+                document_id = payload["draft"]["document_id"]
+                document = docrepo.get(document_id, business_a["id"])
+                self.assertIsNone(document["expense_id"])
+
+                isolated = client.post(
+                    f"/api/{business_a['id']}/expenses",
+                    json={
+                        "concept": "Intento cruzado",
+                        "amount": 20,
+                        "document_id": foreign_doc["id"],
+                    },
+                )
+                self.assertEqual(isolated.status_code, 400)
+                self.assertEqual(db.list_expenses(business_a["id"]), [])
+                self.assertEqual(
+                    client.post(
+                        f"/api/{business_b['id']}/expenses/from-photo",
+                        files={"file": ("ticket.jpg", b"foto", "image/jpeg")},
+                    ).status_code,
+                    403,
+                )
+
+                confirmed = client.post(
+                    f"/api/{business_a['id']}/expenses",
+                    json=payload["draft"],
+                )
+                self.assertEqual(confirmed.status_code, 200)
+                expense = confirmed.json()
+                self.assertEqual(expense["amount"], 121)
+                self.assertEqual(expense["spent_on"], "2026-07-02")
+                self.assertEqual(
+                    docrepo.get(document_id, business_a["id"])["expense_id"],
+                    expense["id"],
+                )
+
+                duplicate = client.post(
+                    f"/api/{business_a['id']}/expenses",
+                    json=payload["draft"],
+                )
+                self.assertEqual(duplicate.status_code, 400)
+                self.assertEqual(len(db.list_expenses(business_a["id"])), 1)
+
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE documents SET expense_id=? "
+                    "WHERE id=? AND business_id=?",
+                    (expense["id"], foreign_doc["id"], business_b["id"]),
+                )
+
+    def test_photo_fallback_and_upload_limit_never_create_expense(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import repo as docrepo
+        from noesis.web import server
+
+        business, _ = self.make_business("Fotos manual")
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(extraction, "extract_expense", return_value=None),
+        ):
+            with TestClient(server.app) as client:
+                self._login(client, business)
+                manual = client.post(
+                    f"/api/{business['id']}/expenses/from-photo",
+                    files={"file": ("ticket.png", b"\x89PNG\r\nfoto", "image/png")},
+                )
+                self.assertEqual(manual.status_code, 201)
+                self.assertFalse(manual.json()["extracted"])
+                self.assertIsNone(manual.json()["draft"]["amount"])
+                self.assertEqual(db.list_expenses(business["id"]), [])
+
+                documents_before = len(docrepo.list_for_business(business["id"]))
+                not_image = client.post(
+                    f"/api/{business['id']}/expenses/from-photo",
+                    files={"file": ("ticket.pdf", b"%PDF-1.4", "application/pdf")},
+                )
+                self.assertEqual(not_image.status_code, 400)
+                self.assertEqual(
+                    len(docrepo.list_for_business(business["id"])),
+                    documents_before,
+                )
+                with patch.object(config, "MAX_UPLOAD_MB", 1):
+                    too_large = client.post(
+                        f"/api/{business['id']}/expenses/from-photo",
+                        files={
+                            "file": (
+                                "grande.jpg",
+                                b"x" * (1024 * 1024 + 1),
+                                "image/jpeg",
+                            )
+                        },
+                    )
+                self.assertEqual(too_large.status_code, 413)
+                self.assertEqual(
+                    len(docrepo.list_for_business(business["id"])),
+                    documents_before,
+                )
+                self.assertEqual(db.list_expenses(business["id"]), [])
 
 
 class PortalHttpTestCase(BackendTestCase):
