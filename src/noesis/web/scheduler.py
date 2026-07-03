@@ -7,6 +7,7 @@ plantilla aprobada por Meta. Las respuestas inmediatas al usuario se gestionan e
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timedelta
 
@@ -77,71 +78,100 @@ def _eur(number) -> str:
     )
 
 
-def send_payment_reminders() -> None:
-    """Avisa al autónomo de facturas vencidas como máximo una vez por semana."""
-    day = f"{datetime.now():%Y-%m-%d}"
-    if not db.claim_scheduled_run(f"reminders:{day}"):
-        return
-    for business in _active_businesses():
-        pending_reminder = []
-        for invoice in db.overdue_invoices(business["id"]):
-            last = invoice.get("last_reminder_at")
-            recent = (
-                last
-                and (datetime.now() - datetime.fromisoformat(last)).days < 7
-            )
-            if not recent:
-                pending_reminder.append(invoice)
-        if not pending_reminder:
+def _payment_reminder_step(
+    invoice: dict,
+    cadence: list[int],
+    point: datetime,
+) -> tuple[int, int] | None:
+    anchor = invoice.get("due_date") or invoice.get("issued_at")
+    if not anchor:
+        return None
+    try:
+        anchor_day = datetime.fromisoformat(str(anchor)).date()
+    except ValueError:
+        return None
+    elapsed = (point.date() - anchor_day).days
+    eligible = [step for step in cadence if step <= elapsed]
+    return (max(eligible), elapsed) if eligible else None
+
+
+def send_payment_reminders(now: datetime | None = None) -> int:
+    """Encola un recordatorio por factura y escalón, nunca texto libre."""
+    from . import whatsapp
+
+    if not whatsapp.is_configured():
+        return 0
+    point = now or datetime.now()
+    day = f"{point:%Y-%m-%d}"
+    if not db.claim_scheduled_run(f"payment-reminders:{day}"):
+        return 0
+
+    queued = 0
+    for business in db.list_businesses():
+        if not business.get("payment_reminders_enabled"):
             continue
-        total = sum(invoice["total"] for invoice in pending_reminder)
-        lines = [
-            f"🔔 Cobros vencidos en {business['name']}: "
-            f"{len(pending_reminder)} factura(s), {_eur(total)} por reclamar.\n"
-        ]
-        for invoice in pending_reminder[:6]:
-            who = invoice.get("client_name") or "cliente"
-            lines.append(
-                f"• {who} — {_eur(invoice['total'])} "
-                f"(vencida hace {invoice['days_late']} días). "
-                f"Mensaje sugerido: «Hola {who}, te recuerdo la factura "
-                f"{invoice.get('number') or ''} de {_eur(invoice['total'])}. "
-                "¿La puedes abonar esta semana? Gracias.»"
+        cadence = db.payment_reminder_days(business)
+        for invoice in db.pending_payments(business["id"]):
+            due = _payment_reminder_step(invoice, cadence, point)
+            if not due:
+                continue
+            step, elapsed = due
+            idempotency_key = (
+                f"payment-reminder:{business['id']}:{invoice['id']}:{step}"
             )
-        if _deliver_template(
-            business,
-            "\n".join(lines),
-            "cobros",
-            config.WHATSAPP_TEMPLATE_PAYMENT_ALERT,
-            f"reminders:{day}:{business['id']}",
-        ):
-            for invoice in pending_reminder[:6]:
-                db.mark_reminder_sent(invoice["id"], business["id"])
-        _send_client_reminders(business, pending_reminder[:6])
-
-
-def _send_client_reminders(business: dict, invoices: list[dict]) -> None:
-    """Envía recordatorios directos por email si hay SMTP configurado."""
-    from ..adapters import email as email_adapter
-
-    if not email_adapter.available():
-        return
-    for invoice in invoices:
-        client = (
-            db.get_client(invoice.get("client_id"), business["id"])
-            if invoice.get("client_id")
-            else None
-        )
-        if not client or not client.get("email"):
-            continue
-        email_adapter.send_reminder_email(
-            client["email"],
-            business.get("name", "Tu proveedor"),
-            client.get("name", "Cliente"),
-            invoice.get("number") or str(invoice["id"]),
-            _eur(invoice["total"]),
-            invoice.get("days_late") or 0,
-        )
+            if db.get_whatsapp_message_by_idempotency_key(
+                idempotency_key, business["id"]
+            ):
+                continue
+            client = (
+                db.get_client(invoice.get("client_id"), business["id"])
+                if invoice.get("client_id")
+                else None
+            )
+            phone = whatsapp.recipient_phone(
+                client.get("phone") if client else None
+            )
+            if not client or not phone:
+                continue
+            token = db.get_or_create_portal_token(
+                business["id"], client["id"]
+            )
+            if not token:
+                continue
+            portal_url = f"{config.BASE_URL}/p/{token}"
+            try:
+                whatsapp.queue_payment_reminder(
+                    phone,
+                    client.get("name") or "cliente",
+                    business.get("name") or "Tu proveedor",
+                    invoice.get("number") or str(invoice["id"]),
+                    _eur(invoice["total"]),
+                    portal_url,
+                    business_id=business["id"],
+                    idempotency_key=idempotency_key,
+                )
+            except (db.DatabaseError, ValueError):
+                log.exception(
+                    "No se pudo encolar el recordatorio de la factura %s.",
+                    invoice["id"],
+                )
+                continue
+            db.mark_reminder_sent(invoice["id"], business["id"])
+            db.record_product_event(
+                business["id"],
+                "payment_reminder_queued",
+                json.dumps(
+                    {
+                        "invoice_id": invoice["id"],
+                        "step": step,
+                        "days_outstanding": elapsed,
+                        "remaining": invoice["total"],
+                    },
+                    separators=(",", ":"),
+                ),
+            )
+            queued += 1
+    return queued
 
 
 def send_weekly_summaries() -> None:

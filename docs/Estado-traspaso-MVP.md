@@ -54,13 +54,15 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
   migración 11; ledger `invoice_payments`, estado e importe restante derivados,
   bloqueo anti-sobrecobro en SQLite/Postgres, API aislada, portal y métricas de caja
   adaptados sin modificar los registros append-only de Veri*Factu.
-- **Gasto por foto (en `codex/gasto-por-foto`, pendiente de revisión):**
-  migración 12; adaptador Claude Vision opcional, endpoint que devuelve un borrador
+- **Gasto por foto (migración 12 en `main`):**
+  adaptador Claude Vision opcional, endpoint que devuelve un borrador
   sin crear gastos y vínculo multiempresa entre el documento y el gasto confirmado.
+- **Recordatorios de cobro (en `codex/recordatorios-cobro`, pendiente de revisión):**
+  migración 13; opt-in y cadencia por negocio, plantilla WhatsApp con restante y
+  portal, idempotencia por factura/escalón y eventos para medir el efecto en DSO.
 
-**Pruebas:** 91/91 en SQLite local, incluidos gasto por foto, cobros parciales,
-aislamiento, vectores AEAT, cola Veri*Factu, backoff, rechazo terminal, control de
-flujo, backups y camino Postgres mockeado.
+**Pruebas:** 91/91 en `main` (con gasto por foto); rama `codex/recordatorios-cobro`
+rebasada sobre `main` con la migración 13 añadida tras la 12.
 
 ---
 

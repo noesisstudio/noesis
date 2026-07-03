@@ -50,9 +50,11 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 - [x] **Cobros parciales** (anticipo + resto) con ledger separado, estado derivado
   y métricas sobre el restante (migración 11 en `main`).
 - [x] **Gasto por foto** con borrador extraído por Claude, confirmación obligatoria
-  y documento vinculado (migración 12 en `codex/gasto-por-foto`, pendiente de
-  revisión y fusión).
-- [ ] Persecución de cobros automática por WhatsApp (bloqueada por Meta).
+  y documento vinculado (migración 12 en `main`).
+- [x] Persecución de cobros automática por WhatsApp: opt-in por negocio, cadencia,
+  restante, portal e idempotencia por escalón (migración 13 en
+  `codex/recordatorios-cobro`, pendiente de revisión y fusión; el envío real
+  sigue bloqueado hasta encender Meta).
 
 ## 🚀 Fase 3 — validar
 - [ ] Piloto con 5-10 negocios de servicios antes de escalar.

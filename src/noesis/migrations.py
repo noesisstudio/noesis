@@ -1206,6 +1206,34 @@ def _downgrade_expense_from_photo(conn) -> None:
     conn.execute("DROP INDEX IF EXISTS uq_expenses_business_id")
 
 
+def _upgrade_payment_reminders(conn) -> None:
+    """Preferencias del negocio para reclamar cobros por WhatsApp."""
+    t = _types(conn.dialect)
+    columns = _column_names(conn, "businesses")
+    if "payment_reminders_enabled" not in columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN payment_reminders_enabled "
+            f"{t['boolean']} NOT NULL DEFAULT FALSE"
+        )
+    if "payment_reminder_days" not in columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN payment_reminder_days "
+            "TEXT NOT NULL DEFAULT '3,7,15'"
+        )
+
+
+def _downgrade_payment_reminders(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS "
+            "payment_reminders_enabled"
+        )
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS payment_reminder_days"
+        )
+    # SQLite conserva las columnas opcionales para evitar reconstruir businesses.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1220,6 +1248,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (10, "datos_cobro", _upgrade_payment_details, _downgrade_payment_details),
     (11, "cobros_parciales", _upgrade_partial_payments, _downgrade_partial_payments),
     (12, "gasto_por_foto", _upgrade_expense_from_photo, _downgrade_expense_from_photo),
+    (13, "recordatorios_cobro", _upgrade_payment_reminders, _downgrade_payment_reminders),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

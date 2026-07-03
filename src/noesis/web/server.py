@@ -1789,6 +1789,33 @@ def update_payment_details(business_id: int, payment_iban: str = Form(""),
     return RedirectResponse(f"/b/{business_id}/ajustes#cobro", status_code=303)
 
 
+@app.post("/b/{business_id}/payment-reminders")
+def update_payment_reminders(
+    business_id: int,
+    payment_reminders_enabled: str = Form(""),
+    payment_reminder_days: str = Form("3,7,15"),
+):
+    try:
+        settings = db.update_payment_reminder_settings(
+            business_id,
+            enabled=payment_reminders_enabled in {
+                "1", "true", "on", "si", "sí"
+            },
+            days=payment_reminder_days,
+        )
+    except ValueError:
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=recordatorios#recordatorios",
+            status_code=303,
+        )
+    if settings is None:
+        return RedirectResponse("/login", status_code=303)
+    db.record_product_event(business_id, "payment_reminder_settings_updated")
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes#recordatorios", status_code=303
+    )
+
+
 @app.post("/b/{business_id}/clockin-policy")
 def update_clockin_policy(
     business_id: int, clockin_policy: str = Form("")
