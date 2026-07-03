@@ -307,6 +307,48 @@ def update_payment_details(business_id, *, iban=None, bizum=None, note=None) -> 
     return get_business(business_id)
 
 
+def parse_payment_reminder_days(value) -> list[int]:
+    """Normaliza una cadencia corta, ordenada y segura para el scheduler."""
+    if isinstance(value, (list, tuple, set)):
+        parts = list(value)
+    else:
+        parts = str(value or "").replace(";", ",").split(",")
+    try:
+        days = sorted({int(str(part).strip()) for part in parts if str(part).strip()})
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La cadencia debe contener días separados por comas.") from exc
+    if not days or len(days) > 6 or any(day < 1 or day > 90 for day in days):
+        raise ValueError("Indica entre 1 y 6 días, del 1 al 90.")
+    return days
+
+
+def payment_reminder_days(business: dict | None) -> list[int]:
+    try:
+        return parse_payment_reminder_days(
+            (business or {}).get("payment_reminder_days") or "3,7,15"
+        )
+    except ValueError:
+        return [3, 7, 15]
+
+
+def update_payment_reminder_settings(
+    business_id: int,
+    *,
+    enabled: bool,
+    days,
+) -> dict | None:
+    cadence = parse_payment_reminder_days(days)
+    with get_conn() as conn:
+        updated = conn.execute(
+            "UPDATE businesses SET payment_reminders_enabled=?, "
+            "payment_reminder_days=? WHERE id=?",
+            (bool(enabled), ",".join(str(day) for day in cadence), business_id),
+        )
+        if updated.rowcount != 1:
+            return None
+    return get_business(business_id)
+
+
 def update_fiscal(business_id, name=None, nif=None, address=None,
                   default_vat=None, default_irpf=None) -> dict:
     """Actualiza los datos fiscales del negocio (NIF, dirección, IVA/IRPF por defecto)."""
@@ -3453,6 +3495,19 @@ def get_whatsapp_message(message_id: int, business_id: int) -> dict | None:
         row = conn.execute(
             "SELECT * FROM whatsapp_outbox WHERE id=? AND business_id=?",
             (message_id, business_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_whatsapp_message_by_idempotency_key(
+    idempotency_key: str,
+    business_id: int,
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_outbox "
+            "WHERE idempotency_key=? AND business_id=?",
+            (idempotency_key, business_id),
         ).fetchone()
         return dict(row) if row else None
 

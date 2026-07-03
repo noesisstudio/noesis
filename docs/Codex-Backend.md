@@ -83,6 +83,9 @@ módulo `documents/` (subida acotada y saneada); falta la extracción.
 
 ## Tarea 3 — Recordatorios de cobro automáticos (dejar listo, activar con Meta)
 
+> Implementada localmente en `codex/recordatorios-cobro` como migración 13.
+> Pendiente de rebase y PR después de fusionar la migración 12 del PR #14.
+
 **Por qué**: es el corazón del lema "del trabajo terminado al dinero cobrado".
 Bloqueado para envío real hasta que el founder encienda WhatsApp (Meta), pero el
 backend puede quedar terminado y probado ya, usando la cola durable existente.

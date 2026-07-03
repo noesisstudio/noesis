@@ -29,7 +29,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `web/whatsapp.py` — entrada idempotente y cola durable de salida. Persiste antes
   de enviar, reintenta con backoff y aplica estados `sent/delivered/read` de Meta.
 - `web/scheduler.py` — genera los proactivos con plantillas aprobadas y ejecuta el
-  worker de la cola cada 15 segundos.
+  worker de la cola cada 15 segundos. Los recordatorios de cobro respetan el
+  opt-out y la cadencia de cada negocio, usan el restante y deduplican por
+  factura/escalón antes de enlazar al portal privado.
 - `db.py` también persiste eventos de producto y calcula el recorrido de activación
   por negocio sin depender de una plataforma analítica externa.
 - `adapters/invoicing.py` — selecciona emisión interna o Holded. Cuando un negocio

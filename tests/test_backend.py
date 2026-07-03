@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import inspect
+import json
 import os
 import tempfile
 import unittest
@@ -813,6 +814,196 @@ class ExpensePhotoHttpTestCase(unittest.TestCase):
                     documents_before,
                 )
                 self.assertEqual(db.list_expenses(business["id"]), [])
+
+
+class PaymentReminderTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def _issued_invoice(self, business, client, base=100):
+        db.update_client(
+            client["id"], business["id"], phone="600111222"
+        )
+        invoice = db.add_invoice(
+            client["id"], "Servicio pendiente", base,
+            business_id=business["id"],
+        )
+        return db.issue_invoice(invoice["id"], business["id"])
+
+    @staticmethod
+    def _reminder_time(invoice, days):
+        due = date.fromisoformat(invoice["due_date"][:10])
+        return datetime.combine(
+            due + timedelta(days=days), datetime.min.time()
+        ).replace(hour=9)
+
+    def test_reminders_use_remaining_and_are_idempotent_per_step(self):
+        business, client = self.make_business("Recordatorios A")
+        other_business, other_client = self.make_business("Recordatorios B")
+        invoice = self._issued_invoice(business, client)
+        self._issued_invoice(other_business, other_client)
+        db.add_invoice_payment(
+            invoice["id"], 40, method="transferencia",
+            business_id=business["id"],
+        )
+        db.update_payment_reminder_settings(
+            business["id"], enabled=True, days="3,7,15"
+        )
+        point = self._reminder_time(invoice, 3)
+
+        with (
+            patch.object(whatsapp, "_TOKEN", ""),
+            patch.object(whatsapp, "_PHONE_ID", ""),
+        ):
+            self.assertEqual(scheduler.send_payment_reminders(now=point), 0)
+        self.assertEqual(db.list_whatsapp_messages(business["id"]), [])
+
+        with (
+            patch.object(whatsapp, "_TOKEN", "token"),
+            patch.object(whatsapp, "_PHONE_ID", "phone-id"),
+        ):
+            self.assertEqual(scheduler.send_payment_reminders(now=point), 1)
+            self.assertEqual(
+                scheduler.send_payment_reminders(now=point + timedelta(days=1)),
+                0,
+            )
+            self.assertEqual(
+                scheduler.send_payment_reminders(now=point + timedelta(days=4)),
+                1,
+            )
+
+        messages = list(reversed(db.list_whatsapp_messages(business["id"])))
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(
+            [message["idempotency_key"].rsplit(":", 1)[1] for message in messages],
+            ["3", "7"],
+        )
+        params = json.loads(messages[0]["template_params"])
+        self.assertEqual(messages[0]["status"], "queued")
+        self.assertEqual(messages[0]["to_phone"], "34600111222")
+        self.assertEqual(
+            messages[0]["template_name"],
+            config.WHATSAPP_TEMPLATE_PAYMENT_REMINDER,
+        )
+        self.assertEqual(params[3], "81,00 €")
+        self.assertTrue(params[4].startswith(f"{config.BASE_URL}/p/"))
+        self.assertEqual(
+            db.list_whatsapp_messages(other_business["id"]), []
+        )
+        self.assertIsNone(
+            db.get_whatsapp_message_by_idempotency_key(
+                messages[0]["idempotency_key"], other_business["id"]
+            )
+        )
+        events = [
+            event for event in db.export_business_data(business["id"])[
+                "product_events"
+            ]
+            if event["event_name"] == "payment_reminder_queued"
+        ]
+        self.assertEqual(
+            [json.loads(event["event_data"])["step"] for event in events],
+            [3, 7],
+        )
+
+    def test_first_late_run_uses_highest_step_and_respects_opt_out(self):
+        business, client = self.make_business("Cadencia A")
+        opt_out, opt_out_client = self.make_business("Cadencia B")
+        no_phone, no_phone_client = self.make_business("Cadencia C")
+        paid_business, paid_client = self.make_business("Cadencia D")
+        invoice = self._issued_invoice(business, client)
+        self._issued_invoice(opt_out, opt_out_client)
+        no_phone_invoice = db.issue_invoice(
+            db.add_invoice(
+                no_phone_client["id"], "Sin teléfono", 100,
+                business_id=no_phone["id"],
+            )["id"],
+            no_phone["id"],
+        )
+        db.update_payment_reminder_settings(
+            business["id"], enabled=True, days=[3, 7, 15]
+        )
+        db.update_payment_reminder_settings(
+            no_phone["id"], enabled=True, days="3,7,15"
+        )
+        paid_invoice = self._issued_invoice(paid_business, paid_client)
+        db.update_payment_reminder_settings(
+            paid_business["id"], enabled=True, days="3,7,15"
+        )
+        db.mark_invoice_paid(paid_invoice["id"], paid_business["id"])
+
+        with (
+            patch.object(whatsapp, "_TOKEN", "token"),
+            patch.object(whatsapp, "_PHONE_ID", "phone-id"),
+        ):
+            queued = scheduler.send_payment_reminders(
+                now=self._reminder_time(invoice, 10)
+            )
+
+        self.assertEqual(queued, 1)
+        message = db.list_whatsapp_messages(business["id"])[0]
+        self.assertTrue(message["idempotency_key"].endswith(":7"))
+        self.assertEqual(db.list_whatsapp_messages(opt_out["id"]), [])
+        self.assertEqual(db.list_whatsapp_messages(no_phone["id"]), [])
+        self.assertEqual(db.list_whatsapp_messages(paid_business["id"]), [])
+        self.assertEqual(
+            db.get_invoice(no_phone_invoice["id"], no_phone["id"])[
+                "reminders_sent"
+            ],
+            0,
+        )
+
+    def test_settings_are_validated_and_visible_in_ajustes(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Ajustes recordatorios")
+        db.create_user(
+            "recordatorios@example.com",
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": "recordatorios@example.com",
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                saved = client.post(
+                    f"/b/{business['id']}/payment-reminders",
+                    data={
+                        "payment_reminders_enabled": "1",
+                        "payment_reminder_days": "2,5,10",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(saved.status_code, 303)
+                settings = db.get_business(business["id"])
+                self.assertTrue(settings["payment_reminders_enabled"])
+                self.assertEqual(settings["payment_reminder_days"], "2,5,10")
+
+                invalid = client.post(
+                    f"/b/{business['id']}/payment-reminders",
+                    data={
+                        "payment_reminders_enabled": "1",
+                        "payment_reminder_days": "0,200",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertIn("error=recordatorios", invalid.headers["location"])
+                self.assertEqual(
+                    db.get_business(business["id"])["payment_reminder_days"],
+                    "2,5,10",
+                )
+                page = client.get(f"/b/{business['id']}/ajustes")
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("Recordatorios de cobro", page.text)
 
 
 class PortalHttpTestCase(BackendTestCase):

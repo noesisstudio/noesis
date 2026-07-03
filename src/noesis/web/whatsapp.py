@@ -29,6 +29,23 @@ _PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
 _CODE_TTL = 1800
 
 
+def is_configured() -> bool:
+    """La cola proactiva solo se alimenta cuando Meta puede procesarla."""
+    return bool(_TOKEN and _PHONE_ID)
+
+
+def recipient_phone(value: str | None) -> str | None:
+    """Normaliza un destinatario para Meta; añade España si faltaba el prefijo."""
+    digits = "".join(char for char in (value or "") if char.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if len(digits) == 9:
+        return f"34{digits}"
+    if 10 <= len(digits) <= 15:
+        return digits
+    return None
+
+
 # ----------------------------------------------------------- Onboarding exprés --
 def start_link(business_id: int) -> dict:
     """Genera un código de vinculación y el enlace wa.me para enviarlo."""
@@ -574,6 +591,27 @@ def send_payment_reminder(
         to,
         config.WHATSAPP_TEMPLATE_PAYMENT_REMINDER,
         [client_name, invoice_number, amount],
+        business_id=business_id,
+        idempotency_key=idempotency_key,
+    )
+
+
+def queue_payment_reminder(
+    to: str,
+    client_name: str,
+    business_name: str,
+    invoice_number: str,
+    amount: str,
+    portal_url: str,
+    *,
+    business_id: int,
+    idempotency_key: str,
+) -> dict:
+    """Persiste el recordatorio aprobable por Meta sin enviarlo en línea."""
+    return queue_template(
+        to,
+        config.WHATSAPP_TEMPLATE_PAYMENT_REMINDER,
+        [client_name, business_name, invoice_number, amount, portal_url],
         business_id=business_id,
         idempotency_key=idempotency_key,
     )

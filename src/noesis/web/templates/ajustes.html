@@ -98,6 +98,48 @@
       </div>
     </div>
   </div>
+
+  <div class="card" id="recordatorios">
+    <div class="card-h"><h2>Recordatorios de cobro</h2>
+      {% if business.payment_reminders_enabled %}
+      <span class="badge b-green">activos</span>
+      {% else %}
+      <span class="badge b-gray">desactivados</span>
+      {% endif %}
+    </div>
+    <div class="card-b">
+      {% if request.query_params.get('error') == 'recordatorios' %}
+      <div class="banner warn" style="margin-bottom:12px">
+        Revisa la cadencia: usa entre 1 y 6 días, separados por comas.
+      </div>
+      {% endif %}
+      <form method="post" action="/b/{{ business.id }}/payment-reminders">
+        <label class="lrow" style="align-items:flex-start;cursor:pointer">
+          <span>
+            <b>Recordar al cliente las facturas pendientes</b>
+            <small class="muted" style="display:block;margin-top:4px">
+              Solo usa plantillas aprobadas y el importe que queda por cobrar.
+            </small>
+          </span>
+          <input type="checkbox" name="payment_reminders_enabled" value="1"
+            {{ 'checked' if business.payment_reminders_enabled }}>
+        </label>
+        <label class="fld" style="margin-top:14px">
+          Días después del vencimiento o envío
+        </label>
+        <input class="input" name="payment_reminder_days"
+          value="{{ business.payment_reminder_days or '3,7,15' }}"
+          placeholder="3,7,15" maxlength="30">
+        <button class="btn primary" style="margin-top:14px">
+          Guardar recordatorios
+        </button>
+      </form>
+      <div class="insight" style="margin-top:14px">
+        Cada aviso incluye el enlace privado del cliente. Si WhatsApp Meta todavía
+        no está configurado en el servidor, no se encola ni se envía ningún mensaje.
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:16px">
