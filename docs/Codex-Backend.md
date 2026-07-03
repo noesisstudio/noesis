@@ -137,6 +137,13 @@ PR aparte sin mezclar con funcionalidad, para que el diff sea revisable.
   REST (faltan claves), marco legal, datos de pago IBAN/Bizum (migración 10),
   lifespan (ya no hay `@app.on_event`), eliminación de `DEFAULT_BUSINESS_ID`.
 
+## Después de estas tareas: el plan WhatsApp
+
+Cerrada la cola T1-T5 (T1-T3 ya entregadas), la siguiente prioridad de producto es
+[`WhatsApp-Cerebro.md`](WhatsApp-Cerebro.md): router de mèdia entrante,
+confirmaciones borrador→SÍ, informes de cierre del día, foto/PDF por WhatsApp e
+histórico importado. El diseño ya está decidido allí; no re-pensar, ejecutar.
+
 ## Orden recomendado
 
 1 (cobros parciales) → 2 (gasto por foto) → 3 (recordatorios) → 4 (routers) → 5.
