@@ -608,6 +608,9 @@ def page(request: Request, business_id: int, page: str):
     if page == "ajustes" and biz.get("whatsapp_status") != "conectado":
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
+        context["wa_reports"] = db.resolve_whatsapp_reports(
+            biz.get("whatsapp_reports")
+        )
         context["verifactu_errors"] = db.verifactu_configuration_errors()
         context["verifactu_ready"] = not context["verifactu_errors"]
         context["verifactu_transmission_enabled"] = (
@@ -1813,6 +1816,35 @@ def update_payment_reminders(
     db.record_product_event(business_id, "payment_reminder_settings_updated")
     return RedirectResponse(
         f"/b/{business_id}/ajustes#recordatorios", status_code=303
+    )
+
+
+@app.post("/b/{business_id}/whatsapp-reports")
+def update_whatsapp_reports(
+    business_id: int,
+    brief_manana: str = Form(""),
+    cierre_tarde: str = Form(""),
+    hora_tarde: str = Form("19"),
+    resumen_semanal: str = Form(""),
+    aviso_fiscal: str = Form(""),
+):
+    on = {"1", "true", "on", "si", "sí"}
+    try:
+        hora = int(hora_tarde)
+    except ValueError:
+        hora = 19
+    settings = db.update_whatsapp_reports(business_id, {
+        "brief_manana": brief_manana in on,
+        "cierre_tarde": cierre_tarde in on,
+        "hora_tarde": hora,
+        "resumen_semanal": resumen_semanal in on,
+        "aviso_fiscal": aviso_fiscal in on,
+    })
+    if settings is None:
+        return RedirectResponse("/login", status_code=303)
+    db.record_product_event(business_id, "whatsapp_reports_updated")
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes#informes", status_code=303
     )
 
 

@@ -60,6 +60,9 @@ def send_daily_summaries() -> None:
     if not db.claim_scheduled_run(f"daily:{day}"):
         return
     for business in _active_businesses():
+        prefs = db.resolve_whatsapp_reports(business.get("whatsapp_reports"))
+        if not prefs["brief_manana"]:
+            continue
         _deliver_template(
             business,
             daily_summary_text(business["id"]),
@@ -174,12 +177,110 @@ def send_payment_reminders(now: datetime | None = None) -> int:
     return queued
 
 
+def send_daily_closings(now: datetime | None = None) -> int:
+    """Cierre del día por WhatsApp: lo hecho, lo facturado, lo cobrado y el
+    siguiente paso. Cada negocio elige su hora (17-21) en Ajustes."""
+    point = now or datetime.now()
+    day = f"{point:%Y-%m-%d}"
+    queued = 0
+    for business in _active_businesses():
+        prefs = db.resolve_whatsapp_reports(business.get("whatsapp_reports"))
+        if not prefs["cierre_tarde"] or prefs["hora_tarde"] != point.hour:
+            continue
+        idempotency_key = f"closing:{day}:{business['id']}"
+        if db.get_whatsapp_message_by_idempotency_key(
+            idempotency_key, business["id"]
+        ):
+            continue
+        bid = business["id"]
+        jobs_today = db.jobs_for_date(day, bid)
+        done_jobs = [
+            job for job in jobs_today if job.get("status") != "cancelado"
+        ]
+        invoices_today = [
+            invoice for invoice in db.list_invoices(bid)
+            if str(invoice.get("issued_at") or "").startswith(day)
+        ]
+        collected = db.payments_received_on(bid, day)
+        lines = [f"🌙 Cierre del día en {business['name']}:"]
+        lines.append(f"• Trabajos de hoy: {len(done_jobs)}")
+        if invoices_today:
+            total = sum(invoice["total"] for invoice in invoices_today)
+            lines.append(
+                f"• Facturado: {len(invoices_today)} factura(s), {_eur(total)}"
+            )
+        lines.append(f"• Cobrado hoy: {_eur(collected)}")
+        pending = db.pending_payments(bid)
+        if pending:
+            first = pending[0]
+            who = first.get("client_name") or "un cliente"
+            lines.append(
+                f"➡️ Mañana lo primero: reclamar a {who} "
+                f"({_eur(first['total'])} pendiente)."
+            )
+        else:
+            lines.append("➡️ Sin cobros pendientes. Todo al día 💪")
+        if _deliver_template(
+            business,
+            "\n".join(lines),
+            "cierre",
+            config.WHATSAPP_TEMPLATE_DAILY_CLOSING,
+            idempotency_key,
+        ):
+            queued += 1
+    return queued
+
+
+def send_quarterly_tax_notices(now: datetime | None = None) -> int:
+    """Aviso fiscal al cerrar cada trimestre: 303/130 estimados y fecha límite."""
+    point = now or datetime.now()
+    if point.month not in (1, 4, 7, 10):
+        return 0
+    previous = point - timedelta(days=10)
+    quarter = (previous.month - 1) // 3 + 1
+    year = previous.year
+    run_key = f"tax-notice:{year}-Q{quarter}"
+    if not db.claim_scheduled_run(run_key):
+        return 0
+    queued = 0
+    for business in _active_businesses():
+        prefs = db.resolve_whatsapp_reports(business.get("whatsapp_reports"))
+        if not prefs["aviso_fiscal"]:
+            continue
+        try:
+            taxes = db.tax_quarter(year, quarter, business["id"])
+        except ValueError:
+            continue
+        month_name = {1: "enero", 4: "abril", 7: "julio", 10: "octubre"}[
+            point.month
+        ]
+        text = (
+            f"🧾 Cierre fiscal del {taxes['label']} en {business['name']}:\n"
+            f"IVA (modelo 303): {_eur(taxes['iva_resultado'])} · "
+            f"IRPF (modelo 130): {_eur(taxes['irpf_pago'])}.\n"
+            f"Plazo de presentación: hasta el 20 de {month_name}. "
+            "Tienes el detalle en Tesorería."
+        )
+        if _deliver_template(
+            business,
+            text,
+            "fiscal",
+            config.WHATSAPP_TEMPLATE_TAX_NOTICE,
+            f"{run_key}:{business['id']}",
+        ):
+            queued += 1
+    return queued
+
+
 def send_weekly_summaries() -> None:
     year, week, _ = datetime.now().isocalendar()
     run_key = f"weekly:{year}-W{week:02d}"
     if not db.claim_scheduled_run(run_key):
         return
     for business in _active_businesses():
+        prefs = db.resolve_whatsapp_reports(business.get("whatsapp_reports"))
+        if not prefs["resumen_semanal"]:
+            continue
         month = db.month_billing(business_id=business["id"])
         pending = db.pending_payments(business["id"])
         text = (
@@ -296,6 +397,22 @@ def start_scheduler() -> BackgroundScheduler:
         hour=8,
         minute=0,
         id="weekly",
+    )
+    scheduler.add_job(
+        send_daily_closings,
+        "cron",
+        hour="17-21",
+        minute=5,
+        id="closing",
+    )
+    scheduler.add_job(
+        send_quarterly_tax_notices,
+        "cron",
+        month="1,4,7,10",
+        day=1,
+        hour=10,
+        minute=0,
+        id="tax-notice",
     )
     scheduler.add_job(
         process_whatsapp_outbox,

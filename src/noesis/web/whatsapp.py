@@ -165,13 +165,22 @@ def _extract_messages(payload: dict) -> list[dict]:
     if not isinstance(payload, dict):
         return out
     if payload.get("from") and (
-        payload.get("text") is not None or payload.get("audio_id")
+        payload.get("text") is not None
+        or payload.get("audio_id")
+        or payload.get("image_id")
+        or payload.get("media_document_id")
     ):
         return [{
             "id": str(payload.get("id") or ""),
             "phone": str(payload["from"]),
             "text": str(payload.get("text") or ""),
             "audio_id": payload.get("audio_id"),
+            "image_id": payload.get("image_id"),
+            "image_mime": payload.get("image_mime"),
+            "media_document_id": payload.get("media_document_id"),
+            "media_document_mime": payload.get("media_document_mime"),
+            "media_document_filename": payload.get("media_document_filename"),
+            "caption": str(payload.get("caption") or ""),
         }]
     for entry in payload.get("entry", []) or []:
         for change in entry.get("changes", []) or []:
@@ -180,11 +189,21 @@ def _extract_messages(payload: dict) -> list[dict]:
                 phone = message.get("from", "")
                 if not phone:
                     continue
+                image = message.get("image", {}) or {}
+                document = message.get("document", {}) or {}
                 out.append({
                     "id": str(message.get("id") or ""),
                     "phone": phone,
                     "text": (message.get("text", {}) or {}).get("body", ""),
                     "audio_id": (message.get("audio", {}) or {}).get("id"),
+                    "image_id": image.get("id"),
+                    "image_mime": image.get("mime_type"),
+                    "media_document_id": document.get("id"),
+                    "media_document_mime": document.get("mime_type"),
+                    "media_document_filename": document.get("filename"),
+                    "caption": str(
+                        image.get("caption") or document.get("caption") or ""
+                    ),
                 })
     return out
 
@@ -257,10 +276,11 @@ def _handle_status(status: dict) -> dict:
     }
 
 
-def _download_media(media_id: str) -> bytes | None:
-    """Descarga un audio de WhatsApp si el token de Meta está configurado."""
+def _download_media(media_id: str, max_bytes: int | None = None) -> bytes | None:
+    """Descarga un mèdia de WhatsApp (audio/imagen/PDF) acotado en tamaño."""
     if not _TOKEN:
         return None
+    limit = max_bytes or config.MAX_AUDIO_BYTES
     try:
         metadata_request = urllib.request.Request(
             f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{media_id}",
@@ -272,12 +292,10 @@ def _download_media(media_id: str) -> bytes | None:
         media_request = urllib.request.Request(
             info["url"], headers={"Authorization": f"Bearer {_TOKEN}"}
         )
-        data = urllib.request.urlopen(media_request, timeout=20).read(
-            config.MAX_AUDIO_BYTES + 1
-        )
-        return data if len(data) <= config.MAX_AUDIO_BYTES else None
+        data = urllib.request.urlopen(media_request, timeout=20).read(limit + 1)
+        return data if len(data) <= limit else None
     except Exception as exc:  # noqa: BLE001
-        log.warning("Fallo descargando audio %s: %s", media_id, exc)
+        log.warning("Fallo descargando mèdia %s: %s", media_id, exc)
         return None
 
 
@@ -296,6 +314,201 @@ def _audio_to_text(audio_id: str) -> str | None:
     except Exception as exc:  # noqa: BLE001
         log.warning("Fallo transcribiendo audio: %s", exc)
         return None
+
+
+# ------------------------------------- Confirmaciones y mèdia entrante --
+_YES_WORDS = {"si", "sí", "ok", "vale", "confirmo", "confirmar", "yes", "s", "va"}
+_NO_WORDS = {"no", "cancela", "cancelar", "anula", "anular", "n"}
+_MONEY_HINTS = ("factur", "gasto", "gastos", "cobr", "pagad", "presupuesto",
+                "borra", "elimina", "anula")
+
+
+def _normalized_word(text: str) -> str:
+    return (text or "").strip().strip("!.¡¿?,;").lower()
+
+
+def _is_yes(text: str) -> bool:
+    return _normalized_word(text) in _YES_WORDS
+
+
+def _is_no(text: str) -> bool:
+    return _normalized_word(text) in _NO_WORDS
+
+
+def _needs_confirmation(text: str) -> bool:
+    """Una orden hablada que mueve dinero se confirma antes de ejecutarse."""
+    lowered = (text or "").lower()
+    return any(hint in lowered for hint in _MONEY_HINTS)
+
+
+def _eur(number) -> str:
+    return (
+        f"{(number or 0):,.2f} €"
+        .replace(",", "X").replace(".", ",").replace("X", ".")
+    )
+
+
+def _extraction_budget_ok(business_id: int) -> bool:
+    """Tope diario de extracciones IA por negocio para proteger el margen."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    used = db.count_product_events(business_id, "media_ingested", since=today)
+    return used < config.MAX_DAILY_EXTRACTIONS
+
+
+def _execute_pending(business: dict, phone: str, pending: dict) -> str:
+    """Ejecuta el borrador confirmado y devuelve la respuesta para el usuario."""
+    db.clear_pending_action(business["id"], phone)
+    try:
+        payload = json.loads(pending["payload"])
+    except (TypeError, ValueError):
+        return "No he podido recuperar el borrador. Vuelve a enviármelo."
+    kind = pending["kind"]
+    if kind == "gasto":
+        try:
+            expense = db.add_expense(
+                payload.get("concept") or "Gasto por foto",
+                payload.get("amount"),
+                vat_rate=payload.get("vat_rate"),
+                category="Ticket",
+                spent_on=payload.get("date"),
+                document_id=payload.get("document_id"),
+                business_id=business["id"],
+            )
+        except ValueError as exc:
+            return f"No he podido apuntar el gasto: {exc}"
+        return (
+            f"Apuntado ✅ Gasto de {_eur(expense['amount'])}"
+            f" ({expense['concept']}). El justificante queda guardado"
+            " en tus papeles."
+        )
+    if kind == "chat_action":
+        return chat.handle(
+            business["id"], str(payload.get("text") or "")
+        ).get("reply", "")
+    return "Ese borrador ya no es válido. Vuelve a enviármelo."
+
+
+def _ingest_image(business: dict, phone: str, message: dict) -> dict:
+    """Foto entrante → documento guardado + borrador de gasto a confirmar."""
+    from ..adapters import extraction
+    from ..documents import service as docservice
+
+    max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
+    data = _download_media(message["image_id"], max_bytes=max_bytes)
+    if not data:
+        send(
+            phone,
+            "No he podido descargar la foto (¿demasiado grande?). "
+            f"El límite es {config.MAX_UPLOAD_MB} MB.",
+            business_id=business["id"],
+        )
+        return {"phone": phone, "media": "image", "ingested": False}
+    mime = message.get("image_mime") or "image/jpeg"
+    ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}.get(
+        mime
+    )
+    if not ext:
+        send(
+            phone,
+            "Solo puedo leer fotos JPG, PNG o WEBP.",
+            business_id=business["id"],
+        )
+        return {"phone": phone, "media": "image", "ingested": False}
+    try:
+        document = docservice.upload(
+            business["id"],
+            f"whatsapp-ticket{ext}",
+            data,
+            kind="ticket",
+            note="Recibido por WhatsApp",
+            run_ocr=False,
+        )
+    except docservice.UploadError as exc:
+        send(phone, str(exc), business_id=business["id"])
+        return {"phone": phone, "media": "image", "ingested": False}
+
+    fields = None
+    if _extraction_budget_ok(business["id"]):
+        fields = extraction.extract_expense(data, mime)
+    db.record_product_event(
+        business["id"], "media_ingested",
+        json.dumps({"type": "image", "extracted": bool(fields)},
+                   separators=(",", ":")),
+    )
+    if fields and fields.get("amount"):
+        payload = {**fields, "document_id": document["id"]}
+        db.set_pending_action(business["id"], phone, "gasto", payload)
+        concept = fields.get("concept") or fields.get("supplier") or "ticket"
+        detail = f"📄 He leído el ticket: {concept} — {_eur(fields['amount'])}"
+        if fields.get("vat_rate") is not None:
+            detail += f" (IVA {fields['vat_rate']} %)"
+        if fields.get("date"):
+            detail += f", del {fields['date']}"
+        send(
+            phone,
+            detail + ". ¿Lo apunto como gasto? Responde SÍ o NO.",
+            business_id=business["id"],
+        )
+        return {
+            "phone": phone, "media": "image", "ingested": True,
+            "pending": True, "document_id": document["id"],
+        }
+    send(
+        phone,
+        "He guardado la foto en tus papeles, pero no he podido leer el "
+        "importe. Dímelo en un mensaje (ej.: «gasto 25,50 ferretería») o "
+        "complétalo desde la web.",
+        business_id=business["id"],
+    )
+    return {
+        "phone": phone, "media": "image", "ingested": True,
+        "pending": False, "document_id": document["id"],
+    }
+
+
+def _ingest_document(business: dict, phone: str, message: dict) -> dict:
+    """PDF entrante → se guarda en papeles (la extracción llegará en W3)."""
+    from ..documents import service as docservice
+
+    mime = message.get("media_document_mime") or ""
+    filename = message.get("media_document_filename") or "documento.pdf"
+    if mime != "application/pdf" and not filename.lower().endswith(".pdf"):
+        send(
+            phone,
+            "Por ahora solo acepto documentos en PDF (o fotos del ticket).",
+            business_id=business["id"],
+        )
+        return {"phone": phone, "media": "document", "ingested": False}
+    max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
+    data = _download_media(message["media_document_id"], max_bytes=max_bytes)
+    if not data:
+        send(
+            phone,
+            "No he podido descargar el documento (¿demasiado grande?). "
+            f"El límite es {config.MAX_UPLOAD_MB} MB.",
+            business_id=business["id"],
+        )
+        return {"phone": phone, "media": "document", "ingested": False}
+    if not filename.lower().endswith(".pdf"):
+        filename += ".pdf"
+    try:
+        document = docservice.upload(
+            business["id"], filename, data,
+            kind="documento", note="Recibido por WhatsApp", run_ocr=False,
+        )
+    except docservice.UploadError as exc:
+        send(phone, str(exc), business_id=business["id"])
+        return {"phone": phone, "media": "document", "ingested": False}
+    send(
+        phone,
+        f"📎 Guardado «{filename}» en tus papeles. Lo tienes en la web, "
+        "en el apartado Documentos.",
+        business_id=business["id"],
+    )
+    return {
+        "phone": phone, "media": "document", "ingested": True,
+        "document_id": document["id"],
+    }
 
 
 def handle_inbound(payload: dict) -> dict:
@@ -373,6 +586,55 @@ def handle_inbound(payload: dict) -> dict:
             )
             results.append({"phone": phone, "known": False})
             continue
+
+        if message.get("image_id"):
+            results.append(_ingest_image(business, phone, message))
+            continue
+        if message.get("media_document_id"):
+            results.append(_ingest_document(business, phone, message))
+            continue
+
+        pending = db.get_pending_action(business["id"], phone)
+        if pending and _is_yes(text):
+            send(
+                phone,
+                _execute_pending(business, phone, pending),
+                business_id=business["id"],
+            )
+            results.append({
+                "phone": phone, "business_id": business["id"],
+                "confirmed": True,
+            })
+            continue
+        if pending and _is_no(text):
+            db.clear_pending_action(business["id"], phone)
+            send(
+                phone,
+                "Descartado. No he apuntado nada.",
+                business_id=business["id"],
+            )
+            results.append({
+                "phone": phone, "business_id": business["id"],
+                "confirmed": False,
+            })
+            continue
+
+        if audio_id and text and _needs_confirmation(text):
+            # Una nota de voz que mueve dinero nunca se ejecuta sin confirmar.
+            db.set_pending_action(
+                business["id"], phone, "chat_action", {"text": text}
+            )
+            send(
+                phone,
+                f"🎤 Te he entendido: «{text}». ¿Lo hago? Responde SÍ o NO.",
+                business_id=business["id"],
+            )
+            results.append({
+                "phone": phone, "business_id": business["id"],
+                "voice": True, "pending": True,
+            })
+            continue
+
         reply = chat.handle(business["id"], text).get("reply", "")
         send(phone, reply, business_id=business["id"])
         results.append({

@@ -408,6 +408,19 @@ def record_product_event(business_id: int, event_name: str,
         )
 
 
+def count_product_events(business_id: int, event_name: str,
+                         since: str | None = None) -> int:
+    """Cuántas veces ha ocurrido un evento (opcionalmente desde una fecha ISO)."""
+    q = ("SELECT COUNT(*) AS n FROM product_events "
+         "WHERE business_id=? AND event_name=?")
+    params: list = [business_id, event_name]
+    if since:
+        q += " AND CAST(created_at AS TEXT) >= ?"
+        params.append(since)
+    with get_conn() as conn:
+        return int(conn.execute(q, params).fetchone()["n"])
+
+
 def activation_snapshot(business_id: int) -> dict:
     """Estado de activación basado en resultados reales, no en visitas o clics.
 
@@ -3510,6 +3523,113 @@ def get_whatsapp_message_by_idempotency_key(
             (idempotency_key, business_id),
         ).fetchone()
         return dict(row) if row else None
+
+
+# ------------------------------------------ Confirmaciones por WhatsApp ---
+def set_pending_action(business_id, phone, kind, payload: dict,
+                       ttl_minutes: int = 30) -> dict:
+    """Guarda el borrador pendiente de un teléfono (reemplaza el anterior)."""
+    expires = (datetime.now() + timedelta(minutes=ttl_minutes)).isoformat(
+        timespec="seconds"
+    )
+    body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    with get_conn() as conn:
+        conn.execute(
+            "DELETE FROM whatsapp_pending_actions "
+            "WHERE business_id=? AND phone=?",
+            (business_id, phone),
+        )
+        row = conn.execute(
+            "INSERT INTO whatsapp_pending_actions "
+            "(business_id, phone, kind, payload, expires_at, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, phone, kind, body, expires, _now()),
+        ).fetchone()
+        new_id = row["id"]
+    return {"id": new_id, "business_id": business_id, "phone": phone,
+            "kind": kind, "payload": body, "expires_at": expires}
+
+
+def get_pending_action(business_id, phone) -> dict | None:
+    """Devuelve la acción pendiente viva de un teléfono; purga la caducada."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_pending_actions "
+            "WHERE business_id=? AND phone=?",
+            (business_id, phone),
+        ).fetchone()
+        if not row:
+            return None
+        if str(row["expires_at"]) < _now():
+            conn.execute(
+                "DELETE FROM whatsapp_pending_actions WHERE id=? AND business_id=?",
+                (row["id"], business_id),
+            )
+            return None
+        return dict(row)
+
+
+def clear_pending_action(business_id, phone) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "DELETE FROM whatsapp_pending_actions WHERE business_id=? AND phone=?",
+            (business_id, phone),
+        )
+
+
+# --------------------------------------------- Informes por WhatsApp ---
+WHATSAPP_REPORT_DEFAULTS = {
+    "brief_manana": True,
+    "cierre_tarde": True,
+    "hora_tarde": 19,
+    "resumen_semanal": True,
+    "aviso_fiscal": True,
+}
+
+
+def resolve_whatsapp_reports(raw) -> dict:
+    """Preferencias de informes con tolerancia a JSON corrupto o versiones viejas."""
+    prefs = dict(WHATSAPP_REPORT_DEFAULTS)
+    if raw:
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else dict(raw)
+        except (ValueError, TypeError):
+            data = {}
+        if isinstance(data, dict):
+            for key in ("brief_manana", "cierre_tarde", "resumen_semanal",
+                        "aviso_fiscal"):
+                if key in data:
+                    prefs[key] = bool(data[key])
+            try:
+                hora = int(data.get("hora_tarde", prefs["hora_tarde"]))
+                if 17 <= hora <= 21:
+                    prefs["hora_tarde"] = hora
+            except (TypeError, ValueError):
+                pass
+    return prefs
+
+
+def update_whatsapp_reports(business_id, prefs: dict) -> dict | None:
+    clean = resolve_whatsapp_reports(prefs)
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE businesses SET whatsapp_reports=? WHERE id=?",
+            (json.dumps(clean, separators=(",", ":")), business_id),
+        )
+        if cur.rowcount != 1:
+            return None
+    return get_business(business_id)
+
+
+def payments_received_on(business_id, day: str) -> float:
+    """Total cobrado un día concreto (YYYY-MM-DD) según el ledger de pagos."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(amount),0) AS total FROM invoice_payments "
+            "WHERE business_id=? AND CAST(paid_at AS TEXT) LIKE ?",
+            (business_id, f"{day}%"),
+        ).fetchone()
+    return round(float(row["total"]), 2)
 
 
 def find_whatsapp_message_by_meta_id(meta_message_id: str) -> dict | None:

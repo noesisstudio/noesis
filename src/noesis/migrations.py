@@ -1234,6 +1234,38 @@ def _downgrade_payment_reminders(conn) -> None:
     # SQLite conserva las columnas opcionales para evitar reconstruir businesses.
 
 
+def _upgrade_whatsapp_brain(conn) -> None:
+    """Confirmaciones de mèdia entrante y preferencias de informes por WhatsApp."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS whatsapp_pending_actions (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    phone       TEXT NOT NULL,
+    kind        TEXT NOT NULL,
+    payload     TEXT NOT NULL,
+    expires_at  {t["timestamp"]} NOT NULL,
+    created_at  {t["timestamp"]} NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_wa_pending_phone
+    ON whatsapp_pending_actions(business_id, phone);
+"""
+    )
+    if "whatsapp_reports" not in _column_names(conn, "businesses"):
+        conn.execute("ALTER TABLE businesses ADD COLUMN whatsapp_reports TEXT")
+
+
+def _downgrade_whatsapp_brain(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS uq_wa_pending_phone")
+    conn.execute("DROP TABLE IF EXISTS whatsapp_pending_actions")
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS whatsapp_reports"
+        )
+    # SQLite conserva la columna opcional para evitar reconstruir businesses.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1249,6 +1281,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (11, "cobros_parciales", _upgrade_partial_payments, _downgrade_partial_payments),
     (12, "gasto_por_foto", _upgrade_expense_from_photo, _downgrade_expense_from_photo),
     (13, "recordatorios_cobro", _upgrade_payment_reminders, _downgrade_payment_reminders),
+    (14, "cerebro_whatsapp", _upgrade_whatsapp_brain, _downgrade_whatsapp_brain),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

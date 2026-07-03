@@ -190,6 +190,17 @@ WHATSAPP_TEMPLATE_PAYMENT_ALERT = os.getenv(
 WHATSAPP_TEMPLATE_PAYMENT_REMINDER = os.getenv(
     "WHATSAPP_TEMPLATE_PAYMENT_REMINDER", "noesis_recordatorio_cobro"
 )
+WHATSAPP_TEMPLATE_DAILY_CLOSING = os.getenv(
+    "WHATSAPP_TEMPLATE_DAILY_CLOSING", "noesis_cierre_dia"
+)
+WHATSAPP_TEMPLATE_TAX_NOTICE = os.getenv(
+    "WHATSAPP_TEMPLATE_TAX_NOTICE", "noesis_aviso_fiscal"
+)
+# Transcripción de voz vía API (Groq/Whisper). Si falta, se intenta whisper local.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_WHISPER_MODEL = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
+# Tope diario de extracciones con IA por negocio (fotos/PDFs): protege el margen.
+MAX_DAILY_EXTRACTIONS = int(os.getenv("NOESIS_MAX_DAILY_EXTRACTIONS", "30"))
 MAX_JSON_BYTES = int(os.getenv("NOESIS_MAX_JSON_BYTES", "262144"))
 MAX_AUDIO_BYTES = int(os.getenv("NOESIS_MAX_AUDIO_BYTES", str(12 * 1024 * 1024)))
 MAX_CHAT_CHARS = int(os.getenv("NOESIS_MAX_CHAT_CHARS", "4000"))

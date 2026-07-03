@@ -53,8 +53,54 @@ class LocalWhisperProvider:
                 pass
 
 
-def available() -> bool:
-    """True si faster-whisper está instalado y se puede transcribir en local."""
+class GroqWhisperProvider:
+    """Transcripción vía la API de Groq (Whisper). Coste ~0,002 €/min.
+
+    Multipart a mano con la stdlib para no añadir dependencias. La clave se lee
+    en cada llamada para que los tests puedan activarla/desactivarla.
+    """
+
+    ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions"
+
+    def transcribe(self, audio: bytes, filename: str = "audio.ogg") -> str:
+        import json as _json
+        import urllib.request
+        import uuid
+
+        from .. import config
+
+        boundary = uuid.uuid4().hex
+        name = os.path.basename(filename) or "audio.ogg"
+        parts = []
+        for field, value in (
+            ("model", config.GROQ_WHISPER_MODEL),
+            ("language", "es"),
+            ("response_format", "json"),
+        ):
+            parts.append(
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="{field}"\r\n\r\n'
+                f"{value}\r\n".encode()
+            )
+        parts.append(
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="{name}"\r\n'
+            "Content-Type: application/octet-stream\r\n\r\n".encode()
+        )
+        body = b"".join(parts) + audio + f"\r\n--{boundary}--\r\n".encode()
+        request = urllib.request.Request(
+            self.ENDPOINT,
+            data=body,
+            headers={
+                "Authorization": f"Bearer {config.GROQ_API_KEY}",
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+            },
+        )
+        response = urllib.request.urlopen(request, timeout=60).read()
+        return str(_json.loads(response).get("text") or "").strip()
+
+
+def _local_available() -> bool:
     try:
         import faster_whisper  # noqa: F401
         return True
@@ -62,12 +108,23 @@ def available() -> bool:
         return False
 
 
-_provider: Transcriber | None = None
+def available() -> bool:
+    """True si hay alguna vía de transcripción (API de Groq o whisper local)."""
+    from .. import config
+
+    return bool(config.GROQ_API_KEY) or _local_available()
+
+
+_local_provider: Transcriber | None = None
 
 
 def get_transcriber() -> Transcriber | None:
-    """Devuelve el transcriptor activo, o None si no está disponible."""
-    global _provider
-    if _provider is None and available():
-        _provider = LocalWhisperProvider()
-    return _provider
+    """Groq si hay clave; si no, whisper local si está instalado; si no, None."""
+    from .. import config
+
+    if config.GROQ_API_KEY:
+        return GroqWhisperProvider()
+    global _local_provider
+    if _local_provider is None and _local_available():
+        _local_provider = LocalWhisperProvider()
+    return _local_provider

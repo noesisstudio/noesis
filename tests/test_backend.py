@@ -2109,5 +2109,271 @@ class VerifactuTestCase(unittest.TestCase):
                 self.assertEqual(forbidden.status_code, 403)
 
 
+class PendingActionTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def test_pending_actions_replace_expire_and_isolate(self):
+        business, _ = self.make_business("Pendientes A")
+        other, _ = self.make_business("Pendientes B")
+        db.set_pending_action(
+            business["id"], "34600111222", "gasto", {"amount": 10}
+        )
+        db.set_pending_action(
+            business["id"], "34600111222", "gasto", {"amount": 20}
+        )
+        pending = db.get_pending_action(business["id"], "34600111222")
+        self.assertEqual(json.loads(pending["payload"])["amount"], 20)
+        # Aislamiento: otro negocio no ve la pendiente de ese teléfono.
+        self.assertIsNone(db.get_pending_action(other["id"], "34600111222"))
+        # Caducidad: una pendiente vencida se purga al leerla.
+        db.set_pending_action(
+            business["id"], "34600111222", "gasto", {"amount": 30},
+            ttl_minutes=-1,
+        )
+        self.assertIsNone(db.get_pending_action(business["id"], "34600111222"))
+        # Borrado explícito.
+        db.set_pending_action(business["id"], "34600111222", "gasto", {})
+        db.clear_pending_action(business["id"], "34600111222")
+        self.assertIsNone(db.get_pending_action(business["id"], "34600111222"))
+
+
+class WhatsappMediaTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def _connected_business(self, name, phone="600111222"):
+        business, client = self.make_business(name)
+        db.set_whatsapp_status(business["id"], "conectado", phone=phone)
+        return db.get_business(business["id"]), client
+
+    def test_photo_creates_draft_and_yes_confirms_once(self):
+        from noesis.adapters import extraction
+
+        business, _ = self._connected_business("Fotos WhatsApp")
+        extracted = {
+            "concept": "Material eléctrico", "amount": 43.20,
+            "vat_rate": 21, "date": "2026-07-02", "supplier": "Ferretería",
+        }
+        replies = []
+        with (
+            patch.object(whatsapp, "_download_media",
+                         return_value=b"\xff\xd8\xff\xe0foto"),
+            patch.object(extraction, "extract_expense",
+                         return_value=extracted),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw:
+                         replies.append(text)),
+        ):
+            result = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-foto-1",
+                "image_id": "media-1", "image_mime": "image/jpeg",
+            })
+            self.assertTrue(result["results"][0]["ingested"])
+            self.assertIn("¿Lo apunto como gasto?", replies[-1])
+            # El gasto NO existe aún: solo hay borrador pendiente.
+            self.assertEqual(db.list_expenses(business["id"]), [])
+
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-foto-2", "text": "SÍ",
+            })
+        expenses = db.list_expenses(business["id"])
+        self.assertEqual(len(expenses), 1)
+        self.assertEqual(expenses[0]["amount"], 43.20)
+        self.assertIn("Apuntado ✅", replies[-1])
+        # La pendiente se consumió: repetir SÍ no duplica.
+        with patch.object(whatsapp, "send",
+                          side_effect=lambda phone, text, **kw:
+                          replies.append(text)):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-foto-3", "text": "sí",
+            })
+        self.assertEqual(len(db.list_expenses(business["id"])), 1)
+
+    def test_photo_no_discards_and_unknown_phone_gets_invite(self):
+        from noesis.adapters import extraction
+
+        business, _ = self._connected_business("Fotos No")
+        replies = []
+        with (
+            patch.object(whatsapp, "_download_media", return_value=b"foto"),
+            patch.object(extraction, "extract_expense", return_value={
+                "concept": "x", "amount": 10, "vat_rate": None,
+                "date": None, "supplier": None,
+            }),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw:
+                         replies.append(text)),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-no-1",
+                "image_id": "media-2", "image_mime": "image/png",
+            })
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-no-2", "text": "no",
+            })
+            self.assertIn("Descartado", replies[-1])
+            self.assertEqual(db.list_expenses(business["id"]), [])
+            # Teléfono desconocido con foto: invitación, jamás ingesta.
+            whatsapp.handle_inbound({
+                "from": "34999888777", "id": "wamid-no-3",
+                "image_id": "media-3", "image_mime": "image/jpeg",
+            })
+            self.assertIn("no está dado de alta", replies[-1])
+
+    def test_voice_money_order_requires_confirmation(self):
+        business, _ = self._connected_business("Voz Dinero")
+        replies = []
+        handled = []
+        with (
+            patch.object(whatsapp, "_audio_to_text",
+                         return_value="hazle una factura a Carlos de 100"),
+            patch.object(whatsapp.chat, "handle",
+                         side_effect=lambda bid, text:
+                         handled.append(text) or {"reply": "hecho"}),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw:
+                         replies.append(text)),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-voz-1",
+                "audio_id": "audio-1",
+            })
+            # No se ejecuta: se pide confirmación.
+            self.assertEqual(handled, [])
+            self.assertIn("¿Lo hago?", replies[-1])
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-voz-2", "text": "vale",
+            })
+            self.assertEqual(
+                handled, ["hazle una factura a Carlos de 100"]
+            )
+
+    def test_pdf_document_is_saved_to_papers(self):
+        business, _ = self._connected_business("PDFs WhatsApp")
+        from noesis.documents import repo as docrepo
+
+        replies = []
+        with (
+            patch.object(whatsapp, "_download_media",
+                         return_value=b"%PDF-1.4 contenido"),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw:
+                         replies.append(text)),
+        ):
+            result = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-pdf-1",
+                "media_document_id": "media-4",
+                "media_document_mime": "application/pdf",
+                "media_document_filename": "factura-luz.pdf",
+            })
+        self.assertTrue(result["results"][0]["ingested"])
+        docs = docrepo.list_for_business(business["id"])
+        self.assertEqual(len(docs), 1)
+        self.assertEqual(docs[0]["filename"], "factura-luz.pdf")
+        self.assertIn("papeles", replies[-1])
+
+
+class WhatsappReportsTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def test_report_prefs_resolve_tolerantly(self):
+        prefs = db.resolve_whatsapp_reports(None)
+        self.assertTrue(prefs["cierre_tarde"])
+        self.assertEqual(prefs["hora_tarde"], 19)
+        broken = db.resolve_whatsapp_reports("{json roto")
+        self.assertEqual(broken, db.WHATSAPP_REPORT_DEFAULTS)
+        custom = db.resolve_whatsapp_reports(
+            '{"hora_tarde": 20, "brief_manana": false, "desconocida": 1}'
+        )
+        self.assertEqual(custom["hora_tarde"], 20)
+        self.assertFalse(custom["brief_manana"])
+        out_of_range = db.resolve_whatsapp_reports('{"hora_tarde": 3}')
+        self.assertEqual(out_of_range["hora_tarde"], 19)
+
+    def test_daily_closing_respects_hour_prefs_and_idempotency(self):
+        business, _ = self.make_business("Cierre A")
+        db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
+        db.update_whatsapp_reports(business["id"], {"hora_tarde": 19})
+        opted_out, _ = self.make_business("Cierre B")
+        db.set_whatsapp_status(opted_out["id"], "conectado", phone="600333444")
+        db.update_whatsapp_reports(opted_out["id"], {"cierre_tarde": False})
+
+        at_19 = datetime.now().replace(hour=19, minute=5)
+        with (
+            patch.object(whatsapp, "_TOKEN", "token"),
+            patch.object(whatsapp, "_PHONE_ID", "phone-id"),
+            patch.object(whatsapp, "_post_to_meta", return_value="wamid-x"),
+        ):
+            self.assertEqual(scheduler.send_daily_closings(now=at_19), 1)
+            # Idempotente dentro del mismo día.
+            self.assertEqual(scheduler.send_daily_closings(now=at_19), 0)
+            # A otra hora no toca.
+            at_18 = at_19.replace(hour=18)
+            self.assertEqual(scheduler.send_daily_closings(now=at_18), 0)
+        messages = db.list_whatsapp_messages(business["id"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            messages[0]["template_name"], config.WHATSAPP_TEMPLATE_DAILY_CLOSING
+        )
+        self.assertEqual(db.list_whatsapp_messages(opted_out["id"]), [])
+
+    def test_quarterly_tax_notice_targets_previous_quarter(self):
+        business, _ = self.make_business("Fiscal A")
+        db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
+        july_first = datetime(2026, 7, 1, 10, 0)
+        with (
+            patch.object(whatsapp, "_TOKEN", "token"),
+            patch.object(whatsapp, "_PHONE_ID", "phone-id"),
+            patch.object(whatsapp, "_post_to_meta", return_value="wamid-y"),
+        ):
+            self.assertEqual(
+                scheduler.send_quarterly_tax_notices(now=july_first), 1
+            )
+            self.assertEqual(
+                scheduler.send_quarterly_tax_notices(now=july_first), 0
+            )
+            # Fuera de los meses de cierre no hace nada.
+            self.assertEqual(
+                scheduler.send_quarterly_tax_notices(
+                    now=datetime(2026, 8, 1, 10, 0)
+                ),
+                0,
+            )
+        message = db.list_whatsapp_messages(business["id"])[0]
+        params = json.loads(message["template_params"])
+        self.assertIn("2T 2026", params[0])
+
+
+class TranscriptionChainTestCase(unittest.TestCase):
+    def test_groq_preferred_when_key_is_set(self):
+        from noesis.adapters import transcription
+
+        with patch.object(config, "GROQ_API_KEY", "clave"):
+            provider = transcription.get_transcriber()
+            self.assertIsInstance(provider, transcription.GroqWhisperProvider)
+            self.assertTrue(transcription.available())
+
+    def test_groq_provider_parses_response(self):
+        from noesis.adapters import transcription
+
+        response = MagicMock()
+        response.read.return_value = json.dumps(
+            {"text": " factura a Carlos de 100 "}
+        ).encode()
+        with (
+            patch.object(config, "GROQ_API_KEY", "clave"),
+            patch("urllib.request.urlopen", return_value=response),
+        ):
+            text = transcription.GroqWhisperProvider().transcribe(
+                b"audio", "voz.ogg"
+            )
+        self.assertEqual(text, "factura a Carlos de 100")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -140,6 +140,57 @@
       </div>
     </div>
   </div>
+
+  <div class="card" id="informes">
+    <div class="card-h"><h2>Informes por WhatsApp</h2></div>
+    <div class="card-b">
+      <form method="post" action="/b/{{ business.id }}/whatsapp-reports">
+        <label class="lrow" style="cursor:pointer">
+          <span><b>Brief de la mañana</b>
+            <small class="muted" style="display:block;margin-top:4px">
+              A las 8:00: agenda de hoy, cobros a perseguir y pendientes.
+            </small></span>
+          <input type="checkbox" name="brief_manana" value="1"
+            {{ 'checked' if wa_reports.brief_manana }}>
+        </label>
+        <label class="lrow" style="margin-top:12px;cursor:pointer">
+          <span><b>Cierre del día</b>
+            <small class="muted" style="display:block;margin-top:4px">
+              Lo hecho, lo facturado y lo cobrado hoy, con el siguiente paso.
+            </small></span>
+          <input type="checkbox" name="cierre_tarde" value="1"
+            {{ 'checked' if wa_reports.cierre_tarde }}>
+        </label>
+        <label class="fld" style="margin-top:12px">Hora del cierre</label>
+        <select class="input" name="hora_tarde">
+          {% for h in [17, 18, 19, 20, 21] %}
+          <option value="{{ h }}" {{ 'selected' if wa_reports.hora_tarde == h }}>
+            {{ h }}:00
+          </option>
+          {% endfor %}
+        </select>
+        <label class="lrow" style="margin-top:12px;cursor:pointer">
+          <span><b>Resumen semanal</b>
+            <small class="muted" style="display:block;margin-top:4px">
+              Lunes a las 8:00: facturado, pendiente, gastos y beneficio.
+            </small></span>
+          <input type="checkbox" name="resumen_semanal" value="1"
+            {{ 'checked' if wa_reports.resumen_semanal }}>
+        </label>
+        <label class="lrow" style="margin-top:12px;cursor:pointer">
+          <span><b>Aviso fiscal trimestral</b>
+            <small class="muted" style="display:block;margin-top:4px">
+              Al cerrar el trimestre: IVA (303) e IRPF (130) estimados y plazo.
+            </small></span>
+          <input type="checkbox" name="aviso_fiscal" value="1"
+            {{ 'checked' if wa_reports.aviso_fiscal }}>
+        </label>
+        <button class="btn primary" style="margin-top:14px">
+          Guardar informes
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:16px">
