@@ -43,6 +43,17 @@
     .foot a { color: var(--brand-2); }
     .pill-link { display:inline-flex; align-items:center; gap:6px; font-weight:650;
       color: var(--brand); text-decoration:none; font-size:13.5px; }
+    .pay-box { margin-top:14px; padding:14px 16px; border-radius: var(--radius-sm);
+      background: var(--brand-soft); border:1px solid var(--border); }
+    .pay-title { font-size:12px; font-weight:750; letter-spacing:.03em;
+      text-transform:uppercase; color: var(--brand); margin-bottom:10px; }
+    .pay-row { display:flex; align-items:center; justify-content:space-between;
+      gap:12px; padding:7px 0; border-bottom:1px dashed var(--border); }
+    .pay-lbl { display:block; font-size:12px; color: var(--muted); }
+    .pay-val { font-size:15px; letter-spacing:.02em; word-break:break-all; }
+    .pay-amount { margin-top:9px; font-size:14px; color: var(--brand-ink); }
+    .pay-note { margin-top:8px; font-size:12.5px; color: var(--muted); font-style:italic; }
+    .pay-copy { flex:0 0 auto; }
   </style>
 </head>
 <body>
@@ -148,6 +159,25 @@
             {% else %}<span class="badge b-amber">Pendiente de pago</span>{% endif %}
             {% if inv.due_date %} · Vence el {{ inv.due_date }}{% endif %}
           </div>
+          {% if inv.status != 'cobrada' and (data.business.payment_iban or data.business.payment_bizum) %}
+          <div class="pay-box">
+            <div class="pay-title">Cómo pagar esta factura</div>
+            {% if data.business.payment_iban %}
+            <div class="pay-row">
+              <div><span class="pay-lbl">Transferencia</span><b class="pay-val" id="iban-{{ inv.id }}">{{ data.business.payment_iban }}</b></div>
+              <button class="btn sm pay-copy" type="button" onclick="copyPay('iban-{{ inv.id }}', this)">Copiar</button>
+            </div>
+            {% endif %}
+            {% if data.business.payment_bizum %}
+            <div class="pay-row">
+              <div><span class="pay-lbl">Bizum</span><b class="pay-val" id="biz-{{ inv.id }}">{{ data.business.payment_bizum }}</b></div>
+              <button class="btn sm pay-copy" type="button" onclick="copyPay('biz-{{ inv.id }}', this)">Copiar</button>
+            </div>
+            {% endif %}
+            <div class="pay-amount">Importe: <b>{{ inv.total | eur }}</b></div>
+            {% if data.business.payment_note %}<div class="pay-note">{{ data.business.payment_note }}</div>{% endif %}
+          </div>
+          {% endif %}
           <div class="doc-actions">
             <a class="pill-link" href="/p/{{ token }}/invoices/{{ inv.id }}/pdf" target="_blank" rel="noopener">Descargar PDF</a>
           </div>
@@ -160,6 +190,23 @@
     <div class="foot">Portal seguro de <a href="https://bynoesis.com">Noesis</a> ·
       Tus datos solo los ve {{ data.business.name }}.</div>
   </div>
+  <script>
+    function copyPay(id, btn){
+      var el = document.getElementById(id);
+      if(!el) return;
+      var text = el.textContent.trim();
+      var done = function(){ var t = btn.textContent; btn.textContent = '¡Copiado!';
+        setTimeout(function(){ btn.textContent = t; }, 1500); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        var r = document.createRange(); r.selectNodeContents(el);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        try { document.execCommand('copy'); } catch(e){}
+        done();
+      }
+    }
+  </script>
 {% endif %}
 </body>
 </html>

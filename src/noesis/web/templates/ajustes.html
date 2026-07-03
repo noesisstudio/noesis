@@ -51,6 +51,29 @@
     </div>
   </div>
 
+  <div class="card" id="cobro">
+    <div class="card-h"><h2>Cómo te pagan</h2><span class="hint">aparece en la factura y en el portal</span></div>
+    <div class="card-b">
+      {% if error == 'cobro' %}<div class="banner warn" style="margin-bottom:12px">Revisa el IBAN o el número de Bizum: alguno no tiene un formato válido.</div>{% endif %}
+      <form method="post" action="/b/{{ business.id }}/payment-details">
+        <label class="fld">IBAN para transferencia</label>
+        <input class="input" name="payment_iban" value="{{ business.payment_iban or '' }}"
+               placeholder="ES12 3456 7890 1234 5678 9012" maxlength="42" autocomplete="off">
+        <label class="fld" style="margin-top:12px">Bizum (teléfono)</label>
+        <input class="input" name="payment_bizum" value="{{ business.payment_bizum or '' }}"
+               placeholder="600 000 000" maxlength="16" autocomplete="off">
+        <label class="fld" style="margin-top:12px">Nota de pago (opcional)</label>
+        <input class="input" name="payment_note" value="{{ business.payment_note or '' }}"
+               placeholder="Ej. Indica el nº de factura en el concepto" maxlength="300">
+        <button class="btn primary" style="margin-top:14px">Guardar datos de cobro</button>
+      </form>
+      <div class="insight" style="margin-top:14px">
+        Cuando el cliente abra su portal o el PDF, verá exactamente cómo pagarte.
+        Menos “¿cómo te lo hago?” y menos días hasta cobrar.
+      </div>
+    </div>
+  </div>
+
   <div class="card card-action">
     <div class="card-h"><h2>WhatsApp</h2>
       {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>

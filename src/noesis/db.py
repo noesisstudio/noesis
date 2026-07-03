@@ -283,6 +283,30 @@ def finish_onboarding(business_id) -> dict:
     return get_business(business_id)
 
 
+def update_payment_details(business_id, *, iban=None, bizum=None, note=None) -> dict:
+    """Guarda cómo quiere cobrar el negocio: IBAN, Bizum y una nota libre.
+
+    Se muestra en el PDF de la factura y en el portal del cliente para que el
+    cliente sepa pagar sin tener que preguntar. Validación ligera y tolerante:
+    lo que no cuadra se rechaza con un mensaje claro, no se corrompe.
+    """
+    clean_iban = (iban or "").replace(" ", "").upper().strip()
+    if clean_iban:
+        if not re.fullmatch(r"[A-Z]{2}[0-9A-Z]{13,32}", clean_iban):
+            raise ValueError("El IBAN no tiene un formato válido.")
+    clean_bizum = re.sub(r"[^\d+]", "", (bizum or "").strip())
+    if clean_bizum and not re.fullmatch(r"\+?\d{9,15}", clean_bizum):
+        raise ValueError("El número de Bizum debe ser un teléfono válido.")
+    clean_note = (note or "").strip()[:300]
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET payment_iban=?, payment_bizum=?, payment_note=? "
+            "WHERE id=?",
+            (clean_iban or None, clean_bizum or None, clean_note or None, business_id),
+        )
+    return get_business(business_id)
+
+
 def update_fiscal(business_id, name=None, nif=None, address=None,
                   default_vat=None, default_irpf=None) -> dict:
     """Actualiza los datos fiscales del negocio (NIF, dirección, IVA/IRPF por defecto)."""
@@ -3436,7 +3460,10 @@ def client_portal_view(business_id: int, client_id: int) -> dict | None:
                      "address": biz.get("address"),
                      "brand_color": business_brand_color(biz),
                      "logo": logo,
-                     "initials": business_initials(biz.get("name"))},
+                     "initials": business_initials(biz.get("name")),
+                     "payment_iban": biz.get("payment_iban"),
+                     "payment_bizum": biz.get("payment_bizum"),
+                     "payment_note": biz.get("payment_note")},
         "client": {"id": client["id"], "name": client.get("name")},
         "quotes": quotes,
         "invoices": invoices,

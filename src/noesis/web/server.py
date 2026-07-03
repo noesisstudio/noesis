@@ -1674,6 +1674,20 @@ def update_fiscal(business_id: int, name: str = Form(""), nif: str = Form(""),
     return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
 
 
+@app.post("/b/{business_id}/payment-details")
+def update_payment_details(business_id: int, payment_iban: str = Form(""),
+                           payment_bizum: str = Form(""), payment_note: str = Form("")):
+    try:
+        db.update_payment_details(business_id, iban=payment_iban,
+                                  bizum=payment_bizum, note=payment_note)
+    except ValueError:
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=cobro#cobro", status_code=303
+        )
+    db.record_product_event(business_id, "payment_details_updated")
+    return RedirectResponse(f"/b/{business_id}/ajustes#cobro", status_code=303)
+
+
 @app.post("/b/{business_id}/clockin-policy")
 def update_clockin_policy(
     business_id: int, clockin_policy: str = Form("")

@@ -207,8 +207,26 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     pdf.ln(1)
     total_row("TOTAL", inv["total"], bold=True, color=brand)
 
+    # --- Forma de pago (si el negocio la ha configurado) ---
+    pay_lines = []
+    if biz.get("payment_iban"):
+        pay_lines.append(f"Transferencia:  {biz['payment_iban']}")
+    if biz.get("payment_bizum"):
+        pay_lines.append(f"Bizum:  {biz['payment_bizum']}")
+    if biz.get("payment_note"):
+        pay_lines.append(biz["payment_note"])
+    if pay_lines:
+        pdf.ln(12)
+        pdf.set_font(fam, "B", 9)
+        pdf.set_text_color(*brand)
+        pdf.cell(0, 6, "FORMA DE PAGO", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font(fam, "", 10)
+        pdf.set_text_color(*INK)
+        for line in pay_lines:
+            pdf.multi_cell(0, 5, line, new_x="LMARGIN", new_y="NEXT")
+
     # --- Pie ---
-    pdf.ln(14)
+    pdf.ln(10 if pay_lines else 14)
     pdf.set_font("Helvetica", "", 8)
     pdf.set_text_color(*MUTED)
     pdf.multi_cell(

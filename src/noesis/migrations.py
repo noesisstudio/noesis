@@ -265,6 +265,9 @@ LEGACY_COLUMNS = {
         "panel_layout": "TEXT",
         "clockin_policy": "TEXT",
         "verifactu_enabled": "BOOLEAN NOT NULL DEFAULT FALSE",
+        "payment_iban": "TEXT",
+        "payment_bizum": "TEXT",
+        "payment_note": "TEXT",
     },
     "users": {
         "is_admin": "INTEGER NOT NULL DEFAULT 0",
@@ -1095,6 +1098,21 @@ def _downgrade_verifactu_phase2(conn) -> None:
     # Los nuevos eventos se conservan: estrechar el CHECK podría destruir auditoría.
 
 
+def _upgrade_payment_details(conn) -> None:
+    """Datos de cobro del negocio (IBAN/Bizum/nota) para el PDF y el portal."""
+    cols = _column_names(conn, "businesses")
+    for col in ("payment_iban", "payment_bizum", "payment_note"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {col} TEXT")
+
+
+def _downgrade_payment_details(conn) -> None:
+    if conn.dialect == "postgres":
+        for col in ("payment_iban", "payment_bizum", "payment_note"):
+            conn.execute(f"ALTER TABLE businesses DROP COLUMN IF EXISTS {col}")
+    # En SQLite se conservan las columnas (DROP COLUMN es frágil); no molestan.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1106,6 +1124,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (7, "verifactu_fase1", _upgrade_verifactu_phase1, _downgrade_verifactu_phase1),
     (8, "backups_verificados", _upgrade_verified_backups, _downgrade_verified_backups),
     (9, "verifactu_fase2", _upgrade_verifactu_phase2, _downgrade_verifactu_phase2),
+    (10, "datos_cobro", _upgrade_payment_details, _downgrade_payment_details),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
