@@ -35,6 +35,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `adapters/invoicing.py` — selecciona emisión interna o Holded. Cuando un negocio
   activa el modo nativo, la emisión interna registra Veri*Factu en la misma
   transacción y no delega en terceros. Ver [[Fiscalidad]].
+- `adapters/extraction.py` — visión Claude opcional para sugerir un borrador de
+  gasto desde una foto; sin clave devuelve `None` y mantiene el flujo manual.
 - `verifactu.py` — formato técnico AEAT: cadena de huella, SHA-256, URL/QR y XML.
 - `web/auth.py` — login (PBKDF2, sesiones firmadas). Aislamiento por dueño.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
@@ -51,6 +53,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - Los cobros viven en `invoice_payments`: el estado y el importe restante se
   derivan del ledger. Cada alta bloquea la factura (`BEGIN IMMEDIATE` en SQLite,
   `FOR UPDATE` en Postgres) para impedir que dos cobros superen el total.
+- Una foto de ticket crea primero un documento y un borrador. Solo la confirmación
+  explícita crea el gasto y enlaza `documents.expense_id` dentro de la transacción.
 - En modo Veri*Factu, la misma transacción añade un registro de alta append-only,
   encadenado por NIF emisor. Las rectificaciones crean una nueva factura R1-R5 y
   conservan el original.

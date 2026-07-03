@@ -1156,6 +1156,56 @@ def _downgrade_partial_payments(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS invoice_payments")
 
 
+def _upgrade_expense_from_photo(conn) -> None:
+    """Relaciona el documento original con el gasto confirmado por el usuario."""
+    t = _types(conn.dialect)
+    if "expense_id" not in _column_names(conn, "documents"):
+        conn.execute(
+            f"ALTER TABLE documents ADD COLUMN expense_id {t['ref']}"
+        )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_expenses_business_id "
+        "ON expenses(business_id, id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_documents_expense "
+        "ON documents(business_id, expense_id)"
+    )
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE documents ADD CONSTRAINT "
+            "documents_business_expense_fk "
+            "FOREIGN KEY (business_id, expense_id) "
+            "REFERENCES expenses(business_id, id)"
+        )
+    else:
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "documents", "expense_id", "expenses", event
+                )
+            )
+
+
+def _downgrade_expense_from_photo(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE documents DROP CONSTRAINT IF EXISTS "
+            "documents_business_expense_fk"
+        )
+        conn.execute(
+            "ALTER TABLE documents DROP COLUMN IF EXISTS expense_id"
+        )
+    else:
+        for event in ("insert", "update"):
+            conn.execute(
+                "DROP TRIGGER IF EXISTS "
+                f"documents_expense_id_same_business_{event}"
+            )
+    conn.execute("DROP INDEX IF EXISTS idx_documents_expense")
+    conn.execute("DROP INDEX IF EXISTS uq_expenses_business_id")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1169,6 +1219,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (9, "verifactu_fase2", _upgrade_verifactu_phase2, _downgrade_verifactu_phase2),
     (10, "datos_cobro", _upgrade_payment_details, _downgrade_payment_details),
     (11, "cobros_parciales", _upgrade_partial_payments, _downgrade_partial_payments),
+    (12, "gasto_por_foto", _upgrade_expense_from_photo, _downgrade_expense_from_photo),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

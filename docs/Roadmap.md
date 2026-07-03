@@ -48,9 +48,10 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 ## 💶 Cerrar el ciclo del cobro (siguiente en producto)
 - [x] Datos de pago (IBAN/Bizum) en Ajustes, el PDF de la factura y el portal.
 - [x] **Cobros parciales** (anticipo + resto) con ledger separado, estado derivado
-  y métricas sobre el restante (migración 11 en `codex/cobros-parciales`, pendiente
-  de revisión y fusión).
-- [ ] **Gasto por foto** (OCR sobre el módulo de documentos existente).
+  y métricas sobre el restante (migración 11 en `main`).
+- [x] **Gasto por foto** con borrador extraído por Claude, confirmación obligatoria
+  y documento vinculado (migración 12 en `codex/gasto-por-foto`, pendiente de
+  revisión y fusión).
 - [ ] Persecución de cobros automática por WhatsApp (bloqueada por Meta).
 
 ## 🚀 Fase 3 — validar

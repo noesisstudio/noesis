@@ -67,11 +67,13 @@ def delete(business_id: int, doc_id: int) -> bool:
 
 def convert_ticket_to_expense(business_id: int, doc_id: int,
                               concept: str | None = None,
-                              amount: float | None = None) -> dict | None:
+                              amount: float | None = None,
+                              vat_rate: float | None = None,
+                              spent_on: str | None = None) -> dict | None:
     """Convierte un ticket/factura escaneada en un gasto registrado.
 
     Usa el importe leído por OCR si no se pasa uno. Devuelve el gasto creado, o None
-    si no hay importe disponible. Deja el documento ligado por nota (trazabilidad).
+    si no hay importe disponible. Vincula el documento al gasto confirmado.
     """
     from .. import db
     doc = repo.get(doc_id, business_id)
@@ -81,5 +83,12 @@ def convert_ticket_to_expense(business_id: int, doc_id: int,
     if not amount or float(amount) <= 0:
         return None
     concept = (concept or doc.get("filename") or "Gasto de ticket").strip()
-    return db.add_expense(concept, float(amount), category="Ticket",
-                          business_id=business_id)
+    return db.add_expense(
+        concept,
+        float(amount),
+        vat_rate=vat_rate,
+        category="Ticket",
+        spent_on=spent_on,
+        document_id=doc_id,
+        business_id=business_id,
+    )
