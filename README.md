@@ -2,108 +2,75 @@
 
 [![CI](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml/badge.svg)](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml)
 
-El copiloto de negocio por WhatsApp para autónomos de servicios (fontaneros,
-electricistas, reformas, limpieza, jardinería…). Hablas con Noesis por texto o
-audio y se ocupa de tu agenda, clientes, cobros y facturas — para que tú solo
-tengas que hacer tu trabajo.
+**Del trabajo terminado al dinero cobrado.** Noesis es el copiloto de negocio por
+WhatsApp para autónomos y pequeños negocios de servicios (fontaneros, electricistas,
+reformas, limpieza, jardinería…). Hablas con él por texto o audio y se ocupa de tu
+agenda, clientes, presupuestos, facturas y cobros — para que tú solo tengas que
+hacer tu trabajo.
 
-> Estado actual: **prototipo local del cerebro**. Funciona en tu ordenador como
-> un chat de prueba (simula WhatsApp). Más adelante enchufamos WhatsApp real y la
-> facturación legal (Verifactu vía API de Holded/Quipu).
+> Estado actual: **SaaS multi-empresa en producción** en
+> [app.bynoesis.com](https://app.bynoesis.com) (Railway + Postgres, auto-deploy
+> desde `main`). Facturación **Veri*Factu nativa** (huella encadenada, QR, XML AEAT;
+> remisión a AEAT implementada, pendiente de certificado), fichaje de equipo
+> inalterable (art. 34.9 ET), portal del cliente sin contraseña y copiloto proactivo.
 
-## Qué hace ya el prototipo
+## Qué hace
 
-Le escribes en lenguaje natural, como en WhatsApp:
+- **Ciclo comercial completo**: cliente → presupuesto → trabajo/agenda → factura
+  (PDF con 3 plantillas y marca propia) → cobro (IBAN/Bizum en factura y portal).
+- **Copiloto proactivo**: plan del día con el porqué de cada acción (cobros
+  pendientes, trabajos sin facturar, seguimiento de presupuestos).
+- **Chat en lenguaje natural** (web hoy, WhatsApp al encender Meta): "haz factura a
+  Carlos por reparación de caldera, 180 € más IVA" — con cerebro local gratuito
+  (`nlu.py`) e IA (Claude) solo para lo complejo.
+- **Cumplimiento**: Veri*Factu nativo (fases 1 y 2 construidas), registro de jornada
+  con sellado hash inalterable, RGPD (export + borrado), fiscalidad correcta
+  (IVA 21/10/4 + IRPF).
+- **Panel web completo**: resumen personalizable, tesorería, análisis financiero
+  (márgenes, DSO, morosidad), equipo con fichaje GPS, portal del cliente.
 
-- "Agenda a Marta el jueves por la mañana en Badalona."
-- "Haz factura a Carlos por reparación de caldera, 180 € más IVA."
-- "¿Qué tengo pendiente hoy?"
-- "¿Cuánto he facturado este mes?"
-- "Recuérdame que Laura me debe la factura."
-
-Y Noesis entiende, ejecuta y te responde como lo haría el asistente real.
-
-## Arquitectura (modular a propósito)
+## Arquitectura
 
 ```
-WhatsApp / CLI  ─►  Agente (Claude)  ─►  Herramientas  ─►  Postgres / SQLite local
-                                            │
-                                            └─►  Facturación (Mock hoy → Holded/Quipu mañana)
+WhatsApp / Web / CLI ─► Cerebro (nlu.py local + Claude opcional) ─► tools.py ─► db.py (Postgres/SQLite)
+                                                                       └─► adapters/ (Stripe, WhatsApp, Whisper)
 ```
 
-Cada pieza (agenda, cobros, clientes, facturación) es independiente. Hoy la
-facturación es un "mock" (simulada); el día que conectemos Holded solo se cambia
-un adaptador, sin tocar el resto.
-
-| Carpeta | Qué es |
+| Módulo (`src/noesis/`) | Qué es |
 |---|---|
-| `src/noesis/agent.py` | El cerebro: habla con Claude y decide qué hacer |
-| `src/noesis/tools.py` | Las acciones que Noesis sabe ejecutar |
-| `src/noesis/db.py` | Dónde se guardan clientes, trabajos, facturas, cobros |
-| `src/noesis/adapters/invoicing.py` | Facturación (mock hoy → Holded mañana) |
-| `src/noesis/cli.py` | El chat de prueba (simula WhatsApp) |
-| `src/noesis/web/server.py` | Servidor web 24/7: dashboard + API + onboarding + webhook |
-| `src/noesis/web/templates/` | Dashboard, alta de negocio y conexión de WhatsApp |
-| `src/noesis/web/scheduler.py` | Alertas programadas (resumen diario y semanal) |
-| `src/noesis/web/reports.py` | Informes descargables (CSV de costes y facturas) |
+| `web/server.py` | FastAPI: páginas, API JSON, login, onboarding, webhooks |
+| `nlu.py` · `web/chat.py` | Cerebro local por reglas + orquestador local/IA |
+| `agent.py` · `tools.py` | Agente Claude (tool-use) y acciones multi-negocio |
+| `db.py` · `migrations.py` | Acceso a datos aislado por `business_id` + esquema versionado |
+| `verifactu.py` | Veri*Factu nativo: huella AEAT, QR, XML, remisión SOAP/mTLS |
+| `clockin_integrity.py` · `work_reports.py` | Fichaje inalterable + informes |
+| `web/whatsapp.py` | Cola durable de WhatsApp (Meta Cloud API) |
+| `adapters/` | Stripe, transcripción local (faster-whisper), facturación |
 
-## Cómo arrancarlo (paso a paso, sin saber programar)
-
-1. **Instala las dependencias** (una sola vez). Abre PowerShell en esta carpeta y ejecuta:
-
-   ```powershell
-   py -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   pip install -e .
-   ```
-
-2. **Pon tu clave de Claude.** Copia `.env.example` a `.env` y dentro pega tu
-   `ANTHROPIC_API_KEY` (se saca en https://console.anthropic.com → API Keys).
-
-3. **Arranca el chat de prueba:**
-
-   ```powershell
-   py -m noesis
-   ```
-
-   Se carga con datos de demo (clientes y trabajos de ejemplo). Escribe como si
-   fuera WhatsApp. Escribe `salir` para terminar y `resumen` para ver el parte del día.
-
-## Cómo arrancar el panel web (dashboard 24/7)
-
-Con el entorno ya instalado (`pip install -e .`):
+## Cómo arrancarlo en local
 
 ```powershell
-noesis-web
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e .
+noesis-web        # → http://127.0.0.1:8000
 ```
 
-Abre el navegador en **http://127.0.0.1:8000**. Es una app **multipágina** con menú
-lateral; cada apartado es una vista en profundidad:
+- Login de demo: **demo@bynoesis.com / demo1234**.
+- CLI de prueba (chat tipo WhatsApp): `py -m noesis`.
+- La IA es opcional: sin `ANTHROPIC_API_KEY` en `.env`, el chat funciona con el
+  cerebro local. Sin `DATABASE_URL` usa SQLite local.
+- Tests: `python -m pytest tests/` (también corren en CI en cada PR).
 
-- `/b/1/resumen` → visión general (lo importante primero).
-- `/b/1/ingresos` · `/costes` · `/facturas` · `/cobros` → finanzas, cada una con sus
-  métricas, gráficos y explicaciones.
-- `/b/1/agenda` · `/clientes` → operativa.
-- `/b/1/asistente` → **chatbot dentro de la web** (cerebro local gratis + IA opcional).
-- `/b/1/ajustes` → negocio, WhatsApp, informes y privacidad.
-- `/onboarding` → alta de un negocio nuevo + pasos para conectar su WhatsApp.
+## Principios
 
-### Diseño y coste interno
-- Sistema de diseño propio (`web/static/app.css`), **sin Tailwind ni CDNs**.
-- Chart.js servido en local (`web/static/vendor/`): los gráficos no llaman a terceros.
-- Chatbot **híbrido**: el cerebro local (`nlu.py`) resuelve los comandos frecuentes
-  sin coste ni APIs; solo lo complejo usa IA (Claude) si hay `ANTHROPIC_API_KEY`.
+- **Mínimas dependencias**: sin CDNs en runtime, sistema de diseño propio,
+  Chart.js servido en local, stdlib siempre que se puede.
+- **Privacidad y margen**: lo rutinario se resuelve en local sin coste por uso;
+  solo lo complejo llama al LLM.
+- **Aislamiento multi-empresa estricto**: toda lectura/escritura filtrada por
+  `business_id`, con FKs compuestas en Postgres y auditorías de seguridad periódicas.
+- **Integraciones detrás de adaptadores**: cambiar de proveedor = tocar un archivo.
 
-Para producción 24/7 en un servidor:
-
-```bash
-uvicorn noesis.web.server:app --host 0.0.0.0 --port 8000
-```
-
-## Próximos pasos del roadmap
-
-- [ ] v1: agenda + cobros + resumen diario proactivo (núcleo del prototipo)
-- [ ] Conectar WhatsApp real (Meta Cloud API)
-- [ ] Transcripción de audios (Whisper)
-- [ ] Facturación legal vía Holded/Quipu API (Verifactu)
-- [ ] Panel web
+Manual para agentes de IA en [`AGENTS.md`](AGENTS.md) · visión y decisiones en
+[`docs/Inicio.md`](docs/Inicio.md) · roadmap en [`docs/Roadmap.md`](docs/Roadmap.md).
