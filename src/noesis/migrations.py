@@ -1266,6 +1266,34 @@ def _downgrade_whatsapp_brain(conn) -> None:
     # SQLite conserva la columna opcional para evitar reconstruir businesses.
 
 
+def _upgrade_gestoria(conn) -> None:
+    """Datos de la gestoría del negocio y token del portal de descarga."""
+    columns = _column_names(conn, "businesses")
+    for column, ddl in (
+        ("gestoria_name", "TEXT"),
+        ("gestoria_email", "TEXT"),
+        ("gestoria_cadence", "TEXT NOT NULL DEFAULT 'off'"),
+        ("gestoria_token", "TEXT"),
+    ):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {column} {ddl}")
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_businesses_gestoria_token "
+        "ON businesses(gestoria_token)"
+    )
+
+
+def _downgrade_gestoria(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS uq_businesses_gestoria_token")
+    if conn.dialect == "postgres":
+        for column in ("gestoria_name", "gestoria_email", "gestoria_cadence",
+                       "gestoria_token"):
+            conn.execute(
+                f"ALTER TABLE businesses DROP COLUMN IF EXISTS {column}"
+            )
+    # SQLite conserva las columnas opcionales para evitar reconstruir businesses.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1282,6 +1310,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (12, "gasto_por_foto", _upgrade_expense_from_photo, _downgrade_expense_from_photo),
     (13, "recordatorios_cobro", _upgrade_payment_reminders, _downgrade_payment_reminders),
     (14, "cerebro_whatsapp", _upgrade_whatsapp_brain, _downgrade_whatsapp_brain),
+    (15, "gestoria", _upgrade_gestoria, _downgrade_gestoria),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

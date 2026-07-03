@@ -191,6 +191,63 @@
       </form>
     </div>
   </div>
+
+  <div class="card" id="gestoria">
+    <div class="card-h"><h2>Tu gestoría</h2>
+      {% if business.gestoria_cadence and business.gestoria_cadence != 'off' %}
+      <span class="badge b-green">{{ business.gestoria_cadence }}</span>
+      {% else %}
+      <span class="badge b-gray">sin conectar</span>
+      {% endif %}
+    </div>
+    <div class="card-b">
+      {% if request.query_params.get('error') == 'gestoria' %}
+      <div class="banner warn" style="margin-bottom:12px">
+        Revisa los datos: para activar el envío hace falta el email de la gestoría.
+      </div>
+      {% endif %}
+      {% if request.query_params.get('ok') == 'gestoria-enviado' %}
+      <div class="banner ok" style="margin-bottom:12px">
+        Aviso enviado a tu gestoría con el enlace del último período.
+      </div>
+      {% elif request.query_params.get('ok') == 'gestoria-enlace' %}
+      <div class="banner ok" style="margin-bottom:12px">
+        Paquete listo. El email no está configurado: comparte tú el enlace de abajo.
+      </div>
+      {% endif %}
+      <p class="muted" style="margin-bottom:12px">
+        Al cerrar cada período, tu gestoría recibe sola las facturas emitidas
+        (PDF y CSV), los gastos con sus justificantes y un resumen fiscal.
+        Se acabó la caja de zapatos.
+      </p>
+      <form method="post" action="/b/{{ business.id }}/gestoria">
+        <label class="fld">Nombre de la gestoría</label>
+        <input class="input" name="gestoria_name" maxlength="120"
+          value="{{ business.gestoria_name or '' }}" placeholder="Gestoría García">
+        <label class="fld" style="margin-top:10px">Email de la gestoría</label>
+        <input class="input" type="email" name="gestoria_email" maxlength="200"
+          value="{{ business.gestoria_email or '' }}"
+          placeholder="clientes@gestoria.com">
+        <label class="fld" style="margin-top:10px">Cada cuánto se le envía</label>
+        <select class="input" name="gestoria_cadence">
+          <option value="off" {{ 'selected' if (business.gestoria_cadence or 'off') == 'off' }}>No enviar</option>
+          <option value="mensual" {{ 'selected' if business.gestoria_cadence == 'mensual' }}>Cada mes</option>
+          <option value="trimestral" {{ 'selected' if business.gestoria_cadence == 'trimestral' }}>Cada trimestre</option>
+        </select>
+        <button class="btn primary" style="margin-top:14px">Guardar gestoría</button>
+      </form>
+      {% if gestoria_link %}
+      <div class="insight" style="margin-top:14px">
+        Enlace privado de tu gestoría:
+        <a href="{{ gestoria_link }}" target="_blank" rel="noopener">{{ gestoria_link }}</a>
+      </div>
+      <form method="post" action="/b/{{ business.id }}/gestoria/send-now"
+            style="margin-top:10px">
+        <button class="btn">Enviar el último período ahora</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:16px">

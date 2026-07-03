@@ -397,6 +397,57 @@ def portal_invoice_pdf(request: Request, token: str, invoice_id: int):
                     headers={"Content-Disposition": f'inline; filename="{name}"'})
 
 
+# ====================================================== PORTAL DE GESTORÍA === #
+# Enlace privado para la gestoría del negocio: lista los períodos cerrados y
+# descarga el paquete (facturas PDF+CSV, gastos con justificantes, resumen).
+# Público a propósito (la gestoría no tiene cuenta); token revocable de 192 bits
+# con el mismo freno anti-escaneo que el portal del cliente.
+@app.get("/g/{token}", response_class=HTMLResponse)
+def gestoria_home(request: Request, token: str):
+    if _token_scan_blocked(request, "gestoria"):
+        return Response("Demasiados intentos. Espera unos minutos.",
+                        status_code=429)
+    business = db.resolve_gestoria_token(token)
+    if not business:
+        _record_token_miss(request, "gestoria")
+        return TEMPLATES.TemplateResponse(
+            request, "gestoria.html",
+            {"token": token, "business": None, "periods": []},
+            status_code=404)
+    return TEMPLATES.TemplateResponse(request, "gestoria.html", {
+        "token": token,
+        "business": business,
+        "periods": db.gestoria_periods(business["id"]),
+    })
+
+
+@app.get("/g/{token}/paquete/{label}")
+def gestoria_package(request: Request, token: str, label: str):
+    if _token_scan_blocked(request, "gestoria"):
+        return Response("Demasiados intentos. Espera unos minutos.",
+                        status_code=429)
+    business = db.resolve_gestoria_token(token)
+    if not business:
+        _record_token_miss(request, "gestoria")
+        return JSONResponse({"error": "Enlace no válido."}, status_code=404)
+    from . import gestoria as gestoria_service
+    try:
+        package = gestoria_service.build_package(business["id"], label)
+    except ValueError:
+        return JSONResponse({"error": "Período no válido."}, status_code=404)
+    if not package:
+        return JSONResponse({"error": "Período no válido."}, status_code=404)
+    data, _meta = package
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="noesis-{label}.zip"'
+        },
+    )
+
+
 # ======================================================== PORTAL DE FICHAJE === #
 def _worker_token_verified(request: Request, token: str) -> bool:
     expected = hashlib.sha256(token.encode()).hexdigest()
@@ -611,6 +662,10 @@ def page(request: Request, business_id: int, page: str):
         context["wa_reports"] = db.resolve_whatsapp_reports(
             biz.get("whatsapp_reports")
         )
+        if biz.get("gestoria_token"):
+            context["gestoria_link"] = (
+                f"{config.BASE_URL}/g/{biz['gestoria_token']}"
+            )
         context["verifactu_errors"] = db.verifactu_configuration_errors()
         context["verifactu_ready"] = not context["verifactu_errors"]
         context["verifactu_transmission_enabled"] = (
@@ -1845,6 +1900,55 @@ def update_whatsapp_reports(
     db.record_product_event(business_id, "whatsapp_reports_updated")
     return RedirectResponse(
         f"/b/{business_id}/ajustes#informes", status_code=303
+    )
+
+
+@app.post("/b/{business_id}/gestoria")
+def update_gestoria(
+    business_id: int,
+    gestoria_name: str = Form(""),
+    gestoria_email: str = Form(""),
+    gestoria_cadence: str = Form("off"),
+):
+    try:
+        settings = db.update_gestoria_settings(
+            business_id,
+            name=gestoria_name,
+            email=gestoria_email,
+            cadence=gestoria_cadence,
+        )
+    except ValueError:
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=gestoria#gestoria",
+            status_code=303,
+        )
+    if settings is None:
+        return RedirectResponse("/login", status_code=303)
+    db.record_product_event(business_id, "gestoria_settings_updated")
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes#gestoria", status_code=303
+    )
+
+
+@app.post("/b/{business_id}/gestoria/send-now")
+def gestoria_send_now(business_id: int):
+    from . import gestoria as gestoria_service
+    business = db.get_business(business_id)
+    if not business or (business.get("gestoria_cadence") or "off") == "off":
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=gestoria#gestoria",
+            status_code=303,
+        )
+    label = gestoria_service.previous_label(business["gestoria_cadence"])
+    emailed = gestoria_service.notify_gestoria(business, label)
+    db.record_product_event(
+        business_id, "gestoria_send_now",
+        json.dumps({"label": label, "emailed": bool(emailed)},
+                   separators=(",", ":")),
+    )
+    ok = "gestoria-enviado" if emailed else "gestoria-enlace"
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes?ok={ok}#gestoria", status_code=303
     )
 
 

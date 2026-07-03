@@ -2,11 +2,14 @@
 
 > **Qué es este documento**: el diseño completo, pensado y decidido, para convertir
 > WhatsApp en el verdadero centro de Noesis. Escrito el 2026-07-03 a petición del
-> founder ("el punto más diferencial es el WhatsApp, no las facturas") para
-> ejecutarlo cuando haya créditos (Fable o Codex). No hay que re-pensar nada:
-> cada fase tiene el diseño, los archivos a tocar y los criterios de prueba.
-> Leer junto a `AGENTS.md`. Última migración en `main`: **12** (la 13 va en el
-> PR #15 de recordatorios); la primera libre para este plan es la **14**.
+> founder ("el punto más diferencial es el WhatsApp, no las facturas").
+>
+> ✅ **CONSTRUIDO el mismo día** (migración 14): W0 (router de mèdia +
+> confirmaciones SÍ/NO), W1 (cierre del día, aviso fiscal trimestral, config en
+> Ajustes), W2 (foto de ticket → borrador de gasto por WhatsApp) y W4 (voz con
+> fallback Groq → whisper local; falta solo GROQ_API_KEY, clic del founder).
+> **Pendiente: W3** (PDF → gasto de proveedor / factura histórica con
+> `source='importada'`) y, como siempre, **encender Meta** para el e2e real.
 
 ---
 

@@ -300,6 +300,34 @@ def send_weekly_summaries() -> None:
         )
 
 
+def send_gestoria_packages(now: datetime | None = None) -> int:
+    """Al cerrar cada período, avisa a la gestoría de que su paquete está listo."""
+    from . import gestoria
+
+    point = now or datetime.now()
+    if point.day > 5:
+        return 0
+    notified = 0
+    for business in db.list_businesses():
+        cadence = business.get("gestoria_cadence") or "off"
+        if cadence == "off" or not business.get("gestoria_email"):
+            continue
+        if cadence == "trimestral" and point.month not in (1, 4, 7, 10):
+            continue
+        label = gestoria.previous_label(cadence, point.date())
+        if not db.claim_scheduled_run(f"gestoria:{business['id']}:{label}"):
+            continue
+        emailed = gestoria.notify_gestoria(business, label)
+        db.record_product_event(
+            business["id"],
+            "gestoria_package_ready",
+            json.dumps({"label": label, "emailed": bool(emailed)},
+                       separators=(",", ":")),
+        )
+        notified += 1
+    return notified
+
+
 def process_whatsapp_outbox() -> None:
     """Procesa mensajes vencidos; la BD coordina las réplicas."""
     from . import whatsapp
@@ -413,6 +441,14 @@ def start_scheduler() -> BackgroundScheduler:
         hour=10,
         minute=0,
         id="tax-notice",
+    )
+    scheduler.add_job(
+        send_gestoria_packages,
+        "cron",
+        day="1-5",
+        hour=9,
+        minute=30,
+        id="gestoria",
     )
     scheduler.add_job(
         process_whatsapp_outbox,

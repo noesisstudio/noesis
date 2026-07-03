@@ -307,6 +307,153 @@ def update_payment_details(business_id, *, iban=None, bizum=None, note=None) -> 
     return get_business(business_id)
 
 
+# ----------------------------------------------------------------- Gestoría ---
+GESTORIA_CADENCES = {"off", "mensual", "trimestral"}
+
+
+def update_gestoria_settings(business_id, *, name=None, email=None,
+                             cadence="off") -> dict | None:
+    """Configura la gestoría del negocio. Al activarla se garantiza el token."""
+    cadence = (cadence or "off").strip().lower()
+    if cadence not in GESTORIA_CADENCES:
+        raise ValueError("La cadencia debe ser mensual, trimestral u off.")
+    name = (name or "").strip()[:120] or None
+    email = (email or "").strip().lower()[:200] or None
+    if cadence != "off":
+        if not email or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            raise ValueError(
+                "Indica el email de la gestoría para poder avisarla."
+            )
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE businesses SET gestoria_name=?, gestoria_email=?, "
+            "gestoria_cadence=? WHERE id=?",
+            (name, email, cadence, business_id),
+        )
+        if cur.rowcount != 1:
+            return None
+    if cadence != "off":
+        get_or_create_gestoria_token(business_id)
+    return get_business(business_id)
+
+
+def get_or_create_gestoria_token(business_id) -> str | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT gestoria_token FROM businesses WHERE id=?",
+            (business_id,),
+        ).fetchone()
+        if not row:
+            return None
+        if row["gestoria_token"]:
+            return row["gestoria_token"]
+        token = secrets.token_urlsafe(24)
+        conn.execute(
+            "UPDATE businesses SET gestoria_token=? WHERE id=?",
+            (token, business_id),
+        )
+        return token
+
+
+def revoke_gestoria_token(business_id) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET gestoria_token=NULL WHERE id=?",
+            (business_id,),
+        )
+
+
+def resolve_gestoria_token(token: str) -> dict | None:
+    if not token:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM businesses WHERE gestoria_token=?",
+            (token,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def gestoria_period_range(label: str) -> tuple[str, str]:
+    """'2026-06' → mes natural; '2026-T2' → trimestre. Valida el formato."""
+    label = (label or "").strip()
+    match_month = re.fullmatch(r"(\d{4})-(0[1-9]|1[0-2])", label)
+    if match_month:
+        year, month = int(match_month.group(1)), int(match_month.group(2))
+        start = date(year, month, 1)
+        end = (
+            date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+        ) - timedelta(days=1)
+        return start.isoformat(), end.isoformat()
+    match_quarter = re.fullmatch(r"(\d{4})-T([1-4])", label)
+    if match_quarter:
+        year, quarter = int(match_quarter.group(1)), int(match_quarter.group(2))
+        start = date(year, 3 * quarter - 2, 1)
+        end_month = 3 * quarter
+        end = (
+            date(year + 1, 1, 1) if end_month == 12
+            else date(year, end_month + 1, 1)
+        ) - timedelta(days=1)
+        return start.isoformat(), end.isoformat()
+    raise ValueError("Período no válido.")
+
+
+def _closed_period_labels(cadence: str, count: int, today: date) -> list[str]:
+    labels = []
+    if cadence == "trimestral":
+        year, quarter = today.year, (today.month - 1) // 3 + 1
+        for _ in range(count):
+            quarter -= 1
+            if quarter == 0:
+                quarter, year = 4, year - 1
+            labels.append(f"{year}-T{quarter}")
+    else:
+        year, month = today.year, today.month
+        for _ in range(count):
+            month -= 1
+            if month == 0:
+                month, year = 12, year - 1
+            labels.append(f"{year}-{month:02d}")
+    return labels
+
+
+def gestoria_invoices_in(business_id, start: str, end: str) -> list[dict]:
+    return [
+        invoice for invoice in list_invoices(business_id)
+        if invoice.get("status") in ("enviada", "parcial", "cobrada")
+        and start <= str(invoice.get("issued_at") or "")[:10] <= end
+    ]
+
+
+def gestoria_expenses_in(business_id, start: str, end: str) -> list[dict]:
+    out = []
+    for expense in list_expenses(business_id):
+        day = str(expense.get("spent_on") or expense.get("created_at") or "")[:10]
+        if start <= day <= end:
+            out.append(expense)
+    return out
+
+
+def gestoria_periods(business_id, count: int = 8) -> list[dict]:
+    """Últimos períodos cerrados según la cadencia, con recuentos."""
+    business = get_business(business_id)
+    if not business:
+        return []
+    cadence = business.get("gestoria_cadence") or "off"
+    if cadence == "off":
+        return []
+    periods = []
+    for label in _closed_period_labels(cadence, count, date.today()):
+        start, end = gestoria_period_range(label)
+        invoices = gestoria_invoices_in(business_id, start, end)
+        expenses = gestoria_expenses_in(business_id, start, end)
+        periods.append({
+            "label": label, "start": start, "end": end,
+            "invoices": len(invoices), "expenses": len(expenses),
+        })
+    return periods
+
+
 def parse_payment_reminder_days(value) -> list[int]:
     """Normaliza una cadencia corta, ordenada y segura para el scheduler."""
     if isinstance(value, (list, tuple, set)):

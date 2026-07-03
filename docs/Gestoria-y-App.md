@@ -2,9 +2,13 @@
 
 > Complemento de [`WhatsApp-Cerebro.md`](WhatsApp-Cerebro.md). Escrito el 2026-07-03
 > tras las preguntas del founder: conexión con la gestoría de cada cliente, app
-> nativa con widget, y qué le falta al producto a nivel de negocio. Diseño decidido
-> para ejecutar sin re-pensar. Migraciones: la 14 está reservada por el plan
-> WhatsApp (W0); este documento usa la **15**.
+> nativa con widget, y qué le falta al producto a nivel de negocio.
+>
+> ✅ **El módulo gestoría (§1) está CONSTRUIDO** (migración 15, mismo día):
+> portal `/g/{token}`, paquete ZIP por período, job mensual/trimestral, tarjeta
+> en Ajustes con "Enviar ahora". Falta SMTP configurado para el email automático
+> (sin él, el autónomo comparte el enlace a mano). §2 (app) y §3 (huecos de
+> negocio) siguen pendientes según su secuencia.
 
 ---
 

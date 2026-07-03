@@ -2375,5 +2375,168 @@ class TranscriptionChainTestCase(unittest.TestCase):
         self.assertEqual(text, "factura a Carlos de 100")
 
 
+class GestoriaTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def test_settings_validation_and_token_lifecycle(self):
+        business, _ = self.make_business("Gestoría A")
+        with self.assertRaises(ValueError):
+            db.update_gestoria_settings(
+                business["id"], cadence="semanal", email="a@b.com"
+            )
+        with self.assertRaises(ValueError):
+            db.update_gestoria_settings(business["id"], cadence="mensual")
+        updated = db.update_gestoria_settings(
+            business["id"], name="Gestoría García",
+            email="Clientes@Gestoria.com", cadence="mensual",
+        )
+        self.assertEqual(updated["gestoria_email"], "clientes@gestoria.com")
+        token = updated["gestoria_token"]
+        self.assertTrue(token)
+        # El token es estable mientras no se revoque.
+        self.assertEqual(db.get_or_create_gestoria_token(business["id"]), token)
+        resolved = db.resolve_gestoria_token(token)
+        self.assertEqual(resolved["id"], business["id"])
+        db.revoke_gestoria_token(business["id"])
+        self.assertIsNone(db.resolve_gestoria_token(token))
+
+    def test_periods_and_ranges(self):
+        business, _ = self.make_business("Gestoría Periodos")
+        self.assertEqual(db.gestoria_periods(business["id"]), [])
+        db.update_gestoria_settings(
+            business["id"], email="g@g.com", cadence="mensual"
+        )
+        periods = db.gestoria_periods(business["id"])
+        self.assertEqual(len(periods), 8)
+        previous_month = (date.today().replace(day=1) - timedelta(days=1))
+        self.assertEqual(periods[0]["label"], f"{previous_month:%Y-%m}")
+        # Rangos: mes y trimestre.
+        self.assertEqual(
+            db.gestoria_period_range("2026-06"), ("2026-06-01", "2026-06-30")
+        )
+        self.assertEqual(
+            db.gestoria_period_range("2026-T2"), ("2026-04-01", "2026-06-30")
+        )
+        with self.assertRaises(ValueError):
+            db.gestoria_period_range("2026-13")
+        with self.assertRaises(ValueError):
+            db.gestoria_period_range("../../etc")
+
+    def test_package_contains_invoices_expenses_and_receipts(self):
+        import zipfile as zipfile_module
+        from noesis.documents import service as docservice
+        from noesis.web import gestoria
+
+        business, client = self.make_business("Gestoría Paquete")
+        other, _ = self.make_business("Gestoría Ajena")
+        invoice = db.add_invoice(
+            client["id"], "Reparación", 500, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+        document = docservice.upload(
+            business["id"], "ticket.jpg", b"\xff\xd8\xff\xe0foto",
+            kind="ticket", run_ocr=False,
+        )
+        db.add_expense(
+            "Material", 60.5, vat_rate=21, document_id=document["id"],
+            business_id=business["id"],
+        )
+        label = f"{date.today():%Y-%m}"
+        data, meta = gestoria.build_package(business["id"], label)
+        self.assertEqual(meta["invoices"], 1)
+        self.assertEqual(meta["expenses"], 1)
+        names = zipfile_module.ZipFile(BytesIO(data)).namelist()
+        self.assertIn("facturas.csv", names)
+        self.assertIn("gastos.csv", names)
+        self.assertIn("resumen.pdf", names)
+        self.assertEqual(
+            len([n for n in names if n.startswith("facturas/")]), 1
+        )
+        self.assertEqual(
+            len([n for n in names if n.startswith("justificantes/")]), 1
+        )
+        # El paquete del negocio vacío no arrastra nada del otro.
+        empty, empty_meta = gestoria.build_package(other["id"], label)
+        self.assertEqual(empty_meta["invoices"], 0)
+        empty_names = zipfile_module.ZipFile(BytesIO(empty)).namelist()
+        self.assertEqual(
+            [n for n in empty_names if n.startswith("justificantes/")], []
+        )
+
+    def test_public_portal_and_send_now(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Gestoría Portal")
+        db.update_gestoria_settings(
+            business["id"], email="g@gestoria.com", cadence="mensual"
+        )
+        token = db.get_business(business["id"])["gestoria_token"]
+        db.create_user(
+            "gestoria-owner@example.com",
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                page = client.get(f"/g/{token}")
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("Gestoría Portal", page.text)
+                self.assertEqual(client.get("/g/token-falso").status_code, 404)
+                label = f"{date.today():%Y-%m}"
+                package = client.get(f"/g/{token}/paquete/{label}")
+                self.assertEqual(package.status_code, 200)
+                self.assertEqual(
+                    package.headers["content-type"], "application/zip"
+                )
+                bad = client.get(f"/g/{token}/paquete/2026-99")
+                self.assertEqual(bad.status_code, 404)
+
+                login = client.post("/login", data={
+                    "email": "gestoria-owner@example.com",
+                    "password": "password-segura-123",
+                }, follow_redirects=False)
+                self.assertEqual(login.status_code, 303)
+                sent = client.post(
+                    f"/b/{business['id']}/gestoria/send-now",
+                    follow_redirects=False,
+                )
+                self.assertEqual(sent.status_code, 303)
+                self.assertIn("gestoria", sent.headers["location"])
+
+    def test_scheduler_notifies_once_per_period(self):
+        from noesis.adapters import email as email_adapter
+
+        business, _ = self.make_business("Gestoría Job")
+        db.update_gestoria_settings(
+            business["id"], email="g@gestoria.com", cadence="mensual"
+        )
+        off_business, _ = self.make_business("Gestoría Off")
+        first_of_month = datetime(2026, 7, 2, 9, 30)
+        emails = []
+        with (
+            patch.object(email_adapter, "available", return_value=True),
+            patch.object(email_adapter, "send_email",
+                         side_effect=lambda to, subject, body, **kw:
+                         emails.append(to) or True),
+        ):
+            self.assertEqual(
+                scheduler.send_gestoria_packages(now=first_of_month), 1
+            )
+            self.assertEqual(
+                scheduler.send_gestoria_packages(now=first_of_month), 0
+            )
+            # Pasado el día 5 no se dispara.
+            self.assertEqual(
+                scheduler.send_gestoria_packages(
+                    now=datetime(2026, 7, 9, 9, 30)
+                ),
+                0,
+            )
+        self.assertEqual(emails, ["g@gestoria.com"])
+
+
 if __name__ == "__main__":
     unittest.main()

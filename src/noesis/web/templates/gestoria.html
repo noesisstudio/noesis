@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Documentación · Noesis</title>
+  <link rel="icon" href="/static/noesis-mark.svg">
+  <style>
+    :root { --forest:#14463b; --teal:#2e8b74; --cream:#f4f1e8; --ink:#1c2220; }
+    * { box-sizing:border-box; margin:0; }
+    body { font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+           background:#f2f3f1; color:var(--ink); padding:0 0 48px; }
+    .head { background:var(--forest); color:var(--cream); padding:26px 20px 22px; }
+    .head .brand { font-size:13px; letter-spacing:.08em; text-transform:uppercase;
+                   opacity:.75; }
+    .head h1 { font-size:21px; margin-top:6px; font-weight:650; }
+    .wrap { max-width:640px; margin:0 auto; padding:0 16px; }
+    .card { background:#fff; border:1px solid #e2e5e1; border-radius:12px;
+            padding:18px; margin-top:16px; }
+    .muted { color:#6e7672; font-size:13px; }
+    .period { display:flex; align-items:center; justify-content:space-between;
+              gap:12px; padding:13px 0; border-bottom:1px solid #edefec; }
+    .period:last-child { border-bottom:0; }
+    .period b { font-size:15px; }
+    .btn { display:inline-block; background:var(--forest); color:#fff;
+           text-decoration:none; padding:8px 14px; border-radius:8px;
+           font-size:13.5px; font-weight:600; white-space:nowrap; }
+    .btn:hover { background:var(--teal); }
+    .empty { text-align:center; padding:36px 16px; color:#6e7672; }
+    .foot { text-align:center; margin-top:26px; font-size:12.5px; color:#8a918d; }
+    .foot a { color:var(--teal); text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <div class="wrap">
+      <div class="brand">Noesis · documentación para la gestoría</div>
+      <h1>{{ business.name if business else "Enlace no válido" }}</h1>
+      {% if business and business.nif %}
+      <div class="muted" style="color:#bcd4cb">NIF {{ business.nif }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="wrap">
+    {% if not business %}
+    <div class="card empty">
+      Este enlace no es válido o ha sido revocado.<br>
+      Pide a tu cliente que te lo vuelva a enviar desde Noesis.
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="muted">
+        Cada paquete incluye las facturas emitidas (PDF y CSV), los gastos con
+        sus justificantes y un resumen fiscal del período.
+      </div>
+      {% if not periods %}
+      <div class="empty">Todavía no hay períodos cerrados con actividad.</div>
+      {% endif %}
+      {% for p in periods %}
+      <div class="period">
+        <div>
+          <b>{{ p.label }}</b>
+          <div class="muted">
+            {{ p.invoices }} factura(s) · {{ p.expenses }} gasto(s)
+          </div>
+        </div>
+        <a class="btn" href="/g/{{ token }}/paquete/{{ p.label }}">Descargar</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="foot">
+      Generado por <a href="https://bynoesis.com">Noesis</a> — el copiloto de
+      negocio por WhatsApp. Enlace privado: no lo compartas.
+    </div>
+  </div>
+</body>
+</html>
