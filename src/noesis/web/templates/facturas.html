@@ -4,8 +4,8 @@
   <div class="page-title">
     <div class="kicker">Facturación</div>
     <h1>Facturas</h1>
-    <p>Todas tus facturas y su estado. El flujo debe ser sencillo: borrador,
-       enviada, cobrada, con PDF y CSV siempre a mano.</p>
+    <p>Todas tus facturas y su estado: borrador, enviada, cobrada parcialmente o
+       cobrada por completo, con PDF y CSV siempre a mano.</p>
   </div>
   <div class="page-actions">
     <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">Descargar CSV</a>
@@ -29,6 +29,7 @@
     <div class="row" id="filters">
       <button class="btn primary" data-f="todas">Todas</button>
       <button class="btn" data-f="enviada">Enviadas</button>
+      <button class="btn" data-f="parcial">Parciales</button>
       <button class="btn" data-f="cobrada">Cobradas</button>
       <button class="btn" data-f="borrador">Borradores</button>
     </div>
@@ -146,16 +147,17 @@ async function newInvoice(){
 async function load() {
   ALL = await api('/invoices');
   const emit = ALL.filter(i=>i.status!=='borrador');
-  const paid = ALL.filter(i=>i.status==='cobrada');
   el('f-total').textContent = eur(emit.reduce((a,b)=>a+b.total,0));
   el('f-issued-n').textContent = emit.length + ' emitida(s)';
-  el('f-paid').textContent = eur(paid.reduce((a,b)=>a+b.total,0));
-  el('f-paid-pct').textContent = emit.length ? pct(paid.length / emit.length * 100) + ' de facturas' : '';
-  el('f-pend').textContent = eur(ALL.filter(i=>i.status==='enviada').reduce((a,b)=>a+b.total,0));
+  const paidAmount = emit.reduce((a,b)=>a+b.paid_amount,0);
+  const issuedAmount = emit.reduce((a,b)=>a+b.total,0);
+  el('f-paid').textContent = eur(paidAmount);
+  el('f-paid-pct').textContent = issuedAmount ? pct(paidAmount / issuedAmount * 100) + ' del importe' : '';
+  el('f-pend').textContent = eur(emit.reduce((a,b)=>a+b.remaining_amount,0));
   el('f-draft').textContent = ALL.filter(i=>i.status==='borrador').length;
   render('todas');
 }
-function badge(s){ return s==='cobrada'?'b-green':s==='enviada'?'b-amber':'b-gray'; }
+function badge(s){ return s==='cobrada'?'b-green':(s==='enviada'||s==='parcial')?'b-amber':'b-gray'; }
 function verifactuState(i) {
   if (!i.verifactu_registered) return '<span class="meta">—</span>';
   const states = {
@@ -190,7 +192,7 @@ function render(f) {
     <td class="t-right table-actions">
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
       ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Enviar</button>`:''}
-      ${i.status==='enviada'?`<button class="btn sm" onclick="pay(${i.id})">Cobrada</button>`:''}
+      ${['enviada','parcial'].includes(i.status)?`<button class="btn sm" onclick="pay(${i.id})">Cobrar restante</button>`:''}
       ${i.status!=='borrador'?`<button class="btn sm" onclick="rectify(${i.id})">Rectificar</button>`:''}
       ${i.status==='borrador'?`<button class="iconbtn" title="Borrar borrador" onclick="del(${i.id})">${TRASH}</button>`:''}
     </td>

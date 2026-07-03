@@ -119,6 +119,25 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(migrations.current_version(), 1)
         self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
 
+    def test_partial_payment_migration_backfills_paid_invoices(self):
+        business, client = self.make_business()
+        invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Cobro anterior", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        db.mark_invoice_paid(invoice["id"], business["id"])
+
+        self.assertEqual(migrations.downgrade(10), 10)
+        self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
+
+        payments = db.list_invoice_payments(invoice["id"], business["id"])
+        self.assertEqual(len(payments), 1)
+        self.assertEqual(payments[0]["amount"], 121)
+        self.assertEqual(payments[0]["method"], "registro_anterior")
+
     def test_invoice_issue_is_idempotent_and_immutable(self):
         business, client = self.make_business()
         invoice = db.add_invoice(
@@ -135,7 +154,93 @@ class BackendTestCase(unittest.TestCase):
             db.mark_invoice_paid(invoice["id"], business["id"])["status"],
             "cobrada",
         )
-        self.assertIsNone(db.mark_invoice_paid(invoice["id"], business["id"]))
+        again = db.mark_invoice_paid(invoice["id"], business["id"])
+        self.assertEqual(again["payment_status"], "pagada")
+        self.assertEqual(
+            len(db.list_invoice_payments(invoice["id"], business["id"])), 1
+        )
+
+    def test_partial_payments_derive_state_and_reject_overpayment(self):
+        business, client = self.make_business()
+        invoice = db.add_invoice(
+            client["id"], "Instalación por fases", 100,
+            business_id=business["id"],
+        )
+        invoice = db.issue_invoice(invoice["id"], business["id"])
+
+        payment = db.add_invoice_payment(
+            invoice["id"], 40, method="transferencia", note="Anticipo",
+            business_id=business["id"],
+        )
+        partial = db.get_invoice(invoice["id"], business["id"])
+
+        self.assertEqual(payment["amount"], 40)
+        self.assertEqual(partial["status"], "parcial")
+        self.assertEqual(partial["payment_status"], "parcial")
+        self.assertEqual(partial["paid_amount"], 40)
+        self.assertEqual(partial["remaining_amount"], 81)
+        with self.assertRaises(ValueError):
+            db.add_invoice_payment(
+                invoice["id"], 81.01, business_id=business["id"]
+            )
+
+        db.add_invoice_payment(
+            invoice["id"], 81, method="bizum", business_id=business["id"]
+        )
+        paid = db.get_invoice(invoice["id"], business["id"])
+        self.assertEqual(paid["status"], "cobrada")
+        self.assertEqual(paid["payment_status"], "pagada")
+        self.assertEqual(paid["remaining_amount"], 0)
+
+    def test_partial_payments_are_isolated_and_feed_cash_metrics(self):
+        business_a, client_a = self.make_business("Cobros A")
+        business_b, client_b = self.make_business("Cobros B")
+        invoice_a = db.issue_invoice(
+            db.add_invoice(
+                client_a["id"], "Servicio A", 100,
+                business_id=business_a["id"],
+            )["id"],
+            business_a["id"],
+        )
+        invoice_b = db.issue_invoice(
+            db.add_invoice(
+                client_b["id"], "Servicio B", 200,
+                business_id=business_b["id"],
+            )["id"],
+            business_b["id"],
+        )
+
+        with self.assertRaises(ValueError):
+            db.add_invoice_payment(
+                invoice_b["id"], 10, business_id=business_a["id"]
+            )
+        self.assertEqual(
+            db.list_invoice_payments(invoice_b["id"], business_a["id"]), []
+        )
+        self.assertIsNone(
+            db.invoice_paid_amount(invoice_b["id"], business_a["id"])
+        )
+
+        db.add_invoice_payment(
+            invoice_a["id"], 40, method="tarjeta",
+            business_id=business_a["id"],
+        )
+        pending = db.pending_payments(business_a["id"])
+        month = db.month_billing(business_id=business_a["id"])
+        analysis = db.financial_analysis(business_a["id"])
+
+        self.assertEqual(pending[0]["invoice_total"], 121)
+        self.assertEqual(pending[0]["total"], 81)
+        self.assertEqual(month["collected"], 40)
+        self.assertEqual(month["pending"], 81)
+        self.assertEqual(analysis["collected"], 40)
+        self.assertEqual(analysis["pending"], 81)
+        self.assertEqual(db.invoice_paid_amount(invoice_b["id"], business_b["id"]), 0)
+
+        exported = db.export_business_data(business_a["id"])
+        client_export = db.export_client_data(client_a["id"], business_a["id"])
+        self.assertEqual(len(exported["invoice_payments"]), 1)
+        self.assertEqual(len(client_export["invoice_payments"]), 1)
 
     def test_quote_acceptance_is_idempotent(self):
         business, client = self.make_business()
@@ -559,6 +664,88 @@ class PortalHttpTestCase(BackendTestCase):
                     db.get_invoice(accepted["invoice_id"], business_a["id"])["status"],
                     "borrador",
                 )
+
+    def test_payment_api_is_isolated_and_portal_shows_remaining_amount(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business_a, client_a = self.make_business("API Cobros A")
+        business_b, client_b = self.make_business("API Cobros B")
+        invoice_a = db.issue_invoice(
+            db.add_invoice(
+                client_a["id"], "Anticipo API", 100,
+                business_id=business_a["id"],
+            )["id"],
+            business_a["id"],
+        )
+        invoice_b = db.issue_invoice(
+            db.add_invoice(
+                client_b["id"], "Factura ajena", 100,
+                business_id=business_b["id"],
+            )["id"],
+            business_b["id"],
+        )
+        db.update_payment_details(
+            business_a["id"], iban="ES9121000418450200051332"
+        )
+        token = db.get_or_create_portal_token(
+            business_a["id"], client_a["id"]
+        )
+        db.create_user(
+            "cobros-api@example.com",
+            auth.hash_password("password-segura-123"),
+            business_a["id"],
+        )
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": "cobros-api@example.com",
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                created = client.post(
+                    f"/api/{business_a['id']}/invoices/{invoice_a['id']}/payments",
+                    json={"amount": 40, "method": "transferencia"},
+                )
+                self.assertEqual(created.status_code, 201)
+                self.assertEqual(created.json()["amount"], 40)
+                listed = client.get(
+                    f"/api/{business_a['id']}/invoices/{invoice_a['id']}/payments"
+                )
+                self.assertEqual(len(listed.json()), 1)
+                self.assertEqual(
+                    client.get(
+                        f"/api/{business_a['id']}/invoices/"
+                        f"{invoice_b['id']}/payments"
+                    ).status_code,
+                    404,
+                )
+                self.assertEqual(
+                    client.post(
+                        f"/api/{business_b['id']}/invoices/"
+                        f"{invoice_b['id']}/payments",
+                        json={"amount": 10},
+                    ).status_code,
+                    403,
+                )
+                invalid = client.post(
+                    f"/api/{business_a['id']}/invoices/{invoice_a['id']}/payments",
+                    json={"amount": 0},
+                )
+                self.assertEqual(invalid.status_code, 400)
+
+                portal = client.get(f"/p/{token}")
+                self.assertEqual(portal.status_code, 200)
+                self.assertIn("Importe pendiente", portal.text)
+                self.assertIn("81,00", portal.text)
+        self.assertEqual(
+            db.list_invoice_payments(invoice_b["id"], business_b["id"]), []
+        )
 
     def test_saas_health_and_profile_onboarding_flow(self):
         from starlette.testclient import TestClient
@@ -1132,6 +1319,23 @@ class VerifactuTestCase(unittest.TestCase):
         self.assertFalse(db.get_business(business["id"])["verifactu_enabled"])
         self.assertIsNone(db.get_invoice_record(invoice["id"], business["id"]))
         self.assertEqual(db.list_invoice_events(business["id"]), [])
+
+    def test_partial_payment_never_changes_verifactu_records(self):
+        business, client = self._enabled_business("Verifactu con anticipo")
+        invoice = self._issue(business, client)
+        record_before = db.get_invoice_record(invoice["id"], business["id"])
+        events_before = db.list_invoice_events(business["id"])
+
+        db.add_invoice_payment(
+            invoice["id"], 40, method="transferencia",
+            business_id=business["id"],
+        )
+
+        self.assertEqual(
+            db.get_invoice_record(invoice["id"], business["id"]),
+            record_before,
+        )
+        self.assertEqual(db.list_invoice_events(business["id"]), events_before)
 
     def test_official_hash_example_and_qr_parameters(self):
         # Vector 6.1 de la especificación AEAT v0.1.2:

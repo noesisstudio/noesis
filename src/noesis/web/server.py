@@ -385,7 +385,7 @@ def portal_invoice_pdf(request: Request, token: str, invoice_id: int):
     inv = db.get_invoice(invoice_id, ref["business_id"])
     if not inv or inv.get("client_id") != ref["client_id"]:
         return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
-    if inv.get("status") not in {"enviada", "cobrada"}:
+    if inv.get("status") not in {"enviada", "parcial", "cobrada"}:
         return JSONResponse({"error": "La factura aún no está disponible."},
                             status_code=404)
     from .invoice_pdf import build_invoice_pdf
@@ -1257,6 +1257,36 @@ def api_mark_paid(business_id: int, invoice_id: int):
             {"error": "Solo se puede cobrar una factura emitida."}, status_code=409
         )
     return inv
+
+
+@app.get("/api/{business_id}/invoices/{invoice_id}/payments")
+def api_invoice_payments(business_id: int, invoice_id: int):
+    if not db.get_invoice(invoice_id, business_id):
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    return db.list_invoice_payments(invoice_id, business_id)
+
+
+@app.post(
+    "/api/{business_id}/invoices/{invoice_id}/payments",
+    status_code=201,
+)
+async def api_add_invoice_payment(
+    business_id: int, invoice_id: int, request: Request
+):
+    if not db.get_invoice(invoice_id, business_id):
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    try:
+        body = await _read_json(request)
+        return db.add_invoice_payment(
+            invoice_id,
+            body.get("amount"),
+            business_id=business_id,
+            method=body.get("method"),
+            paid_at=body.get("paid_at"),
+            note=body.get("note"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
 
 
 @app.post("/api/{business_id}/invoices/{invoice_id}/send")

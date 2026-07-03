@@ -70,7 +70,7 @@
 {% else %}
   {% set quotes = data.quotes | selectattr('status', 'in', ['enviado', 'aceptado', 'rechazado']) | list %}
   {% set pend = quotes | selectattr('status', 'equalto', 'enviado') | list %}
-  {% set invoices = data.invoices | selectattr('status', 'in', ['enviada', 'cobrada']) | list %}
+  {% set invoices = data.invoices | selectattr('status', 'in', ['enviada', 'parcial', 'cobrada']) | list %}
   <div class="portal">
     <div class="portal-head" style="background:{{ data.business.brand_color }}">
       <div class="mark">
@@ -155,11 +155,12 @@
             <div class="doc-amount">{{ inv.total | eur }}</div>
           </div>
           <div class="doc-meta">
-            {% if inv.status == 'cobrada' %}<span class="badge b-green">Pagada</span>
+            {% if inv.payment_status == 'pagada' %}<span class="badge b-green">Pagada</span>
+            {% elif inv.payment_status == 'parcial' %}<span class="badge b-amber">Pago parcial</span>
             {% else %}<span class="badge b-amber">Pendiente de pago</span>{% endif %}
             {% if inv.due_date %} · Vence el {{ inv.due_date }}{% endif %}
           </div>
-          {% if inv.status != 'cobrada' and (data.business.payment_iban or data.business.payment_bizum) %}
+          {% if inv.payment_status != 'pagada' and (data.business.payment_iban or data.business.payment_bizum) %}
           <div class="pay-box">
             <div class="pay-title">Cómo pagar esta factura</div>
             {% if data.business.payment_iban %}
@@ -174,7 +175,10 @@
               <button class="btn sm pay-copy" type="button" onclick="copyPay('biz-{{ inv.id }}', this)">Copiar</button>
             </div>
             {% endif %}
-            <div class="pay-amount">Importe: <b>{{ inv.total | eur }}</b></div>
+            <div class="pay-amount">
+              Importe pendiente: <b>{{ inv.remaining_amount | eur }}</b>
+              {% if inv.paid_amount %} · Ya cobrado: {{ inv.paid_amount | eur }}{% endif %}
+            </div>
             {% if data.business.payment_note %}<div class="pay-note">{{ data.business.payment_note }}</div>{% endif %}
           </div>
           {% endif %}

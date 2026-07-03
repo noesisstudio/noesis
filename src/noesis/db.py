@@ -1876,7 +1876,9 @@ def create_rectifying_invoice(
 ) -> dict:
     """Crea una rectificativa incremental; el original nunca se modifica."""
     original = get_invoice(original_invoice_id, business_id)
-    if not original or original.get("status") not in {"enviada", "cobrada"}:
+    if not original or original.get("status") not in {
+        "enviada", "parcial", "cobrada"
+    }:
         raise ValueError("Solo se puede rectificar una factura ya emitida.")
     invoice_type = (invoice_type or "").strip().upper()
     if invoice_type not in {"R1", "R2", "R3", "R4", "R5"}:
@@ -1919,22 +1921,46 @@ def create_rectifying_invoice(
     return get_invoice(new_id, business_id)
 
 
+def _invoice_payment_state(invoice: dict) -> dict:
+    """Añade importes y estado de cobro derivados del ledger."""
+    data = dict(invoice)
+    total = round(float(data.get("total") or 0), 2)
+    paid = round(float(data.get("paid_amount") or 0), 2)
+    remaining = round(max(total - paid, 0), 2)
+    if total <= 0 or remaining <= 0:
+        payment_status = "pagada"
+    elif paid > 0:
+        payment_status = "parcial"
+    else:
+        payment_status = "pendiente"
+    data["paid_amount"] = paid
+    data["remaining_amount"] = remaining
+    data["payment_status"] = payment_status
+    return data
+
+
 def get_invoice(invoice_id, business_id) -> dict | None:
     where = "i.id=? AND i.business_id=?"
     params = [invoice_id, business_id]
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT i.*, c.name AS client_name FROM invoices i "
+            "SELECT i.*, c.name AS client_name, "
+            "COALESCE((SELECT SUM(p.amount) FROM invoice_payments p "
+            "WHERE p.business_id=i.business_id AND p.invoice_id=i.id), 0) "
+            "AS paid_amount FROM invoices i "
             "LEFT JOIN clients c ON c.id = i.client_id "
             "AND c.business_id=i.business_id WHERE " + where,
             params,
         ).fetchone()
-        return dict(row) if row else None
+        return _invoice_payment_state(row) if row else None
 
 
 def list_invoices(business_id, status=None) -> list[dict]:
     q = (
         "SELECT i.*, COALESCE(i.recipient_name, c.name) AS client_name, "
+        "COALESCE((SELECT SUM(p.amount) FROM invoice_payments p "
+        "WHERE p.business_id=i.business_id AND p.invoice_id=i.id), 0) "
+        "AS paid_amount, "
         "CASE WHEN EXISTS (SELECT 1 FROM invoice_records vr "
         "WHERE vr.business_id=i.business_id AND vr.invoice_id=i.id) "
         "THEN TRUE ELSE FALSE END AS verifactu_registered, "
@@ -1952,7 +1978,10 @@ def list_invoices(business_id, status=None) -> list[dict]:
         params.append(status)
     q += " ORDER BY i.created_at DESC"
     with get_conn() as conn:
-        return [dict(r) for r in conn.execute(q, params).fetchall()]
+        return [
+            _invoice_payment_state(r)
+            for r in conn.execute(q, params).fetchall()
+        ]
 
 
 def _next_document_number(conn, business_id: int, kind: str) -> int:
@@ -2141,7 +2170,9 @@ def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int = 15
             raise ValueError("No existe esa factura.")
         if inv["status"] != "borrador" or inv["number"]:
             existing = get_invoice(invoice_id, business_id)
-            if existing and existing["status"] in {"enviada", "cobrada"}:
+            if existing and existing["status"] in {
+                "enviada", "parcial", "cobrada"
+            }:
                 return existing
             raise ValueError("La factura no se puede emitir desde su estado actual.")
 
@@ -2217,16 +2248,180 @@ def mark_invoice_sent(invoice_id, number, due_date=None, *, business_id: int) ->
     return get_invoice(invoice_id, business_id) if ok else None
 
 
-def mark_invoice_paid(invoice_id, business_id) -> dict | None:
-    """Marca una factura como cobrada. Filtra por business_id (aislamiento): si la
-    factura no es de ese negocio, no toca nada y devuelve None."""
-    with get_conn() as conn:
-        cur = conn.execute(
+def _payment_text(value, label: str, max_length: int) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if len(text) > max_length:
+        raise ValueError(f"{label} no puede superar {max_length} caracteres.")
+    return text or None
+
+
+def _payment_paid_at(value=None) -> str:
+    if value in (None, ""):
+        return _now()
+    text = str(value).strip()
+    try:
+        datetime.fromisoformat(text)
+    except ValueError as exc:
+        raise ValueError("La fecha de cobro no es válida.") from exc
+    return text
+
+
+def _locked_invoice_with_paid(conn, invoice_id: int, business_id: int):
+    lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+    invoice = conn.execute(
+        "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
+        (invoice_id, business_id),
+    ).fetchone()
+    if not invoice:
+        return None, Decimal("0.00")
+    paid = conn.execute(
+        "SELECT COALESCE(SUM(amount),0) AS total FROM invoice_payments "
+        "WHERE invoice_id=? AND business_id=?",
+        (invoice_id, business_id),
+    ).fetchone()["total"]
+    return invoice, Decimal(str(paid or 0)).quantize(Decimal("0.01"))
+
+
+def _insert_invoice_payment(
+    conn,
+    invoice,
+    amount: Decimal,
+    method: str | None,
+    paid_at: str,
+    note: str | None,
+) -> int:
+    row = conn.execute(
+        "INSERT INTO invoice_payments "
+        "(business_id, invoice_id, amount, method, paid_at, note, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+        (
+            invoice["business_id"], invoice["id"], float(amount), method,
+            paid_at, note, _now(),
+        ),
+    ).fetchone()
+    return row["id"]
+
+
+def _set_invoice_payment_state(
+    conn,
+    invoice,
+    paid: Decimal,
+    paid_at: str,
+) -> None:
+    total = Decimal(str(invoice["total"])).quantize(Decimal("0.01"))
+    if paid >= total:
+        conn.execute(
             "UPDATE invoices SET status='cobrada', paid_at=? "
-            "WHERE id=? AND business_id=? AND status='enviada'",
-            (_now(), invoice_id, business_id))
-        ok = cur.rowcount > 0
-    return get_invoice(invoice_id, business_id) if ok else None
+            "WHERE id=? AND business_id=?",
+            (paid_at, invoice["id"], invoice["business_id"]),
+        )
+    else:
+        conn.execute(
+            "UPDATE invoices SET status='parcial', paid_at=NULL "
+            "WHERE id=? AND business_id=?",
+            (invoice["id"], invoice["business_id"]),
+        )
+
+
+def add_invoice_payment(
+    invoice_id,
+    amount,
+    *,
+    business_id: int,
+    method=None,
+    paid_at=None,
+    note=None,
+) -> dict:
+    """Registra un cobro sin alterar el registro fiscal inmutable de la factura."""
+    amount_decimal = Decimal(str(_positive_money(amount, "El importe"))).quantize(
+        Decimal("0.01")
+    )
+    method = _payment_text(method, "El método", 50)
+    note = _payment_text(note, "La nota", 500)
+    paid_at = _payment_paid_at(paid_at)
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        invoice, already_paid = _locked_invoice_with_paid(
+            conn, invoice_id, business_id
+        )
+        if not invoice:
+            raise ValueError("Factura no encontrada.")
+        if invoice["status"] == "borrador" or not invoice.get("number"):
+            raise ValueError("Solo se pueden cobrar facturas emitidas.")
+        total = Decimal(str(invoice["total"])).quantize(Decimal("0.01"))
+        if total <= 0:
+            raise ValueError("Esta factura no admite cobros.")
+        new_paid = already_paid + amount_decimal
+        if new_paid > total:
+            remaining = max(total - already_paid, Decimal("0.00"))
+            raise ValueError(
+                f"El cobro supera el importe pendiente ({float(remaining):.2f} €)."
+            )
+        payment_id = _insert_invoice_payment(
+            conn, invoice, amount_decimal, method, paid_at, note
+        )
+        _set_invoice_payment_state(conn, invoice, new_paid, paid_at)
+        payment = conn.execute(
+            "SELECT * FROM invoice_payments "
+            "WHERE id=? AND business_id=? AND invoice_id=?",
+            (payment_id, business_id, invoice_id),
+        ).fetchone()
+    return dict(payment)
+
+
+def list_invoice_payments(invoice_id, business_id) -> list[dict]:
+    with get_conn() as conn:
+        exists = conn.execute(
+            "SELECT 1 AS found FROM invoices WHERE id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        if not exists:
+            return []
+        rows = conn.execute(
+            "SELECT * FROM invoice_payments "
+            "WHERE invoice_id=? AND business_id=? ORDER BY paid_at, id",
+            (invoice_id, business_id),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def invoice_paid_amount(invoice_id, business_id) -> float | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(i.id) AS invoices, COALESCE(SUM(p.amount),0) AS total "
+            "FROM invoices i LEFT JOIN invoice_payments p "
+            "ON p.business_id=i.business_id AND p.invoice_id=i.id "
+            "WHERE i.id=? AND i.business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+    if not row or not row["invoices"]:
+        return None
+    return round(float(row["total"]), 2)
+
+
+def mark_invoice_paid(invoice_id, business_id) -> dict | None:
+    """Registra el importe restante; repetir la operación no duplica el cobro."""
+    payment_time = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        invoice, already_paid = _locked_invoice_with_paid(
+            conn, invoice_id, business_id
+        )
+        if not invoice or invoice["status"] == "borrador" or not invoice.get("number"):
+            return None
+        total = Decimal(str(invoice["total"])).quantize(Decimal("0.01"))
+        remaining = total - already_paid
+        if total <= 0:
+            return None
+        if remaining > 0:
+            _insert_invoice_payment(
+                conn, invoice, remaining, None, payment_time,
+                "Cobro completo registrado",
+            )
+            _set_invoice_payment_state(conn, invoice, total, payment_time)
+    return get_invoice(invoice_id, business_id)
 
 
 def delete_invoice(invoice_id, business_id) -> bool:
@@ -2583,17 +2778,17 @@ def export_verifactu_xml(
 
 
 def pending_payments(business_id) -> list[dict]:
-    with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT i.*, c.name AS client_name FROM invoices i "
-            "LEFT JOIN clients c ON c.id = i.client_id "
-            "AND c.business_id=i.business_id "
-            "WHERE i.business_id=? AND i.status='enviada' ORDER BY i.issued_at",
-            (business_id,),
-        ).fetchall()
+    rows = [
+        invoice for invoice in list_invoices(business_id)
+        if invoice["status"] != "borrador"
+        and invoice["remaining_amount"] > 0
+    ]
+    rows.sort(key=lambda item: item.get("issued_at") or "")
     out = []
     for r in rows:
         d = dict(r)
+        d["invoice_total"] = d["total"]
+        d["total"] = d["remaining_amount"]
         if d.get("issued_at"):
             issued = datetime.fromisoformat(d["issued_at"]).date()
             d["days_outstanding"] = (date.today() - issued).days
@@ -2647,18 +2842,17 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
     month = month or date.today().strftime("%Y-%m")
     if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
         raise ValueError("El mes debe tener formato YYYY-MM.")
+    invoices = [
+        invoice for invoice in list_invoices(business_id)
+        if invoice["status"] in {"enviada", "parcial", "cobrada"}
+        and str(invoice.get("issued_at") or invoice.get("created_at", "")).startswith(
+            month
+        )
+    ]
     with get_conn() as conn:
-        invoices = [
-            dict(row) for row in conn.execute(
-                "SELECT * FROM invoices WHERE business_id=? "
-                "AND CAST(COALESCE(issued_at, created_at) AS TEXT) LIKE ? "
-                "AND status IN ('enviada','cobrada')",
-                (business_id, f"{month}%"),
-            ).fetchall()
-        ]
         collected_rows = conn.execute(
-            "SELECT COALESCE(SUM(total),0) AS total FROM invoices WHERE business_id=? "
-            "AND CAST(paid_at AS TEXT) LIKE ? AND status='cobrada'",
+            "SELECT COALESCE(SUM(amount),0) AS total FROM invoice_payments "
+            "WHERE business_id=? AND CAST(paid_at AS TEXT) LIKE ?",
             (business_id, f"{month}%"),
         ).fetchone()["total"]
         expense_rows = [
@@ -2670,9 +2864,7 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         ]
     invoiced = sum(item["total"] for item in invoices)
     revenue_base = sum(item["base"] for item in invoices)
-    pending = sum(
-        item["total"] for item in invoices if item["status"] == "enviada"
-    )
+    pending = sum(item["remaining_amount"] for item in invoices)
     vat_output = sum(item["vat_amount"] for item in invoices)
     expenses = sum(item["amount"] for item in expense_rows)
     expense_base = sum(
@@ -2713,7 +2905,7 @@ def income_by_client(business_id, limit: int = 8) -> list[dict]:
             "SELECT c.name AS client_name, SUM(i.total) AS total, COUNT(*) AS n "
             "FROM invoices i LEFT JOIN clients c ON c.id=i.client_id "
             "AND c.business_id=i.business_id "
-            "WHERE i.business_id=? AND i.status IN ('enviada','cobrada') "
+            "WHERE i.business_id=? AND i.status IN ('enviada','parcial','cobrada') "
             "GROUP BY i.client_id ORDER BY total DESC LIMIT ?",
             (business_id, limit),
         ).fetchall()
@@ -2727,7 +2919,7 @@ def client_stats(business_id) -> list[dict]:
             "SELECT c.*, "
             " (SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.client_id=c.id "
             "   AND i.business_id=c.business_id "
-            "   AND i.status IN ('enviada','cobrada')) AS facturado, "
+            "   AND i.status IN ('enviada','parcial','cobrada')) AS facturado, "
             " (SELECT COUNT(*) FROM invoices i WHERE i.client_id=c.id "
             "   AND i.business_id=c.business_id) AS n_facturas, "
             " (SELECT COUNT(*) FROM jobs j WHERE j.client_id=c.id "
@@ -2752,8 +2944,8 @@ def financial_analysis(business_id) -> dict:
 
     invoiced = round(sum(i["total"] for i in invoices), 2)
     revenue_base = round(sum(i["base"] for i in invoices), 2)
-    collected = round(sum(i["total"] for i in invoices if i["status"] == "cobrada"), 2)
-    pending = round(sum(i["total"] for i in invoices if i["status"] == "enviada"), 2)
+    collected = round(sum(i["paid_amount"] for i in invoices), 2)
+    pending = round(sum(i["remaining_amount"] for i in invoices), 2)
     gastos = round(sum(e["amount"] for e in expenses), 2)
     expense_base = round(sum(
         e["amount"] / (1 + (e.get("vat_rate") or 0) / 100)
@@ -2974,7 +3166,7 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
 
     all_invoices = [
         i for i in list_invoices(business_id)
-        if i.get("status") in ("enviada", "cobrada")
+        if i.get("status") in ("enviada", "parcial", "cobrada")
     ]
     all_expenses = list_expenses(business_id)
     invoices = [
@@ -3568,7 +3760,7 @@ def admin_overview() -> dict:
             "(SELECT COUNT(*) FROM invoices i WHERE i.business_id=b.id) AS n_facturas, "
             "(SELECT COUNT(*) FROM clients c WHERE c.business_id=b.id) AS n_clientes, "
             "(SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.business_id=b.id "
-            "  AND i.status IN ('enviada','cobrada')) AS facturado "
+            "  AND i.status IN ('enviada','parcial','cobrada')) AS facturado "
             "FROM businesses b ORDER BY b.created_at DESC").fetchall()
     biz = [dict(r) for r in rows]
     for business in biz:
@@ -3615,6 +3807,10 @@ def export_business_data(business_id) -> dict:
             "WHERE business_id=? ORDER BY id",
             business_id)],
         "invoices": list_invoices(business_id),
+        "invoice_payments": [dict(r) for r in _rows(
+            "SELECT * FROM invoice_payments WHERE business_id=? "
+            "ORDER BY paid_at, id",
+            business_id)],
         "invoice_records": list_invoice_records(business_id),
         "invoice_events": list_invoice_events(business_id),
         "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
@@ -3650,6 +3846,11 @@ def export_client_data(client_id, business_id) -> dict | None:
         "invoices": [dict(r) for r in _rows(
             "SELECT * FROM invoices WHERE business_id=? AND client_id=?",
             business_id, client_id)],
+        "invoice_payments": [dict(r) for r in _rows(
+            "SELECT p.* FROM invoice_payments p JOIN invoices i "
+            "ON i.business_id=p.business_id AND i.id=p.invoice_id "
+            "WHERE p.business_id=? AND i.client_id=? ORDER BY p.paid_at, p.id",
+            business_id, client_id)],
         "quotes": [dict(r) for r in _rows(
             "SELECT * FROM quotes WHERE business_id=? AND client_id=?",
             business_id, client_id)],
@@ -3675,7 +3876,7 @@ def delete_client_cascade(client_id, business_id) -> bool:
     with get_conn() as conn:
         issued = conn.execute(
             "SELECT COUNT(*) AS total FROM invoices WHERE business_id=? AND client_id=? "
-            "AND status IN ('enviada','cobrada')",
+            "AND status IN ('enviada','parcial','cobrada')",
             (business_id, client_id),
         ).fetchone()["total"]
         conn.execute("DELETE FROM portal_tokens WHERE business_id=? AND client_id=?",
@@ -3717,7 +3918,7 @@ def delete_business_cascade(business_id) -> bool:
     with get_conn() as conn:
         issued = conn.execute(
             "SELECT COUNT(*) AS total FROM invoices WHERE business_id=? "
-            "AND status IN ('enviada','cobrada')",
+            "AND status IN ('enviada','parcial','cobrada')",
             (business_id,),
         ).fetchone()["total"]
         if issued:
@@ -3741,7 +3942,7 @@ def delete_business_cascade(business_id) -> bool:
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
             "invoice_events", "invoice_records", "portal_tokens",
             "product_events", "copilot_recommendations", "documents", "quotes",
-            "invoices", "jobs", "workers", "clients", "expenses"
+            "invoice_payments", "invoices", "jobs", "workers", "clients", "expenses"
         ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "

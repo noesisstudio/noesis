@@ -48,6 +48,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   con entidades de otra empresa.
 - La emisión de factura es atómica e idempotente. La secuencia se persiste por
   negocio/año y los datos fiscales quedan congelados en la factura.
+- Los cobros viven en `invoice_payments`: el estado y el importe restante se
+  derivan del ledger. Cada alta bloquea la factura (`BEGIN IMMEDIATE` en SQLite,
+  `FOR UPDATE` en Postgres) para impedir que dos cobros superen el total.
 - En modo Veri*Factu, la misma transacción añade un registro de alta append-only,
   encadenado por NIF emisor. Las rectificaciones crean una nueva factura R1-R5 y
   conservan el original.

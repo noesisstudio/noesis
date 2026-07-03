@@ -21,6 +21,9 @@
 
 ## Tarea 1 — Cobros parciales (ledger de pagos) · PRIORIDAD ALTA
 
+> Implementada en `codex/cobros-parciales` con la migración 11 y pruebas de
+> regresión. Pendiente de revisión y fusión a `main`.
+
 **Por qué**: Forjia ya tiene anticipos/cobros parciales; nosotros solo
 pagado/no-pagado. En oficios es habitual cobrar 40 % al empezar y el resto al
 terminar. Es el hueco de producto nº 1 identificado.
