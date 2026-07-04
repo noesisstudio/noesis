@@ -282,8 +282,6 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
   color:var(--brand); font-size:12px; font-weight:700; }
 .progress { height:8px; background:var(--border); border-radius:999px; overflow:hidden; }
 .progress > span { display:block; height:100%; background:var(--brand-2); border-radius:999px; }
-.demo { background:var(--brand-soft); color:var(--brand-ink); border-radius:8px;
-  padding:10px 12px; font-size:12.5px; margin-top:14px; text-align:center; }
 
 /* ---------- Insight / explanation boxes ---------- */
 .insight { background: var(--brand-soft); border: 1px solid #cfe2da;
