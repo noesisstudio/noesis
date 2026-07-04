@@ -2538,5 +2538,94 @@ class GestoriaTestCase(unittest.TestCase):
         self.assertEqual(emails, ["g@gestoria.com"])
 
 
+class AdminCommandCenterTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def test_overview_includes_contact_activity_and_ai_usage(self):
+        business, client = self.make_business("Admin Uno")
+        db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
+        invoice = db.add_invoice(
+            client["id"], "Trabajo", 200, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+        db.add_invoice_payment(invoice["id"], 100, business_id=business["id"])
+        db.record_product_event(
+            business["id"], "ai_usage",
+            json.dumps({"model": "haiku", "in": 900, "out": 120}),
+        )
+        db.record_product_event(
+            business["id"], "media_ingested",
+            json.dumps({"type": "image", "extracted": True}),
+        )
+        data = db.admin_overview()
+        row = next(
+            b for b in data["businesses"] if b["id"] == business["id"]
+        )
+        self.assertEqual(row["whatsapp_phone"], "600111222")
+        self.assertEqual(row["cobrado"], 100)
+        self.assertEqual(row["last_activity"], date.today().isoformat())
+        self.assertEqual(row["days_inactive"], 0)
+        self.assertEqual(row["ai"]["calls"], 1)
+        self.assertEqual(row["ai"]["input"], 900)
+        self.assertEqual(row["ai"]["extractions"], 1)
+        self.assertEqual(data["ai_usage"]["total"]["output"], 120)
+        self.assertIn("alerts", data)
+        self.assertIn("en_riesgo", data)
+
+    def test_alerts_flag_failed_whatsapp_and_broken_backup(self):
+        business, _ = self.make_business("Admin Alarmas")
+        # Sin nada roto: como mucho avisa de que no hay copia todavía.
+        baseline = db.admin_alerts()
+        self.assertTrue(all(a["area"] == "Backups" for a in baseline))
+        # Un mensaje agotado dispara alarma roja de WhatsApp.
+        message = whatsapp.queue_text(
+            "34600111222", "hola", business_id=business["id"]
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE whatsapp_outbox SET status='failed' WHERE id=?",
+                (message["id"],),
+            )
+        # Suscripción impagada dispara alarma de cobro.
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET subscription_status='past_due' "
+                "WHERE id=?",
+                (business["id"],),
+            )
+        areas = {(a["area"], a["level"]) for a in db.admin_alerts()}
+        self.assertIn(("WhatsApp", "rojo"), areas)
+        self.assertIn(("Cobro", "ambar"), areas)
+
+    def test_agent_records_token_usage(self):
+        from noesis import agent as agent_module
+
+        business, _ = self.make_business("Admin Tokens")
+        response = SimpleNamespace(
+            content=[SimpleNamespace(type="text", text="hola")],
+            stop_reason="end_turn",
+            usage=SimpleNamespace(input_tokens=321, output_tokens=45),
+        )
+        create = MagicMock(return_value=response)
+        fake_client = SimpleNamespace(
+            messages=SimpleNamespace(create=create)
+        )
+        with (
+            patch.object(config, "ANTHROPIC_API_KEY", "clave-test"),
+            patch.object(
+                agent_module.anthropic, "Anthropic", return_value=fake_client
+            ),
+        ):
+            noesis_agent = agent_module.NoesisAgent(business["id"])
+            self.assertEqual(noesis_agent.send("hola"), "hola")
+        usage = db.ai_usage_summary()
+        entry = usage["per_business"][business["id"]]
+        self.assertEqual(entry["calls"], 1)
+        self.assertEqual(entry["input"], 321)
+        self.assertEqual(entry["output"], 45)
+
+
 if __name__ == "__main__":
     unittest.main()

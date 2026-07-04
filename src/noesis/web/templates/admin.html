@@ -12,20 +12,58 @@
   <div class="page-head">
     <div class="page-title">
       <div class="kicker">Noesis · Fundador</div>
-      <h1>Panel de control</h1>
-      <p>Métricas globales del negocio. Solo metadatos de cuenta y agregados — no se
-         muestran los datos operativos de cada autónomo.</p>
+      <h1>Centro de mando</h1>
+      <p>Salud del sistema, clientes, uso de IA y a quién llamar si algo falla.
+         Solo metadatos de cuenta y agregados — sin datos operativos de cada autónomo.</p>
     </div>
     <div class="page-actions"><form method="post" action="/logout"><button class="btn" type="submit">Salir</button></form></div>
   </div>
 
   <div class="admin-grid">
-    <div class="metric"><div class="label">Cuentas</div><div class="value">{{ data.total }}</div><div class="sub">negocios registrados</div></div>
-    <div class="metric"><div class="label">Perfiles completos</div><div class="value">{{ data.perfiles_completos }}</div><div class="sub">segmentados</div></div>
+    <div class="metric"><div class="label">Cuentas</div><div class="value">{{ data.total }}</div><div class="sub">{{ data.en_prueba }} en prueba</div></div>
     <div class="metric"><div class="label">Activados</div><div class="value green">{{ data.activados }}</div><div class="sub">{{ data.tasa_activacion }}% del total</div></div>
     <div class="metric"><div class="label">Primer cobro</div><div class="value green">{{ data.resultados }}</div><div class="sub">ciclo completo</div></div>
-    <div class="metric"><div class="label">Suscripciones activas</div><div class="value green">{{ data.activos }}</div><div class="sub">de pago</div></div>
-    <div class="metric"><div class="label">MRR</div><div class="value">{{ data.mrr }} €</div><div class="sub">ingreso recurrente/mes</div></div>
+    <div class="metric"><div class="label">MRR</div><div class="value">{{ data.mrr }} €</div><div class="sub">{{ data.activos }} suscripción(es)</div></div>
+    <div class="metric"><div class="label">En riesgo</div><div class="value {{ 'red' if data.en_riesgo }}">{{ data.en_riesgo }}</div><div class="sub">activados sin uso 14+ días</div></div>
+    <div class="metric"><div class="label">Alarmas</div><div class="value {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="sub">ahora mismo</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">
+      <b>🚨 Alarmas</b>
+      {% if data.alerts %}<span class="badge b-red">{{ data.alerts|length }} activa(s)</span>
+      {% else %}<span class="badge b-green">todo en orden</span>{% endif %}
+    </div>
+    <div class="card-b">
+      {% if not data.alerts %}
+        <p class="meta">Sin incidencias: colas vacías, copias al día y suscripciones sanas.</p>
+      {% endif %}
+      {% for a in data.alerts %}
+      <div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
+        <span class="badge {{ 'b-red' if a.level == 'rojo' else 'b-amber' }}">{{ a.area }}</span>
+        <span>{{ a.text }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">
+      <b>Uso de IA · {{ data.ai_usage.month }}</b>
+      <span class="hint">el coste real de servir a los clientes</span>
+    </div>
+    <div class="card-b">
+      <div class="row">
+        <span class="badge b-gray">Llamadas al agente: {{ data.ai_usage.total.calls }}</span>
+        <span class="badge b-gray">Tokens entrada: {{ '{:,}'.format(data.ai_usage.total.input).replace(',', '.') }}</span>
+        <span class="badge b-gray">Tokens salida: {{ '{:,}'.format(data.ai_usage.total.output).replace(',', '.') }}</span>
+        <span class="badge b-gray">Extracciones (fotos/PDF): {{ data.ai_usage.total.extractions }}</span>
+      </div>
+      <p class="meta" style="margin-top:8px">
+        El detalle por cliente está en la tabla de cuentas. Lo rutinario se resuelve
+        gratis en local (NLU); aquí solo aparece lo que de verdad llama a la API.
+      </p>
+    </div>
   </div>
 
   <div class="card">
@@ -78,29 +116,45 @@
   </div>
 
   <div class="card">
-    <div class="card-h"><b>Cuentas</b><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp conectado</span></div>
+    <div class="card-h"><b>Cuentas</b><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp · contacto directo para emergencias</span></div>
     <div class="card-b table-pad">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Negocio</th><th>Email</th><th>Sector</th><th>Equipo</th><th>Objetivo</th>
-            <th>Plan</th><th>Estado</th><th>WhatsApp</th>
-            <th class="t-right">Activación</th><th class="t-right">Clientes</th><th class="t-right">Facturas</th>
-            <th class="t-right">Facturado</th></tr></thead>
+          <thead><tr><th>Negocio</th><th>Contacto</th><th>Plan</th><th>Estado</th>
+            <th class="t-right">Activación</th><th class="t-right">Última actividad</th>
+            <th class="t-right">Clientes</th><th class="t-right">Facturas</th>
+            <th class="t-right">Facturado</th><th class="t-right">Cobrado</th>
+            <th class="t-right">IA (in/out)</th></tr></thead>
           <tbody>
           {% for b in data.businesses %}
             <tr>
-              <td><b>{{ b.name }}</b></td>
-              <td class="meta">{{ b.owner_email or '—' }}</td>
-              <td class="meta">{{ b.sector or '—' }}</td>
-              <td class="meta">{{ b.team_size or '—' }}</td>
-              <td class="meta">{{ b.primary_goal or '—' }}</td>
+              <td>
+                <b>{{ b.name }}</b>
+                <div class="meta">{{ b.sector or '—' }}{% if b.n_equipo %} · equipo {{ b.n_equipo }}{% endif %}{% if b.gestoria_cadence and b.gestoria_cadence != 'off' %} · gestoría{% endif %}</div>
+              </td>
+              <td class="meta">
+                {% if b.owner_email %}<a href="mailto:{{ b.owner_email }}">{{ b.owner_email }}</a>{% else %}—{% endif %}
+                {% if b.whatsapp_phone %}<br><a href="https://wa.me/34{{ b.whatsapp_phone|replace(' ','')|replace('+34','') }}" target="_blank" rel="noopener">📱 {{ b.whatsapp_phone }}</a>{% endif %}
+              </td>
               <td>{{ b.plan }}</td>
               <td><span class="badge {{ 'b-green' if b.subscription_status=='active' else 'b-amber' if b.subscription_status=='trial' else 'b-red' }}">{{ b.subscription_status }}</span></td>
-              <td>{% if b.whatsapp_status=='conectado' %}<span class="badge b-green">sí</span>{% else %}<span class="badge b-gray">no</span>{% endif %}</td>
               <td class="t-right"><span class="badge {{ 'b-green' if b.activated else 'b-amber' }}">{{ b.activation_progress }}%</span></td>
+              <td class="t-right">
+                {% if b.last_activity %}
+                  <span class="{{ 'meta' if (b.days_inactive or 0) < 14 }}">{{ b.last_activity }}</span>
+                  {% if (b.days_inactive or 0) >= 14 %}<span class="badge b-red">{{ b.days_inactive }}d</span>{% endif %}
+                {% else %}<span class="meta">nunca</span>{% endif %}
+              </td>
               <td class="t-right num">{{ b.n_clientes }}</td>
               <td class="t-right num">{{ b.n_facturas }}</td>
               <td class="t-right num">{{ '%.2f'|format(b.facturado) }} €</td>
+              <td class="t-right num">{{ '%.2f'|format(b.cobrado) }} €</td>
+              <td class="t-right num meta">
+                {% if b.ai.calls or b.ai.extractions %}
+                  {{ b.ai.calls }}·{{ b.ai.input }}/{{ b.ai.output }}
+                  {% if b.ai.extractions %} +{{ b.ai.extractions }}📷{% endif %}
+                {% else %}—{% endif %}
+              </td>
             </tr>
           {% endfor %}
           </tbody>

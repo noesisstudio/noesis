@@ -92,6 +92,24 @@ class NoesisAgent:
         with self._lock:
             return self._send_locked(user_text)
 
+    def _record_usage(self, resp) -> None:
+        """Apunta los tokens de cada llamada (coste real, visible en /admin)."""
+        try:
+            import json as _json
+
+            usage = getattr(resp, "usage", None)
+            db.record_product_event(
+                self.business_id,
+                "ai_usage",
+                _json.dumps({
+                    "model": self.model,
+                    "in": getattr(usage, "input_tokens", 0) or 0,
+                    "out": getattr(usage, "output_tokens", 0) or 0,
+                }, separators=(",", ":")),
+            )
+        except Exception:  # noqa: BLE001 — la métrica jamás rompe el chat
+            pass
+
     def _send_locked(self, user_text: str) -> str:
         if len(self.messages) > 32:
             self.messages = self.messages[-24:]
@@ -111,6 +129,7 @@ class NoesisAgent:
                 tools=safe_tools,
                 messages=self.messages,
             )
+            self._record_usage(resp)
             self.messages.append({"role": "assistant", "content": resp.content})
 
             if resp.stop_reason != "tool_use":

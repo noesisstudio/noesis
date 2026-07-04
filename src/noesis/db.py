@@ -4121,25 +4121,160 @@ def latest_backup_run(*, status: str | None = None) -> dict | None:
 
 
 # ----------------------------------------------------- Panel de administración ---
+def ai_usage_summary(month: str | None = None) -> dict:
+    """Tokens y llamadas de IA por negocio en un mes (de product_events)."""
+    month = month or date.today().strftime("%Y-%m")
+    per_business: dict[int, dict] = {}
+    total = {"calls": 0, "input": 0, "output": 0, "extractions": 0}
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT business_id, event_name, event_data FROM product_events "
+            "WHERE event_name IN ('ai_usage','media_ingested') "
+            "AND CAST(created_at AS TEXT) LIKE ?",
+            (f"{month}%",),
+        ).fetchall()
+    for row in rows:
+        entry = per_business.setdefault(
+            row["business_id"],
+            {"calls": 0, "input": 0, "output": 0, "extractions": 0},
+        )
+        if row["event_name"] == "media_ingested":
+            entry["extractions"] += 1
+            total["extractions"] += 1
+            continue
+        try:
+            data = json.loads(row["event_data"] or "{}")
+        except ValueError:
+            data = {}
+        entry["calls"] += 1
+        entry["input"] += int(data.get("in") or 0)
+        entry["output"] += int(data.get("out") or 0)
+        total["calls"] += 1
+        total["input"] += int(data.get("in") or 0)
+        total["output"] += int(data.get("out") or 0)
+    return {"month": month, "total": total, "per_business": per_business}
+
+
+def admin_alerts() -> list[dict]:
+    """Alarmas operativas para el fundador: qué está fallando y dónde llamar."""
+    alerts: list[dict] = []
+    with get_conn() as conn:
+        wa_failed = conn.execute(
+            "SELECT COUNT(*) AS n FROM whatsapp_outbox WHERE status='failed'"
+        ).fetchone()["n"]
+        wa_stuck = conn.execute(
+            "SELECT COUNT(*) AS n FROM whatsapp_outbox "
+            "WHERE status IN ('queued','retrying') AND attempts>=3"
+        ).fetchone()["n"]
+        past_due = [dict(r) for r in conn.execute(
+            "SELECT id, name, owner_email FROM businesses "
+            "WHERE subscription_status IN ('past_due','unpaid')"
+        ).fetchall()]
+    if wa_failed:
+        alerts.append({
+            "level": "rojo", "area": "WhatsApp",
+            "text": f"{wa_failed} mensaje(s) agotaron los reintentos (failed).",
+        })
+    if wa_stuck:
+        alerts.append({
+            "level": "ambar", "area": "WhatsApp",
+            "text": f"{wa_stuck} mensaje(s) llevan 3+ intentos sin salir.",
+        })
+    verifactu = verifactu_queue_counts()
+    if verifactu.get("rechazado"):
+        alerts.append({
+            "level": "rojo", "area": "Veri*Factu",
+            "text": f"{verifactu['rechazado']} registro(s) RECHAZADOS por la AEAT.",
+        })
+    if verifactu.get("agotado"):
+        alerts.append({
+            "level": "rojo", "area": "Veri*Factu",
+            "text": f"{verifactu['agotado']} registro(s) agotaron los reintentos.",
+        })
+    backup = latest_backup_run()
+    if not backup:
+        alerts.append({
+            "level": "ambar", "area": "Backups",
+            "text": "Nunca se ha completado una copia de seguridad.",
+        })
+    else:
+        if backup.get("status") == "error":
+            alerts.append({
+                "level": "rojo", "area": "Backups",
+                "text": f"La última copia FALLÓ: {backup.get('error') or ''}",
+            })
+        else:
+            try:
+                age = datetime.now() - datetime.fromisoformat(
+                    str(backup["created_at"])[:19]
+                )
+                if age > timedelta(hours=48):
+                    alerts.append({
+                        "level": "ambar", "area": "Backups",
+                        "text": f"La última copia buena tiene {age.days} día(s).",
+                    })
+            except ValueError:
+                pass
+    for business in past_due:
+        alerts.append({
+            "level": "ambar", "area": "Cobro",
+            "text": (f"Suscripción impagada: {business['name']} "
+                     f"({business.get('owner_email') or 'sin email'})."),
+        })
+    return alerts
+
+
 def admin_overview() -> dict:
     """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
     operativos de cada autónomo, solo metadatos de cuenta y agregados."""
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT b.id, b.name, b.sector, b.owner_email, b.created_at, "
-            "b.whatsapp_status, b.plan, b.subscription_status, b.trial_ends_at, "
-            "b.team_size, b.province, b.primary_goal, "
+            "b.whatsapp_status, b.whatsapp_phone, b.plan, b.subscription_status, "
+            "b.trial_ends_at, b.team_size, b.province, b.primary_goal, "
+            "b.gestoria_cadence, "
             "(SELECT COUNT(*) FROM invoices i WHERE i.business_id=b.id) AS n_facturas, "
             "(SELECT COUNT(*) FROM clients c WHERE c.business_id=b.id) AS n_clientes, "
+            "(SELECT COUNT(*) FROM jobs j WHERE j.business_id=b.id) AS n_trabajos, "
+            "(SELECT COUNT(*) FROM workers w WHERE w.business_id=b.id) AS n_equipo, "
+            "(SELECT COALESCE(SUM(p.amount),0) FROM invoice_payments p "
+            "  WHERE p.business_id=b.id) AS cobrado, "
+            "(SELECT MAX(CAST(pe.created_at AS TEXT)) FROM product_events pe "
+            "  WHERE pe.business_id=b.id) AS last_event, "
+            "(SELECT MAX(CAST(i.created_at AS TEXT)) FROM invoices i "
+            "  WHERE i.business_id=b.id) AS last_invoice, "
+            "(SELECT MAX(CAST(j.created_at AS TEXT)) FROM jobs j "
+            "  WHERE j.business_id=b.id) AS last_job, "
             "(SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.business_id=b.id "
             "  AND i.status IN ('enviada','parcial','cobrada')) AS facturado "
             "FROM businesses b ORDER BY b.created_at DESC").fetchall()
     biz = [dict(r) for r in rows]
+    usage = ai_usage_summary()
+    today = date.today()
     for business in biz:
         activation = activation_snapshot(business["id"])
         business["activation_progress"] = activation["progress"]
         business["activated"] = activation["activated"]
         business["outcome_reached"] = activation["outcome_reached"]
+        last = max(
+            (v for v in (business.pop("last_event"), business.pop("last_invoice"),
+                         business.pop("last_job")) if v),
+            default=None,
+        )
+        business["last_activity"] = str(last)[:10] if last else None
+        if last:
+            try:
+                business["days_inactive"] = (
+                    today - date.fromisoformat(str(last)[:10])
+                ).days
+            except ValueError:
+                business["days_inactive"] = None
+        else:
+            business["days_inactive"] = None
+        business["ai"] = usage["per_business"].get(
+            business["id"],
+            {"calls": 0, "input": 0, "output": 0, "extractions": 0},
+        )
     PRICES = {"trial": 0, "autonomo": 29, "pro": 39}
     activos = [b for b in biz if b["subscription_status"] == "active"]
     mrr = sum(PRICES.get(b["plan"], 0) for b in activos)
@@ -4154,8 +4289,14 @@ def admin_overview() -> dict:
         "activados": len(activated),
         "resultados": len([b for b in biz if b["outcome_reached"]]),
         "tasa_activacion": round(len(activated) / len(biz) * 100) if biz else 0,
+        "en_riesgo": len([
+            b for b in biz
+            if b["activated"] and (b["days_inactive"] or 0) >= 14
+        ]),
         "mrr": mrr, "businesses": biz, "backup": latest_backup_run(),
         "verifactu_queue": verifactu_queue_counts(),
+        "ai_usage": usage,
+        "alerts": admin_alerts(),
     }
 
 
