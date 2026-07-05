@@ -177,6 +177,28 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* Hoja inferior "Crear" (móvil): mismas altas que el menú "+ Crear" del topbar,
+   pero con objetivos táctiles grandes y cierre por arrastre visual. */
+function qcSheet() {
+  closeModal();
+  const item = (href, label, hint) => `<a class="sheet-item" href="/b/${BIZ}/${href}">
+    <b>${label}</b><small>${hint}</small></a>`;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay sheet-overlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Crear">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-title">¿Qué quieres crear?</div>
+    ${item('facturas?nuevo=1', 'Factura', 'cobra por tu trabajo')}
+    ${item('presupuestos?nuevo=1', 'Presupuesto', 'para cerrar un encargo')}
+    ${item('clientes?nuevo=1', 'Cliente', 'una ficha nueva')}
+    ${item('costes?nuevo=1', 'Gasto', 'apunta un ticket')}
+    ${item('equipo?nuevo=1', 'Persona del equipo', 'con su acceso de fichaje')}
+    ${item('asistente', 'Trabajo (por chat)', 'díselo a Noesis con tus palabras')}
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });
+}
+
 /* Apertura directa del formulario de alta al llegar con ?nuevo=1 desde el menú
    "+ Crear". Cada página registra su modal en window.QUICK_NEW. */
 window.addEventListener('DOMContentLoaded', () => {

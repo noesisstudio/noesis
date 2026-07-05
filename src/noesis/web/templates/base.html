@@ -110,6 +110,21 @@
   </div>
 </div>
 
+<!-- Barra inferior (solo móvil): los 4 sitios del día a día + crear. -->
+<nav class="bottom-nav" aria-label="Navegación rápida">
+  <a class="bn-item {{ 'active' if active=='resumen' }}" href="/b/{{ business.id }}/resumen">
+    <span class="ic">{{ ic('resumen') }}</span>Resumen</a>
+  <a class="bn-item {{ 'active' if active=='agenda' }}" href="/b/{{ business.id }}/agenda">
+    <span class="ic">{{ ic('agenda') }}</span>Agenda</a>
+  <button class="bn-create" type="button" aria-label="Crear" onclick="qcSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  <a class="bn-item {{ 'active' if active=='cobros' }}" href="/b/{{ business.id }}/cobros">
+    <span class="ic">{{ ic('cobros') }}</span>Cobros</a>
+  <a class="bn-item {{ 'active' if active=='asistente' }}" href="/b/{{ business.id }}/asistente">
+    <span class="ic">{{ ic('asistente') }}</span>Noesis</a>
+</nav>
+
 <script src="/static/vendor/chart.umd.min.js"></script>
 <script src="/static/app.js?v={{ asset_v }}"></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>

@@ -4495,8 +4495,60 @@ def admin_overview() -> dict:
         "ia_cuentas": [b["name"] for b in ia_top],
         "ia_tokens": [b["ai"]["input"] + b["ai"]["output"] for b in ia_top],
     }
+    # Departamentos: cada área "informa" a dirección con una frase y sus cifras.
+    ai_total = usage["total"]
+    ai_cost_eur = round(
+        (ai_total["input"] * 3 + ai_total["output"] * 15) / 1_000_000 * 0.92
+        + ai_total["extractions"] * 0.014,
+        2,
+    )
+    margen_pct = round((mrr - ai_cost_eur) / mrr * 100) if mrr else None
+    altas_mes = altas_by_month.get(today.strftime("%Y-%m"), 0)
+    en_riesgo = len([
+        b for b in biz if b["activated"] and (b["days_inactive"] or 0) >= 14
+    ])
+    vq = verifactu_queue_counts()
+    backup = latest_backup_run()
+    alerts = admin_alerts()
+    backup_text = {
+        "ok": "última copia verificada OK",
+        "error": "la última copia FALLÓ",
+    }.get((backup or {}).get("status"), "sin copias todavía")
+    finanzas = {
+        "mrr": mrr,
+        "run_rate": mrr * 12,
+        "ai_cost_eur": ai_cost_eur,
+        "margen_pct": margen_pct,
+    }
+    dept_reports = {
+        "finanzas": (
+            f"MRR de {mrr} € ({mrr * 12} €/año). La IA del mes cuesta "
+            f"~{ai_cost_eur} €: margen bruto ~{margen_pct}%."
+            if mrr else
+            f"Aún sin suscripciones de pago. La IA del mes cuesta "
+            f"~{ai_cost_eur} € ({ai_total['calls']} llamadas al agente)."
+        ),
+        "crecimiento": (
+            f"{altas_mes} alta(s) este mes. {len(activated)} de {len(biz)} "
+            f"cuentas activadas ({round(len(activated) / len(biz) * 100) if biz else 0}%) "
+            f"y {en_riesgo} en riesgo de fuga (14+ días sin uso)."
+        ),
+        "operaciones": (
+            f"{len(alerts)} alarma(s) activa(s). Veri*Factu: "
+            f"{vq['pendiente']} pendiente(s), {vq['rechazado']} rechazada(s). "
+            f"Copias: {backup_text}."
+        ),
+        "clientes": (
+            f"{len([b for b in biz if b['whatsapp_status'] == 'conectado'])} "
+            f"de {len(biz)} cuentas con WhatsApp conectado; "
+            f"{len([b for b in biz if b['outcome_reached']])} ya han cobrado "
+            "su primera factura (ciclo completo)."
+        ),
+    }
     return {
         "charts": charts,
+        "finanzas": finanzas,
+        "dept_reports": dept_reports,
         "total": len(biz), "activos": len(activos),
         "en_prueba": len([b for b in biz if b["subscription_status"] == "trial"]),
         "whatsapp_conectados": len([b for b in biz if b["whatsapp_status"] == "conectado"]),
@@ -4506,14 +4558,11 @@ def admin_overview() -> dict:
         "activados": len(activated),
         "resultados": len([b for b in biz if b["outcome_reached"]]),
         "tasa_activacion": round(len(activated) / len(biz) * 100) if biz else 0,
-        "en_riesgo": len([
-            b for b in biz
-            if b["activated"] and (b["days_inactive"] or 0) >= 14
-        ]),
-        "mrr": mrr, "businesses": biz, "backup": latest_backup_run(),
-        "verifactu_queue": verifactu_queue_counts(),
+        "en_riesgo": en_riesgo,
+        "mrr": mrr, "businesses": biz, "backup": backup,
+        "verifactu_queue": vq,
         "ai_usage": usage,
-        "alerts": admin_alerts(),
+        "alerts": alerts,
     }
 
 

@@ -13,7 +13,7 @@
     <div class="page-title">
       <div class="kicker">Noesis · Fundador</div>
       <h1>Centro de mando</h1>
-      <p>Salud del sistema, clientes, uso de IA y a quién llamar si algo falla.
+      <p>Cada departamento te informa con sus cifras y su parte diario.
          Solo metadatos de cuenta y agregados — sin datos operativos de cada autónomo.</p>
     </div>
     <div class="page-actions"><form method="post" action="/logout"><button class="btn" type="submit">Salir</button></form></div>
@@ -28,6 +28,75 @@
     <div class="stat"><div class="lbl">Alarmas</div><div class="val {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="delta flat">ahora mismo</div></div>
   </div>
 
+  <!-- ================= 💰 Finanzas ================= -->
+  <div class="dept-head">
+    <span class="dept-ic">💰</span>
+    <div>
+      <h2>Finanzas</h2>
+      <p>{{ data.dept_reports.finanzas }}</p>
+    </div>
+  </div>
+  <div class="admin-grid fin-grid">
+    <div class="stat"><div class="lbl">MRR</div><div class="val">{{ data.finanzas.mrr }} €</div><div class="delta flat">ingreso recurrente mensual</div></div>
+    <div class="stat"><div class="lbl">Run-rate anual</div><div class="val">{{ data.finanzas.run_rate }} €</div><div class="delta flat">MRR × 12</div></div>
+    <div class="stat"><div class="lbl">Coste IA (mes)</div><div class="val amber">{{ '%.2f'|format(data.finanzas.ai_cost_eur) }} €</div><div class="delta flat">estimado por tokens</div></div>
+    <div class="stat"><div class="lbl">Margen bruto</div>
+      <div class="val {{ 'green' if data.finanzas.margen_pct and data.finanzas.margen_pct >= 70 }}">{{ data.finanzas.margen_pct ~ '%' if data.finanzas.margen_pct is not none else '—' }}</div>
+      <div class="delta flat">MRR menos coste IA</div></div>
+  </div>
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Facturado vs. cobrado</h2><span class="hint">top cuentas por volumen</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-volumen"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Uso de IA por cuenta</h2><span class="hint">tokens del mes · {{ data.ai_usage.month }}</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-ia"></canvas></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Uso de IA · {{ data.ai_usage.month }}</h2><span class="hint">el coste real de servir</span></div>
+    <div class="card-b">
+      <div class="row">
+        <span class="badge b-gray">Llamadas al agente: {{ data.ai_usage.total.calls }}</span>
+        <span class="badge b-gray">Tokens entrada: {{ '{:,}'.format(data.ai_usage.total.input).replace(',', '.') }}</span>
+        <span class="badge b-gray">Tokens salida: {{ '{:,}'.format(data.ai_usage.total.output).replace(',', '.') }}</span>
+        <span class="badge b-gray">Extracciones (fotos/PDF): {{ data.ai_usage.total.extractions }}</span>
+      </div>
+      <p class="meta" style="margin-top:8px">
+        Lo rutinario se resuelve gratis en local (NLU); aquí solo aparece lo que
+        de verdad llama a la API. El detalle por cliente, en la tabla de cuentas.
+      </p>
+    </div>
+  </div>
+
+  <!-- ================= 📈 Crecimiento ================= -->
+  <div class="dept-head">
+    <span class="dept-ic">📈</span>
+    <div>
+      <h2>Crecimiento</h2>
+      <p>{{ data.dept_reports.crecimiento }}</p>
+    </div>
+  </div>
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Altas por mes</h2><span class="hint">últimos 12 meses</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-altas"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Distribución de planes</h2><span class="hint">todas las cuentas</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-planes"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ================= ⚙️ Operaciones ================= -->
+  <div class="dept-head">
+    <span class="dept-ic">⚙️</span>
+    <div>
+      <h2>Operaciones y sistemas</h2>
+      <p>{{ data.dept_reports.operaciones }}</p>
+    </div>
+  </div>
   {% if data.alerts %}
   <div class="card admin-alerts">
     <div class="card-h">
@@ -44,42 +113,7 @@
     </div>
   </div>
   {% endif %}
-
   <div class="grid g2 admin-charts">
-    <div class="card">
-      <div class="card-h"><h2>Altas por mes</h2><span class="hint">últimos 12 meses</span></div>
-      <div class="card-b"><div class="chart-box"><canvas id="ch-altas"></canvas></div></div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h2>Distribución de planes</h2><span class="hint">todas las cuentas</span></div>
-      <div class="card-b"><div class="chart-box"><canvas id="ch-planes"></canvas></div></div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h2>Facturado vs. cobrado</h2><span class="hint">top cuentas por volumen</span></div>
-      <div class="card-b"><div class="chart-box"><canvas id="ch-volumen"></canvas></div></div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h2>Uso de IA por cuenta</h2><span class="hint">tokens del mes · {{ data.ai_usage.month }}</span></div>
-      <div class="card-b"><div class="chart-box"><canvas id="ch-ia"></canvas></div></div>
-    </div>
-  </div>
-
-  <div class="grid g3 admin-ops">
-    <div class="card">
-      <div class="card-h">
-        <h2>Uso de IA · {{ data.ai_usage.month }}</h2>
-      </div>
-      <div class="card-b">
-        <div class="lrow"><span>Llamadas al agente</span><b class="num">{{ data.ai_usage.total.calls }}</b></div>
-        <div class="lrow"><span>Tokens entrada</span><b class="num">{{ '{:,}'.format(data.ai_usage.total.input).replace(',', '.') }}</b></div>
-        <div class="lrow"><span>Tokens salida</span><b class="num">{{ '{:,}'.format(data.ai_usage.total.output).replace(',', '.') }}</b></div>
-        <div class="lrow"><span>Extracciones (fotos/PDF)</span><b class="num">{{ data.ai_usage.total.extractions }}</b></div>
-        <p class="meta" style="margin-top:10px">
-          Lo rutinario se resuelve gratis en local (NLU); aquí solo aparece lo
-          que de verdad llama a la API. Es el coste real de servir a los clientes.
-        </p>
-      </div>
-    </div>
     <div class="card">
       <div class="card-h">
         <h2>Cola Veri*Factu</h2>
@@ -125,7 +159,15 @@
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px">
+  <!-- ================= 👥 Clientes ================= -->
+  <div class="dept-head">
+    <span class="dept-ic">👥</span>
+    <div>
+      <h2>Clientes</h2>
+      <p>{{ data.dept_reports.clientes }}</p>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-h"><h2>Cuentas</h2><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp · contacto directo para emergencias</span></div>
     <div class="card-b table-pad">
       <div class="table-wrap">
