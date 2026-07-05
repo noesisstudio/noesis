@@ -3081,6 +3081,68 @@ def pending_payments(business_id) -> list[dict]:
     return out
 
 
+def global_search(business_id, query: str, limit: int = 6) -> dict:
+    """Buscador global del negocio: clientes, facturas, presupuestos y trabajos
+    por nombre, número, concepto o teléfono. Siempre aislado por business_id."""
+    text = (query or "").strip()
+    if len(text) < 2:
+        return {"clients": [], "invoices": [], "quotes": [], "jobs": []}
+    like = f"%{text.lower()}%"
+    limit = max(1, min(int(limit or 6), 20))
+    with get_conn() as conn:
+        clients = conn.execute(
+            "SELECT id, name, phone, zone FROM clients WHERE business_id=? "
+            "AND (lower(name) LIKE ? OR lower(COALESCE(phone,'')) LIKE ? "
+            "OR lower(COALESCE(nif,'')) LIKE ?) ORDER BY name LIMIT ?",
+            (business_id, like, like, like, limit),
+        ).fetchall()
+        invoices = conn.execute(
+            "SELECT i.id, i.number, i.concept, i.total, i.status, "
+            "c.name AS client_name FROM invoices i "
+            "LEFT JOIN clients c ON c.id=i.client_id "
+            "AND c.business_id=i.business_id "
+            "WHERE i.business_id=? AND (lower(COALESCE(i.number,'')) LIKE ? "
+            "OR lower(i.concept) LIKE ? OR lower(COALESCE(c.name,'')) LIKE ?) "
+            "ORDER BY i.id DESC LIMIT ?",
+            (business_id, like, like, like, limit),
+        ).fetchall()
+        quotes = conn.execute(
+            "SELECT q.id, q.number, q.concept, q.total, q.status, "
+            "c.name AS client_name FROM quotes q "
+            "LEFT JOIN clients c ON c.id=q.client_id "
+            "AND c.business_id=q.business_id "
+            "WHERE q.business_id=? AND (lower(COALESCE(q.number,'')) LIKE ? "
+            "OR lower(q.concept) LIKE ? OR lower(COALESCE(c.name,'')) LIKE ?) "
+            "ORDER BY q.id DESC LIMIT ?",
+            (business_id, like, like, like, limit),
+        ).fetchall()
+        jobs = conn.execute(
+            "SELECT j.id, j.description, j.scheduled_for, j.status, "
+            "c.name AS client_name FROM jobs j "
+            "LEFT JOIN clients c ON c.id=j.client_id "
+            "AND c.business_id=j.business_id "
+            "WHERE j.business_id=? AND (lower(j.description) LIKE ? "
+            "OR lower(COALESCE(c.name,'')) LIKE ?) "
+            "ORDER BY j.id DESC LIMIT ?",
+            (business_id, like, like, limit),
+        ).fetchall()
+    return {
+        "clients": [dict(r) for r in clients],
+        "invoices": [dict(r) for r in invoices],
+        "quotes": [dict(r) for r in quotes],
+        "jobs": [dict(r) for r in jobs],
+    }
+
+
+def list_admin_emails() -> list[str]:
+    """Correos de los administradores de Noesis (para los partes internos)."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT email FROM users WHERE is_admin=TRUE ORDER BY email"
+        ).fetchall()
+        return [row["email"] for row in rows]
+
+
 def cash_forecast(business_id, days: int = 30) -> dict:
     """Previsión de caja: lo que debería entrar (facturas pendientes de cobro),
     lo que suele salir (media de gastos de los últimos 90 días) y el IVA del

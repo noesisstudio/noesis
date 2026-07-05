@@ -795,6 +795,12 @@ def api_forecast(business_id: int, days: int = 30):
     return db.cash_forecast(business_id, days=days)
 
 
+@app.get("/api/{business_id}/search")
+def api_search(business_id: int, q: str = ""):
+    """Buscador global: clientes, facturas, presupuestos y trabajos."""
+    return db.global_search(business_id, q)
+
+
 @app.get("/api/{business_id}/clients")
 def api_clients(business_id: int):
     return db.list_clients(business_id)

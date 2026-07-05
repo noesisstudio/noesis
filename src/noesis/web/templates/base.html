@@ -41,16 +41,12 @@
     <div class="brand"><img class="mark" src="/static/noesis-mark.svg" alt=""> Noesis</div>
     <div class="section">
       {% set b = business.id %}
+      {% set g_tesoreria = ['tesoreria', 'analisis', 'ingresos', 'costes'] %}
+      {% set g_facturacion = ['facturas', 'presupuestos', 'cobros', 'impuestos'] %}
       <a class="nav-item {{ 'active' if active=='resumen' }}" href="/b/{{ b }}/resumen"><span class="ic">{{ ic('resumen') }}</span> Resumen</a>
       <div class="section-label">Negocio</div>
-      <a class="nav-item {{ 'active' if active=='tesoreria' }}" href="/b/{{ b }}/tesoreria"><span class="ic">{{ ic('tesoreria') }}</span> Tesorería</a>
-      <a class="nav-item {{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis"><span class="ic">{{ ic('analisis') }}</span> Análisis</a>
-      <a class="nav-item {{ 'active' if active=='ingresos' }}" href="/b/{{ b }}/ingresos"><span class="ic">{{ ic('ingresos') }}</span> Ingresos</a>
-      <a class="nav-item {{ 'active' if active=='costes' }}" href="/b/{{ b }}/costes"><span class="ic">{{ ic('costes') }}</span> Costes</a>
-      <a class="nav-item {{ 'active' if active=='presupuestos' }}" href="/b/{{ b }}/presupuestos"><span class="ic">{{ ic('presupuestos') }}</span> Presupuestos</a>
-      <a class="nav-item {{ 'active' if active=='facturas' }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturas</a>
-      <a class="nav-item {{ 'active' if active=='cobros' }}" href="/b/{{ b }}/cobros"><span class="ic">{{ ic('cobros') }}</span> Cobros</a>
-      <a class="nav-item {{ 'active' if active=='impuestos' }}" href="/b/{{ b }}/impuestos"><span class="ic">{{ ic('impuestos') }}</span> Impuestos</a>
+      <a class="nav-item {{ 'active' if active in g_tesoreria }}" href="/b/{{ b }}/tesoreria"><span class="ic">{{ ic('tesoreria') }}</span> Tesorería</a>
+      <a class="nav-item {{ 'active' if active in g_facturacion }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturación</a>
       <div class="section-label">Operativa</div>
       <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Agenda</a>
       <a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>
@@ -82,6 +78,11 @@
         <div class="crumb">Noesis · <b>{{ page_title }}</b></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
+        <button class="search-btn" type="button" onclick="searchModal()"
+                title="Buscar (Ctrl+K)" aria-label="Buscar cliente, factura o trabajo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          <span class="search-hint">Buscar</span><kbd>Ctrl K</kbd>
+        </button>
         <div class="quick-create">
           <button class="btn primary sm qc-btn" type="button" aria-haspopup="true" aria-expanded="false"
                   onclick="this.parentElement.classList.toggle('open');this.setAttribute('aria-expanded',this.parentElement.classList.contains('open'))">
@@ -104,6 +105,21 @@
         {% endif %}
       </div>
     </div>
+    {% if active in g_tesoreria %}
+    <div class="subnav" role="tablist" aria-label="Secciones de Tesorería">
+      <a class="{{ 'active' if active=='tesoreria' }}" href="/b/{{ b }}/tesoreria">Tesorería</a>
+      <a class="{{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis">Análisis</a>
+      <a class="{{ 'active' if active=='ingresos' }}" href="/b/{{ b }}/ingresos">Ingresos</a>
+      <a class="{{ 'active' if active=='costes' }}" href="/b/{{ b }}/costes">Costes</a>
+    </div>
+    {% elif active in g_facturacion %}
+    <div class="subnav" role="tablist" aria-label="Secciones de Facturación">
+      <a class="{{ 'active' if active=='facturas' }}" href="/b/{{ b }}/facturas">Facturas</a>
+      <a class="{{ 'active' if active=='presupuestos' }}" href="/b/{{ b }}/presupuestos">Presupuestos</a>
+      <a class="{{ 'active' if active=='cobros' }}" href="/b/{{ b }}/cobros">Cobros</a>
+      <a class="{{ 'active' if active=='impuestos' }}" href="/b/{{ b }}/impuestos">Impuestos</a>
+    </div>
+    {% endif %}
     <div class="content">
       {% block content %}{% endblock %}
     </div>

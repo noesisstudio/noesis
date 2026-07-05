@@ -206,6 +206,73 @@ window.addEventListener('DOMContentLoaded', () => {
   if (typeof window.QUICK_NEW === 'function') setTimeout(window.QUICK_NEW, 120);
 });
 
+/* Buscador global (Ctrl+K): clientes, facturas, presupuestos y trabajos. */
+function searchModal() {
+  closeModal();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay search-overlay';
+  ov.innerHTML = `<div class="modal search-modal" role="dialog" aria-modal="true" aria-label="Buscar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input class="input" id="gs-input" placeholder="Cliente, factura, presupuesto o trabajo…"
+             autocomplete="off" spellcheck="false">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="search-results" id="gs-results">
+      <div class="empty">Escribe al menos 2 letras. Ej.: «Marta», «2026-004», «caldera».</div>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });
+  const onEsc = e => {
+    if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); }
+  };
+  document.addEventListener('keydown', onEsc);
+  const input = ov.querySelector('#gs-input');
+  const results = ov.querySelector('#gs-results');
+  let timer = null, seq = 0;
+  const STATUS = { borrador: 'b-gray', enviada: 'b-amber', parcial: 'b-amber',
+                   cobrada: 'b-green', aceptado: 'b-green', rechazado: 'b-red',
+                   pendiente: 'b-amber', hecho: 'b-green' };
+  const badge = s => s ? `<span class="badge ${STATUS[s] || 'b-gray'}">${esc(s)}</span>` : '';
+  const group = (title, rows) => rows.length
+    ? `<div class="gs-group">${esc(title)}</div>` + rows.join('') : '';
+  const row = (href, main, side) => `<a class="gs-row" href="/b/${BIZ}/${href}">
+    <span class="gs-main">${main}</span><span class="gs-side">${side}</span></a>`;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) return;
+    timer = setTimeout(async () => {
+      const mine = ++seq;
+      const r = await api('/search?q=' + encodeURIComponent(q));
+      if (mine !== seq) return; // llegó tarde: ya hay otra búsqueda en curso
+      const html =
+        group('Clientes', r.clients.map(c => row('clientes',
+          `<b>${esc(c.name)}</b>${c.zone ? `<small>${esc(c.zone)}</small>` : ''}`,
+          esc(c.phone || '')))) +
+        group('Facturas', r.invoices.map(i => row('facturas',
+          `<b>${esc(i.number || 'borrador')}</b><small>${esc(i.client_name || '')} · ${esc(i.concept)}</small>`,
+          `${eur(i.total)} ${badge(i.status)}`))) +
+        group('Presupuestos', r.quotes.map(qu => row('presupuestos',
+          `<b>${esc(qu.number || 'presupuesto')}</b><small>${esc(qu.client_name || '')} · ${esc(qu.concept)}</small>`,
+          `${eur(qu.total)} ${badge(qu.status)}`))) +
+        group('Trabajos', r.jobs.map(j => row('agenda',
+          `<b>${esc(j.description)}</b><small>${esc(j.client_name || '')}${j.scheduled_for ? ' · ' + dateShort(j.scheduled_for) : ''}</small>`,
+          badge(j.status))));
+      results.innerHTML = html ||
+        `<div class="empty">Nada con «${esc(q)}». Prueba con otro nombre o número.</div>`;
+    }, 220);
+  });
+  input.focus();
+}
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    if (typeof BIZ !== 'undefined' && BIZ) searchModal();
+  }
+});
+
 /* Paleta para gráficos (coherente con el sistema de diseño). */
 const CHART = {
   brand: '#2e8b74', brandSoft: '#a9d2c5', forest: '#14463b',

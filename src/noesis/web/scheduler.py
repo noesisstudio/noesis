@@ -389,6 +389,43 @@ def send_collection_proposals(now: datetime | None = None) -> int:
     return queued
 
 
+def send_founder_digest(now: datetime | None = None) -> bool:
+    """Agente CFO interno: cada lunes, los departamentos del centro de mando
+    informan a dirección por email. Cifras deterministas, coste cero."""
+    from ..adapters import email as email_adapter
+
+    point = now or datetime.now()
+    year, week, _ = point.isocalendar()
+    if not db.claim_scheduled_run(f"founder-digest:{year}-W{week:02d}"):
+        return False
+    admins = db.list_admin_emails()
+    if not admins:
+        return True
+    data = db.admin_overview()
+    reports = data["dept_reports"]
+    body = "\n".join([
+        f"Parte semanal de Noesis · semana {week:02d}/{year}",
+        "",
+        f"💰 Finanzas: {reports['finanzas']}",
+        f"📈 Crecimiento: {reports['crecimiento']}",
+        f"⚙️ Operaciones: {reports['operaciones']}",
+        f"👥 Clientes: {reports['clientes']}",
+        "",
+        f"KPIs: {data['total']} cuenta(s) · MRR {data['mrr']} € · "
+        f"coste IA {data['finanzas']['ai_cost_eur']} € · "
+        f"{len(data['alerts'])} alarma(s).",
+        "",
+        f"Detalle completo: {config.BASE_URL}/admin",
+        "— Generado automáticamente por el centro de mando.",
+    ])
+    subject = f"Noesis · parte semanal W{week:02d}: MRR {data['mrr']} €"
+    for address in admins:
+        email_adapter.send_email(address, subject, body)
+    log.info("Parte semanal del fundador enviado a %d dirección(es).",
+             len(admins))
+    return True
+
+
 def send_gestoria_packages(now: datetime | None = None) -> int:
     """Al cerrar cada período, avisa a la gestoría de que su paquete está listo."""
     from . import gestoria
@@ -521,6 +558,14 @@ def start_scheduler() -> BackgroundScheduler:
         hour=10,
         minute=0,
         id="collect-proposals",
+    )
+    scheduler.add_job(
+        send_founder_digest,
+        "cron",
+        day_of_week="mon",
+        hour=9,
+        minute=0,
+        id="founder-digest",
     )
     scheduler.add_job(
         send_daily_closings,

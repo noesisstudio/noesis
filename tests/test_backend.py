@@ -2499,6 +2499,46 @@ class WhatsappReportsTestCase(unittest.TestCase):
         )
         self.assertEqual(db.list_whatsapp_messages(opted_out["id"]), [])
 
+    def test_global_search_finds_and_isolates(self):
+        business, client = self.make_business("Buscador Uno")
+        other, other_client = self.make_business("Buscador Dos")
+        invoice = db.add_invoice(
+            client["id"], "Cambio de caldera", 350, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+        db.add_job(client["id"], "Revisar caldera del ático",
+                   business_id=business["id"])
+        db.add_invoice(other_client["id"], "Caldera ajena", 100,
+                       business_id=other["id"])
+
+        results = db.global_search(business["id"], "caldera")
+        self.assertEqual(len(results["invoices"]), 1)
+        self.assertEqual(results["invoices"][0]["concept"], "Cambio de caldera")
+        self.assertEqual(len(results["jobs"]), 1)
+        # Nada del otro negocio se cuela.
+        concepts = [i["concept"] for i in results["invoices"]]
+        self.assertNotIn("Caldera ajena", concepts)
+        # Por nombre de cliente también encuentra.
+        by_client = db.global_search(business["id"], "cliente fiscal")
+        self.assertTrue(by_client["clients"])
+        # Consultas cortas no buscan.
+        self.assertEqual(db.global_search(business["id"], "c"),
+                         {"clients": [], "invoices": [], "quotes": [],
+                          "jobs": []})
+
+    def test_founder_digest_claims_week_and_lists_admins(self):
+        business, _ = self.make_business("Digest Semanal")
+        user = db.create_user(
+            "founder-digest@example.com", auth.hash_password("clave-larga-123"),
+            business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (user["id"],))
+        self.assertIn("founder-digest@example.com", db.list_admin_emails())
+        self.assertTrue(scheduler.send_founder_digest())
+        # La misma semana no se repite.
+        self.assertFalse(scheduler.send_founder_digest())
+
     def test_cash_forecast_and_collection_proposal_flow(self):
         business, client = self.make_business("Piloto Cobros")
         db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
