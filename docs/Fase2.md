@@ -20,8 +20,10 @@ y degrada con elegancia cuando falta una clave externa (mismo patrón que WhatsA
 ## Lo que necesita configuración del fundador
 
 - **Stripe** (cobrar de verdad): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-  `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`. Webhook → `POST /webhook/stripe`.
-  Sin esto, el alta entra en prueba y el cobro se gestiona a mano.
+  `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM`.
+  Webhook → `POST /webhook/stripe`. Guía paso a paso: `docs/Despliegue.md`,
+  sección "Activar Stripe". Sin esto, el alta entra en prueba y el cobro se
+  gestiona a mano.
 - **Email** (reset de contraseña): `SMTP_HOST/PORT/USER/PASS/FROM`. Sin esto, el
   enlace de reset se registra en el log (sirve para probar).
 - **Admin**: `NOESIS_ADMIN_EMAIL` con tu email para entrar en `/admin`.

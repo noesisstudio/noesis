@@ -37,9 +37,10 @@
       <li>Agenda, clientes y presupuestos</li>
       <li>Facturas con IVA/IRPF, PDF y registro Veri*Factu</li>
       <li>Cobros y recordatorios automáticos</li>
-      <li>Asistente con texto y notas de voz</li>
+      <li>Asistente con texto, voz y foto</li>
       <li>Resumen diario por WhatsApp</li>
       <li>Impuestos trimestrales (303/130)</li>
+      <li>~75 acciones de IA al mes</li>
     </ul>
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="autonomo">
@@ -51,15 +52,32 @@
     <p class="price">39 €<small>/mes</small></p>
     <ul>
       <li>Todo lo del plan Autónomo</li>
-      <li>Equipo: asignación de trabajos y planning</li>
+      <li>Equipo: trabajos, planning y productividad</li>
       <li>Fichaje con registro inalterable (art. 34.9 ET)</li>
-      <li>Alertas avanzadas de cobro</li>
-      <li>Análisis de rentabilidad y cartera</li>
+      <li>Gestoría conectada: portal y paquete automático</li>
+      <li>Alertas avanzadas de cobro y análisis</li>
+      <li>~300 acciones de IA al mes</li>
       <li>Soporte prioritario</li>
     </ul>
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="pro">
       <button class="btn primary full" type="submit">Activar plan Negocio</button>
+    </form>
+  </div>
+  <div class="plan">
+    <h3>Sin Límites</h3>
+    <p class="price">79 €<small>/mes</small></p>
+    <ul>
+      <li>Todo lo del plan Negocio</li>
+      <li>Recepcionista 24/7 (beta): contesta llamadas y agenda citas</li>
+      <li>100 minutos de llamadas al mes incluidos</li>
+      <li>~1.500 acciones de IA al mes</li>
+      <li>Puesta en marcha acompañada</li>
+      <li>Línea directa con el equipo por WhatsApp</li>
+    </ul>
+    <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
+      <input type="hidden" name="plan" value="premium">
+      <button class="btn primary full" type="submit">Activar plan Sin Límites</button>
     </form>
   </div>
 </div>

@@ -89,6 +89,20 @@
     </div>
   </div>
 
+  <!-- ================= 📣 Marketing ================= -->
+  <div class="dept-head">
+    <span class="dept-ic">📣</span>
+    <div>
+      <h2>Marketing y adquisición</h2>
+      <p>{{ data.dept_reports.marketing }}</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Embudo de adquisición</h2>
+      <span class="hint">del alta al pago</span></div>
+    <div class="card-b"><div class="chart-box"><canvas id="ch-funnel"></canvas></div></div>
+  </div>
+
   <!-- ================= ⚙️ Operaciones ================= -->
   <div class="dept-head">
     <span class="dept-ic">⚙️</span>
@@ -242,7 +256,21 @@ new Chart(document.getElementById('ch-altas'), {
          border: { display: false } } } })
 });
 
-const PLAN_LABELS = { trial: 'Prueba', autonomo: 'Autónomo (29 €)', pro: 'Negocio (39 €)' };
+new Chart(document.getElementById('ch-funnel'), {
+  type: 'bar',
+  data: { labels: C.funnel_labels,
+    datasets: [{ label: 'Cuentas', data: C.funnel,
+      backgroundColor: [PAL.soft, PAL.soft, PAL.brand, PAL.brand, PAL.forest, PAL.forest],
+      borderRadius: 6, maxBarThickness: 22 }] },
+  options: BASE({ indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: PAL.grid },
+                   border: { display: false } },
+              y: { grid: { display: false } } } })
+});
+
+const PLAN_LABELS = { trial: 'Prueba', autonomo: 'Autónomo (29 €)', pro: 'Negocio (39 €)',
+                      premium: 'Sin Límites (79 €)' };
 const planKeys = Object.keys(C.planes);
 new Chart(document.getElementById('ch-planes'), {
   type: 'doughnut',

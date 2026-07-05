@@ -27,7 +27,8 @@ escala bien al principio. Coste estimado: ~5 €/mes.
    - Al activar WhatsApp: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`,
      `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` y `NOESIS_WHATSAPP_NUMBER`.
    - Al activar Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-     `STRIPE_PRICE_AUTONOMO` y `STRIPE_PRICE_PRO`.
+     `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO` y `STRIPE_PRICE_PREMIUM`
+     (guía paso a paso en la sección "Activar Stripe" de abajo).
    - Email (SMTP): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
    - Facturación legal: `HOLDED_API_KEY` (cuando se active Verifactu vía Holded).
    - `PORT` lo inyecta Railway automáticamente.
@@ -65,6 +66,31 @@ se aplican con `python -m noesis.migrations upgrade`; se pueden revertir con
 - [ ] Probar alta de un autónomo nuevo y confirmar que NO ve datos de otro.
 - [ ] Página de privacidad/términos (RGPD) antes de meter datos reales de clientes.
 - [ ] Quitar/!proteger el negocio y usuario demo si se considera necesario.
+
+## Activar Stripe (cobro real, ~20 minutos)
+El código ya está listo: checkout, portal de cliente y webhook firmado e idempotente.
+Solo falta la configuración en stripe.com:
+
+1. **Cuenta**: dashboard.stripe.com → activar la cuenta (datos fiscales de la empresa
+   e IBAN donde recibir los pagos).
+2. **Productos**: Catálogo → añadir 3 productos con precio recurrente mensual en EUR:
+   Autónomo 29 €, Negocio 39 €, Sin Límites 79 €. Copiar los `price_...` de cada uno.
+3. **Variables en Railway** (servicio web → Variables):
+   - `STRIPE_SECRET_KEY` → clave secreta de producción (`sk_live_...`).
+   - `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` → los `price_...`.
+4. **Webhook**: Desarrolladores → Webhooks → añadir endpoint
+   `https://bynoesis.com/webhook/stripe` con los eventos `checkout.session.completed`,
+   `customer.subscription.created`, `customer.subscription.updated`,
+   `customer.subscription.deleted`, `invoice.paid` e `invoice.payment_failed`.
+   Copiar el "signing secret" (`whsec_...`) a `STRIPE_WEBHOOK_SECRET`.
+5. **Portal de cliente**: Configuración → Billing → Customer portal → activar
+   (permite al cliente cambiar de plan, tarjeta y cancelar solo).
+6. **Prueba**: antes de las claves live, repetir 2-4 en modo test (`sk_test_...`),
+   pagar con la tarjeta `4242 4242 4242 4242` y comprobar que la cuenta pasa a
+   "Suscripción activa" en `/b/{id}/suscripcion` y que el MRR aparece en `/admin`.
+
+Sin estas variables, el alta sigue funcionando en modo manual (el interés queda
+registrado como evento `checkout_started` y se activa el plan a mano).
 
 ## Seguridad ya implementada
 - Aislamiento por `business_id` en BD, rutas `/b/` y `/api/`, y onboarding.

@@ -27,7 +27,17 @@ from .. import config
 log = logging.getLogger("noesis.billing")
 _API = "https://api.stripe.com/v1"
 
-PLAN_PRICES = {"autonomo": 29, "pro": 39}
+# Catálogo de planes: fuente única de verdad (precios calculados por coste+margen,
+# ver docs/Producto.md). Los créditos son acciones de IA (~2 c€/crédito con colchón):
+#   autonomo -> coste máx ~3 €  -> margen ~90 %
+#   pro      -> coste máx ~8 €  -> margen ~80 %
+#   premium  -> coste máx ~40 € -> margen ~50 % (incluye recepcionista 24/7)
+PLANS = {
+    "autonomo": {"name": "Autónomo", "price": 29, "credits": 75},
+    "pro": {"name": "Negocio", "price": 39, "credits": 300},
+    "premium": {"name": "Sin Límites", "price": 79, "credits": 1500},
+}
+PLAN_PRICES = {key: plan["price"] for key, plan in PLANS.items()}
 
 
 class BillingProvider(Protocol):
@@ -39,7 +49,8 @@ class BillingProvider(Protocol):
 
 def _price_id(plan: str) -> str:
     return {"autonomo": config.STRIPE_PRICE_AUTONOMO,
-            "pro": config.STRIPE_PRICE_PRO}.get(plan, "")
+            "pro": config.STRIPE_PRICE_PRO,
+            "premium": config.STRIPE_PRICE_PREMIUM}.get(plan, "")
 
 
 class StripeBillingProvider:

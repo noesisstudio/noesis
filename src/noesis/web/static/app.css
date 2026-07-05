@@ -644,8 +644,8 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
 .taxrow.total b { font-family:var(--serif); font-size:20px; color:var(--brand); }
 
 /* ---- Suscripción: planes ---- */
-.plan-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:8px; }
-@media (max-width:720px){ .plan-grid { grid-template-columns:1fr; } }
+.plan-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:8px; }
+@media (max-width:980px){ .plan-grid { grid-template-columns:1fr; max-width:520px; } }
 .plan { border:1px solid var(--border); border-radius:var(--radius); padding:22px;
   background:var(--surface); box-shadow:var(--shadow-sm); }
 .plan.featured { border-color:var(--brand-2); box-shadow:0 6px 24px rgba(20,70,59,.10); }

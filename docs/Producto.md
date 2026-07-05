@@ -58,17 +58,25 @@ plantillas WhatsApp): **~1,5-2,5 €/mes**.
 
 | Plan | Precio | Créditos IA/mes | Coste IA máx | Fijo | Coste total | Margen a tope de uso |
 |---|---|---|---|---|---|---|
-| Básico (Autónomo) | **29 €** | ~75 (≈2-3/día) | 1,50 € | 1,50 € | ~3,00 € | **~90%** |
-| Medio (Negocio) | **39 €** | ~300 (≈10/día) | 6,00 € | 2,00 € | ~8,00 € | **~80%** |
-| Superior (propuesta) | **59 €** | ~1.300 ("sin mirar el contador") | 26,00 € | 2,50 € | ~28,50 € | **~52%** |
+| **Autónomo** | **29 €** | ~75 (≈2-3/día) | 1,50 € | 1,50 € | ~3,00 € | **~90%** |
+| **Negocio** | **39 €** | ~300 (≈10/día) | 6,00 € | 2,00 € | ~8,00 € | **~80%** |
+| **Sin Límites** | **79 €** | ~1.500 ("sin mirar el contador") | 30,00 € | 2,50 € + llamadas ~8,00 € | ~40,50 € | **~49%** |
+
+Este catálogo vive en `src/noesis/adapters/billing.py` (`PLANS`) y es el que usan
+el checkout de Stripe, la página `/precios` y el MRR del `/admin`.
+
+**Reparto de módulos** (decidido 2026-07): equipo + fichaje + **gestoría
+conectada** + análisis entran en Negocio (es lo que hace recomendable el plan
+medio); el **recepcionista de llamadas 24/7** (100 min/mes incluidos, ver
+`docs/Recepcionista-llamadas.md`) es el gancho exclusivo de Sin Límites, y
+cuando salga de beta se ofrecerá como add-on de +15 €/mes en Negocio, de modo
+que las llamadas se autofinancian y no rompen el margen del 80%.
 
 Notas:
 - El margen real será mayor: casi nadie agota los créditos, y lo rutinario se
-  resuelve gratis con NLU local. El 50% del superior es el **suelo aceptado**:
-  el cliente intensivo sigue siendo rentable y es el que más retiene.
-- Si se quiere el superior exactamente al 50% con 1.500 créditos:
-  coste máx ≈ 32,5 € → precio ≈ **65 €**. Entre 59 y 69 € es decisión de
-  posicionamiento, no de coste.
+  resuelve gratis con NLU local. El ~50% de Sin Límites es el **suelo
+  aceptado**: el cliente intensivo sigue siendo rentable y es el que más
+  retiene.
 - El margen se vigila en `/admin` (tokens por cuenta vs. plan). Una cuenta del
   básico que consume como el superior es señal de *upsell*, no de recorte.
 - Palancas si el coste sube: enrutar más tráfico a Haiku (÷3 el coste del

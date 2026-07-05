@@ -408,6 +408,7 @@ def send_founder_digest(now: datetime | None = None) -> bool:
         "",
         f"💰 Finanzas: {reports['finanzas']}",
         f"📈 Crecimiento: {reports['crecimiento']}",
+        f"📣 Marketing: {reports['marketing']}",
         f"⚙️ Operaciones: {reports['operaciones']}",
         f"👥 Clientes: {reports['clientes']}",
         "",

@@ -2846,6 +2846,31 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertIn("alerts", data)
         self.assertIn("en_riesgo", data)
 
+    def test_overview_marketing_funnel_and_plan_catalog(self):
+        from noesis.adapters import billing
+
+        self.assertEqual(
+            billing.PLAN_PRICES, {"autonomo": 29, "pro": 39, "premium": 79}
+        )
+        business, _ = self.make_business("Admin Embudo")
+        db.record_product_event(
+            business["id"], "checkout_started", "plan=premium"
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET subscription_status='active', "
+                "plan='premium' WHERE id=?",
+                (business["id"],),
+            )
+        data = db.admin_overview()
+        self.assertIn("marketing", data["dept_reports"])
+        charts = data["charts"]
+        self.assertEqual(len(charts["funnel"]), len(charts["funnel_labels"]))
+        labels = charts["funnel_labels"]
+        self.assertEqual(charts["funnel"][labels.index("Checkout")], 1)
+        self.assertEqual(charts["funnel"][labels.index("De pago")], 1)
+        self.assertEqual(data["mrr"], 79)
+
     def test_alerts_flag_failed_whatsapp_and_broken_backup(self):
         business, _ = self.make_business("Admin Alarmas")
         # Sin nada roto: como mucho avisa de que no hay copia todavía.

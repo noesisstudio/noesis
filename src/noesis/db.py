@@ -4496,6 +4496,10 @@ def admin_overview() -> dict:
             "(SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.business_id=b.id "
             "  AND i.status IN ('enviada','parcial','cobrada')) AS facturado "
             "FROM businesses b ORDER BY b.created_at DESC").fetchall()
+        checkouts = conn.execute(
+            "SELECT COUNT(DISTINCT business_id) AS n FROM product_events "
+            "WHERE event_name = 'checkout_started'").fetchone()
+    checkouts_iniciados = int(dict(checkouts)["n"] or 0)
     biz = [dict(r) for r in rows]
     usage = ai_usage_summary()
     today = date.today()
@@ -4523,10 +4527,13 @@ def admin_overview() -> dict:
             business["id"],
             {"calls": 0, "input": 0, "output": 0, "extractions": 0},
         )
-    PRICES = {"trial": 0, "autonomo": 29, "pro": 39}
+    from .adapters.billing import PLAN_PRICES  # fuente única del catálogo de planes
+    PRICES = {"trial": 0, **PLAN_PRICES}
     activos = [b for b in biz if b["subscription_status"] == "active"]
     mrr = sum(PRICES.get(b["plan"], 0) for b in activos)
     activated = [b for b in biz if b["activated"]]
+    wa_conectados = len([b for b in biz if b["whatsapp_status"] == "conectado"])
+    perfiles = len([b for b in biz if b.get("team_size") and b.get("primary_goal")])
 
     # Datos ya masticados para los gráficos del panel (solo primitivas JSON).
     month_start = today.replace(day=1)
@@ -4556,6 +4563,10 @@ def admin_overview() -> dict:
         "cobrado": [round(float(b["cobrado"] or 0), 2) for b in top],
         "ia_cuentas": [b["name"] for b in ia_top],
         "ia_tokens": [b["ai"]["input"] + b["ai"]["output"] for b in ia_top],
+        "funnel_labels": ["Altas", "Perfil completo", "WhatsApp", "Activadas",
+                          "Checkout", "De pago"],
+        "funnel": [len(biz), perfiles, wa_conectados, len(activated),
+                   checkouts_iniciados, len(activos)],
     }
     # Departamentos: cada área "informa" a dirección con una frase y sus cifras.
     ai_total = usage["total"]
@@ -4600,8 +4611,15 @@ def admin_overview() -> dict:
             f"{vq['pendiente']} pendiente(s), {vq['rechazado']} rechazada(s). "
             f"Copias: {backup_text}."
         ),
+        "marketing": (
+            f"Embudo: {len(biz)} alta(s) → {perfiles} con perfil completo → "
+            f"{wa_conectados} con WhatsApp → {len(activated)} activada(s) → "
+            f"{checkouts_iniciados} checkout(s) → {len(activos)} de pago "
+            f"(conversión alta→pago del "
+            f"{round(len(activos) / len(biz) * 100) if biz else 0}%)."
+        ),
         "clientes": (
-            f"{len([b for b in biz if b['whatsapp_status'] == 'conectado'])} "
+            f"{wa_conectados} "
             f"de {len(biz)} cuentas con WhatsApp conectado; "
             f"{len([b for b in biz if b['outcome_reached']])} ya han cobrado "
             "su primera factura (ciclo completo)."
@@ -4613,10 +4631,8 @@ def admin_overview() -> dict:
         "dept_reports": dept_reports,
         "total": len(biz), "activos": len(activos),
         "en_prueba": len([b for b in biz if b["subscription_status"] == "trial"]),
-        "whatsapp_conectados": len([b for b in biz if b["whatsapp_status"] == "conectado"]),
-        "perfiles_completos": len([
-            b for b in biz if b.get("team_size") and b.get("primary_goal")
-        ]),
+        "whatsapp_conectados": wa_conectados,
+        "perfiles_completos": perfiles,
         "activados": len(activated),
         "resultados": len([b for b in biz if b["outcome_reached"]]),
         "tasa_activacion": round(len(activated) / len(biz) * 100) if biz else 0,
