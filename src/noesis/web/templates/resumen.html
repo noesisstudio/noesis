@@ -96,6 +96,7 @@
     <span class="pulse-chip" id="pu-dso"><small>Días de cobro</small><b>—</b></span>
     <span class="pulse-chip" id="pu-mora"><small>Morosidad</small><b>—</b></span>
     <span class="pulse-chip" id="pu-solv"><small>Solvencia</small><b>—</b></span>
+    <span class="pulse-chip" id="pu-iva"><small>IVA a apartar</small><b>—</b></span>
   </div>
 </a>
 </section>
@@ -285,6 +286,10 @@ async function load() {
       states.push(chip('pu-mora', a.morosidad_pct + '%', grade(a.morosidad_pct, 5, 15, true)));
       states.push(chip('pu-solv', a.solvencia == null ? '—' : a.solvencia + '×',
         a.solvencia == null ? 'ok' : grade(a.solvencia, 1.5, 1)));
+      // El IVA a apartar no es "malo": es dinero de Hacienda. Verde si está a
+      // cero, ámbar si hay que reservarlo (no cuenta para el semáforo global).
+      const vatDue = a.vat_liquidar > 0 ? a.vat_liquidar : 0;
+      chip('pu-iva', eur(vatDue), vatDue > 0 ? 'ok' : 'good');
     }
     const bad = states.filter(s => s === 'bad').length;
     const okC = states.filter(s => s === 'ok').length;

@@ -3081,6 +3081,40 @@ def pending_payments(business_id) -> list[dict]:
     return out
 
 
+def cash_forecast(business_id, days: int = 30) -> dict:
+    """Previsión de caja: lo que debería entrar (facturas pendientes de cobro),
+    lo que suele salir (media de gastos de los últimos 90 días) y el IVA del
+    trimestre en curso que conviene apartar. Estimación de apoyo, no contable."""
+    days = max(7, min(int(days or 30), 90))
+    pending = pending_payments(business_id)
+    entra = round(sum(float(p["total"]) for p in pending), 2)
+    today = date.today()
+    since = (today - timedelta(days=90)).isoformat()
+    with get_conn() as conn:
+        spent = conn.execute(
+            "SELECT COALESCE(SUM(amount),0) AS total FROM expenses "
+            "WHERE business_id=? "
+            "AND substr(CAST(COALESCE(spent_on, created_at) AS TEXT),1,10) >= ?",
+            (business_id, since),
+        ).fetchone()["total"]
+    sale = round(float(spent) / 90 * days, 2)
+    quarter = (today.month - 1) // 3 + 1
+    try:
+        taxes = tax_quarter(today.year, quarter, business_id)
+        iva_reserva = max(float(taxes.get("iva_resultado") or 0), 0.0)
+    except ValueError:
+        iva_reserva = 0.0
+    neto = round(entra - sale - iva_reserva, 2)
+    return {
+        "days": days,
+        "entra": entra,
+        "n_facturas": len(pending),
+        "sale": sale,
+        "iva_reserva": round(iva_reserva, 2),
+        "neto": neto,
+    }
+
+
 # ----------------------------------------------------------------- Gastos ---
 def add_expense(
     concept,

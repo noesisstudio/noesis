@@ -273,6 +273,8 @@ def send_quarterly_tax_notices(now: datetime | None = None) -> int:
 
 
 def send_weekly_summaries() -> None:
+    """Cierre semanal (domingo por la tarde): el estado del negocio en 5 líneas
+    para que el lunes empiece sin ruido mental. No hace falta abrir la app."""
     year, week, _ = datetime.now().isocalendar()
     run_key = f"weekly:{year}-W{week:02d}"
     if not db.claim_scheduled_run(run_key):
@@ -281,23 +283,110 @@ def send_weekly_summaries() -> None:
         prefs = db.resolve_whatsapp_reports(business.get("whatsapp_reports"))
         if not prefs["resumen_semanal"]:
             continue
-        month = db.month_billing(business_id=business["id"])
-        pending = db.pending_payments(business["id"])
-        text = (
-            f"📊 Resumen semanal de {business['name']}:\n"
-            f"Facturado este mes: {month['invoiced']:.2f} € · "
-            f"Pendiente de cobro: {month['pending']:.2f} € "
-            f"({len(pending)} facturas) · "
-            f"Gastos: {month['expenses']:.2f} € · "
-            f"Beneficio estimado: {month['estimated_profit']:.2f} €."
+        bid = business["id"]
+        month = db.month_billing(business_id=bid)
+        pending = db.pending_payments(bid)
+        forecast = db.cash_forecast(bid)
+        lines = [f"📊 Tu semana en {business['name']}:"]
+        lines.append(
+            f"• Facturado este mes: {_eur(month['invoiced'])} · "
+            f"cobrado: {_eur(month['collected'])}"
         )
+        if pending:
+            oldest = pending[0]
+            who = oldest.get("client_name") or "un cliente"
+            lines.append(
+                f"• Te deben {_eur(month['pending'])} en {len(pending)} "
+                f"factura(s). La más antigua: {who}, {_eur(oldest['total'])}."
+            )
+        else:
+            lines.append("• Nadie te debe nada. Todo cobrado 💪")
+        if forecast["iva_reserva"]:
+            lines.append(
+                f"• Aparta {_eur(forecast['iva_reserva'])} para el IVA del "
+                "trimestre: es de Hacienda, no tuyo."
+            )
+        lines.append(
+            f"• Próximos {forecast['days']} días: si cobras lo pendiente y "
+            f"gastas lo habitual, te quedan {_eur(forecast['neto'])}."
+        )
+        if pending:
+            lines.append(
+                f"➡️ Acción de la semana: reclama a "
+                f"{pending[0].get('client_name') or 'tu cliente'} "
+                f"({_eur(pending[0]['total'])})."
+            )
+        else:
+            lines.append(
+                "➡️ Acción de la semana: cierra los presupuestos abiertos."
+            )
         _deliver_template(
             business,
-            text,
+            "\n".join(lines),
             "semanal",
             config.WHATSAPP_TEMPLATE_WEEKLY_SUMMARY,
             f"{run_key}:{business['id']}",
         )
+
+
+def send_collection_proposals(now: datetime | None = None) -> int:
+    """Cobros en piloto automático: si hay una factura vencida y el negocio no
+    tiene recordatorios automáticos, Noesis propone reclamarla por WhatsApp y
+    espera un SÍ del dueño antes de escribir al cliente."""
+    from . import whatsapp
+
+    if not whatsapp.is_configured():
+        return 0
+    point = now or datetime.now()
+    day = f"{point:%Y-%m-%d}"
+    if not db.claim_scheduled_run(f"collect-proposal:{day}"):
+        return 0
+    queued = 0
+    for business in _active_businesses():
+        if business.get("payment_reminders_enabled"):
+            continue  # ya se reclama solo, sin preguntar
+        phone = business.get("whatsapp_phone")
+        if not phone:
+            continue
+        overdue = [
+            invoice for invoice in db.pending_payments(business["id"])
+            if (invoice.get("days_outstanding") or 0) >= 7
+            and invoice.get("client_id")
+        ]
+        if not overdue:
+            continue
+        top = overdue[0]
+        idempotency_key = (
+            f"collect-proposal:{business['id']}:{top['id']}"
+        )
+        if db.get_whatsapp_message_by_idempotency_key(
+            idempotency_key, business["id"]
+        ):
+            continue
+        client = db.get_client(top["client_id"], business["id"])
+        if not client:
+            continue
+        number = top.get("number") or str(top["id"])
+        text = (
+            f"💶 {client.get('name') or 'Un cliente'} te debe "
+            f"{_eur(top['total'])} (factura {number}, "
+            f"{top['days_outstanding']} días). ¿Le mando el recordatorio "
+            "con su enlace de pago? Responde SÍ o NO."
+        )
+        # La propuesta caduca en 12 h; si el dueño responde SÍ se ejecuta.
+        db.set_pending_action(
+            business["id"], phone, "reclamar",
+            {"invoice_id": top["id"]}, ttl_minutes=720,
+        )
+        if _deliver_template(
+            business,
+            text,
+            "cobro",
+            config.WHATSAPP_TEMPLATE_PAYMENT_ALERT,
+            idempotency_key,
+        ):
+            queued += 1
+    return queued
 
 
 def send_gestoria_packages(now: datetime | None = None) -> int:
@@ -421,10 +510,17 @@ def start_scheduler() -> BackgroundScheduler:
     scheduler.add_job(
         send_weekly_summaries,
         "cron",
-        day_of_week="mon",
-        hour=8,
+        day_of_week="sun",
+        hour=18,
         minute=0,
         id="weekly",
+    )
+    scheduler.add_job(
+        send_collection_proposals,
+        "cron",
+        hour=10,
+        minute=0,
+        id="collect-proposals",
     )
     scheduler.add_job(
         send_daily_closings,

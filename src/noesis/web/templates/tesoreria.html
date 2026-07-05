@@ -23,6 +23,30 @@
     <div class="delta flat">te deben − IVA</div></div>
 </div>
 
+<div class="card" style="margin-top:14px">
+  <div class="card-h"><h2>Previsión de caja · 30 días</h2>
+    <span class="hint">si cobras lo pendiente y gastas lo habitual</span></div>
+  <div class="card-b">
+    <div class="bal-grid">
+      <div class="bal-col fav">
+        <div class="bal-label">Debería entrar</div>
+        <div class="bal-row"><span>Facturas pendientes</span><b id="fc-in">—</b></div>
+        <div class="bal-row"><span class="meta" id="fc-in-n">—</span><b></b></div>
+      </div>
+      <div class="bal-col pay">
+        <div class="bal-label">Saldrá</div>
+        <div class="bal-row"><span>Gastos previstos (tu media)</span><b id="fc-out">—</b></div>
+        <div class="bal-row"><span>IVA a apartar (trimestre)</span><b id="fc-vat">—</b></div>
+      </div>
+      <div class="bal-col net">
+        <div class="bal-label">Te quedarían</div>
+        <div class="bal-net" id="fc-net">—</div>
+        <div class="bal-hint" id="fc-hint"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="split" style="margin-top:14px; grid-template-columns:1fr 1fr">
   <div class="card">
     <div class="card-h"><h2>Haber · te deben</h2>
@@ -58,6 +82,21 @@
 <script>
 async function load() {
   const [a, tax] = await Promise.all([api('/analysis'), api('/taxes')]);
+
+  // Previsión de caja a 30 días.
+  api('/forecast').then(f => {
+    el('fc-in').textContent = eur(f.entra);
+    el('fc-in-n').textContent = f.n_facturas
+      ? `${f.n_facturas} factura(s) por cobrar`
+      : 'nada pendiente de cobro';
+    el('fc-out').textContent = eur(f.sale);
+    el('fc-vat').textContent = eur(f.iva_reserva);
+    el('fc-net').textContent = eur(f.neto);
+    el('fc-net').style.color = f.neto >= 0 ? 'var(--brand)' : 'var(--red)';
+    el('fc-hint').textContent = f.neto >= 0
+      ? 'Colchón positivo: cobra lo pendiente y respira tranquilo.'
+      : 'Ojo: a este ritmo la caja no cubre el mes. Prioriza cobrar y frena gasto no esencial.';
+  });
   const vatQ = tax.iva_resultado > 0 ? tax.iva_resultado : 0;
   const irpfQ = tax.irpf_pago > 0 ? tax.irpf_pago : 0;
 

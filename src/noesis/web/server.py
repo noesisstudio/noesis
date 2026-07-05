@@ -239,6 +239,14 @@ def home(request: Request):
                                       {"business_id": bid, "site_active": "inicio"})
 
 
+@app.get("/app")
+def app_entry(request: Request):
+    """Punto de entrada de la app instalada (PWA): directo al panel o al login."""
+    bid = request.session.get("bid")
+    target = f"/b/{bid}/resumen" if bid else "/login"
+    return RedirectResponse(target, status_code=303)
+
+
 # Apartados del sitio público: cada sección es su propia página.
 _SITE_PAGES = {
     "producto": "site_producto.html",
@@ -779,6 +787,12 @@ async def api_panel_layout(business_id: int, request: Request):
 def api_analysis(business_id: int):
     return {**db.financial_analysis(business_id),
             "series": db.monthly_series(business_id, months=12)}
+
+
+@app.get("/api/{business_id}/forecast")
+def api_forecast(business_id: int, days: int = 30):
+    """Previsión de caja: entra − sale − IVA a apartar, a N días vista."""
+    return db.cash_forecast(business_id, days=days)
 
 
 @app.get("/api/{business_id}/clients")

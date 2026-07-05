@@ -397,7 +397,62 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
         return chat.handle(
             business["id"], str(payload.get("text") or "")
         ).get("reply", "")
+    if kind == "reclamar":
+        return _execute_collection(business, payload)
     return "Ese borrador ya no es válido. Vuelve a enviármelo."
+
+
+def _execute_collection(business: dict, payload: dict) -> str:
+    """El dueño ha dicho SÍ: manda el recordatorio de cobro al cliente."""
+    invoice = db.get_invoice(payload.get("invoice_id"), business["id"])
+    if not invoice or invoice.get("status") == "cobrada":
+        return "Esa factura ya está cobrada o no existe. Nada que reclamar 👌"
+    client = (
+        db.get_client(invoice.get("client_id"), business["id"])
+        if invoice.get("client_id") else None
+    )
+    if not client:
+        return (
+            "No encuentro al cliente de esa factura. "
+            "Reclámala desde la web (Cobros)."
+        )
+    token = db.get_or_create_portal_token(business["id"], client["id"])
+    portal_url = f"{config.BASE_URL}/p/{token}" if token else config.BASE_URL
+    client_phone = recipient_phone(client.get("phone"))
+    if not client_phone:
+        return (
+            f"{client.get('name') or 'El cliente'} no tiene teléfono "
+            f"guardado. Este es su enlace de pago para enviárselo tú: "
+            f"{portal_url}"
+        )
+    number = invoice.get("number") or str(invoice["id"])
+    amount = _eur(invoice.get("remaining_amount") or invoice.get("total"))
+    day = datetime.now().strftime("%Y-%m-%d")
+    try:
+        queue_payment_reminder(
+            client_phone,
+            client.get("name") or "cliente",
+            business.get("name") or "Tu proveedor",
+            number,
+            amount,
+            portal_url,
+            business_id=business["id"],
+            idempotency_key=(
+                f"collect-confirmed:{business['id']}:{invoice['id']}:{day}"
+            ),
+        )
+    except (db.DatabaseError, ValueError) as exc:
+        log.exception("No se pudo encolar el recordatorio confirmado.")
+        return f"No he podido enviarlo ({exc}). Inténtalo desde la web."
+    db.mark_reminder_sent(invoice["id"], business["id"])
+    db.record_product_event(
+        business["id"], "collection_confirmed",
+        json.dumps({"invoice_id": invoice["id"]}, separators=(",", ":")),
+    )
+    return (
+        f"Hecho ✅ Le he enviado a {client.get('name') or 'tu cliente'} el "
+        f"recordatorio de la factura {number} ({amount}) con su enlace de pago."
+    )
 
 
 def _ingest_image(business: dict, phone: str, message: dict) -> dict:

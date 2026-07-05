@@ -2499,6 +2499,61 @@ class WhatsappReportsTestCase(unittest.TestCase):
         )
         self.assertEqual(db.list_whatsapp_messages(opted_out["id"]), [])
 
+    def test_cash_forecast_and_collection_proposal_flow(self):
+        business, client = self.make_business("Piloto Cobros")
+        db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE clients SET phone='600999888' WHERE id=?",
+                (client["id"],),
+            )
+        invoice = db.add_invoice(
+            client["id"], "Trabajo vencido", 200, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+        ten_days_ago = (datetime.now() - timedelta(days=10)).isoformat(
+            timespec="seconds"
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE invoices SET issued_at=? WHERE id=?",
+                (ten_days_ago, invoice["id"]),
+            )
+        db.add_expense("Material", 90, business_id=business["id"])
+
+        forecast = db.cash_forecast(business["id"])
+        self.assertEqual(forecast["n_facturas"], 1)
+        self.assertGreater(forecast["entra"], 0)
+        self.assertGreater(forecast["sale"], 0)
+        self.assertEqual(
+            forecast["neto"],
+            round(forecast["entra"] - forecast["sale"]
+                  - forecast["iva_reserva"], 2),
+        )
+
+        with (
+            patch.object(whatsapp, "_TOKEN", "token"),
+            patch.object(whatsapp, "_PHONE_ID", "phone-id"),
+            patch.object(whatsapp, "_post_to_meta", return_value="wamid-c"),
+        ):
+            self.assertEqual(scheduler.send_collection_proposals(), 1)
+            # Idempotente: mismo día no vuelve a proponer.
+            self.assertEqual(scheduler.send_collection_proposals(), 0)
+            pending = db.get_pending_action(business["id"], "600111222")
+            self.assertEqual(pending["kind"], "reclamar")
+            reply = whatsapp._execute_pending(
+                db.get_business(business["id"]), "600111222", pending
+            )
+            self.assertIn("Hecho", reply)
+        templates = [
+            message.get("template_name")
+            for message in db.list_whatsapp_messages(business["id"])
+        ]
+        self.assertIn(config.WHATSAPP_TEMPLATE_PAYMENT_ALERT, templates)
+        self.assertIn(config.WHATSAPP_TEMPLATE_PAYMENT_REMINDER, templates)
+        # La acción confirmada queda consumida.
+        self.assertIsNone(db.get_pending_action(business["id"], "600111222"))
+
     def test_quarterly_tax_notice_targets_previous_quarter(self):
         business, _ = self.make_business("Fiscal A")
         db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
