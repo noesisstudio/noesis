@@ -113,6 +113,7 @@ async function addExpense() {
   el('f-concept').value=''; el('f-amount').value=''; msg.textContent = 'Gasto añadido.';
   load();
 }
+window.QUICK_NEW = () => el('f-concept').focus();
 load();
 </script>
 {% endblock %}

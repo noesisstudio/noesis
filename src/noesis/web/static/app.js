@@ -165,6 +165,25 @@ function shareLink(url, opts = {}) {
   copyBtn.focus();
 }
 
+/* Menú global "+ Crear" (topbar): cerrar al hacer clic fuera o con Escape. */
+document.addEventListener('click', e => {
+  const qc = document.querySelector('.quick-create.open');
+  if (qc && !qc.contains(e.target)) qc.classList.remove('open');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const qc = document.querySelector('.quick-create.open');
+    if (qc) qc.classList.remove('open');
+  }
+});
+
+/* Apertura directa del formulario de alta al llegar con ?nuevo=1 desde el menú
+   "+ Crear". Cada página registra su modal en window.QUICK_NEW. */
+window.addEventListener('DOMContentLoaded', () => {
+  if (new URLSearchParams(location.search).get('nuevo') !== '1') return;
+  if (typeof window.QUICK_NEW === 'function') setTimeout(window.QUICK_NEW, 120);
+});
+
 /* Paleta para gráficos (coherente con el sistema de diseño). */
 const CHART = {
   brand: '#2e8b74', brandSoft: '#a9d2c5', forest: '#14463b',

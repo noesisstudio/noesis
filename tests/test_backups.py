@@ -17,6 +17,7 @@ class VerifiedBackupTestCase(unittest.TestCase):
         self.original = {
             "DB_PATH": config.DB_PATH,
             "BACKUP_DIR": config.BACKUP_DIR,
+            "DOCS_PATH": config.DOCS_PATH,
             "DATABASE_URL": config.DATABASE_URL,
             "BACKUP_S3_ENDPOINT": config.BACKUP_S3_ENDPOINT,
             "BACKUP_S3_BUCKET": config.BACKUP_S3_BUCKET,
@@ -27,6 +28,7 @@ class VerifiedBackupTestCase(unittest.TestCase):
         config.DATABASE_URL = ""
         config.DB_PATH = root / "noesis.db"
         config.BACKUP_DIR = root / "backups"
+        config.DOCS_PATH = root / "uploads"
         config.BACKUP_S3_ENDPOINT = ""
         config.BACKUP_S3_BUCKET = ""
         config.BACKUP_S3_ACCESS_KEY = ""
@@ -103,6 +105,22 @@ class VerifiedBackupTestCase(unittest.TestCase):
         self.assertEqual(db.latest_backup_run()["status"], "error")
         self.assertEqual(backups.latest_verified_backup(), good)
 
+    def test_backup_includes_and_verifies_uploaded_documents(self):
+        from noesis.documents import service
+
+        business, _client = self._business_with_data("Backup documentos")
+        service.upload(
+            business["id"], "factura.pdf", b"%PDF-documento",
+            run_ocr=False,
+        )
+
+        database_path = backups.run_backup()
+        documents = sorted(Path(config.BACKUP_DIR).glob("*.docs.zip"))
+
+        self.assertIsNotNone(database_path)
+        self.assertEqual(len(documents), 1)
+        backups._verify_documents_backup(documents[0])
+
     def test_postgres_path_dumps_and_verifies_without_real_service(self):
         destination = Path(config.BACKUP_DIR) / "noesis-mocked.dump.gz"
         destination.parent.mkdir(parents=True)
@@ -128,7 +146,10 @@ class VerifiedBackupTestCase(unittest.TestCase):
         verify.assert_called_once_with(destination, counts)
         record.assert_called_once_with(destination, "ok", "postgres")
         rotate.assert_called_once_with()
-        upload.assert_called_once_with(destination)
+        self.assertEqual(upload.call_count, 2)
+        upload.assert_any_call(destination)
+        uploaded_documents = upload.call_args_list[1].args[0]
+        self.assertTrue(uploaded_documents.name.endswith(".docs.zip"))
 
     def test_only_admin_can_download_latest_verified_backup(self):
         from starlette.testclient import TestClient

@@ -17,6 +17,7 @@ import logging
 import sqlite3
 import tempfile
 import uuid
+import zipfile
 from contextlib import closing
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
@@ -436,6 +437,55 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _create_documents_backup() -> Path:
+    """Copia los documentos del volumen con rutas relativas y hashes verificables."""
+    root = Path(config.DOCS_PATH)
+    destination = _destination(".docs.zip")
+    manifest: dict[str, str] = {}
+    with zipfile.ZipFile(
+        destination, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True
+    ) as archive:
+        if root.exists():
+            resolved_root = root.resolve()
+            for path in sorted(root.rglob("*")):
+                if path.is_symlink() or not path.is_file():
+                    continue
+                resolved = path.resolve()
+                if resolved_root not in resolved.parents:
+                    continue
+                relative = path.relative_to(root).as_posix()
+                archive.write(path, relative)
+                manifest[relative] = _file_sha256(path)
+        archive.writestr(
+            ".noesis-manifest.json",
+            json.dumps(manifest, sort_keys=True, separators=(",", ":")),
+        )
+    return destination
+
+
+def _verify_documents_backup(path: Path) -> None:
+    with zipfile.ZipFile(path) as archive:
+        if archive.testzip() is not None:
+            raise RuntimeError("El ZIP de documentos está corrupto.")
+        try:
+            manifest = json.loads(
+                archive.read(".noesis-manifest.json").decode("utf-8")
+            )
+        except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("El backup de documentos no tiene manifiesto válido.") from exc
+        expected = set(manifest)
+        actual = {
+            name for name in archive.namelist()
+            if name != ".noesis-manifest.json"
+        }
+        if actual != expected:
+            raise RuntimeError("El backup de documentos está incompleto.")
+        for name, expected_hash in manifest.items():
+            digest = hashlib.sha256(archive.read(name)).hexdigest()
+            if not hmac.compare_digest(digest, expected_hash):
+                raise RuntimeError(f"El documento {name} no supera la verificación.")
+
+
 def _aws_signing_key(secret: str, day: str, region: str) -> bytes:
     date_key = hmac.new(
         ("AWS4" + secret).encode(), day.encode(), hashlib.sha256
@@ -541,6 +591,7 @@ def run_backup() -> Path | None:
     """Crea, restaura y valida una copia antes de rotar o subirla fuera."""
     storage = "postgres" if config.DATABASE_URL else "sqlite"
     destination: Path | None = None
+    documents_backup: Path | None = None
     try:
         if config.DATABASE_URL:
             destination, origin_counts = _create_postgres_backup()
@@ -551,6 +602,8 @@ def run_backup() -> Path | None:
                 return None
             destination, origin_counts = created
             _verify_sqlite_backup(destination, origin_counts)
+        documents_backup = _create_documents_backup()
+        _verify_documents_backup(documents_backup)
     except Exception as exc:  # noqa: BLE001
         log.error("Fallo creando o verificando el backup %s: %s", storage, exc)
         _record_result(destination, "error", storage, str(exc))
@@ -560,6 +613,8 @@ def run_backup() -> Path | None:
     _record_result(destination, "ok", storage)
     _rotate()
     _upload_offsite(destination)
+    if documents_backup is not None:
+        _upload_offsite(documents_backup)
     log.info(
         "Copia de seguridad verificada: %s (%d bytes)",
         destination.name,
@@ -569,24 +624,20 @@ def run_backup() -> Path | None:
 
 
 def _rotate() -> None:
-    copies = sorted(
-        (
-            path
-            for path in _backup_dir().glob("noesis-*")
-            if path.is_file()
-            and (
-                path.name.endswith(".db")
-                or path.name.endswith(".dump.gz")
-                or path.name.endswith(".sql.gz")
-            )
-        ),
-        key=lambda path: path.name,
+    paths = [path for path in _backup_dir().glob("noesis-*") if path.is_file()]
+    groups = (
+        [
+            path for path in paths
+            if path.name.endswith((".db", ".dump.gz", ".sql.gz"))
+        ],
+        [path for path in paths if path.name.endswith(".docs.zip")],
     )
-    for old in copies[:-KEEP]:
-        try:
-            old.unlink()
-        except OSError:
-            log.warning("No se pudo eliminar la copia antigua %s", old.name)
+    for copies in groups:
+        for old in sorted(copies, key=lambda path: path.name)[:-KEEP]:
+            try:
+                old.unlink()
+            except OSError:
+                log.warning("No se pudo eliminar la copia antigua %s", old.name)
 
 
 def latest_verified_backup() -> Path | None:

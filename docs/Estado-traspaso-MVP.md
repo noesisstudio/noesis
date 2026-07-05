@@ -61,8 +61,8 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
   migración 13; opt-in y cadencia por negocio, plantilla WhatsApp con restante y
   portal, idempotencia por factura/escalón y eventos para medir el efecto en DSO.
 
-**Pruebas:** 91/91 en `main` (con gasto por foto); rama `codex/recordatorios-cobro`
-rebasada sobre `main` con la migración 13 añadida tras la 12.
+**Pruebas:** 121/121 en `codex/backend-review-fixes`; incluye regresiones de baja
+de cuenta, reintentos de webhooks, redondeo fiscal y backup de documentos.
 
 ---
 

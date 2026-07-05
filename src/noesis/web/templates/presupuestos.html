@@ -106,6 +106,7 @@ async function accept(id){
   catch(e){ alert('No se pudo: ' + e.message); }
 }
 async function del(id){ if(confirm('¿Borrar este presupuesto?')){ await apiDelete('/quotes/'+id); load(); } }
+window.QUICK_NEW = nuevo;
 load();
 </script>
 {% endblock %}

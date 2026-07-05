@@ -17,13 +17,14 @@ from __future__ import annotations
 import json
 import os
 import hashlib
+import logging
 import re
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, Query, Request, UploadFile
+from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -810,6 +811,12 @@ def _worker_json(worker: dict) -> dict:
 @app.get("/api/{business_id}/workers")
 def api_workers(business_id: int):
     return db.clockins_today(business_id)
+
+
+@app.get("/api/{business_id}/workers/productivity")
+def api_workers_productivity(business_id: int, days: int = 30):
+    """Rendimiento por persona (trabajos, ventas, horas) para el dueño."""
+    return db.team_productivity(business_id, days=days)
 
 
 @app.get("/api/{business_id}/workers/{worker_id}/clockins")
@@ -2042,7 +2049,7 @@ def whatsapp_verify(request: Request):
 
 
 @app.post("/webhook/whatsapp")
-async def whatsapp_inbound(request: Request, background_tasks: BackgroundTasks):
+async def whatsapp_inbound(request: Request):
     # Enruta el mensaje entrante: vincula por código o lo pasa al cerebro del negocio.
     raw = await request.body()
     if len(raw) > config.MAX_JSON_BYTES:
@@ -2055,8 +2062,18 @@ async def whatsapp_inbound(request: Request, background_tasks: BackgroundTasks):
         payload = json.loads(raw)
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JSONResponse({"error": "JSON inválido"}, status_code=400)
-    background_tasks.add_task(whatsapp.handle_inbound, payload)
-    return {"status": "accepted"}
+    try:
+        result = await run_in_threadpool(whatsapp.handle_inbound, payload)
+    except whatsapp.WebhookInProgress:
+        return JSONResponse(
+            {"error": "evento todavía en proceso"}, status_code=503
+        )
+    except Exception:
+        logging.getLogger("uvicorn.error").exception(
+            "Falló el procesamiento del webhook de WhatsApp."
+        )
+        return JSONResponse({"error": "procesamiento fallido"}, status_code=500)
+    return {"status": "processed", **result}
 
 
 # ============================================================ SUSCRIPCIÓN === #
@@ -2099,7 +2116,26 @@ async def stripe_webhook(request: Request):
     if not event_id:
         return JSONResponse({"error": "evento sin id"}, status_code=400)
     if not db.claim_webhook_event("stripe", event_id):
+        claimed = db.webhook_event("stripe", event_id) or {}
+        if claimed.get("status") == "processing":
+            return JSONResponse(
+                {"error": "evento todavía en proceso"}, status_code=503
+            )
         return {"received": True, "duplicate": True}
+    try:
+        _apply_stripe_event(event)
+    except Exception as exc:
+        db.fail_webhook_event("stripe", event_id, str(exc))
+        logging.getLogger("uvicorn.error").exception(
+            "Falló el procesamiento del webhook de Stripe %s.", event_id
+        )
+        return JSONResponse({"error": "procesamiento fallido"}, status_code=500)
+    db.complete_webhook_event("stripe", event_id)
+    return {"received": True}
+
+
+def _apply_stripe_event(event: dict) -> None:
+    """Aplica un evento ya verificado; el endpoint gestiona su ciclo idempotente."""
     obj = event.get("data", {}).get("object", {})
     etype = event.get("type", "")
     bid = (obj.get("metadata") or {}).get("business_id") or obj.get("client_reference_id")
@@ -2151,7 +2187,6 @@ async def stripe_webhook(request: Request):
         if biz:
             db.set_subscription(biz["id"], "active")
             db.record_product_event(biz["id"], "subscription_invoice_paid")
-    return {"received": True}
 
 
 # ========================================================= ADMIN (fundador) = #

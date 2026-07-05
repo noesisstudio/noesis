@@ -16,6 +16,10 @@ en reglas de código y pruebas, no en convenciones.
 - Stripe firmado, deduplicado y tolerante a eventos desordenados habituales.
 - Scheduler con ejecución única y confirmación real antes de marcar recordatorios.
 - CSV protegido ante fórmulas y asistente limitado en memoria/acciones irreversibles.
+- Baja de cuenta ordenada por dependencias: la base confirma antes de borrar archivos.
+- Webhooks con ciclo recuperable y respuesta 5xx ante fallos de procesamiento.
+- Importes fiscales calculados con `Decimal` y redondeo comercial al céntimo.
+- Backups verificados de base de datos y documentos subidos.
 
 ## Pendiente de infraestructura
 - Migrar SQLite a Postgres antes de escalar horizontalmente.

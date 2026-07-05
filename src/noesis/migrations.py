@@ -1294,6 +1294,34 @@ def _downgrade_gestoria(conn) -> None:
     # SQLite conserva las columnas opcionales para evitar reconstruir businesses.
 
 
+def _upgrade_webhook_lifecycle(conn) -> None:
+    """Distingue eventos reservados, completados y fallidos para poder reintentarlos."""
+    columns = _column_names(conn, "webhook_events")
+    additions = (
+        ("status", "TEXT NOT NULL DEFAULT 'done'"),
+        ("locked_at", "TEXT"),
+        ("processed_at", "TEXT"),
+        ("attempts", "INTEGER NOT NULL DEFAULT 1"),
+        ("last_error", "TEXT"),
+    )
+    for column, definition in additions:
+        if column not in columns:
+            conn.execute(
+                f"ALTER TABLE webhook_events ADD COLUMN {column} {definition}"
+            )
+
+
+def _downgrade_webhook_lifecycle(conn) -> None:
+    if conn.dialect == "postgres":
+        for column in (
+            "last_error", "attempts", "processed_at", "locked_at", "status"
+        ):
+            conn.execute(
+                f"ALTER TABLE webhook_events DROP COLUMN IF EXISTS {column}"
+            )
+    # SQLite conserva columnas opcionales para evitar reconstruir la tabla.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1311,6 +1339,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (13, "recordatorios_cobro", _upgrade_payment_reminders, _downgrade_payment_reminders),
     (14, "cerebro_whatsapp", _upgrade_whatsapp_brain, _downgrade_whatsapp_brain),
     (15, "gestoria", _upgrade_gestoria, _downgrade_gestoria),
+    (16, "ciclo_webhooks", _upgrade_webhook_lifecycle, _downgrade_webhook_lifecycle),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

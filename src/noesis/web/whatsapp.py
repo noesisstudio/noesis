@@ -29,6 +29,10 @@ _PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
 _CODE_TTL = 1800
 
 
+class WebhookInProgress(RuntimeError):
+    """El mismo evento sigue en curso y debe reintentarse más tarde."""
+
+
 def is_configured() -> bool:
     """La cola proactiva solo se alimenta cuando Meta puede procesarla."""
     return bool(_TOKEN and _PHONE_ID)
@@ -256,19 +260,27 @@ def _handle_status(status: dict) -> dict:
         }
     event_key = f"{message_id}:{delivery_status}:{status.get('timestamp', '')}"
     if not db.claim_webhook_event("whatsapp_status", event_key):
+        event = db.webhook_event("whatsapp_status", event_key) or {}
+        if event.get("status") == "processing":
+            raise WebhookInProgress(event_key)
         return {"id": message_id, "status": delivery_status, "duplicate": True}
-    errors = status.get("errors") or []
-    error = (
-        errors[0].get("message")
-        if errors and isinstance(errors[0], dict)
-        else None
-    )
-    updated = db.update_whatsapp_delivery(
-        message_id,
-        delivery_status,
-        _status_time(status.get("timestamp", "")),
-        error,
-    )
+    try:
+        errors = status.get("errors") or []
+        error = (
+            errors[0].get("message")
+            if errors and isinstance(errors[0], dict)
+            else None
+        )
+        updated = db.update_whatsapp_delivery(
+            message_id,
+            delivery_status,
+            _status_time(status.get("timestamp", "")),
+            error,
+        )
+    except Exception as exc:
+        db.fail_webhook_event("whatsapp_status", event_key, str(exc))
+        raise
+    db.complete_webhook_event("whatsapp_status", event_key)
     return {
         "id": message_id,
         "status": delivery_status,
@@ -511,14 +523,28 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
     }
 
 
-def handle_inbound(payload: dict) -> dict:
+def _finish_inbound_message(
+    message_id: str | None, claimed_ids: list[str]
+) -> None:
+    if not message_id:
+        return
+    db.complete_webhook_event("whatsapp", message_id)
+    claimed_ids.remove(message_id)
+
+
+def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
     """Procesa mensajes y estados de Meta de forma idempotente."""
     results = [_handle_status(status) for status in _extract_statuses(payload)]
     for message in _extract_messages(payload):
         message_id = message.get("id")
         if message_id and not db.claim_webhook_event("whatsapp", message_id):
+            event = db.webhook_event("whatsapp", message_id) or {}
+            if event.get("status") == "processing":
+                raise WebhookInProgress(message_id)
             results.append({"id": message_id, "duplicate": True})
             continue
+        if message_id:
+            claimed_ids.append(message_id)
         phone = message["phone"]
         text = message["text"]
         audio_id = message.get("audio_id")
@@ -536,6 +562,7 @@ def handle_inbound(payload: dict) -> dict:
                 results.append({
                     "phone": phone, "audio": True, "transcribed": False,
                 })
+                _finish_inbound_message(message_id, claimed_ids)
                 continue
 
         worker_link = _try_worker_link(phone, text)
@@ -550,6 +577,7 @@ def handle_inbound(payload: dict) -> dict:
                 "worker_id": worker_link.get("worker_id"),
                 "worker_linked": bool(worker_link.get("worker_id")),
             })
+            _finish_inbound_message(message_id, claimed_ids)
             continue
 
         linked = _try_link(phone, text)
@@ -560,6 +588,7 @@ def handle_inbound(payload: dict) -> dict:
                 business_id=business["id"] if business else None,
             )
             results.append({"phone": phone, "linked": True})
+            _finish_inbound_message(message_id, claimed_ids)
             continue
 
         worker_clock = _try_worker_clock(phone, text)
@@ -575,6 +604,7 @@ def handle_inbound(payload: dict) -> dict:
                 "worker_id": worker_clock["worker_id"],
                 "clocked": worker_clock["clocked"],
             })
+            _finish_inbound_message(message_id, claimed_ids)
             continue
 
         business = db.get_business_by_phone(phone)
@@ -585,13 +615,16 @@ def handle_inbound(payload: dict) -> dict:
                 "bynoesis.com y conecta tu WhatsApp para empezar.",
             )
             results.append({"phone": phone, "known": False})
+            _finish_inbound_message(message_id, claimed_ids)
             continue
 
         if message.get("image_id"):
             results.append(_ingest_image(business, phone, message))
+            _finish_inbound_message(message_id, claimed_ids)
             continue
         if message.get("media_document_id"):
             results.append(_ingest_document(business, phone, message))
+            _finish_inbound_message(message_id, claimed_ids)
             continue
 
         pending = db.get_pending_action(business["id"], phone)
@@ -605,6 +638,7 @@ def handle_inbound(payload: dict) -> dict:
                 "phone": phone, "business_id": business["id"],
                 "confirmed": True,
             })
+            _finish_inbound_message(message_id, claimed_ids)
             continue
         if pending and _is_no(text):
             db.clear_pending_action(business["id"], phone)
@@ -617,6 +651,7 @@ def handle_inbound(payload: dict) -> dict:
                 "phone": phone, "business_id": business["id"],
                 "confirmed": False,
             })
+            _finish_inbound_message(message_id, claimed_ids)
             continue
 
         if audio_id and text and _needs_confirmation(text):
@@ -633,6 +668,7 @@ def handle_inbound(payload: dict) -> dict:
                 "phone": phone, "business_id": business["id"],
                 "voice": True, "pending": True,
             })
+            _finish_inbound_message(message_id, claimed_ids)
             continue
 
         reply = chat.handle(business["id"], text).get("reply", "")
@@ -642,7 +678,22 @@ def handle_inbound(payload: dict) -> dict:
             "business_id": business["id"],
             "voice": bool(audio_id),
         })
+        _finish_inbound_message(message_id, claimed_ids)
     return {"processed": len(results), "results": results}
+
+
+def handle_inbound(payload: dict) -> dict:
+    """Procesa y confirma eventos solo cuando todos sus efectos han terminado."""
+    claimed_ids: list[str] = []
+    try:
+        result = _handle_inbound(payload, claimed_ids)
+    except Exception as exc:
+        for message_id in claimed_ids:
+            db.fail_webhook_event("whatsapp", message_id, str(exc))
+        raise
+    for message_id in claimed_ids:
+        db.complete_webhook_event("whatsapp", message_id)
+    return result
 
 
 # -------------------------------------------------------------------- Salientes --

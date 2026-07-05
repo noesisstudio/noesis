@@ -89,6 +89,8 @@ inalterable, Veri*Factu fase 1 y backups verificados. GitHub Actions ejecuta tes
 migraciones en cada PR y push a `main`. En `codex/verifactu-fase2`, pendiente de
 revisión, está la migración **9**: vectores oficiales de huella AEAT, cliente SOAP
 mTLS, cola durable con control de flujo y estado visible.
+La migración **16** añade un ciclo recuperable para webhooks: reservado,
+completado o fallido, con reintento seguro.
 Siguiente: revisar esa rama y completar **Fase 2** (activar Postgres, certificado
 AEAT de pruebas, WhatsApp Meta y bynoesis.com).
 Detalle en `docs/Roadmap.md`.

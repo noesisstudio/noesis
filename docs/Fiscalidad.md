@@ -12,6 +12,8 @@ hecha le crea un problema con Hacienda al cliente.
   (o **7%** los tres primeros años de actividad).
 - A particulares: normalmente **0%**.
 - Fórmula implementada: **Total = base + IVA − IRPF retenido**.
+- Base, IVA, IRPF y total se redondean al céntimo con `Decimal` y
+  `ROUND_HALF_UP`; no se usa el redondeo bancario de `float`.
 
 ## Verifactu / Ley Antifraude
 - Obligatorio para autónomos desde **1-jul-2027** (plazo retrasado).

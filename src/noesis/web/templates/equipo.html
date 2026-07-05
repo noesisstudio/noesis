@@ -22,6 +22,45 @@
 
 <div class="card" style="margin-top:16px">
   <div class="card-h">
+    <h2>Rendimiento del equipo</h2>
+    <select id="perf-days" class="input select-inline" onchange="loadPerformance()" aria-label="Período">
+      <option value="7">Últimos 7 días</option>
+      <option value="30" selected>Últimos 30 días</option>
+      <option value="90">Últimos 90 días</option>
+    </select>
+  </div>
+  <div class="card-b">
+    <div class="grid g2 perf-grid">
+      <div>
+        <div class="perf-sub">Quién más factura <span class="hint">ventas de trabajos completados</span></div>
+        <div class="barlist" id="perf-sales"><div class="empty">Cargando…</div></div>
+      </div>
+      <div>
+        <div class="perf-sub">Quién más trabajos completa <span class="hint">completados / asignados</span></div>
+        <div class="barlist" id="perf-jobs"><div class="empty">Cargando…</div></div>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:18px">
+      <table>
+        <thead><tr>
+          <th>Persona</th><th class="t-right">Trabajos</th><th class="t-right">Ventas</th>
+          <th class="t-right">Horas fichadas</th><th class="t-right">€/hora</th>
+        </tr></thead>
+        <tbody id="perf-body">
+          <tr><td colspan="5"><div class="empty">Cargando rendimiento…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="insight" style="margin-top:14px">
+      Las <b>ventas</b> son el precio de los trabajos completados asignados a cada
+      persona en el período. Asigna cada trabajo con su precio en la agenda para
+      que este cuadro refleje la realidad.
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h">
     <h2>Personas y fichajes</h2>
     <span class="hint" id="w-count">Cargando…</span>
   </div>
@@ -151,6 +190,40 @@ async function sendAccess(id) {
   } catch (error) { alert(error.message); }
 }
 
+async function loadPerformance() {
+  const days = el('perf-days').value;
+  let perf;
+  try { perf = await api(`/workers/productivity?days=${days}`); }
+  catch (error) {
+    el('perf-body').innerHTML = `<tr><td colspan="5"><div class="empty">${esc(error.message)}</div></td></tr>`;
+    return;
+  }
+  const act = perf.items.filter(i => i.active);
+  const anyData = act.some(i => i.jobs_asignados || i.horas);
+  el('perf-sales').innerHTML = anyData
+    ? barlist(act.filter(i => i.ventas > 0).slice(0, 6)
+        .map(i => ({name: i.name, value: i.ventas, valText: eur(i.ventas)})))
+    : '<div class="empty">Sin trabajos con precio en este período.</div>';
+  const byJobs = [...act].sort((a, b) => b.jobs_hechos - a.jobs_hechos);
+  el('perf-jobs').innerHTML = anyData
+    ? barlist(byJobs.filter(i => i.jobs_hechos > 0).slice(0, 6)
+        .map(i => ({name: i.name, value: i.jobs_hechos,
+                    valText: `${i.jobs_hechos} de ${i.jobs_asignados}`})), 'alt')
+    : '<div class="empty">Sin trabajos completados en este período.</div>';
+  el('perf-body').innerHTML = act.length ? act.map((i, idx) => `
+    <tr>
+      <td><span class="worker-person"><i style="background:${esc(i.color || '#2e8b74')}"></i>
+        <span><strong>${esc(i.name)}</strong>${idx === 0 && i.ventas > 0
+          ? '<small>El que más factura del período</small>' : ''}</span></span></td>
+      <td class="t-right num">${i.jobs_hechos} <span class="muted">/ ${i.jobs_asignados}</span></td>
+      <td class="t-right num"><strong>${eur(i.ventas)}</strong></td>
+      <td class="t-right num">${i.horas.toLocaleString('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1})} h</td>
+      <td class="t-right num">${i.eur_hora == null ? '<span class="muted">—</span>' : eur(i.eur_hora)}</td>
+    </tr>`).join('')
+    : `<tr><td colspan="5">${emptyState('Sin equipo activo',
+        'Añade personas y asígnales trabajos para medir su rendimiento.', '', '')}</td></tr>`;
+}
+
 let clockinCache = {};
 async function openClockins(workerId) {
   try {
@@ -226,8 +299,10 @@ function annulClockin(workerId, clockinId) {
   });
 }
 
+window.QUICK_NEW = newWorker;
 loadWorkers().catch(error => {
   el('workers-body').innerHTML = `<tr><td colspan="6"><div class="empty">${esc(error.message)}</div></td></tr>`;
 });
+loadPerformance();
 </script>
 {% endblock %}

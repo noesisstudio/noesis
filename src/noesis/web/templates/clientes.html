@@ -192,6 +192,7 @@ async function erase(id){
     await apiDelete('/clients/'+id+'/erase'); load();
   }
 }
+window.QUICK_NEW = addClient;
 load();
 </script>
 {% endblock %}

@@ -62,9 +62,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   conservan el original.
 - Facturas emitidas no se borran ni se renumeran. Los borrados RGPD conservan los
   documentos sujetos a obligación fiscal.
-- Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs. Los eventos
-  de estado de WhatsApp reutilizan `webhook_events`, por lo que una entrega repetida
-  no vuelve a producir efectos.
+- Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs. La migración
+  16 distingue eventos en proceso, completados y fallidos: un error devuelve 5xx y
+  permite reintentar; solo un evento completado se descarta como duplicado.
 - Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
 - El scheduler registra cada ejecución para evitar duplicados entre réplicas. La
@@ -72,6 +72,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   para que varias réplicas no envíen la misma fila.
 - `/health` comprueba que el proceso responde y `/ready` que la versión de esquema
   esperada está aplicada y la base de datos disponible.
+- Los backups incluyen una copia verificada de la base de datos y un ZIP separado,
+  también verificado por hashes, con los archivos de `DOCS_PATH`.
 - Los eventos de producto se almacenan siempre con `business_id`. La activación se
   deriva de datos operativos reales, no de clics o páginas visitadas.
 

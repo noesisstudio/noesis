@@ -81,11 +81,28 @@
         </button>
         <div class="crumb">Noesis · <b>{{ page_title }}</b></div>
       </div>
-      {% if business.whatsapp_status == 'conectado' %}
-        <span class="wa-pill wa-on"><span class="dot"></span> WhatsApp conectado</span>
-      {% else %}
-        <a href="/b/{{ business.id }}/ajustes" class="wa-pill wa-off"><span class="dot"></span> Conectar WhatsApp</a>
-      {% endif %}
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="quick-create">
+          <button class="btn primary sm qc-btn" type="button" aria-haspopup="true" aria-expanded="false"
+                  onclick="this.parentElement.classList.toggle('open');this.setAttribute('aria-expanded',this.parentElement.classList.contains('open'))">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Crear
+          </button>
+          <div class="qc-menu" role="menu">
+            <a role="menuitem" href="/b/{{ business.id }}/facturas?nuevo=1">Factura</a>
+            <a role="menuitem" href="/b/{{ business.id }}/presupuestos?nuevo=1">Presupuesto</a>
+            <a role="menuitem" href="/b/{{ business.id }}/clientes?nuevo=1">Cliente</a>
+            <a role="menuitem" href="/b/{{ business.id }}/costes?nuevo=1">Gasto</a>
+            <a role="menuitem" href="/b/{{ business.id }}/equipo?nuevo=1">Persona del equipo</a>
+            <a role="menuitem" href="/b/{{ business.id }}/asistente">Trabajo (por chat)</a>
+          </div>
+        </div>
+        {% if business.whatsapp_status == 'conectado' %}
+          <span class="wa-pill wa-on"><span class="dot"></span> WhatsApp conectado</span>
+        {% else %}
+          <a href="/b/{{ business.id }}/ajustes" class="wa-pill wa-off"><span class="dot"></span> Conectar WhatsApp</a>
+        {% endif %}
+      </div>
     </div>
     <div class="content">
       {% block content %}{% endblock %}

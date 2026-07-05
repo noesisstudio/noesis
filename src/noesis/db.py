@@ -18,7 +18,7 @@ import secrets
 import sqlite3
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
@@ -175,12 +175,22 @@ def _now() -> str:
 
 def _positive_money(value, label: str) -> float:
     try:
-        number = float(value)
-    except (TypeError, ValueError) as exc:
+        number = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as exc:
         raise ValueError(f"{label} debe ser un número.") from exc
-    if not math.isfinite(number) or number <= 0 or number > 10_000_000:
+    if not number.is_finite() or number <= 0 or number > Decimal("10000000"):
         raise ValueError(f"{label} debe ser mayor que 0 y tener un importe válido.")
-    return round(number, 2)
+    return float(number.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def _tax_amount(base, rate) -> float:
+    """Redondea importes fiscales al céntimo con criterio comercial."""
+    amount = (
+        Decimal(str(base))
+        * Decimal(str(rate or 0))
+        / Decimal("100")
+    )
+    return float(amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 def _tax_rate(value, label: str, allowed: set[float]) -> float:
@@ -339,8 +349,10 @@ def update_gestoria_settings(business_id, *, name=None, email=None,
 
 def get_or_create_gestoria_token(business_id) -> str | None:
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         row = conn.execute(
-            "SELECT gestoria_token FROM businesses WHERE id=?",
+            "SELECT gestoria_token FROM businesses WHERE id=?" + lock,
             (business_id,),
         ).fetchone()
         if not row:
@@ -684,6 +696,7 @@ def business_brand_color(business: dict | None) -> str:
 # El orden de esta tupla es la disposición por defecto (recomendada por Noesis).
 PANEL_BLOCKS = (
     ("foco", "Lo primero hoy"),
+    ("pulso", "Pulso del negocio"),
     ("kpis", "Indicadores del mes"),
     ("balance", "Balance · tu posición"),
     ("hoy", "Trabajos de hoy"),
@@ -1822,6 +1835,56 @@ def clockins_today(business_id: int) -> list[dict]:
     return summaries
 
 
+def team_productivity(business_id: int, days: int = 30) -> dict:
+    """Rendimiento por persona para el dueño del negocio: trabajos asignados y
+    completados, ventas estimadas (precio de los trabajos hechos) y horas
+    fichadas dentro del período. Solo agregados del propio negocio."""
+    days = max(1, min(int(days or 30), 365))
+    today = date.today()
+    since = (today - timedelta(days=days - 1)).isoformat()
+    now = datetime.now()
+    done_ph = ",".join("?" for _ in _JOB_DONE_STATES)
+    dead_ph = ",".join("?" for _ in _JOB_DEAD_STATES)
+    items = []
+    for worker in list_workers(business_id):
+        with get_conn() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) AS asignados, "
+                f"SUM(CASE WHEN status IN ({done_ph}) THEN 1 ELSE 0 END) AS hechos, "
+                f"COALESCE(SUM(CASE WHEN status IN ({done_ph}) "
+                "THEN COALESCE(price_estimate, 0) ELSE 0 END), 0) AS ventas "
+                "FROM jobs WHERE business_id=? AND worker_id=? "
+                f"AND status NOT IN ({dead_ph}) "
+                "AND substr(CAST(COALESCE(scheduled_for, created_at) AS TEXT), 1, 10) >= ?",
+                (*_JOB_DONE_STATES, *_JOB_DONE_STATES,
+                 business_id, worker["id"], *_JOB_DEAD_STATES, since),
+            ).fetchone()
+            records = _clockin_rows_with_corrections(
+                conn, business_id, worker["id"]
+            )
+        seconds = sum(
+            _worked_seconds_for_day(
+                records, (today - timedelta(days=offset)).isoformat(), now
+            )
+            for offset in range(days)
+        )
+        hours = round(seconds / 3600, 1)
+        ventas = round(float(row["ventas"] or 0), 2)
+        items.append({
+            "id": worker["id"],
+            "name": worker["name"],
+            "color": worker.get("color"),
+            "active": worker["active"],
+            "jobs_asignados": int(row["asignados"] or 0),
+            "jobs_hechos": int(row["hechos"] or 0),
+            "ventas": ventas,
+            "horas": hours,
+            "eur_hora": round(ventas / hours, 2) if hours else None,
+        })
+    items.sort(key=lambda i: (-i["ventas"], -i["jobs_hechos"], i["name"]))
+    return {"days": days, "since": since, "items": items}
+
+
 def clockin_report_data(
     business_id: int, worker_id: int, from_day: str, to_day: str
 ) -> dict | None:
@@ -2050,9 +2113,15 @@ def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     base = _positive_money(base, "La base")
     vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
     irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
-    vat_amount = round(base * vat_rate / 100, 2)
-    irpf_amount = round(base * (irpf_rate or 0) / 100, 2)
-    total = round(base + vat_amount - irpf_amount, 2)
+    vat_amount = _tax_amount(base, vat_rate)
+    irpf_amount = _tax_amount(base, irpf_rate)
+    total = float(
+        (
+            Decimal(str(base))
+            + Decimal(str(vat_amount))
+            - Decimal(str(irpf_amount))
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    )
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
@@ -2103,9 +2172,20 @@ def create_rectifying_invoice(
         raise ValueError("La base rectificada debe ser un número distinto de cero.")
     vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
     irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
-    vat_amount = round(signed_base * vat_rate / 100, 2)
-    irpf_amount = round(signed_base * (irpf_rate or 0) / 100, 2)
-    total = round(signed_base + vat_amount - irpf_amount, 2)
+    signed_base = float(
+        Decimal(str(signed_base)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    )
+    vat_amount = _tax_amount(signed_base, vat_rate)
+    irpf_amount = _tax_amount(signed_base, irpf_rate)
+    total = float(
+        (
+            Decimal(str(signed_base))
+            + Decimal(str(vat_amount))
+            - Decimal(str(irpf_amount))
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    )
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
@@ -2364,8 +2444,9 @@ def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int = 15
     """Emite una factura una sola vez, numera y congela sus datos fiscales."""
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         inv = conn.execute(
-            "SELECT * FROM invoices WHERE id=? AND business_id=?",
+            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
             (invoice_id, business_id),
         ).fetchone()
         if not inv:
@@ -3277,9 +3358,15 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     base = _positive_money(base, "La base")
     vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
     irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
-    vat_amount = round(base * vat_rate / 100, 2)
-    irpf_amount = round(base * (irpf_rate or 0) / 100, 2)
-    total = round(base + vat_amount - irpf_amount, 2)
+    vat_amount = _tax_amount(base, vat_rate)
+    irpf_amount = _tax_amount(base, irpf_rate)
+    total = float(
+        (
+            Decimal(str(base))
+            + Decimal(str(vat_amount))
+            - Decimal(str(irpf_amount))
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    )
     valid_until = (date.today() + timedelta(days=valid_days)).isoformat()
     with get_conn() as conn:
         row = conn.execute(
@@ -3328,8 +3415,11 @@ def _next_quote_number(conn, business_id) -> str:
 def mark_quote_sent(quote_id, business_id) -> dict | None:
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        row = conn.execute("SELECT * FROM quotes WHERE id=? AND business_id=?",
-                           (quote_id, business_id)).fetchone()
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM quotes WHERE id=? AND business_id=?" + lock,
+            (quote_id, business_id),
+        ).fetchone()
         if not row:
             return None
         if row["status"] in {"enviado", "aceptado"} and row["number"]:
@@ -3356,8 +3446,9 @@ def accept_quote(quote_id, business_id) -> dict | None:
     negocio: si el presupuesto no es de ese negocio, no hace nada."""
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         q = conn.execute(
-            "SELECT * FROM quotes WHERE id=? AND business_id=?",
+            "SELECT * FROM quotes WHERE id=? AND business_id=?" + lock,
             (quote_id, business_id),
         ).fetchone()
         if not q:
@@ -3516,8 +3607,11 @@ def create_password_reset(user_id, token_hash, ttl_minutes: int = 60) -> None:
 def use_password_reset(token_hash) -> dict | None:
     """Devuelve el reset válido (no usado, no caducado) y lo marca usado."""
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         row = conn.execute(
-            "SELECT * FROM password_resets WHERE token_hash=? AND used=FALSE",
+            "SELECT * FROM password_resets "
+            "WHERE token_hash=? AND used=FALSE" + lock,
             (token_hash,)).fetchone()
         if not row:
             return None
@@ -3568,20 +3662,77 @@ def subscription_allows_access(business: dict | None) -> bool:
     return not ends or ends >= date.today().isoformat()
 
 
-def claim_webhook_event(source: str, event_id: str) -> bool:
-    """Registra un evento una sola vez. False significa que ya fue procesado."""
+def claim_webhook_event(
+    source: str,
+    event_id: str,
+    *,
+    stale_before: str | None = None,
+) -> bool:
+    """Reserva un evento y permite recuperar fallos o procesos abandonados."""
     if not event_id:
         return False
-    try:
-        with get_conn() as conn:
+    now = _now()
+    stale_before = stale_before or (
+        datetime.now() - timedelta(minutes=5)
+    ).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        existing = conn.execute(
+            "SELECT * FROM webhook_events WHERE source=? AND event_id=?" + lock,
+            (source, event_id),
+        ).fetchone()
+        if existing:
+            status = existing.get("status") or "done"
+            if status == "done":
+                return False
+            if (
+                status == "processing"
+                and str(existing.get("locked_at") or "") > stale_before
+            ):
+                return False
             conn.execute(
-                "INSERT INTO webhook_events (source, event_id, created_at) "
-                "VALUES (?, ?, ?)",
-                (source, event_id, _now()),
+                "UPDATE webhook_events SET status='processing', locked_at=?, "
+                "processed_at=NULL, attempts=attempts+1, last_error=NULL "
+                "WHERE source=? AND event_id=?",
+                (now, source, event_id),
             )
+            return True
+        conn.execute(
+            "INSERT INTO webhook_events "
+            "(source, event_id, status, locked_at, attempts, created_at) "
+            "VALUES (?, ?, 'processing', ?, 1, ?)",
+            (source, event_id, now, now),
+        )
         return True
-    except IntegrityError:
-        return False
+
+
+def webhook_event(source: str, event_id: str) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM webhook_events WHERE source=? AND event_id=?",
+            (source, event_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def complete_webhook_event(source: str, event_id: str) -> None:
+    now = _now()
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE webhook_events SET status='done', processed_at=?, "
+            "locked_at=NULL, last_error=NULL WHERE source=? AND event_id=?",
+            (now, source, event_id),
+        )
+
+
+def fail_webhook_event(source: str, event_id: str, error: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE webhook_events SET status='failed', locked_at=NULL, "
+            "last_error=? WHERE source=? AND event_id=?",
+            ((error or "error")[:1000], source, event_id),
+        )
 
 
 def enqueue_whatsapp_message(
@@ -3937,9 +4088,10 @@ def create_whatsapp_link(code_hash: str, business_id: int, expires_at: str) -> N
 def consume_whatsapp_link(code_hash: str) -> int | None:
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         row = conn.execute(
             "SELECT business_id FROM whatsapp_links "
-            "WHERE code_hash=? AND expires_at>=?",
+            "WHERE code_hash=? AND expires_at>=?" + lock,
             (code_hash, _now()),
         ).fetchone()
         if not row:
@@ -4279,7 +4431,38 @@ def admin_overview() -> dict:
     activos = [b for b in biz if b["subscription_status"] == "active"]
     mrr = sum(PRICES.get(b["plan"], 0) for b in activos)
     activated = [b for b in biz if b["activated"]]
+
+    # Datos ya masticados para los gráficos del panel (solo primitivas JSON).
+    month_start = today.replace(day=1)
+    months: list[str] = []
+    point = month_start
+    for _ in range(12):
+        months.append(point.isoformat()[:7])
+        point = (point - timedelta(days=1)).replace(day=1)
+    months.reverse()
+    altas_by_month: dict[str, int] = {}
+    for b in biz:
+        key = str(b["created_at"])[:7]
+        altas_by_month[key] = altas_by_month.get(key, 0) + 1
+    planes: dict[str, int] = {}
+    for b in biz:
+        planes[b["plan"] or "trial"] = planes.get(b["plan"] or "trial", 0) + 1
+    top = sorted(biz, key=lambda b: -float(b["facturado"] or 0))[:8]
+    ia_top = sorted(
+        biz, key=lambda b: -(b["ai"]["input"] + b["ai"]["output"])
+    )[:8]
+    charts = {
+        "meses": months,
+        "altas": [altas_by_month.get(m, 0) for m in months],
+        "planes": planes,
+        "cuentas": [b["name"] for b in top],
+        "facturado": [round(float(b["facturado"] or 0), 2) for b in top],
+        "cobrado": [round(float(b["cobrado"] or 0), 2) for b in top],
+        "ia_cuentas": [b["name"] for b in ia_top],
+        "ia_tokens": [b["ai"]["input"] + b["ai"]["output"] for b in ia_top],
+    }
     return {
+        "charts": charts,
         "total": len(biz), "activos": len(activos),
         "en_prueba": len([b for b in biz if b["subscription_status"] == "trial"]),
         "whatsapp_conectados": len([b for b in biz if b["whatsapp_status"] == "conectado"]),
@@ -4448,10 +4631,10 @@ def delete_business_cascade(business_id) -> bool:
                 "La cuenta tiene registros de jornada que deben conservarse "
                 "durante cuatro años. Solicita una baja con conservación legal."
             )
-        # Borra los ficheros físicos de los documentos antes que sus metadatos (RGPD).
-        from .documents import storage as _docstore
-        _docstore.delete_business_dir(business_id)
+        # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
+            "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
+            "verifactu_outbox", "document_sequences",
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
             "invoice_events", "invoice_records", "portal_tokens",
             "product_events", "copilot_recommendations", "documents", "quotes",
@@ -4460,6 +4643,14 @@ def delete_business_cascade(business_id) -> bool:
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "
                      "(SELECT id FROM users WHERE business_id=?)", (business_id,))
+        conn.execute(
+            "DELETE FROM scheduled_job_runs WHERE run_key LIKE ?",
+            (f"gestoria:{business_id}:%",),
+        )
         conn.execute("DELETE FROM users WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM businesses WHERE id=?", (business_id,))
+    # El borrado físico va después del commit: un fallo de FK nunca deja
+    # metadatos vivos apuntando a archivos ya eliminados.
+    from .documents import storage as _docstore
+    _docstore.delete_business_dir(business_id)
     return True

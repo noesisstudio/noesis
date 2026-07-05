@@ -166,6 +166,22 @@ class BackendTestCase(unittest.TestCase):
             len(db.list_invoice_payments(invoice["id"], business["id"])), 1
         )
 
+    def test_tax_amounts_use_commercial_cent_rounding(self):
+        business, client = self.make_business()
+
+        invoice = db.add_invoice(
+            client["id"], "Importe pequeño", 0.50, business_id=business["id"]
+        )
+        quote = db.add_quote(
+            client["id"], "Presupuesto pequeño", 0.50,
+            business_id=business["id"],
+        )
+
+        self.assertEqual(invoice["vat_amount"], 0.11)
+        self.assertEqual(invoice["total"], 0.61)
+        self.assertEqual(quote["vat_amount"], 0.11)
+        self.assertEqual(quote["total"], 0.61)
+
     def test_partial_payments_derive_state_and_reject_overpayment(self):
         business, client = self.make_business()
         invoice = db.add_invoice(
@@ -264,6 +280,127 @@ class BackendTestCase(unittest.TestCase):
     def test_webhook_events_are_processed_once(self):
         self.assertTrue(db.claim_webhook_event("whatsapp", "wamid.1"))
         self.assertFalse(db.claim_webhook_event("whatsapp", "wamid.1"))
+        db.complete_webhook_event("whatsapp", "wamid.1")
+        self.assertFalse(db.claim_webhook_event("whatsapp", "wamid.1"))
+
+    def test_failed_whatsapp_event_can_be_retried(self):
+        business, _ = self.make_business()
+        db.set_whatsapp_status(business["id"], "conectado", phone="600111222")
+        payload = {
+            "id": "wamid.retry-inbound",
+            "from": "34600111222",
+            "text": "resumen",
+        }
+        with (
+            patch.object(
+                chat,
+                "handle",
+                side_effect=[
+                    RuntimeError("fallo transitorio"),
+                    {"reply": "Recuperado"},
+                ],
+            ) as handle,
+            patch.object(whatsapp, "send", return_value=True),
+        ):
+            with self.assertRaises(RuntimeError):
+                whatsapp.handle_inbound(payload)
+            failed = db.webhook_event("whatsapp", payload["id"])
+            retried = whatsapp.handle_inbound(payload)
+            duplicate = whatsapp.handle_inbound(payload)
+
+        self.assertEqual(failed["status"], "failed")
+        self.assertEqual(retried["processed"], 1)
+        self.assertTrue(duplicate["results"][0]["duplicate"])
+        self.assertEqual(handle.call_count, 2)
+        self.assertEqual(
+            db.webhook_event("whatsapp", payload["id"])["status"], "done"
+        )
+
+    def test_failed_stripe_event_returns_500_and_can_be_retried(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe recuperable")
+        event = {
+            "id": "evt_retry",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "metadata": {
+                        "business_id": str(business["id"]),
+                        "plan": "autonomo",
+                    },
+                    "customer": "cus_retry",
+                    "subscription": "sub_retry",
+                }
+            },
+        }
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "verify_webhook", return_value=event
+            ),
+            patch.object(
+                db,
+                "set_subscription",
+                side_effect=[RuntimeError("fallo transitorio"), None],
+            ) as update,
+            TestClient(server.app) as client,
+        ):
+            failed = client.post("/webhook/stripe", content=b"{}")
+            retried = client.post("/webhook/stripe", content=b"{}")
+            duplicate = client.post("/webhook/stripe", content=b"{}")
+
+        self.assertEqual(failed.status_code, 500)
+        self.assertEqual(retried.status_code, 200)
+        self.assertTrue(duplicate.json()["duplicate"])
+        self.assertEqual(update.call_count, 2)
+        self.assertEqual(
+            db.webhook_event("stripe", event["id"])["status"], "done"
+        )
+
+    def test_account_delete_cleans_dependencies_before_files(self):
+        from noesis.documents import repo, service, storage
+
+        business, client = self.make_business("Baja completa")
+        document = service.upload(
+            business["id"], "ticket.pdf", b"%PDF-review", run_ocr=False
+        )
+        file_path = storage.path_for(
+            business["id"], document["stored_name"]
+        )
+        quote = db.add_quote(
+            client["id"], "Presupuesto", 100, business_id=business["id"]
+        )
+        db.mark_quote_sent(quote["id"], business["id"])
+        db.create_whatsapp_link(
+            "hash-baja",
+            business["id"],
+            (datetime.now() + timedelta(hours=1)).isoformat(),
+        )
+        db.set_pending_action(
+            business["id"], "600111222", "chat_action", {"text": "resumen"}
+        )
+        db.enqueue_whatsapp_message(
+            business_id=business["id"],
+            to_phone="34600111222",
+            message_type="text",
+            text_body="Pendiente",
+        )
+        db.claim_scheduled_run(f"gestoria:{business['id']}:2026-06")
+
+        self.assertTrue(db.delete_business_cascade(business["id"]))
+
+        self.assertIsNone(db.get_business(business["id"]))
+        self.assertIsNone(repo.get(document["id"], business["id"]))
+        self.assertFalse(file_path.exists())
+        with db.get_conn() as conn:
+            remaining_runs = conn.execute(
+                "SELECT COUNT(*) AS total FROM scheduled_job_runs "
+                "WHERE run_key LIKE ?",
+                (f"gestoria:{business['id']}:%",),
+            ).fetchone()["total"]
+        self.assertEqual(remaining_runs, 0)
 
     def test_whatsapp_signature(self):
         payload = b'{"entry":[]}'
@@ -1250,6 +1387,46 @@ class WorkerDataTestCase(unittest.TestCase):
                     "UPDATE jobs SET worker_id=? WHERE id=? AND business_id=?",
                     (worker_b["id"], job_a["id"], business_a["id"]),
                 )
+
+    def test_team_productivity_ranks_by_sales_and_isolates_tenants(self):
+        business, client = self.make_business("Rendimiento Equipo")
+        ana = db.create_worker(business["id"], "Ana")
+        bruno = db.create_worker(business["id"], "Bruno")
+        hecho = db.add_job(
+            client["id"], "Instalación", price_estimate=300,
+            business_id=business["id"],
+        )
+        menor = db.add_job(
+            client["id"], "Revisión", price_estimate=100,
+            business_id=business["id"],
+        )
+        cancelado = db.add_job(
+            client["id"], "Cancelado", price_estimate=999,
+            business_id=business["id"],
+        )
+        db.assign_job_worker(hecho["id"], ana["id"], business["id"])
+        db.assign_job_worker(menor["id"], bruno["id"], business["id"])
+        db.assign_job_worker(cancelado["id"], ana["id"], business["id"])
+        db.update_job_status(hecho["id"], "hecho", business["id"])
+        db.update_job_status(menor["id"], "hecho", business["id"])
+        db.update_job_status(cancelado["id"], "cancelado", business["id"])
+
+        data = db.team_productivity(business["id"], days=30)
+        self.assertEqual(data["days"], 30)
+        self.assertEqual(
+            [item["name"] for item in data["items"]], ["Ana", "Bruno"]
+        )
+        top = data["items"][0]
+        self.assertEqual(top["ventas"], 300.0)
+        self.assertEqual(top["jobs_hechos"], 1)
+        # El trabajo cancelado no cuenta ni como asignado ni como venta.
+        self.assertEqual(top["jobs_asignados"], 1)
+        self.assertEqual(top["horas"], 0.0)
+        self.assertIsNone(top["eur_hora"])
+        self.assertEqual(data["items"][1]["ventas"], 100.0)
+
+        other, _ = self.make_business("Negocio Aislado")
+        self.assertEqual(db.team_productivity(other["id"])["items"], [])
 
     def test_clocking_gps_rules_tokens_and_phone_binding(self):
         business, client = self.make_business("Fichajes")

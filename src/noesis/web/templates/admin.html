@@ -20,103 +20,113 @@
   </div>
 
   <div class="admin-grid">
-    <div class="metric"><div class="label">Cuentas</div><div class="value">{{ data.total }}</div><div class="sub">{{ data.en_prueba }} en prueba</div></div>
-    <div class="metric"><div class="label">Activados</div><div class="value green">{{ data.activados }}</div><div class="sub">{{ data.tasa_activacion }}% del total</div></div>
-    <div class="metric"><div class="label">Primer cobro</div><div class="value green">{{ data.resultados }}</div><div class="sub">ciclo completo</div></div>
-    <div class="metric"><div class="label">MRR</div><div class="value">{{ data.mrr }} €</div><div class="sub">{{ data.activos }} suscripción(es)</div></div>
-    <div class="metric"><div class="label">En riesgo</div><div class="value {{ 'red' if data.en_riesgo }}">{{ data.en_riesgo }}</div><div class="sub">activados sin uso 14+ días</div></div>
-    <div class="metric"><div class="label">Alarmas</div><div class="value {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="sub">ahora mismo</div></div>
+    <div class="stat"><div class="lbl">Cuentas</div><div class="val">{{ data.total }}</div><div class="delta flat">{{ data.en_prueba }} en prueba</div></div>
+    <div class="stat"><div class="lbl">Activados</div><div class="val green">{{ data.activados }}</div><div class="delta flat">{{ data.tasa_activacion }}% del total</div></div>
+    <div class="stat"><div class="lbl">Primer cobro</div><div class="val green">{{ data.resultados }}</div><div class="delta flat">ciclo completo</div></div>
+    <div class="stat"><div class="lbl">MRR</div><div class="val">{{ data.mrr }} €</div><div class="delta flat">{{ data.activos }} suscripción(es)</div></div>
+    <div class="stat"><div class="lbl">En riesgo</div><div class="val {{ 'red' if data.en_riesgo }}">{{ data.en_riesgo }}</div><div class="delta flat">activados sin uso 14+ días</div></div>
+    <div class="stat"><div class="lbl">Alarmas</div><div class="val {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="delta flat">ahora mismo</div></div>
   </div>
 
-  <div class="card">
+  {% if data.alerts %}
+  <div class="card admin-alerts">
     <div class="card-h">
-      <b>🚨 Alarmas</b>
-      {% if data.alerts %}<span class="badge b-red">{{ data.alerts|length }} activa(s)</span>
-      {% else %}<span class="badge b-green">todo en orden</span>{% endif %}
+      <h2>🚨 Alarmas</h2>
+      <span class="badge b-red">{{ data.alerts|length }} activa(s)</span>
     </div>
     <div class="card-b">
-      {% if not data.alerts %}
-        <p class="meta">Sin incidencias: colas vacías, copias al día y suscripciones sanas.</p>
-      {% endif %}
       {% for a in data.alerts %}
-      <div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
+      <div class="lrow">
         <span class="badge {{ 'b-red' if a.level == 'rojo' else 'b-amber' }}">{{ a.area }}</span>
-        <span>{{ a.text }}</span>
+        <span style="flex:1;margin-left:10px">{{ a.text }}</span>
       </div>
       {% endfor %}
     </div>
   </div>
+  {% endif %}
 
-  <div class="card">
-    <div class="card-h">
-      <b>Uso de IA · {{ data.ai_usage.month }}</b>
-      <span class="hint">el coste real de servir a los clientes</span>
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Altas por mes</h2><span class="hint">últimos 12 meses</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-altas"></canvas></div></div>
     </div>
-    <div class="card-b">
-      <div class="row">
-        <span class="badge b-gray">Llamadas al agente: {{ data.ai_usage.total.calls }}</span>
-        <span class="badge b-gray">Tokens entrada: {{ '{:,}'.format(data.ai_usage.total.input).replace(',', '.') }}</span>
-        <span class="badge b-gray">Tokens salida: {{ '{:,}'.format(data.ai_usage.total.output).replace(',', '.') }}</span>
-        <span class="badge b-gray">Extracciones (fotos/PDF): {{ data.ai_usage.total.extractions }}</span>
-      </div>
-      <p class="meta" style="margin-top:8px">
-        El detalle por cliente está en la tabla de cuentas. Lo rutinario se resuelve
-        gratis en local (NLU); aquí solo aparece lo que de verdad llama a la API.
-      </p>
+    <div class="card">
+      <div class="card-h"><h2>Distribución de planes</h2><span class="hint">todas las cuentas</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-planes"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Facturado vs. cobrado</h2><span class="hint">top cuentas por volumen</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-volumen"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Uso de IA por cuenta</h2><span class="hint">tokens del mes · {{ data.ai_usage.month }}</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-ia"></canvas></div></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-h">
-      <b>Cola Veri*Factu</b>
-      {% if data.verifactu_queue.rechazado %}
-        <span class="badge b-red">{{ data.verifactu_queue.rechazado }} rechazada(s)</span>
-      {% else %}
-        <span class="badge b-green">sin rechazos</span>
-      {% endif %}
-    </div>
-    <div class="card-b">
-      <div class="row">
-        <span class="badge b-gray">Pendientes {{ data.verifactu_queue.pendiente }}</span>
-        <span class="badge b-amber">Enviadas {{ data.verifactu_queue.enviado }}</span>
-        <span class="badge b-green">Aceptadas {{ data.verifactu_queue.aceptado }}</span>
-        <span class="badge b-amber">Con errores {{ data.verifactu_queue.aceptado_con_errores }}</span>
-        <span class="badge b-red">Agotadas {{ data.verifactu_queue.agotado }}</span>
+  <div class="grid g3 admin-ops">
+    <div class="card">
+      <div class="card-h">
+        <h2>Uso de IA · {{ data.ai_usage.month }}</h2>
       </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-h">
-      <b>Copias de seguridad</b>
-      {% if data.backup.status == 'ok' %}
-        <span class="badge b-green">Verificación OK</span>
-      {% elif data.backup.status == 'error' %}
-        <span class="badge b-red">Error de verificación</span>
-      {% else %}
-        <span class="badge b-gray">Sin copias</span>
-      {% endif %}
-    </div>
-    <div class="card-b">
-      {% if data.backup.created_at %}
-        <p class="meta">
-          Último intento: <b>{{ data.backup.created_at }}</b> ·
-          Tamaño: <b>{{ data.backup.size_human }}</b>
+      <div class="card-b">
+        <div class="lrow"><span>Llamadas al agente</span><b class="num">{{ data.ai_usage.total.calls }}</b></div>
+        <div class="lrow"><span>Tokens entrada</span><b class="num">{{ '{:,}'.format(data.ai_usage.total.input).replace(',', '.') }}</b></div>
+        <div class="lrow"><span>Tokens salida</span><b class="num">{{ '{:,}'.format(data.ai_usage.total.output).replace(',', '.') }}</b></div>
+        <div class="lrow"><span>Extracciones (fotos/PDF)</span><b class="num">{{ data.ai_usage.total.extractions }}</b></div>
+        <p class="meta" style="margin-top:10px">
+          Lo rutinario se resuelve gratis en local (NLU); aquí solo aparece lo
+          que de verdad llama a la API. Es el coste real de servir a los clientes.
         </p>
-        {% if data.backup.error %}
-          <p class="notice error">{{ data.backup.error }}</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h2>Cola Veri*Factu</h2>
+        {% if data.verifactu_queue.rechazado %}
+          <span class="badge b-red">{{ data.verifactu_queue.rechazado }} rechazada(s)</span>
+        {% else %}
+          <span class="badge b-green">sin rechazos</span>
         {% endif %}
-      {% else %}
-        <p class="meta">Todavía no se ha ejecutado ninguna copia programada.</p>
-      {% endif %}
-      {% if data.backup.download_available %}
-        <a class="btn" href="/admin/backups/latest">Descargar última copia verificada</a>
-      {% endif %}
+      </div>
+      <div class="card-b">
+        <div class="lrow"><span>Pendientes</span><b class="num">{{ data.verifactu_queue.pendiente }}</b></div>
+        <div class="lrow"><span>Enviadas</span><b class="num">{{ data.verifactu_queue.enviado }}</b></div>
+        <div class="lrow"><span>Aceptadas</span><b class="num">{{ data.verifactu_queue.aceptado }}</b></div>
+        <div class="lrow"><span>Con errores</span><b class="num">{{ data.verifactu_queue.aceptado_con_errores }}</b></div>
+        <div class="lrow"><span>Agotadas</span><b class="num {{ 'red' if data.verifactu_queue.agotado }}">{{ data.verifactu_queue.agotado }}</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h2>Copias de seguridad</h2>
+        {% if data.backup.status == 'ok' %}
+          <span class="badge b-green">Verificación OK</span>
+        {% elif data.backup.status == 'error' %}
+          <span class="badge b-red">Error de verificación</span>
+        {% else %}
+          <span class="badge b-gray">Sin copias</span>
+        {% endif %}
+      </div>
+      <div class="card-b">
+        {% if data.backup.created_at %}
+          <div class="lrow"><span>Último intento</span><b>{{ data.backup.created_at }}</b></div>
+          <div class="lrow"><span>Tamaño</span><b>{{ data.backup.size_human }}</b></div>
+          {% if data.backup.error %}
+            <p class="notice error">{{ data.backup.error }}</p>
+          {% endif %}
+        {% else %}
+          <p class="meta">Todavía no se ha ejecutado ninguna copia programada.</p>
+        {% endif %}
+        {% if data.backup.download_available %}
+          <a class="btn sm" style="margin-top:10px" href="/admin/backups/latest">Descargar última copia verificada</a>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-h"><b>Cuentas</b><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp · contacto directo para emergencias</span></div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-h"><h2>Cuentas</h2><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp · contacto directo para emergencias</span></div>
     <div class="card-b table-pad">
       <div class="table-wrap">
         <table>
@@ -164,5 +174,68 @@
     </div>
   </div>
 </div>
+
+<script src="/static/vendor/chart.umd.min.js"></script>
+<script>
+const C = {{ data.charts | tojson }};
+const PAL = { brand: '#2e8b74', forest: '#14463b', soft: '#a9d2c5',
+              amber: '#b7831f', red: '#c0533f', blue: '#6b8cff', grid: '#ece8db' };
+const BASE = (extra = {}) => Object.assign({
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { position: 'bottom',
+    labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 12 } } } },
+  scales: { x: { grid: { display: false } },
+            y: { beginAtZero: true, grid: { color: PAL.grid }, border: { display: false } } }
+}, extra);
+const monthLabel = m => new Date(m + '-01T00:00:00')
+  .toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
+
+new Chart(document.getElementById('ch-altas'), {
+  type: 'bar',
+  data: { labels: C.meses.map(monthLabel),
+    datasets: [{ label: 'Cuentas nuevas', data: C.altas,
+      backgroundColor: PAL.brand, borderRadius: 6, maxBarThickness: 26 }] },
+  options: BASE({ scales: { x: { grid: { display: false } },
+    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: PAL.grid },
+         border: { display: false } } } })
+});
+
+const PLAN_LABELS = { trial: 'Prueba', autonomo: 'Autónomo (29 €)', pro: 'Negocio (39 €)' };
+const planKeys = Object.keys(C.planes);
+new Chart(document.getElementById('ch-planes'), {
+  type: 'doughnut',
+  data: { labels: planKeys.map(k => PLAN_LABELS[k] || k),
+    datasets: [{ data: planKeys.map(k => C.planes[k]),
+      backgroundColor: [PAL.soft, PAL.brand, PAL.forest, PAL.amber, PAL.blue],
+      borderWidth: 2, borderColor: '#fff' }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
+    plugins: { legend: { position: 'bottom',
+      labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 12 } } } } }
+});
+
+new Chart(document.getElementById('ch-volumen'), {
+  type: 'bar',
+  data: { labels: C.cuentas,
+    datasets: [
+      { label: 'Facturado', data: C.facturado, backgroundColor: PAL.forest,
+        borderRadius: 6, maxBarThickness: 20 },
+      { label: 'Cobrado', data: C.cobrado, backgroundColor: PAL.brand,
+        borderRadius: 6, maxBarThickness: 20 }
+    ] },
+  options: BASE({ indexAxis: 'y',
+    scales: { x: { beginAtZero: true, grid: { color: PAL.grid }, border: { display: false } },
+              y: { grid: { display: false } } } })
+});
+
+new Chart(document.getElementById('ch-ia'), {
+  type: 'bar',
+  data: { labels: C.ia_cuentas,
+    datasets: [{ label: 'Tokens (entrada + salida)', data: C.ia_tokens,
+      backgroundColor: PAL.blue, borderRadius: 6, maxBarThickness: 20 }] },
+  options: BASE({ indexAxis: 'y',
+    scales: { x: { beginAtZero: true, grid: { color: PAL.grid }, border: { display: false } },
+              y: { grid: { display: false } } } })
+});
+</script>
 </body>
 </html>

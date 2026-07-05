@@ -81,6 +81,25 @@
 </div>
 </section>
 
+<section class="pblock {{ 'pblock-hidden' if 'pulso' in panel_hidden }}" data-block="pulso" style="order:{{ panel_order.index('pulso') }}">
+{{ pbar('pulso', 'Pulso del negocio') }}
+<a class="card pulse-card" href="/b/{{ business.id }}/analisis" aria-label="Ver análisis completo">
+  <div class="pulse-main">
+    <span class="pulse-dot" id="pu-dot"></span>
+    <div>
+      <div class="pulse-state" id="pu-state">Midiendo el pulso…</div>
+      <div class="pulse-text" id="pu-text">Analizando márgenes, cobros y liquidez.</div>
+    </div>
+  </div>
+  <div class="pulse-chips">
+    <span class="pulse-chip" id="pu-margen"><small>Margen</small><b>—</b></span>
+    <span class="pulse-chip" id="pu-dso"><small>Días de cobro</small><b>—</b></span>
+    <span class="pulse-chip" id="pu-mora"><small>Morosidad</small><b>—</b></span>
+    <span class="pulse-chip" id="pu-solv"><small>Solvencia</small><b>—</b></span>
+  </div>
+</a>
+</section>
+
 <section class="pblock {{ 'pblock-hidden' if 'kpis' in panel_hidden }}" data-block="kpis" style="order:{{ panel_order.index('kpis') }}">
 {{ pbar('kpis', 'Indicadores del mes') }}
 <div class="grid g4">
@@ -249,6 +268,40 @@ async function load() {
   el('s-inv-d').className = 'delta ' + (rate >= 70 ? 'up' : rate >= 40 ? 'flat' : 'down');
 
   api('/analysis').then(a => {
+    // --- Pulso del negocio: 4 señales con semáforo y diagnóstico global ---
+    const chip = (id, valText, state) => {
+      const c = el(id);
+      c.querySelector('b').textContent = valText;
+      c.classList.add('pu-' + state);
+      return state;
+    };
+    const grade = (v, good, ok, invert) => invert
+      ? (v <= good ? 'good' : v <= ok ? 'ok' : 'bad')
+      : (v >= good ? 'good' : v >= ok ? 'ok' : 'bad');
+    const states = [];
+    if (a.invoiced) {
+      states.push(chip('pu-margen', a.margen_pct + '%', grade(a.margen_pct, 25, 10)));
+      states.push(chip('pu-dso', a.dso + ' d', grade(a.dso, 15, 45, true)));
+      states.push(chip('pu-mora', a.morosidad_pct + '%', grade(a.morosidad_pct, 5, 15, true)));
+      states.push(chip('pu-solv', a.solvencia == null ? '—' : a.solvencia + '×',
+        a.solvencia == null ? 'ok' : grade(a.solvencia, 1.5, 1)));
+    }
+    const bad = states.filter(s => s === 'bad').length;
+    const okC = states.filter(s => s === 'ok').length;
+    const overall = !states.length ? 'ok' : bad ? 'bad' : okC ? 'ok' : 'good';
+    el('pu-dot').className = 'pulse-dot pu-' + overall;
+    el('pu-state').textContent = !states.length ? 'Aún sin datos suficientes'
+      : overall === 'good' ? 'Tu negocio está sano'
+      : overall === 'ok' ? 'Tu negocio va bien, con cosas que vigilar'
+      : 'Tu negocio necesita atención';
+    el('pu-text').textContent = !states.length
+      ? 'Registra facturas y gastos para medir el pulso real.'
+      : overall === 'bad'
+        ? 'Hay señales en rojo. Toca aquí para ver qué corregir primero.'
+        : overall === 'ok'
+          ? 'Alguna señal en ámbar. Toca aquí para ver el detalle.'
+          : 'Márgenes, cobros y liquidez en orden. Sigue así.';
+
     const vat = a.vat_liquidar > 0 ? a.vat_liquidar : 0;
     el('bal-due').textContent = eur(a.pending);
     el('bal-cash').textContent = eur(a.collected);
