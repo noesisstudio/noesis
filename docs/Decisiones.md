@@ -2,6 +2,35 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Piloto primero, plataforma por capas (2026-07-07)
+La visión completa ("sistema operativo empresarial": documentos inteligentes,
+gestoría interactiva, productos, proyectos, CRM, finanzas avanzadas) se construye
+**por capas sobre la app actual**, mientras el piloto WhatsApp avanza en paralelo.
+Motivo: el producto está a días del piloto; el feedback de 3-5 autónomos reales
+vale más que módulos nuevos sin usuarios. Autorizado por el founder. Plan de fases
+en [[Roadmap]]; criterio en [[Metodo-operativo-Fable]].
+
+## FacturAI: referencia, no fusión (2026-07-07)
+El proyecto anterior "Automatizacion Facturas" (FacturAI) resuelve un subconjunto
+de Noesis con un stack incompatible (SQLAlchemy, JWT, WeasyPrint, Supabase).
+Decisión: **no copiar código ni fusionar stacks**; portar ideas concretas al
+estilo propio: el prompt de extracción de facturas completo (líneas, NIFs,
+confianza), la detección emitida/recibida por NIF (`_detect_empresa_context`), el
+patrón de historial de estados de factura y los campos mínimos de producto.
+La carpeta queda fuera de git (`.gitignore`) como material de consulta.
+
+## El vault de documentación es `docs/` (2026-07-07)
+No se crea la estructura paralela `obsidian/00-…09-…`: `docs/` ya es el vault de
+Obsidian, los agentes lo conocen y duplicar estructura = documentación
+desincronizada. Los documentos nuevos (método operativo, handoffs, preguntas
+abiertas) viven en `docs/` y se enlazan desde [[Inicio]].
+
+## Método operativo transferible entre modelos (2026-07-07)
+El criterio de trabajo queda documentado en [[Metodo-operativo-Fable]] y todo
+traspaso entre modelos usa `AI_HANDOFF_TEMPLATE.md`. Motivo: que el proyecto no
+dependa de qué modelo lo trabaja (Fable diseña, Opus revisa estrategia, Codex
+ejecuta) sin reinterpretar el producto desde cero.
+
 ## Posicionamiento: suite completa, construida modular
 El founder eligió "suite completa desde el inicio" frente a empezar solo por el
 copiloto proactivo. Se construye modular para que no se vuelva inmanejable.

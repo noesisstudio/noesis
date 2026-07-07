@@ -1,8 +1,9 @@
 # Estado, traspaso y camino al MVP
 
 > Documento vivo para **continuar el trabajo desde cualquier agente** (Claude o Codex)
-> sin perder el hilo. Si lo retomas: lee esto entero, luego `AGENTS.md`.
-> Última actualización: **2026-07-02**.
+> sin perder el hilo. Si lo retomas: lee esto entero, luego `AGENTS.md` y
+> [[Metodo-operativo-Fable]] (el criterio de trabajo heredable).
+> Última actualización: **2026-07-07**.
 
 ---
 
@@ -46,8 +47,8 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 - **Backups verificados (migración 8 en `main`):**
   migración 8; copia SQLite/Postgres, restauración desechable con recuentos,
   historial y descarga solo admin, más subida S3-compatible opcional.
-- **Veri*Factu fase 2 (en `codex/verifactu-fase2`, pendiente de revisión):**
-  migración 9; huellas comprobadas contra los dos vectores oficiales de alta AEAT,
+- **Veri*Factu fase 2 (migración 9, en `main`):**
+  huellas comprobadas contra los dos vectores oficiales de alta AEAT,
   cliente SOAP 1.1 con mTLS, cola durable con backoff y control de flujo, respuestas
   auditadas y estado visible. La remisión queda desactivada sin entorno/certificado.
 - **Cobros parciales (migración 11 en `main`):**
@@ -57,12 +58,18 @@ Noesis es un **copiloto de negocio por WhatsApp para autónomos de servicios**. 
 - **Gasto por foto (migración 12 en `main`):**
   adaptador Claude Vision opcional, endpoint que devuelve un borrador
   sin crear gastos y vínculo multiempresa entre el documento y el gasto confirmado.
-- **Recordatorios de cobro (en `codex/recordatorios-cobro`, pendiente de revisión):**
-  migración 13; opt-in y cadencia por negocio, plantilla WhatsApp con restante y
+- **Recordatorios de cobro (migración 13, en `main`):**
+  opt-in y cadencia por negocio, plantilla WhatsApp con restante y
   portal, idempotencia por factura/escalón y eventos para medir el efecto en DSO.
 
-**Pruebas:** 121/121 en `codex/backend-review-fixes`; incluye regresiones de baja
+**Pruebas:** 126/126 en `main` (2026-07-07); incluye regresiones de baja
 de cuenta, reintentos de webhooks, redondeo fiscal y backup de documentos.
+
+> **Auditoría 2026-07-07 (Fable):** las ramas `codex/postgres`,
+> `codex/whatsapp-fiable`, `codex/verifactu-fase2` y `codex/recordatorios-cobro`
+> están **íntegramente fusionadas en `main`** (verificado con `git rev-list`);
+> las ramas locales ya mergeadas se han borrado. El esquema va por la migración
+> **16**. Decisiones nuevas en [[Decisiones]]; dudas en [[Preguntas-abiertas]].
 
 ---
 
@@ -151,13 +158,13 @@ construir más features.
    cobro. Cazar fricciones reales.
 
 ### P1 — Para fiarse con varios clientes (1–3 semanas)
-5. **Postgres**: implementación terminada en `codex/postgres`, pendiente de revisión
-   y activación en Railway. No se ha tocado la SQLite ni la BD de producción.
-6. **WhatsApp fiable:** implementado en `codex/whatsapp-fiable`, pendiente de
-   revisión y de aprobar/configurar las plantillas reales en Meta. Incluye cola
-   durable, backoff, estados `sent/delivered/read` e idempotencia de webhooks.
-7. **Veri*Factu fase 2:** implementada en `codex/verifactu-fase2`; falta revisión,
-   certificado digital de pruebas y validación real contra el entorno AEAT.
+5. **Postgres**: código en `main` (SQLite de respaldo). Pendiente operativo:
+   provisionar Postgres en Railway y enlazar `DATABASE_URL` si aún no está hecho.
+6. **WhatsApp fiable:** en `main` (cola durable, backoff, estados
+   `sent/delivered/read`, idempotencia de webhooks). Falta aprobar/configurar las
+   plantillas reales en Meta.
+7. **Veri*Factu fase 2:** en `main`; faltan certificado digital de pruebas y
+   validación real contra el entorno AEAT.
 8. **Emails transaccionales** (SMTP real) y **copias de seguridad verificadas** (probar
    una restauración, no solo que se hagan).
 

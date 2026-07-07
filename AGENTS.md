@@ -82,15 +82,17 @@ Si una tarea cruza ambas áreas, divídela en dos sub-tareas (una por agente) en
 editar los mismos archivos en paralelo.
 
 ## 7. Estado actual
-Fase 1 "núcleo sólido" **completa** (login, fiscalidad, editar/borrar, PDF,
-validaciones, marca, móvil). SQLite/Postgres y las migraciones versionadas ya están en
-`main`; las migraciones 5–8 aportan equipo y fichaje, registro de jornada
-inalterable, Veri*Factu fase 1 y backups verificados. GitHub Actions ejecuta tests y
-migraciones en cada PR y push a `main`. En `codex/verifactu-fase2`, pendiente de
-revisión, está la migración **9**: vectores oficiales de huella AEAT, cliente SOAP
-mTLS, cola durable con control de flujo y estado visible.
-La migración **16** añade un ciclo recuperable para webhooks: reservado,
-completado o fallido, con reintento seguro.
-Siguiente: revisar esa rama y completar **Fase 2** (activar Postgres, certificado
-AEAT de pruebas, WhatsApp Meta y bynoesis.com).
-Detalle en `docs/Roadmap.md`.
+Todo el trabajo de ambos agentes está **fusionado en `main`** (auditado el
+2026-07-07): núcleo completo, equipo y fichaje inalterable, Veri*Factu fases 1 y 2
+(migración 9), backups verificados, cobros parciales (11), gasto por foto (12),
+recordatorios de cobro (13) y webhooks recuperables (16). Esquema en la migración
+**16**, 126 tests verdes. GitHub Actions ejecuta tests y migraciones en cada PR y
+push a `main`.
+Siguiente: encender lo externo (claves IA/WhatsApp/Stripe, certificado AEAT),
+pilotar con clientes reales y crecer por capas según `docs/Roadmap.md`.
+
+## 8. Criterio heredable
+El método de trabajo (cómo se prioriza, cómo se diseña, qué no hacer) está en
+**`docs/Metodo-operativo-Fable.md`**. Todo traspaso entre modelos usa
+**`docs/AI_HANDOFF_TEMPLATE.md`**. Las dudas pendientes del founder están en
+`docs/Preguntas-abiertas.md`. Léelos antes de decidir nada estructural.

@@ -52,9 +52,8 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 - [x] **Gasto por foto** con borrador extraído por Claude, confirmación obligatoria
   y documento vinculado (migración 12 en `main`).
 - [x] Persecución de cobros automática por WhatsApp: opt-in por negocio, cadencia,
-  restante, portal e idempotencia por escalón (migración 13 en
-  `codex/recordatorios-cobro`, pendiente de revisión y fusión; el envío real
-  sigue bloqueado hasta encender Meta).
+  restante, portal e idempotencia por escalón (migración 13, en `main`; el envío
+  real sigue bloqueado hasta encender Meta).
 
 ## 🚀 Fase 3 — validar
 - [ ] Piloto con 5-10 negocios de servicios antes de escalar.
@@ -63,6 +62,42 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
 - [ ] Validar disposición a pagar y retención antes de ampliar sectores o funciones.
 - [ ] Definir objetivos de activación, conversión, churn e ingreso por cuenta con
   datos reales del piloto.
+
+## 🏗️ Plataforma por capas (aprobado 2026-07-07, en paralelo al piloto)
+Visión "sistema operativo del autónomo", construida **por capas sobre lo que ya
+existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
+
+### Capa B — MVP plataforma (extiende, no rediseña)
+- [ ] **Documentos inteligentes v1**: extender `documents/` con tipo de documento,
+  confianza, estados (pendiente→revisado→enviado a gestoría→validado) y destinos;
+  portar el prompt completo de FacturAI al adaptador seguro actual; captura con
+  cámara en móvil. La extracción nunca crea registros: borrador + confirmación.
+- [ ] **Facturas recibidas + proveedores** (migración aditiva) con detección
+  emitida/recibida por NIF. Ver dudas 6 y 7 de [[Preguntas-abiertas]].
+- [ ] **Productos/servicios básico** (precio, coste, margen, IVA; sin stock
+  avanzado) asignables a factura.
+- [ ] **Asistente contextual**: pasar la página actual como contexto a
+  `web/chat.py` para que explique la pantalla y sugiera acciones con datos reales.
+- [ ] **Vista Hoy ampliada**: conectar documentos pendientes y recibidas al plan
+  diario del copiloto.
+- [ ] Partir `server.py` en routers por dominio (tarea técnica previa a la capa C).
+
+### Capa C — V1
+- [ ] Portal gestoría interactivo con rol y permisos multi-negocio (tras feedback
+  del ZIP actual con gestorías reales).
+- [ ] Abstracción de canales (`ChannelProvider`) + Telegram según caso de uso
+  confirmado.
+- [ ] CRM con leads/oportunidades/seguimientos conectado a presupuestos.
+- [ ] Proyectos/obras: presupuesto vs. real, horas (sobre fichaje existente),
+  gastos y margen por proyecto.
+- [ ] Pérdidas y ganancias básico ("datos insuficientes" antes que inventar).
+- [ ] Multiidioma (ES/CA/EN) si el piloto lo exige — diseñar i18n antes de más UI.
+
+### Capa D — V2
+Ratios avanzados y EBITDA · stock y ventas por canal · aprendizaje de
+preferencias (visible, borrable, con consentimiento) · WhatsApp Business
+completo con plantillas · portal gestoría avanzado (modelos 303/130/390 con
+revisión humana siempre) · automatizaciones profundas.
 
 ## 🌱 Más adelante
 Optimización de rutas por zona · agente de voz telefónico · inventario y
