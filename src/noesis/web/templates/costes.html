@@ -57,10 +57,26 @@
   </div>
 </div>
 
+<div class="card" style="margin-top:16px">
+  <div class="card-h"><h2>Facturas recibidas</h2>
+    <span class="hint">de proveedores · <a href="/b/{{ business.id }}/documentos">añadir desde Documentos</a></span></div>
+  <div class="card-b table-pad" style="padding-top:6px">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Nº</th><th class="t-right">Base</th>
+          <th class="t-right">IVA</th><th class="t-right">Total</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="r-body"></tbody>
+      </table>
+    </div>
+    <div id="r-empty"></div>
+  </div>
+</div>
+
 <div class="insight" style="margin-top:16px">
   <b>Cómo leer esta página:</b> si tus costes superan el <b>60-70%</b> de lo que
   facturas, el problema no es vender más, es el margen. Mira tu mayor categoría:
-  ahí está tu primera palanca de ahorro.
+  ahí está tu primera palanca de ahorro. Las facturas recibidas entran desde
+  Documentos (foto o PDF) y aquí controlas cuáles te quedan por pagar.
 </div>
 {% endblock %}
 
@@ -102,6 +118,29 @@ async function load() {
     <td class="t-right num">${eur(e.amount)}</td>
     <td class="t-right table-actions"><button class="iconbtn" title="Borrar" onclick="del(${e.id})">${TRASH}</button></td></tr>`).join('');
   el('c-empty').innerHTML = ex.length ? '' : emptyState('Aún no has registrado gastos', 'Añade el primero para ver margen, categorías y CSV.', '#registrar-gasto', 'Registrar gasto');
+
+  const received = await api('/received-invoices');
+  el('r-body').innerHTML = received.map(r => `<tr>
+    <td class="meta">${r.issued_on || dateIso(r.created_at)}</td>
+    <td>${esc(r.supplier_name || '—')}</td>
+    <td class="meta">${esc(r.number || '—')}</td>
+    <td class="t-right num">${r.base !== null ? eur(r.base) : '—'}</td>
+    <td class="t-right num">${r.vat_amount !== null ? eur(r.vat_amount) : '—'}</td>
+    <td class="t-right num">${eur(r.total)}</td>
+    <td>${r.status === 'pagada' ? '<span class="badge b-green">Pagada</span>'
+        : '<span class="badge b-amber">Pendiente</span>'}</td>
+    <td class="t-right table-actions">${r.status === 'pendiente'
+      ? `<button class="btn sm" onclick="payReceived(${r.id})">Marcar pagada</button>` : ''}</td>
+  </tr>`).join('');
+  el('r-empty').innerHTML = received.length ? '' : emptyState(
+    'Sin facturas recibidas',
+    'Sube la factura de un proveedor en Documentos (foto o PDF) y confírmala: aparecerá aquí.',
+    `/b/${BIZ}/documentos`, 'Ir a Documentos');
+}
+async function payReceived(id) {
+  try { await apiPost('/received-invoices/' + id + '/status', { status: 'pagada' }); }
+  catch (e) { alert(e.message); return; }
+  load();
 }
 async function del(id){ if(confirm('¿Borrar este gasto?')){ await apiDelete('/expenses/'+id); load(); } }
 async function addExpense() {

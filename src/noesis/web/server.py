@@ -227,6 +227,7 @@ _PAGES = {
     "ingresos": "Ingresos", "costes": "Costes", "presupuestos": "Presupuestos",
     "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
     "agenda": "Agenda", "equipo": "Equipo", "clientes": "Clientes",
+    "crm": "CRM", "productos": "Productos y servicios",
     "documentos": "Documentos",
     "asistente": "Asistente", "ajustes": "Ajustes",
 }
@@ -427,7 +428,27 @@ def gestoria_home(request: Request, token: str):
         "token": token,
         "business": business,
         "periods": db.gestoria_periods(business["id"]),
+        "requests": db.list_gestoria_requests(business["id"]),
     })
+
+
+@app.post("/g/{token}/solicitud")
+async def gestoria_new_request(request: Request, token: str,
+                               mensaje: str = Form("")):
+    """La gestoría pide documentación al autónomo desde su enlace privado."""
+    if _token_scan_blocked(request, "gestoria"):
+        return Response("Demasiados intentos. Espera unos minutos.",
+                        status_code=429)
+    business = db.resolve_gestoria_token(token)
+    if not business:
+        _record_token_miss(request, "gestoria")
+        return JSONResponse({"error": "Enlace no válido."}, status_code=404)
+    try:
+        db.add_gestoria_request(mensaje, requested_by="gestoria",
+                                business_id=business["id"])
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return RedirectResponse(f"/g/{token}", status_code=303)
 
 
 @app.get("/g/{token}/paquete/{label}")
@@ -1544,7 +1565,8 @@ async def api_chat(business_id: int, request: Request):
         return JSONResponse(
             {"error": "El mensaje está vacío o es demasiado largo."}, status_code=400
         )
-    return await run_in_threadpool(chat.handle, business_id, message)
+    page = str(body.get("page") or "").strip() or None
+    return await run_in_threadpool(chat.handle, business_id, message, page)
 
 
 @app.post("/api/{business_id}/chat/audio")
@@ -1684,6 +1706,273 @@ async def api_document_to_expense(business_id: int, doc_id: int, request: Reques
             {"error": "No hay importe para registrar. Indica uno o sube una foto legible."},
             status_code=400)
     return gasto
+
+
+@app.post("/api/{business_id}/documents/{doc_id}/draft")
+def api_document_draft(business_id: int, doc_id: int):
+    """Borrador de factura extraído por IA. Nunca crea registros: solo propone."""
+    from ..documents import service as docservice
+    draft = docservice.invoice_draft(business_id, doc_id)
+    if draft is None:
+        return JSONResponse(
+            {"error": "No se pudo leer el documento automáticamente. "
+                      "Queda pendiente de revisión manual.",
+             "pending": True},
+            status_code=200)
+    return draft
+
+
+@app.post("/api/{business_id}/documents/{doc_id}/review")
+async def api_document_review(business_id: int, doc_id: int, request: Request):
+    """Corrección humana: tipo, estado y nota del documento. Queda trazado."""
+    from ..documents import repo as docrepo
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        doc = docrepo.set_review(
+            doc_id, business_id,
+            kind=body.get("kind") or None,
+            doc_status=body.get("doc_status") or None,
+            review_note=body.get("review_note") or None)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if doc is None:
+        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+    return doc
+
+
+# ------------------------------------------- Proveedores y facturas recibidas
+@app.get("/api/{business_id}/suppliers")
+def api_suppliers(business_id: int):
+    return db.list_suppliers(business_id)
+
+
+@app.post("/api/{business_id}/suppliers")
+async def api_add_supplier(business_id: int, request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.add_supplier(
+            body.get("name"), nif=body.get("nif"), email=body.get("email"),
+            phone=body.get("phone"), note=body.get("note"),
+            business_id=business_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.get("/api/{business_id}/received-invoices")
+def api_received_invoices(business_id: int, status: str = ""):
+    try:
+        return db.list_received_invoices(business_id, status=status or None)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/received-invoices")
+async def api_add_received_invoice(business_id: int, request: Request):
+    """Alta de factura recibida: manual o confirmando el borrador de un documento."""
+    from ..documents import service as docservice
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    fields = {key: body.get(key) for key in (
+        "number", "concept", "issued_on", "due_on", "base", "vat_rate",
+        "vat_amount", "irpf_amount", "category", "note") if body.get(key)
+        not in (None, "")}
+    try:
+        doc_id = body.get("document_id")
+        if doc_id not in (None, ""):
+            return docservice.confirm_received_invoice(
+                business_id, int(doc_id), total=body.get("total"),
+                supplier_name=body.get("supplier_name"),
+                supplier_nif=body.get("supplier_nif"),
+                supplier_id=body.get("supplier_id") or None, **fields)
+        supplier_id = body.get("supplier_id") or None
+        if not supplier_id and body.get("supplier_name"):
+            known = db.find_supplier(business_id, nif=body.get("supplier_nif"),
+                                     name=body.get("supplier_name"))
+            supplier_id = known["id"] if known else db.add_supplier(
+                body.get("supplier_name"), nif=body.get("supplier_nif"),
+                business_id=business_id)["id"]
+        return db.add_received_invoice(
+            body.get("total"), supplier_id=supplier_id,
+            business_id=business_id, **fields)
+    except (ValueError, TypeError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    except docservice.UploadError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/received-invoices/{received_id}/status")
+async def api_received_invoice_status(business_id: int, received_id: int,
+                                      request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.set_received_invoice_status(
+            received_id, body.get("status"), business_id=business_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.delete("/api/{business_id}/received-invoices/{received_id}")
+def api_delete_received_invoice(business_id: int, received_id: int):
+    db.delete_received_invoice(received_id, business_id)
+    return {"ok": True}
+
+
+# ------------------------------------------------------ Productos/servicios
+@app.get("/api/{business_id}/products")
+def api_products(business_id: int, all: int = 0):
+    return db.list_products(business_id, include_inactive=bool(all))
+
+
+@app.post("/api/{business_id}/products")
+async def api_add_product(business_id: int, request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.add_product(
+            body.get("name"), kind=body.get("kind") or "servicio",
+            price=body.get("price"), cost=body.get("cost"),
+            vat_rate=body.get("vat_rate"), unit=body.get("unit"),
+            category=body.get("category"), stock=body.get("stock"),
+            stock_alert=body.get("stock_alert"), note=body.get("note"),
+            business_id=business_id)
+    except (ValueError, TypeError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/products/{product_id}")
+async def api_update_product(business_id: int, product_id: int,
+                             request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.update_product(product_id, business_id=business_id, **body)
+    except (ValueError, TypeError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+# ------------------------------------------------------------------- CRM ---
+@app.get("/api/{business_id}/leads")
+def api_leads(business_id: int, status: str = ""):
+    try:
+        return db.list_leads(business_id, status=status or None)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/leads")
+async def api_add_lead(business_id: int, request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.add_lead(
+            body.get("name"), phone=body.get("phone"), email=body.get("email"),
+            source=body.get("source"), note=body.get("note"),
+            value_estimate=body.get("value_estimate"),
+            next_action_on=body.get("next_action_on"),
+            business_id=business_id)
+    except (ValueError, TypeError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/leads/{lead_id}")
+async def api_update_lead(business_id: int, lead_id: int, request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.update_lead(
+            lead_id, business_id=business_id, status=body.get("status"),
+            note=body.get("note"), next_action_on=body.get("next_action_on"),
+            value_estimate=body.get("value_estimate"))
+    except (ValueError, TypeError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/leads/{lead_id}/convert")
+def api_convert_lead(business_id: int, lead_id: int):
+    try:
+        return db.convert_lead_to_client(lead_id, business_id=business_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+# ------------------------------------------------- Solicitudes de gestoría
+@app.get("/api/{business_id}/gestoria/requests")
+def api_gestoria_requests(business_id: int, status: str = ""):
+    try:
+        return db.list_gestoria_requests(business_id, status=status or None)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/gestoria/requests")
+async def api_add_gestoria_request(business_id: int, request: Request):
+    """El autónomo anota algo para su gestoría desde la app."""
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.add_gestoria_request(
+            body.get("message"), requested_by="autonomo",
+            document_id=body.get("document_id") or None,
+            business_id=business_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/{business_id}/gestoria/requests/{request_id}/reply")
+async def api_reply_gestoria_request(business_id: int, request_id: int,
+                                     request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        return db.reply_gestoria_request(
+            request_id, body.get("reply"), business_id=business_id,
+            document_id=body.get("document_id") or None,
+            close=bool(body.get("close")))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+# ------------------------------------------------- Pérdidas y ganancias ---
+@app.get("/api/{business_id}/pnl")
+def api_pnl(business_id: int, year: int = 0):
+    return db.profit_and_loss(business_id, year=year or None)
+
+
+# ---------------------------------------------------------------- Idioma ---
+@app.post("/api/{business_id}/language")
+async def api_update_language(business_id: int, request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        db.update_language(business_id, body.get("language"))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "language": body.get("language")}
 
 
 # ================================================================ RGPD ====== #

@@ -446,6 +446,15 @@ def gestoria_expenses_in(business_id, start: str, end: str) -> list[dict]:
     return out
 
 
+def gestoria_received_in(business_id, start: str, end: str) -> list[dict]:
+    out = []
+    for received in list_received_invoices(business_id):
+        day = str(received.get("issued_on") or received.get("created_at") or "")[:10]
+        if start <= day <= end:
+            out.append(received)
+    return out
+
+
 def gestoria_periods(business_id, count: int = 8) -> list[dict]:
     """Últimos períodos cerrados según la cadencia, con recuentos."""
     business = get_business(business_id)
@@ -3266,6 +3275,613 @@ def list_expenses(business_id) -> list[dict]:
             (business_id,)).fetchall()]
 
 
+# ------------------------------------------------------------- Proveedores ---
+def _clean_nif(value) -> str | None:
+    nif = (str(value or "")).strip().upper().replace(" ", "").replace("-", "")
+    return nif or None
+
+
+def add_supplier(name, nif=None, email=None, phone=None, note=None, *,
+                 business_id: int) -> dict:
+    name = (name or "").strip()
+    if not name or len(name) > 200:
+        raise ValueError("El nombre del proveedor es obligatorio (máx. 200).")
+    nif = _clean_nif(nif)
+    with get_conn() as conn:
+        existing = conn.execute(
+            "SELECT id FROM suppliers WHERE business_id=? AND name=?",
+            (business_id, name)).fetchone()
+        if existing:
+            raise ValueError("Ya existe un proveedor con ese nombre.")
+        row = conn.execute(
+            "INSERT INTO suppliers (business_id, name, nif, email, phone, note, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, name, nif, (email or "").strip() or None,
+             (phone or "").strip() or None, (note or "").strip() or None,
+             _now()),
+        ).fetchone()
+        return dict(conn.execute(
+            "SELECT * FROM suppliers WHERE id=? AND business_id=?",
+            (row["id"], business_id)).fetchone())
+
+
+def get_supplier(supplier_id, business_id) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM suppliers WHERE id=? AND business_id=?",
+            (supplier_id, business_id)).fetchone()
+        return dict(row) if row else None
+
+
+def list_suppliers(business_id) -> list[dict]:
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(
+            "SELECT * FROM suppliers WHERE business_id=? ORDER BY name",
+            (business_id,)).fetchall()]
+
+
+def find_supplier(business_id, *, nif=None, name=None) -> dict | None:
+    """Busca proveedor por NIF (prioritario) o nombre exacto, para no duplicar."""
+    nif = _clean_nif(nif)
+    with get_conn() as conn:
+        if nif:
+            row = conn.execute(
+                "SELECT * FROM suppliers WHERE business_id=? AND nif=?",
+                (business_id, nif)).fetchone()
+            if row:
+                return dict(row)
+        name = (name or "").strip()
+        if name:
+            row = conn.execute(
+                "SELECT * FROM suppliers WHERE business_id=? AND name=?",
+                (business_id, name)).fetchone()
+            if row:
+                return dict(row)
+    return None
+
+
+# ------------------------------------------------------ Facturas recibidas ---
+RECEIVED_STATUSES = {"pendiente", "pagada"}
+
+
+def _optional_date(value, label: str) -> str | None:
+    if value in (None, ""):
+        return None
+    try:
+        return date.fromisoformat(str(value).strip()).isoformat()
+    except ValueError as exc:
+        raise ValueError(f"{label} no es una fecha válida.") from exc
+
+
+def add_received_invoice(total, supplier_id=None, number=None, concept=None,
+                         issued_on=None, due_on=None, base=None, vat_rate=None,
+                         vat_amount=None, irpf_amount=None, category=None,
+                         note=None, document_id=None, *,
+                         business_id: int) -> dict:
+    """Registra una factura recibida y, si se indica, la vincula a su documento.
+
+    Nunca la crea la IA directamente: este es el paso de confirmación humana.
+    """
+    total = _positive_money(total, "El total")
+    if vat_rate not in (None, ""):
+        vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
+    else:
+        vat_rate = None
+    for field_label, value in (("La base", base), ("La cuota de IVA", vat_amount),
+                               ("El IRPF", irpf_amount)):
+        if value not in (None, "") and float(value) < 0:
+            raise ValueError(f"{field_label} no puede ser negativa.")
+    base = round(float(base), 2) if base not in (None, "") else None
+    vat_amount = round(float(vat_amount), 2) if vat_amount not in (None, "") else None
+    irpf_amount = round(float(irpf_amount), 2) if irpf_amount not in (None, "") else None
+    issued_on = _optional_date(issued_on, "La fecha de emisión")
+    due_on = _optional_date(due_on, "El vencimiento")
+    number = (number or "").strip()[:50] or None
+    concept = (concept or "").strip()[:500] or None
+    with get_conn() as conn:
+        if supplier_id not in (None, ""):
+            supplier = conn.execute(
+                "SELECT id FROM suppliers WHERE id=? AND business_id=?",
+                (supplier_id, business_id)).fetchone()
+            if not supplier:
+                raise ValueError("Proveedor no encontrado.")
+        else:
+            supplier_id = None
+        if document_id not in (None, ""):
+            conn.execute("BEGIN IMMEDIATE")
+            lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+            document = conn.execute(
+                "SELECT id, received_invoice_id, expense_id FROM documents "
+                "WHERE id=? AND business_id=?" + lock,
+                (document_id, business_id),
+            ).fetchone()
+            if not document:
+                raise ValueError("Documento no encontrado.")
+            if document["received_invoice_id"] is not None:
+                raise ValueError(
+                    "Este documento ya está vinculado a una factura recibida.")
+            if document["expense_id"] is not None:
+                raise ValueError("Este documento ya está vinculado a un gasto.")
+        else:
+            document_id = None
+        row = conn.execute(
+            "INSERT INTO received_invoices (business_id, supplier_id, number, "
+            "concept, issued_on, due_on, base, vat_rate, vat_amount, "
+            "irpf_amount, total, status, category, note, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?, ?) "
+            "RETURNING id",
+            (business_id, supplier_id, number, concept, issued_on, due_on,
+             base, vat_rate, vat_amount, irpf_amount, total, category,
+             (note or "").strip() or None, _now()),
+        ).fetchone()
+        new_id = row["id"]
+        if document_id is not None:
+            linked = conn.execute(
+                "UPDATE documents SET received_invoice_id=?, "
+                "doc_status='revisado', reviewed_at=? "
+                "WHERE id=? AND business_id=? AND received_invoice_id IS NULL",
+                (new_id, _now(), document_id, business_id),
+            )
+            if linked.rowcount != 1:
+                raise ValueError(
+                    "No se pudo vincular el documento a la factura recibida.")
+        received = dict(conn.execute(
+            "SELECT * FROM received_invoices WHERE id=? AND business_id=?",
+            (new_id, business_id)).fetchone())
+    received["document_id"] = document_id
+    return received
+
+
+def get_received_invoice(received_id, business_id) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT r.*, s.name AS supplier_name FROM received_invoices r "
+            "LEFT JOIN suppliers s ON s.id=r.supplier_id "
+            "AND s.business_id=r.business_id "
+            "WHERE r.id=? AND r.business_id=?",
+            (received_id, business_id)).fetchone()
+        return dict(row) if row else None
+
+
+def list_received_invoices(business_id, status=None) -> list[dict]:
+    q = ("SELECT r.*, s.name AS supplier_name FROM received_invoices r "
+         "LEFT JOIN suppliers s ON s.id=r.supplier_id "
+         "AND s.business_id=r.business_id WHERE r.business_id=?")
+    params: list = [business_id]
+    if status:
+        if status not in RECEIVED_STATUSES:
+            raise ValueError("Estado de factura recibida desconocido.")
+        q += " AND r.status=?"
+        params.append(status)
+    q += " ORDER BY COALESCE(r.issued_on, r.created_at) DESC, r.id DESC"
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(q, params).fetchall()]
+
+
+def set_received_invoice_status(received_id, status, *, business_id) -> dict:
+    if status not in RECEIVED_STATUSES:
+        raise ValueError("Estado de factura recibida desconocido.")
+    with get_conn() as conn:
+        updated = conn.execute(
+            "UPDATE received_invoices SET status=? WHERE id=? AND business_id=?",
+            (status, received_id, business_id))
+        if updated.rowcount != 1:
+            raise ValueError("Factura recibida no encontrada.")
+    return get_received_invoice(received_id, business_id)
+
+
+def delete_received_invoice(received_id, business_id) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE documents SET received_invoice_id=NULL "
+            "WHERE received_invoice_id=? AND business_id=?",
+            (received_id, business_id))
+        conn.execute(
+            "DELETE FROM received_invoices WHERE id=? AND business_id=?",
+            (received_id, business_id))
+
+
+# ---------------------------------------------------- Productos y servicios ---
+PRODUCT_KINDS = {"producto", "servicio"}
+
+
+def add_product(name, kind="servicio", price=0, cost=None, vat_rate=None,
+                unit=None, category=None, stock=None, stock_alert=None,
+                note=None, *, business_id: int) -> dict:
+    name = (name or "").strip()
+    if not name or len(name) > 200:
+        raise ValueError("El nombre es obligatorio (máx. 200 caracteres).")
+    if kind not in PRODUCT_KINDS:
+        raise ValueError("El tipo debe ser 'producto' o 'servicio'.")
+    try:
+        price = round(float(price or 0), 2)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("El precio no es válido.") from exc
+    if price < 0:
+        raise ValueError("El precio no puede ser negativo.")
+    if cost not in (None, ""):
+        cost = round(float(cost), 2)
+        if cost < 0:
+            raise ValueError("El coste no puede ser negativo.")
+    else:
+        cost = None
+    if vat_rate not in (None, ""):
+        vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
+    else:
+        vat_rate = None
+    for label, value in (("El stock", stock), ("El aviso de stock", stock_alert)):
+        if value not in (None, "") and float(value) < 0:
+            raise ValueError(f"{label} no puede ser negativo.")
+    stock = float(stock) if stock not in (None, "") else None
+    stock_alert = float(stock_alert) if stock_alert not in (None, "") else None
+    with get_conn() as conn:
+        exists = conn.execute(
+            "SELECT id FROM products WHERE business_id=? AND name=?",
+            (business_id, name)).fetchone()
+        if exists:
+            raise ValueError("Ya existe un producto o servicio con ese nombre.")
+        row = conn.execute(
+            "INSERT INTO products (business_id, name, kind, price, cost, "
+            "vat_rate, unit, category, stock, stock_alert, active, note, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?, ?) "
+            "RETURNING id",
+            (business_id, name, kind, price, cost, vat_rate,
+             (unit or "").strip() or None, (category or "").strip() or None,
+             stock, stock_alert, (note or "").strip() or None, _now()),
+        ).fetchone()
+        created = dict(conn.execute(
+            "SELECT * FROM products WHERE id=? AND business_id=?",
+            (row["id"], business_id)).fetchone())
+    return _product_with_margin(created)
+
+
+def get_product(product_id, business_id) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM products WHERE id=? AND business_id=?",
+            (product_id, business_id)).fetchone()
+    if not row:
+        return None
+    return _product_with_margin(dict(row))
+
+
+def _product_with_margin(product: dict) -> dict:
+    """Margen calculado SOLO si hay coste real; nunca se inventa."""
+    price, cost = product.get("price"), product.get("cost")
+    if cost is not None and price:
+        product["margin"] = round(price - cost, 2)
+        product["margin_pct"] = round((price - cost) / price * 100, 1)
+    else:
+        product["margin"] = None
+        product["margin_pct"] = None
+    stock, alert = product.get("stock"), product.get("stock_alert")
+    product["low_stock"] = (stock is not None and alert is not None
+                            and stock <= alert)
+    return product
+
+
+def list_products(business_id, include_inactive: bool = False) -> list[dict]:
+    q = "SELECT * FROM products WHERE business_id=?"
+    if not include_inactive:
+        q += " AND active IN (TRUE, 1)"
+    q += " ORDER BY name"
+    with get_conn() as conn:
+        rows = conn.execute(q, (business_id,)).fetchall()
+    return [_product_with_margin(dict(r)) for r in rows]
+
+
+def update_product(product_id, *, business_id: int, **fields) -> dict:
+    allowed = {"name", "kind", "price", "cost", "vat_rate", "unit", "category",
+               "stock", "stock_alert", "active", "note"}
+    unknown = set(fields) - allowed
+    if unknown:
+        raise ValueError(f"Campos no editables: {', '.join(sorted(unknown))}.")
+    current = get_product(product_id, business_id)
+    if not current:
+        raise ValueError("Producto no encontrado.")
+    merged = {key: fields.get(key, current.get(key)) for key in allowed}
+    if "active" in fields:
+        merged["active"] = bool(fields["active"])
+    # Revalida TODO con las mismas reglas del alta (sin duplicar el nombre propio).
+    name = (merged["name"] or "").strip()
+    if not name or len(name) > 200:
+        raise ValueError("El nombre es obligatorio (máx. 200 caracteres).")
+    if merged["kind"] not in PRODUCT_KINDS:
+        raise ValueError("El tipo debe ser 'producto' o 'servicio'.")
+    price = round(float(merged["price"] or 0), 2)
+    if price < 0:
+        raise ValueError("El precio no puede ser negativo.")
+    cost = merged["cost"]
+    cost = round(float(cost), 2) if cost not in (None, "") else None
+    if cost is not None and cost < 0:
+        raise ValueError("El coste no puede ser negativo.")
+    vat_rate = merged["vat_rate"]
+    if vat_rate not in (None, ""):
+        vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
+    else:
+        vat_rate = None
+    stock = merged["stock"]
+    stock = float(stock) if stock not in (None, "") else None
+    stock_alert = merged["stock_alert"]
+    stock_alert = float(stock_alert) if stock_alert not in (None, "") else None
+    with get_conn() as conn:
+        clash = conn.execute(
+            "SELECT id FROM products WHERE business_id=? AND name=? AND id<>?",
+            (business_id, name, product_id)).fetchone()
+        if clash:
+            raise ValueError("Ya existe un producto o servicio con ese nombre.")
+        conn.execute(
+            "UPDATE products SET name=?, kind=?, price=?, cost=?, vat_rate=?, "
+            "unit=?, category=?, stock=?, stock_alert=?, active=?, note=? "
+            "WHERE id=? AND business_id=?",
+            (name, merged["kind"], price, cost, vat_rate,
+             (merged["unit"] or "").strip() or None,
+             (merged["category"] or "").strip() or None,
+             stock, stock_alert, merged["active"],
+             (merged["note"] or "").strip() or None,
+             product_id, business_id))
+    return get_product(product_id, business_id)
+
+
+# ------------------------------------------------------------------ CRM ------
+LEAD_STATUSES = {"nuevo", "contactado", "interesado", "presupuesto_enviado",
+                 "seguimiento", "ganado", "perdido", "dormido"}
+
+
+def add_lead(name, phone=None, email=None, source=None, note=None,
+             value_estimate=None, next_action_on=None, *,
+             business_id: int) -> dict:
+    name = (name or "").strip()
+    if not name or len(name) > 200:
+        raise ValueError("El nombre del lead es obligatorio (máx. 200).")
+    if value_estimate not in (None, ""):
+        value_estimate = round(float(value_estimate), 2)
+        if value_estimate < 0:
+            raise ValueError("El valor estimado no puede ser negativo.")
+    else:
+        value_estimate = None
+    next_action_on = _optional_date(next_action_on, "La fecha de seguimiento")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO leads (business_id, name, phone, email, source, "
+            "status, value_estimate, note, next_action_on, created_at) "
+            "VALUES (?, ?, ?, ?, ?, 'nuevo', ?, ?, ?, ?) RETURNING id",
+            (business_id, name, (phone or "").strip() or None,
+             (email or "").strip() or None, (source or "").strip() or None,
+             value_estimate, (note or "").strip() or None, next_action_on,
+             _now()),
+        ).fetchone()
+        return dict(conn.execute(
+            "SELECT * FROM leads WHERE id=? AND business_id=?",
+            (row["id"], business_id)).fetchone())
+
+
+def get_lead(lead_id, business_id) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM leads WHERE id=? AND business_id=?",
+            (lead_id, business_id)).fetchone()
+        return dict(row) if row else None
+
+
+def list_leads(business_id, status=None) -> list[dict]:
+    q = "SELECT * FROM leads WHERE business_id=?"
+    params: list = [business_id]
+    if status:
+        if status not in LEAD_STATUSES:
+            raise ValueError("Estado de lead desconocido.")
+        q += " AND status=?"
+        params.append(status)
+    q += (" ORDER BY CASE WHEN next_action_on IS NULL THEN 1 ELSE 0 END, "
+          "next_action_on, created_at DESC")
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(q, params).fetchall()]
+
+
+def update_lead(lead_id, *, business_id: int, status=None, note=None,
+                next_action_on=None, value_estimate=None) -> dict:
+    lead = get_lead(lead_id, business_id)
+    if not lead:
+        raise ValueError("Lead no encontrado.")
+    if status is not None and status not in LEAD_STATUSES:
+        raise ValueError("Estado de lead desconocido.")
+    updates, params = ["updated_at=?"], [_now()]
+    if status is not None:
+        updates.append("status=?")
+        params.append(status)
+    if note is not None:
+        updates.append("note=?")
+        params.append(note.strip()[:1000] or None)
+    if next_action_on is not None:
+        updates.append("next_action_on=?")
+        params.append(_optional_date(next_action_on, "La fecha de seguimiento"))
+    if value_estimate is not None:
+        value = round(float(value_estimate), 2)
+        if value < 0:
+            raise ValueError("El valor estimado no puede ser negativo.")
+        updates.append("value_estimate=?")
+        params.append(value)
+    params.extend([lead_id, business_id])
+    with get_conn() as conn:
+        conn.execute(f"UPDATE leads SET {', '.join(updates)} "
+                     "WHERE id=? AND business_id=?", params)
+    return get_lead(lead_id, business_id)
+
+
+def convert_lead_to_client(lead_id, *, business_id: int) -> dict:
+    """Lead ganado → cliente real (o vínculo al existente por nombre)."""
+    lead = get_lead(lead_id, business_id)
+    if not lead:
+        raise ValueError("Lead no encontrado.")
+    if lead.get("client_id"):
+        raise ValueError("Este lead ya está convertido en cliente.")
+    client = find_client(lead["name"], business_id) if lead.get("name") else None
+    if not client:
+        client = add_client(lead["name"], phone=lead.get("phone"),
+                            email=lead.get("email"), business_id=business_id)
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE leads SET status='ganado', client_id=?, updated_at=? "
+            "WHERE id=? AND business_id=?",
+            (client["id"], _now(), lead_id, business_id))
+    return {"lead": get_lead(lead_id, business_id), "client": client}
+
+
+def leads_due_today(business_id) -> list[dict]:
+    today = date.today().isoformat()
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(
+            "SELECT * FROM leads WHERE business_id=? AND next_action_on<=? "
+            "AND status NOT IN ('ganado','perdido') ORDER BY next_action_on",
+            (business_id, today)).fetchall()]
+
+
+# ------------------------------------------------- Solicitudes de gestoría ---
+GESTORIA_REQUEST_STATUSES = {"abierta", "respondida", "cerrada"}
+
+
+def add_gestoria_request(message, requested_by="gestoria", document_id=None, *,
+                         business_id: int) -> dict:
+    message = (message or "").strip()
+    if not message or len(message) > 2000:
+        raise ValueError("El mensaje es obligatorio (máx. 2000 caracteres).")
+    if requested_by not in {"gestoria", "autonomo"}:
+        raise ValueError("Origen de la solicitud desconocido.")
+    with get_conn() as conn:
+        if document_id not in (None, ""):
+            doc = conn.execute(
+                "SELECT id FROM documents WHERE id=? AND business_id=?",
+                (document_id, business_id)).fetchone()
+            if not doc:
+                raise ValueError("Documento no encontrado.")
+        else:
+            document_id = None
+        row = conn.execute(
+            "INSERT INTO gestoria_requests (business_id, requested_by, message, "
+            "status, document_id, created_at) VALUES (?, ?, ?, 'abierta', ?, ?) "
+            "RETURNING id",
+            (business_id, requested_by, message, document_id, _now()),
+        ).fetchone()
+        return dict(conn.execute(
+            "SELECT * FROM gestoria_requests WHERE id=? AND business_id=?",
+            (row["id"], business_id)).fetchone())
+
+
+def list_gestoria_requests(business_id, status=None) -> list[dict]:
+    q = "SELECT * FROM gestoria_requests WHERE business_id=?"
+    params: list = [business_id]
+    if status:
+        if status not in GESTORIA_REQUEST_STATUSES:
+            raise ValueError("Estado de solicitud desconocido.")
+        q += " AND status=?"
+        params.append(status)
+    q += " ORDER BY created_at DESC"
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(q, params).fetchall()]
+
+
+def reply_gestoria_request(request_id, reply, *, business_id: int,
+                           document_id=None, close: bool = False) -> dict:
+    reply = (reply or "").strip()
+    if not reply or len(reply) > 2000:
+        raise ValueError("La respuesta es obligatoria (máx. 2000 caracteres).")
+    status = "cerrada" if close else "respondida"
+    with get_conn() as conn:
+        if document_id not in (None, ""):
+            doc = conn.execute(
+                "SELECT id FROM documents WHERE id=? AND business_id=?",
+                (document_id, business_id)).fetchone()
+            if not doc:
+                raise ValueError("Documento no encontrado.")
+            conn.execute(
+                "UPDATE gestoria_requests SET document_id=? "
+                "WHERE id=? AND business_id=?",
+                (document_id, request_id, business_id))
+        updated = conn.execute(
+            "UPDATE gestoria_requests SET reply=?, status=?, replied_at=? "
+            "WHERE id=? AND business_id=?",
+            (reply, status, _now(), request_id, business_id))
+        if updated.rowcount != 1:
+            raise ValueError("Solicitud no encontrada.")
+        return dict(conn.execute(
+            "SELECT * FROM gestoria_requests WHERE id=? AND business_id=?",
+            (request_id, business_id)).fetchone())
+
+
+# ------------------------------------------------- Pérdidas y ganancias ------
+def profit_and_loss(business_id, year: int | None = None) -> dict:
+    """P&G orientativo del año. REGLA: sin datos suficientes, no se inventa el
+    número — se devuelve None y se explica qué falta en 'missing'."""
+    year = year or date.today().year
+    prefix = f"{year}-"
+    invoices = [
+        inv for inv in list_invoices(business_id)
+        if inv["status"] in {"enviada", "parcial", "cobrada"}
+        and str(inv.get("issued_at") or inv.get("created_at") or "").startswith(prefix)
+    ]
+    with get_conn() as conn:
+        expense_rows = [dict(r) for r in conn.execute(
+            "SELECT * FROM expenses WHERE business_id=? "
+            "AND CAST(COALESCE(spent_on, created_at) AS TEXT) LIKE ?",
+            (business_id, f"{prefix}%")).fetchall()]
+        received_rows = [dict(r) for r in conn.execute(
+            "SELECT * FROM received_invoices WHERE business_id=? "
+            "AND CAST(COALESCE(issued_on, created_at) AS TEXT) LIKE ?",
+            (business_id, f"{prefix}%")).fetchall()]
+
+    revenue = round(sum(inv["base"] for inv in invoices), 2)
+    # Gasto SIN IVA cuando se conoce el tipo; si no, el importe tal cual (y se avisa).
+    expense_base = sum(
+        e["amount"] / (1 + (e.get("vat_rate") or 0) / 100) if e.get("vat_rate")
+        else e["amount"] for e in expense_rows)
+    received_base = sum(
+        r["base"] if r.get("base") is not None else r["total"]
+        for r in received_rows)
+    costs = round(expense_base + received_base, 2)
+
+    missing: list[str] = []
+    if not invoices:
+        missing.append("No hay facturas emitidas este año: sin ingresos que contar.")
+    if not expense_rows and not received_rows:
+        missing.append("No hay gastos ni facturas recibidas registrados: el "
+                       "resultado saldría inflado.")
+    untyped = [e for e in expense_rows if not e.get("vat_rate")]
+    if untyped:
+        missing.append(f"{len(untyped)} gasto(s) sin IVA especificado: se cuentan "
+                       "con IVA incluido y el coste real es algo menor.")
+    missing.append("Amortizaciones e intereses no están registrados en Noesis: "
+                   "el EBITDA y el resultado son aproximados. El cierre "
+                   "definitivo es de tu gestoría.")
+
+    complete = bool(invoices) and bool(expense_rows or received_rows)
+    result = round(revenue - costs, 2) if complete else None
+    return {
+        "year": year,
+        "revenue": revenue if invoices else None,
+        "costs": costs if (expense_rows or received_rows) else None,
+        "gross_result": result,
+        # Sin datos de amortización/financieros, EBITDA ≈ resultado operativo.
+        "ebitda_estimate": result,
+        "margin_pct": (round(result / revenue * 100, 1)
+                       if complete and revenue else None),
+        "invoice_count": len(invoices),
+        "expense_count": len(expense_rows) + len(received_rows),
+        "missing": missing,
+    }
+
+
+# ----------------------------------------------------------------- Idioma ----
+LANGUAGES = {"es": "Español", "ca": "Català", "en": "English"}
+
+
+def update_language(business_id, language) -> None:
+    if language not in LANGUAGES:
+        raise ValueError("Idioma no disponible.")
+    with get_conn() as conn:
+        conn.execute("UPDATE businesses SET language=? WHERE id=?",
+                     (language, business_id))
+
+
 # --------------------------------------------------------------- Resúmenes ---
 def month_billing(month: str | None = None, *, business_id: int) -> dict:
     month = month or date.today().strftime("%Y-%m")
@@ -4673,6 +5289,11 @@ def export_business_data(business_id) -> dict:
         "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
         "quotes": list_quotes(business_id),
         "expenses": list_expenses(business_id),
+        "suppliers": list_suppliers(business_id),
+        "received_invoices": list_received_invoices(business_id),
+        "products": list_products(business_id, include_inactive=True),
+        "leads": list_leads(business_id),
+        "gestoria_requests": list_gestoria_requests(business_id),
         "product_events": [dict(r) for r in _rows(
             "SELECT * FROM product_events WHERE business_id=? ORDER BY id",
             business_id)],
@@ -4798,7 +5419,9 @@ def delete_business_cascade(business_id) -> bool:
             "verifactu_outbox", "document_sequences",
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
             "invoice_events", "invoice_records", "portal_tokens",
-            "product_events", "copilot_recommendations", "documents", "quotes",
+            "product_events", "copilot_recommendations", "gestoria_requests",
+            "documents", "received_invoices", "suppliers", "products",
+            "leads", "quotes",
             "invoice_payments", "invoices", "jobs", "workers", "clients", "expenses"
         ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))

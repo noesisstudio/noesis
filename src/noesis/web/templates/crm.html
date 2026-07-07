@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Ventas</div>
+    <h1>CRM · posibles clientes</h1>
+    <p>Quién te ha pedido precio y en qué punto está. Un presupuesto sin seguimiento
+       es dinero que se enfría: aquí no se te escapa ninguno.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn primary" href="#nuevo-lead">Apuntar posible cliente</a>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="stat"><div class="lbl">Abiertos</div><div class="val" id="l-open">—</div><div class="delta flat">sin ganar ni perder aún</div></div>
+  <div class="stat"><div class="lbl">Para seguir HOY</div><div class="val" id="l-due">—</div><div class="delta flat">con seguimiento vencido o de hoy</div></div>
+  <div class="stat"><div class="lbl">Valor estimado abierto</div><div class="val" id="l-value">—</div><div class="delta flat">suma de lo que hay en juego</div></div>
+  <div class="stat"><div class="lbl">Ganados</div><div class="val green" id="l-won">—</div><div class="delta flat">convertidos en cliente</div></div>
+</div>
+
+<div class="grid g3" style="margin-top:16px">
+  <div class="card col-2">
+    <div class="card-h"><h2>Embudo</h2>
+      <select id="l-filter" onchange="load()" style="max-width:200px">
+        <option value="">Todos</option><option value="nuevo">Nuevos</option>
+        <option value="contactado">Contactados</option><option value="interesado">Interesados</option>
+        <option value="presupuesto_enviado">Presupuesto enviado</option>
+        <option value="seguimiento">En seguimiento</option><option value="ganado">Ganados</option>
+        <option value="perdido">Perdidos</option><option value="dormido">Dormidos</option>
+      </select>
+    </div>
+    <div class="card-b table-pad" style="padding-top:6px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Estado</th><th>Seguir el</th><th class="t-right">Valor est.</th><th>Origen</th><th></th></tr></thead>
+          <tbody id="l-body"></tbody>
+        </table>
+      </div>
+      <div id="l-empty"></div>
+    </div>
+  </div>
+  <div class="card" id="nuevo-lead">
+    <div class="card-h"><h2>Apuntar posible cliente</h2></div>
+    <div class="card-b">
+      <label class="fld">Nombre</label>
+      <input class="input" id="f-name" placeholder="Ej. María — reforma baño">
+      <label class="fld" style="margin-top:10px">Teléfono (opcional)</label>
+      <input class="input" id="f-phone" placeholder="600 000 000">
+      <label class="fld" style="margin-top:10px">¿Por dónde llegó?</label>
+      <select id="f-source">
+        <option value="">Sin especificar</option><option>Boca a boca</option>
+        <option>WhatsApp</option><option>Llamada</option><option>Web</option>
+        <option>Instagram</option><option>Otro</option>
+      </select>
+      <label class="fld" style="margin-top:10px">Valor estimado (€, opcional)</label>
+      <input class="input" id="f-value" type="number" step="1" placeholder="1500">
+      <label class="fld" style="margin-top:10px">Seguir el día</label>
+      <input class="input" id="f-next" type="date">
+      <label class="fld" style="margin-top:10px">Nota</label>
+      <input class="input" id="f-note" placeholder="Qué pidió, qué le dijiste…">
+      <button class="btn primary full" style="margin-top:14px" onclick="addLead()">Guardar</button>
+      <div id="l-form-msg" class="meta" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  <b>Cómo usar el CRM:</b> apunta cada persona que pida precio, ponle fecha de
+  seguimiento y cámbiale el estado según avance. Cuando gane, con un clic se
+  convierte en cliente de verdad (y ya puedes presupuestarle y facturarle).
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const BADGE = { nuevo:'b-gray', contactado:'b-blue', interesado:'b-blue',
+  presupuesto_enviado:'b-amber', seguimiento:'b-amber', ganado:'b-green',
+  perdido:'b-red', dormido:'b-gray' };
+const LABEL = { nuevo:'Nuevo', contactado:'Contactado', interesado:'Interesado',
+  presupuesto_enviado:'Presupuesto enviado', seguimiento:'Seguimiento',
+  ganado:'Ganado', perdido:'Perdido', dormido:'Dormido' };
+const NEXT_OPTS = Object.keys(LABEL).map(s => `<option value="${s}">${LABEL[s]}</option>`).join('');
+
+async function load() {
+  const filter = el('l-filter').value;
+  const all = await api('/leads');
+  const items = filter ? all.filter(l => l.status === filter) : all;
+  const today = new Date().toISOString().slice(0, 10);
+  const open = all.filter(l => !['ganado', 'perdido'].includes(l.status));
+  el('l-open').textContent = open.length;
+  const due = open.filter(l => l.next_action_on && l.next_action_on <= today);
+  el('l-due').textContent = due.length;
+  el('l-due').className = 'val ' + (due.length ? 'amber' : '');
+  el('l-value').textContent = eur(open.reduce((a, l) => a + (l.value_estimate || 0), 0));
+  el('l-won').textContent = all.filter(l => l.status === 'ganado').length;
+
+  el('l-body').innerHTML = items.map(l => {
+    const overdue = l.next_action_on && l.next_action_on <= today
+      && !['ganado','perdido'].includes(l.status);
+    return `<tr>
+    <td>${esc(l.name)}${l.note ? `<div class="meta">${esc(l.note)}</div>` : ''}</td>
+    <td><select onchange="setStatus(${l.id}, this.value)" style="max-width:170px">
+      ${NEXT_OPTS.replace(`value="${l.status}"`, `value="${l.status}" selected`)}</select></td>
+    <td class="${overdue ? 'amber' : 'meta'}">${l.next_action_on || '—'}</td>
+    <td class="t-right num">${l.value_estimate ? eur(l.value_estimate) : '—'}</td>
+    <td class="meta">${esc(l.source || '—')}</td>
+    <td class="t-right table-actions">${l.client_id
+      ? '<span class="badge b-green">cliente</span>'
+      : `<button class="btn sm" onclick="convert(${l.id})">Hacer cliente</button>`}</td>
+    </tr>`;
+  }).join('');
+  el('l-empty').innerHTML = items.length ? '' : emptyState(
+    'Sin posibles clientes apuntados',
+    'Cada persona que te pida precio, apúntala aquí con fecha de seguimiento. Es la lista de dinero por entrar.',
+    '#nuevo-lead', 'Apuntar el primero');
+}
+async function setStatus(id, status) {
+  try { await apiPost('/leads/' + id, { status }); } catch (e) { alert(e.message); }
+  load();
+}
+async function convert(id) {
+  if (!confirm('¿Convertir en cliente? Se creará (o vinculará) en tu lista de clientes.')) return;
+  try { await apiPost('/leads/' + id + '/convert', {}); } catch (e) { alert(e.message); return; }
+  load();
+}
+async function addLead() {
+  const msg = el('l-form-msg');
+  const body = { name: el('f-name').value.trim(), phone: el('f-phone').value.trim(),
+    source: el('f-source').value, note: el('f-note').value.trim(),
+    value_estimate: el('f-value').value ? parseFloat(el('f-value').value) : null,
+    next_action_on: el('f-next').value || null };
+  if (!body.name) { msg.textContent = 'El nombre es obligatorio.'; return; }
+  try { await apiPost('/leads', body); }
+  catch (e) { msg.textContent = e.message; return; }
+  ['f-name','f-phone','f-value','f-next','f-note'].forEach(i => el(i).value = '');
+  msg.textContent = 'Apuntado. Te avisaremos el día de seguimiento.';
+  load();
+}
+window.QUICK_NEW = () => el('f-name').focus();
+load();
+</script>
+{% endblock %}

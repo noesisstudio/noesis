@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Catálogo</div>
+    <h1>Productos y servicios</h1>
+    <p>Lo que vendes, con su precio, su coste y su margen. Si sabes qué te deja
+       dinero de verdad, decides mejor qué vender y qué precio tocar.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn primary" href="#nuevo-producto">Añadir al catálogo</a>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="stat"><div class="lbl">En catálogo</div><div class="val" id="p-count">—</div><div class="delta flat" id="p-split"></div></div>
+  <div class="stat"><div class="lbl">Margen medio</div><div class="val" id="p-margin">—</div><div class="delta flat" id="p-margin-note">solo con coste informado</div></div>
+  <div class="stat"><div class="lbl">Mejor margen</div><div class="val green" id="p-best" style="font-size:18px">—</div><div class="delta flat" id="p-best-val"></div></div>
+  <div class="stat"><div class="lbl">Stock bajo</div><div class="val" id="p-low">—</div><div class="delta flat">productos por debajo del aviso</div></div>
+</div>
+
+<div class="grid g3" style="margin-top:16px">
+  <div class="card col-2">
+    <div class="card-h"><h2>Catálogo</h2><span class="hint">activos</span></div>
+    <div class="card-b table-pad" style="padding-top:6px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Tipo</th><th class="t-right">Precio</th><th class="t-right">Coste</th><th class="t-right">Margen</th><th class="t-right">Stock</th><th></th></tr></thead>
+          <tbody id="p-body"></tbody>
+        </table>
+      </div>
+      <div id="p-empty"></div>
+    </div>
+  </div>
+  <div class="card" id="nuevo-producto">
+    <div class="card-h"><h2>Añadir al catálogo</h2></div>
+    <div class="card-b">
+      <label class="fld">Nombre</label>
+      <input class="input" id="f-name" placeholder="Ej. Hora de mano de obra">
+      <label class="fld" style="margin-top:10px">Tipo</label>
+      <select id="f-kind"><option value="servicio">Servicio</option><option value="producto">Producto</option></select>
+      <label class="fld" style="margin-top:10px">Precio de venta (€)</label>
+      <input class="input" id="f-price" type="number" step="0.01" placeholder="45">
+      <label class="fld" style="margin-top:10px">Coste (€, opcional — necesario para ver margen)</label>
+      <input class="input" id="f-cost" type="number" step="0.01" placeholder="20">
+      <label class="fld" style="margin-top:10px">IVA</label>
+      <select id="f-vat"><option value="">Sin especificar</option><option value="21">21%</option><option value="10">10%</option><option value="4">4%</option><option value="0">0%</option></select>
+      <div id="f-stock-wrap" style="display:none">
+        <label class="fld" style="margin-top:10px">Stock actual (opcional)</label>
+        <input class="input" id="f-stock" type="number" step="1" placeholder="10">
+        <label class="fld" style="margin-top:10px">Avisar si baja de</label>
+        <input class="input" id="f-stock-alert" type="number" step="1" placeholder="3">
+      </div>
+      <button class="btn primary full" style="margin-top:14px" onclick="addProduct()">Guardar</button>
+      <div id="p-form-msg" class="meta" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="insight" style="margin-top:16px">
+  <b>Cómo leer esta página:</b> el margen solo aparece si informas el coste — no lo
+  inventamos. Empieza por tus 3 productos o servicios más vendidos: con precio y
+  coste de esos tres ya sabrás dónde ganas y dónde solo trabajas.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+el('f-kind').addEventListener('change', () => {
+  el('f-stock-wrap').style.display = el('f-kind').value === 'producto' ? '' : 'none';
+});
+async function load() {
+  const items = await api('/products');
+  el('p-count').textContent = items.length;
+  const nProd = items.filter(p => p.kind === 'producto').length;
+  el('p-split').textContent = `${nProd} producto(s) · ${items.length - nProd} servicio(s)`;
+
+  const withMargin = items.filter(p => p.margin_pct !== null);
+  if (withMargin.length) {
+    const avg = withMargin.reduce((a, p) => a + p.margin_pct, 0) / withMargin.length;
+    el('p-margin').textContent = Math.round(avg) + '%';
+    el('p-margin-note').textContent = `sobre ${withMargin.length} con coste informado`;
+    const best = [...withMargin].sort((a, b) => b.margin_pct - a.margin_pct)[0];
+    el('p-best').textContent = best.name;
+    el('p-best-val').textContent = `${best.margin_pct}% · ${eur(best.margin)} por unidad`;
+  } else {
+    el('p-margin').textContent = '—';
+    el('p-best').textContent = '—'; el('p-best-val').textContent = 'informa costes para verlo';
+  }
+  const low = items.filter(p => p.low_stock);
+  el('p-low').textContent = low.length;
+  el('p-low').className = 'val ' + (low.length ? 'amber' : '');
+
+  el('p-body').innerHTML = items.map(p => `<tr>
+    <td>${esc(p.name)}${p.low_stock ? ' <span class="badge b-amber">stock bajo</span>' : ''}</td>
+    <td><span class="badge b-gray">${p.kind}</span></td>
+    <td class="t-right num">${eur(p.price)}</td>
+    <td class="t-right num">${p.cost !== null ? eur(p.cost) : '—'}</td>
+    <td class="t-right num">${p.margin_pct !== null ? p.margin_pct + '%' : '—'}</td>
+    <td class="t-right num">${p.stock !== null ? p.stock : '—'}</td>
+    <td class="t-right table-actions"><button class="iconbtn" title="Desactivar" onclick="deactivate(${p.id})">${TRASH}</button></td></tr>`).join('');
+  el('p-empty').innerHTML = items.length ? '' : emptyState(
+    'Tu catálogo está vacío',
+    'Añade lo que vendes (horas, servicios, materiales) para reutilizarlo en facturas y ver márgenes.',
+    '#nuevo-producto', 'Añadir al catálogo');
+}
+async function deactivate(id) {
+  if (!confirm('¿Quitar del catálogo? (se desactiva, no se borra)')) return;
+  await apiPost('/products/' + id, { active: false });
+  load();
+}
+async function addProduct() {
+  const msg = el('p-form-msg');
+  const body = {
+    name: el('f-name').value.trim(), kind: el('f-kind').value,
+    price: parseFloat(el('f-price').value) || 0,
+    cost: el('f-cost').value ? parseFloat(el('f-cost').value) : null,
+    vat_rate: el('f-vat').value ? parseFloat(el('f-vat').value) : null,
+    stock: el('f-stock') && el('f-stock').value ? parseFloat(el('f-stock').value) : null,
+    stock_alert: el('f-stock-alert') && el('f-stock-alert').value ? parseFloat(el('f-stock-alert').value) : null,
+  };
+  if (!body.name) { msg.textContent = 'El nombre es obligatorio.'; return; }
+  try { await apiPost('/products', body); }
+  catch (e) { msg.textContent = e.message; return; }
+  ['f-name','f-price','f-cost','f-stock','f-stock-alert'].forEach(i => { if (el(i)) el(i).value = ''; });
+  msg.textContent = 'Guardado en el catálogo.';
+  load();
+}
+window.QUICK_NEW = () => el('f-name').focus();
+load();
+</script>
+{% endblock %}

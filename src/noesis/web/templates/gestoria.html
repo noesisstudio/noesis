@@ -69,6 +69,40 @@
       </div>
       {% endfor %}
     </div>
+
+    <div class="card">
+      <b>Pedir documentación al cliente</b>
+      <div class="muted" style="margin-top:4px">
+        Lo que escribas aquí le aparecerá dentro de su Noesis, en Documentos.
+      </div>
+      <form method="post" action="/g/{{ token }}/solicitud" style="margin-top:10px">
+        <textarea name="mensaje" required maxlength="2000" rows="3"
+          placeholder="Ej. Falta la factura de la furgoneta de mayo y el recibo de autónomos de junio."
+          style="width:100%; border:1px solid #dfe3de; border-radius:8px; padding:10px; font:inherit"></textarea>
+        <button class="btn" type="submit" style="margin-top:8px; border:0; cursor:pointer">Enviar solicitud</button>
+      </form>
+      {% if requests %}
+      <div style="margin-top:14px">
+        {% for r in requests %}
+        <div class="period">
+          <div>
+            <div class="muted" style="font-size:12px">
+              {{ r.created_at[:10] }} ·
+              {% if r.status == 'abierta' %}⏳ pendiente de respuesta
+              {% elif r.status == 'respondida' %}✅ respondida
+              {% else %}✔ cerrada{% endif %}
+              {% if r.requested_by == 'autonomo' %} · nota del cliente{% endif %}
+            </div>
+            {{ r.message }}
+            {% if r.reply %}
+            <div class="muted" style="margin-top:4px">↳ Respuesta: {{ r.reply }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
     {% endif %}
     <div class="foot">
       Generado por <a href="https://bynoesis.com">Noesis</a> — el copiloto de

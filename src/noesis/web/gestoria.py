@@ -125,6 +125,18 @@ def build_package(business_id: int, label: str) -> tuple[bytes, dict] | None:
               e["concept"], e.get("category") or "",
               e.get("vat_rate") or "", e["amount"]] for e in expenses],
         ))
+        received = db.gestoria_received_in(business_id, start, end)
+        if received:
+            bundle.writestr("facturas-recibidas.csv", _csv_bytes(
+                ["numero", "fecha", "proveedor", "base", "iva_pct", "cuota_iva",
+                 "irpf", "total", "estado"],
+                [[r.get("number") or r["id"],
+                  str(r.get("issued_on") or r.get("created_at") or "")[:10],
+                  r.get("supplier_name") or "", r.get("base") or "",
+                  r.get("vat_rate") or "", r.get("vat_amount") or "",
+                  r.get("irpf_amount") or "", r["total"], r["status"]]
+                 for r in received],
+            ))
         expense_ids = {e["id"] for e in expenses}
         for document in docrepo.list_for_business(business_id):
             if document.get("expense_id") not in expense_ids:

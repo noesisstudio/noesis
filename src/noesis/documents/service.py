@@ -65,6 +65,77 @@ def delete(business_id: int, doc_id: int) -> bool:
     return True
 
 
+def invoice_draft(business_id: int, doc_id: int) -> dict | None:
+    """Borrador de factura extraído por IA del documento, con dirección detectada.
+
+    NUNCA crea registros: devuelve datos para que el usuario los revise. Si la IA
+    no está disponible o no está segura, devuelve lo que haya (o None) y el
+    documento queda pendiente de revisión manual. Los datos del documento son
+    datos, no instrucciones (defensa en adapters/extraction.py).
+    """
+    from .. import db
+    from ..adapters import extraction
+
+    doc = repo.get(doc_id, business_id)
+    if not doc:
+        return None
+    payload = file_bytes(business_id, doc_id)
+    if not payload:
+        return None
+    data, mime, _filename = payload
+    draft = extraction.extract_invoice(data, mime)
+    if draft is None:
+        repo.set_review(doc_id, business_id, doc_status="pendiente_revisar",
+                        review_note="Sin extracción automática: revisar a mano.")
+        return None
+    business = db.get_business(business_id) or {}
+    draft["direction"] = extraction.detect_direction(
+        draft, business_nif=business.get("nif"),
+        business_name=business.get("name"))
+    kind = ("factura_emitida" if draft["direction"] == "emitida"
+            else "factura_recibida" if draft["direction"] == "recibida"
+            else None)
+    repo.set_review(doc_id, business_id, kind=kind,
+                    doc_status="pendiente_revisar",
+                    confidence=draft.get("confidence"))
+    if draft.get("supplier") or draft.get("supplier_nif"):
+        known = db.find_supplier(business_id, nif=draft.get("supplier_nif"),
+                                 name=draft.get("supplier"))
+        draft["supplier_id"] = known["id"] if known else None
+    return draft
+
+
+def confirm_received_invoice(business_id: int, doc_id: int, *, total,
+                             supplier_name: str | None = None,
+                             supplier_nif: str | None = None,
+                             supplier_id: int | None = None,
+                             **fields) -> dict:
+    """Confirmación humana del borrador: crea la recibida y vincula el documento.
+
+    Crea el proveedor si no existe (por NIF o nombre exacto). Lanza ValueError
+    con mensaje apto para el usuario si algo no cuadra.
+    """
+    from .. import db
+
+    doc = repo.get(doc_id, business_id)
+    if not doc:
+        raise UploadError("Documento no encontrado.")
+    if supplier_id is None and (supplier_name or supplier_nif):
+        known = db.find_supplier(business_id, nif=supplier_nif,
+                                 name=supplier_name)
+        if known:
+            supplier_id = known["id"]
+        elif supplier_name:
+            supplier_id = db.add_supplier(
+                supplier_name, nif=supplier_nif, business_id=business_id)["id"]
+    received = db.add_received_invoice(
+        total, supplier_id=supplier_id, document_id=doc_id,
+        business_id=business_id, **fields)
+    repo.set_review(doc_id, business_id, kind="factura_recibida",
+                    doc_status="revisado")
+    return received
+
+
 def convert_ticket_to_expense(business_id: int, doc_id: int,
                               concept: str | None = None,
                               amount: float | None = None,

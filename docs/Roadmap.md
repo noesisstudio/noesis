@@ -68,30 +68,36 @@ Visión "sistema operativo del autónomo", construida **por capas sobre lo que y
 existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
 
 ### Capa B — MVP plataforma (extiende, no rediseña)
-- [ ] **Documentos inteligentes v1**: extender `documents/` con tipo de documento,
-  confianza, estados (pendiente→revisado→enviado a gestoría→validado) y destinos;
-  portar el prompt completo de FacturAI al adaptador seguro actual; captura con
-  cámara en móvil. La extracción nunca crea registros: borrador + confirmación.
-- [ ] **Facturas recibidas + proveedores** (migración aditiva) con detección
-  emitida/recibida por NIF. Ver dudas 6 y 7 de [[Preguntas-abiertas]].
-- [ ] **Productos/servicios básico** (precio, coste, margen, IVA; sin stock
-  avanzado) asignables a factura.
-- [ ] **Asistente contextual**: pasar la página actual como contexto a
-  `web/chat.py` para que explique la pantalla y sugiera acciones con datos reales.
-- [ ] **Vista Hoy ampliada**: conectar documentos pendientes y recibidas al plan
-  diario del copiloto.
+- [x] **Documentos inteligentes v1** (rama `claude/documentos-inteligentes`, PR #16):
+  tipos, confianza, estados (pendiente→revisado→enviado a gestoría→validado),
+  captura con cámara, lectura IA de imagen y PDF con revisión humana obligatoria.
+- [x] **Facturas recibidas + proveedores** (migración 17) con detección
+  emitida/recibida por NIF y presencia en Costes y en el ZIP de gestoría.
+- [x] **Productos/servicios básico** (migración 18): catálogo con precio, coste,
+  margen (solo si hay coste real), IVA, stock con aviso, y prefill al crear factura.
+- [x] **Asistente contextual**: sabe en qué página está el usuario (botón «?» en
+  la barra), la explica con datos reales y la IA hereda contexto e idioma.
+- [x] **Vista Hoy ampliada**: el plan diario incluye documentos pendientes,
+  recibidas por pagar, seguimientos de CRM y solicitudes de gestoría.
+- [x] **CRM de leads** (migración 18, adelantado de la capa C): embudo con 8
+  estados, seguimiento con fecha, valor estimado y conversión a cliente en 1 clic.
+- [x] **Solicitudes de gestoría**: la gestoría pide documentación desde su enlace
+  `/g/{token}` y el autónomo responde desde Documentos. Sin cuentas todavía.
+- [x] **P&G del año con EBITDA estimado** en Análisis — sin inventar: «datos
+  insuficientes» y lista de qué falta.
+- [x] **Idioma persistente** (ES/CA/EN) en Ajustes: se guarda por negocio y la IA
+  responde en él. La traducción completa de la interfaz queda para la capa C.
 - [ ] Partir `server.py` en routers por dominio (tarea técnica previa a la capa C).
 
 ### Capa C — V1
-- [ ] Portal gestoría interactivo con rol y permisos multi-negocio (tras feedback
-  del ZIP actual con gestorías reales).
+- [ ] Portal gestoría con cuentas y permisos multi-negocio (tras feedback real
+  del flujo de solicitudes por enlace).
 - [ ] Abstracción de canales (`ChannelProvider`) + Telegram según caso de uso
-  confirmado.
-- [ ] CRM con leads/oportunidades/seguimientos conectado a presupuestos.
+  confirmado (duda 2 de [[Preguntas-abiertas]]).
+- [ ] Oportunidades y presupuestos conectados al CRM de leads.
 - [ ] Proyectos/obras: presupuesto vs. real, horas (sobre fichaje existente),
   gastos y margen por proyecto.
-- [ ] Pérdidas y ganancias básico ("datos insuficientes" antes que inventar).
-- [ ] Multiidioma (ES/CA/EN) si el piloto lo exige — diseñar i18n antes de más UI.
+- [ ] Multiidioma completo de la interfaz (ES/CA/EN) — diseñar i18n antes de más UI.
 
 ### Capa D — V2
 Ratios avanzados y EBITDA · stock y ventas por canal · aprendizaje de

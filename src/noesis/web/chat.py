@@ -45,7 +45,22 @@ def _business_state(business_id: int) -> dict:
         "expenses": expenses,
         "unbilled": db.unbilled_jobs(business_id),
         "quotes_sent": db.list_quotes(business_id, status="enviado"),
+        "docs_pending": _docs_pending(business_id),
+        "received_pending": db.list_received_invoices(business_id,
+                                                      status="pendiente"),
+        "leads_due": db.leads_due_today(business_id),
+        # Solo lo que pide la gestoría espera respuesta del autónomo; sus
+        # propias notas no son una tarea pendiente.
+        "gestoria_open": [
+            r for r in db.list_gestoria_requests(business_id, status="abierta")
+            if r["requested_by"] == "gestoria"
+        ],
     }
+
+
+def _docs_pending(business_id: int) -> list[dict]:
+    from ..documents import repo as docrepo
+    return docrepo.list_pending_review(business_id)
 
 
 def _daily_plan(state: dict) -> list[dict]:
@@ -79,6 +94,33 @@ def _daily_plan(state: dict) -> list[dict]:
             "topic": "presupuestos",
             "do": f"Haz seguimiento de {len(state['quotes_sent'])} presupuesto(s) enviados ({_eur(total)} en juego).",
             "why": "Un recordatorio amable a tiempo sube mucho la conversión.",
+        })
+    if state.get("leads_due"):
+        names = ", ".join(dict.fromkeys(
+            lead["name"] for lead in state["leads_due"][:3]))
+        plan.append({
+            "topic": "crm",
+            "do": f"Sigue a {len(state['leads_due'])} posible(s) cliente(s) ({names}).",
+            "why": "Tenían seguimiento para hoy o antes; en frío, un presupuesto se pierde.",
+        })
+    if state.get("gestoria_open"):
+        plan.append({
+            "topic": "gestoria",
+            "do": f"Responde a tu gestoría: {len(state['gestoria_open'])} solicitud(es) abiertas.",
+            "why": "Sin esos papeles no puede cerrar tu trimestre; está en Documentos.",
+        })
+    if state.get("docs_pending"):
+        plan.append({
+            "topic": "documentos",
+            "do": f"Revisa {len(state['docs_pending'])} documento(s) pendientes de confirmar.",
+            "why": "Un papel sin clasificar es un gasto sin deducir o una factura perdida.",
+        })
+    if state.get("received_pending"):
+        total = sum(r["total"] for r in state["received_pending"])
+        plan.append({
+            "topic": "pagos",
+            "do": f"Tienes {len(state['received_pending'])} factura(s) de proveedor por pagar ({_eur(total)}).",
+            "why": "Pagar a tiempo evita recargos y mantiene a tus proveedores de tu lado.",
         })
     billing = state["billing"]
     if billing["invoiced"] and billing["expenses"] / max(billing["invoiced"], 1) > .65:
@@ -161,8 +203,72 @@ def _unbilled_reply(business_id: int) -> str:
     return "\n".join(lines)
 
 
-def handle(business_id: int, message: str) -> dict:
+# Qué es cada página, para que el asistente pueda explicar dónde está el usuario.
+_PAGE_HINTS = {
+    "resumen": "tu centro de mando: qué pasa hoy, qué cobrar y el plan del día",
+    "tesoreria": "tu caja: qué te deben, qué debes (IVA/IRPF) y qué entrará",
+    "analisis": "tus ratios: margen, tasa de cobro, morosidad y concentración",
+    "ingresos": "lo que facturas y cobras, mes a mes",
+    "costes": "tus gastos, las facturas de proveedor y dónde se va el dinero",
+    "facturas": "tus facturas emitidas y su estado (borrador, enviada, cobrada)",
+    "presupuestos": "los presupuestos enviados y cuáles siguen sin respuesta",
+    "cobros": "lo pendiente de cobrar, con lo más atrasado primero",
+    "impuestos": "una estimación orientativa del IVA (303) e IRPF (130); la declaración final es de tu gestoría",
+    "agenda": "tus trabajos y citas, por día",
+    "equipo": "tus trabajadores, su fichaje y sus horas",
+    "clientes": "tu lista de clientes y lo que mueve cada uno",
+    "crm": "los posibles clientes: quién pidió precio y a quién seguir hoy",
+    "productos": "tu catálogo: qué vendes, a qué precio y con qué margen",
+    "documentos": "tus papeles: subes o fotografías, Noesis propone y tú confirmas",
+    "ajustes": "los datos de tu negocio: fiscales, marca, gestoría, idioma y canales",
+}
+
+
+def page_briefing(business_id: int, page: str) -> str | None:
+    """Explica la página actual con los datos REALES del negocio. Sin inventar:
+    si no hay datos, lo dice."""
+    hint = _PAGE_HINTS.get(page)
+    if not hint:
+        return None
+    lines = [f"Estás en **{page.capitalize()}**: {hint}."]
+    state = _business_state(business_id)
+    if page in {"resumen", "cobros", "tesoreria"}:
+        pending = sum(p["total"] for p in state["pending"])
+        lines.append(f"Ahora mismo tienes {_eur(pending)} pendientes de cobro"
+                     + (f", {len(state['late'])} cobro(s) con más de una semana."
+                        if state["late"] else ".") )
+    if page == "documentos":
+        n = len(state["docs_pending"])
+        lines.append(f"Tienes {n} documento(s) pendientes de revisar."
+                     if n else "No tienes documentos pendientes de revisar.")
+        if state["gestoria_open"]:
+            lines.append(f"Tu gestoría tiene {len(state['gestoria_open'])} "
+                         "solicitud(es) abiertas esperándote.")
+    if page == "costes":
+        n = len(state["received_pending"])
+        if n:
+            total = sum(r["total"] for r in state["received_pending"])
+            lines.append(f"Hay {n} factura(s) de proveedor por pagar ({_eur(total)}).")
+    if page == "crm":
+        due = state["leads_due"]
+        lines.append(f"Hoy toca seguir a {len(due)} posible(s) cliente(s)."
+                     if due else "No tienes seguimientos vencidos. Bien.")
+    if page in {"facturas", "presupuestos"} and state["quotes_sent"]:
+        lines.append(f"Tienes {len(state['quotes_sent'])} presupuesto(s) enviados "
+                     "sin respuesta: un recordatorio a tiempo sube la conversión.")
+    lines.append("Pregúntame lo que quieras de esta página o dime «plan» y te "
+                 "digo por dónde empezar hoy.")
+    return "\n\n".join(lines)
+
+
+def handle(business_id: int, message: str, page: str | None = None) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
+    if page and any(x in norm for x in (
+            "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
+            "explica esta", "explicame esta", "que es esto")):
+        briefing = page_briefing(business_id, page)
+        if briefing:
+            return {"reply": briefing, "source": "local"}
     if any(x in norm for x in ("sin facturar", "pendiente de facturar", "por facturar",
                                "que me falta facturar", "trabajos sin cobrar")):
         return {"reply": _unbilled_reply(business_id), "source": "local"}
@@ -200,7 +306,19 @@ def handle(business_id: int, message: str) -> dict:
                 agent = NoesisAgent(business_id, model=config.FALLBACK_MODEL)
                 _agents[business_id] = agent
         try:
-            return {"reply": agent.send(message), "source": "ia"}
+            # Contexto y preferencia de idioma van como marco del mensaje: el
+            # agente ya está acotado al negocio; esto solo orienta la respuesta.
+            business = db.get_business(business_id) or {}
+            prefix = ""
+            if page and page in _PAGE_HINTS:
+                prefix += f"[El usuario está en la página '{page}' ({_PAGE_HINTS[page]})] "
+            language = business.get("language") or "es"
+            if language != "es":
+                prefix += ("[Responde en catalán salvo que el usuario escriba "
+                           "claramente en otro idioma] " if language == "ca" else
+                           "[Reply in English unless the user clearly writes "
+                           "in another language] ")
+            return {"reply": agent.send(prefix + message), "source": "ia"}
         except Exception:  # noqa: BLE001
             log.exception("El proveedor de IA falló para el negocio %s.", business_id)
             return {

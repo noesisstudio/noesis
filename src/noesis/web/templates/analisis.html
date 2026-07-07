@@ -47,6 +47,14 @@
   <div class="card-h"><h2>Riesgo de concentración</h2><span class="hint">dependencia de clientes</span></div>
   <div class="card-b"><div id="conc">...</div></div>
 </div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h"><h2>Pérdidas y ganancias del año</h2><span class="hint">orientativo · el cierre es de tu gestoría</span></div>
+  <div class="card-b">
+    <div id="pnl-rows"></div>
+    <div id="pnl-missing" class="insight" style="margin-top:14px"></div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -75,7 +83,23 @@ function ratioRow(name, display, state, text) {
   </div>`;
 }
 
+async function loadPnl() {
+  const p = await api('/pnl');
+  const row = (name, val, bold) => `<div class="lrow"><span>${name}</span>
+    <b class="num" style="${bold ? '' : 'font-weight:500'}">${val}</b></div>`;
+  const fmt = v => v === null ? 'datos insuficientes' : eur(v);
+  el('pnl-rows').innerHTML =
+    row(`Ingresos ${p.year} (base, ${p.invoice_count} factura(s))`, fmt(p.revenue)) +
+    row(`Gastos ${p.year} (base, ${p.expense_count} apunte(s))`, fmt(p.costs)) +
+    row('Resultado bruto', fmt(p.gross_result), true) +
+    row('EBITDA estimado', fmt(p.ebitda_estimate), true) +
+    row('Margen sobre ingresos', p.margin_pct === null ? 'datos insuficientes' : p.margin_pct + '%');
+  el('pnl-missing').innerHTML = '<b>Para leerlo bien:</b><br>' +
+    p.missing.map(m => '· ' + m).join('<br>');
+}
+
 async function load() {
+  loadPnl();
   const a = await api('/analysis');
 
   el('k-profit').textContent = eur(a.beneficio);

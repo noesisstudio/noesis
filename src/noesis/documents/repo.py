@@ -18,24 +18,72 @@ def _conn():
     return db.get_conn()
 
 
-KINDS = {"documento", "ticket", "contrato", "proveedor"}
+KINDS = {"documento", "ticket", "contrato", "proveedor",
+         "factura_emitida", "factura_recibida", "presupuesto"}
+# Ciclo de revisión: pendiente_revisar -> revisado -> enviado_gestoria ->
+# validado; además rechazado y duplicado. Los históricos nacen 'revisado'.
+DOC_STATUSES = {"pendiente_revisar", "revisado", "enviado_gestoria",
+                "validado", "rechazado", "duplicado"}
 
 
 def add(business_id: int, *, filename: str, stored_name: str, mime: str, size: int,
         kind: str = "documento", client_id: int | None = None,
         invoice_id: int | None = None, ocr_text: str | None = None,
-        ocr_amount: float | None = None, note: str | None = None) -> dict:
+        ocr_amount: float | None = None, note: str | None = None,
+        doc_status: str = "revisado", confidence: float | None = None) -> dict:
     kind = kind if kind in KINDS else "documento"
+    doc_status = doc_status if doc_status in DOC_STATUSES else "revisado"
     with _conn() as conn:
         row = conn.execute(
             "INSERT INTO documents (business_id, client_id, invoice_id, kind, "
-            "filename, stored_name, mime, size, ocr_text, ocr_amount, note, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "filename, stored_name, mime, size, ocr_text, ocr_amount, note, "
+            "doc_status, confidence, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, client_id, invoice_id, kind, filename, stored_name, mime,
-             int(size), ocr_text, ocr_amount, note, _now()),
+             int(size), ocr_text, ocr_amount, note, doc_status, confidence,
+             _now()),
         ).fetchone()
         new_id = row["id"]
     return get(new_id, business_id)
+
+
+def set_review(doc_id: int, business_id: int, *, kind: str | None = None,
+               doc_status: str | None = None, confidence: float | None = None,
+               review_note: str | None = None) -> dict | None:
+    """Actualiza la revisión de un documento (tipo, estado, nota). Trazable:
+    siempre sella reviewed_at. Devuelve el documento actualizado o None."""
+    updates: list[str] = ["reviewed_at=?"]
+    params: list = [_now()]
+    if kind is not None:
+        if kind not in KINDS:
+            raise ValueError("Tipo de documento desconocido.")
+        updates.append("kind=?")
+        params.append(kind)
+    if doc_status is not None:
+        if doc_status not in DOC_STATUSES:
+            raise ValueError("Estado de documento desconocido.")
+        updates.append("doc_status=?")
+        params.append(doc_status)
+    if confidence is not None:
+        updates.append("confidence=?")
+        params.append(float(confidence))
+    if review_note is not None:
+        updates.append("review_note=?")
+        params.append(review_note.strip()[:500] or None)
+    params.extend([doc_id, business_id])
+    with _conn() as conn:
+        conn.execute(
+            f"UPDATE documents SET {', '.join(updates)} "
+            "WHERE id=? AND business_id=?", params)
+    return get(doc_id, business_id)
+
+
+def list_pending_review(business_id: int) -> list[dict]:
+    with _conn() as conn:
+        return [dict(r) for r in conn.execute(
+            "SELECT * FROM documents WHERE business_id=? "
+            "AND doc_status='pendiente_revisar' ORDER BY created_at DESC",
+            (business_id,)).fetchall()]
 
 
 def get(doc_id: int, business_id: int) -> dict | None:
