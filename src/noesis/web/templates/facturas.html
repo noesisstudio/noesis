@@ -61,9 +61,12 @@ let ALL = [];
 
 // --- Nueva factura directa (sin pasar por el chat): el flujo de la 1ª factura ---
 async function newInvoice(){
-  let clients = [];
+  let clients = [], catalog = [];
   try { clients = await api('/clients'); } catch(e){}
+  try { catalog = await api('/products'); } catch(e){}
   const opts = clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  const prodOpts = catalog.map(p =>
+    `<option value="${p.id}">${esc(p.name)} · ${eur(p.price)}</option>`).join('');
   const chips = CONCEPT_SUGGESTIONS.map(c =>
     `<button type="button" class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join('');
   closeModal();
@@ -79,6 +82,8 @@ async function newInvoice(){
       <input class="input" id="nf-client-name" style="margin-top:8px;${clients.length?'':''}"
         placeholder="Nombre del cliente nuevo">
       <label class="fld" style="margin-top:12px">Concepto</label>
+      ${prodOpts ? `<select class="input" id="nf-product" style="margin-bottom:8px">
+        <option value="">— O elige de tu catálogo —</option>${prodOpts}</select>` : ''}
       <input class="input" id="nf-concept" placeholder="¿Qué trabajo has hecho?">
       ${chips ? `<div class="chips" style="margin-top:8px" id="nf-chips">${chips}</div>` : ''}
       <div class="nf-row">
@@ -115,6 +120,15 @@ async function newInvoice(){
   if (chipBox) chipBox.addEventListener('click', e => {
     if (e.target.dataset.c) el('nf-concept').value = e.target.dataset.c;
   });
+  const prodSel = el('nf-product');
+  if (prodSel) prodSel.onchange = () => {
+    const p = catalog.find(x => String(x.id) === prodSel.value);
+    if (!p) return;
+    el('nf-concept').value = p.name;
+    el('nf-base').value = p.price;
+    if (p.vat_rate !== null) el('nf-vat').value = String(Math.round(p.vat_rate));
+    recalc();
+  };
   const recalc = () => {
     const base = parseFloat(el('nf-base').value) || 0;
     const vat = base * (parseFloat(el('nf-vat').value)||0) / 100;

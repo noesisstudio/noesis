@@ -390,6 +390,24 @@
   </div>
 
   <div class="card">
+    <div class="card-h"><h2>Idioma</h2><span class="hint">del asistente y los avisos</span></div>
+    <div class="card-b">
+      <label class="fld">Idioma preferido</label>
+      <select id="lang-select">
+        <option value="es" {{ 'selected' if (business.language or 'es') == 'es' }}>Español</option>
+        <option value="ca" {{ 'selected' if business.language == 'ca' }}>Català</option>
+        <option value="en" {{ 'selected' if business.language == 'en' }}>English</option>
+      </select>
+      <button class="btn primary" style="margin-top:12px" onclick="saveLanguage()">Guardar</button>
+      <div id="lang-msg" class="meta" style="margin-top:8px"></div>
+      <p class="hint" style="margin-top:10px">Se guarda en tu cuenta y se mantiene entre
+        sesiones. El asistente con IA responde en este idioma; la interfaz y el
+        asistente básico siguen en español por ahora (la traducción completa llegará
+        por fases — preferimos decírtelo a medio traducir la app).</p>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-h"><h2>Privacidad y costes</h2><span class="badge b-gray">interno</span></div>
     <div class="card-b">
       <div class="lrow"><span>Base de datos</span><b>local (en tu servidor)</b></div>
@@ -417,4 +435,15 @@
     <button class="btn" style="background:var(--red);border-color:var(--red);color:#fff">Eliminar mi cuenta</button>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function saveLanguage() {
+  const msg = el('lang-msg');
+  try { await apiPost('/language', { language: el('lang-select').value }); }
+  catch (e) { msg.textContent = e.message; return; }
+  msg.textContent = 'Idioma guardado.';
+}
+</script>
 {% endblock %}

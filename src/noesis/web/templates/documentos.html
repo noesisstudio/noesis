@@ -4,29 +4,47 @@
   <div class="page-title">
     <div class="kicker">Tus papeles, en orden</div>
     <h1>Documentos</h1>
-    <p>Guarda aquí los papeles de tu negocio: recibos, contratos, facturas de
-       proveedor o la foto de un ticket. Quedan ligados a un cliente si quieres y se
-       incluyen en tu copia de datos (RGPD). Una foto de un ticket se puede convertir
-       en gasto con un clic.</p>
+    <p>Sube o fotografía cualquier papel del negocio. Noesis intenta leerlo, te
+       propone qué es (factura recibida, ticket, contrato…) y <b>tú confirmas</b>.
+       Nada se registra sin tu visto bueno, y todo queda trazado para la gestoría.</p>
   </div>
   <div class="page-actions">
     <a class="btn primary" href="#subir">Subir documento</a>
   </div>
 </div>
 
-<div class="grid g3">
+<div class="grid g4">
+  <div class="stat"><div class="lbl">Pendientes de revisar</div><div class="val" id="s-pending">—</div><div class="delta flat">esperan tu confirmación</div></div>
+  <div class="stat"><div class="lbl">Enviados a gestoría</div><div class="val" id="s-sent">—</div><div class="delta flat">del período actual</div></div>
+  <div class="stat"><div class="lbl">Facturas recibidas</div><div class="val" id="s-received">—</div><div class="delta flat" id="s-received-pending"></div></div>
+  <div class="stat"><div class="lbl">Total guardados</div><div class="val" id="s-total">—</div><div class="delta flat">en tu archivo</div></div>
+</div>
+
+<div class="card" id="gestoria-card" style="margin-top:16px; display:none">
+  <div class="card-h"><h2>Tu gestoría te pide</h2><span class="hint">solicitudes abiertas</span></div>
+  <div class="card-b" id="g-requests"></div>
+</div>
+
+<div class="grid g3" style="margin-top:16px">
   <div class="card" id="subir">
     <div class="card-h"><h2>Subir un documento</h2></div>
     <div class="card-b">
       <label class="fld">Archivo (PDF o foto)</label>
       <input class="input" id="d-file" type="file"
              accept=".pdf,.jpg,.jpeg,.png,.webp,.heic">
+      <button class="btn full" style="margin-top:8px" onclick="el('d-camera').click()">
+        📷 Hacer foto ahora</button>
+      <input id="d-camera" type="file" accept="image/*" capture="environment"
+             style="display:none" onchange="el('d-file').files=this.files; el('d-msg').textContent='Foto lista para subir.'">
       <label class="fld" style="margin-top:10px">Tipo</label>
       <select id="d-kind">
-        <option value="documento">Documento</option>
+        <option value="documento">Documento (no lo sé aún)</option>
+        <option value="factura_recibida">Factura recibida (de proveedor)</option>
+        <option value="factura_emitida">Factura emitida (mía)</option>
         <option value="ticket">Ticket / recibo</option>
+        <option value="presupuesto">Presupuesto</option>
         <option value="contrato">Contrato</option>
-        <option value="proveedor">Factura de proveedor</option>
+        <option value="proveedor">Otro doc. de proveedor</option>
       </select>
       <label class="fld" style="margin-top:10px">Cliente (opcional)</label>
       <select id="d-client"><option value="">— Sin cliente —</option></select>
@@ -39,12 +57,20 @@
   </div>
 
   <div class="card col-2">
-    <div class="card-h"><h2>Tus documentos</h2><span class="hint">más recientes primero</span></div>
+    <div class="card-h"><h2>Tus documentos</h2>
+      <select id="d-filter" onchange="renderList()" style="max-width:220px">
+        <option value="">Todos</option>
+        <option value="pendiente_revisar">Pendientes de revisar</option>
+        <option value="revisado">Revisados</option>
+        <option value="enviado_gestoria">Enviados a gestoría</option>
+        <option value="validado">Validados</option>
+      </select>
+    </div>
     <div class="card-b table-pad" style="padding-top:6px">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Fecha</th><th>Archivo</th><th>Tipo</th><th>Cliente</th>
-            <th class="t-right">Importe leído</th><th></th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Archivo</th><th>Tipo</th><th>Estado</th>
+            <th class="t-right">Importe</th><th></th></tr></thead>
           <tbody id="d-body"></tbody>
         </table>
       </div>
@@ -53,58 +79,148 @@
   </div>
 </div>
 
+<!-- Revisión del borrador leído por IA: el usuario corrige y confirma. -->
+<div class="card" id="review-card" style="margin-top:16px; display:none">
+  <div class="card-h"><h2>Revisar lectura</h2><span class="hint" id="r-confidence"></span></div>
+  <div class="card-b">
+    <div class="grid g4">
+      <div><label class="fld">Proveedor</label>
+        <input class="input" id="r-supplier"></div>
+      <div><label class="fld">NIF proveedor</label>
+        <input class="input" id="r-supplier-nif"></div>
+      <div><label class="fld">Nº factura</label>
+        <input class="input" id="r-number"></div>
+      <div><label class="fld">Fecha emisión</label>
+        <input class="input" id="r-issued" type="date"></div>
+    </div>
+    <div class="grid g4" style="margin-top:10px">
+      <div><label class="fld">Base (€)</label>
+        <input class="input" id="r-base" type="number" step="0.01"></div>
+      <div><label class="fld">IVA %</label>
+        <select id="r-vat"><option value="">—</option><option>21</option><option>10</option><option>4</option><option>0</option></select></div>
+      <div><label class="fld">Cuota IVA (€)</label>
+        <input class="input" id="r-vat-amount" type="number" step="0.01"></div>
+      <div><label class="fld">Total (€)</label>
+        <input class="input" id="r-total" type="number" step="0.01"></div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
+      <button class="btn primary" onclick="confirmReceived()">Confirmar como factura recibida</button>
+      <button class="btn" onclick="markKind('factura_emitida')">Es una factura mía (emitida)</button>
+      <button class="btn" onclick="hideReview()">Cancelar</button>
+    </div>
+    <div id="r-msg" class="meta" style="margin-top:10px"></div>
+  </div>
+</div>
+
 <div class="insight" style="margin-top:16px">
-  <b>Privacidad (RGPD):</b> tus documentos solo los ves tú. Se guardan ligados a tu
-  cuenta, se exportan en «Ajustes → Descargar mis datos» y se borran del todo si das
-  de baja la cuenta o eliminas un cliente.
+  <b>Cómo funciona la lectura:</b> el botón «Leer» usa IA para proponer los datos y
+  <b>nunca registra nada por su cuenta</b>. Si no está segura, el documento queda
+  pendiente y lo rellenas tú. Lo que confirmes aparece en Costes → Facturas
+  recibidas y en el paquete que se lleva tu gestoría.
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const KINDS = { documento:'Documento', ticket:'Ticket', contrato:'Contrato', proveedor:'Proveedor' };
+const KINDS = { documento:'Documento', ticket:'Ticket', contrato:'Contrato',
+  proveedor:'Doc. proveedor', factura_recibida:'Fra. recibida',
+  factura_emitida:'Fra. emitida', presupuesto:'Presupuesto' };
+const STATUS = { pendiente_revisar:['Pendiente','b-amber'], revisado:['Revisado','b-green'],
+  enviado_gestoria:['En gestoría','b-blue'], validado:['Validado','b-green'],
+  rechazado:['Rechazado','b-red'], duplicado:['Duplicado','b-gray'] };
+let reviewDocId = null;
 
 async function load() {
-  // Clientes para el desplegable (opcional al subir).
   try {
     const clients = await api('/clients');
     el('d-client').innerHTML = '<option value="">— Sin cliente —</option>' +
       clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   } catch (e) {}
-  // Aviso de OCR (lectura de fotos).
   try {
     const st = await api('/documents/ocr-status');
     el('d-ocr').textContent = st.ocr
-      ? 'Lectura de fotos activa: de un ticket sacaré el importe automáticamente.'
-      : 'Lectura automática de fotos no disponible en este servidor: podrás poner el importe a mano.';
+      ? 'Lectura de fotos activa: intentaré leer los datos automáticamente.'
+      : 'Lectura automática no disponible en este servidor: rellenarás los datos a mano.';
   } catch (e) {}
+  renderRequests();
   renderList();
+}
+
+async function renderRequests() {
+  let reqs = [];
+  try { reqs = await api('/gestoria/requests'); } catch (e) { return; }
+  const open = reqs.filter(r => r.status === 'abierta' && r.requested_by === 'gestoria');
+  if (!open.length) { el('gestoria-card').style.display = 'none'; return; }
+  el('gestoria-card').style.display = '';
+  el('g-requests').innerHTML = open.map(r => `
+    <div style="padding:10px 0; border-bottom:1px solid var(--line, #edefec)">
+      <div class="meta">${dateIso(r.created_at)}</div>
+      <div style="margin:4px 0 8px">${esc(r.message)}</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <input class="input" id="g-reply-${r.id}" placeholder="Tu respuesta…" style="flex:1; min-width:200px">
+        <button class="btn sm" onclick="replyRequest(${r.id})">Responder</button>
+      </div>
+    </div>`).join('');
+}
+
+async function replyRequest(id) {
+  const reply = el('g-reply-' + id).value.trim();
+  if (!reply) return;
+  try { await apiPost(`/gestoria/requests/${id}/reply`, { reply }); }
+  catch (e) { el('d-msg').textContent = e.message; return; }
+  renderRequests();
 }
 
 async function renderList() {
   const docs = await api('/documents');
-  el('d-body').innerHTML = docs.map(d => {
+  const filter = el('d-filter').value;
+  const shown = filter ? docs.filter(d => d.doc_status === filter) : docs;
+
+  el('s-total').textContent = docs.length;
+  const pending = docs.filter(d => d.doc_status === 'pendiente_revisar').length;
+  el('s-pending').textContent = pending;
+  el('s-pending').className = 'val ' + (pending ? 'amber' : '');
+  el('s-sent').textContent = docs.filter(d => d.doc_status === 'enviado_gestoria').length;
+  try {
+    const received = await api('/received-invoices');
+    el('s-received').textContent = received.length;
+    const rp = received.filter(r => r.status === 'pendiente').length;
+    el('s-received-pending').textContent = rp ? `${rp} pendiente(s) de pagar` : 'todas pagadas';
+  } catch (e) {}
+
+  el('d-body').innerHTML = shown.map(d => {
+    const st = STATUS[d.doc_status] || STATUS.revisado;
     const importe = d.ocr_amount ? eur(d.ocr_amount) : '—';
-    const toExpense = (d.kind === 'ticket' || d.kind === 'proveedor')
-      ? `<button class="iconbtn" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">€→</button>` : '';
+    const actions = [];
+    if (!d.received_invoice_id && !d.expense_id) {
+      actions.push(`<button class="btn sm" title="Leer datos con IA" onclick="readDoc(${d.id})">Leer</button>`);
+    }
+    if (d.kind === 'ticket' && !d.expense_id) {
+      actions.push(`<button class="iconbtn" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">€→</button>`);
+    }
+    if (d.doc_status !== 'enviado_gestoria' && d.doc_status !== 'validado') {
+      actions.push(`<button class="iconbtn" title="Marcar como enviado a gestoría" onclick="setStatus(${d.id},'enviado_gestoria')">📤</button>`);
+    }
+    actions.push(`<button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button>`);
     return `<tr>
       <td class="meta">${dateIso(d.created_at)}</td>
-      <td><a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener">${esc(d.filename)}</a></td>
+      <td><a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener">${esc(d.filename)}</a>
+        ${d.review_note ? `<div class="meta">${esc(d.review_note)}</div>` : ''}</td>
       <td><span class="badge b-gray">${esc(KINDS[d.kind] || d.kind)}</span></td>
-      <td>${esc(d.client_name || '—')}</td>
+      <td><span class="badge ${st[1]}">${st[0]}</span>${d.confidence ? `<div class="meta">${Math.round(d.confidence)}% seguro</div>` : ''}</td>
       <td class="t-right num">${importe}</td>
-      <td class="t-right table-actions">${toExpense}
-        <button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button></td>
+      <td class="t-right table-actions">${actions.join(' ')}</td>
     </tr>`;
   }).join('');
-  el('d-empty').innerHTML = docs.length ? '' :
-    emptyState('Aún no has subido documentos', 'Sube un PDF o la foto de un ticket para empezar.', '#subir', 'Subir documento');
+  el('d-empty').innerHTML = shown.length ? '' :
+    emptyState('Nada por aquí', filter ? 'No hay documentos en este estado.' :
+      'Sube un PDF o haz una foto de un ticket para empezar.', '#subir', 'Subir documento');
 }
 
 async function uploadDoc() {
   const input = el('d-file');
   const msg = el('d-msg');
-  if (!input.files || !input.files.length) { msg.textContent = 'Elige un archivo primero.'; return; }
+  if (!input.files || !input.files.length) { msg.textContent = 'Elige un archivo o haz una foto primero.'; return; }
   const fd = new FormData();
   fd.append('file', input.files[0]);
   fd.append('kind', el('d-kind').value);
@@ -115,7 +231,77 @@ async function uploadDoc() {
   const data = await r.json();
   if (!r.ok) { msg.textContent = data.error || 'No se pudo subir.'; return; }
   input.value = ''; el('d-note').value = '';
-  msg.textContent = 'Documento guardado.' + (data.ocr_amount ? ` Importe detectado: ${eur(data.ocr_amount)}.` : '');
+  msg.textContent = 'Documento guardado.';
+  if (['factura_recibida', 'documento', 'proveedor'].includes(data.kind)) {
+    msg.textContent += ' Leyendo datos…';
+    await readDoc(data.id);
+    msg.textContent = 'Documento guardado.';
+  }
+  renderList();
+}
+
+async function readDoc(id) {
+  el('r-msg').textContent = '';
+  let draft;
+  try { draft = await apiPost(`/documents/${id}/draft`, {}); }
+  catch (e) { el('d-msg').textContent = e.message; return; }
+  if (draft.pending) {
+    el('d-msg').textContent = draft.error;
+    renderList();
+    return;
+  }
+  reviewDocId = id;
+  el('r-supplier').value = draft.supplier || '';
+  el('r-supplier-nif').value = draft.supplier_nif || '';
+  el('r-number').value = draft.number || '';
+  el('r-issued').value = draft.issued_on || '';
+  el('r-base').value = draft.base ?? '';
+  el('r-vat').value = draft.vat_rate ?? '';
+  el('r-vat-amount').value = draft.vat_amount ?? '';
+  el('r-total').value = draft.total ?? '';
+  el('r-confidence').textContent = (draft.confidence ? `la IA está un ${draft.confidence}% segura` : 'revisa los datos')
+    + (draft.direction === 'emitida' ? ' · parece EMITIDA por ti' : draft.direction === 'recibida' ? ' · parece RECIBIDA' : '');
+  el('review-card').style.display = '';
+  el('review-card').scrollIntoView({ behavior: 'smooth' });
+  renderList();
+}
+
+function hideReview() { el('review-card').style.display = 'none'; reviewDocId = null; }
+
+async function confirmReceived() {
+  if (!reviewDocId) return;
+  const msg = el('r-msg');
+  const body = {
+    document_id: reviewDocId,
+    supplier_name: el('r-supplier').value.trim(),
+    supplier_nif: el('r-supplier-nif').value.trim(),
+    number: el('r-number').value.trim(),
+    issued_on: el('r-issued').value || null,
+    base: el('r-base').value ? parseFloat(el('r-base').value) : null,
+    vat_rate: el('r-vat').value ? parseFloat(el('r-vat').value) : null,
+    vat_amount: el('r-vat-amount').value ? parseFloat(el('r-vat-amount').value) : null,
+    total: el('r-total').value ? parseFloat(el('r-total').value) : null,
+  };
+  if (!body.total) { msg.textContent = 'El total es obligatorio.'; return; }
+  try { await apiPost('/received-invoices', body); }
+  catch (e) { msg.textContent = e.message; return; }
+  msg.textContent = '';
+  hideReview();
+  el('d-msg').textContent = 'Factura recibida registrada y ligada al documento.';
+  renderList();
+}
+
+async function markKind(kind) {
+  if (!reviewDocId) return;
+  try { await apiPost(`/documents/${reviewDocId}/review`, { kind, doc_status: 'revisado' }); }
+  catch (e) { el('r-msg').textContent = e.message; return; }
+  hideReview();
+  renderList();
+}
+
+async function setStatus(id, doc_status) {
+  try { await apiPost(`/documents/${id}/review`, { doc_status }); }
+  catch (e) { el('d-msg').textContent = e.message; return; }
   renderList();
 }
 
@@ -130,6 +316,7 @@ async function toExpense(id, amount) {
   try {
     await apiPost(`/documents/${id}/to-expense`, { amount: amt });
     el('d-msg').textContent = 'Gasto registrado desde el documento.';
+    renderList();
   } catch (e) { el('d-msg').textContent = e.message; }
 }
 

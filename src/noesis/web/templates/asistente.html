@@ -14,6 +14,7 @@
   </div>
 
   <div class="chips" id="chips">
+    <span class="chip" id="ctx-chip" style="display:none">¿Qué significa esta página?</span>
     <span class="chip">¿Qué harías tú ahora con mi negocio?</span>
     <span class="chip">Dame un diagnóstico rápido</span>
     <span class="chip">¿Qué tengo hoy?</span>
@@ -66,7 +67,7 @@ async function send(preset) {
   bubble(text, 'me');
   const typing = bubble('Pensando...', 'bot');
   try {
-    const r = await apiPost('/chat', { message: text });
+    const r = await apiPost('/chat', { message: text, page: PAGE_CTX });
     typing.remove();
     bubble(r.reply, 'bot', r.source);
   } catch(e) {
@@ -80,6 +81,14 @@ async function send(preset) {
 document.getElementById('chips').addEventListener('click', e => {
   if (e.target.classList.contains('chip')) send(e.target.textContent);
 });
+
+/* Contexto de página: si llegas con ?ctx=facturas, el asistente sabe dónde estabas
+   y te lo explica con tus datos reales. */
+const PAGE_CTX = new URLSearchParams(location.search).get('ctx') || null;
+if (PAGE_CTX) {
+  el('ctx-chip').style.display = '';
+  send('¿Qué significa esta página?');
+}
 
 /* --- Nota de voz: graba con el micrófono y la envía al cerebro --- */
 let rec = null, recChunks = [], recTimer = null, recStart = 0;

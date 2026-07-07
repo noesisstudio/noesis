@@ -1457,6 +1457,110 @@ def _downgrade_received_invoices(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS suppliers")
 
 
+def _upgrade_platform_base(conn) -> None:
+    """Catálogo de productos/servicios, CRM de leads, solicitudes de gestoría
+    e idioma preferido del negocio. Todo aislado por business_id."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS products (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    name        TEXT NOT NULL,
+    kind        TEXT NOT NULL DEFAULT 'servicio',
+    price       {t["real"]} NOT NULL DEFAULT 0,
+    cost        {t["real"]},
+    vat_rate    {t["real"]},
+    unit        TEXT,
+    category    TEXT,
+    stock       {t["real"]},
+    stock_alert {t["real"]},
+    active      {t["boolean"]} NOT NULL DEFAULT TRUE,
+    note        TEXT,
+    created_at  {t["timestamp"]} NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_products_business ON products(business_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_products_business_name
+    ON products(business_id, name);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_products_business_id
+    ON products(business_id, id);
+
+CREATE TABLE IF NOT EXISTS leads (
+    id             {t["id"]},
+    business_id    {t["ref"]} NOT NULL REFERENCES businesses(id),
+    name           TEXT NOT NULL,
+    phone          TEXT,
+    email          TEXT,
+    source         TEXT,
+    status         TEXT NOT NULL DEFAULT 'nuevo',
+    value_estimate {t["real"]},
+    note           TEXT,
+    next_action_on TEXT,
+    client_id      {t["ref"]},
+    created_at     {t["timestamp"]} NOT NULL,
+    updated_at     {t["timestamp"]},
+    FOREIGN KEY (business_id, client_id)
+        REFERENCES clients(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_leads_business ON leads(business_id);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(business_id, status);
+
+CREATE TABLE IF NOT EXISTS gestoria_requests (
+    id           {t["id"]},
+    business_id  {t["ref"]} NOT NULL REFERENCES businesses(id),
+    requested_by TEXT NOT NULL DEFAULT 'gestoria',
+    message      TEXT NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'abierta',
+    reply        TEXT,
+    document_id  {t["ref"]},
+    created_at   {t["timestamp"]} NOT NULL,
+    replied_at   {t["timestamp"]},
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_gestoria_requests_business
+    ON gestoria_requests(business_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_business_id
+    ON documents(business_id, id);
+"""
+    )
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger("leads", "client_id", "clients", event))
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "gestoria_requests", "document_id", "documents", event))
+    if "language" not in _column_names(conn, "businesses"):
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN language "
+            "TEXT NOT NULL DEFAULT 'es'"
+        )
+
+
+def _downgrade_platform_base(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute("ALTER TABLE businesses DROP COLUMN IF EXISTS language")
+    else:
+        for event in ("insert", "update"):
+            conn.execute(
+                "DROP TRIGGER IF EXISTS "
+                f"leads_client_id_same_business_{event}")
+            conn.execute(
+                "DROP TRIGGER IF EXISTS "
+                f"gestoria_requests_document_id_same_business_{event}")
+    # SQLite conserva la columna 'language' para evitar reconstruir businesses.
+    conn.execute("DROP INDEX IF EXISTS idx_gestoria_requests_business")
+    conn.execute("DROP TABLE IF EXISTS gestoria_requests")
+    conn.execute("DROP INDEX IF EXISTS idx_leads_status")
+    conn.execute("DROP INDEX IF EXISTS idx_leads_business")
+    conn.execute("DROP TABLE IF EXISTS leads")
+    conn.execute("DROP INDEX IF EXISTS uq_products_business_id")
+    conn.execute("DROP INDEX IF EXISTS uq_products_business_name")
+    conn.execute("DROP INDEX IF EXISTS idx_products_business")
+    conn.execute("DROP TABLE IF EXISTS products")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1476,6 +1580,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (15, "gestoria", _upgrade_gestoria, _downgrade_gestoria),
     (16, "ciclo_webhooks", _upgrade_webhook_lifecycle, _downgrade_webhook_lifecycle),
     (17, "proveedores_recibidas", _upgrade_received_invoices, _downgrade_received_invoices),
+    (18, "plataforma_base", _upgrade_platform_base, _downgrade_platform_base),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
