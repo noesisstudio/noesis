@@ -1322,6 +1322,141 @@ def _downgrade_webhook_lifecycle(conn) -> None:
     # SQLite conserva columnas opcionales para evitar reconstruir la tabla.
 
 
+def _upgrade_received_invoices(conn) -> None:
+    """Proveedores y facturas recibidas, con estados de revisión en documentos.
+
+    El documento apunta a la recibida confirmada (mismo patrón que expense_id):
+    la extracción por IA solo produce borradores; el registro nace al confirmar.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS suppliers (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    name        TEXT NOT NULL,
+    nif         TEXT,
+    email       TEXT,
+    phone       TEXT,
+    note        TEXT,
+    created_at  {t["timestamp"]} NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_suppliers_business ON suppliers(business_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_suppliers_business_id
+    ON suppliers(business_id, id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_suppliers_business_name
+    ON suppliers(business_id, name);
+
+CREATE TABLE IF NOT EXISTS received_invoices (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    supplier_id {t["ref"]},
+    number      TEXT,
+    concept     TEXT,
+    issued_on   TEXT,
+    due_on      TEXT,
+    base        {t["real"]},
+    vat_rate    {t["real"]},
+    vat_amount  {t["real"]},
+    irpf_amount {t["real"]},
+    total       {t["real"]} NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pendiente',
+    category    TEXT,
+    note        TEXT,
+    created_at  {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, supplier_id)
+        REFERENCES suppliers(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_received_business
+    ON received_invoices(business_id);
+CREATE INDEX IF NOT EXISTS idx_received_status
+    ON received_invoices(business_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_received_business_id
+    ON received_invoices(business_id, id);
+"""
+    )
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "received_invoices", "supplier_id", "suppliers", event
+                )
+            )
+
+    columns = _column_names(conn, "documents")
+    # Los documentos históricos ya estaban gestionados: nacen 'revisado'. Los
+    # flujos nuevos de clasificación marcan 'pendiente_revisar' explícitamente.
+    additions = (
+        ("doc_status", "TEXT NOT NULL DEFAULT 'revisado'"),
+        ("confidence", t["real"]),
+        ("reviewed_at", t["timestamp"]),
+        ("review_note", "TEXT"),
+        ("received_invoice_id", t["ref"]),
+    )
+    for column, definition in additions:
+        if column not in columns:
+            conn.execute(
+                f"ALTER TABLE documents ADD COLUMN {column} {definition}"
+            )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_documents_received "
+        "ON documents(business_id, received_invoice_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_documents_status "
+        "ON documents(business_id, doc_status)"
+    )
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE documents ADD CONSTRAINT "
+            "documents_business_received_fk "
+            "FOREIGN KEY (business_id, received_invoice_id) "
+            "REFERENCES received_invoices(business_id, id)"
+        )
+    else:
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "documents", "received_invoice_id", "received_invoices",
+                    event,
+                )
+            )
+
+
+def _downgrade_received_invoices(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE documents DROP CONSTRAINT IF EXISTS "
+            "documents_business_received_fk"
+        )
+        for column in ("received_invoice_id", "review_note", "reviewed_at",
+                       "confidence", "doc_status"):
+            conn.execute(
+                f"ALTER TABLE documents DROP COLUMN IF EXISTS {column}"
+            )
+    else:
+        for event in ("insert", "update"):
+            conn.execute(
+                "DROP TRIGGER IF EXISTS "
+                f"documents_received_invoice_id_same_business_{event}"
+            )
+            conn.execute(
+                "DROP TRIGGER IF EXISTS "
+                f"received_invoices_supplier_id_same_business_{event}"
+            )
+    # SQLite conserva las columnas opcionales para evitar reconstruir documents.
+    conn.execute("DROP INDEX IF EXISTS idx_documents_status")
+    conn.execute("DROP INDEX IF EXISTS idx_documents_received")
+    conn.execute("DROP INDEX IF EXISTS uq_received_business_id")
+    conn.execute("DROP INDEX IF EXISTS idx_received_status")
+    conn.execute("DROP INDEX IF EXISTS idx_received_business")
+    conn.execute("DROP TABLE IF EXISTS received_invoices")
+    conn.execute("DROP INDEX IF EXISTS uq_suppliers_business_name")
+    conn.execute("DROP INDEX IF EXISTS uq_suppliers_business_id")
+    conn.execute("DROP INDEX IF EXISTS idx_suppliers_business")
+    conn.execute("DROP TABLE IF EXISTS suppliers")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1340,6 +1475,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (14, "cerebro_whatsapp", _upgrade_whatsapp_brain, _downgrade_whatsapp_brain),
     (15, "gestoria", _upgrade_gestoria, _downgrade_gestoria),
     (16, "ciclo_webhooks", _upgrade_webhook_lifecycle, _downgrade_webhook_lifecycle),
+    (17, "proveedores_recibidas", _upgrade_received_invoices, _downgrade_received_invoices),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

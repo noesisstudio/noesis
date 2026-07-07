@@ -1,5 +1,17 @@
 # Traspaso: Documentos inteligentes v1 (facturas recibidas + clasificación)
 
+> **ACTUALIZACIÓN 2026-07-07 (Fable, rama `claude/documentos-inteligentes`).**
+> El PR 1 (backend) está **hecho y probado (139 tests verdes)**: migración 17
+> (`suppliers`, `received_invoices`, estados de revisión en `documents`),
+> funciones en `db.py`, `extract_invoice` + `detect_direction` en
+> `adapters/extraction.py` (imagen y PDF), `invoice_draft` /
+> `confirm_received_invoice` en `documents/service.py`, recibidas en el ZIP de
+> gestoría y `tests/test_received_invoices.py` (13 tests).
+> **Queda el PR 2 (UI y rutas)**: endpoints en `server.py` (proponer borrador,
+> confirmar, corregir, listar recibidas/proveedores), vista en
+> `documentos.html`/`costes.html` con captura de cámara, y conexión con la vista
+> Hoy y el asistente. Los criterios de §8 que tocan UI siguen pendientes.
+
 - **De → para:** Fable 5 → Codex (implementación) / Opus (revisión de alcance)
 - **Fecha:** 2026-07-07
 - **Rama:** `codex/documentos-inteligentes` (crear desde `main`)
