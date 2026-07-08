@@ -3563,7 +3563,7 @@ def _product_with_margin(product: dict) -> dict:
 def list_products(business_id, include_inactive: bool = False) -> list[dict]:
     q = "SELECT * FROM products WHERE business_id=?"
     if not include_inactive:
-        q += " AND active IN (TRUE, 1)"
+        q += " AND active=TRUE"
     q += " ORDER BY name"
     with get_conn() as conn:
         rows = conn.execute(q, (business_id,)).fetchall()
@@ -3822,11 +3822,11 @@ def profit_and_loss(business_id, year: int | None = None) -> dict:
     with get_conn() as conn:
         expense_rows = [dict(r) for r in conn.execute(
             "SELECT * FROM expenses WHERE business_id=? "
-            "AND CAST(COALESCE(spent_on, created_at) AS TEXT) LIKE ?",
+            "AND COALESCE(spent_on, CAST(created_at AS TEXT)) LIKE ?",
             (business_id, f"{prefix}%")).fetchall()]
         received_rows = [dict(r) for r in conn.execute(
             "SELECT * FROM received_invoices WHERE business_id=? "
-            "AND CAST(COALESCE(issued_on, created_at) AS TEXT) LIKE ?",
+            "AND COALESCE(issued_on, CAST(created_at AS TEXT)) LIKE ?",
             (business_id, f"{prefix}%")).fetchall()]
 
     revenue = round(sum(inv["base"] for inv in invoices), 2)
@@ -3951,7 +3951,7 @@ def income_by_client(business_id, limit: int = 8) -> list[dict]:
             "FROM invoices i LEFT JOIN clients c ON c.id=i.client_id "
             "AND c.business_id=i.business_id "
             "WHERE i.business_id=? AND i.status IN ('enviada','parcial','cobrada') "
-            "GROUP BY i.client_id ORDER BY total DESC LIMIT ?",
+            "GROUP BY i.client_id, c.name ORDER BY total DESC LIMIT ?",
             (business_id, limit),
         ).fetchall()
         return [dict(r) for r in rows]
