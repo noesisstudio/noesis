@@ -73,3 +73,47 @@ jobs:
               f"La versió actual és {actual}, s'esperava {migrations.LATEST_VERSION}"
           )
           PY
+
+  postgres-smoke:
+    name: Humo contra Postgres
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: noesis
+          POSTGRES_PASSWORD: noesis
+          POSTGRES_DB: noesis_ci
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U noesis"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://noesis:noesis@localhost:5432/noesis_ci
+      NOESIS_SECRET: noesis-ci-secret-fixed-32-characters-minimum
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Instalar el proyecto
+        run: pip install -e .
+
+      - name: Aplicar migraciones en Postgres
+        run: python -m noesis.migrations upgrade
+
+      - name: Ejecutar humo Postgres
+        run: python tests/postgres_smoke.py
