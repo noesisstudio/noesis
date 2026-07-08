@@ -3453,7 +3453,7 @@ def list_received_invoices(business_id, status=None) -> list[dict]:
             raise ValueError("Estado de factura recibida desconocido.")
         q += " AND r.status=?"
         params.append(status)
-    q += " ORDER BY COALESCE(r.issued_on, r.created_at) DESC, r.id DESC"
+    q += " ORDER BY COALESCE(r.issued_on, CAST(r.created_at AS TEXT)) DESC, r.id DESC"
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(q, params).fetchall()]
 
