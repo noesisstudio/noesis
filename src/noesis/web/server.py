@@ -14,34 +14,32 @@ Producción: uvicorn noesis.web.server:app --host 0.0.0.0 --port 8000
 
 from __future__ import annotations
 
-import json
 import os
-import hashlib
-import logging
-import re
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, Query, Request, UploadFile
-from fastapi.responses import (
-    FileResponse,
-    HTMLResponse,
-    JSONResponse,
-    RedirectResponse,
-    Response,
-)
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.concurrency import run_in_threadpool
 
-from .. import config, db, verifactu_client
+from .. import config, db
 from ..adapters import billing as billing_adapter
-from ..adapters import email as email_adapter
-from ..tools import run_tool
-from . import auth, backups, chat, reports, whatsapp
-from .deps import HERE, TEMPLATES, _read_json, auth_guard
-from .routers import account, admin, assistant, clients, documents, finance, gestoria, invoicing, pages, portal, team, webhooks
+from . import auth
+from .deps import HERE, auth_guard
+from .routers import (
+    account,
+    admin,
+    assistant,
+    clients,
+    documents,
+    finance,
+    gestoria,
+    invoicing,
+    pages,
+    portal,
+    team,
+    webhooks,
+)
 from .scheduler import start_scheduler
 
 
@@ -187,7 +185,6 @@ app.include_router(admin.router)
 
 
 def main() -> None:
-    import os
     import uvicorn
     # En local: 127.0.0.1:8000. En producción el host (Railway/Render) inyecta
     # PORT y necesita escuchar en 0.0.0.0.
