@@ -9,6 +9,13 @@ nada. La visión y el contexto completos están en el *vault* de Obsidian: **`do
 > [`docs/Estado-traspaso-MVP.md`](docs/Estado-traspaso-MVP.md): dice qué está hecho,
 > qué hay desplegado, qué falta para el MVP y qué tocar a continuación.
 
+> 🎨 **¿Vas a tocar una pantalla, un texto o el estilo?** Lee antes `docs/design/`:
+> [`PRODUCT_PRINCIPLES.md`](docs/design/PRODUCT_PRINCIPLES.md),
+> [`DESIGN.md`](docs/design/DESIGN.md), [`UX_COPY.md`](docs/design/UX_COPY.md) y
+> [`STYLE_TOKENS.json`](docs/design/STYLE_TOKENS.json). Fijan la dirección visual
+> (Noesis = asistente con carácter que te da el parte del día; **no** un dashboard
+> fintech). No rediseñes ni escribas copy a ciegas.
+
 ---
 
 ## 1. Qué es Noesis
