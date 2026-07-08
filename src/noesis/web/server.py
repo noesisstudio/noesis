@@ -41,6 +41,7 @@ from ..adapters import email as email_adapter
 from ..tools import run_tool
 from . import auth, backups, chat, reports, whatsapp
 from .deps import HERE, TEMPLATES, auth_guard
+from .routers import webhooks
 from .scheduler import start_scheduler
 
 
@@ -192,23 +193,7 @@ def site_page(request: Request):
     })
 
 
-@app.get("/health")
-def health():
-    """Liveness para el proveedor cloud: el proceso HTTP está respondiendo."""
-    return {"status": "ok", "service": "noesis", "version": app.version}
-
-
-@app.get("/ready")
-def readiness():
-    """Readiness: comprueba que el almacenamiento está inicializado y accesible."""
-    try:
-        from .. import migrations
-        ready = migrations.is_current()
-    except db.DatabaseError:
-        ready = False
-    if not ready:
-        return JSONResponse({"status": "not_ready"}, status_code=503)
-    return {"status": "ready"}
+app.include_router(webhooks.router)
 
 
 @app.get("/sw.js")
