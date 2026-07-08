@@ -117,10 +117,13 @@ def page(request: Request, business_id: int, page: str):
         "activation": db.activation_snapshot(business_id),
     }
     if page == "resumen":
+        from .. import chat
+
         layout = db.resolve_panel_layout(biz)
         context["panel_order"] = layout["order"]
         context["panel_hidden"] = layout["hidden"]
         context["panel_blocks"] = db.PANEL_BLOCKS
+        context["briefing"] = chat.daily_briefing(business_id)
     if page == "ajustes" and biz.get("whatsapp_status") != "conectado":
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":

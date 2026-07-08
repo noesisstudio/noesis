@@ -13,26 +13,57 @@
 {% endmacro %}
 
 {% block content %}
-<div class="daily-head">
-  <div class="daily-greet">
-    <div class="avatar" id="hd-ini">··</div>
-    <div>
-      <h1 id="hd-greet">Hola, {{ business.name }}</h1>
-      <div class="date" id="hd-date">—</div>
+<section class="parte" aria-label="El parte de Noesis">
+  <div class="parte-top">
+    <div class="parte-who">
+      <span class="parte-mark"><img src="/static/noesis-mark.svg" alt=""></span>
+      <div>
+        <div class="parte-hello">{{ briefing.greeting }}{% if briefing.name %}, {{ briefing.name }}{% endif %}</div>
+        <div class="parte-date" id="hd-date">—</div>
+      </div>
+    </div>
+    <div class="parte-tools" id="hd-actions">
+      <button type="button" class="pchip" id="btn-personalizar" onclick="panelEdit(true)" title="Personalizar el panel" aria-label="Personalizar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      </button>
+    </div>
+    <div class="parte-tools" id="hd-edit-actions" style="display:none">
+      <button type="button" class="btn sm" onclick="panelCancel()">Cancelar</button>
+      <button type="button" class="btn sm primary" onclick="panelSave()">Guardar</button>
     </div>
   </div>
-  <div class="page-actions" id="hd-actions">
-    <button type="button" class="btn" id="btn-personalizar" onclick="panelEdit(true)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;margin-right:5px;vertical-align:-2px"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Personalizar
-    </button>
-    <a class="btn" href="/b/{{ business.id }}/asistente">Hablar con Noesis</a>
-    <a class="btn primary" href="/b/{{ business.id }}/cobros">Revisar cobros</a>
+
+  <p class="parte-lead">{{ briefing.lead }}</p>
+
+  {% if briefing.tasks %}
+  <ol class="parte-items">
+    {% for it in briefing.tasks %}
+    <li class="parte-item">
+      <div class="pi-text">
+        <div class="pi-do">{{ it.do }}</div>
+        <div class="pi-why">{{ it.why }}</div>
+      </div>
+      <a class="btn sm" href="{{ it.href }}">{{ it.action }}</a>
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  {% if briefing.has_activity %}
+  <div class="parte-money">
+    <span class="pm"><small>Te deben</small><b>{{ briefing.money.pending|eur }}</b></span>
+    <span class="pm"><small>Cobrado</small><b>{{ briefing.money.collected|eur }}</b></span>
+    <span class="pm"><small>Facturado (mes)</small><b>{{ briefing.money.invoiced|eur }}</b></span>
   </div>
-  <div class="page-actions" id="hd-edit-actions" style="display:none">
-    <button type="button" class="btn" onclick="panelCancel()">Cancelar</button>
-    <button type="button" class="btn primary" onclick="panelSave()">Guardar panel</button>
+  {% endif %}
+
+  <div class="parte-cta">
+    <a class="btn primary" href="/b/{{ business.id }}/asistente">Habla con Noesis</a>
+    {% if briefing.visits_today %}
+    <a class="btn" href="/b/{{ business.id }}/agenda">Ver el día ({{ briefing.visits_today }})</a>
+    {% endif %}
   </div>
-</div>
+</section>
 
 {% if activation.progress < 100 %}
 <section class="activation-card" aria-labelledby="activation-title">
@@ -64,22 +95,6 @@
 {% endif %}
 
 <div class="panel-blocks" id="panel-blocks">
-
-<section class="pblock {{ 'pblock-hidden' if 'foco' in panel_hidden }}" data-block="foco" style="order:{{ panel_order.index('foco') }}">
-{{ pbar('foco', 'Lo primero hoy') }}
-<div class="cmd-hero">
-  <div>
-    <div class="ch-kicker">Lo primero hoy</div>
-    <div class="ch-focus" id="ch-focus">Calculando tu prioridad…</div>
-    <a class="ch-btn" id="ch-btn" href="/b/{{ business.id }}/cobros" style="display:none">Ir →</a>
-  </div>
-  <div class="ch-side">
-    <div class="r"><span>Facturado</span><b id="hb-inv">—</b></div>
-    <div class="r"><span>Cobrado</span><b id="hb-col">—</b></div>
-    <div class="r"><span>Pendiente</span><b id="hb-pend">—</b></div>
-  </div>
-</div>
-</section>
 
 <section class="pblock {{ 'pblock-hidden' if 'pulso' in panel_hidden }}" data-block="pulso" style="order:{{ panel_order.index('pulso') }}">
 {{ pbar('pulso', 'Pulso del negocio') }}
@@ -233,30 +248,14 @@ async function panelSave(){
   panelEdit(false);
 }
 
-function initials(name){
-  const w = (name || '').trim().split(/\s+/).filter(Boolean);
-  const a = (w[0] || '·')[0] || '·';
-  const b = (w[1] || '')[0] || '';
-  return (a + b).toUpperCase().slice(0, 2) || '··';
-}
-function greeting(){
-  const h = new Date().getHours();
-  return h < 12 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
-}
 (function head(){
-  const name = {{ business.name|tojson }};
-  el('hd-ini').textContent = initials(name);
-  el('hd-greet').textContent = `${greeting()}, ${name}`;
+  // El saludo y el parte llegan renderizados del servidor; aquí solo la fecha.
   el('hd-date').textContent = new Date().toLocaleDateString('es-ES',
     { weekday:'long', day:'numeric', month:'long' });
 })();
 
 async function load() {
   const s = await api('/summary');
-  el('hb-inv').textContent = eur(s.invoiced);
-  el('hb-col').textContent = eur(s.collected);
-  el('hb-pend').textContent = eur(s.pending_total);
-
   el('s-profit').textContent = eur(s.estimated_profit);
   el('s-pend').textContent = eur(s.pending_total);
   el('s-pend-d').textContent = s.pending_count + ' factura(s) sin cobrar';
@@ -328,17 +327,6 @@ async function load() {
   });
 
   api('/plan').then(plan => {
-    const top = plan[0];
-    if (top) {
-      el('ch-focus').textContent = top.do;
-      const btn = el('ch-btn');
-      if (top.topic && top.topic !== 'orden') {
-        btn.style.display = 'inline-flex';
-        btn.textContent = 'Ver ' + top.topic + ' →';
-        btn.href = '/b/{{ business.id }}/' + top.topic;
-        btn.onclick = () => { if (top.id) { try { apiPost('/recommendations/'+top.id+'/status', {status:'aceptado'}); } catch(e){} } };
-      }
-    }
     el('plan').innerHTML = plan.slice(0, 4).map((p, i) => `<li id="rec-${p.id || ('x'+i)}">
       <span class="pl-n">${i + 1}</span>
       <div style="flex:1;min-width:0">
