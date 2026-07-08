@@ -3,12 +3,78 @@ de gestoría, idioma, P&G honesto y plan diario ampliado."""
 
 from __future__ import annotations
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
 
 from noesis import config, db, migrations
 from noesis.web import chat
+
+
+class _RecordingPGConn:
+    """Conexión falsa con dialecto Postgres: registra las sentencias en el mismo
+    orden en que las enviaría db.Connection (split de executescript por ';')."""
+
+    dialect = "postgres"
+
+    def __init__(self):
+        self.statements: list[str] = []
+
+    def execute(self, sql, params=()):
+        self.statements.append(sql.strip())
+        return self
+
+    def executescript(self, script):
+        for statement in script.split(";"):
+            if statement.strip():
+                self.statements.append(statement.strip())
+
+    def fetchone(self):
+        return None
+
+    def fetchall(self):
+        return []
+
+
+class PostgresDDLOrderTest(unittest.TestCase):
+    """Guarda contra un bug que SQLite NO detecta: en Postgres una FK compuesta
+    exige que la columna referida ya tenga índice único al crearse la FK. Este
+    test simula el orden de sentencias del dialecto Postgres y lo comprueba."""
+
+    # Uniques compuestos que ya existen del esquema inicial y migraciones previas.
+    PREEXISTING = {("clients", ("business_id", "id")),
+                   ("invoices", ("business_id", "id")),
+                   ("expenses", ("business_id", "id")),
+                   ("businesses", ("id",))}
+
+    def test_composite_fks_have_unique_index_first(self):
+        original = migrations._column_names
+        migrations._column_names = lambda conn, table: []
+        try:
+            uniques = set(self.PREEXISTING)
+            for version, name, upgrade, _down in migrations.MIGRATIONS:
+                if version < 17:  # capa plataforma (los previos ya están en prod)
+                    continue
+                conn = _RecordingPGConn()
+                upgrade(conn)
+                for stmt in conn.statements:
+                    mu = re.search(
+                        r"UNIQUE INDEX (?:IF NOT EXISTS )?\w+\s+ON (\w+)\((.*?)\)",
+                        stmt)
+                    if mu:
+                        cols = tuple(c.strip() for c in mu.group(2).split(","))
+                        uniques.add((mu.group(1), cols))
+                    for m in re.finditer(r"REFERENCES (\w+)\((.*?)\)", stmt):
+                        cols = tuple(c.strip() for c in m.group(2).split(","))
+                        if len(cols) == 2:
+                            self.assertIn(
+                                (m.group(1), cols), uniques,
+                                f"Migración {version} ({name}): FK compuesta a "
+                                f"{m.group(1)}{cols} sin índice único previo "
+                                "(fallaría en Postgres).")
+        finally:
+            migrations._column_names = original
 
 
 class PlatformTestCase(unittest.TestCase):
