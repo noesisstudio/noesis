@@ -44,14 +44,14 @@
       {% set g_tesoreria = ['tesoreria', 'analisis', 'ingresos', 'costes'] %}
       {% set g_facturacion = ['facturas', 'presupuestos', 'cobros', 'impuestos'] %}
       {% set g_ventas = ['clientes', 'crm', 'productos'] %}
-      <a class="nav-item {{ 'active' if active=='resumen' }}" href="/b/{{ b }}/resumen"><span class="ic">{{ ic('resumen') }}</span> Resumen</a>
+      <a class="nav-item {{ 'active' if active=='resumen' }}" href="/b/{{ b }}/resumen"><span class="ic">{{ ic('resumen') }}</span> Inicio</a>
       <div class="section-label">Negocio</div>
-      <a class="nav-item {{ 'active' if active in g_tesoreria }}" href="/b/{{ b }}/tesoreria"><span class="ic">{{ ic('tesoreria') }}</span> Tesorería</a>
-      <a class="nav-item {{ 'active' if active in g_facturacion }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturación</a>
+      <a class="nav-item {{ 'active' if active in g_tesoreria }}" href="/b/{{ b }}/tesoreria"><span class="ic">{{ ic('tesoreria') }}</span> Dinero</a>
+      <a class="nav-item {{ 'active' if active in g_facturacion }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturas</a>
       <div class="section-label">Operativa</div>
       <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Agenda</a>
       <a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>
-      <a class="nav-item {{ 'active' if active in g_ventas }}" href="/b/{{ b }}/clientes"><span class="ic">{{ ic('clientes') }}</span> Ventas</a>
+      <a class="nav-item {{ 'active' if active in g_ventas }}" href="/b/{{ b }}/clientes"><span class="ic">{{ ic('clientes') }}</span> Clientes</a>
       <a class="nav-item {{ 'active' if active=='documentos' }}" href="/b/{{ b }}/documentos"><span class="ic">{{ ic('documentos') }}</span> Documentos</a>
       <div class="section-label">Noesis</div>
       <a class="nav-item {{ 'active' if active=='asistente' }}" href="/b/{{ b }}/asistente"><span class="ic">{{ ic('asistente') }}</span> Asistente</a>
@@ -112,8 +112,8 @@
       </div>
     </div>
     {% if active in g_tesoreria %}
-    <div class="subnav" role="tablist" aria-label="Secciones de Tesorería">
-      <a class="{{ 'active' if active=='tesoreria' }}" href="/b/{{ b }}/tesoreria">Tesorería</a>
+    <div class="subnav" role="tablist" aria-label="Secciones de Dinero">
+      <a class="{{ 'active' if active=='tesoreria' }}" href="/b/{{ b }}/tesoreria">Caja</a>
       <a class="{{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis">Análisis</a>
       <a class="{{ 'active' if active=='ingresos' }}" href="/b/{{ b }}/ingresos">Ingresos</a>
       <a class="{{ 'active' if active=='costes' }}" href="/b/{{ b }}/costes">Costes</a>
@@ -147,7 +147,7 @@
 <!-- Barra inferior (solo móvil): los 4 sitios del día a día + crear. -->
 <nav class="bottom-nav" aria-label="Navegación rápida">
   <a class="bn-item {{ 'active' if active=='resumen' }}" href="/b/{{ business.id }}/resumen">
-    <span class="ic">{{ ic('resumen') }}</span>Resumen</a>
+    <span class="ic">{{ ic('resumen') }}</span>Inicio</a>
   <a class="bn-item {{ 'active' if active=='agenda' }}" href="/b/{{ business.id }}/agenda">
     <span class="ic">{{ ic('agenda') }}</span>Agenda</a>
   <button class="bn-create" type="button" aria-label="Crear" onclick="qcSheet()">

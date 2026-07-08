@@ -13,7 +13,7 @@ from ..deps import HERE, TEMPLATES
 router = APIRouter()
 
 _PAGES = {
-    "resumen": "Resumen", "tesoreria": "Tesorería", "analisis": "Análisis",
+    "resumen": "Inicio", "tesoreria": "Tesorería", "analisis": "Análisis",
     "ingresos": "Ingresos", "costes": "Costes", "presupuestos": "Presupuestos",
     "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
     "agenda": "Agenda", "equipo": "Equipo", "clientes": "Clientes",
