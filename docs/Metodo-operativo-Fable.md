@@ -8,7 +8,13 @@
 > lee [`AGENTS.md`](../AGENTS.md) y este.
 >
 > Se actualiza cuando cambia el criterio general (ver §9, protocolo de continuidad).
-> Última actualización: **2026-07-07**.
+> Última actualización: **2026-07-08**.
+>
+> **Dirección de producto y diseño (fijada 2026-07-08):** la piel y el lenguaje de
+> Noesis se rigen por `docs/design/` — [`PRODUCT_PRINCIPLES.md`](design/PRODUCT_PRINCIPLES.md)
+> (la frase pilar, el modelo mente/cuerpo y las seis leyes), [`DESIGN.md`](design/DESIGN.md),
+> [`UX_COPY.md`](design/UX_COPY.md) y [`STYLE_TOKENS.json`](design/STYLE_TOKENS.json).
+> Antes de tocar cualquier pantalla o copy, léelos.
 
 ---
 
