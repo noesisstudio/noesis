@@ -3,7 +3,9 @@ __pycache__/
 *.pyc
 .env
 noesis.db
+noesis-demo.db
 /uploads/
+/uploads-demo/
 .db_reset_done
 *.egg-info/
 build/

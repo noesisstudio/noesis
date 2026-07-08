@@ -207,9 +207,10 @@ Codex ejecuta sin desviarse de la arquitectura. Reglas de trabajo:
 - **Antes de tocar código**: leer `AGENTS.md`, [[Estado-traspaso-MVP]] y la tarea
   con sus criterios de aceptación. Verificar rama (`codex/<tarea>`), nunca `main`.
 - **Qué existe y dónde** (mapa completo en [[Estado-traspaso-MVP]] §2): rutas en
-  `web/server.py` (~70, pendiente de partir en routers), datos en `db.py` +
-  `migrations.py` (esquema v16), documentos en `documents/`, IA en `agent.py` /
-  `nlu.py` / `web/chat.py`, adaptadores en `adapters/`.
+  `web/server.py` (2.597 líneas, 145 rutas — pendiente de partir en routers, ver
+  el handoff `docs/handoffs/2026-07-08-partir-server-en-routers.md`), datos en
+  `db.py` + `migrations.py` (esquema v18), documentos en `documents/`, IA en
+  `agent.py` / `nlu.py` / `web/chat.py`, adaptadores en `adapters/`.
 - **Qué NO tocar sin tarea explícita**: tablas append-only (`invoice_records`,
   `worker_clockins`, eventos Verifactu), `web/auth.py`, la cadena de huellas de
   `verifactu.py`, y cualquier `DROP`/renombrado de columnas.
