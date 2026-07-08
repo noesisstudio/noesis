@@ -3453,7 +3453,9 @@ def list_received_invoices(business_id, status=None) -> list[dict]:
             raise ValueError("Estado de factura recibida desconocido.")
         q += " AND r.status=?"
         params.append(status)
-    q += " ORDER BY COALESCE(r.issued_on, r.created_at) DESC, r.id DESC"
+    # issued_on es TEXT y created_at es timestamp: en Postgres COALESCE exige el
+    # mismo tipo, así que casteamos created_at a texto (en SQLite es indiferente).
+    q += " ORDER BY COALESCE(r.issued_on, CAST(r.created_at AS TEXT)) DESC, r.id DESC"
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(q, params).fetchall()]
 
@@ -3826,7 +3828,7 @@ def profit_and_loss(business_id, year: int | None = None) -> dict:
             (business_id, f"{prefix}%")).fetchall()]
         received_rows = [dict(r) for r in conn.execute(
             "SELECT * FROM received_invoices WHERE business_id=? "
-            "AND CAST(COALESCE(issued_on, created_at) AS TEXT) LIKE ?",
+            "AND COALESCE(issued_on, CAST(created_at AS TEXT)) LIKE ?",
             (business_id, f"{prefix}%")).fetchall()]
 
     revenue = round(sum(inv["base"] for inv in invoices), 2)
