@@ -177,6 +177,23 @@ def _greeting(hour: int) -> str:
 
 
 def daily_briefing(business_id: int) -> dict:
+    """El 'parte' del día, resiliente: si algo falla al leer el negocio, el Home NO
+    se cae — devuelve un parte mínimo y honesto y el detalle sigue debajo. La lógica
+    real vive en `_compose_briefing`."""
+    try:
+        return _compose_briefing(business_id)
+    except Exception:  # noqa: BLE001 — el parte jamás debe tumbar la página esencial
+        log.exception("daily_briefing falló para el negocio %s", business_id)
+        return {
+            "greeting": _greeting(datetime.now().hour), "name": "",
+            "lead": ("Aquí tienes tu negocio. No he podido preparar el parte del día "
+                     "ahora mismo; tienes el detalle más abajo."),
+            "on_track": False, "has_activity": False, "visits_today": 0,
+            "tasks": [], "money": {"invoiced": 0, "collected": 0, "pending": 0},
+        }
+
+
+def _compose_briefing(business_id: int) -> dict:
     """El 'parte' del día, en primera persona: Noesis ha revisado el negocio y dice
     lo importante, con su acción al lado. Reutiliza el mismo cerebro que el plan y el
     asistente. NUNCA inventa: si no hay nada que ordenar, lo dice con honestidad."""
