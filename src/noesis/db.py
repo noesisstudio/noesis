@@ -3822,11 +3822,11 @@ def profit_and_loss(business_id, year: int | None = None) -> dict:
     with get_conn() as conn:
         expense_rows = [dict(r) for r in conn.execute(
             "SELECT * FROM expenses WHERE business_id=? "
-            "AND COALESCE(spent_on, CAST(created_at AS TEXT)) LIKE ?",
+            "AND COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
             (business_id, f"{prefix}%")).fetchall()]
         received_rows = [dict(r) for r in conn.execute(
             "SELECT * FROM received_invoices WHERE business_id=? "
-            "AND COALESCE(issued_on, CAST(created_at AS TEXT)) LIKE ?",
+            "AND COALESCE(CAST(issued_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
             (business_id, f"{prefix}%")).fetchall()]
 
     revenue = round(sum(inv["base"] for inv in invoices), 2)
