@@ -22,7 +22,6 @@ import re
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import (
@@ -33,7 +32,6 @@ from fastapi.responses import (
     Response,
 )
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.concurrency import run_in_threadpool
 
@@ -42,38 +40,9 @@ from ..adapters import billing as billing_adapter
 from ..adapters import email as email_adapter
 from ..tools import run_tool
 from . import auth, backups, chat, reports, whatsapp
+from .deps import HERE, TEMPLATES, auth_guard
 from .scheduler import start_scheduler
 
-HERE = Path(__file__).parent
-TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
-
-
-def _asset_version() -> str:
-    """Versión de los assets a partir de su fecha de modificación, para romper la
-    caché del navegador automáticamente cada vez que cambian CSS/JS (clave en
-    producción: si no, los usuarios verían estilos viejos tras un despliegue)."""
-    paths = [HERE / "static" / "app.css", HERE / "static" / "app.js"]
-    try:
-        return str(int(max(p.stat().st_mtime for p in paths if p.exists())))
-    except ValueError:
-        return "1"
-
-
-# Disponible en todas las plantillas como {{ asset_v }}.
-TEMPLATES.env.globals["asset_v"] = _asset_version()
-
-
-def _eur(value) -> str:
-    """Formato de dinero en español (1.234,56 €) para las plantillas."""
-    try:
-        n = float(value or 0)
-    except (TypeError, ValueError):
-        n = 0.0
-    return f"{n:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
-
-
-# Disponible en plantillas como {{ importe | eur }}.
-TEMPLATES.env.filters["eur"] = _eur
 
 @asynccontextmanager
 async def lifespan(app: "FastAPI"):
@@ -89,51 +58,7 @@ app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 # --- Guardia de seguridad: protege /b/ y /api/ y comprueba que el usuario sea
 #     dueño del negocio que pide (aislamiento entre clientes). Se define ANTES de
 #     añadir SessionMiddleware para que éste quede por fuera y la sesión exista aquí.
-@app.middleware("http")
-async def auth_guard(request: Request, call_next):
-    path = request.url.path
-    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and not path.startswith(
-        "/webhook/"
-    ):
-        origin = request.headers.get("origin")
-        fetch_site = request.headers.get("sec-fetch-site", "")
-        if fetch_site == "cross-site":
-            return JSONResponse({"error": "petición cross-site rechazada"}, status_code=403)
-        if origin:
-            origin_url = urlsplit(origin)
-            if origin_url.netloc.lower() != request.headers.get("host", "").lower():
-                return JSONResponse({"error": "origen no autorizado"}, status_code=403)
-
-    if path.startswith("/b/") or path.startswith("/api/"):
-        user = auth.current_user(request)
-        if not user:
-            request.session.clear()
-            if path.startswith("/api/"):
-                return JSONResponse({"error": "no autenticado"}, status_code=401)
-            return RedirectResponse("/login")
-        parts = path.split("/")
-        try:
-            wanted = int(parts[2])
-        except (IndexError, ValueError):
-            wanted = None
-        own_business_id = user["business_id"]
-        if wanted is not None and own_business_id != wanted:
-            if path.startswith("/api/"):
-                return JSONResponse({"error": "no autorizado"}, status_code=403)
-            return RedirectResponse(f"/b/{own_business_id}/resumen")
-        business = db.get_business(own_business_id)
-        allowed_when_blocked = (
-            path.startswith(f"/b/{own_business_id}/suscripcion")
-            or path == f"/b/{own_business_id}/account/delete"
-            or path == f"/api/{own_business_id}/export"
-        )
-        if not db.subscription_allows_access(business) and not allowed_when_blocked:
-            if path.startswith("/api/"):
-                return JSONResponse(
-                    {"error": "La suscripción no está activa."}, status_code=402
-                )
-            return RedirectResponse(f"/b/{own_business_id}/suscripcion?status=required")
-    return await call_next(request)
+app.middleware("http")(auth_guard)
 
 
 app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY,
