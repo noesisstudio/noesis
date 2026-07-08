@@ -1258,6 +1258,28 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   color:var(--brand); box-shadow:var(--shadow-sm); }
 @media (max-width:820px) { .subnav { padding:10px 18px 0; } }
 
+/* ============ Línea de parte de Noesis (cabecera de cada pantalla) ============
+   Noesis te lee la pantalla en su voz (serif). Discreta pero siempre presente:
+   "la mente" está en todas las páginas, no solo en el Home. */
+.page-note {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--brand-soft);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.page-note .pn-mark {
+  width: 30px; height: 30px; border-radius: 9px; background: var(--brand);
+  display: grid; place-items: center; flex: none;
+}
+.page-note .pn-mark img { width: 18px; height: 18px; }
+.page-note p {
+  margin: 0; font-family: var(--serif); font-size: 15px; line-height: 1.45;
+  color: var(--brand-ink);
+}
+@media (max-width: 600px) { .page-note p { font-size: 14px; } }
+
 /* ===================== El parte de Noesis (Home) =====================
    "La app no es un tablero que lees; es un parte que recibes." Noesis, como
    figura con carácter, te habla en primera persona (serif = su voz). Ver

@@ -133,6 +133,12 @@
     </div>
     {% endif %}
     <div class="content">
+      {% if page_note %}
+      <div class="page-note">
+        <span class="pn-mark"><img src="/static/noesis-mark.svg" alt=""></span>
+        <p>{{ page_note }}</p>
+      </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </div>
   </div>

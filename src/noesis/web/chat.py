@@ -354,6 +354,52 @@ def page_briefing(business_id: int, page: str) -> str | None:
     return "\n\n".join(lines)
 
 
+def page_note(business_id: int, page: str) -> str | None:
+    """La voz de Noesis en la cabecera de cada pantalla: UNA línea con un dato real
+    del negocio, en primera persona. Resiliente (nunca tumba la página) y honesta
+    (si no hay nada, lo dice). Devuelve None en el Home (ya tiene su parte) y en
+    páginas sin lectura útil."""
+    if page == "resumen" or page not in _PAGE_HINTS:
+        return None
+    try:
+        state = _business_state(business_id)
+    except Exception:  # noqa: BLE001 — una cabecera nunca puede tumbar la pantalla
+        log.exception("page_note falló para %s en %s", page, business_id)
+        return None
+    if page in {"cobros", "tesoreria"}:
+        pend = sum(p["total"] for p in state["pending"])
+        if pend:
+            late = len(state["late"])
+            return (f"Te deben {_eur(pend)}"
+                    + (f", y {late} llevan más de una semana fuera de caja. "
+                       "Yo empezaría por esos." if late else ". Vas bastante al día."))
+        return "Ahora mismo no te deben nada. Caja limpia."
+    if page == "documentos":
+        bits = []
+        if state["docs_pending"]:
+            bits.append(f"{len(state['docs_pending'])} documento(s) por revisar")
+        if state["gestoria_open"]:
+            bits.append(f"{len(state['gestoria_open'])} solicitud(es) de tu gestoría")
+        return ("Tienes " + " y ".join(bits) + "." if bits
+                else "Todo al día por aquí. Sube una foto y yo la clasifico.")
+    if page == "costes":
+        rec = state["received_pending"]
+        if rec:
+            total = sum(r["total"] for r in rec)
+            return f"Hay {len(rec)} factura(s) de proveedor por pagar ({_eur(total)})."
+        return "Aquí controlas dónde se va el dinero. Sube un ticket y lo registro."
+    if page == "crm":
+        due = len(state["leads_due"])
+        return (f"Hoy toca seguir a {due} posible(s) cliente(s); en frío se enfrían."
+                if due else "Sin seguimientos vencidos. Apunta a quien te pida precio.")
+    if page in {"facturas", "presupuestos"} and state["quotes_sent"]:
+        q = state["quotes_sent"]
+        total = sum(x["total"] for x in q)
+        return (f"{len(q)} presupuesto(s) enviados esperan respuesta "
+                f"({_eur(total)} en juego). Un recordatorio a tiempo convierte.")
+    return f"Aquí tienes {_PAGE_HINTS[page]}."
+
+
 def handle(business_id: int, message: str, page: str | None = None) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
     if page and any(x in norm for x in (
