@@ -40,7 +40,7 @@ from ..adapters import billing as billing_adapter
 from ..adapters import email as email_adapter
 from ..tools import run_tool
 from . import auth, backups, chat, reports, whatsapp
-from .deps import HERE, TEMPLATES, auth_guard
+from .deps import HERE, TEMPLATES, _read_json, auth_guard
 from .routers import webhooks
 from .scheduler import start_scheduler
 
@@ -629,27 +629,6 @@ def page(request: Request, business_id: int, page: str):
 
 
 # ================================================================= API ====== #
-async def _read_json(request: Request) -> dict:
-    declared = request.headers.get("content-length")
-    if declared:
-        try:
-            declared_size = int(declared)
-        except ValueError as exc:
-            raise ValueError("Content-Length no es válido.") from exc
-        if declared_size > config.MAX_JSON_BYTES:
-            raise ValueError("La petición es demasiado grande.")
-    raw = await request.body()
-    if len(raw) > config.MAX_JSON_BYTES:
-        raise ValueError("La petición es demasiado grande.")
-    try:
-        data = json.loads(raw or b"{}")
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise ValueError("El JSON no es válido.") from exc
-    if not isinstance(data, dict):
-        raise ValueError("El cuerpo debe ser un objeto JSON.")
-    return data
-
-
 @app.get("/api/{business_id}/summary")
 def api_summary(business_id: int):
     m = db.month_billing(business_id=business_id)

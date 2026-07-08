@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -106,3 +107,24 @@ async def auth_guard(request: Request, call_next):
                 )
             return RedirectResponse(f"/b/{own_business_id}/suscripcion?status=required")
     return await call_next(request)
+
+
+async def _read_json(request: Request) -> dict:
+    declared = request.headers.get("content-length")
+    if declared:
+        try:
+            declared_size = int(declared)
+        except ValueError as exc:
+            raise ValueError("Content-Length no es válido.") from exc
+        if declared_size > config.MAX_JSON_BYTES:
+            raise ValueError("La petición es demasiado grande.")
+    raw = await request.body()
+    if len(raw) > config.MAX_JSON_BYTES:
+        raise ValueError("La petición es demasiado grande.")
+    try:
+        data = json.loads(raw or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError("El JSON no es válido.") from exc
+    if not isinstance(data, dict):
+        raise ValueError("El cuerpo debe ser un objeto JSON.")
+    return data
