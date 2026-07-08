@@ -1505,6 +1505,11 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE INDEX IF NOT EXISTS idx_leads_business ON leads(business_id);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(business_id, status);
 
+-- El índice único DEBE existir antes de que gestoria_requests lo referencie:
+-- Postgres exige un unique constraint en la columna referida al crear la FK.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_business_id
+    ON documents(business_id, id);
+
 CREATE TABLE IF NOT EXISTS gestoria_requests (
     id           {t["id"]},
     business_id  {t["ref"]} NOT NULL REFERENCES businesses(id),
@@ -1520,8 +1525,6 @@ CREATE TABLE IF NOT EXISTS gestoria_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_gestoria_requests_business
     ON gestoria_requests(business_id, status);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_business_id
-    ON documents(business_id, id);
 """
     )
     if conn.dialect == "sqlite":
