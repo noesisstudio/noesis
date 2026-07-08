@@ -240,6 +240,23 @@ class PlatformTestCase(unittest.TestCase):
         self.assertTrue(crm[0]["action"])
         self.assertNotIn("Aún no tengo nada", b["lead"])
 
+    def test_daily_briefing_never_crashes_the_home(self):
+        # Si al leer el negocio algo falla (p. ej. una consulta que solo peta en
+        # Postgres), el parte devuelve un mínimo honesto en vez de tumbar el Home.
+        original = chat._compose_briefing
+
+        def boom(_business_id):
+            raise RuntimeError("fallo simulado de lectura")
+
+        chat._compose_briefing = boom
+        try:
+            b = chat.daily_briefing(self.bid)
+        finally:
+            chat._compose_briefing = original
+        self.assertEqual(b["tasks"], [])
+        self.assertIn("greeting", b)
+        self.assertIn("No he podido preparar", b["lead"])
+
     # -------------------------------------------------------- RGPD y migración
     def test_export_and_cascade_cover_new_tables(self):
         db.add_product("Hora", price=40, business_id=self.bid)
