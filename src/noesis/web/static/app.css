@@ -1,15 +1,16 @@
-/* build-marker: cobra-datos-pago */
+/* build-marker: parte-noesis-calido */
 /* ==========================================================================
    Noesis — sistema de diseño (hecho a mano, sin frameworks externos).
    Estética: profesional, minimalista cálida, mucho aire, jerarquía clara.
    ========================================================================== */
 :root {
-  /* Paleta Noesis: verde bosque de marca sobre un lienzo fintech frío y limpio. */
-  --bg: #f5f6f8;
+  /* Paleta Noesis: verde bosque de marca sobre un lienzo CÁLIDO (crema). No es
+     una fintech: es un asistente. Ver docs/design/DESIGN.md §6. */
+  --bg: #f4f1e8;
   --surface: #ffffff;
-  --surface-2: #f6f7f9;
-  --border: #e7e9ee;
-  --border-strong: #d9dce3;
+  --surface-2: #faf7f0;
+  --border: #e8e3d6;
+  --border-strong: #dcd6c6;
   --text: #15211c;
   --muted: #5d6b66;
   --faint: #98a0a6;
@@ -872,10 +873,10 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
    Tabler/Linear/Stripe: hairlines limpios, sombra mínima, tipografía confiada.
    ========================================================================== */
 :root {
-  --border: #e8eaf0;
-  --border-strong: #dde0e7;
-  --shadow-sm: 0 1px 2px rgba(18,28,23,.035);
-  --shadow: 0 1px 3px rgba(18,28,23,.05), 0 6px 16px rgba(18,28,23,.04);
+  --border: #e8e3d6;         /* hairlines cálidos, a juego con el lienzo crema */
+  --border-strong: #dcd6c6;
+  --shadow-sm: 0 1px 2px rgba(60,50,25,.035);
+  --shadow: 0 1px 3px rgba(60,50,25,.05), 0 6px 16px rgba(60,50,25,.04);
 }
 body { font-size: 14px; }
 
