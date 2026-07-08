@@ -16,8 +16,8 @@
 <div class="grid g4">
   <div class="stat"><div class="lbl">Beneficio neto</div><div class="val" id="k-profit">—</div><div class="delta flat" id="k-margin-sub">ingresos menos gastos (histórico)</div></div>
   <div class="stat"><div class="lbl">Margen neto <span class="dot-help" title="Beneficio sobre lo facturado">?</span></div><div class="val" id="k-margin">—</div><div class="delta flat">de cada euro facturado</div></div>
-  <div class="stat"><div class="lbl">Solvencia operativa</div><div class="val" id="k-solv">—</div><div class="delta flat">la caja cobrada cubre gastos</div></div>
-  <div class="stat"><div class="lbl">Días de cobro (DSO)</div><div class="val" id="k-dso">—</div><div class="delta flat">lo que tardas de media</div></div>
+  <div class="stat"><div class="lbl">Colchón de caja</div><div class="val" id="k-solv">—</div><div class="delta flat">la caja cobrada cubre tus gastos</div></div>
+  <div class="stat"><div class="lbl">Días en cobrar</div><div class="val" id="k-dso">—</div><div class="delta flat">lo que tardas de media en cobrar</div></div>
 </div>
 
 <div class="split" style="margin-top:16px">
@@ -28,9 +28,9 @@
   <div class="card">
     <div class="card-h"><h2>Posición de IVA</h2><span class="hint">estimada</span></div>
     <div class="card-b">
-      <div class="lrow"><span>IVA repercutido (cobras)</span><b class="num" id="v-rep">—</b></div>
-      <div class="lrow"><span>IVA soportado (pagas)</span><b class="num" id="v-sop">—</b></div>
-      <div class="lrow"><span><b>A liquidar con Hacienda</b></span><b class="num" id="v-liq">—</b></div>
+      <div class="lrow"><span>IVA que cobras</span><b class="num" id="v-rep">—</b></div>
+      <div class="lrow"><span>IVA que pagas</span><b class="num" id="v-sop">—</b></div>
+      <div class="lrow"><span><b>Lo que le darás a Hacienda</b></span><b class="num" id="v-liq">—</b></div>
       <div class="insight" style="margin-top:14px">
         Aparta este importe en cuanto cobras. Es dinero de Hacienda, no beneficio tuyo.
       </div>
@@ -92,7 +92,7 @@ async function loadPnl() {
     row(`Ingresos ${p.year} (base, ${p.invoice_count} factura(s))`, fmt(p.revenue)) +
     row(`Gastos ${p.year} (base, ${p.expense_count} apunte(s))`, fmt(p.costs)) +
     row('Resultado bruto', fmt(p.gross_result), true) +
-    row('EBITDA estimado', fmt(p.ebitda_estimate), true) +
+    row('Lo que gana el negocio (EBITDA)', fmt(p.ebitda_estimate), true) +
     row('Margen sobre ingresos', p.margin_pct === null ? 'datos insuficientes' : p.margin_pct + '%');
   el('pnl-missing').innerHTML = '<b>Para leerlo bien:</b><br>' +
     p.missing.map(m => '· ' + m).join('<br>');
@@ -140,7 +140,7 @@ async function load() {
     : a.margen_pct>=10 ? 'Margen ajustado. Revisa precios o gastos para ganar holgura.'
     : 'Margen bajo: estás trabajando mucho para quedarte poco. Sube precios o recorta gastos.'));
 
-  rows.push(ratioRow('Peso de gastos', a.ratio_gasto+'%', band(a.ratio_gasto,50,70,true),
+  rows.push(ratioRow('Cuánto se te va en gastos', a.ratio_gasto+'%', band(a.ratio_gasto,50,70,true),
     a.ratio_gasto<=50 ? 'Estructura de costes ligera. Buen control del gasto.'
     : a.ratio_gasto<=70 ? 'Los gastos empiezan a pesar. Vigila material y desplazamientos.'
     : 'Los gastos se comen lo facturado. Aquí está tu mayor palanca de mejora.'));
@@ -150,17 +150,17 @@ async function load() {
     : a.cobro_pct>=60 ? 'Cobras la mayoría, pero queda dinero en la calle. Aprieta el seguimiento.'
     : 'Facturas mucho más de lo que cobras. El riesgo no es vender, es cobrar.'));
 
-  rows.push(ratioRow('Días de cobro (DSO)', a.dso+' días', band(a.dso,15,45,true),
+  rows.push(ratioRow('Días que tardas en cobrar', a.dso+' días', band(a.dso,15,45,true),
     a.dso<=15 ? 'Cobras rápido. Tu caja respira.'
     : a.dso<=45 ? 'Plazos razonables, pero acórtalos: pide por adelantado o a 15 días.'
     : 'Tardas demasiado en cobrar. Eso es financiar gratis a tus clientes.'));
 
-  rows.push(ratioRow('Morosidad (>30 días)', a.morosidad_pct+'%', band(a.morosidad_pct,5,15,true),
-    a.morosidad_pct<=5 ? 'Morosidad mínima. Sigue reclamando temprano.'
+  rows.push(ratioRow('Clientes que se retrasan (+30 días)', a.morosidad_pct+'%', band(a.morosidad_pct,5,15,true),
+    a.morosidad_pct<=5 ? 'Casi nadie te deja a deber. Sigue reclamando temprano.'
     : a.morosidad_pct<=15 ? 'Hay facturas envejeciendo. Reclama las de más de 30 días esta semana.'
-    : 'Morosidad alta: '+eur(a.morosidad)+' atascados. Prioriza recuperarlos antes de vender más.'));
+    : 'Se te acumulan retrasos: '+eur(a.morosidad)+' atascados. Recupéralos antes de vender más.'));
 
-  rows.push(ratioRow('Solvencia operativa', a.solvencia==null?'—':a.solvencia+'×', a.solvencia==null?'ok':band(a.solvencia,1.5,1),
+  rows.push(ratioRow('Colchón de caja', a.solvencia==null?'—':a.solvencia+'×', a.solvencia==null?'ok':band(a.solvencia,1.5,1),
     a.solvencia==null ? 'Aún sin gastos registrados para medir solvencia.'
     : a.solvencia>=1.5 ? 'La caja cobrada cubre de sobra tus gastos. Posición cómoda.'
     : a.solvencia>=1 ? 'Cubres los gastos, pero con poco margen. Cuida la liquidez.'
