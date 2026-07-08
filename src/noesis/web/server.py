@@ -41,7 +41,7 @@ from ..adapters import email as email_adapter
 from ..tools import run_tool
 from . import auth, backups, chat, reports, whatsapp
 from .deps import HERE, TEMPLATES, _read_json, auth_guard
-from .routers import assistant, clients, documents, finance, gestoria, invoicing, pages, portal, team, webhooks
+from .routers import admin, assistant, clients, documents, finance, gestoria, invoicing, pages, portal, team, webhooks
 from .scheduler import start_scheduler
 
 
@@ -677,38 +677,7 @@ def _apply_stripe_event(event: dict) -> None:
 
 
 # ========================================================= ADMIN (fundador) = #
-def _is_admin(request: Request) -> bool:
-    user = auth.current_user(request)
-    if not user:
-        return False
-    if user.get("is_admin"):
-        return True
-    return bool(config.ADMIN_EMAIL) and user["email"].lower() == config.ADMIN_EMAIL
-
-
-@app.get("/admin", response_class=HTMLResponse)
-def admin_panel(request: Request):
-    if not _is_admin(request):
-        return RedirectResponse("/login", status_code=303)
-    data = db.admin_overview()
-    data["backup"] = backups.admin_backup_status()
-    return TEMPLATES.TemplateResponse(request, "admin.html",
-                                      {"data": data})
-
-
-@app.get("/admin/backups/latest")
-def admin_download_latest_backup(request: Request):
-    if not _is_admin(request):
-        return Response("No autorizado.", status_code=403)
-    path = backups.latest_verified_backup()
-    if not path:
-        return Response("No hay ninguna copia verificada disponible.", status_code=404)
-    media_type = (
-        "application/gzip"
-        if path.name.endswith((".gz", ".dump"))
-        else "application/vnd.sqlite3"
-    )
-    return FileResponse(path, media_type=media_type, filename=path.name)
+app.include_router(admin.router)
 
 
 # ===================================================== RESET DE CONTRASEÑA == #
