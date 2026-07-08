@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
-from datetime import date
+from datetime import date, datetime
 
 from .. import config, db, nlu
 from ..tools import run_tool
@@ -151,6 +151,82 @@ def daily_plan(business_id: int) -> list[dict]:
         rec = db.record_recommendation(business_id, item["topic"], item["do"])
         out.append({**item, "id": rec["id"], "status": rec["status"]})
     return out
+
+
+# Cada tema del plan vive en una página del menú (algunos dentro de otra sección).
+_TOPIC_PAGE = {
+    "cobros": "cobros", "facturas": "facturas", "agenda": "agenda",
+    "presupuestos": "presupuestos", "crm": "crm", "gestoria": "documentos",
+    "documentos": "documentos", "pagos": "costes", "costes": "costes",
+}
+_TOPIC_ACTION = {
+    "cobros": "Revisar cobros", "facturas": "Ver facturas",
+    "agenda": "Ver la agenda", "presupuestos": "Ver presupuestos",
+    "crm": "Ver posibles clientes", "gestoria": "Ir a Documentos",
+    "documentos": "Revisar documentos", "pagos": "Facturas de proveedor",
+    "costes": "Revisar gastos",
+}
+
+
+def _greeting(hour: int) -> str:
+    if 6 <= hour < 14:
+        return "Buenos días"
+    if 14 <= hour < 21:
+        return "Buenas tardes"
+    return "Buenas noches"
+
+
+def daily_briefing(business_id: int) -> dict:
+    """El 'parte' del día, en primera persona: Noesis ha revisado el negocio y dice
+    lo importante, con su acción al lado. Reutiliza el mismo cerebro que el plan y el
+    asistente. NUNCA inventa: si no hay nada que ordenar, lo dice con honestidad."""
+    biz = db.get_business(business_id) or {}
+    name = (biz.get("name") or "").strip().split()[0] if biz.get("name") else ""
+    state = _business_state(business_id)
+    plan = _daily_plan(state)
+    billing = state["billing"]
+
+    on_track = len(plan) == 1 and plan[0]["topic"] == "orden"
+    has_activity = bool(
+        billing.get("invoiced") or state["pending"] or state["agenda"]
+        or state["clients"] or state["unbilled"]
+    )
+
+    items = []
+    if not on_track:
+        for item in plan[:4]:
+            topic = item["topic"]
+            items.append({
+                "do": item["do"],
+                "why": item["why"],
+                "topic": topic,
+                "href": f"/b/{business_id}/{_TOPIC_PAGE.get(topic, 'resumen')}",
+                "action": _TOPIC_ACTION.get(topic, "Ver"),
+            })
+
+    if items:
+        lead = "He revisado tu negocio. Esto es lo importante de hoy:"
+    elif not has_activity:
+        lead = ("Aún no tengo nada que ordenarte. En cuanto crees tu primer cliente, "
+                "factura o trabajo, cada día te doy el parte con lo importante.")
+    else:
+        lead = ("He revisado tu negocio y vas al día: nada urgente ahora mismo. "
+                "Sigue registrando lo nuevo en cuanto pase y yo te aviso.")
+
+    return {
+        "greeting": _greeting(datetime.now().hour),
+        "name": name,
+        "lead": lead,
+        "on_track": on_track,
+        "has_activity": has_activity,
+        "visits_today": len(state["agenda"]),
+        "tasks": items,
+        "money": {
+            "invoiced": billing.get("invoiced") or 0,
+            "collected": billing.get("collected") or 0,
+            "pending": sum(p["total"] for p in state["pending"]),
+        },
+    }
 
 
 def _coach_reply(business_id: int, message: str = "") -> str:

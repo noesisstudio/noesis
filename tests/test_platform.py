@@ -224,6 +224,22 @@ class PlatformTestCase(unittest.TestCase):
         self.assertEqual(reply["source"], "local")
         self.assertIn("CRM".lower(), reply["reply"].lower())
 
+    # ------------------------------------------------- Parte de Noesis (Home)
+    def test_daily_briefing_honest_and_actionable(self):
+        empty = chat.daily_briefing(self.bid)
+        self.assertFalse(empty["has_activity"])
+        self.assertEqual(empty["tasks"], [])
+        self.assertIn("Aún no tengo nada", empty["lead"])
+        # Un lead con seguimiento vencido genera una tarea de CRM con acción y
+        # enlace válido, y el parte deja de decir "nada que ordenar".
+        db.add_lead("Frío SA", next_action_on="2020-01-01", business_id=self.bid)
+        b = chat.daily_briefing(self.bid)
+        crm = [t for t in b["tasks"] if t["topic"] == "crm"]
+        self.assertTrue(crm)
+        self.assertTrue(crm[0]["href"].endswith("/crm"))
+        self.assertTrue(crm[0]["action"])
+        self.assertNotIn("Aún no tengo nada", b["lead"])
+
     # -------------------------------------------------------- RGPD y migración
     def test_export_and_cascade_cover_new_tables(self):
         db.add_product("Hora", price=40, business_id=self.bid)
