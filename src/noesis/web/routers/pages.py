@@ -13,7 +13,7 @@ from ..deps import HERE, TEMPLATES
 router = APIRouter()
 
 _PAGES = {
-    "resumen": "Resumen", "tesoreria": "Tesorería", "analisis": "Análisis",
+    "resumen": "Inicio", "tesoreria": "Tesorería", "analisis": "Análisis",
     "ingresos": "Ingresos", "costes": "Costes", "presupuestos": "Presupuestos",
     "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
     "agenda": "Agenda", "equipo": "Equipo", "clientes": "Clientes",
@@ -110,15 +110,17 @@ def page(request: Request, business_id: int, page: str):
     biz = db.get_business(business_id)
     if not biz:
         return RedirectResponse("/login")
+    from .. import chat
+
     context = {
         "business": biz,
         "active": page,
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
+        # La voz de Noesis en la cabecera de cada pantalla (None en el Home).
+        "page_note": chat.page_note(business_id, page),
     }
     if page == "resumen":
-        from .. import chat
-
         layout = db.resolve_panel_layout(biz)
         context["panel_order"] = layout["order"]
         context["panel_hidden"] = layout["hidden"]

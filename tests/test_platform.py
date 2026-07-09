@@ -240,6 +240,24 @@ class PlatformTestCase(unittest.TestCase):
         self.assertTrue(crm[0]["action"])
         self.assertNotIn("Aún no tengo nada", b["lead"])
 
+    def test_page_note_voice_and_resilience(self):
+        # El Home no lleva línea (ya tiene su parte); una página inventada tampoco.
+        self.assertIsNone(chat.page_note(self.bid, "resumen"))
+        self.assertIsNone(chat.page_note(self.bid, "pagina-inventada"))
+        # Una página real devuelve una línea (honesta aunque no haya datos).
+        self.assertTrue(chat.page_note(self.bid, "cobros"))
+        # Resiliencia: si la lectura del negocio peta, devuelve None, no lanza.
+        original = chat._business_state
+
+        def boom(_bid):
+            raise RuntimeError("fallo simulado")
+
+        chat._business_state = boom
+        try:
+            self.assertIsNone(chat.page_note(self.bid, "cobros"))
+        finally:
+            chat._business_state = original
+
     def test_daily_briefing_never_crashes_the_home(self):
         # Si al leer el negocio algo falla (p. ej. una consulta que solo peta en
         # Postgres), el parte devuelve un mínimo honesto en vez de tumbar el Home.
