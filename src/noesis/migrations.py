@@ -375,6 +375,16 @@ SQLITE_TENANT_RELATIONS = (
 )
 
 
+def _index_targets_exist(conn, statement: str) -> bool:
+    target = statement.split(" ON ", 1)[1]
+    table = target.split("(", 1)[0].strip()
+    if not _table_exists(conn, table):
+        return False
+    columns = target.split("(", 1)[1].split(")", 1)[0].split(",")
+    existing = _column_names(conn, table)
+    return all(column.strip() in existing for column in columns)
+
+
 def _sqlite_tenant_trigger(table: str, column: str, parent: str, event: str) -> str:
     name = f"{table}_{column}_same_business_{event.lower()}"
     timing = (
@@ -397,8 +407,7 @@ END;
 
 def _upgrade_tenant_integrity(conn) -> None:
     for statement in INDEXES:
-        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
-        if _table_exists(conn, table):
+        if _index_targets_exist(conn, statement):
             conn.execute(statement)
     # Las instalaciones SQLite heredadas no pueden añadir FKs con ALTER TABLE.
     # Estos triggers aplican la misma restricción a sus relaciones multiempresa.
@@ -542,8 +551,7 @@ CREATE TABLE IF NOT EXISTS workers (
 
     # La FK compuesta de fichajes necesita una clave única por negocio en jobs.
     for statement in INDEXES:
-        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
-        if _table_exists(conn, table):
+        if _index_targets_exist(conn, statement):
             conn.execute(statement)
 
     if conn.dialect == "postgres" and not _postgres_constraint_exists(
@@ -588,8 +596,7 @@ CREATE TABLE IF NOT EXISTS worker_tokens (
 """
     )
     for statement in INDEXES:
-        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
-        if _table_exists(conn, table):
+        if _index_targets_exist(conn, statement):
             conn.execute(statement)
 
     if conn.dialect == "sqlite":
@@ -753,8 +760,7 @@ def _upgrade_immutable_clockins(conn) -> None:
         conn.execute("ALTER TABLE worker_clockins ALTER COLUMN seal SET NOT NULL")
 
     for statement in INDEXES:
-        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
-        if _table_exists(conn, table):
+        if _index_targets_exist(conn, statement):
             conn.execute(statement)
 
     conn.executescript(
@@ -776,8 +782,7 @@ CREATE TABLE IF NOT EXISTS worker_clockin_corrections (
 """
     )
     for statement in INDEXES:
-        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
-        if _table_exists(conn, table):
+        if _index_targets_exist(conn, statement):
             conn.execute(statement)
     _install_clockin_append_only(conn)
 
@@ -942,8 +947,7 @@ CREATE TABLE IF NOT EXISTS invoice_events (
 """
     )
     for statement in INDEXES:
-        table = statement.split(" ON ", 1)[1].split("(", 1)[0].strip()
-        if _table_exists(conn, table):
+        if _index_targets_exist(conn, statement):
             conn.execute(statement)
     _install_invoice_append_only(conn)
 
