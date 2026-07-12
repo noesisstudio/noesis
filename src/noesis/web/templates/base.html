@@ -11,6 +11,7 @@
   'cobros': '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
   'impuestos': '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
   'agenda': '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/>',
+  'proyectos': '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   'equipo': '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/>',
   'clientes': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   'documentos': '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>',
@@ -37,7 +38,7 @@
 <body>
 <div class="app">
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="app-sidebar" aria-label="Navegación principal">
     <div class="brand"><img class="mark" src="/static/noesis-mark.svg" alt=""> Noesis</div>
     <div class="section">
       {% set b = business.id %}
@@ -45,13 +46,13 @@
       {% set g_facturacion = ['facturas', 'presupuestos', 'cobros', 'impuestos'] %}
       {% set g_ventas = ['clientes', 'crm', 'productos'] %}
       <a class="nav-item {{ 'active' if active=='resumen' }}" href="/b/{{ b }}/resumen"><span class="ic">{{ ic('resumen') }}</span> Inicio</a>
-      <div class="section-label">Negocio</div>
+      <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Trabajos</a>
+      <a class="nav-item {{ 'active' if active=='proyectos' }}" href="/b/{{ b }}/proyectos"><span class="ic">{{ ic('proyectos') }}</span> Proyectos</a>
+      <a class="nav-item {{ 'active' if active in g_ventas }}" href="/b/{{ b }}/clientes"><span class="ic">{{ ic('clientes') }}</span> Clientes</a>
+      <div class="section-label">Gestión</div>
       <a class="nav-item {{ 'active' if active in g_tesoreria }}" href="/b/{{ b }}/tesoreria"><span class="ic">{{ ic('tesoreria') }}</span> Dinero</a>
       <a class="nav-item {{ 'active' if active in g_facturacion }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturas</a>
-      <div class="section-label">Operativa</div>
-      <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Agenda</a>
       <a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>
-      <a class="nav-item {{ 'active' if active in g_ventas }}" href="/b/{{ b }}/clientes"><span class="ic">{{ ic('clientes') }}</span> Clientes</a>
       <a class="nav-item {{ 'active' if active=='documentos' }}" href="/b/{{ b }}/documentos"><span class="ic">{{ ic('documentos') }}</span> Documentos</a>
       <div class="section-label">Noesis</div>
       <a class="nav-item {{ 'active' if active=='asistente' }}" href="/b/{{ b }}/asistente"><span class="ic">{{ ic('asistente') }}</span> Asistente</a>
@@ -67,18 +68,18 @@
       </form>
     </div>
   </aside>
-  <div class="nav-overlay" onclick="document.body.classList.remove('nav-open')"></div>
+  <button class="nav-overlay" type="button" aria-label="Cerrar menú" onclick="setNavOpen(false)"></button>
 
   <!-- Main -->
   <div class="main">
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:12px">
-        <button class="burger" aria-label="Menú" onclick="document.body.classList.toggle('nav-open')">
+        <button class="burger" aria-label="Menú" aria-controls="app-sidebar" aria-expanded="false" onclick="setNavOpen(!document.body.classList.contains('nav-open'))">
           <span></span><span></span><span></span>
         </button>
         <div class="crumb">Noesis · <b>{{ page_title }}</b></div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px">
+      <div class="topbar-actions">
         {% if active != 'asistente' %}
         <a class="search-btn" href="/b/{{ business.id }}/asistente?ctx={{ active }}"
            title="Preguntar al asistente sobre esta página" aria-label="Ayuda del asistente"
@@ -109,6 +110,7 @@
         {% else %}
           <a href="/b/{{ business.id }}/ajustes" class="wa-pill wa-off"><span class="dot"></span> Conectar WhatsApp</a>
         {% endif %}
+        <a class="integration-link" href="/b/{{ business.id }}/ajustes#integraciones">Integraciones</a>
       </div>
     </div>
     {% if active in g_tesoreria %}
@@ -149,7 +151,7 @@
   <a class="bn-item {{ 'active' if active=='resumen' }}" href="/b/{{ business.id }}/resumen">
     <span class="ic">{{ ic('resumen') }}</span>Inicio</a>
   <a class="bn-item {{ 'active' if active=='agenda' }}" href="/b/{{ business.id }}/agenda">
-    <span class="ic">{{ ic('agenda') }}</span>Agenda</a>
+    <span class="ic">{{ ic('agenda') }}</span>Trabajos</a>
   <button class="bn-create" type="button" aria-label="Crear" onclick="qcSheet()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>

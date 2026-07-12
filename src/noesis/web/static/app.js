@@ -19,6 +19,14 @@ const apiPost = (path, body) => fetch(`/api/${BIZ}${path}`, {
   if (!r.ok) throw new Error(data.error || 'Error de API');
   return data;
 });
+const apiPatch = (path, body) => fetch(`/api/${BIZ}${path}`, {
+  method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body || {})
+}).then(async r => {
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Error de API');
+  return data;
+});
 const apiDelete = (path) => fetch(`/api/${BIZ}${path}`, { method: 'DELETE' })
   .then(async r => {
     const data = await r.json();
@@ -274,6 +282,29 @@ document.addEventListener('keydown', e => {
 });
 
 /* Paleta para gráficos (coherente con el sistema de diseño). */
+/* Menú móvil accesible: conserva el foco y sincroniza el estado del botón. */
+function setNavOpen(open) {
+  document.body.classList.toggle('nav-open', open);
+  const trigger = document.querySelector('.burger');
+  if (trigger) trigger.setAttribute('aria-expanded', String(open));
+  const sidebar = document.querySelector('.sidebar');
+  const mobile = matchMedia('(max-width: 820px)').matches;
+  if (sidebar) sidebar.setAttribute('aria-hidden', String(mobile && !open));
+  if (!open && trigger) trigger.focus();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setNavOpen(false);
+});
+window.addEventListener('resize', () => {
+  const mobile = matchMedia('(max-width: 820px)').matches;
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.setAttribute('aria-hidden', String(mobile && !document.body.classList.contains('nav-open')));
+});
+window.addEventListener('DOMContentLoaded', () => {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.setAttribute('aria-hidden', String(matchMedia('(max-width: 820px)').matches));
+});
+
 const CHART = {
   brand: '#2e8b74', brandSoft: '#a9d2c5', forest: '#14463b',
   red: '#c0533f', green: '#1f8a6d', amber: '#b7831f',

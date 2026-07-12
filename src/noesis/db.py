@@ -3186,6 +3186,216 @@ def cash_forecast(business_id, days: int = 30) -> dict:
     }
 
 
+# -------------------------------------------------------------- Proyectos ---
+PROJECT_STATUSES = {"planificado", "en_curso", "pausado", "terminado"}
+PROJECT_ENTRY_KINDS = {"material", "horas", "subcontrata", "otro"}
+
+
+def _project_number(value, label: str, *, allow_zero: bool = False) -> float:
+    try:
+        number = Decimal(str(value or 0))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ValueError(f"{label} debe ser un número.") from exc
+    minimum_ok = number >= 0 if allow_zero else number > 0
+    if not number.is_finite() or not minimum_ok or number > Decimal("10000000"):
+        qualifier = "0 o mayor" if allow_zero else "mayor que 0"
+        raise ValueError(f"{label} debe ser {qualifier}.")
+    return float(number.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def add_project(name, budget, client_id=None, location=None, planned_hours=0,
+                starts_on=None, ends_on=None, note=None, *, business_id: int) -> dict:
+    name = (name or "").strip()
+    if not name or len(name) > 200:
+        raise ValueError("El nombre del proyecto es obligatorio (máx. 200 caracteres).")
+    budget = _project_number(budget, "El presupuesto")
+    planned_hours = _project_number(
+        planned_hours, "Las horas previstas", allow_zero=True
+    )
+    if client_id not in (None, ""):
+        client_id = int(client_id)
+        if not get_client(client_id, business_id):
+            raise ValueError("El cliente no pertenece a este negocio.")
+    else:
+        client_id = None
+    starts_on = _optional_date(starts_on, "La fecha de inicio")
+    ends_on = _optional_date(ends_on, "La fecha final")
+    if starts_on and ends_on and ends_on < starts_on:
+        raise ValueError("La fecha final no puede ser anterior al inicio.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO projects (business_id, client_id, name, location, budget, "
+            "planned_hours, starts_on, ends_on, note, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, client_id, name, (location or "").strip() or None,
+             budget, planned_hours, starts_on, ends_on,
+             (note or "").strip() or None, _now()),
+        ).fetchone()
+    return get_project(row["id"], business_id)
+
+
+def _project_select() -> str:
+    return (
+        "SELECT p.*, c.name AS client_name, "
+        "COALESCE((SELECT SUM(e.total) FROM project_entries e "
+        "WHERE e.business_id=p.business_id AND e.project_id=p.id),0) AS actual_cost, "
+        "COALESCE((SELECT SUM(e.quantity) FROM project_entries e "
+        "WHERE e.business_id=p.business_id AND e.project_id=p.id "
+        "AND e.kind='horas'),0) AS actual_hours, "
+        "(SELECT COUNT(*) FROM project_members m WHERE m.business_id=p.business_id "
+        "AND m.project_id=p.id) AS member_count "
+        "FROM projects p LEFT JOIN clients c ON c.id=p.client_id "
+        "AND c.business_id=p.business_id "
+    )
+
+
+def _project_metrics(project: dict) -> dict:
+    project = dict(project)
+    budget = float(project.get("budget") or 0)
+    cost = round(float(project.get("actual_cost") or 0), 2)
+    project["actual_cost"] = cost
+    project["actual_hours"] = round(float(project.get("actual_hours") or 0), 2)
+    project["margin"] = round(budget - cost, 2)
+    project["cost_pct"] = round(cost / budget * 100, 1) if budget else 0
+    return project
+
+
+def list_projects(business_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            _project_select() + "WHERE p.business_id=? "
+            "ORDER BY CASE p.status WHEN 'en_curso' THEN 0 WHEN 'planificado' THEN 1 "
+            "WHEN 'pausado' THEN 2 ELSE 3 END, p.updated_at DESC, p.id DESC",
+            (business_id,),
+        ).fetchall()
+    return [_project_metrics(row) for row in rows]
+
+
+def get_project(project_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            _project_select() + "WHERE p.id=? AND p.business_id=?",
+            (project_id, business_id),
+        ).fetchone()
+        if not row:
+            return None
+        members = conn.execute(
+            "SELECT m.*, w.name AS worker_name, w.color AS worker_color "
+            "FROM project_members m JOIN workers w ON w.id=m.worker_id "
+            "AND w.business_id=m.business_id WHERE m.project_id=? "
+            "AND m.business_id=? ORDER BY w.name",
+            (project_id, business_id),
+        ).fetchall()
+        entries = conn.execute(
+            "SELECT e.*, w.name AS worker_name FROM project_entries e "
+            "LEFT JOIN workers w ON w.id=e.worker_id AND w.business_id=e.business_id "
+            "WHERE e.project_id=? AND e.business_id=? "
+            "ORDER BY COALESCE(e.entry_on, e.created_at) DESC, e.id DESC",
+            (project_id, business_id),
+        ).fetchall()
+    project = _project_metrics(row)
+    project["members"] = [dict(item) for item in members]
+    project["entries"] = [dict(item) for item in entries]
+    return project
+
+
+def project_summary(business_id: int) -> dict:
+    projects = list_projects(business_id)
+    active = [p for p in projects if p["status"] != "terminado"]
+    budget = round(sum(float(p["budget"]) for p in active), 2)
+    cost = round(sum(float(p["actual_cost"]) for p in active), 2)
+    progress = (
+        round(sum(int(p["progress"]) for p in active) / len(active)) if active else 0
+    )
+    return {
+        "projects": projects, "active_count": len(active), "progress": progress,
+        "budget": budget, "cost": cost, "margin": round(budget - cost, 2),
+    }
+
+
+def update_project(project_id: int, *, business_id: int, progress=None,
+                   status=None) -> dict | None:
+    project = get_project(project_id, business_id)
+    if not project:
+        return None
+    progress = project["progress"] if progress is None else int(progress)
+    if progress < 0 or progress > 100:
+        raise ValueError("El avance debe estar entre 0 y 100.")
+    status = status or project["status"]
+    if status not in PROJECT_STATUSES:
+        raise ValueError("El estado del proyecto no es válido.")
+    if status == "terminado":
+        progress = 100
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE projects SET progress=?, status=?, updated_at=? "
+            "WHERE id=? AND business_id=?",
+            (progress, status, _now(), project_id, business_id),
+        )
+    return get_project(project_id, business_id)
+
+
+def add_project_member(project_id: int, worker_id: int, hourly_cost=0, role=None,
+                       *, business_id: int) -> dict:
+    if not get_project(project_id, business_id):
+        raise ValueError("Proyecto no encontrado.")
+    worker = get_worker(worker_id, business_id)
+    if not worker or not worker.get("active"):
+        raise ValueError("La persona no pertenece a este negocio o está inactiva.")
+    hourly_cost = _project_number(hourly_cost, "El coste por hora", allow_zero=True)
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO project_members (business_id, project_id, worker_id, role, "
+            "hourly_cost, created_at) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, project_id, worker_id) DO UPDATE SET "
+            "role=excluded.role, hourly_cost=excluded.hourly_cost",
+            (business_id, project_id, worker_id, (role or "").strip() or None,
+             hourly_cost, _now()),
+        )
+    return get_project(project_id, business_id)
+
+
+def add_project_entry(project_id: int, kind, description, quantity, unit_cost,
+                      worker_id=None, entry_on=None, *, business_id: int) -> dict:
+    if not get_project(project_id, business_id):
+        raise ValueError("Proyecto no encontrado.")
+    kind = (kind or "otro").strip()
+    if kind not in PROJECT_ENTRY_KINDS:
+        raise ValueError("El tipo de coste no es válido.")
+    description = (description or "").strip()
+    if not description or len(description) > 300:
+        raise ValueError("La descripción es obligatoria (máx. 300 caracteres).")
+    quantity = _project_number(quantity, "La cantidad")
+    unit_cost = _project_number(unit_cost, "El coste unitario", allow_zero=True)
+    total = float((Decimal(str(quantity)) * Decimal(str(unit_cost))).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    ))
+    if worker_id not in (None, ""):
+        worker_id = int(worker_id)
+        if not get_worker(worker_id, business_id):
+            raise ValueError("La persona no pertenece a este negocio.")
+    else:
+        worker_id = None
+    entry_on = _optional_date(entry_on, "La fecha")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO project_entries (business_id, project_id, worker_id, kind, "
+            "description, quantity, unit_cost, total, entry_on, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, project_id, worker_id, kind, description, quantity,
+             unit_cost, total, entry_on, _now()),
+        ).fetchone()
+        conn.execute(
+            "UPDATE projects SET updated_at=? WHERE id=? AND business_id=?",
+            (_now(), project_id, business_id),
+        )
+        entry = conn.execute(
+            "SELECT * FROM project_entries WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(entry)
+
+
 # ----------------------------------------------------------------- Gastos ---
 def add_expense(
     concept,
@@ -3880,6 +4090,19 @@ def update_language(business_id, language) -> None:
     with get_conn() as conn:
         conn.execute("UPDATE businesses SET language=? WHERE id=?",
                      (language, business_id))
+
+
+EXPLANATION_LEVELS = {"claro", "directo", "detallado"}
+
+
+def update_explanation_level(business_id: int, level: str) -> None:
+    if level not in EXPLANATION_LEVELS:
+        raise ValueError("El nivel de explicación no es válido.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET explanation_level=? WHERE id=?",
+            (level, business_id),
+        )
 
 
 # --------------------------------------------------------------- Resúmenes ---
@@ -5294,6 +5517,13 @@ def export_business_data(business_id) -> dict:
         "products": list_products(business_id, include_inactive=True),
         "leads": list_leads(business_id),
         "gestoria_requests": list_gestoria_requests(business_id),
+        "projects": list_projects(business_id),
+        "project_members": [dict(r) for r in _rows(
+            "SELECT * FROM project_members WHERE business_id=? ORDER BY project_id, worker_id",
+            business_id)],
+        "project_entries": [dict(r) for r in _rows(
+            "SELECT * FROM project_entries WHERE business_id=? ORDER BY project_id, id",
+            business_id)],
         "product_events": [dict(r) for r in _rows(
             "SELECT * FROM product_events WHERE business_id=? ORDER BY id",
             business_id)],
@@ -5331,6 +5561,9 @@ def export_client_data(client_id, business_id) -> dict | None:
             business_id, client_id)],
         "quotes": [dict(r) for r in _rows(
             "SELECT * FROM quotes WHERE business_id=? AND client_id=?",
+            business_id, client_id)],
+        "projects": [dict(r) for r in _rows(
+            "SELECT * FROM projects WHERE business_id=? AND client_id=?",
             business_id, client_id)],
         "exported_at": _now(),
     }
@@ -5374,6 +5607,10 @@ def delete_client_cascade(client_id, business_id) -> bool:
         )
         conn.execute(
             "UPDATE jobs SET client_id=NULL WHERE business_id=? AND client_id=?",
+            (business_id, client_id),
+        )
+        conn.execute(
+            "UPDATE projects SET client_id=NULL WHERE business_id=? AND client_id=?",
             (business_id, client_id),
         )
         if issued:
@@ -5420,6 +5657,7 @@ def delete_business_cascade(business_id) -> bool:
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
             "invoice_events", "invoice_records", "portal_tokens",
             "product_events", "copilot_recommendations", "gestoria_requests",
+            "project_entries", "project_members", "projects",
             "documents", "received_invoices", "suppliers", "products",
             "leads", "quotes",
             "invoice_payments", "invoices", "jobs", "workers", "clients", "expenses"

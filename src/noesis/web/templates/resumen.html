@@ -1,411 +1,149 @@
 {% extends "base.html" %}
 
-{#- Barra de control que aparece sobre cada bloque en modo "Personalizar". -#}
-{% macro pbar(key, label) %}
-<div class="pblock-bar">
-  <span class="pblock-name">{{ label }}<span class="pblock-flag">Oculto</span></span>
-  <span class="pblock-tools">
-    <button type="button" class="pbt" title="Subir" aria-label="Subir bloque" onclick="pMove('{{ key }}',-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button>
-    <button type="button" class="pbt" title="Bajar" aria-label="Bajar bloque" onclick="pMove('{{ key }}',1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-    <button type="button" class="pbt pbt-eye" title="Ocultar o mostrar" aria-label="Ocultar o mostrar bloque" onclick="pToggle('{{ key }}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-  </span>
-</div>
-{% endmacro %}
-
 {% block content %}
-<section class="parte" aria-label="El parte de Noesis">
-  <div class="parte-top">
-    <div class="parte-who">
-      <span class="parte-mark"><img src="/static/noesis-mark.svg" alt=""></span>
-      <div>
-        <div class="parte-hello">{{ briefing.greeting }}{% if briefing.name %}, {{ briefing.name }}{% endif %}</div>
-        <div class="parte-date" id="hd-date">—</div>
+<main class="home-v2">
+  <section class="home-brief" aria-labelledby="home-greeting">
+    <div class="home-brief-copy">
+      <div class="home-eyebrow"><img src="/static/noesis-mark.svg" alt=""> Parte de hoy</div>
+      <h1 id="home-greeting">{{ briefing.greeting }}{% if briefing.name %}, {{ briefing.name }}{% endif %}.</h1>
+      <p>{{ briefing.lead }}</p>
+      {% if briefing.tasks %}
+      {% set first = briefing.tasks[0] %}
+      <div class="home-priority">
+        <span class="priority-label">Lo primero</span>
+        <div>
+          <strong>{{ first.do }}</strong>
+          <small>{{ first.why }}</small>
+        </div>
+        <a class="btn primary" href="{{ first.href }}">{{ first.action }}</a>
       </div>
-    </div>
-    <div class="parte-tools" id="hd-actions">
-      <button type="button" class="pchip" id="btn-personalizar" onclick="panelEdit(true)" title="Personalizar el panel" aria-label="Personalizar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-      </button>
-    </div>
-    <div class="parte-tools" id="hd-edit-actions" style="display:none">
-      <button type="button" class="btn sm" onclick="panelCancel()">Cancelar</button>
-      <button type="button" class="btn sm primary" onclick="panelSave()">Guardar</button>
-    </div>
-  </div>
-
-  <p class="parte-lead">{{ briefing.lead }}</p>
-
-  {% if briefing.tasks %}
-  <ol class="parte-items">
-    {% for it in briefing.tasks %}
-    <li class="parte-item">
-      <div class="pi-text">
-        <div class="pi-do">{{ it.do }}</div>
-        <div class="pi-why">{{ it.why }}</div>
+      {% else %}
+      <div class="home-priority is-clear">
+        <span class="priority-label">Todo en orden</span>
+        <div><strong>No tienes nada urgente ahora mismo.</strong><small>Te avisaré cuando haya algo que merezca tu atención.</small></div>
+        <a class="btn" href="/b/{{ business.id }}/asistente">Preguntar a Noesis</a>
       </div>
-      <a class="btn sm" href="{{ it.href }}">{{ it.action }}</a>
-    </li>
-    {% endfor %}
-  </ol>
+      {% endif %}
+    </div>
+    <div class="home-brief-side">
+      <span id="hd-date">—</span>
+      <a href="/b/{{ business.id }}/asistente">Hablar con Noesis</a>
+    </div>
+  </section>
+
+  {% if activation.progress < 100 %}
+  <section class="home-setup" aria-label="Puesta en marcha">
+    <div><span>Puesta en marcha</span><strong>{{ activation.completed }} de {{ activation.total }} pasos listos</strong></div>
+    <div class="home-setup-track" aria-label="{{ activation.progress }}% completado"><i style="width:{{ activation.progress }}%"></i></div>
+    {% if activation.next_step %}<a href="{{ activation.next_step.href }}">Siguiente: {{ activation.next_step.label }}</a>{% endif %}
+  </section>
   {% endif %}
 
-  {% if briefing.has_activity %}
-  <div class="parte-money">
-    <span class="pm"><small>Te deben</small><b>{{ briefing.money.pending|eur }}</b></span>
-    <span class="pm"><small>Cobrado</small><b>{{ briefing.money.collected|eur }}</b></span>
-    <span class="pm"><small>Facturado (mes)</small><b>{{ briefing.money.invoiced|eur }}</b></span>
-  </div>
-  {% endif %}
+  <section class="home-metrics" aria-label="Resumen del negocio">
+    <a href="/b/{{ business.id }}/tesoreria" class="home-metric"><span>Beneficio este mes</span><strong id="s-profit">—</strong><small>Lo que queda tras los gastos</small></a>
+    <a href="/b/{{ business.id }}/cobros" class="home-metric"><span>Pendiente de cobro</span><strong id="s-pend">—</strong><small id="s-pend-d">—</small></a>
+    <a href="/b/{{ business.id }}/costes" class="home-metric"><span>Gastos este mes</span><strong id="s-expenses">—</strong><small>Costes registrados</small></a>
+    <a href="/b/{{ business.id }}/agenda" class="home-metric"><span>Trabajos hoy</span><strong id="s-today">—</strong><small id="s-today-d">—</small></a>
+  </section>
 
-  <div class="parte-cta">
-    <a class="btn primary" href="/b/{{ business.id }}/asistente">Habla con Noesis</a>
-    {% if briefing.visits_today %}
-    <a class="btn" href="/b/{{ business.id }}/agenda">Ver el día ({{ briefing.visits_today }})</a>
-    {% endif %}
-  </div>
-</section>
+  <section class="home-main-grid">
+    <article class="home-panel home-today">
+      <header><div><span class="panel-kicker">Tu día</span><h2>Hoy</h2></div><a href="/b/{{ business.id }}/agenda">Ver trabajos</a></header>
+      <div id="today" class="home-panel-body"><p class="muted">Preparando tu agenda…</p></div>
+    </article>
+    <article class="home-panel home-working">
+      <header><div><span class="panel-kicker">En segundo plano</span><h2>Noesis está trabajando</h2></div><a href="/b/{{ business.id }}/asistente">Ver asistente</a></header>
+      <div id="noesis-work" class="home-panel-body"><p class="muted">Revisando cobros y próximos pasos…</p></div>
+    </article>
+  </section>
 
-{% if activation.progress < 100 %}
-<section class="activation-card" aria-labelledby="activation-title">
-  <div class="activation-head">
-    <div>
-      <div class="kicker">Puesta en marcha</div>
-      <h2 id="activation-title">Completa tu primer ciclo de trabajo</h2>
-      <p>Configura lo esencial y lleva un trabajo desde el cliente hasta el cobro.</p>
-    </div>
-    <div class="activation-score">
-      <b>{{ activation.completed }}/{{ activation.total }}</b>
-      <span>pasos</span>
-    </div>
-  </div>
-  <div class="activation-progress" aria-label="{{ activation.progress }}% completado">
-    <span style="width:{{ activation.progress }}%"></span>
-  </div>
-  <div class="activation-steps">
-    {% for step in activation.steps %}
-    <a class="activation-step {{ 'done' if step.done else 'next' if activation.next_step and activation.next_step.key == step.key }}"
-       href="{{ step.href }}">
-      <span class="activation-index">{{ loop.index }}</span>
-      <span><b>{{ step.label }}</b><small>{{ step.detail }}</small></span>
-      <span class="activation-state">{{ 'Completado' if step.done else 'Abrir' }}</span>
-    </a>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-<div class="panel-blocks" id="panel-blocks">
-
-<section class="pblock {{ 'pblock-hidden' if 'pulso' in panel_hidden }}" data-block="pulso" style="order:{{ panel_order.index('pulso') }}">
-{{ pbar('pulso', 'Pulso del negocio') }}
-<a class="card pulse-card" href="/b/{{ business.id }}/analisis" aria-label="Ver análisis completo">
-  <div class="pulse-main">
-    <span class="pulse-dot" id="pu-dot"></span>
-    <div>
-      <div class="pulse-state" id="pu-state">Midiendo el pulso…</div>
-      <div class="pulse-text" id="pu-text">Analizando márgenes, cobros y liquidez.</div>
-    </div>
-  </div>
-  <div class="pulse-chips">
-    <span class="pulse-chip" id="pu-margen"><small>Margen</small><b>—</b></span>
-    <span class="pulse-chip" id="pu-dso"><small>Días en cobrar</small><b>—</b></span>
-    <span class="pulse-chip" id="pu-mora"><small>Retrasos</small><b>—</b></span>
-    <span class="pulse-chip" id="pu-solv"><small>Colchón</small><b>—</b></span>
-    <span class="pulse-chip" id="pu-iva"><small>IVA a apartar</small><b>—</b></span>
-  </div>
-</a>
-</section>
-
-<section class="pblock {{ 'pblock-hidden' if 'kpis' in panel_hidden }}" data-block="kpis" style="order:{{ panel_order.index('kpis') }}">
-{{ pbar('kpis', 'Indicadores del mes') }}
-<div class="grid g4">
-  <div class="stat"><div class="lbl">Beneficio (mes)</div><div class="val" id="s-profit">—</div>
-    <div class="delta flat" id="s-profit-d">ingresos menos gastos</div></div>
-  <div class="stat"><div class="lbl">Pendiente de cobro</div><div class="val" id="s-pend">—</div>
-    <div class="delta flat" id="s-pend-d">—</div></div>
-  <div class="stat"><div class="lbl">Trabajos hoy</div><div class="val" id="s-today">—</div>
-    <div class="delta flat" id="s-today-d">—</div></div>
-  <div class="stat"><div class="lbl">Facturado (mes)</div><div class="val" id="s-inv">—</div>
-    <div class="delta flat" id="s-inv-d">—</div></div>
-</div>
-</section>
-
-<section class="pblock {{ 'pblock-hidden' if 'balance' in panel_hidden }}" data-block="balance" style="order:{{ panel_order.index('balance') }}">
-{{ pbar('balance', 'Balance · tu posición') }}
-<div class="card">
-  <div class="card-h"><h2>Balance · tu posición ahora</h2>
-    <a class="hint" href="/b/{{ business.id }}/analisis">ver análisis</a></div>
-  <div class="card-b">
-    <div class="bal-grid">
-      <div class="bal-col fav">
-        <div class="bal-label">A tu favor</div>
-        <div class="bal-row"><span>Te deben (sin cobrar)</span><b id="bal-due">—</b></div>
-        <div class="bal-row"><span>Cobrado (histórico)</span><b id="bal-cash">—</b></div>
+  <section class="home-lower-grid">
+    <article class="home-panel home-money">
+      <header><div><span class="panel-kicker">Sin complicaciones</span><h2>Cómo va el dinero</h2></div><a href="/b/{{ business.id }}/tesoreria">Ver detalle</a></header>
+      <div class="money-summary">
+        <div><span>Facturado</span><strong id="s-inv">—</strong></div>
+        <div><span>Ya cobrado</span><strong id="s-collected">—</strong></div>
+        <p id="money-reading">Leyendo tus números…</p>
       </div>
-      <div class="bal-col pay">
-        <div class="bal-label">A pagar / apartar</div>
-        <div class="bal-row"><span>IVA por liquidar</span><b id="bal-vat">—</b></div>
-        <div class="bal-row"><span>En mora (+30 días)</span><b id="bal-mora">—</b></div>
-      </div>
-      <div class="bal-col net">
-        <div class="bal-label">Por entrar (tras IVA)</div>
-        <div class="bal-net" id="bal-net">—</div>
-        <div class="bal-hint" id="bal-hint"></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<section class="pblock {{ 'pblock-hidden' if 'hoy' in panel_hidden }}" data-block="hoy" style="order:{{ panel_order.index('hoy') }}">
-{{ pbar('hoy', 'Trabajos de hoy') }}
-<div class="card today-card">
-  <div class="card-h"><h2>Hoy · ¿dónde tienes que ir?</h2>
-    <a class="hint" href="/b/{{ business.id }}/agenda">ver agenda</a></div>
-  <div class="card-b"><div id="today">…</div></div>
-</div>
-</section>
-
-<section class="pblock {{ 'pblock-hidden' if 'grafica' in panel_hidden }}" data-block="grafica" style="order:{{ panel_order.index('grafica') }}">
-{{ pbar('grafica', 'Gráfica y plan del día') }}
-<div class="split">
-  <div class="card">
-    <div class="card-h"><h2>Ingresos vs gastos</h2><span class="hint">últimos 6 meses</span></div>
-    <div class="card-b"><div style="height:248px"><canvas id="ch-main"></canvas></div></div>
-  </div>
-  <div class="card card-action">
-    <div class="card-h"><h2>Tu plan para hoy</h2>
-      <span class="hint" id="rec-count"></span></div>
-    <div class="card-b"><ul class="plan-list" id="plan"><li class="muted">Calculando…</li></ul></div>
-  </div>
-</div>
-</section>
-
-<section class="pblock {{ 'pblock-hidden' if 'detalle' in panel_hidden }}" data-block="detalle" style="order:{{ panel_order.index('detalle') }}">
-{{ pbar('detalle', 'Clientes, gastos y cobros') }}
-<div class="grid g3">
-  <div class="card">
-    <div class="card-h"><h2>Top clientes</h2><span class="hint">por facturación</span></div>
-    <div class="card-b"><div class="barlist" id="top-clients"></div></div>
-  </div>
-  <div class="card">
-    <div class="card-h"><h2>Gastos por categoría</h2>
-      <a class="hint" href="/b/{{ business.id }}/costes">ver costes</a></div>
-    <div class="card-b"><div class="barlist" id="cost-cats"></div></div>
-  </div>
-  <div class="card">
-    <div class="card-h"><h2>Cobros que vigilar</h2>
-      <a class="hint" href="/b/{{ business.id }}/cobros">ver todos</a></div>
-    <div class="card-b"><div id="pending">…</div></div>
-  </div>
-</div>
-</section>
-
-</div>
+      <div class="home-chart"><canvas id="ch-main"></canvas></div>
+    </article>
+    <article class="home-panel home-pending">
+      <header><div><span class="panel-kicker">Seguimiento</span><h2>Cobros que vigilar</h2></div><a href="/b/{{ business.id }}/cobros">Ver todos</a></header>
+      <div id="pending" class="home-panel-body"><p class="muted">Comprobando facturas…</p></div>
+    </article>
+  </section>
+</main>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ---- Personalización del panel: ordenar y ocultar bloques del inicio ----
-let P_ORDER = {{ panel_order|tojson }};
-let P_HIDDEN = {{ panel_hidden|tojson }};
-let P_BACKUP = null;
-
-function pApply(){
-  P_ORDER.forEach((k, i) => {
-    const s = document.querySelector('.pblock[data-block="' + k + '"]');
-    if (s){ s.style.order = i; s.classList.toggle('pblock-hidden', P_HIDDEN.includes(k)); }
-  });
-}
-function panelEdit(on){
-  if (on) P_BACKUP = { order: [...P_ORDER], hidden: [...P_HIDDEN] };
-  document.body.classList.toggle('panel-editing', on);
-  el('hd-actions').style.display = on ? 'none' : '';
-  el('hd-edit-actions').style.display = on ? '' : 'none';
-  if (on) window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-function panelCancel(){
-  if (P_BACKUP){ P_ORDER = P_BACKUP.order; P_HIDDEN = P_BACKUP.hidden; pApply(); }
-  panelEdit(false);
-}
-function pMove(key, dir){
-  const i = P_ORDER.indexOf(key), j = i + dir;
-  if (i < 0 || j < 0 || j >= P_ORDER.length) return;
-  [P_ORDER[i], P_ORDER[j]] = [P_ORDER[j], P_ORDER[i]];
-  pApply();
-}
-function pToggle(key){
-  const i = P_HIDDEN.indexOf(key);
-  if (i >= 0) P_HIDDEN.splice(i, 1); else P_HIDDEN.push(key);
-  pApply();
-}
-async function panelSave(){
-  const btns = el('hd-edit-actions').querySelectorAll('button');
-  btns.forEach(b => b.disabled = true);
-  try { await apiPost('/panel-layout', { order: P_ORDER, hidden: P_HIDDEN }); } catch(e){}
-  btns.forEach(b => b.disabled = false);
-  P_BACKUP = null;
-  panelEdit(false);
-}
-
-(function head(){
-  // El saludo y el parte llegan renderizados del servidor; aquí solo la fecha.
+(function setDate(){
   el('hd-date').textContent = new Date().toLocaleDateString('es-ES',
-    { weekday:'long', day:'numeric', month:'long' });
+    {weekday:'long', day:'numeric', month:'long'});
 })();
 
-async function load() {
+async function loadHome(){
   const s = await api('/summary');
-  el('s-profit').textContent = eur(s.estimated_profit);
-  el('s-pend').textContent = eur(s.pending_total);
-  el('s-pend-d').textContent = s.pending_count + ' factura(s) sin cobrar';
-  el('s-pend-d').className = 'delta ' + (s.pending_count ? 'down' : 'up');
-  el('s-today').textContent = s.jobs_today;
-  el('s-today-d').textContent = s.jobs_today ? 'trabajo(s) agendados' : 'día despejado';
-  el('s-inv').textContent = eur(s.invoiced);
-  const rate = s.invoiced ? Math.round(s.collected / s.invoiced * 100) : 0;
-  el('s-inv-d').textContent = rate + '% ya cobrado';
-  el('s-inv-d').className = 'delta ' + (rate >= 70 ? 'up' : rate >= 40 ? 'flat' : 'down');
+  el('s-profit').textContent = eur(s.estimated_profit || 0);
+  el('s-pend').textContent = eur(s.pending_total || 0);
+  el('s-pend-d').textContent = s.pending_count ? `${s.pending_count} ${s.pending_count === 1 ? 'factura' : 'facturas'} por cobrar` : 'Nada pendiente';
+  el('s-expenses').textContent = eur(s.expenses || 0);
+  el('s-today').textContent = s.jobs_today || 0;
+  el('s-today-d').textContent = s.jobs_today ? 'en tu agenda' : 'día despejado';
+  el('s-inv').textContent = eur(s.invoiced || 0);
+  el('s-collected').textContent = eur(s.collected || 0);
+  const rate = s.invoiced ? Math.round((s.collected || 0) / s.invoiced * 100) : 0;
+  el('money-reading').textContent = s.invoiced
+    ? `${rate}% de lo facturado este mes ya está cobrado.`
+    : 'Cuando factures, aquí verás en una frase cómo avanza el mes.';
 
-  api('/analysis').then(a => {
-    // --- Pulso del negocio: 4 señales con semáforo y diagnóstico global ---
-    const chip = (id, valText, state) => {
-      const c = el(id);
-      c.querySelector('b').textContent = valText;
-      c.classList.add('pu-' + state);
-      return state;
-    };
-    const grade = (v, good, ok, invert) => invert
-      ? (v <= good ? 'good' : v <= ok ? 'ok' : 'bad')
-      : (v >= good ? 'good' : v >= ok ? 'ok' : 'bad');
-    const states = [];
-    if (a.invoiced) {
-      states.push(chip('pu-margen', a.margen_pct + '%', grade(a.margen_pct, 25, 10)));
-      states.push(chip('pu-dso', a.dso + ' d', grade(a.dso, 15, 45, true)));
-      states.push(chip('pu-mora', a.morosidad_pct + '%', grade(a.morosidad_pct, 5, 15, true)));
-      states.push(chip('pu-solv', a.solvencia == null ? '—' : a.solvencia + '×',
-        a.solvencia == null ? 'ok' : grade(a.solvencia, 1.5, 1)));
-      // El IVA a apartar no es "malo": es dinero de Hacienda. Verde si está a
-      // cero, ámbar si hay que reservarlo (no cuenta para el semáforo global).
-      const vatDue = a.vat_liquidar > 0 ? a.vat_liquidar : 0;
-      chip('pu-iva', eur(vatDue), vatDue > 0 ? 'ok' : 'good');
-    }
-    const bad = states.filter(s => s === 'bad').length;
-    const okC = states.filter(s => s === 'ok').length;
-    const overall = !states.length ? 'ok' : bad ? 'bad' : okC ? 'ok' : 'good';
-    el('pu-dot').className = 'pulse-dot pu-' + overall;
-    el('pu-state').textContent = !states.length ? 'Aún sin datos suficientes'
-      : overall === 'good' ? 'Tu negocio está sano'
-      : overall === 'ok' ? 'Tu negocio va bien, con cosas que vigilar'
-      : 'Tu negocio necesita atención';
-    el('pu-text').textContent = !states.length
-      ? 'Registra facturas y gastos para medir el pulso real.'
-      : overall === 'bad'
-        ? 'Hay señales en rojo. Toca aquí para ver qué corregir primero.'
-        : overall === 'ok'
-          ? 'Alguna señal en ámbar. Toca aquí para ver el detalle.'
-          : 'Márgenes, cobros y liquidez en orden. Sigue así.';
-
-    const vat = a.vat_liquidar > 0 ? a.vat_liquidar : 0;
-    el('bal-due').textContent = eur(a.pending);
-    el('bal-cash').textContent = eur(a.collected);
-    el('bal-vat').textContent = eur(vat);
-    el('bal-mora').textContent = eur(a.morosidad);
-    el('bal-net').textContent = eur((a.pending || 0) - vat);
-    el('bal-hint').textContent = vat
-      ? `De lo que te deben, aparta ${eur(vat)} para el IVA. Lo demás es tuyo.`
-      : 'No tienes IVA pendiente de liquidar ahora mismo.';
-  });
-
-  const series = await api('/series');
+  const [agenda, plan, pending, series] = await Promise.all([
+    api('/agenda'), api('/plan'), api('/pending'), api('/series')
+  ]);
+  renderToday(agenda);
+  renderWork(plan, pending);
+  renderPending(pending);
   new Chart(el('ch-main'), {
-    type: 'bar',
-    data: { labels: series.map(x => x.month), datasets: [
-      { label: 'Ingresos', data: series.map(x => x.invoiced), backgroundColor: CHART.brand, borderRadius: 6, maxBarThickness: 26 },
-      { label: 'Gastos', data: series.map(x => x.expenses), backgroundColor: CHART.red, borderRadius: 6, maxBarThickness: 26 },
-    ]}, options: CHART.base()
-  });
-
-  api('/plan').then(plan => {
-    el('plan').innerHTML = plan.slice(0, 4).map((p, i) => `<li id="rec-${p.id || ('x'+i)}">
-      <span class="pl-n">${i + 1}</span>
-      <div style="flex:1;min-width:0">
-        <div class="pl-do">${esc(p.do)}</div>
-        <div class="pl-why">${esc(p.why)}</div>
-        <div class="pl-acts">
-          <button class="btn sm" onclick="recGo(${p.id || 'null'}, '${esc(p.topic)}')">Ver ${esc(p.topic)}</button>
-          ${p.id ? `<button class="btn sm" onclick="recDone(${p.id})">Hecho</button>
-            <button class="iconbtn" title="Descartar" onclick="recDismiss(${p.id})">✕</button>` : ''}
-        </div>
-      </div>
-    </li>`).join('');
-    updateRecCount();
-  });
-
-  api('/income/by-client').then(rows => {
-    el('top-clients').innerHTML = barlist(rows.slice(0, 5).map(r => ({
-      name: r.client_name || '—', value: r.total, valText: eur(r.total)
-    })));
-  });
-
-  api('/costs/breakdown').then(rows => {
-    el('cost-cats').innerHTML = barlist(rows.slice(0, 5).map(r => ({
-      name: r.category, value: r.total, valText: eur(r.total)
-    })), 'warn');
-  });
-
-  api('/agenda').then(ag => {
-    const t = el('today');
-    if (!ag.length) {
-      t.innerHTML = emptyState('Día despejado', 'No tienes trabajos registrados para hoy.', '/b/{{ business.id }}/agenda', 'Ver agenda');
-      return;
-    }
-    const zones = [...new Set(ag.map(j => j.zone).filter(Boolean))];
-    const pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-    const summary = `<div class="today-summary">${ag.length} trabajo(s) hoy${zones.length ? ' · ' + zones.map(esc).join(' · ') : ''}</div>`;
-    t.innerHTML = summary + ag.map(j => {
-      const h = timeShort(j.scheduled_for);
-      const price = j.price_estimate ? `<span class="tl-price">${eur(j.price_estimate)}</span>` : '';
-      return `<div class="tl-row"><span class="tl-time">${esc(h || '—')}</span>
-        <div class="tl-body"><div class="t1">${esc(j.client_name || 'Trabajo')} · ${esc(j.description)}</div>
-        <div class="t2"><span class="tl-where">${pin} ${esc(j.zone || 'sin zona')}</span></div></div>
-        ${price}</div>`;
-    }).join('');
-  });
-
-  api('/pending').then(p => {
-    el('pending').innerHTML = p.length ? p.slice(0, 6).map(x =>
-      `<div class="lrow"><span>${esc(x.client_name)}<br><span class="meta">${esc(x.concept)}</span></span>
-       <span style="text-align:right">${eur(x.total)}<br>
-       <span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-amber'}">${daysText(x.days_outstanding)}</span></span></div>`
-    ).join('') : emptyState('Todo cobrado', 'No hay facturas pendientes ahora mismo.');
+    type:'bar',
+    data:{labels:series.map(x=>x.month),datasets:[
+      {label:'Ingresos',data:series.map(x=>x.invoiced),backgroundColor:CHART.brand,borderRadius:5,maxBarThickness:22},
+      {label:'Gastos',data:series.map(x=>x.expenses),backgroundColor:'#d5a16a',borderRadius:5,maxBarThickness:22}
+    ]},
+    options:CHART.base({plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{display:false}}})
   });
 }
 
-async function recGo(id, topic){
-  if (id) { try { await apiPost('/recommendations/'+id+'/status', {status:'aceptado'}); } catch(e){} }
-  location.href = '/b/{{ business.id }}/' + topic;
+function renderToday(rows){
+  const target = el('today');
+  if (!rows.length){
+    target.innerHTML = `<div class="home-empty"><strong>Día despejado</strong><p>No tienes trabajos registrados para hoy.</p><a class="btn sm" href="/b/{{ business.id }}/agenda?nuevo=1">Añadir trabajo</a></div>`;
+    return;
+  }
+  target.innerHTML = rows.slice(0,4).map((j,i)=>`<a class="home-list-row" href="/b/{{ business.id }}/agenda">
+    <span class="home-row-time">${esc(timeShort(j.scheduled_for) || '—')}</span>
+    <span class="home-row-copy"><strong>${esc(j.client_name || 'Trabajo')}</strong><small>${esc(j.description || '')}${j.zone ? ' · '+esc(j.zone) : ''}</small></span>
+    <span class="home-row-state">${i === 0 ? 'Siguiente' : ''}</span>
+  </a>`).join('');
 }
-function recDone(id){
-  apiPost('/recommendations/'+id+'/status', {status:'completado'}).then(() => {
-    const li = el('rec-'+id);
-    if (li) { li.querySelector('.pl-acts').innerHTML = '<span class="badge b-green">Hecho ✓</span>'; li.style.opacity = .7; }
-    updateRecCount();
-  });
+
+function renderWork(plan, pending){
+  const items = [];
+  if (pending.length) items.push({title:`Vigilo ${pending.length} ${pending.length === 1 ? 'cobro pendiente' : 'cobros pendientes'}`,detail:'Te muestro cuáles necesitan atención antes de que se te pasen.',href:'cobros'});
+  plan.slice(0,3).forEach(p=>items.push({title:p.do,detail:p.why,href:p.topic || 'asistente'}));
+  el('noesis-work').innerHTML = items.length ? items.slice(0,4).map((x,i)=>`<a class="work-row" href="/b/{{ business.id }}/${esc(x.href)}">
+    <span class="work-status ${i ? '' : 'active'}"></span><span><strong>${esc(x.title)}</strong><small>${esc(x.detail)}</small></span><b>Ver</b>
+  </a>`).join('') : `<div class="home-empty"><strong>Todo revisado</strong><p>No he encontrado nada urgente. Seguiré pendiente.</p></div>`;
 }
-function recDismiss(id){
-  apiPost('/recommendations/'+id+'/status', {status:'descartado'}).then(() => {
-    const li = el('rec-'+id); if (li) li.remove();
-  });
+
+function renderPending(rows){
+  el('pending').innerHTML = rows.length ? rows.slice(0,5).map(x=>`<a class="pending-row" href="/b/{{ business.id }}/cobros">
+    <span><strong>${esc(x.client_name || 'Cliente')}</strong><small>${esc(x.concept || 'Factura')}</small></span>
+    <span><b>${eur(x.total)}</b><small class="${x.days_outstanding > 30 ? 'late' : ''}">${daysText(x.days_outstanding)}</small></span>
+  </a>`).join('') : `<div class="home-empty"><strong>Todo cobrado</strong><p>No hay facturas pendientes ahora mismo.</p></div>`;
 }
-function updateRecCount(){
-  api('/recommendations').then(r => {
-    const s = r.stats;
-    el('rec-count').textContent = s.completado
-      ? `${s.completado} completada(s) de ${s.total}`
-      : (s.total ? `${s.total} sugerida(s)` : '');
-  });
-}
-load();
+
+loadHome().catch(()=>{
+  document.querySelectorAll('.home-panel-body .muted').forEach(x=>x.textContent='No he podido actualizar este bloque. Vuelve a intentarlo en un momento.');
+});
 </script>
 {% endblock %}

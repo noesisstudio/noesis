@@ -7,7 +7,8 @@ import logging
 import os
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse, Response
 
 from ... import config, db
 from ...adapters import billing as billing_adapter
@@ -160,5 +161,4 @@ def _apply_stripe_event(event: dict) -> None:
         if biz:
             db.set_subscription(biz["id"], "active")
             db.record_product_event(biz["id"], "subscription_invoice_paid")
-
 

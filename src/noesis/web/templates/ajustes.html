@@ -74,7 +74,7 @@
     </div>
   </div>
 
-  <div class="card card-action">
+  <div class="card card-action" id="integraciones">
     <div class="card-h"><h2>WhatsApp</h2>
       {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>
       {% else %}<span class="badge b-amber">no conectado</span>{% endif %}</div>
@@ -408,6 +408,21 @@
   </div>
 
   <div class="card">
+    <div class="card-h"><h2>Cómo te explica Noesis</h2><span class="hint">una preferencia para toda la cuenta</span></div>
+    <div class="card-b">
+      <label class="fld">Nivel de explicación</label>
+      <select id="explanation-select">
+        <option value="claro" {{ 'selected' if (business.explanation_level or 'claro') == 'claro' }}>Claro y acompañado</option>
+        <option value="directo" {{ 'selected' if business.explanation_level == 'directo' }}>Directo y profesional</option>
+        <option value="detallado" {{ 'selected' if business.explanation_level == 'detallado' }}>Detallado y numérico</option>
+      </select>
+      <button class="btn primary" style="margin-top:12px" onclick="saveExplanationLevel()">Guardar preferencia</button>
+      <div id="explanation-msg" class="meta" style="margin-top:8px"></div>
+      <p class="hint" style="margin-top:10px">Se aplica en todas las pantallas y en el asistente. Los datos no cambian: solo cambia cómo te los cuento.</p>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-h"><h2>Privacidad y costes</h2><span class="badge b-gray">interno</span></div>
     <div class="card-b">
       <div class="lrow"><span>Base de datos</span><b>local (en tu servidor)</b></div>
@@ -444,6 +459,12 @@ async function saveLanguage() {
   try { await apiPost('/language', { language: el('lang-select').value }); }
   catch (e) { msg.textContent = e.message; return; }
   msg.textContent = 'Idioma guardado.';
+}
+async function saveExplanationLevel() {
+  const msg = el('explanation-msg');
+  try { await apiPost('/explanation-level', { level: el('explanation-select').value }); }
+  catch (e) { msg.textContent = e.message; return; }
+  msg.textContent = 'Preferencia guardada para toda la cuenta.';
 }
 </script>
 {% endblock %}

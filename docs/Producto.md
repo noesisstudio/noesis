@@ -26,6 +26,17 @@ No competir en "facturar por WhatsApp" (ahí está [[Competencia|Forjia]]), sino
 agenda inteligente + control de cobros + **resumen diario** + facturación integrada.
 Ver [[Investigación]] sobre por qué este es el hueco.
 
+## Experiencia de producto
+Noesis no se presenta como un panel financiero. La primera lectura siempre responde
+en este orden: **qué está pasando, qué toca hacer y qué está resolviendo Noesis**.
+Los datos avanzados siguen disponibles al entrar en cada apartado. La cuenta elige
+en Ajustes si prefiere una explicación clara, directa o detallada; esa preferencia
+se aplica al asistente completo, no mediante selectores repetidos en cada pantalla.
+
+Los trabajos grandes viven en **Proyectos**: la portada solo muestra avance general,
+presupuesto y costes. Al abrir uno aparecen margen, horas, materiales y equipo. Así
+un profesional puede profundizar sin obligar al usuario no financiero a leer un ERP.
+
 ## Canales
 - **WhatsApp** (principal, futuro): texto y audio.
 - **Web/app**: dashboard de control + chatbot interno. Ver [[Arquitectura]].

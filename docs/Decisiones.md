@@ -2,6 +2,16 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Noesis da el parte; el detalle se abre por capas (2026-07-11)
+La Home prioriza situación, siguiente acción y trabajo de Noesis. No se eliminan
+datos: se desplazan a Dinero, Cobros, Proyectos y el resto de apartados. Proyectos
+aplica la misma regla: tres cifras agregadas y listado primero; margen, horas,
+materiales y equipo solo al abrir un proyecto. El estilo de explicación es una
+preferencia de cuenta en Ajustes, no un control repetido en cada vista.
+
+Motivo: un autónomo sin formación financiera debe entender la app de inmediato,
+mientras que quien domina sus números conserva profundidad y trazabilidad.
+
 ## Piloto primero, plataforma por capas (2026-07-07)
 La visión completa ("sistema operativo empresarial": documentos inteligentes,
 gestoría interactiva, productos, proyectos, CRM, finanzas avanzadas) se construye

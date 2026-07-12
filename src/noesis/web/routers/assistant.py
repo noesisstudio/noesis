@@ -67,3 +67,15 @@ async def api_update_language(business_id: int, request: Request):
     return {"ok": True, "language": body.get("language")}
 
 
+@router.post("/api/{business_id}/explanation-level")
+async def api_update_explanation_level(business_id: int, request: Request):
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        db.update_explanation_level(business_id, body.get("level"))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "level": body.get("level")}
+

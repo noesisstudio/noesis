@@ -46,6 +46,7 @@ class PostgresDDLOrderTest(unittest.TestCase):
     PREEXISTING = {("clients", ("business_id", "id")),
                    ("invoices", ("business_id", "id")),
                    ("expenses", ("business_id", "id")),
+                   ("workers", ("business_id", "id")),
                    ("businesses", ("id",))}
 
     def test_composite_fks_have_unique_index_first(self):
@@ -275,6 +276,52 @@ class PlatformTestCase(unittest.TestCase):
         self.assertIn("greeting", b)
         self.assertIn("No he podido preparar", b["lead"])
 
+    # -------------------------------------------------------------- Proyectos
+    def test_project_budget_hours_margin_and_isolation(self):
+        client = db.add_client("Comunidad Marina", business_id=self.bid)
+        worker = db.create_worker(self.bid, "Pau")
+        project = db.add_project(
+            "Instalación comunitaria", 8000, client_id=client["id"],
+            planned_hours=80, business_id=self.bid,
+        )
+        db.add_project_member(
+            project["id"], worker["id"], 22, "Oficial", business_id=self.bid
+        )
+        db.add_project_entry(
+            project["id"], "horas", "Montaje", 10, 22, worker["id"],
+            business_id=self.bid,
+        )
+        db.add_project_entry(
+            project["id"], "material", "Tubería", 2, 150,
+            business_id=self.bid,
+        )
+        detail = db.get_project(project["id"], self.bid)
+        self.assertEqual(detail["actual_hours"], 10)
+        self.assertEqual(detail["actual_cost"], 520)
+        self.assertEqual(detail["margin"], 7480)
+        self.assertEqual(detail["members"][0]["worker_name"], "Pau")
+        self.assertIsNone(db.get_project(project["id"], self.other["id"]))
+
+    def test_project_cross_tenant_relations_are_rejected(self):
+        foreign_client = db.add_client("Privado", business_id=self.other["id"])
+        foreign_worker = db.create_worker(self.other["id"], "Ajeno")
+        with self.assertRaises(ValueError):
+            db.add_project(
+                "Ataque", 1000, client_id=foreign_client["id"],
+                business_id=self.bid,
+            )
+        project = db.add_project("Seguro", 1000, business_id=self.bid)
+        with self.assertRaises(ValueError):
+            db.add_project_member(
+                project["id"], foreign_worker["id"], business_id=self.bid
+            )
+
+    def test_explanation_level_is_account_wide(self):
+        db.update_explanation_level(self.bid, "detallado")
+        self.assertEqual(db.get_business(self.bid)["explanation_level"], "detallado")
+        with self.assertRaises(ValueError):
+            db.update_explanation_level(self.bid, "inventado")
+
     # -------------------------------------------------------- RGPD y migración
     def test_export_and_cascade_cover_new_tables(self):
         db.add_product("Hora", price=40, business_id=self.bid)
@@ -282,17 +329,20 @@ class PlatformTestCase(unittest.TestCase):
         db.add_gestoria_request("Hola", business_id=self.bid)
         db.add_supplier("Prov", business_id=self.bid)
         db.add_received_invoice(10, business_id=self.bid)
+        project = db.add_project("Obra", 1000, business_id=self.bid)
+        db.add_project_entry(project["id"], "material", "Piezas", 1, 10,
+                             business_id=self.bid)
         data = db.export_business_data(self.bid)
         for key in ("products", "leads", "gestoria_requests", "suppliers",
-                    "received_invoices"):
+                    "received_invoices", "projects", "project_entries"):
             self.assertEqual(len(data[key]), 1, key)
         self.assertTrue(db.delete_business_cascade(self.bid))
         self.assertIsNone(db.get_business(self.bid))
 
-    def test_migration_18_roundtrip(self):
+    def test_latest_migration_roundtrip(self):
         self.assertEqual(migrations.current_version(),
                          migrations.LATEST_VERSION)
-        self.assertEqual(migrations.downgrade(17), 17)
+        self.assertEqual(migrations.downgrade(18), 18)
         self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
         db.add_product("Post", price=1, business_id=self.other["id"])
 

@@ -39,7 +39,7 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
   de pruebas antes de activar (trámite del founder).
 - [ ] WhatsApp real (Meta Cloud API) — la cola durable ya está; faltan credenciales
   de Meta (verificación de empresa, clics del founder).
-- [ ] Stripe real — el adaptador ya habla con Stripe; faltan las claves y los dos
+- [ ] Stripe real — el adaptador ya habla con Stripe; faltan las claves y los tres
   precios en Railway (clics del founder).
 - [x] Despliegue 24/7 con HTTPS en **app.bynoesis.com** + marco legal completo
   (términos, privacidad, encargado del tratamiento, cookies, aviso legal).
@@ -87,7 +87,7 @@ existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
   insuficientes» y lista de qué falta.
 - [x] **Idioma persistente** (ES/CA/EN) en Ajustes: se guarda por negocio y la IA
   responde en él. La traducción completa de la interfaz queda para la capa C.
-- [ ] Partir `server.py` en routers por dominio (tarea técnica previa a la capa C).
+- [x] Partir `server.py` en routers por dominio.
 
 ### Capa C — V1
 - [ ] Portal gestoría con cuentas y permisos multi-negocio (tras feedback real
@@ -95,8 +95,10 @@ existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
 - [ ] Abstracción de canales (`ChannelProvider`) + Telegram según caso de uso
   confirmado (duda 2 de [[Preguntas-abiertas]]).
 - [ ] Oportunidades y presupuestos conectados al CRM de leads.
-- [ ] Proyectos/obras: presupuesto vs. real, horas (sobre fichaje existente),
-  gastos y margen por proyecto.
+- [x] Proyectos/obras: portada agregada y detalle progresivo con presupuesto vs.
+  real, horas, equipo, gastos y margen por proyecto (migración 19).
+- [x] Nivel de explicación de cuenta en Ajustes: claro, directo o detallado
+  (migración 20); nunca se pregunta dentro de cada pantalla.
 - [ ] Multiidioma completo de la interfaz (ES/CA/EN) — diseñar i18n antes de más UI.
 
 ### Capa D — V2

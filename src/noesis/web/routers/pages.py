@@ -16,7 +16,7 @@ _PAGES = {
     "resumen": "Inicio", "tesoreria": "Tesorería", "analisis": "Análisis",
     "ingresos": "Ingresos", "costes": "Costes", "presupuestos": "Presupuestos",
     "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
-    "agenda": "Agenda", "equipo": "Equipo", "clientes": "Clientes",
+    "agenda": "Trabajos", "proyectos": "Proyectos", "equipo": "Equipo", "clientes": "Clientes",
     "crm": "CRM", "productos": "Productos y servicios",
     "documentos": "Documentos",
     "asistente": "Asistente", "ajustes": "Ajustes",
@@ -152,6 +152,9 @@ def page(request: Request, business_id: int, page: str):
         }
     if page == "facturas":
         context["concept_suggestions"] = db.invoice_concept_suggestions(biz)
+    if page == "proyectos":
+        context["clients"] = db.list_clients(business_id)
+        context["workers"] = db.list_workers(business_id, include_inactive=False)
     if page == "asistente":
         from ...adapters import transcription
 
