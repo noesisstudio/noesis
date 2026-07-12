@@ -54,6 +54,82 @@ const emptyState = (title, text, href, action) => `
     ${href ? `<br><a class="btn sm" href="${href}">${esc(action || 'Ver')}</a>` : ''}
   </div>`;
 
+/* Acompañante persistente: mismo hilo en todas las pantallas y en WhatsApp. */
+let noesisHistoryLoaded = false;
+const noesisFormat = text => esc(text)
+  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+function noesisBubble(text, role, meta) {
+  const log = el('companion-log');
+  if (!log) return null;
+  const empty = log.querySelector('.companion-empty');
+  if (empty) empty.remove();
+  const node = document.createElement('div');
+  node.className = `bubble ${role === 'user' ? 'me' : 'bot'}`;
+  node.innerHTML = noesisFormat(text) + (meta
+    ? `<span class="src">${esc(meta)}</span>` : '');
+  log.appendChild(node);
+  log.scrollTop = log.scrollHeight;
+  return node;
+}
+async function noesisLoadHistory() {
+  const log = el('companion-log');
+  if (!log || noesisHistoryLoaded) return;
+  noesisHistoryLoaded = true;
+  log.innerHTML = '<div class="companion-empty"><b>Estoy contigo.</b>Pregúntame por esta pantalla o dime qué quieres quitarte de encima.</div>';
+  try {
+    const data = await api('/chat/history?limit=50');
+    if (!data.items.length) return;
+    log.innerHTML = '';
+    data.items.forEach(item => noesisBubble(
+      item.content, item.role,
+      item.channel === 'whatsapp' ? 'WhatsApp' : null
+    ));
+  } catch {
+    noesisHistoryLoaded = false;
+  }
+}
+function noesisDrawer(open) {
+  const drawer = el('noesis-companion');
+  if (!drawer) {
+    if (open) location.href = `/b/${BIZ}/asistente?ctx=${encodeURIComponent(window.NOESIS_PAGE || '')}`;
+    return;
+  }
+  document.body.classList.toggle('companion-open', Boolean(open));
+  drawer.setAttribute('aria-hidden', String(!open));
+  if (open) {
+    noesisLoadHistory();
+    setTimeout(() => el('companion-message')?.focus(), 180);
+  }
+}
+async function noesisSend(preset) {
+  const input = el('companion-message');
+  const button = el('companion-send');
+  const text = String(preset || input?.value || '').trim();
+  if (!text || !button || button.disabled) return;
+  if (input) input.value = '';
+  noesisBubble(text, 'user');
+  button.disabled = true;
+  const typing = noesisBubble('Estoy revisándolo…', 'assistant');
+  try {
+    const result = await apiPost('/chat', {
+      message: text, page: window.NOESIS_PAGE || null
+    });
+    typing?.remove();
+    noesisBubble(result.reply, 'assistant', result.source === 'ia' ? 'IA' : null);
+  } catch (error) {
+    typing?.remove();
+    noesisBubble(error.message || 'Ahora mismo no he podido responderte.', 'assistant');
+  } finally {
+    button.disabled = false;
+    input?.focus();
+  }
+}
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.body.classList.contains('companion-open')) {
+    noesisDrawer(false);
+  }
+});
+
 /* Modal de formulario reutilizable (sustituye a los prompt() del navegador). */
 function closeModal() {
   const m = document.querySelector('.modal-overlay');

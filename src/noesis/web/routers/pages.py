@@ -129,6 +129,7 @@ def page(request: Request, business_id: int, page: str):
     if page == "ajustes" and biz.get("whatsapp_status") != "conectado":
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
+        context["assistant_memories"] = db.list_memories(business_id)
         context["wa_reports"] = db.resolve_whatsapp_reports(
             biz.get("whatsapp_reports")
         )

@@ -386,7 +386,7 @@ def page_note(business_id: int, page: str) -> str | None:
         if state["gestoria_open"]:
             bits.append(f"{len(state['gestoria_open'])} solicitud(es) de tu gestoría")
         return ("Tienes " + " y ".join(bits) + "." if bits
-                else "Todo al día por aquí. Sube una foto y yo la clasifico.")
+                else "Todo al día por aquí. Sube una foto: te propongo dónde va y tú confirmas.")
     if page == "costes":
         rec = state["received_pending"]
         if rec:
@@ -411,7 +411,7 @@ def page_note(business_id: int, page: str) -> str | None:
     return f"Aquí tienes {_PAGE_HINTS[page]}."
 
 
-def handle(business_id: int, message: str, page: str | None = None) -> dict:
+def _handle(business_id: int, message: str, page: str | None = None) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
     if page and any(x in norm for x in (
             "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
@@ -485,3 +485,35 @@ def handle(business_id: int, message: str, page: str | None = None) -> dict:
             }
 
     return {"reply": _coach_reply(business_id, message), "source": "local"}
+
+
+def handle(
+    business_id: int,
+    message: str,
+    page: str | None = None,
+    *,
+    channel: str = "web",
+) -> dict:
+    """Entrada común del acompañante: responde y conserva la relación.
+
+    El guardado es deliberadamente resiliente: una incidencia en el historial no
+    puede impedir que el autónomo consulte o ejecute una tarea habitual.
+    """
+    try:
+        db.add_assistant_message(
+            business_id, "user", message, channel=channel, page=page,
+        )
+        db.record_product_event(
+            business_id, "assistant_message", f"channel={channel};page={page or ''}"
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo guardar la entrada del asistente para %s.", business_id)
+    result = _handle(business_id, message, page)
+    try:
+        db.add_assistant_message(
+            business_id, "assistant", result.get("reply") or "",
+            channel=channel, page=page, source=result.get("source"),
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo guardar la respuesta del asistente para %s.", business_id)
+    return result

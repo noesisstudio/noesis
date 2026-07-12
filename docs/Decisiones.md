@@ -2,6 +2,22 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Noesis recuerda solo lo explicable y la entrada es universal (2026-07-12)
+El acompañante conserva la conversación entre pantallas y canales, pero separa el
+historial de los recuerdos operativos. Un recuerdo permanente debe ser explícito,
+visible, borrable y confirmado; las señales de clientes se calculan con hechos
+trazables (vencimientos, cobros, presupuestos y trabajos), no con una nota opaca.
+
+Todo archivo entra por el mismo servicio de documentos. Noesis propone si es
+ticket, factura recibida o emitida, presupuesto, contrato, albarán, proveedor u
+otro documento, registra confianza y motivo, y pide revisión humana cuando puede
+tener efecto contable. Motivo: acompañar no significa decidir en silencio, y web y
+WhatsApp no deben desarrollar cerebros distintos.
+
+Las facturas emitidas antiguas se guardan como documento pendiente de revisión.
+Nunca se reemiten ni entran en la cadena Veri*Factu. La importación histórica con
+`source='importada'` se habilitará únicamente con un flujo específico y auditado.
+
 ## Noesis da el parte; el detalle se abre por capas (2026-07-11)
 La Home prioriza situación, siguiente acción y trabajo de Noesis. No se eliminan
 datos: se desplazan a Dinero, Cobros, Proyectos y el resto de apartados. Proyectos

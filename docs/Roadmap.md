@@ -77,6 +77,16 @@ existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
   margen (solo si hay coste real), IVA, stock con aviso, y prefill al crear factura.
 - [x] **Asistente contextual**: sabe en qué página está el usuario (botón «?» en
   la barra), la explica con datos reales y la IA hereda contexto e idioma.
+- [x] **Noesis persistente entre pantallas** (migración 21): la conversación se
+  conserva entre web y WhatsApp, el panel lateral acompaña en cada apartado y la
+  IA recibe únicamente recuerdos confirmados y señales trazables del negocio.
+- [x] **Entrada documental universal v1** (migración 21): web y WhatsApp comparten
+  clasificador, registran tipo propuesto, confianza y motivo, y piden confirmación
+  antes de convertir tickets o facturas recibidas. Las facturas emitidas antiguas
+  quedan en revisión y no se reemiten ni entran en Veri*Factu.
+- [x] **Señales de clientes v1**: vencidos, ritmo de pago, actividad y conversión
+  se explican con evidencia visible; sin puntuaciones opacas ni predicciones
+  inventadas.
 - [x] **Vista Hoy ampliada**: el plan diario incluye documentos pendientes,
   recibidas por pagar, seguimientos de CRM y solicitudes de gestoría.
 - [x] **CRM de leads** (migración 18, adelantado de la capa C): embudo con 8
@@ -102,8 +112,8 @@ existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
 - [ ] Multiidioma completo de la interfaz (ES/CA/EN) — diseñar i18n antes de más UI.
 
 ### Capa D — V2
-Ratios avanzados y EBITDA · stock y ventas por canal · aprendizaje de
-preferencias (visible, borrable, con consentimiento) · WhatsApp Business
+Ratios avanzados y EBITDA · stock y ventas por canal · aprendizaje automático de
+preferencias (la memoria confirmada, visible y borrable ya existe) · WhatsApp Business
 completo con plantillas · portal gestoría avanzado (modelos 303/130/390 con
 revisión humana siempre) · automatizaciones profundas.
 

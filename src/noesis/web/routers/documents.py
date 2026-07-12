@@ -51,10 +51,21 @@ async def api_upload_document(business_id: int, file: UploadFile = File(...),
     try:
         doc = docservice.upload(business_id, file.filename or "documento", data,
                                 kind=kind, client_id=_opt_int(client_id),
-                                invoice_id=_opt_int(invoice_id), note=note or None)
+                                invoice_id=_opt_int(invoice_id), note=note or None,
+                                auto_classify=True)
     except docservice.UploadError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return doc
+
+
+@router.post("/api/{business_id}/documents/{doc_id}/classify")
+def api_document_classify(business_id: int, doc_id: int):
+    """Reintenta la misma clasificación universal usada al entrar por cualquier canal."""
+    from ...documents import service as docservice
+    proposal = docservice.classify(business_id, doc_id)
+    if proposal is None:
+        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+    return proposal
 
 
 @router.get("/api/{business_id}/documents/{doc_id}/file")
@@ -132,11 +143,18 @@ async def api_document_review(business_id: int, doc_id: int, request: Request):
     except Exception:  # noqa: BLE001
         body = {}
     try:
+        chosen_kind = body.get("kind") or None
         doc = docrepo.set_review(
             doc_id, business_id,
-            kind=body.get("kind") or None,
+            kind=chosen_kind,
             doc_status=body.get("doc_status") or None,
             review_note=body.get("review_note") or None)
+        if chosen_kind:
+            docrepo.confirm_classification(doc_id, business_id, chosen_kind)
+            db.record_product_event(
+                business_id, "document_classification_confirmed",
+                f"kind={chosen_kind}",
+            )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     if doc is None:

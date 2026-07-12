@@ -33,6 +33,36 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
         config.DATABASE_URL = self.original_database_url
         self.tempdir.cleanup()
 
+    def test_universal_classifier_falls_back_locally_and_waits_for_confirmation(self):
+        with patch.object(config, "ANTHROPIC_API_KEY", ""):
+            doc = docservice.upload(
+                self.business["id"], "ticket-ferreteria.jpg",
+                b"\xff\xd8\xff\xe0foto", run_ocr=False, auto_classify=True,
+            )
+        self.assertEqual(doc["classification"]["kind"], "ticket")
+        stored = docrepo.get(doc["id"], self.business["id"])
+        self.assertEqual(stored["kind"], "ticket")
+        self.assertEqual(stored["doc_status"], "pendiente_revisar")
+        self.assertIsNone(docrepo.get(doc["id"], self.other["id"]))
+        attempt = docrepo.latest_classification(doc["id"], self.business["id"])
+        self.assertEqual(attempt["method"], "heuristica")
+        self.assertIsNone(attempt["confirmed_kind"])
+
+        docrepo.confirm_classification(doc["id"], self.business["id"], "ticket")
+        self.assertEqual(
+            docrepo.latest_classification(doc["id"], self.business["id"])["confirmed_kind"],
+            "ticket",
+        )
+
+    def test_uncertain_document_is_not_forced_into_an_accounting_category(self):
+        with patch.object(config, "ANTHROPIC_API_KEY", ""):
+            doc = docservice.upload(
+                self.business["id"], "papel.jpg", b"\xff\xd8\xff\xe0foto",
+                run_ocr=False, auto_classify=True,
+            )
+        self.assertEqual(doc["classification"]["kind"], "documento")
+        self.assertEqual(docrepo.get(doc["id"], self.business["id"])["kind"], "documento")
+
     def _upload_doc(self, business_id, filename="factura-luz.pdf"):
         return docservice.upload(business_id, filename, b"%PDF-1.4 demo",
                                  run_ocr=False)

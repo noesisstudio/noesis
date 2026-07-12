@@ -393,9 +393,33 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
             f" ({expense['concept']}). El justificante queda guardado"
             " en tus papeles."
         )
+    if kind == "factura_recibida":
+        from ..documents import service as docservice
+        try:
+            received = docservice.confirm_received_invoice(
+                business["id"], int(payload.get("document_id")),
+                total=payload.get("total"),
+                supplier_name=payload.get("supplier"),
+                supplier_nif=payload.get("supplier_nif"),
+                number=payload.get("number"),
+                issued_on=payload.get("issued_on"),
+                due_on=payload.get("due_on"),
+                base=payload.get("base"),
+                vat_rate=payload.get("vat_rate"),
+                vat_amount=payload.get("vat_amount"),
+                irpf_amount=payload.get("irpf_amount"),
+                concept=payload.get("concept") or "Factura recibida por WhatsApp",
+            )
+        except (ValueError, TypeError, docservice.UploadError) as exc:
+            return f"No he podido registrar la factura: {exc}"
+        return (
+            f"Hecho ✅ Factura recibida de "
+            f"{payload.get('supplier') or 'proveedor'} por {_eur(received['total'])}. "
+            "El original y tu confirmación quedan guardados."
+        )
     if kind == "chat_action":
         return chat.handle(
-            business["id"], str(payload.get("text") or "")
+            business["id"], str(payload.get("text") or ""), channel="whatsapp"
         ).get("reply", "")
     if kind == "reclamar":
         return _execute_collection(business, payload)
@@ -456,7 +480,7 @@ def _execute_collection(business: dict, payload: dict) -> str:
 
 
 def _ingest_image(business: dict, phone: str, message: dict) -> dict:
-    """Foto entrante → documento guardado + borrador de gasto a confirmar."""
+    """Foto entrante → clasificación única + borrador confirmable."""
     from ..adapters import extraction
     from ..documents import service as docservice
 
@@ -484,22 +508,65 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
     try:
         document = docservice.upload(
             business["id"],
-            f"whatsapp-ticket{ext}",
+            f"whatsapp-documento{ext}",
             data,
-            kind="ticket",
+            kind="documento",
             note="Recibido por WhatsApp",
-            run_ocr=False,
+            run_ocr=True,
+            auto_classify=True,
         )
     except docservice.UploadError as exc:
         send(phone, str(exc), business_id=business["id"])
         return {"phone": phone, "media": "image", "ingested": False}
+
+    classification = document.get("classification") or {}
+    detected_kind = classification.get("kind") or document.get("kind") or "documento"
+    if detected_kind in {"factura_recibida", "factura_emitida"}:
+        draft = docservice.invoice_draft(business["id"], document["id"])
+        if detected_kind == "factura_recibida" and draft and draft.get("total"):
+            payload = {**draft, "document_id": document["id"]}
+            db.set_pending_action(business["id"], phone, "factura_recibida", payload)
+            send(
+                phone,
+                f"📄 Parece una factura recibida de "
+                f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
+                "¿La guardo como factura de proveedor? Responde SÍ o NO.",
+                business_id=business["id"],
+            )
+            return {"phone": phone, "media": "image", "ingested": True,
+                    "pending": True, "document_id": document["id"],
+                    "classification": detected_kind}
+        send(
+            phone,
+            "He guardado la foto. Parece una factura emitida por ti, así que no "
+            "la reemitiré ni la meteré en Veri*Factu. Revísala en Documentos para "
+            "confirmar que es histórica.",
+            business_id=business["id"],
+        )
+        return {"phone": phone, "media": "image", "ingested": True,
+                "pending": False, "document_id": document["id"],
+                "classification": detected_kind}
+
+    if detected_kind in {"contrato", "presupuesto", "albaran", "proveedor"}:
+        labels = {"contrato": "un contrato", "presupuesto": "un presupuesto",
+                  "albaran": "un albarán", "proveedor": "un documento de proveedor"}
+        send(
+            phone,
+            f"📎 Guardado. Parece {labels[detected_kind]}. Lo he dejado pendiente "
+            "de tu confirmación en Documentos.",
+            business_id=business["id"],
+        )
+        return {"phone": phone, "media": "image", "ingested": True,
+                "pending": False, "document_id": document["id"],
+                "classification": detected_kind}
 
     fields = None
     if _extraction_budget_ok(business["id"]):
         fields = extraction.extract_expense(data, mime)
     db.record_product_event(
         business["id"], "media_ingested",
-        json.dumps({"type": "image", "extracted": bool(fields)},
+        json.dumps({"type": "image", "extracted": bool(fields),
+                    "classification": detected_kind},
                    separators=(",", ":")),
     )
     if fields and fields.get("amount"):
@@ -534,7 +601,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
 
 
 def _ingest_document(business: dict, phone: str, message: dict) -> dict:
-    """PDF entrante → se guarda en papeles (la extracción llegará en W3)."""
+    """PDF entrante → clasificación y, si procede, factura recibida confirmable."""
     from ..documents import service as docservice
 
     mime = message.get("media_document_mime") or ""
@@ -562,19 +629,43 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
         document = docservice.upload(
             business["id"], filename, data,
             kind="documento", note="Recibido por WhatsApp", run_ocr=False,
+            auto_classify=True,
         )
     except docservice.UploadError as exc:
         send(phone, str(exc), business_id=business["id"])
         return {"phone": phone, "media": "document", "ingested": False}
+    classification = document.get("classification") or {}
+    kind = classification.get("kind") or "documento"
+    if kind == "factura_recibida":
+        draft = docservice.invoice_draft(business["id"], document["id"])
+        if draft and draft.get("total"):
+            db.set_pending_action(
+                business["id"], phone, "factura_recibida",
+                {**draft, "document_id": document["id"]},
+            )
+            send(
+                phone,
+                f"📄 He leído «{filename}»: parece una factura recibida de "
+                f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
+                "¿La registro? Responde SÍ o NO.",
+                business_id=business["id"],
+            )
+            return {"phone": phone, "media": "document", "ingested": True,
+                    "pending": True, "document_id": document["id"],
+                    "classification": kind}
+    labels = {"factura_emitida": "factura emitida histórica", "presupuesto": "presupuesto",
+              "contrato": "contrato", "albaran": "albarán", "proveedor": "documento de proveedor"}
+    reading = labels.get(kind)
     send(
         phone,
-        f"📎 Guardado «{filename}» en tus papeles. Lo tienes en la web, "
-        "en el apartado Documentos.",
+        f"📎 Guardado «{filename}» en tus papeles. "
+        + (f"Parece {reading}; confírmalo en Documentos." if reading
+           else "No estoy segura del tipo; te lo he dejado pendiente para revisar."),
         business_id=business["id"],
     )
     return {
         "phone": phone, "media": "document", "ingested": True,
-        "document_id": document["id"],
+        "document_id": document["id"], "classification": kind,
     }
 
 
@@ -726,7 +817,9 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
-        reply = chat.handle(business["id"], text).get("reply", "")
+        reply = chat.handle(
+            business["id"], text, channel="whatsapp"
+        ).get("reply", "")
         send(phone, reply, business_id=business["id"])
         results.append({
             "phone": phone,

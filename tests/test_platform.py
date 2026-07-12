@@ -1,5 +1,4 @@
-"""Regresión de la capa plataforma (migración 18): productos, CRM, solicitudes
-de gestoría, idioma, P&G honesto y plan diario ampliado."""
+"""Regresión de plataforma: dominios base, proyectos y memoria de Noesis."""
 
 from __future__ import annotations
 
@@ -322,6 +321,59 @@ class PlatformTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             db.update_explanation_level(self.bid, "inventado")
 
+    # ------------------------------------------------------ Memoria y señales
+    def test_assistant_history_and_memory_are_durable_and_isolated(self):
+        result = chat.handle(self.bid, "resumen")
+        self.assertTrue(result["reply"])
+        history = db.list_assistant_messages(self.bid)
+        self.assertEqual([item["role"] for item in history], ["user", "assistant"])
+        self.assertEqual(db.list_assistant_messages(self.other["id"]), [])
+
+        db.remember(
+            self.bid, "forma_de_cobro", "transferencia",
+            user_confirmed=True, confidence=100,
+        )
+        self.assertEqual(db.list_memories(self.bid)[0]["memory_value"], "transferencia")
+        self.assertEqual(db.list_memories(self.other["id"]), [])
+
+        memory_id = db.list_memories(self.bid)[0]["id"]
+        self.assertFalse(db.delete_memory(self.other["id"], memory_id))
+        self.assertTrue(db.delete_memory(self.bid, memory_id))
+        self.assertEqual(db.list_memories(self.bid), [])
+
+    def test_client_insights_explain_overdue_risk(self):
+        client = db.add_client("Cliente lento", business_id=self.bid)
+        invoice = db.add_invoice(
+            client["id"], "Trabajo", 100, business_id=self.bid
+        )
+        db.mark_invoice_sent(
+            invoice["id"], "EXT-1", due_date="2020-01-01",
+            business_id=self.bid,
+        )
+        insight = db.client_insights(self.bid)[0]
+        self.assertEqual(insight["level"], "alto")
+        self.assertIn("reclamar", insight["headline"].lower())
+        self.assertGreater(insight["pending_amount"], 0)
+        self.assertEqual(db.client_insights(self.other["id"]), [])
+
+    def test_imported_invoice_can_never_be_reissued(self):
+        client = db.add_client("Cliente histórico", business_id=self.bid)
+        invoice = db.add_invoice(
+            client["id"], "Factura importada", 250, business_id=self.bid
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE invoices SET source='importada', external_number='A-17' "
+                "WHERE id=? AND business_id=?",
+                (invoice["id"], self.bid),
+            )
+        with self.assertRaises(ValueError):
+            db.issue_invoice(invoice["id"], self.bid)
+        with self.assertRaises(ValueError):
+            db.mark_invoice_sent(
+                invoice["id"], "F-2026-999", business_id=self.bid
+            )
+
     # -------------------------------------------------------- RGPD y migración
     def test_export_and_cascade_cover_new_tables(self):
         db.add_product("Hora", price=40, business_id=self.bid)
@@ -332,9 +384,12 @@ class PlatformTestCase(unittest.TestCase):
         project = db.add_project("Obra", 1000, business_id=self.bid)
         db.add_project_entry(project["id"], "material", "Piezas", 1, 10,
                              business_id=self.bid)
+        db.add_assistant_message(self.bid, "user", "hola")
+        db.remember(self.bid, "clave", "valor", user_confirmed=True)
         data = db.export_business_data(self.bid)
         for key in ("products", "leads", "gestoria_requests", "suppliers",
-                    "received_invoices", "projects", "project_entries"):
+                    "received_invoices", "projects", "project_entries",
+                    "assistant_messages", "business_memories"):
             self.assertEqual(len(data[key]), 1, key)
         self.assertTrue(db.delete_business_cascade(self.bid))
         self.assertIsNone(db.get_business(self.bid))

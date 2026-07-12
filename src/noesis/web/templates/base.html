@@ -33,7 +33,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Noesis">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-  <script>window.NOESIS_BIZ = {{ business.id }};</script>
+  <script>window.NOESIS_BIZ = {{ business.id }}; window.NOESIS_PAGE = {{ active|tojson }};</script>
 </head>
 <body>
 <div class="app">
@@ -81,9 +81,10 @@
       </div>
       <div class="topbar-actions">
         {% if active != 'asistente' %}
-        <a class="search-btn" href="/b/{{ business.id }}/asistente?ctx={{ active }}"
-           title="Preguntar al asistente sobre esta página" aria-label="Ayuda del asistente"
-           style="text-decoration:none"><b>?</b></a>
+        <button class="search-btn noesis-trigger" type="button" onclick="noesisDrawer(true)"
+           title="Hablar con Noesis sobre esta página" aria-label="Hablar con Noesis">
+          <img src="/static/noesis-mark.svg" alt="">
+        </button>
         {% endif %}
         <button class="search-btn" type="button" onclick="searchModal()"
                 title="Buscar (Ctrl+K)" aria-label="Buscar cliente, factura o trabajo">
@@ -139,6 +140,9 @@
       <div class="page-note">
         <span class="pn-mark"><img src="/static/noesis-mark.svg" alt=""></span>
         <p>{{ page_note }}</p>
+        {% if active != 'asistente' %}
+        <button class="pn-ask" type="button" onclick="noesisDrawer(true)">Hablar sobre esto</button>
+        {% endif %}
       </div>
       {% endif %}
       {% block content %}{% endblock %}
@@ -157,9 +161,39 @@
   </button>
   <a class="bn-item {{ 'active' if active=='cobros' }}" href="/b/{{ business.id }}/cobros">
     <span class="ic">{{ ic('cobros') }}</span>Cobros</a>
-  <a class="bn-item {{ 'active' if active=='asistente' }}" href="/b/{{ business.id }}/asistente">
-    <span class="ic">{{ ic('asistente') }}</span>Noesis</a>
+  {% if active == 'asistente' %}
+    <a class="bn-item active" href="/b/{{ business.id }}/asistente">
+      <span class="ic">{{ ic('asistente') }}</span>Noesis</a>
+  {% else %}
+    <button class="bn-item" type="button" onclick="noesisDrawer(true)">
+      <span class="ic">{{ ic('asistente') }}</span>Noesis</button>
+  {% endif %}
 </nav>
+
+{% if active != 'asistente' %}
+<button class="companion-scrim" type="button" aria-label="Cerrar Noesis"
+        onclick="noesisDrawer(false)"></button>
+<aside class="companion" id="noesis-companion" aria-label="Noesis, tu mano derecha"
+       aria-hidden="true">
+  <header class="companion-head">
+    <span class="companion-mark"><img src="/static/noesis-mark.svg" alt=""></span>
+    <div><b>Noesis</b><small>He revisado esta pantalla contigo</small></div>
+    <button class="iconbtn" type="button" aria-label="Cerrar Noesis"
+            onclick="noesisDrawer(false)">✕</button>
+  </header>
+  <div class="companion-context">
+    <span>Estás en</span><b>{{ page_title }}</b>
+    <button type="button" onclick="noesisSend('¿Qué debería hacer ahora en esta página?')">¿Qué harías tú?</button>
+  </div>
+  <div class="companion-log" id="companion-log" aria-live="polite"></div>
+  <form class="companion-input" onsubmit="event.preventDefault(); noesisSend();">
+    <input id="companion-message" class="input" placeholder="Dime qué necesitas…"
+           autocomplete="off" maxlength="2000">
+    <button class="btn primary" type="submit" id="companion-send">Enviar</button>
+  </form>
+  <a class="companion-full" href="/b/{{ business.id }}/asistente?ctx={{ active }}">Abrir conversación completa</a>
+</aside>
+{% endif %}
 
 <script src="/static/vendor/chart.umd.min.js"></script>
 <script src="/static/app.js?v={{ asset_v }}"></script>

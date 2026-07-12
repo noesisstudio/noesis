@@ -589,6 +589,123 @@ def count_product_events(business_id: int, event_name: str,
         return int(conn.execute(q, params).fetchone()["n"])
 
 
+# ------------------------------------------------------- Memoria de Noesis ---
+def add_assistant_message(
+    business_id: int,
+    role: str,
+    content: str,
+    *,
+    channel: str = "web",
+    page: str | None = None,
+    source: str | None = None,
+) -> dict:
+    """Guarda una intervención del usuario o de Noesis, aislada por negocio."""
+    if role not in {"user", "assistant"}:
+        raise ValueError("Rol de conversación no válido.")
+    channel = (channel or "web").strip().lower()[:30]
+    if channel not in {"web", "whatsapp", "audio", "system"}:
+        channel = "web"
+    content = str(content or "").strip()
+    if not content:
+        raise ValueError("El mensaje está vacío.")
+    content = content[:12_000]
+    page = (page or "").strip()[:50] or None
+    source = (source or "").strip()[:30] or None
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO assistant_messages "
+            "(business_id, channel, role, content, page, source, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, channel, role, content, page, source, _now()),
+        ).fetchone()
+        message_id = row["id"]
+        saved = conn.execute(
+            "SELECT * FROM assistant_messages WHERE id=? AND business_id=?",
+            (message_id, business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def list_assistant_messages(business_id: int, limit: int = 60) -> list[dict]:
+    """Últimos mensajes en orden de lectura, compartidos entre web y WhatsApp."""
+    limit = max(1, min(int(limit or 60), 200))
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM (SELECT * FROM assistant_messages "
+            "WHERE business_id=? ORDER BY id DESC LIMIT ?) recent "
+            "ORDER BY id ASC",
+            (business_id, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def remember(
+    business_id: int,
+    key: str,
+    value: str,
+    *,
+    scope_type: str = "business",
+    scope_id: int = 0,
+    source: str = "user",
+    confidence: float | None = None,
+    user_confirmed: bool = False,
+) -> dict:
+    """Memoria explícita y corregible; nunca guarda una inferencia como hecho."""
+    key = str(key or "").strip()[:80]
+    value = str(value or "").strip()[:2_000]
+    scope_type = str(scope_type or "business").strip()[:30]
+    if not key or not value:
+        raise ValueError("La memoria necesita clave y valor.")
+    confidence = None if confidence is None else max(0, min(float(confidence), 100))
+    now = _now()
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO business_memories "
+            "(business_id, scope_type, scope_id, memory_key, memory_value, "
+            "source, confidence, user_confirmed, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, scope_type, scope_id, memory_key) "
+            "DO UPDATE SET memory_value=excluded.memory_value, "
+            "source=excluded.source, confidence=excluded.confidence, "
+            "user_confirmed=excluded.user_confirmed, updated_at=excluded.updated_at",
+            (business_id, scope_type, int(scope_id or 0), key, value,
+             source[:30], confidence, bool(user_confirmed), now, now),
+        )
+        row = conn.execute(
+            "SELECT * FROM business_memories WHERE business_id=? "
+            "AND scope_type=? AND scope_id=? AND memory_key=?",
+            (business_id, scope_type, int(scope_id or 0), key),
+        ).fetchone()
+    return dict(row)
+
+
+def list_memories(
+    business_id: int, *, scope_type: str | None = None,
+    scope_id: int | None = None,
+) -> list[dict]:
+    q = "SELECT * FROM business_memories WHERE business_id=?"
+    params: list = [business_id]
+    if scope_type:
+        q += " AND scope_type=?"
+        params.append(scope_type)
+    if scope_id is not None:
+        q += " AND scope_id=?"
+        params.append(int(scope_id))
+    q += " ORDER BY user_confirmed DESC, updated_at DESC, id DESC"
+    with get_conn() as conn:
+        return [dict(row) for row in conn.execute(q, params).fetchall()]
+
+
+def delete_memory(business_id: int, memory_id: int) -> bool:
+    """Olvida una memoria concreta sin poder cruzar el límite del negocio."""
+    with get_conn() as conn:
+        deleted = conn.execute(
+            "DELETE FROM business_memories WHERE id=? AND business_id=?",
+            (int(memory_id), business_id),
+        ).rowcount
+    return bool(deleted)
+
+
 def activation_snapshot(business_id: int) -> dict:
     """Estado de activación basado en resultados reales, no en visitas o clics.
 
@@ -2460,6 +2577,11 @@ def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int = 15
         ).fetchone()
         if not inv:
             raise ValueError("No existe esa factura.")
+        if inv.get("source") == "importada":
+            raise ValueError(
+                "Una factura importada es histórica: no se puede emitir ni "
+                "entrar en la cadena Veri*Factu."
+            )
         if inv["status"] != "borrador" or inv["number"]:
             existing = get_invoice(invoice_id, business_id)
             if existing and existing["status"] in {
@@ -2531,6 +2653,12 @@ def mark_invoice_sent(invoice_id, number, due_date=None, *, business_id: int) ->
             "El modo Veri*Factu nativo debe emitir con la numeración interna."
         )
     with get_conn() as conn:
+        imported = conn.execute(
+            "SELECT source FROM invoices WHERE id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        if imported and imported.get("source") == "importada":
+            raise ValueError("Una factura importada no se puede volver a emitir.")
         cur = conn.execute(
             "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=? "
             "WHERE id=? AND business_id=? AND status='borrador' AND number IS NULL",
@@ -4198,6 +4326,123 @@ def client_stats(business_id) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def client_insights(business_id: int) -> list[dict]:
+    """Señales explicables por cliente; reglas honestas antes que ML opaco.
+
+    Cada lectura incluye su evidencia y confianza. No se presenta como predicción
+    cuando todavía no hay historial suficiente.
+    """
+    clients = list_clients(business_id)
+    invoices = list_invoices(business_id)
+    quotes = list_quotes(business_id)
+    with get_conn() as conn:
+        jobs = [dict(row) for row in conn.execute(
+            "SELECT * FROM jobs WHERE business_id=?", (business_id,)
+        ).fetchall()]
+    today = date.today()
+
+    def _day(value):
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+        except (TypeError, ValueError):
+            try:
+                return date.fromisoformat(str(value)[:10])
+            except (TypeError, ValueError):
+                return None
+
+    out: list[dict] = []
+    for client in clients:
+        cid = client["id"]
+        cinv = [item for item in invoices if item.get("client_id") == cid]
+        cquotes = [item for item in quotes if item.get("client_id") == cid]
+        cjobs = [item for item in jobs if item.get("client_id") == cid]
+        pending = [item for item in cinv if item.get("remaining_amount", 0) > 0
+                   and item.get("status") != "borrador"]
+        overdue = []
+        for item in pending:
+            due = _day(item.get("due_date"))
+            issued = _day(item.get("issued_at"))
+            if (due and due < today) or (not due and issued and (today - issued).days > 30):
+                overdue.append(item)
+        paid_delays = []
+        for item in cinv:
+            issued, paid = _day(item.get("issued_at")), _day(item.get("paid_at"))
+            if issued and paid and paid >= issued:
+                paid_delays.append((paid - issued).days)
+        avg_delay = round(sum(paid_delays) / len(paid_delays)) if paid_delays else None
+        stale_quotes = []
+        for item in cquotes:
+            created = _day(item.get("created_at"))
+            if item.get("status") == "enviado" and created and (today - created).days >= 7:
+                stale_quotes.append(item)
+
+        activity_days = [d for d in (
+            *(_day(item.get("issued_at") or item.get("created_at")) for item in cinv),
+            *(_day(item.get("created_at")) for item in cquotes),
+            *(_day(item.get("scheduled_for") or item.get("created_at")) for item in cjobs),
+        ) if d]
+        last_activity = max(activity_days) if activity_days else None
+        inactivity = (today - last_activity).days if last_activity else None
+        evidence = len(cinv) + len(cquotes) + len(cjobs)
+        confidence = min(95, 35 + len(cinv) * 10 + len(cjobs) * 4 + len(cquotes) * 3)
+
+        if overdue:
+            amount = round(sum(item.get("remaining_amount") or 0 for item in overdue), 2)
+            amount_text = (
+                f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+            level = "alto"
+            headline = f"Conviene reclamar {amount_text} €"
+            reason = (f"Tiene {len(overdue)} factura(s) fuera de plazo"
+                      + (f" y suele tardar {avg_delay} días en pagar." if avg_delay is not None else "."))
+            next_action = "Preparar recordatorio de cobro"
+        elif stale_quotes:
+            level = "medio"
+            headline = "Hay un presupuesto esperando respuesta"
+            reason = f"Lleva al menos 7 días enviado sin aceptar ni rechazar ({len(stale_quotes)} pendiente(s))."
+            next_action = "Preparar seguimiento del presupuesto"
+        elif avg_delay is not None and avg_delay > 30:
+            level = "medio"
+            headline = "Suele pagar con calma"
+            reason = f"Su media observada es de {avg_delay} días desde la emisión."
+            next_action = "Acordar vencimiento antes del próximo trabajo"
+        elif inactivity is not None and inactivity > 120 and evidence >= 2:
+            level = "medio"
+            headline = "Hace tiempo que no trabaja contigo"
+            reason = f"La última actividad registrada fue hace {inactivity} días."
+            next_action = "Valorar un mensaje de seguimiento"
+        elif evidence:
+            level = "bajo"
+            headline = "Relación al día"
+            reason = (f"Veo {len(cjobs)} trabajo(s), {len(cinv)} factura(s) y "
+                      "ningún cobro vencido ahora mismo.")
+            next_action = "Seguir cuidando la relación"
+        else:
+            level = "sin_datos"
+            headline = "Aún estoy aprendiendo"
+            reason = "Me faltan trabajos, presupuestos o facturas para detectar un patrón."
+            next_action = "Registrar la próxima actividad"
+            confidence = 0
+        out.append({
+            "client_id": cid,
+            "client_name": client.get("name"),
+            "level": level,
+            "headline": headline,
+            "reason": reason,
+            "next_action": next_action,
+            "confidence": confidence,
+            "evidence_count": evidence,
+            "pending_amount": round(sum(item.get("remaining_amount") or 0 for item in pending), 2),
+            "average_payment_days": avg_delay,
+            "last_activity_on": last_activity.isoformat() if last_activity else None,
+        })
+    priority = {"alto": 0, "medio": 1, "bajo": 2, "sin_datos": 3}
+    out.sort(key=lambda item: (priority[item["level"]], -item["evidence_count"], item["client_name"] or ""))
+    return out
+
+
 def financial_analysis(business_id) -> dict:
     """Cuadro de mando financiero: KPIs, márgenes, solvencia y morosidad.
 
@@ -5527,6 +5772,15 @@ def export_business_data(business_id) -> dict:
         "product_events": [dict(r) for r in _rows(
             "SELECT * FROM product_events WHERE business_id=? ORDER BY id",
             business_id)],
+        "assistant_messages": [dict(r) for r in _rows(
+            "SELECT * FROM assistant_messages WHERE business_id=? ORDER BY id",
+            business_id)],
+        "business_memories": [dict(r) for r in _rows(
+            "SELECT * FROM business_memories WHERE business_id=? ORDER BY id",
+            business_id)],
+        "document_classifications": [dict(r) for r in _rows(
+            "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
+            business_id)],
         "copilot_recommendations": [dict(r) for r in _rows(
             "SELECT * FROM copilot_recommendations WHERE business_id=? ORDER BY id",
             business_id)],
@@ -5590,6 +5844,11 @@ def delete_client_cascade(client_id, business_id) -> bool:
             "AND status IN ('enviada','parcial','cobrada')",
             (business_id, client_id),
         ).fetchone()["total"]
+        conn.execute(
+            "DELETE FROM business_memories WHERE business_id=? "
+            "AND scope_type='client' AND scope_id=?",
+            (business_id, client_id),
+        )
         conn.execute("DELETE FROM portal_tokens WHERE business_id=? AND client_id=?",
                      (business_id, client_id))
         conn.execute("DELETE FROM quotes WHERE business_id=? AND client_id=?",
@@ -5656,7 +5915,8 @@ def delete_business_cascade(business_id) -> bool:
             "verifactu_outbox", "document_sequences",
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
             "invoice_events", "invoice_records", "portal_tokens",
-            "product_events", "copilot_recommendations", "gestoria_requests",
+            "product_events", "assistant_messages", "business_memories",
+            "document_classifications", "copilot_recommendations", "gestoria_requests",
             "project_entries", "project_members", "projects",
             "documents", "received_invoices", "suppliers", "products",
             "leads", "quotes",

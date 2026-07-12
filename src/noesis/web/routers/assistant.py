@@ -12,6 +12,39 @@ from ..deps import _read_json
 
 router = APIRouter()
 
+
+@router.get("/api/{business_id}/chat/history")
+def api_chat_history(business_id: int, limit: int = 60):
+    return {"items": db.list_assistant_messages(business_id, limit=limit)}
+
+
+@router.get("/api/{business_id}/assistant/memories")
+def api_assistant_memories(business_id: int):
+    """Memoria visible: el usuario puede saber qué conserva Noesis."""
+    return {"items": db.list_memories(business_id)}
+
+
+@router.post("/api/{business_id}/assistant/memories")
+async def api_assistant_remember(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+        memory = db.remember(
+            business_id, body.get("key"), body.get("value"),
+            source="user", confidence=100, user_confirmed=True,
+        )
+    except (ValueError, TypeError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    db.record_product_event(business_id, "assistant_memory_confirmed")
+    return memory
+
+
+@router.delete("/api/{business_id}/assistant/memories/{memory_id}")
+def api_assistant_forget(business_id: int, memory_id: int):
+    if not db.delete_memory(business_id, memory_id):
+        return JSONResponse({"error": "Recuerdo no encontrado."}, status_code=404)
+    db.record_product_event(business_id, "assistant_memory_deleted")
+    return {"ok": True}
+
 @router.post("/api/{business_id}/chat")
 async def api_chat(business_id: int, request: Request):
     try:
@@ -48,7 +81,9 @@ async def api_chat_audio(business_id: int, audio: UploadFile = File(...)):
     if not text:
         return JSONResponse({"error": "El audio estaba vacío o no se entendió."},
                             status_code=422)
-    result = await run_in_threadpool(chat.handle, business_id, text)
+    result = await run_in_threadpool(
+        lambda: chat.handle(business_id, text, channel="audio")
+    )
     return {"transcription": text, **result}
 
 
@@ -78,4 +113,3 @@ async def api_update_explanation_level(business_id: int, request: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     return {"ok": True, "level": body.get("level")}
-

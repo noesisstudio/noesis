@@ -504,7 +504,9 @@ class BackendTestCase(unittest.TestCase):
 
         self.assertEqual(first["processed"], 1)
         self.assertTrue(duplicate["results"][0]["duplicate"])
-        handle.assert_called_once_with(business["id"], "resumen")
+        handle.assert_called_once_with(
+            business["id"], "resumen", channel="whatsapp"
+        )
         send.assert_called_once()
 
     def test_whatsapp_proactives_use_approved_template_and_stable_key(self):
@@ -2408,7 +2410,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
             patch.object(whatsapp, "_audio_to_text",
                          return_value="hazle una factura a Carlos de 100"),
             patch.object(whatsapp.chat, "handle",
-                         side_effect=lambda bid, text:
+                         side_effect=lambda bid, text, **kwargs:
                          handled.append(text) or {"reply": "hecho"}),
             patch.object(whatsapp, "send",
                          side_effect=lambda phone, text, **kw:
@@ -2451,6 +2453,44 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(len(docs), 1)
         self.assertEqual(docs[0]["filename"], "factura-luz.pdf")
         self.assertIn("papeles", replies[-1])
+
+    def test_pdf_received_invoice_is_classified_and_confirmed_by_whatsapp(self):
+        business, _ = self._connected_business("Factura PDF")
+        replies = []
+        classification = {
+            "kind": "factura_recibida", "confidence": 94,
+            "reason": "El negocio figura como receptor.", "method": "ia",
+        }
+        draft = {
+            "number": "P-44", "issued_on": "2026-07-01", "due_on": None,
+            "supplier": "Ferretería Sol", "supplier_nif": "B22222222",
+            "customer": business["name"], "customer_nif": None,
+            "base": 100, "vat_rate": 21, "vat_amount": 21,
+            "irpf_amount": 0, "total": 121, "confidence": 92,
+        }
+        with (
+            patch.object(whatsapp, "_download_media", return_value=b"%PDF-1.4 factura"),
+            patch.object(extraction, "classify_document", return_value=classification),
+            patch.object(extraction, "extract_invoice", return_value=draft),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-pdf-smart-1",
+                "media_document_id": "media-smart",
+                "media_document_mime": "application/pdf",
+                "media_document_filename": "proveedor.pdf",
+            })
+            pending = db.get_pending_action(business["id"], "34600111222")
+            self.assertEqual(pending["kind"], "factura_recibida")
+            self.assertIn("¿La registro?", replies[-1])
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-pdf-smart-2", "text": "sí",
+            })
+        received = db.list_received_invoices(business["id"])
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0]["total"], 121)
+        self.assertIn("Hecho", replies[-1])
 
 
 class WhatsappReportsTestCase(unittest.TestCase):
