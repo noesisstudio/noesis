@@ -28,6 +28,10 @@ def _eur(n) -> str:
     return f"{(n or 0):,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _count(n: int, singular: str, plural: str | None = None) -> str:
+    return f"{n} {singular if n == 1 else (plural or singular + 's')}"
+
+
 def _business_state(business_id: int) -> dict:
     today = date.today().isoformat()
     billing = db.month_billing(business_id=business_id)
@@ -71,7 +75,7 @@ def _daily_plan(state: dict) -> list[dict]:
         total = sum(p["total"] for p in state["late"])
         plan.append({
             "topic": "cobros",
-            "do": f"Reclama {len(state['late'])} cobro(s) atrasado(s) por {_eur(total)}.",
+            "do": f"Reclama {_count(len(state['late']), 'cobro atrasado', 'cobros atrasados')} por {_eur(total)}.",
             "why": "Es dinero que ya es tuyo y lleva más de una semana fuera de caja.",
         })
     if state["unbilled"]:
@@ -79,20 +83,20 @@ def _daily_plan(state: dict) -> list[dict]:
             (j.get("client_name") or "—") for j in state["unbilled"][:3]))
         plan.append({
             "topic": "facturas",
-            "do": f"Factura {len(state['unbilled'])} trabajo(s) ya hechos ({names}).",
+            "do": f"Factura {_count(len(state['unbilled']), 'trabajo ya hecho', 'trabajos ya hechos')} ({names}).",
             "why": "Trabajo terminado sin factura: es donde más dinero se escapa sin que te des cuenta.",
         })
     if state["agenda"]:
         plan.append({
             "topic": "agenda",
-            "do": f"Prepara los {len(state['agenda'])} trabajo(s) de hoy.",
+            "do": f"Prepara {_count(len(state['agenda']), 'trabajo', 'trabajos')} de hoy.",
             "why": "Si dejas la factura lista al cerrar cada uno, no se te queda ninguno sin cobrar.",
         })
     if state["quotes_sent"]:
         total = sum(q["total"] for q in state["quotes_sent"])
         plan.append({
             "topic": "presupuestos",
-            "do": f"Haz seguimiento de {len(state['quotes_sent'])} presupuesto(s) enviados ({_eur(total)} en juego).",
+            "do": f"Haz seguimiento de {_count(len(state['quotes_sent']), 'presupuesto enviado', 'presupuestos enviados')} ({_eur(total)} en juego).",
             "why": "Un recordatorio amable a tiempo sube mucho la conversión.",
         })
     if state.get("leads_due"):
@@ -100,26 +104,26 @@ def _daily_plan(state: dict) -> list[dict]:
             lead["name"] for lead in state["leads_due"][:3]))
         plan.append({
             "topic": "crm",
-            "do": f"Sigue a {len(state['leads_due'])} posible(s) cliente(s) ({names}).",
+            "do": f"Sigue a {_count(len(state['leads_due']), 'posible cliente', 'posibles clientes')} ({names}).",
             "why": "Tenían seguimiento para hoy o antes; en frío, un presupuesto se pierde.",
         })
     if state.get("gestoria_open"):
         plan.append({
             "topic": "gestoria",
-            "do": f"Responde a tu gestoría: {len(state['gestoria_open'])} solicitud(es) abiertas.",
+            "do": f"Responde a tu gestoría: {_count(len(state['gestoria_open']), 'solicitud abierta', 'solicitudes abiertas')}.",
             "why": "Sin esos papeles no puede cerrar tu trimestre; está en Documentos.",
         })
     if state.get("docs_pending"):
         plan.append({
             "topic": "documentos",
-            "do": f"Revisa {len(state['docs_pending'])} documento(s) pendientes de confirmar.",
+            "do": f"Revisa {_count(len(state['docs_pending']), 'documento pendiente', 'documentos pendientes')} de confirmar.",
             "why": "Un papel sin clasificar es un gasto sin deducir o una factura perdida.",
         })
     if state.get("received_pending"):
         total = sum(r["total"] for r in state["received_pending"])
         plan.append({
             "topic": "pagos",
-            "do": f"Tienes {len(state['received_pending'])} factura(s) de proveedor por pagar ({_eur(total)}).",
+            "do": f"Tienes {_count(len(state['received_pending']), 'factura de proveedor', 'facturas de proveedor')} por pagar ({_eur(total)}).",
             "why": "Pagar a tiempo evita recargos y mantiene a tus proveedores de tu lado.",
         })
     billing = state["billing"]
@@ -285,7 +289,7 @@ def _unbilled_reply(business_id: int) -> str:
     if not jobs:
         return ("No veo trabajos hechos sin facturar. Buena señal: vas al día con la "
                 "facturación. Cuando cierres uno nuevo, dímelo y te dejo la factura lista.")
-    lines = [f"Tienes **{len(jobs)} trabajo(s)** que parecen hechos y aún sin factura:"]
+    lines = [f"Tienes **{_count(len(jobs), 'trabajo', 'trabajos')}** que parecen hechos y aún sin factura:"]
     for j in jobs[:8]:
         when = (j.get("scheduled_for") or "")[:10]
         est = f" · ~{_eur(j['price_estimate'])}" if j.get("price_estimate") else ""
@@ -308,6 +312,7 @@ _PAGE_HINTS = {
     "cobros": "lo pendiente de cobrar, con lo más atrasado primero",
     "impuestos": "una estimación orientativa del IVA (303) e IRPF (130); la declaración final es de tu gestoría",
     "agenda": "tus trabajos y citas, por día",
+    "proyectos": "tus obras e instalaciones: avance, horas, costes y margen",
     "equipo": "tus trabajadores, su fichaje y sus horas",
     "clientes": "tu lista de clientes y lo que mueve cada uno",
     "crm": "los posibles clientes: quién pidió precio y a quién seguir hoy",
@@ -328,11 +333,11 @@ def page_briefing(business_id: int, page: str) -> str | None:
     if page in {"resumen", "cobros", "tesoreria"}:
         pending = sum(p["total"] for p in state["pending"])
         lines.append(f"Ahora mismo tienes {_eur(pending)} pendientes de cobro"
-                     + (f", {len(state['late'])} cobro(s) con más de una semana."
+                     + (f", {_count(len(state['late']), 'cobro', 'cobros')} con más de una semana."
                         if state["late"] else ".") )
     if page == "documentos":
         n = len(state["docs_pending"])
-        lines.append(f"Tienes {n} documento(s) pendientes de revisar."
+        lines.append(f"Tienes {_count(n, 'documento pendiente', 'documentos pendientes')} de revisar."
                      if n else "No tienes documentos pendientes de revisar.")
         if state["gestoria_open"]:
             lines.append(f"Tu gestoría tiene {len(state['gestoria_open'])} "
@@ -341,13 +346,13 @@ def page_briefing(business_id: int, page: str) -> str | None:
         n = len(state["received_pending"])
         if n:
             total = sum(r["total"] for r in state["received_pending"])
-            lines.append(f"Hay {n} factura(s) de proveedor por pagar ({_eur(total)}).")
+            lines.append(f"Hay {_count(n, 'factura de proveedor', 'facturas de proveedor')} por pagar ({_eur(total)}).")
     if page == "crm":
         due = state["leads_due"]
-        lines.append(f"Hoy toca seguir a {len(due)} posible(s) cliente(s)."
+        lines.append(f"Hoy toca seguir a {_count(len(due), 'posible cliente', 'posibles clientes')}."
                      if due else "No tienes seguimientos vencidos. Bien.")
     if page in {"facturas", "presupuestos"} and state["quotes_sent"]:
-        lines.append(f"Tienes {len(state['quotes_sent'])} presupuesto(s) enviados "
+        lines.append(f"Tienes {_count(len(state['quotes_sent']), 'presupuesto enviado', 'presupuestos enviados')} "
                      "sin respuesta: un recordatorio a tiempo sube la conversión.")
     lines.append("Pregúntame lo que quieras de esta página o dime «plan» y te "
                  "digo por dónde empezar hoy.")
@@ -377,30 +382,36 @@ def page_note(business_id: int, page: str) -> str | None:
     if page == "documentos":
         bits = []
         if state["docs_pending"]:
-            bits.append(f"{len(state['docs_pending'])} documento(s) por revisar")
+            bits.append(f"{_count(len(state['docs_pending']), 'documento', 'documentos')} por revisar")
         if state["gestoria_open"]:
             bits.append(f"{len(state['gestoria_open'])} solicitud(es) de tu gestoría")
         return ("Tienes " + " y ".join(bits) + "." if bits
-                else "Todo al día por aquí. Sube una foto y yo la clasifico.")
+                else "Todo al día por aquí. Sube una foto: te propongo dónde va y tú confirmas.")
     if page == "costes":
         rec = state["received_pending"]
         if rec:
             total = sum(r["total"] for r in rec)
-            return f"Hay {len(rec)} factura(s) de proveedor por pagar ({_eur(total)})."
+            return f"Hay {_count(len(rec), 'factura de proveedor', 'facturas de proveedor')} por pagar ({_eur(total)})."
         return "Aquí controlas dónde se va el dinero. Sube un ticket y lo registro."
+    if page == "proyectos":
+        summary = db.project_summary(business_id)
+        if not summary["active_count"]:
+            return "Aún no hay proyectos activos. Crea uno y vigilaré avance, horas y margen contigo."
+        return (f"Tienes {_count(summary['active_count'], 'proyecto activo', 'proyectos activos')}, con "
+                f"{_eur(summary['margin'])} de margen disponible en conjunto.")
     if page == "crm":
         due = len(state["leads_due"])
-        return (f"Hoy toca seguir a {due} posible(s) cliente(s); en frío se enfrían."
+        return (f"Hoy toca seguir a {_count(due, 'posible cliente', 'posibles clientes')}; en frío se enfrían."
                 if due else "Sin seguimientos vencidos. Apunta a quien te pida precio.")
     if page in {"facturas", "presupuestos"} and state["quotes_sent"]:
         q = state["quotes_sent"]
         total = sum(x["total"] for x in q)
-        return (f"{len(q)} presupuesto(s) enviados esperan respuesta "
+        return (f"{_count(len(q), 'presupuesto enviado', 'presupuestos enviados')} esperan respuesta "
                 f"({_eur(total)} en juego). Un recordatorio a tiempo convierte.")
     return f"Aquí tienes {_PAGE_HINTS[page]}."
 
 
-def handle(business_id: int, message: str, page: str | None = None) -> dict:
+def _handle(business_id: int, message: str, page: str | None = None) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
     if page and any(x in norm for x in (
             "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
@@ -457,6 +468,13 @@ def handle(business_id: int, message: str, page: str | None = None) -> dict:
                            "claramente en otro idioma] " if language == "ca" else
                            "[Reply in English unless the user clearly writes "
                            "in another language] ")
+            level = business.get("explanation_level") or "claro"
+            if level == "directo":
+                prefix += "[Responde de forma profesional y muy breve; ve directo a la acción] "
+            elif level == "detallado":
+                prefix += "[Explica el porqué y añade el detalle numérico útil sin perder claridad] "
+            else:
+                prefix += "[Explica con palabras sencillas y acompaña cada número con su significado] "
             return {"reply": agent.send(prefix + message), "source": "ia"}
         except Exception:  # noqa: BLE001
             log.exception("El proveedor de IA falló para el negocio %s.", business_id)
@@ -467,3 +485,35 @@ def handle(business_id: int, message: str, page: str | None = None) -> dict:
             }
 
     return {"reply": _coach_reply(business_id, message), "source": "local"}
+
+
+def handle(
+    business_id: int,
+    message: str,
+    page: str | None = None,
+    *,
+    channel: str = "web",
+) -> dict:
+    """Entrada común del acompañante: responde y conserva la relación.
+
+    El guardado es deliberadamente resiliente: una incidencia en el historial no
+    puede impedir que el autónomo consulte o ejecute una tarea habitual.
+    """
+    try:
+        db.add_assistant_message(
+            business_id, "user", message, channel=channel, page=page,
+        )
+        db.record_product_event(
+            business_id, "assistant_message", f"channel={channel};page={page or ''}"
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo guardar la entrada del asistente para %s.", business_id)
+    result = _handle(business_id, message, page)
+    try:
+        db.add_assistant_message(
+            business_id, "assistant", result.get("reply") or "",
+            channel=channel, page=page, source=result.get("source"),
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo guardar la respuesta del asistente para %s.", business_id)
+    return result

@@ -1568,6 +1568,204 @@ def _downgrade_platform_base(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS products")
 
 
+def _upgrade_projects(conn) -> None:
+    """Proyectos rentables: presupuesto, equipo y costes/hora aislados por negocio."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS projects (
+    id            {t["id"]},
+    business_id   {t["ref"]} NOT NULL REFERENCES businesses(id),
+    client_id     {t["ref"]},
+    name          TEXT NOT NULL,
+    location      TEXT,
+    budget        {t["real"]} NOT NULL DEFAULT 0,
+    planned_hours {t["real"]} NOT NULL DEFAULT 0,
+    progress      INTEGER NOT NULL DEFAULT 0,
+    status        TEXT NOT NULL DEFAULT 'planificado',
+    starts_on     TEXT,
+    ends_on       TEXT,
+    note          TEXT,
+    created_at    {t["timestamp"]} NOT NULL,
+    updated_at    {t["timestamp"]},
+    FOREIGN KEY (business_id, client_id)
+        REFERENCES clients(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_projects_business_status
+    ON projects(business_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_projects_business_id
+    ON projects(business_id, id);
+
+CREATE TABLE IF NOT EXISTS project_members (
+    business_id {t["ref"]} NOT NULL,
+    project_id  {t["ref"]} NOT NULL,
+    worker_id   {t["ref"]} NOT NULL,
+    role        TEXT,
+    hourly_cost {t["real"]} NOT NULL DEFAULT 0,
+    created_at  {t["timestamp"]} NOT NULL,
+    PRIMARY KEY (business_id, project_id, worker_id),
+    FOREIGN KEY (business_id, project_id)
+        REFERENCES projects(business_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS project_entries (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL,
+    project_id  {t["ref"]} NOT NULL,
+    worker_id   {t["ref"]},
+    kind        TEXT NOT NULL DEFAULT 'otro',
+    description TEXT NOT NULL,
+    quantity    {t["real"]} NOT NULL DEFAULT 1,
+    unit_cost   {t["real"]} NOT NULL DEFAULT 0,
+    total       {t["real"]} NOT NULL DEFAULT 0,
+    entry_on    TEXT,
+    created_at  {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, project_id)
+        REFERENCES projects(business_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_project_entries_project
+    ON project_entries(business_id, project_id, entry_on);
+"""
+    )
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger("projects", "client_id", "clients", event)
+            )
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "project_members", "project_id", "projects", event
+                )
+            )
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "project_members", "worker_id", "workers", event
+                )
+            )
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "project_entries", "project_id", "projects", event
+                )
+            )
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "project_entries", "worker_id", "workers", event
+                )
+            )
+
+
+def _downgrade_projects(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_project_entries_project")
+    conn.execute("DROP TABLE IF EXISTS project_entries")
+    conn.execute("DROP TABLE IF EXISTS project_members")
+    conn.execute("DROP INDEX IF EXISTS uq_projects_business_id")
+    conn.execute("DROP INDEX IF EXISTS idx_projects_business_status")
+    conn.execute("DROP TABLE IF EXISTS projects")
+
+
+def _upgrade_explanation_level(conn) -> None:
+    if "explanation_level" not in _column_names(conn, "businesses"):
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN explanation_level "
+            "TEXT NOT NULL DEFAULT 'claro'"
+        )
+
+
+def _downgrade_explanation_level(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS explanation_level"
+        )
+    # SQLite conserva la columna para evitar reconstruir businesses.
+
+
+def _upgrade_companion_memory(conn) -> None:
+    """Conversación durable, memoria auditable y aprendizaje documental.
+
+    La conversación y las correcciones pertenecen siempre a un negocio. La
+    clasificación solo propone; ``confirmed_kind`` deja constancia de la decisión
+    humana sin reescribir el intento original.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS assistant_messages (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    channel     TEXT NOT NULL DEFAULT 'web',
+    role        TEXT NOT NULL,
+    content     TEXT NOT NULL,
+    page        TEXT,
+    source      TEXT,
+    created_at  {t["timestamp"]} NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_assistant_messages_business
+    ON assistant_messages(business_id, created_at, id);
+
+CREATE TABLE IF NOT EXISTS business_memories (
+    id             {t["id"]},
+    business_id    {t["ref"]} NOT NULL REFERENCES businesses(id),
+    scope_type     TEXT NOT NULL DEFAULT 'business',
+    scope_id       {t["ref"]} NOT NULL DEFAULT 0,
+    memory_key     TEXT NOT NULL,
+    memory_value   TEXT NOT NULL,
+    source         TEXT NOT NULL DEFAULT 'user',
+    confidence     {t["real"]},
+    user_confirmed {t["boolean"]} NOT NULL DEFAULT FALSE,
+    created_at     {t["timestamp"]} NOT NULL,
+    updated_at     {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, scope_type, scope_id, memory_key)
+);
+CREATE INDEX IF NOT EXISTS idx_business_memories_scope
+    ON business_memories(business_id, scope_type, scope_id);
+
+CREATE TABLE IF NOT EXISTS document_classifications (
+    id             {t["id"]},
+    business_id    {t["ref"]} NOT NULL,
+    document_id    {t["ref"]} NOT NULL,
+    detected_kind  TEXT NOT NULL,
+    confirmed_kind TEXT,
+    confidence     {t["real"]},
+    method         TEXT NOT NULL,
+    reason         TEXT,
+    created_at     {t["timestamp"]} NOT NULL,
+    confirmed_at   {t["timestamp"]},
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_document_classifications_document
+    ON document_classifications(business_id, document_id, created_at);
+"""
+    )
+    columns = _column_names(conn, "invoices")
+    if "source" not in columns:
+        conn.execute(
+            "ALTER TABLE invoices ADD COLUMN source "
+            "TEXT NOT NULL DEFAULT 'noesis'"
+        )
+    if "external_number" not in columns:
+        conn.execute(
+            "ALTER TABLE invoices ADD COLUMN external_number TEXT"
+        )
+
+
+def _downgrade_companion_memory(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_document_classifications_document")
+    conn.execute("DROP TABLE IF EXISTS document_classifications")
+    conn.execute("DROP INDEX IF EXISTS idx_business_memories_scope")
+    conn.execute("DROP TABLE IF EXISTS business_memories")
+    conn.execute("DROP INDEX IF EXISTS idx_assistant_messages_business")
+    conn.execute("DROP TABLE IF EXISTS assistant_messages")
+    if conn.dialect == "postgres":
+        conn.execute("ALTER TABLE invoices DROP COLUMN IF EXISTS external_number")
+        conn.execute("ALTER TABLE invoices DROP COLUMN IF EXISTS source")
+    # SQLite conserva las columnas para evitar reconstruir invoices.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1588,6 +1786,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (16, "ciclo_webhooks", _upgrade_webhook_lifecycle, _downgrade_webhook_lifecycle),
     (17, "proveedores_recibidas", _upgrade_received_invoices, _downgrade_received_invoices),
     (18, "plataforma_base", _upgrade_platform_base, _downgrade_platform_base),
+    (19, "proyectos_rentables", _upgrade_projects, _downgrade_projects),
+    (20, "nivel_explicacion", _upgrade_explanation_level, _downgrade_explanation_level),
+    (21, "memoria_noesis", _upgrade_companion_memory, _downgrade_companion_memory),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

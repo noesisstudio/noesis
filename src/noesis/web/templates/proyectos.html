@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="projects-index">
+  <div class="page-head projects-head">
+    <div class="page-title"><div class="kicker">Control de trabajos grandes</div><h1>Proyectos</h1><p>Presupuesto, costes y avance en un solo sitio. El detalle aparece solo cuando lo necesitas.</p></div>
+    <button class="btn primary" type="button" onclick="newProject()">Nuevo proyecto</button>
+  </div>
+  <section class="project-summary" aria-label="Resumen de proyectos">
+    <div><span>Avance general</span><strong id="pj-progress">—</strong><small id="pj-active">—</small></div>
+    <div><span>Presupuesto activo</span><strong id="pj-budget">—</strong><small>Total acordado</small></div>
+    <div><span>Costes registrados</span><strong id="pj-cost">—</strong><small>Materiales, horas y otros</small></div>
+    <div class="project-summary-reading"><span>Lectura de Noesis</span><p id="pj-reading">Revisando tus proyectos…</p></div>
+  </section>
+  <section class="home-panel project-list-panel">
+    <header><div><span class="panel-kicker">Todos</span><h2>Proyectos</h2></div><select id="pj-filter" aria-label="Filtrar proyectos" onchange="renderProjects()"><option value="active">Activos</option><option value="all">Todos</option><option value="terminado">Terminados</option></select></header>
+    <div id="project-list" class="project-list"><p class="muted">Cargando proyectos…</p></div>
+  </section>
+</div>
+
+<section id="project-detail" hidden aria-live="polite">
+  <button class="project-back" type="button" onclick="closeProject()">← Volver a proyectos</button>
+  <div class="project-detail-head">
+    <div><div class="kicker" id="pd-client">Proyecto</div><h1 id="pd-name">—</h1><p id="pd-location"></p></div>
+    <div class="project-detail-actions"><select id="pd-status" aria-label="Estado del proyecto" onchange="saveProjectState()"><option value="planificado">Planificado</option><option value="en_curso">En curso</option><option value="pausado">Pausado</option><option value="terminado">Terminado</option></select><button class="btn" type="button" onclick="editProgress()">Actualizar avance</button></div>
+  </div>
+  <div class="project-progress"><span><b id="pd-progress-label">0%</b> completado</span><div><i id="pd-progress-bar"></i></div></div>
+  <section class="project-detail-summary">
+    <div><span>Presupuesto</span><strong id="pd-budget">—</strong></div>
+    <div><span>Gastado</span><strong id="pd-cost">—</strong><small id="pd-cost-pct">—</small></div>
+    <div><span>Margen disponible</span><strong id="pd-margin">—</strong><small id="pd-margin-note">—</small></div>
+    <div><span>Horas</span><strong id="pd-hours">—</strong><small id="pd-hours-plan">—</small></div>
+  </section>
+  <div class="project-reading"><img src="/static/noesis-mark.svg" alt=""><div><span>Lectura de Noesis</span><p id="pd-reading">—</p></div></div>
+  <div class="project-detail-grid">
+    <section class="home-panel"><header><div><span class="panel-kicker">Control</span><h2>Costes y horas</h2></div><button class="btn sm" onclick="addEntry()">Añadir</button></header><div id="pd-entries" class="project-detail-list"></div></section>
+    <section class="home-panel"><header><div><span class="panel-kicker">Responsables</span><h2>Equipo asignado</h2></div><button class="btn sm" onclick="addMember()">Asignar</button></header><div id="pd-members" class="project-detail-list"></div></section>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROJECT_CLIENTS = {{ clients|tojson }};
+const PROJECT_WORKERS = {{ workers|tojson }};
+let PROJECTS = [];
+let CURRENT_PROJECT = null;
+const STATUS_LABEL = {planificado:'Planificado',en_curso:'En curso',pausado:'Pausado',terminado:'Terminado'};
+
+async function loadProjects(){
+  const data = await api('/projects');
+  PROJECTS = data.projects;
+  el('pj-progress').textContent = `${data.progress}%`;
+  el('pj-active').textContent = `${data.active_count} ${data.active_count === 1 ? 'proyecto activo' : 'proyectos activos'}`;
+  el('pj-budget').textContent = eur(data.budget);
+  el('pj-cost').textContent = eur(data.cost);
+  el('pj-reading').textContent = !data.active_count ? 'Crea tu primer proyecto y te diré si va dentro de presupuesto.'
+    : data.cost > data.budget ? `Los costes superan el presupuesto activo en ${eur(data.cost-data.budget)}.`
+    : `Los proyectos activos conservan ${eur(data.margin)} de margen disponible.`;
+  renderProjects();
+  const wanted = Number(new URLSearchParams(location.search).get('id'));
+  if (wanted && !CURRENT_PROJECT && PROJECTS.some(p=>p.id===wanted)) await openProject(wanted, false);
+}
+
+function renderProjects(){
+  const mode = el('pj-filter').value;
+  const rows = PROJECTS.filter(p=>mode==='all' || (mode==='active' ? p.status!=='terminado' : p.status==='terminado'));
+  if (!rows.length){
+    el('project-list').innerHTML = `<div class="project-empty"><img src="/static/noesis-mark.svg" alt=""><h3>${PROJECTS.length ? 'No hay proyectos en este filtro' : 'Aún no hay proyectos'}</h3><p>${PROJECTS.length ? 'Cambia el filtro para ver el resto.' : 'Controla una instalación, reforma u obra desde el presupuesto hasta el margen final.'}</p>${PROJECTS.length ? '' : '<button class="btn" onclick="newProject()">Crear primer proyecto</button>'}</div>`;
+    return;
+  }
+  el('project-list').innerHTML = rows.map(p=>`<button class="project-row" type="button" onclick="openProject(${p.id})">
+    <span class="project-row-main"><b>${esc(p.name)}</b><small>${esc(p.client_name || 'Sin cliente')}${p.location ? ' · '+esc(p.location) : ''}</small></span>
+    <span class="project-row-progress"><i><b style="width:${p.progress}%"></b></i><small>${p.progress}% completado</small></span>
+    <span><small>Presupuesto</small><b>${eur(p.budget)}</b></span><span><small>Coste</small><b>${eur(p.actual_cost)}</b></span>
+    <span class="project-margin ${p.margin < 0 ? 'negative' : ''}"><small>Margen</small><b>${eur(p.margin)}</b></span>
+    <span class="badge ${p.status==='terminado'?'b-green':p.status==='pausado'?'b-amber':'b-gray'}">${STATUS_LABEL[p.status]}</span>
+  </button>`).join('');
+}
+
+function newProject(){
+  formModal({title:'Nuevo proyecto',submitLabel:'Crear proyecto',fields:[
+    {name:'name',label:'Nombre',placeholder:'Instalación vivienda Badalona'},
+    {name:'client_id',label:'Cliente',options:[{value:'',label:'Sin cliente'},...PROJECT_CLIENTS.map(c=>({value:String(c.id),label:c.name}))]},
+    {name:'location',label:'Lugar',placeholder:'Dirección o zona'},
+    {name:'budget',label:'Presupuesto acordado',type:'number',placeholder:'8000'},
+    {name:'planned_hours',label:'Horas previstas',type:'number',placeholder:'80'},
+    {name:'starts_on',label:'Fecha de inicio',type:'date'}
+  ],onSubmit:async v=>{try{const p=await apiPost('/projects',v); await loadProjects(); openProject(p.id);}catch(e){alert(e.message);}}});
+}
+
+async function openProject(id, push=true){
+  CURRENT_PROJECT = await api(`/projects/${id}`);
+  el('projects-index').hidden = true; el('project-detail').hidden = false;
+  if (push) history.replaceState({},'',`?id=${id}`);
+  renderProjectDetail(); window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeProject(){ el('project-detail').hidden=true; el('projects-index').hidden=false; CURRENT_PROJECT=null; history.replaceState({},'',location.pathname); }
+
+function renderProjectDetail(){
+  const p=CURRENT_PROJECT;
+  el('pd-name').textContent=p.name; el('pd-client').textContent=p.client_name || 'Proyecto sin cliente'; el('pd-location').textContent=p.location || 'Sin ubicación';
+  el('pd-status').value=p.status; el('pd-progress-label').textContent=`${p.progress}%`; el('pd-progress-bar').style.width=`${p.progress}%`;
+  el('pd-budget').textContent=eur(p.budget); el('pd-cost').textContent=eur(p.actual_cost); el('pd-cost-pct').textContent=`${p.cost_pct}% del presupuesto`;
+  el('pd-margin').textContent=eur(p.margin); el('pd-margin-note').textContent=p.margin<0?'Presupuesto superado':'Todavía disponible';
+  el('pd-hours').textContent=num(p.actual_hours); el('pd-hours-plan').textContent=p.planned_hours?`de ${num(p.planned_hours)} previstas`:'sin previsión inicial';
+  const expected=p.budget*(p.progress/100), deviation=p.actual_cost-expected;
+  el('pd-reading').textContent=p.margin<0 ? `Este proyecto supera el presupuesto en ${eur(Math.abs(p.margin))}. Revisa los últimos costes.`
+    : p.progress && deviation>p.budget*.1 ? `El gasto va ${eur(deviation)} por delante del avance. Conviene revisar materiales y horas.`
+    : `Va dentro de presupuesto. Quedan ${eur(p.margin)} antes de consumir el margen disponible.`;
+  el('pd-entries').innerHTML=p.entries.length?p.entries.map(e=>`<div class="project-detail-row"><span><b>${esc(e.description)}</b><small>${e.kind==='horas'?`${num(e.quantity)} h × ${eur(e.unit_cost)}`:`${esc(e.kind)} · ${dateIso(e.entry_on)}`}${e.worker_name?' · '+esc(e.worker_name):''}</small></span><strong>${eur(e.total)}</strong></div>`).join('')
+    : `<div class="project-mini-empty">Aún no hay costes. Añade materiales, horas u otros gastos.</div>`;
+  el('pd-members').innerHTML=p.members.length?p.members.map(m=>`<div class="project-detail-row"><span><b>${esc(m.worker_name)}</b><small>${esc(m.role||'Equipo')}${m.hourly_cost?` · ${eur(m.hourly_cost)}/h`:''}</small></span></div>`).join('')
+    : `<div class="project-mini-empty">No hay nadie asignado todavía.</div>`;
+}
+
+async function saveProjectState(){ try{CURRENT_PROJECT=await apiPatch(`/projects/${CURRENT_PROJECT.id}`,{status:el('pd-status').value}); renderProjectDetail(); await loadProjects();}catch(e){alert(e.message);} }
+function editProgress(){formModal({title:'Actualizar avance',submitLabel:'Guardar avance',fields:[{name:'progress',label:'Porcentaje completado',type:'number',value:CURRENT_PROJECT.progress,placeholder:'0–100'}],onSubmit:async v=>{try{CURRENT_PROJECT=await apiPatch(`/projects/${CURRENT_PROJECT.id}`,{progress:v.progress}); renderProjectDetail(); await loadProjects();}catch(e){alert(e.message);}}});}
+function addEntry(){formModal({title:'Añadir coste u horas',submitLabel:'Añadir al proyecto',fields:[
+  {name:'kind',label:'Tipo',options:[{value:'material',label:'Material'},{value:'horas',label:'Horas de trabajo'},{value:'subcontrata',label:'Subcontrata'},{value:'otro',label:'Otro'}]},
+  {name:'description',label:'Descripción',placeholder:'Tubería multicapa / Horas de montaje'},
+  {name:'worker_id',label:'Persona (opcional)',options:[{value:'',label:'Sin asignar'},...PROJECT_WORKERS.map(w=>({value:String(w.id),label:w.name}))]},
+  {name:'quantity',label:'Cantidad u horas',type:'number',value:'1'},
+  {name:'unit_cost',label:'Coste por unidad u hora',type:'number',placeholder:'25'},
+  {name:'entry_on',label:'Fecha',type:'date'}
+],onSubmit:async v=>{try{await apiPost(`/projects/${CURRENT_PROJECT.id}/entries`,v); CURRENT_PROJECT=await api(`/projects/${CURRENT_PROJECT.id}`); renderProjectDetail(); await loadProjects();}catch(e){alert(e.message);}}});}
+function addMember(){
+  if(!PROJECT_WORKERS.length){alert('Añade primero una persona en Equipo.');return;}
+  formModal({title:'Asignar al proyecto',submitLabel:'Asignar',fields:[
+    {name:'worker_id',label:'Persona',options:PROJECT_WORKERS.map(w=>({value:String(w.id),label:w.name}))},
+    {name:'role',label:'Función',placeholder:'Oficial, ayudante…'},
+    {name:'hourly_cost',label:'Coste interno por hora',type:'number',placeholder:'22'}
+  ],onSubmit:async v=>{try{CURRENT_PROJECT=await apiPost(`/projects/${CURRENT_PROJECT.id}/members`,v);renderProjectDetail();}catch(e){alert(e.message);}}});
+}
+loadProjects();
+</script>
+{% endblock %}

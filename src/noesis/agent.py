@@ -84,7 +84,15 @@ class NoesisAgent:
         self.business = db.get_business(business_id) or {}
         self.business_name = self.business.get("name") or config.BUSINESS_NAME
         self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        self.messages: list[dict] = []
+        history = db.list_assistant_messages(business_id, limit=24)
+        # Al crear el agente desde una petición, el wrapper ya ha persistido el
+        # mensaje actual. Se añadirá con el contexto de página en ``send``.
+        if history and history[-1].get("role") == "user":
+            history = history[:-1]
+        self.messages: list[dict] = [
+            {"role": item["role"], "content": item["content"]}
+            for item in history if item.get("role") in {"user", "assistant"}
+        ]
         self._lock = threading.Lock()
 
     def send(self, user_text: str) -> str:
@@ -116,6 +124,25 @@ class NoesisAgent:
             while self.messages and self.messages[0].get("role") != "user":
                 self.messages.pop(0)
         self.messages.append({"role": "user", "content": user_text})
+        self.business = db.get_business(self.business_id) or self.business
+        memories = [item for item in db.list_memories(self.business_id)
+                    if item.get("user_confirmed")][:12]
+        signals = [item for item in db.client_insights(self.business_id)
+                   if item.get("level") in {"alto", "medio"}][:3]
+        context_bits = []
+        if memories:
+            context_bits.append("Memoria confirmada por el usuario: " + "; ".join(
+                f"{item['memory_key']}={item['memory_value']}" for item in memories
+            ))
+        if signals:
+            context_bits.append("Señales calculadas (explica siempre el motivo): "
+                                + "; ".join(
+                f"{item['client_name']}: {item['headline']} ({item['reason']})"
+                for item in signals
+            ))
+        system = _system_prompt(self.business)
+        if context_bits:
+            system += "\n\nCONTEXTO DURABLE DEL NEGOCIO\n" + "\n".join(context_bits)
 
         safe_tools = [
             tool for tool in TOOLS
@@ -125,7 +152,7 @@ class NoesisAgent:
             resp = self.client.messages.create(
                 model=self.model,
                 max_tokens=1024,
-                system=_system_prompt(self.business),
+                system=system,
                 tools=safe_tools,
                 messages=self.messages,
             )

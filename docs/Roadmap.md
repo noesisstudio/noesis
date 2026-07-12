@@ -39,7 +39,7 @@ Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de 
   de pruebas antes de activar (trámite del founder).
 - [ ] WhatsApp real (Meta Cloud API) — la cola durable ya está; faltan credenciales
   de Meta (verificación de empresa, clics del founder).
-- [ ] Stripe real — el adaptador ya habla con Stripe; faltan las claves y los dos
+- [ ] Stripe real — el adaptador ya habla con Stripe; faltan las claves y los tres
   precios en Railway (clics del founder).
 - [x] Despliegue 24/7 con HTTPS en **app.bynoesis.com** + marco legal completo
   (términos, privacidad, encargado del tratamiento, cookies, aviso legal).
@@ -77,6 +77,16 @@ existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
   margen (solo si hay coste real), IVA, stock con aviso, y prefill al crear factura.
 - [x] **Asistente contextual**: sabe en qué página está el usuario (botón «?» en
   la barra), la explica con datos reales y la IA hereda contexto e idioma.
+- [x] **Noesis persistente entre pantallas** (migración 21): la conversación se
+  conserva entre web y WhatsApp, el panel lateral acompaña en cada apartado y la
+  IA recibe únicamente recuerdos confirmados y señales trazables del negocio.
+- [x] **Entrada documental universal v1** (migración 21): web y WhatsApp comparten
+  clasificador, registran tipo propuesto, confianza y motivo, y piden confirmación
+  antes de convertir tickets o facturas recibidas. Las facturas emitidas antiguas
+  quedan en revisión y no se reemiten ni entran en Veri*Factu.
+- [x] **Señales de clientes v1**: vencidos, ritmo de pago, actividad y conversión
+  se explican con evidencia visible; sin puntuaciones opacas ni predicciones
+  inventadas.
 - [x] **Vista Hoy ampliada**: el plan diario incluye documentos pendientes,
   recibidas por pagar, seguimientos de CRM y solicitudes de gestoría.
 - [x] **CRM de leads** (migración 18, adelantado de la capa C): embudo con 8
@@ -87,7 +97,7 @@ existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
   insuficientes» y lista de qué falta.
 - [x] **Idioma persistente** (ES/CA/EN) en Ajustes: se guarda por negocio y la IA
   responde en él. La traducción completa de la interfaz queda para la capa C.
-- [ ] Partir `server.py` en routers por dominio (tarea técnica previa a la capa C).
+- [x] Partir `server.py` en routers por dominio.
 
 ### Capa C — V1
 - [ ] Portal gestoría con cuentas y permisos multi-negocio (tras feedback real
@@ -95,13 +105,15 @@ existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
 - [ ] Abstracción de canales (`ChannelProvider`) + Telegram según caso de uso
   confirmado (duda 2 de [[Preguntas-abiertas]]).
 - [ ] Oportunidades y presupuestos conectados al CRM de leads.
-- [ ] Proyectos/obras: presupuesto vs. real, horas (sobre fichaje existente),
-  gastos y margen por proyecto.
+- [x] Proyectos/obras: portada agregada y detalle progresivo con presupuesto vs.
+  real, horas, equipo, gastos y margen por proyecto (migración 19).
+- [x] Nivel de explicación de cuenta en Ajustes: claro, directo o detallado
+  (migración 20); nunca se pregunta dentro de cada pantalla.
 - [ ] Multiidioma completo de la interfaz (ES/CA/EN) — diseñar i18n antes de más UI.
 
 ### Capa D — V2
-Ratios avanzados y EBITDA · stock y ventas por canal · aprendizaje de
-preferencias (visible, borrable, con consentimiento) · WhatsApp Business
+Ratios avanzados y EBITDA · stock y ventas por canal · aprendizaje automático de
+preferencias (la memoria confirmada, visible y borrable ya existe) · WhatsApp Business
 completo con plantillas · portal gestoría avanzado (modelos 303/130/390 con
 revisión humana siempre) · automatizaciones profundas.
 

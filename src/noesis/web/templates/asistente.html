@@ -87,7 +87,6 @@ document.getElementById('chips').addEventListener('click', e => {
 const PAGE_CTX = new URLSearchParams(location.search).get('ctx') || null;
 if (PAGE_CTX) {
   el('ctx-chip').style.display = '';
-  send('¿Qué significa esta página?');
 }
 
 /* --- Nota de voz: graba con el micrófono y la envía al cerebro --- */
@@ -157,6 +156,24 @@ async function sendAudio(blob) {
   }
 }
 
-bubble('Estoy despierto. Puedo registrar tareas, pero también mirar tu negocio y decirte qué priorizar: cobros, agenda, margen o clientes. Pregúntame “qué harías tú ahora” y empiezo por ahí.', 'bot');
+async function initChat() {
+  let lastMessage = '';
+  try {
+    const history = await api('/chat/history?limit=80');
+    lastMessage = history.items.length ? history.items[history.items.length - 1].content : '';
+    history.items.forEach(item => bubble(
+      item.content,
+      item.role === 'user' ? 'me' : 'bot',
+      item.channel === 'whatsapp' ? 'whatsapp' : null
+    ));
+  } catch (e) {}
+  if (!log.children.length) {
+    bubble('Estoy contigo. Puedo registrar tareas y también mirar tu negocio para decirte qué conviene hacer primero.', 'bot');
+  }
+  if (PAGE_CTX && lastMessage !== '¿Qué significa esta página?') {
+    send('¿Qué significa esta página?');
+  }
+}
+initChat();
 </script>
 {% endblock %}

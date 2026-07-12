@@ -18,7 +18,7 @@ def _conn():
     return db.get_conn()
 
 
-KINDS = {"documento", "ticket", "contrato", "proveedor",
+KINDS = {"documento", "ticket", "contrato", "proveedor", "albaran",
          "factura_emitida", "factura_recibida", "presupuesto"}
 # Ciclo de revisión: pendiente_revisar -> revisado -> enviado_gestoria ->
 # validado; además rechazado y duplicado. Los históricos nacen 'revisado'.
@@ -76,6 +76,69 @@ def set_review(doc_id: int, business_id: int, *, kind: str | None = None,
             f"UPDATE documents SET {', '.join(updates)} "
             "WHERE id=? AND business_id=?", params)
     return get(doc_id, business_id)
+
+
+def record_classification(
+    doc_id: int,
+    business_id: int,
+    *,
+    detected_kind: str,
+    confidence: float | None,
+    method: str,
+    reason: str | None = None,
+) -> dict | None:
+    """Registra una propuesta sin borrar intentos anteriores."""
+    if detected_kind not in KINDS or not get(doc_id, business_id):
+        return None
+    with _conn() as conn:
+        row = conn.execute(
+            "INSERT INTO document_classifications "
+            "(business_id, document_id, detected_kind, confidence, method, "
+            "reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, doc_id, detected_kind, confidence,
+             (method or "heuristica")[:30], (reason or "")[:500] or None, _now()),
+        ).fetchone()
+        saved = conn.execute(
+            "SELECT * FROM document_classifications WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def confirm_classification(
+    doc_id: int, business_id: int, confirmed_kind: str
+) -> dict | None:
+    """Confirma la última propuesta y conserva la corrección como aprendizaje."""
+    if confirmed_kind not in KINDS:
+        raise ValueError("Tipo de documento desconocido.")
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT id FROM document_classifications WHERE business_id=? "
+            "AND document_id=? ORDER BY id DESC LIMIT 1",
+            (business_id, doc_id),
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute(
+            "UPDATE document_classifications SET confirmed_kind=?, confirmed_at=? "
+            "WHERE id=? AND business_id=?",
+            (confirmed_kind, _now(), row["id"], business_id),
+        )
+        saved = conn.execute(
+            "SELECT * FROM document_classifications WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def latest_classification(doc_id: int, business_id: int) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM document_classifications WHERE business_id=? "
+            "AND document_id=? ORDER BY id DESC LIMIT 1",
+            (business_id, doc_id),
+        ).fetchone()
+    return dict(row) if row else None
 
 
 def list_pending_review(business_id: int) -> list[dict]:

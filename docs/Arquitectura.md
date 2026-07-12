@@ -14,7 +14,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 ```
 
 ## Piezas (código en `src/noesis/`)
-- `web/server.py` — FastAPI: páginas, API JSON, login, onboarding, webhook.
+- `web/server.py` — ensamblador FastAPI. Las páginas y APIs viven en routers por dominio.
+- `web/routers/projects.py` — proyectos, miembros, horas y costes; todas las rutas
+  quedan protegidas por sesión y `business_id`.
 - `web/templates/landing.html` — página pública de producto en `/` con CTA a login/registro.
 - `web/static/app.css` — sistema de diseño propio (sin Tailwind ni CDNs).
 - `web/static/noesis-product-preview.png` — captura real del panel usada como visual de producto.
@@ -47,6 +49,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 ## Garantías del backend
 - El aislamiento se valida en la ruta y de nuevo en `db.py`; una mutación nunca
   devuelve una entidad de otro `business_id`.
+- Proyectos, miembros y costes usan FKs compuestas por negocio. El margen se deriva
+  de presupuesto menos entradas reales; las horas son entradas con cantidad y coste.
 - `business_id` es obligatorio en todo acceso operativo. Las FKs compuestas
   `(business_id, id)` impiden enlazar un trabajo, factura, presupuesto o documento
   con entidades de otra empresa.

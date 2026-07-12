@@ -74,7 +74,7 @@
     </div>
   </div>
 
-  <div class="card card-action">
+  <div class="card card-action" id="integraciones">
     <div class="card-h"><h2>WhatsApp</h2>
       {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>
       {% else %}<span class="badge b-amber">no conectado</span>{% endif %}</div>
@@ -408,6 +408,44 @@
   </div>
 
   <div class="card">
+    <div class="card-h"><h2>Cómo te explica Noesis</h2><span class="hint">una preferencia para toda la cuenta</span></div>
+    <div class="card-b">
+      <label class="fld">Nivel de explicación</label>
+      <select id="explanation-select">
+        <option value="claro" {{ 'selected' if (business.explanation_level or 'claro') == 'claro' }}>Claro y acompañado</option>
+        <option value="directo" {{ 'selected' if business.explanation_level == 'directo' }}>Directo y profesional</option>
+        <option value="detallado" {{ 'selected' if business.explanation_level == 'detallado' }}>Detallado y numérico</option>
+      </select>
+      <button class="btn primary" style="margin-top:12px" onclick="saveExplanationLevel()">Guardar preferencia</button>
+      <div id="explanation-msg" class="meta" style="margin-top:8px"></div>
+      <p class="hint" style="margin-top:10px">Se aplica en todas las pantallas y en el asistente. Los datos no cambian: solo cambia cómo te los cuento.</p>
+    </div>
+  </div>
+
+  <div class="card memory-card" id="memoria-noesis">
+    <div class="card-h"><h2>Lo que Noesis recuerda</h2><span class="hint">visible y bajo tu control</span></div>
+    <div class="card-b">
+      <p class="muted" style="margin-top:0">Guarda solo detalles que quieras mantener entre conversaciones. Puedes corregirlos volviendo a guardar el mismo tema o borrarlos cuando quieras.</p>
+      <div class="memory-form">
+        <label><span class="fld">Tema</span><input class="input" id="memory-key" maxlength="80" placeholder="Por ejemplo: forma de cobro"></label>
+        <label><span class="fld">Qué debo recordar</span><input class="input" id="memory-value" maxlength="2000" placeholder="Prefiero transferencia bancaria"></label>
+        <button class="btn primary" onclick="saveMemory()">Guardar recuerdo</button>
+      </div>
+      <div id="memory-msg" class="meta" style="margin-top:8px"></div>
+      <div id="memory-list" class="memory-list">
+        {% for memory in assistant_memories %}
+        <div class="memory-row" data-memory-id="{{ memory.id }}">
+          <div><strong>{{ memory.memory_key }}</strong><span>{{ memory.memory_value }}</span></div>
+          <button class="icon-btn" aria-label="Hacer que Noesis olvide {{ memory.memory_key }}" title="Olvidar" onclick="forgetMemory({{ memory.id }})"></button>
+        </div>
+        {% else %}
+        <div class="memory-empty">Aún no guardo ninguna preferencia permanente. La conversación sí se conserva, pero no la convierto en un hecho sin que tú lo decidas.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-h"><h2>Privacidad y costes</h2><span class="badge b-gray">interno</span></div>
     <div class="card-b">
       <div class="lrow"><span>Base de datos</span><b>local (en tu servidor)</b></div>
@@ -444,6 +482,35 @@ async function saveLanguage() {
   try { await apiPost('/language', { language: el('lang-select').value }); }
   catch (e) { msg.textContent = e.message; return; }
   msg.textContent = 'Idioma guardado.';
+}
+async function saveExplanationLevel() {
+  const msg = el('explanation-msg');
+  try { await apiPost('/explanation-level', { level: el('explanation-select').value }); }
+  catch (e) { msg.textContent = e.message; return; }
+  msg.textContent = 'Preferencia guardada para toda la cuenta.';
+}
+async function saveMemory() {
+  const key = el('memory-key').value.trim();
+  const value = el('memory-value').value.trim();
+  const msg = el('memory-msg');
+  if (!key || !value) { msg.textContent = 'Escribe el tema y lo que quieres que recuerde.'; return; }
+  try { await apiPost('/assistant/memories', { key, value }); }
+  catch (e) { msg.textContent = e.message; return; }
+  msg.textContent = 'Recuerdo guardado. Lo usaré como contexto confirmado.';
+  location.hash = 'memoria-noesis';
+  location.reload();
+}
+async function forgetMemory(memoryId) {
+  if (!confirm('¿Quieres que Noesis olvide este dato?')) return;
+  const msg = el('memory-msg');
+  try { await apiDelete(`/assistant/memories/${memoryId}`); }
+  catch (e) { msg.textContent = e.message; return; }
+  const row = document.querySelector(`[data-memory-id="${memoryId}"]`);
+  if (row) row.remove();
+  msg.textContent = 'Olvidado. Ya no lo usaré como contexto.';
+  if (!el('memory-list').querySelector('.memory-row')) {
+    el('memory-list').innerHTML = '<div class="memory-empty">No guardo ninguna preferencia permanente.</div>';
+  }
 }
 </script>
 {% endblock %}

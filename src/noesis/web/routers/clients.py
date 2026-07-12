@@ -20,6 +20,12 @@ def api_clients_stats(business_id: int):
     return db.client_stats(business_id)
 
 
+@router.get("/api/{business_id}/clients/insights")
+def api_clients_insights(business_id: int):
+    """Lecturas explicables; cada señal enseña datos y confianza."""
+    return {"items": db.client_insights(business_id)}
+
+
 @router.get("/api/{business_id}/clients/{client_id}/portal-link")
 def api_portal_link(business_id: int, client_id: int):
     """Enlace privado del cliente (Client Hub) para que el autónomo lo envíe por

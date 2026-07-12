@@ -39,6 +39,12 @@
   </div>
 </div>
 
+<div class="card" style="margin-top:16px">
+  <div class="card-h"><h2>Lo que estoy aprendiendo de tus clientes</h2>
+    <span class="hint">señales explicadas, nunca cajas negras</span></div>
+  <div class="card-b" id="cl-signals"></div>
+</div>
+
 <div class="card card-action" style="margin-top:16px">
   <div class="card-h"><h2>Lectura rápida de tu cartera</h2><span id="cl-badge" class="priority low">cartera</span></div>
   <div class="card-b"><div id="cl-plan">…</div></div>
@@ -57,7 +63,22 @@ async function sharePortal(id, name, phone){
   shareLink(link.url, { phone, message, title: 'Portal de ' + name });
 }
 async function load() {
-  const cs = await api('/clients/stats');
+  const [cs, insightData] = await Promise.all([
+    api('/clients/stats'), api('/clients/insights')
+  ]);
+  const insights = insightData.items || [];
+  el('cl-signals').innerHTML = insights.length ? insights.slice(0, 4).map(item => {
+    const cls = item.level === 'alto' ? 'high' : item.level === 'medio' ? 'medium' : 'low';
+    const ask = encodeURIComponent(`¿Qué debería hacer con ${item.client_name}?`);
+    return `<div class="client-signal">
+      <span class="priority ${cls}">${item.level === 'sin_datos' ? 'aprendiendo' : item.level}</span>
+      <div><b>${esc(item.client_name)} · ${esc(item.headline)}</b>
+        <p>${esc(item.reason)}</p>
+        ${item.confidence ? `<small>${item.confidence}% de confianza · ${item.evidence_count} datos observados</small>` : '<small>Sin historial suficiente</small>'}
+      </div>
+      <button class="btn sm" onclick="noesisDrawer(true);noesisSend(decodeURIComponent('${ask}'))">Preguntar</button>
+    </div>`;
+  }).join('') : '<div class="empty">Añade actividad y Noesis empezará a detectar patrones explicables.</div>';
   const active = cs.filter(c => c.n_trabajos || c.n_facturas).length;
   el('cl-total').textContent = cs.length;
   el('cl-active').textContent = active + ' con actividad';

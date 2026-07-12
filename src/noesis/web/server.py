@@ -37,6 +37,7 @@ from .routers import (
     invoicing,
     pages,
     portal,
+    projects,
     team,
     webhooks,
 )
@@ -163,6 +164,7 @@ app.include_router(finance.router)
 app.include_router(team.router)
 app.include_router(clients.router)
 app.include_router(invoicing.router)
+app.include_router(projects.router)
 
 
 app.include_router(assistant.router)

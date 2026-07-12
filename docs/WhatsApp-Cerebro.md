@@ -230,7 +230,7 @@ Y la regla de W0 aplica SIEMPRE: audio con acción de dinero → borrador+SÍ.
 | 1 | **W0** router mèdia + confirmaciones (migración 14 con la config de W1 incluida) | M | Codex o Fable (backend) | nada — mocks |
 | 2 | **W2** foto ticket → gasto por WhatsApp | S | mismo PR o siguiente | W0 |
 | 3 | **W1** cierre del día + config informes + aviso fiscal | M | backend + 1 pasada de Claude en Ajustes | migración 14 |
-| 4 | **W3** PDF (gasto proveedor + histórico con `source='importada'`) | L | Codex/Fable, revisión estricta (Veri*Factu) | W0 |
+| 4 | **W3** PDF (factura recibida ya clasificable y confirmable; histórico emitido aún pendiente de flujo auditado con `source='importada'`) | L | Codex/Fable, revisión estricta (Veri*Factu) | W0 |
 | 5 | **W4** audio Groq fallback | S | cualquiera | clic founder (GROQ_API_KEY) |
 | — | Encender Meta (verificación empresa, token, webhook, aprobar plantillas) | clics | **FOUNDER** | bloquea el e2e real de TODO |
 

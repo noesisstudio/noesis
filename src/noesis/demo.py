@@ -83,6 +83,33 @@ def seed(*, reset: bool = True) -> int:
                 inv["id"],
             ),
         )
+
+    # Proyectos realistas para revisar la nueva vista de margen sin datos ficticios
+    # en producción: solo forman parte de la cuenta demo local.
+    worker = db.create_worker(business_id, "Pau Martínez", phone="600777888")
+    bathroom = db.add_project(
+        "Reforma integral de baño", 8000, client_id=laura["id"],
+        location="L'Hospitalet", planned_hours=96,
+        starts_on=(today - timedelta(days=8)).isoformat(), business_id=business_id,
+    )
+    db.update_project(bathroom["id"], business_id=business_id, progress=38,
+                      status="en_curso")
+    db.add_project_member(bathroom["id"], worker["id"], 22, "Oficial",
+                          business_id=business_id)
+    db.add_project_entry(bathroom["id"], "material", "Sanitarios y grifería",
+                         1, 1450, entry_on=(today - timedelta(days=5)).isoformat(),
+                         business_id=business_id)
+    db.add_project_entry(bathroom["id"], "horas", "Demolición y preparación",
+                         26, 22, worker_id=worker["id"],
+                         entry_on=(today - timedelta(days=2)).isoformat(),
+                         business_id=business_id)
+    boiler = db.add_project(
+        "Instalación de caldera", 2400, client_id=carlos["id"],
+        location="Barcelona", planned_hours=24, starts_on=today.isoformat(),
+        business_id=business_id,
+    )
+    db.update_project(boiler["id"], business_id=business_id, progress=10,
+                      status="planificado")
     return business_id
 
 

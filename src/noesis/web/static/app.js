@@ -19,6 +19,14 @@ const apiPost = (path, body) => fetch(`/api/${BIZ}${path}`, {
   if (!r.ok) throw new Error(data.error || 'Error de API');
   return data;
 });
+const apiPatch = (path, body) => fetch(`/api/${BIZ}${path}`, {
+  method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body || {})
+}).then(async r => {
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Error de API');
+  return data;
+});
 const apiDelete = (path) => fetch(`/api/${BIZ}${path}`, { method: 'DELETE' })
   .then(async r => {
     const data = await r.json();
@@ -45,6 +53,82 @@ const emptyState = (title, text, href, action) => `
     <span>${esc(text)}</span>
     ${href ? `<br><a class="btn sm" href="${href}">${esc(action || 'Ver')}</a>` : ''}
   </div>`;
+
+/* Acompañante persistente: mismo hilo en todas las pantallas y en WhatsApp. */
+let noesisHistoryLoaded = false;
+const noesisFormat = text => esc(text)
+  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+function noesisBubble(text, role, meta) {
+  const log = el('companion-log');
+  if (!log) return null;
+  const empty = log.querySelector('.companion-empty');
+  if (empty) empty.remove();
+  const node = document.createElement('div');
+  node.className = `bubble ${role === 'user' ? 'me' : 'bot'}`;
+  node.innerHTML = noesisFormat(text) + (meta
+    ? `<span class="src">${esc(meta)}</span>` : '');
+  log.appendChild(node);
+  log.scrollTop = log.scrollHeight;
+  return node;
+}
+async function noesisLoadHistory() {
+  const log = el('companion-log');
+  if (!log || noesisHistoryLoaded) return;
+  noesisHistoryLoaded = true;
+  log.innerHTML = '<div class="companion-empty"><b>Estoy contigo.</b>Pregúntame por esta pantalla o dime qué quieres quitarte de encima.</div>';
+  try {
+    const data = await api('/chat/history?limit=50');
+    if (!data.items.length) return;
+    log.innerHTML = '';
+    data.items.forEach(item => noesisBubble(
+      item.content, item.role,
+      item.channel === 'whatsapp' ? 'WhatsApp' : null
+    ));
+  } catch {
+    noesisHistoryLoaded = false;
+  }
+}
+function noesisDrawer(open) {
+  const drawer = el('noesis-companion');
+  if (!drawer) {
+    if (open) location.href = `/b/${BIZ}/asistente?ctx=${encodeURIComponent(window.NOESIS_PAGE || '')}`;
+    return;
+  }
+  document.body.classList.toggle('companion-open', Boolean(open));
+  drawer.setAttribute('aria-hidden', String(!open));
+  if (open) {
+    noesisLoadHistory();
+    setTimeout(() => el('companion-message')?.focus(), 180);
+  }
+}
+async function noesisSend(preset) {
+  const input = el('companion-message');
+  const button = el('companion-send');
+  const text = String(preset || input?.value || '').trim();
+  if (!text || !button || button.disabled) return;
+  if (input) input.value = '';
+  noesisBubble(text, 'user');
+  button.disabled = true;
+  const typing = noesisBubble('Estoy revisándolo…', 'assistant');
+  try {
+    const result = await apiPost('/chat', {
+      message: text, page: window.NOESIS_PAGE || null
+    });
+    typing?.remove();
+    noesisBubble(result.reply, 'assistant', result.source === 'ia' ? 'IA' : null);
+  } catch (error) {
+    typing?.remove();
+    noesisBubble(error.message || 'Ahora mismo no he podido responderte.', 'assistant');
+  } finally {
+    button.disabled = false;
+    input?.focus();
+  }
+}
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.body.classList.contains('companion-open')) {
+    noesisDrawer(false);
+  }
+});
 
 /* Modal de formulario reutilizable (sustituye a los prompt() del navegador). */
 function closeModal() {
@@ -274,6 +358,29 @@ document.addEventListener('keydown', e => {
 });
 
 /* Paleta para gráficos (coherente con el sistema de diseño). */
+/* Menú móvil accesible: conserva el foco y sincroniza el estado del botón. */
+function setNavOpen(open) {
+  document.body.classList.toggle('nav-open', open);
+  const trigger = document.querySelector('.burger');
+  if (trigger) trigger.setAttribute('aria-expanded', String(open));
+  const sidebar = document.querySelector('.sidebar');
+  const mobile = matchMedia('(max-width: 820px)').matches;
+  if (sidebar) sidebar.setAttribute('aria-hidden', String(mobile && !open));
+  if (!open && trigger) trigger.focus();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setNavOpen(false);
+});
+window.addEventListener('resize', () => {
+  const mobile = matchMedia('(max-width: 820px)').matches;
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.setAttribute('aria-hidden', String(mobile && !document.body.classList.contains('nav-open')));
+});
+window.addEventListener('DOMContentLoaded', () => {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.setAttribute('aria-hidden', String(matchMedia('(max-width: 820px)').matches));
+});
+
 const CHART = {
   brand: '#2e8b74', brandSoft: '#a9d2c5', forest: '#14463b',
   red: '#c0533f', green: '#1f8a6d', amber: '#b7831f',

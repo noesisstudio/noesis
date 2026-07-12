@@ -4,9 +4,8 @@
   <div class="page-title">
     <div class="kicker">Tus papeles, en orden</div>
     <h1>Documentos</h1>
-    <p>Sube o fotografía cualquier papel del negocio. Noesis intenta leerlo, te
-       propone qué es (factura recibida, ticket, contrato…) y <b>tú confirmas</b>.
-       Nada se registra sin tu visto bueno, y todo queda trazado para la gestoría.</p>
+    <p>Sube o fotografía cualquier papel. Noesis propone dónde guardarlo y
+       <b>tú confirmas</b>. Si no está segura, te pregunta; nada se registra por su cuenta.</p>
   </div>
   <div class="page-actions">
     <a class="btn primary" href="#subir">Subir documento</a>
@@ -36,16 +35,6 @@
         📷 Hacer foto ahora</button>
       <input id="d-camera" type="file" accept="image/*" capture="environment"
              style="display:none" onchange="el('d-file').files=this.files; el('d-msg').textContent='Foto lista para subir.'">
-      <label class="fld" style="margin-top:10px">Tipo</label>
-      <select id="d-kind">
-        <option value="documento">Documento (no lo sé aún)</option>
-        <option value="factura_recibida">Factura recibida (de proveedor)</option>
-        <option value="factura_emitida">Factura emitida (mía)</option>
-        <option value="ticket">Ticket / recibo</option>
-        <option value="presupuesto">Presupuesto</option>
-        <option value="contrato">Contrato</option>
-        <option value="proveedor">Otro doc. de proveedor</option>
-      </select>
       <label class="fld" style="margin-top:10px">Cliente (opcional)</label>
       <select id="d-client"><option value="">— Sin cliente —</option></select>
       <label class="fld" style="margin-top:10px">Nota (opcional)</label>
@@ -122,7 +111,7 @@
 
 {% block scripts %}
 <script>
-const KINDS = { documento:'Documento', ticket:'Ticket', contrato:'Contrato',
+const KINDS = { documento:'Por confirmar', ticket:'Ticket', contrato:'Contrato', albaran:'Albarán',
   proveedor:'Doc. proveedor', factura_recibida:'Fra. recibida',
   factura_emitida:'Fra. emitida', presupuesto:'Presupuesto' };
 const STATUS = { pendiente_revisar:['Pendiente','b-amber'], revisado:['Revisado','b-green'],
@@ -139,8 +128,8 @@ async function load() {
   try {
     const st = await api('/documents/ocr-status');
     el('d-ocr').textContent = st.ocr
-      ? 'Lectura de fotos activa: intentaré leer los datos automáticamente.'
-      : 'Lectura automática no disponible en este servidor: rellenarás los datos a mano.';
+      ? 'Lectura local activa. Noesis propondrá un tipo y tú lo confirmarás.'
+      : 'Sin OCR local. La IA clasificará si está conectada; si no, Noesis te preguntará.';
   } catch (e) {}
   renderRequests();
   renderList();
@@ -192,8 +181,14 @@ async function renderList() {
     const st = STATUS[d.doc_status] || STATUS.revisado;
     const importe = d.ocr_amount ? eur(d.ocr_amount) : '—';
     const actions = [];
+    if (d.doc_status === 'pendiente_revisar') {
+      actions.push(`<button class="btn sm" onclick="confirmKind(${d.id}, '${esc(d.kind)}')">Confirmar tipo</button>`);
+    }
     if (!d.received_invoice_id && !d.expense_id) {
-      actions.push(`<button class="btn sm" title="Leer datos con IA" onclick="readDoc(${d.id})">Leer</button>`);
+      actions.push(`<button class="iconbtn" title="Volver a clasificar" onclick="classifyDoc(${d.id})">↻</button>`);
+      if (['documento','factura_recibida','factura_emitida','proveedor'].includes(d.kind)) {
+        actions.push(`<button class="btn sm" title="Extraer datos de factura" onclick="readDoc(${d.id})">Extraer datos</button>`);
+      }
     }
     if (d.kind === 'ticket' && !d.expense_id) {
       actions.push(`<button class="iconbtn" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">€→</button>`);
@@ -223,7 +218,7 @@ async function uploadDoc() {
   if (!input.files || !input.files.length) { msg.textContent = 'Elige un archivo o haz una foto primero.'; return; }
   const fd = new FormData();
   fd.append('file', input.files[0]);
-  fd.append('kind', el('d-kind').value);
+  fd.append('kind', 'documento');
   fd.append('client_id', el('d-client').value);
   fd.append('note', el('d-note').value);
   msg.textContent = 'Subiendo…';
@@ -231,13 +226,46 @@ async function uploadDoc() {
   const data = await r.json();
   if (!r.ok) { msg.textContent = data.error || 'No se pudo subir.'; return; }
   input.value = ''; el('d-note').value = '';
-  msg.textContent = 'Documento guardado.';
-  if (['factura_recibida', 'documento', 'proveedor'].includes(data.kind)) {
-    msg.textContent += ' Leyendo datos…';
+  const proposal = data.classification || {};
+  const proposedKind = proposal.kind || data.kind;
+  msg.textContent = proposedKind === 'documento'
+    ? 'Documento guardado. No estoy segura del tipo: confírmalo en la lista.'
+    : `Documento guardado. Parece ${KINDS[proposedKind] || proposedKind}`
+      + (proposal.confidence ? ` (${Math.round(proposal.confidence)}% segura). Confírmalo.` : '.');
+  if (['factura_recibida', 'factura_emitida'].includes(proposedKind)) {
+    msg.textContent += ' Estoy preparando los datos…';
     await readDoc(data.id);
-    msg.textContent = 'Documento guardado.';
   }
   renderList();
+}
+
+async function classifyDoc(id) {
+  el('d-msg').textContent = 'Revisando el documento…';
+  try {
+    const proposal = await apiPost(`/documents/${id}/classify`, {});
+    el('d-msg').textContent = proposal.kind === 'documento'
+      ? 'No estoy segura del tipo. Revísalo tú y aprenderé de la corrección.'
+      : `Parece ${KINDS[proposal.kind] || proposal.kind} (${Math.round(proposal.confidence || 0)}% segura).`;
+  } catch (e) { el('d-msg').textContent = e.message; }
+  renderList();
+}
+
+function confirmKind(id, current) {
+  const ordered = [current, ...Object.keys(KINDS).filter(k => k !== current)];
+  formModal({
+    title: '¿Qué documento es?', submitLabel: 'Confirmar tipo',
+    fields: [{ name:'kind', label:'Tipo', options: ordered.map(value => ({
+      value, label: KINDS[value] || value
+    })) }],
+    onSubmit: async values => {
+      await apiPost(`/documents/${id}/review`, {
+        kind: values.kind, doc_status: 'revisado',
+        review_note: 'Tipo confirmado por el usuario.'
+      });
+      el('d-msg').textContent = 'Hecho. Guardaré esta corrección para mejorar.';
+      renderList();
+    }
+  });
 }
 
 async function readDoc(id) {
