@@ -1,5 +1,16 @@
 # Registro de QA
 
+## 2026-07-13 — monitorización admin Veri*Factu
+
+- Suite completa: 176 pruebas verdes; avisos/logs esperados de tests de reintentos
+  Stripe, WhatsApp, Veri*Factu, backup y resiliencia del parte.
+- Tests específicos: `VerifactuTestCase` + `AdminCommandCenterTestCase` -> 20 OK.
+- `compileall` y `git diff --check` verdes.
+- Servidor local con base temporal: `/health` 200, `/ready` 200, login admin 303 y
+  `/admin` 200 mostrando “Cola Veri*Factu” y “Vencidas para enviar”.
+- Sin conexión AEAT real: solo se validó la observabilidad de la cola, no la
+  remisión externa.
+
 ## 2026-07-13 — cierre de campo y perfil de cliente
 
 - Suite completa: 175 pruebas verdes; aviso conocido Starlette/httpx.
