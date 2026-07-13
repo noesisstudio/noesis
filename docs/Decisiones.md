@@ -2,6 +2,25 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Autonomía acotada y columna operativa única (2026-07-13)
+
+Noesis hace automáticamente trabajo interno de bajo riesgo y comunicaciones que
+siguen una regla concreta aprobada. Preparar no equivale a autorizar: transferencias,
+pagos, devoluciones, presentación fiscal, emisión definitiva y borrado irreversible
+siempre exigen confirmación específica del autónomo. El límite se valida en servidor
+y cada propuesta o ejecución sensible deja registro.
+
+Proyecto, trabajo, trabajador, fichaje, coste, gasto, documento y tarea forman una
+sola columna operativa. Las horas reales se calculan desde fichajes inmutables y el
+coste laboral desde la tarifa horaria configurada; no se duplican horas manuales con
+horas de fichaje. Motivo: el margen debe surgir del trabajo cotidiano, no de pedir al
+autónomo que replique información en varias pantallas.
+
+La cadencia de gestoría es una regla explícita y revocable. Cada paquete tiene
+carpetas estables, originales, manifiesto, huella, versión y trazabilidad de aviso y
+descarga. Cambiar solo el nombre o email de la gestoría no amplía un permiso que el
+usuario haya restringido después.
+
 ## Noesis recuerda solo lo explicable y la entrada es universal (2026-07-12)
 El acompañante conserva la conversación entre pantallas y canales, pero separa el
 historial de los recuerdos operativos. Un recuerdo permanente debe ser explícito,
