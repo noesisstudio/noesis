@@ -139,10 +139,37 @@
       </div>
       <div class="card-b">
         <div class="lrow"><span>Pendientes</span><b class="num">{{ data.verifactu_queue.pendiente }}</b></div>
+        <div class="lrow"><span>Vencidas para enviar</span><b class="num {{ 'amber' if data.verifactu_queue.vencidas }}">{{ data.verifactu_queue.vencidas }}</b></div>
         <div class="lrow"><span>Enviadas</span><b class="num">{{ data.verifactu_queue.enviado }}</b></div>
         <div class="lrow"><span>Aceptadas</span><b class="num">{{ data.verifactu_queue.aceptado }}</b></div>
         <div class="lrow"><span>Con errores</span><b class="num">{{ data.verifactu_queue.aceptado_con_errores }}</b></div>
         <div class="lrow"><span>Agotadas</span><b class="num {{ 'red' if data.verifactu_queue.agotado }}">{{ data.verifactu_queue.agotado }}</b></div>
+        <p class="meta" style="margin-top:10px">
+          {% if data.verifactu_queue.last_activity_at %}
+            Último movimiento: {{ data.verifactu_queue.last_activity_at }}.
+          {% else %}
+            La cola aún no ha registrado movimientos.
+          {% endif %}
+          {% if data.verifactu_queue.oldest_pending_at %}
+            Pendiente más antiguo: {{ data.verifactu_queue.oldest_pending_at }}
+            {% if data.verifactu_queue.oldest_pending_days is not none %}
+              ({{ data.verifactu_queue.oldest_pending_days }} día(s)).
+            {% endif %}
+          {% endif %}
+        </p>
+        {% if data.verifactu_queue.affected_businesses %}
+        <div class="mini-list" style="margin-top:10px">
+          {% for b in data.verifactu_queue.affected_businesses %}
+          <div class="lrow">
+            <span>{{ b.name }}</span>
+            <span class="meta">
+              {{ b.vencidas }} vencida(s) · {{ b.agotadas }} agotada(s) ·
+              {{ b.rechazadas }} rechazada(s)
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
     </div>
     <div class="card">

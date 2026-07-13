@@ -3,7 +3,8 @@
 ## 2026-07-13 — integraciones y salud por negocio
 
 - Migración 27 verificada en SQLite con ida y vuelta hasta 25.
-- Suite completa: 177 pruebas verdes y 26 subpruebas; aviso conocido Starlette/httpx.
+- Suite completa tras combinar `main`: 178 pruebas verdes y 26 subpruebas; aviso
+  conocido Starlette/httpx.
 - Aislamiento probado para preferencias de IA y solicitudes de banco; la API queda
   además protegida por la guarda común de sesión y `business_id`.
 - La salud operativa cuenta por negocio uso/latencia de IA, documentos pendientes,
@@ -15,6 +16,17 @@
 - QA visual pendiente: el navegador interno se cerró antes de alcanzar localhost y
   Chrome no estaba disponible en la sesión. No se sustituye por una validación
   visual ficticia. También queda el smoke Meta/IA/AEAT con credenciales reales.
+
+## 2026-07-13 — monitorización admin Veri*Factu
+
+- Suite completa: 176 pruebas verdes; avisos/logs esperados de tests de reintentos
+  Stripe, WhatsApp, Veri*Factu, backup y resiliencia del parte.
+- Tests específicos: `VerifactuTestCase` + `AdminCommandCenterTestCase` -> 20 OK.
+- `compileall` y `git diff --check` verdes.
+- Servidor local con base temporal: `/health` 200, `/ready` 200, login admin 303 y
+  `/admin` 200 mostrando “Cola Veri*Factu” y “Vencidas para enviar”.
+- Sin conexión AEAT real: solo se validó la observabilidad de la cola, no la
+  remisión externa.
 
 ## 2026-07-13 — cierre de campo y perfil de cliente
 

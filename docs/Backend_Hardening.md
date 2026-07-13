@@ -20,6 +20,8 @@ en reglas de código y pruebas, no en convenciones.
 - Webhooks con ciclo recuperable y respuesta 5xx ante fallos de procesamiento.
 - Importes fiscales calculados con `Decimal` y redondeo comercial al céntimo.
 - Backups verificados de base de datos y documentos subidos.
+- Panel admin con salud agregada de `verifactu_outbox`: vencidas, agotadas,
+  rechazos, actividad reciente y negocios afectados, sin activar remisión AEAT.
 
 ## Pendiente de infraestructura
 - Migrar SQLite a Postgres antes de escalar horizontalmente.

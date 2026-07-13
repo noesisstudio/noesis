@@ -4245,6 +4245,75 @@ def verifactu_queue_counts() -> dict[str, int]:
     return counts
 
 
+def verifactu_queue_health(now: str | None = None) -> dict:
+    """Resumen operativo de la cola AEAT para el panel interno.
+
+    No procesa ni modifica la cola: solo cuenta vencidos, agotados y actividad
+    reciente para saber si la remisión real se está atascando.
+    """
+    now = now or _now()
+    counts = verifactu_queue_counts()
+    with get_conn() as conn:
+        due = conn.execute(
+            "SELECT COUNT(*) AS total FROM verifactu_outbox "
+            "WHERE status='pendiente' AND attempts<max_attempts "
+            "AND next_attempt_at<=?",
+            (now,),
+        ).fetchone()
+        oldest = conn.execute(
+            "SELECT MIN(next_attempt_at) AS next_attempt_at FROM verifactu_outbox "
+            "WHERE status='pendiente'",
+        ).fetchone()
+        activity = conn.execute(
+            "SELECT MAX(updated_at) AS updated_at FROM verifactu_outbox"
+        ).fetchone()
+        affected = conn.execute(
+            "SELECT b.id, b.name, "
+            "SUM(CASE WHEN o.status='pendiente' AND o.attempts>=o.max_attempts "
+            "THEN 1 ELSE 0 END) AS agotadas, "
+            "SUM(CASE WHEN o.status='rechazado' THEN 1 ELSE 0 END) AS rechazadas, "
+            "SUM(CASE WHEN o.status='pendiente' AND o.attempts<o.max_attempts "
+            "AND o.next_attempt_at<=? THEN 1 ELSE 0 END) AS vencidas "
+            "FROM verifactu_outbox o "
+            "JOIN businesses b ON b.id=o.business_id "
+            "WHERE o.status='rechazado' OR "
+            "(o.status='pendiente' AND (o.attempts>=o.max_attempts "
+            "OR o.next_attempt_at<=?)) "
+            "GROUP BY b.id, b.name "
+            "ORDER BY rechazadas DESC, agotadas DESC, vencidas DESC, b.id "
+            "LIMIT 8",
+            (now, now),
+        ).fetchall()
+    oldest_at = oldest["next_attempt_at"] if oldest else None
+    oldest_days = None
+    if oldest_at:
+        try:
+            oldest_days = max(
+                0,
+                (datetime.fromisoformat(str(now)[:19])
+                 - datetime.fromisoformat(str(oldest_at)[:19])).days,
+            )
+        except ValueError:
+            oldest_days = None
+    return {
+        **counts,
+        "vencidas": int(due["total"] or 0),
+        "oldest_pending_at": oldest_at,
+        "oldest_pending_days": oldest_days,
+        "last_activity_at": activity["updated_at"] if activity else None,
+        "affected_businesses": [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "agotadas": int(row["agotadas"] or 0),
+                "rechazadas": int(row["rechazadas"] or 0),
+                "vencidas": int(row["vencidas"] or 0),
+            }
+            for row in affected
+        ],
+    }
+
+
 def verify_invoice_record_chain(
     business_id: int, issuer_nif: str | None = None
 ) -> dict:
@@ -7064,7 +7133,7 @@ def admin_alerts() -> list[dict]:
             "level": "ambar", "area": "WhatsApp",
             "text": f"{wa_stuck} mensaje(s) llevan 3+ intentos sin salir.",
         })
-    verifactu = verifactu_queue_counts()
+    verifactu = verifactu_queue_health()
     if verifactu.get("rechazado"):
         alerts.append({
             "level": "rojo", "area": "Veri*Factu",
@@ -7074,6 +7143,13 @@ def admin_alerts() -> list[dict]:
         alerts.append({
             "level": "rojo", "area": "Veri*Factu",
             "text": f"{verifactu['agotado']} registro(s) agotaron los reintentos.",
+        })
+    if verifactu.get("vencidas") and not verifactu.get("agotado"):
+        alerts.append({
+            "level": "ambar", "area": "Veri*Factu",
+            "text": (
+                f"{verifactu['vencidas']} registro(s) vencidos esperan remisión."
+            ),
         })
     backup = latest_backup_run()
     if not backup:
@@ -7216,7 +7292,7 @@ def admin_overview() -> dict:
     en_riesgo = len([
         b for b in biz if b["activated"] and (b["days_inactive"] or 0) >= 14
     ])
-    vq = verifactu_queue_counts()
+    vq = verifactu_queue_health()
     backup = latest_backup_run()
     alerts = admin_alerts()
     backup_text = {
@@ -7244,7 +7320,8 @@ def admin_overview() -> dict:
         ),
         "operaciones": (
             f"{len(alerts)} alarma(s) activa(s). Veri*Factu: "
-            f"{vq['pendiente']} pendiente(s), {vq['rechazado']} rechazada(s). "
+            f"{vq['pendiente']} pendiente(s), {vq['vencidas']} vencida(s), "
+            f"{vq['rechazado']} rechazada(s). "
             f"Copias: {backup_text}."
         ),
         "marketing": (

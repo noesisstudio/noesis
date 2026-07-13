@@ -216,6 +216,8 @@ tbody td { padding: 12px; border-top: 1px solid var(--border); }
 tbody tr:hover { background: var(--surface-2); }
 .t-right { text-align: right; }
 .num { font-variant-numeric: tabular-nums; }
+.num.red { color: var(--red); }
+.num.amber { color: var(--amber); }
 .table-wrap { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .table-wrap table { min-width: 760px; }
 .table-actions { white-space:nowrap; }
