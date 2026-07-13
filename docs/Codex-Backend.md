@@ -114,6 +114,10 @@ PR aparte sin mezclar con funcionalidad, para que el diff sea revisable.
 
 ## Tarea 5 — Revisiones menores / hardening
 
+> Monitorización `verifactu_outbox` completada en `codex/verifactu-outbox-admin`:
+> el panel admin muestra vencidas, agotadas, rechazos, actividad reciente y negocios
+> afectados sin activar la conexión AEAT.
+
 - **Rate-limit en memoria** (`auth.too_many_attempts`, escaneo de tokens): hoy es
   un dict en proceso. Si Railway escala a >1 worker o reinicia, se pierde. No es
   urgente con 1 worker; deja escrito un plan (tabla `rate_limits` con ventana, o

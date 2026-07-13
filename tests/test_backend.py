@@ -3088,6 +3088,51 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertIn(("WhatsApp", "rojo"), areas)
         self.assertIn(("Cobro", "ambar"), areas)
 
+    def test_admin_flags_verifactu_due_and_exhausted_queue(self):
+        business, client = self.make_business("Admin Verifactu")
+        with patch.object(config, "VERIFACTU_PRODUCER_NIF", "B87654321"):
+            db.update_verifactu_mode(business["id"], True)
+            first = db.add_invoice(
+                client["id"], "Registro vencido", 100,
+                business_id=business["id"],
+            )
+            first = db.issue_invoice(first["id"], business["id"])
+            second = db.add_invoice(
+                client["id"], "Registro agotado", 120,
+                business_id=business["id"],
+            )
+            second = db.issue_invoice(second["id"], business["id"])
+        now = datetime(2026, 7, 13, 12, 0, 0).isoformat(timespec="seconds")
+        old = datetime(2026, 7, 11, 12, 0, 0).isoformat(timespec="seconds")
+        due = db.get_verifactu_outbox(first["id"], business["id"])
+        exhausted = db.get_verifactu_outbox(second["id"], business["id"])
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE verifactu_outbox SET next_attempt_at=?, attempts=1 "
+                "WHERE id=?",
+                (old, due["id"]),
+            )
+            conn.execute(
+                "UPDATE verifactu_outbox SET next_attempt_at=?, "
+                "attempts=max_attempts WHERE id=?",
+                (old, exhausted["id"]),
+            )
+
+        health = db.verifactu_queue_health(now=now)
+
+        self.assertEqual(health["pendiente"], 2)
+        self.assertEqual(health["vencidas"], 1)
+        self.assertEqual(health["agotado"], 1)
+        self.assertEqual(health["oldest_pending_days"], 2)
+        affected = health["affected_businesses"][0]
+        self.assertEqual(affected["name"], "Admin Verifactu")
+        self.assertEqual(affected["vencidas"], 1)
+        self.assertEqual(affected["agotadas"], 1)
+        overview = db.admin_overview()
+        self.assertEqual(overview["verifactu_queue"]["vencidas"], 1)
+        areas = {(a["area"], a["level"]) for a in overview["alerts"]}
+        self.assertIn(("Veri*Factu", "rojo"), areas)
+
     def test_agent_records_token_usage(self):
         from noesis import agent as agent_module
 
