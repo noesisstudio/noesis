@@ -329,6 +329,9 @@ def update_gestoria_settings(business_id, *, name=None, email=None,
         raise ValueError("La cadencia debe ser mensual, trimestral u off.")
     name = (name or "").strip()[:120] or None
     email = (email or "").strip().lower()[:200] or None
+    previous = get_business(business_id)
+    if not previous:
+        return None
     if cadence != "off":
         if not email or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
             raise ValueError(
@@ -344,6 +347,12 @@ def update_gestoria_settings(business_id, *, name=None, email=None,
             return None
     if cadence != "off":
         get_or_create_gestoria_token(business_id)
+        # Cambiar desde apagado o elegir otra cadencia aprueba esa regla concreta.
+        # Editar solo el nombre/email no pisa un permiso más restrictivo posterior.
+        if (previous.get("gestoria_cadence") or "off") != cadence:
+            update_automation_permission(business_id, "send_gestoria", "rules")
+    else:
+        update_automation_permission(business_id, "send_gestoria", "blocked")
     return get_business(business_id)
 
 
@@ -463,16 +472,122 @@ def gestoria_periods(business_id, count: int = 8) -> list[dict]:
     cadence = business.get("gestoria_cadence") or "off"
     if cadence == "off":
         return []
+    latest_delivery = {}
+    for delivery in list_gestoria_deliveries(business_id, limit=100):
+        latest_delivery.setdefault(delivery["period_label"], delivery)
     periods = []
     for label in _closed_period_labels(cadence, count, date.today()):
         start, end = gestoria_period_range(label)
         invoices = gestoria_invoices_in(business_id, start, end)
         expenses = gestoria_expenses_in(business_id, start, end)
+        prepared = latest_delivery.get(label)
         periods.append({
             "label": label, "start": start, "end": end,
             "invoices": len(invoices), "expenses": len(expenses),
+            "delivery_status": prepared.get("status") if prepared else None,
+            "delivery_version": prepared.get("version") if prepared else None,
         })
     return periods
+
+
+def record_gestoria_delivery(
+    business_id: int,
+    period_label: str,
+    *,
+    source_hash: str,
+    artifact_hash: str,
+    file_size: int,
+    manifest: dict,
+) -> dict:
+    """Guarda una versión solo si cambiaron los datos fuente del período."""
+    gestoria_period_range(period_label)
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    manifest_text = json.dumps(
+        manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        latest = conn.execute(
+            "SELECT * FROM gestoria_deliveries WHERE business_id=? "
+            "AND period_label=? ORDER BY version DESC LIMIT 1" + lock,
+            (business_id, period_label),
+        ).fetchone()
+        if latest and latest["source_hash"] == source_hash:
+            delivery_id = latest["id"]
+            conn.execute(
+                "UPDATE gestoria_deliveries SET artifact_hash=?, file_size=?, "
+                "manifest=? WHERE id=? AND business_id=?",
+                (artifact_hash, int(file_size), manifest_text,
+                 delivery_id, business_id),
+            )
+        else:
+            version = int(latest["version"] if latest else 0) + 1
+            inserted = conn.execute(
+                "INSERT INTO gestoria_deliveries "
+                "(business_id, period_label, version, status, source_hash, "
+                "artifact_hash, file_size, manifest, prepared_at) "
+                "VALUES (?, ?, ?, 'preparado', ?, ?, ?, ?, ?) RETURNING id",
+                (business_id, period_label, version, source_hash,
+                 artifact_hash, int(file_size), manifest_text, now),
+            ).fetchone()
+            delivery_id = inserted["id"]
+        saved = conn.execute(
+            "SELECT * FROM gestoria_deliveries WHERE id=? AND business_id=?",
+            (delivery_id, business_id),
+        ).fetchone()
+    result = dict(saved)
+    result["manifest"] = json.loads(result["manifest"])
+    return result
+
+
+def mark_gestoria_delivery(
+    business_id: int, period_label: str, event: str
+) -> dict | None:
+    """Marca aviso o descarga sobre la última versión preparada."""
+    if event not in {"notified", "downloaded"}:
+        raise ValueError("El evento de gestoría no es válido.")
+    column = "notified_at" if event == "notified" else "downloaded_at"
+    status = "avisado" if event == "notified" else "descargado"
+    now = _now()
+    with get_conn() as conn:
+        latest = conn.execute(
+            "SELECT id FROM gestoria_deliveries WHERE business_id=? "
+            "AND period_label=? ORDER BY version DESC LIMIT 1",
+            (business_id, period_label),
+        ).fetchone()
+        if not latest:
+            return None
+        conn.execute(
+            f"UPDATE gestoria_deliveries SET {column}=?, status=? "
+            "WHERE id=? AND business_id=?",
+            (now, status, latest["id"], business_id),
+        )
+        saved = conn.execute(
+            "SELECT * FROM gestoria_deliveries WHERE id=? AND business_id=?",
+            (latest["id"], business_id),
+        ).fetchone()
+    result = dict(saved)
+    result["manifest"] = json.loads(result["manifest"])
+    return result
+
+
+def list_gestoria_deliveries(business_id: int, limit: int = 24) -> list[dict]:
+    limit = max(1, min(int(limit or 24), 100))
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM gestoria_deliveries WHERE business_id=? "
+            "ORDER BY prepared_at DESC, id DESC LIMIT ?",
+            (business_id, limit),
+        ).fetchall()
+    deliveries = []
+    for row in rows:
+        item = dict(row)
+        item["manifest"] = json.loads(item["manifest"])
+        deliveries.append(item)
+    return deliveries
 
 
 def parse_payment_reminder_days(value) -> list[int]:
@@ -704,6 +819,258 @@ def delete_memory(business_id: int, memory_id: int) -> bool:
             (int(memory_id), business_id),
         ).rowcount
     return bool(deleted)
+
+
+# --------------------------------------------------- Control de autonomía ---
+# El catálogo vive en código para que una modificación maliciosa de la base de
+# datos no pueda convertir una transferencia o una obligación fiscal en una
+# acción automática. La tabla solo guarda la elección dentro de estos límites.
+AUTOMATION_CATALOG: tuple[dict, ...] = (
+    {
+        "key": "organize_documents", "group": "Trabajo interno",
+        "label": "Ordenar y clasificar documentos",
+        "description": "Propone el tipo y coloca cada archivo en su apartado; nunca contabiliza sin revisión.",
+        "risk": "low", "default": "automatic",
+        "allowed_modes": ("automatic", "confirm", "blocked"),
+    },
+    {
+        "key": "daily_brief", "group": "Trabajo interno",
+        "label": "Preparar el parte y los avisos internos",
+        "description": "Analiza el negocio y prioriza lo importante sin modificar datos económicos.",
+        "risk": "low", "default": "automatic",
+        "allowed_modes": ("automatic", "blocked"),
+    },
+    {
+        "key": "project_alerts", "group": "Trabajo interno",
+        "label": "Avisar de desviaciones en proyectos",
+        "description": "Detecta excesos de horas, costes o trabajos pendientes de facturar.",
+        "risk": "low", "default": "automatic",
+        "allowed_modes": ("automatic", "confirm", "blocked"),
+    },
+    {
+        "key": "payment_reminders", "group": "Comunicación",
+        "label": "Recordar cobros a clientes",
+        "description": "Puede seguir una cadencia que tú apruebes; fuera de ella debe preguntar.",
+        "risk": "medium", "default": "rules",
+        "allowed_modes": ("rules", "confirm", "blocked"),
+    },
+    {
+        "key": "send_invoice", "group": "Comunicación",
+        "label": "Enviar facturas y presupuestos",
+        "description": "Prepara el envío, pero tú confirmas el destinatario y el contenido.",
+        "risk": "high", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+    {
+        "key": "send_gestoria", "group": "Comunicación",
+        "label": "Enviar documentación a la gestoría",
+        "description": "Prepara el paquete y pide permiso antes de compartirlo.",
+        "risk": "high", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+    {
+        "key": "move_appointments", "group": "Comunicación",
+        "label": "Mover citas o cambiar asignaciones",
+        "description": "Propone la reorganización y espera tu confirmación.",
+        "risk": "high", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+    {
+        "key": "issue_invoice", "group": "Decisiones sensibles",
+        "label": "Emitir una factura definitiva",
+        "description": "Puede dejarla preparada; la emisión siempre requiere tu aceptación.",
+        "risk": "critical", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+    {
+        "key": "bank_transfer", "group": "Decisiones sensibles",
+        "label": "Realizar transferencias o pagos",
+        "description": "Noesis nunca mueve dinero sin tu aprobación específica.",
+        "risk": "critical", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+    {
+        "key": "refund_payment", "group": "Decisiones sensibles",
+        "label": "Devolver o reembolsar dinero",
+        "description": "Prepara la operación y espera tu aprobación específica.",
+        "risk": "critical", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+    {
+        "key": "tax_submission", "group": "Decisiones sensibles",
+        "label": "Presentar impuestos o registros fiscales",
+        "description": "Noesis calcula y prepara; tú y tu gestoría revisáis antes de presentar.",
+        "risk": "critical", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+    {
+        "key": "delete_data", "group": "Decisiones sensibles",
+        "label": "Borrar información de forma irreversible",
+        "description": "Siempre exige confirmación reforzada y muestra qué desaparecerá.",
+        "risk": "critical", "default": "confirm",
+        "allowed_modes": ("confirm", "blocked"),
+    },
+)
+# La cadencia de gestoría es una regla aprobada por el usuario, no autonomía
+# abierta. Se habilita como modo separado y nunca afecta a pagos ni impuestos.
+AUTOMATION_CATALOG = tuple(
+    {
+        **item,
+        "allowed_modes": ("rules", "confirm", "blocked"),
+        "description": (
+            "Pregunta siempre, salvo que apruebes una cadencia mensual o "
+            "trimestral."
+        ),
+    }
+    if item["key"] == "send_gestoria" else item
+    for item in AUTOMATION_CATALOG
+)
+AUTOMATION_BY_KEY = {item["key"]: item for item in AUTOMATION_CATALOG}
+AUTOMATION_MODE_LABELS = {
+    "automatic": "Puede hacerlo",
+    "rules": "Solo con mis reglas",
+    "confirm": "Preguntar siempre",
+    "blocked": "No permitir",
+}
+
+
+def automation_catalog(business_id: int) -> list[dict]:
+    """Devuelve los límites efectivos, no solo el valor guardado."""
+    if not get_business(business_id):
+        return []
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT action_key, mode, updated_at FROM automation_permissions "
+            "WHERE business_id=?",
+            (business_id,),
+        ).fetchall()
+    saved = {row["action_key"]: dict(row) for row in rows}
+    result = []
+    for raw in AUTOMATION_CATALOG:
+        item = dict(raw)
+        item["allowed_modes"] = list(item["allowed_modes"])
+        chosen = saved.get(item["key"], {}).get("mode") or item["default"]
+        if chosen not in item["allowed_modes"]:
+            chosen = item["default"]
+        item["mode"] = chosen
+        item["mode_label"] = AUTOMATION_MODE_LABELS[chosen]
+        item["updated_at"] = saved.get(item["key"], {}).get("updated_at")
+        result.append(item)
+    return result
+
+
+def update_automation_permission(
+    business_id: int, action_key: str, mode: str
+) -> dict:
+    action_key = str(action_key or "").strip()
+    mode = str(mode or "").strip().lower()
+    policy = AUTOMATION_BY_KEY.get(action_key)
+    if not policy:
+        raise ValueError("La acción de Noesis no existe.")
+    if mode not in policy["allowed_modes"]:
+        if policy["risk"] == "critical":
+            raise ValueError(
+                "Esta acción es sensible y nunca puede ejecutarse automáticamente."
+            )
+        raise ValueError("Ese nivel de autonomía no está permitido para esta acción.")
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    now = _now()
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO automation_permissions "
+            "(business_id, action_key, mode, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, action_key) DO UPDATE SET "
+            "mode=excluded.mode, updated_at=excluded.updated_at",
+            (business_id, action_key, mode, now, now),
+        )
+    return next(
+        item for item in automation_catalog(business_id)
+        if item["key"] == action_key
+    )
+
+
+def automation_decision(business_id: int, action_key: str) -> dict:
+    """Respuesta única para cualquier herramienta que quiera actuar por Noesis."""
+    policy = next(
+        (item for item in automation_catalog(business_id)
+         if item["key"] == action_key),
+        None,
+    )
+    if not policy:
+        raise ValueError("La acción de Noesis no existe.")
+    mode = policy["mode"]
+    return {
+        **policy,
+        "allowed": mode != "blocked",
+        "requires_confirmation": mode in {"rules", "confirm"},
+        "can_execute_automatically": mode == "automatic",
+    }
+
+
+def record_assistant_action(
+    business_id: int,
+    action_key: str,
+    summary: str,
+    *,
+    status: str = "proposed",
+    target_type: str | None = None,
+    target_id: int | None = None,
+    payload: dict | None = None,
+    requested_by: str = "noesis",
+    approved_by: str | None = None,
+    error: str | None = None,
+) -> dict:
+    policy = AUTOMATION_BY_KEY.get(str(action_key or "").strip())
+    if not policy:
+        raise ValueError("La acción de Noesis no existe.")
+    if status not in {"proposed", "approved", "executed", "failed", "cancelled"}:
+        raise ValueError("El estado de la acción no es válido.")
+    summary = str(summary or "").strip()
+    if not summary:
+        raise ValueError("La acción necesita una explicación.")
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    now = _now()
+    approved_at = now if status in {"approved", "executed"} else None
+    executed_at = now if status in {"executed", "failed"} else None
+    payload_text = None
+    if payload is not None:
+        payload_text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        if len(payload_text) > 12_000:
+            raise ValueError("El detalle de la acción es demasiado grande.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO assistant_actions "
+            "(business_id, action_key, risk_level, status, summary, target_type, "
+            "target_id, payload, requested_by, approved_by, created_at, approved_at, "
+            "executed_at, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "RETURNING id",
+            (
+                business_id, action_key, policy["risk"], status, summary[:500],
+                (target_type or "").strip()[:50] or None, target_id, payload_text,
+                str(requested_by or "noesis")[:30],
+                (approved_by or "").strip()[:80] or None,
+                now, approved_at, executed_at, (error or "").strip()[:1000] or None,
+            ),
+        ).fetchone()
+        saved = conn.execute(
+            "SELECT * FROM assistant_actions WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def list_assistant_actions(business_id: int, limit: int = 30) -> list[dict]:
+    limit = max(1, min(int(limit or 30), 200))
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM assistant_actions WHERE business_id=? "
+            "ORDER BY id DESC LIMIT ?",
+            (business_id, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def activation_snapshot(business_id: int) -> dict:
@@ -1428,25 +1795,53 @@ def get_worker_by_phone(phone: str) -> dict | None:
 
 # ------------------------------------------------------------------ Agenda ---
 def add_job(client_id, description, scheduled_for=None, zone=None,
-            price_estimate=None, *, business_id: int) -> dict:
+            price_estimate=None, project_id=None, worker_id=None,
+            *, business_id: int) -> dict:
+    description = str(description or "").strip()
+    if not description or len(description) > 500:
+        raise ValueError("El trabajo necesita una descripción (máx. 500 caracteres).")
     if not get_client(client_id, business_id):
         raise ValueError("El cliente no pertenece a este negocio.")
+    project = None
+    if project_id not in (None, ""):
+        project_id = int(project_id)
+        project = get_project(project_id, business_id)
+        if not project:
+            raise ValueError("El proyecto no pertenece a este negocio.")
+        if project.get("client_id") and project["client_id"] != int(client_id):
+            raise ValueError("El trabajo y el proyecto deben tener el mismo cliente.")
+    else:
+        project_id = None
+    if worker_id not in (None, ""):
+        worker_id = int(worker_id)
+        worker = get_worker(worker_id, business_id)
+        if not worker or not worker.get("active"):
+            raise ValueError("La persona no pertenece a este negocio o está inactiva.")
+    else:
+        worker_id = None
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO jobs (business_id, client_id, description, scheduled_for, "
-            "zone, price_estimate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "zone, price_estimate, project_id, worker_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, client_id, description, scheduled_for, zone,
-             price_estimate, _now()),
+             price_estimate, project_id, worker_id, _now()),
         ).fetchone()
         new_id = row["id"]
+    if project_id and worker_id:
+        _ensure_project_member(project_id, worker_id, business_id)
     return get_job(new_id, business_id)
 
 
 def get_job(job_id, business_id) -> dict | None:
     sql = (
-        "SELECT j.*, w.name AS worker_name, w.color AS worker_color "
+        "SELECT j.*, w.name AS worker_name, w.color AS worker_color, "
+        "p.name AS project_name, p.location AS project_location, "
+        "p.status AS project_status "
         "FROM jobs j LEFT JOIN workers w ON w.id=j.worker_id "
-        "AND w.business_id=j.business_id WHERE j.id=? AND j.business_id=?"
+        "AND w.business_id=j.business_id "
+        "LEFT JOIN projects p ON p.id=j.project_id "
+        "AND p.business_id=j.business_id WHERE j.id=? AND j.business_id=?"
     )
     params = [job_id, business_id]
     with get_conn() as conn:
@@ -1471,6 +1866,10 @@ def delete_job(job_id, business_id) -> None:
             raise ValueError(
                 "El trabajo tiene fichajes y debe conservarse como justificante."
             )
+        conn.execute(
+            "UPDATE project_tasks SET job_id=NULL WHERE job_id=? AND business_id=?",
+            (job_id, business_id),
+        )
         conn.execute("DELETE FROM jobs WHERE id=? AND business_id=?",
                      (job_id, business_id))
 
@@ -1479,11 +1878,14 @@ def jobs_for_date(day: str, business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT j.*, c.name AS client_name, c.zone AS client_zone, "
-            "w.name AS worker_name, w.color AS worker_color "
+            "w.name AS worker_name, w.color AS worker_color, "
+            "p.name AS project_name, p.location AS project_location "
             "FROM jobs j LEFT JOIN clients c ON c.id = j.client_id "
             "AND c.business_id = j.business_id "
             "LEFT JOIN workers w ON w.id=j.worker_id "
             "AND w.business_id=j.business_id "
+            "LEFT JOIN projects p ON p.id=j.project_id "
+            "AND p.business_id=j.business_id "
             "WHERE j.business_id=? AND CAST(j.scheduled_for AS TEXT) LIKE ? "
             "ORDER BY j.scheduled_for",
             (business_id, f"{day}%"),
@@ -1496,11 +1898,14 @@ def jobs_between(start: str, end: str, business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT j.*, c.name AS client_name, w.name AS worker_name, "
-            "w.color AS worker_color FROM jobs j "
+            "w.color AS worker_color, p.name AS project_name, "
+            "p.location AS project_location FROM jobs j "
             "LEFT JOIN clients c ON c.id = j.client_id "
             "AND c.business_id = j.business_id "
             "LEFT JOIN workers w ON w.id=j.worker_id "
             "AND w.business_id=j.business_id "
+            "LEFT JOIN projects p ON p.id=j.project_id "
+            "AND p.business_id=j.business_id "
             "WHERE j.business_id=? AND j.scheduled_for >= ? AND j.scheduled_for <= ? "
             "ORDER BY j.scheduled_for",
             (business_id, start, end + "T23:59"),
@@ -1523,6 +1928,31 @@ def assign_job_worker(
             "UPDATE jobs SET worker_id=? WHERE id=? AND business_id=?",
             (worker_id, job_id, business_id),
         )
+    if worker_id is not None and job.get("project_id"):
+        _ensure_project_member(job["project_id"], worker_id, business_id)
+    return get_job(job_id, business_id)
+
+
+def assign_job_project(
+    job_id: int, project_id: int | None, business_id: int
+) -> dict | None:
+    """Conecta un trabajo existente sin permitir relaciones entre negocios."""
+    job = get_job(job_id, business_id)
+    if not job:
+        return None
+    if project_id is not None:
+        project = get_project(project_id, business_id)
+        if not project:
+            raise ValueError("El proyecto no pertenece a este negocio.")
+        if project.get("client_id") and project["client_id"] != job["client_id"]:
+            raise ValueError("El trabajo y el proyecto deben tener el mismo cliente.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE jobs SET project_id=? WHERE id=? AND business_id=?",
+            (project_id, job_id, business_id),
+        )
+    if project_id is not None and job.get("worker_id"):
+        _ensure_project_member(project_id, job["worker_id"], business_id)
     return get_job(job_id, business_id)
 
 
@@ -1540,12 +1970,16 @@ def jobs_for_worker(
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT j.*, c.name AS client_name, c.address AS client_address, "
-            "c.zone AS client_zone, w.name AS worker_name, w.color AS worker_color "
+            "c.zone AS client_zone, w.name AS worker_name, w.color AS worker_color, "
+            "p.name AS project_name, p.location AS project_location, "
+            "p.status AS project_status "
             "FROM jobs j "
             "LEFT JOIN clients c ON c.id=j.client_id "
             "AND c.business_id=j.business_id "
             "JOIN workers w ON w.id=j.worker_id "
             "AND w.business_id=j.business_id "
+            "LEFT JOIN projects p ON p.id=j.project_id "
+            "AND p.business_id=j.business_id "
             "WHERE j.business_id=? AND j.worker_id=?" + day_filter
             + " ORDER BY j.scheduled_for",
             tuple(params),
@@ -1695,6 +2129,55 @@ def _worked_seconds_for_day(
     return seconds
 
 
+def _worked_seconds_by_job(
+    records: list[dict], now: datetime | None = None
+) -> dict[int, float]:
+    """Reconstruye horas efectivas por trabajo desde el registro append-only."""
+    now = now or datetime.now()
+    totals: dict[int, float] = {}
+    working = False
+    paused = False
+    segment_start: datetime | None = None
+    active_job_id: int | None = None
+
+    def close_segment(point: datetime) -> None:
+        nonlocal segment_start
+        if (
+            active_job_id is not None
+            and segment_start is not None
+            and point >= segment_start
+        ):
+            totals[active_job_id] = totals.get(active_job_id, 0.0) + (
+                point - segment_start
+            ).total_seconds()
+        segment_start = None
+
+    for record in _active_clockin_records(records):
+        point = datetime.fromisoformat(str(record["effective_at"]))
+        action = record["action"]
+        if action == "entrada" and not working:
+            working = True
+            paused = False
+            active_job_id = record.get("job_id")
+            segment_start = point
+        elif action == "pausa" and working and not paused:
+            close_segment(point)
+            paused = True
+        elif action == "reanudar" and working and paused:
+            paused = False
+            segment_start = point
+        elif action == "salida" and working:
+            if not paused:
+                close_segment(point)
+            working = False
+            paused = False
+            active_job_id = None
+            segment_start = None
+    if working and not paused:
+        close_segment(now)
+    return totals
+
+
 def worker_open_shift(worker_id: int, business_id: int) -> dict | None:
     if not get_worker(worker_id, business_id):
         return None
@@ -1752,6 +2235,15 @@ def clock_worker(
             raise ValueError("No hay una pausa que reanudar.")
         if action == "salida" and not state["working"]:
             raise ValueError("No hay una jornada abierta para registrar la salida.")
+        if state["working"] and action != "entrada":
+            open_job_id = state["entry"].get("job_id")
+            if job_id is not None and job_id != open_job_id:
+                raise ValueError(
+                    "Termina o pausa el trabajo actual antes de cambiar de trabajo."
+                )
+            # Pausa, reanudación y salida heredan el trabajo de la entrada para que
+            # el coste no dependa del radio seleccionado después en el portal.
+            job_id = open_job_id
         last = conn.execute(
             "SELECT seal FROM worker_clockins "
             "WHERE business_id=? AND worker_id=? ORDER BY id DESC LIMIT 1",
@@ -3317,6 +3809,8 @@ def cash_forecast(business_id, days: int = 30) -> dict:
 # -------------------------------------------------------------- Proyectos ---
 PROJECT_STATUSES = {"planificado", "en_curso", "pausado", "terminado"}
 PROJECT_ENTRY_KINDS = {"material", "horas", "subcontrata", "otro"}
+PROJECT_TASK_KINDS = {"tarea", "checklist", "incidencia"}
+PROJECT_TASK_STATUSES = {"pendiente", "en_curso", "hecha", "bloqueada"}
 
 
 def _project_number(value, label: str, *, allow_zero: bool = False) -> float:
@@ -3366,25 +3860,89 @@ def _project_select() -> str:
     return (
         "SELECT p.*, c.name AS client_name, "
         "COALESCE((SELECT SUM(e.total) FROM project_entries e "
-        "WHERE e.business_id=p.business_id AND e.project_id=p.id),0) AS actual_cost, "
+        "WHERE e.business_id=p.business_id AND e.project_id=p.id),0) AS entry_cost, "
         "COALESCE((SELECT SUM(e.quantity) FROM project_entries e "
         "WHERE e.business_id=p.business_id AND e.project_id=p.id "
-        "AND e.kind='horas'),0) AS actual_hours, "
+        "AND e.kind='horas'),0) AS entry_hours, "
+        "COALESCE((SELECT SUM(x.amount) FROM expenses x "
+        "WHERE x.business_id=p.business_id AND x.project_id=p.id),0) AS expense_cost, "
         "(SELECT COUNT(*) FROM project_members m WHERE m.business_id=p.business_id "
-        "AND m.project_id=p.id) AS member_count "
+        "AND m.project_id=p.id) AS member_count, "
+        "(SELECT COUNT(*) FROM jobs j WHERE j.business_id=p.business_id "
+        "AND j.project_id=p.id) AS job_count, "
+        "(SELECT COUNT(*) FROM project_tasks t WHERE t.business_id=p.business_id "
+        "AND t.project_id=p.id AND t.status!='hecha') AS pending_task_count "
         "FROM projects p LEFT JOIN clients c ON c.id=p.client_id "
         "AND c.business_id=p.business_id "
     )
 
 
-def _project_metrics(project: dict) -> dict:
+def _project_clockin_metrics(project_id: int, business_id: int) -> dict:
+    with get_conn() as conn:
+        job_rows = conn.execute(
+            "SELECT id FROM jobs WHERE business_id=? AND project_id=?",
+            (business_id, project_id),
+        ).fetchall()
+        members = conn.execute(
+            "SELECT worker_id, hourly_cost FROM project_members "
+            "WHERE business_id=? AND project_id=?",
+            (business_id, project_id),
+        ).fetchall()
+        member_records = {
+            member["worker_id"]: _clockin_rows_with_corrections(
+                conn, business_id, member["worker_id"]
+            )
+            for member in members
+        }
+    job_ids = {row["id"] for row in job_rows}
+    total_hours = 0.0
+    labor_cost = Decimal("0")
+    missing_cost_worker_ids: list[int] = []
+    for member in members:
+        by_job = _worked_seconds_by_job(member_records[member["worker_id"]])
+        hours = sum(
+            seconds for job_id, seconds in by_job.items() if job_id in job_ids
+        ) / 3600
+        total_hours += hours
+        hourly_cost = Decimal(str(member.get("hourly_cost") or 0))
+        if hours and hourly_cost <= 0:
+            missing_cost_worker_ids.append(member["worker_id"])
+        labor_cost += Decimal(str(hours)) * hourly_cost
+    return {
+        "clockin_hours": round(total_hours, 2),
+        "clockin_cost": float(labor_cost.quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )),
+        "missing_hourly_cost_worker_ids": missing_cost_worker_ids,
+    }
+
+
+def _project_metrics(project: dict, clockin: dict | None = None) -> dict:
     project = dict(project)
+    clockin = clockin or {
+        "clockin_hours": 0.0,
+        "clockin_cost": 0.0,
+        "missing_hourly_cost_worker_ids": [],
+    }
     budget = float(project.get("budget") or 0)
-    cost = round(float(project.get("actual_cost") or 0), 2)
+    entry_cost = round(float(project.get("entry_cost") or 0), 2)
+    expense_cost = round(float(project.get("expense_cost") or 0), 2)
+    clockin_cost = round(float(clockin.get("clockin_cost") or 0), 2)
+    cost = round(entry_cost + expense_cost + clockin_cost, 2)
+    entry_hours = round(float(project.get("entry_hours") or 0), 2)
+    clockin_hours = round(float(clockin.get("clockin_hours") or 0), 2)
+    project["entry_cost"] = entry_cost
+    project["expense_cost"] = expense_cost
+    project["clockin_cost"] = clockin_cost
+    project["entry_hours"] = entry_hours
+    project["clockin_hours"] = clockin_hours
     project["actual_cost"] = cost
-    project["actual_hours"] = round(float(project.get("actual_hours") or 0), 2)
+    project["actual_hours"] = round(entry_hours + clockin_hours, 2)
     project["margin"] = round(budget - cost, 2)
     project["cost_pct"] = round(cost / budget * 100, 1) if budget else 0
+    project["missing_hourly_cost_worker_ids"] = list(
+        clockin.get("missing_hourly_cost_worker_ids") or []
+    )
     return project
 
 
@@ -3396,7 +3954,12 @@ def list_projects(business_id: int) -> list[dict]:
             "WHEN 'pausado' THEN 2 ELSE 3 END, p.updated_at DESC, p.id DESC",
             (business_id,),
         ).fetchall()
-    return [_project_metrics(row) for row in rows]
+    return [
+        _project_metrics(
+            row, _project_clockin_metrics(row["id"], business_id)
+        )
+        for row in rows
+    ]
 
 
 def get_project(project_id: int, business_id: int) -> dict | None:
@@ -3421,9 +3984,46 @@ def get_project(project_id: int, business_id: int) -> dict | None:
             "ORDER BY COALESCE(e.entry_on, e.created_at) DESC, e.id DESC",
             (project_id, business_id),
         ).fetchall()
-    project = _project_metrics(row)
+        jobs = conn.execute(
+            "SELECT j.*, c.name AS client_name, w.name AS worker_name "
+            "FROM jobs j LEFT JOIN clients c ON c.id=j.client_id "
+            "AND c.business_id=j.business_id "
+            "LEFT JOIN workers w ON w.id=j.worker_id "
+            "AND w.business_id=j.business_id "
+            "WHERE j.project_id=? AND j.business_id=? "
+            "ORDER BY j.scheduled_for DESC, j.id DESC",
+            (project_id, business_id),
+        ).fetchall()
+        tasks = conn.execute(
+            "SELECT t.*, w.name AS worker_name, j.description AS job_description "
+            "FROM project_tasks t LEFT JOIN workers w ON w.id=t.worker_id "
+            "AND w.business_id=t.business_id "
+            "LEFT JOIN jobs j ON j.id=t.job_id AND j.business_id=t.business_id "
+            "WHERE t.project_id=? AND t.business_id=? "
+            "ORDER BY CASE t.status WHEN 'bloqueada' THEN 0 "
+            "WHEN 'en_curso' THEN 1 WHEN 'pendiente' THEN 2 ELSE 3 END, "
+            "COALESCE(t.due_on, '9999-12-31'), t.id DESC",
+            (project_id, business_id),
+        ).fetchall()
+        expenses = conn.execute(
+            "SELECT * FROM expenses WHERE project_id=? AND business_id=? "
+            "ORDER BY COALESCE(spent_on, created_at) DESC, id DESC",
+            (project_id, business_id),
+        ).fetchall()
+        documents = conn.execute(
+            "SELECT * FROM documents WHERE project_id=? AND business_id=? "
+            "ORDER BY created_at DESC, id DESC",
+            (project_id, business_id),
+        ).fetchall()
+    project = _project_metrics(
+        row, _project_clockin_metrics(project_id, business_id)
+    )
     project["members"] = [dict(item) for item in members]
     project["entries"] = [dict(item) for item in entries]
+    project["jobs"] = [dict(item) for item in jobs]
+    project["tasks"] = [dict(item) for item in tasks]
+    project["expenses"] = [dict(item) for item in expenses]
+    project["documents"] = [dict(item) for item in documents]
     return project
 
 
@@ -3483,6 +4083,20 @@ def add_project_member(project_id: int, worker_id: int, hourly_cost=0, role=None
     return get_project(project_id, business_id)
 
 
+def _ensure_project_member(
+    project_id: int, worker_id: int, business_id: int
+) -> None:
+    """Una asignación de campo nunca deja al trabajador fuera del proyecto."""
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO project_members "
+            "(business_id, project_id, worker_id, role, hourly_cost, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, project_id, worker_id) DO NOTHING",
+            (business_id, project_id, worker_id, None, 0, _now()),
+        )
+
+
 def add_project_entry(project_id: int, kind, description, quantity, unit_cost,
                       worker_id=None, entry_on=None, *, business_id: int) -> dict:
     if not get_project(project_id, business_id):
@@ -3524,6 +4138,135 @@ def add_project_entry(project_id: int, kind, description, quantity, unit_cost,
     return dict(entry)
 
 
+def get_project_task(
+    task_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM project_tasks WHERE id=? AND business_id=?",
+            (task_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def add_project_task(
+    project_id: int,
+    title: str,
+    *,
+    business_id: int,
+    kind: str = "tarea",
+    note: str | None = None,
+    worker_id: int | None = None,
+    job_id: int | None = None,
+    due_on: str | None = None,
+) -> dict:
+    if not get_project(project_id, business_id):
+        raise ValueError("Proyecto no encontrado.")
+    title = str(title or "").strip()
+    if not title or len(title) > 240:
+        raise ValueError("La tarea necesita un título (máx. 240 caracteres).")
+    kind = str(kind or "tarea").strip()
+    if kind not in PROJECT_TASK_KINDS:
+        raise ValueError("El tipo de tarea no es válido.")
+    if worker_id not in (None, ""):
+        worker_id = int(worker_id)
+        worker = get_worker(worker_id, business_id)
+        if not worker or not worker.get("active"):
+            raise ValueError("La persona no pertenece a este negocio o está inactiva.")
+        _ensure_project_member(project_id, worker_id, business_id)
+    else:
+        worker_id = None
+    if job_id not in (None, ""):
+        job_id = int(job_id)
+        job = get_job(job_id, business_id)
+        if not job or job.get("project_id") != project_id:
+            raise ValueError("El trabajo no pertenece a este proyecto.")
+    else:
+        job_id = None
+    due_on = _optional_date(due_on, "La fecha límite")
+    now = _now()
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO project_tasks "
+            "(business_id, project_id, job_id, worker_id, title, note, kind, "
+            "status, due_on, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?, ?) RETURNING id",
+            (
+                business_id, project_id, job_id, worker_id, title,
+                str(note or "").strip()[:2000] or None, kind, due_on, now, now,
+            ),
+        ).fetchone()
+    return get_project_task(row["id"], business_id)
+
+
+def update_project_task(
+    task_id: int,
+    *,
+    business_id: int,
+    status: str,
+    actor_worker_id: int | None = None,
+) -> dict | None:
+    task = get_project_task(task_id, business_id)
+    if not task:
+        return None
+    status = str(status or "").strip()
+    if status not in PROJECT_TASK_STATUSES:
+        raise ValueError("El estado de la tarea no es válido.")
+    if (
+        actor_worker_id is not None
+        and task.get("worker_id") not in (None, actor_worker_id)
+    ):
+        raise ValueError("Esta tarea está asignada a otra persona.")
+    if actor_worker_id is not None and task.get("worker_id") is None:
+        with get_conn() as conn:
+            member = conn.execute(
+                "SELECT 1 AS found FROM project_members WHERE business_id=? "
+                "AND project_id=? AND worker_id=?",
+                (business_id, task["project_id"], actor_worker_id),
+            ).fetchone()
+        if not member:
+            raise ValueError("Esta tarea pertenece a otro proyecto.")
+    now = _now()
+    completed_at = now if status == "hecha" else None
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE project_tasks SET status=?, updated_at=?, completed_at=? "
+            "WHERE id=? AND business_id=?",
+            (status, now, completed_at, task_id, business_id),
+        )
+        conn.execute(
+            "UPDATE projects SET updated_at=? WHERE id=? AND business_id=?",
+            (now, task["project_id"], business_id),
+        )
+    return get_project_task(task_id, business_id)
+
+
+def project_tasks_for_worker(
+    worker_id: int, business_id: int, *, include_done: bool = False
+) -> list[dict]:
+    if not get_worker(worker_id, business_id):
+        return []
+    done_filter = "" if include_done else " AND t.status!='hecha'"
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT t.*, p.name AS project_name, p.location AS project_location, "
+            "j.description AS job_description "
+            "FROM project_tasks t JOIN projects p ON p.id=t.project_id "
+            "AND p.business_id=t.business_id "
+            "LEFT JOIN jobs j ON j.id=t.job_id AND j.business_id=t.business_id "
+            "WHERE t.business_id=? AND (t.worker_id=? OR (t.worker_id IS NULL "
+            "AND EXISTS (SELECT 1 FROM project_members m "
+            "WHERE m.business_id=t.business_id AND m.project_id=t.project_id "
+            "AND m.worker_id=?))) "
+            + done_filter +
+            " ORDER BY CASE t.status WHEN 'bloqueada' THEN 0 "
+            "WHEN 'en_curso' THEN 1 ELSE 2 END, "
+            "COALESCE(t.due_on, '9999-12-31'), t.id",
+            (business_id, worker_id, worker_id),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 # ----------------------------------------------------------------- Gastos ---
 def add_expense(
     concept,
@@ -3532,6 +4275,7 @@ def add_expense(
     category=None,
     spent_on=None,
     document_id=None,
+    project_id=None,
     *,
     business_id: int,
 ) -> dict:
@@ -3559,6 +4303,15 @@ def add_expense(
             raise ValueError("El documento no es válido.")
     else:
         document_id = None
+    if project_id not in (None, ""):
+        try:
+            project_id = int(project_id)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("El proyecto no es válido.") from exc
+        if not get_project(project_id, business_id):
+            raise ValueError("El proyecto no pertenece a este negocio.")
+    else:
+        project_id = None
     with get_conn() as conn:
         if document_id is not None:
             conn.execute("BEGIN IMMEDIATE")
@@ -3574,9 +4327,10 @@ def add_expense(
                 raise ValueError("Este documento ya está vinculado a un gasto.")
         row = conn.execute(
             "INSERT INTO expenses (business_id, concept, amount, vat_rate, category, "
-            "spent_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "spent_on, project_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, concept, amount, vat_rate, category,
-             spent_on, _now()),
+             spent_on, project_id, _now()),
         ).fetchone()
         new_id = row["id"]
         if document_id is not None:
@@ -3609,7 +4363,10 @@ def delete_expense(expense_id, business_id) -> None:
 def list_expenses(business_id) -> list[dict]:
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(
-            "SELECT * FROM expenses WHERE business_id=? ORDER BY created_at DESC",
+            "SELECT x.*, p.name AS project_name FROM expenses x "
+            "LEFT JOIN projects p ON p.id=x.project_id "
+            "AND p.business_id=x.business_id "
+            "WHERE x.business_id=? ORDER BY x.created_at DESC",
             (business_id,)).fetchall()]
 
 
@@ -5762,12 +6519,16 @@ def export_business_data(business_id) -> dict:
         "products": list_products(business_id, include_inactive=True),
         "leads": list_leads(business_id),
         "gestoria_requests": list_gestoria_requests(business_id),
+        "gestoria_deliveries": list_gestoria_deliveries(business_id),
         "projects": list_projects(business_id),
         "project_members": [dict(r) for r in _rows(
             "SELECT * FROM project_members WHERE business_id=? ORDER BY project_id, worker_id",
             business_id)],
         "project_entries": [dict(r) for r in _rows(
             "SELECT * FROM project_entries WHERE business_id=? ORDER BY project_id, id",
+            business_id)],
+        "project_tasks": [dict(r) for r in _rows(
+            "SELECT * FROM project_tasks WHERE business_id=? ORDER BY project_id, id",
             business_id)],
         "product_events": [dict(r) for r in _rows(
             "SELECT * FROM product_events WHERE business_id=? ORDER BY id",
@@ -5777,6 +6538,13 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "business_memories": [dict(r) for r in _rows(
             "SELECT * FROM business_memories WHERE business_id=? ORDER BY id",
+            business_id)],
+        "automation_permissions": [dict(r) for r in _rows(
+            "SELECT * FROM automation_permissions WHERE business_id=? "
+            "ORDER BY action_key",
+            business_id)],
+        "assistant_actions": [dict(r) for r in _rows(
+            "SELECT * FROM assistant_actions WHERE business_id=? ORDER BY id",
             business_id)],
         "document_classifications": [dict(r) for r in _rows(
             "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
@@ -5859,6 +6627,11 @@ def delete_client_cascade(client_id, business_id) -> bool:
             (business_id, client_id),
         )
         conn.execute(
+            "UPDATE project_tasks SET job_id=NULL WHERE business_id=? "
+            "AND job_id IN (SELECT id FROM jobs WHERE business_id=? AND client_id=?)",
+            (business_id, business_id, client_id),
+        )
+        conn.execute(
             "DELETE FROM jobs WHERE business_id=? AND client_id=? "
             "AND NOT EXISTS (SELECT 1 FROM worker_clockins wc "
             "WHERE wc.business_id=jobs.business_id AND wc.job_id=jobs.id)",
@@ -5916,8 +6689,10 @@ def delete_business_cascade(business_id) -> bool:
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
             "invoice_events", "invoice_records", "portal_tokens",
             "product_events", "assistant_messages", "business_memories",
-            "document_classifications", "copilot_recommendations", "gestoria_requests",
-            "project_entries", "project_members", "projects",
+            "assistant_actions", "automation_permissions",
+            "document_classifications", "copilot_recommendations",
+            "gestoria_deliveries", "gestoria_requests",
+            "project_tasks", "project_entries", "project_members", "projects",
             "documents", "received_invoices", "suppliers", "products",
             "leads", "quotes",
             "invoice_payments", "invoices", "jobs", "workers", "clients", "expenses"

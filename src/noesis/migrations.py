@@ -1766,6 +1766,191 @@ def _downgrade_companion_memory(conn) -> None:
     # SQLite conserva las columnas para evitar reconstruir invoices.
 
 
+def _upgrade_autonomy_control(conn) -> None:
+    """Permisos configurables y trazabilidad de las acciones de Noesis.
+
+    Los límites críticos no dependen solo de la interfaz: ``db.py`` valida qué
+    modos admite cada acción antes de persistirlos. El registro de acciones deja
+    constancia de qué propuso, aprobó o ejecutó el asistente.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS automation_permissions (
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id),
+    action_key  TEXT NOT NULL,
+    mode        TEXT NOT NULL,
+    created_at  {t["timestamp"]} NOT NULL,
+    updated_at  {t["timestamp"]} NOT NULL,
+    PRIMARY KEY (business_id, action_key)
+);
+CREATE INDEX IF NOT EXISTS idx_automation_permissions_business
+    ON automation_permissions(business_id, action_key);
+
+CREATE TABLE IF NOT EXISTS assistant_actions (
+    id           {t["id"]},
+    business_id  {t["ref"]} NOT NULL REFERENCES businesses(id),
+    action_key   TEXT NOT NULL,
+    risk_level   TEXT NOT NULL,
+    status       TEXT NOT NULL,
+    summary      TEXT NOT NULL,
+    target_type  TEXT,
+    target_id    {t["ref"]},
+    payload      TEXT,
+    requested_by TEXT NOT NULL DEFAULT 'noesis',
+    approved_by  TEXT,
+    created_at   {t["timestamp"]} NOT NULL,
+    approved_at  {t["timestamp"]},
+    executed_at  {t["timestamp"]},
+    error        TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_assistant_actions_business
+    ON assistant_actions(business_id, created_at, id);
+"""
+    )
+
+
+def _downgrade_autonomy_control(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_assistant_actions_business")
+    conn.execute("DROP TABLE IF EXISTS assistant_actions")
+    conn.execute("DROP INDEX IF EXISTS idx_automation_permissions_business")
+    conn.execute("DROP TABLE IF EXISTS automation_permissions")
+
+
+def _upgrade_operating_spine(conn) -> None:
+    """Une proyecto, trabajo, gastos, documentos y tareas de campo."""
+    t = _types(conn.dialect)
+    for table in ("jobs", "expenses", "documents"):
+        if "project_id" not in _column_names(conn, table):
+            conn.execute(
+                f"ALTER TABLE {table} ADD COLUMN project_id {t['ref']}"
+            )
+    conn.executescript(
+        f"""
+CREATE UNIQUE INDEX IF NOT EXISTS uq_jobs_business_id
+    ON jobs(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_jobs_project
+    ON jobs(business_id, project_id, scheduled_for);
+CREATE INDEX IF NOT EXISTS idx_expenses_project
+    ON expenses(business_id, project_id, spent_on);
+CREATE INDEX IF NOT EXISTS idx_documents_project
+    ON documents(business_id, project_id, created_at);
+
+CREATE TABLE IF NOT EXISTS project_tasks (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL,
+    project_id  {t["ref"]} NOT NULL,
+    job_id      {t["ref"]},
+    worker_id   {t["ref"]},
+    title       TEXT NOT NULL,
+    note        TEXT,
+    kind        TEXT NOT NULL DEFAULT 'tarea',
+    status      TEXT NOT NULL DEFAULT 'pendiente',
+    due_on      TEXT,
+    created_at  {t["timestamp"]} NOT NULL,
+    updated_at  {t["timestamp"]} NOT NULL,
+    completed_at {t["timestamp"]},
+    FOREIGN KEY (business_id, project_id)
+        REFERENCES projects(business_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_project_tasks_project
+    ON project_tasks(business_id, project_id, status, due_on);
+CREATE INDEX IF NOT EXISTS idx_project_tasks_worker
+    ON project_tasks(business_id, worker_id, status, due_on);
+"""
+    )
+    if conn.dialect == "postgres":
+        for table in ("jobs", "expenses", "documents"):
+            constraint = f"{table}_project_same_business"
+            conn.execute(f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {constraint}")
+            conn.execute(
+                f"ALTER TABLE {table} ADD CONSTRAINT {constraint} "
+                "FOREIGN KEY (business_id, project_id) "
+                "REFERENCES projects(business_id, id)"
+            )
+    else:
+        for table in ("jobs", "expenses", "documents"):
+            for event in ("INSERT", "UPDATE"):
+                conn.executescript(
+                    _sqlite_tenant_trigger(
+                        table, "project_id", "projects", event
+                    )
+                )
+        for event in ("INSERT", "UPDATE"):
+            for column, parent in (
+                ("project_id", "projects"),
+                ("job_id", "jobs"),
+                ("worker_id", "workers"),
+            ):
+                conn.executescript(
+                    _sqlite_tenant_trigger(
+                        "project_tasks", column, parent, event
+                    )
+                )
+
+
+def _downgrade_operating_spine(conn) -> None:
+    for table in ("project_tasks", "jobs", "expenses", "documents"):
+        for column in ("project_id", "job_id", "worker_id"):
+            for event in ("insert", "update"):
+                conn.execute(
+                    "DROP TRIGGER IF EXISTS "
+                    f"{table}_{column}_same_business_{event}"
+                )
+    conn.execute("DROP INDEX IF EXISTS idx_project_tasks_worker")
+    conn.execute("DROP INDEX IF EXISTS idx_project_tasks_project")
+    conn.execute("DROP TABLE IF EXISTS project_tasks")
+    conn.execute("DROP INDEX IF EXISTS idx_documents_project")
+    conn.execute("DROP INDEX IF EXISTS idx_expenses_project")
+    conn.execute("DROP INDEX IF EXISTS idx_jobs_project")
+    if conn.dialect == "postgres":
+        for table in ("jobs", "expenses", "documents"):
+            conn.execute(
+                f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS "
+                f"{table}_project_same_business"
+            )
+            conn.execute(
+                f"ALTER TABLE {table} DROP COLUMN IF EXISTS project_id"
+            )
+    # SQLite conserva las columnas anulables para evitar reconstruir tablas con
+    # datos fiscales, documentos o fichajes ya existentes.
+
+
+def _upgrade_gestoria_deliveries(conn) -> None:
+    """Versiona los paquetes compartidos y deja rastro de cada entrega."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS gestoria_deliveries (
+    id             {t["id"]},
+    business_id    {t["ref"]} NOT NULL REFERENCES businesses(id),
+    period_label   TEXT NOT NULL,
+    version        INTEGER NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'preparado',
+    source_hash    TEXT NOT NULL,
+    artifact_hash  TEXT NOT NULL,
+    file_size      INTEGER NOT NULL,
+    manifest       TEXT NOT NULL,
+    prepared_at    {t["timestamp"]} NOT NULL,
+    notified_at    {t["timestamp"]},
+    downloaded_at  {t["timestamp"]},
+    UNIQUE (business_id, period_label, version)
+);
+CREATE INDEX IF NOT EXISTS idx_gestoria_deliveries_business
+    ON gestoria_deliveries(business_id, period_label, version);
+"""
+    )
+
+
+def _downgrade_gestoria_deliveries(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_gestoria_deliveries_business")
+    conn.execute("DROP TABLE IF EXISTS gestoria_deliveries")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1789,6 +1974,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (19, "proyectos_rentables", _upgrade_projects, _downgrade_projects),
     (20, "nivel_explicacion", _upgrade_explanation_level, _downgrade_explanation_level),
     (21, "memoria_noesis", _upgrade_companion_memory, _downgrade_companion_memory),
+    (22, "control_autonomia", _upgrade_autonomy_control, _downgrade_autonomy_control),
+    (23, "columna_operativa", _upgrade_operating_spine, _downgrade_operating_spine),
+    (24, "entregas_gestoria", _upgrade_gestoria_deliveries, _downgrade_gestoria_deliveries),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

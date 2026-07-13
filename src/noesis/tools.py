@@ -127,6 +127,10 @@ TOOLS: list[dict] = [
                 "importe": {"type": "number"},
                 "iva": {"type": "number"},
                 "categoria": {"type": "string"},
+                "proyecto_id": {
+                    "type": "integer",
+                    "description": "Proyecto al que pertenece, si el usuario lo indica.",
+                },
             },
             "required": ["concepto", "importe"],
         },
@@ -134,6 +138,84 @@ TOOLS: list[dict] = [
     {
         "name": "listar_clientes",
         "description": "Lista los clientes guardados.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "ver_proyectos",
+        "description": (
+            "Lista los proyectos con presupuesto, avance, horas, coste y margen. "
+            "Úsala antes de responder sobre una obra o instalación."
+        ),
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "ver_proyecto",
+        "description": (
+            "Muestra el detalle real de un proyecto: trabajos, tareas, equipo, "
+            "fichajes, gastos, documentos y margen."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"proyecto_id": {"type": "integer"}},
+            "required": ["proyecto_id"],
+        },
+    },
+    {
+        "name": "crear_proyecto",
+        "description": (
+            "Crea un proyecto de trabajo con presupuesto y horas previstas. "
+            "No factura ni mueve dinero."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "nombre": {"type": "string"},
+                "presupuesto": {"type": "number"},
+                "cliente": {"type": "string"},
+                "ubicacion": {"type": "string"},
+                "horas_previstas": {"type": "number"},
+            },
+            "required": ["nombre", "presupuesto"],
+        },
+    },
+    {
+        "name": "crear_tarea_proyecto",
+        "description": (
+            "Añade una tarea o comprobación a un proyecto existente. Si no sabes "
+            "el id, consulta primero ver_proyectos."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "proyecto_id": {"type": "integer"},
+                "titulo": {"type": "string"},
+                "trabajador_id": {"type": "integer"},
+                "trabajo_id": {"type": "integer"},
+                "fecha_limite": {"type": "string"},
+                "tipo": {"type": "string", "enum": ["tarea", "checklist", "incidencia"]},
+                "nota": {"type": "string"},
+            },
+            "required": ["proyecto_id", "titulo"],
+        },
+    },
+    {
+        "name": "ver_equipo",
+        "description": "Lista el equipo y su estado de jornada de hoy.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "ver_documentos_pendientes",
+        "description": "Lista documentos cuya clasificación o revisión está pendiente.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "ver_solicitudes_gestoria",
+        "description": "Lista las solicitudes abiertas entre el negocio y su gestoría.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "ver_control_noesis",
+        "description": "Consulta qué puede hacer Noesis solo y qué debe confirmar el usuario.",
         "input_schema": {"type": "object", "properties": {}},
     },
 ]
@@ -222,13 +304,89 @@ def _resumen_negocio(business_id, mes=None):
     return db.month_billing(mes, business_id=business_id)
 
 
-def _registrar_gasto(business_id, concepto, importe, iva=None, categoria=None):
+def _registrar_gasto(
+    business_id, concepto, importe, iva=None, categoria=None, proyecto_id=None
+):
     return {"ok": True, "gasto": db.add_expense(concepto, importe, vat_rate=iva,
-                                                category=categoria, business_id=business_id)}
+                                                category=categoria,
+                                                project_id=proyecto_id,
+                                                business_id=business_id)}
 
 
 def _listar_clientes(business_id):
     return {"clientes": db.list_clients(business_id)}
+
+
+def _ver_proyectos(business_id):
+    return db.project_summary(business_id)
+
+
+def _ver_proyecto(business_id, proyecto_id):
+    project = db.get_project(int(proyecto_id), business_id)
+    return project or {"ok": False, "error": "Proyecto no encontrado."}
+
+
+def _crear_proyecto(
+    business_id, nombre, presupuesto, cliente=None, ubicacion=None,
+    horas_previstas=0,
+):
+    client_id = None
+    if str(cliente or "").strip():
+        client_id = db.get_or_create_client(
+            cliente, business_id=business_id
+        )["id"]
+    return {
+        "ok": True,
+        "proyecto": db.add_project(
+            nombre, presupuesto, client_id=client_id, location=ubicacion,
+            planned_hours=horas_previstas, business_id=business_id,
+        ),
+    }
+
+
+def _crear_tarea_proyecto(
+    business_id, proyecto_id, titulo, trabajador_id=None, trabajo_id=None,
+    fecha_limite=None, tipo="tarea", nota=None,
+):
+    return {
+        "ok": True,
+        "tarea": db.add_project_task(
+            int(proyecto_id), titulo, business_id=business_id, kind=tipo,
+            note=nota, worker_id=trabajador_id, job_id=trabajo_id,
+            due_on=fecha_limite,
+        ),
+    }
+
+
+def _ver_equipo(business_id):
+    return {
+        "personas": db.list_workers(business_id, include_inactive=False),
+        "jornada_hoy": db.clockins_today(business_id),
+    }
+
+
+def _ver_documentos_pendientes(business_id):
+    from .documents import repo
+
+    items = repo.list_pending_review(business_id)
+    return {"n": len(items), "documentos": items}
+
+
+def _ver_solicitudes_gestoria(business_id):
+    items = db.list_gestoria_requests(business_id, status="abierta")
+    return {"n": len(items), "solicitudes": items}
+
+
+def _ver_control_noesis(business_id):
+    return {
+        "permisos": [
+            {
+                "accion": item["key"], "nombre": item["label"],
+                "modo": item["mode"], "riesgo": item["risk"],
+            }
+            for item in db.automation_catalog(business_id)
+        ]
+    }
 
 
 _DISPATCH = {
@@ -242,6 +400,14 @@ _DISPATCH = {
     "resumen_negocio": _resumen_negocio,
     "registrar_gasto": _registrar_gasto,
     "listar_clientes": _listar_clientes,
+    "ver_proyectos": _ver_proyectos,
+    "ver_proyecto": _ver_proyecto,
+    "crear_proyecto": _crear_proyecto,
+    "crear_tarea_proyecto": _crear_tarea_proyecto,
+    "ver_equipo": _ver_equipo,
+    "ver_documentos_pendientes": _ver_documentos_pendientes,
+    "ver_solicitudes_gestoria": _ver_solicitudes_gestoria,
+    "ver_control_noesis": _ver_control_noesis,
 }
 
 

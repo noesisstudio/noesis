@@ -91,3 +91,79 @@ async def api_add_project_entry(business_id: int, project_id: int, request: Requ
         )
     except (TypeError, ValueError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.post("/api/{business_id}/projects/{project_id}/jobs", status_code=201)
+async def api_add_project_job(business_id: int, project_id: int, request: Request):
+    body, error = await _body(request)
+    if error:
+        return error
+    project = db.get_project(project_id, business_id)
+    if not project:
+        return JSONResponse({"error": "Proyecto no encontrado."}, status_code=404)
+    client_id = project.get("client_id") or body.get("client_id")
+    if not client_id:
+        return JSONResponse(
+            {"error": "Elige un cliente para crear el trabajo."}, status_code=400
+        )
+    try:
+        return db.add_job(
+            int(client_id), body.get("description"),
+            scheduled_for=body.get("scheduled_for"),
+            zone=body.get("zone") or project.get("location"),
+            price_estimate=body.get("price_estimate"),
+            project_id=project_id, worker_id=body.get("worker_id"),
+            business_id=business_id,
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.post("/api/{business_id}/jobs/{job_id}/project")
+async def api_assign_job_project(business_id: int, job_id: int, request: Request):
+    body, error = await _body(request)
+    if error:
+        return error
+    try:
+        project_id = body.get("project_id")
+        project_id = None if project_id in (None, "") else int(project_id)
+        job = db.assign_job_project(job_id, project_id, business_id)
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if not job:
+        return JSONResponse({"error": "Trabajo no encontrado."}, status_code=404)
+    return job
+
+
+@router.post("/api/{business_id}/projects/{project_id}/tasks", status_code=201)
+async def api_add_project_task(business_id: int, project_id: int, request: Request):
+    body, error = await _body(request)
+    if error:
+        return error
+    try:
+        return db.add_project_task(
+            project_id, body.get("title"), business_id=business_id,
+            kind=body.get("kind") or "tarea", note=body.get("note"),
+            worker_id=body.get("worker_id"), job_id=body.get("job_id"),
+            due_on=body.get("due_on"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.patch("/api/{business_id}/projects/{project_id}/tasks/{task_id}")
+async def api_update_project_task(
+    business_id: int, project_id: int, task_id: int, request: Request
+):
+    body, error = await _body(request)
+    if error:
+        return error
+    task = db.get_project_task(task_id, business_id)
+    if not task or task.get("project_id") != project_id:
+        return JSONResponse({"error": "Tarea no encontrada."}, status_code=404)
+    try:
+        return db.update_project_task(
+            task_id, business_id=business_id, status=body.get("status")
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)

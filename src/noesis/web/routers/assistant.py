@@ -45,6 +45,38 @@ def api_assistant_forget(business_id: int, memory_id: int):
     db.record_product_event(business_id, "assistant_memory_deleted")
     return {"ok": True}
 
+
+@router.get("/api/{business_id}/assistant/permissions")
+def api_assistant_permissions(business_id: int):
+    """Centro de control: límites efectivos y no solo preferencias guardadas."""
+    return {
+        "items": db.automation_catalog(business_id),
+        "mode_labels": db.AUTOMATION_MODE_LABELS,
+    }
+
+
+@router.post("/api/{business_id}/assistant/permissions")
+async def api_update_assistant_permission(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+        permission = db.update_automation_permission(
+            business_id, body.get("action_key"), body.get("mode")
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    db.record_product_event(
+        business_id,
+        "assistant_permission_updated",
+        f"{permission['key']}:{permission['mode']}",
+    )
+    return permission
+
+
+@router.get("/api/{business_id}/assistant/actions")
+def api_assistant_actions(business_id: int, limit: int = 30):
+    """Historial auditable de lo que Noesis propuso o llegó a ejecutar."""
+    return {"items": db.list_assistant_actions(business_id, limit=limit)}
+
 @router.post("/api/{business_id}/chat")
 async def api_chat(business_id: int, request: Request):
     try:

@@ -113,6 +113,13 @@ def send_payment_reminders(now: datetime | None = None) -> int:
     for business in db.list_businesses():
         if not business.get("payment_reminders_enabled"):
             continue
+        permission = db.automation_decision(
+            business["id"], "payment_reminders"
+        )
+        # La cadencia guardada en Ajustes es la regla aprobada por el usuario.
+        # En modo "preguntar" o "bloqueado", el scheduler nunca escribe fuera.
+        if permission["mode"] != "rules":
+            continue
         cadence = db.payment_reminder_days(business)
         for invoice in db.pending_payments(business["id"]):
             due = _payment_reminder_step(invoice, cadence, point)
@@ -172,6 +179,22 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                     },
                     separators=(",", ":"),
                 ),
+            )
+            db.record_assistant_action(
+                business["id"],
+                "payment_reminders",
+                f"Encolé el aviso de cobro de la factura "
+                f"{invoice.get('number') or invoice['id']} según tu cadencia.",
+                status="executed",
+                target_type="invoice",
+                target_id=invoice["id"],
+                payload={
+                    "step": step,
+                    "days_outstanding": elapsed,
+                    "idempotency_key": idempotency_key,
+                },
+                requested_by="system",
+                approved_by="regla de cobros",
             )
             queued += 1
     return queued
@@ -439,12 +462,34 @@ def send_gestoria_packages(now: datetime | None = None) -> int:
         cadence = business.get("gestoria_cadence") or "off"
         if cadence == "off" or not business.get("gestoria_email"):
             continue
+        permission = db.automation_decision(business["id"], "send_gestoria")
+        if permission["mode"] != "rules":
+            continue
         if cadence == "trimestral" and point.month not in (1, 4, 7, 10):
             continue
         label = gestoria.previous_label(cadence, point.date())
         if not db.claim_scheduled_run(f"gestoria:{business['id']}:{label}"):
             continue
+        package = gestoria.build_package(business["id"], label)
+        if not package:
+            continue
+        _data, meta = package
         emailed = gestoria.notify_gestoria(business, label)
+        if emailed:
+            db.mark_gestoria_delivery(business["id"], label, "notified")
+        db.record_assistant_action(
+            business["id"],
+            "send_gestoria",
+            f"Preparé el paquete {label} v{meta['version']} según tu cadencia"
+            + (" y avisé a tu gestoría." if emailed else "."),
+            status="executed" if emailed else "failed",
+            target_type="gestoria_delivery",
+            payload={"label": label, "version": meta["version"],
+                     "emailed": bool(emailed)},
+            requested_by="system",
+            approved_by="cadencia de gestoría",
+            error=None if emailed else "No se pudo enviar el aviso por email.",
+        )
         db.record_product_event(
             business["id"],
             "gestoria_package_ready",

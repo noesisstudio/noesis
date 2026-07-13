@@ -125,8 +125,26 @@ def _add_tax_rates(norm: str, args: dict) -> None:
 def parse(text: str) -> tuple[str, dict] | None:
     norm = _norm(text)
 
-    if norm in {"hola", "hey", "buenas", "ayuda", "help"} or "que puedes hacer" in norm:
+    if norm in {"hola", "hey", "buenas", "ayuda", "help", "que puedes hacer"}:
         return (HELP, {})
+
+    # --- Centro de control: límites reales de Noesis
+    if re.search(r"(que puedes hacer solo|que puedes hacer sin|permisos de noesis|control de noesis|"
+                 r"que haces sin preguntar|autonomia)", norm):
+        return ("ver_control_noesis", {})
+
+    # --- Crear proyecto sencillo, local y sin IA
+    if "proyect" in norm and re.search(r"\b(crea|crear|nuevo|abre)\b", norm):
+        m = re.search(
+            r"(?:proyecto|obra)\s+(.+?)\s+(?:de|por|presupuesto)\s+"
+            r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?(?:\s|$)",
+            text, re.I,
+        )
+        if m:
+            return ("crear_proyecto", {
+                "nombre": m.group(1).strip(),
+                "presupuesto": float(m.group(2).replace(",", ".")),
+            })
 
     # --- Crear presupuesto: acepta varios órdenes naturales ---
     if "presupuest" in norm:
@@ -184,6 +202,16 @@ def parse(text: str) -> tuple[str, dict] | None:
                  r"deudas?|sin cobrar|impagad|moroso|facturas? pendientes?)", norm):
         return ("ver_cobros_pendientes", {})
 
+    # --- Operativa conectada
+    if re.search(r"\b(proyectos?|obras?)\b", norm):
+        return ("ver_proyectos", {})
+    if re.search(r"(equipo|trabajadores?|quien ha fichado|fichajes? de hoy)", norm):
+        return ("ver_equipo", {})
+    if re.search(r"(documentos?|papeles?|tickets?).*(pendient|revis)", norm):
+        return ("ver_documentos_pendientes", {})
+    if re.search(r"(gestoria|gestor).*(pide|solicitud|pendient)", norm):
+        return ("ver_solicitudes_gestoria", {})
+
     # --- Resumen / ingresos
     if re.search(r"(cuanto.*facturad|ingresos|resumen|como va|como voy|que tal va|"
                  r"balance|beneficio|facturacion|este mes|mis numeros|cuanto llevo)", norm):
@@ -212,6 +240,9 @@ def help_text() -> str:
             "• «Gasté 45 euros en gasolina»\n"
             "• «¿Qué tengo hoy?»\n"
             "• «¿Quién me debe?»\n"
+            "• «¿Cómo van mis proyectos?»\n"
+            "• «¿Qué documentos tengo pendientes?»\n"
+            "• «¿Qué puedes hacer sin preguntarme?»\n"
             "• «¿Qué harías tú ahora?»")
 
 
@@ -273,4 +304,56 @@ def format_reply(tool: str, result: dict) -> str:
         if not cs:
             return "Aún no tienes clientes guardados."
         return "👥 Tus clientes: " + ", ".join(c["name"] for c in cs) + "."
+    if tool == "ver_proyectos":
+        projects = result.get("projects") or []
+        if not projects:
+            return "Aún no tienes proyectos. Si me dices nombre y presupuesto, preparo el primero."
+        lines = [
+            f"🧰 Tienes {result['active_count']} proyecto(s) activo(s). "
+            f"Quedan {_eur(result['margin'])} antes de consumir el presupuesto."
+        ]
+        for project in projects[:6]:
+            lines.append(
+                f"• {project['name']}: {project['progress']}% · "
+                f"gastado {_eur(project['actual_cost'])} · "
+                f"margen {_eur(project['margin'])}"
+            )
+        return "\n".join(lines)
+    if tool == "crear_proyecto":
+        project = result["proyecto"]
+        return (
+            f"🧰 Proyecto creado: {project['name']} · presupuesto "
+            f"{_eur(project['budget'])}. Ahora conecta trabajos y equipo para que "
+            "las horas y el margen se actualicen solos."
+        )
+    if tool == "ver_equipo":
+        people = result.get("personas") or []
+        today = result.get("jornada_hoy") or []
+        inside = [item for item in today if item.get("working")]
+        return (
+            f"👷 Equipo: {len(people)} persona(s). "
+            f"Ahora mismo {len(inside)} tienen la jornada abierta."
+        )
+    if tool == "ver_documentos_pendientes":
+        return (
+            "📎 No tienes documentos pendientes de revisar."
+            if not result.get("n") else
+            f"📎 Hay {result['n']} documento(s) esperando tu confirmación. "
+            "Los encontrarás en Documentos."
+        )
+    if tool == "ver_solicitudes_gestoria":
+        return (
+            "Tu gestoría no tiene solicitudes abiertas."
+            if not result.get("n") else
+            f"Tu gestoría tiene {result['n']} solicitud(es) abiertas. "
+            "Te digo cuál atender primero si quieres."
+        )
+    if tool == "ver_control_noesis":
+        automatic = [p for p in result["permisos"] if p["modo"] == "automatic"]
+        confirmed = [p for p in result["permisos"] if p["modo"] == "confirm"]
+        return (
+            f"Puedo ocuparme solo de {len(automatic)} tipo(s) de tarea interna. "
+            f"En {len(confirmed)} acción(es) siempre te pregunto. Transferencias, "
+            "impuestos, devoluciones y borrados nunca son automáticos."
+        )
     return "Hecho."
