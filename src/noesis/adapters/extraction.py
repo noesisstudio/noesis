@@ -153,9 +153,11 @@ def _validated_invoice(raw: dict | None) -> dict | None:
     return result if any(result[f] is not None for f in essentials) else None
 
 
-def extract_invoice(file_bytes: bytes, mime: str) -> dict | None:
+def extract_invoice(
+    file_bytes: bytes, mime: str, *, allow_external: bool = True
+) -> dict | None:
     """Borrador completo de una factura (imagen o PDF). Nunca crea registros."""
-    if not config.ANTHROPIC_API_KEY or not file_bytes:
+    if not allow_external or not config.ANTHROPIC_API_KEY or not file_bytes:
         return None
     if mime not in SUPPORTED_MIMES and mime != PDF_MIME:
         return None
@@ -313,10 +315,11 @@ def classify_document(
     text_hint: str | None = None,
     business_name: str | None = None,
     business_nif: str | None = None,
+    allow_external: bool = True,
 ) -> dict:
     """Clasifica cualquier papel admitido. Solo propone; nunca crea registros."""
     fallback = _heuristic_classification(filename, text_hint)
-    if (not config.ANTHROPIC_API_KEY or not file_bytes
+    if (not allow_external or not config.ANTHROPIC_API_KEY or not file_bytes
             or (mime not in SUPPORTED_MIMES and mime != PDF_MIME)):
         return fallback
     if mime == PDF_MIME:
@@ -368,10 +371,13 @@ def classify_document(
         return fallback
 
 
-def extract_expense(image_bytes: bytes, mime: str) -> dict | None:
+def extract_expense(
+    image_bytes: bytes, mime: str, *, allow_external: bool = True
+) -> dict | None:
     """Devuelve campos validados para un borrador de gasto, nunca crea el gasto."""
     if (
-        not config.ANTHROPIC_API_KEY
+        not allow_external
+        or not config.ANTHROPIC_API_KEY
         or not image_bytes
         or mime not in SUPPORTED_MIMES
     ):

@@ -1159,6 +1159,43 @@ class PaymentReminderTestCase(unittest.TestCase):
                 self.assertIn("Recordatorios de cobro", page.text)
                 self.assertIn("Centro de control de Noesis", page.text)
                 self.assertIn("Noesis nunca mueve dinero", page.text)
+                self.assertIn("Yo vigilo que todo siga funcionando", page.text)
+                self.assertIn("Calendario externo", page.text)
+
+                requested = client.post(
+                    f"/api/{business['id']}/integrations/banking",
+                    json={"action": "request"},
+                )
+                self.assertEqual(requested.status_code, 200)
+                self.assertEqual(requested.json()["item"]["state"], "requested")
+                invalid_enable = client.post(
+                    f"/api/{business['id']}/integrations/banking",
+                    json={"action": "enable"},
+                )
+                self.assertEqual(invalid_enable.status_code, 400)
+
+                db.set_whatsapp_status(
+                    business["id"], "conectado", phone="600111222"
+                )
+                queued = db.enqueue_whatsapp_message(
+                    business_id=business["id"], to_phone="34600111222",
+                    message_type="text", text_body="Pendiente",
+                )
+                disconnected = client.post(
+                    f"/api/{business['id']}/integrations/whatsapp",
+                    json={"action": "disconnect"},
+                )
+                self.assertEqual(disconnected.status_code, 200)
+                self.assertIsNone(db.get_business(business["id"])["whatsapp_phone"])
+                cancelled = db.get_whatsapp_message(
+                    queued["id"], business["id"]
+                )
+                self.assertEqual(cancelled["status"], "failed")
+                self.assertIn("Cancelado", cancelled["last_error"])
+                self.assertEqual(
+                    disconnected.json()["health"]["whatsapp"].get("failed", 0),
+                    0,
+                )
 
                 permission = client.post(
                     f"/api/{business['id']}/assistant/permissions",

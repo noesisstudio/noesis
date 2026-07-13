@@ -14,6 +14,63 @@
   </div>
 </div>
 
+<section class="integrations-center" id="integraciones">
+  <header class="integrations-reading">
+    <div>
+      <div class="kicker">Conexiones de tu negocio</div>
+      <h2>Yo vigilo que todo siga funcionando</h2>
+      <p>{{ operational_health.summary }}</p>
+    </div>
+    <span class="badge {{ 'b-green' if operational_health.level == 'ok' else ('b-red' if operational_health.level == 'error' else 'b-amber') }}">
+      {{ 'todo en orden' if operational_health.level == 'ok' else ('hay una incidencia' if operational_health.level == 'error' else 'hay revisiones') }}
+    </span>
+  </header>
+  {% if operational_health.attention %}
+  <div class="integration-attention">
+    {% for alert in operational_health.attention %}
+    <a href="{{ '/b/' ~ business.id ~ '/documentos' if alert.area == 'Documentos' else ('#verifactu' if alert.area == 'Veri*Factu' else ('#whatsapp-conexion' if alert.area == 'WhatsApp' else '#salud-operativa')) }}">
+      <b>{{ alert.area }}</b><span>{{ alert.text }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="integration-grid">
+    {% for integration in integrations %}
+    <article class="integration-item" data-integration-key="{{ integration.key }}">
+      <div class="integration-item-head">
+        <strong>{{ integration.name }}</strong>
+        <span class="badge b-{{ integration.status_tone }} integration-state">{{ integration.status_label }}</span>
+      </div>
+      <p>{{ integration.description }}</p>
+      {% if integration.detail %}<small>{{ integration.detail }}</small>{% endif %}
+      {% if integration.last_error %}<small class="integration-error">Último error: {{ integration.last_error }}</small>{% endif %}
+      {% if integration.action %}
+      <button class="btn integration-action" type="button"
+        onclick="updateIntegration('{{ integration.key }}', '{{ integration.action }}', this)">
+        {{ integration.action_label }}
+      </button>
+      {% elif integration.href %}
+      <a class="btn integration-action" href="{{ integration.href }}">{{ integration.action_label }}</a>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  <details class="operational-detail" id="salud-operativa">
+    <summary>Ver cómo está trabajando Noesis por dentro</summary>
+    <div class="operational-grid">
+      <div><span>IA externa este mes</span><b>{{ operational_health.ai.calls }} consultas</b>
+        <small>{{ operational_health.ai.tokens }} tokens{% if operational_health.ai.avg_ms %} · {{ operational_health.ai.avg_ms }} ms de media{% endif %}</small></div>
+      <div><span>Documentos</span><b>{{ operational_health.documents.pending }} por revisar</b>
+        <small>{{ operational_health.documents.classified_month }} clasificados este mes · {{ operational_health.documents.corrections }} correcciones</small></div>
+      <div><span>WhatsApp</span><b>{{ operational_health.whatsapp.get('failed', 0) }} fallidos</b>
+        <small>{{ operational_health.whatsapp.get('retrying', 0) }} reintentándose</small></div>
+      <div><span>Protección de datos</span><b>{{ operational_health.backup.label }}</b>
+        <small>{{ operational_health.backup.created_at or 'aún sin historial' }}</small></div>
+    </div>
+  </details>
+  <div id="integration-msg" class="meta" role="status"></div>
+</section>
+
 <div class="grid g2">
   <div class="card">
     <div class="card-h"><h2>Datos fiscales</h2><span class="hint">salen en tus facturas</span></div>
@@ -74,7 +131,7 @@
     </div>
   </div>
 
-  <div class="card card-action" id="integraciones">
+  <div class="card card-action" id="whatsapp-conexion">
     <div class="card-h"><h2>WhatsApp</h2>
       {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>
       {% else %}<span class="badge b-amber">no conectado</span>{% endif %}</div>
@@ -273,7 +330,7 @@
   </div>
 </div>
 
-<div class="card" style="margin-top:16px">
+<div class="card" id="verifactu" style="margin-top:16px">
   <div class="card-h">
     <h2>Registro Veri*Factu nativo</h2>
     {% if business.verifactu_enabled %}
@@ -567,6 +624,21 @@
 
 {% block scripts %}
 <script>
+async function updateIntegration(key, action, button) {
+  const msg = el('integration-msg');
+  if (action === 'disconnect' && !confirm('¿Desconectar este WhatsApp de Noesis? Podrás volver a vincularlo cuando quieras.')) return;
+  button.disabled = true;
+  try {
+    await apiPost(`/integrations/${key}`, { action });
+    msg.textContent = action === 'request'
+      ? 'Interés guardado. Lo tendremos en cuenta sin activar ningún servicio externo.'
+      : 'Conexión actualizada. El cerebro local de Noesis sigue disponible.';
+    setTimeout(() => window.location.assign(`/b/${BIZ}/ajustes#integraciones`), 350);
+  } catch (e) {
+    msg.textContent = e.message;
+    button.disabled = false;
+  }
+}
 async function saveLanguage() {
   const msg = el('lang-msg');
   try { await apiPost('/language', { language: el('lang-select').value }); }

@@ -3,10 +3,10 @@
 ## Núcleo
 
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
-  `business_id`. Incluye proyectos, tareas, permisos de autonomía y entregas a
-  gestoría.
+  `business_id`. Incluye proyectos, permisos, integraciones, salud operativa y
+  entregas a gestoría.
 - `src/noesis/migrations.py`: esquema SQLite/Postgres. `main` llega a 24 y
-  `codex/field-workflow` a 26.
+  `codex/field-workflow` a 27.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro: clientes,
   agenda, facturas, proyectos, equipo, documentos y gestoría.
 - `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM.
@@ -28,7 +28,10 @@
   `client_preferences` conectan trabajo, coste, evidencia, borrador y aprendizaje.
 - `src/noesis/web/templates/proyectos.html`: resumen progresivo y detalle operativo.
 - `src/noesis/web/templates/fichaje.html`: jornada, trabajos y checklist personal.
-- `src/noesis/web/templates/ajustes.html`: preferencias, memoria y centro de control.
+- `src/noesis/web/routers/account.py`: API del centro de integraciones y ajustes de
+  cuenta; no guarda secretos de proveedores por negocio.
+- `src/noesis/web/templates/ajustes.html`: preferencias, memoria, control de Noesis,
+  conexiones y lectura plegable de salud operativa.
 - `src/noesis/web/static/app.css`: tokens, componentes y responsive sin CDN.
 
 ## Documentos, gestoría y canales
@@ -43,4 +46,5 @@
 - `src/noesis/web/scheduler.py`: partes, recordatorios y reglas previamente
   autorizadas; consulta el centro de control antes de actuar.
 - `src/noesis/adapters/`: Meta, email, pagos, voz, extracción y fiscalidad detrás de
-  fronteras reemplazables.
+  fronteras reemplazables. La extracción externa respeta la decisión de IA de cada
+  negocio y conserva el clasificador local cuando está desactivada.

@@ -663,7 +663,13 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
 
     fields = None
     if _extraction_budget_ok(business["id"]):
-        fields = extraction.extract_expense(data, mime)
+        fields = extraction.extract_expense(
+            data, mime,
+            allow_external=db.integration_enabled(
+                business["id"], "ai_external",
+                available=bool(config.ANTHROPIC_API_KEY),
+            ),
+        )
     db.record_product_event(
         business["id"], "media_ingested",
         json.dumps({"type": "image", "extracted": bool(fields),

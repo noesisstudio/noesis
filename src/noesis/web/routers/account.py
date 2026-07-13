@@ -13,7 +13,7 @@ from ... import config, db, verifactu_client
 from ...adapters import billing as billing_adapter
 from ...adapters import email as email_adapter
 from .. import auth, whatsapp
-from ..deps import TEMPLATES
+from ..deps import TEMPLATES, _read_json
 
 router = APIRouter()
 
@@ -294,6 +294,51 @@ def update_whatsapp_reports(
     )
 
 
+@router.get("/api/{business_id}/integrations")
+def api_integrations(business_id: int):
+    return {
+        "items": db.integration_catalog(business_id),
+        "health": db.business_operational_health(business_id),
+    }
+
+
+@router.post("/api/{business_id}/integrations/{integration_key}")
+async def api_update_integration(
+    business_id: int, integration_key: str, request: Request
+):
+    try:
+        body = await _read_json(request)
+        action = str(body.get("action") or "").strip().lower()
+        if integration_key == "whatsapp":
+            if action != "disconnect":
+                raise ValueError("WhatsApp se conecta con el código seguro.")
+            db.disconnect_whatsapp(business_id)
+            db.record_product_event(business_id, "whatsapp_disconnected")
+        else:
+            allowed_actions = (
+                {"enable": "enabled", "disable": "disabled"}
+                if integration_key == "ai_external"
+                else {"request": "requested", "unrequest": "disabled"}
+            )
+            if action not in allowed_actions:
+                raise ValueError("La acción de integración no es válida.")
+            setting = db.update_integration_setting(
+                business_id, integration_key, allowed_actions[action]
+            )
+            db.record_product_event(
+                business_id, "integration_preference_updated",
+                f"{integration_key}:{setting['mode']}",
+            )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    item = next(
+        (entry for entry in db.integration_catalog(business_id)
+         if entry["key"] == integration_key),
+        None,
+    )
+    return {"item": item, "health": db.business_operational_health(business_id)}
+
+
 @router.post("/b/{business_id}/clockin-policy")
 def update_clockin_policy(
     business_id: int, clockin_policy: str = Form("")
@@ -453,4 +498,3 @@ def reset_submit(request: Request, token: str = Form(...), password: str = Form(
         return RedirectResponse("/restablecer?error=token", status_code=303)
     db.set_password(row["user_id"], auth.hash_password(password))
     return RedirectResponse("/login?error=reset_ok", status_code=303)
-

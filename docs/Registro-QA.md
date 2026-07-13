@@ -1,5 +1,22 @@
 # Registro de QA
 
+## 2026-07-13 — integraciones y salud por negocio
+
+- Migración 27 verificada en SQLite con ida y vuelta hasta 25.
+- Suite completa tras combinar `main`: 178 pruebas verdes y 26 subpruebas; aviso
+  conocido Starlette/httpx.
+- Aislamiento probado para preferencias de IA y solicitudes de banco; la API queda
+  además protegida por la guarda común de sesión y `business_id`.
+- La salud operativa cuenta por negocio uso/latencia de IA, documentos pendientes,
+  correcciones, cola WhatsApp y cola Veri*Factu; no muestra contenido ni credenciales.
+- La IA externa y la extracción documental respetan la preferencia. En cuentas nuevas
+  parte apagada; reglas, OCR y clasificador local siguen funcionando.
+- Smoke HTTP con servidor real: login, Ajustes, API de integraciones, `/health` y
+  `/ready` en 200; ocho integraciones renderizadas y detalle operativo presente.
+- QA visual pendiente: el navegador interno se cerró antes de alcanzar localhost y
+  Chrome no estaba disponible en la sesión. No se sustituye por una validación
+  visual ficticia. También queda el smoke Meta/IA/AEAT con credenciales reales.
+
 ## 2026-07-13 — monitorización admin Veri*Factu
 
 - Suite completa: 176 pruebas verdes; avisos/logs esperados de tests de reintentos

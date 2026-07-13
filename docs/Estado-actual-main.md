@@ -18,7 +18,12 @@
 - Los materiales alimentan el coste del proyecto una sola vez.
 - Migración 26: preferencias confirmadas y perfil explicable de cliente con pagos,
   presupuestos, avisos y margen directo conocido.
-- Rama verificada: 175 pruebas; QA desktop/móvil sin errores de consola.
+- Migración 27: preferencias de integración por negocio. Las cuentas nuevas parten
+  con la IA externa desactivada; el cerebro local sigue disponible y las cuentas
+  anteriores conservan su comportamiento hasta que el usuario decida.
+- Ajustes unifica WhatsApp, IA, correo, Veri*Factu, gestoría y futuras conexiones,
+  con incidencias por negocio, colas, latencia, documentos y correcciones.
+- Rama verificada: 177 pruebas; QA de navegador pendiente para el nuevo centro.
 
 ## Dependencias externas pendientes
 

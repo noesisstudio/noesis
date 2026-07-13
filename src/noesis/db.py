@@ -207,13 +207,23 @@ def _tax_rate(value, label: str, allowed: set[float]) -> float:
 
 # --------------------------------------------------------------- Negocios ---
 def create_business(name, owner_email=None, sector=None) -> dict:
+    now = _now()
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO businesses (name, owner_email, sector, created_at) "
             "VALUES (?, ?, ?, ?) RETURNING id",
-            (name, owner_email, sector, _now()),
+            (name, owner_email, sector, now),
         ).fetchone()
         new_id = row["id"]
+        # Las cuentas nuevas deciden antes de enviar contenido a una IA externa.
+        # Las instalaciones ya existentes conservan su comportamiento previo al
+        # no tener una preferencia explícita tras la migración.
+        conn.execute(
+            "INSERT INTO integration_settings "
+            "(business_id, integration_key, mode, updated_at) "
+            "VALUES (?, 'ai_external', 'disabled', ?)",
+            (new_id, now),
+        )
     return get_business(new_id)
 
 
@@ -285,6 +295,29 @@ def set_whatsapp_status(business_id, status, phone=None) -> dict:
         else:
             conn.execute("UPDATE businesses SET whatsapp_status=? WHERE id=?",
                          (status, business_id))
+    return get_business(business_id)
+
+
+def disconnect_whatsapp(business_id: int) -> dict | None:
+    """Revoca el canal y deja trazados como cancelados los envíos que no salieron."""
+    now = _now()
+    reason = "Cancelado al desconectar WhatsApp por el usuario."
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET whatsapp_status='no_conectado', "
+            "whatsapp_phone=NULL, whatsapp_phone_norm=NULL WHERE id=?",
+            (business_id,),
+        )
+        conn.execute(
+            "UPDATE whatsapp_outbox SET status='failed', last_error=?, "
+            "locked_at=NULL, updated_at=? WHERE business_id=? "
+            "AND status IN ('queued','retrying','processing')",
+            (reason, now, business_id),
+        )
+        conn.execute(
+            "DELETE FROM whatsapp_pending_actions WHERE business_id=?",
+            (business_id,),
+        )
     return get_business(business_id)
 
 
@@ -703,6 +736,338 @@ def count_product_events(business_id: int, event_name: str,
         params.append(since)
     with get_conn() as conn:
         return int(conn.execute(q, params).fetchone()["n"])
+
+
+# ------------------------------------------------------ Integraciones y salud ---
+INTEGRATION_MODES = {"default", "enabled", "disabled", "requested"}
+INTEGRATION_USER_KEYS = {
+    "ai_external", "calendar", "banking", "online_payments",
+}
+
+
+def integration_setting(business_id: int, integration_key: str) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM integration_settings "
+            "WHERE business_id=? AND integration_key=?",
+            (business_id, integration_key),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def integration_enabled(
+    business_id: int, integration_key: str, *, available: bool = True
+) -> bool:
+    """Resuelve el permiso efectivo sin romper instalaciones previas.
+
+    Si nunca se tomó una decisión, ``default`` mantiene el comportamiento local:
+    el servicio solo se usa cuando el servidor realmente lo tiene configurado.
+    """
+    setting = integration_setting(business_id, integration_key)
+    mode = setting.get("mode") if setting else "default"
+    if mode in {"disabled", "requested"}:
+        return False
+    return bool(available)
+
+
+def update_integration_setting(
+    business_id: int, integration_key: str, mode: str
+) -> dict:
+    integration_key = (integration_key or "").strip().lower()
+    mode = (mode or "").strip().lower()
+    if integration_key not in INTEGRATION_USER_KEYS:
+        raise ValueError("Esta integración se gestiona desde su apartado propio.")
+    if mode not in INTEGRATION_MODES - {"default"}:
+        raise ValueError("El estado de la integración no es válido.")
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    now = _now()
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO integration_settings "
+            "(business_id, integration_key, mode, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT (business_id, integration_key) DO UPDATE SET "
+            "mode=excluded.mode, last_error=NULL, updated_at=excluded.updated_at",
+            (business_id, integration_key, mode, now),
+        )
+        row = conn.execute(
+            "SELECT * FROM integration_settings "
+            "WHERE business_id=? AND integration_key=?",
+            (business_id, integration_key),
+        ).fetchone()
+    return dict(row)
+
+
+def record_integration_result(
+    business_id: int, integration_key: str, error: str | None = None
+) -> None:
+    """Guarda la última comprobación sin credenciales ni contenido del usuario."""
+    now = _now()
+    clean_error = (str(error or "").strip()[:300] or None)
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO integration_settings "
+            "(business_id, integration_key, mode, last_error, last_checked_at, updated_at) "
+            "VALUES (?, ?, 'default', ?, ?, ?) "
+            "ON CONFLICT (business_id, integration_key) DO UPDATE SET "
+            "last_error=excluded.last_error, "
+            "last_checked_at=excluded.last_checked_at",
+            (business_id, integration_key, clean_error, now, now),
+        )
+
+
+def integration_catalog(business_id: int) -> list[dict]:
+    """Estado humano de las conexiones, reutilizando sus fuentes de verdad."""
+    business = get_business(business_id) or {}
+    with get_conn() as conn:
+        settings = {
+            row["integration_key"]: dict(row)
+            for row in conn.execute(
+                "SELECT * FROM integration_settings WHERE business_id=?",
+                (business_id,),
+            ).fetchall()
+        }
+    try:
+        from .adapters import email as email_adapter
+        from .web import whatsapp as whatsapp_adapter
+        from . import verifactu_client
+
+        runtime = {
+            "ai_external": bool(config.ANTHROPIC_API_KEY),
+            "whatsapp": whatsapp_adapter.is_configured(),
+            "email": email_adapter.available(),
+            "verifactu": verifactu_client.is_enabled(),
+        }
+    except Exception:  # noqa: BLE001 - el centro nunca debe tumbar Ajustes
+        runtime = {
+            "ai_external": bool(config.ANTHROPIC_API_KEY),
+            "whatsapp": False, "email": False, "verifactu": False,
+        }
+
+    definitions = (
+        ("whatsapp", "WhatsApp", "Habla con Noesis y recibe avisos desde el móvil."),
+        ("ai_external", "IA avanzada", "Respaldo para consultas y documentos complejos."),
+        ("email", "Correo", "Envíos de gestoría, acceso y comunicaciones operativas."),
+        ("verifactu", "Veri*Factu", "Registro fiscal preparado y, con certificado, envío a AEAT."),
+        ("gestoria", "Gestoría", "Paquetes ordenados por período y acceso privado."),
+        ("calendar", "Calendario externo", "Sincronización con tu calendario habitual."),
+        ("banking", "Banco", "Cuadrar cobros y facturas sin mover dinero por ti."),
+        ("online_payments", "Cobro por enlace", "Permitir que el cliente pague desde su portal."),
+    )
+    items: list[dict] = []
+    for key, name, description in definitions:
+        setting = settings.get(key) or {}
+        mode = setting.get("mode") or "default"
+        available = bool(runtime.get(key))
+        active = False
+        state = "pending"
+        label = "por preparar"
+        tone = "gray"
+        action = None
+        action_label = None
+        href = None
+        detail = None
+
+        if key == "whatsapp":
+            active = business.get("whatsapp_status") == "conectado"
+            if active:
+                state, label, tone = "connected", "conectado", "green"
+                action, action_label = "disconnect", "Desconectar"
+                detail = business.get("whatsapp_phone")
+            elif available:
+                state, label, tone = "ready", "listo para conectar", "amber"
+                href, action_label = "#whatsapp-conexion", "Conectar"
+            else:
+                state, label = "unavailable", "falta configurar Meta"
+        elif key == "ai_external":
+            active = integration_enabled(
+                business_id, key, available=available
+            )
+            if active:
+                state, label, tone = "connected", "activa", "green"
+                action, action_label = "disable", "Desactivar"
+            elif available:
+                state, label, tone = "disabled", "desactivada", "gray"
+                action, action_label = "enable", "Activar"
+            else:
+                state, label = "unavailable", "no configurada"
+            detail = "El cerebro local sigue funcionando" if not active else None
+        elif key == "email":
+            active = available
+            state = "connected" if active else "unavailable"
+            label = "disponible" if active else "falta configurar SMTP"
+            tone = "green" if active else "gray"
+            href, action_label = "#gestoria", "Revisar gestoría"
+        elif key == "verifactu":
+            active = bool(business.get("verifactu_enabled"))
+            state = "connected" if active else ("ready" if available else "pending")
+            label = "activo" if active else (
+                "listo para activar" if available else "preparado, sin certificado"
+            )
+            tone = "green" if active else "amber"
+            href, action_label = "#verifactu", "Revisar"
+        elif key == "gestoria":
+            active = bool(
+                business.get("gestoria_email")
+                and (business.get("gestoria_cadence") or "off") != "off"
+            )
+            state = "connected" if active else "ready"
+            label = "activa" if active else "sin activar"
+            tone = "green" if active else "gray"
+            href, action_label = "#gestoria", "Configurar"
+        else:
+            requested = mode == "requested"
+            state = "requested" if requested else "planned"
+            label = "interés guardado" if requested else "próximamente"
+            tone = "amber" if requested else "gray"
+            action = "unrequest" if requested else "request"
+            action_label = "Quitar interés" if requested else "Me interesa"
+
+        items.append({
+            "key": key, "name": name, "description": description,
+            "mode": mode, "available": available, "active": active,
+            "state": state, "status_label": label, "status_tone": tone,
+            "action": action, "action_label": action_label, "href": href,
+            "detail": detail, "last_error": setting.get("last_error"),
+            "last_checked_at": setting.get("last_checked_at"),
+        })
+    return items
+
+
+def business_operational_health(business_id: int) -> dict:
+    """Lectura por negocio de IA, documentos y colas, sin jerga de SRE."""
+    month = date.today().strftime("%Y-%m")
+    ai = {"calls": 0, "input": 0, "output": 0, "durations": []}
+    with get_conn() as conn:
+        usage_rows = conn.execute(
+            "SELECT event_data FROM product_events WHERE business_id=? "
+            "AND event_name='ai_usage' AND CAST(created_at AS TEXT) LIKE ?",
+            (business_id, f"{month}%"),
+        ).fetchall()
+        for row in usage_rows:
+            try:
+                data = json.loads(row["event_data"] or "{}")
+            except ValueError:
+                data = {}
+            ai["calls"] += 1
+            ai["input"] += int(data.get("in") or 0)
+            ai["output"] += int(data.get("out") or 0)
+            if data.get("duration_ms") is not None:
+                ai["durations"].append(int(data["duration_ms"]))
+        classified_rows = conn.execute(
+            "SELECT event_data FROM product_events WHERE business_id=? "
+            "AND event_name='document_classified' "
+            "AND CAST(created_at AS TEXT) LIKE ?",
+            (business_id, f"{month}%"),
+        ).fetchall()
+        classified_month = len(classified_rows)
+        local_classifications = 0
+        for row in classified_rows:
+            try:
+                classification_data = json.loads(row["event_data"] or "{}")
+            except ValueError:
+                classification_data = {}
+            if classification_data.get("method") != "ia":
+                local_classifications += 1
+        document_row = conn.execute(
+            "SELECT COUNT(*) AS total, "
+            "SUM(CASE WHEN doc_status='pendiente_revisar' THEN 1 ELSE 0 END) AS pending "
+            "FROM documents WHERE business_id=?",
+            (business_id,),
+        ).fetchone()
+        corrections = conn.execute(
+            "SELECT COUNT(*) AS total FROM document_classifications "
+            "WHERE business_id=? AND confirmed_kind IS NOT NULL "
+            "AND confirmed_kind<>detected_kind",
+            (business_id,),
+        ).fetchone()["total"]
+        wa_rows = conn.execute(
+            "SELECT status, COUNT(*) AS total FROM whatsapp_outbox "
+            "WHERE business_id=? AND NOT (status='failed' AND "
+            "last_error='Cancelado al desconectar WhatsApp por el usuario.') "
+            "GROUP BY status",
+            (business_id,),
+        ).fetchall()
+        wa = {row["status"]: int(row["total"]) for row in wa_rows}
+        wa_error = conn.execute(
+            "SELECT last_error FROM whatsapp_outbox WHERE business_id=? "
+            "AND last_error IS NOT NULL ORDER BY updated_at DESC, id DESC LIMIT 1",
+            (business_id,),
+        ).fetchone()
+        vf_rows = conn.execute(
+            "SELECT status, COUNT(*) AS total FROM verifactu_outbox "
+            "WHERE business_id=? GROUP BY status",
+            (business_id,),
+        ).fetchall()
+        vf = {row["status"]: int(row["total"]) for row in vf_rows}
+
+    avg_ms = (
+        round(sum(ai["durations"]) / len(ai["durations"]))
+        if ai["durations"] else None
+    )
+    pending_docs = int(document_row["pending"] or 0)
+    failed_wa = int(wa.get("failed", 0))
+    retrying_wa = int(wa.get("retrying", 0))
+    rejected_vf = int(vf.get("rechazado", 0) + vf.get("agotado", 0))
+    attention: list[dict] = []
+    if failed_wa:
+        attention.append({
+            "level": "error", "area": "WhatsApp",
+            "text": f"{failed_wa} mensaje(s) no han podido salir.",
+            "detail": (wa_error["last_error"] if wa_error else None),
+        })
+    elif retrying_wa:
+        attention.append({
+            "level": "review", "area": "WhatsApp",
+            "text": f"{retrying_wa} mensaje(s) se están reintentando.",
+        })
+    if rejected_vf:
+        attention.append({
+            "level": "error", "area": "Veri*Factu",
+            "text": f"{rejected_vf} registro(s) necesitan revisión.",
+        })
+    if pending_docs:
+        attention.append({
+            "level": "review", "area": "Documentos",
+            "text": f"{pending_docs} documento(s) esperan tu confirmación.",
+        })
+
+    backup = latest_backup_run()
+    backup_label = "sin comprobar"
+    if backup and backup.get("status") == "ok":
+        backup_label = "última copia correcta"
+    elif backup and backup.get("status") == "error":
+        backup_label = "última copia con error"
+        attention.append({
+            "level": "error", "area": "Protección de datos",
+            "text": "La última copia de seguridad falló.",
+        })
+
+    level = "error" if any(a["level"] == "error" for a in attention) else (
+        "review" if attention else "ok"
+    )
+    if level == "ok":
+        summary = "He revisado tus conexiones y colas. No hay nada atascado ahora mismo."
+    elif level == "error":
+        summary = "He encontrado una incidencia que conviene revisar antes de seguir."
+    else:
+        summary = "Todo sigue funcionando, pero hay alguna revisión pendiente."
+    return {
+        "level": level, "summary": summary, "attention": attention,
+        "ai": {
+            "calls": ai["calls"], "tokens": ai["input"] + ai["output"],
+            "avg_ms": avg_ms,
+        },
+        "documents": {
+            "total": int(document_row["total"] or 0),
+            "pending": pending_docs, "corrections": int(corrections or 0),
+            "classified_month": classified_month,
+            "local_month": local_classifications,
+        },
+        "whatsapp": wa,
+        "verifactu": vf,
+        "backup": {"label": backup_label, "created_at": backup.get("created_at") if backup else None},
+    }
 
 
 # ------------------------------------------------------- Memoria de Noesis ---
@@ -6746,7 +7111,9 @@ def admin_alerts() -> list[dict]:
     alerts: list[dict] = []
     with get_conn() as conn:
         wa_failed = conn.execute(
-            "SELECT COUNT(*) AS n FROM whatsapp_outbox WHERE status='failed'"
+            "SELECT COUNT(*) AS n FROM whatsapp_outbox WHERE status='failed' "
+            "AND COALESCE(last_error, '')<>"
+            "'Cancelado al desconectar WhatsApp por el usuario.'"
         ).fetchone()["n"]
         wa_stuck = conn.execute(
             "SELECT COUNT(*) AS n FROM whatsapp_outbox "
@@ -7060,6 +7427,10 @@ def export_business_data(business_id) -> dict:
             "SELECT * FROM automation_permissions WHERE business_id=? "
             "ORDER BY action_key",
             business_id)],
+        "integration_settings": [dict(r) for r in _rows(
+            "SELECT * FROM integration_settings WHERE business_id=? "
+            "ORDER BY integration_key",
+            business_id)],
         "assistant_actions": [dict(r) for r in _rows(
             "SELECT * FROM assistant_actions WHERE business_id=? ORDER BY id",
             business_id)],
@@ -7249,6 +7620,7 @@ def delete_business_cascade(business_id) -> bool:
             "invoice_events", "invoice_records", "portal_tokens",
             "product_events", "assistant_messages", "business_memories",
             "assistant_actions", "automation_permissions",
+            "integration_settings",
             "document_classifications", "copilot_recommendations",
             "gestoria_deliveries", "gestoria_requests",
             "job_updates", "job_completions", "job_materials",

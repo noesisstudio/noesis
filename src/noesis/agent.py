@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 import threading
+import time
 
 import anthropic
 
@@ -106,7 +107,7 @@ class NoesisAgent:
         with self._lock:
             return self._send_locked(user_text)
 
-    def _record_usage(self, resp) -> None:
+    def _record_usage(self, resp, duration_ms: int | None = None) -> None:
         """Apunta los tokens de cada llamada (coste real, visible en /admin)."""
         try:
             import json as _json
@@ -119,8 +120,10 @@ class NoesisAgent:
                     "model": self.model,
                     "in": getattr(usage, "input_tokens", 0) or 0,
                     "out": getattr(usage, "output_tokens", 0) or 0,
+                    "duration_ms": duration_ms,
                 }, separators=(",", ":")),
             )
+            db.record_integration_result(self.business_id, "ai_external")
         except Exception:  # noqa: BLE001 — la métrica jamás rompe el chat
             pass
 
@@ -161,6 +164,7 @@ class NoesisAgent:
             if tool["name"] not in {"enviar_factura", "registrar_pago"}
         ]
         for _round in range(6):
+            started = time.monotonic()
             resp = self.client.messages.create(
                 model=self.model,
                 max_tokens=1024,
@@ -168,7 +172,8 @@ class NoesisAgent:
                 tools=safe_tools,
                 messages=self.messages,
             )
-            self._record_usage(resp)
+            duration_ms = round((time.monotonic() - started) * 1000)
+            self._record_usage(resp, duration_ms)
             self.messages.append({"role": "assistant", "content": resp.content})
 
             if resp.stop_reason != "tool_use":

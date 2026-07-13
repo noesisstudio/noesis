@@ -2104,6 +2104,37 @@ def _downgrade_client_preferences(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS client_preferences")
 
 
+def _upgrade_integration_control(conn) -> None:
+    """Preferencias de servicios externos, sin guardar credenciales del proveedor.
+
+    ``default`` conserva el comportamiento previo de cada instalación. Los demás
+    modos permiten que cada negocio active, rechace o muestre interés de forma
+    explícita, siempre sin convertir una preferencia en permiso irreversible.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS integration_settings (
+    business_id    {t["ref"]} NOT NULL REFERENCES businesses(id),
+    integration_key TEXT NOT NULL,
+    mode           TEXT NOT NULL DEFAULT 'default',
+    last_error     TEXT,
+    last_checked_at {t["timestamp"]},
+    updated_at     {t["timestamp"]} NOT NULL,
+    PRIMARY KEY (business_id, integration_key),
+    CHECK (mode IN ('default', 'enabled', 'disabled', 'requested'))
+);
+CREATE INDEX IF NOT EXISTS idx_integration_settings_business
+    ON integration_settings(business_id, updated_at);
+"""
+    )
+
+
+def _downgrade_integration_control(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_integration_settings_business")
+    conn.execute("DROP TABLE IF EXISTS integration_settings")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -2132,6 +2163,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (24, "entregas_gestoria", _upgrade_gestoria_deliveries, _downgrade_gestoria_deliveries),
     (25, "cierre_trabajo_campo", _upgrade_field_work_close, _downgrade_field_work_close),
     (26, "preferencias_cliente", _upgrade_client_preferences, _downgrade_client_preferences),
+    (27, "control_integraciones", _upgrade_integration_control, _downgrade_integration_control),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
