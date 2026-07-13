@@ -1,42 +1,26 @@
 # Estado actual de `main`
 
-> Última auditoría: 2026-07-13. Este documento distingue el código ya fusionado de
-> lo que está listo en una rama para evitar que otra IA dé por desplegado algo local.
+> Auditoría: 2026-07-13. Distinguir siempre producción de ramas en revisión.
 
-## En `origin/main`
+## En `origin/main` y producción
 
-- Último commit auditado: `37a2a99` (merge de PR #26).
-- Esquema: migración 21.
-- Suite auditada antes de esta rama: 164 pruebas verdes.
-- Existe la base de plataforma: Home como parte diario, proyectos iniciales,
-  documentos inteligentes, facturas recibidas, proveedores, CRM, gestoría,
-  memoria confirmada y asistente contextual.
-- El despliegue de Railway correspondiente a ese commit estaba saludable.
+- Commit `4ba9946` (PR #27), esquema 24.
+- 170 pruebas Python y 26 subpruebas verdes.
+- Centro de control, proyectos conectados, trabajador/WhatsApp operativo y entregas
+  versionadas a gestoría desplegados; `/health` y `/ready` respondieron 200.
 
-## Listo en `codex/operating-spine`, aún no fusionado
+## En `codex/field-workflow`, aún no fusionado
 
-- Migraciones 22-24: control de autonomía, columna operativa y entregas a gestoría.
-- Proyecto conectado con trabajo, trabajador, fichaje, coste laboral real, gasto,
-  documento y tarea.
-- Portal de trabajador con trabajos y checklist; equivalentes básicos por WhatsApp.
-- Centro de control que impide automatizar pagos, transferencias, devoluciones,
-  presentación fiscal, emisión definitiva y borrados irreversibles.
-- Cerebro local ampliado para proyectos, equipo, documentos y gestoría.
-- Gestoría con carpetas claras, originales, manifiesto, huella, versiones y eventos
-  de preparación, aviso y descarga.
-- Verificación final de la rama: 170 pruebas y 26 subpruebas verdes.
+- Migración 25: materiales, notas, incidencias, fotos, cierre, firma/conformidad y
+  factura borrador por trabajo.
+- El parte de campo no modifica el fichaje legal. El cliente confirma o pide revisión
+  desde su portal. Emitir/enviar sigue bajo control del autónomo.
+- Los materiales alimentan el coste del proyecto una sola vez.
+- Migración 26: preferencias confirmadas y perfil explicable de cliente con pagos,
+  presupuestos, avisos y margen directo conocido.
+- Rama verificada: 175 pruebas; QA desktop/móvil sin errores de consola.
 
-## No está en producción hasta que ocurra
+## Dependencias externas pendientes
 
-1. Commit y push de `codex/operating-spine`.
-2. PR revisada y fusionada.
-3. Migraciones 22, 23 y 24 aplicadas en Railway/Postgres.
-4. `/health`, `/ready` y smoke test autenticado verificados después del despliegue.
-
-## Dependencias externas aún pendientes
-
-- Credenciales y prueba real de WhatsApp Cloud API.
-- Proveedor de IA opcional y prueba controlada de coste/privacidad.
-- Stripe y conciliación real de pago.
-- Certificado, entorno y validación oficial de la conexión AEAT/Veri*Factu.
-- Revisión legal/fiscal profesional y pilotos con datos reales.
+- Meta real, Stripe real, certificado/entorno AEAT, auditoría legal y de seguridad,
+  restauración externa y piloto con 3-5 negocios.

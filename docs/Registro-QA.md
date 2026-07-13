@@ -1,5 +1,13 @@
 # Registro de QA
 
+## 2026-07-13 — cierre de campo y perfil de cliente
+
+- Suite completa: 175 pruebas verdes; aviso conocido Starlette/httpx.
+- Migraciones 25-26 y orden de FK Postgres verificados.
+- Aislamiento probado para trabajador, cliente, evidencia, firma y factura.
+- QA local desktop/móvil de Clientes, Proyectos y portal del trabajador: 200, sin
+  overflow horizontal ni errores de consola.
+
 ## 2026-07-13 — columna operativa y control del usuario
 
 - Migraciones 22-24 verificadas en SQLite y generación DDL de Postgres: permisos y

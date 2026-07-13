@@ -54,6 +54,14 @@
     .pay-amount { margin-top:9px; font-size:14px; color: var(--brand-ink); }
     .pay-note { margin-top:8px; font-size:12.5px; color: var(--muted); font-style:italic; }
     .pay-copy { flex:0 0 auto; }
+    .work-confirm { margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+    .work-confirm summary { cursor:pointer; color:var(--brand); font-weight:700; }
+    .work-confirm label { display:block; margin-top:12px; font-size:13px; font-weight:650; }
+    .work-confirm input, .work-confirm textarea { width:100%; margin-top:6px; box-sizing:border-box; }
+    .signature-pad { width:100%; height:150px; margin-top:6px; border:1px solid var(--border-strong);
+      border-radius:10px; background:#fff; touch-action:none; display:block; }
+    .signature-tools { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; }
+    .work-reject { margin-top:10px; }
   </style>
 </head>
 <body>
@@ -71,6 +79,7 @@
   {% set quotes = data.quotes | selectattr('status', 'in', ['enviado', 'aceptado', 'rechazado']) | list %}
   {% set pend = quotes | selectattr('status', 'equalto', 'enviado') | list %}
   {% set invoices = data.invoices | selectattr('status', 'in', ['enviada', 'parcial', 'cobrada']) | list %}
+  {% set pending_work = data.work_completions | selectattr('status', 'equalto', 'pendiente_cliente') | list %}
   <div class="portal">
     <div class="portal-head" style="background:{{ data.business.brand_color }}">
       <div class="mark">
@@ -143,6 +152,47 @@
       {% endfor %}
     {% endif %}
 
+    {% if pending_work %}
+      <div class="sec-title">Trabajos por confirmar</div>
+      {% for work in pending_work %}
+        <div class="doc" id="work-{{ work.job_id }}">
+          <div class="doc-top">
+            <div>
+              <div class="num">Trabajo terminado{% if work.project_name %} · {{ work.project_name }}{% endif %}</div>
+              <div class="concept">{{ work.description }}</div>
+            </div>
+            <span class="badge b-amber">Por confirmar</span>
+          </div>
+          {% if work.summary %}<div class="doc-meta">{{ work.summary }}</div>{% endif %}
+          <details class="work-confirm">
+            <summary>Revisar y confirmar</summary>
+            <label>Tu nombre
+              <input class="input work-name" maxlength="160" autocomplete="name"
+                placeholder="Nombre de quien confirma">
+            </label>
+            <label>Comentario (opcional)
+              <textarea class="input work-note" rows="2"
+                placeholder="Algo que quieras dejar anotado"></textarea>
+            </label>
+            <label>Firma
+              <canvas class="signature-pad" width="620" height="150"
+                aria-label="Espacio para firmar"></canvas>
+            </label>
+            <div class="signature-tools">
+              <button class="btn sm" type="button" onclick="clearSignature(this)">Borrar firma</button>
+              <button class="btn green" type="button"
+                onclick="answerWork({{ work.job_id }}, true, this)">Confirmar trabajo</button>
+            </div>
+            <div class="work-reject">
+              <button class="btn sm" type="button"
+                onclick="answerWork({{ work.job_id }}, false, this)">Hay algo que revisar</button>
+            </div>
+            <div class="clock-message" role="status"></div>
+          </details>
+        </div>
+      {% endfor %}
+    {% endif %}
+
     <div class="sec-title">Tus facturas</div>
     {% if invoices %}
       {% for inv in invoices %}
@@ -208,6 +258,55 @@
         var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
         try { document.execCommand('copy'); } catch(e){}
         done();
+      }
+    }
+    document.querySelectorAll('.signature-pad').forEach(function(canvas){
+      var ctx = canvas.getContext('2d'), drawing = false;
+      ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#15211c';
+      function point(e){ var r=canvas.getBoundingClientRect(); return {
+        x:(e.clientX-r.left)*(canvas.width/r.width),
+        y:(e.clientY-r.top)*(canvas.height/r.height)}; }
+      canvas.addEventListener('pointerdown', function(e){ drawing=true;
+        canvas.setPointerCapture(e.pointerId); var p=point(e); ctx.beginPath();
+        ctx.moveTo(p.x,p.y); canvas.dataset.signed='1'; });
+      canvas.addEventListener('pointermove', function(e){ if(!drawing)return;
+        var p=point(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+      canvas.addEventListener('pointerup', function(){ drawing=false; });
+      canvas.addEventListener('pointercancel', function(){ drawing=false; });
+    });
+    function clearSignature(button){
+      var canvas=button.closest('.work-confirm').querySelector('canvas');
+      canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+      delete canvas.dataset.signed;
+    }
+    async function answerWork(jobId, accepted, button){
+      var box=button.closest('.work-confirm'), message=box.querySelector('.clock-message');
+      var name=box.querySelector('.work-name').value.trim();
+      var note=box.querySelector('.work-note').value.trim();
+      var canvas=box.querySelector('canvas');
+      if(accepted && (!name || !canvas.dataset.signed)){
+        message.className='clock-message error';
+        message.textContent='Escribe tu nombre y firma para confirmar.'; return;
+      }
+      if(!accepted && !note){
+        message.className='clock-message error';
+        message.textContent='Indica qué falta o qué hay que revisar.'; return;
+      }
+      button.disabled=true; message.className='clock-message warn';
+      message.textContent='Guardando tu respuesta…';
+      try{
+        var response=await fetch(`/p/{{ token }}/jobs/${jobId}/completion`,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({accepted:accepted,customer_name:name,
+            customer_note:note,signature_data:accepted?canvas.toDataURL('image/png'):null})});
+        var result=await response.json();
+        if(!response.ok)throw new Error(result.error||'No se pudo guardar.');
+        message.className='clock-message ok';
+        message.textContent=accepted?'Trabajo confirmado. Gracias.':'Aviso enviado para que lo revisen.';
+        setTimeout(function(){location.reload();},900);
+      }catch(error){
+        message.className='clock-message error'; message.textContent=error.message;
+        button.disabled=false;
       }
     }
   </script>

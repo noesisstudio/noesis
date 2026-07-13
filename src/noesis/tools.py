@@ -141,6 +141,18 @@ TOOLS: list[dict] = [
         "input_schema": {"type": "object", "properties": {}},
     },
     {
+        "name": "ver_perfil_cliente",
+        "description": (
+            "Explica el historial observado y las preferencias confirmadas de un "
+            "cliente: pagos, presupuestos, actividad y margen directo conocido."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"cliente": {"type": "string"}},
+            "required": ["cliente"],
+        },
+    },
+    {
         "name": "ver_proyectos",
         "description": (
             "Lista los proyectos con presupuesto, avance, horas, coste y margen. "
@@ -317,6 +329,18 @@ def _listar_clientes(business_id):
     return {"clientes": db.list_clients(business_id)}
 
 
+def _ver_perfil_cliente(business_id, cliente):
+    record = db.find_client(cliente, business_id)
+    if not record:
+        return {"ok": False, "error": "Cliente no encontrado."}
+    insight = next(
+        (item for item in db.client_insights(business_id)
+         if item["client_id"] == record["id"]),
+        None,
+    )
+    return {"ok": True, "perfil": insight}
+
+
 def _ver_proyectos(business_id):
     return db.project_summary(business_id)
 
@@ -400,6 +424,7 @@ _DISPATCH = {
     "resumen_negocio": _resumen_negocio,
     "registrar_gasto": _registrar_gasto,
     "listar_clientes": _listar_clientes,
+    "ver_perfil_cliente": _ver_perfil_cliente,
     "ver_proyectos": _ver_proyectos,
     "ver_proyecto": _ver_proyecto,
     "crear_proyecto": _crear_proyecto,

@@ -26,6 +26,31 @@ def api_clients_insights(business_id: int):
     return {"items": db.client_insights(business_id)}
 
 
+@router.get("/api/{business_id}/clients/{client_id}/preferences")
+def api_client_preferences(business_id: int, client_id: int):
+    item = db.get_client_preferences(client_id, business_id)
+    if item is None:
+        return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)
+    return item
+
+
+@router.post("/api/{business_id}/clients/{client_id}/preferences")
+async def api_update_client_preferences(
+    business_id: int, client_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        return db.update_client_preferences(
+            client_id, business_id,
+            preferred_channel=body.get("preferred_channel"),
+            preferred_contact_window=body.get("preferred_contact_window"),
+            payment_terms_days=body.get("payment_terms_days"),
+            note=body.get("note"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
 @router.get("/api/{business_id}/clients/{client_id}/portal-link")
 def api_portal_link(business_id: int, client_id: int):
     """Enlace privado del cliente (Client Hub) para que el autónomo lo envíe por
