@@ -2,6 +2,14 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Cierre controlado y aprendizaje explicable (2026-07-13)
+
+- El parte de campo es operativo y separado del fichaje laboral append-only.
+- Terminar prepara solo un borrador; emitir y enviar requieren al autónomo.
+- La conformidad guarda fuente, momento y huella, sin prometer validez jurídica
+  absoluta.
+- Preferencias confirmadas prevalecen sobre patrones observados y son corregibles.
+
 ## Autonomía acotada y columna operativa única (2026-07-13)
 
 Noesis hace automáticamente trabajo interno de bajo riesgo y comunicaciones que

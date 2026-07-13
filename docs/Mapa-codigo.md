@@ -5,8 +5,8 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, tareas, permisos de autonomía y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. La rama
-  `codex/operating-spine` llega a la migración 24.
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. `main` llega a 24 y
+  `codex/field-workflow` a 26.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro: clientes,
   agenda, facturas, proyectos, equipo, documentos y gestoría.
 - `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM.
@@ -23,7 +23,9 @@
 - `src/noesis/web/routers/projects.py`: proyectos, trabajos vinculados, tareas,
   equipo, horas y costes.
 - `src/noesis/web/routers/portal.py`: portales privados de cliente, gestoría y
-  trabajador.
+  trabajador; incluye parte de campo y conformidad.
+- `src/noesis/db.py`: `job_materials`, `job_updates`, `job_completions` y
+  `client_preferences` conectan trabajo, coste, evidencia, borrador y aprendizaje.
 - `src/noesis/web/templates/proyectos.html`: resumen progresivo y detalle operativo.
 - `src/noesis/web/templates/fichaje.html`: jornada, trabajos y checklist personal.
 - `src/noesis/web/templates/ajustes.html`: preferencias, memoria y centro de control.
