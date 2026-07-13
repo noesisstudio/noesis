@@ -38,6 +38,11 @@
         <option>Herramientas</option><option>Seguros</option><option>Cuota autónomo</option>
         <option>Telefonía</option><option>Otros</option>
       </select>
+      <label class="fld" style="margin-top:10px">Proyecto (opcional)</label>
+      <select id="f-project">
+        <option value="">Gasto general del negocio</option>
+        {% for project in projects %}<option value="{{ project.id }}">{{ project.name }}</option>{% endfor %}
+      </select>
       <button class="btn primary full" style="margin-top:14px" onclick="addExpense()">Añadir gasto</button>
       <div id="c-form-msg" class="meta" style="margin-top:10px"></div>
     </div>
@@ -113,7 +118,7 @@ async function load() {
 
   el('c-body').innerHTML = ex.map(e => `<tr>
     <td class="meta">${dateIso(e.created_at)}</td><td>${esc(e.concept)}</td>
-    <td><span class="badge b-gray">${esc(e.category||'—')}</span></td>
+    <td><span class="badge b-gray">${esc(e.category||'—')}</span>${e.project_name?`<small class="meta" style="display:block;margin-top:4px">${esc(e.project_name)}</small>`:''}</td>
     <td class="t-right num">${e.vat_rate ? e.vat_rate+'%' : '—'}</td>
     <td class="t-right num">${eur(e.amount)}</td>
     <td class="t-right table-actions"><button class="iconbtn" title="Borrar" onclick="del(${e.id})">${TRASH}</button></td></tr>`).join('');
@@ -148,7 +153,8 @@ async function addExpense() {
   const amount = parseFloat(el('f-amount').value);
   const msg = el('c-form-msg');
   if (!concept || !amount) { msg.textContent = 'Concepto e importe son obligatorios.'; return; }
-  await apiPost('/expenses', { concept, amount, category: el('f-cat').value });
+  await apiPost('/expenses', { concept, amount, category: el('f-cat').value,
+    project_id: el('f-project').value || null });
   el('f-concept').value=''; el('f-amount').value=''; msg.textContent = 'Gasto añadido.';
   load();
 }

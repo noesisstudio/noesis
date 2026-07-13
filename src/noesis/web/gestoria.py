@@ -8,7 +8,9 @@ descarga desde su enlace privado /g/{token} (sin contraseña, revocable).
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
+import json
 import logging
 import zipfile
 
@@ -91,8 +93,15 @@ def _summary_pdf(business: dict, label: str, invoices: list[dict],
     return bytes(pdf.output())
 
 
+def _safe_filename(value: str) -> str:
+    """Evita rutas y nombres ambiguos dentro del paquete compartido."""
+    clean = str(value or "documento").replace("/", "-").replace("\\", "-")
+    clean = "".join(char for char in clean if char.isalnum() or char in " ._-()")
+    return clean.strip(" .")[:140] or "documento"
+
+
 def build_package(business_id: int, label: str) -> tuple[bytes, dict] | None:
-    """ZIP del período: facturas (PDF+CSV), gastos (CSV) y justificantes."""
+    """Crea un paquete ordenado, versionado y comprobable para la gestoría."""
     from ..documents import repo as docrepo, service as docservice
     from .invoice_pdf import build_invoice_pdf
 
@@ -102,16 +111,32 @@ def build_package(business_id: int, label: str) -> tuple[bytes, dict] | None:
     start, end = db.gestoria_period_range(label)
     invoices = db.gestoria_invoices_in(business_id, start, end)
     expenses = db.gestoria_expenses_in(business_id, start, end)
+    received = db.gestoria_received_in(business_id, start, end)
+    documents = docrepo.list_for_business(business_id)
+    by_expense: dict[int, list[dict]] = {}
+    by_received: dict[int, list[dict]] = {}
+    for document in documents:
+        if document.get("expense_id") is not None:
+            by_expense.setdefault(int(document["expense_id"]), []).append(document)
+        if document.get("received_invoice_id") is not None:
+            by_received.setdefault(
+                int(document["received_invoice_id"]), []
+            ).append(document)
 
+    files: list[str] = []
+    missing_expense_receipts: list[int] = []
+    missing_received_originals: list[int] = []
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as bundle:
-        for invoice in invoices:
-            pdf = build_invoice_pdf(invoice["id"], business_id)
-            if pdf:
-                number = (invoice.get("number") or f"id-{invoice['id']}"
-                          ).replace("/", "-")
-                bundle.writestr(f"facturas/{number}.pdf", pdf)
-        bundle.writestr("facturas.csv", _csv_bytes(
+        def write(path: str, payload: bytes | str) -> None:
+            bundle.writestr(path, payload)
+            files.append(path)
+
+        write(
+            "00-resumen/resumen.pdf",
+            _summary_pdf(business, label, invoices, expenses),
+        )
+        write("01-ingresos/facturas.csv", _csv_bytes(
             ["numero", "fecha", "cliente", "base", "iva", "irpf", "total",
              "estado", "cobrado"],
             [[i.get("number") or i["id"], str(i.get("issued_at") or "")[:10],
@@ -119,50 +144,149 @@ def build_package(business_id: int, label: str) -> tuple[bytes, dict] | None:
               i.get("irpf_amount") or 0, i["total"], i["status"],
               i.get("paid_amount") or 0] for i in invoices],
         ))
-        bundle.writestr("gastos.csv", _csv_bytes(
-            ["fecha", "concepto", "categoria", "iva_pct", "importe"],
-            [[str(e.get("spent_on") or e.get("created_at") or "")[:10],
-              e["concept"], e.get("category") or "",
-              e.get("vat_rate") or "", e["amount"]] for e in expenses],
-        ))
-        received = db.gestoria_received_in(business_id, start, end)
-        if received:
-            bundle.writestr("facturas-recibidas.csv", _csv_bytes(
-                ["numero", "fecha", "proveedor", "base", "iva_pct", "cuota_iva",
-                 "irpf", "total", "estado"],
-                [[r.get("number") or r["id"],
-                  str(r.get("issued_on") or r.get("created_at") or "")[:10],
-                  r.get("supplier_name") or "", r.get("base") or "",
-                  r.get("vat_rate") or "", r.get("vat_amount") or "",
-                  r.get("irpf_amount") or "", r["total"], r["status"]]
-                 for r in received],
-            ))
-        expense_ids = {e["id"] for e in expenses}
-        for document in docrepo.list_for_business(business_id):
-            if document.get("expense_id") not in expense_ids:
-                continue
-            payload = docservice.file_bytes(business_id, document["id"])
-            if payload:
-                data, _mime, filename = payload
-                safe = filename.replace("/", "-").replace("\\", "-")
-                bundle.writestr(
-                    f"justificantes/{document['id']}-{safe}", data
+        for invoice in invoices:
+            pdf = build_invoice_pdf(invoice["id"], business_id)
+            if pdf:
+                number = _safe_filename(
+                    invoice.get("number") or f"id-{invoice['id']}"
                 )
-        bundle.writestr(
-            "resumen.pdf", _summary_pdf(business, label, invoices, expenses)
-        )
+                write(f"01-ingresos/facturas/{number}.pdf", pdf)
+
+        write("02-gastos/gastos.csv", _csv_bytes(
+            ["fecha", "concepto", "categoria", "iva_pct", "importe",
+             "proyecto"],
+            [[str(e.get("spent_on") or e.get("created_at") or "")[:10],
+              e["concept"], e.get("category") or "", e.get("vat_rate") or "",
+              e["amount"], e.get("project_name") or ""] for e in expenses],
+        ))
+        for expense in expenses:
+            attached = False
+            for document in by_expense.get(int(expense["id"]), []):
+                payload = docservice.file_bytes(business_id, document["id"])
+                if not payload:
+                    continue
+                data, _mime, filename = payload
+                write(
+                    f"02-gastos/justificantes/{document['id']}-"
+                    f"{_safe_filename(filename)}",
+                    data,
+                )
+                attached = True
+            if not attached:
+                missing_expense_receipts.append(int(expense["id"]))
+
+        write("03-facturas-recibidas/facturas-recibidas.csv", _csv_bytes(
+            ["numero", "fecha", "proveedor", "base", "iva_pct", "cuota_iva",
+             "irpf", "total", "estado"],
+            [[r.get("number") or r["id"],
+              str(r.get("issued_on") or r.get("created_at") or "")[:10],
+              r.get("supplier_name") or "", r.get("base") or "",
+              r.get("vat_rate") or "", r.get("vat_amount") or "",
+              r.get("irpf_amount") or "", r["total"], r["status"]]
+             for r in received],
+        ))
+        for invoice in received:
+            attached = False
+            for document in by_received.get(int(invoice["id"]), []):
+                payload = docservice.file_bytes(business_id, document["id"])
+                if not payload:
+                    continue
+                data, _mime, filename = payload
+                write(
+                    f"03-facturas-recibidas/originales/{document['id']}-"
+                    f"{_safe_filename(filename)}",
+                    data,
+                )
+                attached = True
+            if not attached:
+                missing_received_originals.append(int(invoice["id"]))
+
         try:
             xml = db.export_verifactu_xml(
                 business_id, from_day=start, to_day=end
             )
             if xml:
-                bundle.writestr("verifactu.xml", xml)
-        except Exception:  # noqa: BLE001 — el XML es un extra, nunca rompe el ZIP
+                write("04-fiscal/verifactu.xml", xml)
+        except Exception:  # noqa: BLE001
             log.info("Paquete %s sin XML Veri*Factu (no disponible).", label)
 
-    meta = {"label": label, "invoices": len(invoices),
-            "expenses": len(expenses)}
-    return buffer.getvalue(), meta
+        source = {
+            "business_id": business_id,
+            "period": label,
+            "invoices": [{
+                "id": i["id"], "number": i.get("number"),
+                "issued_at": str(i.get("issued_at") or ""),
+                "base": i.get("base"), "vat": i.get("vat_amount"),
+                "irpf": i.get("irpf_amount"), "total": i.get("total"),
+                "status": i.get("status"), "paid": i.get("paid_amount"),
+            } for i in invoices],
+            "expenses": [{
+                "id": e["id"], "spent_on": str(e.get("spent_on") or ""),
+                "concept": e.get("concept"), "amount": e.get("amount"),
+                "vat_rate": e.get("vat_rate"), "project_id": e.get("project_id"),
+            } for e in expenses],
+            "received_invoices": [{
+                "id": r["id"], "number": r.get("number"),
+                "issued_on": str(r.get("issued_on") or ""),
+                "supplier_id": r.get("supplier_id"), "base": r.get("base"),
+                "vat": r.get("vat_amount"), "irpf": r.get("irpf_amount"),
+                "total": r.get("total"), "status": r.get("status"),
+            } for r in received],
+            "documents": sorted(({
+                "id": d["id"], "stored_name": d.get("stored_name"),
+                "expense_id": d.get("expense_id"),
+                "received_invoice_id": d.get("received_invoice_id"),
+            } for d in documents
+                if d.get("expense_id") in {e["id"] for e in expenses}
+                or d.get("received_invoice_id") in {r["id"] for r in received}
+            ), key=lambda item: item["id"]),
+        }
+        source_hash = hashlib.sha256(json.dumps(
+            source, sort_keys=True, separators=(",", ":")
+        ).encode()).hexdigest()
+        manifest = {
+            "noesis_package": 1,
+            "business": business.get("name") or "",
+            "nif": business.get("nif") or "",
+            "period": {"label": label, "start": start, "end": end},
+            "counts": {
+                "invoices": len(invoices),
+                "expenses": len(expenses),
+                "received_invoices": len(received),
+            },
+            "missing": {
+                "expense_receipts": missing_expense_receipts,
+                "received_invoice_originals": missing_received_originals,
+            },
+            "source_hash": source_hash,
+            "files": sorted(files + ["MANIFIESTO.json"]),
+        }
+        bundle.writestr(
+            "MANIFIESTO.json",
+            json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),
+        )
+
+    data = buffer.getvalue()
+    artifact_hash = hashlib.sha256(data).hexdigest()
+    delivery = db.record_gestoria_delivery(
+        business_id,
+        label,
+        source_hash=source_hash,
+        artifact_hash=artifact_hash,
+        file_size=len(data),
+        manifest=manifest,
+    )
+    meta = {
+        "label": label,
+        "invoices": len(invoices),
+        "expenses": len(expenses),
+        "received_invoices": len(received),
+        "source_hash": source_hash,
+        "artifact_hash": artifact_hash,
+        "version": delivery["version"],
+        "manifest": manifest,
+    }
+    return data, meta
 
 
 def notify_gestoria(business: dict, label: str) -> bool:

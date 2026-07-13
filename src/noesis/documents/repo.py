@@ -28,18 +28,19 @@ DOC_STATUSES = {"pendiente_revisar", "revisado", "enviado_gestoria",
 
 def add(business_id: int, *, filename: str, stored_name: str, mime: str, size: int,
         kind: str = "documento", client_id: int | None = None,
-        invoice_id: int | None = None, ocr_text: str | None = None,
+        invoice_id: int | None = None, project_id: int | None = None,
+        ocr_text: str | None = None,
         ocr_amount: float | None = None, note: str | None = None,
         doc_status: str = "revisado", confidence: float | None = None) -> dict:
     kind = kind if kind in KINDS else "documento"
     doc_status = doc_status if doc_status in DOC_STATUSES else "revisado"
     with _conn() as conn:
         row = conn.execute(
-            "INSERT INTO documents (business_id, client_id, invoice_id, kind, "
+            "INSERT INTO documents (business_id, client_id, invoice_id, project_id, kind, "
             "filename, stored_name, mime, size, ocr_text, ocr_amount, note, "
             "doc_status, confidence, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            (business_id, client_id, invoice_id, kind, filename, stored_name, mime,
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, client_id, invoice_id, project_id, kind, filename, stored_name, mime,
              int(size), ocr_text, ocr_amount, note, doc_status, confidence,
              _now()),
         ).fetchone()
@@ -158,9 +159,12 @@ def get(doc_id: int, business_id: int) -> dict | None:
 
 
 def list_for_business(business_id: int, client_id: int | None = None) -> list[dict]:
-    q = ("SELECT d.*, c.name AS client_name FROM documents d "
+    q = ("SELECT d.*, c.name AS client_name, p.name AS project_name "
+         "FROM documents d "
          "LEFT JOIN clients c ON c.id = d.client_id "
-         "AND c.business_id=d.business_id WHERE d.business_id=?")
+         "AND c.business_id=d.business_id "
+         "LEFT JOIN projects p ON p.id=d.project_id "
+         "AND p.business_id=d.business_id WHERE d.business_id=?")
     params: list = [business_id]
     if client_id is not None:
         q += " AND d.client_id=?"

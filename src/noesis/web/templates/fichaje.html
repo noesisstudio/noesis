@@ -91,11 +91,39 @@
                   · {{ job.client_name or 'Cliente' }}</b>
                 <small>{{ job.description }}{% if job.client_zone or job.zone %}
                   · {{ job.client_zone or job.zone }}{% endif %}</small>
+                {% if job.project_name %}<small class="clock-project">Proyecto · {{ job.project_name }}</small>{% endif %}
               </label>
             {% endfor %}
           {% else %}
             <div class="empty">No tienes trabajos asignados para hoy.</div>
           {% endif %}
+        </section>
+
+        <section class="clock-card">
+          <div class="kicker">Lo que tienes que completar</div>
+          {% if data.tasks %}
+            <div class="clock-task-list">
+              {% for task in data.tasks %}
+              <div class="clock-task" data-task-id="{{ task.id }}">
+                <div>
+                  <strong>{{ task.title }}</strong>
+                  <small>{{ task.project_name }}{% if task.job_description %} · {{ task.job_description }}{% endif %}</small>
+                  {% if task.note %}<p>{{ task.note }}</p>{% endif %}
+                </div>
+                <select aria-label="Estado de {{ task.title }}"
+                  onchange="updateTask({{ task.id }}, this.value)">
+                  <option value="pendiente" {{ 'selected' if task.status == 'pendiente' }}>Pendiente</option>
+                  <option value="en_curso" {{ 'selected' if task.status == 'en_curso' }}>En curso</option>
+                  <option value="hecha">Hecha</option>
+                  <option value="bloqueada" {{ 'selected' if task.status == 'bloqueada' }}>Bloqueada</option>
+                </select>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">No tienes tareas pendientes en tus proyectos.</div>
+          {% endif %}
+          <div class="clock-message" id="task-message" role="status"></div>
         </section>
 
         <section class="clock-card">
@@ -243,6 +271,28 @@ async function ackInfo() {
     message.className = 'clock-message error';
     message.textContent = error.message;
     if (button) button.disabled = false;
+  }
+}
+
+async function updateTask(taskId, status) {
+  const message = document.getElementById('task-message');
+  try {
+    const response = await fetch(`${tokenPath}/tasks/${taskId}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'No se pudo actualizar la tarea.');
+    message.className = 'clock-message ok';
+    message.textContent = status === 'hecha' ? 'Tarea completada.' : 'Estado actualizado.';
+    if (status === 'hecha') {
+      const row = document.querySelector(`[data-task-id="${taskId}"]`);
+      if (row) row.remove();
+    }
+  } catch (error) {
+    message.className = 'clock-message error';
+    message.textContent = error.message;
+    setTimeout(() => location.reload(), 900);
   }
 }
 </script>

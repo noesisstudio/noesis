@@ -190,6 +190,7 @@ async def api_add_expense(business_id: int, request: Request):
             category=body.get("category"),
             spent_on=body.get("spent_on") or body.get("date"),
             document_id=body.get("document_id"),
+            project_id=body.get("project_id"),
             business_id=business_id,
         )
     except ValueError as exc:
@@ -365,5 +366,4 @@ def api_taxes(business_id: int, year: int = 0, quarter: int = 0):
                 "current_year": today.year}
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
-
 

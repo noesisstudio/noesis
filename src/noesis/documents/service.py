@@ -19,6 +19,7 @@ class UploadError(Exception):
 
 def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documento",
            client_id: int | None = None, invoice_id: int | None = None,
+           project_id: int | None = None,
            note: str | None = None, run_ocr: bool = True,
            auto_classify: bool = False) -> dict:
     """Valida y guarda un documento. Si es imagen y hay OCR, intenta leer el importe.
@@ -32,6 +33,16 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
     max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
     if len(data) > max_bytes:
         raise UploadError(f"El archivo supera el límite de {config.MAX_UPLOAD_MB} MB.")
+    if project_id not in (None, ""):
+        from .. import db
+        try:
+            project_id = int(project_id)
+        except (TypeError, ValueError) as exc:
+            raise UploadError("El proyecto no es válido.") from exc
+        if not db.get_project(project_id, business_id):
+            raise UploadError("El proyecto no pertenece a este negocio.")
+    else:
+        project_id = None
 
     ocr_text = ocr_amount = None
     if run_ocr and storage.ext_of(filename) in storage.IMAGE_EXTS:
@@ -44,7 +55,7 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
     doc = repo.add(
         business_id, filename=filename, stored_name=stored_name,
         mime=storage.mime_for(filename), size=len(data), kind=kind,
-        client_id=client_id, invoice_id=invoice_id, note=note,
+        client_id=client_id, invoice_id=invoice_id, project_id=project_id, note=note,
         ocr_text=ocr_text, ocr_amount=ocr_amount,
         doc_status="pendiente_revisar" if auto_classify else "revisado")
     if auto_classify:
@@ -210,6 +221,7 @@ def convert_ticket_to_expense(business_id: int, doc_id: int,
         category="Ticket",
         spent_on=spent_on,
         document_id=doc_id,
+        project_id=doc.get("project_id"),
         business_id=business_id,
     )
     repo.set_review(doc_id, business_id, kind="ticket", doc_status="revisado")

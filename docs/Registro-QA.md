@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-07-13 — columna operativa y control del usuario
+
+- Migraciones 22-24 verificadas en SQLite y generación DDL de Postgres: permisos y
+  auditoría, vínculos de proyecto/tarea y entregas versionadas a gestoría.
+- Suite completa final: 170 pruebas y 26 subpruebas verdes; queda una advertencia
+  de deprecación Starlette/httpx ya conocida, sin error funcional.
+- Proyectos: coste real combinado de fichaje, tarifa horaria, gastos y entradas
+  manuales sin doble conteo; aislamiento cruzado cubierto.
+- Gestoría: paquete con emitidas, gastos, recibidas, originales, manifiesto y huella;
+  una fuente sin cambios conserva versión y un cambio crea la siguiente.
+- Navegador local: Inicio, Proyectos, Documentos, Ajustes y portal del trabajador en
+  200, sin errores de consola. Se comprobó el modal de proyecto y un trabajador con
+  trabajo y checklist reales.
+- WhatsApp interno: texto, foto, PDF y audio ya tenían flujo; se añadió `HOY`, fichaje
+  por trabajo y actualización de tarea para el trabajador vinculado.
+- Pendiente externo: Meta, Stripe, proveedor de IA y certificado AEAT no se validan
+  sin credenciales reales y siguen figurando como bloqueo de piloto.
+
 ## 2026-07-12 — Noesis persistente y entrada documental universal
 
 - Migración 21 aplicada en SQLite: historial del asistente, memoria confirmada,

@@ -37,6 +37,8 @@
              style="display:none" onchange="el('d-file').files=this.files; el('d-msg').textContent='Foto lista para subir.'">
       <label class="fld" style="margin-top:10px">Cliente (opcional)</label>
       <select id="d-client"><option value="">— Sin cliente —</option></select>
+      <label class="fld" style="margin-top:10px">Proyecto (opcional)</label>
+      <select id="d-project"><option value="">— Archivo general —</option></select>
       <label class="fld" style="margin-top:10px">Nota (opcional)</label>
       <input class="input" id="d-note" placeholder="Ej. Garantía de la caldera">
       <button class="btn primary full" style="margin-top:14px" onclick="uploadDoc()">Subir</button>
@@ -126,6 +128,12 @@ async function load() {
       clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   } catch (e) {}
   try {
+    const projects = (await api('/projects')).projects;
+    el('d-project').innerHTML = '<option value="">— Archivo general —</option>' +
+      projects.filter(p => p.status !== 'terminado').map(p =>
+        `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  } catch (e) {}
+  try {
     const st = await api('/documents/ocr-status');
     el('d-ocr').textContent = st.ocr
       ? 'Lectura local activa. Noesis propondrá un tipo y tú lo confirmarás.'
@@ -200,6 +208,7 @@ async function renderList() {
     return `<tr>
       <td class="meta">${dateIso(d.created_at)}</td>
       <td><a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener">${esc(d.filename)}</a>
+        ${d.project_name ? `<div class="meta">Proyecto · ${esc(d.project_name)}</div>` : ''}
         ${d.review_note ? `<div class="meta">${esc(d.review_note)}</div>` : ''}</td>
       <td><span class="badge b-gray">${esc(KINDS[d.kind] || d.kind)}</span></td>
       <td><span class="badge ${st[1]}">${st[0]}</span>${d.confidence ? `<div class="meta">${Math.round(d.confidence)}% seguro</div>` : ''}</td>
@@ -220,6 +229,7 @@ async function uploadDoc() {
   fd.append('file', input.files[0]);
   fd.append('kind', 'documento');
   fd.append('client_id', el('d-client').value);
+  fd.append('project_id', el('d-project').value);
   fd.append('note', el('d-note').value);
   msg.textContent = 'Subiendo…';
   const r = await fetch(`/api/${BIZ}/documents`, { method: 'POST', body: fd });

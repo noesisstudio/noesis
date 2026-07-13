@@ -130,6 +130,14 @@ def page(request: Request, business_id: int, page: str):
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
         context["assistant_memories"] = db.list_memories(business_id)
+        context["automation_permissions"] = db.automation_catalog(business_id)
+        context["automation_mode_labels"] = db.AUTOMATION_MODE_LABELS
+        context["assistant_actions"] = db.list_assistant_actions(
+            business_id, limit=8
+        )
+        context["gestoria_deliveries"] = db.list_gestoria_deliveries(
+            business_id, limit=6
+        )
         context["wa_reports"] = db.resolve_whatsapp_reports(
             biz.get("whatsapp_reports")
         )
@@ -156,6 +164,11 @@ def page(request: Request, business_id: int, page: str):
     if page == "proyectos":
         context["clients"] = db.list_clients(business_id)
         context["workers"] = db.list_workers(business_id, include_inactive=False)
+    if page == "costes":
+        context["projects"] = [
+            project for project in db.list_projects(business_id)
+            if project.get("status") != "terminado"
+        ]
     if page == "asistente":
         from ...adapters import transcription
 

@@ -40,6 +40,25 @@ def _business_state(business_id: int) -> dict:
     clients = db.client_stats(business_id)
     expenses = db.list_expenses(business_id)
     late = [p for p in pending if (p.get("days_outstanding") or 0) > 7]
+    projects = db.list_projects(business_id)
+    project_alerts = []
+    if db.automation_decision(business_id, "project_alerts")["allowed"]:
+        for project in projects:
+            if project.get("status") == "terminado":
+                continue
+            if project.get("margin", 0) < 0:
+                reason = "presupuesto_superado"
+            elif project.get("missing_hourly_cost_worker_ids"):
+                reason = "coste_hora_incompleto"
+            elif (
+                project.get("progress")
+                and project.get("actual_cost", 0)
+                > project.get("budget", 0) * (project["progress"] / 100 + .10)
+            ):
+                reason = "coste_adelantado"
+            else:
+                continue
+            project_alerts.append({**project, "alert_reason": reason})
     return {
         "billing": billing,
         "pending": pending,
@@ -59,6 +78,8 @@ def _business_state(business_id: int) -> dict:
             r for r in db.list_gestoria_requests(business_id, status="abierta")
             if r["requested_by"] == "gestoria"
         ],
+        "projects": projects,
+        "project_alerts": project_alerts,
     }
 
 
@@ -86,6 +107,22 @@ def _daily_plan(state: dict) -> list[dict]:
             "do": f"Factura {_count(len(state['unbilled']), 'trabajo ya hecho', 'trabajos ya hechos')} ({names}).",
             "why": "Trabajo terminado sin factura: es donde más dinero se escapa sin que te des cuenta.",
         })
+    if state.get("project_alerts"):
+        project = state["project_alerts"][0]
+        reason = project["alert_reason"]
+        if reason == "presupuesto_superado":
+            do = (
+                f"Revisa {project['name']}: supera el presupuesto en "
+                f"{_eur(abs(project['margin']))}."
+            )
+            why = "Las horas y los gastos conectados ya han consumido todo el margen."
+        elif reason == "coste_hora_incompleto":
+            do = f"Completa el coste por hora del equipo en {project['name']}."
+            why = "Hay horas fichadas, pero sin ese coste el margen no sería fiable."
+        else:
+            do = f"Revisa el ritmo de gasto de {project['name']}."
+            why = "El coste va por delante del avance registrado del proyecto."
+        plan.append({"topic": "proyectos", "do": do, "why": why})
     if state["agenda"]:
         plan.append({
             "topic": "agenda",
@@ -162,6 +199,7 @@ _TOPIC_PAGE = {
     "cobros": "cobros", "facturas": "facturas", "agenda": "agenda",
     "presupuestos": "presupuestos", "crm": "crm", "gestoria": "documentos",
     "documentos": "documentos", "pagos": "costes", "costes": "costes",
+    "proyectos": "proyectos",
 }
 _TOPIC_ACTION = {
     "cobros": "Revisar cobros", "facturas": "Ver facturas",
@@ -169,6 +207,7 @@ _TOPIC_ACTION = {
     "crm": "Ver posibles clientes", "gestoria": "Ir a Documentos",
     "documentos": "Revisar documentos", "pagos": "Facturas de proveedor",
     "costes": "Revisar gastos",
+    "proyectos": "Revisar proyecto",
 }
 
 
@@ -210,7 +249,7 @@ def _compose_briefing(business_id: int) -> dict:
     on_track = len(plan) == 1 and plan[0]["topic"] == "orden"
     has_activity = bool(
         billing.get("invoiced") or state["pending"] or state["agenda"]
-        or state["clients"] or state["unbilled"]
+        or state["clients"] or state["unbilled"] or state["projects"]
     )
 
     items = []

@@ -13,6 +13,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import secrets
 import urllib.error
 import urllib.request
@@ -128,37 +129,137 @@ def _try_worker_link(from_phone: str, text: str) -> dict | None:
     }
 
 
+def _worker_plan_reply(worker: dict) -> str:
+    """Parte operativo breve para el trabajador, sin datos financieros."""
+    business_id = worker["business_id"]
+    today = datetime.now().strftime("%Y-%m-%d")
+    jobs = db.jobs_for_worker(worker["id"], business_id, day=today)
+    tasks = db.project_tasks_for_worker(worker["id"], business_id)
+    lines = [f"Tu parte de hoy, {worker['name']}:"]
+    if jobs:
+        lines.append("\nTrabajos:")
+        for job in jobs[:8]:
+            hour = (
+                str(job.get("scheduled_for") or "")[11:16]
+                if "T" in str(job.get("scheduled_for") or "") else "sin hora"
+            )
+            project = (
+                f" · {job['project_name']}" if job.get("project_name") else ""
+            )
+            lines.append(
+                f"• #{job['id']} · {hour} · {job.get('client_name') or 'Cliente'}"
+                f"{project}: {job['description']}"
+            )
+    else:
+        lines.append("\nNo tienes trabajos asignados hoy.")
+    if tasks:
+        lines.append("\nTareas pendientes:")
+        for task in tasks[:8]:
+            state = {
+                "en_curso": "en curso", "bloqueada": "bloqueada"
+            }.get(task["status"], "pendiente")
+            lines.append(
+                f"• T{task['id']} · {task['project_name']} · {state}: "
+                f"{task['title']}"
+            )
+        lines.append("Responde HECHO Tn, EMPEZAR Tn o BLOQUEAR Tn.")
+    else:
+        lines.append("\nNo tienes tareas de proyecto pendientes.")
+    if jobs:
+        lines.append("Para fichar un trabajo: ENTRADA #n.")
+    return "\n".join(lines)
+
+
 def _try_worker_clock(from_phone: str, text: str) -> dict | None:
+    """Fichaje y parte de campo por WhatsApp para una persona vinculada."""
     worker = db.get_worker_by_phone(from_phone)
     if not worker:
         return None
-    action = (text or "").strip().lower()
-    if action not in {"entrada", "salida", "pausa", "reanudar"}:
-        if db.get_business_by_phone(from_phone):
-            return None
+    normalized = (text or "").strip().lower().replace("#", "")
+    if normalized in {"hoy", "mis trabajos", "trabajos", "mis tareas", "tareas"}:
         return {
             "business_id": worker["business_id"],
             "worker_id": worker["id"],
-            "reply": "Para fichar escribe ENTRADA, PAUSA, REANUDAR o SALIDA.",
+            "reply": _worker_plan_reply(worker),
             "clocked": False,
+            "plan": True,
         }
-    try:
-        clockin = db.clock_worker(
-            worker["business_id"], worker["id"], action, "whatsapp"
+
+    task_match = re.fullmatch(
+        r"(?:hecho|hecha|empezar|bloquear|bloqueada)\s+t?\s*(\d+)",
+        normalized,
+    )
+    if task_match:
+        verb = normalized.split()[0]
+        status = {
+            "hecho": "hecha", "hecha": "hecha", "empezar": "en_curso",
+            "bloquear": "bloqueada", "bloqueada": "bloqueada",
+        }[verb]
+        try:
+            task = db.update_project_task(
+                int(task_match.group(1)),
+                business_id=worker["business_id"],
+                status=status,
+                actor_worker_id=worker["id"],
+            )
+        except ValueError as exc:
+            reply = str(exc)
+            task = None
+        else:
+            reply = (
+                f"Tarea T{task['id']} actualizada a "
+                f"{task['status'].replace('_', ' ')}: {task['title']}."
+                if task else "Esa tarea no es tuya o ya no existe."
+            )
+        return {
+            "business_id": worker["business_id"],
+            "worker_id": worker["id"],
+            "reply": reply,
+            "clocked": False,
+            "task_updated": bool(task),
+        }
+
+    clock_match = re.fullmatch(
+        r"(entrada|salida|pausa|reanudar)(?:\s+(?:trabajo\s*)?(\d+))?",
+        normalized,
+    )
+    if clock_match:
+        action = clock_match.group(1)
+        job_id = int(clock_match.group(2)) if clock_match.group(2) else None
+        try:
+            clockin = db.clock_worker(
+                worker["business_id"], worker["id"], action, "whatsapp",
+                job_id=job_id,
+            )
+        except ValueError as exc:
+            return {
+                "business_id": worker["business_id"],
+                "worker_id": worker["id"],
+                "reply": str(exc),
+                "clocked": False,
+            }
+        hour = str(clockin["at"])[11:16]
+        linked = (
+            f" en el trabajo #{clockin['job_id']}"
+            if clockin.get("job_id") else ""
         )
-    except ValueError as exc:
         return {
             "business_id": worker["business_id"],
             "worker_id": worker["id"],
-            "reply": str(exc),
-            "clocked": False,
+            "reply": f"{action.capitalize()} registrada a las {hour}{linked}.",
+            "clocked": True,
         }
-    hour = str(clockin["at"])[11:16]
+
+    if db.get_business_by_phone(from_phone):
+        return None
     return {
         "business_id": worker["business_id"],
         "worker_id": worker["id"],
-        "reply": f"{action.capitalize()} registrada a las {hour}.",
-        "clocked": True,
+        "reply": (
+            "Escribe HOY para ver tu parte; ENTRADA, PAUSA, REANUDAR o SALIDA "
+            "para fichar; y HECHO Tn para cerrar una tarea."
+        ),
+        "clocked": False,
     }
 
 

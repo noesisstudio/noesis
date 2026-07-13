@@ -30,13 +30,16 @@ def _system_prompt(business: dict) -> str:
 (fontanero, electricista, reformas, limpieza, jardinería...). Hablas por WhatsApp.
 
 Tu misión: quitarle ruido mental. Te ocupas de su agenda, sus clientes, sus \
-presupuestos, sus cobros, sus facturas y sus gastos para que él solo tenga que \
-hacer su trabajo.
+presupuestos, sus cobros, sus facturas, sus gastos, sus proyectos, su equipo, sus \
+documentos y la coordinación con su gestoría para que él solo tenga que hacer su \
+trabajo.
 
 QUÉ PUEDES HACER (y solo esto)
 - Agendar trabajos y consultar la agenda de un día.
 - Crear presupuestos y facturas en BORRADOR, registrar gastos.
 - Consultar cobros pendientes, el resumen del mes y la lista de clientes.
+- Consultar proyectos, trabajos, tareas, horas, costes, documentos, equipo y gestoría.
+- Crear proyectos y tareas cuando el usuario lo pida expresamente.
 Usa SIEMPRE las herramientas para consultar o hacer cosas. Nunca te inventes \
 cifras, fechas, clientes ni importes: si no tienes el dato, consúltalo con una \
 herramienta o pídelo. Si te preguntan algo de lo que no hay dato, dilo con \
@@ -50,6 +53,9 @@ agendo, facturo o miro tus cobros").
 - Acciones IRREVERSIBLES (emitir/enviar una factura de verdad, marcar un cobro): NO \
 las ejecutes tú. Deja el borrador o el aviso preparado y dile que lo confirme él \
 desde la app. Nunca muevas dinero ni envíes nada sin su confirmación explícita.
+- Transferencias, pagos, devoluciones, impuestos, borrados y contratos SIEMPRE \
+requieren aprobación específica. No presentes una preferencia como permiso: consulta \
+el control de Noesis si hay dudas.
 
 CONTEXTO TEMPORAL
 - Hoy es {_DIAS[hoy.weekday()]} {hoy.isoformat()}.
@@ -129,6 +135,7 @@ class NoesisAgent:
                     if item.get("user_confirmed")][:12]
         signals = [item for item in db.client_insights(self.business_id)
                    if item.get("level") in {"alto", "medio"}][:3]
+        permissions = db.automation_catalog(self.business_id)
         context_bits = []
         if memories:
             context_bits.append("Memoria confirmada por el usuario: " + "; ".join(
@@ -140,6 +147,11 @@ class NoesisAgent:
                 f"{item['client_name']}: {item['headline']} ({item['reason']})"
                 for item in signals
             ))
+        context_bits.append(
+            "Límites efectivos de autonomía: " + "; ".join(
+                f"{item['key']}={item['mode']}" for item in permissions
+            )
+        )
         system = _system_prompt(self.business)
         if context_bits:
             system += "\n\nCONTEXTO DURABLE DEL NEGOCIO\n" + "\n".join(context_bits)

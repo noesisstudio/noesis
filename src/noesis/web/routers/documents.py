@@ -30,6 +30,7 @@ def api_ocr_status(business_id: int):
 async def api_upload_document(business_id: int, file: UploadFile = File(...),
                               kind: str = Form("documento"),
                               client_id: str = Form(""), invoice_id: str = Form(""),
+                              project_id: str = Form(""),
                               note: str = Form("")):
     from ...documents import service as docservice
     # Lectura ACOTADA: nunca cargamos en memoria más de lo permitido. Sin este tope,
@@ -51,7 +52,8 @@ async def api_upload_document(business_id: int, file: UploadFile = File(...),
     try:
         doc = docservice.upload(business_id, file.filename or "documento", data,
                                 kind=kind, client_id=_opt_int(client_id),
-                                invoice_id=_opt_int(invoice_id), note=note or None,
+                                invoice_id=_opt_int(invoice_id),
+                                project_id=_opt_int(project_id), note=note or None,
                                 auto_classify=True)
     except docservice.UploadError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
