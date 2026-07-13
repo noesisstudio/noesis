@@ -75,6 +75,8 @@ async function load() {
       <div><b>${esc(item.client_name)} · ${esc(item.headline)}</b>
         <p>${esc(item.reason)}</p>
         ${item.confidence ? `<small>${item.confidence}% de confianza · ${item.evidence_count} datos observados</small>` : '<small>Sin historial suficiente</small>'}
+        <small class="client-observed">${item.average_payment_days==null?'Sin ritmo de pago suficiente':`Suele pagar en ${item.average_payment_days} días`} · ${item.quote_acceptance_pct==null?'Sin presupuestos decididos':`Acepta ${item.quote_acceptance_pct}% de los presupuestos`} · Margen directo conocido ${eur(item.known_margin)}</small>
+        ${item.preferences?.source?`<small class="client-confirmed">Confirmado por ti: ${esc(item.preferences.preferred_channel||'canal sin indicar')}${item.preferences.preferred_contact_window?' · '+esc(item.preferences.preferred_contact_window):''}${item.preferences.payment_terms_days!=null?' · paga a '+item.preferences.payment_terms_days+' días':''}</small>`:''}
       </div>
       <button class="btn sm" onclick="noesisDrawer(true);noesisSend(decodeURIComponent('${ask}'))">Preguntar</button>
     </div>`;
@@ -100,6 +102,7 @@ async function load() {
     <td class="t-right num"><b>${eur(c.facturado)}</b></td>
     <td class="t-right table-actions">
       <button class="btn sm" onclick='sharePortal(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone||"")})' title="Enviarle su portal privado">Portal</button>
+      <button class="btn sm" onclick='clientPreferences(${c.id}, ${JSON.stringify(c.name)})' title="Cómo prefiere que le contactes">Preferencias</button>
       <button class="btn sm" onclick='edit(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone||"")}, ${JSON.stringify(c.zone||"")}, ${JSON.stringify(c.nif||"")}, ${JSON.stringify(c.address||"")}, ${JSON.stringify(c.email||"")})'>Editar</button>
       <a class="btn sm" href="/api/${BIZ}/clients/${c.id}/export" title="Descargar sus datos (RGPD)">Datos</a>
       <button class="iconbtn" title="Borrar y olvidar (RGPD)" onclick="erase(${c.id})">${TRASH}</button>
@@ -141,6 +144,33 @@ function edit(id, name, phone, zone, nif, address, email){
         address:v.address, zone:v.zone
       });
       load();
+    }
+  });
+}
+async function clientPreferences(id, name){
+  let current;
+  try { current = await api(`/clients/${id}/preferences`); }
+  catch(error) { alert(error.message); return; }
+  const ordered = (value, choices) => [
+    ...choices.filter(item => item.value === (value || '')),
+    ...choices.filter(item => item.value !== (value || ''))
+  ];
+  formModal({
+    title: `Preferencias de ${name}`,
+    submitLabel: 'Guardar preferencias',
+    fields: [
+      {name:'preferred_channel',label:'Canal preferido',options:ordered(current.preferred_channel,[
+        {value:'',label:'Sin confirmar'},{value:'whatsapp',label:'WhatsApp'},
+        {value:'telefono',label:'Teléfono'},{value:'email',label:'Email'}])},
+      {name:'preferred_contact_window',label:'Cuándo contactar',options:ordered(current.preferred_contact_window,[
+        {value:'',label:'Sin confirmar'},{value:'manana',label:'Por la mañana'},
+        {value:'tarde',label:'Por la tarde'},{value:'cualquiera',label:'Le va bien cualquier hora'}])},
+      {name:'payment_terms_days',label:'Plazo de pago acordado (días)',type:'number',value:current.payment_terms_days??'',placeholder:'30'},
+      {name:'note',label:'Algo que Noesis debe recordar',value:current.note||'',placeholder:'No llamar durante el servicio, prefiere mensajes…'}
+    ],
+    onSubmit: async values => {
+      await apiPost(`/clients/${id}/preferences`, values);
+      await load();
     }
   });
 }

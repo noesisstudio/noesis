@@ -85,14 +85,34 @@
               <small>Fichaje sin asociarlo a un trabajo concreto.</small>
             </label>
             {% for job in data.jobs %}
-              <label class="clock-job">
-                <input type="radio" name="job" value="{{ job.id }}">
-                <b>{{ job.scheduled_for[11:16] if job.scheduled_for and 'T' in job.scheduled_for else 'Sin hora' }}
-                  · {{ job.client_name or 'Cliente' }}</b>
-                <small>{{ job.description }}{% if job.client_zone or job.zone %}
-                  · {{ job.client_zone or job.zone }}{% endif %}</small>
-                {% if job.project_name %}<small class="clock-project">Proyecto · {{ job.project_name }}</small>{% endif %}
-              </label>
+              <div class="clock-job-wrap">
+                <label class="clock-job">
+                  <input type="radio" name="job" value="{{ job.id }}">
+                  <b>{{ job.scheduled_for[11:16] if job.scheduled_for and 'T' in job.scheduled_for else 'Sin hora' }}
+                    · {{ job.client_name or 'Cliente' }}</b>
+                  <small>{{ job.description }}{% if job.client_zone or job.zone %}
+                    · {{ job.client_zone or job.zone }}{% endif %}</small>
+                  {% if job.project_name %}<small class="clock-project">Proyecto · {{ job.project_name }}</small>{% endif %}
+                </label>
+                <div class="clock-field-status">
+                  {% if job.field.materials %}<span>{{ job.field.materials|length }} materiales · {{ job.field.material_cost|eur }}</span>{% endif %}
+                  {% if job.field.updates %}<span>{{ job.field.updates|length }} notas o evidencias</span>{% endif %}
+                  {% if job.field.completion %}
+                    <span class="badge {{ 'b-green' if job.field.completion.status == 'confirmado' else 'b-amber' }}">
+                      {{ 'Confirmado' if job.field.completion.status == 'confirmado' else 'Cierre enviado' }}
+                    </span>
+                    {% if job.field.completion.invoice_id %}<span>Borrador de factura preparado</span>{% endif %}
+                  {% endif %}
+                </div>
+                <div class="clock-field-actions">
+                  <button class="btn sm" type="button" onclick='openField({{ job.id }}, "material", {{ job.description|tojson }})'>Material</button>
+                  <button class="btn sm" type="button" onclick='openField({{ job.id }}, "update", {{ job.description|tojson }})'>Nota o incidencia</button>
+                  <button class="btn sm" type="button" onclick='openField({{ job.id }}, "photo", {{ job.description|tojson }})'>Foto</button>
+                  {% if not job.field.completion %}
+                    <button class="btn sm primary" type="button" onclick='openField({{ job.id }}, "complete", {{ job.description|tojson }})'>Cerrar trabajo</button>
+                  {% endif %}
+                </div>
+              </div>
             {% endfor %}
           {% else %}
             <div class="empty">No tienes trabajos asignados para hoy.</div>
@@ -125,6 +145,22 @@
           {% endif %}
           <div class="clock-message" id="task-message" role="status"></div>
         </section>
+
+        <dialog class="field-dialog" id="field-dialog">
+          <form id="field-form">
+            <div class="modal-h">
+              <div><div class="kicker">Parte del trabajo</div><h2 id="field-title">Añadir</h2></div>
+              <button class="iconbtn" type="button" aria-label="Cerrar" onclick="closeField()">×</button>
+            </div>
+            <p class="muted" id="field-job"></p>
+            <div id="field-fields"></div>
+            <div class="clock-message" id="field-message" role="status"></div>
+            <div class="field-dialog-actions">
+              <button class="btn" type="button" onclick="closeField()">Cancelar</button>
+              <button class="btn primary" id="field-submit" type="submit">Guardar</button>
+            </div>
+          </form>
+        </dialog>
 
         <section class="clock-card">
           <div class="kicker">Mi historial · últimos 30 días</div>
@@ -295,6 +331,102 @@ async function updateTask(taskId, status) {
     setTimeout(() => location.reload(), 900);
   }
 }
+
+let fieldState = null;
+function fieldControl(name, label, type='text', extra='') {
+  return `<label class="fld" for="field-${name}">${label}</label>
+    <input class="input" id="field-${name}" name="${name}" type="${type}" ${extra}>`;
+}
+function openField(jobId, mode, description) {
+  const dialog = document.getElementById('field-dialog');
+  const fields = document.getElementById('field-fields');
+  const titles = {material:'Añadir material', update:'Dejar nota o incidencia',
+    photo:'Añadir foto', complete:'Cerrar trabajo'};
+  fieldState = {jobId, mode};
+  document.getElementById('field-title').textContent = titles[mode];
+  document.getElementById('field-job').textContent = description;
+  document.getElementById('field-message').className = 'clock-message';
+  document.getElementById('field-message').textContent = '';
+  if (mode === 'material') fields.innerHTML =
+    fieldControl('description','Material','','maxlength="240" required placeholder="Tubo, grifo, cable…"') +
+    fieldControl('quantity','Cantidad','number','min="0.01" step="0.01" value="1" required') +
+    fieldControl('unit_cost','Coste por unidad','number','min="0" step="0.01" value="0" required');
+  if (mode === 'update') fields.innerHTML = `<label class="fld" for="field-kind">Tipo</label>
+    <select class="input" id="field-kind" name="kind"><option value="nota">Nota</option>
+      <option value="incidencia">Incidencia</option></select>
+    <label class="fld" for="field-body">Qué ha pasado</label>
+    <textarea class="input" id="field-body" name="body" rows="4" maxlength="2000" required
+      placeholder="Explícalo para que la empresa lo tenga ordenado"></textarea>`;
+  if (mode === 'photo') fields.innerHTML = `${fieldControl('file','Foto','file','accept="image/*" capture="environment" required')}
+    <label class="fld" for="field-note">Qué muestra (opcional)</label>
+    <textarea class="input" id="field-note" name="note" rows="2" maxlength="500"
+      placeholder="Antes de empezar, resultado final, incidencia…"></textarea>`;
+  if (mode === 'complete') {
+    fields.innerHTML = `<label class="fld" for="field-summary">Resumen de lo realizado</label>
+      <textarea class="input" id="field-summary" name="summary" rows="4" maxlength="2000"
+        placeholder="Qué se ha hecho y qué queda pendiente"></textarea>
+      <div class="field-sign-box"><b>Conformidad presencial (opcional)</b>
+        <p>Si el cliente firma ahora, quedará confirmado. Si no, podrá confirmarlo desde su portal.</p>
+        ${fieldControl('customer_name','Nombre del cliente','','maxlength="160" autocomplete="name"')}
+        <label class="fld">Firma</label><canvas id="field-signature" class="field-signature"
+          width="620" height="150" aria-label="Espacio para firmar"></canvas>
+        <button class="btn sm" type="button" onclick="clearFieldSignature()">Borrar firma</button></div>`;
+    setupFieldSignature();
+  }
+  dialog.showModal();
+  fields.querySelector('input,textarea,select')?.focus();
+}
+function closeField() {
+  document.getElementById('field-dialog').close();
+  fieldState = null;
+}
+function setupFieldSignature() {
+  const canvas = document.getElementById('field-signature');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d'); let drawing = false;
+  ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#15211c';
+  const point = event => { const rect=canvas.getBoundingClientRect(); return {
+    x:(event.clientX-rect.left)*(canvas.width/rect.width),
+    y:(event.clientY-rect.top)*(canvas.height/rect.height)}; };
+  canvas.onpointerdown = event => { drawing=true; canvas.setPointerCapture(event.pointerId);
+    const p=point(event);ctx.beginPath();ctx.moveTo(p.x,p.y);canvas.dataset.signed='1'; };
+  canvas.onpointermove = event => { if(!drawing)return;const p=point(event);ctx.lineTo(p.x,p.y);ctx.stroke(); };
+  canvas.onpointerup = canvas.onpointercancel = () => { drawing=false; };
+}
+function clearFieldSignature() {
+  const canvas=document.getElementById('field-signature'); if(!canvas)return;
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);delete canvas.dataset.signed;
+}
+document.getElementById('field-form')?.addEventListener('submit', async event => {
+  event.preventDefault(); if(!fieldState)return;
+  const form=event.currentTarget, data=new FormData(form), message=document.getElementById('field-message');
+  const submit=document.getElementById('field-submit'); submit.disabled=true;
+  message.className='clock-message warn';message.textContent='Guardando…';
+  let path=`${tokenPath}/jobs/${fieldState.jobId}/`, options;
+  if(fieldState.mode==='photo'){
+    path+='photos';options={method:'POST',body:data};
+  } else {
+    let body={}; data.forEach((value,key)=>body[key]=value);
+    if(fieldState.mode==='material') path+='materials';
+    if(fieldState.mode==='update') path+='updates';
+    if(fieldState.mode==='complete'){
+      path+='complete'; const canvas=document.getElementById('field-signature');
+      body.signature_data=canvas?.dataset.signed?canvas.toDataURL('image/png'):null;
+      if(body.signature_data && !String(body.customer_name||'').trim()){
+        message.className='clock-message error';message.textContent='Escribe el nombre del cliente que firma.';
+        submit.disabled=false;return;
+      }
+    }
+    options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
+  }
+  try{
+    const response=await fetch(path,options), result=await response.json();
+    if(!response.ok)throw new Error(result.error||'No se pudo guardar.');
+    message.className='clock-message ok';
+    message.textContent=fieldState.mode==='complete'?'Trabajo cerrado. Noesis ha preparado la factura si tenía importe.':'Guardado.';
+    setTimeout(()=>location.reload(),900);
+  }catch(error){message.className='clock-message error';message.textContent=error.message;submit.disabled=false;}
+});
 </script>
 {% endif %}
 </body>

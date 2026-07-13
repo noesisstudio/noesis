@@ -135,6 +135,30 @@ async def api_assign_job_project(business_id: int, job_id: int, request: Request
     return job
 
 
+@router.get("/api/{business_id}/jobs/{job_id}/field")
+def api_job_field(business_id: int, job_id: int):
+    data = db.job_field_view(job_id, business_id)
+    if not data:
+        return JSONResponse({"error": "Trabajo no encontrado."}, status_code=404)
+    return data
+
+
+@router.post("/api/{business_id}/jobs/{job_id}/invoice-draft", status_code=201)
+async def api_job_invoice_draft(
+    business_id: int, job_id: int, request: Request
+):
+    body, error = await _body(request)
+    if error:
+        return error
+    try:
+        return db.prepare_job_invoice_draft(
+            job_id, business_id, base=body.get("base"),
+            vat_rate=body.get("vat_rate"), irpf_rate=body.get("irpf_rate"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
 @router.post("/api/{business_id}/projects/{project_id}/tasks", status_code=201)
 async def api_add_project_task(business_id: int, project_id: int, request: Request):
     body, error = await _body(request)

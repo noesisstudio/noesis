@@ -6,7 +6,7 @@ import hashlib
 import json
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from ... import db
@@ -14,6 +14,11 @@ from .. import auth
 from ..deps import TEMPLATES, _read_json
 
 router = APIRouter()
+
+
+def _signer_ip_hash(request: Request, token: str) -> str:
+    value = f"{token}:{auth.client_ip(request)}".encode()
+    return hashlib.sha256(value).hexdigest()
 
 # ====================================================== PORTAL DEL CLIENTE === #
 # Enlace privado SIN contraseña (estilo "client hub" de Jobber). Es público a
@@ -74,6 +79,30 @@ def portal_reject_quote(request: Request, token: str, quote_id: int):
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
     db.reject_quote(quote_id, ref["business_id"])
     return RedirectResponse(f"/p/{token}?ok=rechazado", status_code=303)
+
+
+@router.post("/p/{token}/jobs/{job_id}/completion")
+async def portal_confirm_job(request: Request, token: str, job_id: int):
+    if _token_scan_blocked(request, "portal"):
+        return JSONResponse({"error": "Espera unos minutos."}, status_code=429)
+    ref = db.resolve_portal_token(token)
+    if not ref:
+        _record_token_miss(request, "portal")
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    try:
+        body = await _read_json(request)
+        result = db.confirm_job_completion(
+            job_id, ref["client_id"], business_id=ref["business_id"],
+            accepted=bool(body.get("accepted")),
+            customer_name=body.get("customer_name"),
+            customer_note=body.get("customer_note"),
+            signature_data=body.get("signature_data"),
+            signer_ip_hash=_signer_ip_hash(request, token),
+            signer_user_agent=request.headers.get("user-agent"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "completion": result}
 
 
 @router.get("/p/{token}/invoices/{invoice_id}/pdf")
@@ -203,6 +232,20 @@ def _worker_portal_context(request: Request, token: str) -> dict:
     logo = None
     if business.get("logo_data") and business.get("logo_mime"):
         logo = f"data:{business['logo_mime']};base64,{business['logo_data']}"
+    jobs = (
+        db.jobs_for_worker(worker["id"], business["id"], date.today().isoformat())
+        if unlocked else []
+    )
+    for job in jobs:
+        field = db.job_field_view(job["id"], business["id"]) or {}
+        completion = dict(field.get("completion") or {})
+        completion.pop("signature_data", None)
+        job["field"] = {
+            "materials": field.get("materials", []),
+            "material_cost": field.get("material_cost", 0),
+            "updates": field.get("updates", []),
+            "completion": completion or None,
+        }
     data = {
         "worker": safe_worker,
         "business": {
@@ -213,10 +256,7 @@ def _worker_portal_context(request: Request, token: str) -> dict:
         },
         "pin_required": pin_required,
         "unlocked": unlocked,
-        "jobs": (
-            db.jobs_for_worker(worker["id"], business["id"], date.today().isoformat())
-            if unlocked else []
-        ),
+        "jobs": jobs,
         "tasks": (
             db.project_tasks_for_worker(worker["id"], business["id"])
             if unlocked else []
@@ -356,3 +396,114 @@ async def worker_portal_task(
     if not task:
         return JSONResponse({"error": "Tarea no encontrada."}, status_code=404)
     return {"ok": True, "task": task}
+
+
+def _worker_ref(request: Request, token: str):
+    ref = db.resolve_worker_token(token)
+    if not ref:
+        return None, JSONResponse(
+            {"error": "Enlace no válido o caducado."}, status_code=404
+        )
+    if ref["worker"].get("pin_hash") and not _worker_token_verified(request, token):
+        return None, JSONResponse(
+            {"error": "Introduce tu PIN primero."}, status_code=403
+        )
+    return ref, None
+
+
+@router.post("/t/{token}/jobs/{job_id}/materials")
+async def worker_job_material(request: Request, token: str, job_id: int):
+    ref, error = _worker_ref(request, token)
+    if error:
+        return error
+    try:
+        body = await _read_json(request)
+        material = db.add_job_material(
+            job_id, body.get("description"), body.get("quantity"),
+            body.get("unit_cost"), business_id=ref["business"]["id"],
+            worker_id=ref["worker"]["id"],
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "material": material}
+
+
+@router.post("/t/{token}/jobs/{job_id}/updates")
+async def worker_job_update(request: Request, token: str, job_id: int):
+    ref, error = _worker_ref(request, token)
+    if error:
+        return error
+    try:
+        body = await _read_json(request)
+        update = db.add_job_update(
+            job_id, body.get("kind"), body.get("body"),
+            business_id=ref["business"]["id"],
+            worker_id=ref["worker"]["id"],
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "update": update}
+
+
+@router.post("/t/{token}/jobs/{job_id}/photos")
+async def worker_job_photo(
+    request: Request, token: str, job_id: int,
+    file: UploadFile = File(...), note: str = Form(""),
+):
+    ref, error = _worker_ref(request, token)
+    if error:
+        return error
+    from ... import config
+    from ...documents import service as docservice
+
+    max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
+    payload = await file.read(max_bytes + 1)
+    if len(payload) > max_bytes:
+        return JSONResponse(
+            {"error": f"La foto supera el límite de {config.MAX_UPLOAD_MB} MB."},
+            status_code=413,
+        )
+    job = db.get_job(job_id, ref["business"]["id"])
+    if not job:
+        return JSONResponse({"error": "Trabajo no encontrado."}, status_code=404)
+    try:
+        document = docservice.upload(
+            ref["business"]["id"], file.filename or "evidencia.jpg", payload,
+            client_id=job.get("client_id"), project_id=job.get("project_id"),
+            note=note, run_ocr=False,
+        )
+        update = db.add_job_update(
+            job_id, "foto", note, business_id=ref["business"]["id"],
+            worker_id=ref["worker"]["id"], document_id=document["id"],
+        )
+    except (docservice.UploadError, TypeError, ValueError) as exc:
+        if "document" in locals():
+            docservice.delete(ref["business"]["id"], document["id"])
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "update": update}
+
+
+@router.post("/t/{token}/jobs/{job_id}/complete")
+async def worker_job_complete(request: Request, token: str, job_id: int):
+    ref, error = _worker_ref(request, token)
+    if error:
+        return error
+    try:
+        body = await _read_json(request)
+        signature_data = body.get("signature_data")
+        completion = db.complete_job(
+            job_id, business_id=ref["business"]["id"],
+            worker_id=ref["worker"]["id"], summary=body.get("summary"),
+            customer_name=body.get("customer_name"),
+            signature_data=signature_data,
+            source="presencial" if signature_data else "trabajador",
+            signer_ip_hash=(
+                _signer_ip_hash(request, token) if signature_data else None
+            ),
+            signer_user_agent=request.headers.get("user-agent"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    safe = dict(completion)
+    safe.pop("signature_data", None)
+    return {"ok": True, "completion": safe}

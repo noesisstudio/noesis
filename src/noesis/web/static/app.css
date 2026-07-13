@@ -490,6 +490,8 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .client-signal:last-child { border-bottom:0; }
 .client-signal p { margin:4px 0 3px; color:var(--muted); font-size:13px; line-height:1.45; }
 .client-signal small { color:var(--faint); font-size:11px; }
+.client-signal .client-observed { display:block; margin-top:5px; line-height:1.45; }
+.client-signal .client-confirmed { display:block; color:var(--brand); margin-top:4px; }
 @media (max-width:600px) {
   .client-signal { grid-template-columns:auto 1fr; }
   .client-signal .btn { grid-column:2; justify-self:start; }
@@ -1088,6 +1090,34 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .clock-job b { font-size:13.5px; }
 .clock-job small { display:block; color:var(--muted); margin:3px 0 0 23px; }
 .clock-job .clock-project { color:var(--brand); font-weight:700; }
+.clock-job-wrap { border-bottom:1px solid var(--border); padding-bottom:12px; }
+.clock-job-wrap:last-child { border-bottom:0; padding-bottom:0; }
+.clock-field-status { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px;
+  color:var(--muted); font-size:11.5px; margin:7px 4px 0; }
+.clock-field-actions { display:flex; flex-wrap:wrap; gap:7px; margin:8px 4px 0; }
+.clock-field-actions .btn { min-height:34px; }
+.field-dialog { width:min(520px, calc(100% - 22px)); max-height:90vh; padding:0;
+  border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 70px rgba(20,36,30,.2); }
+.field-dialog::backdrop { background:rgba(15,31,26,.45); }
+.field-dialog form { padding:18px; overflow-y:auto; max-height:calc(90vh - 36px); }
+.field-dialog .modal-h { padding:0 0 10px; }
+.field-dialog .fld { display:block; margin-top:12px; }
+.field-dialog-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:16px; }
+.field-sign-box { margin-top:16px; padding:13px; border:1px solid var(--border);
+  border-radius:12px; background:var(--surface-2); }
+.field-sign-box > p { color:var(--muted); font-size:12px; line-height:1.45; margin:4px 0; }
+.field-signature { width:100%; height:150px; background:#fff; border:1px solid var(--border-strong);
+  border-radius:10px; display:block; margin:6px 0 9px; touch-action:none; }
+.project-job-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+.job-field-modal { width:min(680px, calc(100% - 24px)); }
+.job-field-modal .modal-b { max-height:72vh; overflow-y:auto; }
+.job-field-modal h3 { font-size:13px; color:var(--muted); margin:20px 0 4px; }
+.job-field-total { display:flex; justify-content:space-between; align-items:center;
+  padding:12px 14px; border-radius:11px; background:var(--brand-soft); color:var(--brand-ink); }
+.job-close-box { display:flex; flex-direction:column; align-items:flex-start; gap:9px;
+  padding:13px; border:1px solid var(--border); border-radius:11px; background:var(--surface-2); }
+.job-close-box p { margin:0; line-height:1.5; }
+.job-close-box small { color:var(--muted); }
 .clock-task-list { margin-top:8px; }
 .clock-task { display:grid; grid-template-columns:minmax(0,1fr) 120px; gap:12px;
   align-items:center; padding:12px 0; border-top:1px solid var(--border); }

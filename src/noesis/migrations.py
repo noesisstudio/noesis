@@ -1951,6 +1951,159 @@ def _downgrade_gestoria_deliveries(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS gestoria_deliveries")
 
 
+def _upgrade_field_work_close(conn) -> None:
+    """Cierra cada trabajo con costes, evidencias, conformidad y factura borrador.
+
+    Son registros operativos separados del fichaje legal: nunca se reescribe la
+    jornada para cuadrar el cierre de un trabajo.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS job_materials (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL,
+    job_id      {t["ref"]} NOT NULL,
+    worker_id   {t["ref"]},
+    description TEXT NOT NULL,
+    quantity    {t["real"]} NOT NULL DEFAULT 1,
+    unit_cost   {t["real"]} NOT NULL DEFAULT 0,
+    total       {t["real"]} NOT NULL DEFAULT 0,
+    created_at  {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_job_materials_job
+    ON job_materials(business_id, job_id, created_at);
+
+CREATE TABLE IF NOT EXISTS job_updates (
+    id          {t["id"]},
+    business_id {t["ref"]} NOT NULL,
+    job_id      {t["ref"]} NOT NULL,
+    worker_id   {t["ref"]},
+    document_id {t["ref"]},
+    kind        TEXT NOT NULL,
+    body        TEXT,
+    created_at  {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id),
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_job_updates_job
+    ON job_updates(business_id, job_id, created_at);
+
+CREATE TABLE IF NOT EXISTS job_completions (
+    id                {t["id"]},
+    business_id       {t["ref"]} NOT NULL,
+    job_id            {t["ref"]} NOT NULL,
+    worker_id         {t["ref"]},
+    invoice_id        {t["ref"]},
+    status            TEXT NOT NULL DEFAULT 'pendiente_cliente',
+    summary           TEXT,
+    customer_name     TEXT,
+    customer_note     TEXT,
+    signature_data    TEXT,
+    signature_hash    TEXT,
+    signer_ip_hash    TEXT,
+    signer_user_agent TEXT,
+    source            TEXT NOT NULL DEFAULT 'trabajador',
+    created_at        {t["timestamp"]} NOT NULL,
+    confirmed_at      {t["timestamp"]},
+    rejected_at       {t["timestamp"]},
+    UNIQUE (business_id, job_id),
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id),
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_job_completions_status
+    ON job_completions(business_id, status, created_at);
+"""
+    )
+    if conn.dialect == "sqlite":
+        relations = {
+            "job_materials": (("job_id", "jobs"), ("worker_id", "workers")),
+            "job_updates": (
+                ("job_id", "jobs"), ("worker_id", "workers"),
+                ("document_id", "documents"),
+            ),
+            "job_completions": (
+                ("job_id", "jobs"), ("worker_id", "workers"),
+                ("invoice_id", "invoices"),
+            ),
+        }
+        for table, columns in relations.items():
+            for event in ("INSERT", "UPDATE"):
+                for column, parent in columns:
+                    conn.executescript(
+                        _sqlite_tenant_trigger(table, column, parent, event)
+                    )
+
+
+def _downgrade_field_work_close(conn) -> None:
+    for table in ("job_materials", "job_updates", "job_completions"):
+        for column in ("job_id", "worker_id", "document_id", "invoice_id"):
+            for event in ("insert", "update"):
+                conn.execute(
+                    "DROP TRIGGER IF EXISTS "
+                    f"{table}_{column}_same_business_{event}"
+                )
+    conn.execute("DROP INDEX IF EXISTS idx_job_completions_status")
+    conn.execute("DROP TABLE IF EXISTS job_completions")
+    conn.execute("DROP INDEX IF EXISTS idx_job_updates_job")
+    conn.execute("DROP TABLE IF EXISTS job_updates")
+    conn.execute("DROP INDEX IF EXISTS idx_job_materials_job")
+    conn.execute("DROP TABLE IF EXISTS job_materials")
+
+
+def _upgrade_client_preferences(conn) -> None:
+    """Preferencias confirmadas que mandan sobre cualquier patrón observado."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS client_preferences (
+    business_id             {t["ref"]} NOT NULL,
+    client_id               {t["ref"]} NOT NULL,
+    preferred_channel       TEXT,
+    preferred_contact_window TEXT,
+    payment_terms_days      INTEGER,
+    note                    TEXT,
+    source                  TEXT NOT NULL DEFAULT 'manual',
+    updated_at              {t["timestamp"]} NOT NULL,
+    PRIMARY KEY (business_id, client_id),
+    FOREIGN KEY (business_id, client_id)
+        REFERENCES clients(business_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_client_preferences_business
+    ON client_preferences(business_id, updated_at);
+"""
+    )
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "client_preferences", "client_id", "clients", event
+                )
+            )
+
+
+def _downgrade_client_preferences(conn) -> None:
+    for event in ("insert", "update"):
+        conn.execute(
+            "DROP TRIGGER IF EXISTS "
+            f"client_preferences_client_id_same_business_{event}"
+        )
+    conn.execute("DROP INDEX IF EXISTS idx_client_preferences_business")
+    conn.execute("DROP TABLE IF EXISTS client_preferences")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -1977,6 +2130,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (22, "control_autonomia", _upgrade_autonomy_control, _downgrade_autonomy_control),
     (23, "columna_operativa", _upgrade_operating_spine, _downgrade_operating_spine),
     (24, "entregas_gestoria", _upgrade_gestoria_deliveries, _downgrade_gestoria_deliveries),
+    (25, "cierre_trabajo_campo", _upgrade_field_work_close, _downgrade_field_work_close),
+    (26, "preferencias_cliente", _upgrade_client_preferences, _downgrade_client_preferences),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

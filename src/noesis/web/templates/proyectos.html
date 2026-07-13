@@ -120,7 +120,7 @@ function renderProjectDetail(){
     : `<div class="project-mini-empty">Aún no hay costes. Los fichajes y gastos vinculados aparecerán aquí solos.</div>`;
   el('pd-members').innerHTML=p.members.length?p.members.map(m=>`<div class="project-detail-row"><span><b>${esc(m.worker_name)}</b><small>${esc(m.role||'Equipo')}${m.hourly_cost?` · ${eur(m.hourly_cost)}/h`:' · falta coste por hora'}</small></span></div>`).join('')
     : `<div class="project-mini-empty">No hay nadie asignado todavía.</div>`;
-  el('pd-jobs').innerHTML=p.jobs.length?p.jobs.map(j=>`<div class="project-detail-row"><span><b>${esc(j.description)}</b><small>${dateIso(j.scheduled_for)} · ${esc(j.client_name||'Cliente')}${j.worker_name?' · '+esc(j.worker_name):' · sin asignar'}</small></span><span class="badge ${j.status==='completado'?'b-green':'b-gray'}">${esc(j.status)}</span></div>`).join('')
+  el('pd-jobs').innerHTML=p.jobs.length?p.jobs.map(j=>`<div class="project-detail-row"><span><b>${esc(j.description)}</b><small>${dateIso(j.scheduled_for)} · ${esc(j.client_name||'Cliente')}${j.worker_name?' · '+esc(j.worker_name):' · sin asignar'}</small></span><span class="project-job-actions"><span class="badge ${['hecho','completado'].includes(j.status)?'b-green':'b-gray'}">${esc(j.status)}</span><button class="btn sm" type="button" onclick="openJobField(${j.id})">Ver parte</button></span></div>`).join('')
     : `<div class="project-mini-empty">Añade el primer trabajo. Sus fichajes alimentarán las horas y el coste.</div>`;
   el('pd-tasks').innerHTML=p.tasks.length?p.tasks.map(t=>`<div class="project-detail-row"><span><b>${esc(t.title)}</b><small>${esc(t.worker_name||'Todo el equipo')}${t.due_on?' · antes del '+dateIso(t.due_on):''}${t.job_description?' · '+esc(t.job_description):''}</small></span><select class="project-task-state" aria-label="Estado de ${esc(t.title)}" onchange="saveTaskState(${t.id},this.value)"><option value="pendiente" ${t.status==='pendiente'?'selected':''}>Pendiente</option><option value="en_curso" ${t.status==='en_curso'?'selected':''}>En curso</option><option value="hecha" ${t.status==='hecha'?'selected':''}>Hecha</option><option value="bloqueada" ${t.status==='bloqueada'?'selected':''}>Bloqueada</option></select></div>`).join('')
     : `<div class="project-mini-empty">No hay tareas pendientes para el equipo.</div>`;
@@ -167,6 +167,26 @@ function addTask(){
 async function saveTaskState(taskId,status){
   try{await apiPatch(`/projects/${CURRENT_PROJECT.id}/tasks/${taskId}`,{status});CURRENT_PROJECT=await api(`/projects/${CURRENT_PROJECT.id}`);renderProjectDetail();}
   catch(e){alert(e.message);}
+}
+async function openJobField(jobId){
+  try{
+    const job=await api(`/jobs/${jobId}/field`), c=job.completion;
+    const materials=job.materials.length?job.materials.map(m=>`<div class="project-detail-row"><span><b>${esc(m.description)}</b><small>${num(m.quantity)} × ${eur(m.unit_cost)}${m.worker_name?' · '+esc(m.worker_name):''}</small></span><strong>${eur(m.total)}</strong></div>`).join('')
+      : '<div class="project-mini-empty">No se han apuntado materiales.</div>';
+    const updates=job.updates.length?job.updates.map(u=>`<div class="project-detail-row"><span><b>${u.kind==='foto'?'Foto':u.kind==='incidencia'?'Incidencia':'Nota'}</b><small>${esc(u.body||u.filename||'Evidencia')} ${u.worker_name?' · '+esc(u.worker_name):''}</small></span>${u.document_id?`<a class="btn sm" target="_blank" rel="noopener" href="/api/${BIZ}/documents/${u.document_id}/file">Ver</a>`:''}</div>`).join('')
+      : '<div class="project-mini-empty">No hay notas ni evidencias.</div>';
+    const completion=c?`<div class="job-close-box"><span class="badge ${c.status==='confirmado'?'b-green':c.status==='rechazado'?'b-red':'b-amber'}">${c.status==='confirmado'?'Confirmado por el cliente':c.status==='rechazado'?'El cliente pide revisión':'Pendiente del cliente'}</span><p>${esc(c.summary||'Trabajo marcado como terminado.')}</p>${c.customer_note?`<small>Cliente: ${esc(c.customer_note)}</small>`:''}${c.invoice_id?`<a class="btn sm" href="/b/${BIZ}/facturas">Ver borrador de factura</a>`:`<button class="btn sm primary" type="button" onclick="prepareJobInvoice(${job.id},${job.price_estimate||0})">Preparar factura</button>`}</div>`
+      : '<div class="project-mini-empty">El equipo todavía no ha cerrado este trabajo.</div>';
+    closeModal();
+    const ov=document.createElement('div');ov.className='modal-overlay';
+    ov.innerHTML=`<div class="modal job-field-modal" role="dialog" aria-modal="true"><div class="modal-h"><div><div class="kicker">Parte del trabajo</div><h2>${esc(job.description)}</h2></div><button class="iconbtn modal-x" aria-label="Cerrar">×</button></div><div class="modal-b"><div class="job-field-total"><span>Materiales apuntados</span><strong>${eur(job.material_cost)}</strong></div><h3>Materiales</h3>${materials}<h3>Notas y evidencias</h3>${updates}<h3>Cierre y factura</h3>${completion}</div></div>`;
+    document.body.appendChild(ov);ov.querySelector('.modal-x').onclick=closeModal;ov.onclick=e=>{if(e.target===ov)closeModal();};
+  }catch(error){alert(error.message);}
+}
+function prepareJobInvoice(jobId,estimated){
+  const send=async base=>{try{await apiPost(`/jobs/${jobId}/invoice-draft`,{base});closeModal();CURRENT_PROJECT=await api(`/projects/${CURRENT_PROJECT.id}`);renderProjectDetail();}catch(error){alert(error.message);}};
+  if(estimated>0){send(estimated);return;}
+  formModal({title:'Preparar factura',submitLabel:'Crear borrador',fields:[{name:'base',label:'Importe antes de impuestos',type:'number',placeholder:'0,00'}],onSubmit:v=>send(v.base)});
 }
 loadProjects();
 </script>
