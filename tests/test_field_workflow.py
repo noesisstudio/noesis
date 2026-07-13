@@ -154,16 +154,77 @@ class FieldWorkflowTestCase(unittest.TestCase):
             "confirmado",
         )
 
-    def test_migrations_25_and_26_roundtrip(self):
-        self.assertEqual(migrations.current_version(), 26)
+    def test_migrations_25_to_27_roundtrip(self):
+        self.assertEqual(migrations.current_version(), 27)
         self.assertEqual(migrations.downgrade(25), 25)
         with db.get_conn() as conn:
-            missing = conn.execute(
+            missing_preferences = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' "
                 "AND name='client_preferences'"
             ).fetchone()
-        self.assertIsNone(missing)
-        self.assertEqual(migrations.upgrade(), 26)
+            missing_integrations = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name='integration_settings'"
+            ).fetchone()
+        self.assertIsNone(missing_preferences)
+        self.assertIsNone(missing_integrations)
+        self.assertEqual(migrations.upgrade(), 27)
+
+    def test_integrations_are_controllable_and_isolated_by_business(self):
+        from unittest.mock import patch
+
+        with patch.object(config, "ANTHROPIC_API_KEY", "test-key"):
+            self.assertFalse(db.integration_enabled(
+                self.business["id"], "ai_external", available=True
+            ))
+            enabled = db.update_integration_setting(
+                self.business["id"], "ai_external", "enabled"
+            )
+            self.assertEqual(enabled["mode"], "enabled")
+            self.assertTrue(db.integration_enabled(
+                self.business["id"], "ai_external", available=True
+            ))
+            saved = db.update_integration_setting(
+                self.business["id"], "ai_external", "disabled"
+            )
+            self.assertEqual(saved["mode"], "disabled")
+            self.assertFalse(db.integration_enabled(
+                self.business["id"], "ai_external", available=True
+            ))
+            self.assertFalse(db.integration_enabled(
+                self.other["id"], "ai_external", available=True
+            ))
+
+        interested = db.update_integration_setting(
+            self.business["id"], "banking", "requested"
+        )
+        self.assertEqual(interested["mode"], "requested")
+        catalog = {item["key"]: item for item in db.integration_catalog(
+            self.business["id"]
+        )}
+        self.assertEqual(catalog["banking"]["state"], "requested")
+        self.assertEqual(
+            db.integration_setting(self.other["id"], "banking"), None
+        )
+
+    def test_operational_health_explains_business_queues(self):
+        message = db.enqueue_whatsapp_message(
+            business_id=self.business["id"], to_phone="34600111222",
+            message_type="text", text_body="Hola",
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE whatsapp_outbox SET status='failed', last_error='Meta 500' "
+                "WHERE id=? AND business_id=?",
+                (message["id"], self.business["id"]),
+            )
+        health = db.business_operational_health(self.business["id"])
+        self.assertEqual(health["level"], "error")
+        self.assertEqual(health["whatsapp"]["failed"], 1)
+        self.assertIn("classified_month", health["documents"])
+        self.assertTrue(any(
+            item["area"] == "WhatsApp" for item in health["attention"]
+        ))
 
     def test_confirmed_client_preferences_and_observed_metrics_are_explained(self):
         saved = db.update_client_preferences(

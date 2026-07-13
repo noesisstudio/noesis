@@ -2,7 +2,7 @@
 
 ## En revisión
 
-- [ ] Fusionar y desplegar `codex/field-workflow` (migraciones 25-26).
+- [ ] Fusionar y desplegar `codex/field-workflow` (migraciones 25-27).
 - [ ] Aplicar en Postgres de ensayo y hacer smoke trabajador → cliente → borrador.
 
 ## P0 — validación externa
@@ -15,8 +15,10 @@
 
 ## P1 — siguiente código común
 
-- [ ] Centro de integraciones: activar, revocar, estado, error y reconexión.
-- [ ] Observabilidad por negocio: IA, extracción, colas, latencia y correcciones.
+- [x] Centro de integraciones base: activar IA, revocar/reconectar WhatsApp, estado
+  real y registro de interés para conexiones planificadas.
+- [x] Observabilidad base por negocio: IA, extracción, colas, latencia, errores y
+  correcciones. Falta conectarla a monitorización externa dentro del P0.
 - [ ] Documentos: duplicados, HEIC/PDF escaneado, líneas, búsqueda y corrección masiva.
 - [ ] Calendario externo, recurrentes, comunicaciones y conciliación.
 - [ ] Equipo: varios trabajadores, offline, ausencias y permisos finos.

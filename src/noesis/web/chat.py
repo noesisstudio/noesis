@@ -485,7 +485,9 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
         return {"reply": nlu.format_reply(tool, result), "source": "local"}
 
     # Fallback a la IA (solo si está configurada).
-    if config.ANTHROPIC_API_KEY:
+    if config.ANTHROPIC_API_KEY and db.integration_enabled(
+        business_id, "ai_external", available=True
+    ):
         from ..agent import NoesisAgent
         with _agents_lock:
             agent = _agents.get(business_id)
@@ -515,8 +517,14 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
             else:
                 prefix += "[Explica con palabras sencillas y acompaña cada número con su significado] "
             return {"reply": agent.send(prefix + message), "source": "ia"}
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             log.exception("El proveedor de IA falló para el negocio %s.", business_id)
+            try:
+                db.record_integration_result(
+                    business_id, "ai_external", type(exc).__name__
+                )
+            except Exception:  # noqa: BLE001 - no encadenar el fallo de métrica
+                pass
             return {
                 "reply": "Ahora mismo no puedo usar la IA externa. "
                          "Las órdenes habituales siguen disponibles.",

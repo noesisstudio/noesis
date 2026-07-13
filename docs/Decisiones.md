@@ -10,6 +10,22 @@ Registro de decisiones importantes y su porqué (las más recientes arriba).
   absoluta.
 - Preferencias confirmadas prevalecen sobre patrones observados y son corregibles.
 
+## Las integraciones se eligen por negocio; lo local nunca se apaga (2026-07-13)
+
+Noesis separa capacidad interna de servicio externo. Una cuenta nueva empieza con
+la IA en la nube desactivada y puede activarla desde Ajustes; una cuenta anterior
+sin preferencia conserva el comportamiento previo para no romper su operativa. Al
+desactivarla, el cerebro de reglas, OCR y clasificación heurística continúan dentro
+del servidor. No se guardan claves de proveedor en `integration_settings`.
+
+WhatsApp, gestoría y Veri*Factu conservan sus tablas y flujos como fuente de verdad:
+el centro los resume y enlaza, no los duplica. La salud se calcula siempre con
+`business_id` y traduce colas, errores, latencia y revisiones a lenguaje humano.
+Al desconectar WhatsApp se desvincula el teléfono, se limpian confirmaciones
+pendientes y los mensajes aún no enviados quedan cancelados con trazabilidad.
+Las transferencias y movimientos bancarios siguen fuera del permiso automático;
+marcar interés en la futura conexión bancaria no autoriza ninguna operación.
+
 ## Autonomía acotada y columna operativa única (2026-07-13)
 
 Noesis hace automáticamente trabajo interno de bajo riesgo y comunicaciones que

@@ -80,6 +80,9 @@ def classify(business_id: int, doc_id: int) -> dict | None:
         data, mime, filename,
         text_hint=doc.get("ocr_text"),
         business_name=business.get("name"), business_nif=business.get("nif"),
+        allow_external=db.integration_enabled(
+            business_id, "ai_external", available=bool(config.ANTHROPIC_API_KEY)
+        ),
     )
     kind = proposal.get("kind") or "documento"
     confidence = float(proposal.get("confidence") or 0)
@@ -142,7 +145,12 @@ def invoice_draft(business_id: int, doc_id: int) -> dict | None:
     if not payload:
         return None
     data, mime, _filename = payload
-    draft = extraction.extract_invoice(data, mime)
+    draft = extraction.extract_invoice(
+        data, mime,
+        allow_external=db.integration_enabled(
+            business_id, "ai_external", available=bool(config.ANTHROPIC_API_KEY)
+        ),
+    )
     if draft is None:
         repo.set_review(doc_id, business_id, doc_status="pendiente_revisar",
                         review_note="Sin extracción automática: revisar a mano.")
