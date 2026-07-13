@@ -60,6 +60,7 @@ let view = new Date(); view.setDate(1);
 let selected = TODAY;
 let byDay = {};
 let workers = [];
+let projects = [];
 
 el('cal-wd').innerHTML = WD.map(d => `<div class="cal-wd">${d}</div>`).join('');
 
@@ -116,6 +117,12 @@ function renderDay() {
       <small>${esc(j.description||'Servicio')}${j.zone?' — '+esc(j.zone):''}</small>
       <small>${j.worker_name ? `Asignado a ${esc(j.worker_name)}` : 'Sin asignar'}</small></span>
       <span style="display:flex;align-items:center;gap:8px">
+        <select class="job-worker-select" aria-label="Vincular proyecto"
+          onchange="assignProject(${j.id}, this.value)">
+          <option value="">Sin proyecto</option>
+          ${projects.filter(p=>!p.client_id || p.client_id===j.client_id).map(p=>
+            `<option value="${p.id}" ${p.id===j.project_id?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
         <select class="job-worker-select" aria-label="Asignar trabajador"
           onchange="assignWorker(${j.id}, this.value)">
           <option value="">Sin asignar</option>
@@ -144,8 +151,15 @@ async function assignWorker(jobId, workerId) {
     await loadMonth();
   } catch (error) { alert(error.message); }
 }
+async function assignProject(jobId, projectId) {
+  try {
+    await apiPost(`/jobs/${jobId}/project`, {project_id: projectId || null});
+    await loadMonth();
+  } catch (error) { alert(error.message); }
+}
 async function initAgenda() {
   workers = await api('/workers');
+  projects = (await api('/projects')).projects;
   await loadMonth();
 }
 initAgenda();

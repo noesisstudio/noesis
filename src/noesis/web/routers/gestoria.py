@@ -92,7 +92,28 @@ def gestoria_send_now(business_id: int):
             status_code=303,
         )
     label = gestoria_service.previous_label(business["gestoria_cadence"])
+    package = gestoria_service.build_package(business_id, label)
+    if not package:
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=gestoria#gestoria",
+            status_code=303,
+        )
+    _data, meta = package
     emailed = gestoria_service.notify_gestoria(business, label)
+    if emailed:
+        db.mark_gestoria_delivery(business_id, label, "notified")
+    db.record_assistant_action(
+        business_id,
+        "send_gestoria",
+        f"Preparé el paquete {label} v{meta['version']} y "
+        + ("avisé a tu gestoría." if emailed else "dejé listo su enlace."),
+        status="executed",
+        target_type="gestoria_delivery",
+        payload={"label": label, "version": meta["version"],
+                 "emailed": bool(emailed)},
+        requested_by="user",
+        approved_by="autónomo desde Ajustes",
+    )
     db.record_product_event(
         business_id, "gestoria_send_now",
         json.dumps({"label": label, "emailed": bool(emailed)},
@@ -102,5 +123,3 @@ def gestoria_send_now(business_id: int):
     return RedirectResponse(
         f"/b/{business_id}/ajustes?ok={ok}#gestoria", status_code=303
     )
-
-

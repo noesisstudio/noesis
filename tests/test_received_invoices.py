@@ -214,16 +214,27 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
 
         from noesis.web import gestoria
 
-        db.add_received_invoice(121.0, number="F-9", issued_on="2026-06-15",
-                                business_id=self.business["id"])
+        document = docservice.upload(
+            self.business["id"], "factura-f9.pdf", b"%PDF-1.4 original",
+            kind="factura", run_ocr=False,
+        )
+        db.add_received_invoice(
+            121.0, number="F-9", issued_on="2026-06-15",
+            document_id=document["id"], business_id=self.business["id"],
+        )
         label = "2026-06"
         package = gestoria.build_package(self.business["id"], label)
         self.assertIsNotNone(package)
         payload, _meta = package
         with zipfile.ZipFile(io.BytesIO(payload)) as bundle:
             names = bundle.namelist()
-            self.assertIn("facturas-recibidas.csv", names)
-            content = bundle.read("facturas-recibidas.csv").decode("utf-8-sig")
+            csv_name = "03-facturas-recibidas/facturas-recibidas.csv"
+            self.assertIn(csv_name, names)
+            self.assertTrue(any(
+                name.startswith("03-facturas-recibidas/originales/")
+                for name in names
+            ))
+            content = bundle.read(csv_name).decode("utf-8-sig")
         self.assertIn("F-9", content)
         self.assertIn("121.0", content)
 

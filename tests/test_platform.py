@@ -6,6 +6,7 @@ import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from noesis import config, db, migrations
 from noesis.web import chat
@@ -214,6 +215,24 @@ class PlatformTestCase(unittest.TestCase):
         self.assertLessEqual({"crm", "gestoria", "documentos", "pagos"},
                              topics)
 
+    def test_daily_plan_warns_about_projects_and_respects_control(self):
+        project = db.add_project("Obra desviada", 100, business_id=self.bid)
+        db.add_project_entry(
+            project["id"], "material", "Material extra", 1, 140,
+            business_id=self.bid,
+        )
+        topics = {
+            item["topic"] for item in
+            chat._daily_plan(chat._business_state(self.bid))
+        }
+        self.assertIn("proyectos", topics)
+        db.update_automation_permission(self.bid, "project_alerts", "blocked")
+        topics = {
+            item["topic"] for item in
+            chat._daily_plan(chat._business_state(self.bid))
+        }
+        self.assertNotIn("proyectos", topics)
+
     # ------------------------------------------------------- Asistente por página
     def test_page_briefing_uses_real_data(self):
         text = chat.page_briefing(self.bid, "documentos")
@@ -315,11 +334,121 @@ class PlatformTestCase(unittest.TestCase):
                 project["id"], foreign_worker["id"], business_id=self.bid
             )
 
+    def test_operating_spine_feeds_hours_costs_tasks_and_documents(self):
+        from noesis.documents import service as docservice
+
+        client = db.add_client("Hotel Mar", business_id=self.bid)
+        worker = db.create_worker(self.bid, "Laia")
+        project = db.add_project(
+            "Reforma sala de máquinas", 2000, client_id=client["id"],
+            planned_hours=20, business_id=self.bid,
+        )
+        db.add_project_member(
+            project["id"], worker["id"], 20, "Oficial", business_id=self.bid
+        )
+        job = db.add_job(
+            client["id"], "Cambiar colector", "2026-07-13T08:00",
+            project_id=project["id"], worker_id=worker["id"],
+            business_id=self.bid,
+        )
+        with patch.object(
+            db, "_now",
+            side_effect=["2026-07-13T08:00:00", "2026-07-13T12:00:00"],
+        ):
+            db.clock_worker(
+                self.bid, worker["id"], "entrada", "web", job_id=job["id"]
+            )
+            # La salida hereda el trabajo abierto aunque el portal no lo reenvíe.
+            db.clock_worker(self.bid, worker["id"], "salida", "web")
+        db.add_expense(
+            "Válvulas", 100, project_id=project["id"], business_id=self.bid
+        )
+        task = db.add_project_task(
+            project["id"], "Probar estanqueidad", business_id=self.bid,
+            kind="checklist", worker_id=worker["id"], job_id=job["id"],
+        )
+        doc = docservice.upload(
+            self.bid, "plano.pdf", b"%PDF-1.4 plano", project_id=project["id"],
+            run_ocr=False,
+        )
+
+        detail = db.get_project(project["id"], self.bid)
+        self.assertEqual(detail["clockin_hours"], 4)
+        self.assertEqual(detail["clockin_cost"], 80)
+        self.assertEqual(detail["expense_cost"], 100)
+        self.assertEqual(detail["actual_cost"], 180)
+        self.assertEqual(detail["margin"], 1820)
+        self.assertEqual(detail["jobs"][0]["id"], job["id"])
+        self.assertEqual(detail["tasks"][0]["id"], task["id"])
+        self.assertEqual(detail["documents"][0]["id"], doc["id"])
+        self.assertEqual(
+            db.project_tasks_for_worker(worker["id"], self.bid)[0]["id"],
+            task["id"],
+        )
+        done = db.update_project_task(
+            task["id"], business_id=self.bid, status="hecha",
+            actor_worker_id=worker["id"],
+        )
+        self.assertEqual(done["status"], "hecha")
+        self.assertEqual(db.project_tasks_for_worker(worker["id"], self.bid), [])
+
+        with self.assertRaises(ValueError):
+            db.add_expense(
+                "Fuga", 1, project_id=project["id"],
+                business_id=self.other["id"],
+            )
+        with self.assertRaises(docservice.UploadError):
+            docservice.upload(
+                self.other["id"], "fuga.pdf", b"%PDF-1.4",
+                project_id=project["id"], run_ocr=False,
+            )
+
     def test_explanation_level_is_account_wide(self):
         db.update_explanation_level(self.bid, "detallado")
         self.assertEqual(db.get_business(self.bid)["explanation_level"], "detallado")
         with self.assertRaises(ValueError):
             db.update_explanation_level(self.bid, "inventado")
+
+    # ----------------------------------------------- Control de autonomía
+    def test_autonomy_defaults_protect_money_and_tax_actions(self):
+        permissions = {
+            item["key"]: item for item in db.automation_catalog(self.bid)
+        }
+        self.assertEqual(permissions["organize_documents"]["mode"], "automatic")
+        self.assertEqual(permissions["payment_reminders"]["mode"], "rules")
+        self.assertEqual(permissions["bank_transfer"]["mode"], "confirm")
+        self.assertNotIn(
+            "automatic", permissions["bank_transfer"]["allowed_modes"]
+        )
+        with self.assertRaisesRegex(ValueError, "nunca puede"):
+            db.update_automation_permission(
+                self.bid, "bank_transfer", "automatic"
+            )
+
+    def test_autonomy_is_configurable_auditable_and_isolated(self):
+        saved = db.update_automation_permission(
+            self.bid, "payment_reminders", "blocked"
+        )
+        self.assertEqual(saved["mode"], "blocked")
+        self.assertEqual(
+            db.automation_decision(self.bid, "payment_reminders")["allowed"],
+            False,
+        )
+        other = {
+            item["key"]: item for item in db.automation_catalog(self.other["id"])
+        }
+        self.assertEqual(other["payment_reminders"]["mode"], "rules")
+        action = db.record_assistant_action(
+            self.bid,
+            "payment_reminders",
+            "Preparé el segundo aviso de una factura vencida.",
+            target_type="invoice",
+            target_id=42,
+            payload={"days_overdue": 9},
+        )
+        self.assertEqual(action["risk_level"], "medium")
+        self.assertEqual(len(db.list_assistant_actions(self.bid)), 1)
+        self.assertEqual(db.list_assistant_actions(self.other["id"]), [])
 
     # ------------------------------------------------------ Memoria y señales
     def test_assistant_history_and_memory_are_durable_and_isolated(self):
@@ -384,12 +513,23 @@ class PlatformTestCase(unittest.TestCase):
         project = db.add_project("Obra", 1000, business_id=self.bid)
         db.add_project_entry(project["id"], "material", "Piezas", 1, 10,
                              business_id=self.bid)
+        db.add_project_task(
+            project["id"], "Revisar", business_id=self.bid
+        )
         db.add_assistant_message(self.bid, "user", "hola")
         db.remember(self.bid, "clave", "valor", user_confirmed=True)
+        db.update_automation_permission(
+            self.bid, "payment_reminders", "blocked"
+        )
+        db.record_assistant_action(
+            self.bid, "payment_reminders", "Aviso preparado"
+        )
         data = db.export_business_data(self.bid)
         for key in ("products", "leads", "gestoria_requests", "suppliers",
                     "received_invoices", "projects", "project_entries",
-                    "assistant_messages", "business_memories"):
+                    "project_tasks",
+                    "assistant_messages", "business_memories",
+                    "automation_permissions", "assistant_actions"):
             self.assertEqual(len(data[key]), 1, key)
         self.assertTrue(db.delete_business_cascade(self.bid))
         self.assertIsNone(db.get_business(self.bid))

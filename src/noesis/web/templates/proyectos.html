@@ -35,6 +35,10 @@
     <section class="home-panel"><header><div><span class="panel-kicker">Control</span><h2>Costes y horas</h2></div><button class="btn sm" onclick="addEntry()">Añadir</button></header><div id="pd-entries" class="project-detail-list"></div></section>
     <section class="home-panel"><header><div><span class="panel-kicker">Responsables</span><h2>Equipo asignado</h2></div><button class="btn sm" onclick="addMember()">Asignar</button></header><div id="pd-members" class="project-detail-list"></div></section>
   </div>
+  <div class="project-detail-grid" style="margin-top:14px">
+    <section class="home-panel"><header><div><span class="panel-kicker">Del calendario al margen</span><h2>Trabajos conectados</h2></div><button class="btn sm" onclick="addProjectJob()">Añadir trabajo</button></header><div id="pd-jobs" class="project-detail-list"></div></section>
+    <section class="home-panel"><header><div><span class="panel-kicker">Operativa de campo</span><h2>Tareas del equipo</h2></div><button class="btn sm" onclick="addTask()">Añadir tarea</button></header><div id="pd-tasks" class="project-detail-list"></div></section>
+  </div>
 </section>
 {% endblock %}
 
@@ -104,13 +108,22 @@ function renderProjectDetail(){
   el('pd-margin').textContent=eur(p.margin); el('pd-margin-note').textContent=p.margin<0?'Presupuesto superado':'Todavía disponible';
   el('pd-hours').textContent=num(p.actual_hours); el('pd-hours-plan').textContent=p.planned_hours?`de ${num(p.planned_hours)} previstas`:'sin previsión inicial';
   const expected=p.budget*(p.progress/100), deviation=p.actual_cost-expected;
-  el('pd-reading').textContent=p.margin<0 ? `Este proyecto supera el presupuesto en ${eur(Math.abs(p.margin))}. Revisa los últimos costes.`
+  el('pd-reading').textContent=p.missing_hourly_cost_worker_ids.length ? 'Hay horas fichadas sin coste por hora. Añádelo en Equipo asignado para que el margen sea real.'
+    : p.margin<0 ? `Este proyecto supera el presupuesto en ${eur(Math.abs(p.margin))}. Revisa los últimos costes.`
     : p.progress && deviation>p.budget*.1 ? `El gasto va ${eur(deviation)} por delante del avance. Conviene revisar materiales y horas.`
     : `Va dentro de presupuesto. Quedan ${eur(p.margin)} antes de consumir el margen disponible.`;
-  el('pd-entries').innerHTML=p.entries.length?p.entries.map(e=>`<div class="project-detail-row"><span><b>${esc(e.description)}</b><small>${e.kind==='horas'?`${num(e.quantity)} h × ${eur(e.unit_cost)}`:`${esc(e.kind)} · ${dateIso(e.entry_on)}`}${e.worker_name?' · '+esc(e.worker_name):''}</small></span><strong>${eur(e.total)}</strong></div>`).join('')
-    : `<div class="project-mini-empty">Aún no hay costes. Añade materiales, horas u otros gastos.</div>`;
-  el('pd-members').innerHTML=p.members.length?p.members.map(m=>`<div class="project-detail-row"><span><b>${esc(m.worker_name)}</b><small>${esc(m.role||'Equipo')}${m.hourly_cost?` · ${eur(m.hourly_cost)}/h`:''}</small></span></div>`).join('')
+  const automaticCosts=[];
+  if(p.clockin_hours) automaticCosts.push(`<div class="project-detail-row is-automatic"><span><b>Horas desde fichajes</b><small>${num(p.clockin_hours)} h registradas por el equipo</small></span><strong>${eur(p.clockin_cost)}</strong></div>`);
+  p.expenses.forEach(x=>automaticCosts.push(`<div class="project-detail-row is-automatic"><span><b>${esc(x.concept)}</b><small>Gasto vinculado · ${dateIso(x.spent_on)}</small></span><strong>${eur(x.amount)}</strong></div>`));
+  const manualCosts=p.entries.map(e=>`<div class="project-detail-row"><span><b>${esc(e.description)}</b><small>${e.kind==='horas'?`${num(e.quantity)} h × ${eur(e.unit_cost)}`:`${esc(e.kind)} · ${dateIso(e.entry_on)}`}${e.worker_name?' · '+esc(e.worker_name):''}</small></span><strong>${eur(e.total)}</strong></div>`);
+  el('pd-entries').innerHTML=(automaticCosts.length||manualCosts.length)?[...automaticCosts,...manualCosts].join('')
+    : `<div class="project-mini-empty">Aún no hay costes. Los fichajes y gastos vinculados aparecerán aquí solos.</div>`;
+  el('pd-members').innerHTML=p.members.length?p.members.map(m=>`<div class="project-detail-row"><span><b>${esc(m.worker_name)}</b><small>${esc(m.role||'Equipo')}${m.hourly_cost?` · ${eur(m.hourly_cost)}/h`:' · falta coste por hora'}</small></span></div>`).join('')
     : `<div class="project-mini-empty">No hay nadie asignado todavía.</div>`;
+  el('pd-jobs').innerHTML=p.jobs.length?p.jobs.map(j=>`<div class="project-detail-row"><span><b>${esc(j.description)}</b><small>${dateIso(j.scheduled_for)} · ${esc(j.client_name||'Cliente')}${j.worker_name?' · '+esc(j.worker_name):' · sin asignar'}</small></span><span class="badge ${j.status==='completado'?'b-green':'b-gray'}">${esc(j.status)}</span></div>`).join('')
+    : `<div class="project-mini-empty">Añade el primer trabajo. Sus fichajes alimentarán las horas y el coste.</div>`;
+  el('pd-tasks').innerHTML=p.tasks.length?p.tasks.map(t=>`<div class="project-detail-row"><span><b>${esc(t.title)}</b><small>${esc(t.worker_name||'Todo el equipo')}${t.due_on?' · antes del '+dateIso(t.due_on):''}${t.job_description?' · '+esc(t.job_description):''}</small></span><select class="project-task-state" aria-label="Estado de ${esc(t.title)}" onchange="saveTaskState(${t.id},this.value)"><option value="pendiente" ${t.status==='pendiente'?'selected':''}>Pendiente</option><option value="en_curso" ${t.status==='en_curso'?'selected':''}>En curso</option><option value="hecha" ${t.status==='hecha'?'selected':''}>Hecha</option><option value="bloqueada" ${t.status==='bloqueada'?'selected':''}>Bloqueada</option></select></div>`).join('')
+    : `<div class="project-mini-empty">No hay tareas pendientes para el equipo.</div>`;
 }
 
 async function saveProjectState(){ try{CURRENT_PROJECT=await apiPatch(`/projects/${CURRENT_PROJECT.id}`,{status:el('pd-status').value}); renderProjectDetail(); await loadProjects();}catch(e){alert(e.message);} }
@@ -130,6 +143,30 @@ function addMember(){
     {name:'role',label:'Función',placeholder:'Oficial, ayudante…'},
     {name:'hourly_cost',label:'Coste interno por hora',type:'number',placeholder:'22'}
   ],onSubmit:async v=>{try{CURRENT_PROJECT=await apiPost(`/projects/${CURRENT_PROJECT.id}/members`,v);renderProjectDetail();}catch(e){alert(e.message);}}});
+}
+function addProjectJob(){
+  const fields=[
+    {name:'description',label:'Qué hay que hacer',placeholder:'Instalar tubería de la planta 2'},
+    {name:'scheduled_for',label:'Día y hora',type:'datetime-local'},
+    {name:'worker_id',label:'Persona',options:[{value:'',label:'Sin asignar'},...PROJECT_WORKERS.map(w=>({value:String(w.id),label:w.name}))]},
+    {name:'price_estimate',label:'Importe previsto (opcional)',type:'number'}
+  ];
+  if(!CURRENT_PROJECT.client_id) fields.splice(1,0,{name:'client_id',label:'Cliente',options:PROJECT_CLIENTS.map(c=>({value:String(c.id),label:c.name}))});
+  formModal({title:'Añadir trabajo al proyecto',submitLabel:'Añadir trabajo',fields,onSubmit:async v=>{try{await apiPost(`/projects/${CURRENT_PROJECT.id}/jobs`,v);CURRENT_PROJECT=await api(`/projects/${CURRENT_PROJECT.id}`);renderProjectDetail();await loadProjects();}catch(e){alert(e.message);}}});
+}
+function addTask(){
+  formModal({title:'Nueva tarea del proyecto',submitLabel:'Crear tarea',fields:[
+    {name:'title',label:'Tarea',placeholder:'Comprobar presión antes de cerrar'},
+    {name:'kind',label:'Tipo',options:[{value:'tarea',label:'Tarea'},{value:'checklist',label:'Comprobación'},{value:'incidencia',label:'Incidencia'}]},
+    {name:'worker_id',label:'Responsable',options:[{value:'',label:'Todo el equipo'},...CURRENT_PROJECT.members.map(m=>({value:String(m.worker_id),label:m.worker_name}))]},
+    {name:'job_id',label:'Trabajo relacionado',options:[{value:'',label:'Proyecto general'},...CURRENT_PROJECT.jobs.map(j=>({value:String(j.id),label:j.description}))]},
+    {name:'due_on',label:'Fecha límite',type:'date'},
+    {name:'note',label:'Indicaciones',placeholder:'Qué debe comprobar o dejar anotado'}
+  ],onSubmit:async v=>{try{await apiPost(`/projects/${CURRENT_PROJECT.id}/tasks`,v);CURRENT_PROJECT=await api(`/projects/${CURRENT_PROJECT.id}`);renderProjectDetail();}catch(e){alert(e.message);}}});
+}
+async function saveTaskState(taskId,status){
+  try{await apiPatch(`/projects/${CURRENT_PROJECT.id}/tasks/${taskId}`,{status});CURRENT_PROJECT=await api(`/projects/${CURRENT_PROJECT.id}`);renderProjectDetail();}
+  catch(e){alert(e.message);}
 }
 loadProjects();
 </script>

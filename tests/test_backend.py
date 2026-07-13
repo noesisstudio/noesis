@@ -582,6 +582,20 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(nlu.parse("tengo facturas pendientes de cobrar")[0],
                          "ver_cobros_pendientes")
         self.assertEqual(nlu.parse("¿cómo voy este mes?")[0], "resumen_negocio")
+        self.assertEqual(nlu.parse("¿cómo van mis proyectos?")[0], "ver_proyectos")
+        self.assertEqual(
+            nlu.parse("¿qué documentos tengo pendientes de revisar?")[0],
+            "ver_documentos_pendientes",
+        )
+        self.assertEqual(
+            nlu.parse("¿qué puedes hacer sin preguntarme?")[0],
+            "ver_control_noesis",
+        )
+        tool, args = nlu.parse(
+            "crea proyecto reforma del baño de 8000 euros"
+        )
+        self.assertEqual(tool, "crear_proyecto")
+        self.assertEqual(args["presupuesto"], 8000)
 
     def test_invalid_tax_quarter_and_csv_formula(self):
         business, _ = self.make_business()
@@ -1143,6 +1157,23 @@ class PaymentReminderTestCase(unittest.TestCase):
                 page = client.get(f"/b/{business['id']}/ajustes")
                 self.assertEqual(page.status_code, 200)
                 self.assertIn("Recordatorios de cobro", page.text)
+                self.assertIn("Centro de control de Noesis", page.text)
+                self.assertIn("Noesis nunca mueve dinero", page.text)
+
+                permission = client.post(
+                    f"/api/{business['id']}/assistant/permissions",
+                    json={
+                        "action_key": "payment_reminders",
+                        "mode": "blocked",
+                    },
+                )
+                self.assertEqual(permission.status_code, 200)
+                self.assertEqual(permission.json()["mode"], "blocked")
+                unsafe = client.post(
+                    f"/api/{business['id']}/assistant/permissions",
+                    json={"action_key": "bank_transfer", "mode": "automatic"},
+                )
+                self.assertEqual(unsafe.status_code, 400)
 
 
 class PortalHttpTestCase(BackendTestCase):
@@ -1478,6 +1509,48 @@ class WorkerDataTestCase(unittest.TestCase):
         self.assertEqual(summary[worker["id"]]["last_action"], "salida")
         self.assertEqual(summary[worker["id"]]["last_location"]["lng"], 2.1686)
 
+    def test_worker_whatsapp_shows_plan_updates_task_and_clocks_job(self):
+        business, client = self.make_business("Parte WhatsApp")
+        worker = db.create_worker(business["id"], "Sara")
+        db.bind_worker_phone(
+            business["id"], worker["access_code"], "+34 611 555 444"
+        )
+        project = db.add_project(
+            "Reforma cocina", 4000, client_id=client["id"],
+            business_id=business["id"],
+        )
+        job = db.add_job(
+            client["id"], "Instalar tubería",
+            scheduled_for=f"{date.today().isoformat()}T08:30",
+            project_id=project["id"], worker_id=worker["id"],
+            business_id=business["id"],
+        )
+        task = db.add_project_task(
+            project["id"], "Probar presión", worker_id=worker["id"],
+            job_id=job["id"], business_id=business["id"],
+        )
+
+        plan = whatsapp._try_worker_clock("611555444", "HOY")
+        self.assertIn("Instalar tubería", plan["reply"])
+        self.assertIn("Probar presión", plan["reply"])
+        entered = whatsapp._try_worker_clock(
+            "611555444", f"ENTRADA #{job['id']}"
+        )
+        self.assertTrue(entered["clocked"])
+        self.assertEqual(
+            db.worker_open_shift(worker["id"], business["id"])["job_id"],
+            job["id"],
+        )
+        done = whatsapp._try_worker_clock(
+            "611555444", f"HECHO T{task['id']}"
+        )
+        self.assertTrue(done["task_updated"])
+        self.assertEqual(
+            db.get_project_task(task["id"], business["id"])["status"], "hecha"
+        )
+        exited = whatsapp._try_worker_clock("611555444", "SALIDA")
+        self.assertTrue(exited["clocked"])
+
 
 class WorkerPortalHttpTestCase(unittest.TestCase):
     setUp = BackendTestCase.setUp
@@ -1546,6 +1619,58 @@ class WorkerPortalHttpTestCase(unittest.TestCase):
         self.assertEqual(rows_a[0]["lat"], 40.4168)
         self.assertIsNone(rows_a[1]["lat"])
         self.assertEqual(rows_b, [])
+
+    def test_worker_sees_project_tasks_and_can_complete_only_their_own(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client_record = self.make_business("Equipo con proyectos")
+        other_business, other_client = self.make_business("Proyecto ajeno")
+        worker = db.create_worker(business["id"], "Nora")
+        other_worker = db.create_worker(other_business["id"], "Otro")
+        project = db.add_project(
+            "Instalación Hotel", 5000, client_id=client_record["id"],
+            business_id=business["id"],
+        )
+        job = db.add_job(
+            client_record["id"], "Montar colector",
+            scheduled_for=f"{date.today().isoformat()}T09:00",
+            project_id=project["id"], worker_id=worker["id"],
+            business_id=business["id"],
+        )
+        task = db.add_project_task(
+            project["id"], "Comprobar presión", business_id=business["id"],
+            worker_id=worker["id"], job_id=job["id"], kind="checklist",
+        )
+        foreign_project = db.add_project(
+            "Ajeno", 100, client_id=other_client["id"],
+            business_id=other_business["id"],
+        )
+        foreign_task = db.add_project_task(
+            foreign_project["id"], "No visible", business_id=other_business["id"],
+            worker_id=other_worker["id"],
+        )
+        token = db.get_or_create_worker_token(business["id"], worker["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                page = client.get(f"/t/{token}")
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("Instalación Hotel", page.text)
+                self.assertIn("Comprobar presión", page.text)
+                self.assertNotIn("No visible", page.text)
+                updated = client.post(
+                    f"/t/{token}/tasks/{task['id']}", json={"status": "hecha"}
+                )
+                self.assertEqual(updated.status_code, 200)
+                blocked = client.post(
+                    f"/t/{token}/tasks/{foreign_task['id']}",
+                    json={"status": "hecha"},
+                )
+                self.assertEqual(blocked.status_code, 404)
+        self.assertEqual(
+            db.get_project_task(task["id"], business["id"])["status"], "hecha"
+        )
 
     def test_worker_pin_and_durable_send_day(self):
         from starlette.testclient import TestClient
@@ -2705,6 +2830,21 @@ class GestoriaTestCase(unittest.TestCase):
             email="Clientes@Gestoria.com", cadence="mensual",
         )
         self.assertEqual(updated["gestoria_email"], "clientes@gestoria.com")
+        self.assertEqual(
+            db.automation_decision(business["id"], "send_gestoria")["mode"],
+            "rules",
+        )
+        db.update_automation_permission(
+            business["id"], "send_gestoria", "confirm"
+        )
+        db.update_gestoria_settings(
+            business["id"], name="Nuevo nombre",
+            email="clientes@gestoria.com", cadence="mensual",
+        )
+        self.assertEqual(
+            db.automation_decision(business["id"], "send_gestoria")["mode"],
+            "confirm",
+        )
         token = updated["gestoria_token"]
         self.assertTrue(token)
         # El token es estable mientras no se revoque.
@@ -2760,21 +2900,33 @@ class GestoriaTestCase(unittest.TestCase):
         self.assertEqual(meta["invoices"], 1)
         self.assertEqual(meta["expenses"], 1)
         names = zipfile_module.ZipFile(BytesIO(data)).namelist()
-        self.assertIn("facturas.csv", names)
-        self.assertIn("gastos.csv", names)
-        self.assertIn("resumen.pdf", names)
+        self.assertIn("01-ingresos/facturas.csv", names)
+        self.assertIn("02-gastos/gastos.csv", names)
+        self.assertIn("00-resumen/resumen.pdf", names)
+        self.assertIn("MANIFIESTO.json", names)
         self.assertEqual(
-            len([n for n in names if n.startswith("facturas/")]), 1
+            len([n for n in names if n.startswith("01-ingresos/facturas/")]), 1
         )
         self.assertEqual(
-            len([n for n in names if n.startswith("justificantes/")]), 1
+            len([n for n in names if n.startswith("02-gastos/justificantes/")]), 1
         )
+        deliveries = db.list_gestoria_deliveries(business["id"])
+        self.assertEqual(deliveries[0]["version"], 1)
+        self.assertEqual(deliveries[0]["manifest"]["counts"]["expenses"], 1)
+        _same_data, same_meta = gestoria.build_package(business["id"], label)
+        self.assertEqual(same_meta["version"], 1)
+        db.add_expense("Peaje", 5, business_id=business["id"])
+        _changed_data, changed_meta = gestoria.build_package(
+            business["id"], label
+        )
+        self.assertEqual(changed_meta["version"], 2)
         # El paquete del negocio vacío no arrastra nada del otro.
         empty, empty_meta = gestoria.build_package(other["id"], label)
         self.assertEqual(empty_meta["invoices"], 0)
         empty_names = zipfile_module.ZipFile(BytesIO(empty)).namelist()
         self.assertEqual(
-            [n for n in empty_names if n.startswith("justificantes/")], []
+            [n for n in empty_names
+             if n.startswith("02-gastos/justificantes/")], []
         )
 
     def test_public_portal_and_send_now(self):

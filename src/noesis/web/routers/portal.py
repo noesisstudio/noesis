@@ -159,7 +159,15 @@ def gestoria_package(request: Request, token: str, label: str):
         return JSONResponse({"error": "Período no válido."}, status_code=404)
     if not package:
         return JSONResponse({"error": "Período no válido."}, status_code=404)
-    data, _meta = package
+    data, meta = package
+    db.mark_gestoria_delivery(business["id"], label, "downloaded")
+    db.record_product_event(
+        business["id"], "gestoria_package_downloaded",
+        json.dumps(
+            {"label": label, "version": meta["version"]},
+            separators=(",", ":"),
+        ),
+    )
     return Response(
         content=data,
         media_type="application/zip",
@@ -207,6 +215,10 @@ def _worker_portal_context(request: Request, token: str) -> dict:
         "unlocked": unlocked,
         "jobs": (
             db.jobs_for_worker(worker["id"], business["id"], date.today().isoformat())
+            if unlocked else []
+        ),
+        "tasks": (
+            db.project_tasks_for_worker(worker["id"], business["id"])
             if unlocked else []
         ),
         "open_shift": (
@@ -321,3 +333,26 @@ def worker_portal_ack(request: Request, token: str):
     return {"ok": True}
 
 
+@router.post("/t/{token}/tasks/{task_id}")
+async def worker_portal_task(
+    request: Request, token: str, task_id: int
+):
+    ref = db.resolve_worker_token(token)
+    if not ref:
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    worker = ref["worker"]
+    if worker.get("pin_hash") and not _worker_token_verified(request, token):
+        return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
+    try:
+        body = await _read_json(request)
+        task = db.update_project_task(
+            task_id,
+            business_id=ref["business"]["id"],
+            status=body.get("status"),
+            actor_worker_id=worker["id"],
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if not task:
+        return JSONResponse({"error": "Tarea no encontrada."}, status_code=404)
+    return {"ok": True, "task": task}

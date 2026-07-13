@@ -246,6 +246,29 @@
         <button class="btn">Enviar el último período ahora</button>
       </form>
       {% endif %}
+      {% if gestoria_deliveries %}
+      <div class="gestoria-deliveries">
+        <div class="fld">Últimos paquetes preparados</div>
+        {% for delivery in gestoria_deliveries %}
+        <div class="gestoria-delivery">
+          <div>
+            <b>{{ delivery.period_label }} · versión {{ delivery.version }}</b>
+            <small class="muted">
+              {{ delivery.manifest.counts.invoices }} emitidas ·
+              {{ delivery.manifest.counts.expenses }} gastos ·
+              {{ delivery.manifest.counts.received_invoices }} recibidas
+            </small>
+          </div>
+          <span class="badge {{ 'b-green' if delivery.status == 'descargado' else 'b-gray' }}">
+            {{ delivery.status }}
+          </span>
+        </div>
+        {% endfor %}
+        <p class="muted" style="margin:8px 0 0">
+          Cada versión conserva manifiesto, huella y fecha de aviso o descarga.
+        </p>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -369,6 +392,73 @@
   </div>
 </div>
 
+<div class="card autonomy-card" id="control-noesis" style="margin-top:16px">
+  <div class="card-h">
+    <div>
+      <div class="kicker">Centro de control de Noesis</div>
+      <h2>Decide hasta dónde puede llegar</h2>
+    </div>
+    <span class="badge b-green">tú tienes la última palabra</span>
+  </div>
+  <div class="card-b">
+    <p class="noesis-voice" style="margin-top:0">
+      Me ocupo del trabajo rutinario. Para mover dinero, emitir, presentar impuestos
+      o borrar algo, siempre espero tu aprobación.
+    </p>
+    <div class="insight autonomy-promise">
+      Las transferencias, pagos, devoluciones y obligaciones fiscales no admiten
+      modo automático, aunque se modifique la configuración. Ese límite también se
+      valida en el servidor.
+    </div>
+    <div class="autonomy-list">
+      {% set ns = namespace(group='') %}
+      {% for permission in automation_permissions %}
+        {% if permission.group != ns.group %}
+          {% set ns.group = permission.group %}
+          <h3 class="autonomy-group">{{ permission.group }}</h3>
+        {% endif %}
+        <div class="autonomy-row" data-action-key="{{ permission.key }}">
+          <div class="autonomy-copy">
+            <strong>{{ permission.label }}</strong>
+            <span>{{ permission.description }}</span>
+          </div>
+          <label>
+            <span class="sr-only">Permiso para {{ permission.label }}</span>
+            <select class="input autonomy-select" data-saved-value="{{ permission.mode }}"
+              onchange="saveAutomationPermission(this, '{{ permission.key }}')">
+              {% for mode in permission.allowed_modes %}
+              <option value="{{ mode }}" {{ 'selected' if permission.mode == mode }}>
+                {{ automation_mode_labels[mode] }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+      {% endfor %}
+    </div>
+    <div id="automation-msg" class="meta" role="status"></div>
+    <details class="autonomy-history">
+      <summary>Ver qué ha hecho Noesis</summary>
+      {% if assistant_actions %}
+        <div class="autonomy-action-list">
+          {% for action in assistant_actions %}
+          <div class="autonomy-action">
+            <span class="badge {{ 'b-green' if action.status == 'executed' else 'b-gray' }}">
+              {{ action.status }}
+            </span>
+            <div><strong>{{ action.summary }}</strong>
+              <small>{{ action.created_at }}</small></div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">Aún no hay acciones automáticas. Cuando Noesis actúe,
+          quedará aquí con su motivo y resultado.</div>
+      {% endif %}
+    </details>
+  </div>
+</div>
+
 <div class="grid g2" style="margin-top:16px">
   <div class="card">
     <div class="card-h"><h2>Datos e informes</h2><span class="hint">RGPD · portabilidad</span></div>
@@ -488,6 +578,24 @@ async function saveExplanationLevel() {
   try { await apiPost('/explanation-level', { level: el('explanation-select').value }); }
   catch (e) { msg.textContent = e.message; return; }
   msg.textContent = 'Preferencia guardada para toda la cuenta.';
+}
+async function saveAutomationPermission(select, actionKey) {
+  const msg = el('automation-msg');
+  const previous = select.dataset.savedValue;
+  select.disabled = true;
+  try {
+    await apiPost('/assistant/permissions', {
+      action_key: actionKey,
+      mode: select.value
+    });
+    select.dataset.savedValue = select.value;
+    msg.textContent = 'Control guardado. Lo aplicaré también cuando me escribas por WhatsApp.';
+  } catch (e) {
+    select.value = previous;
+    msg.textContent = e.message;
+  } finally {
+    select.disabled = false;
+  }
 }
 async function saveMemory() {
   const key = el('memory-key').value.trim();
