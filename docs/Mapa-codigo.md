@@ -9,10 +9,12 @@
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro: clientes,
   agenda, facturas, proyectos, equipo, documentos y gestoría.
 - `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM.
-- `src/noesis/agent.py`: agentes privado y externo con historial, recuerdos
+- `src/noesis/agent.py`: agentes privado, compatible y Anthropic con historial, recuerdos
   confirmados, permisos efectivos y contexto del negocio.
-- `src/noesis/adapters/ai.py`: cliente stdlib para un servicio privado
-  OpenAI-compatible; no consume créditos externos.
+- `src/noesis/adapters/ai.py`: cliente stdlib OpenAI-compatible compartido por el
+  servicio privado y el proveedor externo barato.
+- `src/noesis/readiness.py`: diagnóstico de piloto sin secretos para seguridad,
+  datos, copias, WhatsApp, correo, Stripe, AEAT, IA y operaciones.
 
 ## Web y acompañante
 
@@ -20,8 +22,8 @@
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
   de acciones de Noesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve
-  por reglas, después por IA privada y solo entonces por IA externa consentida y
-  limitada por plan.
+  por reglas, después por IA privada, proveedor compatible y Anthropic; los niveles
+  externos comparten consentimiento y un crédito por mensaje.
 - `src/noesis/web/routers/projects.py`: proyectos, trabajos vinculados, tareas,
   equipo, horas y costes.
 - `src/noesis/web/routers/portal.py`: portales privados de cliente, gestoría y

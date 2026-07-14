@@ -5,10 +5,10 @@
 
 ## En revisión
 
-- [ ] Revisar y fusionar `codex/ai-first-hotfix`.
-- [x] Confirmar en CI PostgreSQL el smoke ampliado de proyectos y campo.
+- [x] Fusionar `codex/ai-first-hotfix` (PR #31) y confirmar CI PostgreSQL.
+- [ ] Revisar y fusionar `codex/pilot-readiness`.
 - [ ] Tras desplegar: abrir una ficha de proyecto real, `/ready`, Ajustes y el flujo
-  onboarding → IA recomendada → límite → fallback local.
+  onboarding → IA recomendada → proveedor compatible → Anthropic → límite → local.
 
 ## P0 — piloto seguro
 
@@ -18,13 +18,16 @@
 - [ ] Auditoría externa de seguridad/privacidad, restauración real, alertas y
   procedimiento de incidentes.
 - [ ] Piloto acompañado con 3-5 autónomos durante dos cierres semanales.
+- [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo; probar
+  una restauración externa aislada siguiendo [[Piloto-operativo]].
 - [ ] Medir tiempo ahorrado, trabajos sin facturar, cobros recuperados, correcciones,
   coste por cuenta y retención; no añadir módulos sin evidencia del piloto.
 
 ## P1 — fiabilidad y profundidad común
 
-- [ ] Provisionar un servicio privado OpenAI-compatible y evaluar castellano,
-  catalán, herramientas, latencia, caídas, coste y concurrencia antes de anunciarlo.
+- [ ] Evaluar proveedor compatible y servicio privado con el mismo corpus de
+  castellano, catalán, herramientas, latencia, caídas, coste y concurrencia; no
+  contratar GPU 24/7 sin volumen o requisito de privacidad demostrado.
 - [ ] Documentos: duplicados, HEIC/PDF escaneado, líneas, búsqueda y corrección
   masiva con corpus real.
 - [ ] Calendario externo, recurrentes, comunicaciones y conciliación.

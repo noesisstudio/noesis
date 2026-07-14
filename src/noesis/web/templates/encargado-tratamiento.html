@@ -86,6 +86,9 @@
       <tr><th>Proveedor</th><th>Servicio</th><th>Ubicación</th></tr>
       <tr><td>Railway</td><td>Alojamiento de la aplicación y base de datos</td><td>UE / EE. UU. (con garantías RGPD)</td></tr>
       <tr><td>Anthropic</td><td>Asistente con IA (solo si el Cliente lo activa)</td><td>EE. UU. (cláusulas contractuales tipo)</td></tr>
+      {% if compat_ai_legal_name %}
+      <tr><td>{{ compat_ai_legal_name }}</td><td>Asistente con IA (solo si el Cliente lo activa)</td><td>{{ compat_ai_region }}</td></tr>
+      {% endif %}
       <tr><td>Meta Platforms</td><td>Mensajería de WhatsApp (solo si el Cliente la conecta)</td><td>UE / EE. UU. (con garantías RGPD)</td></tr>
       <tr><td>[Proveedor SMTP]</td><td>Envío de correos transaccionales</td><td>[UE]</td></tr>
     </table>

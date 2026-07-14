@@ -65,7 +65,10 @@ def service_worker():
 
 @router.get("/privacidad", response_class=HTMLResponse)
 def privacidad(request: Request):
-    return TEMPLATES.TemplateResponse(request, "privacidad.html", {})
+    return TEMPLATES.TemplateResponse(request, "privacidad.html", {
+        "compat_ai_legal_name": config.COMPAT_AI_LEGAL_NAME,
+        "compat_ai_region": config.COMPAT_AI_REGION,
+    })
 
 
 @router.get("/terminos", response_class=HTMLResponse)
@@ -85,7 +88,10 @@ def cookies(request: Request):
 
 @router.get("/encargado-tratamiento", response_class=HTMLResponse)
 def encargado_tratamiento(request: Request):
-    return TEMPLATES.TemplateResponse(request, "encargado-tratamiento.html", {})
+    return TEMPLATES.TemplateResponse(request, "encargado-tratamiento.html", {
+        "compat_ai_legal_name": config.COMPAT_AI_LEGAL_NAME,
+        "compat_ai_region": config.COMPAT_AI_REGION,
+    })
 
 
 @router.get("/cumplimiento", response_class=HTMLResponse)

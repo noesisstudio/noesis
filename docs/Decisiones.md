@@ -2,6 +2,21 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Pago por uso antes de GPU propia durante el piloto (2026-07-14)
+
+Noesis admite un proveedor externo OpenAI-compatible entre la IA privada y
+Anthropic. Este nivel permite evaluar modelos abiertos en Groq, Cloudflare, Hugging
+Face u otro servicio sin acoplar el producto a un SDK. Sigue siendo externo: requiere
+consentimiento, consume un crédito del plan y no se presenta como privado ni gratis.
+
+Durante el piloto se prioriza pago por uso con Haiku como fallback de fiabilidad.
+Una GPU propia 24/7 no se contrata hasta que el volumen, la privacidad o la calidad
+medida lo justifiquen. Motivo: a bajo volumen el coste de inferencia es inferior al
+coste fijo y operativo de mantener GPU; el tramo gratuito de terceros no ofrece un
+SLA comercial. Cada proveedor registra modelo, tokens, latencia y coste estimado,
+con tarifas configurables. Cálculo en [[Analisis-coste-IA.ipynb]] y operación en
+[[Piloto-operativo]].
+
 ## IA útil desde el primer día, con control y coste acotado (2026-07-14)
 
 El fundador decide que la experiencia recomendada de una cuenta nueva incluya IA

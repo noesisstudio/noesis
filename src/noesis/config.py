@@ -24,6 +24,14 @@ def env_bool(name: str, default: bool = False) -> bool:
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
+# El agente principal puede usar una tarifa distinta al fallback. Cero evita
+# inventar coste si no se ha revisado el precio del modelo elegido.
+MODEL_INPUT_USD_PER_MTOK = float(
+    os.getenv("NOESIS_MODEL_INPUT_USD_PER_MTOK", "0")
+)
+MODEL_OUTPUT_USD_PER_MTOK = float(
+    os.getenv("NOESIS_MODEL_OUTPUT_USD_PER_MTOK", "0")
+)
 # Modelo BARATO para el respaldo del chat (cuando el cerebro local no entiende la
 # frase). Haiku minimiza el coste: el 90% se resuelve gratis en local y solo lo
 # realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
@@ -34,6 +42,33 @@ LOCAL_AI_BASE_URL = os.getenv("NOESIS_LOCAL_AI_BASE_URL", "").strip()
 LOCAL_AI_MODEL = os.getenv("NOESIS_LOCAL_AI_MODEL", "").strip()
 LOCAL_AI_API_KEY = os.getenv("NOESIS_LOCAL_AI_API_KEY", "").strip()
 LOCAL_AI_TIMEOUT_SECONDS = int(os.getenv("NOESIS_LOCAL_AI_TIMEOUT_SECONDS", "45"))
+# Tercer nivel opcional: proveedor externo barato con contrato OpenAI-compatible
+# (por ejemplo Groq, Cloudflare Workers AI o Hugging Face). Sigue necesitando el
+# consentimiento ``ai_external`` y consume un crédito del plan. Los precios se
+# declaran para poder observar coste sin acoplar el código a una tarifa cambiante.
+COMPAT_AI_BASE_URL = os.getenv("NOESIS_COMPAT_AI_BASE_URL", "").strip()
+COMPAT_AI_MODEL = os.getenv("NOESIS_COMPAT_AI_MODEL", "").strip()
+COMPAT_AI_API_KEY = os.getenv("NOESIS_COMPAT_AI_API_KEY", "").strip()
+COMPAT_AI_PROVIDER = os.getenv("NOESIS_COMPAT_AI_PROVIDER", "compatible").strip()
+COMPAT_AI_LEGAL_NAME = os.getenv("NOESIS_COMPAT_AI_LEGAL_NAME", "").strip()
+COMPAT_AI_REGION = os.getenv("NOESIS_COMPAT_AI_REGION", "").strip()
+COMPAT_AI_TIMEOUT_SECONDS = int(
+    os.getenv("NOESIS_COMPAT_AI_TIMEOUT_SECONDS", "45")
+)
+COMPAT_AI_INPUT_USD_PER_MTOK = float(
+    os.getenv("NOESIS_COMPAT_AI_INPUT_USD_PER_MTOK", "0")
+)
+COMPAT_AI_OUTPUT_USD_PER_MTOK = float(
+    os.getenv("NOESIS_COMPAT_AI_OUTPUT_USD_PER_MTOK", "0")
+)
+# Tarifa del modelo de respaldo, explícita y revisable. Los valores por defecto
+# corresponden a Haiku 4.5 en julio de 2026; si cambia el modelo, deben cambiarse.
+FALLBACK_INPUT_USD_PER_MTOK = float(
+    os.getenv("NOESIS_FALLBACK_INPUT_USD_PER_MTOK", "1")
+)
+FALLBACK_OUTPUT_USD_PER_MTOK = float(
+    os.getenv("NOESIS_FALLBACK_OUTPUT_USD_PER_MTOK", "5")
+)
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 
 # Railway inyecta DATABASE_URL al enlazar el servicio Postgres. Sin esa variable,

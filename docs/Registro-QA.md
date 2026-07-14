@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-07-14 — coste de IA y preparación del piloto
+
+- Suite completa: **188 pruebas verdes**; permanecen el aviso conocido de
+  Starlette/httpx y los logs esperados de caídas simuladas.
+- Proveedor compatible: contrato, herramientas, coste estimado y fallback a
+  Anthropic cubiertos. Una caída entre proveedores consume un solo crédito.
+- Si una herramienta pudo escribir antes de una caída, el segundo proveedor no
+  repite la orden automáticamente; el usuario recibe un aviso para revisar actividad.
+- `noesis-doctor`: salida humana/JSON, avisos, bloqueos por configuración parcial,
+  HTTPS obligatorio para el proveedor externo y ausencia de secretos cubiertos.
+- Notebook de costes ejecutado de principio a fin; SQL reproducible contrastado con
+  la tabla del informe. Artefacto ejecutivo validado y renderizado.
+- Servidor real con base temporal: `/health`, `/ready`, `/privacidad` y
+  `/encargado-tratamiento` en 200; el subencargado compatible configurado apareció
+  en ambos documentos legales.
+- `compileall` y `git diff --check` verdes. No se llamó a Meta, Stripe, AEAT ni a un
+  modelo real; esas pruebas siguen siendo P0 del piloto.
+
 ## 2026-07-14 — IA desde el primer día y guardián PostgreSQL
 
 - `compileall`, `git diff --check`, suite completa: 182 pruebas y 26 subpruebas

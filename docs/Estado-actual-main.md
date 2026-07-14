@@ -5,7 +5,7 @@
 
 ## Código fusionado en `origin/main`
 
-- Commit auditado: `280a5cc` (PR #30).
+- Commit auditado: `2925a98` (PR #31).
 - Esquema SQLite/Postgres: migración **27**.
 - La columna proyecto → trabajo → fichaje → coste → borrador de factura está
   conectada. El cierre de campo, materiales, evidencias y conformidad no alteran el
@@ -17,7 +17,7 @@
 - Última verificación publicada comunicada: Railway/Postgres aplicó las migraciones
   y `/ready` respondió 200. Esto no sustituye una nueva prueba tras cada despliegue.
 
-## Cambio preparado en `codex/ai-first-hotfix`
+## Fusionado en PR #31
 
 - Corrige el `COALESCE` incompatible entre texto y timestamp en la ficha de proyecto
   y añade proyecto, ficha y campo al smoke de PostgreSQL.
@@ -27,9 +27,19 @@
   autorizada. La caída o el límite de un nivel no apaga el producto local.
 - Créditos externos mensuales por plan, reservados atómicamente y aislados por
   `business_id`. La IA privada no consume esos créditos.
-- Estado de pruebas de esta rama: **182 pruebas y 26 subpruebas verdes**; smoke
+- Estado de pruebas comunicado: **182 pruebas y 26 subpruebas verdes**; smoke
   HTTP real en `/health`, `/ready`, onboarding, Ajustes, proyectos, detalle y campo.
   GitHub Actions aplicó migración 27/27 y pasó el smoke PostgreSQL ampliado.
+
+## Cambio preparado en `codex/pilot-readiness`
+
+- Añade proveedor externo OpenAI-compatible antes de Anthropic, con el mismo
+  consentimiento, un crédito único aunque haya fallback y coste estimado por llamada.
+- Añade `noesis-doctor`, un diagnóstico sin secretos para impedir pilotos con Meta,
+  Stripe, copias o AEAT configurados a medias.
+- Documenta costes, punto de equilibrio y runbook de piloto. No modifica el diseño.
+- Verificación local de la rama: **188 pruebas verdes** y smoke real en `/health`,
+  `/ready`, Privacidad y encargo de tratamiento.
 
 ## Capacidades que existen pero dependen de configuración externa
 

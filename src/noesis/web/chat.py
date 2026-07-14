@@ -19,6 +19,7 @@ from ..tools import run_tool
 # Agentes por negocio. El historial y el bloqueo nunca se comparten entre empresas.
 _agents: dict[int, object] = {}
 _local_agents: dict[int, object] = {}
+_compatible_agents: dict[int, object] = {}
 _agents_lock = threading.Lock()
 log = logging.getLogger("noesis.chat")
 
@@ -516,7 +517,7 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
 
     # Si existe un servicio privado, tiene prioridad y no consume créditos externos.
     if ai_adapter.local_available():
-        from ..agent import LocalNoesisAgent
+        from ..agent import LocalNoesisAgent, PartialAgentExecutionError
         try:
             with _agents_lock:
                 local_agent = _local_agents.get(business_id)
@@ -535,12 +536,31 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
                 )
             except Exception:  # noqa: BLE001
                 pass
+            if isinstance(exc, PartialAgentExecutionError):
+                return {
+                    "reply": "La operación pudo quedar preparada antes de que la IA "
+                             "se interrumpiera. Revisa la actividad reciente; no la "
+                             "voy a repetir automáticamente.",
+                    "source": "local",
+                }
 
-    # Respaldo a la IA externa, solo si está configurada y consentida.
-    if config.ANTHROPIC_API_KEY and db.integration_enabled(
+    # Respaldo externo, solo si está configurado y consentido. El proveedor
+    # OpenAI-compatible barato se intenta antes de Anthropic. Ambos comparten una
+    # única reserva por mensaje, incluso cuando hay fallback entre proveedores.
+    external_available = bool(
+        ai_adapter.external_available() or config.ANTHROPIC_API_KEY
+    )
+    if external_available and db.integration_enabled(
         business_id, "ai_external", available=True
     ):
-        credit = db.claim_ai_credit(business_id, provider="anthropic")
+        credit_provider = (
+            config.COMPAT_AI_PROVIDER
+            if ai_adapter.external_available()
+            else "anthropic"
+        )
+        credit = db.claim_ai_credit(
+            business_id, provider=credit_provider or "compatible"
+        )
         if not credit["allowed"]:
             return {
                 "reply": _coach_reply(business_id, message) + "\n\n"
@@ -548,29 +568,68 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
                          "Las órdenes habituales y el cerebro local siguen activos.",
                 "source": "local",
             }
-        from ..agent import NoesisAgent
-        with _agents_lock:
-            agent = _agents.get(business_id)
-            if agent is None:
-                # Respaldo barato (Haiku): solo lo paga lo que el cerebro local
-                # no resuelve. La mayoría de mensajes ni llegan aquí.
-                agent = NoesisAgent(business_id, model=config.FALLBACK_MODEL)
-                _agents[business_id] = agent
-        try:
-            return {"reply": agent.send(prefix + message), "source": "ia"}
-        except Exception as exc:  # noqa: BLE001
-            log.exception("El proveedor de IA falló para el negocio %s.", business_id)
+        if ai_adapter.external_available():
+            from ..agent import CompatibleNoesisAgent, PartialAgentExecutionError
             try:
-                db.record_integration_result(
-                    business_id, "ai_external", type(exc).__name__
+                with _agents_lock:
+                    compatible_agent = _compatible_agents.get(business_id)
+                    if compatible_agent is None:
+                        compatible_agent = CompatibleNoesisAgent(business_id)
+                        _compatible_agents[business_id] = compatible_agent
+                return {
+                    "reply": compatible_agent.send(prefix + message),
+                    "source": "ia_compatible",
+                }
+            except Exception as exc:  # noqa: BLE001 - Anthropic aún puede responder
+                log.exception(
+                    "La IA compatible falló para el negocio %s.", business_id
                 )
-            except Exception:  # noqa: BLE001 - no encadenar el fallo de métrica
-                pass
-            return {
-                "reply": "Ahora mismo no puedo usar la IA externa. "
-                         "Las órdenes habituales siguen disponibles.",
-                "source": "local",
-            }
+                try:
+                    db.record_integration_result(
+                        business_id, "ai_external", type(exc).__name__
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                if isinstance(exc, PartialAgentExecutionError):
+                    return {
+                        "reply": "La operación pudo quedar preparada antes de que "
+                                 "la IA se interrumpiera. Revisa la actividad "
+                                 "reciente; no la voy a repetir automáticamente.",
+                        "source": "local",
+                    }
+
+        if config.ANTHROPIC_API_KEY:
+            from ..agent import NoesisAgent, PartialAgentExecutionError
+            with _agents_lock:
+                agent = _agents.get(business_id)
+                if agent is None:
+                    # Haiku paga solo lo que no resolvieron las capas anteriores.
+                    agent = NoesisAgent(business_id, model=config.FALLBACK_MODEL)
+                    _agents[business_id] = agent
+            try:
+                return {"reply": agent.send(prefix + message), "source": "ia"}
+            except Exception as exc:  # noqa: BLE001
+                log.exception(
+                    "El proveedor de IA falló para el negocio %s.", business_id
+                )
+                try:
+                    db.record_integration_result(
+                        business_id, "ai_external", type(exc).__name__
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                if isinstance(exc, PartialAgentExecutionError):
+                    return {
+                        "reply": "La operación pudo quedar preparada antes de que "
+                                 "la IA se interrumpiera. Revisa la actividad "
+                                 "reciente antes de intentarlo otra vez.",
+                        "source": "local",
+                    }
+        return {
+            "reply": "Ahora mismo no puedo usar la IA externa. "
+                     "Las órdenes habituales siguen disponibles.",
+            "source": "local",
+        }
 
     return {"reply": _coach_reply(business_id, message), "source": "local"}
 

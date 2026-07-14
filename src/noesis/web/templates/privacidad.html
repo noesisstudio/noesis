@@ -69,6 +69,9 @@
       <tr><th>Proveedor</th><th>Para qué</th><th>Ubicación</th></tr>
       <tr><td>Railway</td><td>Alojamiento de la app y la base de datos</td><td>UE / EE. UU. (garantías RGPD)</td></tr>
       <tr><td>Anthropic</td><td>Asistente con IA, solo si lo activas</td><td>EE. UU. (cláusulas tipo)</td></tr>
+      {% if compat_ai_legal_name %}
+      <tr><td>{{ compat_ai_legal_name }}</td><td>Asistente con IA, solo si lo activas</td><td>{{ compat_ai_region }}</td></tr>
+      {% endif %}
       <tr><td>Meta</td><td>WhatsApp, solo si lo conectas</td><td>UE / EE. UU. (garantías RGPD)</td></tr>
       <tr><td>[Proveedor SMTP]</td><td>Correos transaccionales</td><td>[UE]</td></tr>
     </table>

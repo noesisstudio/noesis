@@ -902,7 +902,9 @@ def integration_catalog(business_id: int) -> list[dict]:
 
         runtime = {
             "ai_local": ai_adapter.local_available(),
-            "ai_external": bool(config.ANTHROPIC_API_KEY),
+            "ai_external": bool(
+                ai_adapter.external_available() or config.ANTHROPIC_API_KEY
+            ),
             "whatsapp": whatsapp_adapter.is_configured(),
             "email": email_adapter.available(),
             "verifactu": verifactu_client.is_enabled(),
@@ -910,7 +912,14 @@ def integration_catalog(business_id: int) -> list[dict]:
     except Exception:  # noqa: BLE001 - el centro nunca debe tumbar Ajustes
         runtime = {
             "ai_local": False,
-            "ai_external": bool(config.ANTHROPIC_API_KEY),
+            "ai_external": bool(
+                config.COMPAT_AI_BASE_URL
+                and config.COMPAT_AI_BASE_URL.startswith("https://")
+                and config.COMPAT_AI_MODEL
+                and config.COMPAT_AI_API_KEY
+                and config.COMPAT_AI_LEGAL_NAME
+                and config.COMPAT_AI_REGION
+            ) or bool(config.ANTHROPIC_API_KEY),
             "whatsapp": False, "email": False, "verifactu": False,
         }
 
@@ -1021,7 +1030,13 @@ def integration_catalog(business_id: int) -> list[dict]:
 def business_operational_health(business_id: int) -> dict:
     """Lectura por negocio de IA, documentos y colas, sin jerga de SRE."""
     month = date.today().strftime("%Y-%m")
-    ai = {"calls": 0, "input": 0, "output": 0, "durations": []}
+    ai = {
+        "calls": 0,
+        "input": 0,
+        "output": 0,
+        "estimated_cost_usd": 0.0,
+        "durations": [],
+    }
     with get_conn() as conn:
         usage_rows = conn.execute(
             "SELECT event_data FROM product_events WHERE business_id=? "
@@ -1036,8 +1051,12 @@ def business_operational_health(business_id: int) -> dict:
             ai["calls"] += 1
             ai["input"] += int(data.get("in") or 0)
             ai["output"] += int(data.get("out") or 0)
+            ai["estimated_cost_usd"] += float(
+                data.get("estimated_cost_usd") or 0
+            )
             if data.get("duration_ms") is not None:
                 ai["durations"].append(int(data["duration_ms"]))
+        ai["estimated_cost_usd"] = round(ai["estimated_cost_usd"], 6)
         classified_rows = conn.execute(
             "SELECT event_data FROM product_events WHERE business_id=? "
             "AND event_name='document_classified' "
@@ -7166,10 +7185,17 @@ def latest_backup_run(*, status: str | None = None) -> dict | None:
 
 # ----------------------------------------------------- Panel de administración ---
 def ai_usage_summary(month: str | None = None) -> dict:
-    """Tokens y llamadas de IA por negocio en un mes (de product_events)."""
+    """Tokens, proveedores y coste estimado por negocio en un mes."""
     month = month or date.today().strftime("%Y-%m")
     per_business: dict[int, dict] = {}
-    total = {"calls": 0, "input": 0, "output": 0, "extractions": 0}
+    total = {
+        "calls": 0,
+        "input": 0,
+        "output": 0,
+        "extractions": 0,
+        "estimated_cost_usd": 0.0,
+        "providers": {},
+    }
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT business_id, event_name, event_data FROM product_events "
@@ -7180,7 +7206,14 @@ def ai_usage_summary(month: str | None = None) -> dict:
     for row in rows:
         entry = per_business.setdefault(
             row["business_id"],
-            {"calls": 0, "input": 0, "output": 0, "extractions": 0},
+            {
+                "calls": 0,
+                "input": 0,
+                "output": 0,
+                "extractions": 0,
+                "estimated_cost_usd": 0.0,
+                "providers": {},
+            },
         )
         if row["event_name"] == "media_ingested":
             entry["extractions"] += 1
@@ -7193,9 +7226,20 @@ def ai_usage_summary(month: str | None = None) -> dict:
         entry["calls"] += 1
         entry["input"] += int(data.get("in") or 0)
         entry["output"] += int(data.get("out") or 0)
+        cost = float(data.get("estimated_cost_usd") or 0)
+        provider = str(data.get("provider") or "desconocido")
+        entry["estimated_cost_usd"] += cost
+        entry["providers"][provider] = entry["providers"].get(provider, 0) + 1
         total["calls"] += 1
         total["input"] += int(data.get("in") or 0)
         total["output"] += int(data.get("out") or 0)
+        total["estimated_cost_usd"] += cost
+        total["providers"][provider] = total["providers"].get(provider, 0) + 1
+    total["estimated_cost_usd"] = round(total["estimated_cost_usd"], 6)
+    for entry in per_business.values():
+        entry["estimated_cost_usd"] = round(
+            entry["estimated_cost_usd"], 6
+        )
     return {"month": month, "total": total, "per_business": per_business}
 
 
@@ -7375,8 +7419,10 @@ def admin_overview() -> dict:
     }
     # Departamentos: cada área "informa" a dirección con una frase y sus cifras.
     ai_total = usage["total"]
+    # El chat ya registra el coste por modelo/proveedor. La conversión USD→EUR es
+    # solo una aproximación operativa; la factura del proveedor sigue mandando.
     ai_cost_eur = round(
-        (ai_total["input"] * 3 + ai_total["output"] * 15) / 1_000_000 * 0.92
+        ai_total["estimated_cost_usd"] * 0.92
         + ai_total["extractions"] * 0.014,
         2,
     )
