@@ -4,13 +4,15 @@ Mapa de contenido (MOC) del proyecto. Abre esta carpeta como *vault* en Obsidian
 usa la vista de grafo para navegar.
 
 ## Mapa
-- [[Plan-maestro-Noesis]] — estado real, visión, brechas, prioridades y criterios
-  que debe leer cualquier IA antes de ampliar el producto.
+- [[Estado-actual-main]] — única fotografía viva de lo construido y publicado.
+- [[Tareas-vivas]] — único listado vivo de pendientes y prioridades.
+- [[Plan-maestro-Noesis]] — visión, principios, arquitectura objetivo y criterios.
 - [[Producto]] — qué es Noesis, para quién y la propuesta de valor.
 - [[Competencia]] — Forjia y el resto del mercado.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
 - [[Arquitectura]] — cómo está construido el sistema.
+- [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
 - [[Despliegue]] — cómo poner Noesis online 24/7 en bynoesis.com.
@@ -21,10 +23,9 @@ usa la vista de grafo para navegar.
 - [`AI_HANDOFF_TEMPLATE.md`](AI_HANDOFF_TEMPLATE.md) — plantilla de traspaso.
 
 ## Estado en una frase
-Producción sigue activa sobre Railway, pero la versión profesional más reciente
-vive en `codex/mvp-professional`: migración 21 y 164 pruebas correctas. Antes de
-presentarla como publicada hay que subirla, revisarla, fusionarla, migrar Postgres
-y ejecutar QA de producción. Ver [[Plan-maestro-Noesis]] y [[Roadmap]].
+
+No se repite aquí para evitar desincronizaciones. Consulta [[Estado-actual-main]]
+para la fotografía auditada y [[Tareas-vivas]] para lo siguiente.
 
 > Fundador: graduado en ADE, 23 años, ya tiene una empresa de eventos. Capital
 > inicial ~4.000 €. Rol: negocio/dirección. Desarrollo: Claude.

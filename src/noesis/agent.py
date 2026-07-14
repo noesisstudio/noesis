@@ -1,21 +1,21 @@
-"""El cerebro de Noesis.
+"""Agentes avanzados del cerebro de Noesis.
 
-Mantiene una conversación con Claude. Cuando Claude decide que hay que ejecutar
-una acción (agendar, facturar, cobrar...), llama a la herramienta correspondiente,
-le devuelve el resultado y deja que Claude redacte la respuesta final al autónomo.
-
-Es el mismo bucle que usaremos cuando el canal sea WhatsApp en vez de la consola.
+El proveedor privado y el externo comparten contexto, herramientas y aislamiento.
+Cuando el modelo propone una acción, Noesis valida y ejecuta la herramienta en el
+servidor antes de devolver el resultado. Web y WhatsApp usan el mismo bucle.
 """
 
 from __future__ import annotations
 
 from datetime import date, datetime
+import json
 import threading
 import time
 
 import anthropic
 
 from . import config, db
+from .adapters import ai as ai_adapter
 from .tools import TOOLS, run_tool
 
 _DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
@@ -77,6 +77,35 @@ desplazamientos.
 - Usa euros con el símbolo € y dos decimales."""
 
 
+def _system_with_business_context(business_id: int, business: dict) -> str:
+    """Construye el mismo marco verificable para cualquier proveedor de IA."""
+    memories = [item for item in db.list_memories(business_id)
+                if item.get("user_confirmed")][:12]
+    signals = [item for item in db.client_insights(business_id)
+               if item.get("level") in {"alto", "medio"}][:3]
+    permissions = db.automation_catalog(business_id)
+    context_bits = []
+    if memories:
+        context_bits.append("Memoria confirmada por el usuario: " + "; ".join(
+            f"{item['memory_key']}={item['memory_value']}" for item in memories
+        ))
+    if signals:
+        context_bits.append("Señales calculadas (explica siempre el motivo): "
+                            + "; ".join(
+            f"{item['client_name']}: {item['headline']} ({item['reason']})"
+            for item in signals
+        ))
+    context_bits.append(
+        "Límites efectivos de autonomía: " + "; ".join(
+            f"{item['key']}={item['mode']}" for item in permissions
+        )
+    )
+    system = _system_prompt(business)
+    if context_bits:
+        system += "\n\nCONTEXTO DURABLE DEL NEGOCIO\n" + "\n".join(context_bits)
+    return system
+
+
 class NoesisAgent:
     def __init__(self, business_id: int, model: str | None = None):
         if not config.ANTHROPIC_API_KEY:
@@ -134,30 +163,7 @@ class NoesisAgent:
                 self.messages.pop(0)
         self.messages.append({"role": "user", "content": user_text})
         self.business = db.get_business(self.business_id) or self.business
-        memories = [item for item in db.list_memories(self.business_id)
-                    if item.get("user_confirmed")][:12]
-        signals = [item for item in db.client_insights(self.business_id)
-                   if item.get("level") in {"alto", "medio"}][:3]
-        permissions = db.automation_catalog(self.business_id)
-        context_bits = []
-        if memories:
-            context_bits.append("Memoria confirmada por el usuario: " + "; ".join(
-                f"{item['memory_key']}={item['memory_value']}" for item in memories
-            ))
-        if signals:
-            context_bits.append("Señales calculadas (explica siempre el motivo): "
-                                + "; ".join(
-                f"{item['client_name']}: {item['headline']} ({item['reason']})"
-                for item in signals
-            ))
-        context_bits.append(
-            "Límites efectivos de autonomía: " + "; ".join(
-                f"{item['key']}={item['mode']}" for item in permissions
-            )
-        )
-        system = _system_prompt(self.business)
-        if context_bits:
-            system += "\n\nCONTEXTO DURABLE DEL NEGOCIO\n" + "\n".join(context_bits)
+        system = _system_with_business_context(self.business_id, self.business)
 
         safe_tools = [
             tool for tool in TOOLS
@@ -193,6 +199,106 @@ class NoesisAgent:
                         "content": output,
                     })
             self.messages.append({"role": "user", "content": tool_results})
+        return (
+            "He detenido la operación porque necesitó demasiados pasos. "
+            "Prueba a pedírmelo de una forma más concreta."
+        )
+
+
+class LocalNoesisAgent:
+    """Agente con herramientas servido en infraestructura privada del cliente."""
+
+    def __init__(self, business_id: int):
+        if not ai_adapter.local_available():
+            raise RuntimeError("La IA privada no está configurada.")
+        self.business_id = business_id
+        self.model = config.LOCAL_AI_MODEL
+        self.business = db.get_business(business_id) or {}
+        history = db.list_assistant_messages(business_id, limit=24)
+        if history and history[-1].get("role") == "user":
+            history = history[:-1]
+        self.messages: list[dict] = [
+            {"role": item["role"], "content": item["content"]}
+            for item in history if item.get("role") in {"user", "assistant"}
+        ]
+        self._lock = threading.Lock()
+
+    def send(self, user_text: str) -> str:
+        with self._lock:
+            return self._send_locked(user_text)
+
+    def _record_usage(self, response: dict, duration_ms: int) -> None:
+        try:
+            usage = response.get("usage") or {}
+            db.record_product_event(
+                self.business_id,
+                "ai_usage",
+                json.dumps({
+                    "provider": "local",
+                    "model": self.model,
+                    "in": int(usage.get("prompt_tokens") or 0),
+                    "out": int(usage.get("completion_tokens") or 0),
+                    "duration_ms": duration_ms,
+                }, separators=(",", ":")),
+            )
+            db.record_integration_result(self.business_id, "ai_local")
+        except Exception:  # noqa: BLE001 - observar nunca rompe el chat
+            pass
+
+    def _send_locked(self, user_text: str) -> str:
+        if len(self.messages) > 32:
+            self.messages = self.messages[-24:]
+            while self.messages and self.messages[0].get("role") != "user":
+                self.messages.pop(0)
+        self.messages.append({"role": "user", "content": user_text})
+        self.business = db.get_business(self.business_id) or self.business
+        system = _system_with_business_context(self.business_id, self.business)
+        safe_tools = [
+            tool for tool in TOOLS
+            if tool["name"] not in {"enviar_factura", "registrar_pago"}
+        ]
+        allowed_tools = {tool["name"] for tool in safe_tools}
+        for _round in range(6):
+            started = time.monotonic()
+            response = ai_adapter.local_chat(
+                system=system, messages=self.messages, tools=safe_tools
+            )
+            duration_ms = round((time.monotonic() - started) * 1000)
+            self._record_usage(response, duration_ms)
+            message = response["choices"][0]["message"]
+            content = message.get("content") or ""
+            raw_calls = message.get("tool_calls") or []
+            tool_calls = [call for call in raw_calls if isinstance(call, dict)]
+            assistant_message = {"role": "assistant", "content": content}
+            if tool_calls:
+                assistant_message["tool_calls"] = tool_calls
+            self.messages.append(assistant_message)
+            if not tool_calls:
+                return content.strip() or (
+                    "No he podido concretar una respuesta. Dímelo de otra forma."
+                )
+            for call in tool_calls:
+                function = call.get("function") or {}
+                name = str(function.get("name") or "")
+                try:
+                    arguments = function.get("arguments") or "{}"
+                    args = (
+                        arguments
+                        if isinstance(arguments, dict)
+                        else json.loads(arguments)
+                    )
+                    if not isinstance(args, dict):
+                        raise ValueError("Los argumentos no son un objeto.")
+                    if name not in allowed_tools:
+                        raise ValueError("La herramienta no está autorizada.")
+                    output = run_tool(name, args, self.business_id)
+                except Exception as exc:  # noqa: BLE001 - el modelo puede corregirse
+                    output = json.dumps({"error": str(exc)}, ensure_ascii=False)
+                self.messages.append({
+                    "role": "tool",
+                    "tool_call_id": str(call.get("id") or name),
+                    "content": output,
+                })
         return (
             "He detenido la operación porque necesitó demasiados pasos. "
             "Prueba a pedírmelo de una forma más concreta."

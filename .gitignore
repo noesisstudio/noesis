@@ -13,6 +13,7 @@ dist/
 .obsidian/
 .DS_Store
 .claude/launch.json
+.worktrees/
 
 # Proyecto de referencia externo (no forma parte de la app)
 Automatizacion Facturas - archivo adjuntado/

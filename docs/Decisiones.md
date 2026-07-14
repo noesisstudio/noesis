@@ -2,6 +2,24 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## IA útil desde el primer día, con control y coste acotado (2026-07-14)
+
+El fundador decide que la experiencia recomendada de una cuenta nueva incluya IA
+avanzada desde el onboarding. La elección es explícita y reversible: «Experiencia
+completa» aparece recomendada, mientras «Solo cerebro local» evita enviar contenido
+a un proveedor externo. Ninguna cuenta envía datos fuera antes de esa decisión.
+
+El orden técnico es siempre reglas deterministas, servicio de IA privado compatible
+con OpenAI y, solo si hace falta y el negocio lo ha autorizado, proveedor externo.
+La IA privada no consume créditos externos. La externa tiene un límite mensual por
+plan reservado de forma atómica por mensaje. Agotar el límite nunca apaga agenda,
+facturas, cálculos, documentos ni acompañamiento local.
+
+El modelo propone lenguaje y herramientas, pero el servidor valida la herramienta,
+los argumentos, el `business_id` y los permisos. Pagos, transferencias, impuestos,
+emisión definitiva, envíos sensibles y borrados irreversibles siguen requiriendo
+confirmación específica del autónomo. Detalle operativo en [[IA-local]].
+
 ## Cierre controlado y aprendizaje explicable (2026-07-13)
 
 - El parte de campo es operativo y separado del fichaje laboral append-only.
@@ -12,11 +30,13 @@ Registro de decisiones importantes y su porqué (las más recientes arriba).
 
 ## Las integraciones se eligen por negocio; lo local nunca se apaga (2026-07-13)
 
-Noesis separa capacidad interna de servicio externo. Una cuenta nueva empieza con
-la IA en la nube desactivada y puede activarla desde Ajustes; una cuenta anterior
-sin preferencia conserva el comportamiento previo para no romper su operativa. Al
-desactivarla, el cerebro de reglas, OCR y clasificación heurística continúan dentro
-del servidor. No se guardan claves de proveedor en `integration_settings`.
+Noesis separa capacidad interna de servicio externo. El alta crea la preferencia
+externa desactivada hasta que el usuario elige durante el onboarding; la opción
+recomendada es activarla con límites. Una cuenta anterior sin preferencia conserva
+el comportamiento previo para no romper su operativa. Al desactivarla, el cerebro
+de reglas, OCR, clasificación heurística y cualquier servicio privado configurado
+continúan dentro de la infraestructura. No se guardan claves de proveedor en
+`integration_settings`.
 
 WhatsApp, gestoría y Veri*Factu conservan sus tablas y flujos como fuente de verdad:
 el centro los resume y enlaza, no los duplica. La salud se calcula siempre con
@@ -110,9 +130,10 @@ El código de Holded/Forjia es propietario: copiarlo sería ilegal y una trampa.
 copian **ideas/UX** y se usa open-source. Ver [[Competencia]].
 
 ## Arquitectura híbrida de IA (coste/privacidad)
-Cerebro local por reglas para lo rutinario (gratis, interno) + IA en la nube solo
-para lo complejo. Motivo: por debajo de ~500M tokens/mes no compensa auto-hospedar.
-Ver [[Investigación]] y [[Arquitectura]].
+Cerebro local por reglas para lo rutinario, modelo privado cuando esté configurado
+y proveedor externo autorizado para lo complejo. La decisión de alojar un modelo
+se toma por coste total, privacidad, latencia y calidad, no por una cifra universal
+de tokens. Ver [[IA-local]], [[Investigación]] y [[Arquitectura]].
 
 ## Mínimas dependencias externas
 Hash de contraseñas con stdlib (PBKDF2), Chart.js servido en local, sin Tailwind.

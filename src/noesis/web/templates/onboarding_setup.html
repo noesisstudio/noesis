@@ -62,6 +62,29 @@
           <option value="control" {{ 'selected' if business.primary_goal == 'control' }}>Ver con claridad cómo va el negocio</option>
         </select>
 
+        <label class="fld" style="margin-top:20px">¿Cómo quieres que te acompañe Noesis? *</label>
+        <div class="choice-grid ai-choice-grid">
+          <label class="choice-card ai-choice-card">
+            <input type="radio" name="ai_mode" value="enabled" required checked>
+            <span>
+              <b>Experiencia completa</b>
+              <small>Recomendado · Noesis resuelve primero dentro del sistema y usa IA avanzada solo cuando hace falta.</small>
+            </span>
+          </label>
+          <label class="choice-card ai-choice-card">
+            <input type="radio" name="ai_mode" value="disabled" required>
+            <span>
+              <b>Solo cerebro local</b>
+              <small>Órdenes y lecturas habituales sin enviar consultas a un proveedor externo.</small>
+            </span>
+          </label>
+        </div>
+        <p class="meta" style="margin:9px 0 0">
+          La prueba incluye {{ ai_credits.limit }} consultas avanzadas al mes. Puedes
+          cambiarlo en Ajustes. Noesis nunca mueve dinero, emite ni envía nada
+          irreversible sin tu confirmación.
+        </p>
+
         <label class="fld" style="margin-top:16px">Provincia <span class="hint">opcional</span></label>
         <input class="input" name="province" maxlength="80"
                value="{{ business.province or '' }}" placeholder="Ej. Valencia">

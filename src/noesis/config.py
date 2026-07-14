@@ -28,6 +28,12 @@ MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
 # frase). Haiku minimiza el coste: el 90% se resuelve gratis en local y solo lo
 # realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
 FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
+# Segundo nivel privado opcional. Acepta servidores con contrato OpenAI-compatible
+# (Ollama, llama.cpp o vLLM). Si falta, Noesis pasa a la IA externa consentida.
+LOCAL_AI_BASE_URL = os.getenv("NOESIS_LOCAL_AI_BASE_URL", "").strip()
+LOCAL_AI_MODEL = os.getenv("NOESIS_LOCAL_AI_MODEL", "").strip()
+LOCAL_AI_API_KEY = os.getenv("NOESIS_LOCAL_AI_API_KEY", "").strip()
+LOCAL_AI_TIMEOUT_SECONDS = int(os.getenv("NOESIS_LOCAL_AI_TIMEOUT_SECONDS", "45"))
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 
 # Railway inyecta DATABASE_URL al enlazar el servicio Postgres. Sin esa variable,
