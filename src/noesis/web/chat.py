@@ -441,7 +441,19 @@ def page_note(business_id: int, page: str) -> str | None:
         due = len(state["leads_due"])
         return (f"Hoy toca seguir a {_count(due, 'posible cliente', 'posibles clientes')}; en frío se enfrían."
                 if due else "Sin seguimientos vencidos. Apunta a quien te pida precio.")
-    if page in {"facturas", "presupuestos"} and state["quotes_sent"]:
+    if page == "facturas":
+        pend = sum(p["total"] for p in state["pending"])
+        if state["unbilled"]:
+            extra = f" Y te deben {_eur(pend)} de las ya enviadas." if pend else ""
+            return (f"Tienes {_count(len(state['unbilled']), 'trabajo hecho sin facturar', 'trabajos hechos sin facturar')}: "
+                    f"ahí es donde se escapa el dinero.{extra}")
+        if pend:
+            late = len(state["late"])
+            return (f"Te deben {_eur(pend)} de {_count(len(state['pending']), 'factura enviada', 'facturas enviadas')}"
+                    + (f"; {late} llevan más de una semana. Yo reclamaría hoy." if late else ". Vas al día."))
+        return ("Todo lo facturado está cobrado. Cuando cierres un trabajo, "
+                "dímelo y la factura sale sola de aquí.")
+    if page == "presupuestos" and state["quotes_sent"]:
         q = state["quotes_sent"]
         total = sum(x["total"] for x in q)
         return (f"{_count(len(q), 'presupuesto enviado', 'presupuestos enviados')} esperan respuesta "

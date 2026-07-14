@@ -1460,6 +1460,17 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .parte-item .btn { width: 100%; }
 }
 
+/* ============ Listas densas de objeto (Facturas y sucesivas) ============
+   El objeto protagonista en pocas columnas: quién+qué, cuánto, estado, acción.
+   El detalle fiscal (base/IVA/IRPF) vive en el tooltip del total y en el PDF. */
+.fx-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fx-table td { vertical-align: top; }
+.fx-table .table-actions { white-space: nowrap; }
+@media (max-width: 700px) {
+  .fx-table .table-actions { white-space: normal; }
+  .fx-table .table-actions .btn { margin: 2px 0; }
+}
+
 /* ===========================================================================
    Dirección visual MVP: Noesis como parte diario, no como panel financiero.
    Esta capa unifica navegación, jerarquía y Home sin borrar profundidad.

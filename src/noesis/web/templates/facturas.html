@@ -17,14 +17,7 @@
   </div>
 </div>
 
-<div class="grid g4">
-  <div class="stat"><div class="lbl">Total emitido</div><div class="val" id="f-total">—</div><div class="delta flat" id="f-issued-n"></div></div>
-  <div class="stat"><div class="lbl">Cobradas</div><div class="val green" id="f-paid">—</div><div class="delta up" id="f-paid-pct"></div></div>
-  <div class="stat"><div class="lbl">Pendientes</div><div class="val amber" id="f-pend">—</div><div class="delta flat">enviadas, aún sin cobrar</div></div>
-  <div class="stat"><div class="lbl">Borradores</div><div class="val" id="f-draft">—</div><div class="delta flat">por revisar y emitir</div></div>
-</div>
-
-<div class="card" style="margin-top:16px">
+<div class="card">
   <div class="card-h">
     <div class="row" id="filters">
       <button class="btn primary" data-f="todas">Todas</button>
@@ -37,10 +30,9 @@
   </div>
   <div class="card-b table-pad" style="padding-top:6px">
     <div class="table-wrap">
-      <table>
-        <thead><tr><th>Nº</th><th>Cliente</th><th>Concepto</th><th class="t-right">Base</th>
-          <th class="t-right">IVA</th><th class="t-right">IRPF</th>
-          <th class="t-right">Total</th><th>Estado</th><th>Veri*Factu</th><th></th></tr></thead>
+      <table class="fx-table">
+        <thead><tr><th>Factura</th><th class="t-right">Total</th>
+          <th>Estado</th><th></th></tr></thead>
         <tbody id="f-body"></tbody>
       </table>
     </div>
@@ -158,55 +150,53 @@ async function newInvoice(){
   (nameInput || el('nf-concept')).focus();
 }
 
+let FILTER = 'todas';
 async function load() {
   ALL = await api('/invoices');
-  const emit = ALL.filter(i=>i.status!=='borrador');
-  el('f-total').textContent = eur(emit.reduce((a,b)=>a+b.total,0));
-  el('f-issued-n').textContent = emit.length + ' emitida(s)';
-  const paidAmount = emit.reduce((a,b)=>a+b.paid_amount,0);
-  const issuedAmount = emit.reduce((a,b)=>a+b.total,0);
-  el('f-paid').textContent = eur(paidAmount);
-  el('f-paid-pct').textContent = issuedAmount ? pct(paidAmount / issuedAmount * 100) + ' del importe' : '';
-  el('f-pend').textContent = eur(emit.reduce((a,b)=>a+b.remaining_amount,0));
-  el('f-draft').textContent = ALL.filter(i=>i.status==='borrador').length;
-  render('todas');
+  render(FILTER);
 }
+const STATUS_LABEL = { borrador:'Borrador', enviada:'Enviada',
+  parcial:'Cobro parcial', cobrada:'Cobrada' };
 function badge(s){ return s==='cobrada'?'b-green':(s==='enviada'||s==='parcial')?'b-amber':'b-gray'; }
 function verifactuState(i) {
-  if (!i.verifactu_registered) return '<span class="meta">—</span>';
+  // Compacto, bajo el estado principal: solo habla si hay algo que decir.
+  if (!i.verifactu_registered) return '';
   const states = {
-    pendiente: ['registrada', 'b-gray'],
-    enviado: ['enviada', 'b-amber'],
-    aceptado: ['aceptada', 'b-green'],
-    aceptado_con_errores: ['aceptada con errores', 'b-amber'],
-    rechazado: ['rechazada', 'b-red']
+    pendiente: 'Veri*Factu: registrada',
+    enviado: 'Veri*Factu: enviada a AEAT',
+    aceptado: 'Veri*Factu: aceptada',
+    aceptado_con_errores: 'Veri*Factu: aceptada con errores',
+    rechazado: 'Veri*Factu: RECHAZADA'
   };
-  const state = states[i.verifactu_status] || ['registrada', 'b-gray'];
-  const csv = i.verifactu_csv
-    ? `<small class="meta" style="display:block;margin-top:4px">CSV: ${esc(i.verifactu_csv)}</small>`
-    : '';
+  const label = states[i.verifactu_status] || 'Veri*Factu: registrada';
+  const tip = i.verifactu_csv ? ` title="CSV: ${esc(i.verifactu_csv)}"` : '';
   const error = i.verifactu_error
-    ? `<small class="meta" style="display:block;margin-top:4px" title="${esc(i.verifactu_error)}">${esc(i.verifactu_error)}</small>`
+    ? `<div class="meta" style="color:var(--red)" title="${esc(i.verifactu_error)}">${esc(i.verifactu_error)}</div>`
     : '';
-  return `<span class="badge ${state[1]}">${state[0]}</span>${csv}${error}`;
+  return `<div class="meta"${tip}>${label}</div>${error}`;
 }
 function render(f) {
+  FILTER = f;
   const rows = ALL.filter(i => f==='todas' || i.status===f);
-  el('f-filter-hint').textContent = rows.length + ' resultado(s)';
+  const total = rows.reduce((a,b)=>a+b.total,0);
+  el('f-filter-hint').textContent = rows.length
+    ? `${rows.length} factura(s) · ${eur(total)}` : 'sin resultados';
   el('f-body').innerHTML = rows.map(i => `<tr>
-    <td class="meta">${esc(i.number||'—')}
-      ${i.verifactu_registered ? '<span class="badge b-green" style="margin-left:5px">VF</span>' : ''}
-    </td><td>${esc(i.client_name||'')}</td><td>${esc(i.concept)}</td>
-    <td class="t-right num">${eur(i.base)}</td>
-    <td class="t-right num">${eur(i.vat_amount)}</td>
-    <td class="t-right num">${i.irpf_amount ? '−'+eur(i.irpf_amount) : '—'}</td>
-    <td class="t-right num"><b>${eur(i.total)}</b></td>
-    <td><span class="badge ${badge(i.status)}">${esc(i.status)}</span></td>
-    <td>${verifactuState(i)}</td>
+    <td>
+      <div class="fx-main"><b>${esc(i.client_name||'—')}</b>
+        ${i.number ? `<span class="meta">· ${esc(i.number)}</span>` : ''}</div>
+      <div class="meta">${esc(i.concept)}</div>
+    </td>
+    <td class="t-right num" title="Base ${eur(i.base)} + IVA ${eur(i.vat_amount)}${i.irpf_amount ? ' − IRPF '+eur(i.irpf_amount) : ''}">
+      <b>${eur(i.total)}</b>
+      ${i.status==='parcial' ? `<div class="meta">quedan ${eur(i.remaining_amount)}</div>` : ''}
+    </td>
+    <td><span class="badge ${badge(i.status)}">${STATUS_LABEL[i.status]||esc(i.status)}</span>
+      ${verifactuState(i)}</td>
     <td class="t-right table-actions">
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
-      ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Enviar</button>`:''}
-      ${['enviada','parcial'].includes(i.status)?`<button class="btn sm" onclick="pay(${i.id})">Cobrar restante</button>`:''}
+      ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Emitir</button>`:''}
+      ${['enviada','parcial'].includes(i.status)?`<button class="btn sm" onclick="pay(${i.id})">Cobrar</button>`:''}
       ${i.status!=='borrador'?`<button class="btn sm" onclick="rectify(${i.id})">Rectificar</button>`:''}
       ${i.status==='borrador'?`<button class="iconbtn" title="Borrar borrador" onclick="del(${i.id})">${TRASH}</button>`:''}
     </td>
