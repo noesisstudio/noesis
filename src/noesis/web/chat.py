@@ -1,11 +1,8 @@
-"""Orquestador del chatbot web (arquitectura híbrida).
+"""Orquestador híbrido compartido por el acompañante web y WhatsApp.
 
-1) Intenta resolver con el CEREBRO LOCAL (gratis, interno, sin APIs).
-2) Si no lo entiende y hay ANTHROPIC_API_KEY, delega en la IA (Claude).
-3) Si no hay clave, responde con la ayuda.
-
-Así la app funciona aunque no haya ninguna API configurada, y el coste por IA solo
-aparece en las consultas realmente complejas.
+Resuelve primero con reglas internas, después con un servicio privado opcional y,
+solo con consentimiento y créditos, con el proveedor externo. Si falla un nivel,
+Noesis conserva la respuesta y las órdenes rutinarias locales.
 """
 
 from __future__ import annotations
@@ -16,10 +13,12 @@ import threading
 from datetime import date, datetime
 
 from .. import config, db, nlu
+from ..adapters import ai as ai_adapter
 from ..tools import run_tool
 
-# Agentes IA por negocio (solo se crean si hay API key y se usan en el fallback).
+# Agentes por negocio. El historial y el bloqueo nunca se comparten entre empresas.
 _agents: dict[int, object] = {}
+_local_agents: dict[int, object] = {}
 _agents_lock = threading.Lock()
 log = logging.getLogger("noesis.chat")
 
@@ -484,10 +483,59 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
         result = json.loads(run_tool(tool, args, business_id))
         return {"reply": nlu.format_reply(tool, result), "source": "local"}
 
-    # Fallback a la IA (solo si está configurada).
+    # Marco común para el segundo nivel, sea privado o externo.
+    business = db.get_business(business_id) or {}
+    prefix = ""
+    if page and page in _PAGE_HINTS:
+        prefix += f"[El usuario está en la página '{page}' ({_PAGE_HINTS[page]})] "
+    language = business.get("language") or "es"
+    if language != "es":
+        prefix += ("[Responde en catalán salvo que el usuario escriba "
+                   "claramente en otro idioma] " if language == "ca" else
+                   "[Reply in English unless the user clearly writes "
+                   "in another language] ")
+    level = business.get("explanation_level") or "claro"
+    if level == "directo":
+        prefix += "[Responde de forma profesional y muy breve; ve directo a la acción] "
+    elif level == "detallado":
+        prefix += "[Explica el porqué y añade el detalle numérico útil sin perder claridad] "
+    else:
+        prefix += "[Explica con palabras sencillas y acompaña cada número con su significado] "
+
+    # Si existe un servicio privado, tiene prioridad y no consume créditos externos.
+    if ai_adapter.local_available():
+        from ..agent import LocalNoesisAgent
+        try:
+            with _agents_lock:
+                local_agent = _local_agents.get(business_id)
+                if local_agent is None:
+                    local_agent = LocalNoesisAgent(business_id)
+                    _local_agents[business_id] = local_agent
+            return {
+                "reply": local_agent.send(prefix + message),
+                "source": "ia_local",
+            }
+        except Exception as exc:  # noqa: BLE001 - continúa con el respaldo externo
+            log.exception("La IA privada falló para el negocio %s.", business_id)
+            try:
+                db.record_integration_result(
+                    business_id, "ai_local", type(exc).__name__
+                )
+            except Exception:  # noqa: BLE001
+                pass
+
+    # Respaldo a la IA externa, solo si está configurada y consentida.
     if config.ANTHROPIC_API_KEY and db.integration_enabled(
         business_id, "ai_external", available=True
     ):
+        credit = db.claim_ai_credit(business_id, provider="anthropic")
+        if not credit["allowed"]:
+            return {
+                "reply": _coach_reply(business_id, message) + "\n\n"
+                         "Has usado las consultas avanzadas incluidas este mes. "
+                         "Las órdenes habituales y el cerebro local siguen activos.",
+                "source": "local",
+            }
         from ..agent import NoesisAgent
         with _agents_lock:
             agent = _agents.get(business_id)
@@ -497,25 +545,6 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
                 agent = NoesisAgent(business_id, model=config.FALLBACK_MODEL)
                 _agents[business_id] = agent
         try:
-            # Contexto y preferencia de idioma van como marco del mensaje: el
-            # agente ya está acotado al negocio; esto solo orienta la respuesta.
-            business = db.get_business(business_id) or {}
-            prefix = ""
-            if page and page in _PAGE_HINTS:
-                prefix += f"[El usuario está en la página '{page}' ({_PAGE_HINTS[page]})] "
-            language = business.get("language") or "es"
-            if language != "es":
-                prefix += ("[Responde en catalán salvo que el usuario escriba "
-                           "claramente en otro idioma] " if language == "ca" else
-                           "[Reply in English unless the user clearly writes "
-                           "in another language] ")
-            level = business.get("explanation_level") or "claro"
-            if level == "directo":
-                prefix += "[Responde de forma profesional y muy breve; ve directo a la acción] "
-            elif level == "detallado":
-                prefix += "[Explica el porqué y añade el detalle numérico útil sin perder claridad] "
-            else:
-                prefix += "[Explica con palabras sencillas y acompaña cada número con su significado] "
             return {"reply": agent.send(prefix + message), "source": "ia"}
         except Exception as exc:  # noqa: BLE001
             log.exception("El proveedor de IA falló para el negocio %s.", business_id)

@@ -7,6 +7,7 @@ import json
 import os
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -1366,7 +1367,16 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(signup.status_code, 303)
                 setup_url = signup.headers["location"]
                 self.assertIn("/onboarding/setup/", setup_url)
-                self.assertEqual(client.get(setup_url).status_code, 200)
+                setup_page = client.get(setup_url)
+                self.assertEqual(setup_page.status_code, 200)
+                self.assertIn("Experiencia completa", setup_page.text)
+                created_user = db.get_user_by_email("piloto@example.com")
+                self.assertEqual(
+                    db.integration_setting(
+                        created_user["business_id"], "ai_external"
+                    )["mode"],
+                    "disabled",
+                )
 
                 profile = client.post(
                     setup_url,
@@ -1380,6 +1390,12 @@ class PortalHttpTestCase(BackendTestCase):
                 )
                 self.assertEqual(profile.status_code, 303)
                 self.assertIn("/onboarding/whatsapp/", profile.headers["location"])
+                self.assertEqual(
+                    db.integration_setting(
+                        created_user["business_id"], "ai_external"
+                    )["mode"],
+                    "enabled",
+                )
 
                 other = db.create_business(
                     "Negocio ajeno", "ajeno@example.com", "Electricidad"
@@ -3196,6 +3212,140 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertEqual(entry["calls"], 1)
         self.assertEqual(entry["input"], 321)
         self.assertEqual(entry["output"], 45)
+
+    def test_local_agent_uses_tools_without_external_credits(self):
+        from noesis import agent as agent_module
+        from noesis.adapters import ai as ai_adapter
+
+        business, _ = self.make_business("IA Privada")
+        first = {
+            "choices": [{"message": {
+                "content": "",
+                "tool_calls": [{
+                    "id": "call-1",
+                    "type": "function",
+                    "function": {"name": "listar_clientes", "arguments": "{}"},
+                }],
+            }}],
+            "usage": {"prompt_tokens": 40, "completion_tokens": 10},
+        }
+        second = {
+            "choices": [{"message": {
+                "content": "Tienes un cliente y ya lo tengo localizado."
+            }}],
+            "usage": {"prompt_tokens": 60, "completion_tokens": 12},
+        }
+        with (
+            patch.object(config, "LOCAL_AI_BASE_URL", "http://127.0.0.1:11434"),
+            patch.object(config, "LOCAL_AI_MODEL", "modelo-local"),
+            patch.object(ai_adapter, "local_chat", side_effect=[first, second]) as call,
+        ):
+            local_agent = agent_module.LocalNoesisAgent(business["id"])
+            reply = local_agent.send("¿Qué clientes tengo?")
+
+        self.assertIn("un cliente", reply)
+        self.assertEqual(call.call_count, 2)
+        second_messages = call.call_args_list[1].kwargs["messages"]
+        self.assertTrue(any(
+            item.get("role") == "tool" for item in second_messages
+        ))
+        self.assertEqual(db.ai_credit_status(business["id"])["used"], 0)
+        usage = db.ai_usage_summary()["per_business"][business["id"]]
+        self.assertEqual(usage["calls"], 2)
+        self.assertEqual(usage["input"], 100)
+
+    def test_local_ai_adapter_uses_openai_compatible_contract(self):
+        from noesis.adapters import ai as ai_adapter
+
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = json.dumps({
+            "choices": [{"message": {"content": "Todo en orden."}}]
+        }).encode("utf-8")
+        with (
+            patch.object(config, "LOCAL_AI_BASE_URL", "http://ia-privada:11434"),
+            patch.object(config, "LOCAL_AI_MODEL", "modelo-local"),
+            patch.object(config, "LOCAL_AI_API_KEY", "clave-interna"),
+            patch.object(
+                ai_adapter.urllib.request, "urlopen", return_value=response
+            ) as urlopen,
+        ):
+            result = ai_adapter.local_chat(
+                system="Eres Noesis.",
+                messages=[{"role": "user", "content": "Ayúdame."}],
+                tools=[{
+                    "name": "listar_clientes",
+                    "description": "Lista clientes.",
+                    "input_schema": {"type": "object", "properties": {}},
+                }],
+            )
+
+        self.assertEqual(
+            result["choices"][0]["message"]["content"], "Todo en orden."
+        )
+        request = urlopen.call_args.args[0]
+        self.assertEqual(
+            request.full_url,
+            "http://ia-privada:11434/v1/chat/completions",
+        )
+        self.assertEqual(request.get_header("Authorization"), "Bearer clave-interna")
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(payload["model"], "modelo-local")
+        self.assertEqual(payload["messages"][0]["role"], "system")
+        self.assertEqual(
+            payload["tools"][0]["function"]["name"], "listar_clientes"
+        )
+
+    def test_chat_uses_one_external_credit_per_advanced_message(self):
+        from noesis import agent as agent_module
+        from noesis.adapters import billing
+
+        business, _ = self.make_business("IA con límite")
+        db.update_integration_setting(business["id"], "ai_external", "enabled")
+        fake_agent = MagicMock()
+        fake_agent.send.return_value = "Respuesta avanzada."
+        chat._agents.pop(business["id"], None)
+        chat._local_agents.pop(business["id"], None)
+
+        with (
+            patch.object(config, "LOCAL_AI_BASE_URL", ""),
+            patch.object(config, "LOCAL_AI_MODEL", ""),
+            patch.object(config, "ANTHROPIC_API_KEY", "clave-test"),
+            patch.object(nlu, "parse", return_value=None),
+            patch.object(agent_module, "NoesisAgent", return_value=fake_agent),
+            patch.dict(billing.PLANS["autonomo"], {"credits": 1}),
+        ):
+            first = chat._handle(business["id"], "Consulta compleja singular")
+            second = chat._handle(business["id"], "Otra consulta compleja singular")
+
+        self.assertEqual(first["source"], "ia")
+        self.assertEqual(first["reply"], "Respuesta avanzada.")
+        self.assertEqual(second["source"], "local")
+        self.assertIn("consultas avanzadas", second["reply"])
+        fake_agent.send.assert_called_once()
+        self.assertEqual(db.ai_credit_status(business["id"])["used"], 1)
+
+    def test_external_ai_credit_limit_is_atomic_and_isolated(self):
+        from noesis.adapters import billing
+
+        business, _ = self.make_business("Créditos A")
+        other, _ = self.make_business("Créditos B")
+        with patch.dict(billing.PLANS["autonomo"], {"credits": 2}):
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                claims = list(pool.map(
+                    lambda _index: db.claim_ai_credit(business["id"]),
+                    range(6),
+                ))
+            other_first = db.claim_ai_credit(other["id"])
+
+            self.assertEqual(sum(item["allowed"] for item in claims), 2)
+            self.assertTrue(all(
+                item["remaining"] == 0
+                for item in claims if not item["allowed"]
+            ))
+            self.assertTrue(other_first["allowed"])
+            self.assertEqual(db.ai_credit_status(business["id"])["used"], 2)
+            self.assertEqual(db.ai_credit_status(other["id"])["used"], 1)
 
 
 if __name__ == "__main__":

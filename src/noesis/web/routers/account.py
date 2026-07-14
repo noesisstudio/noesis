@@ -160,7 +160,11 @@ def onboarding_setup(request: Request, business_id: int, error: str = ""):
     if not biz:
         return RedirectResponse("/onboarding", status_code=303)
     return TEMPLATES.TemplateResponse(
-        request, "onboarding_setup.html", {"business": biz, "error": error}
+        request, "onboarding_setup.html", {
+            "business": biz,
+            "error": error,
+            "ai_credits": db.ai_credit_status(business_id),
+        }
     )
 
 
@@ -172,11 +176,14 @@ def onboarding_setup_submit(
     team_size: str = Form(...),
     primary_goal: str = Form(...),
     province: str = Form(""),
+    ai_mode: str = Form("enabled"),
 ):
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
         return RedirectResponse("/login", status_code=303)
     try:
+        if ai_mode not in {"enabled", "disabled"}:
+            raise ValueError("El modo de IA no es válido.")
         db.update_business_profile(
             business_id,
             sector=sector,
@@ -184,6 +191,7 @@ def onboarding_setup_submit(
             primary_goal=primary_goal,
             province=province,
         )
+        db.update_integration_setting(business_id, "ai_external", ai_mode)
     except ValueError:
         return RedirectResponse(
             f"/onboarding/setup/{business_id}?error=profile", status_code=303
@@ -192,6 +200,15 @@ def onboarding_setup_submit(
         business_id,
         "business_profile_completed",
         f"team_size={team_size};goal={primary_goal}",
+    )
+    db.record_product_event(
+        business_id,
+        "ai_onboarding_decision",
+        json.dumps({
+            "mode": ai_mode,
+            "version": "2026-07-14",
+            "local_first": True,
+        }, separators=(",", ":")),
     )
     return RedirectResponse(f"/onboarding/whatsapp/{business_id}", status_code=303)
 

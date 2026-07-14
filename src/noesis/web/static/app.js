@@ -115,7 +115,10 @@ async function noesisSend(preset) {
       message: text, page: window.NOESIS_PAGE || null
     });
     typing?.remove();
-    noesisBubble(result.reply, 'assistant', result.source === 'ia' ? 'IA' : null);
+    const aiLabel = result.source === 'ia_local'
+      ? 'IA privada'
+      : (result.source === 'ia' ? 'IA' : null);
+    noesisBubble(result.reply, 'assistant', aiLabel);
   } catch (error) {
     typing?.remove();
     noesisBubble(error.message || 'Ahora mismo no he podido responderte.', 'assistant');

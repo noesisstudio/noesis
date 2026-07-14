@@ -798,6 +798,73 @@ def update_integration_setting(
     return dict(row)
 
 
+def _ai_credit_limit(business: dict) -> int:
+    from .adapters.billing import PLANS
+
+    plan = business.get("plan") or "trial"
+    if plan not in PLANS:
+        plan = "autonomo"
+    return int(PLANS[plan]["credits"])
+
+
+def ai_credit_status(business_id: int, month: str | None = None) -> dict:
+    """Créditos de IA externa; el cerebro local y privado no los consumen."""
+    month = month or date.today().strftime("%Y-%m")
+    business = get_business(business_id)
+    if not business:
+        return {"limit": 0, "used": 0, "remaining": 0, "month": month}
+    limit = _ai_credit_limit(business)
+    with get_conn() as conn:
+        used = int(conn.execute(
+            "SELECT COUNT(*) AS n FROM product_events WHERE business_id=? "
+            "AND event_name='ai_credit_used' AND CAST(created_at AS TEXT) LIKE ?",
+            (business_id, f"{month}%"),
+        ).fetchone()["n"])
+    return {
+        "limit": limit,
+        "used": used,
+        "remaining": max(0, limit - used),
+        "month": month,
+    }
+
+
+def claim_ai_credit(business_id: int, provider: str = "external") -> dict:
+    """Reserva como máximo un crédito por mensaje, incluso con concurrencia."""
+    now = _now()
+    month = date.today().strftime("%Y-%m")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        business = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not business:
+            return {"allowed": False, "limit": 0, "used": 0, "remaining": 0}
+        limit = _ai_credit_limit(dict(business))
+        used = int(conn.execute(
+            "SELECT COUNT(*) AS n FROM product_events WHERE business_id=? "
+            "AND event_name='ai_credit_used' AND CAST(created_at AS TEXT) LIKE ?",
+            (business_id, f"{month}%"),
+        ).fetchone()["n"])
+        if used >= limit:
+            return {
+                "allowed": False, "limit": limit, "used": used, "remaining": 0
+            }
+        conn.execute(
+            "INSERT INTO product_events "
+            "(business_id, event_name, event_data, created_at) VALUES (?, ?, ?, ?)",
+            (business_id, "ai_credit_used", json.dumps({
+                "provider": provider, "month": month
+            }, separators=(",", ":")), now),
+        )
+    return {
+        "allowed": True,
+        "limit": limit,
+        "used": used + 1,
+        "remaining": max(0, limit - used - 1),
+    }
+
+
 def record_integration_result(
     business_id: int, integration_key: str, error: str | None = None
 ) -> None:
@@ -828,11 +895,13 @@ def integration_catalog(business_id: int) -> list[dict]:
             ).fetchall()
         }
     try:
+        from .adapters import ai as ai_adapter
         from .adapters import email as email_adapter
         from .web import whatsapp as whatsapp_adapter
         from . import verifactu_client
 
         runtime = {
+            "ai_local": ai_adapter.local_available(),
             "ai_external": bool(config.ANTHROPIC_API_KEY),
             "whatsapp": whatsapp_adapter.is_configured(),
             "email": email_adapter.available(),
@@ -840,12 +909,14 @@ def integration_catalog(business_id: int) -> list[dict]:
         }
     except Exception:  # noqa: BLE001 - el centro nunca debe tumbar Ajustes
         runtime = {
+            "ai_local": False,
             "ai_external": bool(config.ANTHROPIC_API_KEY),
             "whatsapp": False, "email": False, "verifactu": False,
         }
 
     definitions = (
         ("whatsapp", "WhatsApp", "Habla con Noesis y recibe avisos desde el móvil."),
+        ("ai_local", "IA privada", "Modelo propio en infraestructura controlada por Noesis."),
         ("ai_external", "IA avanzada", "Respaldo para consultas y documentos complejos."),
         ("email", "Correo", "Envíos de gestoría, acceso y comunicaciones operativas."),
         ("verifactu", "Veri*Factu", "Registro fiscal preparado y, con certificado, envío a AEAT."),
@@ -879,10 +950,20 @@ def integration_catalog(business_id: int) -> list[dict]:
                 href, action_label = "#whatsapp-conexion", "Conectar"
             else:
                 state, label = "unavailable", "falta configurar Meta"
+        elif key == "ai_local":
+            active = available
+            state = "connected" if active else "pending"
+            label = "activa" if active else "preparada, sin servidor"
+            tone = "green" if active else "gray"
+            detail = (
+                f"Modelo {config.LOCAL_AI_MODEL}; no consume créditos externos"
+                if active else "Noesis puede conectarla sin cambiar sus herramientas"
+            )
         elif key == "ai_external":
             active = integration_enabled(
                 business_id, key, available=available
             )
+            credits = ai_credit_status(business_id)
             if active:
                 state, label, tone = "connected", "activa", "green"
                 action, action_label = "disable", "Desactivar"
@@ -891,7 +972,10 @@ def integration_catalog(business_id: int) -> list[dict]:
                 action, action_label = "enable", "Activar"
             else:
                 state, label = "unavailable", "no configurada"
-            detail = "El cerebro local sigue funcionando" if not active else None
+            detail = (
+                f"Quedan {credits['remaining']} de {credits['limit']} consultas este mes"
+                if active else "El cerebro local sigue funcionando"
+            )
         elif key == "email":
             active = available
             state = "connected" if active else "unavailable"
@@ -1755,6 +1839,14 @@ def create_account(name, email, password_hash, sector=None, trial_days: int = 14
             (name, email, sector, _now(), ends),
         ).fetchone()
         business_id = row["id"]
+        # El alta explicará y activará la experiencia completa en el paso de
+        # personalización. Hasta esa elección explícita no sale contenido fuera.
+        conn.execute(
+            "INSERT INTO integration_settings "
+            "(business_id, integration_key, mode, updated_at) "
+            "VALUES (?, 'ai_external', 'disabled', ?)",
+            (business_id, _now()),
+        )
         user_row = conn.execute(
             "INSERT INTO users (email, password_hash, business_id, created_at) "
             "VALUES (?, ?, ?, ?) RETURNING id",
@@ -4714,7 +4806,8 @@ def get_project(project_id: int, business_id: int) -> dict | None:
             "SELECT e.*, w.name AS worker_name FROM project_entries e "
             "LEFT JOIN workers w ON w.id=e.worker_id AND w.business_id=e.business_id "
             "WHERE e.project_id=? AND e.business_id=? "
-            "ORDER BY COALESCE(e.entry_on, e.created_at) DESC, e.id DESC",
+            "ORDER BY COALESCE(e.entry_on, CAST(e.created_at AS TEXT)) DESC, "
+            "e.id DESC",
             (project_id, business_id),
         ).fetchall()
         jobs = conn.execute(
