@@ -3205,13 +3205,17 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 agent_module.anthropic, "Anthropic", return_value=fake_client
             ),
         ):
-            noesis_agent = agent_module.NoesisAgent(business["id"])
+            noesis_agent = agent_module.NoesisAgent(
+                business["id"], model=config.FALLBACK_MODEL
+            )
             self.assertEqual(noesis_agent.send("hola"), "hola")
         usage = db.ai_usage_summary()
         entry = usage["per_business"][business["id"]]
         self.assertEqual(entry["calls"], 1)
         self.assertEqual(entry["input"], 321)
         self.assertEqual(entry["output"], 45)
+        self.assertEqual(entry["providers"], {"anthropic": 1})
+        self.assertAlmostEqual(entry["estimated_cost_usd"], 0.000546)
 
     def test_local_agent_uses_tools_without_external_credits(self):
         from noesis import agent as agent_module
@@ -3296,6 +3300,34 @@ class AdminCommandCenterTestCase(unittest.TestCase):
             payload["tools"][0]["function"]["name"], "listar_clientes"
         )
 
+    def test_compatible_ai_adapter_uses_configured_endpoint_and_price(self):
+        from noesis import agent as agent_module
+        from noesis.adapters import ai as ai_adapter
+
+        business, _ = self.make_business("IA Compatible")
+        response = {
+            "choices": [{"message": {"content": "Todo controlado."}}],
+            "usage": {"prompt_tokens": 8_000, "completion_tokens": 1_200},
+        }
+        with (
+            patch.object(config, "COMPAT_AI_BASE_URL", "https://api.example/v1"),
+            patch.object(config, "COMPAT_AI_MODEL", "modelo-abierto"),
+            patch.object(config, "COMPAT_AI_API_KEY", "clave-compatible"),
+            patch.object(config, "COMPAT_AI_PROVIDER", "proveedor-test"),
+            patch.object(config, "COMPAT_AI_LEGAL_NAME", "Proveedor Test, SL"),
+            patch.object(config, "COMPAT_AI_REGION", "UE"),
+            patch.object(config, "COMPAT_AI_INPUT_USD_PER_MTOK", 0.29),
+            patch.object(config, "COMPAT_AI_OUTPUT_USD_PER_MTOK", 0.59),
+            patch.object(ai_adapter, "external_chat", return_value=response),
+        ):
+            compatible = agent_module.CompatibleNoesisAgent(business["id"])
+            reply = compatible.send("¿Cómo va mi negocio?")
+
+        self.assertEqual(reply, "Todo controlado.")
+        usage = db.ai_usage_summary()["per_business"][business["id"]]
+        self.assertEqual(usage["providers"], {"proveedor-test": 1})
+        self.assertAlmostEqual(usage["estimated_cost_usd"], 0.003028)
+
     def test_chat_uses_one_external_credit_per_advanced_message(self):
         from noesis import agent as agent_module
         from noesis.adapters import billing
@@ -3323,6 +3355,88 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertEqual(second["source"], "local")
         self.assertIn("consultas avanzadas", second["reply"])
         fake_agent.send.assert_called_once()
+        self.assertEqual(db.ai_credit_status(business["id"])["used"], 1)
+
+    def test_chat_prefers_compatible_provider_and_falls_back_without_double_credit(self):
+        from noesis import agent as agent_module
+
+        business, _ = self.make_business("IA doble respaldo")
+        db.update_integration_setting(business["id"], "ai_external", "enabled")
+        compatible = MagicMock()
+        compatible.send.side_effect = RuntimeError("caída compatible")
+        anthropic_agent = MagicMock()
+        anthropic_agent.send.return_value = "Respuesta de respaldo."
+        chat._agents.pop(business["id"], None)
+        chat._local_agents.pop(business["id"], None)
+        chat._compatible_agents.pop(business["id"], None)
+
+        with (
+            patch.object(config, "LOCAL_AI_BASE_URL", ""),
+            patch.object(config, "LOCAL_AI_MODEL", ""),
+            patch.object(config, "COMPAT_AI_BASE_URL", "https://api.example/v1"),
+            patch.object(config, "COMPAT_AI_MODEL", "modelo-abierto"),
+            patch.object(config, "COMPAT_AI_API_KEY", "clave-compatible"),
+            patch.object(config, "COMPAT_AI_PROVIDER", "proveedor-test"),
+            patch.object(config, "COMPAT_AI_LEGAL_NAME", "Proveedor Test, SL"),
+            patch.object(config, "COMPAT_AI_REGION", "UE"),
+            patch.object(config, "ANTHROPIC_API_KEY", "clave-test"),
+            patch.object(nlu, "parse", return_value=None),
+            patch.object(
+                agent_module, "CompatibleNoesisAgent", return_value=compatible
+            ),
+            patch.object(
+                agent_module, "NoesisAgent", return_value=anthropic_agent
+            ),
+        ):
+            result = chat._handle(
+                business["id"], "Consulta compleja con respaldo"
+            )
+
+        self.assertEqual(result["source"], "ia")
+        self.assertEqual(result["reply"], "Respuesta de respaldo.")
+        compatible.send.assert_called_once()
+        anthropic_agent.send.assert_called_once()
+        self.assertEqual(db.ai_credit_status(business["id"])["used"], 1)
+
+    def test_chat_does_not_fallback_after_possible_partial_write(self):
+        from noesis import agent as agent_module
+
+        business, _ = self.make_business("IA sin duplicados")
+        db.update_integration_setting(business["id"], "ai_external", "enabled")
+        compatible = MagicMock()
+        compatible.send.side_effect = agent_module.PartialAgentExecutionError(
+            "posible escritura"
+        )
+        anthropic_agent = MagicMock()
+        chat._agents.pop(business["id"], None)
+        chat._local_agents.pop(business["id"], None)
+        chat._compatible_agents.pop(business["id"], None)
+
+        with (
+            patch.object(config, "LOCAL_AI_BASE_URL", ""),
+            patch.object(config, "LOCAL_AI_MODEL", ""),
+            patch.object(config, "COMPAT_AI_BASE_URL", "https://api.example/v1"),
+            patch.object(config, "COMPAT_AI_MODEL", "modelo-abierto"),
+            patch.object(config, "COMPAT_AI_API_KEY", "clave-compatible"),
+            patch.object(config, "COMPAT_AI_PROVIDER", "proveedor-test"),
+            patch.object(config, "COMPAT_AI_LEGAL_NAME", "Proveedor Test, SL"),
+            patch.object(config, "COMPAT_AI_REGION", "UE"),
+            patch.object(config, "ANTHROPIC_API_KEY", "clave-test"),
+            patch.object(nlu, "parse", return_value=None),
+            patch.object(
+                agent_module, "CompatibleNoesisAgent", return_value=compatible
+            ),
+            patch.object(
+                agent_module, "NoesisAgent", return_value=anthropic_agent
+            ),
+        ):
+            result = chat._handle(
+                business["id"], "Crea un proyecto y dime cómo queda"
+            )
+
+        self.assertEqual(result["source"], "local")
+        self.assertIn("no la voy a repetir", result["reply"])
+        anthropic_agent.send.assert_not_called()
         self.assertEqual(db.ai_credit_status(business["id"])["used"], 1)
 
     def test_external_ai_credit_limit_is_atomic_and_isolated(self):

@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+import json
+import os
+import unittest
+from unittest.mock import patch
+
+from noesis import config, readiness
+
+
+class ReadinessTestCase(unittest.TestCase):
+    def test_report_never_contains_secret_values(self):
+        secret = "secreto-super-largo-que-no-debe-aparecer"
+        with (
+            patch.dict(os.environ, {
+                "WHATSAPP_TOKEN": secret,
+                "NOESIS_WHATSAPP_NUMBER": "+34123456789",
+            }, clear=True),
+            patch.object(config, "SECRET_KEY", secret),
+            patch.object(config, "IS_PRODUCTION", False),
+            patch.object(config, "BASE_URL", "https://app.example"),
+            patch.object(config, "DATABASE_URL", "postgresql://oculta"),
+            patch.object(config, "ANTHROPIC_API_KEY", secret),
+            patch.object(config, "LOCAL_AI_BASE_URL", ""),
+            patch.object(config, "LOCAL_AI_MODEL", ""),
+            patch.object(config, "COMPAT_AI_BASE_URL", ""),
+            patch.object(config, "COMPAT_AI_MODEL", ""),
+            patch.object(config, "COMPAT_AI_API_KEY", ""),
+            patch.object(config, "COMPAT_AI_LEGAL_NAME", ""),
+            patch.object(config, "COMPAT_AI_REGION", ""),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        serialized = json.dumps(report, ensure_ascii=False)
+        self.assertNotIn(secret, serialized)
+        whatsapp = [
+            item for item in report["checks"] if item["area"] == "whatsapp"
+        ][0]
+        self.assertEqual(whatsapp["status"], "blocker")
+
+    def test_missing_optional_services_are_warnings_not_fake_readiness(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(config, "SECRET_KEY", "x" * 40),
+            patch.object(config, "IS_PRODUCTION", False),
+            patch.object(config, "BASE_URL", "https://app.example"),
+            patch.object(config, "DATABASE_URL", "postgresql://oculta"),
+            patch.object(config, "ANTHROPIC_API_KEY", ""),
+            patch.object(config, "LOCAL_AI_BASE_URL", ""),
+            patch.object(config, "LOCAL_AI_MODEL", ""),
+            patch.object(config, "COMPAT_AI_BASE_URL", ""),
+            patch.object(config, "COMPAT_AI_MODEL", ""),
+            patch.object(config, "COMPAT_AI_API_KEY", ""),
+            patch.object(config, "COMPAT_AI_LEGAL_NAME", ""),
+            patch.object(config, "COMPAT_AI_REGION", ""),
+            patch.object(config, "ADMIN_EMAIL", ""),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        self.assertTrue(report["ready"])
+        self.assertEqual(report["counts"]["blocker"], 0)
+        self.assertGreater(report["counts"]["warning"], 0)
+
+    def test_external_compatible_provider_requires_https_and_legal_identity(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(config, "SECRET_KEY", "x" * 40),
+            patch.object(config, "IS_PRODUCTION", False),
+            patch.object(config, "BASE_URL", "https://app.example"),
+            patch.object(config, "DATABASE_URL", "postgresql://oculta"),
+            patch.object(config, "ANTHROPIC_API_KEY", ""),
+            patch.object(config, "LOCAL_AI_BASE_URL", ""),
+            patch.object(config, "LOCAL_AI_MODEL", ""),
+            patch.object(config, "COMPAT_AI_BASE_URL", "http://api.example/v1"),
+            patch.object(config, "COMPAT_AI_MODEL", "modelo"),
+            patch.object(config, "COMPAT_AI_API_KEY", "secreta"),
+            patch.object(config, "COMPAT_AI_LEGAL_NAME", "Proveedor, SL"),
+            patch.object(config, "COMPAT_AI_REGION", "UE"),
+            patch.object(config, "ADMIN_EMAIL", "admin@example.com"),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        ai_checks = [item for item in report["checks"] if item["area"] == "ia"]
+        self.assertTrue(any(item["status"] == "blocker" for item in ai_checks))
+        self.assertTrue(any("HTTPS" in item["action"] for item in ai_checks))
+
+
+if __name__ == "__main__":
+    unittest.main()

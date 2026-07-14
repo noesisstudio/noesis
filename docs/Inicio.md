@@ -13,6 +13,8 @@ usa la vista de grafo para navegar.
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
 - [[Arquitectura]] — cómo está construido el sistema.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
+- [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
+- [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
 - [[Despliegue]] — cómo poner Noesis online 24/7 en bynoesis.com.

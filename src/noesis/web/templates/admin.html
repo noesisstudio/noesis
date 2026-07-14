@@ -55,12 +55,13 @@
     </div>
   </div>
   <div class="card">
-    <div class="card-h"><h2>Uso de IA · {{ data.ai_usage.month }}</h2><span class="hint">el coste real de servir</span></div>
+    <div class="card-h"><h2>Uso de IA · {{ data.ai_usage.month }}</h2><span class="hint">uso y coste estimado</span></div>
     <div class="card-b">
       <div class="row">
         <span class="badge b-gray">Llamadas al agente: {{ data.ai_usage.total.calls }}</span>
         <span class="badge b-gray">Tokens entrada: {{ '{:,}'.format(data.ai_usage.total.input).replace(',', '.') }}</span>
         <span class="badge b-gray">Tokens salida: {{ '{:,}'.format(data.ai_usage.total.output).replace(',', '.') }}</span>
+        <span class="badge b-gray">Coste estimado: {{ '{:.4f}'.format(data.ai_usage.total.estimated_cost_usd).replace('.', ',') }} USD</span>
         <span class="badge b-gray">Extracciones (fotos/PDF): {{ data.ai_usage.total.extractions }}</span>
       </div>
       <p class="meta" style="margin-top:8px">

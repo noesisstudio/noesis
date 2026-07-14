@@ -19,6 +19,28 @@ from .adapters import ai as ai_adapter
 from .tools import TOOLS, run_tool
 
 _DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+_MUTATING_TOOLS = {
+    "agendar_trabajo", "crear_factura", "crear_presupuesto", "registrar_gasto",
+    "crear_proyecto", "crear_tarea_proyecto",
+}
+
+
+class PartialAgentExecutionError(RuntimeError):
+    """El proveedor falló después de que una herramienta pudiera haber escrito."""
+
+
+def _estimated_cost_usd(
+    input_tokens: int,
+    output_tokens: int,
+    input_usd_per_mtok: float,
+    output_usd_per_mtok: float,
+) -> float:
+    """Coste estimado por llamada; nunca se usa para facturar al cliente."""
+    return round(
+        (input_tokens * input_usd_per_mtok
+         + output_tokens * output_usd_per_mtok) / 1_000_000,
+        8,
+    )
 
 
 def _system_prompt(business: dict) -> str:
@@ -134,21 +156,45 @@ class NoesisAgent:
     def send(self, user_text: str) -> str:
         """Procesa un mensaje del autónomo y devuelve la respuesta de Noesis."""
         with self._lock:
-            return self._send_locked(user_text)
+            self._mutated_in_send = False
+            try:
+                return self._send_locked(user_text)
+            except Exception as exc:
+                if self._mutated_in_send:
+                    raise PartialAgentExecutionError(
+                        "La consulta falló después de una posible escritura."
+                    ) from exc
+                raise
 
     def _record_usage(self, resp, duration_ms: int | None = None) -> None:
-        """Apunta los tokens de cada llamada (coste real, visible en /admin)."""
+        """Apunta tokens y coste estimado de cada llamada para operaciones."""
         try:
             import json as _json
 
             usage = getattr(resp, "usage", None)
+            is_fallback = self.model == config.FALLBACK_MODEL
+            input_rate = (
+                config.FALLBACK_INPUT_USD_PER_MTOK
+                if is_fallback else config.MODEL_INPUT_USD_PER_MTOK
+            )
+            output_rate = (
+                config.FALLBACK_OUTPUT_USD_PER_MTOK
+                if is_fallback else config.MODEL_OUTPUT_USD_PER_MTOK
+            )
             db.record_product_event(
                 self.business_id,
                 "ai_usage",
                 _json.dumps({
+                    "provider": "anthropic",
                     "model": self.model,
                     "in": getattr(usage, "input_tokens", 0) or 0,
                     "out": getattr(usage, "output_tokens", 0) or 0,
+                    "estimated_cost_usd": _estimated_cost_usd(
+                        getattr(usage, "input_tokens", 0) or 0,
+                        getattr(usage, "output_tokens", 0) or 0,
+                        input_rate,
+                        output_rate,
+                    ),
                     "duration_ms": duration_ms,
                 }, separators=(",", ":")),
             )
@@ -192,6 +238,8 @@ class NoesisAgent:
             tool_results = []
             for block in resp.content:
                 if block.type == "tool_use":
+                    if block.name in _MUTATING_TOOLS:
+                        self._mutated_in_send = True
                     output = run_tool(block.name, block.input, self.business_id)
                     tool_results.append({
                         "type": "tool_result",
@@ -199,20 +247,38 @@ class NoesisAgent:
                         "content": output,
                     })
             self.messages.append({"role": "user", "content": tool_results})
+        if self._mutated_in_send:
+            return (
+                "He detenido la operación después de preparar una acción. "
+                "Revisa la actividad reciente antes de volver a pedírmela."
+            )
         return (
             "He detenido la operación porque necesitó demasiados pasos. "
             "Prueba a pedírmelo de una forma más concreta."
         )
 
 
-class LocalNoesisAgent:
-    """Agente con herramientas servido en infraestructura privada del cliente."""
+class OpenAICompatibleNoesisAgent:
+    """Agente con herramientas sobre un endpoint OpenAI-compatible validado."""
 
-    def __init__(self, business_id: int):
-        if not ai_adapter.local_available():
-            raise RuntimeError("La IA privada no está configurada.")
+    def __init__(
+        self,
+        business_id: int,
+        *,
+        provider: str,
+        model: str,
+        chat_callable,
+        integration_key: str,
+        input_usd_per_mtok: float = 0,
+        output_usd_per_mtok: float = 0,
+    ):
         self.business_id = business_id
-        self.model = config.LOCAL_AI_MODEL
+        self.provider = provider
+        self.model = model
+        self.chat_callable = chat_callable
+        self.integration_key = integration_key
+        self.input_usd_per_mtok = input_usd_per_mtok
+        self.output_usd_per_mtok = output_usd_per_mtok
         self.business = db.get_business(business_id) or {}
         history = db.list_assistant_messages(business_id, limit=24)
         if history and history[-1].get("role") == "user":
@@ -225,23 +291,41 @@ class LocalNoesisAgent:
 
     def send(self, user_text: str) -> str:
         with self._lock:
-            return self._send_locked(user_text)
+            self._mutated_in_send = False
+            try:
+                return self._send_locked(user_text)
+            except Exception as exc:
+                if self._mutated_in_send:
+                    raise PartialAgentExecutionError(
+                        "La consulta falló después de una posible escritura."
+                    ) from exc
+                raise
 
     def _record_usage(self, response: dict, duration_ms: int) -> None:
         try:
             usage = response.get("usage") or {}
+            input_tokens = int(usage.get("prompt_tokens") or 0)
+            output_tokens = int(usage.get("completion_tokens") or 0)
             db.record_product_event(
                 self.business_id,
                 "ai_usage",
                 json.dumps({
-                    "provider": "local",
+                    "provider": self.provider,
                     "model": self.model,
-                    "in": int(usage.get("prompt_tokens") or 0),
-                    "out": int(usage.get("completion_tokens") or 0),
+                    "in": input_tokens,
+                    "out": output_tokens,
+                    "estimated_cost_usd": _estimated_cost_usd(
+                        input_tokens,
+                        output_tokens,
+                        self.input_usd_per_mtok,
+                        self.output_usd_per_mtok,
+                    ),
                     "duration_ms": duration_ms,
                 }, separators=(",", ":")),
             )
-            db.record_integration_result(self.business_id, "ai_local")
+            db.record_integration_result(
+                self.business_id, self.integration_key
+            )
         except Exception:  # noqa: BLE001 - observar nunca rompe el chat
             pass
 
@@ -260,7 +344,7 @@ class LocalNoesisAgent:
         allowed_tools = {tool["name"] for tool in safe_tools}
         for _round in range(6):
             started = time.monotonic()
-            response = ai_adapter.local_chat(
+            response = self.chat_callable(
                 system=system, messages=self.messages, tools=safe_tools
             )
             duration_ms = round((time.monotonic() - started) * 1000)
@@ -291,6 +375,8 @@ class LocalNoesisAgent:
                         raise ValueError("Los argumentos no son un objeto.")
                     if name not in allowed_tools:
                         raise ValueError("La herramienta no está autorizada.")
+                    if name in _MUTATING_TOOLS:
+                        self._mutated_in_send = True
                     output = run_tool(name, args, self.business_id)
                 except Exception as exc:  # noqa: BLE001 - el modelo puede corregirse
                     output = json.dumps({"error": str(exc)}, ensure_ascii=False)
@@ -299,9 +385,46 @@ class LocalNoesisAgent:
                     "tool_call_id": str(call.get("id") or name),
                     "content": output,
                 })
+        if self._mutated_in_send:
+            return (
+                "He detenido la operación después de preparar una acción. "
+                "Revisa la actividad reciente antes de volver a pedírmela."
+            )
         return (
             "He detenido la operación porque necesitó demasiados pasos. "
             "Prueba a pedírmelo de una forma más concreta."
+        )
+
+
+class LocalNoesisAgent(OpenAICompatibleNoesisAgent):
+    """Agente servido en infraestructura privada; no consume créditos externos."""
+
+    def __init__(self, business_id: int):
+        if not ai_adapter.local_available():
+            raise RuntimeError("La IA privada no está configurada.")
+        super().__init__(
+            business_id,
+            provider="local",
+            model=config.LOCAL_AI_MODEL,
+            chat_callable=ai_adapter.local_chat,
+            integration_key="ai_local",
+        )
+
+
+class CompatibleNoesisAgent(OpenAICompatibleNoesisAgent):
+    """Agente externo barato; requiere consentimiento y crédito antes de crearlo."""
+
+    def __init__(self, business_id: int):
+        if not ai_adapter.external_available():
+            raise RuntimeError("La IA compatible externa no está configurada.")
+        super().__init__(
+            business_id,
+            provider=config.COMPAT_AI_PROVIDER or "compatible",
+            model=config.COMPAT_AI_MODEL,
+            chat_callable=ai_adapter.external_chat,
+            integration_key="ai_external",
+            input_usd_per_mtok=config.COMPAT_AI_INPUT_USD_PER_MTOK,
+            output_usd_per_mtok=config.COMPAT_AI_OUTPUT_USD_PER_MTOK,
         )
 
 
