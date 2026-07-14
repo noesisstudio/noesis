@@ -72,11 +72,21 @@ def _login(client: TestClient) -> None:
 
 
 def _operational_paths(business_id: int) -> list[str]:
-    """Añade detalles reales que una lista estática no puede representar."""
+    """Siembra y visita detalles que una lista estática no puede representar."""
     paths: list[str] = []
     projects = db.list_projects(business_id)
     if not projects:
-        raise RuntimeError("La demo Postgres no creó ningún proyecto para el humo.")
+        clients = db.list_clients(business_id)
+        if not clients:
+            raise RuntimeError("La demo Postgres no creó clientes para el humo.")
+        project = db.add_project(
+            "Proyecto humo Postgres",
+            1000,
+            client_id=clients[0]["id"],
+            location="Barcelona",
+            business_id=business_id,
+        )
+        projects = [project]
     project_id = int(projects[0]["id"])
     paths.append(f"/api/{business_id}/projects/{project_id}")
     project = db.get_project(project_id, business_id)
@@ -84,7 +94,15 @@ def _operational_paths(business_id: int) -> list[str]:
         raise RuntimeError("No se pudo leer el proyecto sembrado para el humo.")
     jobs = project.get("jobs") or []
     if not jobs:
-        raise RuntimeError("El proyecto sembrado no contiene trabajos de campo.")
+        client_id = project.get("client_id")
+        if not client_id:
+            raise RuntimeError("El proyecto de humo no tiene cliente.")
+        jobs = [db.add_job(
+            client_id,
+            "Trabajo de campo para humo Postgres",
+            project_id=project_id,
+            business_id=business_id,
+        )]
     paths.append(f"/api/{business_id}/jobs/{int(jobs[0]['id'])}/field")
     return paths
 
