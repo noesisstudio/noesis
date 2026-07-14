@@ -5,21 +5,23 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, integraciones, salud operativa y
   entregas a gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. `main` llega a 24 y
-  `codex/field-workflow` a 27.
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. `main` llega a 27.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro: clientes,
   agenda, facturas, proyectos, equipo, documentos y gestoría.
 - `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM.
-- `src/noesis/agent.py`: IA opcional con historial, recuerdos confirmados,
-  permisos efectivos y contexto del negocio.
+- `src/noesis/agent.py`: agentes privado y externo con historial, recuerdos
+  confirmados, permisos efectivos y contexto del negocio.
+- `src/noesis/adapters/ai.py`: cliente stdlib para un servicio privado
+  OpenAI-compatible; no consume créditos externos.
 
 ## Web y acompañante
 
 - `src/noesis/web/server.py`: ensamblador FastAPI, seguridad y routers.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
   de acciones de Noesis.
-- `src/noesis/web/chat.py`: parte del día, plan operativo, avisos de proyecto y
-  acompañamiento contextual por pantalla.
+- `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve
+  por reglas, después por IA privada y solo entonces por IA externa consentida y
+  limitada por plan.
 - `src/noesis/web/routers/projects.py`: proyectos, trabajos vinculados, tareas,
   equipo, horas y costes.
 - `src/noesis/web/routers/portal.py`: portales privados de cliente, gestoría y

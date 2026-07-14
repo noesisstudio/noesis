@@ -1,105 +1,104 @@
-# AGENTS.md — Manual del proyecto Noesis
+# AGENTS.md - Manual del proyecto Noesis
 
-Este archivo es la **fuente de verdad compartida** para cualquier agente de IA que
-trabaje en este repositorio (Claude Code, Codex, etc.). Léelo entero antes de tocar
-nada. La visión y el contexto completos están en el *vault* de Obsidian: **`docs/`**
-(empieza por [`docs/Inicio.md`](docs/Inicio.md)).
+Este archivo es la fuente de verdad compartida para cualquier agente de IA que
+trabaje en el repositorio. Léelo entero antes de tocar nada. La visión y el contexto
+están en `docs/`, empezando por [`docs/Inicio.md`](docs/Inicio.md).
 
-> 🔄 **¿Retomas el trabajo (p. ej. continuando desde otro agente)?** Lee primero
-> [`docs/Estado-traspaso-MVP.md`](docs/Estado-traspaso-MVP.md): dice qué está hecho,
-> qué hay desplegado, qué falta para el MVP y qué tocar a continuación.
+> Si retomas trabajo, lee primero [`docs/Estado-actual-main.md`](docs/Estado-actual-main.md)
+> y [`docs/Tareas-vivas.md`](docs/Tareas-vivas.md). El primero es la única fotografía
+> viva; el segundo, el único listado vivo de pendientes. Los traspasos son históricos.
 
-> 🎨 **¿Vas a tocar una pantalla, un texto o el estilo?** Lee antes `docs/design/`:
-> [`PRODUCT_PRINCIPLES.md`](docs/design/PRODUCT_PRINCIPLES.md),
-> [`DESIGN.md`](docs/design/DESIGN.md), [`UX_COPY.md`](docs/design/UX_COPY.md) y
-> [`STYLE_TOKENS.json`](docs/design/STYLE_TOKENS.json). Fijan la dirección visual
-> (Noesis = asistente con carácter que te da el parte del día; **no** un dashboard
-> fintech). No rediseñes ni escribas copy a ciegas.
-
----
+> Si vas a tocar una pantalla, texto o estilo, lee antes
+> [`docs/design/PRODUCT_PRINCIPLES.md`](docs/design/PRODUCT_PRINCIPLES.md),
+> [`docs/design/DESIGN.md`](docs/design/DESIGN.md),
+> [`docs/design/UX_COPY.md`](docs/design/UX_COPY.md) y
+> [`docs/design/STYLE_TOKENS.json`](docs/design/STYLE_TOKENS.json). Noesis da el
+> parte del día; no es un dashboard fintech.
 
 ## 1. Qué es Noesis
-Copiloto de negocio por WhatsApp para autónomos de servicios (fontaneros,
-electricistas, reformas, limpieza, jardinería…). Gestiona agenda, clientes, cobros y
-facturas para "quitar ruido mental". Detalle en `docs/Producto.md`.
+
+Copiloto de negocio por WhatsApp para autónomos de servicios: fontanería,
+electricidad, reformas, limpieza, jardinería y similares. Gestiona agenda, clientes,
+cobros, documentos, proyectos y facturas para quitar ruido mental. Detalle en
+[`docs/Producto.md`](docs/Producto.md).
 
 ## 2. Cómo arrancar
+
 ```bash
 py -m venv .venv
-.\.venv\Scripts\Activate.ps1     # Windows PowerShell
+.\.venv\Scripts\Activate.ps1
 pip install -e .
-noesis-web                       # servidor web -> http://127.0.0.1:8000
+noesis-web
 ```
-- Login de demo: **demo@bynoesis.com / demo1234**.
-- CLI de prueba (chat tipo WhatsApp): `py -m noesis`.
-- La IA (Claude) es opcional: necesita `ANTHROPIC_API_KEY` en `.env`. Sin clave, el
-  chat funciona igual con el cerebro local (`nlu.py`).
 
-## 3. Arquitectura (resumen — detalle en `docs/Arquitectura.md`)
+- Demo básica: `demo@bynoesis.com / demo1234` con `NOESIS_SEED_DEMO` activo.
+- Demo rica: `python -m noesis.demo` crea `demo@noesis.app / demo1234`.
+- CLI de chat: `py -m noesis`.
+- Sin proveedor de IA, el producto funciona con `nlu.py`. Un servicio privado se
+  configura según [`docs/IA-local.md`](docs/IA-local.md); la IA externa requiere
+  `ANTHROPIC_API_KEY` y consentimiento por negocio.
+
+## 3. Arquitectura resumida
+
+```text
+WhatsApp / Web / App
+  -> reglas locales -> IA privada opcional -> IA externa autorizada
+  -> tools.py -> db.py -> adapters/
 ```
-WhatsApp / Web / App  ─►  Cerebro (local nlu.py + IA opcional)  ─►  tools.py  ─►  db.py
-                                                                       └─► adapters/ (Holded…)
-```
-Archivos clave (`src/noesis/`):
-- `web/server.py` — FastAPI: páginas, API, login, onboarding, webhook.
-- `web/static/app.css` · `app.js` — sistema de diseño propio + helpers JS.
-- `web/templates/` — `base.html` (layout) + una plantilla por apartado.
-- `nlu.py` — cerebro local por reglas. `web/chat.py` — orquestador local+IA.
-- `tools.py` / `agent.py` — acciones y agente IA (multi-negocio).
-- `db.py` — acceso único SQLite/Postgres. `migrations.py` — esquema versionado.
-  `web/auth.py` — login/seguridad.
-- `adapters/invoicing.py` — facturación (mock → Holded).
 
-## 4. Reglas de oro (NO romper)
-1. **Idioma:** UI, textos y comentarios en **español**. Identificadores de código en
-   inglés/español como ya están; imita el estilo del archivo que edites.
-2. **Mínimas dependencias externas.** Nada de librerías pesadas si se puede con la
-   stdlib. Sin CDNs en runtime (Chart.js va servido en local).
-3. **Privacidad/coste:** todo lo posible interno. Solo el LLM (si se activa) sale
-   fuera. Lo rutinario se resuelve en local.
-4. **Seguridad:** jamás romper el aislamiento por negocio. Toda consulta/escritura va
-   filtrada por `business_id`. Las rutas `/b/` y `/api/` están protegidas por sesión.
-5. **Fiscalidad correcta:** IVA (21/10/4) + IRPF. Total = base + IVA − IRPF. No
-   inventar cálculos. Ver `docs/Fiscalidad.md`.
-6. **Marca:** verde bosque `#14463b`, teal `#2e8b74`, crema `#f4f1e8`. Usa las
-   variables CSS de `app.css`, no colores sueltos.
-7. **Adaptadores:** integraciones externas (facturación, pagos) detrás de un
-   adaptador, para cambiar de proveedor tocando un solo archivo.
-8. **Verifica antes de cerrar:** arranca el servidor y comprueba que las páginas dan
-   200 y los flujos funcionan. No entregues sin probar.
+Archivos clave:
 
-## 5. Protocolo multi-agente (trabajar dos sin pisarse)
-- **Rama por agente.** No trabajéis sobre `main` directamente.
-  - Claude: ramas `claude/<tarea>`.
-  - Codex: ramas `codex/<tarea>`.
-  - Se fusiona a `main` revisando el *diff*. Resolver conflictos antes de mezclar.
-- **Áreas separadas.** No editar el mismo archivo a la vez (ver reparto abajo).
-- **Una tarea = un objetivo claro.** Commits pequeños y descriptivos.
-- **Actualizar la documentación** (`docs/` y este archivo) cuando cambie algo
-  estructural, para que el otro agente herede el contexto.
-- **No subir** `.env`, `noesis.db` ni `.venv/` (ya en `.gitignore`).
+- `src/noesis/db.py`: acceso único SQLite/Postgres; toda operación filtra por
+  `business_id`.
+- `src/noesis/migrations.py`: esquema versionado; `main` llega a la migración 27.
+- `src/noesis/web/server.py` y `src/noesis/web/routers/`: FastAPI por dominios.
+- `src/noesis/web/static/` y `src/noesis/web/templates/`: sistema de diseño propio.
+- `src/noesis/nlu.py`, `web/chat.py`, `agent.py`, `tools.py`: cerebro y acciones.
+- `src/noesis/adapters/ai.py`: servicio privado OpenAI-compatible.
+- `src/noesis/documents/`: documentos, OCR, revisión y gestoría.
+- `src/noesis/adapters/`: integraciones externas reemplazables.
 
-## 6. Reparto de trabajo recomendado
-| Área | Responsable sugerido | Por qué |
-|---|---|---|
-| Seguridad, fiscalidad, integraciones (Holded/WhatsApp), arquitectura, despliegue | **Claude** | Tareas delicadas y de riesgo |
-| Frontend/UI, nuevas vistas, pulido de diseño, textos, contenido | **Codex** | Tareas más visuales/mecánicas |
+## 4. Reglas de oro
 
-Si una tarea cruza ambas áreas, divídela en dos sub-tareas (una por agente) en vez de
-editar los mismos archivos en paralelo.
+1. UI, textos y comentarios en español; imita los identificadores existentes.
+2. Stdlib y ejecución local primero. Sin CDNs en runtime ni dependencias pesadas
+   sin justificar coste total.
+3. Rutinas y cálculos en local. Solo el contenido no resuelto puede llegar a un
+   proveedor externo autorizado.
+4. Toda lectura/escritura filtra por `business_id`; rutas `/b/` y `/api/` con sesión.
+5. IVA 21/10/4/0 e IRPF. Total = base + IVA - IRPF. Ver `docs/Fiscalidad.md`.
+6. Marca: `#14463b`, `#2e8b74`, `#f4f1e8`; usar variables de `app.css`.
+7. Facturación, pagos, email, voz, IA y extracción detrás de adaptadores.
+8. Noesis prepara; el autónomo confirma dinero, fiscalidad y acciones irreversibles.
+9. Antes de cerrar: tests, servidor, páginas afectadas y estado documental.
+
+## 5. Protocolo multi-agente
+
+- Nunca trabajar directamente sobre `main`. Claude/Fable usa `claude/<tarea>` y
+  Codex `codex/<tarea>`.
+- Una tarea, un objetivo; commits pequeños. No editar a la vez el mismo archivo.
+- Verificar `git branch --show-current` antes de operar con git.
+- Actualizar: estado en `docs/Estado-actual-main.md`, pendientes en
+  `docs/Tareas-vivas.md`, código en `docs/Mapa-codigo.md`, QA en
+  `docs/Registro-QA.md` y decisiones en `docs/Decisiones.md`.
+- No subir `.env`, bases locales, uploads, `.venv/` ni worktrees auxiliares.
+
+## 6. Reparto recomendado
+
+| Área | Responsable sugerido |
+|---|---|
+| Seguridad, fiscalidad, integraciones, arquitectura, despliegue | Claude/Fable |
+| Frontend, vistas, diseño, copy, refactors acotados, CI y QA | Codex |
+
+Si cruza áreas, separar objetivos para evitar pisarse.
 
 ## 7. Estado actual
-Todo el trabajo de ambos agentes está **fusionado en `main`** (auditado el
-2026-07-07): núcleo completo, equipo y fichaje inalterable, Veri*Factu fases 1 y 2
-(migración 9), backups verificados, cobros parciales (11), gasto por foto (12),
-recordatorios de cobro (13) y webhooks recuperables (16). Esquema en la migración
-**16**, 126 tests verdes. GitHub Actions ejecuta tests y migraciones en cada PR y
-push a `main`.
-Siguiente: encender lo externo (claves IA/WhatsApp/Stripe, certificado AEAT),
-pilotar con clientes reales y crecer por capas según `docs/Roadmap.md`.
+
+No duplicarlo aquí. Leer [`docs/Estado-actual-main.md`](docs/Estado-actual-main.md) y
+[`docs/Tareas-vivas.md`](docs/Tareas-vivas.md).
 
 ## 8. Criterio heredable
-El método de trabajo (cómo se prioriza, cómo se diseña, qué no hacer) está en
-**`docs/Metodo-operativo-Fable.md`**. Todo traspaso entre modelos usa
-**`docs/AI_HANDOFF_TEMPLATE.md`**. Las dudas pendientes del founder están en
-`docs/Preguntas-abiertas.md`. Léelos antes de decidir nada estructural.
+
+El método está en [`docs/Metodo-operativo-Fable.md`](docs/Metodo-operativo-Fable.md).
+Los traspasos usan [`docs/AI_HANDOFF_TEMPLATE.md`](docs/AI_HANDOFF_TEMPLATE.md) y
+las dudas del founder viven en [`docs/Preguntas-abiertas.md`](docs/Preguntas-abiertas.md).

@@ -1,5 +1,10 @@
 # Estado, traspaso y camino al MVP
 
+> **Documento histórico.** Conserva el razonamiento y el traspaso de las primeras
+> fases, pero sus cifras, ramas y listas no describen el estado actual. La única
+> fotografía viva es [[Estado-actual-main]] y los únicos pendientes vivos están en
+> [[Tareas-vivas]]. No copies estado desde este documento.
+
 > Documento vivo para **continuar el trabajo desde cualquier agente** (Claude o Codex)
 > sin perder el hilo. Si lo retomas: lee esto entero, luego `AGENTS.md` y
 > [[Metodo-operativo-Fable]] (el criterio de trabajo heredable).

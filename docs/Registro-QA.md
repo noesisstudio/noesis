@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-07-14 — IA desde el primer día y guardián PostgreSQL
+
+- `compileall`, `git diff --check`, suite completa: 182 pruebas y 26 subpruebas
+  verdes; permanece el aviso conocido Starlette/httpx.
+- Regresión PostgreSQL corregida en la ficha de proyecto: fecha de entrada y fecha
+  de creación se ordenan como texto compatible. El smoke añade listado/detalle de
+  proyecto, Ajustes, integraciones y parte de campo; falta ejecutarlo contra el
+  Postgres de GitHub Actions.
+- IA privada: contrato OpenAI-compatible, herramientas validadas por servidor,
+  historial y contexto por negocio, métricas sin contenido y cero créditos externos.
+- IA externa: consentimiento explícito en onboarding, opción completa recomendada,
+  límite mensual por plan y reserva atómica aislada por `business_id`.
+- Servidor real con base temporal: `/health`, `/ready`, Home, onboarding, Ajustes,
+  proyectos, detalle y campo en 200; creación de proyecto 201. Se renderizaron
+  «Experiencia completa» e «IA privada».
+- No se validó un modelo privado, Anthropic ni Meta reales porque no se usaron
+  credenciales ni servicio de inferencia. Ese extremo permanece en [[Tareas-vivas]].
+
 ## 2026-07-13 — integraciones y salud por negocio
 
 - Migración 27 verificada en SQLite con ida y vuelta hasta 25.

@@ -8,7 +8,8 @@ privacidad). Ver [[Investigación]] y [[Decisiones]].
 WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de datos
                             │
                   (local: nlu.py, gratis)
-                  (IA opcional: Claude, solo lo complejo)
+                  (IA privada: OpenAI-compatible)
+                  (IA externa autorizada y limitada)
                             │
                             └─►  Facturación (mock → Holded API)
 ```
@@ -22,8 +23,12 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `web/static/noesis-product-preview.png` — captura real del panel usada como visual de producto.
 - `web/static/vendor/chart.umd.min.js` — Chart.js servido en local.
 - `nlu.py` — **cerebro local** por reglas (sin coste/API).
-- `web/chat.py` — orquesta: local primero, IA (Claude) de respaldo.
-- `agent.py` + `tools.py` — agente IA y acciones (multi-negocio).
+- `web/chat.py` — orquesta reglas → IA privada → IA externa autorizada. Si un nivel
+  falla o agota créditos, conserva el acompañamiento local.
+- `agent.py` + `tools.py` — agentes privado/externo y acciones multi-negocio. El
+  modelo nunca decide por sí solo los permisos ni el aislamiento.
+- `adapters/ai.py` — contrato HTTP OpenAI-compatible para Ollama, llama.cpp, vLLM
+  u otro servicio privado, sin SDK ni dependencia nueva. Ver [[IA-local]].
 - `db.py` — frontera única de datos: Postgres con `DATABASE_URL` y SQLite local como
   fallback.
 - `migrations.py` — esquema versionado con subida/bajada; Railway lo aplica en
@@ -90,12 +95,15 @@ Cuenta → perfil operativo → WhatsApp → panel
 
 El alta recoge sector, tamaño del equipo, provincia y objetivo principal. Estos
 campos permiten segmentar activación, retención y conversión sin mezclar negocios ni
-exponer información personal en herramientas de terceros.
+exponer información personal en herramientas de terceros. También pide una elección
+explícita de IA: la experiencia completa está recomendada, pero la cuenta permanece
+sin envíos externos hasta confirmar esa elección.
 
 Detalle y pendientes: [[Backend_Hardening]].
 
 ## Principios
-- Datos en infraestructura propia/gestionada; solo el LLM (si se activa) sale fuera.
+- Datos en infraestructura propia/gestionada; solo el proveedor externo autorizado
+  recibe el contexto que el nivel local no resuelve.
 - Dependencias mínimas (hash con stdlib, no librerías pesadas).
 - Adaptadores: cambiar de proveedor = cambiar 1 archivo.
 
