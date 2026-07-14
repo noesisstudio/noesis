@@ -6,7 +6,7 @@
 ## En revisión
 
 - [ ] Revisar y fusionar `codex/ai-first-hotfix`.
-- [ ] Confirmar en CI PostgreSQL el smoke ampliado de proyectos y campo.
+- [x] Confirmar en CI PostgreSQL el smoke ampliado de proyectos y campo.
 - [ ] Tras desplegar: abrir una ficha de proyecto real, `/ready`, Ajustes y el flujo
   onboarding → IA recomendada → límite → fallback local.
 

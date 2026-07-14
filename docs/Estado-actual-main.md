@@ -29,7 +29,7 @@
   `business_id`. La IA privada no consume esos créditos.
 - Estado de pruebas de esta rama: **182 pruebas y 26 subpruebas verdes**; smoke
   HTTP real en `/health`, `/ready`, onboarding, Ajustes, proyectos, detalle y campo.
-  El smoke PostgreSQL ampliado queda pendiente de confirmación en CI.
+  GitHub Actions aplicó migración 27/27 y pasó el smoke PostgreSQL ampliado.
 
 ## Capacidades que existen pero dependen de configuración externa
 

@@ -6,8 +6,8 @@
   verdes; permanece el aviso conocido Starlette/httpx.
 - Regresión PostgreSQL corregida en la ficha de proyecto: fecha de entrada y fecha
   de creación se ordenan como texto compatible. El smoke añade listado/detalle de
-  proyecto, Ajustes, integraciones y parte de campo; falta ejecutarlo contra el
-  Postgres de GitHub Actions.
+  proyecto, Ajustes, integraciones y parte de campo. GitHub Actions aplicó la
+  migración 27/27 y pasó el smoke en PostgreSQL 16.
 - IA privada: contrato OpenAI-compatible, herramientas validadas por servidor,
   historial y contexto por negocio, métricas sin contenido y cero créditos externos.
 - IA externa: consentimiento explícito en onboarding, opción completa recomendada,
