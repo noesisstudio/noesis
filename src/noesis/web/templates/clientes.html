@@ -13,20 +13,18 @@
   </div>
 </div>
 
-<div class="grid g4">
-  <div class="stat"><div class="lbl">Total clientes</div><div class="val" id="cl-total">—</div><div class="delta flat" id="cl-active"></div></div>
-  <div class="stat"><div class="lbl">Con actividad</div><div class="val" id="cl-act">—</div><div class="delta flat">facturan o tienen trabajos</div></div>
-  <div class="stat"><div class="lbl">Facturación media</div><div class="val" id="cl-avg">—</div><div class="delta flat">por cliente</div></div>
-  <div class="stat"><div class="lbl">Cliente top</div><div class="val" id="cl-top" style="font-size:18px">—</div><div class="delta up" id="cl-top-v"></div></div>
+<div class="card card-action">
+  <div class="card-h"><h2>Lectura rápida de tu cartera</h2><span id="cl-badge" class="priority low">cartera</span></div>
+  <div class="card-b"><div id="cl-plan">…</div></div>
 </div>
 
 <div class="grid g3" style="margin-top:16px">
   <div class="card col-2">
-    <div class="card-h"><h2>Tus clientes</h2><span class="hint">ordenados por facturación</span></div>
+    <div class="card-h"><h2>Tus clientes</h2><span class="hint" id="cl-hint">ordenados por facturación</span></div>
     <div class="card-b table-pad" style="padding-top:6px">
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>Cliente</th><th>Zona</th><th class="t-right">Trabajos</th><th class="t-right">Facturas</th><th class="t-right">Facturado</th><th></th></tr></thead>
+        <table class="fx-table">
+          <thead><tr><th>Cliente</th><th>Actividad</th><th class="t-right">Facturado</th><th></th></tr></thead>
           <tbody id="cl-body"></tbody>
         </table>
       </div>
@@ -43,11 +41,6 @@
   <div class="card-h"><h2>Lo que estoy aprendiendo de tus clientes</h2>
     <span class="hint">señales explicadas, nunca cajas negras</span></div>
   <div class="card-b" id="cl-signals"></div>
-</div>
-
-<div class="card card-action" style="margin-top:16px">
-  <div class="card-h"><h2>Lectura rápida de tu cartera</h2><span id="cl-badge" class="priority low">cartera</span></div>
-  <div class="card-b"><div id="cl-plan">…</div></div>
 </div>
 {% endblock %}
 
@@ -82,23 +75,23 @@ async function load() {
     </div>`;
   }).join('') : '<div class="empty">Añade actividad y Noesis empezará a detectar patrones explicables.</div>';
   const active = cs.filter(c => c.n_trabajos || c.n_facturas).length;
-  el('cl-total').textContent = cs.length;
-  el('cl-active').textContent = active + ' con actividad';
-  el('cl-act').textContent = active;
   const totFact = cs.reduce((a,b)=>a+(b.facturado||0),0);
-  el('cl-avg').textContent = eur(cs.length ? totFact/cs.length : 0);
-  if (cs.length && cs[0].facturado) { el('cl-top').textContent = cs[0].name; el('cl-top-v').textContent = eur(cs[0].facturado); }
-  else { el('cl-top').textContent = '—'; el('cl-top-v').textContent = ''; }
+  el('cl-hint').textContent = cs.length
+    ? `${cs.length} cliente(s) · ${active} con actividad · ${eur(totFact)}`
+    : 'aún sin clientes';
 
   el('cl-bars').innerHTML = barlist(cs.filter(c => c.facturado).slice(0, 5).map(c => ({
     name: c.name, value: c.facturado, valText: eur(c.facturado)
   })));
 
   el('cl-body').innerHTML = cs.map(c => `<tr>
-    <td><b>${esc(c.name)}</b><br><span class="meta">${esc(c.phone||'Sin teléfono')}</span></td>
-    <td>${c.zone ? `<span class="badge b-gray">${esc(c.zone)}</span>`:'—'}</td>
-    <td class="t-right num">${c.n_trabajos}</td>
-    <td class="t-right num">${c.n_facturas}</td>
+    <td>
+      <div class="fx-main"><b>${esc(c.name)}</b>
+        ${c.zone ? `<span class="badge b-gray">${esc(c.zone)}</span>` : ''}</div>
+      <div class="meta">${esc(c.phone||'Sin teléfono')}</div>
+    </td>
+    <td class="meta">${c.n_trabajos||c.n_facturas
+      ? `${c.n_trabajos} trabajo(s) · ${c.n_facturas} factura(s)` : 'sin actividad'}</td>
     <td class="t-right num"><b>${eur(c.facturado)}</b></td>
     <td class="t-right table-actions">
       <button class="btn sm" onclick='sharePortal(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone||"")})' title="Enviarle su portal privado">Portal</button>
