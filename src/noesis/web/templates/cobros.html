@@ -13,28 +13,22 @@
   </div>
 </div>
 
-<div class="grid g3">
-  <div class="stat"><div class="lbl">Pendiente total</div><div class="val" id="p-total">—</div><div class="delta flat" id="p-count"></div></div>
-  <div class="stat"><div class="lbl">En retraso (+7 días)</div><div class="val red" id="p-late">—</div><div class="delta down">reclamar ya</div></div>
-  <div class="stat"><div class="lbl">Días medios de cobro</div><div class="val" id="p-avg">—</div><div class="delta flat">cuánto tardas de media</div></div>
-</div>
-
-<div class="split" style="margin-top:16px">
+<div class="split">
+  <div class="card card-action">
+    <div class="card-h"><h2>Plan de cobro</h2><span id="p-plan-badge" class="priority low">listo</span></div>
+    <div class="card-b"><div id="p-plan">...</div></div>
+  </div>
   <div class="card">
-    <div class="card-h"><h2>Facturas pendientes</h2><span class="hint">de más antigua a más reciente</span></div>
+    <div class="card-h"><h2>Facturas pendientes</h2><span class="hint" id="p-hint">de más antigua a más reciente</span></div>
     <div class="card-b table-pad" style="padding-top:6px">
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>Cliente</th><th>Concepto</th><th>Emitida</th><th class="t-right">Importe</th><th>Estado</th><th></th></tr></thead>
+        <table class="fx-table">
+          <thead><tr><th>Factura</th><th class="t-right">Importe</th><th>Retraso</th><th></th></tr></thead>
           <tbody id="p-body"></tbody>
         </table>
       </div>
       <div id="p-empty"></div>
     </div>
-  </div>
-  <div class="card card-action">
-    <div class="card-h"><h2>Plan de cobro</h2><span id="p-plan-badge" class="priority low">listo</span></div>
-    <div class="card-b"><div id="p-plan">...</div></div>
   </div>
 </div>
 
@@ -50,15 +44,17 @@ async function load() {
   const p = await api('/pending');
   const total = p.reduce((a,b)=>a+b.total,0);
   const late = p.filter(x => (x.days_outstanding || 0) > 7);
-  el('p-total').textContent = eur(total);
-  el('p-count').textContent = p.length + ' factura(s)';
-  el('p-late').textContent = eur(late.reduce((a,b)=>a+b.total,0));
   const avg = p.length ? Math.round(p.reduce((a,b)=>a+(b.days_outstanding||0),0)/p.length) : 0;
-  el('p-avg').textContent = avg + ' días';
+  el('p-hint').textContent = p.length
+    ? `${p.length} factura(s) · ${eur(total)}${avg ? ` · media ${avg} días` : ''}`
+    : 'nada pendiente';
 
   el('p-body').innerHTML = p.map(x => `<tr>
-    <td><b>${esc(x.client_name)}</b></td><td class="meta">${esc(x.concept)}</td>
-    <td class="meta">${dateIso(x.issued_at)}</td>
+    <td>
+      <div class="fx-main"><b>${esc(x.client_name)}</b>
+        <span class="meta">· emitida ${dateIso(x.issued_at)}</span></div>
+      <div class="meta">${esc(x.concept)}</div>
+    </td>
     <td class="t-right num"><b>${eur(x.total)}</b></td>
     <td><span class="badge ${x.days_outstanding > 7 ? 'b-red' : 'b-amber'}">${daysText(x.days_outstanding)}</span></td>
     <td class="t-right table-actions"><button class="btn green" onclick="pay(${x.id})">He cobrado</button></td>
