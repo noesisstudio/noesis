@@ -12,7 +12,7 @@ import logging
 import threading
 from datetime import date, datetime
 
-from .. import config, db, nlu
+from .. import config, db, internal_brain, nlu
 from ..adapters import ai as ai_adapter
 from ..tools import run_tool
 
@@ -565,7 +565,14 @@ def page_brief(business_id: int, page: str) -> dict | None:
     return {"text": text, "stats": stats, "ask": _PAGE_ASK.get(page)}
 
 
-def _handle(business_id: int, message: str, page: str | None = None) -> dict:
+def _handle(
+    business_id: int,
+    message: str,
+    page: str | None = None,
+    *,
+    channel: str = "web",
+    actor_phone: str | None = None,
+) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
     if page and any(x in norm for x in (
             "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
@@ -580,6 +587,15 @@ def _handle(business_id: int, message: str, page: str | None = None) -> dict:
                                "diagnostico", "como lo ves", "mente", "piensa", "plan",
                                "que hago", "por donde empiezo", "que toca")):
         return {"reply": _coach_reply(business_id, message), "source": "local"}
+
+    communication = internal_brain.prepare_response(
+        business_id,
+        message,
+        channel=channel,
+        actor_phone=actor_phone,
+    )
+    if communication:
+        return communication
 
     parsed = nlu.parse(message)
 
@@ -743,6 +759,7 @@ def handle(
     page: str | None = None,
     *,
     channel: str = "web",
+    actor_phone: str | None = None,
 ) -> dict:
     """Entrada común del acompañante: responde y conserva la relación.
 
@@ -758,7 +775,13 @@ def handle(
         )
     except Exception:  # noqa: BLE001
         log.exception("No se pudo guardar la entrada del asistente para %s.", business_id)
-    result = _handle(business_id, message, page)
+    result = _handle(
+        business_id,
+        message,
+        page,
+        channel=channel,
+        actor_phone=actor_phone,
+    )
     try:
         db.add_assistant_message(
             business_id, "assistant", result.get("reply") or "",
