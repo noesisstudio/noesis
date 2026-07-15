@@ -1,89 +1,68 @@
 {% extends "site_base.html" %}
 {% block page_title %}Producto{% endblock %}
-{% block meta_description %}Qué hace Noesis: agenda, presupuestos, facturas con Veri*Factu, cobros, equipo y fichaje legal para autónomos de servicios.{% endblock %}
+{% block meta_description %}Descubre cómo Noesis conecta WhatsApp, trabajos, proyectos, documentos, facturas, cobros, equipo y gestoría sin duplicar trabajo.{% endblock %}
 {% block content %}
-    <section class="page-hero">
-      <div class="kicker">Producto</div>
-      <h1>Un único flujo desde el primer aviso hasta el cobro.</h1>
-      <p>Noesis conecta las tareas que hoy viven separadas entre WhatsApp, la cabeza,
-        el calendario y las hojas de cálculo.</p>
-    </section>
+  <section class="public-page-hero product-page-hero">
+    <div>
+      <span class="eyebrow">Producto</span>
+      <h1>Del primer aviso al cobro, una sola historia.</h1>
+      <p>Noesis conecta las piezas que hoy viven repartidas entre WhatsApp, tu cabeza,
+        el calendario y varias hojas de cálculo.</p>
+      <div class="public-hero-actions"><a class="btn primary" href="/onboarding">Probar 14 días gratis</a><a class="text-link" href="#como-funciona">Ver el recorrido <span aria-hidden="true">↓</span></a></div>
+    </div>
+    <div class="product-thread" aria-label="Un trabajo conectado de principio a fin">
+      <div><small>Cliente</small><b>Marta pide una reparación</b><span>WhatsApp · audio de 18 s</span></div>
+      <div><small>Trabajo</small><b>Caldera · mañana a las 10:00</b><span>Asignado y con materiales previstos</span></div>
+      <div><small>Cierre</small><b>Parte listo y factura preparada</b><span>480,00 € · pendiente de tu confirmación</span></div>
+      <div><small>Cobro</small><b>Seguimiento sin perseguir</b><span>Noesis vigila el vencimiento</span></div>
+    </div>
+  </section>
 
-    <section class="landing-section slim" id="que-hace">
-      <div class="feature-grid">
-        <article class="feature-card">
-          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>
-          <h3>Captura cada petición</h3>
-          <p>Convierte una conversación en cliente, presupuesto o trabajo sin volver a copiar datos.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/><path d="M6 9.5v5M18 9.5v5"/></svg></span>
-          <h3>Organiza agenda y trabajos</h3>
-          <p>Reúne fecha, cliente, zona, encargo y estado para saber qué toca hacer y qué falta cerrar.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h9l4 4V21.5H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg></span>
-          <h3>Factura al terminar</h3>
-          <p>Prepara documentos con base, IVA e IRPF y evita que un trabajo terminado quede sin facturar.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 15l3.5-4 3 2.5L20 7"/></svg></span>
-          <h3>Cobra y vuelve a vender</h3>
-          <p>Detecta vencimientos, prioriza cobros y conserva el historial completo de cada cliente.</p>
-        </article>
-      </div>
-    </section>
+  <section class="public-section product-intro" id="como-funciona" aria-labelledby="how-title">
+    <div class="section-heading">
+      <span class="eyebrow">Cómo funciona</span>
+      <h2 id="how-title">No vuelves a escribir dos veces lo mismo.</h2>
+      <p>Cada paso aprovecha lo que ya sabe el anterior. Si falta un dato, Noesis te lo dice; si una acción es irreversible, te pide confirmación.</p>
+    </div>
+    <div class="process-rows">
+      <article><b>01</b><div><span>Entra el trabajo</span><h3>La petición se convierte en algo accionable.</h3></div><p>Texto, audio, imagen o formulario: Noesis identifica cliente, encargo, lugar y siguiente paso.</p></article>
+      <article><b>02</b><div><span>Se organiza</span><h3>Agenda, proyecto, equipo y materiales hablan entre sí.</h3></div><p>El trabajo conserva horas, costes, documentos y conversaciones sin crear islas de información.</p></article>
+      <article><b>03</b><div><span>Se cierra</span><h3>Terminar el oficio también cierra la administración.</h3></div><p>Parte, justificantes y factura quedan preparados cuando todavía recuerdas lo ocurrido.</p></article>
+      <article><b>04</b><div><span>Se cobra y aprende</span><h3>Noesis vigila lo pendiente y explica el resultado.</h3></div><p>Te avisa, prepara el seguimiento y aprende de tus hábitos sin ocultarte de dónde sale cada recomendación.</p></article>
+    </div>
+  </section>
 
-    <section class="landing-section" id="flujo">
-      <div class="section-intro">
-        <div class="kicker">Cómo funciona</div>
-        <h2>El ciclo completo, sin duplicar trabajo.</h2>
-      </div>
-      <div class="flow-grid workflow-5">
-        <div class="flow-step"><b>1</b><span>Entra una petición por WhatsApp o web.</span></div>
-        <div class="flow-step"><b>2</b><span>Preparas y compartes el presupuesto.</span></div>
-        <div class="flow-step"><b>3</b><span>Agendas y completas el trabajo.</span></div>
-        <div class="flow-step"><b>4</b><span>Generas la factura con sus impuestos.</span></div>
-        <div class="flow-step"><b>5</b><span>Controlas el cobro y el siguiente servicio.</span></div>
-      </div>
-    </section>
+  <section class="companion-section" aria-labelledby="companion-title">
+    <div class="companion-copy">
+      <span class="eyebrow light-eyebrow">Noesis te acompaña</span>
+      <h2 id="companion-title">No es un chat aparte. Está donde tomas cada decisión.</h2>
+      <p>En cada pantalla entiende qué estás mirando, traduce los números a lenguaje humano y propone el siguiente paso sin quitarte el control.</p>
+      <ul><li>Te explica por qué una cifra importa.</li><li>Te avisa cuando falta información.</li><li>Prepara acciones y espera tu confirmación.</li></ul>
+    </div>
+    <div class="companion-demo">
+      <small>Noesis · en Proyectos</small>
+      <blockquote>“La instalación de Sants mantiene margen, pero quedan 18 horas previstas y solo 620 € de colchón. Antes de aceptar otro coste, revisaría materiales.”</blockquote>
+      <div><span>¿Qué puedo mejorar?</span><span>Explícame el margen</span></div>
+    </div>
+  </section>
 
-    <section class="landing-section" id="cumplimiento-legal">
-      <div class="section-intro">
-        <div class="kicker">Cumplimiento</div>
-        <h2>En regla con Hacienda e Inspección, sin pensarlo.</h2>
-        <p>La normativa que viene no debería costarte ni una tarde. Noesis la lleva
-          integrada de serie, no como un módulo aparte.</p>
-      </div>
-      <div class="feature-grid compliance-grid">
-        <article class="feature-card">
-          <span class="law-tag">Obligatorio · 1 jul 2027</span>
-          <h3>Veri*Factu de serie</h3>
-          <p>Cada factura queda registrada con huella encadenada y QR tributario según
-            el formato técnico de la AEAT. Los autónomos están obligados a partir del
-            1 de julio de 2027, con sanciones de hasta 50.000 €. Con Noesis, ya lo tienes.</p>
-        </article>
-        <article class="feature-card">
-          <span class="law-tag">Art. 34.9 ET</span>
-          <h3>Fichaje justificable</h3>
-          <p>Registro de jornada de tu equipo con sellado inalterable, correcciones
-            auditadas e informes verificables listos para una Inspección de Trabajo.
-            GPS opcional conforme a los criterios de la AEPD.</p>
-        </article>
-        <article class="feature-card">
-          <span class="law-tag">RGPD</span>
-          <h3>Tus datos, protegidos y tuyos</h3>
-          <p>Consentimiento, contrato de encargado del tratamiento y copias de
-            seguridad diarias verificadas. Y todo exportable: si un día te vas, te lo
-            llevas.</p>
-        </article>
-        <article class="feature-card">
-          <span class="law-tag">IVA · IRPF</span>
-          <h3>Impuestos sin sorpresas</h3>
-          <p>Base, IVA (21/10/4) y retención de IRPF calculados bien en cada documento,
-            con la vista de impuestos trimestral para saber qué apartar antes de que
-            llegue el 303.</p>
-        </article>
-      </div>
-    </section>
+  <section class="public-section" aria-labelledby="moments-product-title">
+    <div class="section-heading centered"><span class="eyebrow">Capacidad sin complejidad</span><h2 id="moments-product-title">Todo lo necesario, ordenado por el momento en que lo usas.</h2></div>
+    <div class="product-moment-list">
+      <article><div><span>Antes del trabajo</span><h3>Clientes, posibles clientes, presupuestos y agenda.</h3></div><p>Captura la petición, prepara el presupuesto y deja claro quién va, cuándo y con qué.</p><a href="/preguntas">Resolver dudas →</a></article>
+      <article><div><span>Durante el trabajo</span><h3>Equipo, fichaje, proyectos, horas, costes y documentos.</h3></div><p>Cada persona ve sus tareas y el negocio conoce el coste real sin duplicar registros.</p><a href="/equipo">Ver cómo trabajamos →</a></article>
+      <article><div><span>Al terminar</span><h3>Parte, factura, Veri*Factu y portal de cliente.</h3></div><p>La información del trabajo prepara el documento correcto con IVA e IRPF.</p><a href="/precios">Ver planes →</a></article>
+      <article><div><span>Después</span><h3>Cobros, recordatorios, rentabilidad, impuestos y gestoría.</h3></div><p>Noesis sigue detrás de lo pendiente y deja la documentación ordenada por trimestre.</p><a href="/producto#cumplimiento-legal">Ver cumplimiento →</a></article>
+    </div>
+  </section>
+
+  <section class="compliance-section" id="cumplimiento-legal" aria-labelledby="compliance-title">
+    <div><span class="eyebrow">Cumplimiento</span><h2 id="compliance-title">Preparado para trabajar en regla, sin venderte falsa tranquilidad.</h2><p>Noesis automatiza el dato y la trazabilidad. La gestoría conserva el criterio profesional en lo fiscal delicado.</p></div>
+    <dl>
+      <div><dt>Veri*Factu</dt><dd>Registro, huella encadenada y QR tributario preparados dentro del flujo de facturación.</dd></div>
+      <div><dt>Jornada</dt><dd>Fichaje inalterable, correcciones auditadas e informes verificables para el equipo.</dd></div>
+      <div><dt>Privacidad</dt><dd>Aislamiento por negocio, permisos, exportación y copias de seguridad verificadas.</dd></div>
+      <div><dt>Fiscalidad</dt><dd>IVA e IRPF calculados con reglas explícitas; la presentación definitiva la valida tu gestoría.</dd></div>
+    </dl>
+  </section>
 {% endblock %}

@@ -1,64 +1,50 @@
 {% extends "site_base.html" %}
 {% block page_title %}Preguntas frecuentes{% endblock %}
-{% block meta_description %}Respuestas sobre Noesis: Veri*Factu, gestoría, notas de voz, fichaje del equipo, instalación y exportación de datos.{% endblock %}
+{% block meta_description %}Respuestas claras sobre WhatsApp, Veri*Factu, gestoría, equipo, datos, seguridad, prueba y precios de Noesis.{% endblock %}
 {% block content %}
-    <section class="page-hero">
-      <div class="kicker">Preguntas</div>
-      <h1>Lo importante antes de probar.</h1>
-      <p>Si te queda alguna duda, escríbenos desde tu cuenta o al empezar la prueba.</p>
-    </section>
+  <section class="public-page-hero faq-page-hero">
+    <div><span class="eyebrow">Preguntas</span><h1>Lo importante antes de confiar tu negocio a Noesis.</h1></div>
+    <p>Respuestas directas sobre cómo funciona, qué decide el sistema y qué control conservas tú.</p>
+  </section>
 
-    <section class="landing-section slim" id="faq">
-      <div class="faq-grid">
-        <details open>
-          <summary>¿Está adaptado a Veri*Factu?</summary>
-          <p>Sí. Noesis genera de forma nativa el registro de facturación conforme al
-            formato técnico de la AEAT: huella encadenada, QR tributario y eventos
-            auditables en cada factura. La remisión automática a la AEAT se activa
-            mucho antes de que sea obligatoria para autónomos (1 de julio de 2027).</p>
-        </details>
-        <details>
-          <summary>¿Sustituye a mi gestoría?</summary>
-          <p>No. Noesis ordena el día a día: agenda, cobros, gastos y facturas. La parte
-            fiscal delicada debe seguir revisándose con criterio profesional.</p>
-        </details>
-        <details>
-          <summary>¿Puedo hablarle con notas de voz?</summary>
-          <p>Sí. Dile «factura a Juan el cambio de grifo, noventa y cinco euros» en una
-            nota de voz y Noesis la entiende, la transcribe y prepara el documento.
-            Funciona por WhatsApp y también con el micrófono del asistente web.</p>
-        </details>
-        <details>
-          <summary>¿Sirve para el fichaje de mi equipo?</summary>
-          <p>Sí. Cada persona tiene su acceso personal para fichar desde el móvil, con
-            registro inalterable e informes verificables que cumplen el artículo 34.9
-            del Estatuto de los Trabajadores. Sin apps que instalar.</p>
-        </details>
-        <details>
-          <summary>¿Necesito instalar una aplicación?</summary>
-          <p>No. Noesis usa la API oficial de Meta (WhatsApp Cloud API): conectas tu
-            número y hablas como con cualquier contacto. El panel web funciona desde el
-            primer minuto y se puede instalar como acceso directo en el móvil.</p>
-        </details>
-        <details>
-          <summary>¿Puedo llevarme mis datos?</summary>
-          <p>Sí. Puedes descargar facturas y costes en CSV y exportar la cuenta completa.
-            Noesis evita que el valor de tu negocio quede encerrado en la plataforma.</p>
-        </details>
-        <details>
-          <summary>¿Qué ve mi cliente cuando le envío algo?</summary>
-          <p>Un portal privado con la marca de tu negocio (tu logo y tu color) donde puede
-            aprobar presupuestos y descargar facturas. Sin contraseñas ni registros: un
-            enlace que le mandas por WhatsApp.</p>
-        </details>
-        <details>
-          <summary>¿Mis datos están separados de los de otros negocios?</summary>
-          <p>Completamente. Cada negocio vive aislado a nivel de base de datos, con
-            copias de seguridad diarias verificadas. Nadie ve nada que no sea suyo.</p>
-        </details>
-      </div>
-    </section>
+  <section class="public-section faq-layout" id="faq">
+    <aside class="faq-index" aria-label="Categorías de preguntas">
+      <b>En esta página</b>
+      <a href="#empezar">Empezar</a><a href="#whatsapp">WhatsApp y Noesis</a>
+      <a href="#legalidad">Facturación y legalidad</a><a href="#datos">Datos y seguridad</a>
+      <a href="#equipo-faq">Equipo y gestoría</a>
+    </aside>
+    <div class="faq-groups">
+      <section id="empezar"><span class="eyebrow">Empezar</span><h2>La prueba y el día a día</h2><div class="public-accordion">
+        <details open><summary>¿Necesito instalar una aplicación?</summary><p>No. El panel funciona en el navegador y se puede guardar como acceso directo. WhatsApp usa la integración oficial de Meta cuando está conectada.</p></details>
+        <details><summary>¿Tengo que cambiar mi forma de trabajar?</summary><p>No. Puedes empezar enviando mensajes, audios y fotos como ya haces. La web sirve para entender, revisar y controlar.</p></details>
+        <details><summary>¿Qué pasa después de los 14 días?</summary><p>El panel queda en modo consulta si no eliges plan. No desaparecen tus datos ni se realiza ningún cobro automático.</p></details>
+      </div></section>
+
+      <section id="whatsapp"><span class="eyebrow">WhatsApp y Noesis</span><h2>Hablar, entender y actuar</h2><div class="public-accordion">
+        <details><summary>¿Puedo hablarle con notas de voz?</summary><p>Sí. Noesis puede transcribir una instrucción, identificar los datos relevantes y preparar el siguiente paso para que lo revises.</p></details>
+        <details><summary>¿Entiende fotografías de tickets y facturas?</summary><p>Puede detectar y extraer documentos. Si el tipo o algún dato no está claro, lo deja pendiente y te pregunta antes de clasificarlo definitivamente.</p></details>
+        <details><summary>¿Noesis envía o paga sin preguntarme?</summary><p>No. Preparar no es autorizar. Enviar facturas, reclamar cobros, mover citas o cualquier acción irreversible requiere el nivel de permiso definido y, en los casos sensibles, tu confirmación.</p></details>
+      </div></section>
+
+      <section id="legalidad"><span class="eyebrow">Facturación y legalidad</span><h2>Trabajar en regla</h2><div class="public-accordion">
+        <details><summary>¿Está adaptado a Veri*Factu?</summary><p>Noesis prepara el registro de facturación, la huella encadenada y el QR tributario conforme a la estructura técnica prevista. La conexión definitiva con la AEAT depende del certificado y de la activación del servicio externo correspondiente.</p></details>
+        <details><summary>¿Calcula IVA e IRPF?</summary><p>Sí, aplicando las reglas configuradas en cada documento. Noesis no presenta una estimación fiscal como definitiva: tu gestoría valida la presentación.</p></details>
+        <details><summary>¿Sustituye a mi gestoría?</summary><p>No. Ordena y prepara el trabajo administrativo. La gestoría mantiene el criterio profesional en las decisiones fiscales delicadas.</p></details>
+      </div></section>
+
+      <section id="datos"><span class="eyebrow">Datos y seguridad</span><h2>Tu negocio sigue siendo tuyo</h2><div class="public-accordion">
+        <details><summary>¿Puedo llevarme mis datos?</summary><p>Sí. Puedes exportar la cuenta y descargar los principales registros y documentos.</p></details>
+        <details><summary>¿Mis datos están separados de otros negocios?</summary><p>Sí. Cada lectura y escritura se limita al negocio correspondiente, con controles de sesión y aislamiento por identificador de negocio.</p></details>
+        <details><summary>¿Toda la información sale a una IA externa?</summary><p>No. Lo rutinario se intenta resolver dentro de Noesis. La IA externa se reserva para tareas avanzadas y se puede desactivar desde Ajustes.</p></details>
+      </div></section>
+
+      <section id="equipo-faq"><span class="eyebrow">Equipo y gestoría</span><h2>Que cada persona vea solo lo que necesita</h2><div class="public-accordion">
+        <details><summary>¿Cada trabajador tiene su propio panel?</summary><p>Sí. Puede recibir trabajos asignados, consultar su planificación y fichar sin acceder a la información privada del titular.</p></details>
+        <details><summary>¿La gestoría puede ver los documentos ordenados?</summary><p>Sí. El portal de gestoría organiza ingresos, gastos y documentos por períodos, con intercambio bidireccional y trazabilidad.</p></details>
+        <details><summary>¿Qué ve mi cliente?</summary><p>Un portal privado para consultar y aceptar presupuestos o descargar facturas mediante un enlace compartido por el negocio.</p></details>
+      </div></section>
+    </div>
+  </section>
 {% endblock %}
-
-{% block cta_title %}¿Resuelto? Pues a probarlo.{% endblock %}
-{% block cta_text %}Catorce días con todo, sin tarjeta. Se configura en menos de cinco minutos.{% endblock %}
+{% block cta_title %}Pruébalo con un trabajo real.{% endblock %}
