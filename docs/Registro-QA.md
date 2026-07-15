@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-07-15 — rediseño integral del sitio público
+
+- Home, Producto, Precios, Equipo, Preguntas, login, onboarding y conexión de
+  WhatsApp comparten el nuevo lenguaje editorial cálido, pero cada página conserva
+  una estructura propia según su función.
+- Los tres precios públicos se muestran como 29, 49 y 99 euros al mes más IVA. La
+  nota beta de recepción 24/7 del plan premium queda dentro del flujo del plan y no
+  tapa contenido.
+- No se añadieron valoraciones, testimonios, logotipos de clientes ni cifras sin
+  evidencia. La futura prueba social se presenta como historias de piloto aún por
+  verificar.
+- Rutas públicas y legales comprobadas por HTTP en 200. La Home se comparó con la
+  dirección visual aprobada en escritorio, sin errores de consola.
+- Suite completa: 239 pruebas y 39 subpruebas verdes; permanece un único aviso de
+  deprecación Starlette/httpx ya conocido.
+- El navegador integrado cerró la aplicación después de la captura de escritorio;
+  por ese motivo la revisión final se completó con pruebas automáticas, inspección
+  de HTML/CSS responsive y la evidencia ya guardada, sin repetir el navegador.
+
 ## 2026-07-15 — verdad compartida, precios, modo consulta y acompañamiento
 
 - Suite completa desde el código de esta rama: **238 pruebas verdes** en 205,7 s.

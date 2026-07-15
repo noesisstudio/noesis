@@ -1271,6 +1271,15 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
             with TestClient(server.app) as client:
                 public_page = client.get("/precios")
                 self.assertEqual(public_page.status_code, 200)
+                self.assertIn("Recepcionista 24/7", public_page.text)
+                self.assertIn("Beta con acceso preferente", public_page.text)
+                for route in ("/", "/producto", "/equipo", "/preguntas"):
+                    page = client.get(route)
+                    self.assertEqual(page.status_code, 200, route)
+                    self.assertIn('href="/equipo"', page.text)
+                team_page = client.get("/equipo")
+                self.assertIn("Un equipo pequeño", team_page.text)
+                self.assertNotIn("4,9", team_page.text)
 
                 login = client.post(
                     "/login",

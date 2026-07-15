@@ -31,6 +31,13 @@
 ## Web y acompañante
 
 - `src/noesis/web/server.py`: ensamblador FastAPI, seguridad y routers.
+- `src/noesis/web/templates/site_base.html`: estructura compartida del sitio público,
+  navegación responsive, llamada final y pie legal. Home, Producto, Precios, Equipo
+  y Preguntas usan composiciones propias según su objetivo, sin replicar el panel
+  interno ni inventar prueba social.
+- `src/noesis/web/templates/site_equipo.html`: página pública de equipo y principios;
+  explica responsabilidades reales sin atribuir personas, clientes o credenciales
+  todavía no verificadas.
 - `src/noesis/web/deps.py`: aislamiento de sesión y modo consulta transversal. Una
   cuenta inactiva puede leer; toda mutación web/API devuelve redirección o HTTP 402.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro

@@ -1,72 +1,101 @@
-{#- Layout compartido del sitio público (landing, producto, precios, preguntas).
-    Cada apartado es una página propia; el nav marca dónde estás. -#}
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · {% block page_title %}Del trabajo terminado al dinero cobrado{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}Noesis convierte mensajes y audios de WhatsApp en presupuestos, trabajos, facturas y cobros para autónomos y pequeños negocios de servicios.{% endblock %}">
+  <title>Noesis · {% block page_title %}Haz tu trabajo. Noesis te ordena el negocio{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Noesis ordena trabajos, clientes, documentos, facturas y cobros desde WhatsApp para autónomos y pequeños negocios de servicios.{% endblock %}">
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <meta name="theme-color" content="#14463b">
   <link rel="apple-touch-icon" href="/static/noesis-mark.svg">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
-<body class="landing-body">
-  <header class="site-nav">
-    <a class="site-brand" href="/">
-      <img src="/static/noesis-mark.svg" alt="">
-      <span>Noesis</span>
-    </a>
-    <nav class="site-links" aria-label="Principal">
-      <a href="/producto" class="{{ 'active' if site_active == 'producto' }}">Producto</a>
-      <a href="/precios" class="{{ 'active' if site_active == 'precios' }}">Precios</a>
-      <a href="/preguntas" class="{{ 'active' if site_active == 'preguntas' }}">Preguntas</a>
-    </nav>
-    <div class="site-actions">
-      {% if business_id %}
-      <a class="btn ghost" href="/b/{{ business_id }}/resumen">Mi panel</a>
-      {% else %}
-      <a class="btn ghost" href="/login">Iniciar sesión</a>
-      {% endif %}
-      <a class="btn primary" href="/onboarding">Empezar</a>
+<body class="landing-body public-site">
+  <header class="public-header">
+    <div class="public-header-inner">
+      <a class="site-brand" href="/" aria-label="Noesis, inicio">
+        <img src="/static/noesis-mark.svg" alt="">
+        <span>Noesis</span>
+      </a>
+
+      <nav class="public-nav" aria-label="Principal">
+        <a href="/producto" class="{{ 'active' if site_active == 'producto' }}">Producto</a>
+        <a href="/producto#como-funciona">Cómo funciona</a>
+        <a href="/precios" class="{{ 'active' if site_active == 'precios' }}">Precios</a>
+        <a href="/equipo" class="{{ 'active' if site_active == 'equipo' }}">Equipo</a>
+        <a href="/preguntas" class="{{ 'active' if site_active == 'preguntas' }}">Preguntas</a>
+      </nav>
+
+      <div class="site-actions">
+        {% if business_id %}
+        <a class="btn ghost" href="/b/{{ business_id }}/resumen">Mi panel</a>
+        {% else %}
+        <a class="btn ghost public-login" href="/login">Iniciar sesión</a>
+        {% endif %}
+        <a class="btn primary" href="/onboarding">Probar gratis</a>
+      </div>
+
+      <details class="public-menu">
+        <summary>Menú</summary>
+        <nav aria-label="Menú móvil">
+          <a href="/producto">Producto</a>
+          <a href="/producto#como-funciona">Cómo funciona</a>
+          <a href="/precios">Precios</a>
+          <a href="/equipo">Equipo</a>
+          <a href="/preguntas">Preguntas</a>
+          {% if business_id %}<a href="/b/{{ business_id }}/resumen">Mi panel</a>{% else %}<a href="/login">Iniciar sesión</a>{% endif %}
+        </nav>
+      </details>
     </div>
   </header>
 
   <main>
     {% block content %}{% endblock %}
 
-    <section class="final-cta">
-      <h2>{% block cta_title %}Comprueba si facturas antes y cobras mejor.{% endblock %}</h2>
-      <p>{% block cta_text %}Configura tu negocio, añade un cliente y recorre el primer
-        trabajo completo. No necesitas tarjeta para empezar.{% endblock %}</p>
-      <a class="btn primary" href="/onboarding">Probar 14 días gratis</a>
+    {% block final_cta %}
+    <section class="public-final-cta" aria-labelledby="final-cta-title">
+      <div>
+        <span class="eyebrow">Empieza sin riesgo</span>
+        <h2 id="final-cta-title">{% block cta_title %}Catorce días para poner orden de verdad.{% endblock %}</h2>
+        <p>{% block cta_text %}Sin tarjeta, sin permanencia y con tus datos siempre exportables.{% endblock %}</p>
+      </div>
+      <a class="btn light" href="/onboarding">Probar 14 días gratis</a>
     </section>
+    {% endblock %}
   </main>
 
-  <footer class="site-footer">
-    <div class="footer-cols">
-      <div class="footer-col">
-        <span class="site-brand"><img src="/static/noesis-mark.svg" alt=""> Noesis</span>
-        <p>Operaciones y cobros para autónomos y pequeños negocios de servicios.</p>
+  <footer class="public-footer">
+    <div class="public-footer-grid">
+      <div class="public-footer-brand">
+        <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""> <span>Noesis</span></a>
+        <p>La oficina que trabaja contigo mientras tú haces el oficio.</p>
       </div>
-      <div class="footer-col">
+      <div class="public-footer-col">
         <b>Producto</b>
         <a href="/producto">Qué hace</a>
-        <a href="/producto#cumplimiento-legal">Cumplimiento</a>
+        <a href="/producto#como-funciona">Cómo funciona</a>
         <a href="/precios">Precios</a>
-        <a href="/preguntas">Preguntas frecuentes</a>
+        <a href="/preguntas">Preguntas</a>
       </div>
-      <div class="footer-col">
+      <div class="public-footer-col">
+        <b>Empresa</b>
+        <a href="/equipo">Equipo</a>
+        <a href="/cumplimiento">Cumplimiento</a>
+        <a href="mailto:noesisstudioo@gmail.com">Contacto</a>
+      </div>
+      <div class="public-footer-col">
         <b>Legal</b>
         <a href="/aviso-legal">Aviso legal</a>
         <a href="/privacidad">Privacidad</a>
         <a href="/cookies">Cookies</a>
         <a href="/terminos">Términos</a>
         <a href="/encargado-tratamiento">Encargado del tratamiento</a>
-        <a href="/cumplimiento">Cumplimiento normativo</a>
       </div>
+    </div>
+    <div class="public-footer-bottom">
+      <span>© 2026 Noesis</span>
+      <span>Hecho para autónomos y pequeños equipos de servicios.</span>
     </div>
   </footer>
   <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>

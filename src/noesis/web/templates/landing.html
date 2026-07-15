@@ -1,101 +1,121 @@
 {% extends "site_base.html" %}
 {% block content %}
-    <section class="landing-hero">
-      <div class="landing-copy">
-        <div class="kicker">Para autónomos y pequeños negocios de servicios</div>
-        <h1>Del trabajo terminado al dinero cobrado.</h1>
-        <p>Dilo por WhatsApp —con texto o nota de voz— y Noesis lo convierte en
-          presupuesto, cita, factura o cobro. Tu negocio al día sin abrir un ERP.</p>
-        <div class="landing-cta">
-          <a class="btn primary" href="/onboarding">Probar 14 días gratis</a>
-          <a class="btn" href="/producto">Ver qué hace</a>
+  <section class="marketing-hero">
+    <div class="marketing-hero-inner">
+      <div class="marketing-hero-copy">
+        <div class="hero-kicker">Para autónomos y pequeños negocios de servicios</div>
+        <h1>Haz tu trabajo.<br>Noesis te ordena el negocio.</h1>
+        <p>Noesis es la oficina que se queda detrás de cada trabajo: escucha por WhatsApp,
+          ordena lo importante y te acompaña hasta facturar y cobrar.</p>
+        <div class="hero-actions">
+          <a class="btn light" href="/onboarding">Probar 14 días gratis</a>
+          <a class="text-link light-link" href="/producto#como-funciona">Ver cómo funciona <span aria-hidden="true">→</span></a>
         </div>
-        <div class="trust-row">
-          <span>Sin tarjeta</span>
+        <div class="hero-trust" aria-label="Condiciones de la prueba">
+          <span>14 días sin tarjeta</span>
           <span>Veri*Factu incluido</span>
-          <span>IVA e IRPF correctos</span>
           <span>Datos exportables</span>
         </div>
       </div>
-      <div class="hero-phone" role="img" aria-label="Conversación de WhatsApp: una nota de voz se convierte en una factura enviada">
-        <div class="wa-top">
-          <span class="wa-avatar"><img src="/static/noesis-mark.svg" alt=""></span>
-          <div class="wa-who"><b>Noesis</b><span>en línea</span></div>
-        </div>
-        <div class="wa-chat">
-          <div class="wa-day">Hoy</div>
-          <div class="wa-bubble out d1">
-            <span class="wa-voice" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              <span class="wa-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-              <span class="wa-len">0:06</span>
-            </span>
-            <span class="wa-transcript">«Factura a Marta la reparación de la caldera, doscientos cuarenta euros»</span>
-            <span class="wa-time">18:02 <b>✓✓</b></span>
+
+      <div class="hero-operating-proof" aria-label="De una petición de WhatsApp al trabajo, la factura y el cobro">
+        <ol class="hero-journey">
+          <li><small>Solicitud por WhatsApp</small><b>Reparar caldera</b><span>Marta · mañana, 10:00</span></li>
+          <li><small>Trabajo creado</small><b>Reparación de caldera</b><span class="status-good">Programado</span></li>
+          <li class="journey-noesis"><small>Noesis recomienda</small><b>Preparar la factura al cerrar</b><span>Siempre confirmas antes de enviar</span></li>
+          <li><small>Factura lista</small><b>F-0045 · 480,00 €</b><span class="status-good">Preparada</span></li>
+        </ol>
+        <div class="hero-desk">
+          <div class="hero-desk-nav">
+            <b>Noesis</b>
+            <span class="active">Hoy</span><span>Trabajos</span><span>Facturas</span><span>Cobros</span><span>Clientes</span>
           </div>
-          <div class="wa-bubble in d2">Hecho ✅ <b>Factura F-041</b> · Marta Ruiz<br>240 € + IVA = <b>290,40 €</b>, con su QR Veri*Factu.<br>¿Se la envío con tu enlace de portal?<span class="wa-time">18:02</span></div>
-          <div class="wa-bubble out d3">Sí, envíala<span class="wa-time">18:03 <b>✓✓</b></span></div>
-          <div class="wa-bubble in d4">Enviada 📄 Te aviso cuando la vea y cuando cobres.<br>Mañana tienes 2 trabajos: <b>9:00 Sants</b> y <b>12:30 Gràcia</b>. ¿Te paso el plan del día?<span class="wa-time">18:03</span></div>
+          <div class="hero-desk-main">
+            <div class="desk-heading"><div><small>Tu negocio, hoy</small><h2>Buenos días.</h2></div><span>Nuevo trabajo</span></div>
+            <div class="desk-grid">
+              <section><small>Trabajos de hoy</small><b>10:00 · Reparación de caldera</b><span>Marta López · En curso</span><b>12:30 · Instalación de termo</b><span>Javier Ruiz · Programado</span></section>
+              <section class="desk-focus"><small>Lo siguiente</small><b>Este trabajo puede quedar facturado hoy.</b><p>Tengo cliente, importe y datos fiscales. Tú decides cuándo.</p><span class="desk-action">Revisar factura</span></section>
+              <section><small>Documento recibido</small><b>Presupuesto_2154.pdf</b><span>Recibido hoy por WhatsApp</span></section>
+              <section><small>Cobro pendiente</small><b>480,00 €</b><span>Recordatorio preparado, sin enviar</span></section>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="logo-strip" aria-label="Sectores">
-      <span>Fontanería</span>
-      <span>Electricidad</span>
-      <span>Climatización</span>
-      <span>Reformas</span>
-      <span>Limpieza</span>
-      <span>Jardinería</span>
-      <span>Mantenimiento</span>
-      <span>Equipos de 1 a 10 personas</span>
-    </section>
+  <section class="workflow-section" aria-labelledby="workflow-title">
+    <div class="section-heading centered">
+      <span class="eyebrow">Un único hilo</span>
+      <h2 id="workflow-title">Todo conectado, sin repetir trabajo.</h2>
+      <p>De la conversación al cobro, con el dato en su sitio y la decisión siempre en tus manos.</p>
+    </div>
+    <ol class="workflow-line">
+      <li><b>1</b><h3>Te escriben</h3><p>Noesis recoge la petición por WhatsApp, con texto, audio o foto.</p></li>
+      <li><b>2</b><h3>Organizas</h3><p>Cliente, agenda, presupuesto, materiales y equipo quedan conectados.</p></li>
+      <li><b>3</b><h3>Facturas</h3><p>Al cerrar el trabajo, prepara la factura con IVA, IRPF y Veri*Factu.</p></li>
+      <li><b>4</b><h3>Cobras</h3><p>Vigila vencimientos y prepara seguimientos para que no persigas pagos.</p></li>
+    </ol>
+  </section>
 
-    <section class="landing-band" id="mision">
-      <div>
-        <div class="kicker">La diferencia</div>
-        <h2>Menos software que alimentar. Más negocio que avanza.</h2>
-      </div>
-      <div class="mission-grid">
-        <div>
-          <h3>WhatsApp para actuar</h3>
-          <p>Habla como trabajas: Noesis transforma cada orden en una acción estructurada y revisable.</p>
-        </div>
-        <div>
-          <h3>Web para controlar</h3>
-          <p>Agenda, clientes, rentabilidad, fiscalidad y cobros reunidos en un panel que señala el siguiente paso.</p>
-        </div>
-        <div>
-          <h3>Tu gestor sigue contigo</h3>
-          <p>Noesis recoge y ordena el dato operativo; tu gestor conserva el criterio fiscal y profesional.</p>
-        </div>
-      </div>
-    </section>
+  <section class="moments-section" aria-labelledby="moments-title">
+    <div class="section-heading centered">
+      <span class="eyebrow">A tu lado durante todo el trabajo</span>
+      <h2 id="moments-title">Noesis, pensado para cada momento de tu día.</h2>
+    </div>
+    <div class="moments-grid">
+      <article><span>Antes</span><h3>Empieza con todo claro</h3><ul><li>Petición y cliente ordenados</li><li>Presupuesto y agenda</li><li>Equipo y materiales previstos</li></ul></article>
+      <article><span>Durante</span><h3>El trabajo no pierde contexto</h3><ul><li>Notas, fotos y costes</li><li>Horas y fichaje real</li><li>Comunicación con el cliente</li></ul></article>
+      <article><span>Al terminar</span><h3>Cierra mientras lo recuerdas</h3><ul><li>Parte de trabajo</li><li>Factura y justificantes</li><li>Envío con confirmación</li></ul></article>
+      <article><span>Después</span><h3>Que cobrar no sea otra faena</h3><ul><li>Cobro y recordatorios</li><li>Margen explicado</li><li>Documentos para gestoría</li></ul></article>
+    </div>
+  </section>
 
-    <section class="landing-section" id="apartados">
-      <div class="section-intro">
-        <div class="kicker">Explora</div>
-        <h2>Cada cosa, en su sitio.</h2>
-      </div>
-      <div class="explore-grid">
-        <a class="explore-card" href="/producto">
-          <div class="kicker">Producto</div>
-          <h3>El ciclo completo, del aviso al cobro</h3>
-          <p>Agenda, presupuestos, facturas con Veri*Factu, cobros, equipo y fichaje legal.</p>
-          <span class="explore-more">Ver el producto →</span>
-        </a>
-        <a class="explore-card" href="/precios">
-          <div class="kicker">Precios</div>
-          <h3>Tres planes claros y una prueba honesta</h3>
-          <p>14 días con todo, sin tarjeta. Después, desde 29 €/mes con los impuestos bien hechos.</p>
-          <span class="explore-more">Ver los precios →</span>
-        </a>
-        <a class="explore-card" href="/preguntas">
-          <div class="kicker">Preguntas</div>
-          <h3>Lo que preguntan antes de empezar</h3>
-          <p>Veri*Factu, la gestoría, las notas de voz, el fichaje del equipo y tus datos.</p>
-          <span class="explore-more">Ver las respuestas →</span>
-        </a>
-      </div>
-    </section>
+  <section class="pilot-stories" aria-labelledby="stories-title">
+    <div>
+      <span class="eyebrow">Confianza sin inventar</span>
+      <h2 id="stories-title">Historias reales, cuando estén verificadas.</h2>
+      <p>Estamos trabajando con los primeros autónomos y pequeños equipos. Publicaremos
+        sus experiencias cuando podamos verificar cada caso y contarlo con su permiso.</p>
+      <a class="text-link" href="/equipo">Conoce cómo construimos Noesis <span aria-hidden="true">→</span></a>
+    </div>
+    <img src="/static/noesis-trades-workshop.webp" alt="Ilustración de un pequeño taller de servicios con una furgoneta">
+  </section>
+
+  <section class="pricing-preview" aria-labelledby="pricing-title">
+    <div class="section-heading centered">
+      <span class="eyebrow">Planes claros</span>
+      <h2 id="pricing-title">Empieza solo. Crece sin cambiar de sistema.</h2>
+      <p>Todos los planes incluyen 14 días de prueba, sin tarjeta y sin permanencia.</p>
+    </div>
+    <div class="public-pricing-grid compact">
+      <article class="public-price-card">
+        <div class="plan-label">Autónomo</div><p class="public-price">29 €<small> + IVA/mes</small></p>
+        <p>Para llevar trabajos, clientes, facturas y cobros desde un solo sitio.</p>
+        <a class="btn full" href="/onboarding">Probar gratis</a>
+      </article>
+      <article class="public-price-card recommended">
+        <div class="recommendation-label">Recomendado</div>
+        <div class="plan-label">Negocio</div><p class="public-price">49 €<small> + IVA/mes</small></p>
+        <p>Para equipos que necesitan trabajos asignados, fichaje y gestoría conectada.</p>
+        <a class="btn primary full" href="/onboarding">Probar gratis</a>
+      </article>
+      <article class="public-price-card">
+        <div class="plan-label">Sin Límites</div><p class="public-price">99 €<small> + IVA/mes</small></p>
+        <p>Para un uso intensivo con puesta en marcha acompañada y soporte directo.</p>
+        <span class="beta-line">Recepcionista 24/7 · beta con acceso preferente</span>
+        <a class="btn full" href="/onboarding">Probar gratis</a>
+      </article>
+    </div>
+    <div class="center-link"><a class="text-link" href="/precios">Comparar los planes <span aria-hidden="true">→</span></a></div>
+  </section>
+
+  <section class="faq-preview" aria-labelledby="faq-preview-title">
+    <div class="faq-preview-copy"><span class="eyebrow">Sin letra pequeña</span><h2 id="faq-preview-title">Lo que más nos preguntan.</h2><a class="text-link" href="/preguntas">Ver todas las preguntas <span aria-hidden="true">→</span></a></div>
+    <div class="public-accordion">
+      <details open><summary>¿Tengo que cambiar mi forma de trabajar?</summary><p>No. Puedes seguir hablando por WhatsApp. Noesis ordena esa conversación y te deja revisar el resultado en la web.</p></details>
+      <details><summary>¿Noesis envía cosas sin preguntarme?</summary><p>No. Preparar no es enviar: facturas, cobros y acciones irreversibles necesitan tu confirmación.</p></details>
+      <details><summary>¿Puedo llevarme mis datos?</summary><p>Sí. Tus datos y documentos son exportables y siguen siendo tuyos.</p></details>
+    </div>
+  </section>
 {% endblock %}

@@ -7,7 +7,11 @@
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
-<body>
+<body class="public-auth-body">
+  <header class="auth-topbar">
+    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a>
+    <a href="/b/{{ business.id }}/resumen">Salir del alta</a>
+  </header>
   <div class="onboarding-center">
     <div class="onboarding-card">
       <a class="site-brand onboarding-brand" href="/">

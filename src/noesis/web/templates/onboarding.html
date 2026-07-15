@@ -1,81 +1,40 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Noesis · Empieza</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-  <style>
-    .center { min-height:100vh; display:grid; place-items:center; padding:24px; }
-    .auth-shell { width:100%; max-width:920px; display:grid; grid-template-columns: minmax(0,1fr) 420px; gap:22px; align-items:center; }
-    .auth-copy h1 { font-size:34px; color:var(--brand); line-height:1.1; }
-    .auth-copy p { color:var(--muted); max-width:44ch; }
-    .proof { display:grid; gap:10px; margin-top:20px; }
-    .proof .lrow { background:rgba(255,255,255,.55); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
-    .steps { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--faint); margin-bottom:22px; }
-    .step-n { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; }
-    .on { background:var(--brand); color:#fff; } .off { background:#e8e8ef; }
-    .line { flex:1; border-top:1px solid var(--border-strong); }
-    @media (max-width: 820px) { .auth-shell { grid-template-columns:1fr; } .auth-copy h1 { font-size:28px; } }
-  </style>
 </head>
-<body>
-  <div class="center">
-    <div class="auth-shell">
-      <div class="auth-copy">
-        <img src="/static/noesis-mark.svg" width="54" height="54" alt="" style="margin-bottom:12px">
-        <h1>Cierra el ciclo de cada trabajo.</h1>
-        <p>De la primera petición al cobro, para pequeños negocios de instalaciones,
-          mantenimiento y servicios que ya trabajan por WhatsApp.</p>
-        <div class="proof">
-          <div class="lrow"><span>Configuración inicial</span><b>menos de 5 min</b></div>
-          <div class="lrow"><span>Prueba completa</span><b>14 días sin tarjeta</b></div>
-          <div class="lrow"><span>Tus datos</span><b>siempre exportables</b></div>
-        </div>
-      </div>
+<body class="public-auth-body">
+  <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a><a href="/login">Ya tengo cuenta</a></header>
+  <main class="public-auth-layout">
+    <section class="public-auth-story">
+      <span class="eyebrow light-eyebrow">Empieza con un trabajo real</span>
+      <h1>Tu negocio, ordenado desde el primer aviso.</h1>
+      <p>Crea la cuenta, adapta Noesis a tu oficio y recorre el ciclo completo sin tarjeta.</p>
+      <dl><div><dt>Menos de 5 minutos</dt><dd>para dejar el negocio preparado</dd></div><div><dt>14 días completos</dt><dd>para probar antes de decidir</dd></div><div><dt>Siempre exportable</dt><dd>tu información sigue siendo tuya</dd></div></dl>
+    </section>
 
-      <div class="card pad">
-        <div class="steps">
-          <span class="step-n on">1</span><b style="color:var(--text)">Crea tu cuenta</b>
-          <span class="line"></span>
-          <span class="step-n off">2</span><span>Personaliza</span>
-          <span class="line"></span>
-          <span class="step-n off">3</span><span>WhatsApp</span>
-        </div>
-
-        {% set errbox = 'background:var(--red-soft);color:var(--red);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px' %}
-        {% if error == 'email' %}<div style="{{ errbox }}">Ese email ya tiene cuenta. <a href="/login" style="text-decoration:underline">Entra aquí</a>.</div>{% endif %}
-        {% if error == 'email_format' %}<div style="{{ errbox }}">El email no tiene un formato válido.</div>{% endif %}
-        {% if error == 'name' %}<div style="{{ errbox }}">Pon el nombre de tu negocio.</div>{% endif %}
-        {% if error == 'password' %}<div style="{{ errbox }}">La contraseña debe tener al menos 12 caracteres.</div>{% endif %}
-        {% if error == 'throttle' %}<div style="{{ errbox }}">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% endif %}
-        <form method="post" action="/onboarding/signup">
-          <label class="fld">Nombre de tu negocio *</label>
-          <input class="input" name="name" required placeholder="Ej. Fontanería García">
-          <label class="fld" style="margin-top:14px">Email *</label>
-          <input class="input" name="email" type="email" required placeholder="tu@email.com">
-          <label class="fld" style="margin-top:14px">Contraseña *</label>
-          <input class="input" name="password" type="password" required minlength="12" maxlength="1024" placeholder="Mínimo 12 caracteres">
-          <label class="fld" style="margin-top:14px">Sector *</label>
-          <select name="sector" required>
-            <option value="">Selecciona tu actividad...</option>
-            <option>Fontanería</option><option>Electricidad</option><option>Reformas</option>
-            <option>Climatización</option><option>Limpieza</option><option>Jardinería</option>
-            <option>Mantenimiento</option><option>Otro</option>
-          </select>
-          {% if error == 'consent' %}<div style="{{ errbox }};margin-top:14px">Debes aceptar los términos para crear la cuenta.</div>{% endif %}
-          <label style="display:flex;gap:9px;align-items:flex-start;margin-top:16px;font-size:12.5px;color:var(--muted);line-height:1.5;cursor:pointer">
-            <input type="checkbox" name="acepto" value="1" required style="margin-top:2px">
-            <span>He leído y acepto los
-              <a href="/terminos" target="_blank" style="text-decoration:underline">Términos</a>,
-              la <a href="/privacidad" target="_blank" style="text-decoration:underline">Privacidad</a>
-              y el <a href="/encargado-tratamiento" target="_blank" style="text-decoration:underline">Contrato de Encargado del Tratamiento</a>.</span>
-          </label>
-          <button class="btn primary full" style="margin-top:16px">Crear cuenta y personalizar</button>
-        </form>
-      </div>
-    </div>
-  </div>
+    <section class="public-auth-panel" aria-labelledby="signup-title">
+      <div class="auth-progress" aria-label="Paso 1 de 3"><b>1</b><span>Cuenta</span><i></i><b>2</b><span>Personaliza</span><i></i><b>3</b><span>WhatsApp</span></div>
+      <span class="eyebrow">Paso 1 de 3</span><h2 id="signup-title">Crea tu cuenta.</h2><p class="auth-lead">No pedimos tarjeta. Solo lo necesario para preparar tu espacio.</p>
+      {% if error == 'email' %}<div class="auth-error">Ese email ya tiene cuenta. <a href="/login">Inicia sesión.</a></div>{% endif %}
+      {% if error == 'email_format' %}<div class="auth-error">El email no tiene un formato válido.</div>{% endif %}
+      {% if error == 'name' %}<div class="auth-error">Pon el nombre de tu negocio.</div>{% endif %}
+      {% if error == 'password' %}<div class="auth-error">La contraseña debe tener al menos 12 caracteres.</div>{% endif %}
+      {% if error == 'throttle' %}<div class="auth-error">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% endif %}
+      <form method="post" action="/onboarding/signup" class="public-auth-form">
+        <label>Nombre de tu negocio *<input class="input" name="name" required autocomplete="organization" placeholder="Ej. Fontanería García"></label>
+        <label>Email *<input class="input" name="email" type="email" required autocomplete="email" placeholder="tu@email.com"></label>
+        <label>Contraseña *<input class="input" name="password" type="password" required minlength="12" maxlength="1024" autocomplete="new-password" placeholder="Mínimo 12 caracteres"></label>
+        <label>Sector *<select name="sector" required><option value="">Selecciona tu actividad...</option><option>Fontanería</option><option>Electricidad</option><option>Reformas</option><option>Climatización</option><option>Limpieza</option><option>Jardinería</option><option>Mantenimiento</option><option>Otro</option></select></label>
+        {% if error == 'consent' %}<div class="auth-error">Debes aceptar los términos para crear la cuenta.</div>{% endif %}
+        <label class="auth-consent"><input type="checkbox" name="acepto" value="1" required><span>He leído y acepto los <a href="/terminos" target="_blank">Términos</a>, la <a href="/privacidad" target="_blank">Privacidad</a> y el <a href="/encargado-tratamiento" target="_blank">Contrato de Encargado del Tratamiento</a>.</span></label>
+        <button class="btn primary full">Crear cuenta y personalizar</button>
+      </form>
+      <small class="auth-safe">Noesis nunca mueve dinero ni envía nada irreversible sin tu confirmación.</small>
+    </section>
+  </main>
 </body>
 </html>

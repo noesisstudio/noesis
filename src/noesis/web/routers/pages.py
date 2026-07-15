@@ -42,17 +42,20 @@ def app_entry(request: Request):
 _SITE_PAGES = {
     "producto": "site_producto.html",
     "precios": "site_precios.html",
+    "equipo": "site_equipo.html",
     "preguntas": "site_preguntas.html",
 }
 
 
 @router.get("/producto", response_class=HTMLResponse)
 @router.get("/precios", response_class=HTMLResponse)
+@router.get("/equipo", response_class=HTMLResponse)
 @router.get("/preguntas", response_class=HTMLResponse)
 def site_page(request: Request):
     section = request.url.path.strip("/") or "producto"
     return TEMPLATES.TemplateResponse(request, _SITE_PAGES[section], {
         "site_active": section,
+        "business_id": request.session.get("bid"),
         "prices": billing_adapter.PLAN_PRICES,
     })
 

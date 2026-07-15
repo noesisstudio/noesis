@@ -1,42 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Noesis · Entrar</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-  <style>
-    .center { min-height:100vh; display:grid; place-items:center; padding:24px; }
-    .login-shell { width:100%; max-width:420px; }
-    .err { background:var(--red-soft); color:var(--red); border-radius:8px;
-      padding:10px 12px; font-size:13.5px; margin-bottom:14px; }
-  </style>
 </head>
-<body>
-  <div class="center">
-    <div class="login-shell">
-      <div style="text-align:center; margin-bottom:24px">
-        <img src="/static/noesis-mark.svg" width="52" height="52" alt="">
-        <div style="font-size:30px; font-weight:700; letter-spacing:0; color:var(--brand)">Noesis</div>
-        <p style="color:var(--muted); margin-top:6px">Entra para gestionar agenda, cobros y facturas.</p>
-      </div>
-
-      <div class="card pad">
-        {% if error == 'reset_ok' %}<div class="err" style="background:var(--green-soft);color:var(--green)">Contraseña actualizada. Ya puedes entrar.</div>
-        {% elif error == 'throttle' %}<div class="err">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>
-        {% elif error %}<div class="err">Email o contraseña incorrectos.</div>{% endif %}
-        <form method="post" action="/login">
-          <label class="fld">Email</label>
-          <input class="input" name="email" type="email" required placeholder="tu@email.com">
-          <label class="fld" style="margin-top:14px">Contraseña</label>
-          <input class="input" name="password" type="password" required>
-          <button class="btn primary full" style="margin-top:18px">Entrar</button>
-        </form>
-        <a href="/recuperar" style="display:block;text-align:center;color:var(--muted);font-size:13px;margin-top:14px">¿Olvidaste la contraseña?</a>
-      </div>
-      <a href="/onboarding" style="display:block;text-align:center;color:var(--faint); font-size:13px; margin-top:22px">¿Nuevo? Crea tu cuenta</a>
-    </div>
-  </div>
+<body class="public-auth-body login-page">
+  <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a><a href="/onboarding">Probar gratis</a></header>
+  <main class="public-login-layout">
+    <section class="login-message"><span class="eyebrow light-eyebrow">Vuelve a tu negocio</span><h1>Lo importante sigue en su sitio.</h1><p>Entra para revisar el día, preguntar a Noesis y decidir el siguiente paso.</p></section>
+    <section class="public-auth-panel" aria-labelledby="login-title">
+      <span class="eyebrow">Acceso seguro</span><h2 id="login-title">Inicia sesión.</h2><p class="auth-lead">Tu panel, tus datos y la historia completa del negocio.</p>
+      {% if error == 'reset_ok' %}<div class="auth-success">Contraseña actualizada. Ya puedes entrar.</div>{% elif error == 'throttle' %}<div class="auth-error">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% elif error %}<div class="auth-error">Email o contraseña incorrectos.</div>{% endif %}
+      <form method="post" action="/login" class="public-auth-form">
+        <label>Email<input class="input" name="email" type="email" required autocomplete="email" placeholder="tu@email.com"></label>
+        <label>Contraseña<input class="input" name="password" type="password" required autocomplete="current-password"></label>
+        <button class="btn primary full">Entrar</button>
+      </form>
+      <div class="login-links"><a href="/recuperar">¿Has olvidado la contraseña?</a><a href="/onboarding">Crear una cuenta</a></div>
+    </section>
+  </main>
 </body>
 </html>
