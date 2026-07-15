@@ -79,6 +79,12 @@ def _try_link(from_phone: str, text: str) -> str | None:
             "Ese código no es válido o ha caducado. Genera uno nuevo desde "
             "Ajustes en la web."
         )
+    business = db.get_business(business_id)
+    if not db.subscription_allows_access(business):
+        return (
+            "Tu cuenta está en modo consulta. Activa un plan desde la web y genera "
+            "un código nuevo para conectar WhatsApp."
+        )
     try:
         db.set_whatsapp_status(business_id, "conectado", phone=from_phone)
         db.finish_onboarding(business_id)
@@ -109,6 +115,16 @@ def _try_worker_link(from_phone: str, text: str) -> dict | None:
         return {
             "business_id": None,
             "reply": "El código de equipo no es válido. Pide uno nuevo a tu empresa.",
+        }
+    business = db.get_business(business_id)
+    if not db.subscription_allows_access(business):
+        return {
+            "business_id": business_id,
+            "subscription_required": True,
+            "reply": (
+                "La cuenta de tu empresa está en modo consulta. El titular debe "
+                "activar Noesis antes de vincular el equipo."
+            ),
         }
     try:
         worker = db.bind_worker_phone(business_id, parts[3], from_phone)
@@ -175,6 +191,18 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
     worker = db.get_worker_by_phone(from_phone)
     if not worker:
         return None
+    business = db.get_business(worker["business_id"])
+    if not db.subscription_allows_access(business):
+        return {
+            "business_id": worker["business_id"],
+            "worker_id": worker["id"],
+            "reply": (
+                "La cuenta está en modo consulta. El titular debe activar Noesis "
+                "antes de fichar o actualizar trabajos."
+            ),
+            "clocked": False,
+            "subscription_required": True,
+        }
     normalized = (text or "").strip().lower().replace("#", "")
     if normalized in {"hoy", "mis trabajos", "trabajos", "mis tareas", "tareas"}:
         return {
@@ -831,7 +859,10 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             send(
                 phone,
                 worker_link["reply"],
-                business_id=worker_link.get("business_id"),
+                business_id=(
+                    None if worker_link.get("subscription_required")
+                    else worker_link.get("business_id")
+                ),
             )
             results.append({
                 "phone": phone,
@@ -848,7 +879,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 phone, linked,
                 business_id=business["id"] if business else None,
             )
-            results.append({"phone": phone, "linked": True})
+            results.append({"phone": phone, "linked": bool(business)})
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
@@ -857,7 +888,10 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             send(
                 phone,
                 worker_clock["reply"],
-                business_id=worker_clock["business_id"],
+                business_id=(
+                    None if worker_clock.get("subscription_required")
+                    else worker_clock["business_id"]
+                ),
             )
             results.append({
                 "phone": phone,
@@ -876,6 +910,21 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 "bynoesis.com y conecta tu WhatsApp para empezar.",
             )
             results.append({"phone": phone, "known": False})
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
+
+        if not db.subscription_allows_access(business):
+            send(
+                phone,
+                "Tu cuenta está en modo consulta. Puedes ver tu panel en la web, "
+                "pero necesitas activar un plan para pedirme acciones o enviar documentos.",
+                business_id=None,
+            )
+            results.append({
+                "phone": phone,
+                "business_id": business["id"],
+                "subscription_required": True,
+            })
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
@@ -1033,6 +1082,18 @@ def process_outbox(
         )
         if not message:
             break
+        business_id = message.get("business_id")
+        if business_id:
+            business = db.get_business(business_id)
+            if not db.subscription_allows_access(business):
+                reason = "Envío cancelado: la cuenta está en modo consulta."
+                db.mark_whatsapp_blocked(message["id"], reason, now_text)
+                processed.append({
+                    "id": message["id"],
+                    "status": "failed",
+                    "error": reason,
+                })
+                continue
         try:
             meta_message_id = _post_to_meta(_meta_payload(message))
             db.mark_whatsapp_sent(message["id"], meta_message_id, now_text)

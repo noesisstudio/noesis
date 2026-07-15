@@ -258,4 +258,5 @@ el mismo día que se verifique la empresa.
 > cobrados 250 € de Luis. Mañana lo primero: presupuesto de la comunidad de
 > Sants, caduca el viernes."
 
-Eso no es una app de facturas. Eso es un empleado. Ahí está el precio de 29-39 €.
+Eso no es una app de facturas. Eso es un empleado. Ahí está el valor del catálogo
+29/49/99 € + IVA.

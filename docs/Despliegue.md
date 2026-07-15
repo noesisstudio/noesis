@@ -74,7 +74,8 @@ Solo falta la configuración en stripe.com:
 1. **Cuenta**: dashboard.stripe.com → activar la cuenta (datos fiscales de la empresa
    e IBAN donde recibir los pagos).
 2. **Productos**: Catálogo → añadir 3 productos con precio recurrente mensual en EUR:
-   Autónomo 29 €, Negocio 39 €, Sin Límites 79 €. Copiar los `price_...` de cada uno.
+   Autónomo 29 €, Negocio 49 €, Sin Límites 99 € (todos + IVA). Copiar los
+   `price_...` de cada uno.
 3. **Variables en Railway** (servicio web → Variables):
    - `STRIPE_SECRET_KEY` → clave secreta de producción (`sk_live_...`).
    - `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` → los `price_...`.

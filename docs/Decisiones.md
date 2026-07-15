@@ -2,6 +2,19 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Precio adoptado, prueba completa y después modo consulta (2026-07-15)
+
+El fundador adopta **29/49/99 € al mes + IVA**. La prueba de 14 días permite usar el
+producto completo; al caducar, cancelar o quedar el pago pendiente, la cuenta conserva
+acceso de lectura a su información pero no puede crear, modificar, enviar ni ejecutar
+automatizaciones hasta activar una suscripción. El límite se valida en servidor para
+web/API, portales, WhatsApp, colas y tareas programadas: ocultar botones no es control.
+
+La estructura de cada pantalla se diseña según su decisión principal, sin imponer una
+plantilla de KPIs. La coherencia transversal la aporta Noesis: lectura contextual,
+motivo, siguiente paso y conversación persistente. Abrir el acompañante muestra
+primero una lectura local y no consume IA por sí solo.
+
 ## Compositor interno antes del modelo; precio se decide con piloto (2026-07-15)
 
 Noesis redacta internamente las comunicaciones repetibles a partir de hechos
@@ -15,9 +28,9 @@ del piloto. Se mantiene pago por uso y Haiku como respaldo hasta demostrar calid
 latencia y seguridad. Motivo: una GPU 24/7 cuesta más que la inferencia del volumen
 previsto y un servidor gratuito no ofrece SLA ni estabilidad de precios.
 
-El análisis recomienda 29/49/99 € + IVA si Premium conserva 100 minutos de voz. No
-se cambia el catálogo 29/39/79 en código sin decisión del founder tras el piloto.
-Detalle y supuestos en [[Unit-economics-y-cerebro-interno]].
+El análisis recomendó 29/49/99 € + IVA si Premium conserva 100 minutos de voz. El
+founder lo adoptó el 2026-07-15; detalle y supuestos en
+[[Unit-economics-y-cerebro-interno]].
 
 ## Pago por uso antes de GPU propia durante el piloto (2026-07-14)
 

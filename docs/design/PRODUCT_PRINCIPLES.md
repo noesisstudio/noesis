@@ -42,6 +42,18 @@ ella.
 6. **Primero confirmar, después ejecutar lo irreversible.** Enviar factura, reclamar
    cobro, mandar a gestoría o mover una cita se **propone**; el usuario confirma.
 
+## Pantallas hechas a medida, acompañante común
+
+- No existe una plantilla universal de tarjetas, gráficas o KPIs. Cada pantalla se
+  diseña desde su tarea principal: Clientes prioriza relaciones e historial;
+  Tesorería, disponibilidad y reservas; Agenda, tiempo y secuencia; Documentos,
+  clasificación y revisión; Proyectos, avance y margen.
+- Un dato aparece solo si ayuda a decidir en esa pantalla. La profundidad queda
+  disponible por capas para quien la necesite, sin obligar a entender estadística.
+- Lo transversal no es la estructura visual, sino Noesis: lee el contexto real,
+  explica por qué, propone el siguiente paso y permite preguntar sin perder la
+  pantalla ni la conversación.
+
 ## Innegociables (heredados del método)
 
 - **Noesis no inventa.** Si falta un dato, dice cuál falta. El parte de un negocio

@@ -4,8 +4,8 @@
   <div class="page-title">
     <div class="kicker">Tu cuenta</div>
     <h1>Suscripción</h1>
-    <p>Tu plan de Noesis. Empiezas con una prueba gratuita; cuando quieras, activas el
-       plan y se cobra automáticamente cada mes.</p>
+    <p>Tu plan de Noesis. Durante la prueba puedes completar el ciclo; después conservas
+       el panel en modo consulta hasta activar una suscripción.</p>
   </div>
   <div class="page-actions">
     {% set st = business.subscription_status or 'trial' %}
@@ -20,6 +20,11 @@
 
 {% if status == 'ok' %}
 <div class="insight" style="margin-bottom:16px">✅ ¡Suscripción activada! Gracias por confiar en Noesis.</div>
+{% elif status in ('readonly', 'required') %}
+<div class="subscription-notice" style="margin-bottom:16px">
+  <b>Tu negocio está a salvo y puedes seguir consultándolo.</b>
+  <span>Activa un plan para crear, cambiar, enviar o automatizar.</span>
+</div>
 {% elif status == 'cancel' %}
 <div class="insight" style="margin-bottom:16px">Has cancelado el pago. Puedes intentarlo cuando quieras.</div>
 {% elif status == 'manual' %}
@@ -32,7 +37,7 @@
 <div class="plan-grid">
   <div class="plan">
     <h3>Autónomo</h3>
-    <p class="price">29 €<small>/mes</small></p>
+    <p class="price">{{ prices.autonomo }} €<small> + IVA/mes</small></p>
     <ul>
       <li>Agenda, clientes y presupuestos</li>
       <li>Facturas con IVA/IRPF, PDF y registro Veri*Factu</li>
@@ -49,7 +54,7 @@
   </div>
   <div class="plan featured">
     <h3>Negocio</h3>
-    <p class="price">39 €<small>/mes</small></p>
+    <p class="price">{{ prices.pro }} €<small> + IVA/mes</small></p>
     <ul>
       <li>Todo lo del plan Autónomo</li>
       <li>Equipo: trabajos, planning y productividad</li>
@@ -66,7 +71,7 @@
   </div>
   <div class="plan">
     <h3>Sin Límites</h3>
-    <p class="price">79 €<small>/mes</small></p>
+    <p class="price">{{ prices.premium }} €<small> + IVA/mes</small></p>
     <ul>
       <li>Todo lo del plan Negocio</li>
       <li>Recepcionista 24/7 (beta): contesta llamadas y agenda citas</li>

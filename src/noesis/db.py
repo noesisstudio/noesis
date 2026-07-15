@@ -6549,6 +6549,11 @@ def get_business_by_stripe_customer(customer_id) -> dict | None:
 
 
 def subscription_allows_access(business: dict | None) -> bool:
+    """Indica si la cuenta puede modificar o automatizar el negocio.
+
+    Una prueba vigente conserva el producto completo. Al terminar, la información
+    sigue visible, pero las escrituras y automatizaciones exigen suscripción activa.
+    """
     if not business:
         return False
     status = business.get("subscription_status") or "trial"
@@ -6891,6 +6896,16 @@ def mark_whatsapp_sent(message_id: int, meta_message_id: str, sent_at: str) -> N
             "sent_at=?, last_error=NULL, locked_at=NULL, updated_at=? "
             "WHERE id=? AND status='processing'",
             (meta_message_id, sent_at, sent_at, message_id),
+        )
+
+
+def mark_whatsapp_blocked(message_id: int, reason: str, updated_at: str) -> None:
+    """Cancela un envío reclamado que ya no está autorizado por la cuenta."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE whatsapp_outbox SET status='failed', last_error=?, "
+            "locked_at=NULL, updated_at=? WHERE id=? AND status='processing'",
+            (reason[:1000], updated_at, message_id),
         )
 
 

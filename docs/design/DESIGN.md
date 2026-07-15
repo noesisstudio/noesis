@@ -40,9 +40,14 @@ Noesis se distingue de los datos:
 Esa dualidad serif-voz / sans-dato es la firma tipográfica de Noesis y ya existe a
 medias; hay que apoyarse en ella con intención.
 
-## 4. El patrón de pantalla (obligatorio)
+## 4. La jerarquía de pantalla (obligatoria, no una plantilla)
 
-Toda pantalla sigue este orden vertical:
+Todas comparten una jerarquía de comprensión, pero **no** la misma composición. La
+forma se decide por la tarea: una agenda puede ser temporal, Clientes relacional,
+Documentos una bandeja de revisión y Tesorería una previsión. No se copian bloques ni
+KPIs para conseguir consistencia artificial.
+
+La jerarquía común es:
 
 1. **Parte de Noesis** — una lectura breve en lenguaje humano, con la marca:
    *"He revisado tus cobros: 3 vencidas por 1.240 €. ¿Te preparo los recordatorios?"*
@@ -50,7 +55,8 @@ Toda pantalla sigue este orden vertical:
    ordenarte aquí. Empieza por…"*.
 2. **Acciones** — lo que se puede hacer ahora: hacer factura, reclamar cobro, enviar
    presupuesto, asignar feina, mandar a gestoría.
-3. **Datos simples** — pocos números clave, bien explicados.
+3. **Información útil** — números, estados, calendario, personas o documentos según
+   lo que ayude a decidir en esa sección.
 4. **Detalle** — tablas, gráficas, histórico, exportaciones. Plegado o al final; solo
    para quien lo pide.
 

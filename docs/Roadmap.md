@@ -1,5 +1,9 @@
 # Roadmap
 
+> Mapa histórico de capas y capacidades. No usar las ramas, migraciones ni listas de
+> este documento como estado operativo; la verdad actual está en
+> [`project-state.json`](project-state.json) y los pendientes en [[Tareas-vivas]].
+
 Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de exponerlo.
 
 ## ✅ Hecho

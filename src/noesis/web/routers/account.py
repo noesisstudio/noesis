@@ -181,6 +181,10 @@ def onboarding_setup_submit(
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
         return RedirectResponse("/login", status_code=303)
+    if not db.subscription_allows_access(db.get_business(business_id)):
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=readonly", status_code=303
+        )
     try:
         if ai_mode not in {"enabled", "disabled"}:
             raise ValueError("El modo de IA no es válido.")
@@ -220,6 +224,10 @@ def onboarding_whatsapp(request: Request, business_id: int):
     if not user or user["business_id"] != business_id:
         return RedirectResponse("/login", status_code=303)
     biz = db.get_business(business_id)
+    if not db.subscription_allows_access(biz):
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=readonly", status_code=303
+        )
     link = whatsapp.start_link(business_id)
     return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html",
                                       {"business": biz, "wa": link})
@@ -421,6 +429,10 @@ def onboarding_whatsapp_connect(request: Request, business_id: int):
     if not user or user["business_id"] != business_id:
         return RedirectResponse("/login", status_code=303)
     business = db.get_business(business_id)
+    if not db.subscription_allows_access(business):
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=readonly", status_code=303
+        )
     if not business or business.get("whatsapp_status") != "conectado":
         db.set_whatsapp_status(business_id, "no_conectado")
     db.finish_onboarding(business_id)

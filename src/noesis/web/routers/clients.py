@@ -55,6 +55,12 @@ async def api_update_client_preferences(
 def api_portal_link(business_id: int, client_id: int):
     """Enlace privado del cliente (Client Hub) para que el autónomo lo envíe por
     WhatsApp. Reutiliza el mismo enlace si ya existe uno vigente."""
+    if not db.subscription_allows_access(db.get_business(business_id)):
+        return JSONResponse(
+            {"error": "Activa tu suscripción para crear enlaces.",
+             "code": "subscription_required"},
+            status_code=402,
+        )
     token = db.get_or_create_portal_token(business_id, client_id)
     if not token:
         return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)

@@ -27,15 +27,12 @@ from .. import config
 log = logging.getLogger("noesis.billing")
 _API = "https://api.stripe.com/v1"
 
-# Catálogo de planes: fuente única de verdad (precios calculados por coste+margen,
-# ver docs/Producto.md). Los créditos son acciones de IA (~2 c€/crédito con colchón):
-#   autonomo -> coste máx ~3 €  -> margen ~90 %
-#   pro      -> coste máx ~8 €  -> margen ~80 %
-#   premium  -> coste máx ~40 € -> margen ~50 % (incluye recepcionista 24/7)
+# Catálogo de planes: fuente única de verdad. El precio se comunica siempre + IVA;
+# el modelo reproducible y sus márgenes están en docs/Unit-economics-y-cerebro-interno.md.
 PLANS = {
     "autonomo": {"name": "Autónomo", "price": 29, "credits": 75},
-    "pro": {"name": "Negocio", "price": 39, "credits": 300},
-    "premium": {"name": "Sin Límites", "price": 79, "credits": 1500},
+    "pro": {"name": "Negocio", "price": 49, "credits": 300},
+    "premium": {"name": "Sin Límites", "price": 99, "credits": 1500},
 }
 PLAN_PRICES = {key: plan["price"] for key, plan in PLANS.items()}
 

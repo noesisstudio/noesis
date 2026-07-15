@@ -1,0 +1,41 @@
+{
+  "state_date": "2026-07-15",
+  "product_stage": "MVP desplegado; piloto real controlado pendiente",
+  "schema_version": 27,
+  "verified_test_count": 238,
+  "production": {
+    "url": "https://app.bynoesis.com",
+    "last_baseline_deployment": "verified",
+    "readiness": "verified",
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Verificar precios, modo consulta y acompañante contextual"
+  },
+  "pricing_eur_ex_vat": {
+    "autonomo": 29,
+    "pro": 49,
+    "premium": 99
+  },
+  "subscription_policy": {
+    "trial_days": 14,
+    "valid_trial_can_write": true,
+    "inactive_accounts_are_read_only": true,
+    "irreversible_actions_require_owner_confirmation": true
+  },
+  "ai_route": [
+    "reglas_locales",
+    "compositor_interno",
+    "servicio_privado_compatible",
+    "proveedor_externo_compatible",
+    "anthropic_fallback"
+  ],
+  "external_validation_pending": [
+    "meta_whatsapp_real",
+    "stripe_real",
+    "smtp_real",
+    "qwen_privado_real",
+    "certificado_y_entorno_aeat",
+    "restauracion_externa",
+    "auditoria_seguridad_privacidad_fiscal",
+    "piloto_3_5_negocios"
+  ]
+}

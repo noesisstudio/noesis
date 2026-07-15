@@ -11,13 +11,13 @@
 - **La IA de texto no amenaza el margen en el piloto.** En el escenario híbrido, su
   coste esperado es de unos 0,05 / 0,22 / 0,69 € por cuenta y mes. Pesan más el
   soporte y los 100 minutos de voz del plan superior.
-- **Precio recomendado: 29 / 49 / 99 € + IVA.** El plan Autónomo puede mantenerse.
+- **Precio adoptado: 29 / 49 / 99 € + IVA.** El plan Autónomo se mantiene.
   Negocio necesita más distancia por el soporte y valor que incluye. Sin Límites
   necesita 99 € si conserva 100 minutos de voz; alternativa: 79 € sin voz y add-on
   de voz de al menos 15 €.
 - Con un mix 55% / 35% / 10% y 3.500 € de opex fijo supuesto, el break-even baja de
-  unas **146 cuentas** con los precios actuales a **120 cuentas** con los
-  recomendados. No es una previsión: es un escenario que el piloto debe recalibrar.
+  unas **146 cuentas** con el catálogo anterior a **120 cuentas** con el adoptado.
+  No es una previsión: es un escenario que el piloto debe recalibrar.
 
 ## Qué se ha construido
 
@@ -55,25 +55,25 @@ Escenario base: 60% de las interacciones avanzadas resueltas internamente; del r
 extracción, almacenamiento, voz, soporte, onboarding amortizado y 0,65 € de fijo por
 cuenta. No incluye IVA ni CAC en el margen mensual.
 
-| Plan | Precio actual | COGS software | Margen bruto | Contribución | Margen contribución |
+| Plan | Precio anterior | COGS software | Margen bruto | Contribución | Margen contribución |
 |---|---:|---:|---:|---:|---:|
 | Autónomo | 29 € | 1,48 € | 94,9% | 20,83 € | 71,8% |
 | Negocio | 39 € | 2,82 € | 92,8% | 25,11 € | 64,4% |
 | Sin Límites | 79 € | 18,03 € | 77,2% | 37,40 € | 47,3% |
 
-| Plan | Precio recomendado | COGS software | Margen bruto | Contribución | Margen contribución |
+| Plan | Precio adoptado | COGS software | Margen bruto | Contribución | Margen contribución |
 |---|---:|---:|---:|---:|---:|
 | Autónomo | 29 € | 1,48 € | 94,9% | 20,83 € | 71,8% |
 | Negocio | 49 € | 3,04 € | 93,8% | 34,89 € | 71,2% |
 | Sin Límites | 99 € | 18,47 € | 81,3% | 56,96 € | 57,5% |
 
-Si 29 / 39 / 79 € fueran precios con IVA incluido, el ingreso neto sería solo
+Si el catálogo anterior 29 / 39 / 79 € hubiera incluido IVA, el ingreso neto sería
 23,97 / 32,23 / 65,29 €. Por tanto, precios, checkout y facturas deben comunicar de
 forma inequívoca **«+ IVA»** o recalcular el catálogo.
 
 ## Escala mensual
 
-| Cuentas | Ingreso actual | Resultado tras 3.500 € opex | Ingreso recomendado | Resultado recomendado |
+| Cuentas | Ingreso anterior | Resultado tras 3.500 € opex | Ingreso adoptado | Resultado adoptado |
 |---:|---:|---:|---:|---:|
 | 10 | 375 € | -3.260 € | 430 € | -3.206 € |
 | 50 | 1.875 € | -2.301 € | 2.150 € | -2.032 € |

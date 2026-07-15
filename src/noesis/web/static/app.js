@@ -6,33 +6,26 @@ const eur = n => (n ?? 0).toLocaleString('es-ES',
 const num = n => (n ?? 0).toLocaleString('es-ES');
 const pct = n => `${Math.round(n || 0)}%`;
 
-const api = (path) => fetch(`/api/${BIZ}${path}`).then(async r => {
+const apiResponse = async r => {
   const data = await r.json();
+  if (r.status === 402 && data.subscription_url) {
+    location.href = data.subscription_url + '?status=readonly';
+    throw new Error(data.error || 'Necesitas una suscripción activa.');
+  }
   if (!r.ok) throw new Error(data.error || 'Error de API');
   return data;
-});
+};
+const api = (path) => fetch(`/api/${BIZ}${path}`).then(apiResponse);
 const apiPost = (path, body) => fetch(`/api/${BIZ}${path}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body || {})
-}).then(async r => {
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || 'Error de API');
-  return data;
-});
+}).then(apiResponse);
 const apiPatch = (path, body) => fetch(`/api/${BIZ}${path}`, {
   method: 'PATCH', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body || {})
-}).then(async r => {
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || 'Error de API');
-  return data;
-});
+}).then(apiResponse);
 const apiDelete = (path) => fetch(`/api/${BIZ}${path}`, { method: 'DELETE' })
-  .then(async r => {
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Error de API');
-    return data;
-  });
+  .then(apiResponse);
 
 /* Icono de papelera reutilizable para botones de borrar. */
 const TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';

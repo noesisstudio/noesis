@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Descarregar el repositori
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v6
@@ -34,6 +36,15 @@ jobs:
 
       - name: Instal·lar el projecte
         run: pip install -e .
+
+      - name: Validar la font de veritat del projecte
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            python scripts/check_project_truth.py --base-ref "${{ github.event.pull_request.base.sha }}"
+          else
+            python scripts/check_project_truth.py
+          fi
 
       - name: Executar tots els tests
         env:

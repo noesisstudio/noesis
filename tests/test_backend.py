@@ -458,6 +458,23 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(sent["meta_message_id"], "wamid.retry")
         self.assertIsNotNone(sent["sent_at"])
 
+    def test_whatsapp_outbox_never_sends_for_inactive_subscription(self):
+        business, _ = self.make_business("WhatsApp pausado")
+        point = datetime(2026, 6, 30, 10, 0, 0)
+        message = whatsapp.queue_text(
+            "34600111222", "No debe salir", business_id=business["id"], now=point
+        )
+        db.set_subscription(business["id"], "canceled", plan="tranquilidad")
+
+        with patch.object(whatsapp, "_post_to_meta") as post:
+            processed = whatsapp.process_outbox(now=point)
+
+        post.assert_not_called()
+        self.assertEqual(processed[0]["status"], "failed")
+        blocked = db.get_whatsapp_message(message["id"], business["id"])
+        self.assertEqual(blocked["status"], "failed")
+        self.assertIn("modo consulta", blocked["last_error"])
+
     def test_whatsapp_delivery_webhooks_are_idempotent_and_monotonic(self):
         business, _ = self.make_business()
         point = datetime(2026, 6, 30, 11, 0, 0)
@@ -510,6 +527,29 @@ class BackendTestCase(unittest.TestCase):
             actor_phone="34600111222",
         )
         send.assert_called_once()
+
+    def test_whatsapp_inbound_explains_read_only_without_running_the_brain(self):
+        business, _ = self.make_business("WhatsApp consulta")
+        db.set_whatsapp_status(
+            business["id"], "conectado", phone="34600111222"
+        )
+        db.set_subscription(business["id"], "canceled", plan="tranquilidad")
+        payload = {
+            "id": "wamid.readonly",
+            "from": "34600111222",
+            "text": "crea una factura de 100 euros",
+        }
+
+        with (
+            patch.object(chat, "handle") as handle,
+            patch.object(whatsapp, "send", return_value=True) as send,
+        ):
+            result = whatsapp.handle_inbound(payload)
+
+        handle.assert_not_called()
+        self.assertTrue(result["results"][0]["subscription_required"])
+        self.assertIn("modo consulta", send.call_args.args[1])
+        self.assertIsNone(send.call_args.kwargs["business_id"])
 
     def test_whatsapp_proactives_use_approved_template_and_stable_key(self):
         business, _ = self.make_business()
@@ -1215,6 +1255,95 @@ class PaymentReminderTestCase(unittest.TestCase):
                 self.assertEqual(unsafe.status_code, 400)
 
 
+class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
+    def test_public_and_account_pricing_share_the_current_catalog(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Precios actuales")
+        db.create_user(
+            "precios@example.com",
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                public_page = client.get("/precios")
+                self.assertEqual(public_page.status_code, 200)
+
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": "precios@example.com",
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                account_page = client.get(f"/b/{business['id']}/suscripcion")
+                self.assertEqual(account_page.status_code, 200)
+
+        for page in (public_page.text, account_page.text):
+            self.assertIn("29 €", page)
+            self.assertIn("49 €", page)
+            self.assertIn("99 €", page)
+            self.assertGreaterEqual(page.count("+ IVA/mes"), 3)
+            self.assertNotIn("39 €", page)
+            self.assertNotIn("79 €", page)
+
+    def test_inactive_account_can_read_but_cannot_change_the_business(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, existing_client = self.make_business("Solo consulta")
+        db.create_user(
+            "consulta@example.com",
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        db.set_subscription(business["id"], "past_due", plan="tranquilidad")
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": "consulta@example.com",
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                panel = client.get(f"/b/{business['id']}/clientes")
+                self.assertEqual(panel.status_code, 200)
+                self.assertIn("Modo consulta", panel.text)
+                self.assertEqual(
+                    client.get(f"/api/{business['id']}/clients").status_code, 200
+                )
+                self.assertEqual(
+                    client.get(f"/api/{business['id']}/plan").status_code, 200
+                )
+                self.assertEqual(db.list_recommendations(business["id"]), [])
+
+                blocked = client.post(
+                    f"/api/{business['id']}/clients", json={"name": "No crear"}
+                )
+                self.assertEqual(blocked.status_code, 402)
+                self.assertEqual(blocked.json()["code"], "subscription_required")
+                self.assertIsNone(db.find_client("No crear", business["id"]))
+                link = client.get(
+                    f"/api/{business['id']}/clients/{existing_client['id']}/portal-link"
+                )
+                self.assertEqual(link.status_code, 402)
+                self.assertEqual(link.json()["code"], "subscription_required")
+
+                subscription = client.get(f"/b/{business['id']}/suscripcion")
+                self.assertEqual(subscription.status_code, 200)
+                self.assertIn("49 €", subscription.text)
+                self.assertIn("99 €", subscription.text)
+
+
 class PortalHttpTestCase(BackendTestCase):
     """El portal público (/p/) no debe dejar que un cliente toque documentos de otro."""
 
@@ -1263,6 +1392,29 @@ class PortalHttpTestCase(BackendTestCase):
                     db.get_invoice(accepted["invoice_id"], business_a["id"])["status"],
                     "borrador",
                 )
+
+    def test_portal_stays_visible_but_cannot_mutate_in_read_only_mode(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client_ref = self.make_business("Portal consulta")
+        quote = self._quote(business["id"], client_ref["id"])
+        token = db.get_or_create_portal_token(business["id"], client_ref["id"])
+        db.set_subscription(business["id"], "canceled", plan="tranquilidad")
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                self.assertEqual(client.get(f"/p/{token}").status_code, 200)
+                blocked = client.post(
+                    f"/p/{token}/quotes/{quote['id']}/accept",
+                    follow_redirects=False,
+                )
+
+        self.assertEqual(blocked.status_code, 402)
+        self.assertEqual(blocked.json()["code"], "subscription_required")
+        self.assertEqual(
+            db.get_quote(quote["id"], business["id"])["status"], "enviado"
+        )
 
     def test_payment_api_is_isolated_and_portal_shows_remaining_amount(self):
         from starlette.testclient import TestClient
@@ -3096,7 +3248,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from noesis.adapters import billing
 
         self.assertEqual(
-            billing.PLAN_PRICES, {"autonomo": 29, "pro": 39, "premium": 79}
+            billing.PLAN_PRICES, {"autonomo": 29, "pro": 49, "premium": 99}
         )
         business, _ = self.make_business("Admin Embudo")
         db.record_product_event(
@@ -3115,7 +3267,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         labels = charts["funnel_labels"]
         self.assertEqual(charts["funnel"][labels.index("Checkout")], 1)
         self.assertEqual(charts["funnel"][labels.index("De pago")], 1)
-        self.assertEqual(data["mrr"], 79)
+        self.assertEqual(data["mrr"], 99)
 
     def test_alerts_flag_failed_whatsapp_and_broken_backup(self):
         business, _ = self.make_business("Admin Alarmas")

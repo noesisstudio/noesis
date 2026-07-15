@@ -205,6 +205,12 @@ def api_send_worker_day(business_id: int, worker_id: int):
 
 @router.get("/api/{business_id}/workers/{worker_id}/link")
 def api_worker_link(business_id: int, worker_id: int):
+    if not db.subscription_allows_access(db.get_business(business_id)):
+        return JSONResponse(
+            {"error": "Activa tu suscripción para crear enlaces.",
+             "code": "subscription_required"},
+            status_code=402,
+        )
     worker = db.get_worker(worker_id, business_id)
     if not worker or not worker.get("active"):
         return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
@@ -267,5 +273,4 @@ def api_worker_report(
             )
         },
     )
-
 

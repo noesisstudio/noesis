@@ -43,9 +43,9 @@ un profesional puede profundizar sin obligar al usuario no financiero a leer un 
 
 ## Modelo de negocio
 SaaS de suscripción. Noesis compite por quitar trabajo administrativo, no por ser el
-facturador más barato. El catálogo publicado en código sigue siendo **29 / 39 / 79
-€** con 75 / 300 / 1.500 créditos avanzados. Debe comunicarse si esos importes son
-«+ IVA»; tratarlos como IVA incluido reduce el ingreso neto un 17,36%.
+facturador más barato. El catálogo adoptado es **29 / 49 / 99 € al mes + IVA**, con
+75 / 300 / 1.500 créditos avanzados. La prueba completa dura 14 días; después la
+cuenta queda en modo consulta hasta activar o recuperar la suscripción.
 
 ### Precios calculados por costes y márgenes
 
@@ -54,15 +54,15 @@ opex corporativo. En el escenario híbrido, la IA de texto cuesta menos que el
 soporte y la voz: reglas y compositor interno primero, Qwen para la mayor parte del
 fallback y Haiku como respaldo.
 
-| Plan | Precio actual | Margen contribución actual | Precio recomendado | Margen recomendado |
-|---|---:|---:|---:|---:|
-| **Autónomo** | 29 € | 71,8% | **29 € + IVA** | 71,8% |
-| **Negocio** | 39 € | 64,4% | **49 € + IVA** | 71,2% |
-| **Sin Límites** | 79 € | 47,3% | **99 € + IVA** | 57,5% |
+| Plan | Precio adoptado | Margen de contribución estimado |
+|---|---:|---:|
+| **Autónomo** | **29 € + IVA** | 71,8% |
+| **Negocio** | **49 € + IVA** | 71,2% |
+| **Sin Límites** | **99 € + IVA** | 57,5% |
 
-La recomendación no cambia automáticamente Stripe ni la página de precios: requiere
-decisión explícita del founder tras el piloto. Alternativa para Sin Límites: mantener
-79 € + IVA sin minutos de voz y vender voz como add-on de al menos 15 €/mes.
+El código y la página de precios usan ya ese catálogo. Falta crear o actualizar los
+productos reales de Stripe y validar checkout, webhook, impago y reactivación antes
+de considerarlo publicado. La voz sigue siendo la principal sensibilidad de Premium.
 
 Detalle, fuentes, escala y supuestos editables en
 [[Unit-economics-y-cerebro-interno]] y [[Analisis-unit-economics.ipynb]].

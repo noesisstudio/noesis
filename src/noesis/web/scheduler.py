@@ -52,6 +52,7 @@ def _active_businesses() -> list[dict]:
     return [
         business for business in db.list_businesses()
         if business.get("whatsapp_status") == "conectado"
+        and db.subscription_allows_access(business)
     ]
 
 
@@ -111,6 +112,8 @@ def send_payment_reminders(now: datetime | None = None) -> int:
 
     queued = 0
     for business in db.list_businesses():
+        if not db.subscription_allows_access(business):
+            continue
         if not business.get("payment_reminders_enabled"):
             continue
         permission = db.automation_decision(
@@ -459,6 +462,8 @@ def send_gestoria_packages(now: datetime | None = None) -> int:
         return 0
     notified = 0
     for business in db.list_businesses():
+        if not db.subscription_allows_access(business):
+            continue
         cadence = business.get("gestoria_cadence") or "off"
         if cadence == "off" or not business.get("gestoria_email"):
             continue
@@ -535,6 +540,16 @@ def process_verifactu_outbox(limit: int = 25) -> int:
                 updated_at=now.isoformat(timespec="seconds"),
             )
             break
+        if not db.subscription_allows_access(business):
+            db.mark_verifactu_retry(
+                item["id"],
+                error="Suscripción inactiva: remisión pausada.",
+                next_attempt_at=(
+                    now + timedelta(seconds=config.VERIFACTU_RETRY_MAX_SECONDS)
+                ).isoformat(timespec="seconds"),
+                updated_at=now.isoformat(timespec="seconds"),
+            )
+            continue
         try:
             result = verifactu_client.submit_records(business, [record])
         except verifactu_client.VerifactuTransportError as exc:

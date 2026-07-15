@@ -100,12 +100,26 @@ async def auth_guard(request: Request, call_next):
             or path == f"/b/{own_business_id}/account/delete"
             or path == f"/api/{own_business_id}/export"
         )
-        if not db.subscription_allows_access(business) and not allowed_when_blocked:
+        can_write = db.subscription_allows_access(business)
+        request.state.subscription_read_only = not can_write
+        safe_read = request.method in {"GET", "HEAD", "OPTIONS"}
+        if not can_write and not safe_read and not allowed_when_blocked:
             if path.startswith("/api/"):
                 return JSONResponse(
-                    {"error": "La suscripción no está activa."}, status_code=402
+                    {
+                        "error": (
+                            "Tu panel está en modo consulta. Activa una suscripción "
+                            "para crear, cambiar o enviar."
+                        ),
+                        "code": "subscription_required",
+                        "subscription_url": f"/b/{own_business_id}/suscripcion",
+                    },
+                    status_code=402,
                 )
-            return RedirectResponse(f"/b/{own_business_id}/suscripcion?status=required")
+            return RedirectResponse(
+                f"/b/{own_business_id}/suscripcion?status=readonly",
+                status_code=303,
+            )
     return await call_next(request)
 
 

@@ -284,9 +284,14 @@ class PlatformTestCase(unittest.TestCase):
         brief = chat.page_brief(self.bid, "facturas")
         self.assertTrue(brief["text"])
         self.assertTrue(brief["ask"])
+        self.assertTrue(brief["prompts"])
         labels = {s["label"] for s in brief["stats"]}
         self.assertIn("Te deben", labels)
         self.assertIn("Facturado (mes)", labels)
+        db.add_lead("Seguimiento", next_action_on="2020-01-01", business_id=self.bid)
+        crm_brief = chat.page_brief(self.bid, "crm")
+        self.assertIn("do", crm_brief["focus"])
+        self.assertIn("why", crm_brief["focus"])
         # Resiliencia: si la lectura peta, la pantalla sigue con un mínimo digno.
         original = chat._business_state
 
@@ -300,6 +305,7 @@ class PlatformTestCase(unittest.TestCase):
             chat._business_state = original
         self.assertTrue(degraded["text"])
         self.assertEqual(degraded["stats"], [])
+        self.assertEqual(degraded["focus"], None)
 
     def test_daily_briefing_never_crashes_the_home(self):
         # Si al leer el negocio algo falla (p. ej. una consulta que solo peta en

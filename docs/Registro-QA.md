@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-07-15 — verdad compartida, precios, modo consulta y acompañamiento
+
+- Suite completa desde el código de esta rama: **238 pruebas verdes** en 205,7 s.
+  Permanecen el aviso conocido Starlette/httpx y logs esperados de caídas simuladas.
+- Pruebas nuevas: una cuenta inactiva puede leer panel y API, pero recibe HTTP 402
+  al crear o generar enlaces; el portal de cliente no acepta presupuestos; WhatsApp
+  no ejecuta inbound ni entrega outbox; el plan diario no escribe recomendaciones.
+- Catálogo de código y vistas sincronizado a **29/49/99 € + IVA**; el script de
+  verdad compara automáticamente precios y versión de esquema.
+- El acompañante devuelve lectura, preguntas propias y siguiente acción con motivo;
+  el caso degradado no tumba la pantalla. Abrir el panel no llama a IA por sí solo.
+- `compileall`, `git diff --check` y `scripts/check_project_truth.py` verdes.
+- Se verificó HTML y comportamiento por `TestClient`; no se hizo QA visual con
+  navegador porque las sesiones anteriores estaban cerrando la aplicación. No se
+  sustituye esa comprobación por una afirmación visual ficticia.
+- No se llamó a Meta, Stripe, SMTP, Qwen, Anthropic ni AEAT reales. Los precios de
+  Stripe, credenciales, entregas y reactivación siguen en [[Tareas-vivas]].
+
 ## 2026-07-15 — compositor interno y unit economics
 
 - Rama alineada con `origin/main` en `0471d2c`, incluido el rediseño interior.
