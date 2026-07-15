@@ -470,12 +470,14 @@ def _extraction_budget_ok(business_id: int) -> bool:
 
 def _execute_pending(business: dict, phone: str, pending: dict) -> str:
     """Ejecuta el borrador confirmado y devuelve la respuesta para el usuario."""
-    db.clear_pending_action(business["id"], phone)
     try:
         payload = json.loads(pending["payload"])
     except (TypeError, ValueError):
+        db.clear_pending_action(business["id"], phone)
         return "No he podido recuperar el borrador. Vuelve a enviármelo."
     kind = pending["kind"]
+    if kind != "send_communication":
+        db.clear_pending_action(business["id"], phone)
     if kind == "gasto":
         try:
             expense = db.add_expense(
@@ -524,6 +526,12 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
         ).get("reply", "")
     if kind == "reclamar":
         return _execute_collection(business, payload)
+    if kind == "send_communication":
+        from .. import internal_brain
+        result = internal_brain.deliver_confirmed(business["id"], payload)
+        if not result.startswith("No he podido entregarlo"):
+            db.clear_pending_action(business["id"], phone)
+        return result
     return "Ese borrador ya no es válido. Vuelve a enviármelo."
 
 
@@ -925,7 +933,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             continue
 
         reply = chat.handle(
-            business["id"], text, channel="whatsapp"
+            business["id"], text, channel="whatsapp", actor_phone=phone
         ).get("reply", "")
         send(phone, reply, business_id=business["id"])
         results.append({

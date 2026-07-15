@@ -17,6 +17,7 @@ permanece desactivada. El cerebro determinista nunca se apaga.
 ```text
 mensaje web o WhatsApp
   → reglas y cálculos de `nlu.py`
+  → compositor interno trazable (`internal_brain.py`)
   → servicio privado OpenAI-compatible, si está configurado
   → proveedor externo OpenAI-compatible barato, si está autorizado
   → proveedor externo, si el negocio lo autorizó y conserva créditos
@@ -24,6 +25,10 @@ mensaje web o WhatsApp
 ```
 
 Una interacción resuelta por reglas o por IA privada no consume créditos externos.
+Tampoco consume créditos un borrador resuelto por el compositor interno: cobros,
+presupuestos, citas, gestoría y correos sencillos usan hechos de la base de datos.
+Preparar nunca equivale a enviar; el WhatsApp del titular muestra el borrador y exige
+SÍ/NO antes de entregar la comunicación.
 La reserva del crédito externo se hace de forma atómica y aislada por
 `business_id`, antes de crear la consulta avanzada. Si el proveedor compatible
 falla y responde Anthropic, se usa la misma reserva: nunca dos créditos por el mismo
@@ -51,6 +56,10 @@ endpoint debe estar en una red privada, con TLS o mTLS si cruza máquinas, sin
 exposición pública innecesaria y con límites de CPU, RAM, concurrencia y tiempo.
 Railway no convierte por sí solo este adaptador en un modelo alojado: hace falta
 provisionar un servicio de inferencia y medir su coste total.
+
+Para evaluación privada existe `deploy/local-ai/compose.yml`: levanta Ollama ligado
+a `127.0.0.1` y descarga Qwen3 8B mediante un perfil explícito. No publica el puerto,
+no incluye los pesos en la aplicación y debe fijar imagen/modelo antes del piloto.
 
 ## Proveedor compatible externo
 
@@ -158,3 +167,6 @@ Antes de habilitarlo para clientes:
 4. fijar modelo, versión, cuantización y capacidad por réplica;
 5. monitorizar coste, latencia, uso de créditos y correcciones por negocio.
 6. ejecutar `noesis-doctor --strict` y resolver bloqueos de configuración.
+
+El modelo completo de precios, márgenes, escala y puntos de cruce está en
+[[Unit-economics-y-cerebro-interno]] y [[Analisis-unit-economics.ipynb]].

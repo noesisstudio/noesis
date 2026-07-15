@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-07-15 — compositor interno y unit economics
+
+- Rama alineada con `origin/main` en `0471d2c`, incluido el rediseño interior.
+- Suite completa final: **199 pruebas verdes** en 160,1 s. Permanecen el aviso
+  conocido Starlette/httpx y logs esperados de caídas simuladas.
+- Diez pruebas específicas cubren cobro, presupuesto, cita, correo, catalán,
+  ambigüedad, aislamiento, confirmación SÍ/NO, reintento y API web autenticada en 200.
+- Una orden genérica de facturación no queda capturada por el compositor. El
+  WhatsApp pasa el teléfono del titular y mantiene deduplicación de inbound.
+- `compileall` y `git diff --check` verdes.
+- Notebook ejecutado de principio a fin. Workbook inspeccionado sin errores de
+  fórmula, siete hojas renderizadas y `MODEL STATUS = PASS`; cifras reconciliadas
+  con el notebook independiente.
+- No se llamó a Meta, SMTP real, Qwen, Haiku, Stripe, Retell ni AEAT. Las plantillas,
+  credenciales, latencia y entregas reales permanecen en [[Tareas-vivas]].
+- El `compose.yml` de Ollama se revisó estáticamente, pero no se ejecutó
+  `docker compose config` porque Docker no está instalado en esta máquina.
+
 ## 2026-07-14 — coste de IA y preparación del piloto
 
 - Suite completa: **188 pruebas verdes**; permanecen el aviso conocido de

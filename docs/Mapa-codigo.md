@@ -9,12 +9,19 @@
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro: clientes,
   agenda, facturas, proyectos, equipo, documentos y gestoría.
 - `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM.
+- `src/noesis/internal_brain.py`: compositor local de comunicaciones. Usa hechos del
+  negocio, evita ambigüedad y deja el envío pendiente de SÍ/NO del titular.
 - `src/noesis/agent.py`: agentes privado, compatible y Anthropic con historial, recuerdos
   confirmados, permisos efectivos y contexto del negocio.
 - `src/noesis/adapters/ai.py`: cliente stdlib OpenAI-compatible compartido por el
   servicio privado y el proveedor externo barato.
 - `src/noesis/readiness.py`: diagnóstico de piloto sin secretos para seguridad,
   datos, copias, WhatsApp, correo, Stripe, AEAT, IA y operaciones.
+- `deploy/local-ai/`: Ollama privado ligado a localhost y perfil de descarga de
+  Qwen3 8B para evaluación; no expone el modelo ni lo convierte en un SLA.
+- `analysis/build_unit_economics.mjs`: genera el modelo editable de costes, márgenes,
+  escala, sensibilidad de IA y controles; fuente narrativa en
+  `docs/Analisis-unit-economics.ipynb`.
 
 ## Web y acompañante
 

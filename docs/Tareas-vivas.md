@@ -6,13 +6,17 @@
 ## En revisión
 
 - [x] Fusionar `codex/ai-first-hotfix` (PR #31) y confirmar CI PostgreSQL.
-- [ ] Revisar y fusionar `codex/pilot-readiness`.
+- [x] Fusionar `codex/pilot-readiness` (PR #32).
+- [ ] Revisar y fusionar `codex/internal-brain-unit-economics`: compositor interno,
+  despliegue Qwen privado y modelo económico reproducible.
 - [ ] Tras desplegar: abrir una ficha de proyecto real, `/ready`, Ajustes y el flujo
   onboarding → IA recomendada → proveedor compatible → Anthropic → límite → local.
 
 ## P0 — piloto seguro
 
 - [ ] Meta real: número, webhook, audio/foto/PDF, plantillas, estados y reintentos.
+- [ ] Aprobar en Meta las plantillas de cobro, seguimiento de presupuesto y
+  recordatorio de cita; validar SÍ/NO y entrega real desde el WhatsApp del titular.
 - [ ] Stripe real y conciliación; ninguna transferencia sin aceptación específica.
 - [ ] Certificado/entorno AEAT y validación con asesoría fiscal.
 - [ ] Auditoría externa de seguridad/privacidad, restauración real, alertas y
@@ -22,6 +26,8 @@
   una restauración externa aislada siguiendo [[Piloto-operativo]].
 - [ ] Medir tiempo ahorrado, trabajos sin facturar, cobros recuperados, correcciones,
   coste por cuenta y retención; no añadir módulos sin evidencia del piloto.
+- [ ] Decidir tras el piloto si el catálogo pasa de 29/39/79 a 29/49/99 € + IVA,
+  o si Premium mantiene 79 € sin voz y la vende como add-on.
 
 ## P1 — fiabilidad y profundidad común
 

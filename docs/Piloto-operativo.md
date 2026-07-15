@@ -21,7 +21,11 @@ noesis-doctor --json --strict
 ## 2. Pruebas reales obligatorias
 
 - WhatsApp: texto, nota de voz, ticket, factura PDF, confirmación, plantilla fuera de
-  ventana, estado entregado/leído, reintento y número no vinculado.
+  ventana, estado entregado/leído, reintento y número no vinculado. Aprobar y probar
+  las plantillas `payment_reminder`, `quote_followup` y `appointment_reminder` con
+  sus parámetros en el mismo orden configurado.
+- Compositor interno: cobro, presupuesto, cita, gestoría y correo personalizado;
+  cliente ambiguo, entidad de otro negocio, cambio antes del SÍ y fallo de entrega.
 - IA: orden rutinaria local, consulta compleja, herramienta con datos reales,
   catalán, dato ausente, caída del primer proveedor, fallback y límite mensual.
 - Dinero: borrador, emisión confirmada, pago parcial, impago, enlace Stripe, webhook
@@ -45,6 +49,8 @@ Medir semanalmente por negocio:
 - herramientas correctas, respuestas corregidas y escalados humanos;
 - documentos bien clasificados y correcciones;
 - activación, uso semanal y voluntad de pago.
+- coste total por cuenta y plan: Stripe, WhatsApp utility, IA, audio, documentos,
+  almacenamiento, voz, minutos de soporte y onboarding.
 
 No ampliar módulos si el piloto no demuestra menos ruido mental y repetición de uso.
 

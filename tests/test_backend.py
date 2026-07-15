@@ -506,7 +506,8 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(first["processed"], 1)
         self.assertTrue(duplicate["results"][0]["duplicate"])
         handle.assert_called_once_with(
-            business["id"], "resumen", channel="whatsapp"
+            business["id"], "resumen", channel="whatsapp",
+            actor_phone="34600111222",
         )
         send.assert_called_once()
 

@@ -2,6 +2,23 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Compositor interno antes del modelo; precio se decide con piloto (2026-07-15)
+
+Noesis redacta internamente las comunicaciones repetibles a partir de hechos
+confirmados: cobros, presupuestos, citas, gestoría y correos sencillos. Esta capa no
+es un LLM, no inventa importes o destinatarios y no consume créditos. Si el titular
+pide enviar desde WhatsApp, primero ve el borrador y confirma con SÍ/NO; web solo
+prepara. El envío vuelve a validar entidad, cliente y `business_id`.
+
+Qwen3 8B queda preparado como servicio privado evaluable, no como única dependencia
+del piloto. Se mantiene pago por uso y Haiku como respaldo hasta demostrar calidad,
+latencia y seguridad. Motivo: una GPU 24/7 cuesta más que la inferencia del volumen
+previsto y un servidor gratuito no ofrece SLA ni estabilidad de precios.
+
+El análisis recomienda 29/49/99 € + IVA si Premium conserva 100 minutos de voz. No
+se cambia el catálogo 29/39/79 en código sin decisión del founder tras el piloto.
+Detalle y supuestos en [[Unit-economics-y-cerebro-interno]].
+
 ## Pago por uso antes de GPU propia durante el piloto (2026-07-14)
 
 Noesis admite un proveedor externo OpenAI-compatible entre la IA privada y

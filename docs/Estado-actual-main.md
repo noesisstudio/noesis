@@ -1,11 +1,11 @@
 # Estado actual de `main`
 
-> Única fotografía viva del producto. Auditoría: 2026-07-14. Los pendientes viven
+> Única fotografía viva del producto. Auditoría: 2026-07-15. Los pendientes viven
 > únicamente en [[Tareas-vivas]]; los documentos de traspaso son históricos.
 
 ## Código fusionado en `origin/main`
 
-- Commit auditado: `2925a98` (PR #31).
+- Commit auditado: `0471d2c` (rediseño interior posterior al PR #32).
 - Esquema SQLite/Postgres: migración **27**.
 - La columna proyecto → trabajo → fichaje → coste → borrador de factura está
   conectada. El cierre de campo, materiales, evidencias y conformidad no alteran el
@@ -17,7 +17,7 @@
 - Última verificación publicada comunicada: Railway/Postgres aplicó las migraciones
   y `/ready` respondió 200. Esto no sustituye una nueva prueba tras cada despliegue.
 
-## Fusionado en PR #31
+## Fusionado en PR #31 y PR #32
 
 - Corrige el `COALESCE` incompatible entre texto y timestamp en la ficha de proyecto
   y añade proyecto, ficha y campo al smoke de PostgreSQL.
@@ -31,15 +31,21 @@
   HTTP real en `/health`, `/ready`, onboarding, Ajustes, proyectos, detalle y campo.
   GitHub Actions aplicó migración 27/27 y pasó el smoke PostgreSQL ampliado.
 
-## Cambio preparado en `codex/pilot-readiness`
-
-- Añade proveedor externo OpenAI-compatible antes de Anthropic, con el mismo
+- El PR #32 añade proveedor externo OpenAI-compatible antes de Anthropic, con el mismo
   consentimiento, un crédito único aunque haya fallback y coste estimado por llamada.
 - Añade `noesis-doctor`, un diagnóstico sin secretos para impedir pilotos con Meta,
   Stripe, copias o AEAT configurados a medias.
 - Documenta costes, punto de equilibrio y runbook de piloto. No modifica el diseño.
-- Verificación local de la rama: **188 pruebas verdes** y smoke real en `/health`,
+- Verificación comunicada: **188 pruebas verdes** y smoke real en `/health`,
   `/ready`, Privacidad y encargo de tratamiento.
+
+## Rediseño interior fusionado después del PR #32
+
+- Facturas, Cobros, Clientes y Documentos siguen el patrón «parte de sección»:
+  primero situación y acción, después datos y profundidad.
+- `0471d2c` aplica la misma voz de Noesis al resto de secciones sin convertirlas en
+  dashboards financieros. Este cambio visual no sustituye QA funcional ni smoke de
+  producción tras el despliegue.
 
 ## Capacidades que existen pero dependen de configuración externa
 

@@ -14,6 +14,8 @@ usa la vista de grafo para navegar.
 - [[Arquitectura]] — cómo está construido el sistema.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
+- [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
+- [[Analisis-unit-economics.ipynb]] — modelo reproducible completo por plan.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
