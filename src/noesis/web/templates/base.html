@@ -136,12 +136,23 @@
     </div>
     {% endif %}
     <div class="content">
-      {% if page_note %}
+      {% if page_brief %}
       <div class="page-note">
         <span class="pn-mark"><img src="/static/noesis-mark.svg" alt=""></span>
-        <p>{{ page_note }}</p>
+        <div class="pn-body">
+          <p>{{ page_brief.text }}</p>
+          {% if page_brief.stats %}
+          <div class="pn-stats">
+            {% for s in page_brief.stats %}
+            <span class="pn-chip {{ s.tone }}"><small>{{ s.label }}</small><b>{{ s.value }}</b></span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
         {% if active != 'asistente' %}
-        <button class="pn-ask" type="button" onclick="noesisDrawer(true)">Hablar sobre esto</button>
+        <button class="pn-ask" type="button" data-ask="{{ page_brief.ask or '' }}"
+                onclick="noesisDrawer(true); if (this.dataset.ask) noesisSend(this.dataset.ask)">
+          Explícamelo</button>
         {% endif %}
       </div>
       {% endif %}

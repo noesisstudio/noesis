@@ -398,15 +398,15 @@ def page_briefing(business_id: int, page: str) -> str | None:
     return "\n\n".join(lines)
 
 
-def page_note(business_id: int, page: str) -> str | None:
+def page_note(business_id: int, page: str, state: dict | None = None) -> str | None:
     """La voz de Noesis en la cabecera de cada pantalla: UNA línea con un dato real
     del negocio, en primera persona. Resiliente (nunca tumba la página) y honesta
     (si no hay nada, lo dice). Devuelve None en el Home (ya tiene su parte) y en
-    páginas sin lectura útil."""
+    páginas sin lectura útil. Acepta el estado precomputado para no leer dos veces."""
     if page == "resumen" or page not in _PAGE_HINTS:
         return None
     try:
-        state = _business_state(business_id)
+        state = state or _business_state(business_id)
     except Exception:  # noqa: BLE001 — una cabecera nunca puede tumbar la pantalla
         log.exception("page_note falló para %s en %s", page, business_id)
         return None
@@ -460,6 +460,109 @@ def page_note(business_id: int, page: str) -> str | None:
         return (f"{_count(len(q), 'presupuesto enviado', 'presupuestos enviados')} esperan respuesta "
                 f"({_eur(total)} en juego). Un recordatorio a tiempo convierte.")
     return f"Aquí tienes {_PAGE_HINTS[page]}."
+
+
+# Pregunta natural con la que el botón "Explícamelo" abre el acompañante en cada
+# pantalla. La figura de Noesis es la misma en todas partes: lee, muestra y explica.
+_PAGE_ASK = {
+    "facturas": "Explícame cómo va mi facturación este mes y qué harías tú.",
+    "cobros": "¿A quién le reclamo primero y qué mensaje le mando?",
+    "presupuestos": "¿Qué presupuestos debería mover hoy?",
+    "clientes": "¿Qué clientes debería cuidar más ahora mismo?",
+    "crm": "¿Qué posible cliente tengo más caliente y qué le digo?",
+    "documentos": "¿Qué hago con los documentos pendientes?",
+    "costes": "¿Dónde se me está yendo el dinero este mes?",
+    "ingresos": "¿Cómo van mis ingresos comparados con lo normal?",
+    "tesoreria": "Explícame mi caja en dos frases.",
+    "analisis": "Explícame estos números como si no supiera de finanzas.",
+    "impuestos": "¿Cuánto debería apartar para Hacienda este trimestre?",
+    "agenda": "Organízame el día de hoy.",
+    "equipo": "¿Cómo va el equipo esta semana?",
+    "productos": "¿Qué me deja más margen de lo que vendo?",
+    "proyectos": "¿Qué proyecto me está comiendo el margen?",
+}
+
+
+def _note_stats(page: str, state: dict) -> list[dict]:
+    """Las 2-4 cifras clave de cada pantalla, presentadas POR Noesis (no una pared
+    de KPIs muda). Solo datos ya leídos en el estado: cero consultas nuevas."""
+    def chip(label, value, tone=""):
+        return {"label": label, "value": value, "tone": tone}
+
+    billing = state["billing"]
+    pend = sum(p["total"] for p in state["pending"])
+    late_total = sum(p["total"] for p in state["late"])
+    if page == "facturas":
+        chips = [chip("Facturado (mes)", _eur(billing.get("invoiced"))),
+                 chip("Cobrado (mes)", _eur(billing.get("collected")), "good"),
+                 chip("Te deben", _eur(pend), "warn" if pend else "good")]
+        if state["unbilled"]:
+            chips.append(chip("Sin facturar", str(len(state["unbilled"])), "bad"))
+        return chips
+    if page == "cobros":
+        return [chip("Te deben", _eur(pend), "warn" if pend else "good"),
+                chip("Más de 7 días", _eur(late_total), "bad" if late_total else "good"),
+                chip("Facturas", str(len(state["pending"])))]
+    if page == "presupuestos" and state["quotes_sent"]:
+        return [chip("Enviados", str(len(state["quotes_sent"]))),
+                chip("En juego", _eur(sum(q["total"] for q in state["quotes_sent"])), "warn")]
+    if page == "clientes":
+        cs = state["clients"]
+        active = sum(1 for c in cs if c.get("n_trabajos") or c.get("n_facturas"))
+        return [chip("Clientes", str(len(cs))),
+                chip("Con actividad", str(active)),
+                chip("Facturado", _eur(sum(c.get("facturado") or 0 for c in cs)))]
+    if page == "crm" and state["leads_due"]:
+        return [chip("Para seguir hoy", str(len(state["leads_due"])), "warn")]
+    if page == "documentos":
+        chips = []
+        if state["docs_pending"]:
+            chips.append(chip("Por revisar", str(len(state["docs_pending"])), "warn"))
+        if state["gestoria_open"]:
+            chips.append(chip("Gestoría", str(len(state["gestoria_open"])), "warn"))
+        if state["received_pending"]:
+            chips.append(chip("Proveedor por pagar",
+                              _eur(sum(r["total"] for r in state["received_pending"])), "warn"))
+        return chips
+    if page == "costes":
+        chips = [chip("Gastos (mes)", _eur(billing.get("expenses")))]
+        if state["received_pending"]:
+            chips.append(chip("Proveedor por pagar",
+                              _eur(sum(r["total"] for r in state["received_pending"])), "warn"))
+        return chips
+    if page == "agenda" and state["agenda"]:
+        return [chip("Trabajos hoy", str(len(state["agenda"])))]
+    if page == "proyectos":
+        active = [p for p in state.get("projects", []) if p.get("status") != "terminado"]
+        if active:
+            margin = sum(p.get("margin") or 0 for p in active)
+            return [chip("Activos", str(len(active))),
+                    chip("Margen disponible", _eur(margin),
+                         "bad" if margin < 0 else "good")]
+    return []
+
+
+def page_brief(business_id: int, page: str) -> dict | None:
+    """El parte de sección: la figura de Noesis en cada pantalla — su lectura en
+    primera persona, las cifras clave que la sostienen y la puerta para pedirle
+    que lo explique. Una sola pieza en toda la app; resiliente como page_note."""
+    if page == "resumen" or page not in _PAGE_HINTS:
+        return None
+    try:
+        state = _business_state(business_id)
+    except Exception:  # noqa: BLE001
+        log.exception("page_brief falló para %s en %s", page, business_id)
+        return {"text": f"Aquí tienes {_PAGE_HINTS[page]}.", "stats": [],
+                "ask": _PAGE_ASK.get(page)}
+    text = page_note(business_id, page, state)
+    if not text:
+        return None
+    try:
+        stats = _note_stats(page, state)
+    except Exception:  # noqa: BLE001 — las cifras nunca tumban la lectura
+        log.exception("_note_stats falló para %s en %s", page, business_id)
+        stats = []
+    return {"text": text, "stats": stats, "ask": _PAGE_ASK.get(page)}
 
 
 def _handle(business_id: int, message: str, page: str | None = None) -> dict:

@@ -123,8 +123,9 @@ def page(request: Request, business_id: int, page: str):
         "active": page,
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
-        # La voz de Noesis en la cabecera de cada pantalla (None en el Home).
-        "page_note": chat.page_note(business_id, page),
+        # El parte de sección: la figura de Noesis en cada pantalla — lectura,
+        # cifras clave y puerta al acompañante (None en el Home, que tiene el suyo).
+        "page_brief": chat.page_brief(business_id, page),
     }
     if page == "resumen":
         layout = db.resolve_panel_layout(biz)

@@ -277,6 +277,30 @@ class PlatformTestCase(unittest.TestCase):
         finally:
             chat._business_state = original
 
+    def test_page_brief_stats_and_resilience(self):
+        # El parte de sección: lectura + cifras presentadas por Noesis + pregunta
+        # para el acompañante. Una sola pieza en toda la app.
+        self.assertIsNone(chat.page_brief(self.bid, "resumen"))
+        brief = chat.page_brief(self.bid, "facturas")
+        self.assertTrue(brief["text"])
+        self.assertTrue(brief["ask"])
+        labels = {s["label"] for s in brief["stats"]}
+        self.assertIn("Te deben", labels)
+        self.assertIn("Facturado (mes)", labels)
+        # Resiliencia: si la lectura peta, la pantalla sigue con un mínimo digno.
+        original = chat._business_state
+
+        def boom(_bid):
+            raise RuntimeError("fallo simulado")
+
+        chat._business_state = boom
+        try:
+            degraded = chat.page_brief(self.bid, "facturas")
+        finally:
+            chat._business_state = original
+        self.assertTrue(degraded["text"])
+        self.assertEqual(degraded["stats"], [])
+
     def test_daily_briefing_never_crashes_the_home(self):
         # Si al leer el negocio algo falla (p. ej. una consulta que solo peta en
         # Postgres), el parte devuelve un mínimo honesto en vez de tumbar el Home.

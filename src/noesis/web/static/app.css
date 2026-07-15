@@ -1393,15 +1393,29 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   display: grid; place-items: center; flex: none;
 }
 .page-note .pn-mark img { width: 18px; height: 18px; }
+.page-note .pn-body { flex: 1; min-width: 0; }
 .page-note p {
-  margin: 0; font-family: var(--serif); font-size: 15px; line-height: 1.45; flex:1;
+  margin: 0; font-family: var(--serif); font-size: 15px; line-height: 1.45;
   color: var(--brand-ink);
 }
+/* Las cifras clave, presentadas por Noesis dentro de su parte (no una pared
+   de KPIs muda): chips compactos bajo la lectura. */
+.pn-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+.pn-chip { display: inline-flex; flex-direction: column; gap: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; padding: 5px 11px; }
+.pn-chip small { font-size: 10.5px; color: var(--faint);
+  text-transform: uppercase; letter-spacing: .04em; }
+.pn-chip b { font-size: 13.5px; color: var(--text); font-weight: 750; }
+.pn-chip.good b { color: var(--green); }
+.pn-chip.warn b { color: var(--amber); }
+.pn-chip.bad b { color: var(--red); }
 .pn-ask { flex:none; border:0; background:transparent; color:var(--brand); font-size:12px;
   font-weight:750; cursor:pointer; padding:7px 4px; }
 @media (max-width: 600px) {
   .page-note { align-items:flex-start; flex-wrap:wrap; }
-  .page-note p { font-size:14px; flex:1 1 calc(100% - 48px); }
+  .page-note p { font-size:14px; }
+  .page-note .pn-body { flex: 1 1 calc(100% - 48px); }
   .pn-ask { margin-left:42px; padding-top:0; }
 }
 
