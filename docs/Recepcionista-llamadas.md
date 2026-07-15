@@ -49,8 +49,8 @@ de audio. Solo compensa a partir de ~5.000 min/mes agregados.
 | Plan | Recepcionista |
 |---|---|
 | Autónomo (29 €) | No incluido |
-| Negocio (39 €) | Add-on opcional: +15 €/mes con 100 min (cuando salga de beta) |
-| Sin Límites (79 €) | Incluido, 100 min/mes, minuto extra 0,15 € |
+| Negocio (49 €) | Add-on opcional: +15 €/mes con 100 min (cuando salga de beta) |
+| Sin Límites (99 €) | Incluido, 100 min/mes, minuto extra 0,15 € |
 
 ## Cumplimiento (antes de la beta)
 

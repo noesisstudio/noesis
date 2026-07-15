@@ -129,7 +129,7 @@ Priorizados por (valor para el autónomo × datos que YA tenemos × coste de con
 
 **Los tres primeros son el "CFO de bolsillo"** y salen casi enteros de datos que
 ya guardamos. El 4 y el 5 son el "comercial de bolsillo". Esa pareja — CFO +
-comercial por 29-39 €/mes — es la historia de producto completa: no un programa
+comercial por 29/49/99 € + IVA al mes — es la historia de producto completa: no un programa
 de facturas, sino el empleado que el autónomo nunca pudo pagar.
 
 ### Nota para la conversación de precios pendiente

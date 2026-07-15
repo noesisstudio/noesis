@@ -4,9 +4,11 @@ Este archivo es la fuente de verdad compartida para cualquier agente de IA que
 trabaje en el repositorio. Léelo entero antes de tocar nada. La visión y el contexto
 están en `docs/`, empezando por [`docs/Inicio.md`](docs/Inicio.md).
 
-> Si retomas trabajo, lee primero [`docs/Estado-actual-main.md`](docs/Estado-actual-main.md)
-> y [`docs/Tareas-vivas.md`](docs/Tareas-vivas.md). El primero es la única fotografía
-> viva; el segundo, el único listado vivo de pendientes. Los traspasos son históricos.
+> Si retomas trabajo, lee primero [`docs/project-state.json`](docs/project-state.json),
+> [`docs/Estado-actual-main.md`](docs/Estado-actual-main.md) y
+> [`docs/Tareas-vivas.md`](docs/Tareas-vivas.md). El JSON es la fuente verificable por
+> máquinas; los otros dos explican el estado y los pendientes. Los traspasos son
+> históricos.
 
 > Si vas a tocar una pantalla, texto o estilo, lee antes
 > [`docs/design/PRODUCT_PRINCIPLES.md`](docs/design/PRODUCT_PRINCIPLES.md),
@@ -50,7 +52,8 @@ Archivos clave:
 
 - `src/noesis/db.py`: acceso único SQLite/Postgres; toda operación filtra por
   `business_id`.
-- `src/noesis/migrations.py`: esquema versionado; `main` llega a la migración 27.
+- `src/noesis/migrations.py`: esquema versionado; la versión vigente se consulta en
+  `docs/project-state.json` y se valida automáticamente contra el código.
 - `src/noesis/web/server.py` y `src/noesis/web/routers/`: FastAPI por dominios.
 - `src/noesis/web/static/` y `src/noesis/web/templates/`: sistema de diseño propio.
 - `src/noesis/nlu.py`, `web/chat.py`, `agent.py`, `tools.py`: cerebro y acciones.
@@ -81,6 +84,12 @@ Archivos clave:
 - Actualizar: estado en `docs/Estado-actual-main.md`, pendientes en
   `docs/Tareas-vivas.md`, código en `docs/Mapa-codigo.md`, QA en
   `docs/Registro-QA.md` y decisiones en `docs/Decisiones.md`.
+- Todo PR que cambie `src/noesis/` actualiza `docs/project-state.json` y
+  `docs/Registro-QA.md`. CI lo exige con `scripts/check_project_truth.py`. Si cambia
+  arquitectura, actualiza también `Mapa-codigo`, `Arquitectura` o `Decisiones`.
+- No fijar aquí commits, PR abiertos, conteos de pruebas, precios ni migraciones:
+  se desincronizan. Si una IA cambia producto, pruebas, esquema, precios o bloqueos
+  externos, actualiza la foto compartida en la misma rama; no lo deja a otra IA.
 - No subir `.env`, bases locales, uploads, `.venv/` ni worktrees auxiliares.
 
 ## 6. Reparto recomendado
@@ -94,8 +103,10 @@ Si cruza áreas, separar objetivos para evitar pisarse.
 
 ## 7. Estado actual
 
-No duplicarlo aquí. Leer [`docs/Estado-actual-main.md`](docs/Estado-actual-main.md) y
-[`docs/Tareas-vivas.md`](docs/Tareas-vivas.md).
+No duplicarlo aquí. Leer [`docs/project-state.json`](docs/project-state.json),
+[`docs/Estado-actual-main.md`](docs/Estado-actual-main.md) y
+[`docs/Tareas-vivas.md`](docs/Tareas-vivas.md). La comprobación automática impide
+fusionar código sin actualizar la foto y el registro de QA.
 
 ## 8. Criterio heredable
 

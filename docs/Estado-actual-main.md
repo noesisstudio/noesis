@@ -1,65 +1,55 @@
-# Estado actual de `main`
+# Estado actual del producto
 
-> Única fotografía viva del producto. Auditoría: 2026-07-15. Los pendientes viven
-> únicamente en [[Tareas-vivas]]; los documentos de traspaso son históricos.
+> Lectura humana del estado. La fuente verificable para migración, pruebas, precios,
+> política de suscripción y publicación es [`project-state.json`](project-state.json).
+> Los pendientes solo viven en [[Tareas-vivas]].
 
-## Código fusionado en `origin/main`
+## Producto construido
 
-- Commit auditado: `0471d2c` (rediseño interior posterior al PR #32).
-- Esquema SQLite/Postgres: migración **27**.
-- La columna proyecto → trabajo → fichaje → coste → borrador de factura está
-  conectada. El cierre de campo, materiales, evidencias y conformidad no alteran el
-  fichaje laboral append-only.
-- Centro de control por negocio, preferencias de integración, salud operativa,
-  memoria explicable y perfil de cliente corregible están fusionados.
-- Emitir/enviar facturas, registrar pagos, transferencias, fiscalidad y borrados
-  irreversibles permanecen bajo confirmación del autónomo.
-- Última verificación publicada comunicada: Railway/Postgres aplicó las migraciones
-  y `/ready` respondió 200. Esto no sustituye una nueva prueba tras cada despliegue.
+- Noesis cubre el ciclo cliente → presupuesto → trabajo/proyecto → fichaje y costes
+  → factura → cobro, aislado siempre por `business_id`.
+- La entrada documental es común para web y WhatsApp: clasifica tickets, facturas,
+  presupuestos, contratos y albaranes; propone y pide confirmación cuando el efecto
+  puede ser contable.
+- Hay portales privados para cliente, trabajador y gestoría; el fichaje y Veri*Factu
+  conservan registros inmutables.
+- El cerebro funciona por capas: reglas locales, compositor interno, servicio privado
+  compatible, proveedor externo compatible y Anthropic como respaldo autorizado.
+  Que falle una IA nunca apaga el producto local.
+- Noesis aparece en todas las secciones con una lectura contextual, el motivo y el
+  siguiente paso. La estructura de cada pantalla sigue siendo propia de su función;
+  no existe una plantilla universal de KPIs.
 
-## Fusionado en PR #31 y PR #32
+## Política comercial en el código actual
 
-- Corrige el `COALESCE` incompatible entre texto y timestamp en la ficha de proyecto
-  y añade proyecto, ficha y campo al smoke de PostgreSQL.
-- El onboarding recomienda IA avanzada desde el primer día, pero pide consentimiento
-  explícito antes de enviar contenido a un proveedor externo.
-- Enrutamiento: reglas locales → servicio privado OpenAI-compatible → IA externa
-  autorizada. La caída o el límite de un nivel no apaga el producto local.
-- Créditos externos mensuales por plan, reservados atómicamente y aislados por
-  `business_id`. La IA privada no consume esos créditos.
-- Estado de pruebas comunicado: **182 pruebas y 26 subpruebas verdes**; smoke
-  HTTP real en `/health`, `/ready`, onboarding, Ajustes, proyectos, detalle y campo.
-  GitHub Actions aplicó migración 27/27 y pasó el smoke PostgreSQL ampliado.
+- Catálogo: **29 / 49 / 99 € al mes + IVA**.
+- La prueba dura 14 días y permite operar con normalidad.
+- Al caducar, cancelar o quedar un pago pendiente, el titular puede entrar y consultar
+  sus datos, pero no crear, cambiar, enviar ni ejecutar automatizaciones.
+- El bloqueo se aplica en servidor a web/API, portales, WhatsApp, colas y tareas
+  programadas; no depende de ocultar botones.
+- Pagos, transferencias, presentación fiscal, emisión definitiva, envíos sensibles y
+  borrados irreversibles requieren confirmación específica del autónomo.
 
-- El PR #32 añade proveedor externo OpenAI-compatible antes de Anthropic, con el mismo
-  consentimiento, un crédito único aunque haya fallback y coste estimado por llamada.
-- Añade `noesis-doctor`, un diagnóstico sin secretos para impedir pilotos con Meta,
-  Stripe, copias o AEAT configurados a medias.
-- Documenta costes, punto de equilibrio y runbook de piloto. No modifica el diseño.
-- Verificación comunicada: **188 pruebas verdes** y smoke real en `/health`,
-  `/ready`, Privacidad y encargo de tratamiento.
+## Publicado frente a construido
 
-## Rediseño interior fusionado después del PR #32
+La URL pública y la última comprobación constan en `project-state.json`. Los cambios
+del código actual solo se consideran publicados después de fusionar, desplegar,
+aplicar migraciones y repetir `/ready` y los flujos afectados. **Nunca se deduce que
+algo está en producción porque exista en una rama o haya pasado tests.**
 
-- Facturas, Cobros, Clientes y Documentos siguen el patrón «parte de sección»:
-  primero situación y acción, después datos y profundidad.
-- `0471d2c` aplica la misma voz de Noesis al resto de secciones sin convertirlas en
-  dashboards financieros. Este cambio visual no sustituye QA funcional ni smoke de
-  producción tras el despliegue.
+## Límites que siguen abiertos
 
-## Capacidades que existen pero dependen de configuración externa
+- WhatsApp, Stripe, SMTP, el proveedor privado de IA y AEAT están implementados detrás
+  de adaptadores, pero necesitan credenciales y una prueba real extremo a extremo.
+- Falta auditoría externa de seguridad, privacidad y fiscalidad, restauración real y
+  piloto acompañado con 3-5 negocios.
+- La memoria de cliente es explicable y corregible; no se promete aprendizaje autónomo
+  perfecto ni decisiones legales/fiscales sin humano.
 
-- WhatsApp dispone de webhook firmado, texto, audio, imagen/PDF, confirmaciones y
-  outbox durable; falta validar el número y las plantillas reales de Meta.
-- Stripe, email, Veri*Factu/AEAT, extracción avanzada y el proveedor de IA requieren
-  credenciales, entorno o certificado reales.
-- El adaptador de IA privada está construido, pero necesita un servicio de inferencia
-  provisionado y evaluado; no incluye una GPU ni un modelo dentro del proceso web.
+## Regla para cualquier IA
 
-## Evidencia y límites
-
-- «Construido» no significa «publicado»: después de cada fusión hay que confirmar
-  despliegue, migración, smoke y flujo real afectado.
-- No se promete cumplimiento fiscal definitivo, WhatsApp perfecto ni aprendizaje
-  autónomo completo hasta validar con asesoría, auditoría y pilotos reales.
-- Toda lectura y escritura operativa debe filtrar por `business_id`.
+Toda modificación de producto actualiza `project-state.json` y `Registro-QA.md`; si
+cambia arquitectura, también `Mapa-codigo.md`, `Arquitectura.md` o `Decisiones.md`.
+El CI ejecuta `scripts/check_project_truth.py` y rechaza una PR que cambie `src/noesis/`
+sin esas actualizaciones.
