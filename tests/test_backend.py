@@ -1256,6 +1256,42 @@ class PaymentReminderTestCase(unittest.TestCase):
 
 
 class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
+    def test_public_and_account_pricing_share_the_current_catalog(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Precios actuales")
+        db.create_user(
+            "precios@example.com",
+            auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                public_page = client.get("/precios")
+                self.assertEqual(public_page.status_code, 200)
+
+                login = client.post(
+                    "/login",
+                    data={
+                        "email": "precios@example.com",
+                        "password": "password-segura-123",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                account_page = client.get(f"/b/{business['id']}/suscripcion")
+                self.assertEqual(account_page.status_code, 200)
+
+        for page in (public_page.text, account_page.text):
+            self.assertIn("29 €", page)
+            self.assertIn("49 €", page)
+            self.assertIn("99 €", page)
+            self.assertGreaterEqual(page.count("+ IVA/mes"), 3)
+            self.assertNotIn("39 €", page)
+            self.assertNotIn("79 €", page)
+
     def test_inactive_account_can_read_but_cannot_change_the_business(self):
         from starlette.testclient import TestClient
         from noesis.web import server
