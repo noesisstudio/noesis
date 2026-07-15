@@ -179,14 +179,14 @@ def _daily_plan(state: dict) -> list[dict]:
     return plan
 
 
-def daily_plan(business_id: int) -> list[dict]:
+def daily_plan(business_id: int, *, record: bool = True) -> list[dict]:
     """Plan diario priorizado (con el porqué) para alimentar el dashboard. Mismo
-    cerebro que el asistente. Además REGISTRA cada recomendación en el ledger
-    (idempotente) y devuelve su id/estado para poder marcarla aceptada/completada."""
+    cerebro que el asistente. Si ``record`` está activo, registra cada recomendación
+    en el ledger (idempotente) y devuelve su estado; el modo consulta solo la lee."""
     plan = _daily_plan(_business_state(business_id))
     out = []
     for item in plan:
-        if item["topic"] == "orden":  # "vas al día": no es una acción que registrar.
+        if item["topic"] == "orden" or not record:
             out.append({**item, "id": None, "status": None})
             continue
         rec = db.record_recommendation(business_id, item["topic"], item["do"])
@@ -438,6 +438,47 @@ def page_note(business_id: int, page: str, state: dict | None = None) -> str | N
             return "Aún no hay proyectos activos. Crea uno y vigilaré avance, horas y margen contigo."
         return (f"Tienes {_count(summary['active_count'], 'proyecto activo', 'proyectos activos')}, con "
                 f"{_eur(summary['margin'])} de margen disponible en conjunto.")
+    if page == "analisis":
+        billing = state["billing"]
+        invoiced = billing.get("invoiced") or 0
+        profit = billing.get("estimated_profit") or 0
+        if not invoiced:
+            return "Aún no hay facturación este mes. Cuando la haya, te explicaré margen, cobro y riesgo sin jerga."
+        margin = round(profit / max(billing.get("revenue_base") or 1, 1) * 100)
+        return (f"Este mes el beneficio estimado es {_eur(profit)} y el margen ronda el {margin}%. "
+                "No es una nota: es lo que queda después de los gastos registrados.")
+    if page == "ingresos":
+        billing = state["billing"]
+        return (f"Este mes has facturado {_eur(billing.get('invoiced'))} y han entrado "
+                f"{_eur(billing.get('collected'))}. Lo facturado no siempre es dinero ya disponible.")
+    if page == "agenda":
+        jobs = state["agenda"]
+        return (f"Hoy tienes {_count(len(jobs), 'trabajo', 'trabajos')}. Al cerrar cada uno, te ayudaré a dejarlo facturado."
+                if jobs else "Hoy no tienes trabajos en agenda. Puedes añadir uno y dejar cliente, hora y encargo atados.")
+    if page == "equipo":
+        team = db.clockins_today(business_id)
+        working = sum(1 for worker in team if worker.get("open_shift"))
+        return (f"Hay {_count(len(team), 'persona', 'personas')} en el equipo y {working} trabajando ahora. "
+                "Las horas salen del fichaje real, no de una estimación."
+                if team else "Aún no hay equipo. Cuando lo añadas, cada persona verá sus trabajos y fichará desde su panel.")
+    if page == "clientes":
+        clients = state["clients"]
+        active = sum(1 for client in clients if client.get("n_trabajos") or client.get("n_facturas"))
+        return (f"Conozco {_count(len(clients), 'cliente', 'clientes')}; {active} ya tienen actividad registrada. "
+                "Aquí importa su historia, no solo sus datos de contacto."
+                if clients else "Aún no hay clientes. Crea el primero y reuniré aquí trabajos, presupuestos, facturas y cobros.")
+    if page == "productos":
+        products = db.list_products(business_id)
+        known_margin = [p for p in products if p.get("margin_pct") is not None]
+        return (f"Tienes {_count(len(products), 'servicio o producto', 'servicios o productos')}; "
+                f"conozco el margen de {len(known_margin)}. Completa el coste para que no te aconseje a ciegas."
+                if products else "Aún no hay catálogo. Añade lo que vendes y su coste para presupuestar con margen real.")
+    if page == "impuestos":
+        today = date.today()
+        taxes = db.tax_quarter(today.year, (today.month - 1) // 3 + 1, business_id)
+        reserve = max(taxes["iva_resultado"], 0) + taxes["irpf_pago"]
+        return (f"Con lo registrado, conviene reservar aproximadamente {_eur(reserve)} este trimestre. "
+                "Es una estimación de apoyo; tu gestoría valida la presentación.")
     if page == "crm":
         due = len(state["leads_due"])
         return (f"Hoy toca seguir a {_count(due, 'posible cliente', 'posibles clientes')}; en frío se enfrían."
@@ -459,6 +500,10 @@ def page_note(business_id: int, page: str, state: dict | None = None) -> str | N
         total = sum(x["total"] for x in q)
         return (f"{_count(len(q), 'presupuesto enviado', 'presupuestos enviados')} esperan respuesta "
                 f"({_eur(total)} en juego). Un recordatorio a tiempo convierte.")
+    if page == "presupuestos":
+        return "No hay presupuestos esperando respuesta. Aquí preparas, envías y sigues cada oportunidad hasta aceptarla o cerrarla."
+    if page == "ajustes":
+        return "Aquí decides cómo trabaja Noesis contigo: datos fiscales, permisos, integraciones y nivel de explicación."
     return f"Aquí tienes {_PAGE_HINTS[page]}."
 
 
@@ -481,6 +526,53 @@ _PAGE_ASK = {
     "productos": "¿Qué me deja más margen de lo que vendo?",
     "proyectos": "¿Qué proyecto me está comiendo el margen?",
 }
+
+_PAGE_PROMPTS = {
+    "facturas": ["¿Qué tengo que facturar hoy?", "Explícame lo pendiente"],
+    "cobros": ["¿A quién reclamo primero?", "Redáctame un recordatorio"],
+    "presupuestos": ["¿Qué presupuesto moverías?", "¿Qué tengo en juego?"],
+    "clientes": ["¿A quién debería cuidar?", "¿Dependo demasiado de alguien?"],
+    "crm": ["¿A quién sigo hoy?", "Prepárame el siguiente mensaje"],
+    "documentos": ["¿Qué falta por confirmar?", "¿Qué verá mi gestoría?"],
+    "costes": ["¿Dónde se va el dinero?", "¿Qué pago vence primero?"],
+    "ingresos": ["¿Cuánto ha entrado de verdad?", "Explícame la diferencia"],
+    "tesoreria": ["¿Cuánta caja tendré?", "¿Qué dinero no puedo gastar?"],
+    "analisis": ["Explícame mi margen", "¿Qué número debería mejorar?"],
+    "impuestos": ["¿Cuánto aparto?", "¿De dónde sale esta cifra?"],
+    "agenda": ["Ordéname el día", "¿Qué debería dejar preparado?"],
+    "equipo": ["¿Quién está trabajando?", "¿Falta algún fichaje?"],
+    "productos": ["¿Qué me deja más margen?", "¿Qué coste me falta?"],
+    "proyectos": ["¿Qué proyecto está en riesgo?", "Explícame el margen"],
+    "ajustes": ["¿Qué integración me falta?", "Explícame estos permisos"],
+}
+
+_PAGE_TOPICS = {
+    "tesoreria": {"cobros", "pagos", "costes"},
+    "analisis": {"cobros", "costes", "proyectos"},
+    "ingresos": {"facturas", "cobros"},
+    "costes": {"costes", "pagos", "documentos"},
+    "facturas": {"facturas", "cobros"},
+    "presupuestos": {"presupuestos"},
+    "cobros": {"cobros"},
+    "impuestos": {"documentos", "gestoria", "costes"},
+    "agenda": {"agenda"},
+    "proyectos": {"proyectos"},
+    "equipo": {"agenda", "proyectos"},
+    "clientes": {"cobros", "presupuestos", "crm"},
+    "crm": {"crm", "presupuestos"},
+    "productos": {"costes"},
+    "documentos": {"documentos", "gestoria", "pagos"},
+}
+
+
+def _page_focus(page: str, state: dict) -> dict | None:
+    """Primera acción del plan que pertenece a esta pantalla. No convierte cada
+    sección en un dashboard: conecta su propósito con el siguiente paso real."""
+    topics = _PAGE_TOPICS.get(page, set())
+    for item in _daily_plan(state):
+        if item["topic"] in topics:
+            return {"do": item["do"], "why": item["why"]}
+    return None
 
 
 def _note_stats(page: str, state: dict) -> list[dict]:
@@ -553,7 +645,8 @@ def page_brief(business_id: int, page: str) -> dict | None:
     except Exception:  # noqa: BLE001
         log.exception("page_brief falló para %s en %s", page, business_id)
         return {"text": f"Aquí tienes {_PAGE_HINTS[page]}.", "stats": [],
-                "ask": _PAGE_ASK.get(page)}
+                "ask": _PAGE_ASK.get(page), "prompts": _PAGE_PROMPTS.get(page, []),
+                "focus": None}
     text = page_note(business_id, page, state)
     if not text:
         return None
@@ -562,7 +655,9 @@ def page_brief(business_id: int, page: str) -> dict | None:
     except Exception:  # noqa: BLE001 — las cifras nunca tumban la lectura
         log.exception("_note_stats falló para %s en %s", page, business_id)
         stats = []
-    return {"text": text, "stats": stats, "ask": _PAGE_ASK.get(page)}
+    return {"text": text, "stats": stats, "ask": _PAGE_ASK.get(page),
+            "prompts": _PAGE_PROMPTS.get(page, []),
+            "focus": _page_focus(page, state)}
 
 
 def _handle(

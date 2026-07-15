@@ -16,6 +16,21 @@ from ..deps import TEMPLATES, _read_json
 router = APIRouter()
 
 
+def _subscription_required(business: dict | None) -> JSONResponse | None:
+    if db.subscription_allows_access(business):
+        return None
+    return JSONResponse(
+        {
+            "error": (
+                "La cuenta está en modo consulta. El titular debe activar Noesis "
+                "antes de registrar cambios."
+            ),
+            "code": "subscription_required",
+        },
+        status_code=402,
+    )
+
+
 def _signer_ip_hash(request: Request, token: str) -> str:
     value = f"{token}:{auth.client_ip(request)}".encode()
     return hashlib.sha256(value).hexdigest()
@@ -59,6 +74,9 @@ def portal_accept_quote(request: Request, token: str, quote_id: int):
     ref = db.resolve_portal_token(token)
     if not ref:
         return RedirectResponse(f"/p/{token}", status_code=303)
+    blocked = _subscription_required(db.get_business(ref["business_id"]))
+    if blocked:
+        return blocked
     q = db.get_quote(quote_id, ref["business_id"])
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
@@ -74,6 +92,9 @@ def portal_reject_quote(request: Request, token: str, quote_id: int):
     ref = db.resolve_portal_token(token)
     if not ref:
         return RedirectResponse(f"/p/{token}", status_code=303)
+    blocked = _subscription_required(db.get_business(ref["business_id"]))
+    if blocked:
+        return blocked
     q = db.get_quote(quote_id, ref["business_id"])
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
@@ -89,6 +110,9 @@ async def portal_confirm_job(request: Request, token: str, job_id: int):
     if not ref:
         _record_token_miss(request, "portal")
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    blocked = _subscription_required(db.get_business(ref["business_id"]))
+    if blocked:
+        return blocked
     try:
         body = await _read_json(request)
         result = db.confirm_job_completion(
@@ -164,6 +188,9 @@ async def gestoria_new_request(request: Request, token: str,
     if not business:
         _record_token_miss(request, "gestoria")
         return JSONResponse({"error": "Enlace no válido."}, status_code=404)
+    blocked = _subscription_required(business)
+    if blocked:
+        return blocked
     try:
         db.add_gestoria_request(mensaje, requested_by="gestoria",
                                 business_id=business["id"])
@@ -181,6 +208,9 @@ def gestoria_package(request: Request, token: str, label: str):
     if not business:
         _record_token_miss(request, "gestoria")
         return JSONResponse({"error": "Enlace no válido."}, status_code=404)
+    blocked = _subscription_required(business)
+    if blocked:
+        return blocked
     from .. import gestoria as gestoria_service
     try:
         package = gestoria_service.build_package(business["id"], label)
@@ -277,6 +307,7 @@ def _worker_portal_context(request: Request, token: str) -> dict:
         "info_ack": request.session.get("clockin_info_ack") == hashlib.sha256(
             token.encode()
         ).hexdigest(),
+        "subscription_read_only": not db.subscription_allows_access(business),
     }
     return {"token": token, "data": data}
 
@@ -327,6 +358,9 @@ async def worker_portal_clock(request: Request, token: str):
     ref = db.resolve_worker_token(token)
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    blocked = _subscription_required(ref["business"])
+    if blocked:
+        return blocked
     worker = ref["worker"]
     if worker.get("pin_hash") and not _worker_token_verified(request, token):
         return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
@@ -357,6 +391,9 @@ def worker_portal_ack(request: Request, token: str):
     ref = db.resolve_worker_token(token)
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    blocked = _subscription_required(ref["business"])
+    if blocked:
+        return blocked
     worker = ref["worker"]
     if worker.get("pin_hash") and not _worker_token_verified(request, token):
         return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
@@ -380,6 +417,9 @@ async def worker_portal_task(
     ref = db.resolve_worker_token(token)
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    blocked = _subscription_required(ref["business"])
+    if blocked:
+        return blocked
     worker = ref["worker"]
     if worker.get("pin_hash") and not _worker_token_verified(request, token):
         return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
@@ -404,6 +444,9 @@ def _worker_ref(request: Request, token: str):
         return None, JSONResponse(
             {"error": "Enlace no válido o caducado."}, status_code=404
         )
+    blocked = _subscription_required(ref["business"])
+    if blocked:
+        return None, blocked
     if ref["worker"].get("pin_hash") and not _worker_token_verified(request, token):
         return None, JSONResponse(
             {"error": "Introduce tu PIN primero."}, status_code=403

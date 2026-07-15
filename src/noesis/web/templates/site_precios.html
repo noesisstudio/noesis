@@ -1,19 +1,20 @@
 {% extends "site_base.html" %}
 {% block page_title %}Precios{% endblock %}
-{% block meta_description %}Planes de Noesis: prueba de 14 días sin tarjeta. Autónomo 29 €/mes, Negocio 39 €/mes con equipo, fichaje y gestoría conectada, y Sin Límites 79 €/mes con recepcionista de llamadas 24/7.{% endblock %}
+{% block meta_description %}Planes de Noesis: prueba de 14 días sin tarjeta. Autónomo 29 €/mes, Negocio 49 €/mes con equipo, fichaje y gestoría conectada, y Sin Límites 99 €/mes con recepcionista de llamadas 24/7. Precios más IVA.{% endblock %}
 {% block content %}
     <section class="page-hero">
       <div class="kicker">Precios</div>
       <h1>Empieza pequeño. Mantén el control cuando crezcas.</h1>
       <p>Prueba el ciclo completo durante <b>14 días, gratis y sin tarjeta</b>, con tus datos
-        siempre exportables. Sin permanencia: te vas cuando quieras y te llevas todo.</p>
+        siempre exportables. Después eliges plan; si no activas ninguno, el panel queda
+        en modo consulta y no pierdes tu información.</p>
     </section>
 
     <section class="landing-section slim" id="planes">
       <div class="pricing-grid pricing-3">
         <article class="price-card">
           <h3>Autónomo</h3>
-          <p class="price">29 €<small>/mes</small></p>
+          <p class="price">{{ prices.autonomo }} €<small> + IVA/mes</small></p>
           <p>Para profesionales que gestionan clientes, agenda, facturas y cobros desde el móvil.</p>
           <ul class="price-list">
             <li>Agenda, clientes y presupuestos</li>
@@ -28,7 +29,7 @@
         <article class="price-card featured">
           <span class="badge b-green">recomendado</span>
           <h3>Negocio</h3>
-          <p class="price">39 €<small>/mes</small></p>
+          <p class="price">{{ prices.pro }} €<small> + IVA/mes</small></p>
           <p>Para equipos y más volumen: la jornada en regla y la gestoría ya conectada.</p>
           <ul class="price-list">
             <li>Todo lo del plan Autónomo</li>
@@ -42,7 +43,7 @@
         </article>
         <article class="price-card">
           <h3>Sin Límites</h3>
-          <p class="price">79 €<small>/mes</small></p>
+          <p class="price">{{ prices.premium }} €<small> + IVA/mes</small></p>
           <p>Para quien quiere el negocio en piloto automático: que Noesis conteste hasta el teléfono.</p>
           <ul class="price-list">
             <li>Todo lo del plan Negocio</li>
@@ -66,8 +67,9 @@
       <div class="faq-grid">
         <details open>
           <summary>¿Qué pasa cuando acaba la prueba?</summary>
-          <p>Nada automático: nadie te cobra porque no hay tarjeta. Eliges plan si te ha
-            servido; si no, exportas tus datos y listo.</p>
+          <p>Nada automático: nadie te cobra porque no hay tarjeta. Puedes seguir entrando
+            y consultando tus datos, pero para crear, cambiar o enviar necesitas activar un
+            plan. También puedes exportarlo todo.</p>
         </details>
         <details>
           <summary>¿Hay permanencia?</summary>

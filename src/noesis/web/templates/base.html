@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <script>window.NOESIS_BIZ = {{ business.id }}; window.NOESIS_PAGE = {{ active|tojson }};</script>
 </head>
-<body>
+<body class="{{ 'subscription-readonly' if subscription_read_only else '' }}">
 <div class="app">
   <!-- Sidebar -->
   <aside class="sidebar" id="app-sidebar" aria-label="Navegación principal">
@@ -91,6 +91,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
           <span class="search-hint">Buscar</span><kbd>Ctrl K</kbd>
         </button>
+        {% if subscription_read_only %}
+        <a class="btn primary sm subscription-activate" href="/b/{{ business.id }}/suscripcion">Activar Noesis</a>
+        {% else %}
         <div class="quick-create">
           <button class="btn primary sm qc-btn" type="button" aria-haspopup="true" aria-expanded="false"
                   onclick="this.parentElement.classList.toggle('open');this.setAttribute('aria-expanded',this.parentElement.classList.contains('open'))">
@@ -106,6 +109,7 @@
             <a role="menuitem" href="/b/{{ business.id }}/asistente">Trabajo (por chat)</a>
           </div>
         </div>
+        {% endif %}
         {% if business.whatsapp_status == 'conectado' %}
           <span class="wa-pill wa-on"><span class="dot"></span> WhatsApp conectado</span>
         {% else %}
@@ -135,6 +139,12 @@
       <a class="{{ 'active' if active=='productos' }}" href="/b/{{ b }}/productos">Productos</a>
     </div>
     {% endif %}
+    {% if subscription_read_only %}
+    <div class="readonly-banner" role="status">
+      <div><b>Modo consulta</b><span>Puedes revisar todo tu negocio. Para crear, cambiar o enviar, activa tu plan.</span></div>
+      <a class="btn primary sm" href="/b/{{ business.id }}/suscripcion">Ver planes</a>
+    </div>
+    {% endif %}
     <div class="content">
       {% if page_brief %}
       <div class="page-note">
@@ -148,11 +158,13 @@
             {% endfor %}
           </div>
           {% endif %}
+          {% if page_brief.focus %}
+          <div class="pn-focus"><b>Ahora:</b><span>{{ page_brief.focus.do }}</span></div>
+          {% endif %}
         </div>
         {% if active != 'asistente' %}
-        <button class="pn-ask" type="button" data-ask="{{ page_brief.ask or '' }}"
-                onclick="noesisDrawer(true); if (this.dataset.ask) noesisSend(this.dataset.ask)">
-          Explícamelo</button>
+        <button class="pn-ask" type="button" onclick="noesisDrawer(true)">
+          Ver con Noesis</button>
         {% endif %}
       </div>
       {% endif %}
@@ -167,9 +179,15 @@
     <span class="ic">{{ ic('resumen') }}</span>Inicio</a>
   <a class="bn-item {{ 'active' if active=='agenda' }}" href="/b/{{ business.id }}/agenda">
     <span class="ic">{{ ic('agenda') }}</span>Trabajos</a>
+  {% if subscription_read_only %}
+  <a class="bn-create locked" aria-label="Activar Noesis" href="/b/{{ business.id }}/suscripcion">
+    <span aria-hidden="true">€</span>
+  </a>
+  {% else %}
   <button class="bn-create" type="button" aria-label="Crear" onclick="qcSheet()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>
+  {% endif %}
   <a class="bn-item {{ 'active' if active=='cobros' }}" href="/b/{{ business.id }}/cobros">
     <span class="ic">{{ ic('cobros') }}</span>Cobros</a>
   {% if active == 'asistente' %}
@@ -194,14 +212,41 @@
   </header>
   <div class="companion-context">
     <span>Estás en</span><b>{{ page_title }}</b>
+    {% if not subscription_read_only %}
     <button type="button" onclick="noesisSend('¿Qué debería hacer ahora en esta página?')">¿Qué harías tú?</button>
+    {% endif %}
   </div>
+  {% if page_brief %}
+  <div class="companion-reading">
+    <b>Lo que veo aquí</b>
+    <p>{{ page_brief.text }}</p>
+    {% if page_brief.focus %}
+    <div class="companion-focus">
+      <small>Mi siguiente paso</small>
+      <b>{{ page_brief.focus.do }}</b>
+      <span>{{ page_brief.focus.why }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% if page_brief.prompts and not subscription_read_only %}
+  <div class="companion-prompts" aria-label="Preguntas sugeridas">
+    {% for prompt in page_brief.prompts %}
+    <button class="companion-prompt" type="button" onclick='noesisSend({{ prompt|tojson }})'>{{ prompt }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
   <div class="companion-log" id="companion-log" aria-live="polite"></div>
+  {% if subscription_read_only %}
+  <a class="companion-subscribe" href="/b/{{ business.id }}/suscripcion">
+    Activa Noesis para conversar y actuar</a>
+  {% else %}
   <form class="companion-input" onsubmit="event.preventDefault(); noesisSend();">
     <input id="companion-message" class="input" placeholder="Dime qué necesitas…"
            autocomplete="off" maxlength="2000">
     <button class="btn primary" type="submit" id="companion-send">Enviar</button>
   </form>
+  {% endif %}
   <a class="companion-full" href="/b/{{ business.id }}/asistente?ctx={{ active }}">Abrir conversación completa</a>
 </aside>
 {% endif %}

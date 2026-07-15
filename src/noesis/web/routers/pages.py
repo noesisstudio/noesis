@@ -53,6 +53,7 @@ def site_page(request: Request):
     section = request.url.path.strip("/") or "producto"
     return TEMPLATES.TemplateResponse(request, _SITE_PAGES[section], {
         "site_active": section,
+        "prices": billing_adapter.PLAN_PRICES,
     })
 
 
@@ -106,7 +107,9 @@ def subscription_page(request: Request, business_id: int, status: str = ""):
     return TEMPLATES.TemplateResponse(request, "suscripcion.html", {
         "business": biz, "active": "ajustes", "page_title": "Suscripción",
         "status": status, "billing_on": billing_adapter.get_provider().available(),
-        "prices": billing_adapter.PLAN_PRICES})
+        "prices": billing_adapter.PLAN_PRICES,
+        "subscription_read_only": not db.subscription_allows_access(biz),
+    })
 
 
 @router.get("/b/{business_id}/{page}", response_class=HTMLResponse)
@@ -126,6 +129,7 @@ def page(request: Request, business_id: int, page: str):
         # El parte de sección: la figura de Noesis en cada pantalla — lectura,
         # cifras clave y puerta al acompañante (None en el Home, que tiene el suyo).
         "page_brief": chat.page_brief(business_id, page),
+        "subscription_read_only": not db.subscription_allows_access(biz),
     }
     if page == "resumen":
         layout = db.resolve_panel_layout(biz)
@@ -133,7 +137,11 @@ def page(request: Request, business_id: int, page: str):
         context["panel_hidden"] = layout["hidden"]
         context["panel_blocks"] = db.PANEL_BLOCKS
         context["briefing"] = chat.daily_briefing(business_id)
-    if page == "ajustes" and biz.get("whatsapp_status") != "conectado":
+    if (
+        page == "ajustes"
+        and biz.get("whatsapp_status") != "conectado"
+        and db.subscription_allows_access(biz)
+    ):
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
         context["integrations"] = db.integration_catalog(business_id)

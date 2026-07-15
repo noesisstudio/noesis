@@ -38,7 +38,9 @@ def api_series(business_id: int):
 @router.get("/api/{business_id}/plan")
 def api_plan(business_id: int):
     # Plan diario del copiloto (mismo cerebro que el asistente), para el dashboard.
-    return chat.daily_plan(business_id)
+    # En modo consulta lo calcula sin escribir recomendaciones nuevas en el ledger.
+    can_record = db.subscription_allows_access(db.get_business(business_id))
+    return chat.daily_plan(business_id, record=can_record)
 
 
 @router.get("/api/{business_id}/recommendations")
