@@ -72,4 +72,16 @@ La comparación del hero confirma:
   autorización, nombre y texto verificable.
 - Revisar una captura móvil real cuando el navegador integrado vuelva a ser estable.
 
+## Iteración funcional · 2026-07-16
+
+- La interfaz de producto del hero deja de ser decorativa: incluye ocho pestañas
+  accesibles, datos simulados coherentes y navegación por ratón o teclado.
+- Los precios mensual/anual comparten catálogo y actualizan importe, equivalencia,
+  ahorro, enlace de alta y campo de checkout. El anual ofrece un mes gratis.
+- Esta iteración conserva la dirección visual del pase aprobado. No se abrió una
+  nueva sesión del navegador integrado porque el usuario pidió evitarla tras cierres
+  repetidos de la aplicación; por tanto no se afirma una nueva comparación visual.
+  Su QA se limita de forma explícita a HTML, CSS responsive, JavaScript, rutas y
+  pruebas automáticas.
+
 **final result: passed**

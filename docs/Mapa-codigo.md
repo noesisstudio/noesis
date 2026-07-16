@@ -38,6 +38,11 @@
 - `src/noesis/web/templates/site_equipo.html`: página pública de equipo y principios;
   explica responsabilidades reales sin atribuir personas, clientes o credenciales
   todavía no verificadas.
+- `src/noesis/web/static/public-site.js`: hace navegable la cuenta simulada de la
+  Home y sincroniza el selector mensual/anual, sus importes, ahorro, CTA y campos de
+  checkout sin tocar datos reales.
+- `src/noesis/adapters/billing.py`: catálogo mensual y anual compartido. Stripe usa
+  un `price_id` distinto por plan y periodicidad; el anual cobra 11 meses y da 12.
 - `src/noesis/web/deps.py`: aislamiento de sesión y modo consulta transversal. Una
   cuenta inactiva puede leer; toda mutación web/API devuelve redirección o HTTP 402.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro

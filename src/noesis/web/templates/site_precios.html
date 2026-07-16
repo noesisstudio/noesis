@@ -10,10 +10,18 @@
 
   <section class="public-section pricing-section" id="planes" aria-label="Planes de Noesis">
     <div class="trial-banner"><b>La prueba es completa.</b><span>14 días · sin tarjeta · sin permanencia · datos exportables</span></div>
+    <div class="billing-choice">
+      <div><b>¿Cómo prefieres pagar?</b><span>El plan anual equivale a pagar 11 meses y utilizar Noesis durante 12.</span></div>
+      <div class="billing-toggle" role="group" aria-label="Periodicidad de los precios">
+        <button class="active" type="button" aria-pressed="true" data-billing-toggle="monthly">Mensual</button>
+        <button type="button" aria-pressed="false" data-billing-toggle="annual">Anual <span>1 mes gratis</span></button>
+      </div>
+    </div>
     <div class="public-pricing-grid">
-      <article class="public-price-card">
+      <article class="public-price-card" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
         <div class="plan-label">Autónomo</div>
-        <p class="public-price">{{ prices.autonomo }} €<small> + IVA/mes</small></p>
+        <p class="public-price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+        <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para profesionales que quieren dejar de llevar clientes, trabajos y cobros de memoria.</p>
         <ul class="public-price-list">
           <li>Agenda, clientes, trabajos y presupuestos</li>
@@ -23,14 +31,15 @@
           <li>Documentos e impuestos trimestrales</li>
           <li>75 acciones avanzadas de IA al mes</li>
         </ul>
-        <a class="btn full" href="/onboarding">Probar 14 días gratis</a>
-        <small class="plan-footnote">Para una persona · cancela cuando quieras</small>
+        <a class="btn full plan-start-link" data-plan="autonomo" href="/onboarding?plan=autonomo&billing=monthly">Empieza ahora <span aria-hidden="true">→</span></a>
+        <small class="plan-footnote">Para una persona · sin permanencia</small>
       </article>
 
-      <article class="public-price-card recommended">
+      <article class="public-price-card recommended" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
         <div class="recommendation-label">Recomendado</div>
         <div class="plan-label">Negocio</div>
-        <p class="public-price">{{ prices.pro }} €<small> + IVA/mes</small></p>
+        <p class="public-price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+        <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para equipos que necesitan coordinar el trabajo y tener la jornada y la gestoría conectadas.</p>
         <ul class="public-price-list">
           <li>Todo lo del plan Autónomo</li>
@@ -40,13 +49,14 @@
           <li>Proyectos, costes y rentabilidad</li>
           <li>300 acciones avanzadas · soporte prioritario</li>
         </ul>
-        <a class="btn primary full" href="/onboarding">Probar 14 días gratis</a>
-        <small class="plan-footnote">Para equipos pequeños · cancela cuando quieras</small>
+        <a class="btn primary full plan-start-link" data-plan="pro" href="/onboarding?plan=pro&billing=monthly">Empieza ahora <span aria-hidden="true">→</span></a>
+        <small class="plan-footnote">Para equipos pequeños · sin permanencia</small>
       </article>
 
-      <article class="public-price-card">
+      <article class="public-price-card" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
         <div class="plan-label">Sin Límites</div>
-        <p class="public-price">{{ prices.premium }} €<small> + IVA/mes</small></p>
+        <p class="public-price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+        <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para negocios que quieren más automatización, uso intensivo y una puesta en marcha acompañada.</p>
         <ul class="public-price-list">
           <li>Todo lo del plan Negocio</li>
@@ -56,8 +66,8 @@
           <li>Línea directa con el equipo</li>
         </ul>
         <div class="beta-feature"><b>Recepcionista 24/7</b><span>Beta con acceso preferente: atiende, resume y propone citas.</span></div>
-        <a class="btn full" href="/onboarding">Probar 14 días gratis</a>
-        <small class="plan-footnote">Para uso intensivo · cancela cuando quieras</small>
+        <a class="btn full plan-start-link" data-plan="premium" href="/onboarding?plan=premium&billing=monthly">Empieza ahora <span aria-hidden="true">→</span></a>
+        <small class="plan-footnote">Para uso intensivo · sin permanencia</small>
       </article>
     </div>
   </section>
@@ -71,7 +81,8 @@
     <div class="section-heading"><span class="eyebrow">Sobre el pago</span><h2 id="pricing-faq-title">Claro antes de empezar.</h2><p>Sin letra pequeña, permanencias ni cargos automáticos al terminar la prueba.</p></div>
     <div class="public-accordion">
       <details open><summary>¿Qué pasa cuando acaba la prueba?</summary><p>Nadie te cobra porque no pedimos tarjeta. Puedes seguir consultando tus datos; para crear, cambiar, enviar o automatizar, activas un plan.</p></details>
-      <details><summary>¿Hay permanencia?</summary><p>No. Los planes son mensuales y puedes cancelarlos desde tu cuenta. Conservas el acceso pagado hasta el final del período.</p></details>
+      <details><summary>¿Hay permanencia?</summary><p>No. Puedes elegir pago mensual o anual. El anual se cobra una vez y mantiene el acceso durante doce meses; el mensual se renueva cada mes. En ambos casos conservas el acceso pagado hasta el final del período contratado.</p></details>
+      <details><summary>¿Cuánto ahorro con el plan anual?</summary><p>Una mensualidad completa: pagas el equivalente a 11 meses y utilizas Noesis durante 12. Son 29 €, 49 € o 99 € de ahorro anual, según el plan, siempre antes de IVA.</p></details>
       <details><summary>¿Qué son las acciones avanzadas de IA?</summary><p>Se usan cuando hace falta interpretar, redactar o razonar con más profundidad. Las consultas rutinarias, alertas y lecturas locales no consumen estas acciones.</p></details>
       <details><summary>¿Puedo cambiar de plan?</summary><p>Sí. El plan acompaña el tamaño y el uso real de tu negocio. Podrás subir o bajar sin mover datos ni cambiar de herramienta.</p></details>
       <details><summary>¿Qué incluye la beta del recepcionista?</summary><p>El objetivo es atender llamadas, recoger lo que necesita el cliente y proponerte una cita. Mientras esté en beta, el acceso será progresivo y siempre se indicará qué parte está activa.</p></details>

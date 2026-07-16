@@ -27,7 +27,9 @@ escala bien al principio. Coste estimado: ~5 €/mes.
    - Al activar WhatsApp: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`,
      `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` y `NOESIS_WHATSAPP_NUMBER`.
    - Al activar Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-     `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO` y `STRIPE_PRICE_PREMIUM`
+     `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM`,
+     `STRIPE_PRICE_AUTONOMO_ANNUAL`, `STRIPE_PRICE_PRO_ANNUAL` y
+     `STRIPE_PRICE_PREMIUM_ANNUAL`
      (guía paso a paso en la sección "Activar Stripe" de abajo).
    - Email (SMTP): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
    - Facturación legal: `HOLDED_API_KEY` (cuando se active Verifactu vía Holded).
@@ -73,12 +75,15 @@ Solo falta la configuración en stripe.com:
 
 1. **Cuenta**: dashboard.stripe.com → activar la cuenta (datos fiscales de la empresa
    e IBAN donde recibir los pagos).
-2. **Productos**: Catálogo → añadir 3 productos con precio recurrente mensual en EUR:
-   Autónomo 29 €, Negocio 49 €, Sin Límites 99 € (todos + IVA). Copiar los
-   `price_...` de cada uno.
+2. **Productos**: Catálogo → añadir los tres productos y dos precios recurrentes en
+   EUR para cada uno. Mensual: Autónomo 29 €, Negocio 49 €, Sin Límites 99 €.
+   Anual: 319 €, 539 € y 1.089 € respectivamente (12 meses por el precio de 11).
+   Todos se comunican + IVA. Copiar los seis `price_...`.
 3. **Variables en Railway** (servicio web → Variables):
    - `STRIPE_SECRET_KEY` → clave secreta de producción (`sk_live_...`).
-   - `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` → los `price_...`.
+   - `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` → precios mensuales.
+   - `STRIPE_PRICE_AUTONOMO_ANNUAL`, `STRIPE_PRICE_PRO_ANNUAL`,
+     `STRIPE_PRICE_PREMIUM_ANNUAL` → precios anuales.
 4. **Webhook**: Desarrolladores → Webhooks → añadir endpoint
    `https://bynoesis.com/webhook/stripe` con los eventos `checkout.session.completed`,
    `customer.subscription.created`, `customer.subscription.updated`,

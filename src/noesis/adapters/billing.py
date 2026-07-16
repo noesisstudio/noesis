@@ -35,19 +35,37 @@ PLANS = {
     "premium": {"name": "Sin Límites", "price": 99, "credits": 1500},
 }
 PLAN_PRICES = {key: plan["price"] for key, plan in PLANS.items()}
+ANNUAL_MONTHS_CHARGED = 11
+PLAN_ANNUAL_PRICES = {
+    key: price * ANNUAL_MONTHS_CHARGED for key, price in PLAN_PRICES.items()
+}
+PLAN_ANNUAL_SAVINGS = {
+    key: price * (12 - ANNUAL_MONTHS_CHARGED) for key, price in PLAN_PRICES.items()
+}
 
 
 class BillingProvider(Protocol):
     def available(self) -> bool: ...
     def checkout_url(self, business: dict, plan: str,
-                     success_url: str, cancel_url: str) -> str | None: ...
+                     success_url: str, cancel_url: str,
+                     billing_period: str = "monthly") -> str | None: ...
     def portal_url(self, business: dict, return_url: str) -> str | None: ...
 
 
-def _price_id(plan: str) -> str:
-    return {"autonomo": config.STRIPE_PRICE_AUTONOMO,
+def _price_id(plan: str, billing_period: str = "monthly") -> str:
+    catalog = {
+        "monthly": {
+            "autonomo": config.STRIPE_PRICE_AUTONOMO,
             "pro": config.STRIPE_PRICE_PRO,
-            "premium": config.STRIPE_PRICE_PREMIUM}.get(plan, "")
+            "premium": config.STRIPE_PRICE_PREMIUM,
+        },
+        "annual": {
+            "autonomo": config.STRIPE_PRICE_AUTONOMO_ANNUAL,
+            "pro": config.STRIPE_PRICE_PRO_ANNUAL,
+            "premium": config.STRIPE_PRICE_PREMIUM_ANNUAL,
+        },
+    }
+    return catalog.get(billing_period, {}).get(plan, "")
 
 
 class StripeBillingProvider:
@@ -65,10 +83,14 @@ class StripeBillingProvider:
         with urllib.request.urlopen(req, timeout=20) as resp:
             return json.loads(resp.read().decode())
 
-    def checkout_url(self, business, plan, success_url, cancel_url) -> str | None:
-        price = _price_id(plan)
+    def checkout_url(self, business, plan, success_url, cancel_url,
+                     billing_period="monthly") -> str | None:
+        price = _price_id(plan, billing_period)
         if not price:
-            log.error("Falta STRIPE_PRICE_%s para crear el checkout.", plan.upper())
+            log.error(
+                "Falta el precio Stripe para plan=%s periodo=%s.",
+                plan, billing_period,
+            )
             return None
         data = {
             "mode": "subscription",
@@ -79,8 +101,10 @@ class StripeBillingProvider:
             "client_reference_id": str(business["id"]),
             "metadata[business_id]": str(business["id"]),
             "metadata[plan]": plan,
+            "metadata[billing_period]": billing_period,
             "subscription_data[metadata][business_id]": str(business["id"]),
             "subscription_data[metadata][plan]": plan,
+            "subscription_data[metadata][billing_period]": billing_period,
         }
         if business.get("stripe_customer_id"):
             data["customer"] = business["stripe_customer_id"]
@@ -110,7 +134,8 @@ class ManualBillingProvider:
     def available(self) -> bool:
         return False
 
-    def checkout_url(self, business, plan, success_url, cancel_url) -> str | None:
+    def checkout_url(self, business, plan, success_url, cancel_url,
+                     billing_period="monthly") -> str | None:
         return None
 
     def portal_url(self, business, return_url) -> str | None:

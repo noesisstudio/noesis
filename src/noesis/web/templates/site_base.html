@@ -33,7 +33,7 @@
         {% else %}
         <a class="btn ghost public-login" href="/login">Iniciar sesión</a>
         {% endif %}
-        <a class="btn primary" href="/onboarding">Probar gratis</a>
+        <a class="btn primary" href="/onboarding">Empieza ahora <span aria-hidden="true">→</span></a>
       </div>
 
       <details class="public-menu">
@@ -60,7 +60,7 @@
         <h2 id="final-cta-title">{% block cta_title %}Catorce días para poner orden de verdad.{% endblock %}</h2>
         <p>{% block cta_text %}Sin tarjeta, sin permanencia y con tus datos siempre exportables.{% endblock %}</p>
       </div>
-      <a class="btn light" href="/onboarding">Probar 14 días gratis</a>
+      <a class="btn light" href="/onboarding">Empieza ahora <span aria-hidden="true">→</span></a>
     </section>
     {% endblock %}
   </main>
@@ -98,6 +98,7 @@
       <span>Hecho para autónomos y pequeños equipos de servicios.</span>
     </div>
   </footer>
+  <script src="/static/public-site.js?v={{ asset_v }}" defer></script>
   <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>
 </html>
