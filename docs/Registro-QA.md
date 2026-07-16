@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-07-16 — arreglo del marco de la muestra pública y ancho alineado
+
+- Corregido el marco de la muestra de la portada: `.hero-operating-proof`
+  conservaba un grid de dos columnas (`190px 1fr`) heredado del diseño con
+  `hero-journey`; al retirar la cabecera de ejemplo, el panel entero caía en la
+  columna de 190 px y el resto quedaba en blanco. Ahora es un bloque normal.
+- La muestra y la franja de cifras se limitan a 960 px centrados, el mismo ancho
+  que el texto del hero, para respetar los márgenes de la estructura de la web.
+  Esquinas redondeadas completas y sombra simétrica al quedar rodeada de verde.
+- Retirado el CSS muerto de `hero-journey` (ninguna plantilla lo usa).
+- QA: verificado en servidor local por métricas de DOM (contenedor en bloque,
+  panel 142 px + contenido fluido, métricas del Inicio en 4 columnas, diez
+  pestañas visibles sin desbordamiento, sin scroll horizontal de página). La
+  captura de pantalla del navegador integrado sigue sin responder; no se afirma
+  QA visual en píxeles. Nota: el service worker cachea `app.css` hasta que
+  cambia `?v=`; en producción el redeploy renueva la versión.
+- Test de la portada en verde con el árbol del cambio.
+
 ## 2026-07-16 — ampliación de la muestra pública de producto
 
 - La muestra de la portada conserva el Inicio basado en el panel y permite recorrer
