@@ -15,6 +15,8 @@
 
       const select = selected => {
         const key = selected.dataset.demoTab;
+        const crumb = demo.querySelector('[data-demo-crumb]');
+        if (crumb) crumb.textContent = selected.dataset.demoLabel || selected.textContent.trim();
         tabs.forEach(tab => {
           const active = tab === selected;
           tab.classList.toggle('active', active);

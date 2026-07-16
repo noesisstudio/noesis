@@ -27,6 +27,15 @@
     "inactive_accounts_are_read_only": true,
     "irreversible_actions_require_owner_confirmation": true
   },
+  "public_site": {
+    "product_view": "internal_home_structure_with_sample_company",
+    "interactive_navigation_sections": 10,
+    "billing_periods": [
+      "monthly",
+      "annual"
+    ],
+    "visual_qa": "blocked_by_codex_desktop_browser_crash"
+  },
   "ai_route": [
     "reglas_locales",
     "compositor_interno",

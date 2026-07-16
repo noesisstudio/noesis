@@ -4,8 +4,10 @@
 
 - La pestaña «Inicio» de la vista pública reutiliza la jerarquía y los componentes
   del panel real: Parte de hoy, prioridad, métricas, agenda, trabajo de Noesis,
-  lectura de dinero, gráfico y cobros pendientes. El marco se presenta como «Vista
-  del producto» y «Empresa de ejemplo»; no llama a datos ni acciones de una cuenta real.
+  lectura de dinero, gráfico y cobros pendientes. También replica su armazón:
+  marca, menú agrupado, negocio activo, barra superior y puesta en marcha. El marco
+  se presenta como «Vista del producto» y «Empresa de ejemplo»; no llama a datos ni
+  acciones de una cuenta real.
 - La navegación de ejemplo refleja los diez apartados del producto: Inicio,
   Trabajos, Proyectos, Clientes, Dinero, Facturas, Equipo, Documentos, Noesis y
   Ajustes. Los enlaces internos de Inicio cambian de pestaña sin abandonar la demo.
