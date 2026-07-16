@@ -2,6 +2,22 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Acceso con Google opcional y vista pública sin pantallas inventadas (2026-07-16)
+
+La portada toma de Holded únicamente la jerarquía de campaña —promesa centrada,
+explicación breve, alta y el producto debajo—, nunca sus textos, marca, clientes,
+cifras ni la sensación de ERP. La muestra pública enseña solo el **Inicio** con los
+mismos componentes y armazón del panel real; no permite recorrer resúmenes ficticios
+como si fueran funcionalidades terminadas. Cada apartado futuro de la muestra deberá
+salir de la pantalla real correspondiente, no de una maqueta paralela.
+
+Google OAuth queda implementado como opción de acceso y alta: state de un solo uso,
+perfil OIDC con email verificado, límites por IP y alta que aún exige aceptar los
+términos y completar negocio/sector. No se activa ni se muestra sin cliente y secreto
+configurados; el fundador debe crear el cliente web, registrar la URL de retorno y
+probarlo en producción antes del piloto. Motivo: reducir fricción sin introducir un
+atajo de identidad, consentimiento o privacidad.
+
 ## Precio adoptado, prueba completa y después modo consulta (2026-07-15)
 
 El fundador adopta **29/49/99 € al mes + IVA**. La prueba de 14 días permite usar el

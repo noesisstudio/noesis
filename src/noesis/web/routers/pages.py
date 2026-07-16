@@ -32,6 +32,7 @@ def home(request: Request):
         "prices": billing_adapter.PLAN_PRICES,
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
         "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
+        "google_oauth_available": config.google_oauth_available(),
     })
 
 

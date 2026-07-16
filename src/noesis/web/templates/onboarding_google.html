@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Completa tu cuenta</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body class="public-auth-body">
+  <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a><a href="/login">Ya tengo cuenta</a></header>
+  <main class="public-auth-layout">
+    <section class="public-auth-story">
+      <span class="eyebrow light-eyebrow">Un último paso</span>
+      <h1>Ya sabemos quién eres. Ahora cuéntanos tu oficio.</h1>
+      <p>Con estos datos, Noesis prepara tu espacio sin obligarte a configurar nada de más.</p>
+    </section>
+    <section class="public-auth-panel" aria-labelledby="google-signup-title">
+      <span class="eyebrow">Cuenta verificada</span><h2 id="google-signup-title">Completa tu negocio.</h2>
+      <p class="auth-lead">Entrarás con <b>{{ google_profile.email }}</b>.</p>
+      {% if error == 'name' %}<div class="auth-error">Pon el nombre de tu negocio.</div>{% endif %}
+      {% if error == 'consent' %}<div class="auth-error">Debes aceptar los términos para crear la cuenta.</div>{% endif %}
+      {% if error == 'email' %}<div class="auth-error">Ese correo ya tiene una cuenta. <a href="/login">Inicia sesión.</a></div>{% endif %}
+      <form method="post" action="/onboarding/google" class="public-auth-form">
+        <input type="hidden" name="plan" value="{{ selected_plan }}"><input type="hidden" name="billing" value="{{ selected_billing }}">
+        <label>Nombre de tu negocio *<input class="input" name="name" required autocomplete="organization" placeholder="Ej. Fontanería García"></label>
+        <label>Sector *<select name="sector" required><option value="">Selecciona tu actividad...</option><option>Fontanería</option><option>Electricidad</option><option>Reformas</option><option>Climatización</option><option>Limpieza</option><option>Jardinería</option><option>Mantenimiento</option><option>Otro</option></select></label>
+        <label class="auth-consent"><input type="checkbox" name="acepto" value="1" required><span>He leído y acepto los <a href="/terminos" target="_blank">Términos</a>, la <a href="/privacidad" target="_blank">Privacidad</a> y el <a href="/encargado-tratamiento" target="_blank">Contrato de Encargado del Tratamiento</a>.</span></label>
+        <button class="btn primary full">Crear cuenta y personalizar</button>
+      </form>
+      <small class="auth-safe">Noesis nunca mueve dinero ni envía nada irreversible sin tu confirmación.</small>
+    </section>
+  </main>
+</body>
+</html>

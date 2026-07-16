@@ -99,4 +99,15 @@ La comparación del hero confirma:
   Windows registra fallos de `ChatGPT.exe` a las 09:58 y 09:59. Esta iteración se
   comprueba por HTML, CSS responsive, JavaScript, HTTP local y pruebas automáticas.
 
+## Iteración de jerarquía · 2026-07-16
+
+- La portada adopta la jerarquía de la referencia elegida: cabecera oscura,
+  promesa centrada, explicación breve, acciones de alta y producto inmediatamente
+  después. Mantiene la marca, paleta y voz propias de Noesis.
+- La muestra deja de navegar por vistas creadas únicamente para marketing. Muestra
+  el Inicio basado en el panel real y explica que no ejecuta acciones.
+- No hay nueva captura: la comparación de referencia y prototipo sigue bloqueada por
+  el cierre del navegador integrado. La comprobación se limita explícitamente a
+  HTML, CSS responsive, JavaScript y pruebas automáticas.
+
 **final result: blocked**

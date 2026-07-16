@@ -2,7 +2,7 @@
   "state_date": "2026-07-16",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 27,
-  "verified_test_count": 240,
+  "verified_test_count": 274,
   "production": {
     "url": "https://app.bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -29,12 +29,16 @@
   },
   "public_site": {
     "product_view": "internal_home_structure_with_sample_company",
-    "interactive_navigation_sections": 10,
+    "product_preview": "home_only_until_each_real_product_view_is_available",
     "billing_periods": [
       "monthly",
       "annual"
     ],
     "visual_qa": "blocked_by_codex_desktop_browser_crash"
+  },
+  "authentication": {
+    "password": "available",
+    "google_oauth": "implemented_optional_configuration"
   },
   "ai_route": [
     "reglas_locales",
@@ -47,6 +51,7 @@
     "meta_whatsapp_real",
     "stripe_real",
     "smtp_real",
+    "google_oauth_real",
     "qwen_privado_real",
     "certificado_y_entorno_aeat",
     "restauracion_externa",

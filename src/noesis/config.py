@@ -191,6 +191,15 @@ _DEFAULT_BASE_URL = (
 )
 BASE_URL = os.getenv("NOESIS_BASE_URL", _DEFAULT_BASE_URL).strip().rstrip("/")
 
+# Acceso opcional con Google (OAuth 2.0 / OpenID Connect). Noesis no muestra ni
+# intenta este flujo hasta que ambos valores estén configurados en el entorno.
+GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
+
+
+def google_oauth_available() -> bool:
+    return bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET)
+
 # Email del fundador con acceso al panel de administración (/admin).
 ADMIN_EMAIL = os.getenv("NOESIS_ADMIN_EMAIL", "").strip().lower()
 
