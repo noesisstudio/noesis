@@ -42,7 +42,38 @@
           select(tabs[next]);
         });
       });
+      demo.querySelectorAll('[data-demo-open]').forEach(trigger => {
+        trigger.addEventListener('click', () => {
+          const target = tabs.find(tab => tab.dataset.demoTab === trigger.dataset.demoOpen);
+          if (target) select(target);
+        });
+      });
       select(tabs.find(tab => tab.classList.contains('active')) || tabs[0]);
+    });
+  }
+
+  function initDemoChart() {
+    const canvas = document.getElementById('demo-home-chart');
+    if (!canvas || typeof window.Chart !== 'function') return;
+    new window.Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: ['Mar', 'Abr', 'May', 'Jun', 'Jul'],
+        datasets: [
+          { label: 'Ingresos', data: [3280, 3620, 4010, 4300, 4820], backgroundColor: '#2e8b74', borderRadius: 5, maxBarThickness: 18 },
+          { label: 'Gastos', data: [1210, 1390, 1460, 1520, 1310], backgroundColor: '#d5a16a', borderRadius: 5, maxBarThickness: 18 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#74817c', font: { size: 9 } }, border: { display: false } },
+          y: { display: false, beginAtZero: true },
+        },
+      },
     });
   }
 
@@ -65,9 +96,14 @@
       if (suffix) suffix.textContent = annual ? ' + IVA/año' : ' + IVA/mes';
       if (note) {
         note.hidden = !annual;
-        note.textContent = annual
-          ? `Equivale a ${number(annualPrice / 12)} €/mes · ahorras ${number(saving)} € al año`
-          : '';
+        note.replaceChildren();
+        if (annual) {
+          const badge = document.createElement('b');
+          badge.textContent = '−8,3% · 1 mes gratis';
+          const detail = document.createElement('span');
+          detail.textContent = `Ahorras ${number(saving)} € al año · equivale a ${number(annualPrice / 12)} €/mes`;
+          note.append(badge, detail);
+        }
       }
     });
 
@@ -91,6 +127,7 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     initProductDemo();
+    initDemoChart();
     initBillingToggle();
   });
 }());

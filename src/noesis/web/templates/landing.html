@@ -18,33 +18,88 @@
         </div>
       </div>
 
-      <div class="hero-operating-proof interactive-product-demo" data-product-demo aria-label="Demo interactiva del panel de Noesis con datos simulados">
+      <div class="hero-operating-proof interactive-product-demo" data-product-demo aria-label="Vista interactiva del panel de Noesis con una empresa de ejemplo">
         <div class="demo-frame-top">
-          <span>Demo interactiva</span>
+          <span>Vista del producto</span>
           <b>Taller García</b>
-          <small>Datos simulados</small>
+          <small>Empresa de ejemplo</small>
         </div>
         <div class="hero-desk">
-          <div class="hero-desk-nav" role="tablist" aria-label="Apartados del panel de demostración">
+          <div class="hero-desk-nav" role="tablist" aria-label="Apartados de la empresa de ejemplo">
             <b>Noesis</b>
-            <button class="active" type="button" role="tab" aria-selected="true" aria-controls="demo-hoy" data-demo-tab="hoy">Hoy</button>
+            <button class="active" type="button" role="tab" aria-selected="true" aria-controls="demo-inicio" data-demo-tab="inicio">Inicio</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="demo-trabajos" data-demo-tab="trabajos">Trabajos</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-proyectos" data-demo-tab="proyectos">Proyectos</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="demo-clientes" data-demo-tab="clientes">Clientes</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="demo-dinero" data-demo-tab="dinero">Dinero</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="demo-facturas" data-demo-tab="facturas">Facturas</button>
-            <button type="button" role="tab" aria-selected="false" aria-controls="demo-documentos" data-demo-tab="documentos">Documentos</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="demo-equipo" data-demo-tab="equipo">Equipo</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-documentos" data-demo-tab="documentos">Documentos</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="demo-noesis" data-demo-tab="noesis">Noesis</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-ajustes" data-demo-tab="ajustes">Ajustes</button>
           </div>
           <div class="hero-desk-main" aria-live="polite">
-            <section class="demo-panel active" id="demo-hoy" role="tabpanel" data-demo-panel="hoy">
-              <div class="desk-heading"><div><small>Tu negocio, hoy</small><h2>Buenos días, David.</h2></div><span>16 de julio</span></div>
-              <div class="demo-noesis-reading"><b>Lo primero: termina el trabajo de Marta.</b><span>Después puedo prepararte la factura de 480 €, pero tú decides si se envía.</span></div>
-              <div class="desk-grid">
-                <section><small>Trabajos de hoy</small><b>10:00 · Reparación de caldera</b><span>Marta López · En curso</span><b>12:30 · Instalación de termo</b><span>Javier Ruiz · Programado</span></section>
-                <section class="desk-focus"><small>Lo siguiente</small><b>Este trabajo puede quedar facturado hoy.</b><p>Tengo cliente, importe y datos fiscales.</p><span class="desk-action">Revisar factura</span></section>
-                <section><small>Documento recibido</small><b>Ticket_materiales.jpg</b><span>38,40 € · pendiente de confirmar</span></section>
-                <section><small>Lo que te deben</small><b>1.240,00 €</b><span>2 facturas · un recordatorio preparado</span></section>
+            <section class="demo-panel active" id="demo-inicio" role="tabpanel" data-demo-panel="inicio">
+              <div class="demo-real-dashboard">
+                <main class="home-v2">
+                  <section class="home-brief" aria-labelledby="demo-home-greeting">
+                    <div class="home-brief-copy">
+                      <div class="home-eyebrow"><img src="/static/noesis-mark.svg" alt=""> Parte de hoy</div>
+                      <h1 id="demo-home-greeting">Buenos días, David.</h1>
+                      <p>He revisado tu negocio. Hoy tienes 3 trabajos y 1.240 € pendientes de cobro.</p>
+                      <div class="home-priority">
+                        <span class="priority-label">Lo primero</span>
+                        <div><strong>Cierra la reparación de Marta</strong><small>Tengo el parte y puedo prepararte la factura de 480 €.</small></div>
+                        <button class="btn primary" type="button" data-demo-open="facturas">Revisar factura</button>
+                      </div>
+                    </div>
+                    <div class="home-brief-side">
+                      <span>jueves, 16 de julio</span>
+                      <button type="button" data-demo-open="noesis">Hablar con Noesis</button>
+                    </div>
+                  </section>
+
+                  <section class="home-metrics" aria-label="Resumen de la empresa de ejemplo">
+                    <button type="button" class="home-metric" data-demo-open="dinero"><span>Beneficio este mes</span><strong>2.030 €</strong><small>Lo que queda tras los gastos</small></button>
+                    <button type="button" class="home-metric" data-demo-open="facturas"><span>Pendiente de cobro</span><strong>1.240 €</strong><small>2 facturas por cobrar</small></button>
+                    <button type="button" class="home-metric" data-demo-open="dinero"><span>Gastos este mes</span><strong>1.310 €</strong><small>Costes registrados</small></button>
+                    <button type="button" class="home-metric" data-demo-open="trabajos"><span>Trabajos hoy</span><strong>3</strong><small>en tu agenda</small></button>
+                  </section>
+
+                  <section class="home-main-grid">
+                    <article class="home-panel home-today">
+                      <header><div><span class="panel-kicker">Tu día</span><h2>Hoy</h2></div><button type="button" data-demo-open="trabajos">Ver trabajos</button></header>
+                      <div class="home-panel-body">
+                        <button class="home-list-row" type="button" data-demo-open="trabajos"><span class="home-row-time">10:00</span><span class="home-row-copy"><strong>Marta López</strong><small>Reparación de caldera · Centro</small></span><span class="home-row-state">Siguiente</span></button>
+                        <button class="home-list-row" type="button" data-demo-open="trabajos"><span class="home-row-time">12:30</span><span class="home-row-copy"><strong>Javier Ruiz</strong><small>Instalación de termo · Centro</small></span><span class="home-row-state"></span></button>
+                        <button class="home-list-row" type="button" data-demo-open="trabajos"><span class="home-row-time">16:00</span><span class="home-row-copy"><strong>Comunidad Balmes</strong><small>Revisión de presión · Laura asignada</small></span><span class="home-row-state"></span></button>
+                      </div>
+                    </article>
+                    <article class="home-panel home-working">
+                      <header><div><span class="panel-kicker">En segundo plano</span><h2>Noesis está trabajando</h2></div><button type="button" data-demo-open="noesis">Ver asistente</button></header>
+                      <div class="home-panel-body">
+                        <button class="work-row" type="button" data-demo-open="facturas"><span class="work-status active"></span><span><strong>Vigilo 2 cobros pendientes</strong><small>Te aviso antes de que se te pasen.</small></span><b>Ver</b></button>
+                        <button class="work-row" type="button" data-demo-open="facturas"><span class="work-status"></span><span><strong>Factura de Marta preparada</strong><small>No se enviará sin tu confirmación.</small></span><b>Ver</b></button>
+                        <button class="work-row" type="button" data-demo-open="documentos"><span class="work-status"></span><span><strong>Un ticket necesita confirmación</strong><small>He leído 38,40 € en materiales.</small></span><b>Ver</b></button>
+                      </div>
+                    </article>
+                  </section>
+
+                  <section class="home-lower-grid">
+                    <article class="home-panel home-money">
+                      <header><div><span class="panel-kicker">Sin complicaciones</span><h2>Cómo va el dinero</h2></div><button type="button" data-demo-open="dinero">Ver detalle</button></header>
+                      <div class="money-summary"><div><span>Facturado</span><strong>4.820 €</strong></div><div><span>Ya cobrado</span><strong>3.580 €</strong></div><p>El 74% de lo facturado este mes ya está cobrado.</p></div>
+                      <div class="home-chart"><canvas id="demo-home-chart" aria-label="Ingresos y gastos de ejemplo de los últimos meses"></canvas></div>
+                    </article>
+                    <article class="home-panel home-pending">
+                      <header><div><span class="panel-kicker">Seguimiento</span><h2>Cobros que vigilar</h2></div><button type="button" data-demo-open="facturas">Ver todos</button></header>
+                      <div class="home-panel-body">
+                        <button class="pending-row" type="button" data-demo-open="facturas"><span><strong>Javier Ruiz</strong><small>Instalación de termo</small></span><span><b>760 €</b><small>4 días pendiente</small></span></button>
+                        <button class="pending-row" type="button" data-demo-open="facturas"><span><strong>Marta López</strong><small>Reparación de caldera</small></span><span><b>480 €</b><small>Preparada hoy</small></span></button>
+                      </div>
+                    </article>
+                  </section>
+                </main>
               </div>
             </section>
 
@@ -56,6 +111,15 @@
                 <div><time>16:00</time><span><b>Revisión de presión</b><small>Comunidad Balmes · Laura asignada</small></span><em class="demo-status">Programado</em></div>
               </div>
               <p class="demo-footnote">Noesis ha agrupado las dos últimas visitas por zona para evitar 35 minutos de desplazamiento.</p>
+            </section>
+
+            <section class="demo-panel" id="demo-proyectos" role="tabpanel" data-demo-panel="proyectos" hidden>
+              <div class="desk-heading"><div><small>Rentabilidad por obra</small><h2>Proyectos.</h2></div><span>+ Nuevo proyecto</span></div>
+              <div class="demo-money-grid"><div><small>En curso</small><b>3</b><span>2 dentro de margen</span></div><div><small>Presupuesto total</small><b>18.600 €</b><span>Trabajos activos</span></div><div><small>Margen previsto</small><b>38%</b><span>Después de costes</span></div></div>
+              <div class="demo-list">
+                <div><span><b>Reforma · Local Balmes</b><small>62% completado · 2 personas asignadas</small></span><em class="demo-status good">Dentro de margen</em></div>
+                <div><span><b>Instalación · Clínica Nord</b><small>Materiales pendientes de confirmar</small></span><em class="demo-status amber">Revisar</em></div>
+              </div>
             </section>
 
             <section class="demo-panel" id="demo-clientes" role="tabpanel" data-demo-panel="clientes" hidden>
@@ -106,6 +170,15 @@
               <div class="desk-heading"><div><small>Tu mano derecha</small><h2>Pregunta a Noesis.</h2></div><span>También por WhatsApp</span></div>
               <div class="demo-conversation"><p><b>Noesis</b>He revisado tu negocio. Hoy puedes cerrar 480 € y te quedan dos cobros pendientes. ¿Te preparo el recordatorio de Javier?</p><p class="from-user"><b>Tú</b>Sí, pero no lo envíes todavía.</p><p><b>Noesis</b>Hecho. Lo dejo preparado para que lo revises cuando termines la visita.</p></div>
               <div class="demo-composer"><span>Pregunta por tu negocio…</span><b>Enviar</b></div>
+            </section>
+
+            <section class="demo-panel" id="demo-ajustes" role="tabpanel" data-demo-panel="ajustes" hidden>
+              <div class="desk-heading"><div><small>Tu forma de trabajar</small><h2>Ajustes.</h2></div><span>Guardado</span></div>
+              <div class="demo-list settings-list">
+                <div><span><b>Tono de Noesis</b><small>Profesional, claro y cercano</small></span><em>Personalizar</em></div>
+                <div><span><b>Acciones que requieren permiso</b><small>Facturas, cobros, transferencias y envíos</small></span><em class="demo-status good">Confirmación activa</em></div>
+                <div><span><b>Integraciones</b><small>WhatsApp y correo conectados</small></span><em>Gestionar</em></div>
+              </div>
             </section>
           </div>
         </div>
@@ -195,4 +268,8 @@
       <details><summary>¿Puedo llevarme mis datos?</summary><p>Sí. Tus datos y documentos son exportables y siguen siendo tuyos.</p></details>
     </div>
   </section>
+{% endblock %}
+
+{% block page_scripts %}
+  <script src="/static/vendor/chart.umd.min.js"></script>
 {% endblock %}

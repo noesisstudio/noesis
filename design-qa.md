@@ -84,4 +84,17 @@ La comparación del hero confirma:
   Su QA se limita de forma explícita a HTML, CSS responsive, JavaScript, rutas y
   pruebas automáticas.
 
+## Iteración de fidelidad · 2026-07-16
+
+- «Inicio» ya no interpreta un dashboard nuevo: replica la estructura semántica y
+  los bloques del `resumen.html` real con una empresa de ejemplo claramente marcada.
+  También se alinea la navegación de la demo con los diez apartados del panel.
+- El titular del hero dispone de más superficie útil y el anual hace visible el
+  ahorro sin confundirlo con una alerta: descuento, mes gratis, ahorro total y
+  coste mensual equivalente.
+- No hay nueva captura ni afirmación de comparación visual. La app de escritorio
+  ha cerrado durante el trabajo incluso después de actualizarse y Windows registra
+  nuevos fallos de `ChatGPT.exe` a las 09:58 y 09:59;
+  esta iteración se comprueba por HTML, CSS responsive, JavaScript y HTTP local.
+
 **final result: passed**

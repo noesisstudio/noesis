@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-07-16 — demo pública alineada con el Inicio real
+
+- La pestaña «Inicio» de la vista pública reutiliza la jerarquía y los componentes
+  del panel real: Parte de hoy, prioridad, métricas, agenda, trabajo de Noesis,
+  lectura de dinero, gráfico y cobros pendientes. El marco se presenta como «Vista
+  del producto» y «Empresa de ejemplo»; no llama a datos ni acciones de una cuenta real.
+- La navegación de ejemplo refleja los diez apartados del producto: Inicio,
+  Trabajos, Proyectos, Clientes, Dinero, Facturas, Equipo, Documentos, Noesis y
+  Ajustes. Los enlaces internos de Inicio cambian de pestaña sin abandonar la demo.
+- El hero gana anchura útil en escritorio y reduce el titular para evitar cortes
+  prematuros. En anual, el ahorro ahora muestra «−8,3 % · 1 mes gratis», importe
+  ahorrado y equivalente mensual con contraste rojo informativo.
+- Servidor aislado en `127.0.0.1:8022`: Home HTTP 200; se verificaron los diez
+  tabs, estructura del Inicio real, gráfico local y selector anual en el HTML.
+  La revisión visual volvió a cerrar la aplicación incluso después de actualizarla;
+  Windows registró nuevos fallos de `ChatGPT.exe` a las 09:58 y 09:59.
+- Suite completa: 240 pruebas y 39 subpruebas verdes (279 casos JUnit), sin fallos
+  ni errores; `compileall`, sintaxis JavaScript, verdad del proyecto y
+  `git diff --check` también verdes.
+
 ## 2026-07-16 — demo pública interactiva y facturación anual
 
 - La Home ofrece una cuenta ficticia identificada como datos simulados. Sus ocho
