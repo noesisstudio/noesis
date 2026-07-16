@@ -13,12 +13,7 @@
         <div class="hero-trust" aria-label="Condiciones de la prueba"><span>Sin tarjeta durante la prueba</span><span>Cancela cuando quieras</span></div>
       </div>
 
-      <div class="hero-operating-proof product-home-preview" aria-label="Inicio real de Noesis con datos de una empresa de ejemplo">
-        <div class="demo-frame-top">
-          <span>Inicio de Noesis</span>
-          <b>Taller García</b>
-          <small>Empresa de ejemplo</small>
-        </div>
+      <div class="hero-operating-proof product-home-preview" data-product-demo aria-label="Panel de Noesis con datos de una empresa de ejemplo">
         <div class="hero-desk">
           <div class="hero-desk-nav" role="tablist" aria-label="Apartados de la empresa de ejemplo">
             <div class="demo-panel-brand"><img src="/static/noesis-mark.svg" alt=""><b>Noesis</b></div>
@@ -119,87 +114,276 @@
             </section>
 
             <section class="demo-panel" id="demo-trabajos" role="tabpanel" data-demo-panel="trabajos" hidden>
-              <div class="desk-heading"><div><small>Trabajo y agenda</small><h2>3 visitas hoy.</h2></div><span>+ Nuevo trabajo</span></div>
-              <div class="demo-list">
-                <div><time>10:00</time><span><b>Reparación de caldera</b><small>Marta López · En curso</small></span><em class="demo-status good">En curso</em></div>
-                <div><time>12:30</time><span><b>Instalación de termo</b><small>Javier Ruiz · Centro</small></span><em class="demo-status">Programado</em></div>
-                <div><time>16:00</time><span><b>Revisión de presión</b><small>Comunidad Balmes · Laura asignada</small></span><em class="demo-status">Programado</em></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Operativa de campo</div>
+                    <h1>Trabajos</h1>
+                    <p>Tu agenda del día y del mes, con cada visita conectada a su cliente.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn">Añadir por chat</span><span class="btn primary">Nuevo trabajo</span></div>
+                </div>
+                <div class="grid g4">
+                  <div class="stat"><div class="lbl">Trabajos este mes</div><div class="val">18</div><div class="delta flat">en el calendario</div></div>
+                  <div class="stat"><div class="lbl">Hoy</div><div class="val">3</div><div class="delta flat">visitas programadas</div></div>
+                  <div class="stat"><div class="lbl">Sin confirmar</div><div class="val amber">1</div><div class="delta flat">pendiente de confirmar</div></div>
+                  <div class="stat"><div class="lbl">Ingreso estimado mes</div><div class="val green">6.420 €</div><div class="delta flat">según importes previstos</div></div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h2>Hoy, jueves 16</h2><span class="hint">3 visitas</span></div>
+                  <div class="card-b">
+                    <div class="demo-list">
+                      <div><time>10:00</time><span><b>Reparación de caldera</b><small>Marta López · Centro</small></span><em class="demo-status good">En curso</em></div>
+                      <div><time>12:30</time><span><b>Instalación de termo</b><small>Javier Ruiz · Centro</small></span><em class="demo-status">Programado</em></div>
+                      <div><time>16:00</time><span><b>Revisión de presión</b><small>Comunidad Balmes · Laura asignada</small></span><em class="demo-status">Programado</em></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="insight">Noesis ha agrupado las dos últimas visitas por zona: te ahorras <b>35 minutos</b> de furgoneta.</div>
               </div>
-              <p class="demo-footnote">Noesis ha agrupado las dos últimas visitas por zona para evitar 35 minutos de desplazamiento.</p>
             </section>
 
             <section class="demo-panel" id="demo-proyectos" role="tabpanel" data-demo-panel="proyectos" hidden>
-              <div class="desk-heading"><div><small>Rentabilidad por obra</small><h2>Proyectos.</h2></div><span>+ Nuevo proyecto</span></div>
-              <div class="demo-money-grid"><div><small>En curso</small><b>3</b><span>2 dentro de margen</span></div><div><small>Presupuesto total</small><b>18.600 €</b><span>Trabajos activos</span></div><div><small>Margen previsto</small><b>38%</b><span>Después de costes</span></div></div>
-              <div class="demo-list">
-                <div><span><b>Reforma · Local Balmes</b><small>62% completado · 2 personas asignadas</small></span><em class="demo-status good">Dentro de margen</em></div>
-                <div><span><b>Instalación · Clínica Nord</b><small>Materiales pendientes de confirmar</small></span><em class="demo-status amber">Revisar</em></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Control de trabajos grandes</div>
+                    <h1>Proyectos</h1>
+                    <p>Presupuesto, costes y avance en un solo sitio.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn primary">Nuevo proyecto</span></div>
+                </div>
+                <div class="grid g4">
+                  <div class="stat"><div class="lbl">En curso</div><div class="val">3</div><div class="delta flat">2 dentro de margen</div></div>
+                  <div class="stat"><div class="lbl">Presupuesto total</div><div class="val">18.600 €</div><div class="delta flat">trabajos activos</div></div>
+                  <div class="stat"><div class="lbl">Margen previsto</div><div class="val green">38%</div><div class="delta flat">después de costes</div></div>
+                  <div class="stat"><div class="lbl">Horas registradas</div><div class="val">142 h</div><div class="delta flat">por todo el equipo</div></div>
+                </div>
+                <div class="demo-noesis-reading compact"><b>Dos proyectos van dentro de margen.</b><span>En la Clínica Nord faltan dos materiales por confirmar para cerrar el margen real.</span></div>
+                <div class="card">
+                  <div class="card-h"><h2>Activos</h2><span class="hint">3 proyectos</span></div>
+                  <div class="card-b">
+                    <div class="demo-list">
+                      <div><span><b>Reforma · Local Balmes</b><small>62% completado · 2 personas asignadas</small></span><em class="demo-status good">Dentro de margen</em></div>
+                      <div><span><b>Instalación · Clínica Nord</b><small>Materiales pendientes de confirmar</small></span><em class="demo-status amber">Revisar</em></div>
+                      <div><span><b>Mantenimiento · Hotel Miramar</b><small>Empieza el lunes · presupuesto aceptado</small></span><em class="demo-status">Programado</em></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 
             <section class="demo-panel" id="demo-clientes" role="tabpanel" data-demo-panel="clientes" hidden>
-              <div class="desk-heading"><div><small>Relaciones e historial</small><h2>Clientes.</h2></div><span>+ Añadir</span></div>
-              <div class="demo-list clients-list">
-                <div><span class="demo-avatar">ML</span><span><b>Marta López</b><small>Trabajo en curso · 4 encargos</small></span><em>480 €</em></div>
-                <div><span class="demo-avatar">JR</span><span><b>Javier Ruiz</b><small>Visita hoy · presupuesto aceptado</small></span><em>760 €</em></div>
-                <div><span class="demo-avatar">CB</span><span><b>Comunidad Balmes</b><small>Cliente habitual · 12 encargos</small></span><em>Al día</em></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Relación con clientes</div>
+                    <h1>Clientes</h1>
+                    <p>Quién te da trabajo, quién factura más y qué queda pendiente.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn">Exportar</span><span class="btn primary">Añadir cliente</span></div>
+                </div>
+                <div class="grid g4">
+                  <div class="stat"><div class="lbl">Clientes activos</div><div class="val">24</div><div class="delta flat">con actividad este año</div></div>
+                  <div class="stat"><div class="lbl">Nuevos este mes</div><div class="val green">2</div><div class="delta flat">llegados por WhatsApp</div></div>
+                  <div class="stat"><div class="lbl">Con trabajo en curso</div><div class="val">3</div><div class="delta flat">esta semana</div></div>
+                  <div class="stat"><div class="lbl">Pendiente de cobro</div><div class="val amber">1.240 €</div><div class="delta flat">2 clientes</div></div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h2>Con actividad reciente</h2><span class="hint">ordenados por último trabajo</span></div>
+                  <div class="card-b">
+                    <div class="demo-list clients-list">
+                      <div><span class="demo-avatar">ML</span><span><b>Marta López</b><small>Trabajo en curso · 4 encargos este año</small></span><em>480 €</em></div>
+                      <div><span class="demo-avatar">JR</span><span><b>Javier Ruiz</b><small>Visita hoy · presupuesto aceptado</small></span><em>760 €</em></div>
+                      <div><span class="demo-avatar">CB</span><span><b>Comunidad Balmes</b><small>Cliente habitual · 12 encargos</small></span><em>Al día</em></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="insight">Marta prefiere recibir la factura por WhatsApp; Noesis lo recuerda al enviarla.</div>
               </div>
-              <p class="demo-footnote">Noesis recuerda que Marta prefiere recibir la factura por WhatsApp.</p>
             </section>
 
             <section class="demo-panel" id="demo-dinero" role="tabpanel" data-demo-panel="dinero" hidden>
-              <div class="desk-heading"><div><small>Tu dinero, explicado</small><h2>Este mes va bien.</h2></div><span>Julio</span></div>
-              <div class="demo-money-grid"><div><small>Facturado</small><b>4.820 €</b><span>+12% frente a junio</span></div><div><small>Ya cobrado</small><b>3.580 €</b><span>Disponible en caja</span></div><div><small>Lo que te deben</small><b>1.240 €</b><span>2 facturas</span></div></div>
-              <div class="demo-noesis-reading compact"><b>De cada 100 € facturados te quedan unos 42 €.</b><span>Falta añadir el coste de dos materiales para cerrar el margen real.</span></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Cuentas</div>
+                    <h1>Dinero</h1>
+                    <p>Tu dinero de un vistazo: lo que entra, lo que debes y tu posición.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn">Impuestos</span><span class="btn primary">Revisar cobros</span></div>
+                </div>
+                <div class="grid g4">
+                  <div class="stat"><div class="lbl">Te deben</div><div class="val green">1.240 €</div><div class="delta flat">2 facturas sin cobrar</div></div>
+                  <div class="stat"><div class="lbl">IVA para Hacienda (trim.)</div><div class="val red">480 €</div><div class="delta flat">apártalo este trimestre</div></div>
+                  <div class="stat"><div class="lbl">Beneficio este mes</div><div class="val">2.030 €</div><div class="delta flat">lo que queda tras gastos</div></div>
+                  <div class="stat"><div class="lbl">Gastos este mes</div><div class="val">1.310 €</div><div class="delta flat">costes registrados</div></div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h2>Previsión de caja · 30 días</h2><span class="hint">si cobras lo pendiente y gastas lo habitual</span></div>
+                  <div class="card-b">
+                    <div class="bal-grid">
+                      <div class="bal-col fav">
+                        <div class="bal-label">Debería entrar</div>
+                        <div class="bal-row"><span>Facturas pendientes</span><b>1.240 €</b></div>
+                        <div class="bal-row"><span>Trabajos ya agendados</span><b>1.950 €</b></div>
+                      </div>
+                      <div class="bal-col pay">
+                        <div class="bal-label">Saldrá</div>
+                        <div class="bal-row"><span>Gastos previstos (tu media)</span><b>1.480 €</b></div>
+                        <div class="bal-row"><span>IVA a apartar (trimestre)</span><b>480 €</b></div>
+                      </div>
+                      <div class="bal-col net">
+                        <div class="bal-label">Te quedarían</div>
+                        <div class="bal-net">+1.230 €</div>
+                        <div class="bal-hint">margen para respirar</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="demo-noesis-reading compact"><b>De cada 100 € facturados te quedan unos 42 €.</b><span>Buen mes: cobras más rápido que en junio y los gastos están controlados.</span></div>
+              </div>
             </section>
 
             <section class="demo-panel" id="demo-facturas" role="tabpanel" data-demo-panel="facturas" hidden>
-              <div class="desk-heading"><div><small>Facturas y cobros</small><h2>Todo controlado.</h2></div><span>+ Hacer factura</span></div>
-              <div class="demo-list invoice-list">
-                <div><span><b>F-0045 · Marta López</b><small>Reparación de caldera · hoy</small></span><strong>480 €</strong><em class="demo-status amber">Preparada</em></div>
-                <div><span><b>F-0041 · Javier Ruiz</b><small>Venció hace 4 días</small></span><strong>760 €</strong><em class="demo-status late">Pendiente</em></div>
-                <div><span><b>F-0040 · Comunidad Balmes</b><small>Cobrada el 12 de julio</small></span><strong>1.240 €</strong><em class="demo-status good">Cobrada</em></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Facturación</div>
+                    <h1>Facturas</h1>
+                    <p>Cada factura con su estado, su PDF y su registro Veri*Factu.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn">Descargar CSV</span><span class="btn primary">Nueva factura</span></div>
+                </div>
+                <div class="grid g4">
+                  <div class="stat"><div class="lbl">Facturado este mes</div><div class="val">4.820 €</div><div class="delta flat">4 facturas</div></div>
+                  <div class="stat"><div class="lbl">Ya cobrado</div><div class="val green">3.580 €</div><div class="delta flat">el 74% del mes</div></div>
+                  <div class="stat"><div class="lbl">Pendiente</div><div class="val amber">1.240 €</div><div class="delta flat">2 facturas</div></div>
+                  <div class="stat"><div class="lbl">Vencidas</div><div class="val red">760 €</div><div class="delta flat">1 factura · 4 días</div></div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h2>Este mes</h2><span class="hint">todas las facturas</span></div>
+                  <div class="card-b">
+                    <div class="demo-list invoice-list">
+                      <div><span><b>F-0045 · Marta López</b><small>Reparación de caldera · hoy</small></span><strong>480 €</strong><em class="demo-status amber">Preparada</em></div>
+                      <div><span><b>F-0041 · Javier Ruiz</b><small>Venció hace 4 días</small></span><strong>760 €</strong><em class="demo-status late">Pendiente</em></div>
+                      <div><span><b>F-0040 · Comunidad Balmes</b><small>Cobrada el 12 de julio</small></span><strong>1.240 €</strong><em class="demo-status good">Cobrada</em></div>
+                      <div><span><b>F-0039 · Hotel Miramar</b><small>Cobrada el 8 de julio</small></span><strong>890 €</strong><em class="demo-status good">Cobrada</em></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="insight">Dile por WhatsApp <b>«factura a Juan la caldera, 180 €»</b> y aparece sola en esta lista.</div>
               </div>
             </section>
 
             <section class="demo-panel" id="demo-documentos" role="tabpanel" data-demo-panel="documentos" hidden>
-              <div class="desk-heading"><div><small>Entrada universal</small><h2>Documentos.</h2></div><span>Subir archivo</span></div>
-              <div class="demo-list document-list">
-                <div><span><b>Ticket_materiales.jpg</b><small>WhatsApp · hoy, 09:42</small></span><em class="demo-status amber">Confirmar gasto</em></div>
-                <div><span><b>Factura_Proveedor_148.pdf</b><small>Clasificada como factura recibida</small></span><em class="demo-status good">Ordenada</em></div>
-                <div><span><b>Presupuesto_2154.pdf</b><small>Vinculado al trabajo de Javier</small></span><em class="demo-status good">Vinculado</em></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Tus papeles, en orden</div>
+                    <h1>Documentos</h1>
+                    <p>Sube o fotografía cualquier papel; Noesis propone dónde guardarlo.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn">Enviar por WhatsApp</span><span class="btn primary">Subir archivo</span></div>
+                </div>
+                <div class="grid g4">
+                  <div class="stat"><div class="lbl">Guardados este mes</div><div class="val">32</div><div class="delta flat">tickets, facturas y partes</div></div>
+                  <div class="stat"><div class="lbl">Por confirmar</div><div class="val amber">1</div><div class="delta flat">gasto leído de un ticket</div></div>
+                  <div class="stat"><div class="lbl">Gastos leídos</div><div class="val">1.180 €</div><div class="delta flat">de tickets y facturas</div></div>
+                  <div class="stat"><div class="lbl">Para la gestoría</div><div class="val">12</div><div class="delta flat">listos para exportar</div></div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h2>Últimos documentos</h2><span class="hint">llegados por WhatsApp o subidos</span></div>
+                  <div class="card-b">
+                    <div class="demo-list document-list">
+                      <div><span><b>Ticket_materiales.jpg</b><small>WhatsApp · hoy, 09:42 · leído: 38,40 €</small></span><em class="demo-status amber">Confirmar gasto</em></div>
+                      <div><span><b>Factura_Proveedor_148.pdf</b><small>Clasificada como factura recibida</small></span><em class="demo-status good">Ordenada</em></div>
+                      <div><span><b>Presupuesto_2154.pdf</b><small>Vinculado al trabajo de Javier</small></span><em class="demo-status good">Vinculado</em></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="insight">Noesis propone dónde va cada archivo; <b>nada se contabiliza sin que lo confirmes</b>.</div>
               </div>
-              <p class="demo-footnote">Noesis propone dónde va cada archivo; nada se contabiliza sin que lo confirmes.</p>
             </section>
 
             <section class="demo-panel" id="demo-equipo" role="tabpanel" data-demo-panel="equipo" hidden>
-              <div class="desk-heading"><div><small>Quién hace qué</small><h2>Equipo de hoy.</h2></div><span>2 trabajando</span></div>
-              <div class="demo-list team-list">
-                <div><span class="demo-avatar">DG</span><span><b>David García</b><small>Reparación de caldera · desde 09:54</small></span><em class="demo-status good">Fichado</em></div>
-                <div><span class="demo-avatar">LR</span><span><b>Laura Romero</b><small>Comunidad Balmes · empieza a las 16:00</small></span><em class="demo-status">Asignada</em></div>
-                <div><span class="demo-avatar">MS</span><span><b>Marc Soler</b><small>Sin trabajo pendiente hoy</small></span><em>Disponible</em></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Operativa de campo</div>
+                    <h1>Equipo</h1>
+                    <p>Asigna trabajos, comparte el planning y revisa los fichajes de hoy.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn primary">Añadir persona</span></div>
+                </div>
+                <div class="grid g4">
+                  <div class="stat"><div class="lbl">Equipo activo</div><div class="val">3</div><div class="delta flat">personas disponibles</div></div>
+                  <div class="stat"><div class="lbl">Trabajando ahora</div><div class="val green">2</div><div class="delta flat">con entrada abierta</div></div>
+                  <div class="stat"><div class="lbl">Horas hoy</div><div class="val">11,5 h</div><div class="delta flat">acumuladas por el equipo</div></div>
+                  <div class="stat"><div class="lbl">Con ubicación</div><div class="val">2</div><div class="delta flat">último fichaje de hoy</div></div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h2>Fichajes de hoy</h2><span class="hint">registro de jornada al día</span></div>
+                  <div class="card-b">
+                    <div class="demo-list team-list">
+                      <div><span class="demo-avatar">DG</span><span><b>David García</b><small>Reparación de caldera · entrada 09:54</small></span><em class="demo-status good">Fichado</em></div>
+                      <div><span class="demo-avatar">LR</span><span><b>Laura Romero</b><small>Comunidad Balmes · empieza a las 16:00</small></span><em class="demo-status">Asignada</em></div>
+                      <div><span class="demo-avatar">MS</span><span><b>Marc Soler</b><small>Sin trabajo asignado hoy</small></span><em>Disponible</em></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="insight">El registro de jornada queda guardado y listo para una inspección, sin hojas de cálculo.</div>
               </div>
             </section>
 
             <section class="demo-panel" id="demo-noesis" role="tabpanel" data-demo-panel="noesis" hidden>
-              <div class="desk-heading"><div><small>Tu mano derecha</small><h2>Pregunta a Noesis.</h2></div><span>También por WhatsApp</span></div>
-              <div class="demo-conversation"><p><b>Noesis</b>He revisado tu negocio. Hoy puedes cerrar 480 € y te quedan dos cobros pendientes. ¿Te preparo el recordatorio de Javier?</p><p class="from-user"><b>Tú</b>Sí, pero no lo envíes todavía.</p><p><b>Noesis</b>Hecho. Lo dejo preparado para que lo revises cuando termines la visita.</p></div>
-              <div class="demo-composer"><span>Pregunta por tu negocio…</span><b>Enviar</b></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Copiloto operativo</div>
+                    <h1>Asistente</h1>
+                    <p>Pregunta por tu negocio como se lo pedirías a una persona de confianza.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn">También por WhatsApp</span></div>
+                </div>
+                <div class="demo-conversation"><p><b>Noesis</b>He revisado tu negocio. Hoy puedes cerrar 480 € y te quedan dos cobros pendientes. ¿Te preparo el recordatorio de Javier?</p><p class="from-user"><b>Tú</b>Sí, pero no lo envíes todavía.</p><p><b>Noesis</b>Hecho. Lo dejo preparado para que lo revises cuando termines la visita.</p></div>
+                <div class="demo-composer"><span>Pregunta por tu negocio…</span><b>Enviar</b></div>
+              </div>
             </section>
 
             <section class="demo-panel" id="demo-ajustes" role="tabpanel" data-demo-panel="ajustes" hidden>
-              <div class="desk-heading"><div><small>Tu forma de trabajar</small><h2>Ajustes.</h2></div><span>Guardado</span></div>
-              <div class="demo-list settings-list">
-                <div><span><b>Tono de Noesis</b><small>Profesional, claro y cercano</small></span><em>Personalizar</em></div>
-                <div><span><b>Acciones que requieren permiso</b><small>Facturas, cobros, transferencias y envíos</small></span><em class="demo-status good">Confirmación activa</em></div>
-                <div><span><b>Integraciones</b><small>WhatsApp y correo conectados</small></span><em>Gestionar</em></div>
+              <div class="demo-real-dashboard">
+                <div class="page-head">
+                  <div class="page-title">
+                    <div class="kicker">Configuración</div>
+                    <h1>Ajustes</h1>
+                    <p>Tu forma de trabajar y las conexiones de tu negocio.</p>
+                  </div>
+                  <div class="page-actions"><span class="btn primary">Guardado</span></div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h2>Preferencias</h2><span class="hint">Noesis pide permiso antes de actuar</span></div>
+                  <div class="card-b">
+                    <div class="demo-list settings-list">
+                      <div><span><b>Tono de Noesis</b><small>Profesional, claro y cercano</small></span><em>Personalizar</em></div>
+                      <div><span><b>Acciones que requieren permiso</b><small>Facturas, cobros, transferencias y envíos</small></span><em class="demo-status good">Confirmación activa</em></div>
+                      <div><span><b>Integraciones</b><small>WhatsApp y correo conectados</small></span><em>Gestionar</em></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           </div>
         </div>
       </div>
-        <p class="demo-hint">Vista de ejemplo basada en el panel real de Noesis. Las acciones no se ejecutan.</p>
       </div>
+
+      <div class="hero-impact" aria-label="Lo que ganas con Noesis">
+        <div><strong>40 h</strong><span>de papeleo que recuperas cada mes</span></div>
+        <div><strong>30 seg</strong><span>de la nota de voz a la factura enviada</span></div>
+        <div><strong>80 %</strong><span>menos retraso en los cobros</span></div>
+      </div>
+      <p class="hero-impact-note">Estimación para un negocio de servicios de 1 a 10 personas. Compruébalo en la prueba de 14 días.</p>
     </div>
   </section>
 
