@@ -1371,46 +1371,20 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .demo-real-dashboard .money-summary p { font-size:8px; }
 .demo-real-dashboard .home-chart { height:84px; padding:4px 8px 8px; }
 
-/* Pantallas de la demo que replican los apartados reales del panel, a escala. */
-.demo-real-dashboard .page-head { margin-bottom:10px; gap:10px; }
-.demo-real-dashboard .page-head .kicker { font-size:6.5px; letter-spacing:.07em; }
-.demo-real-dashboard .page-head h1 { font-size:17px; }
-.demo-real-dashboard .page-head p { margin:4px 0 0; font-size:8.5px; line-height:1.45; max-width:52ch; }
-.demo-real-dashboard .page-actions { display:flex; gap:5px; flex-shrink:0; }
-.demo-real-dashboard .page-actions .btn { min-height:0; padding:5px 8px; border-radius:5px; font-size:7px; pointer-events:none; }
-.demo-real-dashboard .grid.g4 { gap:6px; }
-.demo-real-dashboard .stat { padding:8px 10px; border-radius:8px; }
-.demo-real-dashboard .stat .lbl { font-size:6px; letter-spacing:.05em; }
-.demo-real-dashboard .stat .val { font-size:13px; margin-top:3px; }
-.demo-real-dashboard .stat .delta { font-size:6.5px; margin-top:2px; }
-.demo-real-dashboard .card { margin-top:8px; border-radius:9px; }
-.demo-real-dashboard .card-h { padding:8px 10px; gap:6px; }
-.demo-real-dashboard .card-h h2 { font-size:11px; }
-.demo-real-dashboard .card-h .hint { font-size:7px; }
-.demo-real-dashboard .card-b { padding:0 10px 8px; }
-.demo-real-dashboard .insight { margin-top:8px; padding:7px 9px; border-radius:7px; font-size:8px; line-height:1.45; }
-.demo-real-dashboard .demo-list > div { min-height:0; padding:7px 2px; gap:8px; grid-template-columns:34px minmax(0,1fr) auto; }
-.demo-real-dashboard .demo-list time { font-size:8px; }
-.demo-real-dashboard .demo-list span b { font-size:8.5px; }
-.demo-real-dashboard .demo-list span small { margin-top:2px; font-size:7.5px; }
-.demo-real-dashboard .demo-list em, .demo-real-dashboard .demo-list strong { font-size:7.5px; }
-.demo-real-dashboard .demo-status { padding:3px 5px; }
-.demo-real-dashboard .clients-list > div, .demo-real-dashboard .team-list > div { grid-template-columns:24px minmax(0,1fr) auto; }
-.demo-real-dashboard .demo-avatar { width:22px; height:22px; font-size:7px!important; }
-.demo-real-dashboard .invoice-list > div { grid-template-columns:minmax(0,1fr) auto auto; }
-.demo-real-dashboard .document-list > div, .demo-real-dashboard .settings-list > div { grid-template-columns:minmax(0,1fr) auto; }
-.demo-real-dashboard .bal-grid { gap:8px; }
-.demo-real-dashboard .bal-col + .bal-col { padding-left:8px; }
-.demo-real-dashboard .bal-label { font-size:6.5px; }
-.demo-real-dashboard .bal-row { font-size:8px; gap:8px; }
-.demo-real-dashboard .bal-net { font-size:14px; }
-.demo-real-dashboard .bal-hint { font-size:7px; margin-top:3px; }
-.demo-real-dashboard .demo-noesis-reading { margin:8px 0 0; padding:8px 10px; }
-.demo-real-dashboard .demo-noesis-reading b { font-size:10px; }
-.demo-real-dashboard .demo-noesis-reading span { font-size:8px; }
-.demo-real-dashboard .demo-conversation { margin-top:4px; }
-.demo-real-dashboard .demo-conversation p { font-size:8.5px; padding:8px 10px; }
-.demo-real-dashboard .demo-composer { margin-top:8px; font-size:8px; }
+/* Pantallas reales del panel replicadas en la demo pública, reducidas con zoom
+   para conservar exactamente su maquetación. */
+.demo-screen { zoom:.62; max-height:884px; overflow:auto; padding:4px 6px 14px;
+  scrollbar-width:thin; scrollbar-color:#b8c9c1 transparent; }
+.demo-screen .chat-wrap { height:auto; }
+.demo-screen .btn, .demo-screen .chip, .demo-screen input, .demo-screen .cal-cell { cursor:default; }
+.demo-app-main .demo-subnav { margin:0; padding:7px 14px 0; max-width:none; gap:3px;
+  background:#f3f0e8; border-bottom:1px solid var(--border); }
+.demo-app-main .demo-subnav button { flex:0 0 auto; padding:5px 12px; border:1px solid transparent;
+  border-radius:999px; color:var(--muted); background:transparent; font:inherit; font-size:10px;
+  font-weight:700; cursor:pointer; margin-bottom:6px; }
+.demo-app-main .demo-subnav button:hover { color:var(--brand); }
+.demo-app-main .demo-subnav button.active { color:var(--brand); background:var(--surface);
+  border-color:var(--border-strong); }
 .demo-noesis-reading { display:flex; flex-direction:column; gap:3px; margin-bottom:10px; padding:11px 13px;
   background:#edf5f0; border:1px solid #c9ddd4; border-radius:8px; }
 .demo-noesis-reading b { font-family:var(--serif); color:var(--brand); font-size:13px; font-weight:550; }

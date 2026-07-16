@@ -28,8 +28,8 @@
     "irreversible_actions_require_owner_confirmation": true
   },
   "public_site": {
-    "product_view": "interactive_product_overview_with_sample_company",
-    "product_preview": "home_and_product_area_examples_for_trabajos_proyectos_clientes_dinero_facturas_documentos_equipo_asistente_and_ajustes",
+    "product_view": "real_panel_templates_replicated_with_sample_company",
+    "product_preview": "all_sections_and_subsections_navigable_including_caja_analisis_ingresos_costes_presupuestos_cobros_impuestos_crm_productos",
     "demo_frame": "block_layout_960px_aligned_with_hero_copy",
     "billing_periods": [
       "monthly",
