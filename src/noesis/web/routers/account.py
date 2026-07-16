@@ -104,30 +104,43 @@ def delete_account(request: Request, business_id: int, confirm: str = Form(""),
 
 # =========================================================== ONBOARDING ===== #
 @router.get("/onboarding", response_class=HTMLResponse)
-def onboarding(request: Request, error: str = ""):
-    return TEMPLATES.TemplateResponse(request, "onboarding.html", {"error": error})
+def onboarding(request: Request, error: str = "", plan: str = "",
+               billing: str = "monthly"):
+    selected_plan = plan if plan in billing_adapter.PLAN_PRICES else ""
+    selected_billing = billing if billing in {"monthly", "annual"} else "monthly"
+    return TEMPLATES.TemplateResponse(request, "onboarding.html", {
+        "error": error,
+        "selected_plan": selected_plan,
+        "selected_billing": selected_billing,
+        "plan_catalog": billing_adapter.PLANS,
+        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
+    })
 
 
 @router.post("/onboarding/signup")
 def onboarding_signup(request: Request, name: str = Form(...),
                       email: str = Form(...), password: str = Form(...),
-                      sector: str = Form(""), acepto: str = Form("")):
+                      sector: str = Form(""), acepto: str = Form(""),
+                      plan: str = Form(""), billing: str = Form("monthly")):
+    plan = plan if plan in billing_adapter.PLAN_PRICES else ""
+    billing = billing if billing in {"monthly", "annual"} else "monthly"
+    onboarding_query = f"&plan={plan}&billing={billing}" if plan else ""
     key = f"signup:{auth.client_ip(request)}"
     if auth.is_rate_limited(key):
-        return RedirectResponse("/onboarding?error=throttle", status_code=303)
+        return RedirectResponse(f"/onboarding?error=throttle{onboarding_query}", status_code=303)
     email = (email or "").strip().lower()
     name = (name or "").strip()
     if not name:
-        return RedirectResponse("/onboarding?error=name", status_code=303)
+        return RedirectResponse(f"/onboarding?error=name{onboarding_query}", status_code=303)
     if not acepto:
-        return RedirectResponse("/onboarding?error=consent", status_code=303)
+        return RedirectResponse(f"/onboarding?error=consent{onboarding_query}", status_code=303)
     if not auth.valid_email(email):
-        return RedirectResponse("/onboarding?error=email_format", status_code=303)
+        return RedirectResponse(f"/onboarding?error=email_format{onboarding_query}", status_code=303)
     if len(password) < 12 or len(password) > 1024:
         auth.record_failed_attempt(key)
-        return RedirectResponse("/onboarding?error=password", status_code=303)
+        return RedirectResponse(f"/onboarding?error=password{onboarding_query}", status_code=303)
     if db.get_user_by_email(email):
-        return RedirectResponse("/onboarding?error=email", status_code=303)
+        return RedirectResponse(f"/onboarding?error=email{onboarding_query}", status_code=303)
     try:
         biz, user = db.create_account(
             name, email, auth.hash_password(password), sector or None,
@@ -135,13 +148,20 @@ def onboarding_signup(request: Request, name: str = Form(...),
         )
     except (ValueError, *db.IntegrityError):
         auth.record_failed_attempt(key)
-        return RedirectResponse("/onboarding?error=email", status_code=303)
+        return RedirectResponse(f"/onboarding?error=email{onboarding_query}", status_code=303)
     auth.clear_attempts(key)
     request.session.clear()
     request.session["uid"] = user["id"]
     request.session["bid"] = biz["id"]
     request.session["sv"] = user.get("session_version", 0)
+    request.session["signup_plan"] = plan or "autonomo"
+    request.session["signup_billing"] = billing
     db.record_product_event(biz["id"], "account_created")
+    db.record_product_event(
+        biz["id"], "plan_interest",
+        json.dumps({"plan": plan or None, "billing_period": billing},
+                   separators=(",", ":")),
+    )
     # Evidencia de consentimiento: quién aceptó qué versión, cuándo y desde dónde.
     db.record_product_event(biz["id"], "legal_accepted", json.dumps({
         "version": "2026-06-30",
@@ -448,16 +468,27 @@ def onboarding_whatsapp_connect(request: Request, business_id: int):
 
 # ============================================================ SUSCRIPCIÓN === #
 @router.post("/b/{business_id}/suscripcion/checkout")
-def subscription_checkout(request: Request, business_id: int, plan: str = Form("autonomo")):
+def subscription_checkout(request: Request, business_id: int,
+                          plan: str = Form("autonomo"),
+                          billing_period: str = Form("monthly")):
     if plan not in billing_adapter.PLAN_PRICES:
         return RedirectResponse(
             f"/b/{business_id}/suscripcion?status=invalid", status_code=303
         )
+    if billing_period not in {"monthly", "annual"}:
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=invalid", status_code=303
+        )
     biz = db.get_business(business_id)
-    db.record_product_event(business_id, "checkout_started", f"plan={plan}")
+    db.record_product_event(
+        business_id, "checkout_started",
+        f"plan={plan};billing_period={billing_period}",
+    )
     provider = billing_adapter.get_provider()
     base = f"{config.BASE_URL}/b/{business_id}/suscripcion"
-    url = provider.checkout_url(biz, plan, f"{base}?status=ok", f"{base}?status=cancel")
+    url = provider.checkout_url(
+        biz, plan, f"{base}?status=ok", f"{base}?status=cancel", billing_period
+    )
     if not url:
         # Sin Stripe configurado: deja constancia de la intención (alta manual).
         return RedirectResponse(f"{base}?status=manual", status_code=303)

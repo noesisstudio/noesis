@@ -8,7 +8,7 @@
         <p>Noesis es la oficina que se queda detrás de cada trabajo: escucha por WhatsApp,
           ordena lo importante y te acompaña hasta facturar y cobrar.</p>
         <div class="hero-actions">
-          <a class="btn light" href="/onboarding">Probar 14 días gratis</a>
+          <a class="btn light" href="/onboarding">Empieza ahora <span aria-hidden="true">→</span></a>
           <a class="text-link light-link" href="/producto#como-funciona">Ver cómo funciona <span aria-hidden="true">→</span></a>
         </div>
         <div class="hero-trust" aria-label="Condiciones de la prueba">
@@ -18,28 +18,98 @@
         </div>
       </div>
 
-      <div class="hero-operating-proof" aria-label="De una petición de WhatsApp al trabajo, la factura y el cobro">
-        <ol class="hero-journey">
-          <li><small>Solicitud por WhatsApp</small><b>Reparar caldera</b><span>Marta · mañana, 10:00</span></li>
-          <li><small>Trabajo creado</small><b>Reparación de caldera</b><span class="status-good">Programado</span></li>
-          <li class="journey-noesis"><small>Noesis recomienda</small><b>Preparar la factura al cerrar</b><span>Siempre confirmas antes de enviar</span></li>
-          <li><small>Factura lista</small><b>F-0045 · 480,00 €</b><span class="status-good">Preparada</span></li>
-        </ol>
+      <div class="hero-operating-proof interactive-product-demo" data-product-demo aria-label="Demo interactiva del panel de Noesis con datos simulados">
+        <div class="demo-frame-top">
+          <span>Demo interactiva</span>
+          <b>Taller García</b>
+          <small>Datos simulados</small>
+        </div>
         <div class="hero-desk">
-          <div class="hero-desk-nav">
+          <div class="hero-desk-nav" role="tablist" aria-label="Apartados del panel de demostración">
             <b>Noesis</b>
-            <span class="active">Hoy</span><span>Trabajos</span><span>Facturas</span><span>Cobros</span><span>Clientes</span>
+            <button class="active" type="button" role="tab" aria-selected="true" aria-controls="demo-hoy" data-demo-tab="hoy">Hoy</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-trabajos" data-demo-tab="trabajos">Trabajos</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-clientes" data-demo-tab="clientes">Clientes</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-dinero" data-demo-tab="dinero">Dinero</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-facturas" data-demo-tab="facturas">Facturas</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-documentos" data-demo-tab="documentos">Documentos</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-equipo" data-demo-tab="equipo">Equipo</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="demo-noesis" data-demo-tab="noesis">Noesis</button>
           </div>
-          <div class="hero-desk-main">
-            <div class="desk-heading"><div><small>Tu negocio, hoy</small><h2>Buenos días.</h2></div><span>Nuevo trabajo</span></div>
-            <div class="desk-grid">
-              <section><small>Trabajos de hoy</small><b>10:00 · Reparación de caldera</b><span>Marta López · En curso</span><b>12:30 · Instalación de termo</b><span>Javier Ruiz · Programado</span></section>
-              <section class="desk-focus"><small>Lo siguiente</small><b>Este trabajo puede quedar facturado hoy.</b><p>Tengo cliente, importe y datos fiscales. Tú decides cuándo.</p><span class="desk-action">Revisar factura</span></section>
-              <section><small>Documento recibido</small><b>Presupuesto_2154.pdf</b><span>Recibido hoy por WhatsApp</span></section>
-              <section><small>Cobro pendiente</small><b>480,00 €</b><span>Recordatorio preparado, sin enviar</span></section>
-            </div>
+          <div class="hero-desk-main" aria-live="polite">
+            <section class="demo-panel active" id="demo-hoy" role="tabpanel" data-demo-panel="hoy">
+              <div class="desk-heading"><div><small>Tu negocio, hoy</small><h2>Buenos días, David.</h2></div><span>16 de julio</span></div>
+              <div class="demo-noesis-reading"><b>Lo primero: termina el trabajo de Marta.</b><span>Después puedo prepararte la factura de 480 €, pero tú decides si se envía.</span></div>
+              <div class="desk-grid">
+                <section><small>Trabajos de hoy</small><b>10:00 · Reparación de caldera</b><span>Marta López · En curso</span><b>12:30 · Instalación de termo</b><span>Javier Ruiz · Programado</span></section>
+                <section class="desk-focus"><small>Lo siguiente</small><b>Este trabajo puede quedar facturado hoy.</b><p>Tengo cliente, importe y datos fiscales.</p><span class="desk-action">Revisar factura</span></section>
+                <section><small>Documento recibido</small><b>Ticket_materiales.jpg</b><span>38,40 € · pendiente de confirmar</span></section>
+                <section><small>Lo que te deben</small><b>1.240,00 €</b><span>2 facturas · un recordatorio preparado</span></section>
+              </div>
+            </section>
+
+            <section class="demo-panel" id="demo-trabajos" role="tabpanel" data-demo-panel="trabajos" hidden>
+              <div class="desk-heading"><div><small>Trabajo y agenda</small><h2>3 visitas hoy.</h2></div><span>+ Nuevo trabajo</span></div>
+              <div class="demo-list">
+                <div><time>10:00</time><span><b>Reparación de caldera</b><small>Marta López · En curso</small></span><em class="demo-status good">En curso</em></div>
+                <div><time>12:30</time><span><b>Instalación de termo</b><small>Javier Ruiz · Centro</small></span><em class="demo-status">Programado</em></div>
+                <div><time>16:00</time><span><b>Revisión de presión</b><small>Comunidad Balmes · Laura asignada</small></span><em class="demo-status">Programado</em></div>
+              </div>
+              <p class="demo-footnote">Noesis ha agrupado las dos últimas visitas por zona para evitar 35 minutos de desplazamiento.</p>
+            </section>
+
+            <section class="demo-panel" id="demo-clientes" role="tabpanel" data-demo-panel="clientes" hidden>
+              <div class="desk-heading"><div><small>Relaciones e historial</small><h2>Clientes.</h2></div><span>+ Añadir</span></div>
+              <div class="demo-list clients-list">
+                <div><span class="demo-avatar">ML</span><span><b>Marta López</b><small>Trabajo en curso · 4 encargos</small></span><em>480 €</em></div>
+                <div><span class="demo-avatar">JR</span><span><b>Javier Ruiz</b><small>Visita hoy · presupuesto aceptado</small></span><em>760 €</em></div>
+                <div><span class="demo-avatar">CB</span><span><b>Comunidad Balmes</b><small>Cliente habitual · 12 encargos</small></span><em>Al día</em></div>
+              </div>
+              <p class="demo-footnote">Noesis recuerda que Marta prefiere recibir la factura por WhatsApp.</p>
+            </section>
+
+            <section class="demo-panel" id="demo-dinero" role="tabpanel" data-demo-panel="dinero" hidden>
+              <div class="desk-heading"><div><small>Tu dinero, explicado</small><h2>Este mes va bien.</h2></div><span>Julio</span></div>
+              <div class="demo-money-grid"><div><small>Facturado</small><b>4.820 €</b><span>+12% frente a junio</span></div><div><small>Ya cobrado</small><b>3.580 €</b><span>Disponible en caja</span></div><div><small>Lo que te deben</small><b>1.240 €</b><span>2 facturas</span></div></div>
+              <div class="demo-noesis-reading compact"><b>De cada 100 € facturados te quedan unos 42 €.</b><span>Falta añadir el coste de dos materiales para cerrar el margen real.</span></div>
+            </section>
+
+            <section class="demo-panel" id="demo-facturas" role="tabpanel" data-demo-panel="facturas" hidden>
+              <div class="desk-heading"><div><small>Facturas y cobros</small><h2>Todo controlado.</h2></div><span>+ Hacer factura</span></div>
+              <div class="demo-list invoice-list">
+                <div><span><b>F-0045 · Marta López</b><small>Reparación de caldera · hoy</small></span><strong>480 €</strong><em class="demo-status amber">Preparada</em></div>
+                <div><span><b>F-0041 · Javier Ruiz</b><small>Venció hace 4 días</small></span><strong>760 €</strong><em class="demo-status late">Pendiente</em></div>
+                <div><span><b>F-0040 · Comunidad Balmes</b><small>Cobrada el 12 de julio</small></span><strong>1.240 €</strong><em class="demo-status good">Cobrada</em></div>
+              </div>
+            </section>
+
+            <section class="demo-panel" id="demo-documentos" role="tabpanel" data-demo-panel="documentos" hidden>
+              <div class="desk-heading"><div><small>Entrada universal</small><h2>Documentos.</h2></div><span>Subir archivo</span></div>
+              <div class="demo-list document-list">
+                <div><span><b>Ticket_materiales.jpg</b><small>WhatsApp · hoy, 09:42</small></span><em class="demo-status amber">Confirmar gasto</em></div>
+                <div><span><b>Factura_Proveedor_148.pdf</b><small>Clasificada como factura recibida</small></span><em class="demo-status good">Ordenada</em></div>
+                <div><span><b>Presupuesto_2154.pdf</b><small>Vinculado al trabajo de Javier</small></span><em class="demo-status good">Vinculado</em></div>
+              </div>
+              <p class="demo-footnote">Noesis propone dónde va cada archivo; nada se contabiliza sin que lo confirmes.</p>
+            </section>
+
+            <section class="demo-panel" id="demo-equipo" role="tabpanel" data-demo-panel="equipo" hidden>
+              <div class="desk-heading"><div><small>Quién hace qué</small><h2>Equipo de hoy.</h2></div><span>2 trabajando</span></div>
+              <div class="demo-list team-list">
+                <div><span class="demo-avatar">DG</span><span><b>David García</b><small>Reparación de caldera · desde 09:54</small></span><em class="demo-status good">Fichado</em></div>
+                <div><span class="demo-avatar">LR</span><span><b>Laura Romero</b><small>Comunidad Balmes · empieza a las 16:00</small></span><em class="demo-status">Asignada</em></div>
+                <div><span class="demo-avatar">MS</span><span><b>Marc Soler</b><small>Sin trabajo pendiente hoy</small></span><em>Disponible</em></div>
+              </div>
+            </section>
+
+            <section class="demo-panel" id="demo-noesis" role="tabpanel" data-demo-panel="noesis" hidden>
+              <div class="desk-heading"><div><small>Tu mano derecha</small><h2>Pregunta a Noesis.</h2></div><span>También por WhatsApp</span></div>
+              <div class="demo-conversation"><p><b>Noesis</b>He revisado tu negocio. Hoy puedes cerrar 480 € y te quedan dos cobros pendientes. ¿Te preparo el recordatorio de Javier?</p><p class="from-user"><b>Tú</b>Sí, pero no lo envíes todavía.</p><p><b>Noesis</b>Hecho. Lo dejo preparado para que lo revises cuando termines la visita.</p></div>
+              <div class="demo-composer"><span>Pregunta por tu negocio…</span><b>Enviar</b></div>
+            </section>
           </div>
         </div>
+        <p class="demo-hint">Pulsa cualquier apartado para recorrer una cuenta de ejemplo.</p>
       </div>
     </div>
   </section>
@@ -88,23 +158,30 @@
       <h2 id="pricing-title">Empieza solo. Crece sin cambiar de sistema.</h2>
       <p>Todos los planes incluyen 14 días de prueba, sin tarjeta y sin permanencia.</p>
     </div>
+    <div class="billing-toggle" role="group" aria-label="Periodicidad de los precios">
+      <button class="active" type="button" aria-pressed="true" data-billing-toggle="monthly">Mensual</button>
+      <button type="button" aria-pressed="false" data-billing-toggle="annual">Anual <span>1 mes gratis</span></button>
+    </div>
     <div class="public-pricing-grid compact">
-      <article class="public-price-card">
-        <div class="plan-label">Autónomo</div><p class="public-price">29 €<small> + IVA/mes</small></p>
+      <article class="public-price-card" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
+        <div class="plan-label">Autónomo</div><p class="public-price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+        <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para llevar trabajos, clientes, facturas y cobros desde un solo sitio.</p>
-        <a class="btn full" href="/onboarding">Probar gratis</a>
+        <a class="btn full plan-start-link" data-plan="autonomo" href="/onboarding?plan=autonomo&billing=monthly">Empieza ahora <span aria-hidden="true">→</span></a>
       </article>
-      <article class="public-price-card recommended">
+      <article class="public-price-card recommended" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
         <div class="recommendation-label">Recomendado</div>
-        <div class="plan-label">Negocio</div><p class="public-price">49 €<small> + IVA/mes</small></p>
+        <div class="plan-label">Negocio</div><p class="public-price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+        <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para equipos que necesitan trabajos asignados, fichaje y gestoría conectada.</p>
-        <a class="btn primary full" href="/onboarding">Probar gratis</a>
+        <a class="btn primary full plan-start-link" data-plan="pro" href="/onboarding?plan=pro&billing=monthly">Empieza ahora <span aria-hidden="true">→</span></a>
       </article>
-      <article class="public-price-card">
-        <div class="plan-label">Sin Límites</div><p class="public-price">99 €<small> + IVA/mes</small></p>
+      <article class="public-price-card" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
+        <div class="plan-label">Sin Límites</div><p class="public-price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+        <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para un uso intensivo con puesta en marcha acompañada y soporte directo.</p>
         <span class="beta-line">Recepcionista 24/7 · beta con acceso preferente</span>
-        <a class="btn full" href="/onboarding">Probar gratis</a>
+        <a class="btn full plan-start-link" data-plan="premium" href="/onboarding?plan=premium&billing=monthly">Empieza ahora <span aria-hidden="true">→</span></a>
       </article>
     </div>
     <div class="center-link"><a class="text-link" href="/precios">Comparar los planes <span aria-hidden="true">→</span></a></div>

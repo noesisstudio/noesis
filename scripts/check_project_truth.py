@@ -40,7 +40,11 @@ def _changed_files(base_ref: str) -> set[str]:
 
 def validate(base_ref: str = "") -> None:
     from noesis import migrations
-    from noesis.adapters.billing import PLAN_PRICES
+    from noesis.adapters.billing import (
+        ANNUAL_MONTHS_CHARGED,
+        PLAN_ANNUAL_PRICES,
+        PLAN_PRICES,
+    )
 
     try:
         state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
@@ -57,6 +61,17 @@ def validate(base_ref: str = "") -> None:
         _fail(
             "los precios de project-state.json no coinciden con el catálogo de "
             f"código ({PLAN_PRICES})."
+        )
+    if state.get("annual_pricing_eur_ex_vat") != PLAN_ANNUAL_PRICES:
+        _fail(
+            "los precios anuales de project-state.json no coinciden con el "
+            f"catálogo de código ({PLAN_ANNUAL_PRICES})."
+        )
+    discount_months = 12 - ANNUAL_MONTHS_CHARGED
+    if state.get("annual_discount_months") != discount_months:
+        _fail(
+            "el descuento anual de project-state.json no coincide con el "
+            f"catálogo de código ({discount_months} mes/es)."
         )
     try:
         state_day = date.fromisoformat(str(state["state_date"]))

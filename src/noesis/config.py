@@ -207,6 +207,9 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_AUTONOMO = os.getenv("STRIPE_PRICE_AUTONOMO", "")  # 29 € + IVA / mes
 STRIPE_PRICE_PRO = os.getenv("STRIPE_PRICE_PRO", "")            # 49 € + IVA / mes
 STRIPE_PRICE_PREMIUM = os.getenv("STRIPE_PRICE_PREMIUM", "")    # 99 € + IVA / mes
+STRIPE_PRICE_AUTONOMO_ANNUAL = os.getenv("STRIPE_PRICE_AUTONOMO_ANNUAL", "")
+STRIPE_PRICE_PRO_ANNUAL = os.getenv("STRIPE_PRICE_PRO_ANNUAL", "")
+STRIPE_PRICE_PREMIUM_ANNUAL = os.getenv("STRIPE_PRICE_PREMIUM_ANNUAL", "")
 TRIAL_DAYS = int(os.getenv("NOESIS_TRIAL_DAYS", "14"))
 
 # Firma de webhooks y límites de entrada.

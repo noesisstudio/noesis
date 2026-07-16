@@ -1,8 +1,8 @@
 {
-  "state_date": "2026-07-15",
+  "state_date": "2026-07-16",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 27,
-  "verified_test_count": 239,
+  "verified_test_count": 240,
   "production": {
     "url": "https://app.bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -15,6 +15,12 @@
     "pro": 49,
     "premium": 99
   },
+  "annual_pricing_eur_ex_vat": {
+    "autonomo": 319,
+    "pro": 539,
+    "premium": 1089
+  },
+  "annual_discount_months": 1,
   "subscription_policy": {
     "trial_days": 14,
     "valid_trial_can_write": true,

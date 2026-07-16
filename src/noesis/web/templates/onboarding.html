@@ -19,12 +19,22 @@
     <section class="public-auth-panel" aria-labelledby="signup-title">
       <div class="auth-progress" aria-label="Paso 1 de 3"><b>1</b><span>Cuenta</span><i></i><b>2</b><span>Personaliza</span><i></i><b>3</b><span>WhatsApp</span></div>
       <span class="eyebrow">Paso 1 de 3</span><h2 id="signup-title">Crea tu cuenta.</h2><p class="auth-lead">No pedimos tarjeta. Solo lo necesario para preparar tu espacio.</p>
+      {% if selected_plan %}
+      {% set chosen = plan_catalog[selected_plan] %}
+      <div class="selected-plan-summary">
+        <span>Has elegido</span>
+        <b>{{ chosen.name }} · {% if selected_billing == 'annual' %}{{ annual_prices[selected_plan] }} € + IVA/año{% else %}{{ chosen.price }} € + IVA/mes{% endif %}</b>
+        <a href="/precios">Cambiar</a>
+      </div>
+      {% endif %}
       {% if error == 'email' %}<div class="auth-error">Ese email ya tiene cuenta. <a href="/login">Inicia sesión.</a></div>{% endif %}
       {% if error == 'email_format' %}<div class="auth-error">El email no tiene un formato válido.</div>{% endif %}
       {% if error == 'name' %}<div class="auth-error">Pon el nombre de tu negocio.</div>{% endif %}
       {% if error == 'password' %}<div class="auth-error">La contraseña debe tener al menos 12 caracteres.</div>{% endif %}
       {% if error == 'throttle' %}<div class="auth-error">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% endif %}
       <form method="post" action="/onboarding/signup" class="public-auth-form">
+        <input type="hidden" name="plan" value="{{ selected_plan }}">
+        <input type="hidden" name="billing" value="{{ selected_billing }}">
         <label>Nombre de tu negocio *<input class="input" name="name" required autocomplete="organization" placeholder="Ej. Fontanería García"></label>
         <label>Email *<input class="input" name="email" type="email" required autocomplete="email" placeholder="tu@email.com"></label>
         <label>Contraseña *<input class="input" name="password" type="password" required minlength="12" maxlength="1024" autocomplete="new-password" placeholder="Mínimo 12 caracteres"></label>

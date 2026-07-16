@@ -1256,6 +1256,29 @@ class PaymentReminderTestCase(unittest.TestCase):
 
 
 class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
+    def test_stripe_annual_checkout_uses_the_annual_price(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        business = {"id": 42, "owner_email": "pago@example.com"}
+        with patch.object(
+            config, "STRIPE_PRICE_PRO_ANNUAL", "price_pro_annual"
+        ), patch.object(
+            provider, "_post", return_value={"url": "https://checkout.example/year"}
+        ) as post:
+            url = provider.checkout_url(
+                business, "pro", "https://noesis.test/ok",
+                "https://noesis.test/cancel", "annual",
+            )
+
+        self.assertEqual(url, "https://checkout.example/year")
+        payload = post.call_args.args[1]
+        self.assertEqual(payload["line_items[0][price]"], "price_pro_annual")
+        self.assertEqual(payload["metadata[billing_period]"], "annual")
+        self.assertEqual(
+            payload["subscription_data[metadata][billing_period]"], "annual"
+        )
+
     def test_public_and_account_pricing_share_the_current_catalog(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -1273,6 +1296,12 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertEqual(public_page.status_code, 200)
                 self.assertIn("Recepcionista 24/7", public_page.text)
                 self.assertIn("Beta con acceso preferente", public_page.text)
+                self.assertIn("1 mes gratis", public_page.text)
+                self.assertIn('data-annual="319"', public_page.text)
+                self.assertIn(
+                    '/onboarding?plan=autonomo&billing=monthly',
+                    public_page.text,
+                )
                 for route in ("/", "/producto", "/equipo", "/preguntas"):
                     page = client.get(route)
                     self.assertEqual(page.status_code, 200, route)
@@ -1280,6 +1309,17 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 team_page = client.get("/equipo")
                 self.assertIn("Un equipo pequeño", team_page.text)
                 self.assertNotIn("4,9", team_page.text)
+                home_page = client.get("/")
+                self.assertIn("Demo interactiva", home_page.text)
+                self.assertIn("Taller García", home_page.text)
+                self.assertIn("Datos simulados", home_page.text)
+                self.assertEqual(home_page.text.count("data-demo-tab="), 8)
+                annual_signup = client.get(
+                    "/onboarding?plan=autonomo&billing=annual"
+                )
+                self.assertEqual(annual_signup.status_code, 200)
+                self.assertIn("Autónomo · 319 € + IVA/año", annual_signup.text)
+                self.assertIn('name="billing" value="annual"', annual_signup.text)
 
                 login = client.post(
                     "/login",
@@ -1293,10 +1333,26 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 account_page = client.get(f"/b/{business['id']}/suscripcion")
                 self.assertEqual(account_page.status_code, 200)
 
+                provider = MagicMock()
+                provider.checkout_url.return_value = "https://checkout.example/annual"
+                with patch.object(
+                    server.billing_adapter, "get_provider", return_value=provider
+                ):
+                    checkout = client.post(
+                        f"/b/{business['id']}/suscripcion/checkout",
+                        data={"plan": "pro", "billing_period": "annual"},
+                        follow_redirects=False,
+                    )
+                self.assertEqual(checkout.status_code, 303)
+                self.assertEqual(
+                    checkout.headers["location"], "https://checkout.example/annual"
+                )
+                self.assertEqual(provider.checkout_url.call_args.args[-1], "annual")
+
         for page in (public_page.text, account_page.text):
-            self.assertIn("29 €", page)
-            self.assertIn("49 €", page)
-            self.assertIn("99 €", page)
+            self.assertIn('data-monthly="29"', page)
+            self.assertIn('data-monthly="49"', page)
+            self.assertIn('data-monthly="99"', page)
             self.assertGreaterEqual(page.count("+ IVA/mes"), 3)
             self.assertNotIn("39 €", page)
             self.assertNotIn("79 €", page)
@@ -1349,8 +1405,8 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
 
                 subscription = client.get(f"/b/{business['id']}/suscripcion")
                 self.assertEqual(subscription.status_code, 200)
-                self.assertIn("49 €", subscription.text)
-                self.assertIn("99 €", subscription.text)
+                self.assertIn('data-monthly="49"', subscription.text)
+                self.assertIn('data-monthly="99"', subscription.text)
 
 
 class PortalHttpTestCase(BackendTestCase):
@@ -3258,6 +3314,10 @@ class AdminCommandCenterTestCase(unittest.TestCase):
 
         self.assertEqual(
             billing.PLAN_PRICES, {"autonomo": 29, "pro": 49, "premium": 99}
+        )
+        self.assertEqual(
+            billing.PLAN_ANNUAL_PRICES,
+            {"autonomo": 319, "pro": 539, "premium": 1089},
         )
         business, _ = self.make_business("Admin Embudo")
         db.record_product_event(

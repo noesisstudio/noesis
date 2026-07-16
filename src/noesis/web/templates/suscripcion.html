@@ -34,10 +34,19 @@
 <div class="insight" style="margin-bottom:16px">El portal de gestión estará disponible cuando tengas una suscripción activa.</div>
 {% endif %}
 
+<div class="account-billing-choice">
+  <div><b>Elige cómo pagar</b><span>Con el anual pagas 11 meses y tienes 12.</span></div>
+  <div class="billing-toggle" role="group" aria-label="Periodicidad de la suscripción" data-initial-billing="{{ preferred_billing }}">
+    <button type="button" aria-pressed="true" data-billing-toggle="monthly">Mensual</button>
+    <button type="button" aria-pressed="false" data-billing-toggle="annual">Anual <span>1 mes gratis</span></button>
+  </div>
+</div>
+
 <div class="plan-grid">
-  <div class="plan">
+  <div class="plan" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
     <h3>Autónomo</h3>
-    <p class="price">{{ prices.autonomo }} €<small> + IVA/mes</small></p>
+    <p class="price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+    <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
       <li>Agenda, clientes y presupuestos</li>
       <li>Facturas con IVA/IRPF, PDF y registro Veri*Factu</li>
@@ -49,12 +58,14 @@
     </ul>
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="autonomo">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Activar plan Autónomo</button>
     </form>
   </div>
-  <div class="plan featured">
+  <div class="plan featured" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
     <h3>Negocio</h3>
-    <p class="price">{{ prices.pro }} €<small> + IVA/mes</small></p>
+    <p class="price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+    <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
       <li>Todo lo del plan Autónomo</li>
       <li>Equipo: trabajos, planning y productividad</li>
@@ -66,12 +77,14 @@
     </ul>
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="pro">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Activar plan Negocio</button>
     </form>
   </div>
-  <div class="plan">
+  <div class="plan" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
     <h3>Sin Límites</h3>
-    <p class="price">{{ prices.premium }} €<small> + IVA/mes</small></p>
+    <p class="price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+    <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
       <li>Todo lo del plan Negocio</li>
       <li>Recepcionista 24/7 (beta): contesta llamadas y agenda citas</li>
@@ -82,6 +95,7 @@
     </ul>
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="premium">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Activar plan Sin Límites</button>
     </form>
   </div>
@@ -102,3 +116,4 @@
   Hasta entonces, “activar” registra tu interés y lo gestionamos contigo.</p>
 {% endif %}
 {% endblock %}
+{% block scripts %}<script src="/static/public-site.js?v={{ asset_v }}"></script>{% endblock %}

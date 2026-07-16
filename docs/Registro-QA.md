@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-07-16 — demo pública interactiva y facturación anual
+
+- La Home ofrece una cuenta ficticia identificada como datos simulados. Sus ocho
+  apartados usan pestañas accesibles y mantienen trabajos, clientes, facturas,
+  cobros, documentos, equipo y lectura de Noesis coherentes entre sí.
+- CTA públicos cambiados a «Empieza ahora →». Desde cada plan se conserva plan y
+  periodicidad en el alta; los errores de formulario no pierden esa selección.
+- Selector mensual/anual sincronizado en Home, Precios y Suscripción. Catálogo
+  anual: 319 / 539 / 1.089 euros + IVA, una mensualidad gratis. El checkout elige
+  un `price_id` Stripe diferente y registra periodicidad en metadatos.
+- Unit economics recalculado: margen de contribución anual estimado de 70,3% / 69,3%
+  / 54,1%, sujeto a los supuestos documentados y a validación con uso real.
+- Suite completa: 240 pruebas y 39 subpruebas verdes; `compileall`, sintaxis JS,
+  verdad del proyecto y `git diff --check` verdes. Permanece el aviso conocido
+  Starlette/httpx.
+- No se usó el navegador integrado por petición del usuario tras cierres repetidos
+  de la aplicación. No se presenta esta iteración como una nueva QA visual; HTML,
+  responsive e interacciones se verificaron de forma estática y automática.
+
 ## 2026-07-15 — rediseño integral del sitio público
 
 - Home, Producto, Precios, Equipo, Preguntas, login, onboarding y conexión de

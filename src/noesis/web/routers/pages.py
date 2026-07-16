@@ -26,8 +26,13 @@ _PAGES = {
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
     bid = request.session.get("bid")
-    return TEMPLATES.TemplateResponse(request, "landing.html",
-                                      {"business_id": bid, "site_active": "inicio"})
+    return TEMPLATES.TemplateResponse(request, "landing.html", {
+        "business_id": bid,
+        "site_active": "inicio",
+        "prices": billing_adapter.PLAN_PRICES,
+        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
+        "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
+    })
 
 
 @router.get("/app")
@@ -57,6 +62,8 @@ def site_page(request: Request):
         "site_active": section,
         "business_id": request.session.get("bid"),
         "prices": billing_adapter.PLAN_PRICES,
+        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
+        "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
     })
 
 
@@ -111,6 +118,9 @@ def subscription_page(request: Request, business_id: int, status: str = ""):
         "business": biz, "active": "ajustes", "page_title": "Suscripción",
         "status": status, "billing_on": billing_adapter.get_provider().available(),
         "prices": billing_adapter.PLAN_PRICES,
+        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
+        "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
+        "preferred_billing": request.session.get("signup_billing", "monthly"),
         "subscription_read_only": not db.subscription_allows_access(biz),
     })
 

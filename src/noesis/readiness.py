@@ -134,6 +134,8 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     stripe_names = (
         "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_AUTONOMO",
         "STRIPE_PRICE_PRO", "STRIPE_PRICE_PREMIUM",
+        "STRIPE_PRICE_AUTONOMO_ANNUAL", "STRIPE_PRICE_PRO_ANNUAL",
+        "STRIPE_PRICE_PREMIUM_ANNUAL",
     )
     stripe_present, stripe_missing = _env_ready(stripe_names)
     stripe_ok = not stripe_missing
