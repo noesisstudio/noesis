@@ -1310,9 +1310,11 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Un equipo pequeño", team_page.text)
                 self.assertNotIn("4,9", team_page.text)
                 home_page = client.get("/")
-                self.assertIn("Vista del producto", home_page.text)
+                self.assertIn("Inicio de Noesis", home_page.text)
                 self.assertIn("Taller García", home_page.text)
                 self.assertIn("Empresa de ejemplo", home_page.text)
+                self.assertIn("product-home-preview", home_page.text)
+                self.assertNotIn("data-product-demo", home_page.text)
                 self.assertIn("Parte de hoy", home_page.text)
                 self.assertIn("Puesta en marcha", home_page.text)
                 self.assertIn("6 de 6 pasos listos", home_page.text)
@@ -1417,6 +1419,69 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertEqual(subscription.status_code, 200)
                 self.assertIn('data-monthly="49"', subscription.text)
                 self.assertIn('data-monthly="99"', subscription.text)
+
+
+class GoogleOAuthHttpTestCase(BackendTestCase):
+    def test_google_login_and_signup_keep_the_same_account_flow(self):
+        from urllib.parse import parse_qs, urlparse
+
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        from noesis.web.routers import account
+
+        with patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", "google-client"), patch.object(
+            config, "GOOGLE_OAUTH_CLIENT_SECRET", "google-secret"
+        ), patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                self.assertNotIn("Continuar con Google", client.get("/").text)
+                self.assertIn("Continuar con Google", client.get("/login").text)
+                self.assertIn("Continuar con Google", client.get("/onboarding").text)
+                start = client.get(
+                    "/auth/google?flow=signup&plan=pro&billing=annual",
+                    follow_redirects=False,
+                )
+                self.assertEqual(start.status_code, 303)
+                parsed = urlparse(start.headers["location"])
+                self.assertEqual(parsed.netloc, "accounts.google.com")
+                state = parse_qs(parsed.query)["state"][0]
+
+                with patch.object(account, "_google_profile", return_value={
+                    "email": "google@example.com", "name": "David García",
+                }):
+                    callback = client.get(
+                        f"/auth/google/callback?code=one-time-code&state={state}",
+                        follow_redirects=False,
+                    )
+                self.assertEqual(callback.status_code, 303)
+                self.assertIn("/onboarding/google?plan=pro&billing=annual", callback.headers["location"])
+
+                complete = client.get(callback.headers["location"])
+                self.assertEqual(complete.status_code, 200)
+                self.assertIn("google@example.com", complete.text)
+                created = client.post(
+                    "/onboarding/google",
+                    data={
+                        "name": "Fontanería Google", "sector": "Fontanería",
+                        "acepto": "1", "plan": "pro", "billing": "annual",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(created.status_code, 303)
+                self.assertIn("/onboarding/setup/", created.headers["location"])
+                user = db.get_user_by_email("google@example.com")
+                self.assertIsNotNone(user)
+
+                second_start = client.get("/auth/google", follow_redirects=False)
+                second_state = parse_qs(urlparse(second_start.headers["location"]).query)["state"][0]
+                with patch.object(account, "_google_profile", return_value={
+                    "email": "google@example.com", "name": "David García",
+                }):
+                    signed_in = client.get(
+                        f"/auth/google/callback?code=another-code&state={second_state}",
+                        follow_redirects=False,
+                    )
+                self.assertEqual(signed_in.status_code, 303)
+                self.assertEqual(signed_in.headers["location"], f"/b/{user['business_id']}/resumen")
 
 
 class PortalHttpTestCase(BackendTestCase):

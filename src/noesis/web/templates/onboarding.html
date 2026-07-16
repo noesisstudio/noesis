@@ -32,6 +32,13 @@
       {% if error == 'name' %}<div class="auth-error">Pon el nombre de tu negocio.</div>{% endif %}
       {% if error == 'password' %}<div class="auth-error">La contraseña debe tener al menos 12 caracteres.</div>{% endif %}
       {% if error == 'throttle' %}<div class="auth-error">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% endif %}
+      {% if error == 'google_unavailable' %}<div class="auth-error">El acceso con Google todavía no está configurado.</div>{% endif %}
+      {% if error == 'google_cancelled' %}<div class="auth-error">Has cancelado el acceso con Google. Puedes volver a intentarlo.</div>{% endif %}
+      {% if error == 'google_failed' %}<div class="auth-error">No hemos podido confirmar tu cuenta de Google. Prueba otra vez.</div>{% endif %}
+      {% if google_oauth_available %}
+      <a class="auth-google-btn" href="/auth/google?flow=signup{% if selected_plan %}&amp;plan={{ selected_plan }}&amp;billing={{ selected_billing }}{% endif %}">Continuar con Google</a>
+      <div class="auth-divider"><span>o crea tu cuenta con email</span></div>
+      {% endif %}
       <form method="post" action="/onboarding/signup" class="public-auth-form">
         <input type="hidden" name="plan" value="{{ selected_plan }}">
         <input type="hidden" name="billing" value="{{ selected_billing }}">

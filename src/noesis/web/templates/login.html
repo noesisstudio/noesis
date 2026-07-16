@@ -12,7 +12,11 @@
     <section class="login-message"><span class="eyebrow light-eyebrow">Vuelve a tu negocio</span><h1>Lo importante sigue en su sitio.</h1><p>Entra para revisar el día, preguntar a Noesis y decidir el siguiente paso.</p></section>
     <section class="public-auth-panel" aria-labelledby="login-title">
       <span class="eyebrow">Acceso seguro</span><h2 id="login-title">Inicia sesión.</h2><p class="auth-lead">Tu panel, tus datos y la historia completa del negocio.</p>
-      {% if error == 'reset_ok' %}<div class="auth-success">Contraseña actualizada. Ya puedes entrar.</div>{% elif error == 'throttle' %}<div class="auth-error">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% elif error %}<div class="auth-error">Email o contraseña incorrectos.</div>{% endif %}
+      {% if error == 'reset_ok' %}<div class="auth-success">Contraseña actualizada. Ya puedes entrar.</div>{% elif error == 'throttle' %}<div class="auth-error">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% elif error == 'google_unavailable' %}<div class="auth-error">El acceso con Google todavía no está configurado.</div>{% elif error == 'google_cancelled' %}<div class="auth-error">Has cancelado el acceso con Google. Puedes intentarlo de nuevo cuando quieras.</div>{% elif error == 'google_failed' %}<div class="auth-error">No hemos podido confirmar tu cuenta de Google. Prueba otra vez.</div>{% elif error %}<div class="auth-error">Email o contraseña incorrectos.</div>{% endif %}
+      {% if google_oauth_available %}
+      <a class="auth-google-btn" href="/auth/google">Continuar con Google</a>
+      <div class="auth-divider"><span>o con tu email</span></div>
+      {% endif %}
       <form method="post" action="/login" class="public-auth-form">
         <label>Email<input class="input" name="email" type="email" required autocomplete="email" placeholder="tu@email.com"></label>
         <label>Contraseña<input class="input" name="password" type="password" required autocomplete="current-password"></label>

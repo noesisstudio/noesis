@@ -14,6 +14,9 @@
 - [ ] Aprobar plantillas Meta para cobro, presupuesto y cita; validar SÍ/NO y entrega
   desde el WhatsApp real del titular.
 - [ ] SMTP real: invitaciones, facturas, avisos y entregabilidad.
+- [ ] Crear el cliente OAuth web de Google, registrar exactamente
+  `https://app.bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
+  y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales.
 - [ ] Certificado/entorno AEAT y validación con asesoría fiscal.
 - [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo.
 - [ ] Restaurar una copia externa en un entorno aislado y documentar tiempos.

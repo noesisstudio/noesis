@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-07-16 — portada centrada y acceso con Google preparado
+
+- La portada adopta una jerarquía de campaña centrada: promesa, explicación breve,
+  prueba de 14 días, enlace para entender el producto y el Inicio real debajo. Se
+  conserva la identidad de Noesis; no se copian marca, promociones, clientes ni
+  métricas de Holded.
+- La muestra ya no abre pestañas o resúmenes inventados. Expone solo el Inicio real
+  con datos de una empresa de ejemplo, la misma barra superior, menú y bloques que
+  el panel. El texto declara que las acciones no se ejecutan.
+- Google OAuth cubierto por pruebas: estado de un solo uso, alta nueva con correo
+  verificado, aceptación legal, conservación de plan/anual y acceso posterior de la
+  misma cuenta. Solo aparece cuando existen las dos credenciales de entorno; no se
+  hizo ninguna llamada a Google real.
+- Suite completa: 274 pruebas verdes, sin fallos; también `compileall`, sintaxis
+  JavaScript, render HTTP y el control de verdad del proyecto.
+- La revisión visual actual permanece bloqueada por los cierres del navegador
+  integrado de Codex. Esta iteración se valida por render HTML, CSS responsive,
+  JavaScript, TestClient y pruebas automáticas; no se afirma una comparación visual
+  nueva.
+
 ## 2026-07-16 — demo pública alineada con el Inicio real
 
 - La pestaña «Inicio» de la vista pública reutiliza la jerarquía y los componentes
@@ -8,9 +28,9 @@
   marca, menú agrupado, negocio activo, barra superior y puesta en marcha. El marco
   se presenta como «Vista del producto» y «Empresa de ejemplo»; no llama a datos ni
   acciones de una cuenta real.
-- La navegación de ejemplo refleja los diez apartados del producto: Inicio,
-  Trabajos, Proyectos, Clientes, Dinero, Facturas, Equipo, Documentos, Noesis y
-  Ajustes. Los enlaces internos de Inicio cambian de pestaña sin abandonar la demo.
+- La navegación provisional que reflejaba los diez apartados se retiró en la
+  iteración posterior: hasta que cada uno pueda renderizar su pantalla real, la
+  vista pública se limita al Inicio y no presenta resúmenes inventados.
 - El hero gana anchura útil en escritorio y reduce el titular para evitar cortes
   prematuros. En anual, el ahorro ahora muestra «−8,3 % · 1 mes gratis», importe
   ahorrado y equivalente mensual con contraste rojo informativo.

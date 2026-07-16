@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import secrets
+from urllib import error as urlerror
+from urllib import parse as urlparse
+from urllib import request as urlrequest
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -17,10 +21,82 @@ from ..deps import TEMPLATES, _read_json
 
 router = APIRouter()
 
+_GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+
+
+class GoogleOAuthError(RuntimeError):
+    """La identidad de Google no se pudo verificar con seguridad."""
+
+
+def _google_redirect_uri() -> str:
+    return f"{config.BASE_URL}/auth/google/callback"
+
+
+def _google_return_path(flow: str, error: str = "", plan: str = "",
+                        billing: str = "monthly") -> str:
+    target = "/onboarding" if flow == "signup" else "/login"
+    query: dict[str, str] = {}
+    if error:
+        query["error"] = error
+    if flow == "signup" and plan:
+        query.update({"plan": plan, "billing": billing})
+    return target + (f"?{urlparse.urlencode(query)}" if query else "")
+
+
+def _start_session(request: Request, user: dict) -> None:
+    request.session.clear()
+    request.session["uid"] = user["id"]
+    request.session["bid"] = user["business_id"]
+    request.session["sv"] = user.get("session_version", 0)
+
+
+def _google_profile(code: str) -> dict:
+    """Intercambia un código de un solo uso y pide el perfil OIDC verificado."""
+    payload = urlparse.urlencode({
+        "code": code,
+        "client_id": config.GOOGLE_OAUTH_CLIENT_ID,
+        "client_secret": config.GOOGLE_OAUTH_CLIENT_SECRET,
+        "redirect_uri": _google_redirect_uri(),
+        "grant_type": "authorization_code",
+    }).encode("utf-8")
+    try:
+        token_request = urlrequest.Request(
+            _GOOGLE_TOKEN_URL, data=payload,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        with urlrequest.urlopen(token_request, timeout=10) as response:
+            token = json.loads(response.read().decode("utf-8"))
+        access_token = str(token.get("access_token") or "")
+        if not access_token:
+            raise GoogleOAuthError("Google no entregó un acceso válido.")
+        profile_request = urlrequest.Request(
+            _GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        with urlrequest.urlopen(profile_request, timeout=10) as response:
+            profile = json.loads(response.read().decode("utf-8"))
+    except (OSError, ValueError, KeyError, json.JSONDecodeError, urlerror.URLError,
+            urlerror.HTTPError) as exc:
+        raise GoogleOAuthError("No se pudo verificar la identidad con Google.") from exc
+    verified = profile.get("email_verified")
+    email = str(profile.get("email") or "").strip().lower()
+    if not profile.get("sub") or verified not in {True, "true"} or not auth.valid_email(email):
+        raise GoogleOAuthError("Google no confirmó un correo válido.")
+    return {
+        "email": email,
+        "name": str(profile.get("name") or "").strip()[:160],
+    }
+
 # ================================================================ AUTH ====== #
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str = ""):
-    return TEMPLATES.TemplateResponse(request, "login.html", {"error": error})
+    return TEMPLATES.TemplateResponse(request, "login.html", {
+        "error": error,
+        "google_oauth_available": config.google_oauth_available(),
+    })
 
 
 @router.post("/login")
@@ -33,10 +109,7 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
         auth.record_failed_attempt(key)
         return RedirectResponse("/login?error=1", status_code=303)
     auth.clear_attempts(key)
-    request.session.clear()
-    request.session["uid"] = user["id"]
-    request.session["bid"] = user["business_id"]
-    request.session["sv"] = user.get("session_version", 0)
+    _start_session(request, user)
     return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
 
 
@@ -44,6 +117,73 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+
+@router.get("/auth/google")
+def google_start(request: Request, flow: str = "login", plan: str = "",
+                 billing: str = "monthly"):
+    """Empieza OAuth con state de un solo uso y no filtra el secreto al cliente."""
+    flow = "signup" if flow == "signup" else "login"
+    plan = plan if plan in billing_adapter.PLAN_PRICES else ""
+    billing = billing if billing in {"monthly", "annual"} else "monthly"
+    if not config.google_oauth_available():
+        return RedirectResponse(
+            _google_return_path(flow, "google_unavailable", plan, billing), status_code=303
+        )
+    key = f"google-oauth:{auth.client_ip(request)}"
+    if auth.is_rate_limited(key):
+        return RedirectResponse(
+            _google_return_path(flow, "throttle", plan, billing), status_code=303
+        )
+    state = secrets.token_urlsafe(32)
+    request.session["google_oauth_state"] = state
+    request.session["google_oauth_flow"] = flow
+    request.session["google_oauth_plan"] = plan
+    request.session["google_oauth_billing"] = billing
+    query = urlparse.urlencode({
+        "client_id": config.GOOGLE_OAUTH_CLIENT_ID,
+        "redirect_uri": _google_redirect_uri(),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "prompt": "select_account",
+    })
+    return RedirectResponse(f"{_GOOGLE_AUTHORIZE_URL}?{query}", status_code=303)
+
+
+@router.get("/auth/google/callback")
+def google_callback(request: Request, code: str = "", state: str = "",
+                    error: str = ""):
+    flow = str(request.session.pop("google_oauth_flow", "login"))
+    plan = str(request.session.pop("google_oauth_plan", ""))
+    billing = str(request.session.pop("google_oauth_billing", "monthly"))
+    expected_state = str(request.session.pop("google_oauth_state", ""))
+    if error or not code:
+        return RedirectResponse(
+            _google_return_path(flow, "google_cancelled", plan, billing), status_code=303
+        )
+    if not expected_state or not state or not hmac.compare_digest(expected_state, state):
+        auth.record_failed_attempt(f"google-oauth:{auth.client_ip(request)}")
+        return RedirectResponse(
+            _google_return_path(flow, "google_failed", plan, billing), status_code=303
+        )
+    try:
+        profile = _google_profile(code)
+    except GoogleOAuthError:
+        auth.record_failed_attempt(f"google-oauth:{auth.client_ip(request)}")
+        return RedirectResponse(
+            _google_return_path(flow, "google_failed", plan, billing), status_code=303
+        )
+    auth.clear_attempts(f"google-oauth:{auth.client_ip(request)}")
+    user = db.get_user_by_email(profile["email"])
+    if user:
+        _start_session(request, user)
+        return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
+    request.session["google_signup"] = profile
+    request.session["signup_plan"] = plan or "autonomo"
+    request.session["signup_billing"] = billing
+    query = urlparse.urlencode({"plan": plan, "billing": billing}) if plan else ""
+    return RedirectResponse(f"/onboarding/google{'?' + query if query else ''}", status_code=303)
 
 
 
@@ -114,6 +254,7 @@ def onboarding(request: Request, error: str = "", plan: str = "",
         "selected_billing": selected_billing,
         "plan_catalog": billing_adapter.PLANS,
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
+        "google_oauth_available": config.google_oauth_available(),
     })
 
 
@@ -167,6 +308,70 @@ def onboarding_signup(request: Request, name: str = Form(...),
         "version": "2026-06-30",
         "documents": ["terminos", "privacidad", "encargado-tratamiento"],
         "ip": auth.client_ip(request),
+    }))
+    return RedirectResponse(f"/onboarding/setup/{biz['id']}", status_code=303)
+
+
+@router.get("/onboarding/google", response_class=HTMLResponse)
+def onboarding_google(request: Request, error: str = "", plan: str = "",
+                      billing: str = "monthly"):
+    """Completa los datos de negocio tras verificar el correo con Google."""
+    profile = request.session.get("google_signup")
+    if not isinstance(profile, dict) or not auth.valid_email(str(profile.get("email") or "")):
+        return RedirectResponse("/onboarding", status_code=303)
+    selected_plan = plan if plan in billing_adapter.PLAN_PRICES else ""
+    selected_billing = billing if billing in {"monthly", "annual"} else "monthly"
+    return TEMPLATES.TemplateResponse(request, "onboarding_google.html", {
+        "error": error,
+        "google_profile": profile,
+        "selected_plan": selected_plan,
+        "selected_billing": selected_billing,
+        "plan_catalog": billing_adapter.PLANS,
+        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
+    })
+
+
+@router.post("/onboarding/google")
+def onboarding_google_submit(request: Request, name: str = Form(...),
+                             sector: str = Form(""), acepto: str = Form(""),
+                             plan: str = Form(""), billing: str = Form("monthly")):
+    profile = request.session.get("google_signup")
+    email = str(profile.get("email") or "").strip().lower() if isinstance(profile, dict) else ""
+    plan = plan if plan in billing_adapter.PLAN_PRICES else ""
+    billing = billing if billing in {"monthly", "annual"} else "monthly"
+    query = f"?plan={plan}&billing={billing}" if plan else ""
+    error_query = f"{query}{'&' if query else '?'}error="
+    if not auth.valid_email(email):
+        return RedirectResponse(f"/onboarding{query}", status_code=303)
+    if not (name or "").strip():
+        return RedirectResponse(f"/onboarding/google{error_query}name", status_code=303)
+    if not acepto:
+        return RedirectResponse(f"/onboarding/google{error_query}consent", status_code=303)
+    existing = db.get_user_by_email(email)
+    if existing:
+        _start_session(request, existing)
+        return RedirectResponse(f"/b/{existing['business_id']}/resumen", status_code=303)
+    try:
+        biz, user = db.create_account(
+            (name or "").strip(), email, auth.hash_password(secrets.token_urlsafe(48)),
+            sector or None, trial_days=config.TRIAL_DAYS,
+        )
+    except (ValueError, *db.IntegrityError):
+        return RedirectResponse(f"/onboarding/google{error_query}email", status_code=303)
+    _start_session(request, user)
+    request.session.pop("google_signup", None)
+    request.session["signup_plan"] = plan or "autonomo"
+    request.session["signup_billing"] = billing
+    db.record_product_event(biz["id"], "account_created_google")
+    db.record_product_event(
+        biz["id"], "plan_interest",
+        json.dumps({"plan": plan or None, "billing_period": billing}, separators=(",", ":")),
+    )
+    db.record_product_event(biz["id"], "legal_accepted", json.dumps({
+        "version": "2026-06-30",
+        "documents": ["terminos", "privacidad", "encargado-tratamiento"],
+        "ip": auth.client_ip(request),
+        "signup_method": "google",
     }))
     return RedirectResponse(f"/onboarding/setup/{biz['id']}", status_code=303)
 
