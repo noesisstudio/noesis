@@ -99,6 +99,7 @@
     </div>
   </footer>
   <script src="/static/public-site.js?v={{ asset_v }}" defer></script>
+  {% block page_scripts %}{% endblock %}
   <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>
 </html>

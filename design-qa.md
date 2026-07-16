@@ -84,4 +84,19 @@ La comparación del hero confirma:
   Su QA se limita de forma explícita a HTML, CSS responsive, JavaScript, rutas y
   pruebas automáticas.
 
-**final result: passed**
+## Iteración de fidelidad · 2026-07-16
+
+- «Inicio» ya no interpreta un dashboard nuevo: replica la estructura semántica y
+  los bloques del `resumen.html` real con una empresa de ejemplo claramente marcada.
+  La réplica incorpora también el armazón del producto real: marca, menú agrupado,
+  negocio activo, barra superior, puesta en marcha y los diez apartados del panel.
+- El titular del hero dispone de más superficie útil y el anual hace visible el
+  ahorro sin confundirlo con una alerta: descuento, mes gratis, ahorro total y
+  coste mensual equivalente.
+- La imagen de referencia aportada por el usuario se inspeccionó, pero no se puede
+  capturar el prototipo actualizado ni realizar la comparación lado a lado: abrir el
+  navegador integrado vuelve a cerrar Codex incluso después de actualizar la app.
+  Windows registra fallos de `ChatGPT.exe` a las 09:58 y 09:59. Esta iteración se
+  comprueba por HTML, CSS responsive, JavaScript, HTTP local y pruebas automáticas.
+
+**final result: blocked**
