@@ -12,6 +12,8 @@ usa la vista de grafo para navegar.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
 - [[Arquitectura]] — cómo está construido el sistema.
+- [[Guia-tecnica-ingeniero]] — entrada técnica de extremo a extremo para ingeniería:
+  web, datos, cerebro, automatizaciones, WhatsApp y despliegue.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
