@@ -1250,7 +1250,13 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 
 /* Home: jerarquía de campaña clara y el producto real como prueba principal. */
 .marketing-hero { background:#102820; color:#fff; }
-.marketing-hero-inner { width:min(1420px, calc(100% - 64px)); min-height:0; margin:0 auto; padding:96px 0 0; }
+.marketing-hero-inner { width:min(1420px, calc(100% - 64px)); min-height:0; margin:0 auto; padding:96px 0 72px; }
+.hero-impact { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:18px 64px;
+  margin-top:44px; padding-top:30px; border-top:1px solid rgba(255,255,255,.14); }
+.hero-impact > div { display:flex; align-items:baseline; gap:10px; }
+.hero-impact strong { font-family:var(--serif); font-weight:550; font-size:36px; letter-spacing:-.01em; color:#fff; }
+.hero-impact span { max-width:21ch; color:rgba(255,255,255,.66); font-size:13px; line-height:1.4; }
+.hero-impact-note { margin:16px 0 0; text-align:center; color:rgba(255,255,255,.38); font-size:11px; }
 .marketing-hero-copy { max-width:960px; margin:0 auto; text-align:center; }
 .hero-kicker { color:#9fd6bd; }
 .marketing-hero-copy h1 { font-family:var(--serif); font-weight:500; font-size:clamp(52px, 5.6vw, 84px);
@@ -1295,11 +1301,6 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 
 /* Vista navegable: una empresa de ejemplo completa, no una captura decorativa. */
 .interactive-product-demo { display:block; background:#f9f7f1; }
-.demo-frame-top { min-height:38px; padding:0 16px; display:grid; grid-template-columns:1fr auto 1fr;
-  align-items:center; gap:12px; color:#52635c; background:#fff; border-bottom:1px solid var(--border); }
-.demo-frame-top span { color:var(--brand-2); font-size:9px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
-.demo-frame-top b { color:var(--brand); font-size:10.5px; }
-.demo-frame-top small { justify-self:end; color:var(--faint); font-size:9px; }
 .interactive-product-demo .hero-desk, .product-home-preview .hero-desk { grid-template-columns:142px minmax(0,1fr); min-height:480px; }
 .interactive-product-demo .hero-desk-nav, .product-home-preview .hero-desk-nav { gap:2px; padding:12px 9px 8px; }
 .demo-panel-brand { display:flex; align-items:center; gap:7px; padding:0 7px 9px; }
@@ -1337,7 +1338,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .product-home-preview .hero-desk { min-height:610px; }
 .product-home-preview .hero-desk-main { min-height:574px; }
 .product-home-preview .demo-real-dashboard { max-height:548px; }
-.product-home-preview .hero-desk-nav button:not(.active) { cursor:default; }
+.product-home-preview .hero-desk-nav button:not(.active) { cursor:pointer; }
 .demo-real-dashboard .home-v2 { gap:8px; }
 .demo-real-dashboard .home-brief { gap:14px; padding:14px 15px; border-radius:11px; }
 .demo-real-dashboard .home-eyebrow { gap:5px; font-size:7px; }
@@ -1379,6 +1380,47 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .demo-real-dashboard .money-summary strong { font-size:13px; }
 .demo-real-dashboard .money-summary p { font-size:8px; }
 .demo-real-dashboard .home-chart { height:84px; padding:4px 8px 8px; }
+
+/* Pantallas de la demo que replican los apartados reales del panel, a escala. */
+.demo-real-dashboard .page-head { margin-bottom:10px; gap:10px; }
+.demo-real-dashboard .page-head .kicker { font-size:6.5px; letter-spacing:.07em; }
+.demo-real-dashboard .page-head h1 { font-size:17px; }
+.demo-real-dashboard .page-head p { margin:4px 0 0; font-size:8.5px; line-height:1.45; max-width:52ch; }
+.demo-real-dashboard .page-actions { display:flex; gap:5px; flex-shrink:0; }
+.demo-real-dashboard .page-actions .btn { min-height:0; padding:5px 8px; border-radius:5px; font-size:7px; pointer-events:none; }
+.demo-real-dashboard .grid.g4 { gap:6px; }
+.demo-real-dashboard .stat { padding:8px 10px; border-radius:8px; }
+.demo-real-dashboard .stat .lbl { font-size:6px; letter-spacing:.05em; }
+.demo-real-dashboard .stat .val { font-size:13px; margin-top:3px; }
+.demo-real-dashboard .stat .delta { font-size:6.5px; margin-top:2px; }
+.demo-real-dashboard .card { margin-top:8px; border-radius:9px; }
+.demo-real-dashboard .card-h { padding:8px 10px; gap:6px; }
+.demo-real-dashboard .card-h h2 { font-size:11px; }
+.demo-real-dashboard .card-h .hint { font-size:7px; }
+.demo-real-dashboard .card-b { padding:0 10px 8px; }
+.demo-real-dashboard .insight { margin-top:8px; padding:7px 9px; border-radius:7px; font-size:8px; line-height:1.45; }
+.demo-real-dashboard .demo-list > div { min-height:0; padding:7px 2px; gap:8px; grid-template-columns:34px minmax(0,1fr) auto; }
+.demo-real-dashboard .demo-list time { font-size:8px; }
+.demo-real-dashboard .demo-list span b { font-size:8.5px; }
+.demo-real-dashboard .demo-list span small { margin-top:2px; font-size:7.5px; }
+.demo-real-dashboard .demo-list em, .demo-real-dashboard .demo-list strong { font-size:7.5px; }
+.demo-real-dashboard .demo-status { padding:3px 5px; }
+.demo-real-dashboard .clients-list > div, .demo-real-dashboard .team-list > div { grid-template-columns:24px minmax(0,1fr) auto; }
+.demo-real-dashboard .demo-avatar { width:22px; height:22px; font-size:7px!important; }
+.demo-real-dashboard .invoice-list > div { grid-template-columns:minmax(0,1fr) auto auto; }
+.demo-real-dashboard .document-list > div, .demo-real-dashboard .settings-list > div { grid-template-columns:minmax(0,1fr) auto; }
+.demo-real-dashboard .bal-grid { gap:8px; }
+.demo-real-dashboard .bal-col + .bal-col { padding-left:8px; }
+.demo-real-dashboard .bal-label { font-size:6.5px; }
+.demo-real-dashboard .bal-row { font-size:8px; gap:8px; }
+.demo-real-dashboard .bal-net { font-size:14px; }
+.demo-real-dashboard .bal-hint { font-size:7px; margin-top:3px; }
+.demo-real-dashboard .demo-noesis-reading { margin:8px 0 0; padding:8px 10px; }
+.demo-real-dashboard .demo-noesis-reading b { font-size:10px; }
+.demo-real-dashboard .demo-noesis-reading span { font-size:8px; }
+.demo-real-dashboard .demo-conversation { margin-top:4px; }
+.demo-real-dashboard .demo-conversation p { font-size:8.5px; padding:8px 10px; }
+.demo-real-dashboard .demo-composer { margin-top:8px; font-size:8px; }
 .demo-noesis-reading { display:flex; flex-direction:column; gap:3px; margin-bottom:10px; padding:11px 13px;
   background:#edf5f0; border:1px solid #c9ddd4; border-radius:8px; }
 .demo-noesis-reading b { font-family:var(--serif); color:var(--brand); font-size:13px; font-weight:550; }
@@ -1418,8 +1460,6 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .demo-composer { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:13px; padding:9px 10px;
   color:var(--faint); background:#fff; border:1px solid var(--border-strong); border-radius:7px; font-size:9px; }
 .demo-composer b { padding:5px 8px; border-radius:5px; color:#fff; background:var(--brand); font-size:8px; }
-.demo-hint { margin:0; padding:9px 16px; color:#68766f; background:#f1eee7; border-top:1px solid var(--border);
-  text-align:center; font-size:9px; }
 
 /* Flujo y momentos: editorial antes que tarjetas. */
 .workflow-section { border-bottom:1px solid var(--border); }
@@ -1668,8 +1708,6 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .demo-app-topbar { min-height:34px; }
   .demo-topbar-actions > span:nth-child(n+3) { display:none; }
   .hero-desk-main, .interactive-product-demo .hero-desk-main, .product-home-preview .hero-desk-main { min-height:0; padding:14px; }
-  .demo-frame-top { grid-template-columns:1fr auto; }
-  .demo-frame-top b { display:none; }
   .demo-money-grid { grid-template-columns:1fr; }
   .demo-money-grid > div { padding:12px 4px; border-right:0; border-bottom:1px solid var(--border); }
   .demo-money-grid > div:last-child { border-bottom:0; }

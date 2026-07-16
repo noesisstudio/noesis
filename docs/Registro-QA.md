@@ -1,5 +1,17 @@
 # Registro de QA
 
+## 2026-07-16 — ampliación de la muestra pública de producto
+
+- La muestra de la portada conserva el Inicio basado en el panel y permite recorrer
+  ejemplos de Trabajos, Proyectos, Clientes, Dinero, Facturas, Documentos, Equipo,
+  Asistente y Ajustes con datos de una empresa ficticia. No hay llamadas a datos ni
+  acciones de una cuenta real desde esta vista pública.
+- Se añadieron métricas de impacto etiquetadas como estimación para negocios de
+  servicios de 1 a 10 personas; no se presentan como resultados medidos de clientes.
+- Validación local pendiente en este cambio: comprobación automática de la plantilla
+  y de la coherencia del estado. La revisión visual manual continúa bloqueada por el
+  cierre del navegador integrado de Codex.
+
 ## 2026-07-16 — portada centrada y acceso con Google preparado
 
 - La portada adopta una jerarquía de campaña centrada: promesa, explicación breve,

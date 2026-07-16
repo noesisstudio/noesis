@@ -28,8 +28,8 @@
     "irreversible_actions_require_owner_confirmation": true
   },
   "public_site": {
-    "product_view": "internal_home_structure_with_sample_company",
-    "product_preview": "home_only_until_each_real_product_view_is_available",
+    "product_view": "interactive_product_overview_with_sample_company",
+    "product_preview": "home_and_product_area_examples_for_trabajos_proyectos_clientes_dinero_facturas_documentos_equipo_asistente_and_ajustes",
     "billing_periods": [
       "monthly",
       "annual"
