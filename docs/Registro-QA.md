@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-07-17 — comparación anual clara y sector abierto
+
+- El paso 1 del alta muestra, al elegir pago anual, el coste de doce mensualidades
+  tachado, el precio anual, su equivalente mensual y el ahorro en el rojo apagado de
+  marca. Al volver a mensual, la oferta se oculta.
+- Sector deja de ser un listado cerrado en alta por email, alta por Google y perfil
+  de negocio. Acepta hasta 80 caracteres, conserva el texto entre pasos y permite
+  segmentar después desde datos reales sin excluir oficios no previstos.
+- Se verifican renderizado, selección anual y persistencia de un sector libre con la
+  suite completa: **285 pruebas verdes** en 171,6 s. Google/Stripe reales siguen
+  sujetos a sus credenciales.
+- Servidor real temporal: `/ready` y las altas mensual/anual respondieron 200; el
+  HTML anual contiene la oferta y el campo libre. No se abrió navegador visual por
+  los cierres previos de la aplicación de escritorio.
+
 ## 2026-07-17 — alta profesional, configuración operativa y pago
 
 - La web pública distingue `Probar 14 días` de `Contratar ahora` en cada plan y
