@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-07-16 — la muestra pública replica las pantallas reales del panel
+
+- Cada apartado de la demo de la portada reproduce ahora la plantilla real del
+  panel (misma jerarquía y clases: nota de Noesis, cabecera, métricas, tarjetas,
+  tablas, calendario, chat y ajustes) reducida con `zoom`, con datos inventados
+  coherentes entre pantallas. Antes eran resúmenes aproximados.
+- Añadida la barra de subapartados real bajo la barra superior: Dinero abre
+  Caja/Análisis/Ingresos/Costes, Facturas abre Presupuestos/Cobros/Impuestos y
+  Clientes abre CRM/Productos. 21 pestañas en total; el apartado del menú
+  lateral queda activo mientras se navega por sus subapartados.
+- Los gráficos de la demo (inicio, análisis, ingresos, costes) se crean la
+  primera vez que su panel se muestra, porque un canvas no puede medirse oculto.
+- QA: en servidor local se verificaron por DOM las 21 pestañas (panel visible,
+  miga correcta tipo «Dinero · Análisis», subnav mostrado/ocultado según grupo,
+  sin desbordamiento horizontal) y el ancho de los cuatro gráficos tras abrir su
+  panel; consola sin errores. La captura del navegador integrado sigue sin
+  responder; no se afirma QA en píxeles.
+- Suite completa: 274 pruebas y 52 subpruebas verdes con el árbol del cambio.
+
 ## 2026-07-16 — arreglo del marco de la muestra pública y ancho alineado
 
 - Corregido el marco de la muestra de la portada: `.hero-operating-proof`

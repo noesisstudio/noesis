@@ -13,20 +13,31 @@
       const panels = Array.from(demo.querySelectorAll('[data-demo-panel]'));
       if (!tabs.length || !panels.length) return;
 
+      const subnavs = Array.from(demo.querySelectorAll('[data-demo-subnav]'));
       const select = selected => {
         const key = selected.dataset.demoTab;
+        const parent = selected.dataset.demoParent || key;
         const crumb = demo.querySelector('[data-demo-crumb]');
         if (crumb) crumb.textContent = selected.dataset.demoLabel || selected.textContent.trim();
         tabs.forEach(tab => {
-          const active = tab === selected;
+          // El apartado del menú lateral queda activo también cuando se navega
+          // por sus subapartados; dentro del subnav solo se marca el exacto.
+          const active = tab.dataset.demoTab === key
+            || (!tab.dataset.demoParent && tab.dataset.demoTab === parent);
           tab.classList.toggle('active', active);
           tab.setAttribute('aria-selected', String(active));
           tab.tabIndex = active ? 0 : -1;
+        });
+        subnavs.forEach(subnav => {
+          subnav.hidden = subnav.dataset.demoSubnav !== parent;
         });
         panels.forEach(panel => {
           const active = panel.dataset.demoPanel === key;
           panel.classList.toggle('active', active);
           panel.hidden = !active;
+          // Los canvas no pueden medirse mientras el panel está oculto:
+          // el gráfico se crea la primera vez que el panel se muestra.
+          if (active) ensureDemoCharts(panel);
         });
       };
 
@@ -54,28 +65,84 @@
     });
   }
 
+  const demoChartsReady = new Set();
+
+  function demoChartConfig(id) {
+    const barOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#74817c', font: { size: 9 } }, border: { display: false } },
+        y: { display: false, beginAtZero: true },
+      },
+    };
+    const months = ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'];
+    const income = [3050, 3280, 3620, 4010, 4300, 4820];
+    const costs = [1180, 1210, 1390, 1460, 1520, 1310];
+    const bar = datasets => ({ type: 'bar', data: { labels: months, datasets }, options: barOptions });
+    switch (id) {
+      case 'demo-home-chart':
+        return {
+          type: 'bar',
+          data: {
+            labels: months.slice(1),
+            datasets: [
+              { label: 'Ingresos', data: income.slice(1), backgroundColor: '#2e8b74', borderRadius: 5, maxBarThickness: 18 },
+              { label: 'Gastos', data: costs.slice(1), backgroundColor: '#d5a16a', borderRadius: 5, maxBarThickness: 18 },
+            ],
+          },
+          options: barOptions,
+        };
+      case 'demo-analisis-chart':
+        return bar([
+          { label: 'Ingresos', data: income, backgroundColor: '#2e8b74', borderRadius: 5, maxBarThickness: 22 },
+          { label: 'Gastos', data: costs, backgroundColor: '#d5a16a', borderRadius: 5, maxBarThickness: 22 },
+          { label: 'Beneficio', data: income.map((v, i) => v - costs[i]), backgroundColor: '#14463b', borderRadius: 5, maxBarThickness: 22 },
+        ]);
+      case 'demo-ingresos-chart':
+        return bar([
+          { label: 'Facturado', data: income, backgroundColor: '#2e8b74', borderRadius: 5, maxBarThickness: 26 },
+        ]);
+      case 'demo-costes-chart':
+        return {
+          type: 'doughnut',
+          data: {
+            labels: ['Material', 'Combustible', 'Cuota autónomo', 'Seguros', 'Otros'],
+            datasets: [{
+              data: [610, 240, 294, 96, 70],
+              backgroundColor: ['#2e8b74', '#d5a16a', '#14463b', '#8fb8a9', '#c9ddd5'],
+              borderWidth: 0,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { position: 'right', labels: { color: '#53635c', font: { size: 10 }, boxWidth: 12 } } },
+          },
+        };
+      default:
+        return null;
+    }
+  }
+
+  function ensureDemoCharts(root) {
+    if (typeof window.Chart !== 'function') return;
+    (root || document).querySelectorAll('canvas[id^="demo-"]').forEach(canvas => {
+      if (demoChartsReady.has(canvas.id)) return;
+      const config = demoChartConfig(canvas.id);
+      if (!config) return;
+      demoChartsReady.add(canvas.id);
+      new window.Chart(canvas, config);
+    });
+  }
+
   function initDemoChart() {
-    const canvas = document.getElementById('demo-home-chart');
-    if (!canvas || typeof window.Chart !== 'function') return;
-    new window.Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels: ['Mar', 'Abr', 'May', 'Jun', 'Jul'],
-        datasets: [
-          { label: 'Ingresos', data: [3280, 3620, 4010, 4300, 4820], backgroundColor: '#2e8b74', borderRadius: 5, maxBarThickness: 18 },
-          { label: 'Gastos', data: [1210, 1390, 1460, 1520, 1310], backgroundColor: '#d5a16a', borderRadius: 5, maxBarThickness: 18 },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: true } },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: '#74817c', font: { size: 9 } }, border: { display: false } },
-          y: { display: false, beginAtZero: true },
-        },
-      },
+    // Solo los gráficos visibles al cargar; el resto se crea al abrir su panel.
+    document.querySelectorAll('.demo-panel:not([hidden]) canvas[id^="demo-"], canvas#demo-home-chart').forEach(canvas => {
+      ensureDemoCharts(canvas.closest('.demo-panel') || document);
     });
   }
 

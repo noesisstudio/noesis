@@ -1327,7 +1327,12 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Conectar WhatsApp", home_page.text)
                 self.assertIn("demo-home-chart", home_page.text)
                 self.assertIn("chart.umd.min.js", home_page.text)
-                self.assertEqual(home_page.text.count("data-demo-tab="), 10)
+                # 10 apartados del menú + 11 subapartados (Caja/Análisis/Ingresos/
+                # Costes, Facturas/Presupuestos/Cobros/Impuestos, Clientes/CRM/Productos).
+                self.assertEqual(home_page.text.count("data-demo-tab="), 21)
+                self.assertIn("data-demo-subnav", home_page.text)
+                self.assertIn("IVA · Modelo 303", home_page.text)
+                self.assertIn("page-note", home_page.text)
                 annual_signup = client.get(
                     "/onboarding?plan=autonomo&billing=annual"
                 )
