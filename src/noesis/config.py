@@ -209,6 +209,8 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "Noesis <no-reply@bynoesis.com>")
+EMAIL_RETRY_BASE_SECONDS = int(os.getenv("EMAIL_RETRY_BASE_SECONDS", "30"))
+EMAIL_RETRY_MAX_SECONDS = int(os.getenv("EMAIL_RETRY_MAX_SECONDS", "3600"))
 
 # Cobro de la suscripción (Stripe). Si no hay clave, el alta entra en prueba manual.
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")

@@ -2135,6 +2135,115 @@ def _downgrade_integration_control(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS integration_settings")
 
 
+def _upgrade_calendar_feed(conn) -> None:
+    """Enlace privado y revocable para suscribir la agenda sin OAuth externo."""
+    if "calendar_token" not in _column_names(conn, "businesses"):
+        conn.execute("ALTER TABLE businesses ADD COLUMN calendar_token TEXT")
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_businesses_calendar_token "
+        "ON businesses(calendar_token)"
+    )
+
+
+def _downgrade_calendar_feed(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS uq_businesses_calendar_token")
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS calendar_token"
+        )
+    # SQLite conserva la columna para no reconstruir la tabla businesses.
+
+
+def _upgrade_bank_reconciliation(conn) -> None:
+    """Movimientos importados y confirmación humana de cobros sugeridos."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS bank_transactions (
+    id                   {t["id"]},
+    business_id          {t["ref"]} NOT NULL REFERENCES businesses(id),
+    import_hash          TEXT NOT NULL,
+    booked_on            TEXT NOT NULL,
+    amount               {t["real"]} NOT NULL,
+    currency             TEXT NOT NULL DEFAULT 'EUR',
+    description          TEXT,
+    counterparty         TEXT,
+    reference            TEXT,
+    status               TEXT NOT NULL DEFAULT 'imported'
+                         CHECK (status IN ('imported', 'suggested', 'confirmed', 'ignored')),
+    suggested_invoice_id {t["ref"]},
+    match_score          INTEGER,
+    match_reason         TEXT,
+    confirmed_at         {t["timestamp"]},
+    created_at           {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, import_hash),
+    FOREIGN KEY (business_id, suggested_invoice_id)
+        REFERENCES invoices(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_business
+    ON bank_transactions(business_id, booked_on, id);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_status
+    ON bank_transactions(business_id, status, id);
+"""
+    )
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "bank_transactions", "suggested_invoice_id", "invoices", event
+                )
+            )
+
+
+def _downgrade_bank_reconciliation(conn) -> None:
+    for event in ("insert", "update"):
+        conn.execute(
+            "DROP TRIGGER IF EXISTS "
+            f"bank_transactions_suggested_invoice_id_same_business_{event}"
+        )
+    conn.execute("DROP INDEX IF EXISTS idx_bank_transactions_status")
+    conn.execute("DROP INDEX IF EXISTS idx_bank_transactions_business")
+    conn.execute("DROP TABLE IF EXISTS bank_transactions")
+
+
+def _upgrade_email_outbox(conn) -> None:
+    """Correo durable: persistir antes de SMTP y reintentar sin duplicar."""
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS email_outbox (
+    id               {t["id"]},
+    business_id      {t["ref"]} REFERENCES businesses(id),
+    to_email         TEXT NOT NULL,
+    subject          TEXT NOT NULL,
+    text_body        TEXT NOT NULL,
+    html_body        TEXT,
+    idempotency_key  TEXT UNIQUE,
+    status           TEXT NOT NULL DEFAULT 'queued'
+                     CHECK (status IN ('queued', 'processing', 'retrying', 'sent', 'failed')),
+    attempts         INTEGER NOT NULL DEFAULT 0,
+    max_attempts     INTEGER NOT NULL DEFAULT 6,
+    next_attempt_at  {t["timestamp"]} NOT NULL,
+    locked_at        {t["timestamp"]},
+    last_error       TEXT,
+    sent_at          {t["timestamp"]},
+    created_at       {t["timestamp"]} NOT NULL,
+    updated_at       {t["timestamp"]} NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_email_outbox_due
+    ON email_outbox(status, next_attempt_at);
+CREATE INDEX IF NOT EXISTS idx_email_outbox_business
+    ON email_outbox(business_id, created_at);
+"""
+    )
+
+
+def _downgrade_email_outbox(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_email_outbox_business")
+    conn.execute("DROP INDEX IF EXISTS idx_email_outbox_due")
+    conn.execute("DROP TABLE IF EXISTS email_outbox")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -2164,6 +2273,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (25, "cierre_trabajo_campo", _upgrade_field_work_close, _downgrade_field_work_close),
     (26, "preferencias_cliente", _upgrade_client_preferences, _downgrade_client_preferences),
     (27, "control_integraciones", _upgrade_integration_control, _downgrade_integration_control),
+    (28, "calendario_privado", _upgrade_calendar_feed, _downgrade_calendar_feed),
+    (29, "conciliacion_bancaria", _upgrade_bank_reconciliation, _downgrade_bank_reconciliation),
+    (30, "correo_durable", _upgrade_email_outbox, _downgrade_email_outbox),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

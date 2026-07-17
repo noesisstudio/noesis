@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+import hashlib
 import sys
 import traceback
 
@@ -26,7 +28,6 @@ HOT_API_PATHS = [
     "/api/{bid}/taxes",
     "/api/{bid}/invoices",
     "/api/{bid}/projects",
-    "/api/{bid}/integrations",
 ]
 
 
@@ -37,6 +38,7 @@ HOT_PAGE_PATHS = [
     "/b/{bid}/documentos",
     "/b/{bid}/crm",
     "/b/{bid}/agenda",
+    "/b/{bid}/cobros",
     "/b/{bid}/proyectos",
     "/b/{bid}/ajustes",
 ]
@@ -104,6 +106,60 @@ def _operational_paths(business_id: int) -> list[str]:
             business_id=business_id,
         )]
     paths.append(f"/api/{business_id}/jobs/{int(jobs[0]['id'])}/field")
+
+    token = db.get_or_create_calendar_token(business_id)
+    if db.get_business_by_calendar_token(token)["id"] != business_id:
+        raise RuntimeError("El calendario privado no respeta el negocio.")
+    paths.append(f"/cal/{token}.ics")
+
+    pending = db.pending_payments(business_id)
+    if not pending:
+        clients = db.list_clients(business_id)
+        invoice = db.add_invoice(
+            clients[0]["id"], "Factura para conciliación Postgres", 100,
+            business_id=business_id,
+        )
+        pending = [db.issue_invoice(invoice["id"], business_id)]
+        pending[0]["remaining_amount"] = pending[0]["total"]
+    invoice = pending[0]
+    fingerprint = hashlib.sha256(
+        f"postgres-smoke:{business_id}:{invoice['id']}".encode()
+    ).hexdigest()
+    movement = db.add_bank_transaction(
+        business_id, import_hash=fingerprint,
+        booked_on=datetime.now().date().isoformat(),
+        amount=invoice["remaining_amount"],
+        description=f"Cobro factura {invoice.get('number') or invoice['id']}",
+    )
+    if movement:
+        db.suggest_bank_transaction(
+            movement["id"], business_id, invoice["id"],
+            score=120, reason="Humo Postgres.",
+        )
+        confirmed = db.confirm_bank_transaction(movement["id"], business_id)
+        if confirmed.get("status") != "confirmed":
+            raise RuntimeError("La conciliación no confirmó el movimiento.")
+
+    now = datetime.now()
+    queued = db.enqueue_email_message(
+        business_id=business_id, to_email="smoke@example.com",
+        subject="Humo Postgres", text_body="Mensaje de prueba interno.",
+        idempotency_key=f"postgres-smoke:{business_id}", max_attempts=1,
+        now=now.isoformat(timespec="seconds"),
+    )
+    claimed = db.claim_next_email_message(
+        now=now.isoformat(timespec="seconds"),
+        stale_before=(now - timedelta(minutes=5)).isoformat(timespec="seconds"),
+    )
+    if not claimed or claimed["id"] != queued["id"]:
+        raise RuntimeError("La outbox de correo no pudo reclamar el mensaje.")
+    db.mark_email_retry(
+        claimed["id"], error="Humo controlado",
+        next_attempt_at=(now + timedelta(minutes=1)).isoformat(timespec="seconds"),
+        updated_at=now.isoformat(timespec="seconds"),
+    )
+    if db.get_email_message(claimed["id"])["status"] != "failed":
+        raise RuntimeError("La outbox de correo no agotó el intento de humo.")
     return paths
 
 
@@ -146,7 +202,7 @@ def main() -> int:
             print(f"- {failure}", file=sys.stderr)
         return 1
 
-    checked = len(HOT_PAGE_PATHS) + len(HOT_API_PATHS) + 2
+    checked = len(HOT_PAGE_PATHS) + len(HOT_API_PATHS) + 3
     print(f"Smoke Postgres OK: {checked} rutas calientes sin 5xx.")
     return 0
 

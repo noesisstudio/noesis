@@ -2,6 +2,26 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Funciones delante, proveedores detrás; conectores locales primero (2026-07-17)
+
+El cliente no ve un catálogo de APIs preparadas, caídas o aún sin contratar. Ajustes
+muestra únicamente controles con sentido para su trabajo —WhatsApp, gestoría,
+preferencia de ayuda avanzada y datos propios—. El diagnóstico de Google, Meta,
+SMTP, Stripe, IA, AEAT y copias queda reservado a administración. Motivo: la salud
+de infraestructura es una responsabilidad de Noesis, no ruido para el autónomo.
+
+Para reducir coste y dependencia se construyen primero dos conectores internos: un
+calendario ICS privado y revocable, y conciliación por extracto CSV. La conciliación
+solo propone por importe, referencia y cliente; una coincidencia ambigua no se
+selecciona y el cobro existe únicamente después de la confirmación del titular. No
+se autoriza movimiento de dinero ni se presenta el CSV como conexión bancaria viva.
+
+Todo correo confirmado entra antes en una outbox durable. El scheduler lo reclama,
+reintenta con backoff y registra el fallo para administración; la confirmación del
+usuario ya no depende de que SMTP responda en ese instante. Google OAuth se mantiene
+oculto hasta configurar ambas credenciales: así el acceso será real desde el primer
+día que se muestre y nunca un botón decorativo.
+
 ## Acceso con Google opcional y vista pública sin pantallas inventadas (2026-07-16)
 
 La portada toma de Holded únicamente la jerarquía de campaña —promesa centrada,

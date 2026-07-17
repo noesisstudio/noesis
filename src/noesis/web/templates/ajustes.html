@@ -14,63 +14,6 @@
   </div>
 </div>
 
-<section class="integrations-center" id="integraciones">
-  <header class="integrations-reading">
-    <div>
-      <div class="kicker">Conexiones de tu negocio</div>
-      <h2>Yo vigilo que todo siga funcionando</h2>
-      <p>{{ operational_health.summary }}</p>
-    </div>
-    <span class="badge {{ 'b-green' if operational_health.level == 'ok' else ('b-red' if operational_health.level == 'error' else 'b-amber') }}">
-      {{ 'todo en orden' if operational_health.level == 'ok' else ('hay una incidencia' if operational_health.level == 'error' else 'hay revisiones') }}
-    </span>
-  </header>
-  {% if operational_health.attention %}
-  <div class="integration-attention">
-    {% for alert in operational_health.attention %}
-    <a href="{{ '/b/' ~ business.id ~ '/documentos' if alert.area == 'Documentos' else ('#verifactu' if alert.area == 'Veri*Factu' else ('#whatsapp-conexion' if alert.area == 'WhatsApp' else '#salud-operativa')) }}">
-      <b>{{ alert.area }}</b><span>{{ alert.text }}</span>
-    </a>
-    {% endfor %}
-  </div>
-  {% endif %}
-  <div class="integration-grid">
-    {% for integration in integrations %}
-    <article class="integration-item" data-integration-key="{{ integration.key }}">
-      <div class="integration-item-head">
-        <strong>{{ integration.name }}</strong>
-        <span class="badge b-{{ integration.status_tone }} integration-state">{{ integration.status_label }}</span>
-      </div>
-      <p>{{ integration.description }}</p>
-      {% if integration.detail %}<small>{{ integration.detail }}</small>{% endif %}
-      {% if integration.last_error %}<small class="integration-error">Último error: {{ integration.last_error }}</small>{% endif %}
-      {% if integration.action %}
-      <button class="btn integration-action" type="button"
-        onclick="updateIntegration('{{ integration.key }}', '{{ integration.action }}', this)">
-        {{ integration.action_label }}
-      </button>
-      {% elif integration.href %}
-      <a class="btn integration-action" href="{{ integration.href }}">{{ integration.action_label }}</a>
-      {% endif %}
-    </article>
-    {% endfor %}
-  </div>
-  <details class="operational-detail" id="salud-operativa">
-    <summary>Ver cómo está trabajando Noesis por dentro</summary>
-    <div class="operational-grid">
-      <div><span>IA avanzada este mes</span><b>{{ operational_health.ai.calls }} consultas</b>
-        <small>{{ operational_health.ai.tokens }} tokens{% if operational_health.ai.avg_ms %} · {{ operational_health.ai.avg_ms }} ms de media{% endif %}</small></div>
-      <div><span>Documentos</span><b>{{ operational_health.documents.pending }} por revisar</b>
-        <small>{{ operational_health.documents.classified_month }} clasificados este mes · {{ operational_health.documents.corrections }} correcciones</small></div>
-      <div><span>WhatsApp</span><b>{{ operational_health.whatsapp.get('failed', 0) }} fallidos</b>
-        <small>{{ operational_health.whatsapp.get('retrying', 0) }} reintentándose</small></div>
-      <div><span>Protección de datos</span><b>{{ operational_health.backup.label }}</b>
-        <small>{{ operational_health.backup.created_at or 'aún sin historial' }}</small></div>
-    </div>
-  </details>
-  <div id="integration-msg" class="meta" role="status"></div>
-</section>
-
 <div class="grid g2">
   <div class="card">
     <div class="card-h"><h2>Datos fiscales</h2><span class="hint">salen en tus facturas</span></div>
@@ -139,6 +82,10 @@
       {% if business.whatsapp_status == 'conectado' %}
         <div class="lrow"><span>Número vinculado</span><b>{{ business.whatsapp_phone }}</b></div>
         <p class="muted">Ya puedes gestionar tu negocio por WhatsApp con texto o audio.</p>
+        <button class="btn" type="button" onclick="disconnectWhatsApp(this)">
+          Desconectar este número
+        </button>
+        <div id="whatsapp-preference-msg" class="meta" role="status"></div>
       {% else %}
         <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.</p>
         <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener">
@@ -569,6 +516,29 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-h"><h2>Ayuda avanzada de Noesis</h2><span class="hint">tú decides</span></div>
+    <div class="card-b">
+      <p class="muted" style="margin-top:0">
+        Noesis resuelve primero dentro del sistema. Si una consulta necesita más
+        comprensión, puedes permitir que use el servicio avanzado incluido en tu plan.
+      </p>
+      <label class="lrow" style="align-items:flex-start;cursor:pointer">
+        <span>
+          <b>Usar ayuda avanzada cuando haga falta</b>
+          <small class="muted" style="display:block;margin-top:4px">
+            Puedes cambiarlo cuando quieras. Los cálculos y las acciones sensibles
+            siempre se validan dentro de Noesis.
+          </small>
+        </span>
+        <input id="ai-external-preference" type="checkbox"
+          {{ 'checked' if ai_external_preference }}
+          onchange="saveAiPreference(this)">
+      </label>
+      <div id="ai-preference-msg" class="meta" role="status"></div>
+    </div>
+  </div>
+
   <div class="card memory-card" id="memoria-noesis">
     <div class="card-h"><h2>Lo que Noesis recuerda</h2><span class="hint">visible y bajo tu control</span></div>
     <div class="card-b">
@@ -624,19 +594,35 @@
 
 {% block scripts %}
 <script>
-async function updateIntegration(key, action, button) {
-  const msg = el('integration-msg');
-  if (action === 'disconnect' && !confirm('¿Desconectar este WhatsApp de Noesis? Podrás volver a vincularlo cuando quieras.')) return;
+async function disconnectWhatsApp(button) {
+  const msg = el('whatsapp-preference-msg');
+  if (!confirm('¿Desconectar este WhatsApp de Noesis? Podrás volver a vincularlo cuando quieras.')) return;
   button.disabled = true;
   try {
-    await apiPost(`/integrations/${key}`, { action });
-    msg.textContent = action === 'request'
-      ? 'Interés guardado. Lo tendremos en cuenta sin activar ningún servicio externo.'
-      : 'Conexión actualizada. El cerebro local de Noesis sigue disponible.';
-    setTimeout(() => window.location.assign(`/b/${BIZ}/ajustes#integraciones`), 350);
+    await apiPost('/integrations/whatsapp', { action: 'disconnect' });
+    msg.textContent = 'Número desconectado.';
+    setTimeout(() => window.location.assign(`/b/${BIZ}/ajustes#whatsapp-conexion`), 350);
   } catch (e) {
     msg.textContent = e.message;
     button.disabled = false;
+  }
+}
+async function saveAiPreference(input) {
+  const msg = el('ai-preference-msg');
+  const previous = !input.checked;
+  input.disabled = true;
+  try {
+    await apiPost('/integrations/ai_external', {
+      action: input.checked ? 'enable' : 'disable'
+    });
+    msg.textContent = input.checked
+      ? 'Hecho. Usaré la ayuda avanzada solo cuando aporte valor.'
+      : 'Hecho. Seguiré trabajando solo con el cerebro interno.';
+  } catch (e) {
+    input.checked = previous;
+    msg.textContent = e.message;
+  } finally {
+    input.disabled = false;
   }
 }
 async function saveLanguage() {

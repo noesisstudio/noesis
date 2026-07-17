@@ -1,5 +1,29 @@
 # Registro de QA
 
+## 2026-07-17 — conexiones útiles sin exponer infraestructura al cliente
+
+- Ajustes deja de publicar el catálogo/estado de Meta, SMTP, IA, calendario, banco,
+  cobro por enlace o AEAT. El cliente conserva controles reales de WhatsApp, gestoría
+  y ayuda avanzada; el diagnóstico completo, incluido Google OAuth, queda en admin.
+- Google mantiene alta y acceso OAuth ya implementados y probados; el botón solo se
+  renderiza con cliente y secreto presentes. No se llamó a Google real y siguen
+  pendientes las credenciales y el callback de producción.
+- Agenda incorpora un feed ICS privado, aislado por negocio y revocable. Cobros
+  incorpora importación CSV, deduplicación, propuesta explicable y confirmación
+  idempotente; una coincidencia ambigua no se acepta automáticamente.
+- Correo incorpora outbox durable con reintentos, backoff, deduplicación, alerta
+  interna y cobertura RGPD. Recuperación de contraseña, gestoría, digest y
+  comunicaciones confirmadas se encolan antes de SMTP.
+- Suite completa: **284 pruebas verdes** en 206,5 s. También `compileall` y
+  `git diff --check` verdes. Los logs de caídas de SMTP/Meta/Stripe/AEAT y lecturas
+  simuladas pertenecen a pruebas deliberadas de degradación.
+- Ciclo SQLite validado 0→30→0→30, `scripts/check_project_truth.py`, `compileall` y
+  `git diff --check` verdes. El smoke Postgres se amplió para ejercer calendario,
+  conciliación, correo y Cobros; no se ejecutó localmente porque esta máquina no
+  tiene Docker, por lo que queda como comprobación obligatoria del CI de la PR.
+- No se afirma QA visual con navegador porque las sesiones anteriores cerraban la
+  aplicación de escritorio; las rutas afectadas sí se renderizaron por TestClient.
+
 ## 2026-07-16 — corrección: los subnavs de la demo salían todos a la vez
 
 - En producción los tres subnavs (Dinero, Facturas, Clientes) aparecían apilados

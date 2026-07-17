@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from xml.etree import ElementTree as ET
 
-from noesis import config, db, migrations, nlu, verifactu, verifactu_client
+from noesis import banking, config, db, migrations, nlu, verifactu, verifactu_client
 from noesis.adapters import extraction
 from noesis.web import auth, chat, reports, scheduler, whatsapp
 
@@ -701,6 +701,136 @@ class BackendTestCase(unittest.TestCase):
         exported = db.export_business_data(business["id"])
         self.assertEqual(exported["product_events"][0]["event_name"], "activation_test")
 
+    def test_private_calendar_feed_is_subscribable_isolated_and_revocable(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, own_client = self.make_business("Agenda privada")
+        other, other_client = self.make_business("Agenda ajena")
+        scheduled = (date.today() + timedelta(days=2)).isoformat() + "T09:30:00"
+        db.add_job(
+            own_client["id"], "Revisar caldera", scheduled_for=scheduled,
+            business_id=business["id"],
+        )
+        db.add_job(
+            other_client["id"], "Secreto de otro negocio", scheduled_for=scheduled,
+            business_id=other["id"],
+        )
+        db.create_user(
+            "agenda@example.com", auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post("/login", data={
+                    "email": "agenda@example.com",
+                    "password": "password-segura-123",
+                }, follow_redirects=False)
+                self.assertEqual(login.status_code, 303)
+                created = client.post(
+                    f"/b/{business['id']}/calendar-feed",
+                    data={"action": "create"}, follow_redirects=False,
+                )
+                self.assertEqual(created.status_code, 303)
+                token = db.get_business(business["id"])["calendar_token"]
+                self.assertGreaterEqual(len(token), 32)
+
+                feed = client.get(f"/cal/{token}.ics")
+                self.assertEqual(feed.status_code, 200)
+                self.assertTrue(feed.headers["content-type"].startswith("text/calendar"))
+                self.assertIn("BEGIN:VCALENDAR", feed.text)
+                self.assertIn("Revisar caldera", feed.text)
+                self.assertNotIn("Secreto de otro negocio", feed.text)
+                agenda = client.get(f"/b/{business['id']}/agenda")
+                self.assertIn(f"/cal/{token}.ics", agenda.text)
+
+                rotated = client.post(
+                    f"/b/{business['id']}/calendar-feed",
+                    data={"action": "rotate"}, follow_redirects=False,
+                )
+                self.assertEqual(rotated.status_code, 303)
+                new_token = db.get_business(business["id"])["calendar_token"]
+                self.assertNotEqual(new_token, token)
+                self.assertEqual(client.get(f"/cal/{token}.ics").status_code, 404)
+                self.assertEqual(client.get(f"/cal/{new_token}.ics").status_code, 200)
+
+    def test_bank_csv_suggests_but_requires_confirmation_and_deduplicates(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client = self.make_business("Banco controlado")
+        other, _ = self.make_business("Banco ajeno")
+        invoice = db.add_invoice(
+            client["id"], "Reparación", 100, business_id=business["id"]
+        )
+        invoice = db.issue_invoice(invoice["id"], business["id"])
+        csv_data = (
+            "Fecha;Importe;Concepto;Ordenante;Referencia\n"
+            f"17/07/2026;121,00;Pago {invoice['number']};{client['name']};{invoice['number']}\n"
+            "17/07/2026;-25,50;Compra material;Proveedor;REC-2\n"
+            "17/07/2026;-25,50;Compra material;Proveedor;REC-2\n"
+        ).encode("utf-8")
+        db.create_user(
+            "banco@example.com", auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as http:
+                login = http.post("/login", data={
+                    "email": "banco@example.com",
+                    "password": "password-segura-123",
+                }, follow_redirects=False)
+                self.assertEqual(login.status_code, 303)
+                imported = http.post(
+                    f"/b/{business['id']}/bank-import",
+                    files={"file": ("extracto.csv", csv_data, "text/csv")},
+                    follow_redirects=False,
+                )
+                self.assertEqual(imported.status_code, 303)
+                self.assertIn("bank_imported=3", imported.headers["location"])
+                page = http.get(f"/b/{business['id']}/cobros")
+                self.assertIn("Extracto bancario", page.text)
+                self.assertIn(invoice["number"], page.text)
+        movements = db.list_bank_transactions(business["id"])
+        incoming = next(item for item in movements if item["amount"] > 0)
+        outgoing = next(item for item in movements if item["amount"] < 0)
+        self.assertEqual(len([item for item in movements if item["amount"] < 0]), 2)
+        self.assertEqual(incoming["status"], "suggested")
+        self.assertEqual(incoming["suggested_invoice_id"], invoice["id"])
+        self.assertEqual(outgoing["status"], "imported")
+        self.assertEqual(db.list_bank_transactions(other["id"]), [])
+
+        duplicate = banking.import_csv(business["id"], csv_data)
+        self.assertEqual(duplicate["created"], 0)
+        self.assertEqual(duplicate["duplicates"], 3)
+        with self.assertRaises(ValueError):
+            db.confirm_bank_transaction(incoming["id"], other["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as http:
+                http.post("/login", data={
+                    "email": "banco@example.com",
+                    "password": "password-segura-123",
+                })
+                response = http.post(
+                    f"/api/{business['id']}/bank-transactions/{incoming['id']}/confirm",
+                    json={},
+                )
+                self.assertEqual(response.status_code, 200)
+                confirmed = response.json()["transaction"]
+        self.assertEqual(confirmed["status"], "confirmed")
+        self.assertEqual(
+            db.get_invoice(invoice["id"], business["id"])["status"], "cobrada"
+        )
+        self.assertEqual(
+            len(db.list_invoice_payments(invoice["id"], business["id"])), 1
+        )
+        db.confirm_bank_transaction(incoming["id"], business["id"])
+        self.assertEqual(
+            len(db.list_invoice_payments(invoice["id"], business["id"])), 1
+        )
+
     def test_portal_token_reuse_resolve_and_revoke(self):
         business, client = self.make_business()
         token = db.get_or_create_portal_token(business["id"], client["id"])
@@ -1201,15 +1331,20 @@ class PaymentReminderTestCase(unittest.TestCase):
                 self.assertIn("Recordatorios de cobro", page.text)
                 self.assertIn("Centro de control de Noesis", page.text)
                 self.assertIn("Noesis nunca mueve dinero", page.text)
-                self.assertIn("Yo vigilo que todo siga funcionando", page.text)
-                self.assertIn("Calendario externo", page.text)
+                self.assertIn("Ayuda avanzada de Noesis", page.text)
+                self.assertNotIn("Yo vigilo que todo siga funcionando", page.text)
+                self.assertNotIn("Calendario externo", page.text)
+                self.assertNotIn("IA privada", page.text)
+                self.assertEqual(
+                    client.get(f"/api/{business['id']}/integrations").status_code,
+                    404,
+                )
 
                 requested = client.post(
                     f"/api/{business['id']}/integrations/banking",
                     json={"action": "request"},
                 )
-                self.assertEqual(requested.status_code, 200)
-                self.assertEqual(requested.json()["item"]["state"], "requested")
+                self.assertEqual(requested.status_code, 400)
                 invalid_enable = client.post(
                     f"/api/{business['id']}/integrations/banking",
                     json={"action": "enable"},
@@ -1234,10 +1369,7 @@ class PaymentReminderTestCase(unittest.TestCase):
                 )
                 self.assertEqual(cancelled["status"], "failed")
                 self.assertIn("Cancelado", cancelled["last_error"])
-                self.assertEqual(
-                    disconnected.json()["health"]["whatsapp"].get("failed", 0),
-                    0,
-                )
+                self.assertEqual(disconnected.json(), {"ok": True})
 
                 permission = client.post(
                     f"/api/{business['id']}/assistant/permissions",
@@ -3324,41 +3456,105 @@ class GestoriaTestCase(unittest.TestCase):
                 self.assertIn("gestoria", sent.headers["location"])
 
     def test_scheduler_notifies_once_per_period(self):
-        from noesis.adapters import email as email_adapter
-
         business, _ = self.make_business("Gestoría Job")
         db.update_gestoria_settings(
             business["id"], email="g@gestoria.com", cadence="mensual"
         )
         off_business, _ = self.make_business("Gestoría Off")
         first_of_month = datetime(2026, 7, 2, 9, 30)
-        emails = []
+        self.assertEqual(
+            scheduler.send_gestoria_packages(now=first_of_month), 1
+        )
+        self.assertEqual(
+            scheduler.send_gestoria_packages(now=first_of_month), 0
+        )
+        # Pasado el día 5 no se dispara.
+        self.assertEqual(
+            scheduler.send_gestoria_packages(
+                now=datetime(2026, 7, 9, 9, 30)
+            ),
+            0,
+        )
+        emails = db.list_email_messages(business["id"])
+        self.assertEqual([item["to_email"] for item in emails], ["g@gestoria.com"])
+
+    def test_email_outbox_is_idempotent_retries_and_is_rgpd_safe(self):
+        from noesis.adapters import email as email_adapter
+
+        business, _ = self.make_business("Correo durable")
+        first = db.enqueue_email_message(
+            business_id=business["id"], to_email="cliente@example.com",
+            subject="Tu factura", text_body="Contenido",
+            idempotency_key=f"test:{business['id']}:factura-1",
+        )
+        duplicate = db.enqueue_email_message(
+            business_id=business["id"], to_email="cliente@example.com",
+            subject="Tu factura", text_body="Contenido",
+            idempotency_key=f"test:{business['id']}:factura-1",
+        )
+        self.assertEqual(first["id"], duplicate["id"])
+        self.assertEqual(len(db.list_email_messages(business["id"])), 1)
+
         with (
             patch.object(email_adapter, "available", return_value=True),
-            patch.object(email_adapter, "send_email",
-                         side_effect=lambda to, subject, body, **kw:
-                         emails.append(to) or True),
+            patch.object(email_adapter, "send_email", return_value=False),
         ):
-            self.assertEqual(
-                scheduler.send_gestoria_packages(now=first_of_month), 1
+            self.assertEqual(scheduler.process_email_outbox(limit=1), 0)
+        retrying = db.get_email_message(first["id"])
+        self.assertEqual(retrying["status"], "retrying")
+        self.assertEqual(retrying["attempts"], 1)
+
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE email_outbox SET next_attempt_at=? WHERE id=?",
+                ("2000-01-01T00:00:00", first["id"]),
             )
-            self.assertEqual(
-                scheduler.send_gestoria_packages(now=first_of_month), 0
-            )
-            # Pasado el día 5 no se dispara.
-            self.assertEqual(
-                scheduler.send_gestoria_packages(
-                    now=datetime(2026, 7, 9, 9, 30)
-                ),
-                0,
-            )
-        self.assertEqual(emails, ["g@gestoria.com"])
+        with (
+            patch.object(email_adapter, "available", return_value=True),
+            patch.object(email_adapter, "send_email", return_value=True) as send,
+        ):
+            self.assertEqual(scheduler.process_email_outbox(limit=1), 1)
+        self.assertEqual(db.get_email_message(first["id"])["status"], "sent")
+        self.assertEqual(send.call_count, 1)
+        self.assertEqual(len(db.export_business_data(business["id"])["email_outbox"]), 1)
+
+        disposable, _ = self.make_business("Correo borrable")
+        db.enqueue_email_message(
+            business_id=disposable["id"], to_email="otro@example.com",
+            subject="Aviso", text_body="Contenido",
+        )
+        self.assertTrue(db.delete_business_cascade(disposable["id"]))
+        self.assertEqual(db.list_email_messages(disposable["id"]), [])
 
 
 class AdminCommandCenterTestCase(unittest.TestCase):
     setUp = BackendTestCase.setUp
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
+
+    def test_admin_sees_internal_readiness_instead_of_the_customer(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Admin servicios")
+        db.create_user(
+            "founder@example.com", auth.hash_password("password-segura-123"),
+            business["id"],
+        )
+        with (
+            patch.object(config, "ADMIN_EMAIL", "founder@example.com"),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "founder@example.com",
+                    "password": "password-segura-123",
+                })
+                page = client.get("/admin")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Servicios e integraciones", page.text)
+        self.assertIn("Google", page.text)
+        self.assertIn("Esta información es interna", page.text)
 
     def test_overview_includes_contact_activity_and_ai_usage(self):
         business, client = self.make_business("Admin Uno")

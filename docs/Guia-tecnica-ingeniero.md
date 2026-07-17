@@ -2,7 +2,7 @@
 
 > **Propósito.** Documento de entrada para una persona de ingeniería que necesite entender Noesis de extremo a extremo: web, datos, cerebro, automatizaciones, WhatsApp, seguridad y dependencias externas.
 >
-> **Foto del código:** 16-07-2026 · esquema 27 · `main` es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
+> **Foto del código:** 17-07-2026 · esquema 30 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
 
 ## 1. Qué es el sistema
 
@@ -27,7 +27,7 @@ flowchart LR
   I --> C
   C --> D[("Postgres / SQLite\nfiltrado por business_id")]
   C --> A["Adaptadores\nStripe · Meta · SMTP · IA · AEAT"]
-  D --> O["Outbox WhatsApp / Veri*Factu\nBackups / paquetes gestoría"]
+  D --> O["Outbox WhatsApp / correo / Veri*Factu\nBackups / paquetes gestoría"]
   O --> A
 ```
 
@@ -41,7 +41,9 @@ flowchart LR
 | Stripe | Checkout, portal, precios y webhook idempotente | Productos/`price_id`, claves y escenarios de pago reales |
 | Google OAuth | Flujo implementado si hay credenciales | Cliente OAuth y callback real en producción |
 | IA privada/externa | Enrutamiento y adaptador OpenAI-compatible | Servicio/modelo, evaluación, límites y observabilidad real |
-| SMTP | Adaptador y flujos de avisos | Credenciales y prueba de entregabilidad |
+| SMTP | Adaptador, outbox durable y reintentos de avisos | Credenciales y prueba de entregabilidad |
+| Calendario | Feed ICS privado y revocable | Validar suscripción real; OAuth bidireccional solo si el piloto lo exige |
+| Banco | Importación CSV, deduplicación y propuesta confirmable | Validar extractos reales; PSD2 queda fuera del MVP |
 | Veri*Factu/AEAT | Registro, QR, XML, cola y cliente de remisión | Certificado, entorno AEAT y validación fiscal externa |
 | Backups externos | Proceso y soporte S3-compatible | Restauración real auditada |
 
@@ -87,7 +89,8 @@ src/noesis/
 │   ├── scheduler.py          # automatizaciones periódicas
 │   └── gestoria.py           # paquetes y entregas a asesoría
 ├── db.py                     # frontera única de datos multiempresa
-├── migrations.py             # SQLite/Postgres, versión 27
+├── migrations.py             # SQLite/Postgres, versión 30
+├── banking.py                # CSV bancario y propuestas locales de conciliación
 ├── nlu.py                    # órdenes rutinarias por reglas locales
 ├── internal_brain.py         # borradores explicables de comunicaciones
 ├── agent.py                  # IA privada, compatible y Anthropic
@@ -123,13 +126,13 @@ Todas estas pantallas siguen la convención `/b/{business_id}/{apartado}`. La se
 | `resumen` | Parte de hoy y puesta en marcha | prioridad, agenda, dinero, cobros, progreso y lectura de Noesis |
 | `tesoreria`, `ingresos`, `costes`, `analisis`, `impuestos` | Entender caja, rentabilidad y obligaciones | series, P&G, previsión, pendientes, costes e informes CSV |
 | `clientes`, `crm`, `productos` | Relación comercial | clientes, leads, preferencias, catálogo, importación y portal |
-| `agenda` | Trabajos/visitas y planificación operativa | trabajos, asignaciones y estado de campo |
+| `agenda` | Trabajos/visitas y planificación operativa | trabajos, asignaciones, estado de campo y feed ICS privado |
 | `proyectos` | Obras o servicios de mayor alcance | presupuesto, miembros, tareas, horas, costes, avance y borrador de factura |
-| `facturas`, `presupuestos`, `cobros` | Documentos comerciales y cobro | PDF, rectificativas, pagos parciales, envío y portal |
+| `facturas`, `presupuestos`, `cobros` | Documentos comerciales y cobro | PDF, rectificativas, pagos parciales, portal y conciliación CSV confirmable |
 | `equipo` | Personas y productividad | alta, asignación, enlaces de trabajador y fichajes |
 | `documentos` | Entrada y archivo de papeles | subida, clasificación, OCR, proveedor, factura recibida y conversión a gasto |
 | `asistente` | Conversación, audio, memoria y permisos | historial, contexto de negocio y acciones preparadas |
-| `ajustes` | Preferencias y centro de control | IA, memoria, automatizaciones, integraciones, fiscalidad, Veri*Factu y salud operativa |
+| `ajustes` | Preferencias y control del negocio | IA, memoria, automatizaciones, fiscalidad y conexiones utilizables; el diagnóstico técnico solo vive en `/admin` |
 | `suscripcion` | Gestión del plan | checkout/portal de Stripe o flujo de prueba si Stripe no está configurado |
 
 El acompañante no es una página aislada: `base.html` recibe un `page_brief` en cada sección. `web/chat.py` genera el motivo, la cifra relevante y el siguiente paso para que la ayuda sea contextual a la tarea de esa pantalla.
@@ -214,6 +217,19 @@ El titular da de alta el trabajador y genera un enlace/token de trabajador. El t
 
 Noesis agrupa emitidas, gastos, recibidas y originales en paquetes por período. El paquete tiene manifiesto, huella y versionado: si no cambió nada se conserva la versión; si cambió una fuente se crea la siguiente. El portal de gestoría puede pedir documentación y descargar el paquete sin entrar en el panel del autónomo.
 
+### 7.6 Calendario y conciliación sin API obligatoria
+
+Agenda puede crear un token aleatorio y exponer `/cal/{token}.ics`. El enlace es de
+solo lectura, no indexable y revocable: rotarlo invalida inmediatamente el anterior.
+Google Calendar, Apple Calendar u Outlook pueden suscribirse a él sin que Noesis
+almacene credenciales de esos servicios.
+
+Cobros admite CSV bancarios comunes. `banking.py` normaliza fecha, importe, concepto,
+contraparte y referencia, y `db.py` impide duplicados por huella dentro de cada
+negocio. Una propuesta puede apoyarse en importe, número de factura y cliente, pero
+solo el endpoint de confirmación crea `invoice_payments`. Importar nunca mueve dinero
+ni marca una factura como cobrada automáticamente.
+
 ## 8. Cerebro y acompañamiento de Noesis
 
 ### Orden de resolución
@@ -296,6 +312,7 @@ Los mensajes proactivos de Meta deben usar plantillas aprobadas. Las respuestas 
 | Aviso fiscal | día 1 de enero/abril/julio/octubre, 10:00 | recordatorio trimestral | plantilla y cuenta activa |
 | Paquete gestoría | días 1–5, 09:30 | prepara/avisa entrega | cadencia autorizada y email de gestoría |
 | Outbox WhatsApp | cada 15 s | entrega/reintenta mensajes | bloqueo de filas e idempotencia |
+| Outbox correo | cada 15 s | entrega/reintenta correos confirmados | persistencia previa, bloqueo e idempotencia |
 | Outbox Veri*Factu | cada 15 s | remite/reintenta registros | configuración AEAT, cola y backoff |
 | Backup | 03:30 | copia BD y documentos | una ejecución reclamada por día |
 

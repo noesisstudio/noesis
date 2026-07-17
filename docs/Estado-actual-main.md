@@ -19,6 +19,13 @@
 - Noesis aparece en todas las secciones con una lectura contextual, el motivo y el
   siguiente paso. La estructura de cada pantalla sigue siendo propia de su función;
   no existe una plantilla universal de KPIs.
+- Agenda ofrece un enlace privado y revocable para suscribirse desde Google Calendar,
+  Apple Calendar u Outlook sin contratar una API. Cobros importa extractos CSV,
+  propone coincidencias explicables y solo registra el pago cuando el titular lo
+  confirma.
+- Los correos confirmados se persisten antes de intentar SMTP, se deduplican y
+  reintentan con backoff. Los errores de proveedores y el diagnóstico de preparación
+  viven en administración; el cliente ve funciones y preferencias, no infraestructura.
 
 ## Política comercial en el código actual
 
@@ -40,8 +47,10 @@ algo está en producción porque exista en una rama o haya pasado tests.**
 
 ## Límites que siguen abiertos
 
-- WhatsApp, Stripe, SMTP, el proveedor privado de IA y AEAT están implementados detrás
-  de adaptadores, pero necesitan credenciales y una prueba real extremo a extremo.
+- WhatsApp, Stripe, SMTP, Google OAuth, el proveedor privado de IA y AEAT están
+  implementados detrás de adaptadores, pero necesitan credenciales y una prueba real
+  extremo a extremo. El calendario bidireccional y la conexión bancaria automática
+  siguen pendientes; la suscripción ICS y la conciliación CSV ya funcionan en local.
 - Falta auditoría externa de seguridad, privacidad y fiscalidad, restauración real y
   piloto acompañado con 3-5 negocios.
 - La memoria de cliente es explicable y corregible; no se promete aprendizaje autónomo

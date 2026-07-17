@@ -136,14 +136,15 @@ class InternalBrainTestCase(unittest.TestCase):
         self.assertIn("diez minutos tarde", result["reply"])
         self.assertIsNotNone(pending)
 
-        with patch.object(email_adapter, "send_email", return_value=True) as send:
-            reply = whatsapp._execute_pending(
-                db.get_business(self.business["id"]), "699000111", pending
-            )
+        reply = whatsapp._execute_pending(
+            db.get_business(self.business["id"]), "699000111", pending
+        )
 
-        self.assertIn("Enviado a Ana Pérez", reply)
-        self.assertEqual(send.call_args.args[0], "ana@example.com")
-        self.assertIn("diez minutos tarde", send.call_args.args[2])
+        self.assertIn("Preparado para enviar a Ana Pérez", reply)
+        messages = db.list_email_messages(self.business["id"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]["to_email"], "ana@example.com")
+        self.assertIn("diez minutos tarde", messages[0]["text_body"])
 
     def test_failed_delivery_keeps_confirmation_for_safe_retry(self):
         chat.handle(
@@ -154,15 +155,20 @@ class InternalBrainTestCase(unittest.TestCase):
         )
         pending = db.get_pending_action(self.business["id"], "699000111")
 
-        with patch.object(email_adapter, "send_email", return_value=False):
-            reply = whatsapp._execute_pending(
-                db.get_business(self.business["id"]), "699000111", pending
-            )
-
-        self.assertIn("SÍ para reintentar", reply)
-        self.assertIsNotNone(
-            db.get_pending_action(self.business["id"], "699000111")
+        reply = whatsapp._execute_pending(
+            db.get_business(self.business["id"]), "699000111", pending
         )
+        self.assertIn("Preparado para enviar", reply)
+        self.assertIsNone(db.get_pending_action(self.business["id"], "699000111"))
+
+        queued = db.list_email_messages(self.business["id"])[0]
+        with (
+            patch.object(email_adapter, "available", return_value=True),
+            patch.object(email_adapter, "send_email", return_value=False),
+        ):
+            from noesis.web import scheduler
+            self.assertEqual(scheduler.process_email_outbox(limit=1), 0)
+        self.assertEqual(db.get_email_message(queued["id"])["status"], "retrying")
 
     def test_web_can_draft_but_never_sends_or_creates_confirmation(self):
         self._pending_invoice()

@@ -48,6 +48,43 @@
   aparece en su día. Cuando haya varios trabajos la misma jornada, el siguiente paso es
   ordenarlos por zona para no cruzar la ciudad dos veces.
 </div>
+
+<div class="card" id="calendar-feed" style="margin-top:16px">
+  <div class="card-h">
+    <div>
+      <div class="kicker">Tu calendario habitual</div>
+      <h2>Lleva los trabajos contigo</h2>
+    </div>
+  </div>
+  <div class="card-b">
+    <p class="muted" style="margin-top:0">
+      Añade la agenda de Noesis a Google Calendar, Apple Calendar u Outlook con un
+      enlace privado. Se actualizará cuando cambien tus trabajos y no da acceso a tu cuenta.
+    </p>
+    {% if calendar_feed_url %}
+    <label class="fld" for="calendar-feed-url">Enlace privado de suscripción</label>
+    <div class="row" style="align-items:stretch">
+      <input class="input" id="calendar-feed-url" value="{{ calendar_feed_url }}" readonly
+        style="flex:1;min-width:240px">
+      <button class="btn primary" type="button" onclick="copyCalendarFeed()">Copiar enlace</button>
+    </div>
+    <div id="calendar-feed-msg" class="meta" role="status" style="margin-top:8px"></div>
+    <details style="margin-top:14px">
+      <summary>Revocar el enlace actual</summary>
+      <p class="meta">Los calendarios que usen el enlace anterior dejarán de actualizarse.</p>
+      <form method="post" action="/b/{{ business.id }}/calendar-feed">
+        <input type="hidden" name="action" value="rotate">
+        <button class="btn" type="submit">Crear un enlace nuevo</button>
+      </form>
+    </details>
+    {% else %}
+    <form method="post" action="/b/{{ business.id }}/calendar-feed">
+      <input type="hidden" name="action" value="create">
+      <button class="btn primary" type="submit">Crear mi enlace de calendario</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -161,6 +198,18 @@ async function initAgenda() {
   workers = await api('/workers');
   projects = (await api('/projects')).projects;
   await loadMonth();
+}
+async function copyCalendarFeed() {
+  const input = el('calendar-feed-url');
+  const msg = el('calendar-feed-msg');
+  try {
+    await navigator.clipboard.writeText(input.value);
+    msg.textContent = 'Enlace copiado. Añádelo como calendario por URL.';
+  } catch (_error) {
+    input.select();
+    document.execCommand('copy');
+    msg.textContent = 'Enlace copiado.';
+  }
 }
 initAgenda();
 </script>
