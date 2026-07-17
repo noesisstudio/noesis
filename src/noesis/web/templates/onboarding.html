@@ -52,10 +52,19 @@
           <b id="signup-selection-price"></b>
           <a href="/precios">Comparar planes</a>
         </div>
+        <div class="signup-annual-offer" id="signup-annual-offer" hidden>
+          <span class="signup-annual-badge">1 mes gratis</span>
+          <div>
+            <span><s id="signup-annual-before"></s> pagando mes a mes</span>
+            <b id="signup-annual-now"></b>
+            <small><span id="signup-annual-equivalent"></span> · Ahorras <strong id="signup-annual-saving"></strong></small>
+          </div>
+        </div>
       </div>
       {% if error == 'email' %}<div class="auth-error">Ese email ya tiene cuenta. <a href="/login">Inicia sesión.</a></div>{% endif %}
       {% if error == 'email_format' %}<div class="auth-error">El email no tiene un formato válido.</div>{% endif %}
       {% if error == 'name' %}<div class="auth-error">Pon el nombre de tu negocio.</div>{% endif %}
+      {% if error == 'sector' %}<div class="auth-error">Cuéntanos brevemente a qué se dedica tu negocio.</div>{% endif %}
       {% if error == 'password' %}<div class="auth-error">La contraseña debe tener al menos 12 caracteres.</div>{% endif %}
       {% if error == 'throttle' %}<div class="auth-error">Demasiados intentos. Espera unos minutos e inténtalo de nuevo.</div>{% endif %}
       {% if error == 'google_unavailable' %}<div class="auth-error">El acceso con Google todavía no está configurado.</div>{% endif %}
@@ -72,7 +81,7 @@
         <label>Nombre de tu negocio *<input class="input" name="name" required autocomplete="organization" placeholder="Ej. Fontanería García"></label>
         <label>Email *<input class="input" name="email" type="email" required autocomplete="email" placeholder="tu@email.com"></label>
         <label>Contraseña *<input class="input" name="password" type="password" required minlength="12" maxlength="1024" autocomplete="new-password" placeholder="Mínimo 12 caracteres"></label>
-        <label>Sector *<select name="sector" required><option value="">Selecciona tu actividad...</option><option>Fontanería</option><option>Electricidad</option><option>Reformas</option><option>Climatización</option><option>Limpieza</option><option>Jardinería</option><option>Mantenimiento</option><option>Otro</option></select></label>
+        <label>¿A qué se dedica tu negocio? *<input class="input" name="sector" required maxlength="80" autocomplete="organization-title" placeholder="Ej. Instalación de placas solares"></label>
         {% if error == 'consent' %}<div class="auth-error">Debes aceptar los términos para crear la cuenta.</div>{% endif %}
         <label class="auth-consent"><input type="checkbox" name="acepto" value="1" required><span>He leído y acepto los <a href="/terminos" target="_blank">Términos</a>, la <a href="/privacidad" target="_blank">Privacidad</a> y el <a href="/encargado-tratamiento" target="_blank">Contrato de Encargado del Tratamiento</a>.</span></label>
         <button class="btn primary full" id="signup-submit">Crear cuenta y configurarla</button>
@@ -90,6 +99,11 @@
     const intentField = document.getElementById('signup-intent-field');
     const price = document.getElementById('signup-selection-price');
     const label = document.getElementById('signup-selection-label');
+    const annualOffer = document.getElementById('signup-annual-offer');
+    const annualBefore = document.getElementById('signup-annual-before');
+    const annualNow = document.getElementById('signup-annual-now');
+    const annualEquivalent = document.getElementById('signup-annual-equivalent');
+    const annualSaving = document.getElementById('signup-annual-saving');
     const google = document.getElementById('google-signup-link');
     const submit = document.getElementById('signup-submit');
     function sync() {
@@ -101,8 +115,19 @@
       const amount = billing.value === 'annual'
         ? `${option.dataset.annual} € + IVA/año`
         : `${option.dataset.monthly} € + IVA/mes`;
+      const monthlyPrice = Number(option.dataset.monthly);
+      const annualPrice = Number(option.dataset.annual);
+      const regularAnnualPrice = monthlyPrice * 12;
+      const saving = regularAnnualPrice - annualPrice;
       label.textContent = intent === 'trial' ? 'Después de la prueba' : 'Contratarás al terminar';
       price.textContent = `${option.textContent} · ${amount}`;
+      annualOffer.hidden = billing.value !== 'annual';
+      if (billing.value === 'annual') {
+        annualBefore.textContent = `${regularAnnualPrice} €`;
+        annualNow.textContent = `${annualPrice} € + IVA al año`;
+        annualEquivalent.textContent = `Equivale a ${(annualPrice / 12).toFixed(2).replace('.', ',')} €/mes`;
+        annualSaving.textContent = `${saving} € (-${Math.round((saving / regularAnnualPrice) * 100)} %)`;
+      }
       submit.textContent = intent === 'trial'
         ? 'Empezar mis 14 días'
         : 'Crear cuenta y preparar el pago';

@@ -43,6 +43,8 @@
   },
   "internal_capabilities": {
     "commercial_onboarding": "trial_or_subscribe_then_business_invoice_collection_messages_whatsapp_and_checkout",
+    "onboarding_sector_capture": "free_text_up_to_80_characters",
+    "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",
     "private_calendar_feed": "implemented_revocable_ics",
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",

@@ -39,13 +39,10 @@
       {% endif %}
 
       <form method="post" action="/onboarding/setup/{{ business.id }}">
-        <label class="fld">Actividad principal *</label>
-        <select name="sector" required>
-          {% for sector in ['Fontanería', 'Electricidad', 'Reformas', 'Climatización',
-                            'Limpieza', 'Jardinería', 'Mantenimiento', 'Otro'] %}
-          <option value="{{ sector }}" {{ 'selected' if business.sector == sector }}>{{ sector }}</option>
-          {% endfor %}
-        </select>
+        <label class="fld">¿A qué se dedica tu negocio? *</label>
+        <input class="input" name="sector" required maxlength="80"
+               value="{{ business.sector or '' }}"
+               placeholder="Ej. Instalación y mantenimiento de placas solares">
 
         <label class="fld" style="margin-top:16px">Personas que trabajan en el negocio *</label>
         <div class="choice-grid">

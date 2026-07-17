@@ -2,6 +2,14 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Oferta anual explicable y sector escrito por el cliente (2026-07-17)
+
+El alta anual compara el coste real de doce mensualidades con el pago anual, muestra
+el equivalente mensual y cuantifica el ahorro. El rojo se usa como acento comercial
+apagado, no como alarma. El sector es texto libre y se conserva entre pasos: Noesis
+no obliga a un oficio a encajar en una lista incompleta y la segmentación interna se
+construye después sobre respuestas reales.
+
 ## Configurar antes de operar o cobrar; prueba y contratación son explícitas (2026-07-17)
 
 El alta ofrece dos compromisos distintos: probar 14 días sin tarjeta o contratar un

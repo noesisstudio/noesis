@@ -1473,6 +1473,10 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertEqual(annual_signup.status_code, 200)
                 self.assertIn('data-annual="319" selected', annual_signup.text)
                 self.assertIn('name="billing" value="annual"', annual_signup.text)
+                self.assertIn('id="signup-annual-offer"', annual_signup.text)
+                self.assertIn('id="signup-annual-before"', annual_signup.text)
+                self.assertIn('name="sector" required maxlength="80"', annual_signup.text)
+                self.assertNotIn('<select name="sector"', annual_signup.text)
 
                 login = client.post(
                     "/login",
@@ -1602,10 +1606,13 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                 complete = client.get(callback.headers["location"])
                 self.assertEqual(complete.status_code, 200)
                 self.assertIn("google@example.com", complete.text)
+                self.assertIn("signup-annual-offer-static", complete.text)
+                self.assertIn('name="sector" required maxlength="80"', complete.text)
                 created = client.post(
                     "/onboarding/google",
                     data={
-                        "name": "Fontanería Google", "sector": "Fontanería",
+                        "name": "Taller Google",
+                        "sector": "Restauración de patrimonio",
                         "acepto": "1", "plan": "pro", "billing": "annual",
                         "intent": "subscribe",
                     },
@@ -1615,6 +1622,10 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                 self.assertIn("/onboarding/setup/", created.headers["location"])
                 user = db.get_user_by_email("google@example.com")
                 self.assertIsNotNone(user)
+                self.assertEqual(
+                    db.get_business(user["business_id"])["sector"],
+                    "Restauración de patrimonio",
+                )
 
                 second_start = client.get("/auth/google", follow_redirects=False)
                 second_state = parse_qs(urlparse(second_start.headers["location"]).query)["state"][0]
@@ -1856,13 +1867,28 @@ class PortalHttpTestCase(BackendTestCase):
 
         with patch.object(server, "start_scheduler", lambda: None):
             with TestClient(server.app) as client:
+                missing_sector = client.post(
+                    "/onboarding/signup",
+                    data={
+                        "name": "Negocio sin actividad",
+                        "email": "sinsector@example.com",
+                        "password": "password-segura-123",
+                        "sector": "   ",
+                        "acepto": "1",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(missing_sector.status_code, 303)
+                self.assertIn("error=sector", missing_sector.headers["location"])
+                self.assertIsNone(db.get_user_by_email("sinsector@example.com"))
+
                 signup = client.post(
                     "/onboarding/signup",
                     data={
                         "name": "Negocio Completo",
                         "email": "completo@example.com",
                         "password": "password-segura-123",
-                        "sector": "Reformas",
+                        "sector": "Instalación de placas solares",
                         "acepto": "1",
                         "plan": "pro",
                         "billing": "annual",
@@ -1873,11 +1899,15 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(signup.status_code, 303)
                 user = db.get_user_by_email("completo@example.com")
                 business_id = user["business_id"]
+                setup_page = client.get(signup.headers["location"])
+                self.assertIn(
+                    'value="Instalación de placas solares"', setup_page.text
+                )
 
                 profile = client.post(
                     signup.headers["location"],
                     data={
-                        "sector": "Reformas",
+                        "sector": "Instalación de placas solares",
                         "team_size": "2-5",
                         "primary_goal": "facturar",
                         "province": "Valencia",
@@ -1927,6 +1957,9 @@ class PortalHttpTestCase(BackendTestCase):
                 )
 
                 configured = db.get_business(business_id)
+                self.assertEqual(
+                    configured["sector"], "Instalación de placas solares"
+                )
                 self.assertEqual(configured["default_payment_term_days"], 30)
                 self.assertEqual(configured["invoice_template"], "editorial")
                 self.assertEqual(configured["payment_reminder_days"], "3,10")

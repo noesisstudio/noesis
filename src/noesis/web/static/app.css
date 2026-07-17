@@ -1514,6 +1514,20 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .signup-plan-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
 .signup-plan-row label { display:grid; gap:5px; color:var(--muted); font-size:10.5px; font-weight:750; }
 .signup-plan-row select { min-height:40px; background:var(--surface); }
+.signup-annual-offer { display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px;
+  align-items:start; margin-top:10px; padding:11px 12px; color:var(--red);
+  background:var(--red-soft); border:1px solid var(--red);
+  border-radius:var(--radius-sm); }
+.signup-annual-offer[hidden] { display:none; }
+.signup-annual-badge { padding:4px 7px; color:var(--surface); background:var(--red); border-radius:6px;
+  font-size:9px; font-weight:850; letter-spacing:.02em; text-transform:uppercase; white-space:nowrap; }
+.signup-annual-offer > div { display:grid; gap:2px; }
+.signup-annual-offer > div > span { color:var(--red); font-size:10px; }
+.signup-annual-offer s { color:var(--muted); }
+.signup-annual-offer b { color:var(--red); font-size:13px; }
+.signup-annual-offer small { color:var(--red); font-size:10.5px; }
+.signup-annual-offer strong { color:var(--red); }
+.signup-annual-offer-static { margin:-6px 0 14px; }
 .faq-preview { display:grid; grid-template-columns:.58fr 1.42fr; gap:80px; padding:70px 0 90px; border-top:1px solid var(--border); }
 .faq-preview h2 { font-size:clamp(30px,3.4vw,43px); margin:10px 0 22px; }
 .public-accordion { border-top:1px solid var(--border-strong); }

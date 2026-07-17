@@ -294,8 +294,11 @@ def onboarding_signup(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding?error=throttle{onboarding_query}", status_code=303)
     email = (email or "").strip().lower()
     name = (name or "").strip()
+    sector = (sector or "").strip()[:80]
     if not name:
         return RedirectResponse(f"/onboarding?error=name{onboarding_query}", status_code=303)
+    if not sector:
+        return RedirectResponse(f"/onboarding?error=sector{onboarding_query}", status_code=303)
     if not acepto:
         return RedirectResponse(f"/onboarding?error=consent{onboarding_query}", status_code=303)
     if not auth.valid_email(email):
@@ -307,7 +310,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding?error=email{onboarding_query}", status_code=303)
     try:
         biz, user = db.create_account(
-            name, email, auth.hash_password(password), sector or None,
+            name, email, auth.hash_password(password), sector,
             trial_days=config.TRIAL_DAYS,
         )
     except (ValueError, *db.IntegrityError):
@@ -372,6 +375,9 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding{query}", status_code=303)
     if not (name or "").strip():
         return RedirectResponse(f"/onboarding/google{error_query}name", status_code=303)
+    sector = (sector or "").strip()[:80]
+    if not sector:
+        return RedirectResponse(f"/onboarding/google{error_query}sector", status_code=303)
     if not acepto:
         return RedirectResponse(f"/onboarding/google{error_query}consent", status_code=303)
     existing = db.get_user_by_email(email)
@@ -381,7 +387,7 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
     try:
         biz, user = db.create_account(
             (name or "").strip(), email, auth.hash_password(secrets.token_urlsafe(48)),
-            sector or None, trial_days=config.TRIAL_DAYS,
+            sector, trial_days=config.TRIAL_DAYS,
         )
     except (ValueError, *db.IntegrityError):
         return RedirectResponse(f"/onboarding/google{error_query}email", status_code=303)
