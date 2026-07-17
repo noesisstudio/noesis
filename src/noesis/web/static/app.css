@@ -1379,6 +1379,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .demo-screen .btn, .demo-screen .chip, .demo-screen input, .demo-screen .cal-cell { cursor:default; }
 .demo-app-main .demo-subnav { margin:0; padding:7px 14px 0; max-width:none; gap:3px;
   background:#f3f0e8; border-bottom:1px solid var(--border); }
+/* .subnav trae display:flex, que gana al atributo hidden: hay que reafirmarlo. */
+.demo-app-main .demo-subnav[hidden] { display:none; }
 .demo-app-main .demo-subnav button { flex:0 0 auto; padding:5px 12px; border:1px solid transparent;
   border-radius:999px; color:var(--muted); background:transparent; font:inherit; font-size:10px;
   font-weight:700; cursor:pointer; margin-bottom:6px; }
