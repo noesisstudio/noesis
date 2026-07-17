@@ -1,14 +1,14 @@
 {
   "state_date": "2026-07-17",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 30,
-  "verified_test_count": 284,
+  "schema_version": 31,
+  "verified_test_count": 285,
   "production": {
     "url": "https://app.bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Aplicar migraciones 28-30 y verificar calendario, conciliación CSV, correo durable y Ajustes"
+    "pending_after_deploy": "Aplicar migración 31 y verificar alta por prueba/contratación, preferencias operativas, Google OAuth y checkout reales"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -39,9 +39,10 @@
   },
   "authentication": {
     "password": "available",
-    "google_oauth": "implemented_optional_configuration"
+    "google_oauth": "implemented_hidden_until_client_and_secret_are_configured"
   },
   "internal_capabilities": {
+    "commercial_onboarding": "trial_or_subscribe_then_business_invoice_collection_messages_whatsapp_and_checkout",
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",
     "private_calendar_feed": "implemented_revocable_ics",
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",

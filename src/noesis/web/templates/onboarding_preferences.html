@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Prepara tu operativa</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body class="public-auth-body">
+  <header class="auth-topbar">
+    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a>
+    <a href="/b/{{ business.id }}/resumen">Guardar y salir</a>
+  </header>
+  <div class="onboarding-center onboarding-operations-center">
+    <div class="onboarding-card onboarding-operations-card">
+      <div class="onboarding-steps" aria-label="Paso 3 de 4">
+        <span class="onboarding-step complete">1</span><span>Cuenta</span>
+        <span class="onboarding-line"></span>
+        <span class="onboarding-step complete">2</span><span>Negocio</span>
+        <span class="onboarding-line"></span>
+        <span class="onboarding-step current">3</span><b>Operativa</b>
+        <span class="onboarding-line"></span>
+        <span class="onboarding-step">4</span><span>WhatsApp</span>
+      </div>
+
+      <div class="kicker">Déjalo listo una vez</div>
+      <h1>¿Cómo quieres trabajar?</h1>
+      <p class="onboarding-lead">Lo que elijas aquí se aplicará a tus facturas,
+        cobros y avisos. Después podrás cambiarlo desde Ajustes.</p>
+
+      {% if error %}
+      <div class="form-error">Revisa los datos fiscales, de cobro o de tu gestoría.</div>
+      {% endif %}
+
+      <form method="post" action="/onboarding/preferences/{{ business.id }}" class="onboarding-operations-form">
+        <section class="onboarding-config-section">
+          <div class="onboarding-config-heading">
+            <span>1</span><div><h2>Tus facturas</h2><p>Datos reales y valores por defecto.</p></div>
+          </div>
+          <div class="grid g2 onboarding-fields">
+            <label>Tu NIF o DNI *
+              <input class="input" name="nif" required maxlength="40" value="{{ business.nif or '' }}" placeholder="12345678Z">
+            </label>
+            <label>Dirección fiscal *
+              <input class="input" name="address" required maxlength="300" value="{{ business.address or '' }}" placeholder="Calle, número, localidad">
+            </label>
+            <label>IVA habitual
+              <select name="default_vat">
+                {% for value in [21, 10, 4, 0] %}<option value="{{ value }}" {{ 'selected' if business.default_vat == value }}>{{ value }} %</option>{% endfor %}
+              </select>
+            </label>
+            <label>IRPF habitual
+              <select name="default_irpf">
+                {% for value in [0, 7, 15] %}<option value="{{ value }}" {{ 'selected' if business.default_irpf == value }}>{{ value }} %</option>{% endfor %}
+              </select>
+            </label>
+            <label>Cuándo vence una factura
+              <select name="default_payment_term_days">
+                {% for value, label in [(0,'El mismo día'),(7,'A 7 días'),(15,'A 15 días'),(30,'A 30 días'),(60,'A 60 días')] %}
+                <option value="{{ value }}" {{ 'selected' if (business.default_payment_term_days if business.default_payment_term_days is not none else 15) == value }}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label>Estilo del PDF
+              <select name="invoice_template">
+                {% for value, label in [('clasica','Clásica y clara'),('minimal','Minimal'),('editorial','Editorial')] %}
+                <option value="{{ value }}" {{ 'selected' if (business.invoice_template or 'clasica') == value }}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+          <p class="onboarding-helper">Noesis preparará los cálculos con estos valores; tú revisarás cada factura antes de emitirla.</p>
+        </section>
+
+        <section class="onboarding-config-section">
+          <div class="onboarding-config-heading">
+            <span>2</span><div><h2>Cómo quieres cobrar</h2><p>Aparecerá en el PDF y en el portal del cliente.</p></div>
+          </div>
+          <div class="grid g2 onboarding-fields">
+            <label>IBAN para transferencias
+              <input class="input" name="payment_iban" maxlength="42" value="{{ business.payment_iban or '' }}" placeholder="ES12 3456 7890 1234 5678 9012">
+            </label>
+            <label>Bizum
+              <input class="input" name="payment_bizum" maxlength="16" value="{{ business.payment_bizum or '' }}" placeholder="600 000 000">
+            </label>
+          </div>
+          <label class="onboarding-field-full">Nota de pago
+            <input class="input" name="payment_note" maxlength="300" value="{{ business.payment_note or '' }}" placeholder="Ej. Indica el número de factura en el concepto">
+          </label>
+          <label class="onboarding-switch-row">
+            <input type="checkbox" id="onboarding-reminders" name="payment_reminders_enabled" value="1" {{ 'checked' if business.payment_reminders_enabled }}>
+            <span><b>Ayudarme a perseguir cobros</b><small>Noesis prepara los avisos según la cadencia que apruebes.</small></span>
+          </label>
+          <label class="onboarding-reminder-days" id="onboarding-reminder-days">Avisar a los
+            <input class="input" name="payment_reminder_days" maxlength="30" value="{{ business.payment_reminder_days or '3,7,15' }}" aria-label="Días de recordatorio">
+            días de retraso
+          </label>
+        </section>
+
+        <section class="onboarding-config-section">
+          <div class="onboarding-config-heading">
+            <span>3</span><div><h2>Qué quieres recibir</h2><p>Elige el acompañamiento; no mensajes por defecto que no esperabas.</p></div>
+          </div>
+          <div class="onboarding-switch-grid">
+            {% for name, title, text, checked in [
+              ('brief_manana','Parte de la mañana','Agenda, cobros y lo primero del día.',wa_reports.brief_manana),
+              ('cierre_tarde','Cierre del día','Lo hecho y lo que queda para mañana.',wa_reports.cierre_tarde),
+              ('resumen_semanal','Resumen semanal','Cómo ha ido la semana, sin tecnicismos.',wa_reports.resumen_semanal),
+              ('aviso_fiscal','Aviso trimestral','Estimación fiscal para revisar con tu gestoría.',wa_reports.aviso_fiscal)
+            ] %}
+            <label class="onboarding-switch-row">
+              <input type="checkbox" name="{{ name }}" value="1" {{ 'checked' if checked }}>
+              <span><b>{{ title }}</b><small>{{ text }}</small></span>
+            </label>
+            {% endfor %}
+          </div>
+          <label class="onboarding-close-hour">Hora del cierre
+            <select name="hora_tarde">
+              {% for hour in [17,18,19,20,21] %}<option value="{{ hour }}" {{ 'selected' if wa_reports.hora_tarde == hour }}>{{ hour }}:00</option>{% endfor %}
+            </select>
+          </label>
+        </section>
+
+        <section class="onboarding-config-section">
+          <div class="onboarding-config-heading">
+            <span>4</span><div><h2>Tu gestoría</h2><p>Opcional. Puedes conectarla ahora o más adelante.</p></div>
+          </div>
+          <label>Enviar documentación
+            <select name="gestoria_cadence" id="onboarding-gestoria-cadence">
+              <option value="off">Todavía no</option>
+              <option value="mensual">Cada mes</option>
+              <option value="trimestral">Cada trimestre</option>
+            </select>
+          </label>
+          <div class="grid g2 onboarding-fields" id="onboarding-gestoria-fields" hidden>
+            <label>Nombre de la gestoría
+              <input class="input" name="gestoria_name" maxlength="120" placeholder="Gestoría García">
+            </label>
+            <label>Email de la gestoría
+              <input class="input" type="email" name="gestoria_email" maxlength="200" placeholder="clientes@gestoria.com">
+            </label>
+          </div>
+        </section>
+
+        <div class="onboarding-submit-bar">
+          <div><b>Después: conecta WhatsApp</b><span>{% if signup_intent == 'subscribe' %}y revisa el pago elegido{% else %}y empieza tus 14 días{% endif %}.</span></div>
+          <button class="btn primary" type="submit">Guardar y continuar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const reminders = document.getElementById('onboarding-reminders');
+    const reminderDays = document.getElementById('onboarding-reminder-days');
+    const cadence = document.getElementById('onboarding-gestoria-cadence');
+    const gestoria = document.getElementById('onboarding-gestoria-fields');
+    function sync() {
+      reminderDays.hidden = !reminders.checked;
+      gestoria.hidden = cadence.value === 'off';
+      gestoria.querySelector('[name="gestoria_email"]').required = cadence.value !== 'off';
+    }
+    reminders.addEventListener('change', sync);
+    cadence.addEventListener('change', sync);
+    sync();
+  })();
+  </script>
+</body>
+</html>

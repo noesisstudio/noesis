@@ -5,9 +5,9 @@
 
 ## P0 — publicar y pilotar con seguridad
 
-- [ ] Fusionar y desplegar el candidato actual; aplicar migraciones 28-30 y confirmar
-  `/ready`, Home, Ajustes sin diagnóstico técnico, alta Google, calendario privado,
-  conciliación CSV, correo durable, modo consulta y una ficha de proyecto.
+- [ ] Fusionar y desplegar el candidato actual; aplicar migración 31 y confirmar
+  `/ready`, alta por prueba, alta por contratación, preferencias operativas,
+  vencimiento de factura, checkout, Home, modo consulta y una ficha de proyecto.
 - [ ] Crear o actualizar en Stripe los productos **29/49/99 € + IVA**, enlazar sus
   `price_id`, probar checkout, webhook, impago, reactivación y portal de cliente.
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
@@ -18,7 +18,9 @@
   y entregabilidad. La cola durable ya está construida.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://app.bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
-  y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales.
+  y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El
+  botón permanece oculto hasta que ambas credenciales existan para no prometer una
+  función falsa.
 - [ ] Certificado/entorno AEAT y validación con asesoría fiscal.
 - [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo.
 - [ ] Restaurar una copia externa en un entorno aislado y documentar tiempos.

@@ -97,16 +97,18 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 
 ## Flujo SaaS de alta
 ```
-Cuenta → perfil operativo → WhatsApp → panel
-                              │
-                              └─► recorrido: cliente → trabajo → factura → cobro
+Prueba o contratación → cuenta → negocio → operativa → WhatsApp
+                                                    │
+                       prueba ───────────────────────┴─► panel
+                       contratación ──────────────────► checkout → panel
 ```
 
-El alta recoge sector, tamaño del equipo, provincia y objetivo principal. Estos
-campos permiten segmentar activación, retención y conversión sin mezclar negocios ni
-exponer información personal en herramientas de terceros. También pide una elección
-explícita de IA: la experiencia completa está recomendada, pero la cuenta permanece
-sin envíos externos hasta confirmar esa elección.
+El alta recoge sector, tamaño del equipo, provincia, objetivo principal y elección
+explícita de IA. Después configura datos fiscales, IVA/IRPF, plantilla y vencimiento
+de factura, cobro, recordatorios, informes y gestoría. Son valores operativos que
+usa el producto. Quien prueba entra sin tarjeta; quien contrata revisa al final el
+plan mensual/anual antes del checkout. Google solo se ofrece si existen cliente y
+secreto válidos.
 
 Detalle y pendientes: [[Backend_Hardening]].
 

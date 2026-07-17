@@ -112,16 +112,28 @@ def cumplimiento(request: Request):
 
 
 @router.get("/b/{business_id}/suscripcion", response_class=HTMLResponse)
-def subscription_page(request: Request, business_id: int, status: str = ""):
+def subscription_page(
+    request: Request, business_id: int, status: str = "", plan: str = "",
+    billing: str = "",
+):
     # Definida antes de la ruta generica /b/{id}/{page} para que no la capture esta.
     biz = db.get_business(business_id)
+    preferred_plan = (
+        plan if plan in billing_adapter.PLAN_PRICES
+        else str(request.session.get("signup_plan") or "pro")
+    )
+    preferred_billing = (
+        billing if billing in {"monthly", "annual"}
+        else str(request.session.get("signup_billing") or "monthly")
+    )
     return TEMPLATES.TemplateResponse(request, "suscripcion.html", {
         "business": biz, "active": "ajustes", "page_title": "Suscripción",
         "status": status, "billing_on": billing_adapter.get_provider().available(),
         "prices": billing_adapter.PLAN_PRICES,
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
         "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
-        "preferred_billing": request.session.get("signup_billing", "monthly"),
+        "preferred_plan": preferred_plan,
+        "preferred_billing": preferred_billing,
         "subscription_read_only": not db.subscription_allows_access(biz),
     })
 

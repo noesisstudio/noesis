@@ -2,7 +2,7 @@
 
 > **Propósito.** Documento de entrada para una persona de ingeniería que necesite entender Noesis de extremo a extremo: web, datos, cerebro, automatizaciones, WhatsApp, seguridad y dependencias externas.
 >
-> **Foto del código:** 17-07-2026 · esquema 30 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
+> **Foto del código:** 17-07-2026 · esquema 31 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
 
 ## 1. Qué es el sistema
 
@@ -89,7 +89,7 @@ src/noesis/
 │   ├── scheduler.py          # automatizaciones periódicas
 │   └── gestoria.py           # paquetes y entregas a asesoría
 ├── db.py                     # frontera única de datos multiempresa
-├── migrations.py             # SQLite/Postgres, versión 30
+├── migrations.py             # SQLite/Postgres, versión 31
 ├── banking.py                # CSV bancario y propuestas locales de conciliación
 ├── nlu.py                    # órdenes rutinarias por reglas locales
 ├── internal_brain.py         # borradores explicables de comunicaciones
@@ -181,11 +181,11 @@ Documento → clasificación → borrador revisable → gasto o factura recibida
 
 ### 7.1 Alta, sesión y suscripción
 
-1. El usuario crea cuenta por contraseña o, si está configurado, Google OAuth.
-2. Onboarding recoge negocio, sector, equipo, provincia, objetivo y preferencia de IA; después ofrece vincular WhatsApp.
-3. La cuenta recibe una prueba de 14 días. El catálogo es 29/49/99 € + IVA al mes, con anual de 11 meses cobrados.
-4. Stripe genera checkout/portal cuando está configurado. Su webhook firmado cambia el estado de la suscripción de forma idempotente.
-5. Si expira, se cancela o hay impago, la cuenta conserva lectura, exportación y baja, pero queda en **modo consulta**.
+1. El usuario elige probar 14 días o contratar un plan mensual/anual y crea cuenta por contraseña o, si está configurado, Google OAuth.
+2. Onboarding recoge negocio, sector, equipo, provincia, objetivo, nivel de explicación y preferencia de IA.
+3. Configura fiscalidad, plantilla y vencimiento de factura, datos de cobro, recordatorios, informes, gestoría y WhatsApp. Estas preferencias se persisten y se aplican a facturas y automatizaciones.
+4. Quien prueba entra al panel sin tarjeta. Quien contrata llega a la revisión del plan y Stripe genera checkout cuando está configurado; su webhook firmado activa la suscripción de forma idempotente.
+5. El catálogo es 29/49/99 € + IVA al mes, con anual de 11 meses cobrados. Si la prueba expira, se cancela o hay impago, la cuenta conserva lectura, exportación y baja, pero queda en **modo consulta**.
 
 El modo consulta se fuerza en servidor, no solo con botones ocultos: web, API, WhatsApp, scheduler y colas cancelan o rechazan mutaciones (HTTP 402 en API).
 

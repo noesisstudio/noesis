@@ -17,16 +17,42 @@
     </section>
 
     <section class="public-auth-panel" aria-labelledby="signup-title">
-      <div class="auth-progress" aria-label="Paso 1 de 3"><b>1</b><span>Cuenta</span><i></i><b>2</b><span>Personaliza</span><i></i><b>3</b><span>WhatsApp</span></div>
-      <span class="eyebrow">Paso 1 de 3</span><h2 id="signup-title">Crea tu cuenta.</h2><p class="auth-lead">No pedimos tarjeta. Solo lo necesario para preparar tu espacio.</p>
-      {% if selected_plan %}
-      {% set chosen = plan_catalog[selected_plan] %}
-      <div class="selected-plan-summary">
-        <span>Has elegido</span>
-        <b>{{ chosen.name }} · {% if selected_billing == 'annual' %}{{ annual_prices[selected_plan] }} € + IVA/año{% else %}{{ chosen.price }} € + IVA/mes{% endif %}</b>
-        <a href="/precios">Cambiar</a>
+      <div class="auth-progress" aria-label="Paso 1 de 4"><b>1</b><span>Cuenta</span><i></i><b>2</b><span>Negocio</span><i></i><b>3</b><span>Operativa</span><i></i><b>4</b><span>WhatsApp</span></div>
+      <span class="eyebrow">Paso 1 de 4</span><h2 id="signup-title">Empieza a tu manera.</h2>
+      <p class="auth-lead">Elige si quieres probar primero o dejar el plan contratado al terminar la configuración.</p>
+
+      <div class="signup-commercial-choice" id="signup-commercial-choice">
+        <div class="signup-intent-grid" role="radiogroup" aria-label="Cómo quieres empezar">
+          <label class="signup-intent-card">
+            <input type="radio" name="signup-intent-choice" value="trial" {{ 'checked' if selected_intent == 'trial' }}>
+            <span><b>Probar 14 días</b><small>Sin tarjeta. Decide al terminar la prueba.</small></span>
+          </label>
+          <label class="signup-intent-card">
+            <input type="radio" name="signup-intent-choice" value="subscribe" {{ 'checked' if selected_intent == 'subscribe' }}>
+            <span><b>Contratar ahora</b><small>Configura primero y paga al final.</small></span>
+          </label>
+        </div>
+        <div class="signup-plan-row">
+          <label>Plan
+            <select id="signup-plan-choice">
+              {% for key, item in plan_catalog.items() %}
+              <option value="{{ key }}" data-monthly="{{ item.price }}" data-annual="{{ annual_prices[key] }}" {{ 'selected' if selected_plan == key }}>{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Pago
+            <select id="signup-billing-choice">
+              <option value="monthly" {{ 'selected' if selected_billing == 'monthly' }}>Mensual</option>
+              <option value="annual" {{ 'selected' if selected_billing == 'annual' }}>Anual · 1 mes gratis</option>
+            </select>
+          </label>
+        </div>
+        <div class="selected-plan-summary">
+          <span id="signup-selection-label">Tu elección</span>
+          <b id="signup-selection-price"></b>
+          <a href="/precios">Comparar planes</a>
+        </div>
       </div>
-      {% endif %}
       {% if error == 'email' %}<div class="auth-error">Ese email ya tiene cuenta. <a href="/login">Inicia sesión.</a></div>{% endif %}
       {% if error == 'email_format' %}<div class="auth-error">El email no tiene un formato válido.</div>{% endif %}
       {% if error == 'name' %}<div class="auth-error">Pon el nombre de tu negocio.</div>{% endif %}
@@ -36,22 +62,55 @@
       {% if error == 'google_cancelled' %}<div class="auth-error">Has cancelado el acceso con Google. Puedes volver a intentarlo.</div>{% endif %}
       {% if error == 'google_failed' %}<div class="auth-error">No hemos podido confirmar tu cuenta de Google. Prueba otra vez.</div>{% endif %}
       {% if google_oauth_available %}
-      <a class="auth-google-btn" href="/auth/google?flow=signup{% if selected_plan %}&amp;plan={{ selected_plan }}&amp;billing={{ selected_billing }}{% endif %}">Continuar con Google</a>
+      <a class="auth-google-btn" id="google-signup-link" href="/auth/google?flow=signup&amp;plan={{ selected_plan }}&amp;billing={{ selected_billing }}&amp;intent={{ selected_intent }}">Continuar con Google</a>
       <div class="auth-divider"><span>o crea tu cuenta con email</span></div>
       {% endif %}
       <form method="post" action="/onboarding/signup" class="public-auth-form">
-        <input type="hidden" name="plan" value="{{ selected_plan }}">
-        <input type="hidden" name="billing" value="{{ selected_billing }}">
+        <input type="hidden" id="signup-plan-field" name="plan" value="{{ selected_plan }}">
+        <input type="hidden" id="signup-billing-field" name="billing" value="{{ selected_billing }}">
+        <input type="hidden" id="signup-intent-field" name="intent" value="{{ selected_intent }}">
         <label>Nombre de tu negocio *<input class="input" name="name" required autocomplete="organization" placeholder="Ej. Fontanería García"></label>
         <label>Email *<input class="input" name="email" type="email" required autocomplete="email" placeholder="tu@email.com"></label>
         <label>Contraseña *<input class="input" name="password" type="password" required minlength="12" maxlength="1024" autocomplete="new-password" placeholder="Mínimo 12 caracteres"></label>
         <label>Sector *<select name="sector" required><option value="">Selecciona tu actividad...</option><option>Fontanería</option><option>Electricidad</option><option>Reformas</option><option>Climatización</option><option>Limpieza</option><option>Jardinería</option><option>Mantenimiento</option><option>Otro</option></select></label>
         {% if error == 'consent' %}<div class="auth-error">Debes aceptar los términos para crear la cuenta.</div>{% endif %}
         <label class="auth-consent"><input type="checkbox" name="acepto" value="1" required><span>He leído y acepto los <a href="/terminos" target="_blank">Términos</a>, la <a href="/privacidad" target="_blank">Privacidad</a> y el <a href="/encargado-tratamiento" target="_blank">Contrato de Encargado del Tratamiento</a>.</span></label>
-        <button class="btn primary full">Crear cuenta y personalizar</button>
+        <button class="btn primary full" id="signup-submit">Crear cuenta y configurarla</button>
       </form>
       <small class="auth-safe">Noesis nunca mueve dinero ni envía nada irreversible sin tu confirmación.</small>
     </section>
   </main>
+  <script>
+  (() => {
+    const plan = document.getElementById('signup-plan-choice');
+    const billing = document.getElementById('signup-billing-choice');
+    const intents = [...document.querySelectorAll('[name="signup-intent-choice"]')];
+    const planField = document.getElementById('signup-plan-field');
+    const billingField = document.getElementById('signup-billing-field');
+    const intentField = document.getElementById('signup-intent-field');
+    const price = document.getElementById('signup-selection-price');
+    const label = document.getElementById('signup-selection-label');
+    const google = document.getElementById('google-signup-link');
+    const submit = document.getElementById('signup-submit');
+    function sync() {
+      const intent = intents.find(item => item.checked)?.value || 'trial';
+      const option = plan.options[plan.selectedIndex];
+      planField.value = plan.value;
+      billingField.value = billing.value;
+      intentField.value = intent;
+      const amount = billing.value === 'annual'
+        ? `${option.dataset.annual} € + IVA/año`
+        : `${option.dataset.monthly} € + IVA/mes`;
+      label.textContent = intent === 'trial' ? 'Después de la prueba' : 'Contratarás al terminar';
+      price.textContent = `${option.textContent} · ${amount}`;
+      submit.textContent = intent === 'trial'
+        ? 'Empezar mis 14 días'
+        : 'Crear cuenta y preparar el pago';
+      if (google) google.href = `/auth/google?flow=signup&plan=${encodeURIComponent(plan.value)}&billing=${encodeURIComponent(billing.value)}&intent=${intent}`;
+    }
+    [plan, billing, ...intents].forEach(item => item.addEventListener('change', sync));
+    sync();
+  })();
+  </script>
 </body>
 </html>

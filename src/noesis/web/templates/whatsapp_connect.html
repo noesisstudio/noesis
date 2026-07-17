@@ -16,12 +16,12 @@
       <dl><div><dt>Texto, audio e imágenes</dt><dd>envía lo que ya tienes a mano</dd></div><div><dt>Una cuenta, un teléfono</dt><dd>vinculación privada para tu negocio</dd></div><div><dt>Siempre bajo tu control</dt><dd>las acciones sensibles se confirman</dd></div></dl>
     </section>
     <section class="public-auth-panel" aria-labelledby="whatsapp-title">
-      <div class="auth-progress complete-progress" aria-label="Paso 3 de 3"><b>1</b><span>Cuenta</span><i></i><b>2</b><span>Personaliza</span><i></i><b>3</b><span>WhatsApp</span></div>
-      <span class="eyebrow">Paso 3 de 3</span><h2 id="whatsapp-title">Conecta WhatsApp.</h2><p class="auth-lead">Tres pasos y puedes empezar a hablar con Noesis.</p>
+      <div class="auth-progress complete-progress" aria-label="Paso 4 de 4"><b>1</b><span>Cuenta</span><i></i><b>2</b><span>Negocio</span><i></i><b>3</b><span>Operativa</span><i></i><b>4</b><span>WhatsApp</span></div>
+      <span class="eyebrow">Paso 4 de 4</span><h2 id="whatsapp-title">Conecta WhatsApp.</h2><p class="auth-lead">Tu negocio ya está configurado. Solo falta elegir el número desde el que hablarás con Noesis.</p>
       <ol class="connect-steps"><li><b>1</b><span>Pulsa el botón para abrir WhatsApp con un mensaje preparado.</span></li><li><b>2</b><span>Envíalo tal cual. El teléfono queda vinculado solo a tu cuenta.</span></li><li><b>3</b><span>Prueba con “¿qué tengo hoy?” o envía una nota de voz.</span></li></ol>
       <a class="btn green full" href="{{ wa.link }}" target="_blank" rel="noopener">Conectar mi WhatsApp ahora</a>
       <p class="connect-code">Código de vinculación: <b>{{ wa.code }}</b>{% if not wa.number %}<span>El número oficial se activa al aprobar Meta; el enrutado ya está preparado.</span>{% endif %}</p>
-      <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect"><button class="btn full">Entrar al panel y conectarlo después</button></form>
+      <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect"><button class="btn full">{% if signup_intent == 'subscribe' %}Continuar y revisar el pago{% else %}Empezar mis 14 días{% endif %}</button></form>
     </section>
   </main>
 </body>

@@ -26,11 +26,19 @@
 - Los correos confirmados se persisten antes de intentar SMTP, se deduplican y
   reintentan con backoff. Los errores de proveedores y el diagnóstico de preparación
   viven en administración; el cliente ve funciones y preferencias, no infraestructura.
+- El alta comercial distingue con claridad entre **probar 14 días** y **contratar
+  ahora**. Antes de entrar al panel recoge negocio, nivel de explicación, fiscalidad,
+  estilo y vencimiento de factura, medios de cobro, recordatorios, informes,
+  gestoría y WhatsApp. Esas elecciones se guardan en el producto y se aplican a la
+  operativa; no son una encuesta decorativa.
 
 ## Política comercial en el código actual
 
 - Catálogo: **29 / 49 / 99 € al mes + IVA**.
 - La prueba dura 14 días y permite operar con normalidad.
+- La web pública permite probar o contratar cada plan en modalidad mensual/anual.
+  Quien contrata configura primero el negocio y después revisa el plan antes de ir
+  al checkout; quien prueba entra al panel sin tarjeta tras la misma puesta en marcha.
 - Al caducar, cancelar o quedar un pago pendiente, el titular puede entrar y consultar
   sus datos, pero no crear, cambiar, enviar ni ejecutar automatizaciones.
 - El bloqueo se aplica en servidor a web/API, portales, WhatsApp, colas y tareas

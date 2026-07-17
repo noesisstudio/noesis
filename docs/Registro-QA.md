@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-07-17 — alta profesional, configuración operativa y pago
+
+- La web pública distingue `Probar 14 días` de `Contratar ahora` en cada plan y
+  conserva plan y periodicidad hasta el final. La prueba entra al panel sin tarjeta;
+  la contratación llega a la revisión y checkout después de configurar el negocio.
+- El onboarding tiene cuatro pasos reales: cuenta, negocio, operativa y WhatsApp.
+  Fiscalidad, vencimiento, plantilla, cobro, recordatorios, informes y gestoría se
+  persisten en las mismas columnas y reglas que usa el producto. Se verificó además
+  que una factura emitida adopta el vencimiento elegido.
+- Google OAuth conserva intención, plan y periodicidad en alta y acceso. El botón se
+  prueba con credenciales simuladas, pero permanece oculto si faltan cliente o secreto;
+  no se llamó a Google real.
+- Suite completa: **285 pruebas verdes** en 185,5 s. `compileall`, sintaxis del JS,
+  `git diff --check`, ciclo de migraciones hasta 31 y verdad de proyecto también se
+  validan antes de publicar. Los pagos Stripe y Google reales siguen pendientes de
+  credenciales y prueba extremo a extremo.
+- Servidor real con SQLite temporal: `/health`, `/ready`, Home, Precios, login y las
+  altas de prueba/contratación respondieron 200. Se cerró el servidor después de QA;
+  no se usó navegador visual para evitar los cierres de la aplicación ya observados.
+
 ## 2026-07-17 — conexiones útiles sin exponer infraestructura al cliente
 
 - Ajustes deja de publicar el catálogo/estado de Meta, SMTP, IA, calendario, banco,
