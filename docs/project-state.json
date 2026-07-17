@@ -35,7 +35,7 @@
       "monthly",
       "annual"
     ],
-    "visual_qa": "dom_metrics_verified_screenshot_tool_unavailable"
+    "visual_qa": "computed_style_rendering_verified_screenshot_tool_unavailable"
   },
   "authentication": {
     "password": "available",

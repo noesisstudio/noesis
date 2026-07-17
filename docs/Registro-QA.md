@@ -1,5 +1,17 @@
 # Registro de QA
 
+## 2026-07-16 — corrección: los subnavs de la demo salían todos a la vez
+
+- En producción los tres subnavs (Dinero, Facturas, Clientes) aparecían apilados
+  sobre cualquier pantalla: la clase `.subnav` declara `display:flex`, que gana
+  al atributo `hidden`. Se añade `.demo-app-main .demo-subnav[hidden]
+  { display:none; }`.
+- Lección de QA registrada: la comprobación anterior validaba la propiedad
+  `hidden` del DOM, no el renderizado. Esta vez se verificó con
+  `getComputedStyle().display` y `offsetHeight` por cada apartado: en Inicio y
+  Trabajos no se ve ningún subnav; Dinero, Facturas y Clientes muestran solo el
+  suyo.
+
 ## 2026-07-16 — la muestra pública replica las pantallas reales del panel
 
 - Cada apartado de la demo de la portada reproduce ahora la plantilla real del
