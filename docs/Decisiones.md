@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Configurar antes de operar o cobrar; prueba y contratación son explícitas (2026-07-17)
+
+El alta ofrece dos compromisos distintos: probar 14 días sin tarjeta o contratar un
+plan mensual/anual. Ambos preparan primero el negocio; la prueba termina en el panel
+y la contratación termina en una revisión del plan y checkout. No se mezcla una
+prueba con una compra implícita ni se pide pagar antes de entender qué se configura.
+
+La puesta en marcha recoge negocio, nivel de explicación, IA, fiscalidad, factura,
+vencimiento, cobro, recordatorios, informes, gestoría y WhatsApp. Cada elección se
+persiste en su fuente operativa y se puede cambiar después desde Ajustes. Motivo:
+entregar una cuenta funcional desde el primer día, no un cuestionario de marketing.
+Google sigue la misma selección comercial, pero el botón continúa oculto hasta que
+existan credenciales reales; mostrar una acción que no funciona rompería confianza.
+
 ## Funciones delante, proveedores detrás; conectores locales primero (2026-07-17)
 
 El cliente no ve un catálogo de APIs preparadas, caídas o aún sin contratar. Ajustes

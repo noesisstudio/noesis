@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 30.
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 31.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
   y propuestas explicables de conciliación; nunca confirma un pago por sí solo.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro: clientes,
@@ -62,8 +62,11 @@
   `client_preferences` conectan trabajo, coste, evidencia, borrador y aprendizaje.
 - `src/noesis/web/templates/proyectos.html`: resumen progresivo y detalle operativo.
 - `src/noesis/web/templates/fichaje.html`: jornada, trabajos y checklist personal.
-- `src/noesis/web/routers/account.py`: alta, sesión, Google OAuth, preferencias y
-  cuenta; no expone el diagnóstico de proveedores en la API del cliente.
+- `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
+  Google OAuth, configuración operativa, checkout y cuenta; no expone el
+  diagnóstico de proveedores en la API del cliente.
+- `src/noesis/web/templates/onboarding_preferences.html`: aplica fiscalidad,
+  factura, cobro, recordatorios, informes y gestoría antes de entrar al producto.
 - `src/noesis/web/routers/admin.py` + `templates/admin.html`: diagnóstico técnico y
   preparación de servicios reservado al fundador.
 - `src/noesis/web/templates/ajustes.html`: datos, preferencias, memoria y conexiones

@@ -366,6 +366,16 @@ def finish_onboarding(business_id) -> dict:
     return get_business(business_id)
 
 
+def _clean_payment_details(iban=None, bizum=None, note=None) -> tuple[str, str, str]:
+    clean_iban = (iban or "").replace(" ", "").upper().strip()
+    if clean_iban and not re.fullmatch(r"[A-Z]{2}[0-9A-Z]{13,32}", clean_iban):
+        raise ValueError("El IBAN no tiene un formato válido.")
+    clean_bizum = re.sub(r"[^\d+]", "", (bizum or "").strip())
+    if clean_bizum and not re.fullmatch(r"\+?\d{9,15}", clean_bizum):
+        raise ValueError("El número de Bizum debe ser un teléfono válido.")
+    return clean_iban, clean_bizum, (note or "").strip()[:300]
+
+
 def update_payment_details(business_id, *, iban=None, bizum=None, note=None) -> dict:
     """Guarda cómo quiere cobrar el negocio: IBAN, Bizum y una nota libre.
 
@@ -373,14 +383,9 @@ def update_payment_details(business_id, *, iban=None, bizum=None, note=None) -> 
     cliente sepa pagar sin tener que preguntar. Validación ligera y tolerante:
     lo que no cuadra se rechaza con un mensaje claro, no se corrompe.
     """
-    clean_iban = (iban or "").replace(" ", "").upper().strip()
-    if clean_iban:
-        if not re.fullmatch(r"[A-Z]{2}[0-9A-Z]{13,32}", clean_iban):
-            raise ValueError("El IBAN no tiene un formato válido.")
-    clean_bizum = re.sub(r"[^\d+]", "", (bizum or "").strip())
-    if clean_bizum and not re.fullmatch(r"\+?\d{9,15}", clean_bizum):
-        raise ValueError("El número de Bizum debe ser un teléfono válido.")
-    clean_note = (note or "").strip()[:300]
+    clean_iban, clean_bizum, clean_note = _clean_payment_details(
+        iban, bizum, note
+    )
     with get_conn() as conn:
         conn.execute(
             "UPDATE businesses SET payment_iban=?, payment_bizum=?, payment_note=? "
@@ -744,6 +749,70 @@ def update_business_profile(business_id, *, sector=None, team_size=None,
             "UPDATE businesses SET sector=?, team_size=?, province=?, primary_goal=? "
             "WHERE id=?",
             (sector[:80], team_size, province, primary_goal, business_id),
+        )
+    return get_business(business_id)
+
+
+def update_onboarding_preferences(
+    business_id: int,
+    *,
+    nif: str = "",
+    address: str = "",
+    default_vat=21,
+    default_irpf=0,
+    default_payment_term_days=15,
+    invoice_template: str = "clasica",
+    payment_iban: str = "",
+    payment_bizum: str = "",
+    payment_note: str = "",
+    payment_reminders_enabled: bool = False,
+    payment_reminder_days="3,7,15",
+    whatsapp_reports: dict | None = None,
+) -> dict:
+    """Guarda de una vez la operativa elegida durante el alta.
+
+    La pantalla no es una encuesta: IVA, IRPF, vencimiento, plantilla, forma de
+    cobro y avisos pasan a ser los valores que usa el producto.
+    """
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    clean_nif = (nif or "").strip()[:40]
+    clean_address = (address or "").strip()[:300]
+    if not clean_nif or not clean_address:
+        raise ValueError(
+            "El NIF y la dirección fiscal son obligatorios para facturar."
+        )
+    vat = _tax_rate(default_vat, "El IVA", {0, 4, 10, 21})
+    irpf = _tax_rate(default_irpf, "El IRPF", {0, 7, 15})
+    try:
+        term_days = int(default_payment_term_days)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("El plazo de pago no es válido.") from exc
+    if term_days not in {0, 7, 15, 30, 60}:
+        raise ValueError("El plazo de pago no es válido.")
+    if invoice_template not in INVOICE_TEMPLATES:
+        raise ValueError("La plantilla de factura no es válida.")
+    reminder_days = parse_payment_reminder_days(payment_reminder_days)
+    iban, bizum, note = _clean_payment_details(
+        payment_iban, payment_bizum, payment_note
+    )
+    reports = resolve_whatsapp_reports(whatsapp_reports or {})
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET nif=?, address=?, default_vat=?, "
+            "default_irpf=?, default_payment_term_days=?, invoice_template=?, "
+            "payment_iban=?, payment_bizum=?, payment_note=?, "
+            "payment_reminders_enabled=?, payment_reminder_days=?, "
+            "whatsapp_reports=? WHERE id=?",
+            (
+                clean_nif, clean_address,
+                vat, irpf, term_days, invoice_template,
+                iban or None, bizum or None, note or None,
+                bool(payment_reminders_enabled),
+                ",".join(str(day) for day in reminder_days),
+                json.dumps(reports, ensure_ascii=False, separators=(",", ":")),
+                business_id,
+            ),
         )
     return get_business(business_id)
 
@@ -3862,7 +3931,9 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
     ).fetchone())
 
 
-def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int = 15) -> dict:
+def issue_invoice(
+    invoice_id: int, business_id: int, payment_term_days: int | None = None
+) -> dict:
     """Emite una factura una sola vez, numera y congela sus datos fiscales."""
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
@@ -3915,6 +3986,11 @@ def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int = 15
         year = date.today().year
         number = f"{year}/{seq:04d}"
         issued_at = _now()
+        if payment_term_days is None:
+            configured_term = biz.get("default_payment_term_days")
+            payment_term_days = int(
+                15 if configured_term is None else configured_term
+            )
         due_date = (
             date.today() + timedelta(days=max(0, min(payment_term_days, 365)))
         ).isoformat()

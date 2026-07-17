@@ -1431,9 +1431,11 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("1 mes gratis", public_page.text)
                 self.assertIn('data-annual="319"', public_page.text)
                 self.assertIn(
-                    '/onboarding?plan=autonomo&billing=monthly',
+                    '/onboarding?intent=trial&plan=autonomo&billing=monthly',
                     public_page.text,
                 )
+                self.assertIn("intent=trial", public_page.text)
+                self.assertIn("intent=subscribe", public_page.text)
                 for route in ("/", "/producto", "/equipo", "/preguntas"):
                     page = client.get(route)
                     self.assertEqual(page.status_code, 200, route)
@@ -1469,7 +1471,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                     "/onboarding?plan=autonomo&billing=annual"
                 )
                 self.assertEqual(annual_signup.status_code, 200)
-                self.assertIn("Autónomo · 319 € + IVA/año", annual_signup.text)
+                self.assertIn('data-annual="319" selected', annual_signup.text)
                 self.assertIn('name="billing" value="annual"', annual_signup.text)
 
                 login = client.post(
@@ -1576,7 +1578,7 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                 self.assertIn("Continuar con Google", client.get("/login").text)
                 self.assertIn("Continuar con Google", client.get("/onboarding").text)
                 start = client.get(
-                    "/auth/google?flow=signup&plan=pro&billing=annual",
+                    "/auth/google?flow=signup&plan=pro&billing=annual&intent=subscribe",
                     follow_redirects=False,
                 )
                 self.assertEqual(start.status_code, 303)
@@ -1592,7 +1594,10 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                         follow_redirects=False,
                     )
                 self.assertEqual(callback.status_code, 303)
-                self.assertIn("/onboarding/google?plan=pro&billing=annual", callback.headers["location"])
+                self.assertIn(
+                    "/onboarding/google?plan=pro&billing=annual&intent=subscribe",
+                    callback.headers["location"],
+                )
 
                 complete = client.get(callback.headers["location"])
                 self.assertEqual(complete.status_code, 200)
@@ -1602,6 +1607,7 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                     data={
                         "name": "Fontanería Google", "sector": "Fontanería",
                         "acepto": "1", "plan": "pro", "billing": "annual",
+                        "intent": "subscribe",
                     },
                     follow_redirects=False,
                 )
@@ -1821,7 +1827,7 @@ class PortalHttpTestCase(BackendTestCase):
                     follow_redirects=False,
                 )
                 self.assertEqual(profile.status_code, 303)
-                self.assertIn("/onboarding/whatsapp/", profile.headers["location"])
+                self.assertIn("/onboarding/preferences/", profile.headers["location"])
                 self.assertEqual(
                     db.integration_setting(
                         created_user["business_id"], "ai_external"
@@ -1843,6 +1849,123 @@ class PortalHttpTestCase(BackendTestCase):
                 revoked = client.get(setup_url, follow_redirects=False)
                 self.assertEqual(revoked.status_code, 303)
                 self.assertEqual(revoked.headers["location"], "/login")
+
+    def test_subscribe_onboarding_configures_operations_before_checkout(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                signup = client.post(
+                    "/onboarding/signup",
+                    data={
+                        "name": "Negocio Completo",
+                        "email": "completo@example.com",
+                        "password": "password-segura-123",
+                        "sector": "Reformas",
+                        "acepto": "1",
+                        "plan": "pro",
+                        "billing": "annual",
+                        "intent": "subscribe",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(signup.status_code, 303)
+                user = db.get_user_by_email("completo@example.com")
+                business_id = user["business_id"]
+
+                profile = client.post(
+                    signup.headers["location"],
+                    data={
+                        "sector": "Reformas",
+                        "team_size": "2-5",
+                        "primary_goal": "facturar",
+                        "province": "Valencia",
+                        "ai_mode": "enabled",
+                        "explanation_level": "detallado",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(profile.status_code, 303)
+                self.assertEqual(
+                    profile.headers["location"],
+                    f"/onboarding/preferences/{business_id}",
+                )
+
+                preferences_page = client.get(profile.headers["location"])
+                self.assertEqual(preferences_page.status_code, 200)
+                self.assertIn("onboarding-operations-card", preferences_page.text)
+                preferences = client.post(
+                    profile.headers["location"],
+                    data={
+                        "nif": "B12345678",
+                        "address": "Calle Mayor, 1, Valencia",
+                        "default_vat": "21",
+                        "default_irpf": "15",
+                        "default_payment_term_days": "30",
+                        "invoice_template": "editorial",
+                        "payment_iban": "ES9121000418450200051332",
+                        "payment_bizum": "600111222",
+                        "payment_note": "Indica el numero de factura.",
+                        "payment_reminders_enabled": "1",
+                        "payment_reminder_days": "3,10",
+                        "brief_manana": "1",
+                        "cierre_tarde": "1",
+                        "hora_tarde": "20",
+                        "resumen_semanal": "1",
+                        "aviso_fiscal": "1",
+                        "gestoria_name": "Gestoria Piloto",
+                        "gestoria_email": "gestoria@example.com",
+                        "gestoria_cadence": "mensual",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(preferences.status_code, 303)
+                self.assertEqual(
+                    preferences.headers["location"],
+                    f"/onboarding/whatsapp/{business_id}",
+                )
+
+                configured = db.get_business(business_id)
+                self.assertEqual(configured["default_payment_term_days"], 30)
+                self.assertEqual(configured["invoice_template"], "editorial")
+                self.assertEqual(configured["payment_reminder_days"], "3,10")
+                self.assertEqual(configured["gestoria_cadence"], "mensual")
+                reports = db.resolve_whatsapp_reports(
+                    configured["whatsapp_reports"]
+                )
+                self.assertTrue(reports["brief_manana"])
+                self.assertEqual(reports["hora_tarde"], 20)
+
+                customer = db.add_client(
+                    "Cliente Piloto", address="Calle Cliente, 2",
+                    nif="12345678Z", business_id=business_id,
+                )
+                invoice = db.add_invoice(
+                    customer["id"], "Mantenimiento", 100,
+                    business_id=business_id,
+                )
+                issued = db.issue_invoice(invoice["id"], business_id)
+                self.assertEqual(
+                    issued["due_date"],
+                    (date.today() + timedelta(days=30)).isoformat(),
+                )
+
+                whatsapp_step = client.get(preferences.headers["location"])
+                self.assertEqual(whatsapp_step.status_code, 200)
+                self.assertIn("Continuar y revisar el pago", whatsapp_step.text)
+                finished = client.post(
+                    f"/onboarding/whatsapp/{business_id}/connect",
+                    follow_redirects=False,
+                )
+                self.assertEqual(finished.status_code, 303)
+                self.assertIn("/suscripcion?", finished.headers["location"])
+                self.assertIn("status=ready", finished.headers["location"])
+                self.assertIn("plan=pro", finished.headers["location"])
+                self.assertIn("billing=annual", finished.headers["location"])
+                payment_page = client.get(finished.headers["location"])
+                self.assertEqual(payment_page.status_code, 200)
+                self.assertIn("subscription-ready", payment_page.text)
 
 
 class WorkerDataTestCase(unittest.TestCase):

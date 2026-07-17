@@ -22,9 +22,11 @@
       <div class="onboarding-steps" aria-label="Progreso del alta">
         <span class="onboarding-step complete">1</span><span>Cuenta</span>
         <span class="onboarding-line"></span>
-        <span class="onboarding-step current">2</span><b>Personaliza</b>
+        <span class="onboarding-step current">2</span><b>Negocio</b>
         <span class="onboarding-line"></span>
-        <span class="onboarding-step">3</span><span>WhatsApp</span>
+        <span class="onboarding-step">3</span><span>Operativa</span>
+        <span class="onboarding-line"></span>
+        <span class="onboarding-step">4</span><span>WhatsApp</span>
       </div>
 
       <div class="kicker">Adapta Noesis a tu operativa</div>
@@ -83,6 +85,13 @@
             </span>
           </label>
         </div>
+
+        <label class="fld" style="margin-top:18px">¿Cómo quieres entender tus números? *</label>
+        <select name="explanation_level" required>
+          <option value="claro" {{ 'selected' if (business.explanation_level or 'claro') == 'claro' }}>Claro y acompañado · sin tecnicismos</option>
+          <option value="directo" {{ 'selected' if business.explanation_level == 'directo' }}>Directo y profesional · más síntesis</option>
+          <option value="detallado" {{ 'selected' if business.explanation_level == 'detallado' }}>Detallado y numérico · más profundidad</option>
+        </select>
         <p class="meta" style="margin:9px 0 0">
           La prueba incluye {{ ai_credits.limit }} consultas avanzadas al mes. Puedes
           cambiarlo en Ajustes. Noesis nunca mueve dinero, emite ni envía nada
@@ -93,7 +102,7 @@
         <input class="input" name="province" maxlength="80"
                value="{{ business.province or '' }}" placeholder="Ej. Valencia">
 
-        <button class="btn primary full" style="margin-top:20px">Guardar y conectar WhatsApp</button>
+        <button class="btn primary full" style="margin-top:20px">Continuar con facturas y avisos</button>
       </form>
     </div>
   </div>

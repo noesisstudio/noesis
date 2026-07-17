@@ -21,7 +21,8 @@
       {% if error == 'consent' %}<div class="auth-error">Debes aceptar los términos para crear la cuenta.</div>{% endif %}
       {% if error == 'email' %}<div class="auth-error">Ese correo ya tiene una cuenta. <a href="/login">Inicia sesión.</a></div>{% endif %}
       <form method="post" action="/onboarding/google" class="public-auth-form">
-        <input type="hidden" name="plan" value="{{ selected_plan }}"><input type="hidden" name="billing" value="{{ selected_billing }}">
+        <input type="hidden" name="plan" value="{{ selected_plan }}"><input type="hidden" name="billing" value="{{ selected_billing }}"><input type="hidden" name="intent" value="{{ selected_intent }}">
+        <div class="selected-plan-summary"><span>{{ 'Prueba de 14 días' if selected_intent == 'trial' else 'Contratación al terminar' }}</span><b>{{ plan_catalog[selected_plan].name }} · {% if selected_billing == 'annual' %}{{ annual_prices[selected_plan] }} € + IVA/año{% else %}{{ plan_catalog[selected_plan].price }} € + IVA/mes{% endif %}</b></div>
         <label>Nombre de tu negocio *<input class="input" name="name" required autocomplete="organization" placeholder="Ej. Fontanería García"></label>
         <label>Sector *<select name="sector" required><option value="">Selecciona tu actividad...</option><option>Fontanería</option><option>Electricidad</option><option>Reformas</option><option>Climatización</option><option>Limpieza</option><option>Jardinería</option><option>Mantenimiento</option><option>Otro</option></select></label>
         <label class="auth-consent"><input type="checkbox" name="acepto" value="1" required><span>He leído y acepto los <a href="/terminos" target="_blank">Términos</a>, la <a href="/privacidad" target="_blank">Privacidad</a> y el <a href="/encargado-tratamiento" target="_blank">Contrato de Encargado del Tratamiento</a>.</span></label>

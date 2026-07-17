@@ -34,7 +34,7 @@ class InternalInvoicingProvider:
     el modo nativo.
     """
 
-    def __init__(self, payment_term_days: int = 15):
+    def __init__(self, payment_term_days: int | None = None):
         self.payment_term_days = payment_term_days
 
     def issue(self, invoice: dict, client: dict) -> dict:

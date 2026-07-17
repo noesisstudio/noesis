@@ -2244,6 +2244,24 @@ def _downgrade_email_outbox(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS email_outbox")
 
 
+def _upgrade_onboarding_operations(conn) -> None:
+    """Preferencia real de vencimiento usada al emitir las facturas del negocio."""
+    if "default_payment_term_days" not in _column_names(conn, "businesses"):
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN default_payment_term_days "
+            "INTEGER NOT NULL DEFAULT 15"
+        )
+
+
+def _downgrade_onboarding_operations(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS "
+            "default_payment_term_days"
+        )
+    # SQLite conserva la columna para evitar reconstruir businesses.
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -2276,6 +2294,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (28, "calendario_privado", _upgrade_calendar_feed, _downgrade_calendar_feed),
     (29, "conciliacion_bancaria", _upgrade_bank_reconciliation, _downgrade_bank_reconciliation),
     (30, "correo_durable", _upgrade_email_outbox, _downgrade_email_outbox),
+    (31, "alta_operativa", _upgrade_onboarding_operations, _downgrade_onboarding_operations),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

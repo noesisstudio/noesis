@@ -177,7 +177,10 @@
     });
 
     document.querySelectorAll('.plan-start-link[data-plan]').forEach(link => {
-      link.href = `/onboarding?plan=${encodeURIComponent(link.dataset.plan)}&billing=${period}`;
+      link.href = `/onboarding?intent=trial&plan=${encodeURIComponent(link.dataset.plan)}&billing=${period}`;
+    });
+    document.querySelectorAll('.plan-buy-link[data-plan]').forEach(link => {
+      link.href = `/onboarding?intent=subscribe&plan=${encodeURIComponent(link.dataset.plan)}&billing=${period}`;
     });
     document.querySelectorAll('[data-billing-field]').forEach(field => {
       field.value = period;

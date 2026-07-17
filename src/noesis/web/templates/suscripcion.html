@@ -18,8 +18,19 @@
   </div>
 </div>
 
-{% if status == 'ok' %}
-<div class="insight" style="margin-bottom:16px">✅ ¡Suscripción activada! Gracias por confiar en Noesis.</div>
+{% if status == 'checkout_return' %}
+<div class="subscription-notice subscription-success" style="margin-bottom:16px">
+  {% if business.subscription_status == 'active' %}
+  <b>Suscripción activada.</b><span>Tu configuración y tus datos siguen exactamente donde los dejaste.</span>
+  {% else %}
+  <b>Pago completado. Estamos confirmando la activación.</b><span>Normalmente tarda unos segundos; puedes recargar esta página.</span>
+  {% endif %}
+</div>
+{% elif status == 'ready' %}
+<div class="subscription-ready" style="margin-bottom:18px">
+  <div><span class="eyebrow">Último paso</span><h2>Tu negocio ya está preparado.</h2><p>Revisa el plan que elegiste y continúa al pago seguro. No tendrás que volver a configurarlo después.</p></div>
+  <div class="subscription-ready-checks"><span>✓ Cuenta creada</span><span>✓ Facturas configuradas</span><span>✓ Avisos elegidos</span></div>
+</div>
 {% elif status in ('readonly', 'required') %}
 <div class="subscription-notice" style="margin-bottom:16px">
   <b>Tu negocio está a salvo y puedes seguir consultándolo.</b>
@@ -28,8 +39,8 @@
 {% elif status == 'cancel' %}
 <div class="insight" style="margin-bottom:16px">Has cancelado el pago. Puedes intentarlo cuando quieras.</div>
 {% elif status == 'manual' %}
-<div class="insight" style="margin-bottom:16px">El cobro automático aún no está activo en este servidor.
-  Hemos anotado tu interés: te activamos el plan a mano y te avisamos.</div>
+<div class="subscription-notice" style="margin-bottom:16px"><b>Hemos guardado tu elección.</b>
+  <span>Nuestro equipo terminará la activación contigo sin que tengas que repetir la configuración.</span></div>
 {% elif status == 'noportal' %}
 <div class="insight" style="margin-bottom:16px">El portal de gestión estará disponible cuando tengas una suscripción activa.</div>
 {% endif %}
@@ -43,7 +54,8 @@
 </div>
 
 <div class="plan-grid">
-  <div class="plan" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
+  <div class="plan {{ 'selected-plan' if preferred_plan == 'autonomo' }}" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
+    {% if preferred_plan == 'autonomo' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
     <h3>Autónomo</h3>
     <p class="price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
     <small class="annual-price-note" data-annual-note hidden></small>
@@ -62,7 +74,8 @@
       <button class="btn primary full" type="submit">Activar plan Autónomo</button>
     </form>
   </div>
-  <div class="plan featured" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
+  <div class="plan featured {{ 'selected-plan' if preferred_plan == 'pro' }}" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
+    {% if preferred_plan == 'pro' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
     <h3>Negocio</h3>
     <p class="price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
     <small class="annual-price-note" data-annual-note hidden></small>
@@ -81,7 +94,8 @@
       <button class="btn primary full" type="submit">Activar plan Negocio</button>
     </form>
   </div>
-  <div class="plan" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
+  <div class="plan {{ 'selected-plan' if preferred_plan == 'premium' }}" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
+    {% if preferred_plan == 'premium' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
     <h3>Sin Límites</h3>
     <p class="price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
     <small class="annual-price-note" data-annual-note hidden></small>
@@ -111,9 +125,6 @@
 </div></div>
 {% endif %}
 
-{% if not billing_on %}
-<p class="hint" style="margin-top:16px">Nota: el cobro con tarjeta se activa cuando conectemos Stripe.
-  Hasta entonces, “activar” registra tu interés y lo gestionamos contigo.</p>
-{% endif %}
+<p class="subscription-payment-note">Pago seguro · Cancela cuando quieras · Tus datos siempre son exportables.</p>
 {% endblock %}
 {% block scripts %}<script src="/static/public-site.js?v={{ asset_v }}"></script>{% endblock %}

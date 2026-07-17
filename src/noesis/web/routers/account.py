@@ -34,14 +34,25 @@ def _google_redirect_uri() -> str:
     return f"{config.BASE_URL}/auth/google/callback"
 
 
+def _signup_selection(
+    plan: str = "", billing: str = "monthly", intent: str = "trial"
+) -> tuple[str, str, str]:
+    return (
+        plan if plan in billing_adapter.PLAN_PRICES else "autonomo",
+        billing if billing in {"monthly", "annual"} else "monthly",
+        intent if intent in {"trial", "subscribe"} else "trial",
+    )
+
+
 def _google_return_path(flow: str, error: str = "", plan: str = "",
-                        billing: str = "monthly") -> str:
+                        billing: str = "monthly", intent: str = "trial") -> str:
     target = "/onboarding" if flow == "signup" else "/login"
     query: dict[str, str] = {}
     if error:
         query["error"] = error
-    if flow == "signup" and plan:
-        query.update({"plan": plan, "billing": billing})
+    if flow == "signup":
+        plan, billing, intent = _signup_selection(plan, billing, intent)
+        query.update({"plan": plan, "billing": billing, "intent": intent})
     return target + (f"?{urlparse.urlencode(query)}" if query else "")
 
 
@@ -121,25 +132,27 @@ def logout(request: Request):
 
 @router.get("/auth/google")
 def google_start(request: Request, flow: str = "login", plan: str = "",
-                 billing: str = "monthly"):
+                 billing: str = "monthly", intent: str = "trial"):
     """Empieza OAuth con state de un solo uso y no filtra el secreto al cliente."""
     flow = "signup" if flow == "signup" else "login"
-    plan = plan if plan in billing_adapter.PLAN_PRICES else ""
-    billing = billing if billing in {"monthly", "annual"} else "monthly"
+    plan, billing, intent = _signup_selection(plan, billing, intent)
     if not config.google_oauth_available():
         return RedirectResponse(
-            _google_return_path(flow, "google_unavailable", plan, billing), status_code=303
+            _google_return_path(
+                flow, "google_unavailable", plan, billing, intent
+            ), status_code=303
         )
     key = f"google-oauth:{auth.client_ip(request)}"
     if auth.is_rate_limited(key):
         return RedirectResponse(
-            _google_return_path(flow, "throttle", plan, billing), status_code=303
+            _google_return_path(flow, "throttle", plan, billing, intent), status_code=303
         )
     state = secrets.token_urlsafe(32)
     request.session["google_oauth_state"] = state
     request.session["google_oauth_flow"] = flow
     request.session["google_oauth_plan"] = plan
     request.session["google_oauth_billing"] = billing
+    request.session["google_oauth_intent"] = intent
     query = urlparse.urlencode({
         "client_id": config.GOOGLE_OAUTH_CLIENT_ID,
         "redirect_uri": _google_redirect_uri(),
@@ -157,22 +170,25 @@ def google_callback(request: Request, code: str = "", state: str = "",
     flow = str(request.session.pop("google_oauth_flow", "login"))
     plan = str(request.session.pop("google_oauth_plan", ""))
     billing = str(request.session.pop("google_oauth_billing", "monthly"))
+    intent = str(request.session.pop("google_oauth_intent", "trial"))
     expected_state = str(request.session.pop("google_oauth_state", ""))
     if error or not code:
         return RedirectResponse(
-            _google_return_path(flow, "google_cancelled", plan, billing), status_code=303
+            _google_return_path(
+                flow, "google_cancelled", plan, billing, intent
+            ), status_code=303
         )
     if not expected_state or not state or not hmac.compare_digest(expected_state, state):
         auth.record_failed_attempt(f"google-oauth:{auth.client_ip(request)}")
         return RedirectResponse(
-            _google_return_path(flow, "google_failed", plan, billing), status_code=303
+            _google_return_path(flow, "google_failed", plan, billing, intent), status_code=303
         )
     try:
         profile = _google_profile(code)
     except GoogleOAuthError:
         auth.record_failed_attempt(f"google-oauth:{auth.client_ip(request)}")
         return RedirectResponse(
-            _google_return_path(flow, "google_failed", plan, billing), status_code=303
+            _google_return_path(flow, "google_failed", plan, billing, intent), status_code=303
         )
     auth.clear_attempts(f"google-oauth:{auth.client_ip(request)}")
     user = db.get_user_by_email(profile["email"])
@@ -180,10 +196,13 @@ def google_callback(request: Request, code: str = "", state: str = "",
         _start_session(request, user)
         return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
     request.session["google_signup"] = profile
-    request.session["signup_plan"] = plan or "autonomo"
+    request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
-    query = urlparse.urlencode({"plan": plan, "billing": billing}) if plan else ""
-    return RedirectResponse(f"/onboarding/google{'?' + query if query else ''}", status_code=303)
+    request.session["signup_intent"] = intent
+    query = urlparse.urlencode({
+        "plan": plan, "billing": billing, "intent": intent,
+    })
+    return RedirectResponse(f"/onboarding/google?{query}", status_code=303)
 
 
 
@@ -245,13 +264,15 @@ def delete_account(request: Request, business_id: int, confirm: str = Form(""),
 # =========================================================== ONBOARDING ===== #
 @router.get("/onboarding", response_class=HTMLResponse)
 def onboarding(request: Request, error: str = "", plan: str = "",
-               billing: str = "monthly"):
-    selected_plan = plan if plan in billing_adapter.PLAN_PRICES else ""
-    selected_billing = billing if billing in {"monthly", "annual"} else "monthly"
+               billing: str = "monthly", intent: str = "trial"):
+    selected_plan, selected_billing, selected_intent = _signup_selection(
+        plan, billing, intent
+    )
     return TEMPLATES.TemplateResponse(request, "onboarding.html", {
         "error": error,
         "selected_plan": selected_plan,
         "selected_billing": selected_billing,
+        "selected_intent": selected_intent,
         "plan_catalog": billing_adapter.PLANS,
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
         "google_oauth_available": config.google_oauth_available(),
@@ -262,10 +283,12 @@ def onboarding(request: Request, error: str = "", plan: str = "",
 def onboarding_signup(request: Request, name: str = Form(...),
                       email: str = Form(...), password: str = Form(...),
                       sector: str = Form(""), acepto: str = Form(""),
-                      plan: str = Form(""), billing: str = Form("monthly")):
-    plan = plan if plan in billing_adapter.PLAN_PRICES else ""
-    billing = billing if billing in {"monthly", "annual"} else "monthly"
-    onboarding_query = f"&plan={plan}&billing={billing}" if plan else ""
+                      plan: str = Form("autonomo"), billing: str = Form("monthly"),
+                      intent: str = Form("trial")):
+    plan, billing, intent = _signup_selection(plan, billing, intent)
+    onboarding_query = (
+        f"&plan={plan}&billing={billing}&intent={intent}"
+    )
     key = f"signup:{auth.client_ip(request)}"
     if auth.is_rate_limited(key):
         return RedirectResponse(f"/onboarding?error=throttle{onboarding_query}", status_code=303)
@@ -295,12 +318,13 @@ def onboarding_signup(request: Request, name: str = Form(...),
     request.session["uid"] = user["id"]
     request.session["bid"] = biz["id"]
     request.session["sv"] = user.get("session_version", 0)
-    request.session["signup_plan"] = plan or "autonomo"
+    request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
+    request.session["signup_intent"] = intent
     db.record_product_event(biz["id"], "account_created")
     db.record_product_event(
         biz["id"], "plan_interest",
-        json.dumps({"plan": plan or None, "billing_period": billing},
+        json.dumps({"plan": plan, "billing_period": billing, "intent": intent},
                    separators=(",", ":")),
     )
     # Evidencia de consentimiento: quién aceptó qué versión, cuándo y desde dónde.
@@ -314,18 +338,20 @@ def onboarding_signup(request: Request, name: str = Form(...),
 
 @router.get("/onboarding/google", response_class=HTMLResponse)
 def onboarding_google(request: Request, error: str = "", plan: str = "",
-                      billing: str = "monthly"):
+                      billing: str = "monthly", intent: str = "trial"):
     """Completa los datos de negocio tras verificar el correo con Google."""
     profile = request.session.get("google_signup")
     if not isinstance(profile, dict) or not auth.valid_email(str(profile.get("email") or "")):
         return RedirectResponse("/onboarding", status_code=303)
-    selected_plan = plan if plan in billing_adapter.PLAN_PRICES else ""
-    selected_billing = billing if billing in {"monthly", "annual"} else "monthly"
+    selected_plan, selected_billing, selected_intent = _signup_selection(
+        plan, billing, intent
+    )
     return TEMPLATES.TemplateResponse(request, "onboarding_google.html", {
         "error": error,
         "google_profile": profile,
         "selected_plan": selected_plan,
         "selected_billing": selected_billing,
+        "selected_intent": selected_intent,
         "plan_catalog": billing_adapter.PLANS,
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
     })
@@ -334,12 +360,13 @@ def onboarding_google(request: Request, error: str = "", plan: str = "",
 @router.post("/onboarding/google")
 def onboarding_google_submit(request: Request, name: str = Form(...),
                              sector: str = Form(""), acepto: str = Form(""),
-                             plan: str = Form(""), billing: str = Form("monthly")):
+                             plan: str = Form("autonomo"),
+                             billing: str = Form("monthly"),
+                             intent: str = Form("trial")):
     profile = request.session.get("google_signup")
     email = str(profile.get("email") or "").strip().lower() if isinstance(profile, dict) else ""
-    plan = plan if plan in billing_adapter.PLAN_PRICES else ""
-    billing = billing if billing in {"monthly", "annual"} else "monthly"
-    query = f"?plan={plan}&billing={billing}" if plan else ""
+    plan, billing, intent = _signup_selection(plan, billing, intent)
+    query = f"?plan={plan}&billing={billing}&intent={intent}"
     error_query = f"{query}{'&' if query else '?'}error="
     if not auth.valid_email(email):
         return RedirectResponse(f"/onboarding{query}", status_code=303)
@@ -360,12 +387,15 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding/google{error_query}email", status_code=303)
     _start_session(request, user)
     request.session.pop("google_signup", None)
-    request.session["signup_plan"] = plan or "autonomo"
+    request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
+    request.session["signup_intent"] = intent
     db.record_product_event(biz["id"], "account_created_google")
     db.record_product_event(
         biz["id"], "plan_interest",
-        json.dumps({"plan": plan or None, "billing_period": billing}, separators=(",", ":")),
+        json.dumps({
+            "plan": plan, "billing_period": billing, "intent": intent,
+        }, separators=(",", ":")),
     )
     db.record_product_event(biz["id"], "legal_accepted", json.dumps({
         "version": "2026-06-30",
@@ -389,6 +419,7 @@ def onboarding_setup(request: Request, business_id: int, error: str = ""):
             "business": biz,
             "error": error,
             "ai_credits": db.ai_credit_status(business_id),
+            "signup_intent": request.session.get("signup_intent", "trial"),
         }
     )
 
@@ -402,6 +433,7 @@ def onboarding_setup_submit(
     primary_goal: str = Form(...),
     province: str = Form(""),
     ai_mode: str = Form("enabled"),
+    explanation_level: str = Form("claro"),
 ):
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
@@ -421,6 +453,7 @@ def onboarding_setup_submit(
             province=province,
         )
         db.update_integration_setting(business_id, "ai_external", ai_mode)
+        db.update_explanation_level(business_id, explanation_level)
     except ValueError:
         return RedirectResponse(
             f"/onboarding/setup/{business_id}?error=profile", status_code=303
@@ -439,7 +472,113 @@ def onboarding_setup_submit(
             "local_first": True,
         }, separators=(",", ":")),
     )
-    return RedirectResponse(f"/onboarding/whatsapp/{business_id}", status_code=303)
+    return RedirectResponse(
+        f"/onboarding/preferences/{business_id}", status_code=303
+    )
+
+
+@router.get("/onboarding/preferences/{business_id}", response_class=HTMLResponse)
+def onboarding_preferences(request: Request, business_id: int, error: str = ""):
+    user = auth.current_user(request)
+    if not user or user["business_id"] != business_id:
+        return RedirectResponse("/login", status_code=303)
+    business = db.get_business(business_id)
+    if not business:
+        return RedirectResponse("/onboarding", status_code=303)
+    return TEMPLATES.TemplateResponse(
+        request, "onboarding_preferences.html", {
+            "business": business,
+            "error": error,
+            "wa_reports": db.resolve_whatsapp_reports(
+                business.get("whatsapp_reports")
+            ),
+            "signup_intent": request.session.get("signup_intent", "trial"),
+        },
+    )
+
+
+@router.post("/onboarding/preferences/{business_id}")
+def onboarding_preferences_submit(
+    request: Request,
+    business_id: int,
+    nif: str = Form(""),
+    address: str = Form(""),
+    default_vat: float = Form(21),
+    default_irpf: float = Form(0),
+    default_payment_term_days: int = Form(15),
+    invoice_template: str = Form("clasica"),
+    payment_iban: str = Form(""),
+    payment_bizum: str = Form(""),
+    payment_note: str = Form(""),
+    payment_reminders_enabled: str = Form(""),
+    payment_reminder_days: str = Form("3,7,15"),
+    brief_manana: str = Form(""),
+    cierre_tarde: str = Form(""),
+    hora_tarde: int = Form(19),
+    resumen_semanal: str = Form(""),
+    aviso_fiscal: str = Form(""),
+    gestoria_name: str = Form(""),
+    gestoria_email: str = Form(""),
+    gestoria_cadence: str = Form("off"),
+):
+    user = auth.current_user(request)
+    if not user or user["business_id"] != business_id:
+        return RedirectResponse("/login", status_code=303)
+    if not db.subscription_allows_access(db.get_business(business_id)):
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=readonly", status_code=303
+        )
+    on = {"1", "true", "on", "si", "sí"}
+    try:
+        if gestoria_cadence not in db.GESTORIA_CADENCES:
+            raise ValueError("La cadencia de gestoría no es válida.")
+        if gestoria_cadence != "off" and not auth.valid_email(
+            gestoria_email.strip().lower()
+        ):
+            raise ValueError("La gestoría necesita un email válido.")
+        db.update_onboarding_preferences(
+            business_id,
+            nif=nif,
+            address=address,
+            default_vat=default_vat,
+            default_irpf=default_irpf,
+            default_payment_term_days=default_payment_term_days,
+            invoice_template=invoice_template,
+            payment_iban=payment_iban,
+            payment_bizum=payment_bizum,
+            payment_note=payment_note,
+            payment_reminders_enabled=payment_reminders_enabled in on,
+            payment_reminder_days=payment_reminder_days,
+            whatsapp_reports={
+                "brief_manana": brief_manana in on,
+                "cierre_tarde": cierre_tarde in on,
+                "hora_tarde": hora_tarde,
+                "resumen_semanal": resumen_semanal in on,
+                "aviso_fiscal": aviso_fiscal in on,
+            },
+        )
+        db.update_gestoria_settings(
+            business_id,
+            name=gestoria_name,
+            email=gestoria_email,
+            cadence=gestoria_cadence,
+        )
+    except ValueError:
+        return RedirectResponse(
+            f"/onboarding/preferences/{business_id}?error=preferences",
+            status_code=303,
+        )
+    db.record_product_event(
+        business_id, "operational_preferences_completed",
+        json.dumps({
+            "invoice_term_days": default_payment_term_days,
+            "payment_reminders": payment_reminders_enabled in on,
+            "gestoria": gestoria_cadence,
+        }, separators=(",", ":")),
+    )
+    return RedirectResponse(
+        f"/onboarding/whatsapp/{business_id}", status_code=303
+    )
 
 
 @router.get("/onboarding/whatsapp/{business_id}", response_class=HTMLResponse)
@@ -455,7 +594,13 @@ def onboarding_whatsapp(request: Request, business_id: int):
         )
     link = whatsapp.start_link(business_id)
     return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html",
-                                      {"business": biz, "wa": link})
+                                      {
+                                          "business": biz,
+                                          "wa": link,
+                                          "signup_intent": request.session.get(
+                                              "signup_intent", "trial"
+                                          ),
+                                      })
 
 
 @router.post("/b/{business_id}/fiscal")
@@ -651,6 +796,18 @@ def onboarding_whatsapp_connect(request: Request, business_id: int):
         "onboarding_completed",
         f"whatsapp={business.get('whatsapp_status') if business else 'unknown'}",
     )
+    plan, billing_period, intent = _signup_selection(
+        str(request.session.get("signup_plan") or "autonomo"),
+        str(request.session.get("signup_billing") or "monthly"),
+        str(request.session.get("signup_intent") or "trial"),
+    )
+    if intent == "subscribe":
+        query = urlparse.urlencode({
+            "status": "ready", "plan": plan, "billing": billing_period,
+        })
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?{query}", status_code=303
+        )
     return RedirectResponse(f"/b/{business_id}/resumen", status_code=303)
 
 
@@ -676,12 +833,23 @@ def subscription_checkout(request: Request, business_id: int,
     )
     provider = billing_adapter.get_provider()
     base = f"{config.BASE_URL}/b/{business_id}/suscripcion"
+    success_query = urlparse.urlencode({
+        "status": "checkout_return", "plan": plan,
+        "billing": billing_period,
+    })
+    cancel_query = urlparse.urlencode({
+        "status": "cancel", "plan": plan, "billing": billing_period,
+    })
     url = provider.checkout_url(
-        biz, plan, f"{base}?status=ok", f"{base}?status=cancel", billing_period
+        biz, plan, f"{base}?{success_query}", f"{base}?{cancel_query}",
+        billing_period,
     )
     if not url:
         # Sin Stripe configurado: deja constancia de la intención (alta manual).
-        return RedirectResponse(f"{base}?status=manual", status_code=303)
+        manual_query = urlparse.urlencode({
+            "status": "manual", "plan": plan, "billing": billing_period,
+        })
+        return RedirectResponse(f"{base}?{manual_query}", status_code=303)
     return RedirectResponse(url, status_code=303)
 
 
