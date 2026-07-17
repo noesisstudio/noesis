@@ -31,10 +31,16 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   u otro servicio privado, sin SDK ni dependencia nueva. Ver [[IA-local]].
 - `db.py` — frontera única de datos: Postgres con `DATABASE_URL` y SQLite local como
   fallback.
+- `banking.py` — importa extractos CSV en local, deduplica y propone coincidencias;
+  el titular confirma antes de crear un cobro en el ledger.
 - `migrations.py` — esquema versionado con subida/bajada; Railway lo aplica en
   pre-deploy.
 - `web/whatsapp.py` — entrada idempotente y cola durable de salida. Persiste antes
   de enviar, reintenta con backoff y aplica estados `sent/delivered/read` de Meta.
+- `adapters/email.py` + `email_outbox` — el correo se persiste antes de SMTP y el
+  scheduler lo entrega con idempotencia, bloqueo entre réplicas y backoff.
+- `web/routers/finance.py` — publica un feed ICS secreto y revocable para la agenda;
+  no requiere OAuth ni una API de calendario para la suscripción de solo lectura.
 - `web/scheduler.py` — genera los proactivos con plantillas aprobadas y ejecuta el
   worker de la cola cada 15 segundos. Los recordatorios de cobro respetan el
   opt-out y la cadencia de cada negocio, usan el restante y deduplican por
@@ -79,6 +85,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - El scheduler registra cada ejecución para evitar duplicados entre réplicas. La
   outbox de WhatsApp usa claves idempotentes y `FOR UPDATE SKIP LOCKED` en Postgres
   para que varias réplicas no envíen la misma fila.
+- La outbox de correo aplica la misma frontera durable. Los fallos agotados y los
+  servicios sin configurar se muestran solo en administración, nunca como un centro
+  de estado técnico para el cliente.
 - `/health` comprueba que el proceso responde y `/ready` que la versión de esquema
   esperada está aplicada y la base de datos disponible.
 - Los backups incluyen una copia verificada de la base de datos y un ZIP separado,

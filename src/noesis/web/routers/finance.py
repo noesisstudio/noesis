@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+import json
 
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from ... import db
+from ... import banking, db
 from .. import chat, reports
 from ..deps import _read_json
 
@@ -123,6 +124,64 @@ def api_pending(business_id: int):
     return db.pending_payments(business_id)
 
 
+@router.post("/b/{business_id}/bank-import")
+async def import_bank_statement(
+    business_id: int, file: UploadFile = File(...)
+):
+    filename = (file.filename or "").lower()
+    if not filename.endswith((".csv", ".txt")):
+        return RedirectResponse(
+            f"/b/{business_id}/cobros?bank_error=format#bank-reconciliation",
+            status_code=303,
+        )
+    content = await file.read(5 * 1024 * 1024 + 1)
+    await file.close()
+    if len(content) > 5 * 1024 * 1024:
+        return RedirectResponse(
+            f"/b/{business_id}/cobros?bank_error=size#bank-reconciliation",
+            status_code=303,
+        )
+    try:
+        result = banking.import_csv(business_id, content)
+    except ValueError:
+        return RedirectResponse(
+            f"/b/{business_id}/cobros?bank_error=content#bank-reconciliation",
+            status_code=303,
+        )
+    db.record_product_event(
+        business_id, "bank_statement_imported",
+        json.dumps(result, separators=(",", ":")),
+    )
+    return RedirectResponse(
+        f"/b/{business_id}/cobros?bank_imported={result['created']}"
+        f"&bank_duplicates={result['duplicates']}#bank-reconciliation",
+        status_code=303,
+    )
+
+
+@router.post("/api/{business_id}/bank-transactions/{transaction_id}/confirm")
+def confirm_bank_match(business_id: int, transaction_id: int):
+    try:
+        transaction = db.confirm_bank_transaction(transaction_id, business_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    db.record_product_event(
+        business_id, "bank_match_confirmed", f"transaction_id={transaction_id}"
+    )
+    return {"transaction": transaction}
+
+
+@router.post("/api/{business_id}/bank-transactions/{transaction_id}/ignore")
+def ignore_bank_match(business_id: int, transaction_id: int):
+    transaction = db.ignore_bank_transaction(transaction_id, business_id)
+    if not transaction:
+        return JSONResponse({"error": "Movimiento no encontrado."}, status_code=404)
+    db.record_product_event(
+        business_id, "bank_match_ignored", f"transaction_id={transaction_id}"
+    )
+    return {"transaction": transaction}
+
+
 @router.get("/api/{business_id}/agenda")
 def api_agenda(business_id: int, week: bool = False, start: str = "", end: str = ""):
     if start and end:
@@ -132,6 +191,110 @@ def api_agenda(business_id: int, week: bool = False, start: str = "", end: str =
         return db.jobs_between(today.isoformat(),
                                (today + timedelta(days=6)).isoformat(), business_id)
     return db.jobs_for_date(date.today().isoformat(), business_id)
+
+
+def _ics_escape(value: object) -> str:
+    return (
+        str(value or "")
+        .replace("\\", "\\\\")
+        .replace("\n", "\\n")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+    )
+
+
+def _ics_event_dates(value: str) -> tuple[str, str]:
+    """Devuelve líneas DTSTART/DTEND usando la hora local del negocio."""
+    raw = (value or "").strip()
+    if len(raw) == 10:
+        start = date.fromisoformat(raw)
+        return (
+            f"DTSTART;VALUE=DATE:{start:%Y%m%d}",
+            f"DTEND;VALUE=DATE:{start + timedelta(days=1):%Y%m%d}",
+        )
+    try:
+        start_at = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        start_at = datetime.combine(date.today(), datetime.min.time())
+    if start_at.tzinfo is not None:
+        start_at = start_at.astimezone().replace(tzinfo=None)
+    end_at = start_at + timedelta(hours=1)
+    return (
+        f"DTSTART;TZID=Europe/Madrid:{start_at:%Y%m%dT%H%M%S}",
+        f"DTEND;TZID=Europe/Madrid:{end_at:%Y%m%dT%H%M%S}",
+    )
+
+
+def _calendar_ics(business: dict) -> str:
+    today = date.today()
+    jobs = db.jobs_between(
+        (today - timedelta(days=365)).isoformat(),
+        (today + timedelta(days=730)).isoformat(),
+        business["id"],
+    )
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Noesis//Agenda de trabajos//ES",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        f"X-WR-CALNAME:{_ics_escape('Noesis · ' + business['name'])}",
+        "X-WR-TIMEZONE:Europe/Madrid",
+    ]
+    for job in jobs:
+        start_line, end_line = _ics_event_dates(job.get("scheduled_for") or "")
+        summary = job.get("client_name") or job.get("description") or "Trabajo"
+        details = [job.get("description")]
+        if job.get("worker_name"):
+            details.append(f"Asignado a {job['worker_name']}")
+        if job.get("project_name"):
+            details.append(f"Proyecto: {job['project_name']}")
+        lines.extend([
+            "BEGIN:VEVENT",
+            f"UID:job-{job['id']}@bynoesis.com",
+            f"DTSTAMP:{stamp}",
+            start_line,
+            end_line,
+            f"SUMMARY:{_ics_escape(summary)}",
+            f"DESCRIPTION:{_ics_escape(' · '.join(str(x) for x in details if x))}",
+        ])
+        location = job.get("project_location")
+        if location:
+            lines.append(f"LOCATION:{_ics_escape(location)}")
+        if job.get("status") == "cancelado":
+            lines.append("STATUS:CANCELLED")
+        lines.append("END:VEVENT")
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines) + "\r\n"
+
+
+@router.get("/cal/{token}.ics")
+def public_calendar_feed(token: str):
+    business = db.get_business_by_calendar_token(token)
+    if not business:
+        return Response("Calendario no encontrado.", status_code=404)
+    return Response(
+        _calendar_ics(business),
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": 'inline; filename="agenda-noesis.ics"',
+            "Cache-Control": "private, max-age=300",
+            "X-Robots-Tag": "noindex, nofollow",
+        },
+    )
+
+
+@router.post("/b/{business_id}/calendar-feed")
+def update_calendar_feed(business_id: int, action: str = Form("create")):
+    if action == "rotate":
+        db.rotate_calendar_token(business_id)
+        event = "calendar_feed_rotated"
+    else:
+        db.get_or_create_calendar_token(business_id)
+        event = "calendar_feed_created"
+    db.record_product_event(business_id, event)
+    return RedirectResponse(f"/b/{business_id}/agenda#calendar-feed", status_code=303)
 
 
 

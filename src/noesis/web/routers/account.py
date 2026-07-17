@@ -544,14 +544,6 @@ def update_whatsapp_reports(
     )
 
 
-@router.get("/api/{business_id}/integrations")
-def api_integrations(business_id: int):
-    return {
-        "items": db.integration_catalog(business_id),
-        "health": db.business_operational_health(business_id),
-    }
-
-
 @router.post("/api/{business_id}/integrations/{integration_key}")
 async def api_update_integration(
     business_id: int, integration_key: str, request: Request
@@ -565,11 +557,9 @@ async def api_update_integration(
             db.disconnect_whatsapp(business_id)
             db.record_product_event(business_id, "whatsapp_disconnected")
         else:
-            allowed_actions = (
-                {"enable": "enabled", "disable": "disabled"}
-                if integration_key == "ai_external"
-                else {"request": "requested", "unrequest": "disabled"}
-            )
+            if integration_key != "ai_external":
+                raise ValueError("Esta preferencia se gestiona desde su apartado propio.")
+            allowed_actions = {"enable": "enabled", "disable": "disabled"}
             if action not in allowed_actions:
                 raise ValueError("La acción de integración no es válida.")
             setting = db.update_integration_setting(
@@ -581,12 +571,7 @@ async def api_update_integration(
             )
     except (TypeError, ValueError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
-    item = next(
-        (entry for entry in db.integration_catalog(business_id)
-         if entry["key"] == integration_key),
-        None,
-    )
-    return {"item": item, "health": db.business_operational_health(business_id)}
+    return {"ok": True}
 
 
 @router.post("/b/{business_id}/clockin-policy")
@@ -740,10 +725,13 @@ def forgot_submit(request: Request, email: str = Form(...)):
         token = secrets.token_urlsafe(32)
         db.create_password_reset(user["id"], _hash_token(token), ttl_minutes=60)
         link = f"{config.BASE_URL}/restablecer?token={token}"
-        email_adapter.send_email(
+        email_adapter.queue_email(
             email, "Restablecer tu contraseña de Noesis",
             f"Hola,\n\nPara crear una contraseña nueva, abre este enlace (válido 1 hora):\n"
-            f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Noesis")
+            f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Noesis",
+            business_id=user["business_id"],
+            idempotency_key=f"password-reset:{user['id']}:{_hash_token(token)[:20]}",
+        )
     return RedirectResponse("/recuperar?sent=1", status_code=303)
 
 

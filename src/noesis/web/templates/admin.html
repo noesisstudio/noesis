@@ -112,6 +112,33 @@
       <p>{{ data.dept_reports.operaciones }}</p>
     </div>
   </div>
+  <div class="card">
+    <div class="card-h">
+      <h2>Servicios e integraciones</h2>
+      <span class="badge {{ 'b-green' if data.readiness.ready else 'b-amber' }}">
+        {{ data.readiness.counts.ok }} preparados ·
+        {{ data.readiness.counts.warning }} avisos ·
+        {{ data.readiness.counts.blocker }} bloqueos
+      </span>
+    </div>
+    <div class="card-b">
+      {% for check in data.readiness.checks %}
+      <div class="lrow" style="align-items:flex-start">
+        <span class="badge {{ 'b-green' if check.status == 'ok' else ('b-red' if check.status == 'blocker' else 'b-amber') }}">
+          {{ check.area }}
+        </span>
+        <span style="flex:1;margin-left:10px">
+          <b>{{ check.summary }}</b>
+          {% if check.action %}<small class="meta" style="display:block;margin-top:3px">{{ check.action }}</small>{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+      <p class="meta" style="margin-top:12px">
+        Esta información es interna. El cliente solo ve las funciones que puede usar
+        y sus propias preferencias.
+      </p>
+    </div>
+  </div>
   {% if data.alerts %}
   <div class="card admin-alerts">
     <div class="card-h">

@@ -14,7 +14,7 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 
-from .. import config
+from .. import config, db
 
 log = logging.getLogger("noesis.email")
 
@@ -44,6 +44,27 @@ def send_email(to: str, subject: str, body: str, html: str | None = None) -> boo
     if html:
         msg.add_alternative(html, subtype="html")
     return _send_msg(msg)
+
+
+def queue_email(
+    to: str,
+    subject: str,
+    body: str,
+    html: str | None = None,
+    *,
+    business_id: int | None = None,
+    idempotency_key: str | None = None,
+) -> bool:
+    """Persiste el correo antes de enviarlo; el scheduler se ocupa de SMTP."""
+    db.enqueue_email_message(
+        business_id=business_id,
+        to_email=to,
+        subject=subject,
+        text_body=body,
+        html_body=html,
+        idempotency_key=idempotency_key,
+    )
+    return True
 
 
 def send_invoice_email(to: str, biz_name: str, invoice_number: str,

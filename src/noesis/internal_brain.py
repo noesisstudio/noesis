@@ -573,10 +573,17 @@ def deliver_confirmed(business_id: int, payload: dict) -> str:
         return "Ese borrador ya no es válido. No he enviado nada."
 
     delivered = False
+    queued = False
     if draft.channel == "email":
-        delivered = email_adapter.send_email(
-            draft.recipient_address, draft.subject, draft.body
+        delivered = email_adapter.queue_email(
+            draft.recipient_address, draft.subject, draft.body,
+            business_id=business_id,
+            idempotency_key=(
+                f"internal-email:{business_id}:{draft.intent}:"
+                f"{draft.entity_id or draft.client_id or 0}:{date.today().isoformat()}"
+            ),
         )
+        queued = delivered
     elif draft.channel == "whatsapp_template" and draft.template_name:
         key = (
             f"internal:{draft.intent}:{business_id}:"
@@ -602,4 +609,6 @@ def deliver_confirmed(business_id: int, payload: dict) -> str:
             separators=(",", ":"),
         ),
     )
+    if queued:
+        return f"Preparado para enviar a {draft.recipient_name} ✅"
     return f"Enviado a {draft.recipient_name} ✅"

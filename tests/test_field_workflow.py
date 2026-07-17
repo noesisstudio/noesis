@@ -154,8 +154,8 @@ class FieldWorkflowTestCase(unittest.TestCase):
             "confirmado",
         )
 
-    def test_migrations_25_to_27_roundtrip(self):
-        self.assertEqual(migrations.current_version(), 27)
+    def test_migrations_25_to_30_roundtrip(self):
+        self.assertEqual(migrations.current_version(), 30)
         self.assertEqual(migrations.downgrade(25), 25)
         with db.get_conn() as conn:
             missing_preferences = conn.execute(
@@ -168,7 +168,7 @@ class FieldWorkflowTestCase(unittest.TestCase):
             ).fetchone()
         self.assertIsNone(missing_preferences)
         self.assertIsNone(missing_integrations)
-        self.assertEqual(migrations.upgrade(), 27)
+        self.assertEqual(migrations.upgrade(), 30)
 
     def test_integrations_are_controllable_and_isolated_by_business(self):
         from unittest.mock import patch

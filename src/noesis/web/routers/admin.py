@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ... import config, db
+from ... import config, db, readiness
 from .. import auth, backups
 from ..deps import TEMPLATES
 
@@ -27,6 +27,7 @@ def admin_panel(request: Request):
         return RedirectResponse("/login", status_code=303)
     data = db.admin_overview()
     data["backup"] = backups.admin_backup_status()
+    data["readiness"] = readiness.collect_readiness(check_database=False)
     return TEMPLATES.TemplateResponse(request, "admin.html",
                                       {"data": data})
 
@@ -44,5 +45,4 @@ def admin_download_latest_backup(request: Request):
         else "application/vnd.sqlite3"
     )
     return FileResponse(path, media_type=media_type, filename=path.name)
-
 

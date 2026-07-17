@@ -151,6 +151,16 @@ def page(request: Request, business_id: int, page: str):
         context["panel_hidden"] = layout["hidden"]
         context["panel_blocks"] = db.PANEL_BLOCKS
         context["briefing"] = chat.daily_briefing(business_id)
+    if page == "agenda":
+        token = biz.get("calendar_token")
+        context["calendar_feed_url"] = (
+            f"{config.BASE_URL}/cal/{token}.ics" if token else ""
+        )
+    if page == "cobros":
+        context["bank_transactions"] = db.list_bank_transactions(
+            business_id, limit=50
+        )
+        context["bank_summary"] = db.bank_reconciliation_summary(business_id)
     if (
         page == "ajustes"
         and biz.get("whatsapp_status") != "conectado"
@@ -158,8 +168,10 @@ def page(request: Request, business_id: int, page: str):
     ):
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
-        context["integrations"] = db.integration_catalog(business_id)
-        context["operational_health"] = db.business_operational_health(business_id)
+        ai_setting = db.integration_setting(business_id, "ai_external") or {}
+        context["ai_external_preference"] = (
+            ai_setting.get("mode") != "disabled"
+        )
         context["assistant_memories"] = db.list_memories(business_id)
         context["automation_permissions"] = db.automation_catalog(business_id)
         context["automation_mode_labels"] = db.AUTOMATION_MODE_LABELS

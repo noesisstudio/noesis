@@ -131,6 +131,22 @@ def collect_readiness(*, check_database: bool = True) -> dict:
         if not smtp_ok else "",
     ))
 
+    google_names = ("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET")
+    google_present, google_missing = _env_ready(google_names)
+    google_ok = not google_missing
+    google_partial = bool(google_present) and bool(google_missing)
+    checks.append(ReadinessCheck(
+        "google",
+        "ok" if google_ok else ("blocker" if google_partial else "warning"),
+        "Alta y acceso con Google configurados." if google_ok else
+        ("Google OAuth está configurado a medias." if google_partial else
+         "El acceso con Google aún no está configurado."),
+        (
+            "Crea el cliente OAuth web, registra el callback exacto y completa "
+            "GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET."
+        ) if not google_ok else "Prueba un alta nueva y un acceso existente.",
+    ))
+
     stripe_names = (
         "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_AUTONOMO",
         "STRIPE_PRICE_PRO", "STRIPE_PRICE_PREMIUM",

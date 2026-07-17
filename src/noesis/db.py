@@ -233,6 +233,45 @@ def get_business(business_id) -> dict | None:
         return dict(row) if row else None
 
 
+def get_business_by_calendar_token(token: str) -> dict | None:
+    """Resuelve un feed privado sin aceptar tokens cortos o manipulados."""
+    token = (token or "").strip()
+    if len(token) < 32 or len(token) > 160:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM businesses WHERE calendar_token=?", (token,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_or_create_calendar_token(business_id: int) -> str:
+    business = get_business(business_id)
+    if not business:
+        raise ValueError("Negocio no encontrado.")
+    if business.get("calendar_token"):
+        return str(business["calendar_token"])
+    return rotate_calendar_token(business_id)
+
+
+def rotate_calendar_token(business_id: int) -> str:
+    """Revoca el enlace anterior y entrega uno impredecible para este negocio."""
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    for _attempt in range(4):
+        token = secrets.token_urlsafe(32)
+        try:
+            with get_conn() as conn:
+                conn.execute(
+                    "UPDATE businesses SET calendar_token=? WHERE id=?",
+                    (token, business_id),
+                )
+            return token
+        except IntegrityError:
+            continue
+    raise RuntimeError("No se pudo crear un enlace de calendario seguro.")
+
+
 def normalize_phone(phone: str) -> str:
     """Deja solo dígitos y se queda con los últimos 9 (España), para comparar
     teléfonos escritos de mil formas (+34 600..., 0034..., 600 00 00 00)."""
@@ -4544,6 +4583,324 @@ def pending_payments(business_id) -> list[dict]:
     return out
 
 
+# ----------------------------------------------------- Conciliación bancaria ---
+def add_bank_transaction(
+    business_id: int,
+    *,
+    import_hash: str,
+    booked_on: str,
+    amount: float,
+    description: str = "",
+    counterparty: str = "",
+    reference: str = "",
+    currency: str = "EUR",
+) -> dict | None:
+    """Guarda un movimiento una sola vez; nunca lo convierte en cobro solo."""
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    try:
+        date.fromisoformat(booked_on)
+    except ValueError as exc:
+        raise ValueError("La fecha del movimiento no es válida.") from exc
+    number = Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if not number.is_finite() or number == 0:
+        raise ValueError("El movimiento necesita un importe distinto de cero.")
+    clean_hash = str(import_hash or "").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", clean_hash):
+        raise ValueError("La huella del movimiento no es válida.")
+    fields = {
+        "description": _payment_text(description, "La descripción", 500),
+        "counterparty": _payment_text(counterparty, "La contraparte", 200),
+        "reference": _payment_text(reference, "La referencia", 200),
+    }
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO bank_transactions "
+            "(business_id, import_hash, booked_on, amount, currency, description, "
+            "counterparty, reference, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, import_hash) DO NOTHING RETURNING id",
+            (
+                business_id, clean_hash, booked_on, float(number),
+                (currency or "EUR").strip().upper()[:3],
+                fields["description"], fields["counterparty"],
+                fields["reference"], _now(),
+            ),
+        ).fetchone()
+        if not row:
+            return None
+        transaction_id = row["id"]
+    return get_bank_transaction(transaction_id, business_id)
+
+
+def get_bank_transaction(transaction_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT bt.*, i.number AS invoice_number, i.total AS invoice_total, "
+            "c.name AS client_name FROM bank_transactions bt "
+            "LEFT JOIN invoices i ON i.id=bt.suggested_invoice_id "
+            "AND i.business_id=bt.business_id "
+            "LEFT JOIN clients c ON c.id=i.client_id AND c.business_id=i.business_id "
+            "WHERE bt.id=? AND bt.business_id=?",
+            (transaction_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_bank_transactions(
+    business_id: int, *, status: str | None = None, limit: int = 100
+) -> list[dict]:
+    sql = (
+        "SELECT bt.*, i.number AS invoice_number, i.total AS invoice_total, "
+        "c.name AS client_name FROM bank_transactions bt "
+        "LEFT JOIN invoices i ON i.id=bt.suggested_invoice_id "
+        "AND i.business_id=bt.business_id "
+        "LEFT JOIN clients c ON c.id=i.client_id AND c.business_id=i.business_id "
+        "WHERE bt.business_id=?"
+    )
+    params: list[Any] = [business_id]
+    if status:
+        sql += " AND bt.status=?"
+        params.append(status)
+    sql += " ORDER BY bt.booked_on DESC, bt.id DESC LIMIT ?"
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def suggest_bank_transaction(
+    transaction_id: int,
+    business_id: int,
+    invoice_id: int | None,
+    *,
+    score: int | None = None,
+    reason: str = "",
+) -> dict | None:
+    if invoice_id is not None:
+        invoice = get_invoice(invoice_id, business_id)
+        if not invoice or invoice.get("status") == "borrador":
+            raise ValueError("La factura sugerida no es válida.")
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE bank_transactions SET status=?, suggested_invoice_id=?, "
+            "match_score=?, match_reason=? WHERE id=? AND business_id=? "
+            "AND status IN ('imported','suggested')",
+            (
+                "suggested" if invoice_id is not None else "imported",
+                invoice_id, score, _payment_text(reason, "El motivo", 300),
+                transaction_id, business_id,
+            ),
+        )
+    return get_bank_transaction(transaction_id, business_id) if cur.rowcount else None
+
+
+def confirm_bank_transaction(transaction_id: int, business_id: int) -> dict:
+    """Confirma una sugerencia y registra el cobro en la misma transacción."""
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        movement = conn.execute(
+            "SELECT * FROM bank_transactions WHERE id=? AND business_id=?" + lock,
+            (transaction_id, business_id),
+        ).fetchone()
+        if not movement:
+            raise ValueError("Movimiento no encontrado.")
+        if movement["status"] == "confirmed":
+            return dict(movement)
+        invoice_id = movement.get("suggested_invoice_id")
+        if movement["status"] != "suggested" or not invoice_id:
+            raise ValueError("Este movimiento no tiene una factura sugerida.")
+        amount = Decimal(str(movement["amount"])).quantize(Decimal("0.01"))
+        if amount <= 0:
+            raise ValueError("Solo una entrada de dinero puede confirmar un cobro.")
+        invoice, already_paid = _locked_invoice_with_paid(
+            conn, invoice_id, business_id
+        )
+        if not invoice or invoice["status"] == "borrador" or not invoice.get("number"):
+            raise ValueError("La factura ya no admite este cobro.")
+        total = Decimal(str(invoice["total"])).quantize(Decimal("0.01"))
+        if already_paid + amount > total:
+            raise ValueError("El movimiento supera lo que queda por cobrar.")
+        note = " · ".join(
+            value for value in (
+                "Conciliado desde extracto",
+                movement.get("reference"),
+                movement.get("description"),
+            ) if value
+        )[:500]
+        _insert_invoice_payment(
+            conn, invoice, amount, "extracto_bancario",
+            f"{movement['booked_on']}T12:00:00", note,
+        )
+        _set_invoice_payment_state(
+            conn, invoice, already_paid + amount,
+            f"{movement['booked_on']}T12:00:00",
+        )
+        now = _now()
+        conn.execute(
+            "UPDATE bank_transactions SET status='confirmed', confirmed_at=? "
+            "WHERE id=? AND business_id=?",
+            (now, transaction_id, business_id),
+        )
+    return get_bank_transaction(transaction_id, business_id) or {}
+
+
+def ignore_bank_transaction(transaction_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE bank_transactions SET status='ignored', "
+            "suggested_invoice_id=NULL, match_score=NULL, match_reason=NULL "
+            "WHERE id=? AND business_id=? AND status<>'confirmed'",
+            (transaction_id, business_id),
+        )
+    return get_bank_transaction(transaction_id, business_id) if cur.rowcount else None
+
+
+def bank_reconciliation_summary(business_id: int) -> dict:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) AS n, COALESCE(SUM(amount),0) AS total "
+            "FROM bank_transactions WHERE business_id=? GROUP BY status",
+            (business_id,),
+        ).fetchall()
+    by = {row["status"]: dict(row) for row in rows}
+    return {
+        key: {
+            "count": int(by.get(key, {}).get("n") or 0),
+            "total": round(float(by.get(key, {}).get("total") or 0), 2),
+        }
+        for key in ("imported", "suggested", "confirmed", "ignored")
+    }
+
+
+# ------------------------------------------------------------- Correo durable ---
+def enqueue_email_message(
+    *,
+    business_id: int | None,
+    to_email: str,
+    subject: str,
+    text_body: str,
+    html_body: str | None = None,
+    idempotency_key: str | None = None,
+    max_attempts: int = 6,
+    now: str | None = None,
+) -> dict:
+    if business_id is not None and not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    to_email = str(to_email or "").strip().lower()
+    subject = str(subject or "").strip()
+    text_body = str(text_body or "").strip()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", to_email) or len(to_email) > 320:
+        raise ValueError("El email de destino no es válido.")
+    if not subject or len(subject) > 200:
+        raise ValueError("El asunto del email no es válido.")
+    if not text_body or len(text_body) > 100_000:
+        raise ValueError("El contenido del email no es válido.")
+    if html_body is not None and len(html_body) > 200_000:
+        raise ValueError("El contenido HTML es demasiado grande.")
+    created_at = now or _now()
+    try:
+        with get_conn() as conn:
+            row = conn.execute(
+                "INSERT INTO email_outbox "
+                "(business_id, to_email, subject, text_body, html_body, "
+                "idempotency_key, status, attempts, max_attempts, next_attempt_at, "
+                "created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) RETURNING id",
+                (
+                    business_id, to_email, subject, text_body, html_body,
+                    idempotency_key, max(1, min(int(max_attempts), 20)),
+                    created_at, created_at, created_at,
+                ),
+            ).fetchone()
+            message_id = row["id"]
+    except IntegrityError:
+        if not idempotency_key:
+            raise
+        with get_conn() as conn:
+            existing = conn.execute(
+                "SELECT * FROM email_outbox WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+        if not existing or existing.get("business_id") != business_id:
+            raise ValueError("La clave idempotente pertenece a otro envío.")
+        return dict(existing)
+    return get_email_message(message_id) or {}
+
+
+def get_email_message(message_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM email_outbox WHERE id=?", (message_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_email_messages(
+    business_id: int | None = None, *, status: str | None = None, limit: int = 100
+) -> list[dict]:
+    sql = "SELECT * FROM email_outbox WHERE 1=1"
+    params: list[Any] = []
+    if business_id is not None:
+        sql += " AND business_id=?"
+        params.append(business_id)
+    if status:
+        sql += " AND status=?"
+        params.append(status)
+    sql += " ORDER BY created_at DESC, id DESC LIMIT ?"
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def claim_next_email_message(*, now: str, stale_before: str) -> dict | None:
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM email_outbox WHERE "
+            "((status IN ('queued','retrying') AND next_attempt_at<=?) "
+            "OR (status='processing' AND locked_at<=?)) "
+            "ORDER BY next_attempt_at, id LIMIT 1" + suffix,
+            (now, stale_before),
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute(
+            "UPDATE email_outbox SET status='processing', attempts=attempts+1, "
+            "locked_at=?, updated_at=? WHERE id=?",
+            (now, now, row["id"]),
+        )
+        claimed = conn.execute(
+            "SELECT * FROM email_outbox WHERE id=?", (row["id"],)
+        ).fetchone()
+    return dict(claimed)
+
+
+def mark_email_sent(message_id: int, sent_at: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE email_outbox SET status='sent', sent_at=?, last_error=NULL, "
+            "locked_at=NULL, updated_at=? WHERE id=? AND status='processing'",
+            (sent_at, sent_at, message_id),
+        )
+
+
+def mark_email_retry(
+    message_id: int, *, error: str, next_attempt_at: str, updated_at: str
+) -> dict | None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE email_outbox SET "
+            "status=CASE WHEN attempts>=max_attempts THEN 'failed' ELSE 'retrying' END, "
+            "next_attempt_at=?, last_error=?, locked_at=NULL, updated_at=? "
+            "WHERE id=? AND status='processing'",
+            (next_attempt_at, str(error or "error")[:1000], updated_at, message_id),
+        )
+    return get_email_message(message_id)
+
+
 def global_search(business_id, query: str, limit: int = 6) -> dict:
     """Buscador global del negocio: clientes, facturas, presupuestos y trabajos
     por nombre, número, concepto o teléfono. Siempre aislado por business_id."""
@@ -7271,6 +7628,13 @@ def admin_alerts() -> list[dict]:
             "SELECT COUNT(*) AS n FROM whatsapp_outbox "
             "WHERE status IN ('queued','retrying') AND attempts>=3"
         ).fetchone()["n"]
+        email_failed = conn.execute(
+            "SELECT COUNT(*) AS n FROM email_outbox WHERE status='failed'"
+        ).fetchone()["n"]
+        email_stuck = conn.execute(
+            "SELECT COUNT(*) AS n FROM email_outbox "
+            "WHERE status IN ('queued','retrying') AND attempts>=3"
+        ).fetchone()["n"]
         past_due = [dict(r) for r in conn.execute(
             "SELECT id, name, owner_email FROM businesses "
             "WHERE subscription_status IN ('past_due','unpaid')"
@@ -7284,6 +7648,16 @@ def admin_alerts() -> list[dict]:
         alerts.append({
             "level": "ambar", "area": "WhatsApp",
             "text": f"{wa_stuck} mensaje(s) llevan 3+ intentos sin salir.",
+        })
+    if email_failed:
+        alerts.append({
+            "level": "rojo", "area": "Correo",
+            "text": f"{email_failed} correo(s) agotaron los reintentos.",
+        })
+    if email_stuck:
+        alerts.append({
+            "level": "ambar", "area": "Correo",
+            "text": f"{email_stuck} correo(s) llevan 3+ intentos sin salir.",
         })
     verifactu = verifactu_queue_health()
     if verifactu.get("rechazado"):
@@ -7535,6 +7909,8 @@ def export_business_data(business_id) -> dict:
             "SELECT * FROM invoice_payments WHERE business_id=? "
             "ORDER BY paid_at, id",
             business_id)],
+        "bank_transactions": list_bank_transactions(business_id, limit=500),
+        "email_outbox": list_email_messages(business_id, limit=500),
         "invoice_records": list_invoice_records(business_id),
         "invoice_events": list_invoice_events(business_id),
         "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
@@ -7622,6 +7998,11 @@ def export_client_data(client_id, business_id) -> dict | None:
             "SELECT p.* FROM invoice_payments p JOIN invoices i "
             "ON i.business_id=p.business_id AND i.id=p.invoice_id "
             "WHERE p.business_id=? AND i.client_id=? ORDER BY p.paid_at, p.id",
+            business_id, client_id)],
+        "bank_transactions": [dict(r) for r in _rows(
+            "SELECT bt.* FROM bank_transactions bt JOIN invoices i "
+            "ON i.business_id=bt.business_id AND i.id=bt.suggested_invoice_id "
+            "WHERE bt.business_id=? AND i.client_id=? ORDER BY bt.booked_on, bt.id",
             business_id, client_id)],
         "quotes": [dict(r) for r in _rows(
             "SELECT * FROM quotes WHERE business_id=? AND client_id=?",
@@ -7769,6 +8150,7 @@ def delete_business_cascade(business_id) -> bool:
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
+            "email_outbox",
             "verifactu_outbox", "document_sequences",
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
             "invoice_events", "invoice_records", "portal_tokens",
@@ -7782,7 +8164,7 @@ def delete_business_cascade(business_id) -> bool:
             "project_tasks", "project_entries", "project_members", "projects",
             "documents", "received_invoices", "suppliers", "products",
             "leads", "quotes",
-            "invoice_payments", "invoices", "jobs", "workers", "clients", "expenses"
+            "bank_transactions", "invoice_payments", "invoices", "jobs", "workers", "clients", "expenses"
         ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "

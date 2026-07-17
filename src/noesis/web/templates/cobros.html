@@ -32,6 +32,90 @@
   </div>
 </div>
 
+<div class="card" id="bank-reconciliation" style="margin-top:16px">
+  <div class="card-h">
+    <div>
+      <div class="kicker">Cuadra lo que ha entrado</div>
+      <h2>Extracto bancario</h2>
+    </div>
+    {% if bank_summary.suggested.count %}
+    <span class="badge b-amber">{{ bank_summary.suggested.count }} por confirmar</span>
+    {% elif bank_summary.confirmed.count %}
+    <span class="badge b-green">{{ bank_summary.confirmed.count }} cuadrado(s)</span>
+    {% endif %}
+  </div>
+  <div class="card-b">
+    <p class="muted" style="margin-top:0">
+      Sube el CSV de tu banco. Noesis detecta duplicados y propone qué ingreso
+      corresponde a cada factura; nada se marca como cobrado hasta que tú confirmas.
+    </p>
+    {% if request.query_params.get('bank_imported') is not none %}
+    <div class="banner ok" style="margin-bottom:12px">
+      {{ request.query_params.get('bank_imported') }} movimiento(s) nuevo(s) importados.
+      {% if request.query_params.get('bank_duplicates') != '0' %}
+      {{ request.query_params.get('bank_duplicates') }} duplicado(s) ignorados.
+      {% endif %}
+    </div>
+    {% elif request.query_params.get('bank_error') %}
+    <div class="banner warn" style="margin-bottom:12px">
+      No he podido leer ese extracto. Exporta un CSV con fecha, importe y concepto,
+      y vuelve a intentarlo.
+    </div>
+    {% endif %}
+    <form method="post" action="/b/{{ business.id }}/bank-import"
+      enctype="multipart/form-data" class="row">
+      <input class="input" type="file" name="file" accept=".csv,.txt,text/csv" required
+        style="flex:1;min-width:240px">
+      <button class="btn primary" type="submit">Revisar extracto</button>
+    </form>
+
+    {% if bank_transactions %}
+    <div class="table-wrap" style="margin-top:16px">
+      <table>
+        <thead><tr><th>Fecha y concepto</th><th class="t-right">Movimiento</th><th>Propuesta</th><th></th></tr></thead>
+        <tbody>
+        {% for movement in bank_transactions %}
+        <tr>
+          <td>
+            <b>{{ movement.booked_on }}</b>
+            <div class="meta">{{ movement.counterparty or movement.description or movement.reference or 'Sin concepto' }}</div>
+          </td>
+          <td class="t-right num {{ 'green' if movement.amount > 0 else 'red' }}">
+            {{ movement.amount | eur }}
+          </td>
+          <td>
+            {% if movement.status == 'suggested' %}
+              <b>{{ movement.invoice_number }} · {{ movement.client_name }}</b>
+              <div class="meta">{{ movement.match_reason }}</div>
+            {% elif movement.status == 'confirmed' %}
+              <span class="badge b-green">cobro confirmado</span>
+              {% if movement.invoice_number %}<div class="meta">{{ movement.invoice_number }}</div>{% endif %}
+            {% elif movement.status == 'ignored' %}
+              <span class="badge b-gray">ignorado</span>
+            {% elif movement.amount < 0 %}
+              <span class="meta">Salida de dinero · no afecta a cobros</span>
+            {% else %}
+              <span class="meta">Sin coincidencia clara</span>
+            {% endif %}
+          </td>
+          <td class="t-right table-actions">
+            {% if movement.status == 'suggested' %}
+            <button class="btn green" type="button" onclick="confirmBankMatch({{ movement.id }}, this)">Confirmar</button>
+            {% endif %}
+            {% if movement.status in ['imported', 'suggested'] %}
+            <button class="btn" type="button" onclick="ignoreBankMatch({{ movement.id }}, this)">Ignorar</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    <div id="bank-msg" class="meta" role="status" style="margin-top:8px"></div>
+  </div>
+</div>
+
 <div class="insight" style="margin-top:16px">
   Noesis debe comportarse como una oficina pequeña: detectar retrasos, preparar el
   mensaje adecuado y dejarte confirmar antes de contactar con el cliente.
@@ -80,6 +164,26 @@ async function load() {
   }
 }
 async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
+async function confirmBankMatch(id, button) {
+  button.disabled = true;
+  try {
+    await apiPost(`/bank-transactions/${id}/confirm`, {});
+    window.location.assign(`/b/${BIZ}/cobros#bank-reconciliation`);
+  } catch (error) {
+    el('bank-msg').textContent = error.message;
+    button.disabled = false;
+  }
+}
+async function ignoreBankMatch(id, button) {
+  button.disabled = true;
+  try {
+    await apiPost(`/bank-transactions/${id}/ignore`, {});
+    window.location.assign(`/b/${BIZ}/cobros#bank-reconciliation`);
+  } catch (error) {
+    el('bank-msg').textContent = error.message;
+    button.disabled = false;
+  }
+}
 load();
 </script>
 {% endblock %}

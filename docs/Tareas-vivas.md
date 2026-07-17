@@ -5,15 +5,17 @@
 
 ## P0 — publicar y pilotar con seguridad
 
-- [ ] Fusionar y desplegar el candidato actual; confirmar `/ready`, migración, Home,
-  una ficha de proyecto, modo consulta y acompañante contextual.
+- [ ] Fusionar y desplegar el candidato actual; aplicar migraciones 28-30 y confirmar
+  `/ready`, Home, Ajustes sin diagnóstico técnico, alta Google, calendario privado,
+  conciliación CSV, correo durable, modo consulta y una ficha de proyecto.
 - [ ] Crear o actualizar en Stripe los productos **29/49/99 € + IVA**, enlazar sus
   `price_id`, probar checkout, webhook, impago, reactivación y portal de cliente.
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
   reintentos y bloqueo de cuenta inactiva.
 - [ ] Aprobar plantillas Meta para cobro, presupuesto y cita; validar SÍ/NO y entrega
   desde el WhatsApp real del titular.
-- [ ] SMTP real: invitaciones, facturas, avisos y entregabilidad.
+- [ ] SMTP real: credenciales, invitaciones, facturas, avisos, reintentos de la outbox
+  y entregabilidad. La cola durable ya está construida.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://app.bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales.
@@ -32,7 +34,12 @@
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
 - [ ] Documentos: duplicados, HEIC, PDF escaneado, líneas, búsqueda y corrección
   masiva con corpus real.
-- [ ] Calendario externo, recurrentes, comunicaciones y conciliación.
+- [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir
+  si el piloto necesita sincronización bidireccional OAuth y recurrentes.
+- [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por
+  enlace para después del piloto. Ningún movimiento se confirma automáticamente.
+- [ ] Correo: panel interno de detalle/reejecución manual si los avisos agregados de
+  la outbox resultan insuficientes durante el piloto.
 - [ ] Equipo: varios trabajadores reales, offline, ausencias y permisos finos.
 - [ ] Gestoría con cuentas/MFA, varias empresas y revisión por documento.
 - [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,

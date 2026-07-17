@@ -295,14 +295,16 @@ def notify_gestoria(business: dict, label: str) -> bool:
 
     email = business.get("gestoria_email")
     token = business.get("gestoria_token")
-    if not email or not token or not email_adapter.available():
+    if not email or not token:
         return False
     link = f"{config.BASE_URL}/g/{token}"
-    return email_adapter.send_email(
+    return email_adapter.queue_email(
         email,
         f"Documentación {label} de {business.get('name') or 'su cliente'}",
         (f"Hola,\n\n{business.get('name') or 'Su cliente'} usa Noesis para su "
          f"gestión. El paquete del período {label} (facturas emitidas, gastos "
          f"con justificantes y resumen fiscal) ya está disponible aquí:\n\n"
          f"{link}\n\nEste enlace es privado; no lo compartas.\n\n— Noesis"),
+        business_id=business["id"],
+        idempotency_key=f"gestoria:{business['id']}:{label}",
     )

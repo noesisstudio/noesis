@@ -447,8 +447,11 @@ def send_founder_digest(now: datetime | None = None) -> bool:
     ])
     subject = f"Noesis · parte semanal W{week:02d}: MRR {data['mrr']} €"
     for address in admins:
-        email_adapter.send_email(address, subject, body)
-    log.info("Parte semanal del fundador enviado a %d dirección(es).",
+        email_adapter.queue_email(
+            address, subject, body,
+            idempotency_key=f"founder-digest:{year}-W{week:02d}:{address}",
+        )
+    log.info("Parte semanal del fundador encolado para %d dirección(es).",
              len(admins))
     return True
 
@@ -510,6 +513,48 @@ def process_whatsapp_outbox() -> None:
     from . import whatsapp
 
     whatsapp.process_outbox(limit=25)
+
+
+def process_email_outbox(limit: int = 25) -> int:
+    """Entrega SMTP desde la cola durable con backoff e idempotencia."""
+    from ..adapters import email as email_adapter
+
+    processed = 0
+    for _ in range(max(1, min(int(limit), 500))):
+        now = datetime.now()
+        item = db.claim_next_email_message(
+            now=now.isoformat(timespec="seconds"),
+            stale_before=(now - timedelta(minutes=5)).isoformat(timespec="seconds"),
+        )
+        if not item:
+            break
+        try:
+            if not email_adapter.available():
+                raise RuntimeError("SMTP no está configurado.")
+            if not email_adapter.send_email(
+                item["to_email"], item["subject"], item["text_body"],
+                item.get("html_body"),
+            ):
+                raise RuntimeError("El servidor SMTP no confirmó el envío.")
+        except Exception as exc:  # noqa: BLE001 - la cola debe sobrevivir al proveedor
+            delay = min(
+                config.EMAIL_RETRY_MAX_SECONDS,
+                config.EMAIL_RETRY_BASE_SECONDS
+                * (2 ** max(0, int(item["attempts"]) - 1)),
+            )
+            db.mark_email_retry(
+                item["id"], error=str(exc),
+                next_attempt_at=(now + timedelta(seconds=delay)).isoformat(
+                    timespec="seconds"
+                ),
+                updated_at=now.isoformat(timespec="seconds"),
+            )
+            log.warning("Correo aplazado outbox=%s: %s", item["id"], exc)
+            continue
+        sent_at = datetime.now().isoformat(timespec="seconds")
+        db.mark_email_sent(item["id"], sent_at)
+        processed += 1
+    return processed
 
 
 def process_verifactu_outbox(limit: int = 25) -> int:
@@ -657,6 +702,14 @@ def start_scheduler() -> BackgroundScheduler:
         "interval",
         seconds=15,
         id="whatsapp-outbox",
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        process_email_outbox,
+        "interval",
+        seconds=15,
+        id="email-outbox",
         max_instances=1,
         coalesce=True,
     )
