@@ -1,46 +1,52 @@
 # Preguntas abiertas
 
-> Dudas que necesitan respuesta del founder (o criterio de Opus) antes de
-> implementar. Cuando una se responde, se mueve a [[Decisiones]] con su porqué.
-> Las tareas puramente operativas del founder están al final.
-> Última actualización: **2026-07-07**.
+> Solo contiene decisiones reales del founder. Los trabajos de conexión y QA viven
+> en [[Tareas-vivas]] y [[Conectar-APIs]]. Cuando una pregunta se responde, se mueve
+> a [[Decisiones]] con el porqué. Última revisión: **2026-07-20**.
 
-## Requieren decisión de negocio
+## Decisiones que no bloquean la conexión inmediata
 
-1. **Catalán en el MVP.** El 2026-07-07 el founder autorizó el plan general, que
-   aplaza i18n a V1 salvo que el catalán sea imprescindible para vender. Queda por
-   confirmar explícitamente: ¿hay clientes del piloto que lo exijan? Si sí, la
-   arquitectura i18n debe diseñarse **antes** de crear más pantallas.
-2. **Telegram: ¿para quién?** Como canal del autónomo compite con la cuña WhatsApp
-   (el cliente objetivo vive en WhatsApp). Como canal interno founder/gestoría es
-   barato y rápido de montar. Pendiente: confirmar el caso de uso antes de
-   construir la abstracción de canales con Telegram como primer proveedor extra.
-3. **Gestoría interactiva: ¿antes o después del feedback del piloto?** El paquete
-   ZIP actual (`/g/{token}`) resuelve el 80 % sin cuentas ni permisos nuevos. El
-   portal con rol gestoría (multi-negocio) es un cambio de modelo de permisos
-   serio. Propuesta vigente: esperar al feedback de 2-3 gestorías reales sobre el
-   ZIP antes de diseñar el rol. PROPUESTA, NO CONFIRMADO.
-4. **Precio y momento de WhatsApp Business real.** Meta cobra por conversación;
-   encenderlo tiene coste variable por cliente. ¿Se enciende con el piloto o
-   cuando haya ingresos? (El código está listo; es decisión de gasto.)
+1. **Proveedor avanzado de IA para el piloto.** El cerebro local siempre permanece
+   activo. Falta elegir qué respaldo se prueba primero con el mismo corpus:
+   Anthropic, un proveedor OpenAI-compatible o un servicio privado. Criterio por
+   defecto: calidad con herramientas y estabilidad antes que el precio teórico;
+   presupuesto y consentimiento por negocio obligatorios.
 
-## Técnicas, con propuesta por defecto
+2. **IVA en Stripe.** Los precios aprobados son 29/49/99 EUR **más IVA**. El Checkout
+   actual no habilita `automatic_tax` ni añade una tasa. Antes de cobrar en live hay
+   que decidir entre activar Stripe Tax —propuesta recomendada— o cobrar precios con
+   IVA incluido y cambiar el copy comercial. Esta decisión sí bloquea Stripe live.
 
-5. **¿Cuándo partir `server.py` (~70 rutas) en routers?** Propuesta: primera
-   tarea técnica tras el próximo hito de producto, en rama propia, sin mezclarla
-   con features. Es mecánica pero toca todo; no debe convivir con otra rama
-   grande abierta.
-6. **Facturas recibidas: ¿entidad nueva o extensión de `expenses`?** Propuesta:
-   entidad propia `received_invoices` vinculada a proveedor y documento, porque
-   su ciclo (recepción→deducción→pago) no es el de un gasto de ticket. Decidir al
-   diseñar la migración del módulo de documentos inteligentes.
-7. **Proveedores: ¿tabla propia o `clients` con rol?** Propuesta: tabla propia
-   (los campos y consultas difieren). Se decide junto con la 6.
+3. **Idioma completo de la interfaz.** El asistente ya conserva ES/CA/EN, pero la UI
+   no está internacionalizada entera. Propuesta: mantener la interfaz española en el
+   piloto y adelantar i18n solo si un cliente real lo exige para usar o comprar.
 
-## Operativas del founder (no técnicas, bloquean el piloto)
+4. **Portal de gestoría con cuentas multiempresa.** El enlace privado, carpetas por
+   periodo y solicitudes ya cubren el piloto. Propuesta: probarlo con 2-3 gestorías
+   antes de añadir cuentas, MFA y permisos multiempresa.
 
-- Poner `ANTHROPIC_API_KEY` y variables de WhatsApp en Railway.
-- Verificar el número de WhatsApp en Meta y aprobar las plantillas.
-- Certificado digital de pruebas AEAT para validar Veri*Factu fase 2.
-- Claves de Stripe y los dos precios en Railway.
-- Reclutar 3-5 autónomos del mismo perfil para el piloto.
+5. **Voz en el plan Sin Límites.** El recepcionista telefónico está diseñado pero no
+   construido. Antes de prometer minutos incluidos hay que validar coste, demanda y
+   margen con llamadas reales. Propuesta: beta cerrada o add-on hasta tener datos.
+
+## Decisiones aplazadas por evidencia
+
+- Sincronización bidireccional de calendario: decidir tras probar el ICS actual.
+- PSD2 y cobro por enlace: decidir tras validar la conciliación CSV y el ciclo de
+  cobro con el piloto.
+- Telegram: solo si una cohorte real no puede operar por WhatsApp/web.
+- Personalización profunda por sector: después de observar patrones repetidos en
+  varios clientes, sin cerrar de antemano el público a fontanería u otro oficio.
+
+## Ya resuelto — no volver a preguntar
+
+- `server.py` ya está dividido en routers por dominio.
+- Facturas recibidas y proveedores tienen entidades propias.
+- WhatsApp se enciende para el piloto en cuanto Meta y las plantillas pasen QA; ya
+  no es una decisión de producto, sino una tarea P0.
+- El piloto inicial es de 3-5 negocios de servicios y no exige un sector cerrado.
+- Las transferencias, pagos, envíos sensibles, emisiones y acciones fiscales siempre
+  requieren confirmación específica del autónomo.
+- Google OAuth, SMTP, Stripe, Meta y AEAT no se consideran disponibles por tener
+  código: necesitan credenciales y prueba externa completa.
+- Holded no se conecta: la facturación y Veri*Factu son desarrollo propio.

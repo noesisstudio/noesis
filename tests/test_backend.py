@@ -167,6 +167,200 @@ class BackendTestCase(unittest.TestCase):
             len(db.list_invoice_payments(invoice["id"], business["id"])), 1
         )
 
+    def test_database_freezes_issued_invoice_and_number_is_unique_per_business(self):
+        business, client = self.make_business("Factura Inmutable")
+        issued = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Servicio cerrado", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoices SET total=1 WHERE id=? AND business_id=?",
+                    (issued["id"], business["id"]),
+                )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "DELETE FROM invoices WHERE id=? AND business_id=?",
+                    (issued["id"], business["id"]),
+                )
+
+        other = db.add_invoice(
+            client["id"], "Otro servicio", 50, business_id=business["id"]
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoices SET number=?, status='enviada' "
+                    "WHERE id=? AND business_id=?",
+                    (issued["number"], other["id"], business["id"]),
+                )
+
+        db.mark_reminder_sent(issued["id"], business["id"])
+        self.assertEqual(
+            db.get_invoice(issued["id"], business["id"])["reminders_sent"], 1
+        )
+
+    def test_invoice_sequence_is_correlative_and_isolated_per_business(self):
+        business_a, client_a = self.make_business("Numeracion A")
+        business_b, client_b = self.make_business("Numeracion B")
+        first_a = db.issue_invoice(
+            db.add_invoice(
+                client_a["id"], "Primera", 10, business_id=business_a["id"]
+            )["id"],
+            business_a["id"],
+        )
+        second_a = db.issue_invoice(
+            db.add_invoice(
+                client_a["id"], "Segunda", 20, business_id=business_a["id"]
+            )["id"],
+            business_a["id"],
+        )
+        first_b = db.issue_invoice(
+            db.add_invoice(
+                client_b["id"], "Primera", 30, business_id=business_b["id"]
+            )["id"],
+            business_b["id"],
+        )
+
+        year = date.today().year
+        self.assertEqual(first_a["number"], f"{year}/0001")
+        self.assertEqual(second_a["number"], f"{year}/0002")
+        self.assertEqual(first_b["number"], f"{year}/0001")
+
+    def test_professional_invoice_lines_draft_edit_and_series_are_consistent(self):
+        business, client = self.make_business("Factura Profesional")
+        draft = db.add_invoice(
+            client["id"],
+            "Material y mano de obra",
+            None,
+            business_id=business["id"],
+            lines=[
+                {
+                    "description": "Instalación",
+                    "quantity": 2,
+                    "unit_price": 50,
+                    "discount_rate": 10,
+                    "vat_rate": 21,
+                },
+                {
+                    "description": "Material reducido",
+                    "quantity": 1,
+                    "unit_price": 20,
+                    "vat_rate": 10,
+                },
+            ],
+            irpf_rate=7,
+            operation_date=date.today().isoformat(),
+            payment_method="Transferencia a 15 días",
+            notes="Trabajo terminado y revisado.",
+        )
+        self.assertEqual(draft["base"], 110)
+        self.assertEqual(draft["vat_amount"], 20.9)
+        self.assertEqual(draft["irpf_amount"], 7.7)
+        self.assertEqual(draft["total"], 123.2)
+        self.assertEqual(draft["vat_rate"], -1)
+        self.assertEqual(len(draft["lines"]), 2)
+
+        edited = db.update_invoice_draft(
+            draft["id"],
+            business["id"],
+            client_id=client["id"],
+            lines=[{
+                "description": "Servicio final",
+                "quantity": 3,
+                "unit_price": 40,
+                "vat_rate": 21,
+            }],
+            irpf_rate=0,
+            notes="Versión aprobada por el cliente.",
+        )
+        self.assertEqual(edited["base"], 120)
+        self.assertEqual(len(edited["lines"]), 1)
+        issued = db.issue_invoice(edited["id"], business["id"])
+        self.assertRegex(issued["number"], rf"^{date.today().year}/0001$")
+
+        with self.assertRaises(ValueError):
+            db.update_invoice_draft(
+                issued["id"], business["id"], client_id=client["id"],
+                lines=[{"description": "Alterada", "quantity": 1,
+                        "unit_price": 1, "vat_rate": 21}],
+            )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoice_lines SET unit_price=1 "
+                    "WHERE invoice_id=? AND business_id=?",
+                    (issued["id"], business["id"]),
+                )
+
+    def test_simplified_and_rectifying_invoices_use_separate_legal_series(self):
+        business, client = self.make_business("Series Separadas")
+        anonymous = db.add_client("Cliente mostrador", business_id=business["id"])
+        simplified = db.issue_invoice(
+            db.add_invoice(
+                anonymous["id"], "Reparación menor", 100,
+                invoice_type="F2", business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        self.assertEqual(simplified["number"], f"T{date.today().year}/0001")
+        self.assertFalse(simplified.get("recipient_nif"))
+
+        too_large = db.add_invoice(
+            anonymous["id"], "Servicio superior al límite", 400,
+            invoice_type="F2", business_id=business["id"],
+        )
+        with self.assertRaisesRegex(ValueError, "400"):
+            db.issue_invoice(too_large["id"], business["id"])
+
+        original = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Trabajo original", 200,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        rectifying = db.create_rectifying_invoice(
+            original["id"], business["id"], concept="Corrección",
+            base=-20, invoice_type="R1", reason="Error material",
+        )
+        rectifying = db.issue_invoice(rectifying["id"], business["id"])
+        self.assertEqual(rectifying["number"], f"R{date.today().year}/0001")
+
+    def test_recurring_invoices_prepare_once_and_require_opt_in_to_issue(self):
+        business, client = self.make_business("Facturas Programadas")
+        db.set_trial(business["id"], days=14)
+        today = date.today()
+        schedule = db.add_recurring_invoice(
+            business["id"], client["id"], name="Mantenimiento mensual",
+            cadence="monthly", next_run_on=today.isoformat(),
+            lines=[{
+                "description": "Mantenimiento",
+                "quantity": 1,
+                "unit_price": 80,
+                "vat_rate": 21,
+            }],
+        )
+        generated = db.process_due_recurring_invoices(today=today)
+        self.assertEqual(len(generated), 1)
+        self.assertEqual(generated[0]["status"], "borrador")
+        self.assertIsNone(generated[0]["number"])
+        self.assertEqual(db.process_due_recurring_invoices(today=today), [])
+        refreshed = db.get_recurring_invoice(schedule["id"], business["id"])
+        self.assertGreater(refreshed["next_run_on"], today.isoformat())
+        with db.get_conn() as conn:
+            runs = conn.execute(
+                "SELECT * FROM recurring_invoice_runs WHERE business_id=?",
+                (business["id"],),
+            ).fetchall()
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0]["status"], "completed")
+
     def test_tax_amounts_use_commercial_cent_rounding(self):
         business, client = self.make_business()
 
@@ -638,6 +832,47 @@ class BackendTestCase(unittest.TestCase):
         )
         self.assertEqual(tool, "crear_proyecto")
         self.assertEqual(args["presupuesto"], 8000)
+
+        sale_tool, sale_args = nlu.parse(
+            "ticket de venta a Marta por reparación 121 euros"
+        )
+        self.assertEqual(sale_tool, "crear_factura")
+        self.assertEqual(sale_args["tipo_factura"], "F2")
+        self.assertTrue(sale_args["importe_incluye_iva"])
+        # Un ticket sin indicar que es una venta conserva el flujo de gasto.
+        self.assertEqual(nlu.parse("ticket de 12 euros")[0], "registrar_gasto")
+        self.assertEqual(
+            nlu.parse("factura el trabajo 42"),
+            ("preparar_factura_trabajo", {"trabajo_id": 42}),
+        )
+        ca_tool, ca_args = nlu.parse(
+            "tiquet de venda a Marta per reparació 121 euros"
+        )
+        self.assertEqual(ca_tool, "crear_factura")
+        self.assertEqual(ca_args["cliente"], "Marta")
+        self.assertEqual(ca_args["concepto"], "reparació")
+        self.assertEqual(
+            nlu.parse("factura el treball 42"),
+            ("preparar_factura_trabajo", {"trabajo_id": 42}),
+        )
+
+    def test_client_reference_reuses_unique_habitual_and_rejects_ambiguity(self):
+        business, _ = self.make_business("Clientes habituales")
+        habitual = db.add_client("Marta López", business_id=business["id"])
+        result = chat.handle(
+            business["id"], "factura a Marta por revisión 100 euros"
+        )
+        self.assertEqual(result["source"], "local")
+        invoice = db.list_invoices(business["id"])[0]
+        self.assertEqual(invoice["client_id"], habitual["id"])
+
+        db.add_client("Marta García", business_id=business["id"])
+        before = len(db.list_clients(business["id"]))
+        ambiguous = chat.handle(
+            business["id"], "factura a Marta por revisión 80 euros"
+        )
+        self.assertIn("varios clientes", ambiguous["reply"])
+        self.assertEqual(len(db.list_clients(business["id"])), before)
 
     def test_invalid_tax_quarter_and_csv_formula(self):
         business, _ = self.make_business()
@@ -2612,6 +2847,95 @@ class LegalClockinTestCase(unittest.TestCase):
                 self.assertEqual(forbidden.status_code, 403)
 
 
+class ProfessionalInvoicingHttpTestCase(unittest.TestCase):
+    setUp = BackendTestCase.setUp
+    tearDown = BackendTestCase.tearDown
+    make_business = BackendTestCase.make_business
+
+    def test_invoice_screen_and_professional_endpoints_complete_the_draft_flow(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client_record = self.make_business("Facturacion HTTP")
+        db.update_client(
+            client_record["id"], business["id"], email="fiscal@example.com"
+        )
+        db.create_user(
+            "facturacion-http@example.com",
+            auth.hash_password("password-segura-123"), business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login", data={
+                        "email": "facturacion-http@example.com",
+                        "password": "password-segura-123",
+                    }, follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                page = client.get(f"/b/{business['id']}/facturas")
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("Series de numeraci", page.text)
+                created = client.post(
+                    f"/api/{business['id']}/invoices", json={
+                        "client_id": client_record["id"],
+                        "concept": "Servicio web", "lines": [
+                            {"description": "Servicio web", "quantity": 2,
+                             "unit_price": 40, "vat_rate": 21},
+                            {"description": "Material", "quantity": 1,
+                             "unit_price": 10, "vat_rate": 10},
+                        ],
+                    },
+                )
+                self.assertEqual(created.status_code, 200, created.text)
+                invoice = created.json()
+                edited = client.patch(
+                    f"/api/{business['id']}/invoices/{invoice['id']}",
+                    json={
+                        "client_id": client_record["id"],
+                        "lines": invoice["lines"], "irpf_rate": 0,
+                        "notes": "Revisada antes de emitir.",
+                    },
+                )
+                self.assertEqual(edited.status_code, 200, edited.text)
+                series = client.post(
+                    f"/api/{business['id']}/invoice-series", json={
+                        "code": "OBRAS", "name": "Obras",
+                        "document_type": "invoice",
+                        "prefix_template": "OBR-{YYYY}/", "padding": 4,
+                    },
+                )
+                self.assertEqual(series.status_code, 201, series.text)
+                recurring = client.post(
+                    f"/api/{business['id']}/recurring-invoices", json={
+                        "client_id": client_record["id"],
+                        "name": "Mantenimiento mensual", "cadence": "monthly",
+                        "next_run_on": (date.today() + timedelta(days=2)).isoformat(),
+                        "lines": [{"description": "Mantenimiento", "quantity": 1,
+                                   "unit_price": 50, "vat_rate": 21}],
+                        "auto_issue": False,
+                    },
+                )
+                self.assertEqual(recurring.status_code, 201, recurring.text)
+                issued = client.post(
+                    f"/api/{business['id']}/invoices/{invoice['id']}/send",
+                    json={},
+                )
+                self.assertEqual(issued.status_code, 200, issued.text)
+                delivered = client.post(
+                    f"/api/{business['id']}/invoices/{invoice['id']}/deliver",
+                    json={"channel": "auto"},
+                )
+                self.assertEqual(delivered.status_code, 200, delivered.text)
+                self.assertEqual(delivered.json()["channel"], "email")
+                self.assertTrue(delivered.json()["queued"])
+                history = client.get(
+                    f"/api/{business['id']}/invoices/{invoice['id']}/history"
+                )
+                self.assertEqual(history.status_code, 200)
+                self.assertEqual(history.json()[0]["event_type"], "emision")
+
+
 class VerifactuTestCase(unittest.TestCase):
     make_business = BackendTestCase.make_business
 
@@ -2653,7 +2977,10 @@ class VerifactuTestCase(unittest.TestCase):
         invoice = self._issue(business, client)
         self.assertFalse(db.get_business(business["id"])["verifactu_enabled"])
         self.assertIsNone(db.get_invoice_record(invoice["id"], business["id"]))
-        self.assertEqual(db.list_invoice_events(business["id"]), [])
+        self.assertEqual(
+            [event["event_type"] for event in db.list_invoice_events(business["id"])],
+            ["emision"],
+        )
 
     def test_partial_payment_never_changes_verifactu_records(self):
         business, client = self._enabled_business("Verifactu con anticipo")
@@ -2670,7 +2997,9 @@ class VerifactuTestCase(unittest.TestCase):
             db.get_invoice_record(invoice["id"], business["id"]),
             record_before,
         )
-        self.assertEqual(db.list_invoice_events(business["id"]), events_before)
+        events_after = db.list_invoice_events(business["id"])
+        self.assertEqual(events_after[:-1], events_before)
+        self.assertEqual(events_after[-1]["event_type"], "cobro")
 
     def test_official_hash_example_and_qr_parameters(self):
         # Vector 6.1 de la especificación AEAT v0.1.2:
@@ -2726,6 +3055,29 @@ class VerifactuTestCase(unittest.TestCase):
             "F7B94CFD8924EDFF273501B01EE5153E4CE8F259766F88CF6ACB8935802A2B97",
         )
 
+    def test_cancellation_hash_uses_the_official_fields_and_order(self):
+        payload = verifactu.cancellation_hash_input(
+            issuer_nif="A12345678", invoice_number="2026/0001",
+            issue_date="20-07-2026", previous_hash="ABC123",
+            generated_at="2026-07-20T12:30:00+02:00",
+        )
+        self.assertEqual(
+            payload,
+            "IDEmisorFacturaAnulada=A12345678&"
+            "NumSerieFacturaAnulada=2026/0001&"
+            "FechaExpedicionFacturaAnulada=20-07-2026&"
+            "Huella=ABC123&"
+            "FechaHoraHusoGenRegistro=2026-07-20T12:30:00+02:00",
+        )
+        self.assertEqual(
+            verifactu.cancellation_record_hash(
+                issuer_nif="A12345678", invoice_number="2026/0001",
+                issue_date="20-07-2026", previous_hash="ABC123",
+                generated_at="2026-07-20T12:30:00+02:00",
+            ),
+            hashlib.sha256(payload.encode("utf-8")).hexdigest().upper(),
+        )
+
     def test_transport_is_disabled_without_certificate(self):
         business, client = self._enabled_business("Verifactu Sin Certificado")
         invoice = self._issue(business, client)
@@ -2737,6 +3089,108 @@ class VerifactuTestCase(unittest.TestCase):
         submit.assert_not_called()
         self.assertEqual(
             db.get_invoice(invoice["id"], business["id"])["status"], "enviada"
+        )
+
+    def test_inactive_subscription_never_stops_fiscal_remittance(self):
+        business, client = self._enabled_business("Verifactu Suscripcion")
+        invoice = self._issue(business, client)
+        db.set_subscription(business["id"], "canceled", plan="tranquilidad")
+        result = verifactu_client.SubmissionResult(
+            status="aceptado",
+            csv="CSV-SIN-SUSCRIPCION",
+            wait_seconds=0,
+            error_code=None,
+            error_description=None,
+            global_status="Correcto",
+            raw_response="<Respuesta>correcta</Respuesta>",
+        )
+        with (
+            patch.object(verifactu_client, "is_enabled", return_value=True),
+            patch.object(
+                verifactu_client, "submit_records", return_value=result
+            ) as submit,
+        ):
+            self.assertEqual(scheduler.process_verifactu_outbox(), 1)
+
+        submit.assert_called_once()
+        queued = db.get_verifactu_outbox(invoice["id"], business["id"])
+        self.assertEqual(queued["status"], "aceptado")
+        self.assertEqual(queued["aeat_csv"], "CSV-SIN-SUSCRIPCION")
+
+    def test_tampered_chain_is_never_sent_to_aeat(self):
+        business, client = self._enabled_business("Verifactu Bloqueo Seguro")
+        invoice = self._issue(business, client)
+        record = db.get_invoice_record(invoice["id"], business["id"])
+        with db.get_conn() as conn:
+            conn.execute("DROP TRIGGER invoice_records_append_only_update")
+            conn.execute(
+                "UPDATE invoice_records SET invoice_total=999 WHERE id=?",
+                (record["id"],),
+            )
+
+        with (
+            patch.object(verifactu_client, "is_enabled", return_value=True),
+            patch.object(verifactu_client, "submit_records") as submit,
+        ):
+            self.assertEqual(scheduler.process_verifactu_outbox(), 0)
+
+        submit.assert_not_called()
+        queued = db.get_verifactu_outbox(invoice["id"], business["id"])
+        self.assertEqual(queued["status"], "pendiente")
+        self.assertIn("integridad", queued["last_error"])
+        self.assertEqual(
+            [event["event_type"] for event in db.list_invoice_events(business["id"])],
+            ["alta", "anomalia"],
+        )
+
+    def test_new_record_requires_a_valid_existing_chain(self):
+        business, client = self._enabled_business("Verifactu Cadena Previa")
+        first = self._issue(business, client)
+        record = db.get_invoice_record(first["id"], business["id"])
+        with db.get_conn() as conn:
+            conn.execute("DROP TRIGGER invoice_records_append_only_update")
+            conn.execute(
+                "UPDATE invoice_records SET invoice_total=999 WHERE id=?",
+                (record["id"],),
+            )
+        draft = db.add_invoice(
+            client["id"], "Segundo servicio", 200,
+            business_id=business["id"],
+        )
+
+        with self.assertRaisesRegex(ValueError, "cadena Veri\\*Factu"):
+            db.issue_invoice(draft["id"], business["id"])
+        untouched = db.get_invoice(draft["id"], business["id"])
+        self.assertEqual(untouched["status"], "borrador")
+        self.assertIsNone(untouched["number"])
+
+    def test_fiscal_identity_is_locked_after_first_verifactu_record(self):
+        business, client = self._enabled_business("Verifactu Identidad")
+        self._issue(business, client)
+
+        with self.assertRaisesRegex(ValueError, "NIF no puede cambiarse"):
+            db.update_fiscal(business["id"], nif="A99999999")
+        self.assertEqual(db.get_business(business["id"])["nif"], "A12345678")
+
+    def test_clock_rollback_blocks_a_new_fiscal_record(self):
+        business, client = self._enabled_business("Verifactu Reloj")
+        self._issue(business, client)
+        draft = db.add_invoice(
+            client["id"], "Servicio posterior", 50,
+            business_id=business["id"],
+        )
+
+        with (
+            patch.object(
+                verifactu,
+                "generated_at_with_timezone",
+                return_value="2020-01-01T00:00:00+01:00",
+            ),
+            self.assertRaisesRegex(ValueError, "reloj del sistema"),
+        ):
+            db.issue_invoice(draft["id"], business["id"])
+        self.assertEqual(
+            db.get_invoice(draft["id"], business["id"])["status"], "borrador"
         )
 
     def test_outbox_accepts_response_and_stores_csv(self):
@@ -2892,6 +3346,31 @@ class VerifactuTestCase(unittest.TestCase):
         self.assertEqual(result.wait_seconds, 60)
         self.assertEqual(result.error_code, "2000")
 
+    def test_soap_fault_is_retryable_and_duplicate_acceptance_is_idempotent(self):
+        fault = b"""<?xml version="1.0"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+ <soapenv:Body><soapenv:Fault><faultcode>soapenv:Server</faultcode>
+ <faultstring>Servicio temporalmente no disponible</faultstring>
+ </soapenv:Fault></soapenv:Body></soapenv:Envelope>"""
+        with self.assertRaises(verifactu_client.VerifactuTransportError):
+            verifactu_client.parse_response(fault)
+
+        duplicate = b"""<?xml version="1.0"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+ <soapenv:Body><RespuestaRegFactuSistemaFacturacion>
+  <EstadoEnvio>Incorrecto</EstadoEnvio>
+  <RespuestaLinea><EstadoRegistro>Incorrecto</EstadoRegistro>
+   <CodigoErrorRegistro>3000</CodigoErrorRegistro>
+   <DescripcionErrorRegistro>Registro duplicado</DescripcionErrorRegistro>
+   <RegistroDuplicado><EstadoRegistroDuplicado>Correcta</EstadoRegistroDuplicado>
+   </RegistroDuplicado>
+  </RespuestaLinea>
+ </RespuestaRegFactuSistemaFacturacion></soapenv:Body>
+</soapenv:Envelope>"""
+        result = verifactu_client.parse_response(duplicate)
+        self.assertEqual(result.status, "aceptado")
+        self.assertEqual(result.error_code, "3000")
+
     def test_records_are_chained_scoped_and_append_only(self):
         business, client = self._enabled_business()
         other_business, other_client = self._enabled_business("Verifactu Ajeno")
@@ -2927,6 +3406,54 @@ class VerifactuTestCase(unittest.TestCase):
                     "UPDATE invoice_events SET details='alterado' WHERE id=?",
                     (events[0]["id"],),
                 )
+
+    def test_mixed_vat_and_simplified_invoice_generate_the_expected_aeat_xml(self):
+        business, client = self._enabled_business("Verifactu IVA Mixto")
+        mixed = db.add_invoice(
+            client["id"], "Servicios combinados", None,
+            business_id=business["id"],
+            lines=[
+                {"description": "Servicio", "quantity": 1,
+                 "unit_price": 100, "vat_rate": 21},
+                {"description": "Material", "quantity": 2,
+                 "unit_price": 25, "vat_rate": 10},
+            ],
+            operation_date=date.today().isoformat(),
+        )
+        mixed = db.issue_invoice(mixed["id"], business["id"])
+        anonymous = db.add_client("Cliente mostrador", business_id=business["id"])
+        simplified = db.issue_invoice(
+            db.add_invoice(
+                anonymous["id"], "Servicio menor", 50,
+                invoice_type="F2", business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+
+        xml = db.export_verifactu_xml(business["id"])
+        root = ET.fromstring(xml)
+        ns = {"sum": verifactu.NS_LR, "sum1": verifactu.NS_INFO}
+        altas = root.findall("sum:RegistroFactura/sum1:RegistroAlta", ns)
+        mixed_xml = next(
+            item for item in altas
+            if item.find("sum1:IDFactura/sum1:NumSerieFactura", ns).text
+            == mixed["number"]
+        )
+        self.assertEqual(
+            len(mixed_xml.findall("sum1:Desglose/sum1:DetalleDesglose", ns)),
+            2,
+        )
+        self.assertEqual(
+            mixed_xml.find("sum1:FechaOperacion", ns).text,
+            date.today().strftime("%d-%m-%Y"),
+        )
+        simplified_xml = next(
+            item for item in altas
+            if item.find("sum1:IDFactura/sum1:NumSerieFactura", ns).text
+            == simplified["number"]
+        )
+        self.assertEqual(simplified_xml.find("sum1:TipoFactura", ns).text, "F2")
+        self.assertIsNone(simplified_xml.find("sum1:Destinatarios", ns))
 
     def test_chain_verification_detects_tampering(self):
         business, client = self._enabled_business("Verifactu Manipulacion")
@@ -2978,6 +3505,86 @@ class VerifactuTestCase(unittest.TestCase):
             [event["event_type"] for event in db.list_invoice_events(business["id"])],
         )
 
+    def test_accepted_record_can_be_cancelled_without_altering_the_invoice(self):
+        business, client = self._enabled_business("Verifactu Anulacion")
+        original = self._issue(business, client, "Registro erróneo", 100)
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE verifactu_outbox SET status='aceptado' "
+                "WHERE invoice_id=? AND business_id=?",
+                (original["id"], business["id"]),
+            )
+        cancellation = db.create_invoice_cancellation_record(
+            original["id"], business["id"],
+            reason="La operación nunca llegó a realizarse.",
+        )
+        self.assertEqual(cancellation["record_type"], "anulacion")
+        self.assertEqual(cancellation["invoice_number"], original["number"])
+        self.assertTrue(db.verify_invoice_record_chain(business["id"])["valid"])
+        self.assertEqual(
+            db.get_invoice(original["id"], business["id"])["total"],
+            original["total"],
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoice_cancellation_records SET reason='cambio' "
+                    "WHERE id=?", (cancellation["id"],),
+                )
+        with self.assertRaisesRegex(ValueError, "anulado"):
+            db.create_rectifying_invoice(
+                original["id"], business["id"], concept="Corrección",
+                base=-10, reason="Ya anulado", invoice_type="R1",
+            )
+
+        xml = db.export_verifactu_xml(business["id"])
+        root = ET.fromstring(xml)
+        ns = {"sum": verifactu.NS_LR, "sum1": verifactu.NS_INFO}
+        node = root.find("sum:RegistroFactura/sum1:RegistroAnulacion", ns)
+        self.assertIsNotNone(node)
+        self.assertEqual(
+            node.find(
+                "sum1:IDFactura/sum1:NumSerieFacturaAnulada", ns
+            ).text,
+            original["number"],
+        )
+
+        following = self._issue(business, client, "Trabajo posterior", 50)
+        following_record = db.get_invoice_record(following["id"], business["id"])
+        self.assertEqual(following_record["previous_hash"], cancellation["record_hash"])
+        self.assertTrue(db.verify_invoice_record_chain(business["id"])["valid"])
+
+    def test_cancellation_uses_the_durable_aeat_outbox(self):
+        business, client = self._enabled_business("Verifactu Cola Anulacion")
+        invoice = self._issue(business, client)
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE verifactu_outbox SET status='aceptado' "
+                "WHERE invoice_id=? AND business_id=?",
+                (invoice["id"], business["id"]),
+            )
+        db.create_invoice_cancellation_record(
+            invoice["id"], business["id"], reason="Factura emitida por error.",
+        )
+        result = verifactu_client.SubmissionResult(
+            status="aceptado", csv="CSV-ANULACION-1", wait_seconds=0,
+            error_code=None, error_description=None, global_status="Correcto",
+            raw_response="<Respuesta>anulada</Respuesta>",
+        )
+        with (
+            patch.object(verifactu_client, "is_enabled", return_value=True),
+            patch.object(
+                verifactu_client, "submit_records", return_value=result
+            ) as submit,
+        ):
+            self.assertEqual(scheduler.process_verifactu_outbox(), 1)
+        self.assertEqual(submit.call_args.args[1][0]["record_type"], "anulacion")
+        queued = db.get_verifactu_cancellation_outbox(
+            invoice["id"], business["id"]
+        )
+        self.assertEqual(queued["status"], "aceptado")
+        self.assertEqual(queued["aeat_csv"], "CSV-ANULACION-1")
+
     def test_qr_png_pdf_and_aeat_xml_are_generated(self):
         from PIL import Image
         from noesis.web.invoice_pdf import build_invoice_pdf
@@ -3011,6 +3618,27 @@ class VerifactuTestCase(unittest.TestCase):
             db.list_invoice_events(business["id"])[-1]["event_type"],
             "exportacion",
         )
+
+    def test_rectifying_pdf_handles_long_legal_description(self):
+        from noesis.web.invoice_pdf import build_invoice_pdf
+
+        business, client = self._enabled_business("Verifactu PDF Rectificativa")
+        original = self._issue(business, client)
+        rectifying = db.create_rectifying_invoice(
+            original["id"],
+            business["id"],
+            concept="Corrección detallada de materiales y horas " * 8,
+            base=-25,
+            vat_rate=21,
+            irpf_rate=0,
+            invoice_type="R1",
+            reason="Error material detectado tras la emisión.",
+        )
+        issued = db.issue_invoice(rectifying["id"], business["id"])
+
+        pdf = build_invoice_pdf(issued["id"], business["id"])
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertGreater(len(pdf), 3500)
 
     def test_export_endpoint_is_tenant_scoped(self):
         from starlette.testclient import TestClient
@@ -3196,6 +3824,90 @@ class WhatsappMediaTestCase(unittest.TestCase):
                 handled, ["hazle una factura a Carlos de 100"]
             )
 
+    def test_sale_ticket_reuses_client_requires_issue_confirmation_and_feeds_numbers(self):
+        business, _ = self._connected_business("Ticket WhatsApp")
+        habitual = db.add_client(
+            "Marta López", phone="611223344", business_id=business["id"]
+        )
+        replies = []
+        with patch.object(
+            whatsapp, "send",
+            side_effect=lambda phone, text, **kw: replies.append(text),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-ticket-1",
+                "text": "ticket de venta a Marta por reparación 121 euros",
+            })
+            invoice = db.list_invoices(business["id"])[0]
+            self.assertEqual(invoice["client_id"], habitual["id"])
+            self.assertEqual(invoice["invoice_type"], "F2")
+            self.assertEqual(invoice["base"], 100.0)
+            self.assertEqual(invoice["total"], 121.0)
+            self.assertEqual(invoice["status"], "borrador")
+
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-ticket-2",
+                "text": f"emitir factura {invoice['id']}",
+            })
+            self.assertEqual(
+                db.get_invoice(invoice["id"], business["id"])["status"],
+                "borrador",
+            )
+            self.assertIn("¿Confirmas?", replies[-1])
+
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-ticket-3", "text": "sí",
+            })
+
+        issued = db.get_invoice(invoice["id"], business["id"])
+        self.assertEqual(issued["status"], "enviada")
+        self.assertTrue(issued["number"].startswith("T"))
+        self.assertIn("PDF preparado", replies[-1])
+        self.assertEqual(db.month_billing(business_id=business["id"])["invoiced"], 121.0)
+        today = date.today().isoformat()
+        self.assertEqual(
+            [item["id"] for item in db.gestoria_invoices_in(
+                business["id"], today, today
+            )],
+            [issued["id"]],
+        )
+        quarter = (date.today().month - 1) // 3 + 1
+        fiscal = db.tax_quarter(date.today().year, quarter, business["id"])
+        self.assertEqual(fiscal["n_facturas"], 1)
+        self.assertEqual(fiscal["iva_repercutido"], 21.0)
+        self.assertEqual(
+            next(c for c in db.client_stats(business["id"])
+                 if c["id"] == habitual["id"])["facturado"],
+            121.0,
+        )
+
+    def test_confirmed_whatsapp_invoice_delivery_queues_pdf_email_once(self):
+        business, client = self._connected_business("Entrega WhatsApp")
+        db.update_client(
+            client["id"], business["id"], email="cliente@example.com"
+        )
+        invoice = db.add_invoice(
+            client["id"], "Revisión anual", 100, business_id=business["id"]
+        )
+        replies = []
+        with patch.object(
+            whatsapp, "send",
+            side_effect=lambda phone, text, **kw: replies.append(text),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-deliver-1",
+                "text": f"emitir y enviar factura {invoice['id']}",
+            })
+            self.assertEqual(db.list_email_messages(business["id"]), [])
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-deliver-2", "text": "sí",
+            })
+        messages = db.list_email_messages(business["id"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]["entity_type"], "invoice")
+        self.assertEqual(messages[0]["entity_id"], invoice["id"])
+        self.assertIn("entrega preparada", replies[-1])
+
     def test_pdf_document_is_saved_to_papers(self):
         business, _ = self._connected_business("PDFs WhatsApp")
         from noesis.documents import repo as docrepo
@@ -3356,15 +4068,11 @@ class WhatsappReportsTestCase(unittest.TestCase):
         invoice = db.add_invoice(
             client["id"], "Trabajo vencido", 200, business_id=business["id"]
         )
-        db.issue_invoice(invoice["id"], business["id"])
         ten_days_ago = (datetime.now() - timedelta(days=10)).isoformat(
             timespec="seconds"
         )
-        with db.get_conn() as conn:
-            conn.execute(
-                "UPDATE invoices SET issued_at=? WHERE id=?",
-                (ten_days_ago, invoice["id"]),
-            )
+        with patch.object(db, "_now", return_value=ten_days_ago):
+            db.issue_invoice(invoice["id"], business["id"])
         db.add_expense("Material", 90, business_id=business["id"])
 
         forecast = db.cash_forecast(business["id"])
@@ -3681,6 +4389,40 @@ class GestoriaTestCase(unittest.TestCase):
         )
         self.assertTrue(db.delete_business_cascade(disposable["id"]))
         self.assertEqual(db.list_email_messages(disposable["id"]), [])
+
+    def test_invoice_email_is_sent_with_a_generated_pdf_and_audited(self):
+        from noesis.adapters import email as email_adapter
+
+        business, client = self.make_business("Correo con factura")
+        invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Servicio facturado", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        db.enqueue_email_message(
+            business_id=business["id"], to_email="cliente@example.com",
+            subject="Factura", text_body="Adjunta",
+            idempotency_key=f"invoice-email:{invoice['id']}",
+            entity_type="invoice", entity_id=invoice["id"],
+        )
+        with (
+            patch.object(email_adapter, "available", return_value=True),
+            patch.object(email_adapter, "send_email", return_value=True) as send,
+        ):
+            self.assertEqual(scheduler.process_email_outbox(limit=1), 1)
+        attachments = send.call_args.kwargs["attachments"]
+        self.assertEqual(len(attachments), 1)
+        self.assertTrue(attachments[0][0].endswith(".pdf"))
+        self.assertTrue(attachments[0][1].startswith(b"%PDF"))
+        self.assertEqual(attachments[0][2:], ("application", "pdf"))
+        self.assertEqual(
+            [event["event_type"] for event in db.list_invoice_events(
+                business["id"], invoice_id=invoice["id"]
+            )],
+            ["emision", "entrega_enviada"],
+        )
 
 
 class AdminCommandCenterTestCase(unittest.TestCase):

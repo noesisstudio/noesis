@@ -2,7 +2,7 @@
 
 > **Propósito.** Documento de entrada para una persona de ingeniería que necesite entender Noesis de extremo a extremo: web, datos, cerebro, automatizaciones, WhatsApp, seguridad y dependencias externas.
 >
-> **Foto del código:** 17-07-2026 · esquema 31 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
+> **Foto del código:** 20-07-2026 · esquema 33 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
 
 ## 1. Qué es el sistema
 
@@ -38,7 +38,7 @@ flowchart LR
 | Panel, API, onboarding, portales y reglas locales | Construidos y cubiertos por la suite | Prueba con negocios piloto |
 | Postgres y migraciones | Implementados; CI aplica el esquema y realiza humo contra Postgres | Verificación posterior a cada despliegue (`/ready`) |
 | WhatsApp Cloud API | Webhook firmado, outbox, reintentos, plantillas y flujos de entrada | Número, app Meta, plantillas aprobadas y prueba E2E real |
-| Stripe | Checkout, portal, precios y webhook idempotente | Productos/`price_id`, claves y escenarios de pago reales |
+| Stripe | Checkout, portal, precios y webhook idempotente | Seis `price_id`, claves, IVA del Checkout y escenarios reales |
 | Google OAuth | Flujo implementado si hay credenciales | Cliente OAuth y callback real en producción |
 | IA privada/externa | Enrutamiento y adaptador OpenAI-compatible | Servicio/modelo, evaluación, límites y observabilidad real |
 | SMTP | Adaptador, outbox durable y reintentos de avisos | Credenciales y prueba de entregabilidad |
@@ -47,7 +47,7 @@ flowchart LR
 | Veri*Factu/AEAT | Registro, QR, XML, cola y cliente de remisión | Certificado, entorno AEAT y validación fiscal externa |
 | Backups externos | Proceso y soporte S3-compatible | Restauración real auditada |
 
-No se debe presentar una fila de la segunda columna como “integración activa” hasta completar la tercera. Las pendientes exactas viven en [`Tareas-vivas.md`](Tareas-vivas.md).
+No se debe presentar una fila de la segunda columna como “integración activa” hasta completar la tercera. Las pendientes exactas viven en [`Tareas-vivas.md`](Tareas-vivas.md) y las credenciales, callbacks y pruebas en [`Conectar-APIs.md`](Conectar-APIs.md).
 
 ## 3. Arranque local y comprobaciones básicas
 
@@ -149,7 +149,7 @@ Los tokens reducen fricción, pero son enlaces privados: no se deben registrar n
 
 ## 6. Modelo de datos y reglas que no se deben romper
 
-`db.py` es la frontera de persistencia. SQLite es el fallback local y Postgres el objetivo de producción. Las migraciones viven en `migrations.py` y deben ser reversibles cuando sea viable.
+`db.py` es la frontera de persistencia. SQLite es el fallback local y Postgres la base operativa de producción. Las migraciones viven en `migrations.py` y deben ser reversibles cuando sea viable.
 
 ### Identidad y aislamiento
 
@@ -173,9 +173,9 @@ Documento → clasificación → borrador revisable → gasto o factura recibida
 - Las horas provienen de fichajes inmutables; no se duplican como un coste manual.
 - El margen del proyecto se deriva de presupuesto menos costes/hora/gastos reales.
 - Los pagos viven en un ledger (`invoice_payments`); pendiente y estado se derivan, no se escriben a mano. La factura se bloquea al añadir un cobro para evitar sobrecobro concurrente.
-- La emisión de factura es atómica e idempotente, congela datos fiscales y conserva numeración por negocio/año.
+- La emisión de factura es atómica e idempotente, congela cabecera y líneas y conserva numeración por negocio/serie/año.
 - Las facturas emitidas no se eliminan ni se renumeran. Una rectificación crea otra factura, manteniendo el original.
-- En modo Veri*Factu se añade un registro de alta append-only y encadenado con huella; no se borra para “corregir” la historia fiscal.
+- En modo Veri*Factu se añade un registro de alta append-only y encadenado con huella; no se borra para “corregir” la historia fiscal. Las anulaciones aceptadas crean otro registro inmutable enlazado al alta y entran en la misma cadena cronológica.
 
 ## 7. Flujos funcionales que debe conocer una persona de ingeniería
 
@@ -320,11 +320,13 @@ La tabla de ejecuciones programadas impide duplicados entre réplicas. Cuando un
 
 ## 11. Facturación, fiscalidad y Veri*Factu
 
-- IVA soportado: 21/10/4/0; total = base + IVA − IRPF cuando corresponda.
-- PDFs, conceptos, cobros y rectificativas pertenecen a `routers/invoicing.py` y sus servicios de dominio.
-- El modo nativo registra la cadena de huella, QR y XML; la remisión a AEAT se hace desde una outbox distinta y reintentable.
+- IVA soportado: 21/10/4/0; total = base + IVA − IRPF cuando corresponda. El 0 % se trata hoy como tipo cero, no como exención.
+- Series, líneas con cantidad/precio/descuento, borradores, PDF, cobros, entrega por correo, historial, recurrencias y rectificativas pertenecen a `routers/invoicing.py` y sus servicios de dominio.
+- El modo nativo registra la cadena de huella, QR y XML de alta o anulación; cada tipo se remite desde una outbox durable y reintentable sin modificar el documento original.
+- La recurrencia crea borradores por defecto. La emisión automática solo se activa con autorización explícita del titular y conserva una clave idempotente por periodo.
 - No activar remisión hasta disponer de NIF del productor, certificado PEM, clave y entorno AEAT de pruebas validado con asesoría fiscal.
-- El adaptador `invoicing.py` permite usar emisión interna o Holded sin repartir lógica de proveedor por las pantallas.
+- `invoicing.py` conserva una frontera interna, pero el único proveedor es el motor
+  nativo de Noesis: numeración, PDF y Veri*Factu no se delegan.
 
 La ingeniería debe tratar esta zona como sensible: no modificar numeración, inmutabilidad, cálculos o borrados sin revisar [`Fiscalidad.md`](Fiscalidad.md), pruebas y criterio de asesoría.
 
@@ -357,7 +359,7 @@ No copiar secretos al repositorio. `.env.example` es el inventario completo. Gru
 | Voz/OCR | `GROQ_API_KEY`, `NOESIS_WHISPER_*`, límite de extracciones | `adapters/transcription.py`, documentos |
 | Pago | `STRIPE_*` y precios por plan/periodicidad | `adapters/billing.py`, cuenta y webhook |
 | Correo | `SMTP_*` | `adapters/email.py`, avisos y recuperación |
-| Fiscal | `HOLDED_API_KEY`, `NOESIS_VERIFACTU_*`, certificado/clave/entorno AEAT | facturación y outbox fiscal |
+| Fiscal | `NOESIS_VERIFACTU_*`, certificado/clave/entorno AEAT | facturación nativa y outbox fiscal |
 | OAuth | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | `routers/account.py` |
 
 Para Railway, `railway.json` aplica migraciones en predeploy, arranca Uvicorn y usa `/ready` como healthcheck. El volumen persistente debe alojar documentos, modelos y el fallback SQLite; la operación normal de producción usa Postgres.

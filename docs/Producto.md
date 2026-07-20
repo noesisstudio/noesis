@@ -38,7 +38,8 @@ presupuesto y costes. Al abrir uno aparecen margen, horas, materiales y equipo. 
 un profesional puede profundizar sin obligar al usuario no financiero a leer un ERP.
 
 ## Canales
-- **WhatsApp** (principal, futuro): texto y audio.
+- **WhatsApp** (principal): texto, audio, imágenes y documentos. El adaptador, el
+  webhook y las colas están construidos; falta conectar y validar Meta real.
 - **Web/app**: dashboard de control + chatbot interno. Ver [[Arquitectura]].
 
 ## Modelo de negocio

@@ -4,6 +4,8 @@
 > fases, pero sus cifras, ramas y listas no describen el estado actual. La única
 > fotografía viva es [[Estado-actual-main]] y los únicos pendientes vivos están en
 > [[Tareas-vivas]]. No copies estado desde este documento.
+> Las referencias históricas a activar Holded están anuladas: la facturación y
+> Veri*Factu son desarrollo propio de Noesis.
 
 > Contexto original del traspaso del **2026-07-07**. Para continuar desde cualquier
 > agente se lee primero `AGENTS.md`, `project-state.json`, [[Estado-actual-main]] y

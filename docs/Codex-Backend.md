@@ -1,5 +1,10 @@
 # Codex — Órdenes de trabajo backend
 
+> **Documento histórico de ejecución.** Conserva el contexto de 2026-07-03, pero
+> sus migraciones, pruebas y pendientes ya no son estado actual. Usar
+> [`project-state.json`](project-state.json), [[Tareas-vivas]], [[Mapa-codigo]] y
+> [[Conectar-APIs]] antes de actuar.
+
 > Documento para Codex. Léelo junto a [`AGENTS.md`](../AGENTS.md) antes de empezar.
 > Estado a 2026-07-03: `main` desplegado en producción (app.bynoesis.com, Railway +
 > Postgres). CI verde, 79 tests, última migración aplicada: **10** (`datos_cobro`).

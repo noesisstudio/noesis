@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 
-from . import db
+from . import config, db
 from .adapters import invoicing
 
 _provider = invoicing.get_provider()
@@ -52,8 +54,9 @@ TOOLS: list[dict] = [
     {
         "name": "crear_factura",
         "description": (
-            "Prepara una factura en BORRADOR con un concepto y un importe BASE (sin "
-            "IVA). Calcula IVA y total. NO la envía. Crea el cliente si no existe."
+            "Prepara una factura en BORRADOR. Puede ser completa F1 o simplificada "
+            "F2 (ticket de venta). NO la emite ni la envía. Reutiliza el cliente "
+            "habitual si la referencia es inequívoca."
         ),
         "input_schema": {
             "type": "object",
@@ -63,8 +66,36 @@ TOOLS: list[dict] = [
                 "base": {"type": "number", "description": "Importe SIN IVA."},
                 "iva": {"type": "number", "description": "Tipo de IVA (21, 10 o 4). Por defecto el del negocio."},
                 "irpf": {"type": "number", "description": "Retención de IRPF (ej. 15 o 7). Por defecto el del negocio."},
+                "tipo_factura": {"type": "string", "enum": ["F1", "F2"]},
+                "importe_incluye_iva": {"type": "boolean"},
+                "lineas": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "description": {"type": "string"},
+                            "quantity": {"type": "number"},
+                            "unit_price": {"type": "number"},
+                            "discount_rate": {"type": "number"},
+                            "vat_rate": {"type": "number"},
+                        },
+                        "required": ["description", "quantity", "unit_price"],
+                    },
+                },
             },
-            "required": ["cliente", "concepto", "base"],
+            "required": ["concepto", "base"],
+        },
+    },
+    {
+        "name": "preparar_factura_trabajo",
+        "description": (
+            "Recupera el cierre de un trabajo y prepara su factura sin duplicarla. "
+            "El trabajo debe estar cerrado y tener un importe."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"trabajo_id": {"type": "integer"}},
+            "required": ["trabajo_id"],
         },
     },
     {
@@ -250,18 +281,55 @@ def _ver_agenda(business_id, fecha):
     return {"fecha": fecha, "n": len(jobs), "trabajos": jobs}
 
 
-def _crear_factura(business_id, cliente, concepto, base, iva=None, irpf=None):
+def _crear_factura(
+    business_id, concepto, base, cliente=None, iva=None, irpf=None,
+    tipo_factura="F1", importe_incluye_iva=False, lineas=None,
+):
     biz = db.get_business(business_id) or {}
-    c = db.get_or_create_client(cliente, business_id=business_id)
+    invoice_type = str(tipo_factura or "F1").strip().upper()
+    if invoice_type not in {"F1", "F2"}:
+        raise ValueError("El tipo debe ser factura completa F1 o simplificada F2.")
+    client_name = str(cliente or "").strip()
+    if not client_name:
+        if invoice_type != "F2":
+            raise ValueError("Indica el cliente de la factura completa.")
+        client_name = "Cliente de mostrador"
+    c = db.get_or_create_client(client_name, business_id=business_id)
     rate = biz.get("default_vat", 21) if iva is None else iva
-    irpf_rate = biz.get("default_irpf", 0) if irpf is None else irpf
+    irpf_rate = (
+        0 if invoice_type == "F2" and irpf is None
+        else biz.get("default_irpf", 0) if irpf is None else irpf
+    )
+    if importe_incluye_iva and not lineas:
+        gross = Decimal(str(base))
+        divisor = (
+            Decimal("1") + Decimal(str(rate)) / Decimal("100")
+            - Decimal(str(irpf_rate)) / Decimal("100")
+        )
+        if divisor <= 0:
+            raise ValueError("Los tipos fiscales no permiten calcular la base.")
+        base = float((gross / divisor).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        ))
     inv = db.add_invoice(c["id"], concepto, base, vat_rate=rate,
-                         irpf_rate=irpf_rate, business_id=business_id)
+                         irpf_rate=irpf_rate, business_id=business_id,
+                         invoice_type=invoice_type, lines=lineas)
+    if invoice_type == "F2" and Decimal(str(inv["total"])) > Decimal("400"):
+        db.delete_invoice(inv["id"], business_id)
+        raise ValueError(
+            "El ticket supera el límite general de 400 € IVA incluido. "
+            "Prepara una factura completa con los datos fiscales del cliente."
+        )
     msg = (f"Borrador listo: {inv['total']:.2f} € (base {inv['base']:.2f} "
            f"+ IVA {inv['vat_amount']:.2f}")
     if inv["irpf_amount"]:
         msg += f" − IRPF {inv['irpf_amount']:.2f}"
     return {"ok": True, "factura": inv, "mensaje": msg + ")."}
+
+
+def _preparar_factura_trabajo(business_id, trabajo_id):
+    invoice = db.prepare_job_invoice_draft(int(trabajo_id), business_id)
+    return {"ok": True, "factura": invoice}
 
 
 def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None):
@@ -280,17 +348,98 @@ def _enviar_factura(business_id, factura_id):
     if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
     client = db.get_client(inv["client_id"], business_id)
-    business = db.get_business(business_id) or {}
-    # En modo nativo no se delega en Holded: la emisión y la huella deben quedar
-    # en la misma transacción local.
-    provider = (
-        invoicing.InternalInvoicingProvider()
-        if business.get("verifactu_enabled")
-        else _provider
-    )
-    issued = provider.issue(inv, client or {})
+    # La emisión y la huella quedan siempre dentro del motor nativo de Noesis.
+    issued = _provider.issue(inv, client or {})
     inv = db.get_invoice(factura_id, business_id)
     return {"ok": True, "factura": inv, "emision": issued}
+
+
+def prepare_invoice_delivery(
+    business_id: int, factura_id: int, *, channel: str = "auto"
+) -> dict:
+    """Prepara PDF y entrega durable tras una confirmación explícita del titular."""
+    from .adapters import email as email_adapter
+    from .web import whatsapp
+    from .web.invoice_pdf import build_invoice_pdf
+
+    invoice = db.get_invoice(factura_id, business_id)
+    if not invoice or invoice.get("status") == "borrador" or not invoice.get("number"):
+        raise ValueError("Emite la factura antes de entregarla.")
+    client = db.get_client(invoice["client_id"], business_id) or {}
+    business = db.get_business(business_id) or {}
+    pdf = build_invoice_pdf(factura_id, business_id)
+    if not pdf:
+        raise ValueError("No se ha podido generar el PDF de la factura.")
+    token = db.get_or_create_portal_token(business_id, invoice["client_id"])
+    pdf_url = (
+        f"{config.BASE_URL}/p/{token}/invoices/{factura_id}/pdf"
+        if token else None
+    )
+    owner_pdf_url = f"{config.BASE_URL}/api/{business_id}/invoices/{factura_id}/pdf"
+    preferences = db.get_client_preferences(invoice["client_id"], business_id) or {}
+    requested = str(channel or "auto").strip().lower()
+    if requested not in {"auto", "email", "whatsapp", "none"}:
+        raise ValueError("El canal de entrega no es válido.")
+    selected = requested
+    if selected == "auto":
+        preferred = preferences.get("preferred_channel")
+        if preferred in {"email", "whatsapp"}:
+            selected = preferred
+        elif client.get("email"):
+            selected = "email"
+        elif whatsapp.recipient_phone(client.get("phone")):
+            selected = "whatsapp"
+        else:
+            selected = "none"
+    queued = False
+    target = None
+    amount = f"{invoice['total']:.2f} EUR"
+    day = date.today().isoformat()
+    if selected == "email":
+        target = str(client.get("email") or "").strip()
+        if not target:
+            raise ValueError("El cliente no tiene correo configurado.")
+        email_adapter.queue_email(
+            target,
+            f"Factura {invoice['number']} — {business.get('name') or 'Noesis'}",
+            (
+                f"Hola {client.get('name') or ''},\n\n"
+                f"Te enviamos la factura {invoice['number']} por {amount}. "
+                "Encontrarás el PDF adjunto.\n\n"
+                f"— {business.get('name') or 'Noesis'}"
+            ),
+            business_id=business_id,
+            idempotency_key=f"invoice:{business_id}:{factura_id}:email:{day}",
+            entity_type="invoice",
+            entity_id=factura_id,
+        )
+        queued = True
+    elif selected == "whatsapp":
+        target = whatsapp.recipient_phone(client.get("phone"))
+        if not target:
+            raise ValueError("El cliente no tiene un WhatsApp válido configurado.")
+        whatsapp.queue_template(
+            target,
+            config.WHATSAPP_TEMPLATE_INVOICE,
+            [
+                client.get("name") or "cliente",
+                business.get("name") or "Tu proveedor",
+                invoice["number"], amount, pdf_url or config.BASE_URL,
+            ],
+            business_id=business_id,
+            idempotency_key=f"invoice:{business_id}:{factura_id}:whatsapp:{day}",
+        )
+        queued = True
+    if queued:
+        db.record_invoice_communication(
+            factura_id, business_id, "entrega_preparada",
+            details=f"canal={selected};destino={target}",
+        )
+    return {
+        "ok": True, "factura": invoice, "pdf_url": pdf_url,
+        "owner_pdf_url": owner_pdf_url,
+        "channel": selected, "target": target, "queued": queued,
+    }
 
 
 def _registrar_pago(business_id, factura_id):
@@ -417,6 +566,7 @@ _DISPATCH = {
     "agendar_trabajo": _agendar_trabajo,
     "ver_agenda": _ver_agenda,
     "crear_factura": _crear_factura,
+    "preparar_factura_trabajo": _preparar_factura_trabajo,
     "crear_presupuesto": _crear_presupuesto,
     "enviar_factura": _enviar_factura,
     "registrar_pago": _registrar_pago,

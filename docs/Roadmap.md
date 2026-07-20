@@ -1,126 +1,69 @@
 # Roadmap
 
-> Mapa histórico de capas y capacidades. No usar las ramas, migraciones ni listas de
-> este documento como estado operativo; la verdad actual está en
-> [`project-state.json`](project-state.json) y los pendientes en [[Tareas-vivas]].
+> Dirección estable por etapas. No contiene números vivos de migración, tests,
+> commits o despliegues. La verdad verificable está en
+> [`project-state.json`](project-state.json) y el trabajo inmediato en
+> [[Tareas-vivas]].
 
-Principio rector: **no lanzar un MVP que falle**. Endurecer el núcleo antes de exponerlo.
+Principio rector: **publicar, conectar y pilotar antes de ampliar alcance**.
 
-## ✅ Hecho
-- App web multipágina (FastAPI) con [[Arquitectura|sistema de diseño propio]].
-- Apartados en profundidad: resumen, ingresos, costes, facturas, cobros, agenda,
-  clientes, asistente (chatbot interno), ajustes.
-- Cerebro local (gratis) + IA opcional. Ver [[Investigación]].
-- [[Fiscalidad]] correcta: IVA (21/10/4) + IRPF + datos fiscales del negocio.
-- Marca aplicada (verde bosque + teal + crema), iconos SVG propios, logo, móvil.
-- **Login y seguridad**: contraseñas cifradas, sesiones, aislamiento por dueño.
-- Informes CSV, alertas programadas (diaria/semanal).
-- Suite de regresión del backend: aislamiento multiempresa, facturación idempotente,
-  webhooks firmados, sesiones revocables y validación fiscal.
-- **Fase 1 completa**: editar/borrar (clientes, facturas, gastos, trabajos),
-  **PDF de factura** (fpdf2) con datos fiscales, validaciones de formularios.
-- Alta SaaS en tres pasos, recorrido de activación hasta el primer cobro, eventos de
-  producto internos y embudo operativo en administración.
-- Posicionamiento alrededor del ciclo "del trabajo terminado al dinero cobrado",
-  para autónomos y pequeños negocios de servicios (público amplio).
-- Endpoints de salud y disponibilidad para despliegue (`/health` y `/ready`).
-- Registro Veri*Factu nativo fase 1 en `main`: huella, QR, eventos, rectificativas
-  y XML AEAT.
-- Veri*Factu fase 2 en `codex/verifactu-fase2`: vectores oficiales, SOAP mTLS y
-  cola durable; pendiente de revisión y prueba real con certificado AEAT.
+## Etapa A — núcleo construido
 
-## 🚧 Fase 1 — núcleo sólido (COMPLETA ✅)
-- [x] Editar / borrar entidades (clientes, facturas, gastos, trabajos).
-- [x] PDF de factura.
-- [x] Validaciones de formularios.
+- SaaS multiempresa con sesión, aislamiento por `business_id`, alta guiada,
+  suscripción y modo consulta cuando la cuenta no está activa.
+- Flujo cliente → presupuesto → trabajo/proyecto → horas y costes → factura → cobro.
+- Documentos inteligentes por web y WhatsApp, con clasificación explicable y
+  confirmación humana antes de crear efectos contables.
+- Facturas recibidas, proveedores, catálogo, CRM, equipo/fichaje, gestoría por
+  portal privado, P&G y proyectos con rentabilidad.
+- Asistente persistente y contextual: reglas locales, compositor interno y respaldos
+  de IA opcionales sin perder el servicio local.
+- Facturación nativa Veri*Factu, colas durables de WhatsApp/correo, conciliación CSV,
+  feed ICS privado y portales de cliente, trabajador y gestoría.
+- Landing, alta por prueba/contratación, modalidad mensual/anual y Google OAuth
+  oculto hasta disponer de credenciales válidas.
 
-## 🔌 Fase 2 — conectar lo real
-- [x] Base de datos de producción (Postgres en Railway) + copias de seguridad
-  verificadas (migración 8, restauración probada, S3 opcional).
-- [x] Veri*Factu nativo fase 1 (registro local conforme a formato técnico, sin envío).
-- [x] Veri*Factu fase 2 fusionada en `main` (migración 9): vectores oficiales AEAT,
-  cliente SOAP mTLS, cola durable. Falta certificado digital y validar el entorno
-  de pruebas antes de activar (trámite del founder).
-- [ ] WhatsApp real (Meta Cloud API) — la cola durable ya está; faltan credenciales
-  de Meta (verificación de empresa, clics del founder).
-- [ ] Stripe real — el adaptador ya habla con Stripe; faltan las claves y los tres
-  precios en Railway (clics del founder).
-- [x] Despliegue 24/7 con HTTPS en **app.bynoesis.com** + marco legal completo
-  (términos, privacidad, encargado del tratamiento, cookies, aviso legal).
-- [x] Transcripción de audios (Whisper, instalación opcional).
+## Etapa B — P0: producción verificable y piloto
 
-## 💶 Cerrar el ciclo del cobro (siguiente en producto)
-- [x] Datos de pago (IBAN/Bizum) en Ajustes, el PDF de la factura y el portal.
-- [x] **Cobros parciales** (anticipo + resto) con ledger separado, estado derivado
-  y métricas sobre el restante (migración 11 en `main`).
-- [x] **Gasto por foto** con borrador extraído por Claude, confirmación obligatoria
-  y documento vinculado (migración 12 en `main`).
-- [x] Persecución de cobros automática por WhatsApp: opt-in por negocio, cadencia,
-  restante, portal e idempotencia por escalón (migración 13, en `main`; el envío
-  real sigue bloqueado hasta encender Meta).
+1. Desplegar el `main` actual, aplicar migraciones y repetir `/ready`, doctor y
+   recorridos críticos.
+2. Conectar SMTP, Google OAuth, Stripe, Meta WhatsApp y al menos un respaldo de IA
+   según [[Conectar-APIs]].
+3. Resolver el tratamiento de IVA de Stripe antes de cobros live.
+4. Configurar copia externa, restaurarla de verdad y medir recuperación.
+5. Validar AEAT en pruebas con certificado y revisión fiscal externa.
+6. Completar auditoría externa de seguridad, privacidad, fiscalidad e incidentes.
+7. Pilotar con 3-5 autónomos durante dos cierres semanales y medir activación hasta
+   primer cobro, tiempo ahorrado, errores, coste y retención.
 
-## 🚀 Fase 3 — validar
-- [ ] Piloto con 5-10 negocios de servicios antes de escalar.
-- [ ] Medir semanalmente: alta → perfil → cliente → trabajo → factura → cobro.
-- [ ] Entrevistar abandonos y activados; corregir el paso con mayor caída.
-- [ ] Validar disposición a pagar y retención antes de ampliar sectores o funciones.
-- [ ] Definir objetivos de activación, conversión, churn e ingreso por cuenta con
-  datos reales del piloto.
+La salida de esta etapa no es «más pantallas»: es evidencia de que un negocio real
+puede entrar, trabajar, facturar, cobrar y entregar papeles sin asistencia técnica.
 
-## 🏗️ Plataforma por capas (aprobado 2026-07-07, en paralelo al piloto)
-Visión "sistema operativo del autónomo", construida **por capas sobre lo que ya
-existe** (criterio en [[Metodo-operativo-Fable]]; decisión en [[Decisiones]]).
+## Etapa C — P1: profundidad guiada por el piloto
 
-### Capa B — MVP plataforma (extiende, no rediseña)
-- [x] **Documentos inteligentes v1** (rama `claude/documentos-inteligentes`, PR #16):
-  tipos, confianza, estados (pendiente→revisado→enviado a gestoría→validado),
-  captura con cámara, lectura IA de imagen y PDF con revisión humana obligatoria.
-- [x] **Facturas recibidas + proveedores** (migración 17) con detección
-  emitida/recibida por NIF y presencia en Costes y en el ZIP de gestoría.
-- [x] **Productos/servicios básico** (migración 18): catálogo con precio, coste,
-  margen (solo si hay coste real), IVA, stock con aviso, y prefill al crear factura.
-- [x] **Asistente contextual**: sabe en qué página está el usuario (botón «?» en
-  la barra), la explica con datos reales y la IA hereda contexto e idioma.
-- [x] **Noesis persistente entre pantallas** (migración 21): la conversación se
-  conserva entre web y WhatsApp, el panel lateral acompaña en cada apartado y la
-  IA recibe únicamente recuerdos confirmados y señales trazables del negocio.
-- [x] **Entrada documental universal v1** (migración 21): web y WhatsApp comparten
-  clasificador, registran tipo propuesto, confianza y motivo, y piden confirmación
-  antes de convertir tickets o facturas recibidas. Las facturas emitidas antiguas
-  quedan en revisión y no se reemiten ni entran en Veri*Factu.
-- [x] **Señales de clientes v1**: vencidos, ritmo de pago, actividad y conversión
-  se explican con evidencia visible; sin puntuaciones opacas ni predicciones
-  inventadas.
-- [x] **Vista Hoy ampliada**: el plan diario incluye documentos pendientes,
-  recibidas por pagar, seguimientos de CRM y solicitudes de gestoría.
-- [x] **CRM de leads** (migración 18, adelantado de la capa C): embudo con 8
-  estados, seguimiento con fecha, valor estimado y conversión a cliente en 1 clic.
-- [x] **Solicitudes de gestoría**: la gestoría pide documentación desde su enlace
-  `/g/{token}` y el autónomo responde desde Documentos. Sin cuentas todavía.
-- [x] **P&G del año con EBITDA estimado** en Análisis — sin inventar: «datos
-  insuficientes» y lista de qué falta.
-- [x] **Idioma persistente** (ES/CA/EN) en Ajustes: se guarda por negocio y la IA
-  responde en él. La traducción completa de la interfaz queda para la capa C.
-- [x] Partir `server.py` en routers por dominio.
+- Comparar servicio privado, proveedor compatible y fallback con corpus ES/CA:
+  herramientas, calidad, latencia, coste, concurrencia y recuperación ante fallos.
+- Endurecer documentos con duplicados, HEIC, escaneados, líneas, búsqueda y
+  corrección masiva según errores reales.
+- Probar ICS y CSV bancarios reales antes de plantear OAuth bidireccional o PSD2.
+- Equipo con varios trabajadores, offline, ausencias y permisos finos.
+- Gestoría con cuentas, MFA, varias empresas y revisión por documento si el portal
+  por enlace se queda corto.
+- Observabilidad por negocio de colas, IA, extracción, latencia, correcciones y coste.
+- Revisar cada pantalla por su tarea concreta; no imponer KPIs ni estructuras iguales.
 
-### Capa C — V1
-- [ ] Portal gestoría con cuentas y permisos multi-negocio (tras feedback real
-  del flujo de solicitudes por enlace).
-- [ ] Abstracción de canales (`ChannelProvider`) + Telegram según caso de uso
-  confirmado (duda 2 de [[Preguntas-abiertas]]).
-- [ ] Oportunidades y presupuestos conectados al CRM de leads.
-- [x] Proyectos/obras: portada agregada y detalle progresivo con presupuesto vs.
-  real, horas, equipo, gastos y margen por proyecto (migración 19).
-- [x] Nivel de explicación de cuenta en Ajustes: claro, directo o detallado
-  (migración 20); nunca se pregunta dentro de cada pantalla.
-- [ ] Multiidioma completo de la interfaz (ES/CA/EN) — diseñar i18n antes de más UI.
+## Etapa D — P2: expansión con retención demostrada
 
-### Capa D — V2
-Ratios avanzados y EBITDA · stock y ventas por canal · aprendizaje automático de
-preferencias (la memoria confirmada, visible y borrable ya existe) · WhatsApp Business
-completo con plantillas · portal gestoría avanzado (modelos 303/130/390 con
-revisión humana siempre) · automatizaciones profundas.
+- Personalización por patrones de sector, rutas, hitos y automatizaciones específicas.
+- Calendario bidireccional, PSD2 y cobro por enlace solo con demanda y permisos claros.
+- PWA profunda, inventario avanzado, nóminas e integraciones contables adicionales.
+- Recepcionista telefónico, minutos incluidos y add-on solo con unit economics medidos.
+- Nuevos canales como Telegram únicamente si aportan adopción o retención real.
 
-## 🌱 Más adelante
-Optimización de rutas por zona · agente de voz telefónico · inventario y
-  trabajadores · modelos 303/130 estimados.
+## Límites permanentes
+
+- Noesis prepara y propone; el titular autoriza dinero, fiscalidad, emisiones,
+  mensajes sensibles y borrados irreversibles.
+- Lo observado se distingue de lo confirmado; la memoria es visible y corregible.
+- Ninguna integración externa puede apagar el núcleo local.
+- Construido, fusionado, desplegado y validado son estados distintos.

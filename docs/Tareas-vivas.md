@@ -5,15 +5,17 @@
 
 ## P0 — publicar y pilotar con seguridad
 
-- [ ] Fusionar y desplegar el candidato actual; aplicar migración 31 y confirmar
-  `/ready`, alta por prueba, alta por contratación, preferencias operativas,
+- [ ] Fusionar el candidato fiscal, desplegar el `main` resultante, aplicar migración
+  33 y confirmar `/ready`, alta por prueba, alta por contratación, preferencias operativas,
   vencimiento de factura, checkout, Home, modo consulta y una ficha de proyecto.
 - [ ] Crear o actualizar en Stripe los productos **29/49/99 € + IVA**, enlazar sus
-  `price_id`, probar checkout, webhook, impago, reactivación y portal de cliente.
+  seis `price_id`, resolver cómo aplica el IVA el Checkout y probar checkout,
+  webhook, impago, reactivación y portal de cliente antes de usar claves live.
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
   reintentos y bloqueo de cuenta inactiva.
-- [ ] Aprobar plantillas Meta para cobro, presupuesto y cita; validar SÍ/NO y entrega
-  desde el WhatsApp real del titular.
+- [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
+  presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
+  real del titular.
 - [ ] SMTP real: credenciales, invitaciones, facturas, avisos, reintentos de la outbox
   y entregabilidad. La cola durable ya está construida.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
@@ -21,7 +23,10 @@
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El
   botón permanece oculto hasta que ambas credenciales existan para no prometer una
   función falsa.
-- [ ] Certificado/entorno AEAT y validación con asesoría fiscal.
+- [ ] Certificado/entorno AEAT: autorización por obligado tributario, mTLS en pruebas,
+  aceptación/rechazo/duplicado/CSV/reintentos, alta y anulación ya construidas,
+  subsanación de rechazos, declaración
+  responsable y validación con asesoría fiscal antes de producción.
 - [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo.
 - [ ] Restaurar una copia externa en un entorno aislado y documentar tiempos.
 - [ ] Auditoría externa de seguridad, privacidad, fiscalidad y procedimiento de
@@ -29,6 +34,8 @@
 - [ ] Piloto acompañado con 3-5 autónomos durante dos cierres semanales.
 - [ ] Medir activación hasta primer cobro, tiempo ahorrado, trabajos sin facturar,
   cobros recuperados, correcciones, coste por cuenta y retención.
+
+Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]].
 
 ## P1 — profundidad después del primer piloto
 
@@ -48,6 +55,9 @@
   correcciones y coste.
 - [ ] Revisar cada pantalla con evidencia visual tras estabilizar el diseño; su
   jerarquía debe responder a su tarea, no copiar la de otra sección.
+- [ ] Fiscalidad ampliada: exenciones E1-E8, no sujeción N1/N2, inversión del sujeto
+  pasivo, identificación extranjera y divisas, solo después de validarlas con
+  asesoría y XSD/validaciones AEAT. Hasta entonces el 0% es tipo cero, no exención.
 
 ## P2 — solo con retención demostrada
 

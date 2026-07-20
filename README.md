@@ -73,4 +73,6 @@ noesis-web        # → http://127.0.0.1:8000
 - **Integraciones detrás de adaptadores**: cambiar de proveedor = tocar un archivo.
 
 Manual para agentes de IA en [`AGENTS.md`](AGENTS.md) · visión y decisiones en
-[`docs/Inicio.md`](docs/Inicio.md) · roadmap en [`docs/Roadmap.md`](docs/Roadmap.md).
+[`docs/Inicio.md`](docs/Inicio.md) · conexión de servicios en
+[`docs/Conectar-APIs.md`](docs/Conectar-APIs.md) · roadmap en
+[`docs/Roadmap.md`](docs/Roadmap.md).

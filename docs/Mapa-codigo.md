@@ -5,12 +5,21 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 31.
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 33;
+  la última migración añade series, líneas, programaciones recurrentes, entrega
+  trazable y anulaciones Veri*Factu; cabecera y líneas quedan congeladas al emitir.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
   y propuestas explicables de conciliación; nunca confirma un pago por sí solo.
-- `src/noesis/tools.py`: herramientas que puede invocar el cerebro: clientes,
-  agenda, facturas, proyectos, equipo, documentos y gestoría.
-- `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM.
+- `src/noesis/tools.py`: herramientas que puede invocar el cerebro y flujo común de
+  entrega de factura: PDF, canal habitual, email/plantilla WhatsApp, idempotencia y
+  evento trazable.
+- `src/noesis/verifactu.py`: huellas de alta y anulación, QR y XML nativos validados
+  contra los XSD AEAT.
+- `src/noesis/verifactu_client.py`: SOAP/mTLS directo, endpoints oficiales para
+  certificado ordinario o sello, TLS mínimo, límite de respuesta e idempotencia de
+  duplicados.
+- `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM;
+  separa ticket de gasto de ticket de venta F2 y entiende el trabajo a facturar.
 - `src/noesis/internal_brain.py`: compositor local de comunicaciones. Usa hechos del
   negocio, evita ambigüedad y deja el envío pendiente de SÍ/NO del titular.
 - `src/noesis/agent.py`: agentes privado, compatible y Anthropic con historial, recuerdos
@@ -27,6 +36,8 @@
 - `docs/project-state.json`: fuente de verdad legible por máquinas para versión de
   esquema, pruebas, precios, publicación, política de suscripción y validaciones
   externas pendientes.
+- `docs/Registro-cambios.md`: bitácora obligatoria por modificación; relaciona
+  objetivo, áreas tocadas, validación, riesgos y diagnóstico/rollback.
 - `scripts/check_project_truth.py`: compara esa fuente con migraciones y catálogo;
   en CI exige actualizar estado y QA cuando cambia el producto.
 
@@ -62,6 +73,9 @@
   `client_preferences` conectan trabajo, coste, evidencia, borrador y aprendizaje.
 - `src/noesis/web/templates/proyectos.html`: resumen progresivo y detalle operativo.
 - `src/noesis/web/templates/fichaje.html`: jornada, trabajos y checklist personal.
+- `src/noesis/web/routers/invoicing.py` + `templates/facturas.html`: editor de
+  borradores con líneas e impuestos, series, recurrencia, duplicación, emisión,
+  PDF, entrega durable, historial, rectificación y anulación confirmada.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
   Google OAuth, configuración operativa, checkout y cuenta; no expone el
   diagnóstico de proveedores en la API del cliente.
@@ -81,11 +95,15 @@
   factura recibida.
 - `src/noesis/web/gestoria.py`: paquete ordenado, manifiesto, huella y versionado.
 - `src/noesis/web/whatsapp.py`: texto, audio local, fotos/PDF, confirmaciones,
-  trabajador y cola durable. La entrada y la salida se detienen en modo consulta.
+  trabajador y cola durable. Emisión y entrega usan una segunda confirmación,
+  validación fiscal previa, PDF y canal habitual; la entrada y la salida se detienen
+  en modo consulta.
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el
   titular y calendario ICS privado/revocable.
 - `src/noesis/web/scheduler.py`: partes, recordatorios, reglas autorizadas y workers
-  de outbox. WhatsApp, correo y Veri*Factu se persisten y reintentan.
+  de outbox. WhatsApp, correo y Veri*Factu se persisten y reintentan; la remisión
+  fiscal de altas y anulaciones verifica una cadena común y continúa aunque la
+  suscripción SaaS quede inactiva.
 - `src/noesis/adapters/email.py`: frontera SMTP; toda comunicación nueva se encola
   antes de salir para no perderla ante una caída del proveedor.
 - `src/noesis/adapters/`: Meta, email, pagos, voz, extracción y fiscalidad detrás de

@@ -1,5 +1,10 @@
 # WhatsApp como centro de operaciones — diseño para ejecutar
 
+> **Documento histórico de diseño e implementación.** No usar sus fases o números
+> de migración como estado vivo. Consultar [`project-state.json`](project-state.json),
+> [[Tareas-vivas]] y [[Conectar-APIs]] para saber qué está construido y qué falta
+> validar con Meta.
+
 > **Qué es este documento**: el diseño completo, pensado y decidido, para convertir
 > WhatsApp en el verdadero centro de Noesis. Escrito el 2026-07-03 a petición del
 > founder ("el punto más diferencial es el WhatsApp, no las facturas").
@@ -40,15 +45,19 @@ La tesis del founder es correcta y este documento la asume como norte:
 | Recordatorios de cobro al cliente (restante, escalones, idempotente) | ✅ en PR #15 | `scheduler.send_payment_reminders` |
 | Extracción de ticket por visión (Haiku, validada, anti-inyección) | ✅ hecho (T2) | `adapters/extraction.py` |
 | Módulo documentos (subida acotada, uuid, por negocio, vínculo a gasto) | ✅ hecho | `documents/` + migración 12 |
-| **Webhook: imágenes y PDFs entrantes** | ❌ NO: `_extract_messages` solo lee `text` y `audio` | `whatsapp.py:145` |
-| **Máquina de confirmación en el chat** (borrador → SÍ/NO) | ❌ NO existe | — |
-| **Informe de cierre del día** (lo hecho, lo cobrado, lo pendiente) | ❌ NO existe (solo el brief de la mañana) | — |
-| **Config de informes por negocio** (horas, on/off, qué bloques) | ❌ NO existe | — |
-| **Ingesta de PDF** (gasto de proveedor / factura histórica) | ❌ NO existe | — |
+| Webhook de imágenes y PDFs entrantes | ✅ hecho | `whatsapp._extract_messages`, `_ingest_image`, `_ingest_document` |
+| Máquina de confirmación borrador → SÍ/NO | ✅ hecho | `whatsapp_pending_actions`, `_execute_pending` |
+| Ticket de venta F2 por texto, separado del ticket de gasto | ✅ hecho | `nlu._parse_simplified_sale`, `tools._crear_factura` |
+| Cliente habitual inequívoco, sin duplicar Martas ambiguas | ✅ hecho | `db.resolve_client_reference` |
+| Emisión confirmada → número → PDF → entrega → KPIs/gestoría | ✅ hecho | `_prepare_invoice_action`, `prepare_invoice_delivery`, motor nativo |
+| Informe de cierre del día | ✅ hecho | `scheduler.send_daily_closings` |
+| Config de informes por negocio | ✅ hecho | `businesses.whatsapp_reports` + onboarding/Ajustes |
+| Ingesta de PDF de proveedor o histórico | ✅ hecho | `documents/` + `_ingest_document` |
 
-**Conclusión**: el 60 % de la fontanería está. Lo que falta es (a) el router de
-mèdia entrante, (b) el patrón borrador→confirmación, y (c) los informes de cierre
-y su configuración. Nada requiere rediseñar lo existente.
+**Conclusión auditada el 20-07-2026**: el recorrido interno está construido y
+testeado sin depender de Meta. Falta la validación extremo a extremo con número
+real, plantillas aprobadas —incluida `noesis_factura_lista`—, audio/OCR reales y
+entregabilidad del proveedor. Eso es activación externa, no otro motor paralelo.
 
 ## 2. Principios de diseño (no negociables)
 

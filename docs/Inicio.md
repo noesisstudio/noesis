@@ -6,6 +6,8 @@ usa la vista de grafo para navegar.
 ## Mapa
 - [[Estado-actual-main]] — única fotografía viva de lo construido y publicado.
 - [[Tareas-vivas]] — único listado vivo de pendientes y prioridades.
+- [[Registro-cambios]] — bitácora cronológica obligatoria: qué cambió, pruebas,
+  riesgos y pista para diagnosticar o revertir una regresión.
 - [[Plan-maestro-Noesis]] — visión, principios, arquitectura objetivo y criterios.
 - [[Producto]] — qué es Noesis, para quién y la propuesta de valor.
 - [[Competencia]] — Forjia y el resto del mercado.
@@ -14,6 +16,8 @@ usa la vista de grafo para navegar.
 - [[Arquitectura]] — cómo está construido el sistema.
 - [[Guia-tecnica-ingeniero]] — entrada técnica de extremo a extremo para ingeniería:
   web, datos, cerebro, automatizaciones, WhatsApp y despliegue.
+- [[Conectar-APIs]] — guía única de credenciales, callbacks, variables y pruebas
+  externas para conectar producción sin confundir código con servicio activo.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
@@ -21,7 +25,7 @@ usa la vista de grafo para navegar.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
-- [[Despliegue]] — cómo poner Noesis online 24/7 en bynoesis.com.
+- [[Despliegue]] — cómo operar Noesis online 24/7 en app.bynoesis.com.
 - [[Decisiones]] — registro de decisiones importantes (y por qué).
 - [[Metodo-operativo-Fable]] — el criterio de trabajo, heredable por Opus y Codex.
 - [[Preguntas-abiertas]] — dudas que esperan respuesta del founder.

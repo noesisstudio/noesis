@@ -1,8 +1,8 @@
 """Formato técnico Veri*Factu publicado por la AEAT.
 
-Esta fase genera huella, QR y XML, pero no realiza ninguna transmisión. El orden
-de campos de la huella y los nombres XML no deben cambiarse sin revisar primero
-la versión de las especificaciones técnicas configurada.
+Genera huella, QR y el cuerpo XML que ``verifactu_client`` remite por SOAP/mTLS.
+El orden de campos de la huella y los nombres XML no deben cambiarse sin revisar
+primero la versión de las especificaciones técnicas configurada.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ def aeat_date(value: str | date | datetime) -> str:
 
 def generated_at_with_timezone() -> str:
     """Fecha, hora y huso local en el formato dateTime del XSD."""
-    return datetime.now().astimezone().isoformat(timespec="seconds")
+    return datetime.now().astimezone().isoformat(timespec="milliseconds")
 
 
 def invoice_hash_input(
@@ -98,6 +98,36 @@ def invoice_hash_input(
 
 def invoice_record_hash(*, algorithm: str | None = None, **values) -> str:
     payload = invoice_hash_input(**values).encode("utf-8")
+    try:
+        digest = hashlib.new(
+            algorithm or config.VERIFACTU_HASH_ALGORITHM, payload
+        )
+    except ValueError as exc:
+        raise ValueError("El algoritmo de huella Veri*Factu no está disponible.") from exc
+    return digest.hexdigest().upper()
+
+
+def cancellation_hash_input(
+    *,
+    issuer_nif: str,
+    invoice_number: str,
+    issue_date: str,
+    previous_hash: str | None,
+    generated_at: str,
+) -> str:
+    """Cadena oficial del registro de anulación, en el orden de la AEAT."""
+    fields = (
+        ("IDEmisorFacturaAnulada", issuer_nif.strip()),
+        ("NumSerieFacturaAnulada", invoice_number.strip()),
+        ("FechaExpedicionFacturaAnulada", aeat_date(issue_date)),
+        ("Huella", (previous_hash or "").strip()),
+        ("FechaHoraHusoGenRegistro", generated_at.strip()),
+    )
+    return "&".join(f"{name}={value}" for name, value in fields)
+
+
+def cancellation_record_hash(*, algorithm: str | None = None, **values) -> str:
+    payload = cancellation_hash_input(**values).encode("utf-8")
     try:
         digest = hashlib.new(
             algorithm or config.VERIFACTU_HASH_ALGORITHM, payload
@@ -174,6 +204,48 @@ def build_aeat_xml(business: dict, records: list[dict]) -> bytes:
 
     for record in records:
         wrapper = _sub(root, NS_LR, "RegistroFactura")
+        if record.get("record_type") == "anulacion":
+            cancellation = _sub(wrapper, NS_INFO, "RegistroAnulacion")
+            _sub(cancellation, NS_INFO, "IDVersion", record["record_version"])
+            invoice_id = _sub(cancellation, NS_INFO, "IDFactura")
+            _sub(
+                invoice_id, NS_INFO, "IDEmisorFacturaAnulada",
+                record["issuer_nif"],
+            )
+            _sub(
+                invoice_id, NS_INFO, "NumSerieFacturaAnulada",
+                record["invoice_number"],
+            )
+            _sub(
+                invoice_id, NS_INFO, "FechaExpedicionFacturaAnulada",
+                record["issue_date"],
+            )
+            chain = _sub(cancellation, NS_INFO, "Encadenamiento")
+            if record.get("previous_hash"):
+                previous = _sub(chain, NS_INFO, "RegistroAnterior")
+                _sub(
+                    previous, NS_INFO, "IDEmisorFactura",
+                    record["previous_issuer_nif"],
+                )
+                _sub(
+                    previous, NS_INFO, "NumSerieFactura",
+                    record["previous_invoice_number"],
+                )
+                _sub(
+                    previous, NS_INFO, "FechaExpedicionFactura",
+                    record["previous_issue_date"],
+                )
+                _sub(previous, NS_INFO, "Huella", record["previous_hash"])
+            else:
+                _sub(chain, NS_INFO, "PrimerRegistro", "S")
+            _system_xml(cancellation, record)
+            _sub(
+                cancellation, NS_INFO, "FechaHoraHusoGenRegistro",
+                record["generated_at"],
+            )
+            _sub(cancellation, NS_INFO, "TipoHuella", record["hash_type"])
+            _sub(cancellation, NS_INFO, "Huella", record["record_hash"])
+            continue
         alta = _sub(wrapper, NS_INFO, "RegistroAlta")
         _sub(alta, NS_INFO, "IDVersion", record["record_version"])
         invoice_id = _sub(alta, NS_INFO, "IDFactura")
@@ -203,11 +275,14 @@ def build_aeat_xml(business: dict, records: list[dict]) -> bytes:
                 record["rectified_issue_date"],
             )
 
+        if record.get("operation_date"):
+            _sub(alta, NS_INFO, "FechaOperacion", record["operation_date"])
         _sub(alta, NS_INFO, "DescripcionOperacion", record["description"])
-        recipients = _sub(alta, NS_INFO, "Destinatarios")
-        recipient = _sub(recipients, NS_INFO, "IDDestinatario")
-        _sub(recipient, NS_INFO, "NombreRazon", record["recipient_name"])
-        _sub(recipient, NS_INFO, "NIF", record["recipient_nif"])
+        if record.get("recipient_nif"):
+            recipients = _sub(alta, NS_INFO, "Destinatarios")
+            recipient = _sub(recipients, NS_INFO, "IDDestinatario")
+            _sub(recipient, NS_INFO, "NombreRazon", record["recipient_name"])
+            _sub(recipient, NS_INFO, "NIF", record["recipient_nif"])
 
         breakdown = _sub(alta, NS_INFO, "Desglose")
         for item in json.loads(record["breakdown_json"]):

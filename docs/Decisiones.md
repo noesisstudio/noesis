@@ -2,6 +2,54 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## WhatsApp prepara; un segundo consentimiento emite y entrega (2026-07-20)
+
+`Factura a Marta…` y `ticket de venta…` crean siempre un borrador. La referencia
+parcial a un cliente solo se reutiliza cuando hay una coincidencia única; ante dos
+Martas se pregunta y no se crea un duplicado. `Ticket` sin indicar que es una venta
+sigue siendo gasto para evitar invertir ingresos y costes.
+
+Emitir o entregar desde WhatsApp requiere una orden posterior y un SÍ. Entonces el
+motor valida campos legales, numera, congela, genera el PDF y prepara el canal
+habitual. Email adjunta el PDF; WhatsApp usa plantilla aprobada y enlace privado.
+Motivo: automatizar el recorrido completo sin convertir una interpretación de texto,
+audio o IA en una decisión fiscal irreversible.
+
+## Facturación progresiva: simple al entrar, completa cuando hace falta (2026-07-20)
+
+Noesis no replica la densidad de un ERP. El camino habitual enseña cliente, líneas,
+impuestos, forma de pago y total; las menciones legales, series y programaciones se
+abren solo cuando el negocio las necesita. Por debajo, el motor sí conserva cantidad,
+precio, descuento, IVA por línea, IRPF, fecha de operación, series separadas,
+recurrencia idempotente, historial y PDF.
+
+Un borrador se puede editar y duplicar. Al emitir, la cabecera y las líneas quedan
+inalterables. Corregir se hace con rectificativa; anular ante la AEAT crea un registro
+nuevo, encadenado e inmutable, y exige confirmación escrita del titular. Motivo:
+combinar la facilidad de Noesis con la trazabilidad profesional observada en Holded,
+sin copiar su arquitectura de ERP ni permitir atajos legalmente inseguros.
+
+## La obligación fiscal sobrevive al estado de la suscripción (2026-07-20)
+
+Una cuenta caducada queda en modo consulta para impedir nuevas operaciones, pero
+Noesis continúa remitiendo a la AEAT los registros Veri*Factu que ya se generaron
+legalmente. Un impago del SaaS no puede convertir una outbox fiscal pendiente en
+incumplimiento. La factura emitida queda congelada en BD; cobros, recordatorios y
+respuesta AEAT viven en ledgers y eventos separados. Cualquier anomalía de huella
+bloquea el envío externo y queda auditada.
+
+## Facturación nativa; no conectar Holded ni otro SaaS de facturación (2026-07-20)
+
+El founder confirma que Noesis debe controlar internamente numeración, emisión, PDF,
+registro Veri*Factu, trazabilidad y remisión AEAT. Holded y Quipu son únicamente
+referencias de mercado; no son proveedores técnicos ni caminos de respaldo.
+
+Se elimina la activación por `HOLDED_API_KEY` y el proveedor externo del código. La
+frontera `invoicing.py` permanece para separar responsabilidades, pero devuelve
+siempre el motor nativo. Motivo: control del producto, privacidad, coste, aislamiento
+multiempresa y ausencia de dependencia estratégica en otro SaaS. Esta decisión
+**sustituye** la antigua «No reconstruir Verifactu» de este mismo documento.
+
 ## Oferta anual explicable y sector escrito por el cliente (2026-07-17)
 
 El alta anual compara el coste real de doce mensualidades con el pago anual, muestra
@@ -242,9 +290,10 @@ de tokens. Ver [[IA-local]], [[Investigación]] y [[Arquitectura]].
 Hash de contraseñas con stdlib (PBKDF2), Chart.js servido en local, sin Tailwind.
 Motivo: coste, privacidad y control. Ver [[Arquitectura]].
 
-## No reconstruir Verifactu
-Se integrará vía API de un proveedor homologado (Holded/Quipu) en vez de
-construir la parte regulada. Ver [[Fiscalidad]].
+## Decisión superada — no reconstruir Verifactu
+
+La idea inicial era integrar un proveedor homologado. Queda anulada por la decisión
+de 2026-07-20: la facturación y Veri*Factu son desarrollo propio de Noesis.
 
 ## Marca
 Paleta del logo: verde bosque #14463b + teal #2e8b74 + crema #f4f1e8. Dominio

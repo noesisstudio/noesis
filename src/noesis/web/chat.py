@@ -702,7 +702,9 @@ def _handle(
             return {"reply": "Te lo puedo agendar, pero me falta el día. Dímelo como lo dirías por WhatsApp: "
                              "**mañana por la mañana**, **el jueves a las 10** o "
                              "**el lunes por la tarde en Badalona**.", "source": "local"}
-        if tool in {"crear_factura", "crear_presupuesto"} and "iva incluido" in norm:
+        if (tool in {"crear_factura", "crear_presupuesto"}
+                and "iva incluido" in norm
+                and not args.get("importe_incluye_iva")):
             business = db.get_business(business_id) or {}
             rate = float(business.get("default_vat") or 21)
             args["base"] = round(float(args["base"]) / (1 + rate / 100), 2)

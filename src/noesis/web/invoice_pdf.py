@@ -82,6 +82,8 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     )
     recipient_nif = inv.get("recipient_nif") or client.get("nif")
     recipient_address = inv.get("recipient_address") or client.get("address")
+    invoice_type = (inv.get("invoice_type") or "F1").upper()
+    is_rectifying = invoice_type.startswith("R")
 
     tpl = _TEMPLATES.get(biz.get("invoice_template") or "clasica", _TEMPLATES["clasica"])
     fam = "Times" if tpl["serif"] else "Helvetica"
@@ -113,9 +115,10 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     pdf.set_text_color(*brand)
     pdf.cell(68 if verifactu_active else 110, 8, issuer_name)
     pdf.set_xy(150, 17)
-    pdf.set_font(fam, "B", 20)
+    pdf.set_font(fam, "B", 13 if is_rectifying else 20)
     pdf.set_text_color(*INK)
-    pdf.cell(42, 8, tpl["title"], align="R")
+    title = "RECTIFICATIVA" if is_rectifying else tpl["title"]
+    pdf.cell(42, 8, title, align="R")
 
     pdf.set_xy(text_x, 25)
     pdf.set_font("Helvetica", "", 10)
@@ -132,6 +135,9 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     fecha = (inv.get("issued_at") or inv.get("created_at") or "")[:10]
     pdf.set_xy(150, 30)
     pdf.cell(42, 5, f"Fecha: {fecha or date.today().isoformat()}", align="R")
+    if inv.get("operation_date"):
+        pdf.set_xy(150, 35)
+        pdf.cell(42, 5, f"Operación: {inv['operation_date']}", align="R")
 
     pdf.set_y(62 if verifactu_active else 40)
     pdf.set_draw_color(*brand)
@@ -156,6 +162,23 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
         recipient_data.append(recipient_address)
     if recipient_data:
         pdf.multi_cell(0, 5, "  |  ".join(recipient_data))
+    if is_rectifying:
+        original = db.get_invoice(inv.get("rectifies_invoice_id"), business_id)
+        reference = original.get("number") if original else None
+        pdf.ln(3)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(*brand)
+        pdf.cell(0, 5, f"FACTURA RECTIFICATIVA {invoice_type}",
+                 new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*MUTED)
+        details = []
+        if reference:
+            details.append(f"Rectifica la factura {reference}")
+        if inv.get("rectification_reason"):
+            details.append(f"Motivo: {inv['rectification_reason']}")
+        if details:
+            pdf.multi_cell(0, 5, "  |  ".join(details))
     pdf.ln(8)
 
     # --- Tabla de conceptos (cabecera según plantilla) ---
@@ -163,33 +186,57 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
         pdf.set_fill_color(*brand)
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(96, 9, "  Concepto", fill=True)
-        pdf.cell(26, 9, "Base", align="R", fill=True)
-        pdf.cell(26, 9, "IVA", align="R", fill=True)
-        pdf.cell(26, 9, "Total ", align="R", fill=True)
+        pdf.cell(72, 9, "  Concepto", fill=True)
+        pdf.cell(18, 9, "Cant.", align="R", fill=True)
+        pdf.cell(28, 9, "Precio", align="R", fill=True)
+        pdf.cell(18, 9, "IVA", align="R", fill=True)
+        pdf.cell(38, 9, "Total ", align="R", fill=True)
         pdf.ln(9)
     else:
         pdf.set_text_color(*brand)
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(96, 8, "Concepto")
-        pdf.cell(26, 8, "Base", align="R")
-        pdf.cell(26, 8, "IVA", align="R")
-        pdf.cell(26, 8, "Total", align="R")
+        pdf.cell(72, 8, "Concepto")
+        pdf.cell(18, 8, "Cant.", align="R")
+        pdf.cell(28, 8, "Precio", align="R")
+        pdf.cell(18, 8, "IVA", align="R")
+        pdf.cell(38, 8, "Total", align="R")
         pdf.ln(8)
         pdf.set_draw_color(*brand)
         pdf.line(18, pdf.get_y(), 192, pdf.get_y())
         pdf.ln(2)
 
-    pdf.set_text_color(*INK)
-    pdf.set_font(fam, "", 10)
-    pdf.cell(96, 9, ("  " if tpl["table_fill"] else "") + inv["concept"])
-    pdf.cell(26, 9, _eur(inv["base"]).replace(" EUR", ""), align="R")
-    pdf.cell(26, 9, f"{inv['vat_rate']:.0f}%", align="R")
-    pdf.cell(26, 9, _eur(inv["total"]).replace(" EUR", "") + (" " if tpl["table_fill"] else ""), align="R")
-    pdf.ln(9)
-    pdf.set_draw_color(*LINE)
-    pdf.line(18, pdf.get_y(), 192, pdf.get_y())
-    pdf.ln(6)
+    lines = inv.get("lines") or [{
+        "description": inv["concept"], "quantity": 1,
+        "unit_price": inv["base"], "discount_rate": 0,
+        "vat_rate": inv["vat_rate"], "total": inv["base"] + inv["vat_amount"],
+        "base": inv["base"], "vat_amount": inv["vat_amount"],
+    }]
+    for line in lines:
+        pdf.set_text_color(*INK)
+        pdf.set_font(fam, "", 9)
+        row_y = pdf.get_y()
+        pdf.set_xy(18, row_y)
+        description = line["description"]
+        if line.get("discount_rate"):
+            description += f" · dto. {line['discount_rate']:g}%"
+        pdf.multi_cell(
+            72, 5, ("  " if tpl["table_fill"] else "") + description
+        )
+        row_bottom = max(pdf.get_y(), row_y + 9)
+        pdf.set_xy(90, row_y)
+        pdf.cell(18, 9, f"{line['quantity']:g}", align="R")
+        pdf.cell(28, 9, _eur(line["unit_price"]).replace(" EUR", ""), align="R")
+        pdf.cell(18, 9, f"{line['vat_rate']:g}%", align="R")
+        pdf.cell(
+            38, 9,
+            _eur(line["total"]).replace(" EUR", "")
+            + (" " if tpl["table_fill"] else ""), align="R",
+        )
+        pdf.set_y(row_bottom)
+        pdf.set_draw_color(*LINE)
+        pdf.line(18, pdf.get_y(), 192, pdf.get_y())
+        pdf.ln(3)
+    pdf.ln(3)
 
     # --- Totales ---
     def total_row(label, value, bold=False, color=INK):
@@ -201,7 +248,12 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
                  new_x="LMARGIN", new_y="NEXT")
 
     total_row("Base imponible", inv["base"])
-    total_row(f"IVA ({inv['vat_rate']:.0f}%)", inv["vat_amount"])
+    tax_groups = {}
+    for line in lines:
+        rate = float(line["vat_rate"])
+        tax_groups[rate] = tax_groups.get(rate, 0) + float(line["vat_amount"])
+    for rate, amount in sorted(tax_groups.items()):
+        total_row(f"IVA ({rate:g}%)", amount)
     if inv.get("irpf_amount"):
         total_row(f"IRPF (-{inv['irpf_rate']:.0f}%)", -inv["irpf_amount"], color=MUTED)
     pdf.ln(1)
@@ -209,6 +261,8 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
 
     # --- Forma de pago (si el negocio la ha configurado) ---
     pay_lines = []
+    if inv.get("payment_method"):
+        pay_lines.append(f"Método:  {inv['payment_method']}")
     if biz.get("payment_iban"):
         pay_lines.append(f"Transferencia:  {biz['payment_iban']}")
     if biz.get("payment_bizum"):
@@ -224,6 +278,20 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
         pdf.set_text_color(*INK)
         for line in pay_lines:
             pdf.multi_cell(0, 5, line, new_x="LMARGIN", new_y="NEXT")
+
+    if inv.get("notes") or inv.get("legal_mention"):
+        pdf.ln(8)
+        pdf.set_font(fam, "B", 9)
+        pdf.set_text_color(*brand)
+        pdf.cell(0, 6, "NOTAS", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font(fam, "", 9)
+        pdf.set_text_color(*INK)
+        if inv.get("notes"):
+            pdf.multi_cell(0, 5, inv["notes"], new_x="LMARGIN", new_y="NEXT")
+        if inv.get("legal_mention"):
+            pdf.multi_cell(
+                0, 5, inv["legal_mention"], new_x="LMARGIN", new_y="NEXT"
+            )
 
     # --- Pie ---
     pdf.ln(10 if pay_lines else 14)

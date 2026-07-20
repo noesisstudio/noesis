@@ -531,9 +531,23 @@ def process_email_outbox(limit: int = 25) -> int:
         try:
             if not email_adapter.available():
                 raise RuntimeError("SMTP no está configurado.")
+            attachments = []
+            if item.get("entity_type") == "invoice":
+                from .invoice_pdf import build_invoice_pdf
+
+                invoice = db.get_invoice(item["entity_id"], item["business_id"])
+                if not invoice or invoice.get("status") == "borrador":
+                    raise RuntimeError("La factura adjunta no está emitida.")
+                payload = build_invoice_pdf(item["entity_id"], item["business_id"])
+                if not payload:
+                    raise RuntimeError("No se pudo generar el PDF de la factura.")
+                safe_number = str(invoice["number"]).replace("/", "-")
+                attachments.append(
+                    (f"factura_{safe_number}.pdf", payload, "application", "pdf")
+                )
             if not email_adapter.send_email(
                 item["to_email"], item["subject"], item["text_body"],
-                item.get("html_body"),
+                item.get("html_body"), attachments=attachments,
             ):
                 raise RuntimeError("El servidor SMTP no confirmó el envío.")
         except Exception as exc:  # noqa: BLE001 - la cola debe sobrevivir al proveedor
@@ -553,6 +567,11 @@ def process_email_outbox(limit: int = 25) -> int:
             continue
         sent_at = datetime.now().isoformat(timespec="seconds")
         db.mark_email_sent(item["id"], sent_at)
+        if item.get("entity_type") == "invoice":
+            db.record_invoice_communication(
+                item["entity_id"], item["business_id"], "entrega_enviada",
+                details=f"correo={item['to_email']}",
+            )
         processed += 1
     return processed
 
@@ -565,6 +584,7 @@ def process_verifactu_outbox(limit: int = 25) -> int:
         return 0
     db.enqueue_missing_verifactu_records()
     processed = 0
+    control_flow_until = None
     for _ in range(max(1, min(int(limit), 1000))):
         now = datetime.now()
         item = db.claim_next_verifactu_submission(
@@ -585,16 +605,37 @@ def process_verifactu_outbox(limit: int = 25) -> int:
                 updated_at=now.isoformat(timespec="seconds"),
             )
             break
-        if not db.subscription_allows_access(business):
+        integrity = db.verify_invoice_record_chain(
+            item["business_id"], issuer_nif=record["issuer_nif"]
+        )
+        if not integrity["valid"]:
+            error = (
+                "Anomalía de integridad Veri*Factu: el registro no se ha "
+                "remitido a la AEAT."
+            )
+            db.record_verifactu_anomaly(
+                item["business_id"],
+                invoice_id=item["invoice_id"],
+                record_id=(
+                    integrity.get("broken_at")
+                    if integrity.get("broken_record_type") == "alta"
+                    else item["record_id"]
+                ),
+                details=json.dumps(integrity, ensure_ascii=False),
+            )
             db.mark_verifactu_retry(
                 item["id"],
-                error="Suscripción inactiva: remisión pausada.",
+                error=error,
                 next_attempt_at=(
                     now + timedelta(seconds=config.VERIFACTU_RETRY_MAX_SECONDS)
                 ).isoformat(timespec="seconds"),
                 updated_at=now.isoformat(timespec="seconds"),
             )
-            continue
+            log.error("%s negocio=%s", error, item["business_id"])
+            break
+        db.record_verifactu_submission_attempt(
+            item["id"], now.isoformat(timespec="seconds")
+        )
         try:
             result = verifactu_client.submit_records(business, [record])
         except verifactu_client.VerifactuTransportError as exc:
@@ -632,6 +673,84 @@ def process_verifactu_outbox(limit: int = 25) -> int:
                 + timedelta(seconds=result.wait_seconds)
             ).isoformat(timespec="seconds")
             db.postpone_verifactu_submissions(until, completed_at)
+            db.postpone_verifactu_cancellations(until, completed_at)
+            control_flow_until = until
+            break
+    if control_flow_until:
+        return processed
+    remaining = max(0, max(1, min(int(limit), 1000)) - processed)
+    for _ in range(remaining):
+        now = datetime.now()
+        item = db.claim_next_verifactu_cancellation_submission(
+            now=now.isoformat(timespec="seconds"),
+            stale_before=(now - timedelta(minutes=5)).isoformat(timespec="seconds"),
+        )
+        if not item:
+            break
+        business = db.get_business(item["business_id"])
+        record = db.get_invoice_cancellation_record_by_id(
+            item["record_id"], item["business_id"]
+        )
+        if not business or not record:
+            db.mark_verifactu_cancellation_retry(
+                item["id"], error="No se encuentra el registro de anulación.",
+                next_attempt_at=(
+                    now + timedelta(seconds=config.VERIFACTU_RETRY_MAX_SECONDS)
+                ).isoformat(timespec="seconds"),
+                updated_at=now.isoformat(timespec="seconds"),
+            )
+            break
+        integrity = db.verify_invoice_record_chain(
+            item["business_id"], issuer_nif=record["issuer_nif"]
+        )
+        if not integrity["valid"]:
+            db.record_verifactu_anomaly(
+                item["business_id"], invoice_id=item["invoice_id"],
+                record_id=None, details=json.dumps(integrity, ensure_ascii=False),
+            )
+            db.mark_verifactu_cancellation_retry(
+                item["id"], error="Anomalía de integridad Veri*Factu.",
+                next_attempt_at=(
+                    now + timedelta(seconds=config.VERIFACTU_RETRY_MAX_SECONDS)
+                ).isoformat(timespec="seconds"),
+                updated_at=now.isoformat(timespec="seconds"),
+            )
+            break
+        db.record_verifactu_cancellation_attempt(
+            item["id"], now.isoformat(timespec="seconds")
+        )
+        try:
+            result = verifactu_client.submit_records(business, [record])
+        except verifactu_client.VerifactuTransportError as exc:
+            delay = min(
+                config.VERIFACTU_RETRY_MAX_SECONDS,
+                config.VERIFACTU_RETRY_BASE_SECONDS
+                * (2 ** max(0, int(item["attempts"]) - 1)),
+            )
+            db.mark_verifactu_cancellation_retry(
+                item["id"], error=str(exc),
+                next_attempt_at=(now + timedelta(seconds=delay)).isoformat(
+                    timespec="seconds"
+                ),
+                updated_at=now.isoformat(timespec="seconds"),
+            )
+            break
+        completed_at = datetime.now().isoformat(timespec="seconds")
+        db.mark_verifactu_cancellation_result(
+            item["id"], status=result.status, csv=result.csv,
+            global_status=result.global_status, error_code=result.error_code,
+            error_description=result.error_description,
+            response=result.raw_response, wait_seconds=result.wait_seconds,
+            completed_at=completed_at,
+        )
+        processed += 1
+        if result.wait_seconds:
+            until = (
+                datetime.fromisoformat(completed_at)
+                + timedelta(seconds=result.wait_seconds)
+            ).isoformat(timespec="seconds")
+            db.postpone_verifactu_submissions(until, completed_at)
+            db.postpone_verifactu_cancellations(until, completed_at)
             break
     return processed
 
@@ -639,6 +758,11 @@ def process_verifactu_outbox(limit: int = 25) -> int:
 def run_daily_backup() -> None:
     if db.claim_scheduled_run(f"backup:{datetime.now():%Y-%m-%d}"):
         backups.run_backup()
+
+
+def process_recurring_invoices() -> int:
+    """Genera los vencimientos recurrentes una sola vez y deja trazabilidad."""
+    return len(db.process_due_recurring_invoices())
 
 
 def start_scheduler() -> BackgroundScheduler:
@@ -718,6 +842,14 @@ def start_scheduler() -> BackgroundScheduler:
         "interval",
         seconds=15,
         id="verifactu-outbox",
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        process_recurring_invoices,
+        "cron",
+        minute=2,
+        id="recurring-invoices",
         max_instances=1,
         coalesce=True,
     )

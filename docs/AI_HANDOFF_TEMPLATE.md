@@ -11,7 +11,7 @@
 
 - **De → para:** <modelo que entrega> → <modelo que recibe>
 - **Fecha:** AAAA-MM-DD
-- **Rama:** `claude/<tarea>` o `codex/<tarea>` (nunca `main` directa)
+- **Git:** `main` actualizado y limpio, o rama/PR si el founder la pidió
 - **Nivel de confianza del que entrega:** alto / medio / bajo — <por qué>
 - **¿Requiere revisión antes de implementar?** sí / no — <de quién>
 

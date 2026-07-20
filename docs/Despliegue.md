@@ -1,13 +1,14 @@
 # Despliegue 24/7
 
-Objetivo: tener **bynoesis.com** online, con HTTPS, para enseñarlo a autónomos e
+Objetivo: operar **app.bynoesis.com** online, con HTTPS, para autónomos e
 inversores. Ver fases en [[Roadmap]].
 
 ## Recomendación: Railway
 
-Por qué Railway sobre Render para empezar: arranque más simple desde el repo de
-GitHub, **volumen persistente** barato (clave para que no se borren los datos) y
-escala bien al principio. Coste estimado: ~5 €/mes.
+Railway es la plataforma configurada en el repositorio: despliega desde GitHub,
+permite Postgres y volumen persistente y ejecuta el pre-deploy definido. El coste
+vigente no se fija aquí porque depende del consumo y cambia; se controla en el
+proveedor y en [[Unit-economics-y-cerebro-interno]].
 
 ### Pasos (los hace el founder; el código ya está preparado)
 1. Crear cuenta en [railway.app](https://railway.app) con el GitHub de Noesis.
@@ -16,7 +17,7 @@ escala bien al principio. Coste estimado: ~5 €/mes.
    Uvicorn y usa `/ready` como healthcheck.
 4. **Variables de entorno** (Settings → Variables):
    - `NOESIS_SECRET` → una cadena larga y aleatoria (firma las sesiones; **obligatoria**).
-   - `NOESIS_BASE_URL` → `https://bynoesis.com` cuando el dominio propio esté
+   - `NOESIS_BASE_URL` → `https://app.bynoesis.com` cuando el dominio propio esté
      conectado. Mientras tanto se usa automáticamente `RAILWAY_PUBLIC_DOMAIN`.
    - `HOST` → `0.0.0.0`
    - `DATABASE_URL` → referencia `${{Postgres.DATABASE_URL}}` del servicio Postgres.
@@ -32,24 +33,22 @@ escala bien al principio. Coste estimado: ~5 €/mes.
      `STRIPE_PRICE_PREMIUM_ANNUAL`
      (guía paso a paso en la sección "Activar Stripe" de abajo).
    - Email (SMTP): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
-   - Facturación legal: `HOLDED_API_KEY` (cuando se active Verifactu vía Holded).
+   - Facturación legal nativa: variables `NOESIS_VERIFACTU_*` y certificado/clave
+     indicados en [[Conectar-APIs]]. Noesis no delega la facturación en otro SaaS.
    - `PORT` lo inyecta Railway automáticamente.
 5. **Volumen persistente**: se mantiene montado en `/data` para documentos, modelos
    y la copia histórica de SQLite. La base operativa vive en Postgres.
-6. **Dominio**: Settings → Networking → Custom Domain → `bynoesis.com`, y apuntar el
+6. **Dominio**: Settings → Networking → Custom Domain → `app.bynoesis.com`, y apuntar el
    DNS según indique Railway. HTTPS es automático.
 
-## Activación de Postgres (solo tras aprobar el PR)
-1. En el servicio web, pestaña **Backups**, crea y bloquea un backup manual del
-   volumen que contiene `/data/noesis.db`. No cambies aún ninguna variable.
-2. Añade un servicio PostgreSQL gestionado al mismo proyecto y entorno. Debe empezar
-   limpio: esta migración no importa datos reales automáticamente.
-3. En el servicio web, define `DATABASE_URL=${{Postgres.DATABASE_URL}}`. Conserva el
-   volumen y `NOESIS_DB_PATH=/data/noesis.db` hasta verificar la transición.
-4. Fusiona el PR. El `preDeployCommand` ejecuta
-   `python -m noesis.migrations upgrade`; si falla, Railway no inicia el despliegue.
-5. Comprueba `/health`, `/ready`, alta/login y aislamiento con dos negocios. Solo
-   después retira la variable SQLite que ya no haga falta.
+## Verificación de Postgres
+1. Confirmar que `DATABASE_URL` referencia el servicio PostgreSQL del entorno.
+2. Antes de una migración sensible, conservar copia externa y punto de restauración.
+3. El `preDeployCommand` ejecuta `python -m noesis.migrations upgrade`; si falla,
+   Railway no debe iniciar el nuevo despliegue.
+4. Comprobar `/health`, `/ready`, alta/login y aislamiento con dos negocios.
+5. Mantener SQLite únicamente para local o recuperación histórica; no ejecutar dos
+   bases operativas en paralelo.
 
 Para desarrollo y tests, si `DATABASE_URL` está vacía se usa SQLite. Sus migraciones
 se aplican con `python -m noesis.migrations upgrade`; se pueden revertir con
@@ -78,14 +77,16 @@ Solo falta la configuración en stripe.com:
 2. **Productos**: Catálogo → añadir los tres productos y dos precios recurrentes en
    EUR para cada uno. Mensual: Autónomo 29 €, Negocio 49 €, Sin Límites 99 €.
    Anual: 319 €, 539 € y 1.089 € respectivamente (12 meses por el precio de 11).
-   Todos se comunican + IVA. Copiar los seis `price_...`.
+   Todos se comunican + IVA. Copiar los seis `price_...`. **Antes de live:** el
+   Checkout actual no activa `automatic_tax`; resolver y probar el tratamiento de
+   IVA según [[Conectar-APIs]].
 3. **Variables en Railway** (servicio web → Variables):
    - `STRIPE_SECRET_KEY` → clave secreta de producción (`sk_live_...`).
    - `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` → precios mensuales.
    - `STRIPE_PRICE_AUTONOMO_ANNUAL`, `STRIPE_PRICE_PRO_ANNUAL`,
      `STRIPE_PRICE_PREMIUM_ANNUAL` → precios anuales.
 4. **Webhook**: Desarrolladores → Webhooks → añadir endpoint
-   `https://bynoesis.com/webhook/stripe` con los eventos `checkout.session.completed`,
+   `https://app.bynoesis.com/webhook/stripe` con los eventos `checkout.session.completed`,
    `customer.subscription.created`, `customer.subscription.updated`,
    `customer.subscription.deleted`, `invoice.paid` e `invoice.payment_failed`.
    Copiar el "signing secret" (`whsec_...`) a `STRIPE_WEBHOOK_SECRET`.
@@ -97,6 +98,9 @@ Solo falta la configuración en stripe.com:
 
 Sin estas variables, el alta sigue funcionando en modo manual (el interés queda
 registrado como evento `checkout_started` y se activa el plan a mano).
+
+La guía completa de todos los proveedores, callbacks y pruebas está en
+[[Conectar-APIs]].
 
 ## Seguridad ya implementada
 - Aislamiento por `business_id` en BD, rutas `/b/` y `/api/`, y onboarding.

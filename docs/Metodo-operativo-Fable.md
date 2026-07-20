@@ -8,7 +8,7 @@
 > lee [`AGENTS.md`](../AGENTS.md) y este.
 >
 > Se actualiza cuando cambia el criterio general (ver §9, protocolo de continuidad).
-> Última actualización: **2026-07-08**.
+> Última revisión de continuidad: **2026-07-20**.
 >
 > **Dirección de producto y diseño (fijada 2026-07-08):** la piel y el lenguaje de
 > Noesis se rigen por `docs/design/` — [`PRODUCT_PRINCIPLES.md`](design/PRODUCT_PRINCIPLES.md)
@@ -162,7 +162,9 @@ marca visiblemente como demo. En producción, jamás mock data sin marcar.
   la fase 0 de 2026-07-07, cuatro ramas "pendientes de revisión" según los docs
   resultaron estar ya fusionadas en `main`. Verificar con `git`, no con memoria.
 - **No operar git sin `git branch --show-current`.** Ya causó confusión una vez
-  (2026-06-30). `main` auto-despliega en Railway: nada llega a `main` sin tests.
+  (2026-06-30). Desde la decisión del founder de 2026-07-20 se trabaja sobre
+  `main`: primero `git pull --ff-only`, árbol limpio, un solo escritor y nada se
+  empuja sin pruebas. Cada cambio queda en [[Registro-cambios]].
 - **No fusionar stacks ajenos.** El proyecto FacturAI se usa como referencia y se
   portan piezas al estilo propio (ver [[Decisiones]]); traer su SQLAlchemy/JWT
   habría creado dos formas de hacer todo.
@@ -191,11 +193,10 @@ Opus revisa con criterio de negocio. Estado de las decisiones (detalle y fechas 
   cliente sin contraseña; piloto primero con plataforma por capas; FacturAI como
   referencia (no fusión); vault de documentación = `docs/` (no duplicar en otra
   estructura); fiscalidad siempre con revisión humana.
-- **Abiertas que requieren criterio de negocio** (no técnicas): cuándo encender el
-  gasto de WhatsApp Business real; si el catalán es imprescindible para el MVP;
-  si la gestoría interactiva (con cuentas y permisos) se adelanta o espera al
-  feedback del piloto; si Telegram aporta al cliente objetivo o solo abarata el
-  canal interno.
+- **Abiertas que requieren criterio de negocio**: proveedor avanzado del piloto,
+  tratamiento del IVA en Stripe, momento de i18n completa, profundidad del portal
+  de gestoría y modelo comercial de voz. La lista viva y sus propuestas están solo
+  en [[Preguntas-abiertas]]. WhatsApp real ya es una tarea P0, no una decisión.
 - **Dónde está el valor defendible**: la combinación documento→factura→cobro→
   gestoría con trazabilidad. Los competidores tienen piezas; la orquestación con
   asistente es la diferencia. Ver [[Competencia]].
@@ -210,13 +211,15 @@ Opus revisa con criterio de negocio. Estado de las decisiones (detalle y fechas 
 
 Codex ejecuta sin desviarse de la arquitectura. Reglas de trabajo:
 
-- **Antes de tocar código**: leer `AGENTS.md`, [[Estado-traspaso-MVP]] y la tarea
-  con sus criterios de aceptación. Verificar rama (`codex/<tarea>`), nunca `main`.
-- **Qué existe y dónde** (mapa completo en [[Estado-traspaso-MVP]] §2): rutas en
-  `web/server.py` (2.597 líneas, 145 rutas — pendiente de partir en routers, ver
-  el handoff `docs/handoffs/2026-07-08-partir-server-en-routers.md`), datos en
-  `db.py` + `migrations.py` (esquema v18), documentos en `documents/`, IA en
-  `agent.py` / `nlu.py` / `web/chat.py`, adaptadores en `adapters/`.
+- **Antes de tocar código**: leer `AGENTS.md`, [[Estado-actual-main]],
+  [[Tareas-vivas]] y la tarea
+  con sus criterios de aceptación. Verificar que se está en `main`, actualizado y
+  limpio, salvo que el founder haya pedido expresamente una rama/PR.
+- **Qué existe y dónde**: el mapa vivo es [[Mapa-codigo]]; la versión de esquema y
+  las pruebas están únicamente en [`project-state.json`](project-state.json). Las
+  rutas viven en `web/routers/`, los datos en `db.py` + `migrations.py`, documentos
+  en `documents/`, IA en `agent.py` / `nlu.py` / `web/chat.py` y proveedores en
+  `adapters/`.
 - **Qué NO tocar sin tarea explícita**: tablas append-only (`invoice_records`,
   `worker_clockins`, eventos Verifactu), `web/auth.py`, la cadena de huellas de
   `verifactu.py`, y cualquier `DROP`/renombrado de columnas.
@@ -252,9 +255,11 @@ Al cerrar una iteración importante, actualizar **solo lo que haya cambiado**:
 | El criterio general de trabajo | Este documento |
 | Una decisión de producto/arquitectura | [[Decisiones]] (la más reciente arriba, con el porqué) |
 | La arquitectura o el modelo de datos | [[Arquitectura]] |
-| Prioridades o fases | [[Roadmap]] |
-| El estado de lo hecho/desplegado | [[Estado-traspaso-MVP]] |
+| Prioridades inmediatas | [[Tareas-vivas]] |
+| Dirección por etapas | [[Roadmap]] |
+| Estado verificable | `project-state.json` + [[Estado-actual-main]] |
 | Dudas pendientes del founder | [[Preguntas-abiertas]] |
+| Credenciales o pruebas externas | [[Conectar-APIs]] |
 | Hay traspaso a otro modelo | Nuevo handoff desde la plantilla |
 
 Regla anti-ruido: no duplicar contenido entre documentos; enlazar. Un dato en dos

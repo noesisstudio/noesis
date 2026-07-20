@@ -505,10 +505,13 @@ class PlatformTestCase(unittest.TestCase):
         invoice = db.add_invoice(
             client["id"], "Trabajo", 100, business_id=self.bid
         )
-        db.mark_invoice_sent(
-            invoice["id"], "EXT-1", due_date="2020-01-01",
-            business_id=self.bid,
-        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE invoices SET source='importada', external_number='EXT-1', "
+                "number='EXT-1', status='enviada', issued_at='2020-01-01', "
+                "due_date='2020-01-01' WHERE id=? AND business_id=?",
+                (invoice["id"], self.bid),
+            )
         insight = db.client_insights(self.bid)[0]
         self.assertEqual(insight["level"], "alto")
         self.assertIn("reclamar", insight["headline"].lower())
@@ -528,10 +531,7 @@ class PlatformTestCase(unittest.TestCase):
             )
         with self.assertRaises(ValueError):
             db.issue_invoice(invoice["id"], self.bid)
-        with self.assertRaises(ValueError):
-            db.mark_invoice_sent(
-                invoice["id"], "F-2026-999", business_id=self.bid
-            )
+        self.assertFalse(hasattr(db, "mark_invoice_sent"))
 
     # -------------------------------------------------------- RGPD y migración
     def test_export_and_cascade_cover_new_tables(self):
