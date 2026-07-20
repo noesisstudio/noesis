@@ -2695,9 +2695,10 @@ CREATE INDEX IF NOT EXISTS idx_verifactu_cancellation_due
     conn.execute(
         "UPDATE invoices SET series_id=(SELECT s.id FROM invoice_series s "
         "WHERE s.business_id=invoices.business_id AND s.is_default=TRUE AND "
-        "s.document_type=CASE WHEN invoices.invoice_type LIKE 'R%' THEN 'rectifying' "
+        "s.document_type=CASE WHEN invoices.invoice_type LIKE ? THEN 'rectifying' "
         "WHEN invoices.invoice_type='F2' THEN 'simplified' ELSE 'invoice' END) "
-        "WHERE series_id IS NULL"
+        "WHERE series_id IS NULL",
+        ("R%",),
     )
     conn.execute(
         "INSERT INTO invoice_lines "

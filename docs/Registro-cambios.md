@@ -55,3 +55,22 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   producción sin copia, auditoría y plan específico.
 - **Estado de publicación:** candidato local verificado; PR de consolidación
   solicitado, todavía no desplegado al escribir esta entrada.
+
+## 2026-07-20 17:46 — compatibilidad PostgreSQL de la migración 28
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el fallo del guardián PostgreSQL detectado en el PR #48.
+- **Áreas y archivos:** `src/noesis/migrations.py`, `tests/test_platform.py`.
+- **Cambios de datos/migración:** no cambia el esquema ni los datos resultantes;
+  parametriza el patrón `R%` usado al clasificar facturas rectificativas durante la
+  migración 28.
+- **Pruebas ejecutadas:** prueba unitaria específica de migraciones y repetición del
+  CI PostgreSQL del PR.
+- **Dependencias o validaciones externas:** GitHub Actions con PostgreSQL 16.
+- **Riesgo/punto probable de fallo:** únicamente la traducción de placeholders entre
+  SQLite y psycopg.
+- **Diagnóstico y rollback:** el error original era `psycopg.ProgrammingError` por un
+  `%` literal interpretado como placeholder. Revertir este commit recuperaría el
+  fallo; no requiere rollback de base de datos.
+- **Estado de publicación:** corrección preparada en el PR #48, pendiente de CI al
+  escribir esta entrada.

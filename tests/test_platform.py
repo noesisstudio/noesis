@@ -77,6 +77,25 @@ class PostgresDDLOrderTest(unittest.TestCase):
         finally:
             migrations._column_names = original
 
+    def test_migrations_parameterise_like_wildcards_for_psycopg(self):
+        """psycopg interpreta un % literal como placeholder aunque no haya params."""
+        original = migrations._column_names
+        migrations._column_names = lambda conn, table: []
+        try:
+            for version, name, upgrade, _down in migrations.MIGRATIONS:
+                if version < 17:
+                    continue
+                conn = _RecordingPGConn()
+                upgrade(conn)
+                for stmt in conn.statements:
+                    self.assertIsNone(
+                        re.search(r"LIKE\s+'[^']*%[^']*'", stmt, re.IGNORECASE),
+                        f"Migración {version} ({name}): wildcard LIKE literal no "
+                        "parametrizado; psycopg lo interpreta como placeholder.",
+                    )
+        finally:
+            migrations._column_names = original
+
 
 class PlatformTestCase(unittest.TestCase):
     def setUp(self):
