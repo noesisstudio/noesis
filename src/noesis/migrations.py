@@ -718,7 +718,8 @@ END;
 CREATE OR REPLACE FUNCTION noesis_clockins_append_only()
 RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'los registros de jornada son inalterables';
+    RAISE EXCEPTION 'los registros de jornada son inalterables'
+        USING ERRCODE = '23514';
 END;
 $$ LANGUAGE plpgsql
 """
@@ -843,7 +844,8 @@ END;
 CREATE OR REPLACE FUNCTION noesis_invoice_records_append_only()
 RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'los registros VeriFactu son inalterables';
+    RAISE EXCEPTION 'los registros VeriFactu son inalterables'
+        USING ERRCODE = '23514';
 END;
 $$ LANGUAGE plpgsql
 """
@@ -2262,6 +2264,551 @@ def _downgrade_onboarding_operations(conn) -> None:
     # SQLite conserva la columna para evitar reconstruir businesses.
 
 
+_IMMUTABLE_INVOICE_FIELDS = (
+    "number", "client_id", "concept", "base", "vat_rate", "vat_amount",
+    "irpf_rate", "irpf_amount", "total", "due_date", "issued_at",
+    "issuer_name", "issuer_nif", "issuer_address", "recipient_name",
+    "recipient_nif", "recipient_address", "invoice_type",
+    "rectifies_invoice_id", "rectification_type", "rectification_reason",
+    "source", "external_number", "operation_date", "series_id", "notes",
+    "payment_method", "legal_mention", "currency", "created_at",
+)
+
+
+def _install_issued_invoice_integrity(conn) -> None:
+    """Protege en BD la numeración y el contenido de una factura emitida."""
+    if conn.dialect == "sqlite":
+        changed = " OR ".join(
+            f"OLD.{field} IS NOT NEW.{field}"
+            for field in _IMMUTABLE_INVOICE_FIELDS
+        )
+        conn.executescript(
+            f"""
+CREATE TRIGGER IF NOT EXISTS invoices_issued_immutable_update
+BEFORE UPDATE ON invoices
+WHEN OLD.status <> 'borrador' AND ({changed})
+BEGIN
+    SELECT RAISE(ABORT, 'una factura emitida no puede alterarse');
+END;
+CREATE TRIGGER IF NOT EXISTS invoices_issued_immutable_delete
+BEFORE DELETE ON invoices
+WHEN OLD.status <> 'borrador'
+BEGIN
+    SELECT RAISE(ABORT, 'una factura emitida no puede borrarse');
+END;
+"""
+        )
+        return
+
+    changed = " OR ".join(
+        f"OLD.{field} IS DISTINCT FROM NEW.{field}"
+        for field in _IMMUTABLE_INVOICE_FIELDS
+    )
+    conn.execute(
+        f"""
+CREATE OR REPLACE FUNCTION noesis_issued_invoice_integrity()
+RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        IF OLD.status <> 'borrador' THEN
+            RAISE EXCEPTION 'una factura emitida no puede borrarse'
+                USING ERRCODE = '23514';
+        END IF;
+        RETURN OLD;
+    END IF;
+    IF OLD.status <> 'borrador' AND ({changed}) THEN
+        RAISE EXCEPTION 'una factura emitida no puede alterarse'
+            USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql
+"""
+    )
+    conn.execute("DROP TRIGGER IF EXISTS invoices_issued_integrity ON invoices")
+    conn.execute(
+        "CREATE TRIGGER invoices_issued_integrity BEFORE UPDATE OR DELETE "
+        "ON invoices FOR EACH ROW EXECUTE FUNCTION "
+        "noesis_issued_invoice_integrity()"
+    )
+
+
+def _upgrade_invoice_legal_integrity(conn) -> None:
+    """Cierra vías antiguas para duplicar o reescribir facturas emitidas."""
+    duplicate = conn.execute(
+        "SELECT business_id, number, COUNT(*) AS total FROM invoices "
+        "WHERE number IS NOT NULL GROUP BY business_id, number "
+        "HAVING COUNT(*) > 1 LIMIT 1"
+    ).fetchone()
+    if duplicate:
+        raise RuntimeError(
+            "Hay numeración de factura duplicada; revisa el negocio "
+            f"{duplicate['business_id']} y el número {duplicate['number']} "
+            "antes de aplicar la migración."
+        )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_business_number_unique "
+        "ON invoices(business_id, number) WHERE number IS NOT NULL"
+    )
+    _install_issued_invoice_integrity(conn)
+
+
+def _downgrade_invoice_legal_integrity(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_delete")
+    else:
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_integrity ON invoices")
+        conn.execute("DROP FUNCTION IF EXISTS noesis_issued_invoice_integrity()")
+    conn.execute("DROP INDEX IF EXISTS idx_invoices_business_number_unique")
+
+
+def _install_invoice_lines_integrity(conn) -> None:
+    """Las líneas de una factura emitida son tan inmutables como su cabecera."""
+    if conn.dialect == "sqlite":
+        conn.executescript(
+            """
+CREATE TRIGGER IF NOT EXISTS invoice_lines_issued_insert
+BEFORE INSERT ON invoice_lines
+WHEN EXISTS (
+    SELECT 1 FROM invoices i
+    WHERE i.id=NEW.invoice_id AND i.business_id=NEW.business_id
+      AND i.status <> 'borrador'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'las líneas de una factura emitida no pueden alterarse');
+END;
+CREATE TRIGGER IF NOT EXISTS invoice_lines_issued_update
+BEFORE UPDATE ON invoice_lines
+WHEN EXISTS (
+    SELECT 1 FROM invoices i
+    WHERE i.id=OLD.invoice_id AND i.business_id=OLD.business_id
+      AND i.status <> 'borrador'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'las líneas de una factura emitida no pueden alterarse');
+END;
+CREATE TRIGGER IF NOT EXISTS invoice_lines_issued_delete
+BEFORE DELETE ON invoice_lines
+WHEN EXISTS (
+    SELECT 1 FROM invoices i
+    WHERE i.id=OLD.invoice_id AND i.business_id=OLD.business_id
+      AND i.status <> 'borrador'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'las líneas de una factura emitida no pueden alterarse');
+END;
+"""
+        )
+        return
+    conn.execute(
+        """
+CREATE OR REPLACE FUNCTION noesis_invoice_lines_integrity()
+RETURNS trigger AS $$
+DECLARE target_business BIGINT;
+DECLARE target_invoice BIGINT;
+BEGIN
+    target_business := CASE WHEN TG_OP = 'DELETE' THEN OLD.business_id ELSE NEW.business_id END;
+    target_invoice := CASE WHEN TG_OP = 'DELETE' THEN OLD.invoice_id ELSE NEW.invoice_id END;
+    IF EXISTS (
+        SELECT 1 FROM invoices i
+        WHERE i.id=target_invoice AND i.business_id=target_business
+          AND i.status <> 'borrador'
+    ) THEN
+        RAISE EXCEPTION 'las líneas de una factura emitida no pueden alterarse'
+            USING ERRCODE = '23514';
+    END IF;
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql
+"""
+    )
+    conn.execute("DROP TRIGGER IF EXISTS invoice_lines_integrity ON invoice_lines")
+    conn.execute(
+        "CREATE TRIGGER invoice_lines_integrity BEFORE INSERT OR UPDATE OR DELETE "
+        "ON invoice_lines FOR EACH ROW EXECUTE FUNCTION "
+        "noesis_invoice_lines_integrity()"
+    )
+
+
+def _expand_professional_invoice_events(conn) -> None:
+    allowed = (
+        "'alta', 'rectificacion', 'emision', 'cobro', 'exportacion', 'anomalia', 'remision', "
+        "'aceptacion', 'rechazo', 'entrega_preparada', 'entrega_enviada', "
+        "'visualizacion', 'anulacion'"
+    )
+    if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoice_events_append_only_update")
+        conn.execute("DROP TRIGGER IF EXISTS invoice_events_append_only_delete")
+        conn.execute("DROP INDEX IF EXISTS idx_invoice_events_business")
+        conn.executescript(
+            f"""
+CREATE TABLE invoice_events_v33 (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    invoice_id  INTEGER,
+    record_id   INTEGER,
+    event_type  TEXT NOT NULL CHECK (event_type IN ({allowed})),
+    details     TEXT,
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id),
+    FOREIGN KEY (business_id, record_id)
+        REFERENCES invoice_records(business_id, id)
+);
+INSERT INTO invoice_events_v33
+    (id, business_id, invoice_id, record_id, event_type, details, created_at)
+SELECT id, business_id, invoice_id, record_id, event_type, details, created_at
+FROM invoice_events;
+DROP TABLE invoice_events;
+ALTER TABLE invoice_events_v33 RENAME TO invoice_events;
+"""
+        )
+    else:
+        conn.execute(
+            "ALTER TABLE invoice_events DROP CONSTRAINT IF EXISTS "
+            "invoice_events_event_type_check"
+        )
+        conn.execute(
+            "ALTER TABLE invoice_events ADD CONSTRAINT "
+            f"invoice_events_event_type_check CHECK (event_type IN ({allowed}))"
+        )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_invoice_events_business "
+        "ON invoice_events(business_id, created_at, id)"
+    )
+    _install_invoice_append_only(conn)
+
+
+def _upgrade_professional_invoicing(conn) -> None:
+    """Líneas, series legales, metadatos y programación de facturas."""
+    t = _types(conn.dialect)
+    columns = _column_names(conn, "invoices")
+    additions = (
+        ("series_id", t["ref"]),
+        ("operation_date", "TEXT"),
+        ("notes", "TEXT"),
+        ("payment_method", "TEXT"),
+        ("legal_mention", "TEXT"),
+        ("currency", "TEXT NOT NULL DEFAULT 'EUR'"),
+        ("internal_note", "TEXT"),
+    )
+    for column, definition in additions:
+        if column not in columns:
+            conn.execute(f"ALTER TABLE invoices ADD COLUMN {column} {definition}")
+    record_columns = _column_names(conn, "invoice_records")
+    if "operation_date" not in record_columns:
+        conn.execute("ALTER TABLE invoice_records ADD COLUMN operation_date TEXT")
+    email_columns = _column_names(conn, "email_outbox")
+    if "entity_type" not in email_columns:
+        conn.execute("ALTER TABLE email_outbox ADD COLUMN entity_type TEXT")
+    if "entity_id" not in email_columns:
+        conn.execute(f"ALTER TABLE email_outbox ADD COLUMN entity_id {t['ref']}")
+
+    conn.executescript(
+        f"""
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_records_business_id
+    ON invoice_records(business_id, id);
+CREATE TABLE IF NOT EXISTS invoice_series (
+    id              {t["id"]},
+    business_id     {t["ref"]} NOT NULL REFERENCES businesses(id),
+    code            TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    document_type   TEXT NOT NULL CHECK (
+                        document_type IN ('invoice', 'rectifying', 'simplified')
+                    ),
+    prefix_template TEXT NOT NULL,
+    padding         INTEGER NOT NULL DEFAULT 4 CHECK (padding BETWEEN 2 AND 8),
+    is_default      {t["boolean"]} NOT NULL DEFAULT FALSE,
+    active          {t["boolean"]} NOT NULL DEFAULT TRUE,
+    created_at      {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (business_id, code)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_series_default
+    ON invoice_series(business_id, document_type) WHERE is_default=TRUE;
+
+CREATE TABLE IF NOT EXISTS invoice_lines (
+    id            {t["id"]},
+    business_id   {t["ref"]} NOT NULL,
+    invoice_id    {t["ref"]} NOT NULL,
+    position      INTEGER NOT NULL,
+    description   TEXT NOT NULL,
+    quantity      {t["real"]} NOT NULL,
+    unit_price    {t["real"]} NOT NULL,
+    discount_rate {t["real"]} NOT NULL DEFAULT 0,
+    vat_rate      {t["real"]} NOT NULL,
+    base          {t["real"]} NOT NULL,
+    vat_amount    {t["real"]} NOT NULL,
+    total         {t["real"]} NOT NULL,
+    created_at    {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, invoice_id, position),
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_lines_invoice
+    ON invoice_lines(business_id, invoice_id, position);
+
+CREATE TABLE IF NOT EXISTS recurring_invoices (
+    id              {t["id"]},
+    business_id     {t["ref"]} NOT NULL REFERENCES businesses(id),
+    client_id       {t["ref"]} NOT NULL,
+    name            TEXT NOT NULL,
+    cadence         TEXT NOT NULL CHECK (
+                        cadence IN ('weekly', 'monthly', 'quarterly', 'annual')
+                    ),
+    interval_count  INTEGER NOT NULL DEFAULT 1 CHECK (interval_count BETWEEN 1 AND 24),
+    next_run_on     TEXT NOT NULL,
+    ends_on         TEXT,
+    auto_issue      {t["boolean"]} NOT NULL DEFAULT FALSE,
+    status          TEXT NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active', 'paused', 'ended')),
+    lines_json      TEXT NOT NULL,
+    irpf_rate       {t["real"]} NOT NULL DEFAULT 0,
+    invoice_type    TEXT NOT NULL DEFAULT 'F1',
+    series_id       {t["ref"]},
+    notes           TEXT,
+    payment_method  TEXT,
+    last_generated_at {t["timestamp"]},
+    created_at      {t["timestamp"]} NOT NULL,
+    updated_at      {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    FOREIGN KEY (business_id, client_id)
+        REFERENCES clients(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_recurring_invoices_due
+    ON recurring_invoices(status, next_run_on, business_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recurring_invoices_business_id
+    ON recurring_invoices(business_id, id);
+
+CREATE TABLE IF NOT EXISTS recurring_invoice_runs (
+    id              {t["id"]},
+    business_id     {t["ref"]} NOT NULL,
+    recurring_id    {t["ref"]} NOT NULL,
+    scheduled_for   TEXT NOT NULL,
+    invoice_id      {t["ref"]},
+    status          TEXT NOT NULL DEFAULT 'processing'
+                    CHECK (status IN ('processing', 'completed', 'error')),
+    error           TEXT,
+    created_at      {t["timestamp"]} NOT NULL,
+    completed_at    {t["timestamp"]},
+    UNIQUE (business_id, recurring_id, scheduled_for),
+    FOREIGN KEY (business_id, recurring_id)
+        REFERENCES recurring_invoices(business_id, id),
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_recurring_invoice_runs
+    ON recurring_invoice_runs(business_id, recurring_id, scheduled_for);
+
+CREATE TABLE IF NOT EXISTS invoice_cancellation_records (
+    id                       {t["id"]},
+    business_id              {t["ref"]} NOT NULL REFERENCES businesses(id),
+    invoice_id               {t["ref"]} NOT NULL,
+    original_record_id       {t["ref"]} NOT NULL,
+    record_type              TEXT NOT NULL DEFAULT 'anulacion'
+                             CHECK (record_type='anulacion'),
+    record_version           TEXT NOT NULL,
+    issuer_nif               TEXT NOT NULL,
+    issuer_name              TEXT NOT NULL,
+    invoice_number           TEXT NOT NULL,
+    issue_date               TEXT NOT NULL,
+    reason                   TEXT NOT NULL,
+    generated_at             TEXT NOT NULL,
+    previous_record_type     TEXT,
+    previous_record_id       {t["ref"]},
+    previous_issuer_nif      TEXT,
+    previous_invoice_number  TEXT,
+    previous_issue_date      TEXT,
+    previous_hash            TEXT,
+    hash_algorithm           TEXT NOT NULL,
+    hash_type                TEXT NOT NULL,
+    hash_spec_version        TEXT NOT NULL,
+    record_hash              TEXT NOT NULL,
+    producer_name            TEXT NOT NULL,
+    producer_nif             TEXT NOT NULL,
+    system_name              TEXT NOT NULL,
+    system_id                TEXT NOT NULL,
+    system_version           TEXT NOT NULL,
+    installation_id          TEXT NOT NULL,
+    created_at               TEXT NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (business_id, invoice_id),
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id),
+    FOREIGN KEY (business_id, original_record_id)
+        REFERENCES invoice_records(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_cancellations_chain
+    ON invoice_cancellation_records(business_id, issuer_nif, generated_at, id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_cancellations_business_id
+    ON invoice_cancellation_records(business_id, id);
+
+CREATE TABLE IF NOT EXISTS verifactu_cancellation_outbox (
+    id                    {t["id"]},
+    business_id           {t["ref"]} NOT NULL REFERENCES businesses(id),
+    invoice_id            {t["ref"]} NOT NULL,
+    record_id             {t["ref"]} NOT NULL,
+    status                TEXT NOT NULL DEFAULT 'pendiente'
+                          CHECK (status IN (
+                              'pendiente', 'enviado', 'aceptado',
+                              'aceptado_con_errores', 'rechazado'
+                          )),
+    attempts              INTEGER NOT NULL DEFAULT 0,
+    max_attempts          INTEGER NOT NULL DEFAULT 6,
+    next_attempt_at       {t["timestamp"]} NOT NULL,
+    locked_at             {t["timestamp"]},
+    sent_at               {t["timestamp"]},
+    completed_at          {t["timestamp"]},
+    aeat_csv              TEXT,
+    aeat_global_status    TEXT,
+    aeat_error_code       TEXT,
+    aeat_error_description TEXT,
+    aeat_response         TEXT,
+    wait_seconds          INTEGER NOT NULL DEFAULT 0,
+    last_error            TEXT,
+    created_at            {t["timestamp"]} NOT NULL,
+    updated_at            {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, record_id),
+    FOREIGN KEY (business_id, invoice_id)
+        REFERENCES invoices(business_id, id),
+    FOREIGN KEY (business_id, record_id)
+        REFERENCES invoice_cancellation_records(business_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_verifactu_cancellation_due
+    ON verifactu_cancellation_outbox(status, next_attempt_at);
+"""
+    )
+    now = datetime.now().isoformat(timespec="seconds")
+    defaults = (
+        ("GENERAL", "Facturas", "invoice", "{YYYY}/"),
+        ("RECT", "Rectificativas", "rectifying", "R{YYYY}/"),
+        ("TICKET", "Simplificadas", "simplified", "T{YYYY}/"),
+    )
+    for code, name, document_type, prefix in defaults:
+        conn.execute(
+            "INSERT INTO invoice_series "
+            "(business_id, code, name, document_type, prefix_template, padding, "
+            "is_default, active, created_at) "
+            "SELECT id, ?, ?, ?, ?, 4, TRUE, TRUE, ? FROM businesses WHERE TRUE "
+            "ON CONFLICT (business_id, code) DO NOTHING",
+            (code, name, document_type, prefix, now),
+        )
+    conn.execute(
+        "UPDATE invoices SET series_id=(SELECT s.id FROM invoice_series s "
+        "WHERE s.business_id=invoices.business_id AND s.is_default=TRUE AND "
+        "s.document_type=CASE WHEN invoices.invoice_type LIKE ? THEN 'rectifying' "
+        "WHEN invoices.invoice_type='F2' THEN 'simplified' ELSE 'invoice' END) "
+        "WHERE series_id IS NULL",
+        ("R%",),
+    )
+    conn.execute(
+        "INSERT INTO invoice_lines "
+        "(business_id, invoice_id, position, description, quantity, unit_price, "
+        "discount_rate, vat_rate, base, vat_amount, total, created_at) "
+        "SELECT i.business_id, i.id, 1, i.concept, 1, i.base, 0, i.vat_rate, "
+        "i.base, i.vat_amount, i.base+i.vat_amount, i.created_at FROM invoices i "
+        "WHERE NOT EXISTS (SELECT 1 FROM invoice_lines l WHERE "
+        "l.business_id=i.business_id AND l.invoice_id=i.id)"
+    )
+    _install_invoice_lines_integrity(conn)
+    if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_delete")
+    _install_issued_invoice_integrity(conn)
+    _expand_professional_invoice_events(conn)
+    if conn.dialect == "sqlite":
+        conn.executescript(
+            """
+CREATE TRIGGER IF NOT EXISTS invoice_cancellation_records_append_only_update
+BEFORE UPDATE ON invoice_cancellation_records
+BEGIN
+    SELECT RAISE(ABORT, 'los registros de anulación son inalterables');
+END;
+CREATE TRIGGER IF NOT EXISTS invoice_cancellation_records_append_only_delete
+BEFORE DELETE ON invoice_cancellation_records
+BEGIN
+    SELECT RAISE(ABORT, 'los registros de anulación son inalterables');
+END;
+CREATE TRIGGER IF NOT EXISTS invoice_cancellation_records_require_hash
+BEFORE INSERT ON invoice_cancellation_records
+WHEN NEW.record_hash IS NULL OR NEW.record_hash=''
+BEGIN
+    SELECT RAISE(ABORT, 'todo registro de anulación necesita huella');
+END;
+"""
+        )
+    else:
+        conn.execute(
+            """
+CREATE OR REPLACE FUNCTION noesis_invoice_cancellations_append_only()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'los registros de anulación son inalterables'
+        USING ERRCODE = '23514';
+END;
+$$ LANGUAGE plpgsql
+"""
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS invoice_cancellations_append_only "
+            "ON invoice_cancellation_records"
+        )
+        conn.execute(
+            "CREATE TRIGGER invoice_cancellations_append_only "
+            "BEFORE UPDATE OR DELETE ON invoice_cancellation_records "
+            "FOR EACH ROW EXECUTE FUNCTION "
+            "noesis_invoice_cancellations_append_only()"
+        )
+
+
+def _downgrade_professional_invoicing(conn) -> None:
+    if conn.dialect == "sqlite":
+        for trigger in (
+            "invoice_lines_issued_insert", "invoice_lines_issued_update",
+            "invoice_lines_issued_delete",
+        ):
+            conn.execute(f"DROP TRIGGER IF EXISTS {trigger}")
+    else:
+        conn.execute("DROP TRIGGER IF EXISTS invoice_lines_integrity ON invoice_lines")
+        conn.execute("DROP FUNCTION IF EXISTS noesis_invoice_lines_integrity()")
+        conn.execute(
+            "DROP TRIGGER IF EXISTS invoice_cancellations_append_only "
+            "ON invoice_cancellation_records"
+        )
+        conn.execute(
+            "DROP FUNCTION IF EXISTS noesis_invoice_cancellations_append_only()"
+        )
+    conn.execute("DROP INDEX IF EXISTS idx_verifactu_cancellation_due")
+    conn.execute("DROP TABLE IF EXISTS verifactu_cancellation_outbox")
+    conn.execute("DROP INDEX IF EXISTS idx_invoice_cancellations_chain")
+    conn.execute("DROP INDEX IF EXISTS idx_invoice_cancellations_business_id")
+    conn.execute("DROP TABLE IF EXISTS invoice_cancellation_records")
+    conn.execute("DROP INDEX IF EXISTS idx_recurring_invoices_due")
+    conn.execute("DROP INDEX IF EXISTS idx_recurring_invoices_business_id")
+    conn.execute("DROP INDEX IF EXISTS idx_recurring_invoice_runs")
+    conn.execute("DROP TABLE IF EXISTS recurring_invoice_runs")
+    conn.execute("DROP TABLE IF EXISTS recurring_invoices")
+    conn.execute("DROP INDEX IF EXISTS idx_invoice_lines_invoice")
+    conn.execute("DROP TABLE IF EXISTS invoice_lines")
+    conn.execute("DROP INDEX IF EXISTS idx_invoice_series_default")
+    conn.execute("DROP TABLE IF EXISTS invoice_series")
+    if conn.dialect == "postgres":
+        for column in (
+            "series_id", "operation_date", "notes", "payment_method",
+            "legal_mention", "currency", "internal_note",
+        ):
+            conn.execute(f"ALTER TABLE invoices DROP COLUMN IF EXISTS {column}")
+        conn.execute(
+            "ALTER TABLE invoice_records DROP COLUMN IF EXISTS operation_date"
+        )
+        conn.execute("ALTER TABLE email_outbox DROP COLUMN IF EXISTS entity_type")
+        conn.execute("ALTER TABLE email_outbox DROP COLUMN IF EXISTS entity_id")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -2295,6 +2842,10 @@ MIGRATIONS: tuple[Migration, ...] = (
     (29, "conciliacion_bancaria", _upgrade_bank_reconciliation, _downgrade_bank_reconciliation),
     (30, "correo_durable", _upgrade_email_outbox, _downgrade_email_outbox),
     (31, "alta_operativa", _upgrade_onboarding_operations, _downgrade_onboarding_operations),
+    (32, "integridad_factura_emitida", _upgrade_invoice_legal_integrity,
+     _downgrade_invoice_legal_integrity),
+    (33, "facturacion_profesional", _upgrade_professional_invoicing,
+     _downgrade_professional_invoicing),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

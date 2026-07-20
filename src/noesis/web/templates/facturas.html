@@ -4,7 +4,7 @@
   <div class="page-title">
     <div class="kicker">Facturación</div>
     <h1>Facturas</h1>
-    <p>Todas tus facturas y su estado: borrador, enviada, cobrada parcialmente o
+    <p>Todas tus facturas y su estado: borrador, emitida, cobrada parcialmente o
        cobrada por completo, con PDF y CSV siempre a mano.</p>
   </div>
   <div class="page-actions">
@@ -21,7 +21,7 @@
   <div class="card-h">
     <div class="row" id="filters">
       <button class="btn primary" data-f="todas">Todas</button>
-      <button class="btn" data-f="enviada">Enviadas</button>
+      <button class="btn" data-f="enviada">Emitidas</button>
       <button class="btn" data-f="parcial">Parciales</button>
       <button class="btn" data-f="cobrada">Cobradas</button>
       <button class="btn" data-f="borrador">Borradores</button>
@@ -40,6 +40,22 @@
   </div>
 </div>
 
+<details class="card" style="margin-top:16px" id="recurring-card">
+  <summary class="card-h" style="cursor:pointer">
+    <div><b>Facturas programadas</b><div class="meta">Noesis prepara cada vencimiento; solo las emite automáticamente si tú lo autorizas.</div></div>
+    <button class="btn sm" type="button" onclick="event.preventDefault();newRecurring()">Programar</button>
+  </summary>
+  <div class="card-b" id="recurring-list"></div>
+</details>
+
+<details class="card" style="margin-top:16px" id="series-card">
+  <summary class="card-h" style="cursor:pointer">
+    <div><b>Series de numeración</b><div class="meta">Facturas, simplificadas y rectificativas mantienen secuencias separadas.</div></div>
+    <button class="btn sm" type="button" onclick="event.preventDefault();newSeries()">Añadir serie</button>
+  </summary>
+  <div class="card-b" id="series-list"></div>
+</details>
+
 <div class="insight" style="margin-top:16px">
   Con Noesis no hace falta entrar aquí para facturar: dile por WhatsApp
   <b>“factura a Juan por la caldera 180 €”</b> y aparece sola en esta lista.
@@ -49,13 +65,17 @@
 {% block scripts %}
 <script>
 const CONCEPT_SUGGESTIONS = {{ concept_suggestions|tojson }};
+const DEFAULT_VAT = Number({{ business.default_vat if business.default_vat is not none else 21 }});
+const DEFAULT_IRPF = Number({{ business.default_irpf if business.default_irpf is not none else 0 }});
 let ALL = [];
 
 // --- Nueva factura directa (sin pasar por el chat): el flujo de la 1ª factura ---
-async function newInvoice(){
-  let clients = [], catalog = [];
+async function newInvoice(initial=null){
+  if(typeof initial==='number') initial = await api(`/invoices/${initial}`);
+  let clients = [], catalog = [], series = [];
   try { clients = await api('/clients'); } catch(e){}
   try { catalog = await api('/products'); } catch(e){}
+  try { series = await api('/invoice-series'); } catch(e){}
   const opts = clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   const prodOpts = catalog.map(p =>
     `<option value="${p.id}">${esc(p.name)} · ${eur(p.price)}</option>`).join('');
@@ -64,8 +84,8 @@ async function newInvoice(){
   closeModal();
   const ov = document.createElement('div');
   ov.className = 'modal-overlay';
-  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Nueva factura">
-    <div class="modal-h"><h2>Nueva factura</h2>
+  ov.innerHTML = `<div class="modal invoice-modal" role="dialog" aria-modal="true" aria-label="Nueva factura">
+    <div class="modal-h"><h2>${initial?'Revisar borrador':'Nueva factura'}</h2>
       <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
     <div class="modal-b">
       <label class="fld">Cliente</label>
@@ -73,29 +93,40 @@ async function newInvoice(){
         <option value="">— Escribir un cliente nuevo —</option>${opts}</select>` : ''}
       <input class="input" id="nf-client-name" style="margin-top:8px;${clients.length?'':''}"
         placeholder="Nombre del cliente nuevo">
-      <label class="fld" style="margin-top:12px">Concepto</label>
+      <div class="nf-row" style="margin-top:12px">
+        <div><label class="fld">Tipo</label><select class="input" id="nf-type">
+          <option value="F1">Factura completa</option><option value="F2">Factura simplificada</option>
+        </select><small class="meta" id="nf-type-help">Requiere los datos fiscales del cliente.</small></div>
+        <div><label class="fld">Serie</label><select class="input" id="nf-series"></select></div>
+        <div><label class="fld">Fecha de operación</label><input class="input" id="nf-operation" type="date"></div>
+      </div>
+      <label class="fld" style="margin-top:12px">Líneas</label>
       ${prodOpts ? `<select class="input" id="nf-product" style="margin-bottom:8px">
         <option value="">— O elige de tu catálogo —</option>${prodOpts}</select>` : ''}
-      <input class="input" id="nf-concept" placeholder="¿Qué trabajo has hecho?">
       ${chips ? `<div class="chips" style="margin-top:8px" id="nf-chips">${chips}</div>` : ''}
-      <div class="nf-row">
-        <div><label class="fld">Base (€)</label>
-          <input class="input" id="nf-base" type="number" inputmode="decimal" placeholder="180.00"></div>
-        <div><label class="fld">IVA</label>
-          <select class="input" id="nf-vat">
-            <option value="21">21%</option><option value="10">10%</option>
-            <option value="4">4%</option><option value="0">0%</option></select></div>
-        <div><label class="fld">IRPF</label>
+      <div id="nf-lines"></div>
+      <button class="btn sm" type="button" id="nf-add-line">+ Añadir línea</button>
+      <div class="nf-row" style="margin-top:12px">
+        <div><label class="fld">IRPF general</label>
           <select class="input" id="nf-irpf">
             <option value="0">0%</option><option value="7">7%</option>
             <option value="15">15%</option></select></div>
+        <div><label class="fld">Forma de pago</label><input class="input" id="nf-payment" placeholder="Transferencia, efectivo…"></div>
       </div>
+      <label class="fld" style="margin-top:12px">Notas para el cliente</label>
+      <textarea class="input" id="nf-notes" rows="2" placeholder="Condiciones o aclaraciones opcionales"></textarea>
+      <details class="nf-advanced">
+        <summary>Opciones legales avanzadas</summary>
+        <label class="fld">Mención legal</label>
+        <textarea class="input" id="nf-legal" rows="2" maxlength="500"
+          placeholder="Solo si esta operación necesita una mención legal específica"></textarea>
+      </details>
       <div class="nf-total" id="nf-total">Total: —</div>
       <div class="clock-message" id="nf-msg" role="alert"></div>
     </div>
     <div class="modal-f">
       <button class="btn modal-cancel">Cancelar</button>
-      <button class="btn primary" id="nf-save">Crear borrador</button>
+      <button class="btn primary" id="nf-save">${initial?'Guardar cambios':'Crear borrador'}</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
@@ -106,56 +137,176 @@ async function newInvoice(){
   const sel = el('nf-client'), nameInput = el('nf-client-name');
   if (sel) {
     const syncName = () => { nameInput.style.display = sel.value ? 'none' : 'block'; };
-    sel.onchange = syncName; syncName();
+    sel.onchange = syncName;
+    if(initial) sel.value=String(initial.client_id);
+    syncName();
+  }
+  const seriesSelect = el('nf-series'), typeSelect = el('nf-type');
+  const syncSeries = () => {
+    const wanted = typeSelect.value === 'F2' ? 'simplified' : 'invoice';
+    seriesSelect.innerHTML = series.filter(s => s.document_type === wanted && s.active)
+      .map(s => `<option value="${s.id}">${esc(s.name)} · ${esc(s.prefix_template)}</option>`).join('');
+    el('nf-type-help').textContent = typeSelect.value === 'F2'
+      ? 'Para importes de hasta 400 €; no exige NIF del cliente.'
+      : 'Requiere los datos fiscales completos del cliente.';
+  };
+  if(initial) typeSelect.value=initial.invoice_type||'F1';
+  typeSelect.onchange = syncSeries; syncSeries();
+  if(initial?.series_id) seriesSelect.value=String(initial.series_id);
+  if(initial?.operation_date) el('nf-operation').value=initial.operation_date;
+  const lineBox = el('nf-lines');
+  const addLine = (values={}) => {
+    const row = document.createElement('div'); row.className = 'nf-line';
+    row.innerHTML = `<div><label class="meta">Concepto</label><input class="input line-desc" placeholder="Trabajo o material" value="${esc(values.description||'')}"></div>
+      <div><label class="meta">Cant.</label><input class="input line-qty" type="number" min="0.01" step="0.01" value="${values.quantity||1}"></div>
+      <div><label class="meta">Precio</label><input class="input line-price" type="number" step="0.01" value="${values.unit_price??''}"></div>
+      <div><label class="meta">Dto.</label><input class="input line-discount" type="number" min="0" max="100" step="0.01" value="${values.discount_rate||0}"></div>
+      <div><label class="meta">IVA</label><select class="input line-vat"><option value="21">21%</option><option value="10">10%</option><option value="4">4%</option><option value="0">0% tipo cero</option></select></div>
+      <button class="iconbtn line-remove" type="button" title="Quitar línea">${TRASH}</button>`;
+    row.querySelector('.line-vat').value = String(values.vat_rate ?? DEFAULT_VAT);
+    row.querySelectorAll('input,select').forEach(node => { node.oninput=recalc; node.onchange=recalc; });
+    row.querySelector('.line-remove').onclick = () => { if(lineBox.children.length>1){ row.remove(); recalc(); } };
+    lineBox.appendChild(row); recalc();
+  };
+  el('nf-add-line').onclick = () => addLine();
+  (initial?.lines?.length ? initial.lines : [{}]).forEach(addLine);
+  el('nf-irpf').value=String(initial?.irpf_rate ?? DEFAULT_IRPF);
+  if(initial){
+    el('nf-payment').value=initial.payment_method||'';
+    el('nf-notes').value=initial.notes||'';
+    el('nf-legal').value=initial.legal_mention||'';
+    recalc();
   }
   const chipBox = el('nf-chips');
   if (chipBox) chipBox.addEventListener('click', e => {
-    if (e.target.dataset.c) el('nf-concept').value = e.target.dataset.c;
+    if (e.target.dataset.c) lineBox.querySelector('.line-desc').value = e.target.dataset.c;
   });
   const prodSel = el('nf-product');
   if (prodSel) prodSel.onchange = () => {
     const p = catalog.find(x => String(x.id) === prodSel.value);
     if (!p) return;
-    el('nf-concept').value = p.name;
-    el('nf-base').value = p.price;
-    if (p.vat_rate !== null) el('nf-vat').value = String(Math.round(p.vat_rate));
+    const first = lineBox.querySelector('.nf-line');
+    first.querySelector('.line-desc').value = p.name;
+    first.querySelector('.line-price').value = p.price;
+    if (p.vat_rate !== null) first.querySelector('.line-vat').value = String(Math.round(p.vat_rate));
     recalc();
   };
-  const recalc = () => {
-    const base = parseFloat(el('nf-base').value) || 0;
-    const vat = base * (parseFloat(el('nf-vat').value)||0) / 100;
+  function collectLines(){ return [...lineBox.querySelectorAll('.nf-line')].map(row => ({
+    description: row.querySelector('.line-desc').value.trim(),
+    quantity: row.querySelector('.line-qty').value,
+    unit_price: row.querySelector('.line-price').value,
+    discount_rate: row.querySelector('.line-discount').value,
+    vat_rate: row.querySelector('.line-vat').value
+  })); }
+  function recalc(){
+    const lines = collectLines();
+    const base = lines.reduce((sum,l)=>sum+(parseFloat(l.quantity)||0)*(parseFloat(l.unit_price)||0)*(1-(parseFloat(l.discount_rate)||0)/100),0);
+    const vat = lines.reduce((sum,l)=>{ const b=(parseFloat(l.quantity)||0)*(parseFloat(l.unit_price)||0)*(1-(parseFloat(l.discount_rate)||0)/100); return sum+b*(parseFloat(l.vat_rate)||0)/100; },0);
     const irpf = base * (parseFloat(el('nf-irpf').value)||0) / 100;
     el('nf-total').textContent = base ? `Total: ${eur(base + vat - irpf)} (base ${eur(base)} + IVA ${eur(vat)}${irpf?` − IRPF ${eur(irpf)}`:''})` : 'Total: —';
-  };
-  ['nf-base','nf-vat','nf-irpf'].forEach(id => { el(id).oninput = recalc; el(id).onchange = recalc; });
+  }
+  el('nf-irpf').oninput = recalc; el('nf-irpf').onchange = recalc;
   el('nf-save').onclick = async () => {
     const msg = el('nf-msg');
     const body = {
       client_id: sel && sel.value ? sel.value : null,
       client_name: (!sel || !sel.value) ? nameInput.value.trim() : '',
-      concept: el('nf-concept').value.trim(),
-      base: el('nf-base').value,
-      vat_rate: el('nf-vat').value,
+      concept: collectLines()[0]?.description || '',
+      lines: collectLines(),
       irpf_rate: el('nf-irpf').value,
+      invoice_type: typeSelect.value,
+      series_id: seriesSelect.value || null,
+      operation_date: el('nf-operation').value || null,
+      payment_method: el('nf-payment').value.trim(),
+      notes: el('nf-notes').value.trim(),
+      legal_mention: el('nf-legal').value.trim(),
     };
     el('nf-save').disabled = true;
     try {
-      await apiPost('/invoices', body);
+      if(initial) await apiPatch(`/invoices/${initial.id}`, body);
+      else await apiPost('/invoices', body);
       close(); load();
     } catch(e) {
       msg.textContent = e.message; msg.style.display = 'block';
       el('nf-save').disabled = false;
     }
   };
-  (nameInput || el('nf-concept')).focus();
+  (nameInput || lineBox.querySelector('.line-desc')).focus();
 }
 
 let FILTER = 'todas';
+let RECURRING = [];
+let SERIES = [];
+async function newRecurring(){
+  const clients = await api('/clients');
+  if(!clients.length){ alert('Crea primero el cliente al que vas a facturar.'); return; }
+  const tomorrow = new Date(Date.now()+86400000).toISOString().slice(0,10);
+  formModal({
+    title:'Programar factura', submitLabel:'Guardar programación', fields:[
+      {name:'client_id',label:'Cliente',options:clients.map(c=>({value:c.id,label:c.name}))},
+      {name:'name',label:'Nombre de la programación',placeholder:'Mantenimiento mensual'},
+      {name:'cadence',label:'Frecuencia',options:[
+        {value:'weekly',label:'Semanal'},{value:'monthly',label:'Mensual'},
+        {value:'quarterly',label:'Trimestral'},{value:'annual',label:'Anual'}]},
+      {name:'next_run_on',label:'Primera fecha',type:'date',value:tomorrow},
+      {name:'ends_on',label:'Fecha final (opcional)',type:'date'},
+      {name:'concept',label:'Concepto',placeholder:'Servicio de mantenimiento'},
+      {name:'base',label:'Base (€)',type:'number'},
+      {name:'vat_rate',label:'IVA',options:[DEFAULT_VAT, ...[21,10,4,0].filter(v=>v!==DEFAULT_VAT)].map(v=>({value:String(v),label:v===0?'0% (tipo cero, no exenta)':`${v}%`}))},
+      {name:'irpf_rate',label:'IRPF',options:[DEFAULT_IRPF, ...[0,7,15].filter(v=>v!==DEFAULT_IRPF)].map(v=>({value:String(v),label:`${v}%`}))},
+      {name:'auto_issue',label:'Al llegar la fecha',options:[
+        {value:'false',label:'Preparar borrador para revisarlo'},
+        {value:'true',label:'Emitir automáticamente (autorización permanente)'}]}
+    ],
+    onSubmit:async v=>{
+      await apiPost('/recurring-invoices',{
+        ...v, auto_issue:v.auto_issue==='true',
+        lines:[{description:v.concept,quantity:1,unit_price:v.base,discount_rate:0,vat_rate:v.vat_rate}]
+      });
+      await loadRecurring();
+    }
+  });
+}
+async function recurringStatus(id,status){
+  await apiPost(`/recurring-invoices/${id}/status`,{status}); await loadRecurring();
+}
+async function loadRecurring(){
+  RECURRING = await api('/recurring-invoices');
+  const labels={weekly:'semanal',monthly:'mensual',quarterly:'trimestral',annual:'anual'};
+  el('recurring-list').innerHTML = RECURRING.length ? RECURRING.map(r=>`<div class="row" style="justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+    <div><b>${esc(r.name)}</b><div class="meta">${esc(r.client_name)} · ${labels[r.cadence]} · próxima ${esc(r.next_run_on)} · ${r.auto_issue?'emisión autorizada':'borrador para revisar'}</div></div>
+    <div class="row">${r.status==='active'?`<button class="btn sm" onclick="recurringStatus(${r.id},'paused')">Pausar</button>`:`<button class="btn sm" onclick="recurringStatus(${r.id},'active')">Reanudar</button>`}<button class="btn sm" onclick="recurringStatus(${r.id},'ended')">Finalizar</button></div>
+  </div>`).join('') : '<div class="empty">Aún no has programado ninguna factura.</div>';
+}
+async function newSeries(){
+  formModal({
+    title:'Nueva serie', submitLabel:'Crear serie', fields:[
+      {name:'name',label:'Nombre',placeholder:'Facturas de obra'},
+      {name:'code',label:'Código interno',placeholder:'OBRAS'},
+      {name:'document_type',label:'Tipo',options:[
+        {value:'invoice',label:'Factura completa'},
+        {value:'simplified',label:'Factura simplificada'},
+        {value:'rectifying',label:'Factura rectificativa'}]},
+      {name:'prefix_template',label:'Prefijo',value:'{YYYY}/',placeholder:'OBR-{YYYY}/'},
+      {name:'padding',label:'Dígitos',type:'number',value:'4'}
+    ],
+    onSubmit:async values=>{ await apiPost('/invoice-series',values); await loadSeries(); }
+  });
+}
+async function loadSeries(){
+  SERIES=await api('/invoice-series');
+  const labels={invoice:'Factura',simplified:'Simplificada',rectifying:'Rectificativa'};
+  el('series-list').innerHTML=SERIES.map(s=>`<div class="series-row">
+    <div><b>${esc(s.name)}</b><small>${esc(labels[s.document_type]||s.document_type)} · ${esc(s.code)}</small></div>
+    <code>${esc(s.prefix_template)}${'0'.repeat(Math.min(Number(s.padding)||4,8))}</code>
+    <span class="badge ${s.is_default?'b-green':'b-gray'}">${s.is_default?'predeterminada':'disponible'}</span>
+  </div>`).join('');
+}
 async function load() {
-  ALL = await api('/invoices');
+  [ALL] = await Promise.all([api('/invoices'), loadRecurring(), loadSeries()]);
   render(FILTER);
 }
-const STATUS_LABEL = { borrador:'Borrador', enviada:'Enviada',
+const STATUS_LABEL = { borrador:'Borrador', enviada:'Emitida',
   parcial:'Cobro parcial', cobrada:'Cobrada' };
 function badge(s){ return s==='cobrada'?'b-green':(s==='enviada'||s==='parcial')?'b-amber':'b-gray'; }
 function verifactuState(i) {
@@ -168,7 +319,14 @@ function verifactuState(i) {
     aceptado_con_errores: 'Veri*Factu: aceptada con errores',
     rechazado: 'Veri*Factu: RECHAZADA'
   };
-  const label = states[i.verifactu_status] || 'Veri*Factu: registrada';
+  const cancellation = {
+    pendiente:'Anulación AEAT pendiente', enviado:'Anulación enviada',
+    aceptado:'Registro anulado en AEAT', aceptado_con_errores:'Anulado con avisos',
+    rechazado:'Anulación rechazada'
+  };
+  const label = i.cancellation_status
+    ? (cancellation[i.cancellation_status] || 'Anulación registrada')
+    : (states[i.verifactu_status] || 'Veri*Factu: registrada');
   const tip = i.verifactu_csv ? ` title="CSV: ${esc(i.verifactu_csv)}"` : '';
   const error = i.verifactu_error
     ? `<div class="meta" style="color:var(--red)" title="${esc(i.verifactu_error)}">${esc(i.verifactu_error)}</div>`
@@ -195,9 +353,14 @@ function render(f) {
       ${verifactuState(i)}</td>
     <td class="t-right table-actions">
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
+      ${['F1','F2'].includes(i.invoice_type)?`<button class="btn sm" onclick="duplicateInvoice(${i.id})">Duplicar</button>`:''}
       ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Emitir</button>`:''}
+      ${i.status==='borrador'?`<button class="btn sm" onclick="newInvoice(${i.id})">Editar</button>`:''}
       ${['enviada','parcial'].includes(i.status)?`<button class="btn sm" onclick="pay(${i.id})">Cobrar</button>`:''}
-      ${i.status!=='borrador'?`<button class="btn sm" onclick="rectify(${i.id})">Rectificar</button>`:''}
+      ${i.status!=='borrador'?`<button class="btn sm" onclick="deliver(${i.id})">Enviar</button>`:''}
+      ${i.status!=='borrador'&&!i.cancellation_status?`<button class="btn sm" onclick="rectify(${i.id})">Rectificar</button>`:''}
+      ${['aceptado','aceptado_con_errores'].includes(i.verifactu_status)&&!i.cancellation_status?`<button class="btn sm danger" onclick="cancelVerifactu(${i.id})">Anular registro</button>`:''}
+      ${i.status!=='borrador'?`<button class="btn sm" onclick="showInvoiceHistory(${i.id})">Historial</button>`:''}
       ${i.status==='borrador'?`<button class="iconbtn" title="Borrar borrador" onclick="del(${i.id})">${TRASH}</button>`:''}
     </td>
   </tr>`).join('');
@@ -213,11 +376,72 @@ function render(f) {
   }
 }
 async function send(id){
-  if(!confirm('¿Emitir y enviar esta factura? Se le asignará número y fecha.')) return;
+  if(!confirm('¿Emitir esta factura? Se le asignará número y fecha definitivos. Después podrás entregarla por el canal habitual del cliente.')) return;
   try { await apiPost('/invoices/'+id+'/send', {}); load(); }
   catch(e){ alert('No se pudo enviar: ' + e.message); }
 }
 async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
+async function deliver(id){
+  if(!confirm('¿Entregar esta factura por el canal habitual del cliente? El PDF y el enlace privado quedarán preparados y Noesis reintentará si el proveedor falla.')) return;
+  try {
+    const result=await apiPost(`/invoices/${id}/deliver`,{channel:'auto'});
+    if(!result.queued) throw new Error('El cliente no tiene correo ni WhatsApp configurado.');
+    alert(`Entrega preparada por ${result.channel} para ${result.target}.`);
+  }
+  catch(e){ alert('No se pudo preparar el envío: '+e.message); }
+}
+async function duplicateInvoice(id){
+  try {
+    const source=await api(`/invoices/${id}`);
+    await apiPost('/invoices',{
+      client_id:source.client_id, concept:source.concept, lines:source.lines,
+      irpf_rate:source.irpf_rate, invoice_type:['F1','F2'].includes(source.invoice_type)?source.invoice_type:'F1',
+      operation_date:null, payment_method:source.payment_method,
+      notes:source.notes, legal_mention:source.legal_mention
+    });
+    await load();
+  } catch(e){ alert('No se pudo duplicar la factura: '+e.message); }
+}
+async function showInvoiceHistory(id){
+  try {
+    const events = await api(`/invoices/${id}/history`);
+    const labels = {
+      alta:'Registro fiscal creado', rectificacion:'Rectificativa registrada',
+      emision:'Factura emitida', cobro:'Cobro registrado',
+      entrega_preparada:'Envío preparado', entrega_enviada:'Correo enviado',
+      visualizacion:'Documento visto', remision:'Remitida a la AEAT',
+      aceptacion:'Aceptada por la AEAT', rechazo:'Rechazada por la AEAT',
+      exportacion:'Registro exportado', anomalia:'Anomalía detectada'
+    };
+    closeModal();
+    const ov=document.createElement('div'); ov.className='modal-overlay';
+    ov.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Historial de factura">
+      <div class="modal-h"><h2>Historial de la factura</h2><button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
+      <div class="modal-b invoice-history">${events.length?events.map(event=>`<div class="invoice-history-row">
+        <span class="work-status active"></span><div><b>${esc(labels[event.event_type]||event.event_type)}</b>
+        <small>${esc(new Date(event.created_at).toLocaleString('es-ES'))}${event.details?` · ${esc(event.details)}`:''}</small></div>
+      </div>`).join(''):'<div class="empty">Todavía no hay actividad registrada.</div>'}</div>
+      <div class="modal-f"><button class="btn primary modal-cancel">Cerrar</button></div></div>`;
+    document.body.appendChild(ov);
+    const close=()=>ov.remove(); ov.querySelector('.modal-x').onclick=close;
+    ov.querySelector('.modal-cancel').onclick=close;
+    ov.addEventListener('click',e=>{if(e.target===ov)close();});
+  } catch(e){ alert('No se pudo cargar el historial: '+e.message); }
+}
+function cancelVerifactu(id){
+  const invoice=ALL.find(item=>item.id===id); if(!invoice) return;
+  formModal({
+    title:'Anular registro Veri*Factu', submitLabel:'Preparar anulación',
+    fields:[
+      {name:'reason',label:'Motivo obligatorio',placeholder:'Explica por qué debe anularse el registro'},
+      {name:'confirmation',label:`Escribe ANULAR ${invoice.number}`,
+       placeholder:`ANULAR ${invoice.number}`}
+    ],
+    onSubmit:async values=>{
+      await apiPost(`/invoices/${id}/cancel-verifactu`,values); await load();
+    }
+  });
+}
 async function del(id){ if(confirm('¿Borrar esta factura?')){ await apiDelete('/invoices/'+id); load(); } }
 function rectify(id) {
   formModal({

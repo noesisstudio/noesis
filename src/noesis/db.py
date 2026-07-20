@@ -17,6 +17,7 @@ import math
 import re
 import secrets
 import sqlite3
+import unicodedata
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -376,7 +377,10 @@ def _clean_payment_details(iban=None, bizum=None, note=None) -> tuple[str, str, 
     return clean_iban, clean_bizum, (note or "").strip()[:300]
 
 
-def update_payment_details(business_id, *, iban=None, bizum=None, note=None) -> dict:
+def update_payment_details(
+    business_id, *, iban=None, bizum=None, note=None,
+    default_payment_term_days=None,
+) -> dict:
     """Guarda cómo quiere cobrar el negocio: IBAN, Bizum y una nota libre.
 
     Se muestra en el PDF de la factura y en el portal del cliente para que el
@@ -386,11 +390,21 @@ def update_payment_details(business_id, *, iban=None, bizum=None, note=None) -> 
     clean_iban, clean_bizum, clean_note = _clean_payment_details(
         iban, bizum, note
     )
+    fields = ["payment_iban=?", "payment_bizum=?", "payment_note=?"]
+    params: list = [clean_iban or None, clean_bizum or None, clean_note or None]
+    if default_payment_term_days is not None:
+        try:
+            term_days = int(default_payment_term_days)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("El plazo de pago no es válido.") from exc
+        if term_days not in {0, 7, 15, 30, 60}:
+            raise ValueError("El plazo de pago no es válido.")
+        fields.append("default_payment_term_days=?")
+        params.append(term_days)
+    params.append(business_id)
     with get_conn() as conn:
         conn.execute(
-            "UPDATE businesses SET payment_iban=?, payment_bizum=?, payment_note=? "
-            "WHERE id=?",
-            (clean_iban or None, clean_bizum or None, clean_note or None, business_id),
+            f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params,
         )
     return get_business(business_id)
 
@@ -717,6 +731,26 @@ def update_fiscal(business_id, name=None, nif=None, address=None,
         default_vat = _tax_rate(default_vat, "El IVA", {0, 4, 10, 21})
     if default_irpf is not None:
         default_irpf = _tax_rate(default_irpf, "El IRPF", {0, 7, 15})
+    if nif is not None and nif != "":
+        nif = str(nif).strip().upper()
+        with get_conn() as conn:
+            current = conn.execute(
+                "SELECT nif FROM businesses WHERE id=?", (business_id,)
+            ).fetchone()
+            has_records = conn.execute(
+                "SELECT 1 AS found FROM invoice_records "
+                "WHERE business_id=? LIMIT 1",
+                (business_id,),
+            ).fetchone()
+        if (
+            current
+            and has_records
+            and (current.get("nif") or "").strip().upper() != nif
+        ):
+            raise ValueError(
+                "El NIF no puede cambiarse después de generar registros "
+                "Veri*Factu; crea otro negocio para otra identidad fiscal."
+            )
     fields, params = [], []
     for col, val in [("name", name), ("nif", nif), ("address", address),
                      ("default_vat", default_vat), ("default_irpf", default_irpf)]:
@@ -2106,6 +2140,47 @@ def find_client(name, business_id) -> dict | None:
         return dict(row) if row else None
 
 
+def _fold_client_reference(value: str | None) -> str:
+    """Normaliza una referencia humana sin convertirla en una búsqueda difusa."""
+    text = unicodedata.normalize("NFKD", str(value or "").strip().lower())
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", text).split())
+
+
+def resolve_client_reference(name, business_id) -> dict | None:
+    """Reutiliza un cliente habitual solo cuando la referencia es inequívoca.
+
+    Admite ``Marta`` para ``Marta López`` si no existe otra Marta. Ante dos
+    coincidencias no elige ni crea un duplicado: pide una referencia más precisa.
+    """
+    reference = _fold_client_reference(name)
+    if not reference:
+        return None
+    clients = list_clients(business_id)
+    exact = [c for c in clients if _fold_client_reference(c["name"]) == reference]
+    if len(exact) == 1:
+        return exact[0]
+    words = reference.split()
+    matches = []
+    for client in clients:
+        candidate = _fold_client_reference(client["name"])
+        candidate_words = candidate.split()
+        if (
+            candidate.startswith(reference + " ")
+            or all(word in candidate_words for word in words)
+        ):
+            matches.append(client)
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        options = ", ".join(client["name"] for client in matches[:5])
+        raise ValueError(
+            f"Hay varios clientes que encajan con «{name}»: {options}. "
+            "Indica el nombre completo."
+        )
+    return None
+
+
 def list_clients(business_id) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
@@ -2116,7 +2191,10 @@ def list_clients(business_id) -> list[dict]:
 
 
 def get_or_create_client(name, business_id, **kw) -> dict:
-    return find_client(name, business_id) or add_client(name, business_id=business_id, **kw)
+    return (
+        resolve_client_reference(name, business_id)
+        or add_client(name, business_id=business_id, **kw)
+    )
 
 
 def update_client(client_id, business_id, name=None, phone=None, address=None,
@@ -3550,8 +3628,8 @@ def _verifactu_nif(value: str | None, label: str) -> str:
 
 def verifactu_configuration_errors() -> list[str]:
     errors = []
-    if not config.VERIFACTU_PRODUCER_NAME:
-        errors.append("nombre del productor")
+    if not 1 <= len(config.VERIFACTU_PRODUCER_NAME) <= 120:
+        errors.append("nombre del productor (máximo 120 caracteres)")
     try:
         _verifactu_nif(config.VERIFACTU_PRODUCER_NIF, "El NIF del productor")
     except ValueError:
@@ -3560,14 +3638,22 @@ def verifactu_configuration_errors() -> list[str]:
         errors.append("nombre del sistema (máximo 30 caracteres)")
     if not 1 <= len(config.VERIFACTU_SYSTEM_ID) <= 2:
         errors.append("identificador del sistema (máximo 2 caracteres)")
-    if not config.VERIFACTU_SYSTEM_VERSION:
-        errors.append("versión del sistema")
+    if not 1 <= len(config.VERIFACTU_SYSTEM_VERSION) <= 50:
+        errors.append("versión del sistema (máximo 50 caracteres)")
+    if not 1 <= len(config.VERIFACTU_INSTALLATION_PREFIX) <= 80:
+        errors.append("identificador de instalación")
     if config.VERIFACTU_HASH_ALGORITHM != "sha256":
         errors.append("algoritmo SHA-256")
     if config.VERIFACTU_HASH_TYPE != "01":
         errors.append("tipo de huella 01")
-    if not config.VERIFACTU_QR_BASE_URL.startswith("https://"):
-        errors.append("URL HTTPS del QR")
+    if config.VERIFACTU_RECORD_VERSION != "1.0":
+        errors.append("versión de registro 1.0")
+    official_qr_urls = {
+        "https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR",
+        "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR",
+    }
+    if config.VERIFACTU_QR_BASE_URL not in official_qr_urls:
+        errors.append("URL oficial AEAT del QR")
     return errors
 
 
@@ -3590,38 +3676,265 @@ def update_verifactu_mode(business_id: int, enabled: bool) -> dict | None:
     return get_business(business_id)
 
 
+_SERIES_DEFAULTS = {
+    "invoice": ("GENERAL", "Facturas", "{YYYY}/"),
+    "rectifying": ("RECT", "Rectificativas", "R{YYYY}/"),
+    "simplified": ("TICKET", "Simplificadas", "T{YYYY}/"),
+}
+
+
+def _series_document_type(invoice_type: str) -> str:
+    if invoice_type.startswith("R"):
+        return "rectifying"
+    if invoice_type == "F2":
+        return "simplified"
+    return "invoice"
+
+
+def _ensure_default_invoice_series(conn, business_id: int, document_type: str):
+    if document_type not in _SERIES_DEFAULTS:
+        raise ValueError("El tipo de serie no es válido.")
+    code, name, prefix = _SERIES_DEFAULTS[document_type]
+    conn.execute(
+        "INSERT INTO invoice_series "
+        "(business_id, code, name, document_type, prefix_template, padding, "
+        "is_default, active, created_at) VALUES (?, ?, ?, ?, ?, 4, TRUE, TRUE, ?) "
+        "ON CONFLICT (business_id, code) DO NOTHING",
+        (business_id, code, name, document_type, prefix, _now()),
+    )
+    return conn.execute(
+        "SELECT * FROM invoice_series WHERE business_id=? AND document_type=? "
+        "AND is_default=TRUE AND active=TRUE ORDER BY id LIMIT 1",
+        (business_id, document_type),
+    ).fetchone()
+
+
+def list_invoice_series(business_id: int) -> list[dict]:
+    if not get_business(business_id):
+        return []
+    with get_conn() as conn:
+        for document_type in _SERIES_DEFAULTS:
+            _ensure_default_invoice_series(conn, business_id, document_type)
+        rows = conn.execute(
+            "SELECT * FROM invoice_series WHERE business_id=? "
+            "ORDER BY document_type, is_default DESC, id",
+            (business_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def add_invoice_series(
+    business_id: int,
+    *,
+    code: str,
+    name: str,
+    document_type: str,
+    prefix_template: str,
+    padding: int = 4,
+) -> dict:
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    code = (code or "").strip().upper()
+    name = (name or "").strip()
+    document_type = (document_type or "").strip().lower()
+    prefix_template = (prefix_template or "").strip()
+    if not re.fullmatch(r"[A-Z0-9_-]{1,20}", code):
+        raise ValueError("El código de serie solo admite letras, números, _ y -.")
+    if not 1 <= len(name) <= 80:
+        raise ValueError("El nombre de la serie es obligatorio.")
+    if document_type not in _SERIES_DEFAULTS:
+        raise ValueError("El tipo de serie no es válido.")
+    if (
+        "{YYYY}" not in prefix_template
+        or len(prefix_template) > 30
+        or any(char in prefix_template for char in "\r\n\t")
+    ):
+        raise ValueError("El formato debe incluir {YYYY} y no superar 30 caracteres.")
+    try:
+        padding = int(padding)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La longitud de numeración no es válida.") from exc
+    if not 2 <= padding <= 8:
+        raise ValueError("La longitud de numeración debe estar entre 2 y 8.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO invoice_series "
+            "(business_id, code, name, document_type, prefix_template, padding, "
+            "is_default, active, created_at) VALUES (?, ?, ?, ?, ?, ?, FALSE, TRUE, ?) "
+            "RETURNING id",
+            (
+                business_id, code, name, document_type, prefix_template,
+                padding, _now(),
+            ),
+        ).fetchone()
+        created = conn.execute(
+            "SELECT * FROM invoice_series WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+        return dict(created)
+
+
+def _normalize_invoice_lines(
+    lines,
+    *,
+    fallback_concept: str | None = None,
+    fallback_base=None,
+    fallback_vat=config.DEFAULT_VAT_RATE,
+    allow_negative: bool = False,
+) -> list[dict]:
+    if not lines:
+        lines = [{
+            "description": fallback_concept,
+            "quantity": 1,
+            "unit_price": fallback_base,
+            "discount_rate": 0,
+            "vat_rate": fallback_vat,
+        }]
+    if not isinstance(lines, list) or not 1 <= len(lines) <= 100:
+        raise ValueError("La factura debe tener entre 1 y 100 líneas.")
+    normalized = []
+    for position, raw in enumerate(lines, 1):
+        if not isinstance(raw, dict):
+            raise ValueError("Cada línea de factura debe ser un objeto válido.")
+        description = (raw.get("description") or raw.get("concept") or "").strip()
+        if not 1 <= len(description) <= 500:
+            raise ValueError("Cada línea necesita una descripción de hasta 500 caracteres.")
+        try:
+            quantity = Decimal(str(raw.get("quantity", 1)))
+            unit_price = Decimal(str(raw.get("unit_price", raw.get("price"))))
+            discount = Decimal(str(raw.get("discount_rate", 0)))
+        except (ArithmeticError, TypeError, ValueError) as exc:
+            raise ValueError("Cantidad, precio y descuento deben ser números válidos.") from exc
+        if not quantity.is_finite() or quantity <= 0 or quantity > 1_000_000:
+            raise ValueError("La cantidad debe ser mayor que cero.")
+        if not unit_price.is_finite() or abs(unit_price) > Decimal("10000000"):
+            raise ValueError("El precio unitario no es válido.")
+        if not discount.is_finite() or discount < 0 or discount > 100:
+            raise ValueError("El descuento debe estar entre 0 y 100%.")
+        base = (quantity * unit_price * (Decimal("1") - discount / 100)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        if (not allow_negative and base <= 0) or (allow_negative and base == 0):
+            raise ValueError("La base de cada línea debe ser distinta de cero.")
+        vat_rate = _tax_rate(raw.get("vat_rate", fallback_vat), "El IVA", {0, 4, 10, 21})
+        vat = (base * Decimal(str(vat_rate)) / 100).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        normalized.append({
+            "position": position,
+            "description": description,
+            "quantity": float(quantity),
+            "unit_price": float(unit_price.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)),
+            "discount_rate": float(discount),
+            "vat_rate": vat_rate,
+            "base": float(base),
+            "vat_amount": float(vat),
+            "total": float((base + vat).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
+        })
+    return normalized
+
+
+def _invoice_totals(lines: list[dict], irpf_rate) -> dict:
+    irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
+    base = sum((Decimal(str(line["base"])) for line in lines), Decimal("0"))
+    vat = sum((Decimal(str(line["vat_amount"])) for line in lines), Decimal("0"))
+    base = base.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    vat = vat.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    irpf = (base * Decimal(str(irpf_rate)) / 100).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    total = (base + vat - irpf).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    rates = {line["vat_rate"] for line in lines}
+    return {
+        "base": float(base),
+        "vat_rate": next(iter(rates)) if len(rates) == 1 else -1,
+        "vat_amount": float(vat),
+        "irpf_rate": irpf_rate,
+        "irpf_amount": float(irpf),
+        "total": float(total),
+    }
+
+
 def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
-                irpf_rate=0, *, business_id: int) -> dict:
+                irpf_rate=0, *, business_id: int, lines=None,
+                invoice_type: str = "F1", series_id: int | None = None,
+                operation_date: str | None = None, notes: str | None = None,
+                payment_method: str | None = None,
+                legal_mention: str | None = None) -> dict:
     """Crea una factura calculando IVA y retención de IRPF.
 
     Total = base + IVA − IRPF retenido (así sale el importe que el cliente paga).
     """
     if not get_client(client_id, business_id):
         raise ValueError("El cliente no pertenece a este negocio.")
-    concept = (concept or "").strip()
-    if not concept or len(concept) > 500:
-        raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
-    base = _positive_money(base, "La base")
-    vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
-    irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
-    vat_amount = _tax_amount(base, vat_rate)
-    irpf_amount = _tax_amount(base, irpf_rate)
-    total = float(
-        (
-            Decimal(str(base))
-            + Decimal(str(vat_amount))
-            - Decimal(str(irpf_amount))
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    invoice_type = (invoice_type or "F1").strip().upper()
+    if invoice_type not in {"F1", "F2"}:
+        raise ValueError("Solo se pueden crear facturas completas o simplificadas.")
+    normalized = _normalize_invoice_lines(
+        lines, fallback_concept=concept, fallback_base=base,
+        fallback_vat=vat_rate,
     )
+    totals = _invoice_totals(normalized, irpf_rate)
+    concept = normalized[0]["description"]
+    if len(normalized) > 1:
+        concept = f"{concept} y {len(normalized) - 1} línea(s) más"
+    if operation_date:
+        try:
+            operation_date = date.fromisoformat(str(operation_date)).isoformat()
+        except ValueError as exc:
+            raise ValueError("La fecha de operación no es válida.") from exc
+    notes = (notes or "").strip() or None
+    payment_method = (payment_method or "").strip() or None
+    legal_mention = (legal_mention or "").strip() or None
+    for value, label, maximum in (
+        (notes, "Las notas", 2000),
+        (payment_method, "La forma de pago", 120),
+        (legal_mention, "La mención legal", 500),
+    ):
+        if value and len(value) > maximum:
+            raise ValueError(f"{label} supera {maximum} caracteres.")
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        document_type = _series_document_type(invoice_type)
+        if series_id is None:
+            series = _ensure_default_invoice_series(conn, business_id, document_type)
+            series_id = series["id"]
+        else:
+            series = conn.execute(
+                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
+                "AND active=TRUE",
+                (series_id, business_id),
+            ).fetchone()
+            if not series or series["document_type"] != document_type:
+                raise ValueError("La serie no corresponde al tipo de factura.")
         row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
-            "vat_amount, irpf_rate, irpf_amount, total, status, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?) RETURNING id",
-            (business_id, client_id, concept, base, vat_rate, vat_amount,
-             irpf_rate or 0, irpf_amount, total, _now()),
+            "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
+            "series_id, operation_date, notes, payment_method, legal_mention, "
+            "currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', "
+            "?, ?, ?, ?, ?, ?, 'EUR', ?) RETURNING id",
+            (
+                business_id, client_id, concept, totals["base"],
+                totals["vat_rate"], totals["vat_amount"], totals["irpf_rate"],
+                totals["irpf_amount"], totals["total"], invoice_type, series_id,
+                operation_date, notes, payment_method, legal_mention, _now(),
+            ),
         ).fetchone()
         new_id = row["id"]
+        created_at = _now()
+        for line in normalized:
+            conn.execute(
+                "INSERT INTO invoice_lines "
+                "(business_id, invoice_id, position, description, quantity, "
+                "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    business_id, new_id, line["position"], line["description"],
+                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["vat_rate"], line["base"], line["vat_amount"],
+                    line["total"], created_at,
+                ),
+            )
     return get_invoice(new_id, business_id)
 
 
@@ -3635,6 +3948,8 @@ def create_rectifying_invoice(
     irpf_rate=0,
     invoice_type: str = "R1",
     reason: str,
+    lines=None,
+    series_id: int | None = None,
 ) -> dict:
     """Crea una rectificativa incremental; el original nunca se modifica."""
     original = get_invoice(original_invoice_id, business_id)
@@ -3642,6 +3957,10 @@ def create_rectifying_invoice(
         "enviada", "parcial", "cobrada"
     }:
         raise ValueError("Solo se puede rectificar una factura ya emitida.")
+    if get_invoice_cancellation_record(original_invoice_id, business_id):
+        raise ValueError(
+            "El registro fiscal de esta factura está anulado; no puede rectificarse."
+        )
     invoice_type = (invoice_type or "").strip().upper()
     if invoice_type not in {"R1", "R2", "R3", "R4", "R5"}:
         raise ValueError("El tipo de factura rectificativa no es válido.")
@@ -3651,46 +3970,62 @@ def create_rectifying_invoice(
         raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
     if len(reason) < 3 or len(reason) > 1000:
         raise ValueError("El motivo de rectificación es obligatorio.")
-    try:
-        signed_base = float(base)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("La base rectificada debe ser un número distinto de cero.") from exc
-    if (
-        not math.isfinite(signed_base)
-        or signed_base == 0
-        or abs(signed_base) > 10_000_000
-    ):
-        raise ValueError("La base rectificada debe ser un número distinto de cero.")
-    vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
-    irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
-    signed_base = float(
-        Decimal(str(signed_base)).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
+    normalized = _normalize_invoice_lines(
+        lines,
+        fallback_concept=concept,
+        fallback_base=base,
+        fallback_vat=vat_rate,
+        allow_negative=True,
     )
-    vat_amount = _tax_amount(signed_base, vat_rate)
-    irpf_amount = _tax_amount(signed_base, irpf_rate)
-    total = float(
-        (
-            Decimal(str(signed_base))
-            + Decimal(str(vat_amount))
-            - Decimal(str(irpf_amount))
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    )
+    totals = _invoice_totals(normalized, irpf_rate)
+    if totals["base"] == 0:
+        raise ValueError("La base rectificada debe ser distinta de cero.")
+    concept = normalized[0]["description"]
+    if len(normalized) > 1:
+        concept = f"{concept} y {len(normalized) - 1} línea(s) más"
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if series_id is None:
+            series = _ensure_default_invoice_series(
+                conn, business_id, "rectifying"
+            )
+            series_id = series["id"]
+        else:
+            series = conn.execute(
+                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
+                "AND document_type='rectifying' AND active=TRUE",
+                (series_id, business_id),
+            ).fetchone()
+            if not series:
+                raise ValueError("La serie rectificativa no es válida.")
         row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
             "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
             "rectifies_invoice_id, rectification_type, rectification_reason, "
-            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?, "
-            "'I', ?, ?) RETURNING id",
+            "series_id, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "'borrador', ?, ?, 'I', ?, ?, 'EUR', ?) RETURNING id",
             (
-                business_id, original["client_id"], concept, signed_base, vat_rate,
-                vat_amount, irpf_rate or 0, irpf_amount, total, invoice_type,
-                original_invoice_id, reason, _now(),
+                business_id, original["client_id"], concept, totals["base"],
+                totals["vat_rate"], totals["vat_amount"], totals["irpf_rate"],
+                totals["irpf_amount"], totals["total"], invoice_type,
+                original_invoice_id, reason, series_id, _now(),
             ),
         ).fetchone()
         new_id = row["id"]
+        created_at = _now()
+        for line in normalized:
+            conn.execute(
+                "INSERT INTO invoice_lines "
+                "(business_id, invoice_id, position, description, quantity, "
+                "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    business_id, new_id, line["position"], line["description"],
+                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["vat_rate"], line["base"], line["vat_amount"],
+                    line["total"], created_at,
+                ),
+            )
     return get_invoice(new_id, business_id)
 
 
@@ -3725,7 +4060,141 @@ def get_invoice(invoice_id, business_id) -> dict | None:
             "AND c.business_id=i.business_id WHERE " + where,
             params,
         ).fetchone()
-        return _invoice_payment_state(row) if row else None
+        if not row:
+            return None
+        lines = conn.execute(
+            "SELECT * FROM invoice_lines WHERE invoice_id=? AND business_id=? "
+            "ORDER BY position, id",
+            (invoice_id, business_id),
+        ).fetchall()
+        result = _invoice_payment_state(row)
+        result["lines"] = [dict(line) for line in lines]
+        return result
+
+
+def find_invoice_reference(reference, business_id: int) -> dict | None:
+    """Resuelve el id interno o el número visible de una factura del negocio."""
+    value = str(reference or "").strip().lstrip("#").strip()
+    value = re.sub(r"^factura\s+", "", value, flags=re.I).strip()
+    if not value:
+        return None
+    if value.isdigit():
+        invoice = get_invoice(int(value), business_id)
+        if invoice:
+            return invoice
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT id FROM invoices WHERE business_id=? "
+            "AND LOWER(COALESCE(number,''))=LOWER(?) ORDER BY id DESC LIMIT 1",
+            (business_id, value),
+        ).fetchone()
+    return get_invoice(row["id"], business_id) if row else None
+
+
+def get_invoice_lines(invoice_id: int, business_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM invoice_lines WHERE invoice_id=? AND business_id=? "
+            "ORDER BY position, id",
+            (invoice_id, business_id),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def update_invoice_draft(
+    invoice_id: int,
+    business_id: int,
+    *,
+    client_id: int,
+    lines,
+    irpf_rate=0,
+    invoice_type: str = "F1",
+    series_id: int | None = None,
+    operation_date: str | None = None,
+    notes: str | None = None,
+    payment_method: str | None = None,
+    legal_mention: str | None = None,
+) -> dict:
+    if not get_client(client_id, business_id):
+        raise ValueError("El cliente no pertenece a este negocio.")
+    invoice_type = (invoice_type or "F1").strip().upper()
+    if invoice_type not in {"F1", "F2"}:
+        raise ValueError("El tipo de factura no es válido para este borrador.")
+    normalized = _normalize_invoice_lines(lines)
+    totals = _invoice_totals(normalized, irpf_rate)
+    if operation_date:
+        try:
+            operation_date = date.fromisoformat(str(operation_date)).isoformat()
+        except ValueError as exc:
+            raise ValueError("La fecha de operación no es válida.") from exc
+    notes = (notes or "").strip() or None
+    payment_method = (payment_method or "").strip() or None
+    legal_mention = (legal_mention or "").strip() or None
+    for value, label, maximum in (
+        (notes, "Las notas", 2000),
+        (payment_method, "La forma de pago", 120),
+        (legal_mention, "La mención legal", 500),
+    ):
+        if value and len(value) > maximum:
+            raise ValueError(f"{label} supera {maximum} caracteres.")
+    concept = normalized[0]["description"]
+    if len(normalized) > 1:
+        concept = f"{concept} y {len(normalized) - 1} línea(s) más"
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        current = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
+            (invoice_id, business_id),
+        ).fetchone()
+        if not current:
+            raise ValueError("Factura no encontrada.")
+        if current["status"] != "borrador" or current.get("number"):
+            raise ValueError("Una factura emitida no puede editarse.")
+        expected_type = _series_document_type(invoice_type)
+        if series_id is None:
+            series = _ensure_default_invoice_series(conn, business_id, expected_type)
+            series_id = series["id"]
+        else:
+            series = conn.execute(
+                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
+                "AND active=TRUE",
+                (series_id, business_id),
+            ).fetchone()
+            if not series or series["document_type"] != expected_type:
+                raise ValueError("La serie no corresponde al tipo de factura.")
+        conn.execute(
+            "UPDATE invoices SET client_id=?, concept=?, base=?, vat_rate=?, "
+            "vat_amount=?, irpf_rate=?, irpf_amount=?, total=?, invoice_type=?, "
+            "series_id=?, operation_date=?, notes=?, payment_method=?, "
+            "legal_mention=? WHERE id=? AND business_id=? AND status='borrador'",
+            (
+                client_id, concept, totals["base"], totals["vat_rate"],
+                totals["vat_amount"], totals["irpf_rate"],
+                totals["irpf_amount"], totals["total"], invoice_type, series_id,
+                operation_date, notes, payment_method, legal_mention,
+                invoice_id, business_id,
+            ),
+        )
+        conn.execute(
+            "DELETE FROM invoice_lines WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        )
+        created_at = _now()
+        for line in normalized:
+            conn.execute(
+                "INSERT INTO invoice_lines "
+                "(business_id, invoice_id, position, description, quantity, "
+                "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    business_id, invoice_id, line["position"], line["description"],
+                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["vat_rate"], line["base"], line["vat_amount"],
+                    line["total"], created_at,
+                ),
+            )
+    return get_invoice(invoice_id, business_id)
 
 
 def list_invoices(business_id, status=None) -> list[dict]:
@@ -3738,11 +4207,18 @@ def list_invoices(business_id, status=None) -> list[dict]:
         "WHERE vr.business_id=i.business_id AND vr.invoice_id=i.id) "
         "THEN TRUE ELSE FALSE END AS verifactu_registered, "
         "vo.status AS verifactu_status, vo.aeat_csv AS verifactu_csv, "
-        "vo.aeat_error_description AS verifactu_error "
+        "vo.aeat_error_description AS verifactu_error, s.name AS series_name, "
+        "(SELECT co.status FROM verifactu_cancellation_outbox co WHERE "
+        "co.business_id=i.business_id AND co.invoice_id=i.id "
+        "ORDER BY co.id DESC LIMIT 1) AS cancellation_status, "
+        "(SELECT COUNT(*) FROM invoice_lines il WHERE "
+        "il.business_id=i.business_id AND il.invoice_id=i.id) AS line_count "
         "FROM invoices i "
         "LEFT JOIN clients c ON c.id = i.client_id AND c.business_id=i.business_id "
         "LEFT JOIN verifactu_outbox vo ON vo.invoice_id=i.id "
         "AND vo.business_id=i.business_id "
+        "LEFT JOIN invoice_series s ON s.id=i.series_id "
+        "AND s.business_id=i.business_id "
         "WHERE i.business_id=?"
     )
     params: list = [business_id]
@@ -3755,6 +4231,243 @@ def list_invoices(business_id, status=None) -> list[dict]:
             _invoice_payment_state(r)
             for r in conn.execute(q, params).fetchall()
         ]
+
+
+def _advance_recurring_day(day: date, cadence: str, interval_count: int) -> date:
+    if cadence == "weekly":
+        return day + timedelta(weeks=interval_count)
+    months = interval_count * {
+        "monthly": 1, "quarterly": 3, "annual": 12,
+    }[cadence]
+    target_month = day.month - 1 + months
+    year = day.year + target_month // 12
+    month = target_month % 12 + 1
+    next_month = date(year + (month == 12), month % 12 + 1, 1)
+    last_day = (next_month - timedelta(days=1)).day
+    return date(year, month, min(day.day, last_day))
+
+
+def add_recurring_invoice(
+    business_id: int,
+    client_id: int,
+    *,
+    name: str,
+    cadence: str,
+    next_run_on: str,
+    lines,
+    interval_count: int = 1,
+    ends_on: str | None = None,
+    auto_issue: bool = False,
+    irpf_rate=0,
+    invoice_type: str = "F1",
+    series_id: int | None = None,
+    notes: str | None = None,
+    payment_method: str | None = None,
+) -> dict:
+    if not get_client(client_id, business_id):
+        raise ValueError("El cliente no pertenece a este negocio.")
+    name = (name or "").strip()
+    cadence = (cadence or "").strip().lower()
+    if not 1 <= len(name) <= 120:
+        raise ValueError("Pon un nombre a la programación.")
+    if cadence not in {"weekly", "monthly", "quarterly", "annual"}:
+        raise ValueError("La frecuencia no es válida.")
+    try:
+        interval_count = int(interval_count)
+        start = date.fromisoformat(str(next_run_on))
+        end = date.fromisoformat(str(ends_on)) if ends_on else None
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Las fechas o el intervalo no son válidos.") from exc
+    if not 1 <= interval_count <= 24:
+        raise ValueError("El intervalo debe estar entre 1 y 24.")
+    if end and end < start:
+        raise ValueError("La fecha final no puede ser anterior al primer día.")
+    invoice_type = (invoice_type or "F1").strip().upper()
+    if invoice_type not in {"F1", "F2"}:
+        raise ValueError("El tipo de factura programada no es válido.")
+    normalized = _normalize_invoice_lines(lines)
+    _invoice_totals(normalized, irpf_rate)
+    now = _now()
+    with get_conn() as conn:
+        if series_id is not None:
+            series = conn.execute(
+                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
+                "AND active=TRUE",
+                (series_id, business_id),
+            ).fetchone()
+            if (
+                not series
+                or series["document_type"] != _series_document_type(invoice_type)
+            ):
+                raise ValueError("La serie no corresponde al tipo de factura.")
+        row = conn.execute(
+            "INSERT INTO recurring_invoices "
+            "(business_id, client_id, name, cadence, interval_count, next_run_on, "
+            "ends_on, auto_issue, status, lines_json, irpf_rate, invoice_type, "
+            "series_id, notes, payment_method, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?) "
+            "RETURNING id",
+            (
+                business_id, client_id, name, cadence, interval_count,
+                start.isoformat(), end.isoformat() if end else None,
+                bool(auto_issue), json.dumps(normalized, ensure_ascii=False),
+                _tax_rate(irpf_rate, "El IRPF", {0, 7, 15}), invoice_type,
+                series_id, (notes or "").strip() or None,
+                (payment_method or "").strip() or None, now, now,
+            ),
+        ).fetchone()
+    return get_recurring_invoice(row["id"], business_id)
+
+
+def get_recurring_invoice(recurring_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT r.*, c.name AS client_name FROM recurring_invoices r "
+            "JOIN clients c ON c.id=r.client_id AND c.business_id=r.business_id "
+            "WHERE r.id=? AND r.business_id=?",
+            (recurring_id, business_id),
+        ).fetchone()
+    if not row:
+        return None
+    result = dict(row)
+    result["lines"] = json.loads(result.pop("lines_json"))
+    return result
+
+
+def list_recurring_invoices(business_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT r.*, c.name AS client_name FROM recurring_invoices r "
+            "JOIN clients c ON c.id=r.client_id AND c.business_id=r.business_id "
+            "WHERE r.business_id=? ORDER BY r.status, r.next_run_on, r.id",
+            (business_id,),
+        ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["lines"] = json.loads(item.pop("lines_json"))
+        result.append(item)
+    return result
+
+
+def set_recurring_invoice_status(
+    recurring_id: int, business_id: int, status: str
+) -> dict | None:
+    if status not in {"active", "paused", "ended"}:
+        raise ValueError("El estado de la programación no es válido.")
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "UPDATE recurring_invoices SET status=?, updated_at=? "
+            "WHERE id=? AND business_id=?",
+            (status, _now(), recurring_id, business_id),
+        )
+    return (
+        get_recurring_invoice(recurring_id, business_id)
+        if cursor.rowcount else None
+    )
+
+
+def process_due_recurring_invoices(
+    *, today: date | None = None, limit: int = 100
+) -> list[dict]:
+    """Genera una vez cada vencimiento; emitir automáticamente es opt-in."""
+    today = today or date.today()
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT r.* FROM recurring_invoices r JOIN businesses b "
+            "ON b.id=r.business_id WHERE r.status='active' "
+            "AND r.next_run_on<=? ORDER BY r.next_run_on, r.id LIMIT ?",
+            (today.isoformat(), max(1, min(int(limit), 500))),
+        ).fetchall()
+    generated = []
+    for raw in rows:
+        schedule = dict(raw)
+        business = get_business(schedule["business_id"])
+        if not business or not subscription_allows_access(business):
+            continue
+        scheduled_for = schedule["next_run_on"]
+        now = _now()
+        stale_before = (datetime.now() - timedelta(minutes=10)).isoformat(
+            timespec="seconds"
+        )
+        with get_conn() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            run = conn.execute(
+                "INSERT INTO recurring_invoice_runs "
+                "(business_id, recurring_id, scheduled_for, status, created_at) "
+                "VALUES (?, ?, ?, 'processing', ?) "
+                "ON CONFLICT (business_id, recurring_id, scheduled_for) DO NOTHING "
+                "RETURNING id",
+                (
+                    schedule["business_id"], schedule["id"], scheduled_for, now,
+                ),
+            ).fetchone()
+            if not run:
+                run = conn.execute(
+                    "UPDATE recurring_invoice_runs SET created_at=?, error=NULL, "
+                    "status='processing' WHERE business_id=? AND recurring_id=? "
+                    "AND scheduled_for=? AND invoice_id IS NULL AND "
+                    "(status='error' OR created_at<=?) RETURNING id",
+                    (
+                        now, schedule["business_id"], schedule["id"],
+                        scheduled_for, stale_before,
+                    ),
+                ).fetchone()
+            if not run:
+                continue
+        try:
+            lines = json.loads(schedule["lines_json"])
+            invoice = add_invoice(
+                schedule["client_id"],
+                lines[0]["description"],
+                None,
+                business_id=schedule["business_id"],
+                lines=lines,
+                irpf_rate=schedule["irpf_rate"],
+                invoice_type=schedule["invoice_type"],
+                series_id=schedule.get("series_id"),
+                operation_date=scheduled_for,
+                notes=schedule.get("notes"),
+                payment_method=schedule.get("payment_method"),
+            )
+            if schedule.get("auto_issue"):
+                invoice = issue_invoice(invoice["id"], schedule["business_id"])
+            next_day = _advance_recurring_day(
+                date.fromisoformat(scheduled_for),
+                schedule["cadence"],
+                int(schedule["interval_count"]),
+            )
+            end = date.fromisoformat(schedule["ends_on"]) if schedule.get("ends_on") else None
+            next_status = "ended" if end and next_day > end else "active"
+            completed_at = _now()
+            with get_conn() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                conn.execute(
+                    "UPDATE recurring_invoice_runs SET invoice_id=?, status='completed', "
+                    "completed_at=? WHERE id=? AND business_id=?",
+                    (
+                        invoice["id"], completed_at, run["id"],
+                        schedule["business_id"],
+                    ),
+                )
+                conn.execute(
+                    "UPDATE recurring_invoices SET next_run_on=?, status=?, "
+                    "last_generated_at=?, updated_at=? WHERE id=? AND business_id=?",
+                    (
+                        next_day.isoformat(), next_status, completed_at,
+                        completed_at, schedule["id"], schedule["business_id"],
+                    ),
+                )
+            generated.append(invoice)
+        except Exception as exc:  # noqa: BLE001 - deja el fallo trazable y reintentable.
+            with get_conn() as conn:
+                conn.execute(
+                    "UPDATE recurring_invoice_runs SET status='error', error=? "
+                    "WHERE id=? AND business_id=?",
+                    (str(exc)[:1500], run["id"], schedule["business_id"]),
+                )
+            log.exception("No se pudo generar la factura recurrente %s", schedule["id"])
+    return generated
 
 
 def _next_document_number(conn, business_id: int, kind: str) -> int:
@@ -3783,6 +4496,38 @@ def _next_document_number(conn, business_id: int, kind: str) -> int:
     return row["last_number"]
 
 
+def _next_invoice_series_number(conn, business_id: int, series_id: int) -> str:
+    lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+    series = conn.execute(
+        "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
+        "AND active=TRUE" + lock,
+        (series_id, business_id),
+    ).fetchone()
+    if not series:
+        raise ValueError("La serie de numeración no está disponible.")
+    year = date.today().year
+    prefix = series["prefix_template"].replace("{YYYY}", str(year))
+    existing = conn.execute(
+        "SELECT number FROM invoices WHERE business_id=? AND number LIKE ?",
+        (business_id, f"{prefix}%"),
+    ).fetchall()
+    used = []
+    for item in existing:
+        suffix = str(item["number"])[len(prefix):]
+        if suffix.isdigit():
+            used.append(int(suffix))
+    initial = max(used, default=0) + 1
+    sequence_kind = f"invoice_series:{series_id}"
+    row = conn.execute(
+        "INSERT INTO document_sequences (business_id, kind, year, last_number) "
+        "VALUES (?, ?, ?, ?) ON CONFLICT (business_id, kind, year) DO UPDATE "
+        "SET last_number=document_sequences.last_number+1 RETURNING last_number",
+        (business_id, sequence_kind, year, initial),
+    ).fetchone()
+    number = int(row["last_number"])
+    return f"{prefix}{number:0{int(series['padding'])}d}"
+
+
 def _record_invoice_event(
     conn,
     business_id: int,
@@ -3804,6 +4549,87 @@ def _record_invoice_event(
     )
 
 
+def _fiscal_record_rows(
+    conn, business_id: int, issuer_nif: str | None = None
+) -> list[dict]:
+    """Une altas y anulaciones en el orden cronológico de una sola cadena."""
+    where = "business_id=?"
+    params: list = [business_id]
+    if issuer_nif:
+        where += " AND issuer_nif=?"
+        params.append(issuer_nif.strip().upper())
+    records = [
+        dict(row) for row in conn.execute(
+            f"SELECT * FROM invoice_records WHERE {where}", params
+        ).fetchall()
+    ]
+    cancellations = [
+        dict(row) for row in conn.execute(
+            f"SELECT * FROM invoice_cancellation_records WHERE {where}", params
+        ).fetchall()
+    ]
+    records.extend(cancellations)
+    records.sort(
+        key=lambda item: (
+            str(item.get("generated_at") or ""),
+            0 if item.get("record_type") == "alta" else 1,
+            int(item["id"]),
+        )
+    )
+    return records
+
+
+def _verify_invoice_record_rows(records: list[dict]) -> dict:
+    """Verifica una cadena ya ordenada sin abrir otra conexión a la BD."""
+    previous_by_issuer: dict[str, dict] = {}
+    last_record = None
+    for index, record in enumerate(records):
+        previous = previous_by_issuer.get(record["issuer_nif"])
+        previous_hash = previous["record_hash"] if previous else None
+        if record.get("record_type") == "anulacion":
+            expected = verifactu.cancellation_record_hash(
+                algorithm=record["hash_algorithm"],
+                issuer_nif=record["issuer_nif"],
+                invoice_number=record["invoice_number"],
+                issue_date=record["issue_date"],
+                previous_hash=previous_hash,
+                generated_at=record["generated_at"],
+            )
+        else:
+            expected = verifactu.invoice_record_hash(
+                algorithm=record["hash_algorithm"],
+                issuer_nif=record["issuer_nif"],
+                invoice_number=record["invoice_number"],
+                issue_date=record["issue_date"],
+                invoice_type=record["invoice_type"],
+                vat_total=record["vat_total"],
+                invoice_total=record["invoice_total"],
+                previous_hash=previous_hash,
+                generated_at=record["generated_at"],
+            )
+        if (
+            record.get("previous_hash") != previous_hash
+            or record.get("record_hash") != expected
+        ):
+            return {
+                "valid": False,
+                "checked": index,
+                "broken_at": record["id"],
+                "broken_record_type": record.get("record_type") or "alta",
+                "expected_hash": expected,
+                "stored_hash": record.get("record_hash"),
+            }
+        previous_by_issuer[record["issuer_nif"]] = record
+        last_record = record
+    return {
+        "valid": True,
+        "checked": len(records),
+        "broken_at": None,
+        "broken_record_type": None,
+        "last_hash": last_record["record_hash"] if last_record else None,
+    }
+
+
 def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
     invoice = conn.execute(
         "SELECT * FROM invoices WHERE id=? AND business_id=?",
@@ -3822,19 +4648,50 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
         return dict(existing)
 
     issuer_nif = _verifactu_nif(invoice["issuer_nif"], "El NIF del emisor")
-    recipient_nif = _verifactu_nif(
-        invoice["recipient_nif"], "El NIF del destinatario"
-    )
     invoice_type = (invoice.get("invoice_type") or "F1").strip().upper()
+    recipient_nif = (invoice.get("recipient_nif") or "").strip().upper()
+    if invoice_type != "F2" or recipient_nif:
+        recipient_nif = _verifactu_nif(
+            recipient_nif, "El NIF del destinatario"
+        )
+    producer_nif = _verifactu_nif(
+        config.VERIFACTU_PRODUCER_NIF, "El NIF del productor"
+    )
+    issuer_name = (invoice["issuer_name"] or "").strip()
+    recipient_name = (invoice.get("recipient_name") or "").strip()
+    if not 1 <= len(issuer_name) <= 120:
+        raise ValueError("El nombre fiscal del emisor supera 120 caracteres.")
+    if invoice_type != "F2" and not 1 <= len(recipient_name) <= 120:
+        raise ValueError("El nombre fiscal del destinatario supera 120 caracteres.")
     if invoice_type not in _VERIFACTU_INVOICE_TYPES:
         raise ValueError("El tipo de factura no es válido para Veri*Factu.")
     issue_date = verifactu.aeat_date(invoice["issued_at"])
     generated_at = verifactu.generated_at_with_timezone()
-    previous = conn.execute(
-        "SELECT * FROM invoice_records "
-        "WHERE business_id=? AND issuer_nif=? ORDER BY id DESC LIMIT 1",
-        (business_id, issuer_nif),
-    ).fetchone()
+    existing_chain = _fiscal_record_rows(conn, business_id, issuer_nif)
+    integrity = _verify_invoice_record_rows(existing_chain)
+    if not integrity["valid"]:
+        raise ValueError(
+            "La cadena Veri*Factu existente presenta una anomalía; "
+            "la factura no se ha emitido."
+        )
+    previous = existing_chain[-1] if existing_chain else None
+    if previous:
+        try:
+            previous_time = datetime.fromisoformat(previous["generated_at"])
+            current_time = datetime.fromisoformat(generated_at)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "La fecha del último registro Veri*Factu no es válida."
+            ) from exc
+        if current_time < previous_time - timedelta(minutes=1):
+            raise ValueError(
+                "El reloj del sistema retrocede respecto al último registro "
+                "Veri*Factu; revisa la sincronización horaria."
+            )
+        if current_time <= previous_time:
+            generated_at = (previous_time + timedelta(milliseconds=1)).isoformat(
+                timespec="milliseconds"
+            )
     previous_hash = previous["record_hash"] if previous else None
 
     rectified = None
@@ -3856,12 +4713,35 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
         previous_hash=previous_hash,
         generated_at=generated_at,
     )
+    invoice_lines = conn.execute(
+        "SELECT * FROM invoice_lines WHERE business_id=? AND invoice_id=? "
+        "ORDER BY position, id",
+        (business_id, invoice_id),
+    ).fetchall()
+    grouped: dict[float, dict[str, Decimal]] = {}
+    for line in invoice_lines:
+        rate = float(line["vat_rate"])
+        target = grouped.setdefault(
+            rate, {"base": Decimal("0"), "vat_amount": Decimal("0")}
+        )
+        target["base"] += Decimal(str(line["base"]))
+        target["vat_amount"] += Decimal(str(line["vat_amount"]))
+    if not grouped:
+        grouped[float(invoice["vat_rate"])] = {
+            "base": Decimal(str(invoice["base"])),
+            "vat_amount": Decimal(str(invoice["vat_amount"])),
+        }
     breakdown = json.dumps(
-        [{
-            "vat_rate": invoice["vat_rate"],
-            "base": invoice["base"],
-            "vat_amount": invoice["vat_amount"],
-        }],
+        [
+            {
+                "vat_rate": rate,
+                "base": float(values["base"].quantize(Decimal("0.01"))),
+                "vat_amount": float(
+                    values["vat_amount"].quantize(Decimal("0.01"))
+                ),
+            }
+            for rate, values in sorted(grouped.items())
+        ],
         separators=(",", ":"),
         ensure_ascii=False,
     )
@@ -3876,31 +4756,33 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
         "business_id, invoice_id, record_type, record_version, invoice_type, "
         "rectification_type, rectified_issuer_nif, rectified_invoice_number, "
         "rectified_issue_date, issuer_nif, issuer_name, invoice_number, issue_date, "
-        "recipient_nif, recipient_name, description, breakdown_json, vat_total, "
+        "operation_date, recipient_nif, recipient_name, description, breakdown_json, vat_total, "
         "invoice_total, generated_at, previous_record_id, previous_issuer_nif, "
         "previous_invoice_number, previous_issue_date, previous_hash, "
         "hash_algorithm, hash_type, hash_spec_version, record_hash, qr_url, "
         "producer_name, producer_nif, system_name, system_id, system_version, "
         "installation_id, created_at) VALUES ("
         "?, ?, 'alta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
         (
             business_id, invoice_id, config.VERIFACTU_RECORD_VERSION, invoice_type,
             invoice.get("rectification_type"),
             issuer_nif if rectified else None,
             rectified["number"] if rectified else None,
             verifactu.aeat_date(rectified["issued_at"]) if rectified else None,
-            issuer_nif, invoice["issuer_name"], invoice["number"], issue_date,
-            recipient_nif, invoice["recipient_name"], invoice["concept"], breakdown,
+            issuer_nif, issuer_name, invoice["number"], issue_date,
+            verifactu.aeat_date(invoice["operation_date"])
+            if invoice.get("operation_date") else None,
+            recipient_nif, recipient_name, invoice["concept"].strip(), breakdown,
             invoice["vat_amount"], invoice["total"], generated_at,
-            previous["id"] if previous else None,
+            previous["id"] if previous and previous.get("record_type") == "alta" else None,
             previous["issuer_nif"] if previous else None,
             previous["invoice_number"] if previous else None,
             previous["issue_date"] if previous else None,
             previous_hash, config.VERIFACTU_HASH_ALGORITHM,
             config.VERIFACTU_HASH_TYPE, config.VERIFACTU_HASH_SPEC_VERSION,
-            record_hash, invoice_qr_url, config.VERIFACTU_PRODUCER_NAME,
-            config.VERIFACTU_PRODUCER_NIF, config.VERIFACTU_SYSTEM_NAME,
+            record_hash, invoice_qr_url, config.VERIFACTU_PRODUCER_NAME.strip(),
+            producer_nif, config.VERIFACTU_SYSTEM_NAME,
             config.VERIFACTU_SYSTEM_ID, config.VERIFACTU_SYSTEM_VERSION,
             f"{config.VERIFACTU_INSTALLATION_PREFIX}-{business_id}",
             generated_at,
@@ -3932,9 +4814,17 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
 
 
 def issue_invoice(
-    invoice_id: int, business_id: int, payment_term_days: int | None = None
+    invoice_id: int,
+    business_id: int,
+    payment_term_days: int | None = None,
+    *,
+    _issued_at_override: str | None = None,
 ) -> dict:
-    """Emite una factura una sola vez, numera y congela sus datos fiscales."""
+    """Emite una factura una sola vez, numera y congela sus datos fiscales.
+
+    ``_issued_at_override`` existe únicamente para construir cuentas demo con
+    historia coherente. No se expone en las rutas de producto.
+    """
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
@@ -3966,33 +4856,88 @@ def issue_invoice(
         ).fetchone()
         if not biz or not client:
             raise ValueError("Faltan el negocio o el cliente de la factura.")
+        invoice_type = (inv.get("invoice_type") or "F1").upper()
         missing = []
-        for value, label in (
+        required = [
             (biz["name"], "nombre fiscal del negocio"),
             (biz["nif"], "NIF del negocio"),
             (biz["address"], "domicilio del negocio"),
             (client["name"], "nombre del cliente"),
-            (client["nif"], "NIF del cliente"),
-            (client["address"], "domicilio del cliente"),
-        ):
+        ]
+        if invoice_type != "F2":
+            required.extend((
+                (client["nif"], "NIF del cliente"),
+                (client["address"], "domicilio del cliente"),
+            ))
+        for value, label in required:
             if not (value or "").strip():
                 missing.append(label)
         if missing:
             raise ValueError(
                 "Antes de emitir completa: " + ", ".join(missing) + "."
             )
-
-        seq = _next_document_number(conn, business_id, "invoice")
-        year = date.today().year
-        number = f"{year}/{seq:04d}"
-        issued_at = _now()
+        lines = [dict(row) for row in conn.execute(
+            "SELECT * FROM invoice_lines WHERE business_id=? AND invoice_id=? "
+            "ORDER BY position, id",
+            (business_id, invoice_id),
+        ).fetchall()]
+        if not lines:
+            raise ValueError("La factura no contiene ninguna línea.")
+        totals = _invoice_totals(lines, inv.get("irpf_rate") or 0)
+        for key in ("base", "vat_amount", "irpf_amount", "total"):
+            if Decimal(str(totals[key])).quantize(Decimal("0.01")) != Decimal(
+                str(inv[key])
+            ).quantize(Decimal("0.01")):
+                raise ValueError(
+                    "Los totales del borrador no coinciden con sus líneas; "
+                    "revísalo antes de emitir."
+                )
+        if invoice_type == "F2" and Decimal(str(inv["total"])) > Decimal("400"):
+            raise ValueError(
+                "La factura simplificada supera el límite general de 400 €. "
+                "Emítela como factura completa con los datos fiscales del cliente."
+            )
+        expected_document_type = _series_document_type(invoice_type)
+        series = conn.execute(
+            "SELECT * FROM invoice_series WHERE id=? AND business_id=? AND active=TRUE",
+            (inv.get("series_id"), business_id),
+        ).fetchone()
+        if not series:
+            series = _ensure_default_invoice_series(
+                conn, business_id, expected_document_type
+            )
+            conn.execute(
+                "UPDATE invoices SET series_id=? WHERE id=? AND business_id=?",
+                (series["id"], invoice_id, business_id),
+            )
+        if series["document_type"] != expected_document_type:
+            raise ValueError("La serie no corresponde al tipo de factura.")
+        number = _next_invoice_series_number(conn, business_id, series["id"])
+        if _issued_at_override:
+            try:
+                issued_day = date.fromisoformat(str(_issued_at_override)[:10])
+            except ValueError as exc:
+                raise ValueError("La fecha de emisión demo no es válida.") from exc
+            if issued_day > date.today():
+                raise ValueError("La fecha de emisión demo no puede ser futura.")
+            issued_at = f"{issued_day.isoformat()}T12:00:00"
+        else:
+            issued_at = _now()
+            issued_day = date.today()
+        if inv.get("operation_date"):
+            try:
+                operation_day = date.fromisoformat(inv["operation_date"])
+            except ValueError as exc:
+                raise ValueError("La fecha de operación del borrador no es válida.") from exc
+            if operation_day > date.today():
+                raise ValueError("La fecha de operación no puede estar en el futuro.")
         if payment_term_days is None:
             configured_term = biz.get("default_payment_term_days")
             payment_term_days = int(
                 15 if configured_term is None else configured_term
             )
         due_date = (
-            date.today() + timedelta(days=max(0, min(payment_term_days, 365)))
+            issued_day + timedelta(days=max(0, min(payment_term_days, 365)))
         ).isoformat()
         conn.execute(
             "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=?, "
@@ -4001,7 +4946,7 @@ def issue_invoice(
             "WHERE id=? AND business_id=? AND status='borrador'",
             (
                 number, issued_at, due_date, biz["name"], biz["nif"], biz["address"],
-                client["name"], client["nif"], client["address"], invoice_id,
+                client["name"], client.get("nif"), client.get("address"), invoice_id,
                 business_id,
             ),
         )
@@ -4013,31 +4958,12 @@ def issue_invoice(
                     + ", ".join(errors) + "."
                 )
             _create_invoice_record(conn, business_id, invoice_id)
+        else:
+            _record_invoice_event(
+                conn, business_id, "emision", invoice_id=invoice_id,
+                details=f"numero={number}", created_at=issued_at,
+            )
     return get_invoice(invoice_id, business_id)
-
-
-def mark_invoice_sent(invoice_id, number, due_date=None, *, business_id: int) -> dict | None:
-    """Marca una factura como enviada. Filtra por business_id (aislamiento): si la
-    factura no es de ese negocio, no toca nada y devuelve None."""
-    business = get_business(business_id)
-    if business and business.get("verifactu_enabled"):
-        raise ValueError(
-            "El modo Veri*Factu nativo debe emitir con la numeración interna."
-        )
-    with get_conn() as conn:
-        imported = conn.execute(
-            "SELECT source FROM invoices WHERE id=? AND business_id=?",
-            (invoice_id, business_id),
-        ).fetchone()
-        if imported and imported.get("source") == "importada":
-            raise ValueError("Una factura importada no se puede volver a emitir.")
-        cur = conn.execute(
-            "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=? "
-            "WHERE id=? AND business_id=? AND status='borrador' AND number IS NULL",
-            (number, _now(), due_date, invoice_id, business_id),
-        )
-        ok = cur.rowcount > 0
-    return get_invoice(invoice_id, business_id) if ok else None
 
 
 def _payment_text(value, label: str, max_length: int) -> str | None:
@@ -4155,6 +5081,14 @@ def add_invoice_payment(
             conn, invoice, amount_decimal, method, paid_at, note
         )
         _set_invoice_payment_state(conn, invoice, new_paid, paid_at)
+        _record_invoice_event(
+            conn, business_id, "cobro", invoice_id=invoice_id,
+            details=(
+                f"importe={float(amount_decimal):.2f};"
+                f"metodo={method or 'no indicado'}"
+            ),
+            created_at=paid_at,
+        )
         payment = conn.execute(
             "SELECT * FROM invoice_payments "
             "WHERE id=? AND business_id=? AND invoice_id=?",
@@ -4213,6 +5147,11 @@ def mark_invoice_paid(invoice_id, business_id) -> dict | None:
                 "Cobro completo registrado",
             )
             _set_invoice_payment_state(conn, invoice, total, payment_time)
+            _record_invoice_event(
+                conn, business_id, "cobro", invoice_id=invoice_id,
+                details=f"importe={float(remaining):.2f};metodo=no indicado",
+                created_at=payment_time,
+            )
     return get_invoice(invoice_id, business_id)
 
 
@@ -4235,6 +5174,152 @@ def get_invoice_record(invoice_id: int, business_id: int) -> dict | None:
         return dict(row) if row else None
 
 
+def get_invoice_cancellation_record(
+    invoice_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM invoice_cancellation_records "
+            "WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_verifactu_cancellation_outbox(
+    invoice_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM verifactu_cancellation_outbox "
+            "WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def create_invoice_cancellation_record(
+    invoice_id: int, business_id: int, *, reason: str
+) -> dict:
+    """Anula ante la AEAT un alta aceptada sin borrar ni alterar la factura."""
+    reason = (reason or "").strip()
+    if not 5 <= len(reason) <= 1000:
+        raise ValueError("Explica el motivo de la anulación (5 a 1.000 caracteres).")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute(
+            "SELECT * FROM invoice_cancellation_records "
+            "WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        if existing:
+            return dict(existing)
+        invoice = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        original = conn.execute(
+            "SELECT * FROM invoice_records WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        outbox = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+        if not invoice or not original:
+            raise ValueError(
+                "Solo se puede anular un registro Veri*Factu ya generado."
+            )
+        if not outbox or outbox["status"] not in {
+            "aceptado", "aceptado_con_errores"
+        }:
+            raise ValueError(
+                "La anulación requiere que el alta haya sido aceptada por la AEAT."
+            )
+        issuer_nif = original["issuer_nif"]
+        chain = _fiscal_record_rows(conn, business_id, issuer_nif)
+        integrity = _verify_invoice_record_rows(chain)
+        if not integrity["valid"]:
+            raise ValueError(
+                "La cadena Veri*Factu presenta una anomalía; no se ha anulado."
+            )
+        previous = chain[-1] if chain else None
+        generated_at = verifactu.generated_at_with_timezone()
+        if previous:
+            previous_time = datetime.fromisoformat(previous["generated_at"])
+            current_time = datetime.fromisoformat(generated_at)
+            if current_time < previous_time - timedelta(minutes=1):
+                raise ValueError(
+                    "El reloj del sistema retrocede respecto al último registro."
+                )
+            if current_time <= previous_time:
+                generated_at = (
+                    previous_time + timedelta(milliseconds=1)
+                ).isoformat(timespec="milliseconds")
+        previous_hash = previous["record_hash"] if previous else None
+        record_hash = verifactu.cancellation_record_hash(
+            issuer_nif=issuer_nif,
+            invoice_number=original["invoice_number"],
+            issue_date=original["issue_date"],
+            previous_hash=previous_hash,
+            generated_at=generated_at,
+        )
+        row = conn.execute(
+            "INSERT INTO invoice_cancellation_records ("
+            "business_id, invoice_id, original_record_id, record_type, "
+            "record_version, issuer_nif, issuer_name, invoice_number, issue_date, "
+            "reason, generated_at, previous_record_type, previous_record_id, "
+            "previous_issuer_nif, previous_invoice_number, previous_issue_date, "
+            "previous_hash, hash_algorithm, hash_type, hash_spec_version, "
+            "record_hash, producer_name, producer_nif, system_name, system_id, "
+            "system_version, installation_id, created_at) VALUES ("
+            "?, ?, ?, 'anulacion', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (
+                business_id, invoice_id, original["id"],
+                config.VERIFACTU_RECORD_VERSION, issuer_nif,
+                original["issuer_name"], original["invoice_number"],
+                original["issue_date"], reason, generated_at,
+                previous.get("record_type") if previous else None,
+                previous["id"] if previous else None,
+                previous["issuer_nif"] if previous else None,
+                previous["invoice_number"] if previous else None,
+                previous["issue_date"] if previous else None,
+                previous_hash, config.VERIFACTU_HASH_ALGORITHM,
+                config.VERIFACTU_HASH_TYPE, config.VERIFACTU_HASH_SPEC_VERSION,
+                record_hash, config.VERIFACTU_PRODUCER_NAME.strip(),
+                config.VERIFACTU_PRODUCER_NIF.strip().upper(),
+                config.VERIFACTU_SYSTEM_NAME, config.VERIFACTU_SYSTEM_ID,
+                config.VERIFACTU_SYSTEM_VERSION,
+                f"{config.VERIFACTU_INSTALLATION_PREFIX}-{business_id}",
+                generated_at,
+            ),
+        ).fetchone()
+        record_id = row["id"]
+        queued_at = _now()
+        conn.execute(
+            "INSERT INTO verifactu_cancellation_outbox ("
+            "business_id, invoice_id, record_id, status, attempts, max_attempts, "
+            "next_attempt_at, created_at, updated_at) "
+            "VALUES (?, ?, ?, 'pendiente', 0, ?, ?, ?, ?)",
+            (
+                business_id, invoice_id, record_id,
+                config.VERIFACTU_MAX_ATTEMPTS, queued_at, queued_at, queued_at,
+            ),
+        )
+        _record_invoice_event(
+            conn, business_id, "anulacion", invoice_id=invoice_id,
+            details=f"motivo={reason};huella={record_hash}",
+            created_at=generated_at,
+        )
+        created = conn.execute(
+            "SELECT * FROM invoice_cancellation_records "
+            "WHERE id=? AND business_id=?",
+            (record_id, business_id),
+        ).fetchone()
+        return dict(created)
+
+
 def list_invoice_records(
     business_id: int,
     *,
@@ -4248,10 +5333,7 @@ def list_invoice_records(
     if start and end and end < start:
         raise ValueError("La fecha final no puede ser anterior a la inicial.")
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM invoice_records WHERE business_id=? ORDER BY id",
-            (business_id,),
-        ).fetchall()
+        rows = _fiscal_record_rows(conn, business_id)
     result = []
     for raw in rows:
         record = dict(raw)
@@ -4264,13 +5346,43 @@ def list_invoice_records(
     return result
 
 
-def list_invoice_events(business_id: int) -> list[dict]:
+def list_invoice_events(
+    business_id: int, invoice_id: int | None = None
+) -> list[dict]:
+    query = "SELECT * FROM invoice_events WHERE business_id=?"
+    params: list = [business_id]
+    if invoice_id is not None:
+        query += " AND invoice_id=?"
+        params.append(invoice_id)
+    query += " ORDER BY id"
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM invoice_events WHERE business_id=? ORDER BY id",
-            (business_id,),
+            query,
+            params,
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def record_invoice_communication(
+    invoice_id: int,
+    business_id: int,
+    event_type: str,
+    details: str | None = None,
+) -> None:
+    if event_type not in {
+        "entrega_preparada", "entrega_enviada", "visualizacion"
+    }:
+        raise ValueError("El evento de factura no es válido.")
+    if not get_invoice(invoice_id, business_id):
+        raise ValueError("Factura no encontrada.")
+    with get_conn() as conn:
+        _record_invoice_event(
+            conn,
+            business_id,
+            event_type,
+            invoice_id=invoice_id,
+            details=(details or "")[:1500] or None,
+        )
 
 
 def get_verifactu_outbox(invoice_id: int, business_id: int) -> dict | None:
@@ -4342,19 +5454,30 @@ def claim_next_verifactu_submission(
             "updated_at=? WHERE id=?",
             (now, now, now, row["id"]),
         )
+        claimed = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE id=?", (row["id"],)
+        ).fetchone()
+        return dict(claimed)
+
+
+def record_verifactu_submission_attempt(outbox_id: int, created_at: str) -> None:
+    """Audita el intento justo antes de abrir la conexión con la AEAT."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM verifactu_outbox WHERE id=? AND status='enviado'",
+            (outbox_id,),
+        ).fetchone()
+        if not row:
+            return
         _record_invoice_event(
             conn,
             row["business_id"],
             "remision",
             invoice_id=row["invoice_id"],
             record_id=row["record_id"],
-            details=f"intento={int(row['attempts']) + 1}",
-            created_at=now,
+            details=f"intento={int(row['attempts'])}",
+            created_at=created_at,
         )
-        claimed = conn.execute(
-            "SELECT * FROM verifactu_outbox WHERE id=?", (row["id"],)
-        ).fetchone()
-        return dict(claimed)
 
 
 def mark_verifactu_retry(
@@ -4447,6 +5570,145 @@ def postpone_verifactu_submissions(until: str, updated_at: str) -> int:
         return max(0, cursor.rowcount)
 
 
+def claim_next_verifactu_cancellation_submission(
+    *, now: str, stale_before: str
+) -> dict | None:
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM verifactu_cancellation_outbox "
+            "WHERE attempts<max_attempts AND "
+            "((status='pendiente' AND next_attempt_at<=?) OR "
+            "(status='enviado' AND locked_at<=?)) "
+            "ORDER BY next_attempt_at, id LIMIT 1" + suffix,
+            (now, stale_before),
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute(
+            "UPDATE verifactu_cancellation_outbox SET status='enviado', "
+            "attempts=attempts+1, locked_at=?, sent_at=COALESCE(sent_at, ?), "
+            "last_error=NULL, updated_at=? WHERE id=?",
+            (now, now, now, row["id"]),
+        )
+        return dict(conn.execute(
+            "SELECT * FROM verifactu_cancellation_outbox WHERE id=?",
+            (row["id"],),
+        ).fetchone())
+
+
+def get_invoice_cancellation_record_by_id(
+    record_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM invoice_cancellation_records "
+            "WHERE id=? AND business_id=?",
+            (record_id, business_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def record_verifactu_cancellation_attempt(
+    outbox_id: int, created_at: str
+) -> None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM verifactu_cancellation_outbox "
+            "WHERE id=? AND status='enviado'", (outbox_id,),
+        ).fetchone()
+        if row:
+            _record_invoice_event(
+                conn, row["business_id"], "remision",
+                invoice_id=row["invoice_id"],
+                details=f"anulacion;intento={int(row['attempts'])}",
+                created_at=created_at,
+            )
+
+
+def mark_verifactu_cancellation_retry(
+    outbox_id: int, *, error: str, next_attempt_at: str, updated_at: str
+) -> dict | None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE verifactu_cancellation_outbox SET status='pendiente', "
+            "next_attempt_at=?, last_error=?, locked_at=NULL, updated_at=? "
+            "WHERE id=? AND status='enviado'",
+            (next_attempt_at, error[:1500], updated_at, outbox_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM verifactu_cancellation_outbox WHERE id=?",
+            (outbox_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def mark_verifactu_cancellation_result(
+    outbox_id: int,
+    *,
+    status: str,
+    csv: str | None,
+    global_status: str | None,
+    error_code: str | None,
+    error_description: str | None,
+    response: str,
+    wait_seconds: int,
+    completed_at: str,
+) -> dict | None:
+    if status not in {"aceptado", "aceptado_con_errores", "rechazado"}:
+        raise ValueError("Estado de respuesta Veri*Factu no válido.")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT * FROM verifactu_cancellation_outbox WHERE id=?",
+            (outbox_id,),
+        ).fetchone()
+        if not row or row["status"] != "enviado":
+            return dict(row) if row else None
+        conn.execute(
+            "UPDATE verifactu_cancellation_outbox SET status=?, aeat_csv=?, "
+            "aeat_global_status=?, aeat_error_code=?, "
+            "aeat_error_description=?, aeat_response=?, wait_seconds=?, "
+            "completed_at=?, locked_at=NULL, last_error=NULL, updated_at=? "
+            "WHERE id=?",
+            (
+                status, csv, global_status, error_code, error_description,
+                response, max(0, int(wait_seconds)), completed_at,
+                completed_at, outbox_id,
+            ),
+        )
+        _record_invoice_event(
+            conn, row["business_id"],
+            "rechazo" if status == "rechazado" else "aceptacion",
+            invoice_id=row["invoice_id"],
+            details=json.dumps(
+                {
+                    "operacion": "anulacion", "estado": status, "csv": csv,
+                    "codigo_error": error_code,
+                    "descripcion_error": error_description,
+                },
+                ensure_ascii=False, separators=(",", ":"),
+            ),
+            created_at=completed_at,
+        )
+        updated = conn.execute(
+            "SELECT * FROM verifactu_cancellation_outbox WHERE id=?",
+            (outbox_id,),
+        ).fetchone()
+        return dict(updated)
+
+
+def postpone_verifactu_cancellations(until: str, updated_at: str) -> int:
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "UPDATE verifactu_cancellation_outbox SET next_attempt_at=?, "
+            "updated_at=? WHERE status='pendiente' AND next_attempt_at<?",
+            (until, updated_at, until),
+        )
+        return max(0, cursor.rowcount)
+
+
 def verifactu_queue_counts() -> dict[str, int]:
     counts = {
         "pendiente": 0,
@@ -4458,11 +5720,16 @@ def verifactu_queue_counts() -> dict[str, int]:
     }
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT status, COUNT(*) AS total FROM verifactu_outbox "
-            "GROUP BY status"
+            "SELECT status, COUNT(*) AS total FROM ("
+            "SELECT status FROM verifactu_outbox UNION ALL "
+            "SELECT status FROM verifactu_cancellation_outbox"
+            ") fiscal_outbox GROUP BY status"
         ).fetchall()
         exhausted = conn.execute(
-            "SELECT COUNT(*) AS total FROM verifactu_outbox "
+            "SELECT COUNT(*) AS total FROM ("
+            "SELECT status, attempts, max_attempts FROM verifactu_outbox UNION ALL "
+            "SELECT status, attempts, max_attempts FROM "
+            "verifactu_cancellation_outbox) fiscal_outbox "
             "WHERE status='pendiente' AND attempts>=max_attempts"
         ).fetchone()
     for row in rows:
@@ -4481,17 +5748,26 @@ def verifactu_queue_health(now: str | None = None) -> dict:
     counts = verifactu_queue_counts()
     with get_conn() as conn:
         due = conn.execute(
-            "SELECT COUNT(*) AS total FROM verifactu_outbox "
+            "SELECT COUNT(*) AS total FROM ("
+            "SELECT status, attempts, max_attempts, next_attempt_at "
+            "FROM verifactu_outbox UNION ALL "
+            "SELECT status, attempts, max_attempts, next_attempt_at "
+            "FROM verifactu_cancellation_outbox) fiscal_outbox "
             "WHERE status='pendiente' AND attempts<max_attempts "
             "AND next_attempt_at<=?",
             (now,),
         ).fetchone()
         oldest = conn.execute(
-            "SELECT MIN(next_attempt_at) AS next_attempt_at FROM verifactu_outbox "
-            "WHERE status='pendiente'",
+            "SELECT MIN(next_attempt_at) AS next_attempt_at FROM ("
+            "SELECT status, next_attempt_at FROM verifactu_outbox UNION ALL "
+            "SELECT status, next_attempt_at FROM verifactu_cancellation_outbox"
+            ") fiscal_outbox WHERE status='pendiente'",
         ).fetchone()
         activity = conn.execute(
-            "SELECT MAX(updated_at) AS updated_at FROM verifactu_outbox"
+            "SELECT MAX(updated_at) AS updated_at FROM ("
+            "SELECT updated_at FROM verifactu_outbox UNION ALL "
+            "SELECT updated_at FROM verifactu_cancellation_outbox"
+            ") fiscal_outbox"
         ).fetchone()
         affected = conn.execute(
             "SELECT b.id, b.name, "
@@ -4500,7 +5776,10 @@ def verifactu_queue_health(now: str | None = None) -> dict:
             "SUM(CASE WHEN o.status='rechazado' THEN 1 ELSE 0 END) AS rechazadas, "
             "SUM(CASE WHEN o.status='pendiente' AND o.attempts<o.max_attempts "
             "AND o.next_attempt_at<=? THEN 1 ELSE 0 END) AS vencidas "
-            "FROM verifactu_outbox o "
+            "FROM (SELECT business_id, status, attempts, max_attempts, "
+            "next_attempt_at FROM verifactu_outbox UNION ALL "
+            "SELECT business_id, status, attempts, max_attempts, "
+            "next_attempt_at FROM verifactu_cancellation_outbox) o "
             "JOIN businesses b ON b.id=o.business_id "
             "WHERE o.status='rechazado' OR "
             "(o.status='pendiente' AND (o.attempts>=o.max_attempts "
@@ -4553,41 +5832,34 @@ def verify_invoice_record_chain(
     if issuer_nif:
         target_nif = issuer_nif.strip().upper()
         records = [row for row in records if row["issuer_nif"] == target_nif]
-    previous_by_issuer: dict[str, dict] = {}
-    last_record = None
-    for index, record in enumerate(records):
-        previous = previous_by_issuer.get(record["issuer_nif"])
-        previous_hash = previous["record_hash"] if previous else None
-        expected = verifactu.invoice_record_hash(
-            algorithm=record["hash_algorithm"],
-            issuer_nif=record["issuer_nif"],
-            invoice_number=record["invoice_number"],
-            issue_date=record["issue_date"],
-            invoice_type=record["invoice_type"],
-            vat_total=record["vat_total"],
-            invoice_total=record["invoice_total"],
-            previous_hash=previous_hash,
-            generated_at=record["generated_at"],
+    return _verify_invoice_record_rows(records)
+
+
+def record_verifactu_anomaly(
+    business_id: int,
+    *,
+    invoice_id: int | None = None,
+    record_id: int | None = None,
+    details: str,
+) -> None:
+    """Registra una alerta fiscal sin repetir el mismo evento indefinidamente."""
+    safe_details = str(details)[:1500]
+    with get_conn() as conn:
+        previous = conn.execute(
+            "SELECT details FROM invoice_events WHERE business_id=? "
+            "AND event_type='anomalia' AND record_id=? ORDER BY id DESC LIMIT 1",
+            (business_id, record_id),
+        ).fetchone()
+        if previous and previous.get("details") == safe_details:
+            return
+        _record_invoice_event(
+            conn,
+            business_id,
+            "anomalia",
+            invoice_id=invoice_id,
+            record_id=record_id,
+            details=safe_details,
         )
-        if (
-            record.get("previous_hash") != previous_hash
-            or record.get("record_hash") != expected
-        ):
-            return {
-                "valid": False,
-                "checked": index,
-                "broken_at": record["id"],
-                "expected_hash": expected,
-                "stored_hash": record.get("record_hash"),
-            }
-        previous_by_issuer[record["issuer_nif"]] = record
-        last_record = record
-    return {
-        "valid": True,
-        "checked": len(records),
-        "broken_at": None,
-        "last_hash": last_record["record_hash"] if last_record else None,
-    }
 
 
 def export_verifactu_xml(
@@ -4609,7 +5881,10 @@ def export_verifactu_xml(
         with get_conn() as conn:
             _record_invoice_event(
                 conn, business_id, "anomalia",
-                record_id=integrity.get("broken_at"),
+                record_id=(
+                    integrity.get("broken_at")
+                    if integrity.get("broken_record_type") == "alta" else None
+                ),
                 details=json.dumps(integrity, ensure_ascii=False),
             )
         raise ValueError(
@@ -4812,6 +6087,11 @@ def confirm_bank_transaction(transaction_id: int, business_id: int) -> dict:
             conn, invoice, already_paid + amount,
             f"{movement['booked_on']}T12:00:00",
         )
+        _record_invoice_event(
+            conn, business_id, "cobro", invoice_id=invoice_id,
+            details=f"importe={float(amount):.2f};metodo=extracto_bancario",
+            created_at=f"{movement['booked_on']}T12:00:00",
+        )
         now = _now()
         conn.execute(
             "UPDATE bank_transactions SET status='confirmed', confirmed_at=? "
@@ -4858,6 +6138,8 @@ def enqueue_email_message(
     text_body: str,
     html_body: str | None = None,
     idempotency_key: str | None = None,
+    entity_type: str | None = None,
+    entity_id: int | None = None,
     max_attempts: int = 6,
     now: str | None = None,
 ) -> dict:
@@ -4875,17 +6157,27 @@ def enqueue_email_message(
     if html_body is not None and len(html_body) > 200_000:
         raise ValueError("El contenido HTML es demasiado grande.")
     created_at = now or _now()
+    entity_type = (entity_type or "").strip().lower() or None
+    if entity_type not in {None, "invoice"}:
+        raise ValueError("El tipo de adjunto del correo no es válido.")
+    if entity_type == "invoice":
+        if business_id is None or entity_id is None or not get_invoice(
+            int(entity_id), business_id
+        ):
+            raise ValueError("La factura adjunta no pertenece al negocio.")
+        entity_id = int(entity_id)
     try:
         with get_conn() as conn:
             row = conn.execute(
                 "INSERT INTO email_outbox "
                 "(business_id, to_email, subject, text_body, html_body, "
-                "idempotency_key, status, attempts, max_attempts, next_attempt_at, "
-                "created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) RETURNING id",
+                "idempotency_key, entity_type, entity_id, status, attempts, "
+                "max_attempts, next_attempt_at, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) RETURNING id",
                 (
                     business_id, to_email, subject, text_body, html_body,
-                    idempotency_key, max(1, min(int(max_attempts), 20)),
+                    idempotency_key, entity_type, entity_id,
+                    max(1, min(int(max_attempts), 20)),
                     created_at, created_at, created_at,
                 ),
             ).fetchone()
@@ -6791,16 +8083,29 @@ def accept_quote(quote_id, business_id) -> dict | None:
             }
         if q["status"] != "enviado":
             raise ValueError("Primero debes enviar el presupuesto antes de aceptarlo.")
+        series = _ensure_default_invoice_series(conn, business_id, "invoice")
         invoice_row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
-            "vat_amount, irpf_rate, irpf_amount, total, status, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?) RETURNING id",
+            "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
+            "series_id, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "'borrador', 'F1', ?, 'EUR', ?) RETURNING id",
             (
                 business_id, q["client_id"], q["concept"], q["base"], q["vat_rate"],
-                q["vat_amount"], q["irpf_rate"], q["irpf_amount"], q["total"], _now(),
+                q["vat_amount"], q["irpf_rate"], q["irpf_amount"], q["total"],
+                series["id"], _now(),
             ),
         ).fetchone()
         invoice_id = invoice_row["id"]
+        conn.execute(
+            "INSERT INTO invoice_lines "
+            "(business_id, invoice_id, position, description, quantity, unit_price, "
+            "discount_rate, vat_rate, base, vat_amount, total, created_at) "
+            "VALUES (?, ?, 1, ?, 1, ?, 0, ?, ?, ?, ?, ?)",
+            (
+                business_id, invoice_id, q["concept"], q["base"], q["vat_rate"],
+                q["base"], q["vat_amount"], q["base"] + q["vat_amount"], _now(),
+            ),
+        )
         conn.execute(
             "UPDATE quotes SET status='aceptado', accepted_at=?, invoice_id=? "
             "WHERE id=? AND business_id=? AND status='enviado'",
@@ -7981,6 +9286,14 @@ def export_business_data(business_id) -> dict:
             "WHERE business_id=? ORDER BY id",
             business_id)],
         "invoices": list_invoices(business_id),
+        "invoice_lines": [dict(r) for r in _rows(
+            "SELECT * FROM invoice_lines WHERE business_id=? "
+            "ORDER BY invoice_id, position", business_id)],
+        "invoice_series": list_invoice_series(business_id),
+        "recurring_invoices": list_recurring_invoices(business_id),
+        "recurring_invoice_runs": [dict(r) for r in _rows(
+            "SELECT * FROM recurring_invoice_runs WHERE business_id=? "
+            "ORDER BY recurring_id, scheduled_for", business_id)],
         "invoice_payments": [dict(r) for r in _rows(
             "SELECT * FROM invoice_payments WHERE business_id=? "
             "ORDER BY paid_at, id",
@@ -7990,6 +9303,12 @@ def export_business_data(business_id) -> dict:
         "invoice_records": list_invoice_records(business_id),
         "invoice_events": list_invoice_events(business_id),
         "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
+        "invoice_cancellation_records": [dict(r) for r in _rows(
+            "SELECT * FROM invoice_cancellation_records WHERE business_id=? "
+            "ORDER BY generated_at, id", business_id)],
+        "verifactu_cancellation_outbox": [dict(r) for r in _rows(
+            "SELECT * FROM verifactu_cancellation_outbox WHERE business_id=? "
+            "ORDER BY created_at, id", business_id)],
         "quotes": list_quotes(business_id),
         "expenses": list_expenses(business_id),
         "suppliers": list_suppliers(business_id),
@@ -8227,9 +9546,11 @@ def delete_business_cascade(business_id) -> bool:
         for table in (
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
             "email_outbox",
-            "verifactu_outbox", "document_sequences",
+            "verifactu_cancellation_outbox", "verifactu_outbox",
+            "document_sequences",
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
-            "invoice_events", "invoice_records", "portal_tokens",
+            "invoice_events", "invoice_cancellation_records", "invoice_records",
+            "portal_tokens",
             "product_events", "assistant_messages", "business_memories",
             "assistant_actions", "automation_permissions",
             "integration_settings",
@@ -8240,7 +9561,9 @@ def delete_business_cascade(business_id) -> bool:
             "project_tasks", "project_entries", "project_members", "projects",
             "documents", "received_invoices", "suppliers", "products",
             "leads", "quotes",
-            "bank_transactions", "invoice_payments", "invoices", "jobs", "workers", "clients", "expenses"
+            "bank_transactions", "recurring_invoice_runs", "recurring_invoices",
+            "invoice_payments", "invoice_lines", "invoices", "invoice_series",
+            "jobs", "workers", "clients", "expenses"
         ):
             conn.execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
         conn.execute("DELETE FROM password_resets WHERE user_id IN "

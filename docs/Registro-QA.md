@@ -1,5 +1,90 @@
 # Registro de QA
 
+## 2026-07-20 — facturación profesional, entrega y anulación fiscal
+
+- WhatsApp separa `ticket de venta` F2 del ticket de gasto, entiende castellano y
+  catalán, reutiliza un cliente habitual solo si es inequívoco y no crea duplicados
+  ante referencias ambiguas. Facturar un trabajo cerrado reutiliza su borrador.
+- Emitir/entregar requiere una segunda confirmación. Se verificó el recorrido
+  mensaje → borrador → SÍ → número de serie → PDF → email durable y su reflejo en
+  facturación mensual, ficha de cliente, resumen fiscal y selección de gestoría.
+- La web distingue emisión de entrega. La entrega automática respeta el canal
+  habitual; email adjunta el PDF y WhatsApp queda en plantilla aprobable con enlace
+  privado. Sin contacto no se declara un envío inexistente.
+- La migración 33 añade series independientes, líneas con cantidad/precio/descuento
+  e IVA, metadatos de factura, programaciones recurrentes idempotentes, adjuntos de
+  correo y registros/outbox de anulación. SQLite permite bajar/subir la migración y
+  el guardián DDL verifica el orden de índices únicos antes de las FK en PostgreSQL.
+- Se probaron totales de IVA mixto e IRPF, edición de borrador, inmutabilidad de
+  cabecera/líneas emitidas, series general/simplificada/rectificativa, límite general
+  de 400 € de F2, recurrencia sin doble generación y emisión automática solo con
+  autorización explícita.
+- El correo de factura se persiste antes de SMTP, genera el PDF al entregar, lo
+  adjunta y registra preparación/envío. El portal registra visualización y el
+  historial por factura incluye emisión, cobros, remisión y respuesta fiscal.
+- La anulación conserva factura y alta, exige confirmación con el número, calcula la
+  huella oficial, comparte la cadena cronológica con las altas y usa una outbox
+  durable independiente. Se verificaron inmutabilidad, encadenamiento posterior,
+  respuesta/CSV y rechazo de rectificar un registro ya anulado.
+- XML combinado de alta + anulación validado con
+  `SuministroLR.xsd`, `SuministroInformacion.xsd` y el esquema XMLDSig oficiales.
+  El JavaScript del editor pasa `node --check`; la pantalla y las APIs de borrador,
+  series, recurrencia, emisión e historial pasan un flujo HTTP autenticado.
+- Suite completa final: **325 pruebas y 52 subtests verdes**. Solo aparece el aviso
+  conocido Starlette/httpx. El humo PostgreSQL se amplió a factura profesional,
+  trigger inmutable, PDF, historial, series y recurrencia; su ejecución real queda
+  para el CI con PostgreSQL 16.
+- No se declara homologación: siguen pendientes certificado/mTLS real, subsanación
+  de rechazos, exenciones/no sujeción, declaración responsable y auditoría fiscal.
+
+## 2026-07-20 — facturación nativa e integridad fiscal reforzadas
+
+- La migración 32 hace único el número de factura por negocio y bloquea en base de
+  datos la modificación o eliminación de sus datos legales una vez emitida. Cobros,
+  recordatorios y estados operativos permanecen actualizables sin reescribir la
+  factura.
+- La emisión reserva la secuencia anual dentro de la transacción, congela emisor y
+  receptor y crea registro, evento y outbox Veri*Factu de forma atómica. Se retiró
+  el atajo histórico que permitía asignar numeración desde fuera del motor nativo.
+- La cadena se verifica antes de añadir y antes de remitir. Se bloquean huellas
+  alteradas, retrocesos anómalos del reloj y cambios del NIF emisor después del
+  primer registro; la remisión fiscal ya creada continúa aunque se cancele la
+  suscripción comercial.
+- El cliente AEAT usa TLS 1.2+, certificado ordinario o de sello, clave PEM cifrada,
+  límite de respuesta y cierre idempotente de duplicados ya aceptados. Los XML F1 y
+  R1 generados se validaron localmente contra los XSD oficiales del 20-07-2026.
+- El PDF diferencia una rectificativa, referencia la original, explica la causa y
+  ajusta conceptos largos. IVA e IRPF conservan cálculo decimal y redondeo al
+  céntimo.
+- Suite de este primer cierre: **301 pruebas y 52 subtests verdes** en 221,84 s;
+  la cifra actual está en `project-state.json` y en la sección superior. En aquel
+  corte quedaban pendientes anulación y subsanación; la primera ya está construida.
+  mTLS real, subsanación, declaración responsable y revisión fiscal externa siguen
+  pendientes y no se presentan como homologados.
+
+## 2026-07-20 — auditoría documental y mapa único de conexiones
+
+- Corrección posterior del founder: Holded no es una integración futura. Se elimina
+  `HOLDED_API_KEY`, el proveedor externo y cualquier selección dinámica; una prueba
+  de regresión exige que `get_provider()` devuelva siempre el motor nativo. La
+  facturación y Veri*Factu quedan como desarrollo propio de Noesis.
+
+- Se contrastaron los documentos vivos con `origin/main`, `config.py`, todos los
+  adaptadores y las salidas HTTP/SMTP reales. Las integraciones externas del código
+  quedan inventariadas en `Conectar-APIs.md`, con variables, callback y prueba de
+  aceptación; calendario bidireccional, PSD2, cobro por enlace y voz se distinguen
+  como capacidades aún no conectables.
+- Se retiraron preguntas ya resueltas sobre routers, facturas recibidas y proveedores,
+  y se reescribió el roadmap sin duplicar migraciones, ramas o conteos vivos.
+- Se corrigieron referencias antiguas de dominio, Postgres y Veri*Factu; los planes
+  de 2026-07-03 se marcan como históricos. `.env.example` incorpora los tres precios
+  anuales de Stripe y las variables explícitas de seguridad para demo/reset/proxy.
+- Riesgo detectado y no ocultado: Stripe live no aplica aún el IVA explícitamente
+  en Checkout.
+- Validación ejecutada: suite completa con **286 pruebas y 52 subtests verdes**,
+  `scripts/check_project_truth.py`, parseo de `project-state.json`, `compileall` y
+  `git diff --check`. Solo aparece el aviso conocido de deprecación Starlette/httpx.
+
 ## 2026-07-17 — comparación anual clara y sector abierto
 
 - El paso 1 del alta muestra, al elegir pago anual, el coste de doce mensualidades

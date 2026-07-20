@@ -27,6 +27,8 @@ HOT_API_PATHS = [
     "/api/{bid}/costs/breakdown",
     "/api/{bid}/taxes",
     "/api/{bid}/invoices",
+    "/api/{bid}/invoice-series",
+    "/api/{bid}/recurring-invoices",
     "/api/{bid}/projects",
 ]
 
@@ -39,6 +41,7 @@ HOT_PAGE_PATHS = [
     "/b/{bid}/crm",
     "/b/{bid}/agenda",
     "/b/{bid}/cobros",
+    "/b/{bid}/facturas",
     "/b/{bid}/proyectos",
     "/b/{bid}/ajustes",
 ]
@@ -107,6 +110,63 @@ def _operational_paths(business_id: int) -> list[str]:
         )]
     paths.append(f"/api/{business_id}/jobs/{int(jobs[0]['id'])}/field")
 
+    clients = db.list_clients(business_id)
+    fiscal_client = next(
+        (item for item in clients if item.get("nif") and item.get("address")),
+        None,
+    )
+    if not fiscal_client:
+        fiscal_client = db.add_client(
+            "Cliente fiscal humo", nif="B12345678",
+            address="Calle Cliente 1", business_id=business_id,
+        )
+    business = db.get_business(business_id)
+    if not business.get("nif") or not business.get("address"):
+        db.update_fiscal(
+            business_id, nif="A12345678", address="Calle Negocio 1"
+        )
+    professional = db.add_invoice(
+        fiscal_client["id"], "Factura profesional Postgres", None,
+        business_id=business_id,
+        lines=[
+            {"description": "Servicio", "quantity": 2,
+             "unit_price": 30, "vat_rate": 21},
+            {"description": "Material", "quantity": 1,
+             "unit_price": 20, "discount_rate": 5, "vat_rate": 10},
+        ],
+    )
+    professional = db.update_invoice_draft(
+        professional["id"], business_id, client_id=fiscal_client["id"],
+        lines=professional["lines"], irpf_rate=0,
+        notes="Validación de factura profesional en PostgreSQL.",
+    )
+    professional = db.issue_invoice(professional["id"], business_id)
+    if len(professional.get("lines") or []) != 2:
+        raise RuntimeError("Postgres no conservó las líneas de factura.")
+    try:
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE invoice_lines SET unit_price=1 "
+                "WHERE invoice_id=? AND business_id=?",
+                (professional["id"], business_id),
+            )
+    except db.IntegrityError:
+        pass
+    else:
+        raise RuntimeError("Postgres permitió alterar una factura emitida.")
+    paths.extend([
+        f"/api/{business_id}/invoices/{professional['id']}",
+        f"/api/{business_id}/invoices/{professional['id']}/history",
+        f"/api/{business_id}/invoices/{professional['id']}/pdf",
+    ])
+    db.add_recurring_invoice(
+        business_id, fiscal_client["id"], name="Programación humo Postgres",
+        cadence="monthly",
+        next_run_on=(datetime.now().date() + timedelta(days=30)).isoformat(),
+        lines=[{"description": "Mantenimiento", "quantity": 1,
+                "unit_price": 50, "vat_rate": 21}],
+    )
+
     token = db.get_or_create_calendar_token(business_id)
     if db.get_business_by_calendar_token(token)["id"] != business_id:
         raise RuntimeError("El calendario privado no respeta el negocio.")
@@ -114,7 +174,6 @@ def _operational_paths(business_id: int) -> list[str]:
 
     pending = db.pending_payments(business_id)
     if not pending:
-        clients = db.list_clients(business_id)
         invoice = db.add_invoice(
             clients[0]["id"], "Factura para conciliación Postgres", 100,
             business_id=business_id,
@@ -202,7 +261,7 @@ def main() -> int:
             print(f"- {failure}", file=sys.stderr)
         return 1
 
-    checked = len(HOT_PAGE_PATHS) + len(HOT_API_PATHS) + 3
+    checked = len(HOT_PAGE_PATHS) + len(HOT_API_PATHS) + 6
     print(f"Smoke Postgres OK: {checked} rutas calientes sin 5xx.")
     return 0
 

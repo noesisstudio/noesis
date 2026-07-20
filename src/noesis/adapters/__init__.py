@@ -1,5 +1,5 @@
-"""Adaptadores hacia servicios externos (facturación, pagos, calendario...).
+"""Fronteras de infraestructura de Noesis.
 
-La idea: el resto de Noesis no sabe NI le importa quién emite la factura.
-Hoy usamos un mock; mañana se enchufa Holded o Quipu cambiando solo aquí.
+La facturación es nativa; pagos SaaS, correo, voz e IA opcional permanecen detrás
+de adaptadores para que una caída externa no apague el núcleo del producto.
 """

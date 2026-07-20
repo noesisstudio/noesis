@@ -23,7 +23,13 @@ def available() -> bool:
     return bool(config.SMTP_HOST and config.SMTP_USER and config.SMTP_PASS)
 
 
-def send_email(to: str, subject: str, body: str, html: str | None = None) -> bool:
+def send_email(
+    to: str,
+    subject: str,
+    body: str,
+    html: str | None = None,
+    attachments: list[tuple[str, bytes, str, str]] | None = None,
+) -> bool:
     """Envía un email de texto. Devuelve True si salió por SMTP; False si solo se
     registró en log (sin SMTP configurado o ante un fallo de envío)."""
     if not available():
@@ -43,6 +49,10 @@ def send_email(to: str, subject: str, body: str, html: str | None = None) -> boo
     msg.set_content(body)
     if html:
         msg.add_alternative(html, subtype="html")
+    for filename, payload, maintype, subtype in attachments or []:
+        msg.add_attachment(
+            payload, maintype=maintype, subtype=subtype, filename=filename
+        )
     return _send_msg(msg)
 
 
@@ -54,6 +64,8 @@ def queue_email(
     *,
     business_id: int | None = None,
     idempotency_key: str | None = None,
+    entity_type: str | None = None,
+    entity_id: int | None = None,
 ) -> bool:
     """Persiste el correo antes de enviarlo; el scheduler se ocupa de SMTP."""
     db.enqueue_email_message(
@@ -63,6 +75,8 @@ def queue_email(
         text_body=body,
         html_body=html,
         idempotency_key=idempotency_key,
+        entity_type=entity_type,
+        entity_id=entity_id,
     )
     return True
 

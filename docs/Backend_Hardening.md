@@ -24,9 +24,17 @@ en reglas de código y pruebas, no en convenciones.
   rechazos, actividad reciente y negocios afectados, sin activar remisión AEAT.
 
 ## Pendiente de infraestructura
-- Migrar SQLite a Postgres antes de escalar horizontalmente.
-- Cola durable para procesar WhatsApp fuera del proceso web.
-- Copias cifradas y externas con simulacro periódico de restauración.
-- Holded real con credenciales y series separadas por negocio.
-- Plantillas aprobadas por Meta para avisos proactivos fuera de la ventana de atención.
-- Flujo administrativo de baja con conservación fiscal y eliminación al vencer plazos.
+
+> Esta sección no sustituye a [[Tareas-vivas]]. Evita conservar como pendientes
+> trabajos que ya cerró el código.
+
+- Desplegar el esquema actual en PostgreSQL y verificar `/ready`; SQLite queda como
+  fallback local, no como base operativa de producción.
+- Restaurar una copia S3-compatible en un entorno aislado y medir RPO/RTO.
+- Conectar Meta, aprobar plantillas y probar firma, estados y reintentos reales. La
+  outbox durable y el bloqueo entre réplicas ya están construidos.
+- Mantener la facturación completamente nativa: ningún proveedor externo recibe la
+  factura ni decide numeración, emisión o registro Veri*Factu.
+- Completar auditoría externa de seguridad, privacidad, fiscalidad e incidentes.
+- Validar con asesoría el flujo de baja, conservación fiscal y borrado al vencer los
+  plazos. Credenciales y pruebas: [[Conectar-APIs]].

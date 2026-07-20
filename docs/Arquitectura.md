@@ -11,7 +11,7 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
                   (IA privada: OpenAI-compatible)
                   (IA externa autorizada y limitada)
                             │
-                            └─►  Facturación (mock → Holded API)
+                            └─►  Facturación nativa Veri*Factu
 ```
 
 ## Piezas (código en `src/noesis/`)
@@ -47,9 +47,15 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   factura/escalón antes de enlazar al portal privado.
 - `db.py` también persiste eventos de producto y calcula el recorrido de activación
   por negocio sin depender de una plataforma analítica externa.
-- `adapters/invoicing.py` — selecciona emisión interna o Holded. Cuando un negocio
-  activa el modo nativo, la emisión interna registra Veri*Factu en la misma
-  transacción y no delega en terceros. Ver [[Fiscalidad]].
+- `adapters/invoicing.py` — frontera del motor propio. La emisión interna registra
+  Veri*Factu en la misma transacción y no delega facturas en terceros. Ver
+  [[Fiscalidad]].
+- `invoice_series`, `invoice_lines` y `recurring_invoices` — series configurables,
+  conceptos estructurados y programación idempotente de borradores recurrentes. La
+  emisión automática requiere autorización explícita del titular.
+- `invoice_cancellation_records` y `verifactu_cancellation_outbox` — anulaciones
+  fiscales append-only enlazadas al alta original. Conservan la factura emitida y
+  usan la misma cadena cronológica de huellas y una cola durable independiente.
 - `adapters/extraction.py` — visión Claude opcional para sugerir un borrador de
   gasto desde una foto; sin clave devuelve `None` y mantiene el flujo manual.
 - `verifactu.py` — formato técnico AEAT: cadena de huella, SHA-256, URL/QR y XML.
@@ -66,7 +72,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   `(business_id, id)` impiden enlazar un trabajo, factura, presupuesto o documento
   con entidades de otra empresa.
 - La emisión de factura es atómica e idempotente. La secuencia se persiste por
-  negocio/año y los datos fiscales quedan congelados en la factura.
+  negocio/serie/año y los datos fiscales y líneas quedan congelados en la factura.
+  General, rectificativas y tickets usan series separadas sin renumerar históricos.
 - Los cobros viven en `invoice_payments`: el estado y el importe restante se
   derivan del ledger. Cada alta bloquea la factura (`BEGIN IMMEDIATE` en SQLite,
   `FOR UPDATE` en Postgres) para impedir que dos cobros superen el total.
@@ -75,6 +82,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - En modo Veri*Factu, la misma transacción añade un registro de alta append-only,
   encadenado por NIF emisor. Las rectificaciones crean una nueva factura R1-R5 y
   conservan el original.
+- Una anulación Veri*Factu no borra ni cambia la factura: crea un registro de
+  anulación inmutable, enlazado al alta aceptada, y lo remite desde su propia outbox.
 - Facturas emitidas no se borran ni se renumeran. Los borrados RGPD conservan los
   documentos sujetos a obligación fiscal.
 - Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs. La migración
@@ -118,4 +127,5 @@ Detalle y pendientes: [[Backend_Hardening]].
 - Dependencias mínimas (hash con stdlib, no librerías pesadas).
 - Adaptadores: cambiar de proveedor = cambiar 1 archivo.
 
-Qué falta técnicamente: ver [[Roadmap]].
+Qué falta técnicamente: ver [[Tareas-vivas]]. Para conectar servicios externos,
+consultar [[Conectar-APIs]].

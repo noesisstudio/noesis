@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
-from ... import config, db
+from ... import config, db, tools as invoice_tools
 from ...tools import run_tool
 from ..deps import _read_json
 
@@ -18,6 +18,21 @@ router = APIRouter()
 @router.get("/api/{business_id}/invoices")
 def api_invoices(business_id: int):
     return db.list_invoices(business_id)
+
+
+@router.get("/api/{business_id}/invoices/{invoice_id}")
+def api_invoice(business_id: int, invoice_id: int):
+    invoice = db.get_invoice(invoice_id, business_id)
+    if invoice is None:
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    return invoice
+
+
+@router.get("/api/{business_id}/invoices/{invoice_id}/history")
+def api_invoice_history(business_id: int, invoice_id: int):
+    if not db.get_invoice(invoice_id, business_id):
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    return db.list_invoice_events(business_id, invoice_id=invoice_id)
 
 
 @router.post("/api/{business_id}/invoices")
@@ -51,10 +66,40 @@ async def api_create_invoice(business_id: int, request: Request):
             vat_rate=body.get("vat_rate", config.DEFAULT_VAT_RATE),
             irpf_rate=body.get("irpf_rate", 0),
             business_id=business_id,
+            lines=body.get("lines"),
+            invoice_type=body.get("invoice_type", "F1"),
+            series_id=body.get("series_id"),
+            operation_date=body.get("operation_date"),
+            notes=body.get("notes"),
+            payment_method=body.get("payment_method"),
+            legal_mention=body.get("legal_mention"),
         )
     except (TypeError, ValueError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     return invoice
+
+
+@router.patch("/api/{business_id}/invoices/{invoice_id}")
+async def api_update_invoice_draft(
+    business_id: int, invoice_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        return db.update_invoice_draft(
+            invoice_id,
+            business_id,
+            client_id=int(body.get("client_id")),
+            lines=body.get("lines"),
+            irpf_rate=body.get("irpf_rate", 0),
+            invoice_type=body.get("invoice_type", "F1"),
+            series_id=body.get("series_id"),
+            operation_date=body.get("operation_date"),
+            notes=body.get("notes"),
+            payment_method=body.get("payment_method"),
+            legal_mention=body.get("legal_mention"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
 
 
 @router.post("/api/{business_id}/invoices/{invoice_id}/rectify")
@@ -72,10 +117,98 @@ async def api_rectify_invoice(
             irpf_rate=body.get("irpf_rate", 0),
             invoice_type=body.get("invoice_type", "R1"),
             reason=body.get("reason"),
+            lines=body.get("lines"),
+            series_id=body.get("series_id"),
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     return invoice
+
+
+@router.post("/api/{business_id}/invoices/{invoice_id}/cancel-verifactu")
+async def api_cancel_verifactu_record(
+    business_id: int, invoice_id: int, request: Request
+):
+    invoice = db.get_invoice(invoice_id, business_id)
+    if not invoice or not invoice.get("number"):
+        return JSONResponse({"error": "Factura emitida no encontrada."}, status_code=404)
+    try:
+        body = await _read_json(request)
+        expected = f"ANULAR {invoice['number']}"
+        if (body.get("confirmation") or "").strip() != expected:
+            raise ValueError(f"Escribe exactamente {expected} para confirmar.")
+        record = db.create_invoice_cancellation_record(
+            invoice_id, business_id, reason=body.get("reason")
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=409)
+    return record
+
+
+@router.get("/api/{business_id}/invoice-series")
+def api_invoice_series(business_id: int):
+    return db.list_invoice_series(business_id)
+
+
+@router.post("/api/{business_id}/invoice-series", status_code=201)
+async def api_add_invoice_series(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+        return db.add_invoice_series(
+            business_id,
+            code=body.get("code"),
+            name=body.get("name"),
+            document_type=body.get("document_type"),
+            prefix_template=body.get("prefix_template"),
+            padding=body.get("padding", 4),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.get("/api/{business_id}/recurring-invoices")
+def api_recurring_invoices(business_id: int):
+    return db.list_recurring_invoices(business_id)
+
+
+@router.post("/api/{business_id}/recurring-invoices", status_code=201)
+async def api_add_recurring_invoice(business_id: int, request: Request):
+    try:
+        body = await _read_json(request)
+        return db.add_recurring_invoice(
+            business_id,
+            int(body.get("client_id")),
+            name=body.get("name"),
+            cadence=body.get("cadence"),
+            interval_count=body.get("interval_count", 1),
+            next_run_on=body.get("next_run_on"),
+            ends_on=body.get("ends_on"),
+            auto_issue=bool(body.get("auto_issue", False)),
+            lines=body.get("lines"),
+            irpf_rate=body.get("irpf_rate", 0),
+            invoice_type=body.get("invoice_type", "F1"),
+            series_id=body.get("series_id"),
+            notes=body.get("notes"),
+            payment_method=body.get("payment_method"),
+        )
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.post("/api/{business_id}/recurring-invoices/{recurring_id}/status")
+async def api_recurring_invoice_status(
+    business_id: int, recurring_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        result = db.set_recurring_invoice_status(
+            recurring_id, business_id, body.get("status")
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if result is None:
+        return JSONResponse({"error": "Programación no encontrada."}, status_code=404)
+    return result
 
 
 @router.get("/api/{business_id}/verifactu/export.xml")
@@ -282,6 +415,67 @@ def api_send_invoice(business_id: int, invoice_id: int):
     return result["factura"]
 
 
+@router.post("/api/{business_id}/invoices/{invoice_id}/deliver")
+async def api_deliver_invoice(
+    business_id: int, invoice_id: int, request: Request
+):
+    """Entrega por el canal habitual y deja el intento en una outbox durable."""
+    from ...adapters import email as email_adapter
+
+    invoice = db.get_invoice(invoice_id, business_id)
+    if not invoice:
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    if invoice.get("status") == "borrador" or not invoice.get("number"):
+        return JSONResponse(
+            {"error": "Emite la factura antes de enviarla al cliente."},
+            status_code=409,
+        )
+    client = db.get_client(invoice["client_id"], business_id) or {}
+    try:
+        body = await _read_json(request)
+        explicit_email = (body.get("email") or "").strip()
+        channel = (body.get("channel") or "auto").strip().lower()
+        if not explicit_email:
+            delivered = invoice_tools.prepare_invoice_delivery(
+                business_id, invoice_id, channel=channel
+            )
+            return {
+                **delivered,
+                "email": delivered["target"]
+                if delivered["channel"] == "email" else None,
+            }
+        target = explicit_email
+        business = db.get_business(business_id) or {}
+        subject = f"Factura {invoice['number']} — {business.get('name') or 'Noesis'}"
+        text_body = (
+            f"Hola {client.get('name') or ''},\n\n"
+            f"Te enviamos la factura {invoice['number']} por "
+            f"{invoice['total']:.2f} EUR. Encontrarás el PDF adjunto.\n\n"
+            f"— {business.get('name') or 'Noesis'}"
+        )
+        queued = email_adapter.queue_email(
+            target,
+            subject,
+            text_body,
+            business_id=business_id,
+            idempotency_key=(
+                body.get("idempotency_key")
+                or f"invoice:{business_id}:{invoice_id}:email:{date.today().isoformat()}"
+            ),
+            entity_type="invoice",
+            entity_id=invoice_id,
+        )
+        db.record_invoice_communication(
+            invoice_id,
+            business_id,
+            "entrega_preparada",
+            details=f"correo={target}",
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"queued": bool(queued), "email": target}
+
+
 # ----------------------------------------------------------- Presupuestos ---
 @router.get("/api/{business_id}/quotes")
 def api_quotes(business_id: int):
@@ -366,4 +560,3 @@ def api_taxes(business_id: int, year: int = 0, quarter: int = 0):
                 "current_year": today.year}
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
-

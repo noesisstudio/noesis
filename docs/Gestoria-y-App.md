@@ -1,5 +1,9 @@
 # Gestoría, app nativa y huecos de negocio — diseño y decisiones
 
+> **Documento histórico de diseño e implementación.** Conserva decisiones útiles,
+> pero sus números y pendientes no son la fotografía actual. Consultar
+> [`project-state.json`](project-state.json), [[Tareas-vivas]] y [[Mapa-codigo]].
+
 > Complemento de [`WhatsApp-Cerebro.md`](WhatsApp-Cerebro.md). Escrito el 2026-07-03
 > tras las preguntas del founder: conexión con la gestoría de cada cliente, app
 > nativa con widget, y qué le falta al producto a nivel de negocio.

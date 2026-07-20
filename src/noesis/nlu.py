@@ -92,20 +92,20 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
       - "factura a Juan 95 euros"                          (sin concepto explícito)
     """
     # Orden 1: verbo a CLIENTE por CONCEPTO IMPORTE
-    m = re.search(verb_re + r"\s+(?:a|para)\s+(.+?)\s+(?:por|de)\s+(.+?)[,]?\s*"
+    m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+(?:por|de|per)\s+(.+?)[,]?\s*"
                   r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?$", text, re.I)
     if m:
         return {"cliente": m.group(1).strip(), "concepto": m.group(2).strip(),
                 "base": float(m.group(3).replace(",", "."))}
     # Orden 2: verbo a CLIENTE IMPORTE por CONCEPTO
-    m = re.search(verb_re + r"\s+(?:a|para)\s+(.+?)\s+"
+    m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
                   r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)\s+"
-                  r"(?:por|de)\s+(.+)", text, re.I)
+                  r"(?:por|de|per)\s+(.+)", text, re.I)
     if m:
         return {"cliente": m.group(1).strip(), "concepto": m.group(3).strip(),
                 "base": float(m.group(2).replace(",", "."))}
     # Orden 3: verbo a CLIENTE IMPORTE (sin concepto, "Servicio" por defecto)
-    m = re.search(verb_re + r"\s+(?:a|para)\s+(.+?)\s+"
+    m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
                   r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)", text, re.I)
     if m:
         return {"cliente": m.group(1).strip(), "concepto": "Servicio",
@@ -120,6 +120,52 @@ def _add_tax_rates(norm: str, args: dict) -> None:
         args["iva"] = float(vat.group(1))
     if irpf:
         args["irpf"] = float(irpf.group(1))
+
+
+def _parse_simplified_sale(text: str, norm: str) -> dict | None:
+    """Interpreta solo tickets DE VENTA; una foto o un ticket suelto sigue siendo gasto."""
+    explicit = bool(
+        re.search(r"\b(?:ticket|tiquet)\s+de\s+(?:venta|venda)\b", norm)
+        or "factura simplificada" in norm
+    )
+    if not explicit:
+        return None
+    verb = (
+        r"factura\s+simplificada"
+        if "factura simplificada" in norm
+        else r"(?:ticket|tiquet)\s+de\s+(?:venta|venda)"
+    )
+    args = _parse_doc_command(text, norm, verb)
+    if not args:
+        patterns = (
+            verb + r"\s+(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)\s+"
+            r"(?:por|de|per)\s+(.+)$",
+            verb + r"\s+(?:por|de|per)\s+(.+?)[,]?\s*"
+            r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?$",
+        )
+        first = re.search(patterns[0], text, re.I)
+        second = re.search(patterns[1], text, re.I) if not first else None
+        if first:
+            args = {
+                "cliente": "", "concepto": first.group(2).strip(),
+                "base": float(first.group(1).replace(",", ".")),
+            }
+        elif second:
+            args = {
+                "cliente": "", "concepto": second.group(1).strip(),
+                "base": float(second.group(2).replace(",", ".")),
+            }
+        else:
+            amount = _parse_amount(text)
+            if amount is not None:
+                args = {"cliente": "", "concepto": "Venta", "base": amount}
+    if not args:
+        return None
+    args["tipo_factura"] = "F2"
+    # En un ticket el importe que dicta el autónomo es normalmente el PVP final.
+    args["importe_incluye_iva"] = True
+    _add_tax_rates(norm, args)
+    return args
 
 
 def parse(text: str) -> tuple[str, dict] | None:
@@ -147,16 +193,33 @@ def parse(text: str) -> tuple[str, dict] | None:
             })
 
     # --- Crear presupuesto: acepta varios órdenes naturales ---
-    if "presupuest" in norm:
-        args = _parse_doc_command(text, norm, r"presupuest(?:o|ar|a|ame)?")
+    if "presupuest" in norm or "pressupost" in norm:
+        args = _parse_doc_command(
+            text, norm, r"(?:presupuest(?:o|ar|a|ame)?|pressupost(?:ar|a|am)?)"
+        )
         if args:
             _add_tax_rates(norm, args)
             return ("crear_presupuesto", args)
+
+    # --- Facturar un trabajo ya cerrado sin reescribir cliente ni concepto ---
+    work_invoice = re.search(
+        r"\b(?:factura|facturar)\s+(?:el\s+)?(?:trabajo|treball)\s*#?\s*(\d+)\b", norm
+    )
+    if work_invoice:
+        return ("preparar_factura_trabajo", {
+            "trabajo_id": int(work_invoice.group(1)),
+        })
+
+    # --- Ticket de venta / factura simplificada explícita ---
+    simplified = _parse_simplified_sale(text, norm)
+    if simplified:
+        return ("crear_factura", simplified)
 
     # --- Crear factura: acepta varios órdenes naturales ---
     if "factura" in norm:
         args = _parse_doc_command(text, norm, r"factura(?:r|me)?")
         if args:
+            args["tipo_factura"] = "F1"
             _add_tax_rates(norm, args)
             return ("crear_factura", args)
 
@@ -235,6 +298,8 @@ def help_text() -> str:
     return ("Soy Noesis. No soy un chat para entretenerte: soy tu oficina pequeña.\n\n"
             "Puedo registrar cosas y también ayudarte a decidir qué toca mirar:\n"
             "• «Factura a Juan por cambio de grifo 95 euros»\n"
+            "• «Ticket de venta por desplazamiento 36,30 euros»\n"
+            "• «Emitir y enviar factura 12» (te pediré confirmación)\n"
             "• «Presupuesto a Ana por reforma de baño 1200 euros»\n"
             "• «Agenda a Marta el jueves por la mañana en Badalona»\n"
             "• «Gasté 45 euros en gasolina»\n"
@@ -255,8 +320,19 @@ def format_reply(tool: str, result: dict) -> str:
         desglose = f"base {_eur(f['base'])} + IVA {_eur(f['vat_amount'])}"
         if f.get("irpf_amount"):
             desglose += f" − IRPF {_eur(f['irpf_amount'])}"
-        return (f"🧾 Factura preparada para {f['client_name']}: **{_eur(f['total'])}** "
-                f"({desglose}). La dejo en borrador para que puedas revisarla antes de enviarla.")
+        label = "Ticket de venta" if f.get("invoice_type") == "F2" else "Factura"
+        return (f"🧾 {label} #{f['id']} preparado para {f['client_name']}: "
+                f"**{_eur(f['total'])}** ({desglose}). Lo dejo en borrador para "
+                f"que lo revises. Cuando esté correcto, escribe «emitir factura "
+                f"{f['id']}»; para entregarlo también, «emitir y enviar factura "
+                f"{f['id']}».")
+    if tool == "preparar_factura_trabajo":
+        f = result["factura"]
+        return (
+            f"🧾 El trabajo ya está conectado con el borrador #{f['id']} de "
+            f"{_eur(f['total'])}. Revísalo y escribe «emitir factura {f['id']}» "
+            "cuando esté correcto."
+        )
     if tool == "crear_presupuesto":
         q = result["presupuesto"]
         desglose = f"base {_eur(q['base'])} + IVA {_eur(q['vat_amount'])}"

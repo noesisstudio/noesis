@@ -31,6 +31,19 @@
   estilo y vencimiento de factura, medios de cobro, recordatorios, informes,
   gestoría y WhatsApp. Esas elecciones se guardan en el producto y se aplican a la
   operativa; no son una encuesta decorativa.
+- La facturación nativa admite borradores editables, varias líneas con cantidad,
+  precio, descuento e IVA, series separadas para factura completa, simplificada y
+  rectificativa, vencimiento configurable, duplicación y programaciones recurrentes.
+  La emisión congela cabecera y líneas. La entrega genera el PDF al salir de la
+  outbox de correo y el historial reúne emisión, remisión, visualización y cobros.
+- WhatsApp distingue un ticket de gasto de un `ticket de venta` F2. Reutiliza un
+  cliente habitual solo si la referencia es inequívoca, conecta trabajos cerrados
+  con su borrador y exige otro SÍ para emitir o entregar. Tras confirmarlo asigna
+  número, valida los datos obligatorios, genera el PDF y prepara email o plantilla
+  WhatsApp; la misma factura alimenta KPIs, impuestos, cobros y gestoría.
+- Una anulación Veri*Factu nunca borra la factura: exige confirmación escrita,
+  conserva el alta, crea otro registro inmutable con huella oficial, lo encadena al
+  anterior y lo remite mediante una cola durable independiente.
 
 ## Política comercial en el código actual
 
@@ -57,12 +70,19 @@ algo está en producción porque exista en una rama o haya pasado tests.**
 
 - WhatsApp, Stripe, SMTP, Google OAuth, el proveedor privado de IA y AEAT están
   implementados detrás de adaptadores, pero necesitan credenciales y una prueba real
-  extremo a extremo. El calendario bidireccional y la conexión bancaria automática
+  extremo a extremo. La secuencia exacta está en [[Conectar-APIs]]. Stripe live
+  requiere además cerrar cómo se aplica el IVA. La facturación es nativa y no se
+  conecta a otro SaaS. El calendario bidireccional y la conexión bancaria automática
   siguen pendientes; la suscripción ICS y la conciliación CSV ya funcionan en local.
+- La entrega de factura por WhatsApp requiere aprobar en Meta la plantilla
+  `noesis_factura_lista`; el recorrido interno y la cola ya están construidos.
 - Falta auditoría externa de seguridad, privacidad y fiscalidad, restauración real y
   piloto acompañado con 3-5 negocios.
 - La memoria de cliente es explicable y corregible; no se promete aprendizaje autónomo
   perfecto ni decisiones legales/fiscales sin humano.
+- Exenciones, no sujeción, identificación fiscal extranjera y subsanación de un
+  registro rechazado todavía requieren desarrollo y validación fiscal antes de
+  admitir esos casos. El 0% visible significa tipo cero, no exención.
 
 ## Regla para cualquier IA
 

@@ -458,7 +458,7 @@ def _audio_to_text(audio_id: str) -> str | None:
 
 
 # ------------------------------------- Confirmaciones y mèdia entrante --
-_YES_WORDS = {"si", "sí", "ok", "vale", "confirmo", "confirmar", "yes", "s", "va"}
+_YES_WORDS = {"si", "sí", "ok", "vale", "d'acord", "dacord", "confirmo", "confirmar", "yes", "s", "va"}
 _NO_WORDS = {"no", "cancela", "cancelar", "anula", "anular", "n"}
 _MONEY_HINTS = ("factur", "gasto", "gastos", "cobr", "pagad", "presupuesto",
                 "borra", "elimina", "anula")
@@ -480,6 +480,75 @@ def _needs_confirmation(text: str) -> bool:
     """Una orden hablada que mueve dinero se confirma antes de ejecutarse."""
     lowered = (text or "").lower()
     return any(hint in lowered for hint in _MONEY_HINTS)
+
+
+def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None:
+    """Convierte una orden de emisión/entrega en una confirmación verificable."""
+    match = re.search(
+        r"\b(?:emitir|emite|emetre|emet|envia|enviar)"
+        r"(?:\s+(?:y|i)\s+(?:emitir|emite|emetre|emet|envia|enviar))?\s+"
+        r"(?:la\s+)?(?:factura|ticket|tiquet)\s+(.+?)\s*$",
+        (text or "").strip(), re.I,
+    )
+    if not match:
+        return None
+    reference = match.group(1).strip()
+    invoice = db.find_invoice_reference(reference, business["id"])
+    if not invoice:
+        return (
+            f"No encuentro la factura «{reference}» en este negocio. "
+            "Usa el número de borrador que te mostré, por ejemplo: "
+            "«emitir factura 12»."
+        )
+    deliver = "envi" in (text or "").lower()
+    client = db.get_client(invoice["client_id"], business["id"]) or {}
+    if invoice.get("status") == "borrador":
+        required = [
+            (business.get("name"), "nombre fiscal del negocio"),
+            (business.get("nif"), "NIF del negocio"),
+            (business.get("address"), "domicilio fiscal del negocio"),
+            (client.get("name"), "nombre del cliente"),
+        ]
+        if invoice.get("invoice_type") != "F2":
+            required.extend((
+                (client.get("nif"), "NIF del cliente"),
+                (client.get("address"), "domicilio del cliente"),
+            ))
+        missing = [label for value, label in required if not str(value or "").strip()]
+        if missing:
+            return (
+                f"El borrador #{invoice['id']} aún no se puede emitir legalmente. "
+                "Falta: " + ", ".join(missing) + ". Completa esos datos y vuelve "
+                "a pedírmelo; no he cambiado la factura."
+            )
+    if deliver and not (
+        str(client.get("email") or "").strip()
+        or recipient_phone(client.get("phone"))
+    ):
+        return (
+            f"Puedo emitir el borrador #{invoice['id']}, pero no entregarlo: "
+            f"{client.get('name') or 'el cliente'} no tiene correo ni WhatsApp "
+            "válido. Añade un contacto o escribe solo «emitir factura "
+            f"{invoice['id']}»."
+        )
+    if invoice.get("status") != "borrador" and not deliver:
+        return (
+            f"La factura {invoice.get('number') or invoice['id']} ya está emitida. "
+            f"Escribe «enviar factura {invoice.get('number') or invoice['id']}» "
+            "si quieres entregarla al cliente."
+        )
+    db.set_pending_action(
+        business["id"], phone, "emitir_factura",
+        {"invoice_id": invoice["id"], "deliver": deliver},
+    )
+    action = "emitir y entregar" if deliver else "emitir"
+    recipient = f" a {client.get('name')}" if deliver else ""
+    return (
+        f"Voy a {action} el borrador #{invoice['id']}{recipient} por "
+        f"{_eur(invoice['total'])}. Al emitirlo tendrá número definitivo, el PDF "
+        "quedará generado y sus cifras pasarán a ingresos, impuestos, cliente y "
+        "gestoría. ¿Confirmas? Responde SÍ o NO."
+    )
 
 
 def _eur(number) -> str:
@@ -547,6 +616,36 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
             f"Hecho ✅ Factura recibida de "
             f"{payload.get('supplier') or 'proveedor'} por {_eur(received['total'])}. "
             "El original y tu confirmación quedan guardados."
+        )
+    if kind == "emitir_factura":
+        from .. import tools
+        invoice_id = int(payload.get("invoice_id"))
+        invoice = db.get_invoice(invoice_id, business["id"])
+        if not invoice:
+            return "No encuentro ese borrador. No he emitido ni enviado nada."
+        if invoice.get("status") == "borrador":
+            result = json.loads(tools.run_tool(
+                "enviar_factura", {"factura_id": invoice_id}, business["id"]
+            ))
+            if not result.get("ok"):
+                return result.get("error") or "No he podido emitir la factura."
+        try:
+            delivery = tools.prepare_invoice_delivery(
+                business["id"], invoice_id,
+                channel="auto" if payload.get("deliver") else "none",
+            )
+        except ValueError as exc:
+            return f"La factura está emitida, pero no he podido preparar la entrega: {exc}"
+        invoice = delivery["factura"]
+        if delivery["queued"]:
+            return (
+                f"Hecho ✅ Factura {invoice['number']} emitida. PDF generado y "
+                f"entrega preparada por {delivery['channel']} a "
+                f"{delivery['target']}. Ya cuenta en tus números y en gestoría."
+            )
+        return (
+            f"Hecho ✅ Factura {invoice['number']} emitida y PDF preparado. "
+            f"Puedes revisarlo aquí iniciando sesión: {delivery['owner_pdf_url']}"
         )
     if kind == "chat_action":
         return chat.handle(
@@ -960,6 +1059,17 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             results.append({
                 "phone": phone, "business_id": business["id"],
                 "confirmed": False,
+            })
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
+
+        invoice_action = _prepare_invoice_action(business, phone, text)
+        if invoice_action is not None:
+            send(phone, invoice_action, business_id=business["id"])
+            results.append({
+                "phone": phone, "business_id": business["id"],
+                "invoice_action": True,
+                "pending": bool(db.get_pending_action(business["id"], phone)),
             })
             _finish_inbound_message(message_id, claimed_ids)
             continue

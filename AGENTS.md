@@ -39,6 +39,7 @@ noesis-web
 - Sin proveedor de IA, el producto funciona con `nlu.py`. Un servicio privado se
   configura según [`docs/IA-local.md`](docs/IA-local.md); la IA externa requiere
   `ANTHROPIC_API_KEY` y consentimiento por negocio.
+- Credenciales, callbacks y pruebas externas: [`docs/Conectar-APIs.md`](docs/Conectar-APIs.md).
 
 ## 3. Arquitectura resumida
 
@@ -75,16 +76,23 @@ Archivos clave:
 8. Noesis prepara; el autónomo confirma dinero, fiscalidad y acciones irreversibles.
 9. Antes de cerrar: tests, servidor, páginas afectadas y estado documental.
 
-## 5. Protocolo multi-agente
+## 5. Protocolo multi-agente y trazabilidad
 
-- Nunca trabajar directamente sobre `main`. Claude/Fable usa `claude/<tarea>` y
-  Codex `codex/<tarea>`.
-- Una tarea, un objetivo; commits pequeños. No editar a la vez el mismo archivo.
+- Decisión del founder (2026-07-20): después de fusionar el PR de consolidación,
+  los agentes trabajan directamente sobre `main`, salvo que él pida expresamente
+  una rama/PR. Antes de editar: `git switch main`, `git pull --ff-only` y árbol
+  limpio. Nunca hacer force-push ni reescribir historia.
+- `main` auto-despliega: una tarea, un objetivo y un commit pequeño; no hacer push
+  si fallan las pruebas proporcionales al riesgo. No editar a la vez el mismo archivo
+  desde dos agentes: con un único `main`, solo puede haber un escritor activo.
 - Verificar `git branch --show-current` antes de operar con git.
+- **Toda modificación** actualiza `docs/Registro-cambios.md` en el mismo commit:
+  fecha, objetivo, áreas/archivos, pruebas, límites externos, riesgo y pista de
+  diagnóstico/rollback. Es la bitácora cronológica para encontrar regresiones.
 - Actualizar: estado en `docs/Estado-actual-main.md`, pendientes en
   `docs/Tareas-vivas.md`, código en `docs/Mapa-codigo.md`, QA en
   `docs/Registro-QA.md` y decisiones en `docs/Decisiones.md`.
-- Todo PR que cambie `src/noesis/` actualiza `docs/project-state.json` y
+- Todo cambio que afecte `src/noesis/` actualiza `docs/project-state.json` y
   `docs/Registro-QA.md`. CI lo exige con `scripts/check_project_truth.py`. Si cambia
   arquitectura, actualiza también `Mapa-codigo`, `Arquitectura` o `Decisiones`.
 - No fijar aquí commits, PR abiertos, conteos de pruebas, precios ni migraciones:

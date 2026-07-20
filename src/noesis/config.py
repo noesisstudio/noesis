@@ -120,9 +120,6 @@ SEED_DEMO = env_bool("NOESIS_SEED_DEMO")
 # cero). Úsalo una vez y quita la variable después.
 RESET_DB = env_bool("NOESIS_RESET_DB")
 
-# Clave de Holded para facturación real (Verifactu). Si está, se usa Holded.
-HOLDED_API_KEY = os.getenv("HOLDED_API_KEY", "")
-
 # Registro Veri*Factu nativo. Sin entorno y certificado, solo genera y conserva.
 # La huella y el QR siguen los documentos técnicos publicados por la AEAT. Se
 # mantienen configurables porque la Agencia puede versionarlos.
@@ -167,6 +164,10 @@ VERIFACTU_INSTALLATION_PREFIX = os.getenv(
 # Remisión AEAT por SOAP/mTLS. Vacío = desactivado, sin llamadas externas.
 VERIFACTU_CERT_PATH = os.getenv("VERIFACTU_CERT_PATH", "").strip()
 VERIFACTU_KEY_PATH = os.getenv("VERIFACTU_KEY_PATH", "").strip()
+VERIFACTU_KEY_PASSWORD = os.getenv("VERIFACTU_KEY_PASSWORD", "")
+VERIFACTU_CERT_TYPE = os.getenv(
+    "VERIFACTU_CERT_TYPE", "persona"
+).strip().lower()
 VERIFACTU_AEAT_ENV = os.getenv("VERIFACTU_AEAT_ENV", "").strip().lower()
 VERIFACTU_HTTP_TIMEOUT_SECONDS = int(
     os.getenv("NOESIS_VERIFACTU_HTTP_TIMEOUT_SECONDS", "30")
@@ -179,6 +180,9 @@ VERIFACTU_RETRY_MAX_SECONDS = int(
 )
 VERIFACTU_MAX_ATTEMPTS = int(
     os.getenv("NOESIS_VERIFACTU_MAX_ATTEMPTS", "6")
+)
+VERIFACTU_MAX_RESPONSE_BYTES = int(
+    os.getenv("NOESIS_VERIFACTU_MAX_RESPONSE_BYTES", str(2 * 1024 * 1024))
 )
 
 # URL pública para emails y vueltas de pago. Railway inyecta su dominio público;
@@ -245,6 +249,9 @@ WHATSAPP_TEMPLATE_PAYMENT_ALERT = os.getenv(
 )
 WHATSAPP_TEMPLATE_PAYMENT_REMINDER = os.getenv(
     "WHATSAPP_TEMPLATE_PAYMENT_REMINDER", "noesis_recordatorio_cobro"
+)
+WHATSAPP_TEMPLATE_INVOICE = os.getenv(
+    "WHATSAPP_TEMPLATE_INVOICE", "noesis_factura_lista"
 )
 WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP = os.getenv(
     "WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP", "noesis_seguimiento_presupuesto"

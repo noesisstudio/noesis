@@ -170,8 +170,9 @@ No se pide al autónomo duplicar horas, costes o documentos entre módulos.
 
 - **Forjia:** referencia directa de WhatsApp, facturación, gastos y gestoría. Noesis
   debe diferenciarse por orquestación, parte diario, campo y rentabilidad.
-- **Holded/Quipu:** profundidad contable e integraciones. Conviene integrar la parte
-  regulada o profunda cuando construirla no añada ventaja.
+- **Holded/Quipu:** referencias de mercado para profundidad contable. Noesis no les
+  delega la facturación; construye internamente la parte regulada y solo conecta
+  directamente con la administración o infraestructura imprescindible.
 - **Jobber/ServiceTitan:** referencia de operación de campo, dispatch, checklists,
   job costing, rutas y portal cliente.
 - **TaxDome/Dext:** referencia de gestoría, documentos, revisión y multi-cliente.

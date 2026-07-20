@@ -147,6 +147,12 @@ def portal_invoice_pdf(request: Request, token: str, invoice_id: int):
     data = build_invoice_pdf(invoice_id, ref["business_id"])
     if data is None:
         return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    db.record_invoice_communication(
+        invoice_id,
+        ref["business_id"],
+        "visualizacion",
+        details="descarga_portal_cliente",
+    )
     name = f"factura_{inv.get('number') or invoice_id}.pdf"
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{name}"'})

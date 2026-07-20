@@ -357,6 +357,8 @@ label.fld { display:block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
 
 .modal-f { display:flex; justify-content:flex-end; gap:8px; padding:14px 20px;
   border-top:1px solid var(--border); background:var(--surface-2); }
+.btn.danger { color:var(--red); border-color:color-mix(in srgb, var(--red) 38%, var(--border)); }
+.btn.danger:hover { background:var(--red-soft); border-color:var(--red); }
 
 /* ---------- Ratios / análisis financiero ---------- */
 .ratios { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -522,10 +524,44 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 
 /* Formulario de nueva factura: fila compacta base/IVA/IRPF + total en vivo. */
 .nf-row { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:10px; margin-top:12px; }
+.invoice-modal { max-width:820px; }
+.invoice-modal .modal-b { max-height:min(72vh, 720px); overflow-y:auto; }
+.nf-line { display:grid; grid-template-columns:minmax(180px,2fr) 70px 100px 80px 90px 36px;
+  gap:8px; margin-bottom:8px; align-items:end; }
+.nf-advanced { margin-top:12px; padding-top:10px; border-top:1px solid var(--border); }
+.nf-advanced summary { color:var(--brand); font-size:12px; font-weight:700; cursor:pointer; }
+.nf-advanced .fld { margin-top:10px; }
+.invoice-history { padding-top:8px; }
+.invoice-history-row { display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px;
+  align-items:start; padding:12px 0; border-bottom:1px solid var(--border); }
+.invoice-history-row:last-child { border-bottom:0; }
+.invoice-history-row b, .invoice-history-row small { display:block; }
+.invoice-history-row b { color:var(--brand-ink); font-size:13px; }
+.invoice-history-row small { margin-top:3px; color:var(--muted); font-size:11px;
+  line-height:1.45; overflow-wrap:anywhere; }
+.series-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:14px;
+  align-items:center; padding:11px 0; border-bottom:1px solid var(--border); }
+.series-row:last-child { border-bottom:0; }
+.series-row b, .series-row small { display:block; }
+.series-row b { color:var(--brand-ink); font-size:13px; }
+.series-row small { color:var(--muted); margin-top:2px; font-size:11px; }
+.series-row code { color:var(--brand); background:var(--brand-soft); border-radius:7px;
+  padding:5px 8px; font-size:11px; }
 .nf-total { margin-top:12px; padding:10px 12px; background:var(--brand-soft);
   border-radius:10px; color:var(--brand); font-weight:650; font-size:13.5px; }
 .modal-b .chips { margin-bottom:0; }
 .modal-b .chips .chip { font-size:12px; padding:5px 10px; }
+@media (max-width:720px) {
+  .invoice-modal { max-height:calc(100vh - 20px); }
+  .invoice-modal .modal-b { max-height:calc(100vh - 150px); }
+  .nf-row { grid-template-columns:1fr; }
+  .nf-line { grid-template-columns:1fr 1fr; padding:11px; border:1px solid var(--border);
+    border-radius:11px; background:#fff; }
+  .nf-line > div:first-child { grid-column:1/-1; }
+  .nf-line .line-remove { align-self:center; justify-self:end; }
+  .series-row { grid-template-columns:1fr auto; }
+  .series-row .badge { grid-column:1/-1; justify-self:start; }
+}
 
 /* ---------- Landing pública ---------- */
 .landing-body { background: var(--bg); }

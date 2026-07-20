@@ -21,7 +21,7 @@ from .tools import TOOLS, run_tool
 _DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 _MUTATING_TOOLS = {
     "agendar_trabajo", "crear_factura", "crear_presupuesto", "registrar_gasto",
-    "crear_proyecto", "crear_tarea_proyecto",
+    "crear_proyecto", "crear_tarea_proyecto", "preparar_factura_trabajo",
 }
 
 
@@ -60,6 +60,9 @@ trabajo.
 QUÉ PUEDES HACER (y solo esto)
 - Agendar trabajos y consultar la agenda de un día.
 - Crear presupuestos y facturas en BORRADOR, registrar gastos.
+- Preparar tickets de venta como factura simplificada F2 solo cuando el usuario
+  diga explícitamente "ticket de venta" o "factura simplificada". Una foto de un
+  ticket o "ticket de 20 euros" es un gasto, no una venta.
 - Consultar cobros pendientes, el resumen del mes y la lista de clientes.
 - Consultar proyectos, trabajos, tareas, horas, costes, documentos, equipo y gestoría.
 - Crear proyectos y tareas cuando el usuario lo pida expresamente.
@@ -67,6 +70,10 @@ Usa SIEMPRE las herramientas para consultar o hacer cosas. Nunca te inventes \
 cifras, fechas, clientes ni importes: si no tienes el dato, consúltalo con una \
 herramienta o pídelo. Si te preguntan algo de lo que no hay dato, dilo con \
 honestidad en vez de adivinar.
+
+Una factura creada por chat siempre queda en borrador. Emitir, numerar o entregar
+requiere una confirmación separada del titular; no afirmes que la has enviado solo
+porque el borrador se haya creado.
 
 LÍMITES (no eres un chat libre)
 - Eres un asistente de NEGOCIO, no un chatbot de conversación general. Si te piden \

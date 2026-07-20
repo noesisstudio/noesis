@@ -627,10 +627,12 @@ def update_fiscal(business_id: int, name: str = Form(""), nif: str = Form(""),
 
 @router.post("/b/{business_id}/payment-details")
 def update_payment_details(business_id: int, payment_iban: str = Form(""),
-                           payment_bizum: str = Form(""), payment_note: str = Form("")):
+                           payment_bizum: str = Form(""), payment_note: str = Form(""),
+                           default_payment_term_days: int = Form(15)):
     try:
         db.update_payment_details(business_id, iban=payment_iban,
-                                  bizum=payment_bizum, note=payment_note)
+                                  bizum=payment_bizum, note=payment_note,
+                                  default_payment_term_days=default_payment_term_days)
     except ValueError:
         return RedirectResponse(
             f"/b/{business_id}/ajustes?error=cobro#cobro", status_code=303

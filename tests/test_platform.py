@@ -77,6 +77,43 @@ class PostgresDDLOrderTest(unittest.TestCase):
         finally:
             migrations._column_names = original
 
+    def test_migrations_parameterise_like_wildcards_for_psycopg(self):
+        """psycopg interpreta un % literal como placeholder aunque no haya params."""
+        original = migrations._column_names
+        migrations._column_names = lambda conn, table: []
+        try:
+            for version, name, upgrade, _down in migrations.MIGRATIONS:
+                if version < 17:
+                    continue
+                conn = _RecordingPGConn()
+                upgrade(conn)
+                for stmt in conn.statements:
+                    self.assertIsNone(
+                        re.search(r"LIKE\s+'[^']*%[^']*'", stmt, re.IGNORECASE),
+                        f"Migración {version} ({name}): wildcard LIKE literal no "
+                        "parametrizado; psycopg lo interpreta como placeholder.",
+                    )
+        finally:
+            migrations._column_names = original
+
+    def test_postgres_integrity_triggers_use_integrity_sqlstate(self):
+        original = migrations._column_names
+        migrations._column_names = lambda conn, table: []
+        try:
+            for version, name, upgrade, _down in migrations.MIGRATIONS:
+                conn = _RecordingPGConn()
+                upgrade(conn)
+                for stmt in conn.statements:
+                    if "RAISE EXCEPTION" not in stmt:
+                        continue
+                    self.assertIn(
+                        "ERRCODE = '23514'", stmt,
+                        f"Migración {version} ({name}): el trigger no devuelve "
+                        "un error de integridad reconocible por psycopg.",
+                    )
+        finally:
+            migrations._column_names = original
+
 
 class PlatformTestCase(unittest.TestCase):
     def setUp(self):
@@ -505,10 +542,13 @@ class PlatformTestCase(unittest.TestCase):
         invoice = db.add_invoice(
             client["id"], "Trabajo", 100, business_id=self.bid
         )
-        db.mark_invoice_sent(
-            invoice["id"], "EXT-1", due_date="2020-01-01",
-            business_id=self.bid,
-        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE invoices SET source='importada', external_number='EXT-1', "
+                "number='EXT-1', status='enviada', issued_at='2020-01-01', "
+                "due_date='2020-01-01' WHERE id=? AND business_id=?",
+                (invoice["id"], self.bid),
+            )
         insight = db.client_insights(self.bid)[0]
         self.assertEqual(insight["level"], "alto")
         self.assertIn("reclamar", insight["headline"].lower())
@@ -528,10 +568,7 @@ class PlatformTestCase(unittest.TestCase):
             )
         with self.assertRaises(ValueError):
             db.issue_invoice(invoice["id"], self.bid)
-        with self.assertRaises(ValueError):
-            db.mark_invoice_sent(
-                invoice["id"], "F-2026-999", business_id=self.bid
-            )
+        self.assertFalse(hasattr(db, "mark_invoice_sent"))
 
     # -------------------------------------------------------- RGPD y migración
     def test_export_and_cascade_cover_new_tables(self):

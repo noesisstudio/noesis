@@ -17,12 +17,20 @@ from . import config, verifactu
 
 SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/"
 AEAT_ENDPOINTS = {
-    "pruebas": (
+    ("pruebas", "persona"): (
         "https://prewww1.aeat.es/wlpl/TIKE-CONT/ws/"
         "SistemaFacturacion/VerifactuSOAP"
     ),
-    "produccion": (
+    ("produccion", "persona"): (
         "https://www1.agenciatributaria.gob.es/wlpl/TIKE-CONT/ws/"
+        "SistemaFacturacion/VerifactuSOAP"
+    ),
+    ("pruebas", "sello"): (
+        "https://prewww10.aeat.es/wlpl/TIKE-CONT/ws/"
+        "SistemaFacturacion/VerifactuSOAP"
+    ),
+    ("produccion", "sello"): (
+        "https://www10.agenciatributaria.gob.es/wlpl/TIKE-CONT/ws/"
         "SistemaFacturacion/VerifactuSOAP"
     ),
 }
@@ -48,12 +56,24 @@ class SubmissionResult:
 def configuration_errors() -> list[str]:
     """Explica por qué la remisión está desactivada o mal configurada."""
     errors = []
-    if config.VERIFACTU_AEAT_ENV not in AEAT_ENDPOINTS:
+    if config.VERIFACTU_AEAT_ENV not in {"pruebas", "produccion"}:
         errors.append("entorno AEAT (pruebas o produccion)")
+    if config.VERIFACTU_CERT_TYPE not in {"persona", "sello"}:
+        errors.append("tipo de certificado (persona o sello)")
     if not config.VERIFACTU_CERT_PATH:
         errors.append("certificado Veri*Factu")
     if not config.VERIFACTU_KEY_PATH:
         errors.append("clave privada Veri*Factu")
+    if config.VERIFACTU_CERT_PATH and not Path(
+        config.VERIFACTU_CERT_PATH
+    ).is_file():
+        errors.append("archivo de certificado Veri*Factu")
+    if config.VERIFACTU_KEY_PATH and not Path(
+        config.VERIFACTU_KEY_PATH
+    ).is_file():
+        errors.append("archivo de clave privada Veri*Factu")
+    if not 1024 <= config.VERIFACTU_MAX_RESPONSE_BYTES <= 10 * 1024 * 1024:
+        errors.append("límite seguro de respuesta AEAT")
     return errors
 
 
@@ -100,14 +120,9 @@ def parse_response(payload: bytes) -> SubmissionResult:
     if fault is not None:
         code = _first_text(fault, "faultcode")
         description = _first_text(fault, "faultstring") or "SOAP Fault de la AEAT."
-        return SubmissionResult(
-            status="rechazado",
-            csv=None,
-            wait_seconds=0,
-            error_code=code,
-            error_description=description,
-            global_status="Incorrecto",
-            raw_response=raw,
+        detail = f"{code}: {description}" if code else description
+        raise VerifactuTransportError(
+            f"La AEAT devolvió un error SOAP temporal o de configuración: {detail}"
         )
 
     line = next(
@@ -137,8 +152,20 @@ def parse_response(payload: bytes) -> SubmissionResult:
         wait_seconds = max(0, int(wait_text))
     except ValueError:
         wait_seconds = 0
+    status = statuses[official_status]
+    duplicate_status = _first_text(line, "EstadoRegistroDuplicado")
+    if official_status == "Incorrecto" and duplicate_status in {
+        "Correcta", "AceptadaConErrores"
+    }:
+        # Un timeout puede ocultar una aceptación y provocar un reenvío. Si la
+        # AEAT confirma que el registro idéntico ya consta, la cola queda cerrada
+        # como aceptada en vez de generar un falso rechazo permanente.
+        status = (
+            "aceptado" if duplicate_status == "Correcta"
+            else "aceptado_con_errores"
+        )
     return SubmissionResult(
-        status=statuses[official_status],
+        status=status,
         csv=_first_text(root, "CSV"),
         wait_seconds=wait_seconds,
         error_code=_first_text(line, "CodigoErrorRegistro"),
@@ -164,10 +191,17 @@ def submit_records(business: dict, records: list[dict]) -> SubmissionResult:
             "No se encuentra el certificado o la clave privada Veri*Factu."
         )
 
-    endpoint = urlsplit(AEAT_ENDPOINTS[config.VERIFACTU_AEAT_ENV])
+    endpoint = urlsplit(AEAT_ENDPOINTS[
+        (config.VERIFACTU_AEAT_ENV, config.VERIFACTU_CERT_TYPE)
+    ])
     context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     try:
-        context.load_cert_chain(str(cert_path), str(key_path))
+        context.load_cert_chain(
+            str(cert_path),
+            str(key_path),
+            password=config.VERIFACTU_KEY_PASSWORD or None,
+        )
     except (OSError, ssl.SSLError) as exc:
         raise VerifactuTransportError(
             "No se pudo cargar el certificado digital Veri*Factu."
@@ -193,7 +227,7 @@ def submit_records(business: dict, records: list[dict]) -> SubmissionResult:
             },
         )
         response = connection.getresponse()
-        response_payload = response.read()
+        response_payload = response.read(config.VERIFACTU_MAX_RESPONSE_BYTES + 1)
     except (OSError, ssl.SSLError, http.client.HTTPException) as exc:
         raise VerifactuTransportError(
             "No se pudo conectar con el servicio Veri*Factu de la AEAT."
@@ -201,6 +235,10 @@ def submit_records(business: dict, records: list[dict]) -> SubmissionResult:
     finally:
         connection.close()
 
+    if len(response_payload) > config.VERIFACTU_MAX_RESPONSE_BYTES:
+        raise VerifactuTransportError(
+            "La respuesta de la AEAT supera el límite de seguridad."
+        )
     if response.status >= 400 and b"Fault" not in response_payload:
         raise VerifactuTransportError(
             f"La AEAT respondió por HTTP con estado {response.status}."
