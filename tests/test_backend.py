@@ -167,6 +167,27 @@ class BackendTestCase(unittest.TestCase):
             len(db.list_invoice_payments(invoice["id"], business["id"])), 1
         )
 
+    def test_demo_historical_issue_is_atomic_and_remains_immutable(self):
+        business, client = self.make_business("Factura Demo Histórica")
+        draft = db.add_invoice(
+            client["id"], "Servicio histórico", 100,
+            business_id=business["id"],
+        )
+
+        issued = db.issue_invoice(
+            draft["id"], business["id"], payment_term_days=10,
+            _issued_at_override="2026-01-10",
+        )
+
+        self.assertEqual(issued["issued_at"], "2026-01-10T12:00:00")
+        self.assertEqual(issued["due_date"], "2026-01-20")
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoices SET due_date=? WHERE id=? AND business_id=?",
+                    ("2026-02-01", issued["id"], business["id"]),
+                )
+
     def test_database_freezes_issued_invoice_and_number_is_unique_per_business(self):
         business, client = self.make_business("Factura Inmutable")
         issued = db.issue_invoice(

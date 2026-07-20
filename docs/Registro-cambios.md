@@ -60,7 +60,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 
 - **Autor/agente:** Codex.
 - **Objetivo:** corregir el fallo del guardián PostgreSQL detectado en el PR #48.
-- **Áreas y archivos:** `src/noesis/migrations.py`, `tests/test_platform.py`.
+- **Áreas y archivos:** `src/noesis/migrations.py`, `src/noesis/db.py`,
+  `src/noesis/demo.py`, `tests/test_platform.py`, `tests/test_backend.py`.
 - **Cambios de datos/migración:** no cambia el esquema ni los datos resultantes;
   parametriza el patrón `R%` usado al clasificar facturas rectificativas durante la
   migración 28.
@@ -70,7 +71,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Riesgo/punto probable de fallo:** únicamente la traducción de placeholders entre
   SQLite y psycopg.
 - **Diagnóstico y rollback:** el error original era `psycopg.ProgrammingError` por un
-  `%` literal interpretado como placeholder. Revertir este commit recuperaría el
-  fallo; no requiere rollback de base de datos.
+  `%` literal interpretado como placeholder. El segundo error era una mutación de
+  fechas posterior a la emisión en los datos demo; ahora la fecha histórica se fija
+  dentro de la misma emisión y se mantiene la protección inmutable. Revertir este
+  commit recuperaría los errores; no requiere rollback de base de datos.
 - **Estado de publicación:** corrección preparada en el PR #48, pendiente de CI al
   escribir esta entrada.

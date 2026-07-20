@@ -72,17 +72,12 @@ def seed(*, reset: bool = True) -> int:
         carlos["id"], "Sustitución termo eléctrico", 180,
         business_id=business_id,
     )
-    db.issue_invoice(inv["id"], business_id)
-    # La marcamos como emitida hace 12 días para que salga el aviso de retraso.
-    with db.get_conn() as conn:
-        conn.execute(
-            "UPDATE invoices SET issued_at=?, due_date=? WHERE id=?",
-            (
-                (today - timedelta(days=12)).isoformat(),
-                (today - timedelta(days=2)).isoformat(),
-                inv["id"],
-            ),
-        )
+    # Se emite con fecha histórica en la misma transición para respetar la
+    # inmutabilidad fiscal de la cabecera tanto en SQLite como en PostgreSQL.
+    db.issue_invoice(
+        inv["id"], business_id, payment_term_days=10,
+        _issued_at_override=(today - timedelta(days=12)).isoformat(),
+    )
 
     # Proyectos realistas para revisar la nueva vista de margen sin datos ficticios
     # en producción: solo forman parte de la cuenta demo local.
@@ -227,12 +222,10 @@ def seed_rich(*, reset: bool = True, force: bool = False,
                              irpf_rate=irpf, business_id=bid)
         if issued_days is None:
             return inv  # se queda en borrador
-        db.issue_invoice(inv["id"], bid)
         issued_on = d(issued_days)
-        due_on = d(issued_days + 15)
-        with db.get_conn() as conn:
-            conn.execute("UPDATE invoices SET issued_at=?, due_date=? WHERE id=?",
-                         (issued_on, due_on, inv["id"]))
+        db.issue_invoice(
+            inv["id"], bid, _issued_at_override=issued_on,
+        )
         if pay == "full":
             db.mark_invoice_paid(inv["id"], bid)
         elif isinstance(pay, (int, float)):

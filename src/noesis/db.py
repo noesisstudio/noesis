@@ -4814,9 +4814,17 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
 
 
 def issue_invoice(
-    invoice_id: int, business_id: int, payment_term_days: int | None = None
+    invoice_id: int,
+    business_id: int,
+    payment_term_days: int | None = None,
+    *,
+    _issued_at_override: str | None = None,
 ) -> dict:
-    """Emite una factura una sola vez, numera y congela sus datos fiscales."""
+    """Emite una factura una sola vez, numera y congela sus datos fiscales.
+
+    ``_issued_at_override`` existe únicamente para construir cuentas demo con
+    historia coherente. No se expone en las rutas de producto.
+    """
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
@@ -4905,7 +4913,17 @@ def issue_invoice(
         if series["document_type"] != expected_document_type:
             raise ValueError("La serie no corresponde al tipo de factura.")
         number = _next_invoice_series_number(conn, business_id, series["id"])
-        issued_at = _now()
+        if _issued_at_override:
+            try:
+                issued_day = date.fromisoformat(str(_issued_at_override)[:10])
+            except ValueError as exc:
+                raise ValueError("La fecha de emisión demo no es válida.") from exc
+            if issued_day > date.today():
+                raise ValueError("La fecha de emisión demo no puede ser futura.")
+            issued_at = f"{issued_day.isoformat()}T12:00:00"
+        else:
+            issued_at = _now()
+            issued_day = date.today()
         if inv.get("operation_date"):
             try:
                 operation_day = date.fromisoformat(inv["operation_date"])
@@ -4919,7 +4937,7 @@ def issue_invoice(
                 15 if configured_term is None else configured_term
             )
         due_date = (
-            date.today() + timedelta(days=max(0, min(payment_term_days, 365)))
+            issued_day + timedelta(days=max(0, min(payment_term_days, 365)))
         ).isoformat()
         conn.execute(
             "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=?, "
