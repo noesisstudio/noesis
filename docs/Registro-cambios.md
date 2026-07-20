@@ -80,3 +80,27 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   datos.
 - **Estado de publicación:** corrección preparada en el PR #48, pendiente de CI al
   escribir esta entrada.
+
+## 2026-07-20 18:01 — publicación de la consolidación en `main`
+
+- **Autor/agente:** Codex.
+- **Objetivo:** publicar el conjunto consolidado y dejar el entorno activo listo
+  para trabajar directamente sobre `main`, según la decisión del fundador.
+- **Áreas y archivos:** PR #48 y los commits `b1e4541`, `46279ad`, `0535b14` y
+  `522475d`; configuración operativa documentada en `AGENTS.md` y
+  `docs/Metodo-operativo-Fable.md`.
+- **Cambios de datos/migración:** esquema objetivo 33; sin cambios adicionales de
+  datos durante la fusión.
+- **Pruebas ejecutadas:** CI completo verde en GitHub Actions: suite general, ciclo
+  completo de migraciones y humo funcional con PostgreSQL 16.
+- **Dependencias o validaciones externas:** no se ha validado todavía el despliegue
+  de producción ni las credenciales reales de Meta, SMTP, Stripe, Google o AEAT.
+- **Riesgo/punto probable de fallo:** despliegue que no aplique la migración 33 o
+  variables externas incompletas; la publicación en Git no equivale por sí sola a
+  despliegue validado.
+- **Diagnóstico y rollback:** `main` quedó en `63c95d8` tras fusionar el PR #48. El
+  CI detectó y se corrigieron un wildcard SQL no parametrizado, una mutación tardía
+  de fechas demo y un SQLSTATE PostgreSQL mal clasificado. Ante una regresión,
+  revisar primero esos commits y el run CI `29757337851`.
+- **Estado de publicación:** PR #48 fusionado en `main`; candidato de repositorio
+  validado por CI, producción todavía no verificada.
