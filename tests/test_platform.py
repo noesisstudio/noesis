@@ -96,6 +96,24 @@ class PostgresDDLOrderTest(unittest.TestCase):
         finally:
             migrations._column_names = original
 
+    def test_postgres_integrity_triggers_use_integrity_sqlstate(self):
+        original = migrations._column_names
+        migrations._column_names = lambda conn, table: []
+        try:
+            for version, name, upgrade, _down in migrations.MIGRATIONS:
+                conn = _RecordingPGConn()
+                upgrade(conn)
+                for stmt in conn.statements:
+                    if "RAISE EXCEPTION" not in stmt:
+                        continue
+                    self.assertIn(
+                        "ERRCODE = '23514'", stmt,
+                        f"Migración {version} ({name}): el trigger no devuelve "
+                        "un error de integridad reconocible por psycopg.",
+                    )
+        finally:
+            migrations._column_names = original
+
 
 class PlatformTestCase(unittest.TestCase):
     def setUp(self):

@@ -64,7 +64,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `src/noesis/demo.py`, `tests/test_platform.py`, `tests/test_backend.py`.
 - **Cambios de datos/migración:** no cambia el esquema ni los datos resultantes;
   parametriza el patrón `R%` usado al clasificar facturas rectificativas durante la
-  migración 28.
+  migración 28 y normaliza los triggers PostgreSQL con SQLSTATE de integridad
+  `23514` para que SQLite y psycopg expongan el mismo tipo de fallo.
 - **Pruebas ejecutadas:** prueba unitaria específica de migraciones y repetición del
   CI PostgreSQL del PR.
 - **Dependencias o validaciones externas:** GitHub Actions con PostgreSQL 16.
@@ -73,7 +74,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** el error original era `psycopg.ProgrammingError` por un
   `%` literal interpretado como placeholder. El segundo error era una mutación de
   fechas posterior a la emisión en los datos demo; ahora la fecha histórica se fija
-  dentro de la misma emisión y se mantiene la protección inmutable. Revertir este
-  commit recuperaría los errores; no requiere rollback de base de datos.
+  dentro de la misma emisión y se mantiene la protección inmutable. El tercero era
+  la clasificación `P0001` de los triggers PostgreSQL; ahora devuelven `23514`.
+  Revertir estos commits recuperaría los errores; no requiere rollback de base de
+  datos.
 - **Estado de publicación:** corrección preparada en el PR #48, pendiente de CI al
   escribir esta entrada.

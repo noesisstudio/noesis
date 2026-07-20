@@ -718,7 +718,8 @@ END;
 CREATE OR REPLACE FUNCTION noesis_clockins_append_only()
 RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'los registros de jornada son inalterables';
+    RAISE EXCEPTION 'los registros de jornada son inalterables'
+        USING ERRCODE = '23514';
 END;
 $$ LANGUAGE plpgsql
 """
@@ -843,7 +844,8 @@ END;
 CREATE OR REPLACE FUNCTION noesis_invoice_records_append_only()
 RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'los registros VeriFactu son inalterables';
+    RAISE EXCEPTION 'los registros VeriFactu son inalterables'
+        USING ERRCODE = '23514';
 END;
 $$ LANGUAGE plpgsql
 """
@@ -2309,12 +2311,14 @@ RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
         IF OLD.status <> 'borrador' THEN
-            RAISE EXCEPTION 'una factura emitida no puede borrarse';
+            RAISE EXCEPTION 'una factura emitida no puede borrarse'
+                USING ERRCODE = '23514';
         END IF;
         RETURN OLD;
     END IF;
     IF OLD.status <> 'borrador' AND ({changed}) THEN
-        RAISE EXCEPTION 'una factura emitida no puede alterarse';
+        RAISE EXCEPTION 'una factura emitida no puede alterarse'
+            USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
 END;
@@ -2411,7 +2415,8 @@ BEGIN
         WHERE i.id=target_invoice AND i.business_id=target_business
           AND i.status <> 'borrador'
     ) THEN
-        RAISE EXCEPTION 'las líneas de una factura emitida no pueden alterarse';
+        RAISE EXCEPTION 'las líneas de una factura emitida no pueden alterarse'
+            USING ERRCODE = '23514';
     END IF;
     IF TG_OP = 'DELETE' THEN
         RETURN OLD;
@@ -2742,7 +2747,8 @@ END;
 CREATE OR REPLACE FUNCTION noesis_invoice_cancellations_append_only()
 RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'los registros de anulación son inalterables';
+    RAISE EXCEPTION 'los registros de anulación son inalterables'
+        USING ERRCODE = '23514';
 END;
 $$ LANGUAGE plpgsql
 """
