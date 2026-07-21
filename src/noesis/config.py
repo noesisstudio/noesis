@@ -225,6 +225,17 @@ MAX_REQUEST_BYTES = max(
     1_048_576, int(os.getenv("NOESIS_MAX_REQUEST_BYTES", "20971520"))
 )
 
+# Antivirus privado opcional. ClamAV recibe el archivo por INSTREAM dentro de la
+# red del despliegue; no se manda contenido a una API externa.
+CLAMAV_HOST = os.getenv("NOESIS_CLAMAV_HOST", "").strip()
+CLAMAV_PORT = max(1, min(65_535, int(os.getenv("NOESIS_CLAMAV_PORT", "3310"))))
+CLAMAV_TIMEOUT_SECONDS = max(
+    0.5, float(os.getenv("NOESIS_CLAMAV_TIMEOUT_SECONDS", "8"))
+)
+CLAMAV_REQUIRED = env_bool(
+    "NOESIS_CLAMAV_REQUIRED", IS_PRODUCTION and bool(CLAMAV_HOST)
+)
+
 # Pool limitado: evita agotar PostgreSQL cuando coinciden web, scheduler y colas.
 DB_POOL_MIN_SIZE = max(0, int(os.getenv("NOESIS_DB_POOL_MIN_SIZE", "1")))
 DB_POOL_MAX_SIZE = max(
@@ -254,7 +265,7 @@ def google_oauth_available() -> bool:
 ADMIN_EMAIL = os.getenv("NOESIS_ADMIN_EMAIL", "").strip().lower()
 ADMIN_REQUIRE_GOOGLE_OAUTH = env_bool(
     "NOESIS_ADMIN_REQUIRE_GOOGLE_OAUTH",
-    IS_PRODUCTION and google_oauth_available(),
+    IS_PRODUCTION,
 )
 
 # Envío de emails (reset de contraseña, avisos). Si no hay SMTP, se registra en log.

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ... import config, db, readiness
+from ... import config, db, readiness, security_center
 from .. import auth, backups
 from ..deps import TEMPLATES
 
@@ -30,9 +30,18 @@ def _is_admin(request: Request) -> bool:
 def admin_panel(request: Request):
     if not _is_admin(request):
         return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.panel_viewed",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+    )
     data = db.admin_overview()
     data["backup"] = backups.admin_backup_status()
     data["readiness"] = readiness.collect_readiness(check_database=False)
+    data["security"] = security_center.build_security_report()
     return TEMPLATES.TemplateResponse(request, "admin.html",
                                       {"data": data})
 
@@ -44,6 +53,16 @@ def admin_download_latest_backup(request: Request):
     path = backups.latest_verified_backup()
     if not path:
         return Response("No hay ninguna copia verificada disponible.", status_code=404)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.backup_downloaded",
+        severity="warning",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"storage": "postgres" if config.DATABASE_URL else "sqlite"},
+    )
     media_type = (
         "application/gzip"
         if path.name.endswith((".gz", ".dump"))

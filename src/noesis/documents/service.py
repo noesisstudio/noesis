@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 
 from .. import config
-from . import ocr, repo, storage, validation
+from . import malware, ocr, repo, storage, validation
 
 
 class UploadError(Exception):
@@ -37,6 +37,32 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
         validation.validate(filename, data)
     except validation.UnsafeDocument as exc:
         raise UploadError(str(exc)) from exc
+    try:
+        scan = malware.scan(data)
+    except malware.ScannerUnavailable as exc:
+        if config.CLAMAV_REQUIRED:
+            from .. import db
+            db.record_security_event(
+                "document.scan_unavailable",
+                severity="critical",
+                area="documents",
+                subject_business_id=business_id,
+                metadata={"required": True},
+            )
+            raise UploadError(
+                "No puedo comprobar la seguridad del archivo ahora. Intentalo de nuevo."
+            ) from exc
+        scan = malware.ScanResult("unavailable")
+    if scan.status == "malware":
+        from .. import db
+        db.record_security_event(
+            "document.malware_blocked",
+            severity="critical",
+            area="documents",
+            subject_business_id=business_id,
+            metadata={"scanner": "clamav"},
+        )
+        raise UploadError("El archivo no ha superado el control de seguridad.")
     if project_id not in (None, ""):
         from .. import db
         try:

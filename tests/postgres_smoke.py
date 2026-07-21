@@ -243,11 +243,33 @@ def _check_gets(client: TestClient, business_id: int) -> list[str]:
     return failures
 
 
+def _check_security_audit(business_id: int) -> None:
+    """Comprueba en Postgres la cadena y el trigger, no solo su DDL."""
+    event = db.record_security_event(
+        "security.postgres_smoke",
+        area="security",
+        subject_business_id=business_id,
+        metadata={"storage": "postgres"},
+    )
+    if not db.security_event_integrity()["ok"]:
+        raise RuntimeError("La cadena de auditoria no supera la verificacion.")
+    try:
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE security_events SET severity='critical' WHERE id=?",
+                (event["id"],),
+            )
+    except db.IntegrityError:
+        return
+    raise RuntimeError("Postgres permitio modificar la bitacora append-only.")
+
+
 def main() -> int:
     try:
         _ensure_postgres()
         db.init_db()
         business = _seed_if_empty()
+        _check_security_audit(int(business["id"]))
         with TestClient(server.app) as client:
             _login(client)
             failures = _check_gets(client, int(business["id"]))

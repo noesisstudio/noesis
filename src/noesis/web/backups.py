@@ -15,6 +15,7 @@ import http.client
 import json
 import logging
 import sqlite3
+import time as monotonic_time
 import tempfile
 import uuid
 import zipfile
@@ -661,6 +662,86 @@ def latest_verified_backup() -> Path | None:
     if candidate.parent != directory or not candidate.is_file():
         return None
     return candidate
+
+
+def _latest_documents_backup() -> Path | None:
+    copies = sorted(
+        _backup_dir().glob("*.docs.zip"),
+        key=lambda candidate: candidate.stat().st_mtime,
+        reverse=True,
+    )
+    return copies[0] if copies else None
+
+
+def verify_latest_backup_set() -> dict:
+    """Repite una restauracion aislada del ultimo juego de copias disponible.
+
+    Es independiente de la verificacion hecha al crear la copia. No toca el
+    esquema real: SQLite usa un temporal y PostgreSQL un esquema desechable.
+    """
+    started = monotonic_time.monotonic()
+    database_path = latest_verified_backup()
+    documents_path = _latest_documents_backup()
+    storage = "postgres" if config.DATABASE_URL else "sqlite"
+    try:
+        if database_path is None:
+            raise RuntimeError("No hay una copia de base de datos verificada.")
+        if storage == "postgres":
+            with gzip.open(database_path, "rt", encoding="utf-8") as source:
+                header = json.loads(source.readline())
+            expected = {
+                str(table): int(total)
+                for table, total in (header.get("counts") or {}).items()
+            }
+            if not expected:
+                raise RuntimeError("La copia PostgreSQL no declara sus recuentos.")
+            _verify_postgres_backup(database_path, expected)
+        else:
+            with closing(sqlite3.connect(database_path)) as source:
+                expected = _sqlite_counts(source)
+            _verify_sqlite_backup(database_path, expected)
+        if documents_path is None:
+            raise RuntimeError("No hay una copia de documentos asociada.")
+        _verify_documents_backup(documents_path)
+    except Exception as exc:  # noqa: BLE001 - debe dejar evidencia y devolver estado
+        duration = round(monotonic_time.monotonic() - started, 3)
+        db.record_security_event(
+            "backup.restore_drill_failed",
+            severity="critical",
+            area="backups",
+            metadata={
+                "storage": storage,
+                "duration_seconds": duration,
+                "error_type": type(exc).__name__,
+            },
+        )
+        return {
+            "ok": False,
+            "storage": storage,
+            "duration_seconds": duration,
+            "error": str(exc)[:300],
+        }
+    duration = round(monotonic_time.monotonic() - started, 3)
+    db.record_security_event(
+        "backup.restore_drill_passed",
+        severity="info",
+        area="backups",
+        metadata={"storage": storage, "duration_seconds": duration},
+    )
+    return {
+        "ok": True,
+        "storage": storage,
+        "duration_seconds": duration,
+        "error": None,
+    }
+
+
+def restore_check_main() -> int:
+    """Entrada CLI para el simulacro; devuelve codigo no cero si falla."""
+    db.init_db(auto_migrate=not bool(config.DATABASE_URL))
+    result = verify_latest_backup_set()
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result["ok"] else 2
 
 
 def admin_backup_status() -> dict:

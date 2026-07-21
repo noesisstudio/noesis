@@ -23,6 +23,34 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-21 — operaciones de seguridad y responsable CISO interno
+
+- **Autor/agente:** Codex.
+- **Objetivo:** subir la seguridad verificable del piloto sin dar autonomía a una
+  IA ni enviar documentos a nuevos terceros: evidencia inmutable, restauración
+  repetible, antivirus privado y acceso admin fuerte por defecto.
+- **Áreas y archivos:** migración/DB, `security_center.py`, documentos/ClamAV,
+  backups/scheduler/CLI, admin, readiness, configuración, pruebas y documentación
+  viva. El diff del commit es el inventario exacto.
+- **Cambios de datos/migración:** esquema 35 con `security_events`; eventos globales
+  append-only, cadena SHA-256, severidad, área, IDs internos opcionales, `request_id`
+  y metadatos escalares filtrados. Triggers impiden UPDATE/DELETE en SQLite/Postgres.
+- **Pruebas ejecutadas:** 347 pruebas verdes tras añadir 8 regresiones; ciclo
+  `0 -> 35 -> 0 -> 35`, Ruff, Bandit, detector de secretos, `pip-audit`, verdad de
+  proyecto, diff y smoke HTTP admin verdes. PostgreSQL 16 queda para CI del PR.
+- **Dependencias o validaciones externas:** no se añade paquete Python. ClamAV es un
+  daemon privado opcional y no está desplegado desde este cambio; Google OAuth, S3
+  y PostgreSQL de producción requieren variables y validación real.
+- **Riesgo/punto probable de fallo:** despliegue sin migración 35, producción sin
+  credenciales Google (fallará al arrancar por diseño), host ClamAV inaccesible en
+  modo obligatorio o artefacto de backup externo no descargable.
+- **Diagnóstico y rollback:** correlacionar por `X-Request-ID`, revisar el centro
+  CISO y ejecutar `noesis-restore-check`. Se puede revertir la aplicación; bajar la
+  migración elimina solo la bitácora y no debe hacerse en producción sin preservar
+  su evidencia y una copia.
+- **Estado de publicación:** rama `codex/security-operations`; no está en `main` ni
+  desplegado hasta fusionar, migrar y validar el dominio real.
+
 ## 2026-07-21 — hardening de seguridad y operación previa al piloto
 
 - **Autor/agente:** Codex.

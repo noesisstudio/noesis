@@ -257,6 +257,220 @@ def clear_auth_attempts(key_hash: str) -> None:
         conn.execute("DELETE FROM auth_attempts WHERE key_hash=?", (key_hash,))
 
 
+def auth_attempt_summary(hours: int = 24) -> dict:
+    """Volumen agregado de intentos fallidos; no devuelve identidades ni IP."""
+    hours = max(1, min(int(hours), 168))
+    since = (datetime.now() - timedelta(hours=hours)).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS attempts, COUNT(DISTINCT key_hash) AS keys "
+            "FROM auth_attempts WHERE attempted_at>=?", (since,)
+        ).fetchone()
+    return {
+        "hours": hours,
+        "attempts": int(row["attempts"] or 0),
+        "pseudonymous_keys": int(row["keys"] or 0),
+    }
+
+
+_SECURITY_SEVERITIES = {"info", "warning", "critical"}
+_SECURITY_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{1,63}$")
+
+
+def _security_metadata(metadata: dict | None) -> dict:
+    """Reduce metadatos a escalares acotados; nunca acepta cuerpos ni secretos."""
+    clean: dict[str, str | int | float | bool | None] = {}
+    forbidden = (
+        "email", "phone", "telefono", "ip", "token", "secret", "password",
+        "credential", "filename", "document", "message", "body", "content",
+    )
+    for raw_key, value in list((metadata or {}).items())[:20]:
+        key = str(raw_key).strip().lower()
+        if (
+            not _SECURITY_NAME_RE.fullmatch(key)
+            or any(part in key for part in forbidden)
+        ):
+            continue
+        if value is None or isinstance(value, (bool, int, float)):
+            clean[key] = value
+        elif isinstance(value, str):
+            clean[key] = value.strip()[:200]
+    return clean
+
+
+def _security_event_payload(event: dict) -> str:
+    return json.dumps(
+        {
+            "event_type": event["event_type"],
+            "severity": event["severity"],
+            "area": event["area"],
+            "actor_user_id": event.get("actor_user_id"),
+            "subject_business_id": event.get("subject_business_id"),
+            "request_id": event.get("request_id"),
+            "metadata": event.get("metadata") or {},
+            "created_at": event["created_at"],
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def record_security_event(
+    event_type: str,
+    *,
+    severity: str = "info",
+    area: str = "security",
+    actor_user_id: int | None = None,
+    subject_business_id: int | None = None,
+    request_id: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    """Anade un evento encadenado a la bitacora global, sin datos de cliente."""
+    event_type = str(event_type or "").strip().lower()
+    severity = str(severity or "").strip().lower()
+    area = str(area or "").strip().lower()
+    if not _SECURITY_NAME_RE.fullmatch(event_type):
+        raise ValueError("Tipo de evento de seguridad no valido.")
+    if severity not in _SECURITY_SEVERITIES:
+        raise ValueError("Severidad de seguridad no valida.")
+    if not _SECURITY_NAME_RE.fullmatch(area):
+        raise ValueError("Area de seguridad no valida.")
+    created_at = _now()
+    event = {
+        "event_type": event_type,
+        "severity": severity,
+        "area": area,
+        "actor_user_id": int(actor_user_id) if actor_user_id else None,
+        "subject_business_id": (
+            int(subject_business_id) if subject_business_id else None
+        ),
+        "request_id": str(request_id or "").strip()[:64] or None,
+        "metadata": _security_metadata(metadata),
+        "created_at": created_at,
+    }
+    with get_conn() as conn:
+        # Serializa el extremo de la cadena. SQLite toma un bloqueo de escritura;
+        # PostgreSQL usa un advisory lock solo durante esta transaccion.
+        if conn.dialect == "sqlite":
+            conn.execute("BEGIN IMMEDIATE")
+        else:
+            conn.execute("SELECT pg_advisory_xact_lock(?)", (730_351_001,))
+        previous = conn.execute(
+            "SELECT event_hash FROM security_events ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        previous_hash = previous["event_hash"] if previous else None
+        event_hash = hashlib.sha256(
+            ((previous_hash or "") + _security_event_payload(event)).encode("utf-8")
+        ).hexdigest()
+        row = conn.execute(
+            "INSERT INTO security_events "
+            "(event_type, severity, area, actor_user_id, subject_business_id, "
+            "request_id, metadata_json, previous_hash, event_hash, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (
+                event_type,
+                severity,
+                area,
+                event["actor_user_id"],
+                event["subject_business_id"],
+                event["request_id"],
+                json.dumps(
+                    event["metadata"], ensure_ascii=False, sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                previous_hash,
+                event_hash,
+                created_at,
+            ),
+        ).fetchone()
+    return get_security_event(row["id"])
+
+
+def get_security_event(event_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM security_events WHERE id=?", (event_id,)
+        ).fetchone()
+    if not row:
+        return None
+    event = dict(row)
+    try:
+        event["metadata"] = json.loads(event.pop("metadata_json") or "{}")
+    except ValueError:
+        event["metadata"] = {}
+    return event
+
+
+def list_security_events(limit: int = 50) -> list[dict]:
+    limit = max(1, min(int(limit), 200))
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM security_events ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+    events = []
+    for raw in rows:
+        event = dict(raw)
+        try:
+            event["metadata"] = json.loads(event.pop("metadata_json") or "{}")
+        except ValueError:
+            event["metadata"] = {}
+        events.append(event)
+    return events
+
+
+def security_event_integrity() -> dict:
+    """Verifica continuidad y huellas de toda la bitacora append-only."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM security_events ORDER BY id"
+        ).fetchall()
+    previous_hash = None
+    for raw in rows:
+        row = dict(raw)
+        try:
+            metadata = json.loads(row.get("metadata_json") or "{}")
+        except ValueError:
+            return {"ok": False, "events": len(rows), "broken_at": row["id"]}
+        event = {
+            "event_type": row["event_type"],
+            "severity": row["severity"],
+            "area": row["area"],
+            "actor_user_id": row.get("actor_user_id"),
+            "subject_business_id": row.get("subject_business_id"),
+            "request_id": row.get("request_id"),
+            "metadata": metadata,
+            "created_at": str(row["created_at"]),
+        }
+        expected = hashlib.sha256(
+            ((previous_hash or "") + _security_event_payload(event)).encode("utf-8")
+        ).hexdigest()
+        if row.get("previous_hash") != previous_hash or not secrets.compare_digest(
+            expected, row["event_hash"]
+        ):
+            return {"ok": False, "events": len(rows), "broken_at": row["id"]}
+        previous_hash = row["event_hash"]
+    return {"ok": True, "events": len(rows), "broken_at": None}
+
+
+def security_event_counts() -> dict:
+    day_ago = (datetime.now() - timedelta(hours=24)).isoformat(timespec="seconds")
+    week_ago = (datetime.now() - timedelta(days=7)).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        day = conn.execute(
+            "SELECT severity, COUNT(*) AS total FROM security_events "
+            "WHERE created_at>=? GROUP BY severity", (day_ago,)
+        ).fetchall()
+        week = conn.execute(
+            "SELECT severity, COUNT(*) AS total FROM security_events "
+            "WHERE created_at>=? GROUP BY severity", (week_ago,)
+        ).fetchall()
+    return {
+        "24h": {row["severity"]: int(row["total"]) for row in day},
+        "7d": {row["severity"]: int(row["total"]) for row in week},
+    }
+
+
 def _positive_money(value, label: str) -> float:
     try:
         number = Decimal(str(value))
