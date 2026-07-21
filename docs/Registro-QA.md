@@ -29,6 +29,9 @@
   que no existe en PyPI, y no encuentra vulnerabilidades conocidas.
 - Smoke HTTP aislado: login admin 303, `/admin` 200, bloque CISO renderizado y
   `X-Request-ID` presente. El aviso Starlette/httpx ya conocido no afecta el flujo.
+- PR #54: `Tests i migracions` verde en 2m26s y `Humo contra Postgres` verde en
+  38s. PostgreSQL 16 aplicó la migración 35, verificó la cadena y rechazó el UPDATE
+  de la bitácora; la suite general repitió seguridad, 347 pruebas y ciclo completo.
 
 ## 2026-07-21 — hardening de seguridad previo al piloto
 

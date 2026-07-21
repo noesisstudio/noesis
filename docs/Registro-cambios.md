@@ -48,8 +48,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   CISO y ejecutar `noesis-restore-check`. Se puede revertir la aplicación; bajar la
   migración elimina solo la bitácora y no debe hacerse en producción sin preservar
   su evidencia y una copia.
-- **Estado de publicación:** rama `codex/security-operations`; no está en `main` ni
-  desplegado hasta fusionar, migrar y validar el dominio real.
+- **Estado de publicación:** PR #54 en borrador sobre `codex/security-operations`,
+  con suite general y PostgreSQL 16 verdes; no está en `main` ni desplegado hasta
+  fusionar, migrar y validar el dominio real.
 
 ## 2026-07-21 — hardening de seguridad y operación previa al piloto
 
