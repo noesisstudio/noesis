@@ -23,6 +23,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-21 — política segura de actualización de dependencias
+
+- **Autor/agente:** Codex.
+- **Objetivo:** mantener la vigilancia automática de dependencias sin volver a
+  mezclar cambios heterogéneos ni romper el lockfile que exige el CI.
+- **Áreas y archivos:** `.github/dependabot.yml` y este registro.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** validación sintáctica YAML, `uv sync --locked`, fuente de
+  verdad del proyecto, Ruff, `pip-audit`, detector de secretos y `git diff --check`
+  verdes. La suite completa local superó el límite de 3 minutos sin mostrar fallo;
+  los dos jobs de CI son obligatorios antes de fusionar.
+- **Dependencias o validaciones externas:** configuración contrastada con la
+  referencia oficial de GitHub Dependabot. Se cambia el ecosistema de `pip` a `uv`
+  para que el bot actualice `pyproject.toml` y `uv.lock` de forma coherente.
+- **Riesgo/punto probable de fallo:** GitHub debe reconocer el ecosistema `uv` y
+  aplicar la nueva política al siguiente ciclo. Las subidas mayores dejan de ser
+  rutinarias y requieren un PR manual revisado expresamente.
+- **Diagnóstico y rollback:** el PR #53 agrupó 21 cambios mediante `patterns: ["*"]`
+  y falló antes de los tests porque no actualizó `uv.lock`; se cerró explicando la
+  causa. Revertir este cambio recuperaría el agrupado inseguro y no es recomendable.
+- **Estado de publicación:** candidato en `codex/dependabot-policy`; no estará en
+  `main` ni activo para Dependabot hasta superar CI y fusionarse.
+
 ## 2026-07-21 — operaciones de seguridad y responsable CISO interno
 
 - **Autor/agente:** Codex.
@@ -48,9 +71,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   CISO y ejecutar `noesis-restore-check`. Se puede revertir la aplicación; bajar la
   migración elimina solo la bitácora y no debe hacerse en producción sin preservar
   su evidencia y una copia.
-- **Estado de publicación:** PR #54 en borrador sobre `codex/security-operations`,
-  con suite general y PostgreSQL 16 verdes; no está en `main` ni desplegado hasta
-  fusionar, migrar y validar el dominio real.
+- **Estado de publicación:** PR #54 fusionado en `main` el 2026-07-21, con suite
+  general y PostgreSQL 16 verdes. Despliegue, migración 35 y validación del dominio
+  real continúan siendo pasos independientes pendientes de comprobar.
 
 ## 2026-07-21 — hardening de seguridad y operación previa al piloto
 
