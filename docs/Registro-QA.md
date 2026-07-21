@@ -7,8 +7,8 @@
   facturación, portales, WhatsApp y aislamiento existente. Los logs de caídas de IA,
   Meta, SMTP, Stripe, AEAT y backup son fallos simulados que prueban reintentos.
 - Migración 34 validada en SQLite con ciclo limpio `0 -> 34 -> 0 -> 34`; crea el
-  límite de autenticación persistente y seudonimizado. La ejecución real PostgreSQL
-  queda a cargo del job obligatorio del PR.
+  límite de autenticación persistente y seudonimizado. El job obligatorio del PR
+  aplicó el esquema y completó el humo funcional en PostgreSQL 16.
 - Archivos: se rechazan imagen con extensión falsa, PDF con acciones activas y
   payloads que exceden límites antes de OCR/almacenamiento. Se acepta un JPEG real;
   fixtures antiguos se corrigieron sin relajar la validación.
@@ -28,14 +28,18 @@
   Dependabot habilitado. En GitHub se activaron alertas de dependencias vulnerables
   y actualizaciones automáticas de seguridad; secret scanning avanzado no aparece
   disponible para este repositorio/plan y se cubre localmente en CI.
-- Pendiente externo: humo PostgreSQL del PR, dominio/TLS y cookies reales, pentest,
-  revisión RGPD/fiscal, credenciales de proveedores y restauración aislada. No se
+- Pendiente externo: dominio/TLS y cookies reales, pentest, revisión RGPD/fiscal,
+  credenciales de proveedores y restauración aislada. No se
   declara desplegado ni auditado externamente.
 - Primer run del PR #49: la migración 34 llegó correctamente a PostgreSQL. Los dos
   fallos fueron de fixtures: datos demo con extensión JPG y bytes PDF, y falsos
   positivos Linux del detector de secretos. Se corrigieron los datos, manteniendo
   la validación, y se marcaron individualmente solo constantes de prueba revisadas.
   La siembra rica corregida se ejecutó en SQLite aislado y creó sus 5 documentos.
+  El siguiente run confirmó el humo PostgreSQL 16 completo en verde. Los datos
+  ficticios repetidos se centralizaron en constantes revisadas para conservar la
+  sensibilidad del detector sin excepciones dispersas; las 261 pruebas del módulo
+  backend siguieron verdes tras la refactorización.
 
 ## 2026-07-20 — facturación profesional, entrega y anulación fiscal
 

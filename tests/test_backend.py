@@ -20,6 +20,14 @@ from noesis.adapters import extraction
 from noesis.web import auth, chat, reports, scheduler, whatsapp
 from tests.fixtures import TINY_JPEG, TINY_PNG
 
+TEST_PASSWORD = "password-segura-123"  # pragma: allowlist secret
+ISSUER_NIF = "A12345678"  # pragma: allowlist secret
+CLIENT_NIF = "B12345678"  # pragma: allowlist secret
+PRODUCER_NIF = "B87654321"  # pragma: allowlist secret
+ALTERNATIVE_NIF = "A99999999"  # pragma: allowlist secret
+SUPPLIER_NIF = "B22222222"  # pragma: allowlist secret
+TEST_IBAN = "ES9121000418450200051332"  # pragma: allowlist secret
+
 
 class BackendTestCase(unittest.TestCase):
     def setUp(self):
@@ -44,10 +52,10 @@ class BackendTestCase(unittest.TestCase):
     def make_business(self, name="Taller Seguro"):
         business = db.create_business(name, f"{name.lower().replace(' ', '')}@example.com")
         db.update_fiscal(
-            business["id"], nif="A12345678", address="Calle Principal 1"  # pragma: allowlist secret
+            business["id"], nif=ISSUER_NIF, address="Calle Principal 1"  # pragma: allowlist secret
         )
         client = db.add_client(
-            "Cliente Fiscal", nif="B12345678", address="Calle Cliente 2",  # pragma: allowlist secret
+            "Cliente Fiscal", nif=CLIENT_NIF, address="Calle Cliente 2",  # pragma: allowlist secret
             business_id=business["id"],
         )
         return business, client
@@ -156,7 +164,7 @@ class BackendTestCase(unittest.TestCase):
         second = db.issue_invoice(invoice["id"], business["id"])
 
         self.assertEqual(first["number"], second["number"])
-        self.assertEqual(first["recipient_nif"], "B12345678")  # pragma: allowlist secret
+        self.assertEqual(first["recipient_nif"], CLIENT_NIF)  # pragma: allowlist secret
         self.assertFalse(db.delete_invoice(invoice["id"], business["id"]))
         self.assertEqual(
             db.mark_invoice_paid(invoice["id"], business["id"])["status"],
@@ -910,7 +918,7 @@ class BackendTestCase(unittest.TestCase):
     def test_password_change_revokes_existing_session_version(self):
         business, _ = self.make_business()
         user = db.create_user(
-            "owner@example.com", auth.hash_password("password-segura-123"),
+            "owner@example.com", auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         old_version = user["session_version"]
@@ -928,10 +936,10 @@ class BackendTestCase(unittest.TestCase):
             province="Asturias", primary_goal="facturar",
         )
         db.update_fiscal(
-            business["id"], nif="B12345678", address="Calle Taller 1"  # pragma: allowlist secret
+            business["id"], nif=CLIENT_NIF, address="Calle Taller 1"  # pragma: allowlist secret
         )
         client = db.add_client(
-            "Hotel Costa", nif="A12345678", address="Avenida Mar 4",  # pragma: allowlist secret
+            "Hotel Costa", nif=ISSUER_NIF, address="Avenida Mar 4",  # pragma: allowlist secret
             business_id=business["id"],
         )
         db.add_job(
@@ -974,7 +982,7 @@ class BackendTestCase(unittest.TestCase):
             business_id=other["id"],
         )
         db.create_user(
-            "agenda@example.com", auth.hash_password("password-segura-123"),
+            "agenda@example.com", auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
 
@@ -982,7 +990,7 @@ class BackendTestCase(unittest.TestCase):
             with TestClient(server.app) as client:
                 login = client.post("/login", data={
                     "email": "agenda@example.com",
-                    "password": "password-segura-123",  # pragma: allowlist secret
+                    "password": TEST_PASSWORD,  # pragma: allowlist secret
                 }, follow_redirects=False)
                 self.assertEqual(login.status_code, 303)
                 created = client.post(
@@ -1029,14 +1037,14 @@ class BackendTestCase(unittest.TestCase):
             "17/07/2026;-25,50;Compra material;Proveedor;REC-2\n"
         ).encode("utf-8")
         db.create_user(
-            "banco@example.com", auth.hash_password("password-segura-123"),
+            "banco@example.com", auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         with patch.object(server, "start_scheduler", lambda: None):
             with TestClient(server.app) as http:
                 login = http.post("/login", data={
                     "email": "banco@example.com",
-                    "password": "password-segura-123",  # pragma: allowlist secret
+                    "password": TEST_PASSWORD,  # pragma: allowlist secret
                 }, follow_redirects=False)
                 self.assertEqual(login.status_code, 303)
                 imported = http.post(
@@ -1068,7 +1076,7 @@ class BackendTestCase(unittest.TestCase):
             with TestClient(server.app) as http:
                 http.post("/login", data={
                     "email": "banco@example.com",
-                    "password": "password-segura-123",
+                    "password": TEST_PASSWORD,
                 })
                 response = http.post(
                     f"/api/{business['id']}/bank-transactions/{incoming['id']}/confirm",
@@ -1250,12 +1258,12 @@ class ExpensePhotoHttpTestCase(unittest.TestCase):
         email = f"foto-{business['id']}@example.com"
         db.create_user(
             email,
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         response = client.post(
             "/login",
-            data={"email": email, "password": "password-segura-123"},
+            data={"email": email, "password": TEST_PASSWORD},
             follow_redirects=False,
         )
         self.assertEqual(response.status_code, 303)
@@ -1543,7 +1551,7 @@ class PaymentReminderTestCase(unittest.TestCase):
         business, _ = self.make_business("Ajustes recordatorios")
         db.create_user(
             "recordatorios@example.com",
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         with patch.object(server, "start_scheduler", lambda: None):
@@ -1552,7 +1560,7 @@ class PaymentReminderTestCase(unittest.TestCase):
                     "/login",
                     data={
                         "email": "recordatorios@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     },
                     follow_redirects=False,
                 )
@@ -1675,7 +1683,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         business, _ = self.make_business("Precios actuales")
         db.create_user(
             "precios@example.com",
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
 
@@ -1739,7 +1747,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                     "/login",
                     data={
                         "email": "precios@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     },
                     follow_redirects=False,
                 )
@@ -1778,7 +1786,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         business, existing_client = self.make_business("Solo consulta")
         db.create_user(
             "consulta@example.com",
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         db.set_subscription(business["id"], "past_due", plan="tranquilidad")
@@ -1789,7 +1797,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                     "/login",
                     data={
                         "email": "consulta@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     },
                     follow_redirects=False,
                 )
@@ -1990,14 +1998,14 @@ class PortalHttpTestCase(BackendTestCase):
             business_b["id"],
         )
         db.update_payment_details(
-            business_a["id"], iban="ES9121000418450200051332"
+            business_a["id"], iban=TEST_IBAN
         )
         token = db.get_or_create_portal_token(
             business_a["id"], client_a["id"]
         )
         db.create_user(
             "cobros-api@example.com",
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business_a["id"],
         )
 
@@ -2007,7 +2015,7 @@ class PortalHttpTestCase(BackendTestCase):
                     "/login",
                     data={
                         "email": "cobros-api@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     },
                     follow_redirects=False,
                 )
@@ -2064,7 +2072,7 @@ class PortalHttpTestCase(BackendTestCase):
                     data={
                         "name": "Clima Piloto",
                         "email": "piloto@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                         "sector": "Climatización",
                         "acepto": "1",
                     },
@@ -2129,7 +2137,7 @@ class PortalHttpTestCase(BackendTestCase):
                     data={
                         "name": "Negocio sin actividad",
                         "email": "sinsector@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                         "sector": "   ",
                         "acepto": "1",
                     },
@@ -2144,7 +2152,7 @@ class PortalHttpTestCase(BackendTestCase):
                     data={
                         "name": "Negocio Completo",
                         "email": "completo@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                         "sector": "Instalación de placas solares",
                         "acepto": "1",
                         "plan": "pro",
@@ -2185,13 +2193,13 @@ class PortalHttpTestCase(BackendTestCase):
                 preferences = client.post(
                     profile.headers["location"],
                     data={
-                        "nif": "B12345678",
+                        "nif": CLIENT_NIF,
                         "address": "Calle Mayor, 1, Valencia",
                         "default_vat": "21",
                         "default_irpf": "15",
                         "default_payment_term_days": "30",
                         "invoice_template": "editorial",
-                        "payment_iban": "ES9121000418450200051332",
+                        "payment_iban": TEST_IBAN,
                         "payment_bizum": "600111222",
                         "payment_note": "Indica el numero de factura.",
                         "payment_reminders_enabled": "1",
@@ -2583,7 +2591,7 @@ class WorkerPortalHttpTestCase(unittest.TestCase):
         self._job_for(business, client_record, worker, "Revisión")
         token = db.get_or_create_worker_token(business["id"], worker["id"])
         db.create_user(
-            "equipo@example.com", auth.hash_password("password-segura-123"),
+            "equipo@example.com", auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
 
@@ -2612,7 +2620,7 @@ class WorkerPortalHttpTestCase(unittest.TestCase):
                     "/login",
                     data={
                         "email": "equipo@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     },
                     follow_redirects=False,
                 )
@@ -2651,7 +2659,7 @@ class LegalClockinTestCase(unittest.TestCase):
         worker = db.create_worker(business["id"], "Laura Legal")
         user = db.create_user(
             f"{name.lower().replace(' ', '')}@example.com",
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         return business, client, worker, user
@@ -2831,7 +2839,7 @@ class LegalClockinTestCase(unittest.TestCase):
                     "/login",
                     data={
                         "email": user["email"],
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     },
                     follow_redirects=False,
                 )
@@ -2884,14 +2892,14 @@ class ProfessionalInvoicingHttpTestCase(unittest.TestCase):
         )
         db.create_user(
             "facturacion-http@example.com",
-            auth.hash_password("password-segura-123"), business["id"],
+            auth.hash_password(TEST_PASSWORD), business["id"],
         )
         with patch.object(server, "start_scheduler", lambda: None):
             with TestClient(server.app) as client:
                 login = client.post(
                     "/login", data={
                         "email": "facturacion-http@example.com",
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     }, follow_redirects=False,
                 )
                 self.assertEqual(login.status_code, 303)
@@ -2969,7 +2977,7 @@ class VerifactuTestCase(unittest.TestCase):
             config.VERIFACTU_KEY_PATH,
             config.VERIFACTU_AEAT_ENV,
         )
-        config.VERIFACTU_PRODUCER_NIF = "B87654321"  # pragma: allowlist secret
+        config.VERIFACTU_PRODUCER_NIF = PRODUCER_NIF  # pragma: allowlist secret
         config.VERIFACTU_CERT_PATH = ""
         config.VERIFACTU_KEY_PATH = ""
         config.VERIFACTU_AEAT_ENV = ""
@@ -3079,13 +3087,13 @@ class VerifactuTestCase(unittest.TestCase):
 
     def test_cancellation_hash_uses_the_official_fields_and_order(self):
         payload = verifactu.cancellation_hash_input(
-            issuer_nif="A12345678", invoice_number="2026/0001",
+            issuer_nif=ISSUER_NIF, invoice_number="2026/0001",
             issue_date="20-07-2026", previous_hash="ABC123",
             generated_at="2026-07-20T12:30:00+02:00",
         )
         self.assertEqual(
             payload,
-            "IDEmisorFacturaAnulada=A12345678&"
+            f"IDEmisorFacturaAnulada={ISSUER_NIF}&"
             "NumSerieFacturaAnulada=2026/0001&"
             "FechaExpedicionFacturaAnulada=20-07-2026&"
             "Huella=ABC123&"
@@ -3093,7 +3101,7 @@ class VerifactuTestCase(unittest.TestCase):
         )
         self.assertEqual(
             verifactu.cancellation_record_hash(
-                issuer_nif="A12345678", invoice_number="2026/0001",
+                issuer_nif=ISSUER_NIF, invoice_number="2026/0001",
                 issue_date="20-07-2026", previous_hash="ABC123",
                 generated_at="2026-07-20T12:30:00+02:00",
             ),
@@ -3191,8 +3199,8 @@ class VerifactuTestCase(unittest.TestCase):
         self._issue(business, client)
 
         with self.assertRaisesRegex(ValueError, "NIF no puede cambiarse"):
-            db.update_fiscal(business["id"], nif="A99999999")
-        self.assertEqual(db.get_business(business["id"])["nif"], "A12345678")
+            db.update_fiscal(business["id"], nif=ALTERNATIVE_NIF)
+        self.assertEqual(db.get_business(business["id"])["nif"], ISSUER_NIF)
 
     def test_clock_rollback_blocks_a_new_fiscal_record(self):
         business, client = self._enabled_business("Verifactu Reloj")
@@ -3671,7 +3679,7 @@ class VerifactuTestCase(unittest.TestCase):
         self._issue(business, client_record)
         user = db.create_user(
             "verifactu@example.com",
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         with patch.object(server, "start_scheduler", lambda: None):
@@ -3680,7 +3688,7 @@ class VerifactuTestCase(unittest.TestCase):
                     "/login",
                     data={
                         "email": user["email"],
-                        "password": "password-segura-123",
+                        "password": TEST_PASSWORD,
                     },
                     follow_redirects=False,
                 )
@@ -3963,7 +3971,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
         }
         draft = {
             "number": "P-44", "issued_on": "2026-07-01", "due_on": None,
-            "supplier": "Ferretería Sol", "supplier_nif": "B22222222",
+            "supplier": "Ferretería Sol", "supplier_nif": SUPPLIER_NIF,
             "customer": business["name"], "customer_nif": None,
             "base": 100, "vat_rate": 21, "vat_amount": 21,
             "irpf_amount": 0, "total": 121, "confidence": 92,
@@ -4311,7 +4319,7 @@ class GestoriaTestCase(unittest.TestCase):
         token = db.get_business(business["id"])["gestoria_token"]
         db.create_user(
             "gestoria-owner@example.com",
-            auth.hash_password("password-segura-123"),
+            auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         with patch.object(server, "start_scheduler", lambda: None):
@@ -4331,7 +4339,7 @@ class GestoriaTestCase(unittest.TestCase):
 
                 login = client.post("/login", data={
                     "email": "gestoria-owner@example.com",
-                    "password": "password-segura-123",
+                    "password": TEST_PASSWORD,
                 }, follow_redirects=False)
                 self.assertEqual(login.status_code, 303)
                 sent = client.post(
@@ -4458,7 +4466,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
 
         business, _ = self.make_business("Admin servicios")
         db.create_user(
-            "founder@example.com", auth.hash_password("password-segura-123"),
+            "founder@example.com", auth.hash_password(TEST_PASSWORD),
             business["id"],
         )
         with (
@@ -4468,7 +4476,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
             with TestClient(server.app) as client:
                 client.post("/login", data={
                     "email": "founder@example.com",
-                    "password": "password-segura-123",
+                    "password": TEST_PASSWORD,
                 })
                 page = client.get("/admin")
         self.assertEqual(page.status_code, 200)
@@ -4563,7 +4571,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
 
     def test_admin_flags_verifactu_due_and_exhausted_queue(self):
         business, client = self.make_business("Admin Verifactu")
-        with patch.object(config, "VERIFACTU_PRODUCER_NIF", "B87654321"):  # pragma: allowlist secret
+        with patch.object(config, "VERIFACTU_PRODUCER_NIF", PRODUCER_NIF):  # pragma: allowlist secret
             db.update_verifactu_mode(business["id"], True)
             first = db.add_invoice(
                 client["id"], "Registro vencido", 100,

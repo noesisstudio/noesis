@@ -39,8 +39,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   Bandit, `pip-audit` y detector de secretos verdes. Dependencias nuevas bloqueadas
   en `uv.lock` y sincronizadas con `requirements.txt`.
 - **Dependencias o validaciones externas:** habilitadas alertas de vulnerabilidades
-  y correcciones de seguridad de Dependabot. Pendientes humo PostgreSQL del PR,
-  producción real, pentest, RGPD/fiscalidad, restauración y credenciales externas.
+  y correcciones de seguridad de Dependabot. El humo PostgreSQL 16 del PR es verde;
+  quedan pendientes producción real, pentest, RGPD/fiscalidad, restauración y
+  credenciales externas.
 - **Riesgo/punto probable de fallo:** configuración incorrecta de hosts/OAuth en
   producción, pool insuficiente para la concurrencia real, proveedores S3 sin
   soporte de la cabecera SSE o dominio de medios Meta nuevo no permitido.
@@ -53,7 +54,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Seguimiento CI:** el primer run del PR #49 confirmó la migración 34 en
   PostgreSQL y detectó una imagen demo falsa y constantes de prueba no reconocidas
   por la baseline en Linux. Se sustituyó el payload demo por JPEG real y se usaron
-  allowlists por línea, sin excluir archivos ni desactivar detectores.
+  constantes reutilizables con allowlist revisada, sin excluir archivos ni
+  desactivar detectores. El humo PostgreSQL 16 posterior quedó verde.
 
 ## 2026-07-20 — consolidación del MVP, facturación profesional e integración total
 
