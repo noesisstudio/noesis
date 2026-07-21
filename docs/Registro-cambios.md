@@ -49,8 +49,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   colas sin consultar contenido personal. Revertir el commit de aplicación si hay
   regresión; la migración 34 puede bajar sin tocar datos de negocio, pero no debe
   bajarse en producción sin copia y ventana controlada.
-- **Estado de publicación:** rama `codex/security-hardening`, local verificada;
-  todavía no fusionada, desplegada ni validada con infraestructura real.
+- **Estado de publicación:** PR #49 en rama `codex/security-hardening`, verificado
+  localmente y con los dos jobs CI verdes; todavía no fusionado ni desplegado.
 - **Seguimiento CI:** el primer run del PR #49 confirmó la migración 34 en
   PostgreSQL y detectó una imagen demo falsa y constantes de prueba no reconocidas
   por la baseline en Linux. Se sustituyó el payload demo por JPEG real y se usaron

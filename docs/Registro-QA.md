@@ -40,6 +40,9 @@
   ficticios repetidos se centralizaron en constantes revisadas para conservar la
   sensibilidad del detector sin excepciones dispersas; las 261 pruebas del módulo
   backend siguieron verdes tras la refactorización.
+- Run final de código del PR #49: `Tests i migracions` verde en 2m28s y `Humo contra
+  Postgres` verde en 31s, incluyendo auditoría de dependencias, detector de secretos,
+  Ruff, Bandit, fuente de verdad, suite, ciclo de migraciones y PostgreSQL 16.
 
 ## 2026-07-20 — facturación profesional, entrega y anulación fiscal
 
