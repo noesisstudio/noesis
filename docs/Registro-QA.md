@@ -1,5 +1,37 @@
 # Registro de QA
 
+## 2026-07-21 — hardening de seguridad previo al piloto
+
+- Suite completa: **339 pruebas verdes**. Incluye 80 casos generados con Hypothesis
+  para invariantes de IVA/IRPF y total, además de sesiones, documentos, webhooks,
+  facturación, portales, WhatsApp y aislamiento existente. Los logs de caídas de IA,
+  Meta, SMTP, Stripe, AEAT y backup son fallos simulados que prueban reintentos.
+- Migración 34 validada en SQLite con ciclo limpio `0 -> 34 -> 0 -> 34`; crea el
+  límite de autenticación persistente y seudonimizado. La ejecución real PostgreSQL
+  queda a cargo del job obligatorio del PR.
+- Archivos: se rechazan imagen con extensión falsa, PDF con acciones activas y
+  payloads que exceden límites antes de OCR/almacenamiento. Se acepta un JPEG real;
+  fixtures antiguos se corrigieron sin relajar la validación.
+- Autenticación: probado el límite compartido por cuenta sin persistir email/IP en
+  claro, la caducidad por inactividad, request IDs, cabeceras y limpieza al salir.
+- Los portales privados por token responden `no-store` y `no-referrer`. La descarga
+  de medios de WhatsApp rechaza hosts engañosos y redirects fuera de Meta antes de
+  enviar una petición o exponer el bearer.
+- Las peticiones con `Content-Length` superior al techo global se rechazan antes de
+  parsear formularios o multipart; los límites más bajos por JSON, audio y documento
+  permanecen activos.
+- Herramientas: Ruff y Bandit sin hallazgos bloqueantes; `pip-audit` sin
+  vulnerabilidades conocidas en dependencias publicadas; detector de secretos pasa
+  para archivos versionados y nuevos. La distribución local `noesis` no existe en
+  PyPI y por ello `pip-audit` la marca correctamente como no auditable.
+- Cadena de suministro: lock reproducible, acciones de GitHub fijadas por SHA y
+  Dependabot habilitado. En GitHub se activaron alertas de dependencias vulnerables
+  y actualizaciones automáticas de seguridad; secret scanning avanzado no aparece
+  disponible para este repositorio/plan y se cubre localmente en CI.
+- Pendiente externo: humo PostgreSQL del PR, dominio/TLS y cookies reales, pentest,
+  revisión RGPD/fiscal, credenciales de proveedores y restauración aislada. No se
+  declara desplegado ni auditado externamente.
+
 ## 2026-07-20 — facturación profesional, entrega y anulación fiscal
 
 - WhatsApp separa `ticket de venta` F2 del ticket de gasto, entiende castellano y

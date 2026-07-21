@@ -29,8 +29,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   modelo nunca decide por sí solo los permisos ni el aislamiento.
 - `adapters/ai.py` — contrato HTTP OpenAI-compatible para Ollama, llama.cpp, vLLM
   u otro servicio privado, sin SDK ni dependencia nueva. Ver [[IA-local]].
-- `db.py` — frontera única de datos: Postgres con `DATABASE_URL` y SQLite local como
-  fallback.
+- `db.py` — frontera única de datos: Postgres con `DATABASE_URL`, pool de conexiones
+  acotado por proceso y SQLite local como fallback.
 - `banking.py` — importa extractos CSV en local, deduplica y propone coincidencias;
   el titular confirma antes de crear un cobro en el ledger.
 - `migrations.py` — esquema versionado con subida/bajada; Railway lo aplica en
@@ -60,6 +60,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   gasto desde una foto; sin clave devuelve `None` y mantiene el flujo manual.
 - `verifactu.py` — formato técnico AEAT: cadena de huella, SHA-256, URL/QR y XML.
 - `web/auth.py` — login (PBKDF2, sesiones firmadas). Aislamiento por dueño.
+- `documents/validation.py` — valida el contenido real de imágenes y PDF antes de
+  OCR o almacenamiento; limita píxeles/páginas y bloquea acciones PDF activas.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
   fiscalidad, NLU y revocación de sesiones.
 
@@ -91,6 +93,12 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   permite reintentar; solo un evento completado se descarta como duplicado.
 - Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
+- En producción las sesiones usan cookie `__Host-`, caducan por inactividad y el
+  administrador exige Google OAuth cuando está configurado. Login y recuperación
+  tienen límites persistentes por origen y cuenta sin guardar esos valores en claro.
+- El servidor restringe hosts, no expone OpenAPI en producción, emite cabeceras de
+  aislamiento y registra request IDs, ruta, estado y duración sin query strings ni
+  contenido personal.
 - El scheduler registra cada ejecución para evitar duplicados entre réplicas. La
   outbox de WhatsApp usa claves idempotentes y `FOR UPDATE SKIP LOCKED` en Postgres
   para que varias réplicas no envíen la misma fila.
@@ -101,6 +109,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   esperada está aplicada y la base de datos disponible.
 - Los backups incluyen una copia verificada de la base de datos y un ZIP separado,
   también verificado por hashes, con los archivos de `DOCS_PATH`.
+- La copia externa exige HTTPS en producción y solicita cifrado en reposo al servicio
+  S3-compatible. Su disponibilidad solo se considera validada tras una restauración.
 - Los eventos de producto se almacenan siempre con `business_id`. La activación se
   deriva de datos operativos reales, no de clics o páginas visitadas.
 
@@ -128,4 +138,5 @@ Detalle y pendientes: [[Backend_Hardening]].
 - Adaptadores: cambiar de proveedor = cambiar 1 archivo.
 
 Qué falta técnicamente: ver [[Tareas-vivas]]. Para conectar servicios externos,
-consultar [[Conectar-APIs]].
+consultar [[Conectar-APIs]]. El modelo de amenazas y la operación segura viven en
+[[Seguridad-operativa]].

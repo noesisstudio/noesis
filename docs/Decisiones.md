@@ -290,6 +290,19 @@ de tokens. Ver [[IA-local]], [[Investigación]] y [[Arquitectura]].
 Hash de contraseñas con stdlib (PBKDF2), Chart.js servido en local, sin Tailwind.
 Motivo: coste, privacidad y control. Ver [[Arquitectura]].
 
+## Seguridad por capas y sin dependencia obligatoria de Redis (2026-07-21)
+
+Los límites de autenticación se comparten mediante la misma base de datos y guardan
+solo una huella HMAC de IP/cuenta. PostgreSQL usa un pool acotado; los archivos se
+validan por contenido; los logs no incluyen query strings; la administración exige
+Google OAuth en producción cuando está configurado. Motivo: cerrar ataques reales sin
+añadir para el MVP otro servicio crítico, costes o datos personales innecesarios.
+
+La CSP estricta se despliega inicialmente en report-only porque la UI conserva
+scripts/estilos inline. RLS, antivirus de archivos y MFA/passkeys para terceros son
+capas candidatas, no sustitutos de `business_id`, transacciones, validación y
+confirmación actuales. Ver [[Seguridad-operativa]].
+
 ## Decisión superada — no reconstruir Verifactu
 
 La idea inicial era integrar un proveedor homologado. Queda anulada por la decisión

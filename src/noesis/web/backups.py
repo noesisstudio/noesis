@@ -513,6 +513,9 @@ def _upload_offsite(path: Path) -> bool | None:
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         log.error("NOESIS_BACKUP_S3_ENDPOINT no es una URL HTTP válida.")
         return False
+    if config.IS_PRODUCTION and parsed.scheme != "https":
+        log.error("Los backups externos deben usar HTTPS en producción.")
+        return False
     prefix = config.BACKUP_S3_PREFIX.strip("/")
     object_key = "/".join(part for part in (prefix, path.name) if part)
     base_path = parsed.path.rstrip("/")
@@ -532,6 +535,11 @@ def _upload_offsite(path: Path) -> bool | None:
         f"x-amz-date:{amz_date}\n"
     )
     signed_headers = "host;x-amz-content-sha256;x-amz-date"
+    if config.BACKUP_S3_SSE:
+        canonical_headers += (
+            f"x-amz-server-side-encryption:{config.BACKUP_S3_SSE}\n"
+        )
+        signed_headers += ";x-amz-server-side-encryption"
     canonical_request = (
         f"PUT\n{canonical_uri}\n\n{canonical_headers}\n"
         f"{signed_headers}\n{payload_hash}"
@@ -569,6 +577,10 @@ def _upload_offsite(path: Path) -> bool | None:
         connection.putheader("Content-Type", "application/octet-stream")
         connection.putheader("x-amz-content-sha256", payload_hash)
         connection.putheader("x-amz-date", amz_date)
+        if config.BACKUP_S3_SSE:
+            connection.putheader(
+                "x-amz-server-side-encryption", config.BACKUP_S3_SSE
+            )
         connection.putheader("Authorization", authorization)
         connection.endheaders()
         with path.open("rb") as source:

@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from noesis import config, db, migrations
+from tests.fixtures import TINY_JPEG
 
 
 SIGNATURE = "data:image/png;base64,iVBORw0KGgo="
@@ -128,7 +129,7 @@ class FieldWorkflowTestCase(unittest.TestCase):
                 self.assertEqual(material.status_code, 200)
                 photo = client.post(
                     f"/t/{worker_token}/jobs/{self.job['id']}/photos",
-                    files={"file": ("final.jpg", b"imagen", "image/jpeg")},
+                    files={"file": ("final.jpg", TINY_JPEG, "image/jpeg")},
                     data={"note": "Resultado final"},
                 )
                 self.assertEqual(photo.status_code, 200)

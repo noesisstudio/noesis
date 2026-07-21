@@ -16,9 +16,14 @@ def _is_admin(request: Request) -> bool:
     user = auth.current_user(request)
     if not user:
         return False
-    if user.get("is_admin"):
-        return True
-    return bool(config.ADMIN_EMAIL) and user["email"].lower() == config.ADMIN_EMAIL
+    allowed = bool(user.get("is_admin")) or (
+        bool(config.ADMIN_EMAIL) and user["email"].lower() == config.ADMIN_EMAIL
+    )
+    if not allowed:
+        return False
+    if config.ADMIN_REQUIRE_GOOGLE_OAUTH:
+        return request.session.get("auth_provider") == "google"
+    return True
 
 
 @router.get("/admin", response_class=HTMLResponse)
@@ -45,4 +50,3 @@ def admin_download_latest_backup(request: Request):
         else "application/vnd.sqlite3"
     )
     return FileResponse(path, media_type=media_type, filename=path.name)
-

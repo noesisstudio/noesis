@@ -8,7 +8,6 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from ... import db
-from ..deps import _read_json
 
 router = APIRouter()
 

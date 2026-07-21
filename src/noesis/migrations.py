@@ -2809,6 +2809,26 @@ def _downgrade_professional_invoicing(conn) -> None:
         conn.execute("ALTER TABLE email_outbox DROP COLUMN IF EXISTS entity_id")
 
 
+def _upgrade_shared_auth_limits(conn) -> None:
+    """Intentos de autenticación compartidos entre procesos y despliegues."""
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS auth_attempts ("
+        f"id {t['id']}, "
+        "key_hash TEXT NOT NULL, "
+        f"attempted_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_auth_attempts_key_time "
+        "ON auth_attempts(key_hash, attempted_at)"
+    )
+
+
+def _downgrade_shared_auth_limits(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_auth_attempts_key_time")
+    conn.execute("DROP TABLE IF EXISTS auth_attempts")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -2846,6 +2866,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_invoice_legal_integrity),
     (33, "facturacion_profesional", _upgrade_professional_invoicing,
      _downgrade_professional_invoicing),
+    (34, "limites_auth_compartidos", _upgrade_shared_auth_limits,
+     _downgrade_shared_auth_limits),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

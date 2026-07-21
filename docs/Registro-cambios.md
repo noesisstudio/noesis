@@ -23,6 +23,34 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-21 — hardening de seguridad y operación previa al piloto
+
+- **Autor/agente:** Codex.
+- **Objetivo:** reducir el riesgo de fuga, abuso de autenticación, carga maliciosa,
+  agotamiento de conexiones, exposición en logs y cadena de suministro sin añadir
+  servicios externos obligatorios al MVP.
+- **Áreas y archivos:** CI/Dependabot/lock y baseline de secretos; configuración,
+  servidor/sesiones/admin, pool de base de datos, documentos, WhatsApp, XML AEAT,
+  backups, despliegue, pruebas y `Seguridad-operativa.md`. El diff del commit es el
+  inventario exacto.
+- **Cambios de datos/migración:** esquema 34 con `auth_attempts`: eventos mínimos de
+  intentos, caducables y con clave HMAC; no guarda IP ni email en claro.
+- **Pruebas ejecutadas:** 339 pruebas verdes; ciclo `0 -> 34 -> 0 -> 34`; Ruff,
+  Bandit, `pip-audit` y detector de secretos verdes. Dependencias nuevas bloqueadas
+  en `uv.lock` y sincronizadas con `requirements.txt`.
+- **Dependencias o validaciones externas:** habilitadas alertas de vulnerabilidades
+  y correcciones de seguridad de Dependabot. Pendientes humo PostgreSQL del PR,
+  producción real, pentest, RGPD/fiscalidad, restauración y credenciales externas.
+- **Riesgo/punto probable de fallo:** configuración incorrecta de hosts/OAuth en
+  producción, pool insuficiente para la concurrencia real, proveedores S3 sin
+  soporte de la cabecera SSE o dominio de medios Meta nuevo no permitido.
+- **Diagnóstico y rollback:** usar `X-Request-ID`, `/ready`, jobs CI y contadores de
+  colas sin consultar contenido personal. Revertir el commit de aplicación si hay
+  regresión; la migración 34 puede bajar sin tocar datos de negocio, pero no debe
+  bajarse en producción sin copia y ventana controlada.
+- **Estado de publicación:** rama `codex/security-hardening`, local verificada;
+  todavía no fusionada, desplegada ni validada con infraestructura real.
+
 ## 2026-07-20 — consolidación del MVP, facturación profesional e integración total
 
 - **Autor/agente:** Codex, continuando trabajo previo de Codex/Fable revisado en el

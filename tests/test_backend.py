@@ -18,6 +18,7 @@ from xml.etree import ElementTree as ET
 from noesis import banking, config, db, migrations, nlu, verifactu, verifactu_client
 from noesis.adapters import extraction
 from noesis.web import auth, chat, reports, scheduler, whatsapp
+from tests.fixtures import TINY_JPEG, TINY_PNG
 
 
 class BackendTestCase(unittest.TestCase):
@@ -1269,7 +1270,7 @@ class ExpensePhotoHttpTestCase(unittest.TestCase):
         foreign_doc = docservice.upload(
             business_b["id"],
             "ajeno.jpg",
-            b"\xff\xd8\xff\xe0ajeno",
+            TINY_JPEG,
             kind="ticket",
             run_ocr=False,
         )
@@ -1289,7 +1290,7 @@ class ExpensePhotoHttpTestCase(unittest.TestCase):
                 self._login(client, business_a)
                 uploaded = client.post(
                     f"/api/{business_a['id']}/expenses/from-photo",
-                    files={"file": ("ticket.jpg", b"\xff\xd8\xff\xe0ticket", "image/jpeg")},
+                    files={"file": ("ticket.jpg", TINY_JPEG, "image/jpeg")},
                 )
                 self.assertEqual(uploaded.status_code, 201)
                 payload = uploaded.json()
@@ -1361,7 +1362,7 @@ class ExpensePhotoHttpTestCase(unittest.TestCase):
                 self._login(client, business)
                 manual = client.post(
                     f"/api/{business['id']}/expenses/from-photo",
-                    files={"file": ("ticket.png", b"\x89PNG\r\nfoto", "image/png")},
+                    files={"file": ("ticket.png", TINY_PNG, "image/png")},
                 )
                 self.assertEqual(manual.status_code, 201)
                 self.assertFalse(manual.json()["extracted"])
@@ -3754,7 +3755,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
         replies = []
         with (
             patch.object(whatsapp, "_download_media",
-                         return_value=b"\xff\xd8\xff\xe0foto"),
+                         return_value=TINY_JPEG),
             patch.object(extraction, "extract_expense",
                          return_value=extracted),
             patch.object(whatsapp, "send",
@@ -3792,7 +3793,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
         business, _ = self._connected_business("Fotos No")
         replies = []
         with (
-            patch.object(whatsapp, "_download_media", return_value=b"foto"),
+            patch.object(whatsapp, "_download_media", return_value=TINY_PNG),
             patch.object(extraction, "extract_expense", return_value={
                 "concept": "x", "amount": 10, "vat_rate": None,
                 "date": None, "supplier": None,
@@ -4258,7 +4259,7 @@ class GestoriaTestCase(unittest.TestCase):
         )
         db.issue_invoice(invoice["id"], business["id"])
         document = docservice.upload(
-            business["id"], "ticket.jpg", b"\xff\xd8\xff\xe0foto",
+            business["id"], "ticket.jpg", TINY_JPEG,
             kind="ticket", run_ocr=False,
         )
         db.add_expense(

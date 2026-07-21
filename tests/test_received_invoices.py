@@ -10,6 +10,7 @@ from unittest.mock import patch
 from noesis import config, db, migrations
 from noesis.adapters import extraction
 from noesis.documents import repo as docrepo, service as docservice
+from tests.fixtures import TINY_JPEG
 
 
 class ReceivedInvoicesTestCase(unittest.TestCase):
@@ -37,7 +38,7 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
         with patch.object(config, "ANTHROPIC_API_KEY", ""):
             doc = docservice.upload(
                 self.business["id"], "ticket-ferreteria.jpg",
-                b"\xff\xd8\xff\xe0foto", run_ocr=False, auto_classify=True,
+                TINY_JPEG, run_ocr=False, auto_classify=True,
             )
         self.assertEqual(doc["classification"]["kind"], "ticket")
         stored = docrepo.get(doc["id"], self.business["id"])
@@ -57,7 +58,7 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
     def test_uncertain_document_is_not_forced_into_an_accounting_category(self):
         with patch.object(config, "ANTHROPIC_API_KEY", ""):
             doc = docservice.upload(
-                self.business["id"], "papel.jpg", b"\xff\xd8\xff\xe0foto",
+                self.business["id"], "papel.jpg", TINY_JPEG,
                 run_ocr=False, auto_classify=True,
             )
         self.assertEqual(doc["classification"]["kind"], "documento")

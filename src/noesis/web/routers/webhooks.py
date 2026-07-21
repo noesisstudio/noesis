@@ -12,7 +12,6 @@ from fastapi.responses import JSONResponse, Response
 
 from ... import config, db
 from ...adapters import billing as billing_adapter
-from ...tools import run_tool
 from .. import whatsapp
 
 router = APIRouter()

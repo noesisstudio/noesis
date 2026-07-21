@@ -5,10 +5,9 @@ from __future__ import annotations
 import re
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse, Response
 
 from ... import config, db
-from ..deps import _read_json
 
 router = APIRouter()
 
@@ -79,8 +78,12 @@ def api_document_file(business_id: int, doc_id: int):
     data, mime, filename = got
     # Sanea el nombre para la cabecera: sin comillas ni saltos que la rompan.
     safe_name = re.sub(r'[\r\n"\\]', "_", filename or "documento")[:120]
-    return Response(content=data, media_type=mime,
-                    headers={"Content-Disposition": f'inline; filename="{safe_name}"'})
+    disposition = "attachment" if mime == "application/pdf" else "inline"
+    return Response(
+        content=data,
+        media_type=mime,
+        headers={"Content-Disposition": f'{disposition}; filename="{safe_name}"'},
+    )
 
 
 @router.delete("/api/{business_id}/documents/{doc_id}")
