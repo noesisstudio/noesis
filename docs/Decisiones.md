@@ -290,16 +290,32 @@ de tokens. Ver [[IA-local]], [[Investigación]] y [[Arquitectura]].
 Hash de contraseñas con stdlib (PBKDF2), Chart.js servido en local, sin Tailwind.
 Motivo: coste, privacidad y control. Ver [[Arquitectura]].
 
+## Operaciones de seguridad verificables, no un “agente” opaco (2026-07-21)
+
+El responsable CISO interno es determinista, de solo lectura y trabaja únicamente
+con metadatos técnicos. No recibe facturas, mensajes ni documentos y no ejecuta
+correcciones. Sus evidencias viven en una bitácora append-only con cadena de hashes;
+los accesos admin y descargas de copias incluyen `request_id`. Motivo: dirección
+necesita saber qué pasa sin dar a una IA permisos de seguridad ni crear una falsa
+sensación de certificación.
+
+Producción exige Google OAuth para el administrador aunque falten credenciales: en
+ese caso el arranque falla de forma explícita. Los documentos pueden usar ClamAV
+privado por streaming y fallo cerrado. Cada backup se restaura al crearlo y un
+simulacro semanal independiente vuelve a verificar el último juego. Pentest, MFA de
+la cuenta Google, restauración desde otro proveedor, RGPD y red siguen siendo
+responsabilidades externas verificables.
+
 ## Seguridad por capas y sin dependencia obligatoria de Redis (2026-07-21)
 
 Los límites de autenticación se comparten mediante la misma base de datos y guardan
 solo una huella HMAC de IP/cuenta. PostgreSQL usa un pool acotado; los archivos se
 validan por contenido; los logs no incluyen query strings; la administración exige
-Google OAuth en producción cuando está configurado. Motivo: cerrar ataques reales sin
+Google OAuth en producción. Motivo: cerrar ataques reales sin
 añadir para el MVP otro servicio crítico, costes o datos personales innecesarios.
 
 La CSP estricta se despliega inicialmente en report-only porque la UI conserva
-scripts/estilos inline. RLS, antivirus de archivos y MFA/passkeys para terceros son
+scripts/estilos inline. RLS, KMS/cifrado selectivo y MFA/passkeys para terceros son
 capas candidatas, no sustitutos de `business_id`, transacciones, validación y
 confirmación actuales. Ver [[Seguridad-operativa]].
 

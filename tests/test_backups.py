@@ -199,6 +199,11 @@ class VerifiedBackupTestCase(unittest.TestCase):
         self.assertIn("Verificación OK", panel.text)
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.content, path.read_bytes())
+        event_types = [
+            event["event_type"] for event in db.list_security_events(10)
+        ]
+        self.assertIn("admin.panel_viewed", event_types)
+        self.assertIn("admin.backup_downloaded", event_types)
 
 
 if __name__ == "__main__":

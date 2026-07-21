@@ -5,9 +5,11 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 33;
-  la última migración añade series, líneas, programaciones recurrentes, entrega
-  trazable y anulaciones Veri*Factu; cabecera y líneas quedan congeladas al emitir.
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 35;
+  facturación profesional queda congelada al emitir, los límites de autenticación
+  son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
+- `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
+  lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
   y propuestas explicables de conciliación; nunca confirma un pago por sí solo.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro y flujo común de
@@ -81,16 +83,19 @@
   diagnóstico de proveedores en la API del cliente.
 - `src/noesis/web/templates/onboarding_preferences.html`: aplica fiscalidad,
   factura, cobro, recordatorios, informes y gestoría antes de entrar al producto.
-- `src/noesis/web/routers/admin.py` + `templates/admin.html`: diagnóstico técnico y
-  preparación de servicios reservado al fundador.
+- `src/noesis/web/routers/admin.py` + `templates/admin.html`: diagnóstico técnico,
+  parte CISO y evidencia de seguridad reservados al fundador; audita acceso y
+  descarga de copias sin guardar contenido de clientes.
 - `src/noesis/web/templates/ajustes.html`: datos, preferencias, memoria y conexiones
   que el cliente puede usar; no muestra qué proveedor falta o está caído.
 - `src/noesis/web/static/app.css`: tokens, componentes y responsive sin CDN.
 
 ## Documentos, gestoría y canales
 
-- `src/noesis/documents/service.py`: entrada universal, clasificación y confirmación
-  antes de contabilizar.
+- `src/noesis/documents/service.py`: entrada universal, validación, antivirus,
+  clasificación y confirmación antes de almacenar o contabilizar.
+- `src/noesis/documents/malware.py`: cliente stdlib del protocolo ClamAV INSTREAM;
+  escanea en memoria y permite fallo cerrado sin una API externa.
 - `src/noesis/documents/repo.py`: metadatos y vínculos con cliente, proyecto, gasto o
   factura recibida.
 - `src/noesis/web/gestoria.py`: paquete ordenado, manifiesto, huella y versionado.
@@ -100,10 +105,12 @@
   en modo consulta.
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el
   titular y calendario ICS privado/revocable.
+- `src/noesis/web/backups.py`: copia, restauración descartable, manifiesto documental,
+  salida S3 y comando `noesis-restore-check`.
 - `src/noesis/web/scheduler.py`: partes, recordatorios, reglas autorizadas y workers
   de outbox. WhatsApp, correo y Veri*Factu se persisten y reintentan; la remisión
   fiscal de altas y anulaciones verifica una cadena común y continúa aunque la
-  suscripción SaaS quede inactiva.
+  suscripción SaaS quede inactiva. Ejecuta copia diaria y simulacro semanal.
 - `src/noesis/adapters/email.py`: frontera SMTP; toda comunicación nueva se encola
   antes de salir para no perderla ante una caída del proveedor.
 - `src/noesis/adapters/`: Meta, email, pagos, voz, extracción y fiscalidad detrás de

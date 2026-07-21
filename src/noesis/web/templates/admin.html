@@ -112,6 +112,65 @@
       <p>{{ data.dept_reports.operaciones }}</p>
     </div>
   </div>
+
+  <div class="card" id="seguridad">
+    <div class="card-h">
+      <div>
+        <div class="kicker">Responsable CISO interno · solo lectura</div>
+        <h2>Seguridad y continuidad</h2>
+      </div>
+      <span class="badge {{ 'b-red' if data.security.status == 'rojo' else 'b-amber' if data.security.status == 'ambar' else 'b-green' }}">
+        {{ data.security.score }}/10 · {{ data.security.status }}
+      </span>
+    </div>
+    <div class="card-b">
+      <p class="assistant-line">{{ data.security.headline }}</p>
+      <div class="mini-list" style="margin-top:12px">
+        {% for check in data.security.findings %}
+        <div class="lrow" style="align-items:flex-start">
+          <span class="badge {{ 'b-red' if check.level == 'critical' else 'b-amber' if check.level == 'warning' else 'b-green' if check.level == 'ok' else 'b-gray' }}">
+            {{ check.control }}
+          </span>
+          <span style="flex:1;margin-left:10px">
+            {{ check.evidence }}
+            {% if check.action %}<span class="meta" style="display:block">Siguiente: {{ check.action }}</span>{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="meta" style="margin-top:12px">
+        La nota mide controles internos verificables. No sustituye pentest, revisión
+        RGPD ni configuración segura del proveedor de infraestructura.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Actividad de seguridad</h2><span class="hint">sin contenido de clientes</span></div>
+      <div class="card-b">
+        <div class="lrow"><span>Críticos · 24 h</span><b class="num {{ 'red' if data.security.counts['24h'].get('critical', 0) }}">{{ data.security.counts['24h'].get('critical', 0) }}</b></div>
+        <div class="lrow"><span>Avisos · 24 h</span><b class="num">{{ data.security.counts['24h'].get('warning', 0) }}</b></div>
+        <div class="lrow"><span>Críticos · 7 días</span><b class="num">{{ data.security.counts['7d'].get('critical', 0) }}</b></div>
+        <div class="lrow"><span>Avisos · 7 días</span><b class="num">{{ data.security.counts['7d'].get('warning', 0) }}</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Últimos eventos auditados</h2><span class="hint">cadena append-only</span></div>
+      <div class="card-b mini-list">
+        {% for event in data.security.recent_events[:6] %}
+        <div class="lrow">
+          <span class="badge {{ 'b-red' if event.severity == 'critical' else 'b-amber' if event.severity == 'warning' else 'b-gray' }}">{{ event.area }}</span>
+          <span style="flex:1;margin-left:10px">{{ event.event_type }}</span>
+          <span class="meta">{{ event.created_at|string|truncate(19, True, '') }}</span>
+        </div>
+        {% else %}
+        <p class="meta">La bitácora aún no tiene eventos.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-h">
       <h2>Servicios e integraciones</h2>

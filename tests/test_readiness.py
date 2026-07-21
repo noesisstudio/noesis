@@ -84,6 +84,19 @@ class ReadinessTestCase(unittest.TestCase):
         self.assertTrue(any(item["status"] == "blocker" for item in ai_checks))
         self.assertTrue(any("HTTPS" in item["action"] for item in ai_checks))
 
+    def test_required_admin_oauth_is_a_blocker_when_credentials_are_missing(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", True),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", ""),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", ""),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+        google = next(
+            item for item in report["checks"] if item["area"] == "google"
+        )
+        self.assertEqual(google["status"], "blocker")
+
 
 if __name__ == "__main__":
     unittest.main()

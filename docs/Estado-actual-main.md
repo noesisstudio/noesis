@@ -26,6 +26,14 @@
 - Los correos confirmados se persisten antes de intentar SMTP, se deduplican y
   reintentan con backoff. Los errores de proveedores y el diagnóstico de preparación
   viven en administración; el cliente ve funciones y preferencias, no infraestructura.
+- El panel del fundador incorpora un responsable CISO interno, determinista y de
+  solo lectura. Resume controles con evidencia, presión de acceso agregada y eventos
+  sin contenido de clientes. Las acciones administrativas quedan en una bitácora
+  append-only encadenada por hash; producción exige Google OAuth para el admin.
+- Cada backup se restaura al crearlo y, además, un simulacro semanal independiente
+  vuelve a restaurar la última base y verifica el ZIP documental en un entorno
+  descartable. La entrada documental admite ClamAV privado por streaming y puede
+  fallar cerrado sin enviar archivos a una API externa.
 - El alta comercial distingue con claridad entre **probar 14 días** y **contratar
   ahora**. Antes de entrar al panel recoge negocio, nivel de explicación, fiscalidad,
   estilo y vencimiento de factura, medios de cobro, recordatorios, informes,
@@ -76,8 +84,10 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   siguen pendientes; la suscripción ICS y la conciliación CSV ya funcionan en local.
 - La entrega de factura por WhatsApp requiere aprobar en Meta la plantilla
   `noesis_factura_lista`; el recorrido interno y la cola ya están construidos.
-- Falta auditoría externa de seguridad, privacidad y fiscalidad, restauración real y
-  piloto acompañado con 3-5 negocios.
+- Falta auditoría externa de seguridad, privacidad y fiscalidad, desplegar y probar
+  ClamAV, restaurar una copia descargada del almacenamiento externo en otra
+  infraestructura y pilotar con 3-5 negocios. El simulacro interno no sustituye esa
+  prueba de desastre ni un pentest independiente.
 - La memoria de cliente es explicable y corregible; no se promete aprendizaje autónomo
   perfecto ni decisiones legales/fiscales sin humano.
 - Exenciones, no sujeción, identificación fiscal extranjera y subsanación de un

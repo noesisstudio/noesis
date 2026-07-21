@@ -42,13 +42,50 @@ en servidor y base de datos.
 | Fuerza bruta de acceso/recuperación | Límite persistente compartido por IP y cuenta; claves seudonimizadas con HMAC | Un WAF puede añadir defensa volumétrica, no sustituir esta capa |
 | Host-header, clickjacking y carga cruzada | Hosts permitidos, CSP, `frame-ancestors`, COOP/CORP, HSTS y cabeceras defensivas | CSP estricta se observa primero en modo report-only |
 | Fuga por logs | Registro estructurado sin query string, cuerpo, token ni datos personales; access log de Uvicorn apagado en producción | Proveedor de hosting debe fijar retención y acceso |
-| Archivo malicioso o bomba de recursos | Firma real de PDF/imagen, límite de tamaño, páginas, píxeles y rechazo de PDF activo | Antivirus de contenido queda como defensa adicional antes de gran escala |
+| Archivo malicioso o bomba de recursos | Firma real de PDF/imagen, límite de tamaño, páginas, píxeles, rechazo de PDF activo y adaptador ClamAV privado por streaming | Desplegar el daemon y activar fallo cerrado; ningún escáner garantiza riesgo cero |
 | SSRF por medios de WhatsApp | Descarga solo por HTTPS desde dominios de medios Meta conocidos y con tamaño acotado | Revalidar dominios si Meta cambia su entrega |
 | XML malicioso | Respuestas AEAT se analizan con `defusedxml` y tamaño máximo | Certificado y entorno AEAT reales pendientes |
 | Dependencia vulnerable o cadena de suministro | Lock reproducible, acciones fijadas por SHA, Dependabot, `pip-audit`, Bandit, Ruff y detector de secretos en CI | Revisar alertas antes de fusionar; no actualizar a ciegas |
 | Doble ejecución o carrera | Transacciones, claves idempotentes, bloqueo de fila y outboxes durables | Smoke PostgreSQL obligatorio |
-| Pérdida o cifrado de datos | Backups verificados, copia externa HTTPS y cifrado S3 solicitado | Una copia no cuenta hasta restaurarla en entorno aislado |
-| Abuso administrativo | Sesión admin más corta y Google OAuth obligatorio en producción cuando está configurado | MFA/passkeys para gestoría y roles finos siguen pendientes |
+| Pérdida o cifrado de datos | Backups verificados, copia externa HTTPS, cifrado S3 solicitado y simulacro semanal independiente | Falta restaurar una descarga del bucket en otra infraestructura y medir RPO/RTO |
+| Abuso administrativo | Sesión admin corta, Google OAuth obligatorio en producción y acciones sensibles en bitácora append-only encadenada | El MFA real depende de la política del Workspace/cuenta Google; passkeys para gestoría siguen pendientes |
+| Manipulación de evidencia | Triggers impiden UPDATE/DELETE y cada evento enlaza la huella anterior | Un superusuario de BD sigue siendo una frontera de confianza; exportar evidencia a un SIEM/WORM al escalar |
+
+## Centro CISO interno
+
+`/admin` muestra un responsable CISO determinista y de solo lectura. No es un LLM ni
+un agente autónomo: calcula su parte a partir de controles verificables, antigüedad de
+backups, último simulacro, presión agregada de autenticación y la bitácora. No lee
+facturas, mensajes, documentos, teléfonos, emails ni IPs. Su nota es operativa: ayuda
+a priorizar, pero nunca equivale a certificación o pentest.
+
+La tabla `security_events` (migración 35) conserva tipo, severidad, área, IDs internos
+opcionales, `request_id`, metadatos escalares acotados y la cadena de hashes. Triggers
+SQLite/PostgreSQL bloquean actualización y borrado. Los metadatos descartan claves de
+email, teléfono, IP, token, secreto, contraseña, fichero, documento, mensaje o cuerpo.
+
+## Antivirus documental privado
+
+- Variables: `NOESIS_CLAMAV_HOST`, `NOESIS_CLAMAV_PORT`,
+  `NOESIS_CLAMAV_TIMEOUT_SECONDS` y `NOESIS_CLAMAV_REQUIRED`.
+- Noesis usa `INSTREAM`: el contenido viaja en memoria al daemon privado, no a una
+  API de terceros y no se escribe antes del veredicto.
+- `FOUND` se rechaza siempre. Si `REQUIRED=true`, timeout, caída o respuesta inválida
+  también se rechazan antes de almacenar. Sin ClamAV siguen actuando las validaciones
+  estructurales, pero el centro CISO mantiene el aviso.
+- El daemon debe vivir en red privada, sin puerto público, actualizado y con recursos
+  limitados. Probar EICAR en un entorno de ensayo, nunca con malware real.
+
+## Restauración y continuidad
+
+- Al crear cada copia, Noesis ya la restaura en un fichero SQLite temporal o en un
+  esquema PostgreSQL aleatorio y compara esquema y recuentos.
+- Cada domingo a las 04:30, `noesis-restore-check` repite de forma independiente la
+  restauración de la última base y verifica el manifiesto/hashes del ZIP documental.
+  El resultado queda en la bitácora y aparece en el centro CISO.
+- Esto prueba el artefacto local y el código de restauración. Para cubrir pérdida
+  total del proveedor hay que descargar desde S3 y restaurar en otra infraestructura,
+  cronometrar RPO/RTO y documentar el responsable.
 
 ## Gestión de secretos
 
@@ -80,9 +117,11 @@ en servidor y base de datos.
 - CI general y PostgreSQL verdes; migración objetivo aplicada.
 - Variables revisadas con `noesis-doctor --strict`, sin secretos en repositorio.
 - TLS, dominio, hosts permitidos, cookies y login Google admin comprobados fuera de
-  local.
+  local; la cuenta Google del fundador debe tener verificación en dos pasos.
 - Webhooks reales prueban firma válida/inválida, duplicado y reintento.
-- Copia externa restaurada en entorno aislado.
+- ClamAV privado en fallo cerrado probado con limpio, EICAR, caída y timeout.
+- `noesis-restore-check` correcto y copia externa restaurada en infraestructura
+  distinta con RPO/RTO anotados.
 - Acceso de una segunda empresa intenta y no consigue leer recursos ajenos.
 - Responsable y canal de incidentes definidos; retención de logs y backups fijada.
 
@@ -90,6 +129,6 @@ en servidor y base de datos.
 
 Noesis puede construir controles internos, pero no debe autocertificarse. Antes de
 escalar datos reales se mantienen como tareas externas: pentest autenticado, revisión
-RGPD/DPA, auditoría fiscal/AEAT, configuración de red y hosting, restauración real y
-respuesta a incidentes ensayada. RLS de PostgreSQL, antivirus de archivos y MFA de
+RGPD/DPA, auditoría fiscal/AEAT, configuración de red y hosting, restauración externa
+y respuesta a incidentes ensayada. RLS de PostgreSQL, KMS/cifrado selectivo y MFA de
 gestoría se decidirán con evidencia del piloto y sin sustituir el aislamiento actual.

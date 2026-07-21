@@ -2829,6 +2829,88 @@ def _downgrade_shared_auth_limits(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS auth_attempts")
 
 
+def _upgrade_security_audit(conn) -> None:
+    """Bitacora global append-only para acciones y senales de seguridad."""
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS security_events ("
+        f"id {t['id']}, "
+        "event_type TEXT NOT NULL, "
+        "severity TEXT NOT NULL CHECK (severity IN ('info','warning','critical')), "
+        "area TEXT NOT NULL, "
+        f"actor_user_id {t['ref']}, "
+        f"subject_business_id {t['ref']}, "
+        "request_id TEXT, "
+        "metadata_json TEXT NOT NULL DEFAULT '{}', "
+        "previous_hash TEXT, "
+        "event_hash TEXT NOT NULL UNIQUE, "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_created "
+        "ON security_events(created_at, id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_severity "
+        "ON security_events(severity, created_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_type "
+        "ON security_events(event_type, created_at)"
+    )
+    if conn.dialect == "sqlite":
+        conn.executescript(
+            """
+CREATE TRIGGER IF NOT EXISTS security_events_append_only_update
+BEFORE UPDATE ON security_events
+BEGIN
+    SELECT RAISE(ABORT, 'la bitacora de seguridad es inalterable');
+END;
+CREATE TRIGGER IF NOT EXISTS security_events_append_only_delete
+BEFORE DELETE ON security_events
+BEGIN
+    SELECT RAISE(ABORT, 'la bitacora de seguridad es inalterable');
+END;
+"""
+        )
+    else:
+        conn.execute(
+            """
+CREATE OR REPLACE FUNCTION noesis_security_events_append_only()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'la bitacora de seguridad es inalterable'
+        USING ERRCODE = '23514';
+END;
+$$ LANGUAGE plpgsql
+"""
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS security_events_append_only "
+            "ON security_events"
+        )
+        conn.execute(
+            "CREATE TRIGGER security_events_append_only "
+            "BEFORE UPDATE OR DELETE ON security_events "
+            "FOR EACH ROW EXECUTE FUNCTION noesis_security_events_append_only()"
+        )
+
+
+def _downgrade_security_audit(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS security_events_append_only_update")
+        conn.execute("DROP TRIGGER IF EXISTS security_events_append_only_delete")
+    else:
+        conn.execute(
+            "DROP TRIGGER IF EXISTS security_events_append_only ON security_events"
+        )
+        conn.execute("DROP FUNCTION IF EXISTS noesis_security_events_append_only()")
+    conn.execute("DROP INDEX IF EXISTS idx_security_events_type")
+    conn.execute("DROP INDEX IF EXISTS idx_security_events_severity")
+    conn.execute("DROP INDEX IF EXISTS idx_security_events_created")
+    conn.execute("DROP TABLE IF EXISTS security_events")
+
+
 Migration = tuple[int, str, Callable, Callable]
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
@@ -2868,6 +2950,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_professional_invoicing),
     (34, "limites_auth_compartidos", _upgrade_shared_auth_limits,
      _downgrade_shared_auth_limits),
+    (35, "auditoria_seguridad", _upgrade_security_audit,
+     _downgrade_security_audit),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

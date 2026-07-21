@@ -135,9 +135,12 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     google_present, google_missing = _env_ready(google_names)
     google_ok = not google_missing
     google_partial = bool(google_present) and bool(google_missing)
+    google_blocked = config.ADMIN_REQUIRE_GOOGLE_OAUTH and not google_ok
     checks.append(ReadinessCheck(
         "google",
-        "ok" if google_ok else ("blocker" if google_partial else "warning"),
+        "ok" if google_ok else (
+            "blocker" if google_partial or google_blocked else "warning"
+        ),
         "Alta y acceso con Google configurados." if google_ok else
         ("Google OAuth está configurado a medias." if google_partial else
          "El acceso con Google aún no está configurado."),
@@ -227,6 +230,17 @@ def collect_readiness(*, check_database: bool = True) -> dict:
         "Responsable del panel interno configurado." if config.ADMIN_EMAIL else
         "No hay email administrador configurado.",
         "Configura NOESIS_ADMIN_EMAIL." if not config.ADMIN_EMAIL else "",
+    ))
+
+    antivirus_ok = bool(config.CLAMAV_HOST and config.CLAMAV_REQUIRED)
+    checks.append(ReadinessCheck(
+        "seguridad documental",
+        "ok" if antivirus_ok else ("blocker" if config.CLAMAV_REQUIRED else "warning"),
+        "Antivirus privado con fallo cerrado." if antivirus_ok else
+        ("El antivirus es obligatorio pero no tiene host." if config.CLAMAV_REQUIRED else
+         "El antivirus privado no esta en modo obligatorio."),
+        "Configura ClamAV y NOESIS_CLAMAV_REQUIRED=true antes de escalar documentos."
+        if not antivirus_ok else "",
     ))
 
     serialized = [asdict(check) for check in checks]

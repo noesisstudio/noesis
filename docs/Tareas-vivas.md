@@ -5,9 +5,9 @@
 
 ## P0 — publicar y pilotar con seguridad
 
-- [ ] Fusionar y desplegar el hardening de seguridad con migración 34; confirmar
-  cookies `__Host-`, hosts permitidos, caducidad admin, logs sin query string,
-  cabeceras y rutas principales en el dominio real.
+- [ ] Desplegar el hardening y las operaciones de seguridad hasta migración 35;
+  confirmar cookies `__Host-`, hosts, caducidad, logs sin query string, Google OAuth
+  admin obligatorio, panel CISO, bitácora encadenada y rutas reales del dominio.
 - [ ] Fusionar el candidato fiscal, desplegar el `main` resultante, aplicar migración
   33 y confirmar `/ready`, alta por prueba, alta por contratación, preferencias operativas,
   vencimiento de factura, checkout, Home, modo consulta y una ficha de proyecto.
@@ -31,7 +31,11 @@
   subsanación de rechazos, declaración
   responsable y validación con asesoría fiscal antes de producción.
 - [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo.
-- [ ] Restaurar una copia externa en un entorno aislado y documentar tiempos.
+- [ ] Desplegar ClamAV en red privada, fijar `NOESIS_CLAMAV_REQUIRED=true` y probar
+  archivo limpio, EICAR, caída y timeout sin almacenar el payload rechazado.
+- [ ] Ejecutar `noesis-restore-check` y comprobar el simulacro semanal. Después,
+  descargar una copia del bucket y restaurarla en infraestructura distinta,
+  documentando RPO/RTO; la prueba local no demuestra recuperación ante caída total.
 - [ ] Ejecutar un pentest autenticado externo y una revisión de privacidad/RGPD,
   fiscalidad y procedimiento de incidentes. El modelo interno y la puerta de salida
   están en [[Seguridad-operativa]]; una revisión propia no sustituye esta validación.
@@ -60,8 +64,9 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Eliminar `unsafe-inline` de la CSP efectiva tras migrar scripts/estilos inline;
   mientras tanto observar la política estricta en report-only sin romper la UI.
 - [ ] Evaluar MFA/passkeys y permisos finos para gestoría antes de abrir acceso a
-  terceros; valorar antivirus de archivos y RLS PostgreSQL tras el piloto según el
-  riesgo y la complejidad observados.
+  terceros; valorar RLS PostgreSQL y KMS/cifrado de campos tras el piloto según el
+  riesgo y la complejidad observados. El antivirus privado ya tiene adaptador y
+  modo de fallo cerrado; falta desplegar el daemon.
 - [ ] Revisar cada pantalla con evidencia visual tras estabilizar el diseño; su
   jerarquía debe responder a su tarea, no copiar la de otra sección.
 - [ ] Fiscalidad ampliada: exenciones E1-E8, no sujeción N1/N2, inversión del sujeto

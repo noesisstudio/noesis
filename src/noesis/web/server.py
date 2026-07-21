@@ -214,6 +214,10 @@ def _startup() -> None:
         raise RuntimeError(
             "El acceso admin exige Google OAuth, pero faltan sus credenciales."
         )
+    if config.CLAMAV_REQUIRED and not config.CLAMAV_HOST:
+        raise RuntimeError(
+            "El antivirus es obligatorio, pero NOESIS_CLAMAV_HOST no esta configurado."
+        )
     if config.IS_PRODUCTION and not config.BASE_URL.startswith("https://"):
         log.error(
             "NOESIS_BASE_URL no usa HTTPS. La app continuará disponible, pero los "

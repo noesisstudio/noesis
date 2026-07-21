@@ -1,5 +1,38 @@
 # Registro de QA
 
+## 2026-07-21 — bitácora CISO, antivirus y simulacro de restauración
+
+- Migración 35: crea `security_events`, instala triggers append-only en SQLite y
+  PostgreSQL y permite downgrade/upgrade. Dos eventos consecutivos enlazan la huella
+  anterior; UPDATE y DELETE son rechazados por base de datos. El humo PostgreSQL 16
+  inserta un evento real, verifica la cadena e intenta una mutación que debe fallar.
+- La bitácora elimina metadatos con claves de email, teléfono, IP, token, secreto,
+  contraseña, fichero, documento, mensaje o cuerpo. La verificación recalcula toda
+  la cadena; el centro CISO la consulta sin crear eventos ni mutar controles.
+- ClamAV: probado protocolo `INSTREAM` con respuesta limpia y EICAR, además de caída
+  obligatoria. En fallo cerrado el documento no llega a almacenamiento y queda una
+  señal crítica sin nombre de fichero ni contenido.
+- Backups: el flujo habitual sigue creando y restaurando la copia antes de marcarla
+  correcta. El simulacro independiente vuelve a restaurar el último SQLite y valida
+  el manifiesto documental, registra duración/resultado y nunca toca la base activa.
+- Admin: entrar al panel y descargar la copia quedan auditados con IDs internos y
+  `request_id`; producción exige Google OAuth incluso si faltan credenciales, caso
+  en que el arranque falla de forma segura.
+- Pruebas específicas de operaciones, hardening, backups y readiness: 24 verdes.
+  Suite completa final: **347 pruebas verdes en 239,9 s**. PostgreSQL 16 se completa
+  en CI
+  antes de publicar. Pendiente externo: daemon ClamAV, OAuth real,
+  restauración desde bucket/otra infraestructura, pentest y revisión RGPD.
+- Cierre local: ciclo limpio `0 -> 35 -> 0 -> 35`; Ruff, Bandit, detector de
+  secretos (incluidos archivos nuevos), `pip-audit`, `git diff --check` y
+  `check_project_truth.py` verdes. `pip-audit` solo omite el paquete local `noesis`,
+  que no existe en PyPI, y no encuentra vulnerabilidades conocidas.
+- Smoke HTTP aislado: login admin 303, `/admin` 200, bloque CISO renderizado y
+  `X-Request-ID` presente. El aviso Starlette/httpx ya conocido no afecta el flujo.
+- PR #54: `Tests i migracions` verde en 2m26s y `Humo contra Postgres` verde en
+  38s. PostgreSQL 16 aplicó la migración 35, verificó la cadena y rechazó el UPDATE
+  de la bitácora; la suite general repitió seguridad, 347 pruebas y ciclo completo.
+
 ## 2026-07-21 — hardening de seguridad previo al piloto
 
 - Suite completa: **339 pruebas verdes**. Incluye 80 casos generados con Hypothesis

@@ -760,6 +760,16 @@ def run_daily_backup() -> None:
         backups.run_backup()
 
 
+def run_weekly_restore_drill() -> None:
+    """Revalida la ultima copia sin tocar nunca la base de datos activa."""
+    point = datetime.now()
+    year, week, _ = point.isocalendar()
+    if db.claim_scheduled_run(f"restore-drill:{year}-W{week:02d}"):
+        result = backups.verify_latest_backup_set()
+        if not result["ok"]:
+            log.error("El simulacro de restauracion ha fallado.")
+
+
 def process_recurring_invoices() -> int:
     """Genera los vencimientos recurrentes una sola vez y deja trazabilidad."""
     return len(db.process_due_recurring_invoices())
@@ -854,10 +864,20 @@ def start_scheduler() -> BackgroundScheduler:
         coalesce=True,
     )
     scheduler.add_job(run_daily_backup, "cron", hour=3, minute=30, id="backup")
+    scheduler.add_job(
+        run_weekly_restore_drill,
+        "cron",
+        day_of_week="sun",
+        hour=4,
+        minute=30,
+        id="restore-drill",
+        max_instances=1,
+        coalesce=True,
+    )
     scheduler.start()
     _scheduler = scheduler
     log.info(
         "Scheduler iniciado (colas WhatsApp/Veri*Factu cada 15s, diario 08:00, "
-        "cobros 09:00, semanal lun 08:00, backup 03:30)."
+        "cobros 09:00, semanal lun 08:00, backup 03:30, restauracion dom 04:30)."
     )
     return scheduler

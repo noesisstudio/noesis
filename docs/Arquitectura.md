@@ -62,6 +62,11 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `web/auth.py` — login (PBKDF2, sesiones firmadas). Aislamiento por dueño.
 - `documents/validation.py` — valida el contenido real de imágenes y PDF antes de
   OCR o almacenamiento; limita píxeles/páginas y bloquea acciones PDF activas.
+- `documents/malware.py` — transmite el archivo validado a un ClamAV privado por
+  `INSTREAM`; si el despliegue exige el escáner, una caída falla cerrada antes de
+  escribir en almacenamiento.
+- `security_center.py` + `security_events` — parte CISO de solo lectura sobre una
+  bitácora append-only y encadenada, sin contenido operativo ni datos de contacto.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
   fiscalidad, NLU y revocación de sesiones.
 
@@ -94,7 +99,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
 - En producción las sesiones usan cookie `__Host-`, caducan por inactividad y el
-  administrador exige Google OAuth cuando está configurado. Login y recuperación
+  administrador exige Google OAuth; si faltan sus credenciales la app no arranca.
+  Login y recuperación
   tienen límites persistentes por origen y cuenta sin guardar esos valores en claro.
 - El servidor restringe hosts, no expone OpenAPI en producción, emite cabeceras de
   aislamiento y registra request IDs, ruta, estado y duración sin query strings ni
@@ -108,7 +114,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `/health` comprueba que el proceso responde y `/ready` que la versión de esquema
   esperada está aplicada y la base de datos disponible.
 - Los backups incluyen una copia verificada de la base de datos y un ZIP separado,
-  también verificado por hashes, con los archivos de `DOCS_PATH`.
+  también verificado por hashes, con los archivos de `DOCS_PATH`. Un simulacro
+  semanal independiente repite la restauración en un fichero/esquema descartable y
+  deja evidencia inmutable; nunca restaura encima de producción.
 - La copia externa exige HTTPS en producción y solicita cifrado en reposo al servicio
   S3-compatible. Su disponibilidad solo se considera validada tras una restauración.
 - Los eventos de producto se almacenan siempre con `business_id`. La activación se
