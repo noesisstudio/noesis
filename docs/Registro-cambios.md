@@ -50,6 +50,10 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   bajarse en producción sin copia y ventana controlada.
 - **Estado de publicación:** rama `codex/security-hardening`, local verificada;
   todavía no fusionada, desplegada ni validada con infraestructura real.
+- **Seguimiento CI:** el primer run del PR #49 confirmó la migración 34 en
+  PostgreSQL y detectó una imagen demo falsa y constantes de prueba no reconocidas
+  por la baseline en Linux. Se sustituyó el payload demo por JPEG real y se usaron
+  allowlists por línea, sin excluir archivos ni desactivar detectores.
 
 ## 2026-07-20 — consolidación del MVP, facturación profesional e integración total
 

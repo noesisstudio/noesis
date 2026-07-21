@@ -44,10 +44,10 @@ class BackendTestCase(unittest.TestCase):
     def make_business(self, name="Taller Seguro"):
         business = db.create_business(name, f"{name.lower().replace(' ', '')}@example.com")
         db.update_fiscal(
-            business["id"], nif="A12345678", address="Calle Principal 1"
+            business["id"], nif="A12345678", address="Calle Principal 1"  # pragma: allowlist secret
         )
         client = db.add_client(
-            "Cliente Fiscal", nif="B12345678", address="Calle Cliente 2",
+            "Cliente Fiscal", nif="B12345678", address="Calle Cliente 2",  # pragma: allowlist secret
             business_id=business["id"],
         )
         return business, client
@@ -623,10 +623,10 @@ class BackendTestCase(unittest.TestCase):
         payload = b'{"entry":[]}'
         old_secret, old_production = config.WHATSAPP_APP_SECRET, config.IS_PRODUCTION
         try:
-            config.WHATSAPP_APP_SECRET = "secret"
+            config.WHATSAPP_APP_SECRET = "secret"  # pragma: allowlist secret
             config.IS_PRODUCTION = True
             signature = "sha256=" + hmac.new(
-                b"secret", payload, hashlib.sha256
+                b"secret", payload, hashlib.sha256  # pragma: allowlist secret
             ).hexdigest()
             self.assertTrue(whatsapp.verify_signature(payload, signature))
             self.assertFalse(whatsapp.verify_signature(payload, "sha256=bad"))
@@ -982,7 +982,7 @@ class BackendTestCase(unittest.TestCase):
             with TestClient(server.app) as client:
                 login = client.post("/login", data={
                     "email": "agenda@example.com",
-                    "password": "password-segura-123",
+                    "password": "password-segura-123",  # pragma: allowlist secret
                 }, follow_redirects=False)
                 self.assertEqual(login.status_code, 303)
                 created = client.post(
@@ -2969,7 +2969,7 @@ class VerifactuTestCase(unittest.TestCase):
             config.VERIFACTU_KEY_PATH,
             config.VERIFACTU_AEAT_ENV,
         )
-        config.VERIFACTU_PRODUCER_NIF = "B87654321"
+        config.VERIFACTU_PRODUCER_NIF = "B87654321"  # pragma: allowlist secret
         config.VERIFACTU_CERT_PATH = ""
         config.VERIFACTU_KEY_PATH = ""
         config.VERIFACTU_AEAT_ENV = ""
@@ -3038,7 +3038,7 @@ class VerifactuTestCase(unittest.TestCase):
         )
         self.assertEqual(
             digest,
-            "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60",
+            "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60",  # pragma: allowlist secret
         )
         with patch.object(
             config,
@@ -3068,13 +3068,13 @@ class VerifactuTestCase(unittest.TestCase):
             vat_total="12.35",
             invoice_total="123.45",
             previous_hash=(
-                "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60"
+                "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60"  # pragma: allowlist secret
             ),
             generated_at="2024-01-01T19:20:35+01:00",
         )
         self.assertEqual(
             digest,
-            "F7B94CFD8924EDFF273501B01EE5153E4CE8F259766F88CF6ACB8935802A2B97",
+            "F7B94CFD8924EDFF273501B01EE5153E4CE8F259766F88CF6ACB8935802A2B97",  # pragma: allowlist secret
         )
 
     def test_cancellation_hash_uses_the_official_fields_and_order(self):

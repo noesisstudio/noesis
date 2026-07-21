@@ -31,6 +31,11 @@
 - Pendiente externo: humo PostgreSQL del PR, dominio/TLS y cookies reales, pentest,
   revisión RGPD/fiscal, credenciales de proveedores y restauración aislada. No se
   declara desplegado ni auditado externamente.
+- Primer run del PR #49: la migración 34 llegó correctamente a PostgreSQL. Los dos
+  fallos fueron de fixtures: datos demo con extensión JPG y bytes PDF, y falsos
+  positivos Linux del detector de secretos. Se corrigieron los datos, manteniendo
+  la validación, y se marcaron individualmente solo constantes de prueba revisadas.
+  La siembra rica corregida se ejecutó en SQLite aislado y creó sus 5 documentos.
 
 ## 2026-07-20 — facturación profesional, entrega y anulación fiscal
 

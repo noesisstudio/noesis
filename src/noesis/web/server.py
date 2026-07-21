@@ -204,7 +204,7 @@ def _startup() -> None:
     import logging
     log = logging.getLogger("uvicorn.error")
     if config.IS_PRODUCTION and (
-        config.SECRET_KEY == "dev-secret-cambiar-en-produccion"
+        config.SECRET_KEY == "dev-secret-cambiar-en-produccion"  # pragma: allowlist secret
         or len(config.SECRET_KEY) < 32
     ):
         raise RuntimeError(
