@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
@@ -195,6 +196,51 @@ _DEFAULT_BASE_URL = (
 )
 BASE_URL = os.getenv("NOESIS_BASE_URL", _DEFAULT_BASE_URL).strip().rstrip("/")
 
+# Host header: en producción solo se aceptan el dominio público y los hosts
+# declarados explícitamente. Evita que enlaces y redirecciones se construyan con un
+# Host falsificado. En local se mantiene abierto para TestClient y desarrollo.
+_base_host = urlsplit(BASE_URL).hostname or ""
+_configured_hosts = [
+    host.strip().lower()
+    for host in os.getenv("NOESIS_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+_railway_private_host = os.getenv("RAILWAY_PRIVATE_DOMAIN", "").strip().lower()
+ALLOWED_HOSTS = list(dict.fromkeys(
+    _configured_hosts
+    + ([_base_host] if _base_host else [])
+    + ([_railway_private_host] if _railway_private_host else [])
+    + ["localhost", "127.0.0.1"]
+)) if IS_PRODUCTION else ["*"]
+
+# Límites defensivos de documentos. Son independientes del tamaño en MB: una
+# imagen comprimida pequeña puede intentar reservar cientos de megapíxeles.
+MAX_IMAGE_PIXELS = max(
+    1_000_000, int(os.getenv("NOESIS_MAX_IMAGE_PIXELS", "40000000"))
+)
+MAX_PDF_PAGES = max(1, int(os.getenv("NOESIS_MAX_PDF_PAGES", "200")))
+# Techo HTTP global previo al parser multipart. Los límites por tipo siguen siendo
+# más bajos; este evita que una petición declaradamente gigante llegue a parsearse.
+MAX_REQUEST_BYTES = max(
+    1_048_576, int(os.getenv("NOESIS_MAX_REQUEST_BYTES", "20971520"))
+)
+
+# Pool limitado: evita agotar PostgreSQL cuando coinciden web, scheduler y colas.
+DB_POOL_MIN_SIZE = max(0, int(os.getenv("NOESIS_DB_POOL_MIN_SIZE", "1")))
+DB_POOL_MAX_SIZE = max(
+    DB_POOL_MIN_SIZE or 1, int(os.getenv("NOESIS_DB_POOL_MAX_SIZE", "8"))
+)
+DB_POOL_TIMEOUT = max(1.0, float(os.getenv("NOESIS_DB_POOL_TIMEOUT", "10")))
+
+# Registro operativo sin datos personales. Se activa por defecto en producción.
+LOG_REQUESTS = env_bool("NOESIS_LOG_REQUESTS", IS_PRODUCTION)
+
+# Caducidad por inactividad, además del máximo absoluto firmado por Starlette.
+SESSION_IDLE_MINUTES = max(15, int(os.getenv("NOESIS_SESSION_IDLE_MINUTES", "720")))
+ADMIN_SESSION_IDLE_MINUTES = max(
+    15, int(os.getenv("NOESIS_ADMIN_SESSION_IDLE_MINUTES", "60"))
+)
+
 # Acceso opcional con Google (OAuth 2.0 / OpenID Connect). Noesis no muestra ni
 # intenta este flujo hasta que ambos valores estén configurados en el entorno.
 GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
@@ -206,6 +252,10 @@ def google_oauth_available() -> bool:
 
 # Email del fundador con acceso al panel de administración (/admin).
 ADMIN_EMAIL = os.getenv("NOESIS_ADMIN_EMAIL", "").strip().lower()
+ADMIN_REQUIRE_GOOGLE_OAUTH = env_bool(
+    "NOESIS_ADMIN_REQUIRE_GOOGLE_OAUTH",
+    IS_PRODUCTION and google_oauth_available(),
+)
 
 # Envío de emails (reset de contraseña, avisos). Si no hay SMTP, se registra en log.
 SMTP_HOST = os.getenv("SMTP_HOST", "")
@@ -286,6 +336,7 @@ BACKUP_S3_ACCESS_KEY = os.getenv("NOESIS_BACKUP_S3_ACCESS_KEY", "").strip()
 BACKUP_S3_SECRET_KEY = os.getenv("NOESIS_BACKUP_S3_SECRET_KEY", "").strip()
 BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "us-east-1").strip()
 BACKUP_S3_PREFIX = os.getenv("NOESIS_BACKUP_S3_PREFIX", "noesis").strip()
+BACKUP_S3_SSE = os.getenv("NOESIS_BACKUP_S3_SSE", "AES256").strip()
 BACKUP_S3_TIMEOUT_SECONDS = int(
     os.getenv("NOESIS_BACKUP_S3_TIMEOUT_SECONDS", "60")
 )

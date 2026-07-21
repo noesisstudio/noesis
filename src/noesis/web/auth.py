@@ -1,7 +1,7 @@
 """Autenticación: hash de contraseñas (PBKDF2, solo stdlib) y sesión actual.
 
 No usamos librerías externas para el hash: PBKDF2-HMAC-SHA256 con sal aleatoria y
-200.000 iteraciones es seguro y viene en la librería estándar de Python. Esto
+600.000 iteraciones es seguro y viene en la librería estándar de Python. Esto
 encaja con el objetivo de mantener Noesis con el mínimo de dependencias.
 """
 
@@ -13,6 +13,7 @@ import hmac
 import os
 import re
 import time
+from datetime import datetime, timedelta
 
 from .. import db
 
@@ -26,11 +27,9 @@ def valid_email(email: str) -> bool:
     return bool(_EMAIL_RE.match((email or "").strip()))
 
 
-# -------- Límite de intentos (anti fuerza bruta), en memoria por IP+acción --------
-_ATTEMPTS: dict[str, list[float]] = {}
+# -------- Límite compartido y pseudonimizado por IP/identidad/acción --------------
 _WINDOW = 300        # 5 minutos
 _MAX_ATTEMPTS = 8    # intentos permitidos por ventana
-_MAX_KEYS = 10_000
 
 
 def client_ip(request) -> str:
@@ -51,38 +50,31 @@ def client_ip(request) -> str:
     return request.client.host if request.client else "?"
 
 
-def _prune_attempts(now: float) -> None:
-    stale = [
-        key for key, hits in _ATTEMPTS.items()
-        if not hits or now - hits[-1] >= _WINDOW
-    ]
-    for key in stale:
-        _ATTEMPTS.pop(key, None)
-    if len(_ATTEMPTS) > _MAX_KEYS:
-        oldest = sorted(_ATTEMPTS, key=lambda key: _ATTEMPTS[key][-1])
-        for key in oldest[:len(_ATTEMPTS) - _MAX_KEYS]:
-            _ATTEMPTS.pop(key, None)
+def _attempt_key(key: str) -> str:
+    """No guarda IP ni email reversibles aunque se filtre la tabla auxiliar."""
+    from .. import config
+    return hmac.new(
+        config.SECRET_KEY.encode(), key.encode(), hashlib.sha256
+    ).hexdigest()
 
 
 def is_rate_limited(key: str) -> bool:
     """Comprueba el límite sin contabilizar peticiones que finalmente sean válidas."""
-    now = time.time()
-    _prune_attempts(now)
-    hits = [t for t in _ATTEMPTS.get(key, []) if now - t < _WINDOW]
-    _ATTEMPTS[key] = hits
-    return len(hits) >= _MAX_ATTEMPTS
+    since = (datetime.now() - timedelta(seconds=_WINDOW)).isoformat(timespec="seconds")
+    return db.auth_attempt_count(_attempt_key(key), since) >= _MAX_ATTEMPTS
 
 
 def record_failed_attempt(key: str) -> None:
-    now = time.time()
-    _prune_attempts(now)
-    hits = [t for t in _ATTEMPTS.get(key, []) if now - t < _WINDOW]
-    hits.append(now)
-    _ATTEMPTS[key] = hits[-_MAX_ATTEMPTS:]
+    now = datetime.now()
+    db.record_auth_attempt(
+        _attempt_key(key),
+        now.isoformat(timespec="microseconds"),
+        keep_since=(now - timedelta(seconds=_WINDOW)).isoformat(timespec="seconds"),
+    )
 
 
 def clear_attempts(key: str) -> None:
-    _ATTEMPTS.pop(key, None)
+    db.clear_auth_attempts(_attempt_key(key))
 
 
 def too_many_attempts(key: str) -> bool:
@@ -117,4 +109,20 @@ def current_user(request) -> dict | None:
         return None
     if request.session.get("sv", 0) != user.get("session_version", 0):
         return None
+    from .. import config
+    now = int(time.time())
+    last_seen = int(request.session.get("seen") or now)
+    is_admin = bool(user.get("is_admin")) or (
+        bool(config.ADMIN_EMAIL)
+        and str(user.get("email") or "").lower() == config.ADMIN_EMAIL
+    )
+    idle_minutes = (
+        config.ADMIN_SESSION_IDLE_MINUTES if is_admin else config.SESSION_IDLE_MINUTES
+    )
+    if now - last_seen > idle_minutes * 60:
+        request.session.clear()
+        return None
+    # Evita reescribir la cookie en cada recurso, pero mantiene una ventana móvil.
+    if now - last_seen >= 300 or "seen" not in request.session:
+        request.session["seen"] = now
     return user

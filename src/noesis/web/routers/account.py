@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import secrets
+import time
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
@@ -13,7 +14,7 @@ from urllib import request as urlrequest
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
-from ... import config, db, verifactu_client
+from ... import config, db
 from ...adapters import billing as billing_adapter
 from ...adapters import email as email_adapter
 from .. import auth, whatsapp
@@ -56,11 +57,13 @@ def _google_return_path(flow: str, error: str = "", plan: str = "",
     return target + (f"?{urlparse.urlencode(query)}" if query else "")
 
 
-def _start_session(request: Request, user: dict) -> None:
+def _start_session(request: Request, user: dict, *, auth_provider: str = "password") -> None:
     request.session.clear()
     request.session["uid"] = user["id"]
     request.session["bid"] = user["business_id"]
     request.session["sv"] = user.get("session_version", 0)
+    request.session["seen"] = int(time.time())
+    request.session["auth_provider"] = auth_provider
 
 
 def _google_profile(code: str) -> dict:
@@ -112,14 +115,20 @@ def login_page(request: Request, error: str = ""):
 
 @router.post("/login")
 def login_submit(request: Request, email: str = Form(...), password: str = Form(...)):
-    key = f"login:{auth.client_ip(request)}"
-    if auth.is_rate_limited(key):
+    email = (email or "").strip().lower()
+    keys = (
+        f"login-ip:{auth.client_ip(request)}",
+        f"login-account:{email}",
+    )
+    if any(auth.is_rate_limited(key) for key in keys):
         return RedirectResponse("/login?error=throttle", status_code=303)
-    user = db.get_user_by_email((email or "").strip().lower())
+    user = db.get_user_by_email(email)
     if not user or not auth.verify_password(password, user["password_hash"]):
-        auth.record_failed_attempt(key)
+        for key in keys:
+            auth.record_failed_attempt(key)
         return RedirectResponse("/login?error=1", status_code=303)
-    auth.clear_attempts(key)
+    for key in keys:
+        auth.clear_attempts(key)
     _start_session(request, user)
     return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
 
@@ -127,7 +136,9 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
 @router.post("/logout")
 def logout(request: Request):
     request.session.clear()
-    return RedirectResponse("/login", status_code=303)
+    response = RedirectResponse("/login", status_code=303)
+    response.headers["Clear-Site-Data"] = '"cache", "cookies", "storage"'
+    return response
 
 
 @router.get("/auth/google")
@@ -193,7 +204,7 @@ def google_callback(request: Request, code: str = "", state: str = "",
     auth.clear_attempts(f"google-oauth:{auth.client_ip(request)}")
     user = db.get_user_by_email(profile["email"])
     if user:
-        _start_session(request, user)
+        _start_session(request, user, auth_provider="google")
         return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
     request.session["google_signup"] = profile
     request.session["signup_plan"] = plan
@@ -317,10 +328,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
         auth.record_failed_attempt(key)
         return RedirectResponse(f"/onboarding?error=email{onboarding_query}", status_code=303)
     auth.clear_attempts(key)
-    request.session.clear()
-    request.session["uid"] = user["id"]
-    request.session["bid"] = biz["id"]
-    request.session["sv"] = user.get("session_version", 0)
+    _start_session(request, user)
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
     request.session["signup_intent"] = intent
@@ -382,7 +390,7 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding/google{error_query}consent", status_code=303)
     existing = db.get_user_by_email(email)
     if existing:
-        _start_session(request, existing)
+        _start_session(request, existing, auth_provider="google")
         return RedirectResponse(f"/b/{existing['business_id']}/resumen", status_code=303)
     try:
         biz, user = db.create_account(
@@ -391,7 +399,7 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
         )
     except (ValueError, *db.IntegrityError):
         return RedirectResponse(f"/onboarding/google{error_query}email", status_code=303)
-    _start_session(request, user)
+    _start_session(request, user, auth_provider="google")
     request.session.pop("google_signup", None)
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
@@ -877,7 +885,6 @@ def subscription_portal(request: Request, business_id: int):
 
 
 # ===================================================== RESET DE CONTRASEÑA == #
-import secrets  # noqa: E402
 
 
 def _hash_token(token: str) -> str:
@@ -891,11 +898,15 @@ def forgot_page(request: Request, sent: str = ""):
 
 @router.post("/recuperar")
 def forgot_submit(request: Request, email: str = Form(...)):
-    key = f"forgot:{auth.client_ip(request)}"
-    if auth.is_rate_limited(key):
-        return RedirectResponse("/recuperar?sent=1", status_code=303)
-    auth.record_failed_attempt(key)
     email = (email or "").strip().lower()
+    keys = (
+        f"forgot-ip:{auth.client_ip(request)}",
+        f"forgot-account:{email}",
+    )
+    if any(auth.is_rate_limited(key) for key in keys):
+        return RedirectResponse("/recuperar?sent=1", status_code=303)
+    for key in keys:
+        auth.record_failed_attempt(key)
     user = db.get_user_by_email(email)
     if user:  # Si no existe, no lo revelamos (respuesta idéntica).
         token = secrets.token_urlsafe(32)

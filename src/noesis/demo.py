@@ -301,8 +301,17 @@ def seed_rich(*, reset: bool = True, force: bool = False,
     from .documents import repo as docrepo
     from .documents import service as docservice
 
+    def demo_bytes(filename: str) -> bytes:
+        if filename.lower().endswith((".jpg", ".jpeg")):
+            from io import BytesIO
+            from PIL import Image
+            output = BytesIO()
+            Image.new("RGB", (2, 2), (244, 241, 232)).save(output, format="JPEG")
+            return output.getvalue()
+        return b"%PDF-1.4 demo\n%%EOF"
+
     def doc(filename, status, confidence=None, note=None):
-        dd = docservice.upload(bid, filename, b"%PDF-1.4 demo\n%%EOF",
+        dd = docservice.upload(bid, filename, demo_bytes(filename),
                                run_ocr=False)
         docrepo.set_review(dd["id"], bid, doc_status=status,
                            confidence=confidence, review_note=note)

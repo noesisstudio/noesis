@@ -13,6 +13,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from xml.etree import ElementTree as ET
 
+from defusedxml import ElementTree as SafeET
+from defusedxml.common import DefusedXmlException
+
 from . import config, verifactu
 
 SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/"
@@ -107,8 +110,8 @@ def parse_response(payload: bytes) -> SubmissionResult:
     """Interpreta la respuesta oficial, incluida una SOAP Fault estructural."""
     raw = payload.decode("utf-8", errors="replace")
     try:
-        root = ET.fromstring(payload)
-    except ET.ParseError as exc:
+        root = SafeET.fromstring(payload)
+    except (ET.ParseError, DefusedXmlException) as exc:
         raise VerifactuTransportError(
             "La AEAT devolvió una respuesta XML ilegible."
         ) from exc

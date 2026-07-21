@@ -10,7 +10,9 @@ requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.40.0,<1",
     "python-dotenv>=1.0.0,<2",
+    "defusedxml>=0.7.0,<1",
     "psycopg[binary]>=3.2.0,<4",
+    "psycopg_pool>=3.2.0,<4",
     "rich>=13.7.0,<15",
     "fastapi>=0.110.0,<1",
     "uvicorn[standard]>=0.29.0,<1",
@@ -19,6 +21,8 @@ dependencies = [
     "python-multipart>=0.0.9,<1",
     "itsdangerous>=2.1.0,<3",
     "fpdf2>=2.7.0,<3",
+    # Se usa de forma directa para validar imágenes antes de OCR/almacenamiento.
+    "pillow>=11.0.0,<13",
     # Generador QR puro Python; Pillow ya es dependencia transitiva de fpdf2.
     "qrcode>=8.0,<9",
 ]
@@ -27,6 +31,13 @@ dependencies = [
 # Transcripción de voz local (notas de voz -> factura/agenda). Pesa y pide RAM,
 # por eso es opcional: pip install -e ".[audio]"
 audio = ["faster-whisper>=1.0.0,<2"]
+security = [
+    "bandit>=1.8.0,<2",
+    "detect-secrets>=1.5.0,<2",
+    "pip-audit>=2.9.0,<3",
+    "ruff>=0.12.0,<1",
+]
+test = ["hypothesis>=6.130.0,<7"]
 
 [project.scripts]
 noesis = "noesis.cli:main"
@@ -35,3 +46,16 @@ noesis-doctor = "noesis.readiness:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+# Guardia acotada: errores reales, fallos de sintaxis e imports. Bandit cubre
+# seguridad por separado; mezclar ambos conjuntos escondería riesgos entre ruido.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E731", "E741"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", ".worktrees"]

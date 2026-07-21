@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 
 from .. import config
-from . import ocr, repo, storage
+from . import ocr, repo, storage, validation
 
 
 class UploadError(Exception):
@@ -33,6 +33,10 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
     max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
     if len(data) > max_bytes:
         raise UploadError(f"El archivo supera el límite de {config.MAX_UPLOAD_MB} MB.")
+    try:
+        validation.validate(filename, data)
+    except validation.UnsafeDocument as exc:
+        raise UploadError(str(exc)) from exc
     if project_id not in (None, ""):
         from .. import db
         try:

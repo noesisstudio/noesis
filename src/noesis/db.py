@@ -17,6 +17,7 @@ import math
 import re
 import secrets
 import sqlite3
+import threading
 import unicodedata
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
@@ -32,9 +33,11 @@ log = logging.getLogger("noesis.db")
 
 try:
     import psycopg
+    from psycopg_pool import ConnectionPool
     from psycopg.rows import dict_row
 except ImportError:  # SQLite local no necesita cargar el driver.
     psycopg = None
+    ConnectionPool = None
     dict_row = None
 
 
@@ -122,6 +125,48 @@ class Connection:
         self.raw.close()
 
 
+_pool = None
+_pool_url = ""
+_pool_lock = threading.Lock()
+
+
+def _postgres_pool():
+    """Pool perezoso y acotado; se recrea si un test cambia DATABASE_URL."""
+    global _pool, _pool_url
+    if ConnectionPool is None:
+        raise RuntimeError("DATABASE_URL está configurada pero falta psycopg_pool.")
+    if _pool is not None and _pool_url == config.DATABASE_URL:
+        return _pool
+    with _pool_lock:
+        if _pool is not None and _pool_url != config.DATABASE_URL:
+            _pool.close()
+            _pool = None
+        if _pool is None:
+            candidate = ConnectionPool(
+                conninfo=config.DATABASE_URL,
+                kwargs={"row_factory": dict_row},
+                min_size=config.DB_POOL_MIN_SIZE,
+                max_size=config.DB_POOL_MAX_SIZE,
+                timeout=config.DB_POOL_TIMEOUT,
+                open=False,
+                name="noesis",
+            )
+            candidate.open(wait=True)
+            _pool = candidate
+            _pool_url = config.DATABASE_URL
+    return _pool
+
+
+def close_pool() -> None:
+    """Cierra conexiones persistentes durante el apagado ordenado."""
+    global _pool, _pool_url
+    with _pool_lock:
+        if _pool is not None:
+            _pool.close()
+        _pool = None
+        _pool_url = ""
+
+
 @contextmanager
 def get_conn():
     """Abre la BD configurada, confirma al salir y siempre cierra."""
@@ -130,8 +175,15 @@ def get_conn():
             raise RuntimeError(
                 "DATABASE_URL está configurada pero falta psycopg."
             )
-        raw = psycopg.connect(config.DATABASE_URL, row_factory=dict_row)
-        conn = Connection(raw, "postgres")
+        with _postgres_pool().connection() as raw:
+            conn = Connection(raw, "postgres")
+            try:
+                yield conn
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+        return
     else:
         raw = sqlite3.connect(config.DB_PATH)
         raw.row_factory = sqlite3.Row
@@ -173,6 +225,36 @@ def reset_db() -> None:
 
 def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+
+# ------------------------------------------------------ Seguridad de acceso ---
+def auth_attempt_count(key_hash: str, since: str) -> int:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS total FROM auth_attempts "
+            "WHERE key_hash=? AND attempted_at>=?",
+            (key_hash, since),
+        ).fetchone()
+    return int(row["total"] or 0)
+
+
+def record_auth_attempt(key_hash: str, attempted_at: str, *, keep_since: str) -> None:
+    with get_conn() as conn:
+        # Limpieza global: un atacante que rote IP/cuenta no puede hacer crecer la
+        # tabla indefinidamente con claves distintas.
+        conn.execute(
+            "DELETE FROM auth_attempts WHERE attempted_at<?",
+            (keep_since,),
+        )
+        conn.execute(
+            "INSERT INTO auth_attempts (key_hash, attempted_at) VALUES (?, ?)",
+            (key_hash, attempted_at),
+        )
+
+
+def clear_auth_attempts(key_hash: str) -> None:
+    with get_conn() as conn:
+        conn.execute("DELETE FROM auth_attempts WHERE key_hash=?", (key_hash,))
 
 
 def _positive_money(value, label: str) -> float:

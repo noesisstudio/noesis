@@ -5,6 +5,9 @@
 
 ## P0 — publicar y pilotar con seguridad
 
+- [ ] Fusionar y desplegar el hardening de seguridad con migración 34; confirmar
+  cookies `__Host-`, hosts permitidos, caducidad admin, logs sin query string,
+  cabeceras y rutas principales en el dominio real.
 - [ ] Fusionar el candidato fiscal, desplegar el `main` resultante, aplicar migración
   33 y confirmar `/ready`, alta por prueba, alta por contratación, preferencias operativas,
   vencimiento de factura, checkout, Home, modo consulta y una ficha de proyecto.
@@ -29,8 +32,9 @@
   responsable y validación con asesoría fiscal antes de producción.
 - [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo.
 - [ ] Restaurar una copia externa en un entorno aislado y documentar tiempos.
-- [ ] Auditoría externa de seguridad, privacidad, fiscalidad y procedimiento de
-  incidentes.
+- [ ] Ejecutar un pentest autenticado externo y una revisión de privacidad/RGPD,
+  fiscalidad y procedimiento de incidentes. El modelo interno y la puerta de salida
+  están en [[Seguridad-operativa]]; una revisión propia no sustituye esta validación.
 - [ ] Piloto acompañado con 3-5 autónomos durante dos cierres semanales.
 - [ ] Medir activación hasta primer cobro, tiempo ahorrado, trabajos sin facturar,
   cobros recuperados, correcciones, coste por cuenta y retención.
@@ -53,6 +57,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Gestoría con cuentas/MFA, varias empresas y revisión por documento.
 - [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,
   correcciones y coste.
+- [ ] Eliminar `unsafe-inline` de la CSP efectiva tras migrar scripts/estilos inline;
+  mientras tanto observar la política estricta en report-only sin romper la UI.
+- [ ] Evaluar MFA/passkeys y permisos finos para gestoría antes de abrir acceso a
+  terceros; valorar antivirus de archivos y RLS PostgreSQL tras el piloto según el
+  riesgo y la complejidad observados.
 - [ ] Revisar cada pantalla con evidencia visual tras estabilizar el diseño; su
   jerarquía debe responder a su tarea, no copiar la de otra sección.
 - [ ] Fiscalidad ampliada: exenciones E1-E8, no sujeción N1/N2, inversión del sujeto

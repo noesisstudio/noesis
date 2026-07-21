@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-07-20",
+  "state_date": "2026-07-21",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 33,
-  "verified_test_count": 325,
+  "schema_version": 34,
+  "verified_test_count": 339,
   "production": {
     "url": "https://app.bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Aplicar migración 33 y verificar facturas con líneas y series, recurrencia, PDF, entrega por correo, historial, rectificación, anulación y cola Veri*Factu además de alta, Google OAuth y checkout; Stripe live sigue bloqueado hasta resolver el IVA"
+    "pending_after_deploy": "Fusionar el hardening, aplicar migración 34 y verificar dominio, hosts, cookie __Host-, caducidad admin, logs, documentos y pool PostgreSQL; después repetir los flujos reales de Meta, Stripe, SMTP, Google OAuth, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -52,7 +52,8 @@
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",
-    "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending"
+    "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
+    "security_hardening": "schema_34_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request"
   },
   "ai_route": [
     "reglas_locales",

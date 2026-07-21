@@ -16,6 +16,7 @@ import os
 import re
 import secrets
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -417,23 +418,50 @@ def _handle_status(status: dict) -> dict:
     }
 
 
+def _trusted_meta_media_url(value: str) -> bool:
+    parsed = urllib.parse.urlsplit(value)
+    hostname = (parsed.hostname or "").lower()
+    trusted_host = any(
+        hostname == suffix or hostname.endswith(f".{suffix}")
+        for suffix in ("facebook.com", "fbsbx.com", "fbcdn.net")
+    )
+    return bool(
+        parsed.scheme == "https" and trusted_host
+        and parsed.username is None and parsed.password is None
+    )
+
+
+class _TrustedMetaRedirect(urllib.request.HTTPRedirectHandler):
+    """Nunca sigue un redirect que pueda filtrar el bearer o provocar SSRF."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _trusted_meta_media_url(newurl):
+            raise urllib.error.URLError("redirect de media no autorizado")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def _download_media(media_id: str, max_bytes: int | None = None) -> bytes | None:
     """Descarga un mèdia de WhatsApp (audio/imagen/PDF) acotado en tamaño."""
-    if not _TOKEN:
+    if not _TOKEN or not re.fullmatch(r"[0-9]{1,32}", str(media_id or "")):
         return None
     limit = max_bytes or config.MAX_AUDIO_BYTES
     try:
+        opener = urllib.request.build_opener(_TrustedMetaRedirect())
         metadata_request = urllib.request.Request(
             f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{media_id}",
             headers={"Authorization": f"Bearer {_TOKEN}"},
         )
-        info = json.loads(
-            urllib.request.urlopen(metadata_request, timeout=10).read()
-        )
+        metadata_raw = opener.open(metadata_request, timeout=10).read(65_537)
+        if len(metadata_raw) > 65_536:
+            raise ValueError("respuesta de metadatos demasiado grande")
+        info = json.loads(metadata_raw)
+        media_url = str(info.get("url") or "")
+        if not _trusted_meta_media_url(media_url):
+            raise ValueError("Meta devolvió una URL de media no autorizada")
         media_request = urllib.request.Request(
-            info["url"], headers={"Authorization": f"Bearer {_TOKEN}"}
+            media_url, headers={"Authorization": f"Bearer {_TOKEN}"}
         )
-        data = urllib.request.urlopen(media_request, timeout=20).read(limit + 1)
+        data = opener.open(media_request, timeout=20).read(limit + 1)
         return data if len(data) <= limit else None
     except Exception as exc:  # noqa: BLE001
         log.warning("Fallo descargando mèdia %s: %s", media_id, exc)
