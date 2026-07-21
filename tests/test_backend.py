@@ -156,7 +156,7 @@ class BackendTestCase(unittest.TestCase):
         second = db.issue_invoice(invoice["id"], business["id"])
 
         self.assertEqual(first["number"], second["number"])
-        self.assertEqual(first["recipient_nif"], "B12345678")
+        self.assertEqual(first["recipient_nif"], "B12345678")  # pragma: allowlist secret
         self.assertFalse(db.delete_invoice(invoice["id"], business["id"]))
         self.assertEqual(
             db.mark_invoice_paid(invoice["id"], business["id"])["status"],
@@ -928,10 +928,10 @@ class BackendTestCase(unittest.TestCase):
             province="Asturias", primary_goal="facturar",
         )
         db.update_fiscal(
-            business["id"], nif="B12345678", address="Calle Taller 1"
+            business["id"], nif="B12345678", address="Calle Taller 1"  # pragma: allowlist secret
         )
         client = db.add_client(
-            "Hotel Costa", nif="A12345678", address="Avenida Mar 4",
+            "Hotel Costa", nif="A12345678", address="Avenida Mar 4",  # pragma: allowlist secret
             business_id=business["id"],
         )
         db.add_job(
@@ -1036,7 +1036,7 @@ class BackendTestCase(unittest.TestCase):
             with TestClient(server.app) as http:
                 login = http.post("/login", data={
                     "email": "banco@example.com",
-                    "password": "password-segura-123",
+                    "password": "password-segura-123",  # pragma: allowlist secret
                 }, follow_redirects=False)
                 self.assertEqual(login.status_code, 303)
                 imported = http.post(
@@ -4563,7 +4563,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
 
     def test_admin_flags_verifactu_due_and_exhausted_queue(self):
         business, client = self.make_business("Admin Verifactu")
-        with patch.object(config, "VERIFACTU_PRODUCER_NIF", "B87654321"):
+        with patch.object(config, "VERIFACTU_PRODUCER_NIF", "B87654321"):  # pragma: allowlist secret
             db.update_verifactu_mode(business["id"], True)
             first = db.add_invoice(
                 client["id"], "Registro vencido", 100,
