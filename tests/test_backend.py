@@ -1761,10 +1761,22 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Beta con acceso preferente", public_page.text)
                 self.assertIn("1 mes gratis", public_page.text)
                 self.assertIn('data-annual="319"', public_page.text)
-                # El alta la aprueba el equipo: los planes llevan al formulario
-                # conservando cuál miraba el visitante.
-                self.assertIn('/solicitar-acceso?plan=autonomo', public_page.text)
-                self.assertNotIn("/onboarding?intent=", public_page.text)
+                # Con el registro abierto los planes llevan al alta normal.
+                self.assertIn(
+                    "/onboarding?intent=trial&plan=autonomo", public_page.text
+                )
+                # Con el registro cerrado llevan al formulario de solicitud, y en
+                # ambos casos se conserva el plan que miraba el visitante. El
+                # indicador es un global de plantilla fijado al arrancar, así que
+                # se sustituye ahí y no en la configuración.
+                from noesis.web.deps import TEMPLATES
+
+                with patch.dict(
+                    TEMPLATES.env.globals, {"public_signup_available": False}
+                ):
+                    closed_page = client.get("/precios")
+                self.assertIn("/solicitar-acceso?plan=autonomo", closed_page.text)
+                self.assertNotIn("/onboarding?intent=", closed_page.text)
                 for route in ("/", "/equipo", "/preguntas", "/contacto"):
                     page = client.get(route)
                     self.assertEqual(page.status_code, 200, route)

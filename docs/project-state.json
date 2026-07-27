@@ -2,7 +2,7 @@
   "state_date": "2026-07-27",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 36,
-  "verified_test_count": 354,
+  "verified_test_count": 361,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
