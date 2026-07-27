@@ -8,6 +8,9 @@
 - `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 35;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
+  El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
+  transaccional, asigna serie/línea a las emitidas históricas y lo reinstala antes
+  de continuar.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
@@ -29,7 +32,9 @@
 - `src/noesis/adapters/ai.py`: cliente stdlib OpenAI-compatible compartido por el
   servicio privado y el proveedor externo barato.
 - `src/noesis/readiness.py`: diagnóstico de piloto sin secretos para seguridad,
-  datos, copias, WhatsApp, correo, Stripe, AEAT, IA y operaciones.
+  identidad legal, dominio canónico, apertura pública, audio/OCR, datos, copias,
+  WhatsApp, correo, Stripe, AEAT, IA y operaciones. Al abrir el alta pública,
+  servicios críticos incompletos pasan de aviso a bloqueo.
 - `deploy/local-ai/`: Ollama privado ligado a localhost y perfil de descarga de
   Qwen3 8B para evaluación; no expone el modelo ni lo convierte en un SLA.
 - `analysis/build_unit_economics.mjs`: genera el modelo editable de costes, márgenes,
@@ -79,8 +84,9 @@
   borradores con líneas e impuestos, series, recurrencia, duplicación, emisión,
   PDF, entrega durable, historial, rectificación y anulación confirmada.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
-  Google OAuth, configuración operativa, checkout y cuenta; no expone el
-  diagnóstico de proveedores en la API del cliente.
+  Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
+  cerrada en producción si falta identidad legal o autorización explícita y no
+  expone el diagnóstico de proveedores en la API del cliente.
 - `src/noesis/web/templates/onboarding_preferences.html`: aplica fiscalidad,
   factura, cobro, recordatorios, informes y gestoría antes de entrar al producto.
 - `src/noesis/web/routers/admin.py` + `templates/admin.html`: diagnóstico técnico,

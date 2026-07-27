@@ -23,6 +23,66 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-27 — equipo real en la web pública y botón de agendar reunión
+
+- **Autor/agente:** Claude.
+- **Objetivo:** a petición del fundador, sustituir el enfoque deliberadamente
+  anónimo de `/equipo` por perfiles reales de los dos cofundadores, y añadir un
+  botón de agendar reunión (Cal.com) en `/equipo` y `/preguntas` en lugar del
+  calendario embebido que no habría funcionado por la CSP del sitio.
+- **Áreas y archivos:** `src/noesis/web/templates/site_equipo.html`,
+  `src/noesis/web/templates/site_preguntas.html`, `src/noesis/web/static/app.css`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** capturas reales con Playwright/Chromium en escritorio
+  (1400px) y móvil (390px) de `/equipo` y `/preguntas`; verificado que
+  `https://cal.com/bynoesis` responde 200 con título "ByNoesis | Cal.com" antes de
+  enlazarlo. Suite completa: 345/347 (los 2 fallos son el artefacto de macOS ya
+  conocido en `test_backups.py`, no relacionado). `test_backend.py` cubre `/equipo`
+  y `/preguntas` con 200 y sigue en verde.
+- **Dependencias o validaciones externas:** el enlace usa Cal.com externo mediante
+  `<a target="_blank" rel="noopener">` normal, no iframe, para no chocar con
+  `frame-src 'none'` de la CSP.
+- **Riesgo/punto probable de fallo:** las bios de los fundadores y el nombre de
+  usuario de Cal.com dependen de datos dados directamente por el fundador en el
+  chat; las fotos son un monograma con iniciales a falta de fotos reales.
+- **Diagnóstico y rollback:** revertir este commit recupera la versión anónima
+  anterior de `/equipo` sin nombres ni botón de Cal.com.
+- **Estado de publicación:** commit en `main`.
+
+## 2026-07-27 — corrige migración que rompía bases con facturas ya emitidas
+
+- **Autor/agente:** Claude.
+- **Objetivo:** al levantar el entorno local para una auditoría funcional completa,
+  la migración a esquema 35 fallaba con `sqlite3.IntegrityError: una factura emitida
+  no puede alterarse` en cuanto la base tenía al menos una factura no borrador.
+  Cualquier instalación real (no solo la demo vacía) se habría quedado sin arrancar
+  al aplicar `_upgrade_professional_invoicing`.
+- **Áreas y archivos:** `src/noesis/migrations.py`
+  (`_upgrade_professional_invoicing`).
+- **Cambios de datos/migración:** el disparador de inmutabilidad de facturas
+  emitidas (instalado por `_upgrade_invoice_legal_integrity`, migración anterior)
+  bloqueaba el propio `UPDATE ... SET series_id=... WHERE series_id IS NULL` de esta
+  migración, porque `series_id` está en la lista de campos protegidos y toda factura
+  previa a esta migración lo tiene `NULL`. Se desactiva el disparador solo durante
+  ese relleno retroactivo de metadatos y se reinstala (`_install_issued_invoice_integrity`)
+  inmediatamente después, en el mismo dialecto SQLite/Postgres.
+- **Pruebas ejecutadas:** reproducido con una base SQLite real con facturas emitidas
+  (`enviada`, `cobrada`) generadas en sesiones anteriores; tras el arreglo la
+  migración llega a la versión 35, el `series_id` queda relleno en las facturas
+  emitidas y una mutación directa posterior sigue bloqueada por el disparador
+  reinstalado. Suite completa: **345/347** (los 2 fallos restantes son un artefacto
+  de rutas `/private/var` vs `/var` de macOS en `test_backups.py`, no relacionados
+  con este cambio ni nuevos).
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** si en el futuro se añade un campo a
+  `_IMMUTABLE_INVOICE_FIELDS` que también necesite un backfill retroactivo en una
+  migración posterior, hay que repetir este mismo patrón (desactivar el disparador,
+  escribir, reinstalar) o la migración volverá a romperse igual.
+- **Diagnóstico y rollback:** revertir este commit reintroduce el fallo en cualquier
+  base con facturas emitidas antes de llegar a schema 35 (SQLite y Postgres). No hay
+  cambio de esquema nuevo, solo de la secuencia de la migración existente.
+- **Estado de publicación:** commit en `main`.
+
 ## 2026-07-21 — política segura de actualización de dependencias
 
 - **Autor/agente:** Codex.

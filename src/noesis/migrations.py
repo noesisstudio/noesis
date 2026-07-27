@@ -2697,6 +2697,15 @@ CREATE INDEX IF NOT EXISTS idx_verifactu_cancellation_due
             "ON CONFLICT (business_id, code) DO NOTHING",
             (code, name, document_type, prefix, now),
         )
+    # El disparador de inmutabilidad de facturas emitidas ya está instalado
+    # por la migración anterior y bloquearía este relleno retroactivo de
+    # series_id en facturas ya emitidas (la columna no existía antes de esta
+    # migración, así que toda factura previa la tiene NULL). Se desactiva solo
+    # durante esta pasada de datos históricos y se reinstala justo después.
+    if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
+    else:
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_integrity ON invoices")
     conn.execute(
         "UPDATE invoices SET series_id=(SELECT s.id FROM invoice_series s "
         "WHERE s.business_id=invoices.business_id AND s.is_default=TRUE AND "
@@ -2705,6 +2714,7 @@ CREATE INDEX IF NOT EXISTS idx_verifactu_cancellation_due
         "WHERE series_id IS NULL",
         ("R%",),
     )
+    _install_issued_invoice_integrity(conn)
     conn.execute(
         "INSERT INTO invoice_lines "
         "(business_id, invoice_id, position, description, quantity, unit_price, "

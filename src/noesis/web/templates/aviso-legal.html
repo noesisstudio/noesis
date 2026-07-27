@@ -16,22 +16,23 @@
   <main class="legal-wrap legal">
     <a class="legal-back" href="/">&#8249; Volver al inicio</a>
     <h1>Aviso legal</h1>
-    <p class="updated">Última actualización: 30 de junio de 2026</p>
+    <p class="updated">Última actualización: {{ legal_document_version }}</p>
 
+    {% if not legal_ready %}
     <div class="note">
-      Información exigida por la Ley 34/2002 de Servicios de la Sociedad de la Información
-      y de Comercio Electrónico (LSSI-CE). Completa los campos entre corchetes [ ] con los
-      datos definitivos de la empresa y revísalo con un profesional antes de operar.
+      El acceso comercial permanece cerrado mientras se completa la identificación
+      legal del prestador. Noesis no acepta altas públicas ni pagos en este estado.
     </div>
+    {% endif %}
 
     <h2>1. Titular del sitio y del servicio</h2>
     <div class="meta-box">
-      <b>Titular:</b> [Razón social / nombre del titular]<br>
-      <b>NIF/CIF:</b> [NIF/CIF]<br>
-      <b>Domicilio:</b> [Dirección]<br>
-      <b>Email:</b> noesisstudioo@gmail.com<br>
+      <b>Titular:</b> {{ legal_name or "Noesis · acceso piloto cerrado" }}<br>
+      {% if legal_nif %}<b>NIF/CIF:</b> {{ legal_nif }}<br>{% endif %}
+      {% if legal_address %}<b>Domicilio:</b> {{ legal_address }}<br>{% endif %}
+      <b>Email:</b> {{ legal_email }}<br>
       <b>Sitio web:</b> bynoesis.com<br>
-      <b>Datos registrales:</b> [si es sociedad, datos del Registro Mercantil]
+      {% if legal_registry %}<b>Datos registrales:</b> {{ legal_registry }}{% endif %}
     </div>
 
     <h2>2. Objeto</h2>
@@ -47,7 +48,7 @@
 
     <h2>4. Propiedad intelectual e industrial</h2>
     <p>El software, la marca “Noesis”, el logotipo, los diseños, textos y demás elementos del
-      servicio son titularidad de [Razón social] o de sus licenciantes y están protegidos por
+      servicio son titularidad de {{ legal_name or "su titular legítimo" }} o de sus licenciantes y están protegidos por
       la normativa de propiedad intelectual e industrial. No se cede ningún derecho sobre
       ellos más allá del uso del servicio conforme a los Términos. Los datos que el usuario
       introduce siguen siendo <b>de su propiedad</b>.</p>

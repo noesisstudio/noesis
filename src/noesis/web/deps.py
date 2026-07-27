@@ -11,6 +11,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .. import config, db
+from ..adapters import transcription
+from ..documents import ocr
 from . import auth
 
 HERE = Path(__file__).parent
@@ -30,6 +32,12 @@ def _asset_version() -> str:
 TEMPLATES.env.globals["asset_v"] = _asset_version()
 # Dominio público: lo usan las etiquetas canónicas y de compartición social.
 TEMPLATES.env.globals["base_url"] = config.BASE_URL
+TEMPLATES.env.globals["public_signup_available"] = config.public_signup_available()
+TEMPLATES.env.globals["public_contact_email"] = config.PUBLIC_CONTACT_EMAIL
+TEMPLATES.env.globals["voice_available"] = transcription.available()
+TEMPLATES.env.globals["ocr_available"] = (
+    ocr.available() or bool(config.ANTHROPIC_API_KEY)
+)
 
 
 def _eur(value) -> str:

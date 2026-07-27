@@ -97,6 +97,44 @@ class ReadinessTestCase(unittest.TestCase):
         )
         self.assertEqual(google["status"], "blocker")
 
+    def test_production_blocks_wrong_domain_and_missing_legal_identity(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "BASE_URL", "https://app.bynoesis.com"),
+            patch.object(config, "CANONICAL_PUBLIC_HOST", "bynoesis.com"),
+            patch.object(config, "LEGAL_NAME", ""),
+            patch.object(config, "LEGAL_NIF", ""),
+            patch.object(config, "LEGAL_ADDRESS", ""),
+            patch.object(config, "LEGAL_EMAIL", ""),
+            patch.object(config, "PUBLIC_SIGNUP_ENABLED", False),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        by_area = {item["area"]: item for item in report["checks"]}
+        self.assertEqual(by_area["dominio"]["status"], "blocker")
+        self.assertEqual(by_area["legal"]["status"], "blocker")
+        self.assertEqual(by_area["alta pública"]["status"], "warning")
+        self.assertFalse(report["ready"])
+
+    def test_open_production_requires_operational_services(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "PUBLIC_SIGNUP_ENABLED", True),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(config, "ANTHROPIC_API_KEY", ""),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        by_area = {item["area"]: item for item in report["checks"]}
+        for area in (
+            "copias", "whatsapp", "correo", "stripe", "audio",
+            "lectura de imágenes", "seguridad documental",
+        ):
+            self.assertEqual(by_area[area]["status"], "blocker", area)
+
 
 if __name__ == "__main__":
     unittest.main()

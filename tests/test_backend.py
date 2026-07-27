@@ -29,6 +29,72 @@ SUPPLIER_NIF = "B22222222"  # pragma: allowlist secret
 TEST_IBAN = "ES9121000418450200051332"  # pragma: allowlist secret
 
 
+class HistoricalInvoiceMigrationTestCase(unittest.TestCase):
+    def test_schema_33_backfills_issued_invoice_and_restores_immutability(self):
+        tempdir = tempfile.TemporaryDirectory()
+        old_path = config.DB_PATH
+        old_url = config.DATABASE_URL
+        config.DATABASE_URL = ""
+        config.DB_PATH = Path(tempdir.name) / "migration-32.db"
+        try:
+            migrations.upgrade(32)
+            now = datetime.now().isoformat(timespec="seconds")
+            with db.get_conn() as conn:
+                business = conn.execute(
+                    "INSERT INTO businesses "
+                    "(name, owner_email, sector, created_at) VALUES (?, ?, ?, ?) "
+                    "RETURNING id",
+                    ("Histórico", "historico@example.com", "Servicios", now),
+                ).fetchone()
+                client = conn.execute(
+                    "INSERT INTO clients "
+                    "(business_id, name, nif, address, created_at) "
+                    "VALUES (?, ?, ?, ?, ?) RETURNING id",
+                    (
+                        business["id"], "Cliente", CLIENT_NIF,
+                        "Calle Cliente 1", now,
+                    ),
+                ).fetchone()
+                invoice = conn.execute(
+                    "INSERT INTO invoices "
+                    "(business_id, number, client_id, concept, base, vat_rate, "
+                    "vat_amount, irpf_rate, irpf_amount, total, status, issued_at, "
+                    "issuer_name, issuer_nif, issuer_address, recipient_name, "
+                    "recipient_nif, recipient_address, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                    "RETURNING id",
+                    (
+                        business["id"], "2026/0001", client["id"], "Servicio",
+                        100, 21, 21, 0, 0, 121, "emitida", now, "Histórico",
+                        ISSUER_NIF, "Calle Negocio 1", "Cliente", CLIENT_NIF,
+                        "Calle Cliente 1", now,
+                    ),
+                ).fetchone()
+
+            self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
+            with db.get_conn() as conn:
+                migrated = conn.execute(
+                    "SELECT series_id FROM invoices WHERE id=?",
+                    (invoice["id"],),
+                ).fetchone()
+                line_count = conn.execute(
+                    "SELECT COUNT(*) AS total FROM invoice_lines WHERE invoice_id=?",
+                    (invoice["id"],),
+                ).fetchone()["total"]
+            self.assertIsNotNone(migrated["series_id"])
+            self.assertEqual(line_count, 1)
+            with self.assertRaises(db.IntegrityError):
+                with db.get_conn() as conn:
+                    conn.execute(
+                        "UPDATE invoices SET concept='Alteración' WHERE id=?",
+                        (invoice["id"],),
+                    )
+        finally:
+            config.DB_PATH = old_path
+            config.DATABASE_URL = old_url
+            tempdir.cleanup()
+
+
 class BackendTestCase(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
@@ -2087,6 +2153,16 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(setup_page.status_code, 200)
                 self.assertIn("Experiencia completa", setup_page.text)
                 created_user = db.get_user_by_email("piloto@example.com")
+                with db.get_conn() as conn:
+                    legal_event = conn.execute(
+                        "SELECT event_data FROM product_events "
+                        "WHERE business_id=? AND event_name='legal_accepted'",
+                        (created_user["business_id"],),
+                    ).fetchone()
+                self.assertEqual(
+                    json.loads(legal_event["event_data"])["version"],
+                    config.LEGAL_DOCUMENT_VERSION,
+                )
                 self.assertEqual(
                     db.integration_setting(
                         created_user["business_id"], "ai_external"
@@ -2127,6 +2203,59 @@ class PortalHttpTestCase(BackendTestCase):
                 revoked = client.get(setup_url, follow_redirects=False)
                 self.assertEqual(revoked.status_code, 303)
                 self.assertEqual(revoked.headers["location"], "/login")
+
+    def test_public_signup_closes_safely_without_legal_readiness(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "SECRET_KEY", "x" * 64),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(config, "PUBLIC_SIGNUP_ENABLED", False),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", "test-client"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "test-secret"),
+        ):
+            with TestClient(server.app) as client:
+                page = client.get("/onboarding")
+                self.assertEqual(page.status_code, 503)
+                self.assertIn("Acceso piloto", page.text)
+                self.assertNotIn("Crear cuenta y configurarla", page.text)
+                attempt = client.post(
+                    "/onboarding/signup",
+                    data={
+                        "name": "No debe crearse",
+                        "email": "cerrado@example.com",
+                        "password": TEST_PASSWORD,
+                        "sector": "Fontanería",
+                        "acepto": "1",
+                    },
+                )
+                self.assertEqual(attempt.status_code, 503)
+                self.assertIsNone(db.get_user_by_email("cerrado@example.com"))
+                google = client.get(
+                    "/auth/google?flow=signup", follow_redirects=False
+                )
+                self.assertEqual(google.status_code, 303)
+                self.assertEqual(google.headers["location"], "/onboarding")
+
+    def test_public_legal_pages_do_not_expose_template_placeholders(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                for route in (
+                    "/privacidad", "/aviso-legal", "/terminos",
+                    "/encargado-tratamiento",
+                ):
+                    page = client.get(route)
+                    self.assertEqual(page.status_code, 200, route)
+                    self.assertNotIn("[Razón social", page.text, route)
+                    self.assertNotIn("[NIF", page.text, route)
+                    self.assertNotIn("[Dirección", page.text, route)
+                    self.assertNotIn("Borrador inicial", page.text, route)
 
     def test_subscribe_onboarding_configures_operations_before_checkout(self):
         from starlette.testclient import TestClient
@@ -4461,6 +4590,34 @@ class AdminCommandCenterTestCase(unittest.TestCase):
     setUp = BackendTestCase.setUp
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
+
+    def test_missing_required_google_blocks_admin_not_the_whole_service(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Admin bloqueado")
+        db.create_user(
+            "blocked-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "SECRET_KEY", "x" * 64),
+            patch.object(config, "ADMIN_EMAIL", "blocked-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", True),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", ""),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", ""),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                self.assertEqual(client.get("/health").status_code, 200)
+                client.post("/login", data={
+                    "email": "blocked-admin@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                admin = client.get("/admin", follow_redirects=False)
+        self.assertEqual(admin.status_code, 303)
+        self.assertEqual(admin.headers["location"], "/login")
 
     def test_admin_sees_internal_readiness_instead_of_the_customer(self):
         from starlette.testclient import TestClient

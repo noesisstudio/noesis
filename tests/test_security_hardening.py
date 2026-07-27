@@ -9,7 +9,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from unittest.mock import patch
 
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from hypothesis import given, settings, strategies as st
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.testclient import TestClient
 
 from noesis import config, db
@@ -79,6 +82,44 @@ class SecurityHardeningTestCase(unittest.TestCase):
             logout = client.post("/logout")
             self.assertEqual(logout.history[0].headers["clear-site-data"],
                              '"cache", "cookies", "storage"')
+
+    def test_railway_healthcheck_host_is_allowed_without_opening_other_hosts(self):
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "BASE_URL", "https://bynoesis.com"),
+            patch.dict(
+                "os.environ",
+                {
+                    "RAILWAY_ENVIRONMENT": "production",
+                    "RAILWAY_PRIVATE_DOMAIN": "noesis.railway.internal",
+                    "NOESIS_ALLOWED_HOSTS": "www.bynoesis.com",
+                },
+                clear=True,
+            ),
+        ):
+            allowed_hosts = config.build_allowed_hosts()
+
+        self.assertIn("healthcheck.railway.app", allowed_hosts)
+        self.assertNotIn("*", allowed_hosts)
+
+        probe = FastAPI()
+        probe.add_middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=allowed_hosts,
+            www_redirect=False,
+        )
+
+        @probe.get("/ready")
+        def ready():
+            return JSONResponse({"status": "ready"})
+
+        with TestClient(probe) as client:
+            accepted = client.get(
+                "/ready", headers={"Host": "healthcheck.railway.app"}
+            )
+            rejected = client.get("/ready", headers={"Host": "evil.example"})
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(rejected.status_code, 400)
 
     def test_declared_oversized_request_is_rejected_before_parsing(self):
         with patch.object(config, "MAX_REQUEST_BYTES", 10), TestClient(server.app) as client:

@@ -27,7 +27,7 @@ usa la vista de grafo para navegar.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
-- [[Despliegue]] — cómo operar Noesis online 24/7 en app.bynoesis.com.
+- [[Despliegue]] — cómo operar Noesis online 24/7 en bynoesis.com.
 - [[Decisiones]] — registro de decisiones importantes (y por qué).
 - [[Metodo-operativo-Fable]] — el criterio de trabajo, heredable por Opus y Codex.
 - [[Preguntas-abiertas]] — dudas que esperan respuesta del founder.

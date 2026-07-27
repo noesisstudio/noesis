@@ -148,6 +148,8 @@ def google_start(request: Request, flow: str = "login", plan: str = "",
                  billing: str = "monthly", intent: str = "trial"):
     """Empieza OAuth con state de un solo uso y no filtra el secreto al cliente."""
     flow = "signup" if flow == "signup" else "login"
+    if flow == "signup" and not config.public_signup_available():
+        return RedirectResponse("/onboarding", status_code=303)
     plan, billing, intent = _signup_selection(plan, billing, intent)
     if not config.google_oauth_available():
         return RedirectResponse(
@@ -368,6 +370,12 @@ def access_request_submit(
 @router.get("/onboarding", response_class=HTMLResponse)
 def onboarding(request: Request, error: str = "", plan: str = "",
                billing: str = "monthly", intent: str = "trial"):
+    if not config.public_signup_available():
+        return TEMPLATES.TemplateResponse(
+            request, "registro-cerrado.html",
+            {"contact_email": config.PUBLIC_CONTACT_EMAIL},
+            status_code=503,
+        )
     selected_plan, selected_billing, selected_intent = _signup_selection(
         plan, billing, intent
     )
@@ -388,6 +396,12 @@ def onboarding_signup(request: Request, name: str = Form(...),
                       sector: str = Form(""), acepto: str = Form(""),
                       plan: str = Form("autonomo"), billing: str = Form("monthly"),
                       intent: str = Form("trial")):
+    if not config.public_signup_available():
+        return TEMPLATES.TemplateResponse(
+            request, "registro-cerrado.html",
+            {"contact_email": config.PUBLIC_CONTACT_EMAIL},
+            status_code=503,
+        )
     plan, billing, intent = _signup_selection(plan, billing, intent)
     onboarding_query = (
         f"&plan={plan}&billing={billing}&intent={intent}"
@@ -432,7 +446,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
     )
     # Evidencia de consentimiento: quién aceptó qué versión, cuándo y desde dónde.
     db.record_product_event(biz["id"], "legal_accepted", json.dumps({
-        "version": "2026-06-30",
+        "version": config.LEGAL_DOCUMENT_VERSION,
         "documents": ["terminos", "privacidad", "encargado-tratamiento"],
         "ip": auth.client_ip(request),
     }))
@@ -443,6 +457,12 @@ def onboarding_signup(request: Request, name: str = Form(...),
 def onboarding_google(request: Request, error: str = "", plan: str = "",
                       billing: str = "monthly", intent: str = "trial"):
     """Completa los datos de negocio tras verificar el correo con Google."""
+    if not config.public_signup_available():
+        return TEMPLATES.TemplateResponse(
+            request, "registro-cerrado.html",
+            {"contact_email": config.PUBLIC_CONTACT_EMAIL},
+            status_code=503,
+        )
     profile = request.session.get("google_signup")
     if not isinstance(profile, dict) or not auth.valid_email(str(profile.get("email") or "")):
         return RedirectResponse("/onboarding", status_code=303)
@@ -466,6 +486,12 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
                              plan: str = Form("autonomo"),
                              billing: str = Form("monthly"),
                              intent: str = Form("trial")):
+    if not config.public_signup_available():
+        return TEMPLATES.TemplateResponse(
+            request, "registro-cerrado.html",
+            {"contact_email": config.PUBLIC_CONTACT_EMAIL},
+            status_code=503,
+        )
     profile = request.session.get("google_signup")
     email = str(profile.get("email") or "").strip().lower() if isinstance(profile, dict) else ""
     plan, billing, intent = _signup_selection(plan, billing, intent)
@@ -504,7 +530,7 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
         }, separators=(",", ":")),
     )
     db.record_product_event(biz["id"], "legal_accepted", json.dumps({
-        "version": "2026-06-30",
+        "version": config.LEGAL_DOCUMENT_VERSION,
         "documents": ["terminos", "privacidad", "encargado-tratamiento"],
         "ip": auth.client_ip(request),
         "signup_method": "google",
