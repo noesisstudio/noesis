@@ -142,8 +142,10 @@ jobs:
       - name: Instalar el proyecto
         run: uv sync --locked
 
-      - name: Aplicar migraciones en Postgres
-        run: uv run python -m noesis.migrations upgrade
+      - name: Aplicar migraciones en Postgres con datos históricos
+        run: |
+          uv run python -m noesis.migrations upgrade 32
+          uv run python tests/postgres_migration_smoke.py
 
       - name: Ejecutar humo Postgres
         run: uv run python tests/postgres_smoke.py

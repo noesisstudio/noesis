@@ -2333,6 +2333,15 @@ $$ LANGUAGE plpgsql
     )
 
 
+def _drop_issued_invoice_integrity(conn) -> None:
+    """Retira temporalmente el guardián para backfills dentro de una migración."""
+    if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_delete")
+        return
+    conn.execute("DROP TRIGGER IF EXISTS invoices_issued_integrity ON invoices")
+
+
 def _upgrade_invoice_legal_integrity(conn) -> None:
     """Cierra vías antiguas para duplicar o reescribir facturas emitidas."""
     duplicate = conn.execute(
@@ -2354,11 +2363,8 @@ def _upgrade_invoice_legal_integrity(conn) -> None:
 
 
 def _downgrade_invoice_legal_integrity(conn) -> None:
-    if conn.dialect == "sqlite":
-        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
-        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_delete")
-    else:
-        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_integrity ON invoices")
+    _drop_issued_invoice_integrity(conn)
+    if conn.dialect == "postgres":
         conn.execute("DROP FUNCTION IF EXISTS noesis_issued_invoice_integrity()")
     conn.execute("DROP INDEX IF EXISTS idx_invoices_business_number_unique")
 
@@ -2697,6 +2703,11 @@ CREATE INDEX IF NOT EXISTS idx_verifactu_cancellation_due
             "ON CONFLICT (business_id, code) DO NOTHING",
             (code, name, document_type, prefix, now),
         )
+    # La migración 32 protege también ``series_id``. Para asignar una serie a las
+    # facturas históricas emitidas debemos retirar ese trigger solo durante este
+    # backfill transaccional y reinstalarlo inmediatamente después. En Postgres, un
+    # fallo revierte también el DROP; las facturas nunca quedan desprotegidas.
+    _drop_issued_invoice_integrity(conn)
     conn.execute(
         "UPDATE invoices SET series_id=(SELECT s.id FROM invoice_series s "
         "WHERE s.business_id=invoices.business_id AND s.is_default=TRUE AND "
@@ -2705,6 +2716,7 @@ CREATE INDEX IF NOT EXISTS idx_verifactu_cancellation_due
         "WHERE series_id IS NULL",
         ("R%",),
     )
+    _install_issued_invoice_integrity(conn)
     conn.execute(
         "INSERT INTO invoice_lines "
         "(business_id, invoice_id, position, description, quantity, unit_price, "
@@ -2715,10 +2727,6 @@ CREATE INDEX IF NOT EXISTS idx_verifactu_cancellation_due
         "l.business_id=i.business_id AND l.invoice_id=i.id)"
     )
     _install_invoice_lines_integrity(conn)
-    if conn.dialect == "sqlite":
-        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
-        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_delete")
-    _install_issued_invoice_integrity(conn)
     _expand_professional_invoice_events(conn)
     if conn.dialect == "sqlite":
         conn.executescript(

@@ -29,6 +29,72 @@ SUPPLIER_NIF = "B22222222"  # pragma: allowlist secret
 TEST_IBAN = "ES9121000418450200051332"  # pragma: allowlist secret
 
 
+class HistoricalInvoiceMigrationTestCase(unittest.TestCase):
+    def test_schema_33_backfills_issued_invoice_and_restores_immutability(self):
+        tempdir = tempfile.TemporaryDirectory()
+        old_path = config.DB_PATH
+        old_url = config.DATABASE_URL
+        config.DATABASE_URL = ""
+        config.DB_PATH = Path(tempdir.name) / "migration-32.db"
+        try:
+            migrations.upgrade(32)
+            now = datetime.now().isoformat(timespec="seconds")
+            with db.get_conn() as conn:
+                business = conn.execute(
+                    "INSERT INTO businesses "
+                    "(name, owner_email, sector, created_at) VALUES (?, ?, ?, ?) "
+                    "RETURNING id",
+                    ("Histórico", "historico@example.com", "Servicios", now),
+                ).fetchone()
+                client = conn.execute(
+                    "INSERT INTO clients "
+                    "(business_id, name, nif, address, created_at) "
+                    "VALUES (?, ?, ?, ?, ?) RETURNING id",
+                    (
+                        business["id"], "Cliente", CLIENT_NIF,
+                        "Calle Cliente 1", now,
+                    ),
+                ).fetchone()
+                invoice = conn.execute(
+                    "INSERT INTO invoices "
+                    "(business_id, number, client_id, concept, base, vat_rate, "
+                    "vat_amount, irpf_rate, irpf_amount, total, status, issued_at, "
+                    "issuer_name, issuer_nif, issuer_address, recipient_name, "
+                    "recipient_nif, recipient_address, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                    "RETURNING id",
+                    (
+                        business["id"], "2026/0001", client["id"], "Servicio",
+                        100, 21, 21, 0, 0, 121, "emitida", now, "Histórico",
+                        ISSUER_NIF, "Calle Negocio 1", "Cliente", CLIENT_NIF,
+                        "Calle Cliente 1", now,
+                    ),
+                ).fetchone()
+
+            self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
+            with db.get_conn() as conn:
+                migrated = conn.execute(
+                    "SELECT series_id FROM invoices WHERE id=?",
+                    (invoice["id"],),
+                ).fetchone()
+                line_count = conn.execute(
+                    "SELECT COUNT(*) AS total FROM invoice_lines WHERE invoice_id=?",
+                    (invoice["id"],),
+                ).fetchone()["total"]
+            self.assertIsNotNone(migrated["series_id"])
+            self.assertEqual(line_count, 1)
+            with self.assertRaises(db.IntegrityError):
+                with db.get_conn() as conn:
+                    conn.execute(
+                        "UPDATE invoices SET concept='Alteración' WHERE id=?",
+                        (invoice["id"],),
+                    )
+        finally:
+            config.DB_PATH = old_path
+            config.DATABASE_URL = old_url
+            tempdir.cleanup()
+
+
 class BackendTestCase(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()

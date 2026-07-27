@@ -23,6 +23,34 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-27 11:44 — migración profesional compatible con facturas emitidas
+
+- **Autor/agente:** Codex.
+- **Objetivo:** resolver el `CheckViolation` real de Railway al aplicar el salto
+  32 → 33 sobre una factura ya emitida, sin rebajar su inmutabilidad posterior.
+- **Áreas y archivos:** helper y backfill en `migrations.py`; regresión unitaria en
+  `test_backend.py`; nuevo humo `postgres_migration_smoke.py`; secuencia PostgreSQL
+  de GitHub Actions; estado, mapa, QA y este registro.
+- **Cambios de datos/migración:** no cambia la versión (35) ni añade columnas. La
+  migración 33 asigna la serie y línea históricas con el trigger de cabecera
+  suspendido solo durante el backfill y restaurado inmediatamente.
+- **Pruebas ejecutadas:** 352 pruebas verdes en 235,4 s; regresión específica
+  SQLite, compilación, Ruff, Bandit, `pip-audit`, YAML, fuente de verdad y
+  `git diff --check` verdes. El nuevo escenario PostgreSQL se completa en CI antes
+  de considerar publicable el arreglo.
+- **Dependencias o validaciones externas:** el error procede del predeploy real de
+  Railway; no se accedió ni modificó manualmente la base de producción.
+- **Riesgo/punto probable de fallo:** una excepción durante el backfill. PostgreSQL
+  revierte toda la transacción, incluido el `DROP TRIGGER`; la prueba confirma que
+  el guardián vuelve a impedir cambios al terminar.
+- **Diagnóstico y rollback:** el síntoma original es
+  `psycopg.errors.CheckViolation: una factura emitida no puede alterarse` en el
+  `UPDATE invoices SET series_id`. Si reaparece, no editar la factura ni borrar el
+  trigger manualmente: conservar el despliegue anterior y revisar el job de
+  migración histórica. Revertir el commit no requiere downgrade de esquema.
+- **Estado de publicación:** incluido en el commit asociado sobre `main`; pendiente
+  de CI, nuevo predeploy Railway y validación de la versión pública.
+
 ## 2026-07-27 11:24 — apertura comercial verificable y corrección P0
 
 - **Autor/agente:** Codex.

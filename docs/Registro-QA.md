@@ -1,5 +1,26 @@
 # Registro de QA
 
+## 2026-07-27 — regresión de migración 32 → 33 con factura emitida
+
+- Railway reveló un caso que el humo anterior no cubría: producción tenía una
+  factura emitida sin `series_id`; la migración 33 intentaba asignárselo después de
+  que la migración 32 ya hubiese instalado el trigger de inmutabilidad. PostgreSQL
+  abortaba correctamente con `CheckViolation`.
+- El backfill retira únicamente el trigger de cabecera, asigna la serie y lo
+  reinstala inmediatamente. En PostgreSQL todo ocurre dentro de la misma transacción:
+  si falla, el `DROP` también se revierte. La protección permanente no se relaja.
+- Nueva regresión SQLite: parte exactamente del esquema 32, inserta una factura
+  emitida, migra a 35, verifica serie y línea y confirma que modificar después el
+  concepto vuelve a fallar.
+- El job PostgreSQL ahora migra primero a 32, inserta una factura emitida histórica,
+  ejecuta 32 → 35, verifica serie/línea y prueba el trigger restaurado antes de
+  recorrer las rutas calientes. Ya no valida solo una base vacía.
+- Suite completa final: **352 pruebas verdes en 235,4 s**. Ruff, Bandit,
+  `pip-audit`, compilación, YAML, fuente de verdad y `git diff --check` verdes.
+  La aceptación definitiva exige ambos jobs CI verdes y repetir el despliegue
+  Railway; no se tocó la base real desde local ni se desactivó ningún control en
+  producción.
+
 ## 2026-07-27 — puerta de apertura, verdad pública y dependencias
 
 - Suite completa: **351 pruebas verdes en 255,8 s**. Después de centralizar la

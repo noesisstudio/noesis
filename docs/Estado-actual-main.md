@@ -59,6 +59,10 @@
 - Una anulación Veri*Factu nunca borra la factura: exige confirmación escrita,
   conserva el alta, crea otro registro inmutable con huella oficial, lo encadena al
   anterior y lo remite mediante una cola durable independiente.
+- La actualización de facturación profesional admite datos reales del esquema 32:
+  asigna serie y línea a facturas ya emitidas dentro de la transacción de migración
+  y reinstala inmediatamente la inmutabilidad. El CI reproduce este salto con una
+  factura emitida tanto en SQLite como en PostgreSQL.
 
 ## Política comercial en el código actual
 

@@ -8,6 +8,9 @@
 - `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 35;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
+  El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
+  transaccional, asigna serie/línea a las emitidas históricas y lo reinstala antes
+  de continuar.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación

@@ -2,7 +2,7 @@
   "state_date": "2026-07-27",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 35,
-  "verified_test_count": 351,
+  "verified_test_count": 352,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -53,6 +53,7 @@
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",
     "email_delivery": "implemented_durable_outbox_with_retry",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
+    "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",
     "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
