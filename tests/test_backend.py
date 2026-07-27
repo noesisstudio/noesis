@@ -4589,6 +4589,34 @@ class AdminCommandCenterTestCase(unittest.TestCase):
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
 
+    def test_missing_required_google_blocks_admin_not_the_whole_service(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Admin bloqueado")
+        db.create_user(
+            "blocked-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "SECRET_KEY", "x" * 64),
+            patch.object(config, "ADMIN_EMAIL", "blocked-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", True),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", ""),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", ""),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                self.assertEqual(client.get("/health").status_code, 200)
+                client.post("/login", data={
+                    "email": "blocked-admin@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                admin = client.get("/admin", follow_redirects=False)
+        self.assertEqual(admin.status_code, 303)
+        self.assertEqual(admin.headers["location"], "/login")
+
     def test_admin_sees_internal_readiness_instead_of_the_customer(self):
         from starlette.testclient import TestClient
         from noesis.web import server

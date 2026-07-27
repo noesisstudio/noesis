@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-07-27 — admin fail-closed sin convertirlo en caída global
+
+- Tras superar correctamente la migración real, Railway falló en el arranque. El
+  botón Google ausente y el guard de startup identifican la configuración admin
+  pendiente como causa más probable.
+- La autorización de `/admin` ya exige una sesión cuyo `auth_provider` sea Google.
+  Sin credenciales no existe forma de obtenerla, por lo que se mantiene bloqueado.
+  El startup registra un error operativo, pero permite `/health`, login y paneles de
+  clientes.
+- Nueva prueba: simula producción con Google obligatorio y sin credenciales, inicia
+  el servidor, confirma `/health` en 200, autentica al administrador por contraseña
+  y verifica que `/admin` redirige a login. Total del proyecto: **353 pruebas**.
+- Google OAuth real sigue siendo P0 antes de usar el centro fundador; esta corrección
+  preserva seguridad y evita que su ausencia deje sin servicio a los autónomos.
+
 ## 2026-07-27 — regresión de migración 32 → 33 con factura emitida
 
 - Railway reveló un caso que el humo anterior no cubría: producción tenía una
@@ -62,8 +77,9 @@
   correcta. El simulacro independiente vuelve a restaurar el último SQLite y valida
   el manifiesto documental, registra duración/resultado y nunca toca la base activa.
 - Admin: entrar al panel y descargar la copia quedan auditados con IDs internos y
-  `request_id`; producción exige Google OAuth incluso si faltan credenciales, caso
-  en que el arranque falla de forma segura.
+  `request_id`; producción exige Google OAuth. La implementación inicial hacía
+  fallar todo el arranque si faltaban credenciales; desde la corrección del
+  2026-07-27 falla cerrado solo `/admin` y conserva disponibles los clientes.
 - Pruebas específicas de operaciones, hardening, backups y readiness: 24 verdes.
   Suite completa final: **347 pruebas verdes en 239,9 s**. PostgreSQL 16 se completa
   en CI

@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-27 11:54 — admin bloqueado sin caída global
+
+- **Autor/agente:** Codex.
+- **Objetivo:** conservar Google OAuth obligatorio para `/admin` sin impedir que
+  arranque todo el SaaS cuando sus credenciales todavía no están configuradas.
+- **Áreas y archivos:** startup web, regresión HTTP, arquitectura, decisión, estado,
+  QA y este registro.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** la prueba específica inicia producción simulada, confirma
+  `/health` y demuestra que una sesión admin por contraseña no accede a `/admin`.
+  El CI completo se exige antes de validar el despliegue.
+- **Dependencias o validaciones externas:** Google OAuth real sigue sin credenciales;
+  Railway debe repetir el arranque y el healthcheck.
+- **Riesgo/punto probable de fallo:** creer que el admin está disponible porque la
+  app arranca. `noesis-doctor --strict` conserva Google como bloqueo y `/admin`
+  requiere `auth_provider=google`.
+- **Diagnóstico y rollback:** revisar el error operativo de startup y el diagnóstico
+  Google. Revertir recuperaría la caída global, no una protección adicional del
+  panel, por lo que no se recomienda.
+- **Estado de publicación:** incluido en el commit asociado; pendiente de CI y
+  despliegue Railway.
+
 ## 2026-07-27 11:44 — migración profesional compatible con facturas emitidas
 
 - **Autor/agente:** Codex.

@@ -314,7 +314,9 @@ necesita saber qué pasa sin dar a una IA permisos de seguridad ni crear una fal
 sensación de certificación.
 
 Producción exige Google OAuth para el administrador aunque falten credenciales: en
-ese caso el arranque falla de forma explícita. Los documentos pueden usar ClamAV
+ese caso `/admin` falla cerrado, pero no se interrumpe el servicio de todos los
+clientes. El diagnóstico interno y `noesis-doctor --strict` siguen marcándolo como
+bloqueo hasta configurarlo. Los documentos pueden usar ClamAV
 privado por streaming y fallo cerrado. Cada backup se restaura al crearlo y un
 simulacro semanal independiente vuelve a verificar el último juego. Pentest, MFA de
 la cuenta Google, restauración desde otro proveedor, RGPD y red siguen siendo

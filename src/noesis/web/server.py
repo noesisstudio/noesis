@@ -211,8 +211,13 @@ def _startup() -> None:
             "NOESIS_SECRET es obligatoria en producción y debe tener al menos 32 caracteres."
         )
     if config.ADMIN_REQUIRE_GOOGLE_OAUTH and not config.google_oauth_available():
-        raise RuntimeError(
-            "El acceso admin exige Google OAuth, pero faltan sus credenciales."
+        # El panel ya falla cerrado en ``routers.admin._is_admin``: sin un inicio
+        # real de Google ninguna sesión puede entrar. Mantener disponible el resto
+        # del SaaS evita que una credencial administrativa pendiente tumbe a todos
+        # los autónomos durante un despliegue.
+        log.error(
+            "El panel admin permanece bloqueado: exige Google OAuth y faltan "
+            "sus credenciales. El resto del servicio puede arrancar."
         )
     if config.CLAMAV_REQUIRED and not config.CLAMAV_HOST:
         raise RuntimeError(
