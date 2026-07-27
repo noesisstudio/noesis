@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-27 12:05 — healthcheck Railway compatible con hosts cerrados
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir que Railway valide `/ready` sin relajar la protección
+  contra cabeceras `Host` falsificadas.
+- **Áreas y archivos:** configuración de hosts, regresión de seguridad, arquitectura,
+  estado verificable, QA y este registro.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** suite completa de **354 pruebas verdes en 223,9 s**; la
+  nueva regresión acepta `healthcheck.railway.app`, rechaza `evil.example` y
+  confirma que no se introduce `*`. Ruff, compilación, fuente de verdad y
+  `git diff --check` verdes.
+- **Dependencias o validaciones externas:** la documentación oficial de Railway
+  identifica `healthcheck.railway.app` como el hostname exacto de sus comprobaciones.
+- **Riesgo/punto probable de fallo:** una futura modificación del hostname por
+  Railway o que `/ready` devuelva 503 por una migración realmente pendiente.
+- **Diagnóstico y rollback:** ante un despliegue fallido, distinguir en los logs un
+  rechazo de host de un `not_ready`; revertir este commit devuelve la lista anterior,
+  pero volvería a bloquear el healthcheck actual de Railway.
+- **Estado de publicación:** corrección local verificada; pendiente de CI, despliegue
+  y comprobación HTTP real al escribir esta entrada.
+
 ## 2026-07-27 11:54 — admin bloqueado sin caída global
 
 - **Autor/agente:** Codex.

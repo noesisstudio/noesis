@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-07-27 — host del healthcheck de Railway
+
+- Los logs confirmaron que Uvicorn completaba el startup; la advertencia de Google
+  solo mantenía cerrado `/admin`. La caída era posterior, durante el healthcheck.
+- Railway documenta que sus healthchecks usan `Host: healthcheck.railway.app`.
+  `TrustedHostMiddleware` lo rechazaba porque Noesis solo admitía el dominio público,
+  el privado y localhost.
+- La configuración añade ese host exacto únicamente cuando existe
+  `RAILWAY_ENVIRONMENT`; no acepta comodines ni cambia los hosts de instalaciones
+  ajenas a Railway.
+- Nueva prueba de regresión: el host de Railway obtiene 200 en una ruta de prueba,
+  `evil.example` obtiene 400 y la lista no contiene `*`. Módulo específico:
+  **9 pruebas verdes**. Suite completa: **354 pruebas verdes en 223,9 s**; pendiente
+  CI y healthcheck real antes de declarar producción recuperada.
+
 ## 2026-07-27 — admin fail-closed sin convertirlo en caída global
 
 - Tras superar correctamente la migración real, Railway falló en el arranque. El

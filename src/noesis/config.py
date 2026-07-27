@@ -202,19 +202,36 @@ CANONICAL_PUBLIC_HOST = os.getenv(
 # Host header: en producción solo se aceptan el dominio público y los hosts
 # declarados explícitamente. Evita que enlaces y redirecciones se construyan con un
 # Host falsificado. En local se mantiene abierto para TestClient y desarrollo.
-_base_host = urlsplit(BASE_URL).hostname or ""
-_configured_hosts = [
-    host.strip().lower()
-    for host in os.getenv("NOESIS_ALLOWED_HOSTS", "").split(",")
-    if host.strip()
-]
-_railway_private_host = os.getenv("RAILWAY_PRIVATE_DOMAIN", "").strip().lower()
-ALLOWED_HOSTS = list(dict.fromkeys(
-    _configured_hosts
-    + ([_base_host] if _base_host else [])
-    + ([_railway_private_host] if _railway_private_host else [])
-    + ["localhost", "127.0.0.1"]
-)) if IS_PRODUCTION else ["*"]
+def build_allowed_hosts() -> list[str]:
+    if not IS_PRODUCTION:
+        return ["*"]
+
+    base_host = urlsplit(BASE_URL).hostname or ""
+    configured_hosts = [
+        host.strip().lower()
+        for host in os.getenv("NOESIS_ALLOWED_HOSTS", "").split(",")
+        if host.strip()
+    ]
+    railway_private_host = os.getenv(
+        "RAILWAY_PRIVATE_DOMAIN", ""
+    ).strip().lower()
+    # Railway usa este Host exacto durante el healthcheck previo a activar un
+    # despliegue. Solo se admite dentro de Railway; no se abre un comodín.
+    railway_healthcheck_host = (
+        "healthcheck.railway.app"
+        if os.getenv("RAILWAY_ENVIRONMENT", "").strip()
+        else ""
+    )
+    return list(dict.fromkeys(
+        configured_hosts
+        + ([base_host] if base_host else [])
+        + ([railway_private_host] if railway_private_host else [])
+        + ([railway_healthcheck_host] if railway_healthcheck_host else [])
+        + ["localhost", "127.0.0.1"]
+    ))
+
+
+ALLOWED_HOSTS = build_allowed_hosts()
 
 # Identidad legal y apertura comercial. En producción, el alta pública permanece
 # cerrada por defecto y nunca se habilita si faltan los datos que el cliente debe
