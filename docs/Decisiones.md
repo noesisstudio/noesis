@@ -2,6 +2,21 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Los backfills de migración deben desactivar el disparador de inmutabilidad, no esquivarlo (2026-07-27)
+
+Una migración que rellena retroactivamente un campo nuevo en filas ya existentes
+(por ejemplo `series_id` en facturas ya emitidas) puede chocar con un disparador de
+inmutabilidad instalado por una migración anterior en la misma cadena. La solución
+correcta no es debilitar el disparador ni excluir esas filas del backfill: es
+desactivarlo justo antes de la escritura histórica y reinstalarlo
+(`_install_issued_invoice_integrity` u homólogo) inmediatamente después, dentro de
+la misma función de migración. Motivo: el dato retroactivo no es una alteración de
+factura por parte de un usuario, es completar metadatos que no existían cuando la
+factura se emitió; pero cualquier migración futura que backfillee un campo listado
+en `_IMMUTABLE_INVOICE_FIELDS` (o su equivalente en `invoice_lines`) sobre filas no
+`borrador` debe repetir este mismo patrón o volverá a romper cualquier base con
+facturas ya emitidas.
+
 ## WhatsApp prepara; un segundo consentimiento emite y entrega (2026-07-20)
 
 `Factura a Marta…` y `ticket de venta…` crean siempre un borrador. La referencia

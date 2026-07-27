@@ -1,5 +1,27 @@
 # Registro de QA
 
+## 2026-07-27 — migración de facturación profesional con facturas ya emitidas
+
+- Reproducido el fallo real: copia SQLite local con facturas en estado `enviada` y
+  `cobrada` generadas antes de llegar a schema 35. `python -c "from noesis import
+  db; db.init_db()"` fallaba con `sqlite3.IntegrityError: una factura emitida no
+  puede alterarse` en `_upgrade_professional_invoicing`.
+- Tras el arreglo: la misma base migra `0 -> ... -> 35` sin error. Verificado por
+  consulta directa: `schema_migrations` llega a 35, las facturas emitidas quedan con
+  `series_id` relleno (no `NULL`) y los triggers `invoices_issued_immutable_update` /
+  `invoices_issued_immutable_delete` siguen presentes tras la migración.
+- Verificación de que la inmutabilidad sigue activa: un `UPDATE invoices SET
+  series_id=999999 WHERE status<>'borrador'` posterior a la migración sigue siendo
+  rechazado por SQLite con el mismo mensaje de error legal.
+- Suite completa: **345 pruebas verdes / 347** en ~57 s. Los 2 fallos son
+  `test_backups.py::VerifiedBackupTestCase` comparando `PosixPath` con y sin el
+  prefijo `/private` que macOS antepone a `/var` por symlink; no reproducen en Linux/CI
+  y no están relacionados con este cambio. `Ruff` no ejecutado en este ciclo (cambio
+  acotado a una función de migración, sin tocar estilo).
+- Pendiente: confirmar en CI (Linux, PostgreSQL 16 y SQLite) que el ciclo
+  `0 -> 35 -> 0 -> 35` sigue limpio como en el registro del 2026-07-21; no se pudo
+  ejecutar Postgres en este entorno local.
+
 ## 2026-07-21 — bitácora CISO, antivirus y simulacro de restauración
 
 - Migración 35: crea `security_events`, instala triggers append-only en SQLite y
