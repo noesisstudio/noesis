@@ -1,7 +1,7 @@
 {
   "state_date": "2026-07-27",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 35,
+  "schema_version": 36,
   "verified_test_count": 354,
   "production": {
     "url": "https://bynoesis.com",
@@ -46,6 +46,7 @@
     "onboarding_sector_capture": "free_text_up_to_80_characters",
     "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",
     "public_opening_gate": "production_signup_fail_closed_until_legal_identity_and_explicit_enable_existing_accounts_keep_access",
+    "access_requests": "schema_36_public_form_stored_with_plan_interest_rate_limited_honeypot_founder_approves_and_invitation_link_lets_owner_set_own_password",
     "legal_consent_version": "single_source_shared_by_pages_and_account_events",
     "capability_promises": "public_copy_reflects_runtime_voice_and_image_reading_availability",
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",
