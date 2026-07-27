@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Publicar el candidato, aplicar migración 35 y verificar dominio canónico, puerta de alta pública cerrada, identidad legal, Google OAuth admin, bitácora CISO, ClamAV privado, copia externa y restauración; después rotar secretos expuestos y repetir los flujos reales de Meta, Stripe, SMTP, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, SMTP, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

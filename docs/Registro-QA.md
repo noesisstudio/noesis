@@ -12,8 +12,11 @@
   ajenas a Railway.
 - Nueva prueba de regresión: el host de Railway obtiene 200 en una ruta de prueba,
   `evil.example` obtiene 400 y la lista no contiene `*`. Módulo específico:
-  **9 pruebas verdes**. Suite completa: **354 pruebas verdes en 223,9 s**; pendiente
-  CI y healthcheck real antes de declarar producción recuperada.
+  **9 pruebas verdes**. Suite completa: **354 pruebas verdes en 223,9 s**.
+- CI real verde: suite, migraciones y humo PostgreSQL. Railway activó el despliegue
+  como `success`. Verificación externa final: `/health`, `/ready`, `/`, `/login`
+  responden 200; `/admin` redirige correctamente a `/login` porque Google OAuth
+  todavía no está configurado. Producción recuperada.
 
 ## 2026-07-27 — admin fail-closed sin convertirlo en caída global
 

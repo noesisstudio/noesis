@@ -42,8 +42,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** ante un despliegue fallido, distinguir en los logs un
   rechazo de host de un `not_ready`; revertir este commit devuelve la lista anterior,
   pero volvería a bloquear el healthcheck actual de Railway.
-- **Estado de publicación:** corrección local verificada; pendiente de CI, despliegue
-  y comprobación HTTP real al escribir esta entrada.
+- **Estado de publicación:** publicada en `main`; ambos jobs de CI verdes, despliegue
+  Railway marcado `success` y comprobación real de `/health`, `/ready`, portada y
+  login en 200. `/admin` redirige al login mientras Google OAuth siga sin configurar.
 
 ## 2026-07-27 11:54 — admin bloqueado sin caída global
 
