@@ -15,13 +15,52 @@
 - Se recupera el helper `_drop_issued_invoice_integrity` de Codex, se reutiliza en
   `_upgrade_professional_invoicing` y en `_downgrade_invoice_legal_integrity`
   (antes con la lógica duplicada inline) y se elimina el bloque muerto.
-- También se detectó que el propio merge omitió las entradas de Codex en este
-  archivo y en `Registro-cambios.md` (sí sobrevivió su entrada en
-  `Mapa-codigo.md`); se restauran íntegras a continuación, en su fecha y autoría
-  original, para no perder la bitácora de un incidente real de Railway.
+- También se detectó que el propio merge omitió tres entradas completas de Codex en
+  este archivo y en `Registro-cambios.md` (las de 239ac7e, e5fd731 y 923f1fc/e78e9e4;
+  la de 558d72b sí quedó, la de `Mapa-codigo.md` y `project-state.json` también
+  sobrevivieron intactas). Se restauran íntegras a continuación, en su fecha y
+  autoría original, para no perder la bitácora de un incidente real de Railway con
+  tres caídas de despliegue en cascada y su recuperación.
 - Suite completa tras la limpieza: **352 pruebas verdes / 354** (2 fallos de
   siempre: artefacto macOS `/private/var` vs `/var` en `test_backups.py`, sin
   relación). `ruff check src/noesis/migrations.py`: verde.
+
+## 2026-07-27 — host del healthcheck de Railway (recuperación de producción)
+
+- Los logs confirmaron que Uvicorn completaba el startup; la advertencia de Google
+  solo mantenía cerrado `/admin`. La caída era posterior, durante el healthcheck.
+- Railway documenta que sus healthchecks usan `Host: healthcheck.railway.app`.
+  `TrustedHostMiddleware` lo rechazaba porque Noesis solo admitía el dominio público,
+  el privado y localhost.
+- La configuración añade ese host exacto únicamente cuando existe
+  `RAILWAY_ENVIRONMENT`; no acepta comodines ni cambia los hosts de instalaciones
+  ajenas a Railway.
+- Nueva prueba de regresión: el host de Railway obtiene 200 en una ruta de prueba,
+  `evil.example` obtiene 400 y la lista no contiene `*`. Módulo específico:
+  **9 pruebas verdes**. Suite completa: **354 pruebas verdes en 223,9 s**.
+- CI real verde: suite, migraciones y humo PostgreSQL. Railway activó el despliegue
+  como `success`. Verificación externa final: `/health`, `/ready`, `/`, `/login`
+  responden 200; `/admin` redirige correctamente a `/login` porque Google OAuth
+  todavía no está configurado. **Producción recuperada.**
+- **Autor/agente original de esta entrada:** Codex (restaurada tras perderse en el
+  merge `796e49e`; ver entrada de reconciliación arriba).
+
+## 2026-07-27 — admin fail-closed sin convertirlo en caída global
+
+- Tras superar correctamente la migración real, Railway falló en el arranque. El
+  botón Google ausente y el guard de startup identifican la configuración admin
+  pendiente como causa más probable.
+- La autorización de `/admin` ya exige una sesión cuyo `auth_provider` sea Google.
+  Sin credenciales no existe forma de obtenerla, por lo que se mantiene bloqueado.
+  El startup registra un error operativo, pero permite `/health`, login y paneles de
+  clientes.
+- Nueva prueba: simula producción con Google obligatorio y sin credenciales, inicia
+  el servidor, confirma `/health` en 200, autentica al administrador por contraseña
+  y verifica que `/admin` redirige a login. Total del proyecto: **353 pruebas**.
+- Google OAuth real sigue siendo P0 antes de usar el centro fundador; esta corrección
+  preserva seguridad y evita que su ausencia deje sin servicio a los autónomos.
+- **Autor/agente original de esta entrada:** Codex (restaurada tras perderse en el
+  merge `796e49e`; ver entrada de reconciliación arriba).
 
 ## 2026-07-27 — regresión de migración 32 → 33 con factura emitida
 
@@ -43,6 +82,33 @@
   La aceptación definitiva exige ambos jobs CI verdes y repetir el despliegue
   Railway; no se tocó la base real desde local ni se desactivó ningún control en
   producción.
+- **Autor/agente original de esta entrada:** Codex (restaurada tras perderse en el
+  merge `796e49e`; ver entrada de reconciliación arriba).
+
+## 2026-07-27 — puerta de apertura, verdad pública y dependencias
+
+- Suite completa: **351 pruebas verdes en 255,8 s**. Después de centralizar la
+  versión legal se repitieron 9 pruebas afectadas: alta normal, alta cerrada,
+  bloqueo del acceso directo de Google, páginas legales y diagnóstico de apertura.
+- La apertura en producción se probó con alta desactivada: GET/POST no crean
+  cuentas, Google no inicia un flujo de registro y las cuentas existentes conservan
+  el acceso. El diagnóstico bloquea dominio no canónico e identidad legal ausente;
+  al activar el alta, también exige copia externa, Meta, SMTP, Stripe, voz, lectura
+  de imágenes y ClamAV.
+- Las cuatro páginas legales renderizan en 200 sin marcadores de razón social, NIF,
+  dirección ni etiquetas de borrador. La versión visible y el evento
+  `legal_accepted` usan una única constante (`2026-07-27`).
+- Pillow quedó en 12.3.0 y `pip-audit` no encontró vulnerabilidades conocidas; el
+  paquete local `noesis` se omite porque no existe en PyPI. El extra OCR resuelve
+  `pytesseract` de forma reproducible y `uv lock --check` queda verde.
+- Compilación, Ruff, Bandit, `git diff --check` y ciclo limpio de migraciones
+  `0 -> 35 -> 0 -> 35` verdes. El escaneo de archivos cambiados/nuevos solo devolvió
+  los falsos positivos ya auditados en la baseline; se actualizó únicamente la
+  línea desplazada de `readiness.py`.
+- No se usó navegador por la inestabilidad conocida de la aplicación de escritorio.
+  La evidencia visual y la validación real de Railway/PostgreSQL, dominio, Meta,
+  Stripe, SMTP, Google, audio/OCR, ClamAV, copia externa y AEAT siguen siendo
+  externas y están en [[Tareas-vivas]].
 - **Autor/agente original de esta entrada:** Codex (restaurada tras perderse en el
   merge `796e49e`; ver entrada de reconciliación arriba).
 

@@ -33,8 +33,10 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   local en `migrations.py` y descartando el refactor de Codex (helper
   `_drop_issued_invoice_integrity`, reutilizado en el downgrade), sin dejar marcas
   de conflicto. El resultado funcionaba pero dejaba un bloque duplicado inerte, y
-  las entradas de Codex en este archivo y en `Registro-QA.md` desaparecieron del
-  todo (su entrada en `Mapa-codigo.md` sí sobrevivió).
+  tres entradas completas de Codex sobre el incidente real de Railway (239ac7e,
+  e5fd731, 923f1fc/e78e9e4) desaparecieron de este archivo y de `Registro-QA.md`
+  (su entrada en `Mapa-codigo.md` y sus cambios en `project-state.json` sí
+  sobrevivieron intactos).
 - **Áreas y archivos:** `src/noesis/migrations.py` (recupera el helper y quita el
   bloque duplicado); `docs/Registro-QA.md` y este registro (restauran la entrada
   de Codex perdida, con su autoría y fecha original).
@@ -76,6 +78,83 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `UPDATE invoices SET series_id`. Si reaparece, no editar la factura ni borrar el
   trigger manualmente: conservar el despliegue anterior y revisar el job de
   migración histórica. Revertir el commit no requiere downgrade de esquema.
+- **Estado de publicación:** entrada restaurada tras perderse en el merge
+  `796e49e`; el commit original ya está en `main` desde el 2026-07-27.
+
+## 2026-07-27 11:54 — admin bloqueado sin caída global
+
+- **Autor/agente:** Codex.
+- **Objetivo:** conservar Google OAuth obligatorio para `/admin` sin impedir que
+  arranque todo el SaaS cuando sus credenciales todavía no están configuradas.
+- **Áreas y archivos:** startup web, regresión HTTP, arquitectura, decisión, estado,
+  QA y este registro.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** la prueba específica inicia producción simulada, confirma
+  `/health` y demuestra que una sesión admin por contraseña no accede a `/admin`.
+  El CI completo se exige antes de validar el despliegue.
+- **Dependencias o validaciones externas:** Google OAuth real sigue sin credenciales;
+  Railway debe repetir el arranque y el healthcheck.
+- **Riesgo/punto probable de fallo:** creer que el admin está disponible porque la
+  app arranca. `noesis-doctor --strict` conserva Google como bloqueo y `/admin`
+  requiere `auth_provider=google`.
+- **Diagnóstico y rollback:** revisar el error operativo de startup y el diagnóstico
+  Google. Revertir recuperaría la caída global, no una protección adicional del
+  panel, por lo que no se recomienda.
+- **Estado de publicación:** entrada restaurada tras perderse en el merge
+  `796e49e`; el commit original ya está en `main` desde el 2026-07-27.
+
+## 2026-07-27 12:05 — healthcheck Railway compatible con hosts cerrados
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir que Railway valide `/ready` sin relajar la protección
+  contra cabeceras `Host` falsificadas.
+- **Áreas y archivos:** configuración de hosts, regresión de seguridad, arquitectura,
+  estado verificable, QA y este registro.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** suite completa de **354 pruebas verdes en 223,9 s**; la
+  nueva regresión acepta `healthcheck.railway.app`, rechaza `evil.example` y
+  confirma que no se introduce `*`. Ruff, compilación, fuente de verdad y
+  `git diff --check` verdes.
+- **Dependencias o validaciones externas:** la documentación oficial de Railway
+  identifica `healthcheck.railway.app` como el hostname exacto de sus comprobaciones.
+- **Riesgo/punto probable de fallo:** una futura modificación del hostname por
+  Railway o que `/ready` devuelva 503 por una migración realmente pendiente.
+- **Diagnóstico y rollback:** ante un despliegue fallido, distinguir en los logs un
+  rechazo de host de un `not_ready`; revertir este commit devuelve la lista anterior,
+  pero volvería a bloquear el healthcheck actual de Railway.
+- **Estado de publicación:** publicada en `main`; ambos jobs de CI verdes, despliegue
+  Railway marcado `success` y comprobación real de `/health`, `/ready`, portada y
+  login en 200. `/admin` redirige al login mientras Google OAuth siga sin configurar.
+  **Producción recuperada.** (Entrada restaurada tras perderse en el merge
+  `796e49e`.)
+
+## 2026-07-27 11:24 — apertura comercial verificable y corrección P0
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir las divergencias críticas detectadas en la auditoría:
+  dependencia vulnerable, dominio dividido, textos legales incompletos, apertura
+  pública sin puerta operativa y promesas de audio/OCR no ligadas a disponibilidad.
+- **Áreas y archivos:** configuración y diagnóstico (`config.py`, `readiness.py`,
+  `.env.example`); alta/Google y plantillas públicas/legales; OCR y lock de
+  dependencias; pruebas y documentación viva. El diff exacto queda en el commit.
+- **Cambios de datos/migración:** ninguno; el esquema permanece en 35. La versión
+  de documentos legales se centraliza y cada nueva aceptación registra
+  `2026-07-27`.
+- **Pruebas ejecutadas:** 351 pruebas verdes en 255,8 s; 9 pruebas afectadas
+  repetidas tras el último cambio; compilación, Ruff, Bandit, `pip-audit`,
+  `uv lock --check`, escaneo de secretos de archivos cambiados/nuevos,
+  `git diff --check` y migraciones `0 -> 35 -> 0 -> 35` verdes.
+- **Dependencias o validaciones externas:** no se llamó a Railway, Meta, Google,
+  Stripe, SMTP, Anthropic/Groq, S3, ClamAV ni AEAT. Falta revisión jurídica/fiscal
+  y prueba visual/real; el navegador se evitó por el crash reportado.
+- **Riesgo/punto probable de fallo:** desplegar sin las nuevas variables deja el
+  alta pública cerrada de forma intencionada. Un dominio/callback incoherente o
+  habilitar el alta antes de completar servicios produce bloqueos en
+  `noesis-doctor --strict`, no cuentas parcialmente operativas.
+- **Diagnóstico y rollback:** consultar el centro admin y `noesis-doctor --strict`
+  sin exponer secretos. Ante regresión, revertir el commit de aplicación; no hay
+  rollback de datos. Para reabrir, no se elimina la puerta: se completan variables
+  y se activa `NOESIS_PUBLIC_SIGNUP_ENABLED=true` tras la aceptación P0.
 - **Estado de publicación:** entrada restaurada tras perderse en el merge
   `796e49e`; el commit original ya está en `main` desde el 2026-07-27.
 

@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Apertura pública cerrada por defecto y dominio canónico único (2026-07-27)
+
+En producción, Noesis no acepta nuevas cuentas ni inicia altas con Google mientras
+falten la identidad legal mínima del prestador o la activación explícita
+`NOESIS_PUBLIC_SIGNUP_ENABLED`. Las cuentas ya creadas pueden seguir iniciando
+sesión. La web ofrece solicitar acceso al piloto y no simula que audio, OCR,
+WhatsApp o pagos reales están disponibles si sus adaptadores no están operativos.
+
+El dominio canónico es `https://bynoesis.com`; OAuth, Stripe, Meta, correo y enlaces
+privados deben usarlo de forma coherente. Motivo: impedir consentimientos o cobros
+con textos incompletos, evitar callbacks divididos entre dominios y convertir la
+apertura comercial en una decisión verificable, no en el efecto accidental de un
+despliegue.
+
 ## Los backfills de migración deben desactivar el disparador de inmutabilidad, no esquivarlo (2026-07-27)
 
 Una migración que rellena retroactivamente un campo nuevo en filas ya existentes
@@ -315,7 +329,9 @@ necesita saber qué pasa sin dar a una IA permisos de seguridad ni crear una fal
 sensación de certificación.
 
 Producción exige Google OAuth para el administrador aunque falten credenciales: en
-ese caso el arranque falla de forma explícita. Los documentos pueden usar ClamAV
+ese caso `/admin` falla cerrado, pero no se interrumpe el servicio de todos los
+clientes. El diagnóstico interno y `noesis-doctor --strict` siguen marcándolo como
+bloqueo hasta configurarlo. Los documentos pueden usar ClamAV
 privado por streaming y fallo cerrado. Cada backup se restaura al crearlo y un
 simulacro semanal independiente vuelve a verificar el último juego. Pentest, MFA de
 la cuenta Google, restauración desde otro proveedor, RGPD y red siguen siendo
