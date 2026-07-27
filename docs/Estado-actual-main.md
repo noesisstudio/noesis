@@ -39,6 +39,13 @@
   estilo y vencimiento de factura, medios de cobro, recordatorios, informes,
   gestoría y WhatsApp. Esas elecciones se guardan en el producto y se aplican a la
   operativa; no son una encuesta decorativa.
+- En producción, el alta pública queda cerrada por defecto. No acepta términos,
+  crea cuentas ni inicia el alta con Google hasta configurar la identidad legal
+  mínima y activar expresamente la apertura. Las cuentas existentes siguen entrando
+  y la web cambia sus llamadas a «Solicitar acceso» sin enseñar diagnósticos internos.
+- El diagnóstico previo a apertura comprueba un dominio canónico único, identidad
+  legal, copias externas, WhatsApp, SMTP, Stripe, voz, lectura de imágenes y ClamAV.
+  Las capacidades de audio/OCR se describen en la web según disponibilidad real.
 - La facturación nativa admite borradores editables, varias líneas con cantidad,
   precio, descuento e IVA, series separadas para factura completa, simplificada y
   rectificativa, vencimiento configurable, duplicación y programaciones recurrentes.
@@ -57,9 +64,10 @@
 
 - Catálogo: **29 / 49 / 99 € al mes + IVA**.
 - La prueba dura 14 días y permite operar con normalidad.
-- La web pública permite probar o contratar cada plan en modalidad mensual/anual.
-  Quien contrata configura primero el negocio y después revisa el plan antes de ir
-  al checkout; quien prueba entra al panel sin tarjeta tras la misma puesta en marcha.
+- El código permite probar o contratar cada plan en modalidad mensual/anual. Quien
+  contrata configura primero el negocio y después revisa el plan antes de ir al
+  checkout; quien prueba entra al panel sin tarjeta tras la misma puesta en marcha.
+  En producción esa entrada permanece cerrada hasta superar la puerta de apertura.
 - Al caducar, cancelar o quedar un pago pendiente, el titular puede entrar y consultar
   sus datos, pero no crear, cambiar, enviar ni ejecutar automatizaciones.
 - El bloqueo se aplica en servidor a web/API, portales, WhatsApp, colas y tareas
@@ -82,6 +90,14 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   requiere además cerrar cómo se aplica el IVA. La facturación es nativa y no se
   conecta a otro SaaS. El calendario bidireccional y la conexión bancaria automática
   siguen pendientes; la suscripción ICS y la conciliación CSV ya funcionan en local.
+- La transcripción y el OCR tienen adaptadores y degradación segura, pero requieren
+  desplegar y validar respectivamente Groq/faster-whisper y
+  Tesseract/pytesseract o una extracción externa consentida. Hasta entonces la web
+  no los presenta como capacidades activas.
+- Antes del piloto deben rotarse todos los secretos que hayan aparecido en capturas
+  o documentos compartidos, completar la identidad legal del prestador y someter
+  privacidad, términos y contrato de encargo a revisión jurídica. Ningún secreto
+  propuesto en un informe debe reutilizarse.
 - La entrega de factura por WhatsApp requiere aprobar en Meta la plantilla
   `noesis_factura_lista`; el recorrido interno y la cola ya están construidos.
 - Falta auditoría externa de seguridad, privacidad y fiscalidad, desplegar y probar

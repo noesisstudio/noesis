@@ -1,5 +1,30 @@
 # Registro de QA
 
+## 2026-07-27 — puerta de apertura, verdad pública y dependencias
+
+- Suite completa: **351 pruebas verdes en 255,8 s**. Después de centralizar la
+  versión legal se repitieron 9 pruebas afectadas: alta normal, alta cerrada,
+  bloqueo del acceso directo de Google, páginas legales y diagnóstico de apertura.
+- La apertura en producción se probó con alta desactivada: GET/POST no crean
+  cuentas, Google no inicia un flujo de registro y las cuentas existentes conservan
+  el acceso. El diagnóstico bloquea dominio no canónico e identidad legal ausente;
+  al activar el alta, también exige copia externa, Meta, SMTP, Stripe, voz, lectura
+  de imágenes y ClamAV.
+- Las cuatro páginas legales renderizan en 200 sin marcadores de razón social, NIF,
+  dirección ni etiquetas de borrador. La versión visible y el evento
+  `legal_accepted` usan una única constante (`2026-07-27`).
+- Pillow quedó en 12.3.0 y `pip-audit` no encontró vulnerabilidades conocidas; el
+  paquete local `noesis` se omite porque no existe en PyPI. El extra OCR resuelve
+  `pytesseract` de forma reproducible y `uv lock --check` queda verde.
+- Compilación, Ruff, Bandit, `git diff --check` y ciclo limpio de migraciones
+  `0 -> 35 -> 0 -> 35` verdes. El escaneo de archivos cambiados/nuevos solo devolvió
+  los falsos positivos ya auditados en la baseline; se actualizó únicamente la
+  línea desplazada de `readiness.py`.
+- No se usó navegador por la inestabilidad conocida de la aplicación de escritorio.
+  La evidencia visual y la validación real de Railway/PostgreSQL, dominio, Meta,
+  Stripe, SMTP, Google, audio/OCR, ClamAV, copia externa y AEAT siguen siendo
+  externas y están en [[Tareas-vivas]].
+
 ## 2026-07-21 — bitácora CISO, antivirus y simulacro de restauración
 
 - Migración 35: crea `security_events`, instala triggers append-only en SQLite y

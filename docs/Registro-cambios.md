@@ -23,6 +23,37 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-27 11:24 — apertura comercial verificable y corrección P0
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir las divergencias críticas detectadas en la auditoría:
+  dependencia vulnerable, dominio dividido, textos legales incompletos, apertura
+  pública sin puerta operativa y promesas de audio/OCR no ligadas a disponibilidad.
+- **Áreas y archivos:** configuración y diagnóstico (`config.py`, `readiness.py`,
+  `.env.example`); alta/Google y plantillas públicas/legales; OCR y lock de
+  dependencias; pruebas y documentación viva. El diff exacto queda en el commit.
+- **Cambios de datos/migración:** ninguno; el esquema permanece en 35. La versión
+  de documentos legales se centraliza y cada nueva aceptación registra
+  `2026-07-27`.
+- **Pruebas ejecutadas:** 351 pruebas verdes en 255,8 s; 9 pruebas afectadas
+  repetidas tras el último cambio; compilación, Ruff, Bandit, `pip-audit`,
+  `uv lock --check`, escaneo de secretos de archivos cambiados/nuevos,
+  `git diff --check` y migraciones `0 -> 35 -> 0 -> 35` verdes.
+- **Dependencias o validaciones externas:** no se llamó a Railway, Meta, Google,
+  Stripe, SMTP, Anthropic/Groq, S3, ClamAV ni AEAT. Falta revisión jurídica/fiscal
+  y prueba visual/real; el navegador se evitó por el crash reportado.
+- **Riesgo/punto probable de fallo:** desplegar sin las nuevas variables deja el
+  alta pública cerrada de forma intencionada. Un dominio/callback incoherente o
+  habilitar el alta antes de completar servicios produce bloqueos en
+  `noesis-doctor --strict`, no cuentas parcialmente operativas.
+- **Diagnóstico y rollback:** consultar el centro admin y `noesis-doctor --strict`
+  sin exponer secretos. Ante regresión, revertir el commit de aplicación; no hay
+  rollback de datos. Para reabrir, no se elimina la puerta: se completan variables
+  y se activa `NOESIS_PUBLIC_SIGNUP_ENABLED=true` tras la aceptación P0.
+- **Estado de publicación:** incluido en el commit asociado sobre `main`; pendiente
+  de despliegue y validación real en Railway. Git publicado no equivale a producción
+  verificada.
+
 ## 2026-07-21 — política segura de actualización de dependencias
 
 - **Autor/agente:** Codex.

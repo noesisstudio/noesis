@@ -7,10 +7,13 @@
         <h1>Haz tu trabajo.<span>Noesis te ordena el negocio.</span></h1>
         <p>Trabajos, clientes, documentos, facturas y cobros en orden. Noesis te dice qué importa hoy y prepara el siguiente paso contigo.</p>
         <div class="hero-actions">
-          <a class="btn light" href="/onboarding?intent=trial">Prueba 14 días gratis <span aria-hidden="true">→</span></a>
+          <a class="btn light" href="/onboarding{% if public_signup_available %}?intent=trial{% endif %}">{% if public_signup_available %}Prueba 14 días gratis{% else %}Solicitar acceso al piloto{% endif %} <span aria-hidden="true">→</span></a>
         </div>
         <a class="hero-how" href="/producto#como-funciona">Ver cómo funciona <span aria-hidden="true">→</span></a>
-        <div class="hero-trust" aria-label="Condiciones de la prueba"><span>Sin tarjeta durante la prueba</span><span>Cancela cuando quieras</span></div>
+        <div class="hero-trust" aria-label="Condiciones de acceso">
+          {% if public_signup_available %}<span>Sin tarjeta durante la prueba</span><span>Cancela cuando quieras</span>
+          {% else %}<span>Acceso acompañado</span><span>Tus datos son exportables</span>{% endif %}
+        </div>
       </div>
 
       <div class="hero-operating-proof product-home-preview" data-product-demo aria-label="Panel de Noesis con datos de una empresa de ejemplo">
@@ -939,7 +942,7 @@
                   </div>
                   <div class="card">
                     <div class="card-h"><b>WhatsApp</b><span class="badge b-green">conectado</span></div>
-                    <div class="card-b"><p style="margin:0" class="meta">Tu número de siempre. Texto, notas de voz y fotos de tickets.</p></div>
+                    <div class="card-b"><p style="margin:0" class="meta">{% if voice_available and ocr_available %}Tu número de siempre. Texto, notas de voz y fotos de tickets.{% else %}Texto y documentos desde tu móvil. Audio y lectura automática se activan durante la puesta en marcha.{% endif %}</p></div>
                   </div>
                   <div class="card">
                     <div class="card-h"><b>Tu gestoría</b><span class="badge b-green">cada mes</span></div>
@@ -954,11 +957,11 @@
       </div>
 
       <div class="hero-impact" aria-label="Lo que ganas con Noesis">
-        <div><strong>40 h</strong><span>de papeleo que recuperas cada mes</span></div>
-        <div><strong>30 seg</strong><span>de la nota de voz a la factura enviada</span></div>
-        <div><strong>80 %</strong><span>menos retraso en los cobros</span></div>
+        <div><strong>1 hilo</strong><span>del primer aviso al cobro</span></div>
+        <div><strong>En segundo plano</strong><span>Noesis ordena y prepara el siguiente paso</span></div>
+        <div><strong>Tu control</strong><span>tú confirmas cada acción sensible</span></div>
       </div>
-      <p class="hero-impact-note">Estimación para un negocio de servicios de 1 a 10 personas. Compruébalo en la prueba de 14 días.</p>
+      <p class="hero-impact-note">Sin promesas inventadas: el ahorro real se mide contigo durante el piloto.</p>
     </div>
   </section>
 
@@ -969,7 +972,7 @@
       <p>De la conversación al cobro, con el dato en su sitio y la decisión siempre en tus manos.</p>
     </div>
     <ol class="workflow-line">
-      <li><b>1</b><h3>Te escriben</h3><p>Noesis recoge la petición por WhatsApp, con texto, audio o foto.</p></li>
+      <li><b>1</b><h3>Te escriben</h3><p>{% if voice_available and ocr_available %}Noesis recoge la petición por WhatsApp, con texto, audio o foto.{% else %}Noesis recoge la petición y conserva su contexto. El audio y la lectura de fotos se habilitan al conectar esos servicios.{% endif %}</p></li>
       <li><b>2</b><h3>Organizas</h3><p>Cliente, agenda, presupuesto, materiales y equipo quedan conectados.</p></li>
       <li><b>3</b><h3>Facturas</h3><p>Al cerrar el trabajo, prepara la factura con IVA, IRPF y Veri*Factu.</p></li>
       <li><b>4</b><h3>Cobras</h3><p>Vigila vencimientos y prepara seguimientos para que no persigas pagos.</p></li>
@@ -1004,7 +1007,7 @@
     <div class="section-heading centered">
       <span class="eyebrow">Planes claros</span>
       <h2 id="pricing-title">Empieza solo. Crece sin cambiar de sistema.</h2>
-      <p>Todos los planes incluyen 14 días de prueba, sin tarjeta y sin permanencia.</p>
+      <p>{% if public_signup_available %}Todos los planes incluyen 14 días de prueba, sin tarjeta y sin permanencia.{% else %}Los precios están publicados; el acceso se abre de forma acompañada mientras validamos el servicio completo.{% endif %}</p>
     </div>
     <div class="billing-toggle" role="group" aria-label="Periodicidad de los precios">
       <button class="active" type="button" aria-pressed="true" data-billing-toggle="monthly">Mensual</button>
@@ -1015,24 +1018,30 @@
         <div class="plan-label">Autónomo</div><p class="public-price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para llevar trabajos, clientes, facturas y cobros desde un solo sitio.</p>
+        {% if public_signup_available %}
         <a class="btn full plan-start-link" data-plan="autonomo" href="/onboarding?intent=trial&plan=autonomo&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="autonomo" href="/onboarding?intent=subscribe&plan=autonomo&billing=monthly">Contratar ahora</a>
+        {% else %}<a class="btn full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
       </article>
       <article class="public-price-card recommended" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
         <div class="recommendation-label">Recomendado</div>
         <div class="plan-label">Negocio</div><p class="public-price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para equipos que necesitan trabajos asignados, fichaje y gestoría conectada.</p>
+        {% if public_signup_available %}
         <a class="btn primary full plan-start-link" data-plan="pro" href="/onboarding?intent=trial&plan=pro&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="pro" href="/onboarding?intent=subscribe&plan=pro&billing=monthly">Contratar ahora</a>
+        {% else %}<a class="btn primary full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
       </article>
       <article class="public-price-card" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
         <div class="plan-label">Sin Límites</div><p class="public-price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para un uso intensivo con puesta en marcha acompañada y soporte directo.</p>
         <span class="beta-line">Recepcionista 24/7 · beta con acceso preferente</span>
+        {% if public_signup_available %}
         <a class="btn full plan-start-link" data-plan="premium" href="/onboarding?intent=trial&plan=premium&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="premium" href="/onboarding?intent=subscribe&plan=premium&billing=monthly">Contratar ahora</a>
+        {% else %}<a class="btn full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
       </article>
     </div>
     <div class="center-link"><a class="text-link" href="/precios">Comparar los planes <span aria-hidden="true">→</span></a></div>

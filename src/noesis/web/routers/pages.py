@@ -23,6 +23,23 @@ _PAGES = {
 }
 
 
+def _legal_context() -> dict:
+    """Datos legales públicos; nunca incluye credenciales ni valores internos."""
+    return {
+        "legal_name": config.LEGAL_NAME,
+        "legal_nif": config.LEGAL_NIF,
+        "legal_address": config.LEGAL_ADDRESS,
+        "legal_email": config.LEGAL_EMAIL or config.PUBLIC_CONTACT_EMAIL,
+        "legal_registry": config.LEGAL_REGISTRY,
+        "legal_ready": config.legal_identity_ready(),
+        "legal_document_version": config.LEGAL_DOCUMENT_VERSION,
+        "smtp_provider_name": config.SMTP_PROVIDER_NAME,
+        "smtp_provider_region": config.SMTP_PROVIDER_REGION,
+        "compat_ai_legal_name": config.COMPAT_AI_LEGAL_NAME,
+        "compat_ai_region": config.COMPAT_AI_REGION,
+    }
+
+
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
     bid = request.session.get("bid")
@@ -77,20 +94,17 @@ def service_worker():
 
 @router.get("/privacidad", response_class=HTMLResponse)
 def privacidad(request: Request):
-    return TEMPLATES.TemplateResponse(request, "privacidad.html", {
-        "compat_ai_legal_name": config.COMPAT_AI_LEGAL_NAME,
-        "compat_ai_region": config.COMPAT_AI_REGION,
-    })
+    return TEMPLATES.TemplateResponse(request, "privacidad.html", _legal_context())
 
 
 @router.get("/terminos", response_class=HTMLResponse)
 def terminos(request: Request):
-    return TEMPLATES.TemplateResponse(request, "terminos.html", {})
+    return TEMPLATES.TemplateResponse(request, "terminos.html", _legal_context())
 
 
 @router.get("/aviso-legal", response_class=HTMLResponse)
 def aviso_legal(request: Request):
-    return TEMPLATES.TemplateResponse(request, "aviso-legal.html", {})
+    return TEMPLATES.TemplateResponse(request, "aviso-legal.html", _legal_context())
 
 
 @router.get("/cookies", response_class=HTMLResponse)
@@ -100,10 +114,9 @@ def cookies(request: Request):
 
 @router.get("/encargado-tratamiento", response_class=HTMLResponse)
 def encargado_tratamiento(request: Request):
-    return TEMPLATES.TemplateResponse(request, "encargado-tratamiento.html", {
-        "compat_ai_legal_name": config.COMPAT_AI_LEGAL_NAME,
-        "compat_ai_region": config.COMPAT_AI_REGION,
-    })
+    return TEMPLATES.TemplateResponse(
+        request, "encargado-tratamiento.html", _legal_context()
+    )
 
 
 @router.get("/cumplimiento", response_class=HTMLResponse)

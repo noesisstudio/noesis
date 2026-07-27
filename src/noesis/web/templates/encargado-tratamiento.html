@@ -16,23 +16,26 @@
   <main class="legal-wrap legal">
     <a class="legal-back" href="/">&#8249; Volver al inicio</a>
     <h1>Contrato de Encargado del Tratamiento</h1>
-    <p class="updated">Última actualización: 30 de junio de 2026</p>
+    <p class="updated">Última actualización: {{ legal_document_version }}</p>
 
     <div class="note">
       Este contrato regula el tratamiento de datos personales que <b>Noesis</b> realiza
       <b>por cuenta de ti</b> (la persona o empresa usuaria) cuando usas el servicio. Se
       celebra conforme al <b>artículo 28 del Reglamento (UE) 2016/679 (RGPD)</b> y forma
       parte de los <a href="/terminos">Términos de uso</a>. Al crear tu cuenta y usar
-      Noesis, ambas partes lo aceptan. Antes de operar con clientes reales, revísalo con
-      un profesional legal y completa los campos entre corchetes [ ].
+      Noesis, ambas partes lo aceptan.
+      {% if not legal_ready %}<b>El alta comercial permanece cerrada hasta completar
+      la identificación del encargado y su revisión profesional.</b>{% endif %}
     </div>
 
     <h2>1. Partes</h2>
     <div class="meta-box">
       <b>Responsable del tratamiento:</b> tú, la persona o empresa titular de la cuenta
       (en adelante, “el Cliente”), con los datos identificativos facilitados en tu perfil.<br>
-      <b>Encargado del tratamiento:</b> [Razón social / nombre del titular], NIF [NIF/CIF],
-      domicilio [Dirección], contacto noesisstudioo@gmail.com (en adelante, “Noesis”).
+      <b>Encargado del tratamiento:</b>
+      {{ legal_name or "Noesis · acceso piloto cerrado" }}{% if legal_nif %}, NIF
+      {{ legal_nif }}{% endif %}{% if legal_address %}, domicilio
+      {{ legal_address }}{% endif %}, contacto {{ legal_email }} (en adelante, “Noesis”).
     </div>
     <p>El Cliente decide qué datos introduce y con qué finalidad. Noesis los trata
       <b>únicamente siguiendo sus instrucciones</b> para prestarle el servicio.</p>
@@ -90,16 +93,19 @@
       <tr><td>{{ compat_ai_legal_name }}</td><td>Asistente con IA (solo si el Cliente lo activa)</td><td>{{ compat_ai_region }}</td></tr>
       {% endif %}
       <tr><td>Meta Platforms</td><td>Mensajería de WhatsApp (solo si el Cliente la conecta)</td><td>UE / EE. UU. (con garantías RGPD)</td></tr>
-      <tr><td>[Proveedor SMTP]</td><td>Envío de correos transaccionales</td><td>[UE]</td></tr>
+      {% if smtp_provider_name %}
+      <tr><td>{{ smtp_provider_name }}</td><td>Envío de correos transaccionales</td><td>{{ smtp_provider_region or "Según contrato vigente" }}</td></tr>
+      {% endif %}
     </table>
     <p>Noesis informará de cualquier <b>cambio de subencargados</b> con antelación
       razonable, dando al Cliente la posibilidad de oponerse por motivos justificados.</p>
 
     <h2>6. Medidas de seguridad</h2>
     <ul>
-      <li>Cifrado de contraseñas y conexión segura (HTTPS) en todo el servicio.</li>
-      <li><b>Aislamiento estricto entre cuentas</b>: cada negocio solo accede a sus propios
-        datos, garantizado a nivel de base de datos.</li>
+      <li>Contraseñas transformadas mediante hash robusto con sal y conexión segura
+        (HTTPS) en el servicio público.</li>
+      <li><b>Aislamiento entre cuentas</b>: las operaciones autenticadas y las consultas
+        de negocio exigen el identificador del negocio correspondiente.</li>
       <li>Sesiones firmadas, control de acceso y límites frente a accesos abusivos.</li>
       <li>Copias de seguridad y procedimientos de restauración.</li>
       <li>Registro de eventos relevantes para poder detectar y analizar incidencias.</li>

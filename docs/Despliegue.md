@@ -1,6 +1,6 @@
 # Despliegue 24/7
 
-Objetivo: operar **app.bynoesis.com** online, con HTTPS, para autónomos e
+Objetivo: operar **bynoesis.com** online, con HTTPS, para autónomos e
 inversores. Ver fases en [[Roadmap]].
 
 ## Recomendación: Railway
@@ -17,7 +17,7 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
    Uvicorn y usa `/ready` como healthcheck.
 4. **Variables de entorno** (Settings → Variables):
    - `NOESIS_SECRET` → una cadena larga y aleatoria (firma las sesiones; **obligatoria**).
-   - `NOESIS_BASE_URL` → `https://app.bynoesis.com` cuando el dominio propio esté
+   - `NOESIS_BASE_URL` → `https://bynoesis.com` cuando el dominio propio esté
      conectado. Mientras tanto se usa automáticamente `RAILWAY_PUBLIC_DOMAIN`.
    - `HOST` → `0.0.0.0`
    - `DATABASE_URL` → referencia `${{Postgres.DATABASE_URL}}` del servicio Postgres.
@@ -38,7 +38,7 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
    - `PORT` lo inyecta Railway automáticamente.
 5. **Volumen persistente**: se mantiene montado en `/data` para documentos, modelos
    y la copia histórica de SQLite. La base operativa vive en Postgres.
-6. **Dominio**: Settings → Networking → Custom Domain → `app.bynoesis.com`, y apuntar el
+6. **Dominio**: Settings → Networking → Custom Domain → `bynoesis.com`, y apuntar el
    DNS según indique Railway. HTTPS es automático.
 
 ## Verificación de Postgres
@@ -86,7 +86,7 @@ Solo falta la configuración en stripe.com:
    - `STRIPE_PRICE_AUTONOMO_ANNUAL`, `STRIPE_PRICE_PRO_ANNUAL`,
      `STRIPE_PRICE_PREMIUM_ANNUAL` → precios anuales.
 4. **Webhook**: Desarrolladores → Webhooks → añadir endpoint
-   `https://app.bynoesis.com/webhook/stripe` con los eventos `checkout.session.completed`,
+   `https://bynoesis.com/webhook/stripe` con los eventos `checkout.session.completed`,
    `customer.subscription.created`, `customer.subscription.updated`,
    `customer.subscription.deleted`, `invoice.paid` e `invoice.payment_failed`.
    Copiar el "signing secret" (`whsec_...`) a `STRIPE_WEBHOOK_SECRET`.

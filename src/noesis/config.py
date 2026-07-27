@@ -195,6 +195,9 @@ _DEFAULT_BASE_URL = (
     else "http://127.0.0.1:8000"
 )
 BASE_URL = os.getenv("NOESIS_BASE_URL", _DEFAULT_BASE_URL).strip().rstrip("/")
+CANONICAL_PUBLIC_HOST = os.getenv(
+    "NOESIS_CANONICAL_PUBLIC_HOST", "bynoesis.com"
+).strip().lower()
 
 # Host header: en producción solo se aceptan el dominio público y los hosts
 # declarados explícitamente. Evita que enlaces y redirecciones se construyan con un
@@ -212,6 +215,34 @@ ALLOWED_HOSTS = list(dict.fromkeys(
     + ([_railway_private_host] if _railway_private_host else [])
     + ["localhost", "127.0.0.1"]
 )) if IS_PRODUCTION else ["*"]
+
+# Identidad legal y apertura comercial. En producción, el alta pública permanece
+# cerrada por defecto y nunca se habilita si faltan los datos que el cliente debe
+# poder consultar antes de aceptar términos o pagar.
+LEGAL_NAME = os.getenv("NOESIS_LEGAL_NAME", "").strip()
+LEGAL_NIF = os.getenv("NOESIS_LEGAL_NIF", "").strip().upper()
+LEGAL_ADDRESS = os.getenv("NOESIS_LEGAL_ADDRESS", "").strip()
+LEGAL_EMAIL = os.getenv("NOESIS_LEGAL_EMAIL", "").strip().lower()
+LEGAL_REGISTRY = os.getenv("NOESIS_LEGAL_REGISTRY", "").strip()
+LEGAL_DOCUMENT_VERSION = "2026-07-27"
+PUBLIC_CONTACT_EMAIL = os.getenv(
+    "NOESIS_CONTACT_EMAIL", LEGAL_EMAIL or "noesisstudioo@gmail.com"
+).strip().lower()
+SMTP_PROVIDER_NAME = os.getenv("NOESIS_SMTP_PROVIDER_NAME", "").strip()
+SMTP_PROVIDER_REGION = os.getenv("NOESIS_SMTP_PROVIDER_REGION", "").strip()
+PUBLIC_SIGNUP_ENABLED = env_bool(
+    "NOESIS_PUBLIC_SIGNUP_ENABLED", not IS_PRODUCTION
+)
+
+
+def legal_identity_ready() -> bool:
+    """True cuando los cuatro datos legales mínimos están configurados."""
+    return all((LEGAL_NAME, LEGAL_NIF, LEGAL_ADDRESS, LEGAL_EMAIL))
+
+
+def public_signup_available() -> bool:
+    """Impide aceptar términos o pagos con textos legales incompletos."""
+    return PUBLIC_SIGNUP_ENABLED and (legal_identity_ready() or not IS_PRODUCTION)
 
 # Límites defensivos de documentos. Son independientes del tamaño en MB: una
 # imagen comprimida pequeña puede intentar reservar cientos de megapíxeles.

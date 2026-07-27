@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Apertura pública cerrada por defecto y dominio canónico único (2026-07-27)
+
+En producción, Noesis no acepta nuevas cuentas ni inicia altas con Google mientras
+falten la identidad legal mínima del prestador o la activación explícita
+`NOESIS_PUBLIC_SIGNUP_ENABLED`. Las cuentas ya creadas pueden seguir iniciando
+sesión. La web ofrece solicitar acceso al piloto y no simula que audio, OCR,
+WhatsApp o pagos reales están disponibles si sus adaptadores no están operativos.
+
+El dominio canónico es `https://bynoesis.com`; OAuth, Stripe, Meta, correo y enlaces
+privados deben usarlo de forma coherente. Motivo: impedir consentimientos o cobros
+con textos incompletos, evitar callbacks divididos entre dominios y convertir la
+apertura comercial en una decisión verificable, no en el efecto accidental de un
+despliegue.
+
 ## WhatsApp prepara; un segundo consentimiento emite y entrega (2026-07-20)
 
 `Factura a Marta…` y `ticket de venta…` crean siempre un borrador. La referencia

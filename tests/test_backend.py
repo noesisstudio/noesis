@@ -2085,6 +2085,16 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(setup_page.status_code, 200)
                 self.assertIn("Experiencia completa", setup_page.text)
                 created_user = db.get_user_by_email("piloto@example.com")
+                with db.get_conn() as conn:
+                    legal_event = conn.execute(
+                        "SELECT event_data FROM product_events "
+                        "WHERE business_id=? AND event_name='legal_accepted'",
+                        (created_user["business_id"],),
+                    ).fetchone()
+                self.assertEqual(
+                    json.loads(legal_event["event_data"])["version"],
+                    config.LEGAL_DOCUMENT_VERSION,
+                )
                 self.assertEqual(
                     db.integration_setting(
                         created_user["business_id"], "ai_external"
@@ -2125,6 +2135,59 @@ class PortalHttpTestCase(BackendTestCase):
                 revoked = client.get(setup_url, follow_redirects=False)
                 self.assertEqual(revoked.status_code, 303)
                 self.assertEqual(revoked.headers["location"], "/login")
+
+    def test_public_signup_closes_safely_without_legal_readiness(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "SECRET_KEY", "x" * 64),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(config, "PUBLIC_SIGNUP_ENABLED", False),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", "test-client"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "test-secret"),
+        ):
+            with TestClient(server.app) as client:
+                page = client.get("/onboarding")
+                self.assertEqual(page.status_code, 503)
+                self.assertIn("Acceso piloto", page.text)
+                self.assertNotIn("Crear cuenta y configurarla", page.text)
+                attempt = client.post(
+                    "/onboarding/signup",
+                    data={
+                        "name": "No debe crearse",
+                        "email": "cerrado@example.com",
+                        "password": TEST_PASSWORD,
+                        "sector": "Fontanería",
+                        "acepto": "1",
+                    },
+                )
+                self.assertEqual(attempt.status_code, 503)
+                self.assertIsNone(db.get_user_by_email("cerrado@example.com"))
+                google = client.get(
+                    "/auth/google?flow=signup", follow_redirects=False
+                )
+                self.assertEqual(google.status_code, 303)
+                self.assertEqual(google.headers["location"], "/onboarding")
+
+    def test_public_legal_pages_do_not_expose_template_placeholders(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                for route in (
+                    "/privacidad", "/aviso-legal", "/terminos",
+                    "/encargado-tratamiento",
+                ):
+                    page = client.get(route)
+                    self.assertEqual(page.status_code, 200, route)
+                    self.assertNotIn("[Razón social", page.text, route)
+                    self.assertNotIn("[NIF", page.text, route)
+                    self.assertNotIn("[Dirección", page.text, route)
+                    self.assertNotIn("Borrador inicial", page.text, route)
 
     def test_subscribe_onboarding_configures_operations_before_checkout(self):
         from starlette.testclient import TestClient

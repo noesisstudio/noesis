@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Acceso piloto</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body class="auth-page">
+  <header class="auth-topbar">
+    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a>
+    <a href="/login">Ya tengo cuenta</a>
+  </header>
+  <main class="auth-shell">
+    <section class="auth-story">
+      <span class="eyebrow">ACCESO CONTROLADO</span>
+      <h1>Estamos abriendo con pocos negocios.</h1>
+      <p>Así podemos configurar Noesis contigo, comprobar que todo encaja y acompañarte desde el primer trabajo.</p>
+    </section>
+    <section class="auth-card">
+      <span class="eyebrow">PILOTO DE NOESIS</span>
+      <h2>Solicita acceso.</h2>
+      <p>Cuéntanos brevemente a qué te dedicas y te responderemos personalmente.</p>
+      <a class="btn primary full" href="mailto:{{ contact_email }}?subject=Quiero%20probar%20Noesis">Escribir a Noesis</a>
+      <p class="muted">Las cuentas existentes pueden seguir entrando con normalidad.</p>
+    </section>
+  </main>
+</body>
+</html>
