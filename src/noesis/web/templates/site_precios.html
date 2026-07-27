@@ -1,6 +1,6 @@
 {% extends "site_base.html" %}
 {% block page_title %}Precios{% endblock %}
-{% block meta_description %}Planes de Noesis: Autónomo 29 €, Negocio 49 € y Sin Límites 99 € al mes más IVA. Prueba 14 días sin tarjeta y conserva tus datos aunque no actives un plan.{% endblock %}
+{% block meta_description %}Planes de Noesis: Autónomo 29 €, Negocio 49 € y Sin Límites 99 € al mes más IVA. {% if public_signup_available %}Prueba 14 días sin tarjeta.{% else %}Acceso piloto acompañado.{% endif %}{% endblock %}
 {% block content %}
   <section class="public-page-hero pricing-page-hero">
     <div><span class="eyebrow">Precios</span><h1>Empieza con lo que necesitas. Crece sin cambiar de sistema.</h1></div>
@@ -9,7 +9,10 @@
   </section>
 
   <section class="public-section pricing-section" id="planes" aria-label="Planes de Noesis">
-    <div class="trial-banner"><b>La prueba es completa.</b><span>14 días · sin tarjeta · sin permanencia · datos exportables</span></div>
+    <div class="trial-banner">
+      {% if public_signup_available %}<b>La prueba es completa.</b><span>14 días · sin tarjeta · sin permanencia · datos exportables</span>
+      {% else %}<b>Acceso piloto acompañado.</b><span>Precios transparentes · configuración conjunta · datos exportables</span>{% endif %}
+    </div>
     <div class="billing-choice">
       <div><b>¿Cómo prefieres pagar?</b><span>El plan anual equivale a pagar 11 meses y utilizar Noesis durante 12.</span></div>
       <div class="billing-toggle" role="group" aria-label="Periodicidad de los precios">
@@ -27,12 +30,14 @@
           <li>Agenda, clientes, trabajos y presupuestos</li>
           <li>Facturas con IVA, IRPF y Veri*Factu</li>
           <li>Cobros y recordatorios preparados</li>
-          <li>WhatsApp con texto, audio e imágenes</li>
+          <li>{% if voice_available and ocr_available %}WhatsApp con texto, audio e imágenes{% else %}WhatsApp con texto y documentos; audio e imágenes en la puesta en marcha{% endif %}</li>
           <li>Documentos e impuestos trimestrales</li>
           <li>75 acciones avanzadas de IA al mes</li>
         </ul>
+        {% if public_signup_available %}
         <a class="btn full plan-start-link" data-plan="autonomo" href="/onboarding?intent=trial&plan=autonomo&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="autonomo" href="/onboarding?intent=subscribe&plan=autonomo&billing=monthly">Contratar ahora</a>
+        {% else %}<a class="btn full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
         <small class="plan-footnote">Para una persona · sin permanencia</small>
       </article>
 
@@ -50,8 +55,10 @@
           <li>Proyectos, costes y rentabilidad</li>
           <li>300 acciones avanzadas · soporte prioritario</li>
         </ul>
+        {% if public_signup_available %}
         <a class="btn primary full plan-start-link" data-plan="pro" href="/onboarding?intent=trial&plan=pro&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="pro" href="/onboarding?intent=subscribe&plan=pro&billing=monthly">Contratar ahora</a>
+        {% else %}<a class="btn primary full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
         <small class="plan-footnote">Para equipos pequeños · sin permanencia</small>
       </article>
 
@@ -68,8 +75,10 @@
           <li>Línea directa con el equipo</li>
         </ul>
         <div class="beta-feature"><b>Recepcionista 24/7</b><span>Beta con acceso preferente: atiende, resume y propone citas.</span></div>
+        {% if public_signup_available %}
         <a class="btn full plan-start-link" data-plan="premium" href="/onboarding?intent=trial&plan=premium&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="premium" href="/onboarding?intent=subscribe&plan=premium&billing=monthly">Contratar ahora</a>
+        {% else %}<a class="btn full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
         <small class="plan-footnote">Para uso intensivo · sin permanencia</small>
       </article>
     </div>

@@ -2,13 +2,13 @@
   "state_date": "2026-07-27",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 35,
-  "verified_test_count": 347,
+  "verified_test_count": 354,
   "production": {
-    "url": "https://app.bynoesis.com",
+    "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Publicar el candidato, aplicar migración 35 y verificar dominio, Google OAuth admin obligatorio, bitácora CISO, ClamAV privado, copia externa y simulacro de restauración; después repetir los flujos reales de Meta, Stripe, SMTP, backup y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, SMTP, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -45,11 +45,15 @@
     "commercial_onboarding": "trial_or_subscribe_then_business_invoice_collection_messages_whatsapp_and_checkout",
     "onboarding_sector_capture": "free_text_up_to_80_characters",
     "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",
+    "public_opening_gate": "production_signup_fail_closed_until_legal_identity_and_explicit_enable_existing_accounts_keep_access",
+    "legal_consent_version": "single_source_shared_by_pages_and_account_events",
+    "capability_promises": "public_copy_reflects_runtime_voice_and_image_reading_availability",
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",
     "private_calendar_feed": "implemented_revocable_ics",
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",
     "email_delivery": "implemented_durable_outbox_with_retry",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
+    "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",
     "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
@@ -63,11 +67,14 @@
     "anthropic_fallback"
   ],
   "external_validation_pending": [
+    "rotate_any_secret_exposed_in_shared_material",
+    "legal_identity_and_professional_legal_review",
     "meta_whatsapp_real",
     "stripe_real",
     "smtp_real",
     "google_oauth_real",
     "respaldo_ia_avanzada_real",
+    "audio_and_image_reading_real",
     "certificado_y_entorno_aeat",
     "restauracion_externa",
     "auditoria_seguridad_privacidad_fiscal",

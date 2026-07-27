@@ -30,9 +30,18 @@ Antes de cualquier proveedor:
 ```dotenv
 NOESIS_ENV=production
 NOESIS_HTTPS=true
-NOESIS_BASE_URL=https://app.bynoesis.com
+NOESIS_BASE_URL=https://bynoesis.com
+NOESIS_CANONICAL_PUBLIC_HOST=bynoesis.com
+NOESIS_ALLOWED_HOSTS=bynoesis.com,www.bynoesis.com
 NOESIS_SECRET=<cadena larga y aleatoria>
 NOESIS_ADMIN_EMAIL=<correo del founder>
+NOESIS_LEGAL_NAME=<nombre o razón social>
+NOESIS_LEGAL_NIF=<NIF/CIF>
+NOESIS_LEGAL_ADDRESS=<domicilio completo>
+NOESIS_LEGAL_EMAIL=<correo para derechos y contratos>
+NOESIS_LEGAL_REGISTRY=<datos registrales, si aplican>
+NOESIS_CONTACT_EMAIL=<correo público del piloto>
+NOESIS_PUBLIC_SIGNUP_ENABLED=false
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 NOESIS_DOCS_PATH=/data/uploads
 NOESIS_BACKUP_DIR=/data/backups
@@ -44,6 +53,15 @@ Railway inyecta `PORT`, `RAILWAY_ENVIRONMENT` y `RAILWAY_PUBLIC_DOMAIN`. Tras el
 despliegue hay que aplicar la versión de esquema indicada en
 [`project-state.json`](project-state.json), comprobar `GET /health`, `GET /ready`
 y ejecutar `noesis-doctor --strict`. Nunca activar `NOESIS_RESET_DB` con datos.
+
+Si una contraseña, token o `NOESIS_SECRET` ha aparecido en una captura, PDF o chat,
+se considera expuesto: se genera otro valor en el gestor del proveedor, se revoca
+el anterior y se redacta el documento. No se copia a `.env.example`, Git ni tickets.
+
+El registro público está diseñado para fallar cerrado. Primero se despliega con
+`NOESIS_PUBLIC_SIGNUP_ENABLED=false`; después se validan identidad legal, correo,
+Stripe, WhatsApp, audio/OCR, ClamAV y copias. Solo al completar la prueba de
+aceptación se cambia a `true` y se repite `noesis-doctor --strict`.
 
 ## 1. Correo por SMTP
 
@@ -78,8 +96,8 @@ añadir DMARC antes de escalar envíos.
 En Google Cloud, crear un cliente **OAuth 2.0 de aplicación web**, configurar la
 pantalla de consentimiento y registrar exactamente:
 
-- Origen autorizado: `https://app.bynoesis.com`
-- URI de redirección: `https://app.bynoesis.com/auth/google/callback`
+- Origen autorizado: `https://bynoesis.com`
+- URI de redirección: `https://bynoesis.com/auth/google/callback`
 - Scopes usados por Noesis: `openid email profile`
 
 ```dotenv
@@ -139,7 +157,7 @@ STRIPE_PRICE_PRO_ANNUAL=price_...
 STRIPE_PRICE_PREMIUM_ANNUAL=price_...
 ```
 
-Crear el webhook `https://app.bynoesis.com/webhook/stripe` con:
+Crear el webhook `https://bynoesis.com/webhook/stripe` con:
 
 - `checkout.session.completed`
 - `customer.subscription.created`
@@ -174,7 +192,7 @@ En Meta Business / Meta for Developers:
 4. configurar el webhook y suscribir el campo `messages`;
 5. aprobar las plantillas proactivas en español.
 
-Callback: `https://app.bynoesis.com/webhook/whatsapp`  
+Callback: `https://bynoesis.com/webhook/whatsapp`
 Verify token: el mismo valor aleatorio que `WHATSAPP_VERIFY_TOKEN`.
 
 ```dotenv

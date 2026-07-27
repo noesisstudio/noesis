@@ -8,10 +8,10 @@
       <h1>Del primer aviso al cobro, una sola historia.</h1>
       <p>Noesis conecta las piezas que hoy viven repartidas entre WhatsApp, tu cabeza,
         el calendario y varias hojas de cálculo.</p>
-      <div class="public-hero-actions"><a class="btn primary" href="/onboarding?intent=trial">Prueba 14 días <span aria-hidden="true">→</span></a><a class="text-link" href="#como-funciona">Ver el recorrido <span aria-hidden="true">↓</span></a></div>
+      <div class="public-hero-actions"><a class="btn primary" href="/onboarding{% if public_signup_available %}?intent=trial{% endif %}">{% if public_signup_available %}Prueba 14 días{% else %}Solicitar acceso{% endif %} <span aria-hidden="true">→</span></a><a class="text-link" href="#como-funciona">Ver el recorrido <span aria-hidden="true">↓</span></a></div>
     </div>
     <div class="product-thread" aria-label="Un trabajo conectado de principio a fin">
-      <div><small>Cliente</small><b>Marta pide una reparación</b><span>WhatsApp · audio de 18 s</span></div>
+      <div><small>Cliente</small><b>Marta pide una reparación</b><span>WhatsApp · {% if voice_available %}audio de 18 s{% else %}mensaje recibido{% endif %}</span></div>
       <div><small>Trabajo</small><b>Caldera · mañana a las 10:00</b><span>Asignado y con materiales previstos</span></div>
       <div><small>Cierre</small><b>Parte listo y factura preparada</b><span>480,00 € · pendiente de tu confirmación</span></div>
       <div><small>Cobro</small><b>Seguimiento sin perseguir</b><span>Noesis vigila el vencimiento</span></div>
@@ -25,7 +25,7 @@
       <p>Cada paso aprovecha lo que ya sabe el anterior. Si falta un dato, Noesis te lo dice; si una acción es irreversible, te pide confirmación.</p>
     </div>
     <div class="process-rows">
-      <article><b>01</b><div><span>Entra el trabajo</span><h3>La petición se convierte en algo accionable.</h3></div><p>Texto, audio, imagen o formulario: Noesis identifica cliente, encargo, lugar y siguiente paso.</p></article>
+      <article><b>01</b><div><span>Entra el trabajo</span><h3>La petición se convierte en algo accionable.</h3></div><p>{% if voice_available and ocr_available %}Texto, audio, imagen o formulario: Noesis identifica cliente, encargo, lugar y siguiente paso.{% else %}Texto, documento o formulario: Noesis identifica cliente, encargo, lugar y siguiente paso. Audio e imágenes se activan durante la puesta en marcha.{% endif %}</p></article>
       <article><b>02</b><div><span>Se organiza</span><h3>Agenda, proyecto, equipo y materiales hablan entre sí.</h3></div><p>El trabajo conserva horas, costes, documentos y conversaciones sin crear islas de información.</p></article>
       <article><b>03</b><div><span>Se cierra</span><h3>Terminar el oficio también cierra la administración.</h3></div><p>Parte, justificantes y factura quedan preparados cuando todavía recuerdas lo ocurrido.</p></article>
       <article><b>04</b><div><span>Se cobra y aprende</span><h3>Noesis vigila lo pendiente y explica el resultado.</h3></div><p>Te avisa, prepara el seguimiento y aprende de tus hábitos sin ocultarte de dónde sale cada recomendación.</p></article>

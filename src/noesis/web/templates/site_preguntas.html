@@ -17,13 +17,13 @@
     <div class="faq-groups">
       <section id="empezar"><span class="eyebrow">Empezar</span><h2>La prueba y el día a día</h2><div class="public-accordion">
         <details open><summary>¿Necesito instalar una aplicación?</summary><p>No. El panel funciona en el navegador y se puede guardar como acceso directo. WhatsApp usa la integración oficial de Meta cuando está conectada.</p></details>
-        <details><summary>¿Tengo que cambiar mi forma de trabajar?</summary><p>No. Puedes empezar enviando mensajes, audios y fotos como ya haces. La web sirve para entender, revisar y controlar.</p></details>
-        <details><summary>¿Qué pasa después de los 14 días?</summary><p>El panel queda en modo consulta si no eliges plan. No desaparecen tus datos ni se realiza ningún cobro automático.</p></details>
+        <details><summary>¿Tengo que cambiar mi forma de trabajar?</summary><p>No. Puedes empezar enviando mensajes y documentos como ya haces. Durante la puesta en marcha activamos también audio y lectura de imágenes si tu plan los necesita.</p></details>
+        <details><summary>¿Qué pasa después de los 14 días?</summary><p>{% if public_signup_available %}El panel queda en modo consulta si no eliges plan. No desaparecen tus datos ni se realiza ningún cobro automático.{% else %}La prueba pública todavía no está abierta. Durante el piloto acordamos contigo el acceso y nunca hacemos un cobro sin que elijas antes un plan.{% endif %}</p></details>
       </div></section>
 
       <section id="whatsapp"><span class="eyebrow">WhatsApp y Noesis</span><h2>Hablar, entender y actuar</h2><div class="public-accordion">
-        <details><summary>¿Puedo hablarle con notas de voz?</summary><p>Sí. Noesis puede transcribir una instrucción, identificar los datos relevantes y preparar el siguiente paso para que lo revises.</p></details>
-        <details><summary>¿Entiende fotografías de tickets y facturas?</summary><p>Puede detectar y extraer documentos. Si el tipo o algún dato no está claro, lo deja pendiente y te pregunta antes de clasificarlo definitivamente.</p></details>
+        <details><summary>¿Puedo hablarle con notas de voz?</summary><p>{% if voice_available %}Sí. Noesis puede transcribir una instrucción, identificar los datos relevantes y preparar el siguiente paso para que lo revises.{% else %}La función está preparada y se habilita durante la puesta en marcha. Si no está activa, Noesis conserva el audio y te pide el dato por escrito sin inventarlo.{% endif %}</p></details>
+        <details><summary>¿Entiende fotografías de tickets y facturas?</summary><p>{% if ocr_available %}Puede detectar y extraer documentos. Si el tipo o algún dato no está claro, lo deja pendiente y te pregunta antes de clasificarlo definitivamente.{% else %}Guarda y ordena el documento. La lectura automática se habilita durante la puesta en marcha; mientras tanto, te pide confirmar los datos antes de registrarlos.{% endif %}</p></details>
         <details><summary>¿Noesis envía o paga sin preguntarme?</summary><p>No. Preparar no es autorizar. Enviar facturas, reclamar cobros, mover citas o cualquier acción irreversible requiere el nivel de permiso definido y, en los casos sensibles, tu confirmación.</p></details>
       </div></section>
 

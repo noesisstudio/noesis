@@ -16,18 +16,21 @@
   <main class="legal-wrap legal">
     <a class="legal-back" href="/">&#8249; Volver al inicio</a>
     <h1>Términos de uso</h1>
-    <p class="updated">Última actualización: 30 de junio de 2026</p>
+    <p class="updated">Última actualización: {{ legal_document_version }}</p>
 
+    {% if not legal_ready %}
     <div class="note">
-      Borrador inicial pensado para Noesis. Antes de operar con clientes reales,
-      revísalo con un profesional legal y completa los campos entre corchetes [ ].
+      Estos términos todavía no permiten un alta comercial: Noesis mantiene el
+      acceso piloto cerrado hasta completar la identificación legal del prestador.
     </div>
+    {% endif %}
 
     <h2>1. Objeto</h2>
     <p>Estos términos regulan el uso de Noesis (en adelante, “el servicio”), una
       aplicación que ayuda a profesionales autónomos a gestionar agenda, clientes,
-      cobros y facturas. El titular del servicio es [Razón social / nombre], con NIF
-      [NIF/CIF] y contacto en noesisstudioo@gmail.com.</p>
+      cobros y facturas. El titular del servicio es
+      {{ legal_name or "Noesis · acceso piloto cerrado" }}{% if legal_nif %}, con NIF
+      {{ legal_nif }}{% endif %} y contacto en {{ legal_email }}.</p>
 
     <h2>2. Tu cuenta</h2>
     <ul>

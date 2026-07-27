@@ -22,7 +22,7 @@ dependencies = [
     "itsdangerous>=2.1.0,<3",
     "fpdf2>=2.7.0,<3",
     # Se usa de forma directa para validar imágenes antes de OCR/almacenamiento.
-    "pillow>=11.0.0,<13",
+    "pillow>=12.3.0,<13",
     # Generador QR puro Python; Pillow ya es dependencia transitiva de fpdf2.
     "qrcode>=8.0,<9",
 ]
@@ -31,6 +31,9 @@ dependencies = [
 # Transcripción de voz local (notas de voz -> factura/agenda). Pesa y pide RAM,
 # por eso es opcional: pip install -e ".[audio]"
 audio = ["faster-whisper>=1.0.0,<2"]
+# OCR local de tickets. Además de este extra, el servidor necesita el binario
+# tesseract y los idiomas spa/eng. Sin él, se usa extracción autorizada o revisión.
+ocr = ["pytesseract>=0.3.13,<1"]
 security = [
     "bandit>=1.8.0,<2",
     "detect-secrets>=1.5.0,<2",

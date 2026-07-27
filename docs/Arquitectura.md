@@ -99,12 +99,14 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
 - En producción las sesiones usan cookie `__Host-`, caducan por inactividad y el
-  administrador exige Google OAuth; si faltan sus credenciales la app no arranca.
+  administrador exige Google OAuth; si faltan sus credenciales el panel queda
+  bloqueado, pero las rutas de clientes y salud siguen disponibles.
   Login y recuperación
   tienen límites persistentes por origen y cuenta sin guardar esos valores en claro.
 - El servidor restringe hosts, no expone OpenAPI en producción, emite cabeceras de
   aislamiento y registra request IDs, ruta, estado y duración sin query strings ni
-  contenido personal.
+  contenido personal. En Railway admite además su hostname exacto de healthcheck
+  (`healthcheck.railway.app`) solo cuando detecta ese entorno; nunca abre un wildcard.
 - El scheduler registra cada ejecución para evitar duplicados entre réplicas. La
   outbox de WhatsApp usa claves idempotentes y `FOR UPDATE SKIP LOCKED` en Postgres
   para que varias réplicas no envíen la misma fila.

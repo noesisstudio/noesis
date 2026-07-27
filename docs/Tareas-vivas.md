@@ -5,24 +5,37 @@
 
 ## P0 — publicar y pilotar con seguridad
 
-- [ ] Desplegar el hardening y las operaciones de seguridad hasta migración 35;
-  confirmar cookies `__Host-`, hosts, caducidad, logs sin query string, Google OAuth
-  admin obligatorio, panel CISO, bitácora encadenada y rutas reales del dominio.
-- [ ] Fusionar el candidato fiscal, desplegar el `main` resultante, aplicar migración
-  33 y confirmar `/ready`, alta por prueba, alta por contratación, preferencias operativas,
-  vencimiento de factura, checkout, Home, modo consulta y una ficha de proyecto.
+- [ ] Rotar `NOESIS_SECRET`, SMTP y cualquier credencial que haya aparecido en una
+  captura, PDF o conversación; revocar la anterior y eliminar/redactar las copias
+  compartidas. No reutilizar secretos sugeridos por una IA.
+- [ ] Desplegar el `main` actual, aplicar la migración indicada en
+  `project-state.json` y confirmar `/health`, `/ready`, dominio canónico, cookies
+  `__Host-`, hosts, logs sin query string, Google OAuth admin, panel CISO, bitácora
+  encadenada, Home, modo consulta y ficha de proyecto.
+- [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
+  `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL`; revisar aviso legal, privacidad,
+  términos, DPA y fiscalidad con profesionales. Mantener
+  `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.
+- [ ] Validar en producción la puerta de apertura: con el alta cerrada, las cuentas
+  existentes entran y una alta por contraseña o Google no crea cuenta; al abrirla,
+  repetir prueba, contratación, preferencias, checkout, webhook, modo consulta y
+  reactivación.
 - [ ] Crear o actualizar en Stripe los productos **29/49/99 € + IVA**, enlazar sus
   seis `price_id`, resolver cómo aplica el IVA el Checkout y probar checkout,
   webhook, impago, reactivación y portal de cliente antes de usar claves live.
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
   reintentos y bloqueo de cuenta inactiva.
+- [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
+  (Tesseract/pytesseract o extracción externa autorizada) con corpus real en
+  castellano/catalán; sin estos servicios, mantener las promesas públicas
+  degradadas.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.
 - [ ] SMTP real: credenciales, invitaciones, facturas, avisos, reintentos de la outbox
   y entregabilidad. La cola durable ya está construida.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
-  `https://app.bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
+  `https://bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El
   botón permanece oculto hasta que ambas credenciales existan para no prometer una
   función falsa.

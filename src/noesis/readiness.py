@@ -13,9 +13,12 @@ from dataclasses import asdict, dataclass
 import json
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from . import config, migrations
 from .adapters import ai as ai_adapter
+from .adapters import transcription
+from .documents import ocr
 
 
 @dataclass(frozen=True)
@@ -60,6 +63,42 @@ def collect_readiness(*, check_database: bool = True) -> dict:
         "URL pública con HTTPS." if https_ok else "La URL base no usa HTTPS.",
         "Configura NOESIS_BASE_URL con el dominio HTTPS real." if not https_ok else "",
     ))
+    base_host = (urlsplit(config.BASE_URL).hostname or "").lower()
+    canonical_ok = not config.IS_PRODUCTION or base_host == config.CANONICAL_PUBLIC_HOST
+    checks.append(ReadinessCheck(
+        "dominio",
+        "ok" if canonical_ok else "blocker",
+        "Dominio canónico coherente." if canonical_ok else
+        f"La URL base usa {base_host or 'un host vacío'}, no "
+        f"{config.CANONICAL_PUBLIC_HOST}.",
+        (
+            "Decide un único dominio y actualiza NOESIS_BASE_URL, OAuth, "
+            "Stripe, Meta y enlaces transaccionales."
+        ) if not canonical_ok else "",
+    ))
+
+    legal_ok = config.legal_identity_ready()
+    checks.append(ReadinessCheck(
+        "legal",
+        "ok" if legal_ok else ("blocker" if config.IS_PRODUCTION else "warning"),
+        "Identidad legal pública configurada." if legal_ok else
+        "Faltan datos obligatorios del prestador.",
+        (
+            "Completa NOESIS_LEGAL_NAME, NOESIS_LEGAL_NIF, "
+            "NOESIS_LEGAL_ADDRESS y NOESIS_LEGAL_EMAIL; revisión profesional pendiente."
+        ) if not legal_ok else "",
+    ))
+    signup_ok = config.public_signup_available()
+    checks.append(ReadinessCheck(
+        "alta pública",
+        "ok" if signup_ok else "warning",
+        "Alta pública habilitada." if signup_ok else
+        "Alta pública cerrada; las cuentas existentes siguen disponibles.",
+        (
+            "Habilita NOESIS_PUBLIC_SIGNUP_ENABLED solo después de legal, "
+            "pagos, correo y flujo completo."
+        ) if not signup_ok else "",
+    ))
 
     if check_database:
         try:
@@ -93,9 +132,12 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     backup_present, backup_missing = _env_ready(backup_names)
     backup_ok = not backup_missing
     backup_partial = bool(backup_present) and bool(backup_missing)
+    external_required = config.PUBLIC_SIGNUP_ENABLED and config.IS_PRODUCTION
     checks.append(ReadinessCheck(
         "copias",
-        "ok" if backup_ok else ("blocker" if backup_partial else "warning"),
+        "ok" if backup_ok else (
+            "blocker" if backup_partial or external_required else "warning"
+        ),
         "Copia externa S3 configurada." if backup_ok else
         ("La copia externa está configurada a medias." if backup_partial else
          "No hay copia externa configurada."),
@@ -112,7 +154,9 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     wa_partial = bool(wa_present) and bool(wa_missing)
     checks.append(ReadinessCheck(
         "whatsapp",
-        "ok" if wa_ok else ("blocker" if wa_partial else "warning"),
+        "ok" if wa_ok else (
+            "blocker" if wa_partial or external_required else "warning"
+        ),
         "Meta Cloud API configurada." if wa_ok else
         ("WhatsApp está configurado a medias." if wa_partial else
          "WhatsApp real aún no está configurado."),
@@ -124,7 +168,9 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     smtp_present, smtp_missing = _env_ready(smtp_names)
     smtp_ok = not smtp_missing
     checks.append(ReadinessCheck(
-        "correo", "ok" if smtp_ok else "warning",
+        "correo", "ok" if smtp_ok else (
+            "blocker" if external_required else "warning"
+        ),
         "Correo saliente configurado." if smtp_ok else
         "El correo real no está completo.",
         "Completa SMTP y prueba recuperación, factura y gestoría."
@@ -160,7 +206,9 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     stripe_ok = not stripe_missing
     stripe_partial = bool(stripe_present) and bool(stripe_missing)
     checks.append(ReadinessCheck(
-        "stripe", "ok" if stripe_ok else ("blocker" if stripe_partial else "warning"),
+        "stripe", "ok" if stripe_ok else (
+            "blocker" if stripe_partial or external_required else "warning"
+        ),
         "Cobro de suscripción configurado." if stripe_ok else
         ("Stripe está configurado a medias." if stripe_partial else
          "Stripe real aún no está configurado."),
@@ -225,6 +273,27 @@ def collect_readiness(*, check_database: bool = True) -> dict:
             "Completa endpoint HTTPS, modelo, clave, NOESIS_COMPAT_AI_LEGAL_NAME y NOESIS_COMPAT_AI_REGION.",
         ))
 
+    voice_ok = transcription.available()
+    image_reading_ok = ocr.available() or bool(config.ANTHROPIC_API_KEY)
+    checks.append(ReadinessCheck(
+        "audio",
+        "ok" if voice_ok else ("blocker" if external_required else "warning"),
+        "Transcripción de voz disponible." if voice_ok else
+        "No hay transcripción de voz disponible.",
+        "Configura Groq Whisper o instala y valida faster-whisper."
+        if not voice_ok else "",
+    ))
+    checks.append(ReadinessCheck(
+        "lectura de imágenes",
+        "ok" if image_reading_ok else (
+            "blocker" if external_required else "warning"
+        ),
+        "Lectura automática de imágenes disponible." if image_reading_ok else
+        "Las imágenes se guardan, pero no se leen automáticamente.",
+        "Configura la extracción autorizada o instala Tesseract con pytesseract."
+        if not image_reading_ok else "",
+    ))
+
     checks.append(ReadinessCheck(
         "operaciones", "ok" if config.ADMIN_EMAIL else "warning",
         "Responsable del panel interno configurado." if config.ADMIN_EMAIL else
@@ -235,7 +304,9 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     antivirus_ok = bool(config.CLAMAV_HOST and config.CLAMAV_REQUIRED)
     checks.append(ReadinessCheck(
         "seguridad documental",
-        "ok" if antivirus_ok else ("blocker" if config.CLAMAV_REQUIRED else "warning"),
+        "ok" if antivirus_ok else (
+            "blocker" if config.CLAMAV_REQUIRED or external_required else "warning"
+        ),
         "Antivirus privado con fallo cerrado." if antivirus_ok else
         ("El antivirus es obligatorio pero no tiene host." if config.CLAMAV_REQUIRED else
          "El antivirus privado no esta en modo obligatorio."),

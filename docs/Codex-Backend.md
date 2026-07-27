@@ -6,8 +6,9 @@
 > [[Conectar-APIs]] antes de actuar.
 
 > Documento para Codex. Léelo junto a [`AGENTS.md`](../AGENTS.md) antes de empezar.
-> Estado a 2026-07-03: `main` desplegado en producción (app.bynoesis.com, Railway +
-> Postgres). CI verde, 79 tests, última migración aplicada: **10** (`datos_cobro`).
+> Estado histórico a 2026-07-03: `main` desplegado en Railway + Postgres. El dominio
+> canónico vigente se consulta en `project-state.json`. CI verde, 79 tests,
+> última migración aplicada: **10** (`datos_cobro`).
 > La siguiente migración libre es la **11**.
 
 ## Reglas duras (no romper jamás)

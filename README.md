@@ -9,7 +9,7 @@ agenda, clientes, presupuestos, facturas y cobros — para que tú solo tengas q
 hacer tu trabajo.
 
 > Estado actual: **SaaS multi-empresa en producción** en
-> [app.bynoesis.com](https://app.bynoesis.com) (Railway + Postgres, auto-deploy
+> [bynoesis.com](https://bynoesis.com) (Railway + Postgres, auto-deploy
 > desde `main`). Facturación **Veri*Factu nativa** (huella encadenada, QR, XML AEAT;
 > remisión a AEAT implementada, pendiente de certificado), fichaje de equipo
 > inalterable (art. 34.9 ET), portal del cliente sin contraseña y copiloto proactivo.
