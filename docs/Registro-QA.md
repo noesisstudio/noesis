@@ -1,5 +1,51 @@
 # Registro de QA
 
+## 2026-07-27 — reconciliación del merge: recupera el refactor perdido de la migración
+
+- El merge `796e49e` (fusión manual de `main` con dos arreglos independientes del
+  mismo bug: commit local `9691898` y el commit remoto `558d72b` de Codex) resolvió
+  el conflicto en `migrations.py` quedándose enteramente con la versión local y
+  descartando el refactor de Codex, sin dejar marcas de conflicto. El resultado
+  funcionaba (352 pruebas verdes, incluida la regresión específica de Codex
+  `test_schema_33_backfills_issued_invoice_and_restores_immutability`), pero dejaba
+  un bloque duplicado inerte: un segundo `DROP`/reinstalación del disparador de
+  facturas emitidas justo después del backfill de `invoice_lines`, que ya no hacía
+  falta porque el primer `DROP`/reinstalación (antes del `UPDATE` de `series_id`)
+  es suficiente.
+- Se recupera el helper `_drop_issued_invoice_integrity` de Codex, se reutiliza en
+  `_upgrade_professional_invoicing` y en `_downgrade_invoice_legal_integrity`
+  (antes con la lógica duplicada inline) y se elimina el bloque muerto.
+- También se detectó que el propio merge omitió las entradas de Codex en este
+  archivo y en `Registro-cambios.md` (sí sobrevivió su entrada en
+  `Mapa-codigo.md`); se restauran íntegras a continuación, en su fecha y autoría
+  original, para no perder la bitácora de un incidente real de Railway.
+- Suite completa tras la limpieza: **352 pruebas verdes / 354** (2 fallos de
+  siempre: artefacto macOS `/private/var` vs `/var` en `test_backups.py`, sin
+  relación). `ruff check src/noesis/migrations.py`: verde.
+
+## 2026-07-27 — regresión de migración 32 → 33 con factura emitida
+
+- Railway reveló un caso que el humo anterior no cubría: producción tenía una
+  factura emitida sin `series_id`; la migración 33 intentaba asignárselo después de
+  que la migración 32 ya hubiese instalado el trigger de inmutabilidad. PostgreSQL
+  abortaba correctamente con `CheckViolation`.
+- El backfill retira únicamente el trigger de cabecera, asigna la serie y lo
+  reinstala inmediatamente. En PostgreSQL todo ocurre dentro de la misma transacción:
+  si falla, el `DROP` también se revierte. La protección permanente no se relaja.
+- Nueva regresión SQLite: parte exactamente del esquema 32, inserta una factura
+  emitida, migra a 35, verifica serie y línea y confirma que modificar después el
+  concepto vuelve a fallar.
+- El job PostgreSQL ahora migra primero a 32, inserta una factura emitida histórica,
+  ejecuta 32 → 35, verifica serie/línea y prueba el trigger restaurado antes de
+  recorrer las rutas calientes. Ya no valida solo una base vacía.
+- Suite completa final: **352 pruebas verdes en 235,4 s**. Ruff, Bandit,
+  `pip-audit`, compilación, YAML, fuente de verdad y `git diff --check` verdes.
+  La aceptación definitiva exige ambos jobs CI verdes y repetir el despliegue
+  Railway; no se tocó la base real desde local ni se desactivó ningún control en
+  producción.
+- **Autor/agente original de esta entrada:** Codex (restaurada tras perderse en el
+  merge `796e49e`; ver entrada de reconciliación arriba).
+
 ## 2026-07-27 — equipo real y botón de agendar reunión en la web pública
 
 - `/equipo`: captura de escritorio (1400px) y móvil (390px) con Playwright/Chromium
