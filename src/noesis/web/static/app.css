@@ -1635,6 +1635,24 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .faq-groups section { scroll-margin-top:25px; }
 .faq-groups h2 { font-family:var(--serif); color:var(--brand); font-weight:500; font-size:32px; margin:8px 0 22px; }
 
+/* Equipo: personas reales, con nombre y foto. */
+.team-founders { width:min(var(--public-max), calc(100% - 40px)); margin:0 auto; }
+.founders-grid { display:grid; grid-template-columns:1fr 1fr;
+  border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong); }
+.founder-card { padding:40px 44px; border-right:1px solid var(--border); }
+.founder-card:last-child { border-right:0; }
+.founder-avatar { width:72px; height:72px; border-radius:50%; background:var(--brand-soft);
+  color:var(--brand); border:1px solid var(--border-strong); display:flex; align-items:center;
+  justify-content:center; font-family:var(--serif); font-weight:600; font-size:21px;
+  letter-spacing:.02em; margin-bottom:18px; overflow:hidden; }
+.founder-avatar img { width:100%; height:100%; object-fit:cover; }
+.founder-card h3 { font-family:var(--serif); font-weight:500; font-size:22px; color:var(--brand); margin:0; }
+.founder-role { display:block; color:var(--brand-2); font-weight:700; font-size:12.5px; margin:5px 0 16px; }
+.founder-card p { color:var(--muted); line-height:1.68; font-size:14.5px; margin:0 0 18px; }
+.founder-tags { display:flex; flex-wrap:wrap; gap:8px; list-style:none; margin:0; padding:0; }
+.founder-tags .chip { padding:5px 12px; font-size:12px; background:var(--brand-soft);
+  color:var(--brand-ink); border:1px solid #cfe2da; cursor:default; }
+
 /* Equipo: transparencia en vez de perfiles inventados. */
 .team-manifesto { display:grid; grid-template-columns:.9fr 1.1fr; gap:90px; padding:68px; background:var(--brand); color:#fff; border-radius:14px; }
 .team-manifesto h2 { color:#fff; font-size:clamp(38px,4.3vw,56px); margin-top:12px; }
@@ -1654,6 +1672,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .team-contact { display:flex; align-items:center; justify-content:space-between; gap:50px; padding:52px 58px; background:#e7efe9; border-radius:14px; }
 .team-contact h2 { font-size:clamp(30px,3.4vw,43px); margin:10px 0 12px; }
 .team-contact p { color:var(--muted); max-width:67ch; line-height:1.65; }
+.team-contact-actions { display:flex; gap:12px; flex-shrink:0; flex-wrap:wrap; }
+.team-contact .btn.ghost { border-color:var(--brand); color:var(--brand); background:transparent; }
+.team-contact .btn.ghost:hover { background:#fff; }
 
 /* Cierre y pie. */
 .public-final-cta { width:min(var(--public-max), calc(100% - 40px)); margin:88px auto 0; padding:28px 34px;
@@ -1753,9 +1774,11 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .demo-real-dashboard .home-main-grid, .demo-real-dashboard .home-lower-grid { grid-template-columns:1fr; }
   .demo-real-dashboard .money-summary { grid-template-columns:1fr 1fr; }
   .demo-real-dashboard .money-summary p { grid-column:1/-1; text-align:left; }
-  .workflow-line, .moments-grid, .public-pricing-grid, .team-responsibilities { grid-template-columns:1fr; }
+  .workflow-line, .moments-grid, .public-pricing-grid, .team-responsibilities, .founders-grid { grid-template-columns:1fr; }
   .workflow-line li, .workflow-line li:nth-child(2), .moments-grid article, .moments-grid article:nth-child(2) { border-right:0; border-bottom:1px solid var(--border); }
   .workflow-line li:last-child, .moments-grid article:last-child { border-bottom:0; }
+  .founder-card { border-right:0; border-bottom:1px solid var(--border); padding:30px 24px; }
+  .founder-card:last-child { border-bottom:0; }
   .public-pricing-grid .recommended { grid-column:auto; }
   .public-section, .workflow-section, .moments-section, .pricing-preview { padding:68px 0; }
   .pilot-stories { padding:30px 24px; grid-template-columns:1fr; }

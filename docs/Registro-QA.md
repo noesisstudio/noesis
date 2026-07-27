@@ -1,5 +1,22 @@
 # Registro de QA
 
+## 2026-07-27 — equipo real y botón de agendar reunión en la web pública
+
+- `/equipo`: captura de escritorio (1400px) y móvil (390px) con Playwright/Chromium
+  confirman que las dos tarjetas de fundadores (avatar, nombre, rol, bio, chips de
+  habilidades) renderizan correctamente y colapsan a una columna en móvil.
+- `/preguntas`: captura de la nueva sección de contacto con el botón "Agendar
+  reunión" confirma el mismo patrón visual que `/equipo`.
+- `curl -I https://cal.com/bynoesis` devuelve 200 y el HTML contiene
+  `<title>ByNoesis | Cal.com</title>` antes de enlazarlo desde ambas páginas.
+- `grep` sobre el HTML servido confirma que los dos enlaces apuntan exactamente a
+  `https://cal.com/bynoesis` con `target="_blank" rel="noopener"`.
+- Suite completa tras el cambio: 345/347 verdes (mismos 2 fallos de macOS en
+  `test_backups.py`, sin relación). `tests/test_backend.py` verifica 200 en
+  `/equipo` y `/preguntas` y sigue en verde.
+- Pendiente: sustituir el monograma de iniciales por fotos reales y confirmar el
+  texto final de las bios con el fundador; no bloquea la publicación.
+
 ## 2026-07-27 — migración de facturación profesional con facturas ya emitidas
 
 - Reproducido el fallo real: copia SQLite local con facturas en estado `enviada` y
