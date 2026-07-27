@@ -1650,6 +1650,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   justify-content:center; font-family:var(--serif); font-weight:600; font-size:21px;
   letter-spacing:.02em; margin-bottom:18px; overflow:hidden; }
 .founder-avatar img { width:100%; height:100%; object-fit:cover; }
+/* Retrato real del fundador: mismo hueco que el avatar de iniciales. */
+.founder-photo { width:72px; height:72px; border-radius:50%; object-fit:cover; display:block;
+  border:1px solid var(--border-strong); background:var(--brand-soft); margin-bottom:18px; }
 .founder-card h3 { font-family:var(--serif); font-weight:500; font-size:22px; color:var(--brand); margin:0; }
 .founder-role { display:block; color:var(--brand-2); font-weight:700; font-size:12.5px; margin:5px 0 16px; }
 .founder-card p { color:var(--muted); line-height:1.68; font-size:14.5px; margin:0 0 18px; }
@@ -1688,17 +1691,6 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .public-final-cta-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .public-final-cta .btn.ghost { color:#fff; border-color:rgba(255,255,255,.35); background:rgba(255,255,255,.08); }
 
-/* Equipo: personas reales con foto. */
-.team-people { display:grid; grid-template-columns:repeat(2,1fr); gap:26px; }
-.team-people article { display:flex; gap:20px; align-items:flex-start; padding:22px;
-  border:1px solid var(--border); border-radius:14px; background:var(--surface); }
-.team-people img { width:96px; height:96px; flex:0 0 auto; border-radius:50%;
-  object-fit:cover; background:var(--surface-2); }
-.team-people h3 { font-size:19px; color:var(--brand); letter-spacing:-.01em; }
-.team-people span { display:block; margin:3px 0 9px; color:var(--brand-2);
-  font-size:12px; font-weight:750; }
-.team-people p { color:var(--muted); font-size:14px; line-height:1.6; }
-
 /* Contacto: calendario incrustado y vías alternativas. */
 .cal-embed { border:1px solid var(--border); border-radius:14px; overflow:hidden;
   background:var(--surface); }
@@ -1712,11 +1704,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .contact-grid .btn { align-self:flex-start; }
 
 @media (max-width: 860px) {
-  .team-people, .contact-grid { grid-template-columns:1fr; }
+  .contact-grid { grid-template-columns:1fr; }
   .cal-embed iframe { height:640px; }
-}
-@media (max-width: 560px) {
-  .team-people article { flex-direction:column; }
 }
 .public-footer { width:min(var(--public-max), calc(100% - 40px)); margin:0 auto; padding:60px 0 28px; }
 .public-footer-grid { display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:54px; }

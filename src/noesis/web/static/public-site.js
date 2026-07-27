@@ -176,10 +176,16 @@
       }
     });
 
-    // El alta la aprueba el equipo: todos los planes llevan al mismo formulario,
-    // conservando cuál miraba el visitante.
+    // Con el registro cerrado los planes llevan al formulario de solicitud; con
+    // el registro abierto, al alta. En ambos casos se conserva el plan elegido.
     document.querySelectorAll('.plan-start-link[data-plan]').forEach(link => {
-      link.href = `/solicitar-acceso?plan=${encodeURIComponent(link.dataset.plan)}`;
+      const plan = encodeURIComponent(link.dataset.plan);
+      link.href = link.getAttribute('href').startsWith('/solicitar-acceso')
+        ? `/solicitar-acceso?plan=${plan}`
+        : `/onboarding?intent=trial&plan=${plan}&billing=${period}`;
+    });
+    document.querySelectorAll('.plan-buy-link[data-plan]').forEach(link => {
+      link.href = `/onboarding?intent=subscribe&plan=${encodeURIComponent(link.dataset.plan)}&billing=${period}`;
     });
     document.querySelectorAll('[data-billing-field]').forEach(field => {
       field.value = period;

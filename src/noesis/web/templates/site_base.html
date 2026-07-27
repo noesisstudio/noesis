@@ -57,9 +57,10 @@
           <a href="/equipo">Equipo</a>
           <a href="/preguntas">Preguntas</a>
           <a href="/contacto">Contáctanos</a>
-          <a href="/solicitar-acceso">Solicitar acceso</a>
           {% if business_id %}<a href="/b/{{ business_id }}/resumen">Mi panel</a>{% else %}<a href="/login">Iniciar sesión</a>{% endif %}
-          {% if not business_id %}<a href="/onboarding">{% if public_signup_available %}Prueba 14 días{% else %}Solicitar acceso{% endif %}</a>{% endif %}
+          {% if not business_id %}
+          {% if public_signup_available %}<a href="/onboarding?intent=trial">Prueba 14 días</a>{% else %}<a href="/solicitar-acceso">Solicitar acceso</a>{% endif %}
+          {% endif %}
         </nav>
       </details>
     </div>
@@ -75,16 +76,16 @@
         <h2 id="final-cta-title">{% block cta_title %}{% if public_signup_available %}Catorce días para poner orden de verdad.{% else %}Abrimos con pocos negocios y acompañamiento directo.{% endif %}{% endblock %}</h2>
         <p>{% block cta_text %}{% if public_signup_available %}Sin tarjeta, sin permanencia y con tus datos siempre exportables.{% else %}Solicita acceso y configuraremos contigo el primer ciclo completo.{% endif %}{% endblock %}</p>
       </div>
-<<<<<<< HEAD
       <div class="public-final-cta-actions">
+        {% if public_signup_available %}
+        <a class="btn light" href="/onboarding?intent=trial">Prueba 14 días <span aria-hidden="true">→</span></a>
+        {% else %}
         <a class="btn light" href="/solicitar-acceso">Solicitar acceso <span aria-hidden="true">→</span></a>
+        {% endif %}
         {% if site_active != 'contacto' %}
         <a class="btn ghost" href="/contacto">Reservar una llamada</a>
         {% endif %}
       </div>
-=======
-      <a class="btn light" href="/onboarding{% if public_signup_available %}?intent=trial{% endif %}">{% if public_signup_available %}Prueba 14 días{% else %}Solicitar acceso{% endif %} <span aria-hidden="true">→</span></a>
->>>>>>> origin/main
     </section>
     {% endblock %}
   </main>
@@ -105,14 +106,9 @@
       <div class="public-footer-col">
         <b>Empresa</b>
         <a href="/equipo">Equipo</a>
-<<<<<<< HEAD
         <a href="/contacto">Contáctanos</a>
-        <a href="/solicitar-acceso">Solicitar acceso</a>
-        <a href="mailto:info@bynoesis.com">info@bynoesis.com</a>
-=======
         <a href="/cumplimiento">Cumplimiento</a>
-        <a href="mailto:{{ public_contact_email }}">Contacto</a>
->>>>>>> origin/main
+        <a href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a>
       </div>
       <div class="public-footer-col">
         <b>Legal</b>

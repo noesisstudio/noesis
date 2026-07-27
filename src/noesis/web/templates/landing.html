@@ -7,20 +7,17 @@
         <h1>Haz tu trabajo.<span>Noesis te ordena el negocio.</span></h1>
         <p>Trabajos, clientes, documentos, facturas y cobros en orden. Noesis te dice qué importa hoy y prepara el siguiente paso contigo.</p>
         <div class="hero-actions">
-<<<<<<< HEAD
-          <a class="btn light" href="/solicitar-acceso">Prueba 14 días gratis <span aria-hidden="true">→</span></a>
+          {% if public_signup_available %}
+          <a class="btn light" href="/onboarding?intent=trial">Prueba 14 días gratis <span aria-hidden="true">→</span></a>
+          {% else %}
+          <a class="btn light" href="/solicitar-acceso">Solicitar acceso al piloto <span aria-hidden="true">→</span></a>
+          {% endif %}
         </div>
         <a class="hero-how" href="#como-funciona">Ver cómo funciona <span aria-hidden="true">→</span></a>
-        <div class="hero-trust" aria-label="Condiciones de la prueba"><span>Sin tarjeta durante la prueba</span><span>Cancela cuando quieras</span></div>
-=======
-          <a class="btn light" href="/onboarding{% if public_signup_available %}?intent=trial{% endif %}">{% if public_signup_available %}Prueba 14 días gratis{% else %}Solicitar acceso al piloto{% endif %} <span aria-hidden="true">→</span></a>
-        </div>
-        <a class="hero-how" href="/producto#como-funciona">Ver cómo funciona <span aria-hidden="true">→</span></a>
         <div class="hero-trust" aria-label="Condiciones de acceso">
           {% if public_signup_available %}<span>Sin tarjeta durante la prueba</span><span>Cancela cuando quieras</span>
           {% else %}<span>Acceso acompañado</span><span>Tus datos son exportables</span>{% endif %}
         </div>
->>>>>>> origin/main
       </div>
 
       <div class="hero-operating-proof product-home-preview" data-product-demo aria-label="Panel de Noesis con datos de una empresa de ejemplo">
@@ -1039,42 +1036,36 @@
         <div class="plan-label">Autónomo</div><p class="public-price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para llevar trabajos, clientes, facturas y cobros desde un solo sitio.</p>
-<<<<<<< HEAD
-        <a class="btn full plan-start-link" data-plan="autonomo" href="/solicitar-acceso?plan=autonomo">Solicitar acceso <span aria-hidden="true">→</span></a>
-=======
         {% if public_signup_available %}
         <a class="btn full plan-start-link" data-plan="autonomo" href="/onboarding?intent=trial&plan=autonomo&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="autonomo" href="/onboarding?intent=subscribe&plan=autonomo&billing=monthly">Contratar ahora</a>
-        {% else %}<a class="btn full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
->>>>>>> origin/main
+        {% else %}
+        <a class="btn full plan-start-link" data-plan="autonomo" href="/solicitar-acceso?plan=autonomo">Solicitar acceso <span aria-hidden="true">→</span></a>
+        {% endif %}
       </article>
       <article class="public-price-card recommended" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
         <div class="recommendation-label">Recomendado</div>
         <div class="plan-label">Negocio</div><p class="public-price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para equipos que necesitan trabajos asignados, fichaje y gestoría conectada.</p>
-<<<<<<< HEAD
-        <a class="btn primary full plan-start-link" data-plan="pro" href="/solicitar-acceso?plan=pro">Solicitar acceso <span aria-hidden="true">→</span></a>
-=======
         {% if public_signup_available %}
         <a class="btn primary full plan-start-link" data-plan="pro" href="/onboarding?intent=trial&plan=pro&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="pro" href="/onboarding?intent=subscribe&plan=pro&billing=monthly">Contratar ahora</a>
-        {% else %}<a class="btn primary full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
->>>>>>> origin/main
+        {% else %}
+        <a class="btn primary full plan-start-link" data-plan="pro" href="/solicitar-acceso?plan=pro">Solicitar acceso <span aria-hidden="true">→</span></a>
+        {% endif %}
       </article>
       <article class="public-price-card" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
         <div class="plan-label">Sin Límites</div><p class="public-price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para un uso intensivo con puesta en marcha acompañada y soporte directo.</p>
         <span class="beta-line">Recepcionista 24/7 · beta con acceso preferente</span>
-<<<<<<< HEAD
-        <a class="btn full plan-start-link" data-plan="premium" href="/solicitar-acceso?plan=premium">Solicitar acceso <span aria-hidden="true">→</span></a>
-=======
         {% if public_signup_available %}
         <a class="btn full plan-start-link" data-plan="premium" href="/onboarding?intent=trial&plan=premium&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
         <a class="plan-buy-link" data-plan="premium" href="/onboarding?intent=subscribe&plan=premium&billing=monthly">Contratar ahora</a>
-        {% else %}<a class="btn full" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>{% endif %}
->>>>>>> origin/main
+        {% else %}
+        <a class="btn full plan-start-link" data-plan="premium" href="/solicitar-acceso?plan=premium">Solicitar acceso <span aria-hidden="true">→</span></a>
+        {% endif %}
       </article>
     </div>
     <div class="center-link"><a class="text-link" href="/precios">Comparar los planes <span aria-hidden="true">→</span></a></div>
