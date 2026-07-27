@@ -28,6 +28,8 @@ def _asset_version() -> str:
 
 # Disponible en todas las plantillas como {{ asset_v }}.
 TEMPLATES.env.globals["asset_v"] = _asset_version()
+# Dominio público: lo usan las etiquetas canónicas y de compartición social.
+TEMPLATES.env.globals["base_url"] = config.BASE_URL
 
 
 def _eur(value) -> str:

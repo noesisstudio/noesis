@@ -2912,6 +2912,44 @@ def _downgrade_security_audit(conn) -> None:
 
 
 Migration = tuple[int, str, Callable, Callable]
+def _upgrade_access_requests(conn) -> None:
+    """Solicitudes de acceso: el alta la aprueba el equipo, no el visitante."""
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS access_requests ("
+        f"id {t['id']}, "
+        "name TEXT NOT NULL, "
+        "business_name TEXT, "
+        "sector TEXT, "
+        "email TEXT NOT NULL, "
+        "phone TEXT, "
+        "message TEXT, "
+        # Plan que miraba al pulsar: contexto comercial para la primera llamada.
+        "plan_interest TEXT, "
+        "status TEXT NOT NULL DEFAULT 'nueva' "
+        "CHECK (status IN ('nueva','contactada','alta','descartada')), "
+        "internal_note TEXT, "
+        # Queda enlazado al negocio creado para no dar de alta dos veces lo mismo.
+        f"business_id {t['ref']} REFERENCES businesses(id), "
+        f"created_at {t['timestamp']} NOT NULL, "
+        f"updated_at {t['timestamp']})"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_access_requests_status "
+        "ON access_requests(status, created_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_access_requests_email "
+        "ON access_requests(email)"
+    )
+
+
+def _downgrade_access_requests(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_access_requests_email")
+    conn.execute("DROP INDEX IF EXISTS idx_access_requests_status")
+    conn.execute("DROP TABLE IF EXISTS access_requests")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -2952,6 +2990,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_shared_auth_limits),
     (35, "auditoria_seguridad", _upgrade_security_audit,
      _downgrade_security_audit),
+    (36, "solicitudes_acceso", _upgrade_access_requests,
+     _downgrade_access_requests),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

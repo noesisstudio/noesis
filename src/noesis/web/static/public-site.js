@@ -176,11 +176,10 @@
       }
     });
 
+    // El alta la aprueba el equipo: todos los planes llevan al mismo formulario,
+    // conservando cuál miraba el visitante.
     document.querySelectorAll('.plan-start-link[data-plan]').forEach(link => {
-      link.href = `/onboarding?intent=trial&plan=${encodeURIComponent(link.dataset.plan)}&billing=${period}`;
-    });
-    document.querySelectorAll('.plan-buy-link[data-plan]').forEach(link => {
-      link.href = `/onboarding?intent=subscribe&plan=${encodeURIComponent(link.dataset.plan)}&billing=${period}`;
+      link.href = `/solicitar-acceso?plan=${encodeURIComponent(link.dataset.plan)}`;
     });
     document.querySelectorAll('[data-billing-field]').forEach(field => {
       field.value = period;

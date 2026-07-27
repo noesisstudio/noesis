@@ -1695,16 +1695,18 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Beta con acceso preferente", public_page.text)
                 self.assertIn("1 mes gratis", public_page.text)
                 self.assertIn('data-annual="319"', public_page.text)
-                self.assertIn(
-                    '/onboarding?intent=trial&plan=autonomo&billing=monthly',
-                    public_page.text,
-                )
-                self.assertIn("intent=trial", public_page.text)
-                self.assertIn("intent=subscribe", public_page.text)
-                for route in ("/", "/producto", "/equipo", "/preguntas"):
+                # El alta la aprueba el equipo: los planes llevan al formulario
+                # conservando cuál miraba el visitante.
+                self.assertIn('/solicitar-acceso?plan=autonomo', public_page.text)
+                self.assertNotIn("/onboarding?intent=", public_page.text)
+                for route in ("/", "/equipo", "/preguntas", "/contacto"):
                     page = client.get(route)
                     self.assertEqual(page.status_code, 200, route)
                     self.assertIn('href="/equipo"', page.text)
+                # Producto se fusionó con la portada; su enlace antiguo sigue vivo.
+                retired = client.get("/producto", follow_redirects=False)
+                self.assertEqual(retired.status_code, 301)
+                self.assertEqual(retired.headers["location"], "/#como-funciona")
                 team_page = client.get("/equipo")
                 self.assertIn("Un equipo pequeño", team_page.text)
                 self.assertNotIn("4,9", team_page.text)
