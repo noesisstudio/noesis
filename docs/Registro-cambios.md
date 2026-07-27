@@ -158,6 +158,27 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Estado de publicación:** entrada restaurada tras perderse en el merge
   `796e49e`; el commit original ya está en `main` desde el 2026-07-27.
 
+## 2026-07-27 — fotos reales de los fundadores en /equipo
+
+- **Autor/agente:** Claude.
+- **Objetivo:** sustituir el monograma de iniciales de `/equipo` por las fotos
+  reales que el fundador subió al repositorio.
+- **Áreas y archivos:** `src/noesis/web/templates/site_equipo.html`;
+  `src/noesis/web/static/team-xavier-grino.jpg` y
+  `src/noesis/web/static/team-miquel-colell.jpg` (nuevos).
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** las fotos originales (600x600, 340KB/712KB) se
+  redimensionan a 480x480 y se recomprimen a JPEG (24-30KB) con Pillow, quitando
+  metadatos EXIF. Captura real con Playwright confirma que ambas cargan
+  correctamente en el círculo de 72px. Suite completa: 352/354 verdes (mismos 2
+  fallos de macOS, sin relación). `check_project_truth.py` verde.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** ninguno; son archivos estáticos servidos
+  desde `/static/`.
+- **Diagnóstico y rollback:** revertir este commit devuelve el monograma de
+  iniciales.
+- **Estado de publicación:** commit en `main`; pendiente de push (ver más abajo).
+
 ## 2026-07-27 — equipo real en la web pública y botón de agendar reunión
 
 - **Autor/agente:** Claude.
