@@ -343,26 +343,49 @@ def access_request_submit(
         return RedirectResponse("/solicitar-acceso?error=error", status_code=303)
     auth.record_failed_attempt(ip_key)
 
-    # El aviso al equipo nunca puede tumbar la solicitud ya guardada.
-    if config.ADMIN_EMAIL:
+    # Los avisos nunca pueden tumbar una solicitud ya guardada: si el correo
+    # falla, la petición sigue estando en el panel.
+    inbox = config.ADMIN_EMAIL or config.PUBLIC_CONTACT_EMAIL
+    if inbox:
         try:
             email_adapter.send_email(
-                config.ADMIN_EMAIL,
+                inbox,
                 f"Nueva solicitud de acceso: {created['name']}",
                 "\n".join([
                     f"Nombre: {created['name']}",
-                    f"Negocio: {created['business_name'] or '—'}",
-                    f"Sector: {created['sector'] or '—'}",
                     f"Correo: {created['email']}",
                     f"Teléfono: {created['phone'] or '—'}",
+                    f"A qué se dedica: {created['sector'] or '—'}",
+                    f"Negocio: {created['business_name'] or '—'}",
                     f"Plan que miraba: {created['plan_interest'] or '—'}",
+                    "",
                     f"Mensaje: {created['message'] or '—'}",
                     "",
-                    f"Gestiónala en {config.BASE_URL}/admin",
+                    f"Darle de alta: {config.BASE_URL}/admin#solicitudes",
                 ]),
             )
         except Exception:  # noqa: BLE001
             log.exception("No se pudo avisar de la solicitud %s.", created["id"])
+    try:
+        email_adapter.send_email(
+            created["email"],
+            "Hemos recibido tu solicitud · Noesis",
+            "\n".join([
+                f"Hola, {created['name']}:",
+                "",
+                "Hemos recibido tu solicitud de acceso a Noesis. La revisamos y te",
+                "escribimos en menos de 24 horas laborables con tu acceso y una fecha",
+                "para ponerlo en marcha juntos.",
+                "",
+                "Si prefieres que hablemos antes, puedes reservar una llamada aquí:",
+                f"{config.BASE_URL}/contacto",
+                "",
+                "Un saludo,",
+                "El equipo de Noesis",
+            ]),
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo confirmar la solicitud %s.", created["id"])
     return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
 
 
@@ -371,11 +394,12 @@ def access_request_submit(
 def onboarding(request: Request, error: str = "", plan: str = "",
                billing: str = "monthly", intent: str = "trial"):
     if not config.public_signup_available():
-        return TEMPLATES.TemplateResponse(
-            request, "registro-cerrado.html",
-            {"contact_email": config.PUBLIC_CONTACT_EMAIL},
-            status_code=503,
-        )
+        # Con el alta cerrada no se enseña una pantalla intermedia: se lleva
+        # directamente al formulario, conservando el plan que venía mirando.
+        target = "/solicitar-acceso"
+        if plan in billing_adapter.PLAN_PRICES:
+            target += f"?plan={plan}"
+        return RedirectResponse(target, status_code=303)
     selected_plan, selected_billing, selected_intent = _signup_selection(
         plan, billing, intent
     )

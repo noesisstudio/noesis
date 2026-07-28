@@ -62,7 +62,10 @@ class AccessRequestTestCase(unittest.TestCase):
         self.assertEqual(stored[0]["email"], "marta@ejemplo.com")
         self.assertEqual(stored[0]["plan_interest"], "pro")
         self.assertEqual(stored[0]["status"], "nueva")
-        notify.assert_called_once()
+        # Salen dos correos: el aviso al equipo y la confirmación al solicitante.
+        destinatarios = [llamada.args[0] for llamada in notify.call_args_list]
+        self.assertIn(config.ADMIN_EMAIL, destinatarios)
+        self.assertIn("marta@ejemplo.com", destinatarios)
 
     def test_request_without_consent_or_valid_email_is_rejected(self):
         scheduler, client = self._client()

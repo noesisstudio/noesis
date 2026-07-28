@@ -2,6 +2,22 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Con el alta cerrada se va directo al formulario, y cal.com se incrusta sin su script (2026-07-27)
+
+`/onboarding` mostraba una pantalla intermedia («estamos abriendo con pocos negocios»)
+antes de dejar llegar al formulario. Un paso de más que no aportaba nada: ahora redirige
+directamente a `/solicitar-acceso` conservando el plan. La protección real nunca fue esa
+pantalla sino el rechazo del envío, que se mantiene: no se puede crear una cuenta con el
+alta cerrada aunque se llame a la ruta a mano.
+
+Sobre el calendario, dos intentos fallidos dejan la lección anotada. Apuntar al **perfil**
+de cal.com muestra la lista de tipos de reunión y obliga a pulsar antes de ver una sola
+hora. Y su vista **`/embed`** no sirve para un iframe suelto: espera que la página
+anfitriona cargue el script de cal.com y complete un saludo por mensajes, así que sin él
+se queda en blanco. Lo que funciona es la **URL normal de una cita concreta**, que se
+pinta sola y no obliga a traer JavaScript de terceros —algo que además chocaría con la
+regla de no depender de CDNs en tiempo de ejecución.
+
 ## El alta la aprueba el equipo, y la contraseña la elige siempre el titular (2026-07-27)
 
 Durante el piloto no interesa que nadie se cree una cuenta solo: se acompaña negocio

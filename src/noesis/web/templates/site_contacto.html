@@ -20,10 +20,12 @@
     </div>
 
     {# Se apunta a una reunión concreta, no al perfil: así se ven los huecos
-       disponibles desde el primer momento en vez de una lista que hay que pulsar. #}
+       disponibles desde el primer momento en vez de una lista que hay que pulsar.
+       Se usa la URL normal y NO la vista /embed de cal.com: esa espera que la
+       página anfitriona cargue su script y se queda en blanco sin él. #}
     <div class="cal-embed">
       <iframe
-        src="https://cal.com/bynoesis/sesion-de-estrategia/embed?theme=light"
+        src="https://cal.com/bynoesis/sesion-de-estrategia"
         title="Calendario para reservar una reunión de 30 minutos con Noesis"
         loading="lazy"
       ></iframe>

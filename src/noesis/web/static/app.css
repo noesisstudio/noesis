@@ -1694,8 +1694,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 /* Contacto: calendario incrustado y vías alternativas. */
 .cal-embed { border:1px solid var(--border); border-radius:14px; overflow:hidden;
   background:var(--surface); }
-/* Alto ajustado a la vista de reserva de cal.com para no dejar hueco muerto. */
-.cal-embed iframe { display:block; width:100%; height:640px; border:0; }
+/* La vista de reserva de cal.com necesita alto: con menos, el calendario se corta. */
+.cal-embed iframe { display:block; width:100%; height:820px; border:0; }
 .cal-fallback { margin-top:12px; color:var(--muted); font-size:13px; text-align:center; }
 .contact-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
 .contact-grid article { display:flex; flex-direction:column; gap:10px; padding:24px;
