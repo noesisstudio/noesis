@@ -1,5 +1,32 @@
 # Registro de QA
 
+## 2026-07-27 — corrección del calendario y rediseño de la solicitud
+
+### Qué se probó y con qué resultado
+
+- **Calendario**: revisada la captura de producción. No fallaba la carga: el iframe
+  apuntaba al **perfil** de cal.com, que muestra la lista de tipos de reunión y obliga a
+  pulsar antes de ver horas, dejando además medio recuadro vacío. Se comprobó contra
+  cal.com que existen dos citas publicadas (`sesion-de-estrategia` y `15min`, ambas
+  responden 200 en su vista de incrustar) y se apunta ya a la de 30 minutos, para que
+  los huecos disponibles se vean de entrada. Alto reducido a 640 px.
+- **`/solicitar-acceso` rediseñada**: pasa a usar el diseño del sitio público (cabecera,
+  menú y pie) en lugar del formato del flujo de cuenta. Verificado que renderiza esos
+  elementos y responde 200.
+- **Formulario simplificado**: se retira el nombre del negocio y el selector de plan
+  deja de mostrarse; el plan viaja oculto desde la página de precios. Comprobado que un
+  envío válido se guarda conservando plan y teléfono, y que sigue rechazando el envío
+  sin consentimiento.
+- Ruff en verde, las 7 pruebas del alta por solicitud y la de precios siguen pasando.
+
+### Qué no se pudo probar
+
+- **Que el calendario se pinte ya correctamente**: el cambio de URL es coherente con lo
+  observado, pero no se ha vuelto a abrir en un navegador con red tras desplegar.
+  Confirmar visualmente en producción.
+- **Aspecto real de la página rediseñada**: verificada por marcado y estilos, no con una
+  captura en navegador.
+
 ## 2026-07-27 — alta por solicitud, contacto con calendario y portada única
 
 ### Qué se probó y con qué resultado

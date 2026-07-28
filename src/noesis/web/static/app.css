@@ -1694,7 +1694,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 /* Contacto: calendario incrustado y vías alternativas. */
 .cal-embed { border:1px solid var(--border); border-radius:14px; overflow:hidden;
   background:var(--surface); }
-.cal-embed iframe { display:block; width:100%; height:740px; border:0; }
+/* Alto ajustado a la vista de reserva de cal.com para no dejar hueco muerto. */
+.cal-embed iframe { display:block; width:100%; height:640px; border:0; }
 .cal-fallback { margin-top:12px; color:var(--muted); font-size:13px; text-align:center; }
 .contact-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
 .contact-grid article { display:flex; flex-direction:column; gap:10px; padding:24px;
@@ -1873,8 +1874,42 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .public-auth-form textarea.input { min-height:88px; padding-top:11px; resize:vertical; line-height:1.55; }
 /* Señuelo antispam: fuera de la vista y del recorrido con teclado, nunca display:none. */
 .hp-field { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
-.request-next { margin:20px 0; padding:17px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); }
-.request-next p { margin:0 0 12px; color:var(--muted); font-size:12.5px; line-height:1.55; }
+/* Solicitud de acceso: página del sitio público, no del flujo de cuenta. */
+.request-layout { display:grid; grid-template-columns:1fr 1.1fr; gap:48px; align-items:start; }
+.request-aside h2 { font-size:20px; color:var(--brand); letter-spacing:-.01em; margin-bottom:20px; }
+.request-steps { display:grid; gap:20px; margin:0 0 28px; padding:0; list-style:none; }
+.request-steps li { display:flex; gap:14px; align-items:flex-start; }
+.request-steps b { width:26px; height:26px; flex:0 0 auto; border-radius:50%;
+  background:var(--brand); color:#fff; display:flex; align-items:center;
+  justify-content:center; font-size:12.5px; font-weight:750; }
+.request-steps h3 { font-size:15px; color:var(--text); margin:2px 0 3px; }
+.request-steps p { color:var(--muted); font-size:13.5px; line-height:1.6; margin:0; }
+.request-notes { display:grid; gap:11px; padding:20px; border:1px solid var(--border);
+  border-radius:12px; background:var(--surface-2); }
+.request-notes p { margin:0; color:var(--muted); font-size:13px; line-height:1.6; }
+.request-notes b { color:var(--brand); }
+.request-form-card { padding:32px; border:1px solid var(--border); border-radius:14px;
+  background:var(--surface); box-shadow:0 1px 3px rgba(20,70,59,.05); }
+.request-form { display:grid; gap:17px; }
+.request-form > label:not(.auth-consent) { display:grid; gap:7px; color:var(--text);
+  font-size:12.5px; font-weight:750; }
+.request-form .opt { color:var(--faint); font-weight:600; }
+.request-form .input { min-height:46px; background:#fbfaf7; border-color:var(--border-strong); }
+.request-form textarea.input { min-height:88px; padding-top:11px; resize:vertical; line-height:1.55; }
+.request-form .input:focus { background:#fff; border-color:var(--brand-2);
+  box-shadow:0 0 0 3px rgba(46,139,116,.12); }
+.request-safe { display:block; color:var(--faint); text-align:center; line-height:1.5; }
+.request-done { display:flex; justify-content:center; }
+.request-done-card { max-width:620px; padding:44px; text-align:center; border:1px solid var(--border);
+  border-radius:16px; background:var(--surface); }
+.request-done-card h2 { font-size:28px; color:var(--brand); margin:10px 0 12px; letter-spacing:-.015em; }
+.request-done-card p { color:var(--muted); line-height:1.68; margin:0 0 24px; }
+.request-done-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+@media (max-width: 860px) {
+  .request-layout { grid-template-columns:1fr; gap:32px; }
+  .request-form-card { padding:24px; }
+}
 
 /* Solicitudes de acceso en el panel del fundador. */
 .admin-note { margin:0 0 14px; padding:13px 16px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-size:13px; }
