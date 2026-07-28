@@ -1,0 +1,1161 @@
+<title>Noesis · Auditoría y plan de apertura</title>
+
+<style>
+  :root {
+    --paper:        #f4f1e8;
+    --paper-raised: #fbf9f4;
+    --ink:          #14463b;
+    --ink-body:     #2c3a35;
+    --muted:        #6c7a73;
+    --faint:        #97a29b;
+    --rule:         #d9d5c7;
+    --rule-soft:    #e6e3d8;
+    --accent:       #2e8b74;
+    --critical:     #a3271d;
+    --warning:      #8a5d0c;
+    --critical-bg:  #f6e7e4;
+    --warning-bg:   #f6eedd;
+    --accent-bg:    #e3efe9;
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:        #101a16;
+      --paper-raised: #16221d;
+      --ink:          #cfe4d9;
+      --ink-body:     #c2cec8;
+      --muted:        #8b9992;
+      --faint:        #6d7a74;
+      --rule:         #2a3a33;
+      --rule-soft:    #223029;
+      --accent:       #55b394;
+      --critical:     #e0796c;
+      --warning:      #d5a44e;
+      --critical-bg:  #2b1c19;
+      --warning-bg:   #2a2317;
+      --accent-bg:    #172c25;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:        #101a16;
+    --paper-raised: #16221d;
+    --ink:          #cfe4d9;
+    --ink-body:     #c2cec8;
+    --muted:        #8b9992;
+    --faint:        #6d7a74;
+    --rule:         #2a3a33;
+    --rule-soft:    #223029;
+    --accent:       #55b394;
+    --critical:     #e0796c;
+    --warning:      #d5a44e;
+    --critical-bg:  #2b1c19;
+    --warning-bg:   #2a2317;
+    --accent-bg:    #172c25;
+  }
+
+  :root[data-theme="light"] {
+    --paper:        #f4f1e8;
+    --paper-raised: #fbf9f4;
+    --ink:          #14463b;
+    --ink-body:     #2c3a35;
+    --muted:        #6c7a73;
+    --faint:        #97a29b;
+    --rule:         #d9d5c7;
+    --rule-soft:    #e6e3d8;
+    --accent:       #2e8b74;
+    --critical:     #a3271d;
+    --warning:      #8a5d0c;
+    --critical-bg:  #f6e7e4;
+    --warning-bg:   #f6eedd;
+    --accent-bg:    #e3efe9;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink-body);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 44rem; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.5rem; }
+  .kicker {
+    font-size: .688rem; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .75rem;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.1;
+    letter-spacing: -.025em; font-weight: 700; color: var(--ink);
+    text-wrap: balance; margin-bottom: .75rem;
+  }
+  .standfirst {
+    font-family: var(--serif); font-size: 1.075rem; line-height: 1.65;
+    color: var(--muted); max-width: 38rem;
+  }
+
+  .board {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 2.5rem 0 3rem;
+  }
+  .board div { background: var(--paper-raised); padding: 1rem 1.1rem; }
+  .board dt {
+    font-size: .688rem; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: .4rem;
+  }
+  .board dd {
+    font-size: 1.5rem; font-weight: 700; color: var(--ink);
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .board dd span {
+    font-size: .813rem; font-weight: 600; color: var(--muted);
+    display: block; margin-top: .2rem; letter-spacing: 0;
+  }
+
+  .part {
+    margin-top: 4rem; padding-top: 1.25rem; border-top: 2px solid var(--ink);
+  }
+  .part-label {
+    font-size: .688rem; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .5rem;
+  }
+  .part h2 {
+    font-size: clamp(1.5rem, 4vw, 1.875rem); font-weight: 700;
+    letter-spacing: -.02em; color: var(--ink); text-wrap: balance;
+  }
+  .part-intro {
+    font-family: var(--serif); font-size: 1.006rem; line-height: 1.68;
+    color: var(--ink-body); margin-top: .9rem;
+  }
+
+  .group { margin-top: 2.75rem; }
+  .group-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .35rem; }
+  .group-head h3 {
+    font-size: 1.125rem; font-weight: 700; color: var(--ink); letter-spacing: -.01em;
+  }
+  .group-note {
+    font-family: var(--serif); font-style: italic; font-size: .938rem;
+    color: var(--muted); margin-bottom: 1.25rem;
+  }
+
+  .items { border-top: 1px solid var(--rule); }
+  .item { border-bottom: 1px solid var(--rule-soft); padding: .9rem 0; }
+  .item b {
+    display: block; font-size: .975rem; font-weight: 700; color: var(--ink);
+    margin-bottom: .2rem;
+  }
+  .item p { font-size: .938rem; color: var(--ink-body); margin: 0; }
+
+  .dot {
+    width: .55rem; height: .55rem; flex: 0 0 auto; border-radius: 50%;
+    display: inline-block;
+  }
+  .dot.ok { background: var(--accent); }
+  .dot.off { background: var(--faint); }
+  .dot.degraded { background: var(--warning); }
+  .dot.broken { background: var(--critical); }
+
+  .phase { margin-top: 3.25rem; }
+  .phase-head {
+    display: flex; align-items: baseline; gap: .75rem;
+    border-bottom: 1px solid var(--ink); padding-bottom: .5rem; margin-bottom: .5rem;
+  }
+  .phase-num {
+    font-family: var(--mono); font-size: .813rem; font-weight: 700;
+    color: var(--accent); font-variant-numeric: tabular-nums;
+  }
+  .phase-head h3 {
+    font-size: 1.313rem; font-weight: 700; letter-spacing: -.015em;
+    color: var(--ink); text-wrap: balance;
+  }
+  .phase-note {
+    font-family: var(--serif); font-size: .938rem; color: var(--muted);
+    margin-bottom: 1.75rem; font-style: italic;
+  }
+
+  .task { border-bottom: 1px solid var(--rule-soft); padding: 1.75rem 0; }
+  .task:last-child { border-bottom: none; }
+  .task-head { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .9rem; }
+  .task-head h4 {
+    font-size: 1.063rem; font-weight: 700; color: var(--ink);
+    letter-spacing: -.01em; flex: 1 1 auto; min-width: 12rem;
+  }
+
+  .pill {
+    font-size: .688rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; padding: .2rem .5rem; border: 1px solid;
+    white-space: nowrap;
+  }
+  .pill.critical { color: var(--critical); border-color: var(--critical); background: var(--critical-bg); }
+  .pill.warning  { color: var(--warning);  border-color: var(--warning);  background: var(--warning-bg); }
+  .pill.later    { color: var(--muted);    border-color: var(--rule);     background: transparent; }
+  .pill.you      { color: var(--accent);   border-color: var(--accent);   background: var(--accent-bg); }
+  .pill.me       { color: var(--muted);    border-color: var(--rule);     background: transparent; }
+
+  .what {
+    font-family: var(--serif); font-size: 1.006rem; line-height: 1.68;
+    color: var(--ink-body); margin-bottom: .9rem;
+  }
+  .what strong { font-weight: 700; color: var(--ink); }
+  .why { margin-bottom: .9rem; }
+  .label {
+    font-size: .688rem; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint); display: block; margin-bottom: .3rem;
+  }
+  .do { background: var(--paper-raised); border: 1px solid var(--rule-soft); padding: .9rem 1.1rem; }
+  .do p { margin: 0; }
+  .do p + p { margin-top: .5rem; }
+
+  code {
+    font-family: var(--mono); font-size: .875em; background: var(--accent-bg);
+    color: var(--ink); padding: .1em .35em; border: 1px solid var(--rule-soft);
+    word-break: break-word;
+  }
+  .val {
+    display: block; margin-top: .45rem; padding: .5rem .7rem; background: var(--paper);
+    border: 1px solid var(--rule); font-family: var(--mono); font-size: .813rem;
+    overflow-x: auto; white-space: pre;
+  }
+
+  .dep {
+    font-size: .813rem; color: var(--muted); margin-top: .8rem;
+    padding-left: .8rem; border-left: 2px solid var(--rule);
+  }
+
+  .callout {
+    border: 1px solid var(--critical); background: var(--critical-bg);
+    padding: 1.1rem 1.25rem; margin: 1.75rem 0;
+  }
+  .callout .label { color: var(--critical); }
+  .callout p { font-family: var(--serif); font-size: 1.006rem; line-height: 1.65; margin: 0; }
+  .callout p + p { margin-top: .6rem; }
+
+  .glossary { margin-top: 4rem; border-top: 2px solid var(--ink); padding-top: 1.5rem; }
+  .glossary h2 { font-size: 1.5rem; font-weight: 700; color: var(--ink); margin-bottom: 1.25rem; letter-spacing: -.015em; }
+  .glossary dl { display: grid; gap: 1.1rem; }
+  .glossary dt { font-family: var(--mono); font-size: .875rem; font-weight: 700; color: var(--ink); margin-bottom: .25rem; }
+  .glossary dd { font-family: var(--serif); font-size: .975rem; line-height: 1.62; color: var(--ink-body); }
+
+  a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  @media (max-width: 34rem) {
+    .wrap { padding: 2.5rem 1.1rem 4rem; }
+    .board { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="kicker">Auditoría · 27 julio 2026</div>
+    <h1>Qué funciona, qué no, y qué hacer antes de abrir</h1>
+    <p class="standfirst">
+      Primera parte: el estado real de cada pieza, comprobado contra el código y
+      contra la web publicada. Segunda parte: el plan de trabajo ordenado por
+      dependencias, con el porqué de cada cosa explicado desde cero.
+    </p>
+  </header>
+
+  <dl class="board">
+    <div><dt>Funcionan</dt><dd>12<span>piezas verificadas</span></dd></div>
+    <div><dt>Apagadas</dt><dd>6<span>falta credencial</span></dd></div>
+    <div><dt>Degradadas</dt><dd>3<span>prometen de más</span></dd></div>
+    <div><dt>Rotas</dt><dd>6<span>hay que arreglar</span></dd></div>
+  </dl>
+
+  <p class="what">
+    Antes de entrar en detalle, la conclusión: <strong>el problema no es el
+    código</strong>. Los 347 tests pasan, no hay fallos de seguridad de severidad alta,
+    el aislamiento entre negocios está bien resuelto y la web responde. Lo que falta es
+    conectar servicios externos, legalizar la web y publicar lo que ya está construido.
+    Casi nada de esta lista es «programar más producto».
+  </p>
+
+
+  <!-- ============================ PARTE 1 ============================ -->
+  <section class="part">
+    <div class="part-label">Parte 1</div>
+    <h2>Auditoría funcional</h2>
+    <p class="part-intro">
+      Pieza por pieza, en cuatro estados: lo que funciona hoy, lo que está construido
+      pero apagado, lo que funciona peor de lo que promete tu web, y lo que está roto.
+    </p>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="dot ok"></span>
+        <h3>Funciona hoy</h3>
+      </div>
+      <p class="group-note">Verificado contra el código y contra la web publicada. No depende de nadie externo.</p>
+      <div class="items">
+        <div class="item">
+          <b>La web pública</b>
+          <p>Portada, producto, precios, equipo, preguntas y acceso responden correctamente en <code>bynoesis.com</code> y <code>www.bynoesis.com</code>, con certificado válido y cabeceras de seguridad puestas.</p>
+        </div>
+        <div class="item">
+          <b>Cuentas, acceso y aislamiento entre negocios</b>
+          <p>Contraseñas cifradas, sesiones firmadas, límite de ocho intentos de acceso, y cada consulta filtrada por negocio. Es la parte mejor construida de todo el sistema: ningún cliente puede ver datos de otro.</p>
+        </div>
+        <div class="item">
+          <b>Facturación completa</b>
+          <p>Borradores editables, varias líneas con cantidad, precio y descuento, IVA e IRPF, series separadas para factura completa, simplificada y rectificativa, vencimientos, duplicados, facturas recurrentes y generación del PDF. Todo local, sin depender de ningún servicio de terceros.</p>
+        </div>
+        <div class="item">
+          <b>Veri*Factu: la cadena de registros</b>
+          <p>Cada factura emitida genera un registro inalterable, encadenado por huella al anterior, con su código QR. Anular no borra: crea otro registro encadenado. Esto funciona hoy; lo único que falta es enviarlo a la Agencia Tributaria, que necesita certificado.</p>
+        </div>
+        <div class="item">
+          <b>Clientes, presupuestos, trabajos, proyectos y agenda</b>
+          <p>El ciclo operativo completo, desde que entra un cliente hasta que se cierra el trabajo, incluida la rentabilidad por proyecto.</p>
+        </div>
+        <div class="item">
+          <b>Equipo y fichaje inalterable</b>
+          <p>Asignación de trabajos, planning y registro de jornada que no se puede modificar a posteriori, como exige la ley.</p>
+        </div>
+        <div class="item">
+          <b>Documentos</b>
+          <p>Subida con límites de tamaño, validación de que el archivo es lo que dice ser, almacenamiento aislado por negocio y vínculo con gastos y facturas.</p>
+        </div>
+        <div class="item">
+          <b>Portales privados por enlace</b>
+          <p>Tres portales que funcionan con un enlace secreto y revocable, sin que nadie tenga que crearse cuenta: el del cliente final para ver y pagar, el del trabajador, y el de la gestoría con su paquete trimestral.</p>
+        </div>
+        <div class="item">
+          <b>Conciliación bancaria por CSV</b>
+          <p>Importa el extracto que descargue el autónomo, descarta duplicados y propone qué ingreso cuadra con qué factura, explicando por qué. Nunca da un cobro por bueno solo: lo confirma el titular. No conecta con el banco, y eso es deliberado.</p>
+        </div>
+        <div class="item">
+          <b>Suscripción de calendario</b>
+          <p>Un enlace privado y revocable para ver la agenda desde Google Calendar, Apple o Outlook, sin contratar ninguna API. Falta probarlo con las tres aplicaciones reales.</p>
+        </div>
+        <div class="item">
+          <b>Asistente con cerebro local</b>
+          <p>Entiende órdenes y redacta mensajes profesionales <em>sin usar ninguna inteligencia artificial de pago</em>, a base de reglas y de los datos ya guardados. Nunca inventa importes ni destinatarios. Esto es lo que hace que el producto siga funcionando aunque falle o se apague cualquier proveedor externo.</p>
+        </div>
+        <div class="item">
+          <b>Copias de seguridad verificadas</b>
+          <p>Cada copia se restaura al crearla para comprobar que sirve, y hay un simulacro semanal independiente. La pega es dónde viven: en el mismo sitio que la aplicación.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="dot off"></span>
+        <h3>Construido pero apagado</h3>
+      </div>
+      <p class="group-note">El código está hecho y probado. Falta darle credenciales o configurarlo fuera.</p>
+      <div class="items">
+        <div class="item">
+          <b>Cobro con tarjeta (Stripe)</b>
+          <p>Todo el circuito está programado: pago, renovación, impago, cancelación y portal del cliente. Sin configurar en el panel de Stripe, quien pulse «contratar» solo deja registrado su interés y tendrías que activarle el plan a mano.</p>
+        </div>
+        <div class="item">
+          <b>WhatsApp de verdad</b>
+          <p>El canal está entero: recibe, responde, encola, reintenta y confirma con SÍ/NO. Pero el número configurado es el de pruebas de Meta (estadounidense, solo escribe a teléfonos que registres a mano) y el token de acceso ya caducó.</p>
+        </div>
+        <div class="item">
+          <b>Acceso con Google</b>
+          <p>Implementado, y el botón permanece oculto a propósito hasta que existan las credenciales, para no prometer algo que fallaría.</p>
+        </div>
+        <div class="item">
+          <b>Envío a la Agencia Tributaria</b>
+          <p>Las colas de alta y anulación están construidas con reintentos. Sin certificado digital no se envía nada: los registros se generan y se guardan, pero no se remiten.</p>
+        </div>
+        <div class="item">
+          <b>Antivirus de archivos</b>
+          <p>El código sabe hablar con un antivirus y puede rechazar lo infectado sin llegar a guardarlo. Falta instalar el antivirus.</p>
+        </div>
+        <div class="item">
+          <b>Copia de seguridad fuera de Railway</b>
+          <p>Preparado para subir copias cifradas a otro proveedor. Sin configurar, todas tus copias dependen del mismo sitio que la aplicación.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="dot degraded"></span>
+        <h3>Funciona peor de lo que promete tu web</h3>
+      </div>
+      <p class="group-note">Esto es lo más delicado que he encontrado después de lo legal.</p>
+
+      <div class="callout">
+        <span class="label">Atención</span>
+        <p>
+          Tu portada vende, con estas palabras, «de la nota de voz a la factura
+          enviada», «foto del ticket por WhatsApp» y «fotografía cualquier papel».
+          <strong>Ninguna de esas dos funciones funcionaría hoy en producción.</strong>
+        </p>
+        <p>
+          No es que estén mal programadas — están bien hechas. Es que necesitan
+          servicios externos que no están dados de alta, y el propio código está
+          diseñado para degradarse con elegancia en vez de romperse. El resultado es
+          que el cliente manda la foto y Noesis le responde que la ha guardado pero no
+          ha podido leer el importe. Funciona, pero no es lo que vendiste.
+        </p>
+      </div>
+
+      <div class="items">
+        <div class="item">
+          <b>Foto del ticket → gasto apuntado</b>
+          <p>Necesita una de dos cosas: la clave de inteligencia artificial que lee la imagen, o un lector de texto instalado en el servidor. La clave no aparece entre tus variables de Railway, y el lector local no está ni siquiera en la lista de dependencias, así que no se instala al desplegar. Resultado: guarda la foto en los papeles del cliente, pero le pide que escriba el importe a mano.</p>
+        </div>
+        <div class="item">
+          <b>Notas de voz → texto</b>
+          <p>Necesita un servicio de transcripción (hay uno preparado que cuesta céntimos) o el modelo de voz instalado en el servidor. No hay ninguno de los dos. Resultado: Noesis contesta que ha recibido la nota pero no ha podido transcribirla y pide que se lo escriban.</p>
+        </div>
+        <div class="item">
+          <b>Asistente en su versión avanzada</b>
+          <p>Sin la clave de inteligencia artificial, el asistente cae al cerebro local. Esto sí es una degradación digna: entiende órdenes, consulta datos y redacta mensajes correctos. Simplemente es más rígido que un modelo grande ante frases retorcidas.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="dot broken"></span>
+        <h3>Roto ahora mismo</h3>
+      </div>
+      <p class="group-note">Todo esto tiene arreglo, y está detallado en la segunda parte.</p>
+      <div class="items">
+        <div class="item">
+          <b>Las páginas legales están publicadas en borrador</b>
+          <p>Privacidad, aviso legal, términos y contrato de encargado del tratamiento son visibles con los huecos sin rellenar y un aviso que dice «borrador, revísalo con un profesional». Es lo más grave de la lista.</p>
+        </div>
+        <div class="item">
+          <b>Los enlaces que Noesis manda por correo no llevan a ninguna parte</b>
+          <p>La dirección que la app considera «su casa» sigue apuntando al dominio antiguo, que ya no existe. Afecta a recuperar contraseña, al enlace de pago que se manda al cliente final y a las vueltas desde Stripe.</p>
+        </div>
+        <div class="item">
+          <b><code>app.bynoesis.com</code> ya no resuelve</b>
+          <p>Consecuencia del cambio de dominio. Si alguien tiene ese enlace guardado o lo has puesto en algún sitio, no le carga nada.</p>
+        </div>
+        <div class="item">
+          <b>La vuelta del acceso con Google apunta al dominio muerto</b>
+          <p>Cuando actives Google habrá que registrar la dirección nueva; la que está anotada dejaría el acceso a medias.</p>
+        </div>
+        <div class="item">
+          <b>La página de reservas con calendario</b>
+          <p>Está sin publicar, y además tal como la construí no funcionaría: las reglas de seguridad de tu web bloquean incrustar contenido de otras páginas, así que se vería un hueco vacío. Error mío, explicado en la segunda parte.</p>
+        </div>
+        <div class="item">
+          <b>Producción va con código más antiguo que el repositorio</b>
+          <p>Lo detecté por las cabeceras que devuelve la web: faltan varias que el código actual sí incluye. Hay un lote de mejoras de seguridad construidas, probadas y nunca publicadas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================ PARTE 2 ============================ -->
+  <section class="part">
+    <div class="part-label">Parte 2</div>
+    <h2>Plan de trabajo</h2>
+    <p class="part-intro">
+      Ordenado por dependencias: cada fase da por hecha la anterior. Para cada punto,
+      qué es, por qué importa y qué hay que hacer exactamente.
+    </p>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 0</span>
+        <h3>El nudo que bloquea a los demás</h3>
+      </div>
+      <p class="phase-note">Si solo puedes hacer una cosa esta semana, que sea esta.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Darte de alta como autónomo</h4>
+          <span class="pill critical">Bloqueante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Es el alta censal en Hacienda (modelo 036 o 037) y, según tu caso, el alta en
+          el régimen de autónomos. Suena a papeleo desconectado del producto, pero
+          <strong>es el nudo del que cuelgan otras cuatro cosas de esta lista</strong>.
+        </p>
+        <div class="why">
+          <span class="label">Por qué bloquea</span>
+          <p>
+            Sin estar dado de alta no puedes emitir facturas legalmente, que es
+            literalmente lo que vende tu producto. No puedes poner un NIF real en las
+            páginas legales, y sin él esas páginas no cumplen. Meta no te va a verificar
+            la empresa, y sin verificación no hay número de WhatsApp de producción — el
+            corazón de Noesis. Y Stripe te pedirá datos fiscales para ingresarte el dinero.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            Habla con un gestor esta semana. No es algo en lo que yo pueda ayudarte más
+            allá de señalarte que casi todo lo demás depende de ello.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 1</span>
+        <h3>Cerrar dos puertas abiertas</h3>
+      </div>
+      <p class="phase-note">Diez minutos. Los dos secretos salieron en una captura de pantalla.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Cambiar <code>NOESIS_SECRET</code></h4>
+          <span class="pill critical">Bloqueante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Es la <strong>firma maestra</strong> de tu web. Cuando alguien inicia sesión, el
+          servidor le da una especie de pulsera de acceso que su navegador guarda, y que
+          dice «este es Xavier, del negocio 3». Para que nadie pueda tachar esa pulsera y
+          escribir «soy el administrador», el servidor la sella con un lacre. Ese lacre se
+          fabrica con esta clave, y el servidor reconoce los auténticos porque la conoce.
+        </p>
+        <div class="why">
+          <span class="label">Por qué importa</span>
+          <p>
+            Quien tenga esa clave <strong>puede fabricar lacres falsos</strong>: crearse
+            una pulsera que diga «soy el administrador» y el servidor se la creería sin
+            pedirle ninguna contraseña. Al cambiar la clave, todos los lacres antiguos
+            dejan de valer de golpe.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            En Railway → Variables, sustituye el valor por este y redespliega. Se cerrarán
+            las sesiones abiertas y tendrás que volver a entrar; como aún no tienes
+            clientes, ahora es gratis hacerlo.
+          </p>
+          <p>Genera una nueva con este comando y pega el resultado; no reutilices
+             ninguna clave que haya aparecido escrita en un chat o un documento.</p>
+          <code class="val">python -c "import secrets; print(secrets.token_urlsafe(64))"</code>
+        </div>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Cambiar <code>SMTP_PASS</code></h4>
+          <span class="pill critical">Bloqueante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Es la contraseña del buzón <code>info@bynoesis.com</code>. Noesis la usa para
+          enviar correos en tu nombre: recuperación de contraseña, facturas, avisos.
+          <strong>SMTP</strong> es el protocolo con el que se envía correo; piénsalo como
+          la llave del buzón de salida.
+        </p>
+        <div class="why">
+          <span class="label">Por qué importa</span>
+          <p>
+            Tu dominio tiene configurados SPF y DKIM, los sellos que demuestran a Gmail
+            que un correo salió de verdad de bynoesis.com. Eso es bueno, pero significa
+            que <strong>quien tenga esta contraseña puede escribir a tus futuros clientes
+            desde tu dirección real y pasar todos los filtros</strong>. Un correo de
+            phishing perfecto, firmado por ti.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            Cámbiala en <strong>dos sitios</strong>: primero en Hostinger (la contraseña
+            del buzón) y después pega la nueva en Railway. Si solo la cambias en uno, los
+            correos dejan de salir.
+          </p>
+          <p>
+            Aparte: si esa contraseña la usas en algún otro servicio personal, cámbiala
+            también ahí. Es el riesgo más probable de los dos.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 2</span>
+        <h3>Que la web no se caiga el día que publiquemos</h3>
+      </div>
+      <p class="phase-note">Cinco minutos, y hay que hacerlo antes de desplegar, no después.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Corregir <code>NOESIS_BASE_URL</code></h4>
+          <span class="pill critical">Bloqueante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Es <strong>la dirección que la app considera «su casa»</strong>. Cuando Noesis
+          tiene que escribir su propia dirección dentro de algo — el enlace de recuperar
+          contraseña de un correo, el enlace de pago que se manda al cliente final, la
+          vuelta desde Stripe — usa esta variable.
+        </p>
+        <div class="why">
+          <span class="label">Por qué importa</span>
+          <p>
+            Ahora mismo apunta a <code>app.bynoesis.com</code>, que <strong>ya no
+            existe</strong> desde que cambiaste el dominio. Cualquier enlace que Noesis
+            mande a un cliente lleva a una página que no carga.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>En Railway, cambia su valor a:</p>
+          <code class="val">https://bynoesis.com</code>
+        </div>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Crear <code>NOESIS_ALLOWED_HOSTS</code></h4>
+          <span class="pill critical">Bloqueante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Es <strong>la lista de invitados de tu web</strong>: los nombres de dominio que
+          la app acepta atender. Funciona como un portero — si llega una petición pidiendo
+          por un dominio que no está en la lista, la rechaza. Sirve para que nadie engañe
+          a tu servidor haciéndole creer que vive en otra dirección.
+        </p>
+        <div class="why">
+          <span class="label">Por qué importa</span>
+          <p>
+            Esta es la trampa más peligrosa de toda la lista. La app construye esa lista
+            juntando <code>NOESIS_BASE_URL</code> con esta variable. Si solo pones la
+            primera con <code>bynoesis.com</code>, entonces <code>www.bynoesis.com</code>
+            <strong>no está en la lista</strong> y todo el que entre con «www» recibirá un
+            error. Y como esta protección solo se activa con el código nuevo,
+            <strong>la web se caería justo el día del despliegue</strong>, sin avisar antes.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            No la busques, <strong>no existe todavía</strong>: hay que crearla. En Railway
+            → Variables → «New Variable», con este nombre y este valor (sin espacios
+            alrededor de la coma):
+          </p>
+          <code class="val">NOESIS_ALLOWED_HOSTS
+bynoesis.com,www.bynoesis.com</code>
+        </div>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Comprobar la base de datos y la cuenta demo</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Dos comprobaciones rápidas. <code>DATABASE_URL</code> le dice a Noesis qué base
+          de datos usar. <code>NOESIS_SEED_DEMO</code>, si existe, crea automáticamente
+          una cuenta de demostración con la contraseña <code>demo1234</code>.
+        </p>
+        <div class="why">
+          <span class="label">Por qué importa</span>
+          <p>
+            Si <code>DATABASE_URL</code> estuviera vacía, Noesis guardaría todo en un
+            simple fichero dentro del servidor, que puede borrarse en cada despliegue —
+            perderías datos de clientes. Y una cuenta pública con contraseña
+            <code>demo1234</code> es una puerta abierta a cualquiera que la pruebe.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            Confirma que <code>DATABASE_URL</code> apunta a un servicio PostgreSQL de tu
+            proyecto y que <strong>no existe</strong> ninguna variable llamada
+            <code>NOESIS_SEED_DEMO</code>. En tu última captura no aparecía, que es lo correcto.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 3</span>
+        <h3>Que la web sea legal y dé confianza</h3>
+      </div>
+      <p class="phase-note">Lo más grave que encontré, y está visible ahora mismo.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Rellenar las cuatro páginas legales</h4>
+          <span class="pill critical">Bloqueante</span>
+          <span class="pill me">Yo, con tus datos</span>
+        </div>
+        <p class="what">
+          Tu web tiene publicadas cuatro páginas legales — privacidad, aviso legal,
+          términos y contrato de encargado del tratamiento — y las cuatro están
+          <strong>a medio escribir</strong>. Cualquiera que entre hoy lee literalmente
+          «Borrador inicial… revísalo con un profesional legal» y ve
+          <code>[Razón social]</code>, <code>[NIF/CIF]</code> y <code>[Dirección]</code>
+          donde deberían estar tus datos.
+        </p>
+        <div class="why">
+          <span class="label">Por qué importa</span>
+          <p>
+            Por ley: el RGPD obliga a identificar con datos reales a quien trata los datos
+            personales, y la LSSI obliga a publicar quién es el titular de la web. Pero el
+            motivo comercial es aún más directo — <strong>un autónomo que va a meter ahí
+            los datos de sus clientes lee «borrador» y se va</strong>. Estás pidiendo
+            confianza con un cartel de obras en la puerta.
+          </p>
+          <p>
+            Un matiz importante: como tus clientes meterán en Noesis datos de <em>sus</em>
+            clientes, legalmente tú eres el «encargado» de esos datos. Ese contrato regula
+            esa responsabilidad, y es el documento que más conviene que revise un
+            profesional.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            Lo relleno yo. Necesito tu <strong>nombre y apellidos completos</strong>, tu
+            <strong>DNI</strong> y un <strong>domicilio</strong> a efectos de
+            notificaciones. Como todavía no tienes sociedad, el responsable eres tú como
+            persona física, lo cual es perfectamente válido.
+          </p>
+          <p>
+            Aviso honesto: yo relleno y limpio los textos, pero no soy abogado.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 4</span>
+        <h3>El alta controlada que pediste</h3>
+      </div>
+      <p class="phase-note">Que nadie se registre solo: tú decides quién entra.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Formulario de solicitud y alta desde tu panel</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill me">Yo</span>
+        </div>
+        <p class="what">
+          Hoy cualquiera puede crearse una cuenta solo desde la web. Lo cambiamos por
+          esto: una página pública donde dejan sus datos y un panel donde tú los ves y
+          decides. <strong>Los 14 días de prueba empiezan a contar el día que tú das el
+          alta</strong>, no el día que rellenaron el formulario — como propusiste, y es lo
+          correcto.
+        </p>
+        <div class="why">
+          <span class="label">Cómo recibirá su contraseña</span>
+          <p>
+            Cuando pulses «Dar de alta», el sistema crea la cuenta y genera un enlace de
+            un solo uso que caduca. Se le envía por correo automáticamente y
+            <strong>además te lo enseño en pantalla</strong>, para que puedas mandárselo
+            por WhatsApp si el email falla o tarda. Él abre el enlace y elige su propia
+            contraseña: tú nunca llegas a conocerla, que es exactamente lo que te interesa
+            cuando manejas datos fiscales de otros.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué construyo</span>
+          <p>
+            La página pública de solicitud con su consentimiento, el almacén de esas
+            solicitudes, la lista en tu panel con el botón de alta, el sistema de
+            invitación y un aviso por correo a ti cada vez que alguien solicite acceso.
+            Todos los botones públicos de «Empezar» pasarán a llevar al formulario. El
+            alta automática se queda funcionando pero escondida, para que tú puedas
+            crearte cuentas de prueba rápido.
+          </p>
+        </div>
+        <p class="dep">Me lleva aproximadamente medio día de trabajo.</p>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 5</span>
+        <h3>Publicar los cambios</h3>
+      </div>
+      <p class="phase-note">Nada de lo anterior se ve hasta que se despliega.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Desplegar</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill me">Yo preparo, tú apruebas</span>
+        </div>
+        <p class="what">
+          <strong>Desplegar</strong> es publicar el código nuevo en el servidor de verdad.
+          Hasta que no ocurre, los cambios solo existen en mi ordenador y en el
+          repositorio: la web pública sigue mostrando lo viejo.
+        </p>
+        <div class="why">
+          <span class="label">Ojo con este despliegue en concreto</span>
+          <p>
+            Como producción va con código más antiguo, ese despliegue no traerá solo
+            nuestros cambios: entrará <em>también</em> todo el lote de seguridad pendiente
+            de golpe. Es un salto más grande de lo normal, y por eso las variables de la
+            Fase 2 tienen que estar bien puestas antes.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            Yo subo los cambios en una rama aparte, los revisamos y los fusionamos.
+            Railway publica solo y actualiza la estructura de la base de datos. Después
+            verifico que la web responde en los dos dominios y que las páginas legales ya
+            salen con tus datos.
+          </p>
+        </div>
+        <p class="dep">Depende de: Fases 2, 3 y 4 terminadas.</p>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 6</span>
+        <h3>Que WhatsApp funcione de verdad</h3>
+      </div>
+      <p class="phase-note">Buena noticia primero: tus clientes no necesitan cuenta de Meta.</p>
+
+      <p class="what">
+        Aclaro tu duda de ayer, porque cambia el trabajo. Noesis usa <strong>un solo
+        número de WhatsApp: el tuyo</strong>. El cliente no crea nada en Meta. Su alta es
+        pulsar un botón que le abre WhatsApp con un mensaje ya escrito tipo
+        <code>NOESIS 4F2A1B</code>, enviarlo, y listo: su teléfono queda vinculado a su
+        negocio. A partir de ahí, cuando escribe, Noesis sabe quién es y le responde solo
+        con sus datos.
+      </p>
+      <p class="what">
+        El acceso a Meta es todo tuyo. Como todo sale de un número único, ten en cuenta un
+        efecto de diseño: cuando Noesis reclama un cobro al cliente de tu cliente, a esa
+        persona le llega desde tu número, no desde el del fontanero. Que cada autónomo
+        tenga su propio número es otro modelo mucho más complejo, y para un piloto de tres
+        o cinco negocios no compensa.
+      </p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Generar un token permanente</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Un <strong>token</strong> es la contraseña con la que tu app se identifica ante
+          Meta cada vez que quiere enviar o leer un mensaje. El que configuramos era el
+          temporal de pruebas, que dura 24 horas: <strong>ya ha caducado</strong>.
+        </p>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            En Meta Business, crear un «usuario de sistema» y generar desde ahí un token
+            permanente. Es el que hay que poner en Railway.
+          </p>
+        </div>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Poner un número español de producción</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          El número configurado es el de pruebas que regala Meta: estadounidense y
+          limitado a escribir solo a un puñado de teléfonos que registres a mano. Con
+          clientes reales no sirve de nada.
+        </p>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            En Meta, el «Paso 2 · Configuración de producción», añadiendo un número tuyo.
+            Te pedirá la verificación de empresa, que es donde esto choca con la Fase 0.
+          </p>
+        </div>
+        <p class="dep">Depende de: Fase 0 (verificación de empresa).</p>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Configurar el webhook y aprobar las plantillas</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill you">Tú, te guío</span>
+        </div>
+        <p class="what">
+          Un <strong>webhook</strong> es el timbre de tu casa: la dirección web que Meta
+          llama cada vez que alguien te escribe. Sin él, Noesis nunca se entera de los
+          mensajes que entran. Las <strong>plantillas</strong> son textos aprobados
+          previamente por Meta, obligatorios para escribir tú primero a alguien fuera de
+          una conversación reciente.
+        </p>
+        <div class="why">
+          <span class="label">Por qué importa</span>
+          <p>
+            Todo lo proactivo depende de las plantillas: el parte de la mañana, el cierre
+            del día, los recordatorios de cobro. Su aprobación tarda entre horas y días,
+            así que conviene mandarlas a revisar el mismo día que verifiques la empresa.
+          </p>
+        </div>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            El webhook ya se puede configurar, porque el dominio funciona. Cuando quieras
+            te doy la dirección exacta y la clave de verificación que hay que pegar en Meta.
+          </p>
+        </div>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Encender la lectura de fotos y de voz</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill you">Tú, decisión de coste</span>
+        </div>
+        <p class="what">
+          Son las dos funciones degradadas de la Parte 1, y las que más vende tu portada.
+          Para la <strong>voz</strong> hay un servicio de transcripción ya integrado que
+          cuesta unos dos céntimos por diez minutos de audio: prácticamente gratis. Para
+          <strong>leer fotos de tickets</strong> hace falta la clave de inteligencia
+          artificial; según tus propios cálculos, ronda el céntimo y medio por foto y ya
+          está contemplado dentro del precio de los planes.
+        </p>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            Dar de alta las dos claves y ponerlas en Railway. Es cuestión de minutos y de
+            unos pocos euros al mes, y es lo que separa tu producto de una app de facturas
+            normal. Si prefieres no encenderlas todavía, entonces hay que <strong>quitar
+            esas promesas de la portada</strong> hasta que estén: vender algo que no
+            responde es peor que no ofrecerlo.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 7</span>
+        <h3>Poder cobrar</h3>
+      </div>
+      <p class="phase-note">Media hora de configuración y una decisión tuya sobre el IVA.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Terminar Stripe</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          <strong>Stripe</strong> es la pasarela que cobra las suscripciones con tarjeta.
+          Está construida en el código pero sin configurar en su panel, así que hoy quien
+          pulse «contratar» solo deja registrado su interés: tendrías que activarle el plan
+          a mano, uno por uno.
+        </p>
+        <div class="do">
+          <span class="label">Qué hacer</span>
+          <p>
+            Crear los tres planes con precio mensual y anual (29, 49 y 99 € al mes; 319,
+            539 y 1.089 € al año), copiar sus seis identificadores a Railway y crear el
+            webhook apuntando a la dirección de cobros de tu web. Prueba la ronda completa
+            en modo de pruebas antes de activar el cobro real.
+          </p>
+          <p>
+            <strong>Decisión pendiente tuya:</strong> si el IVA va incluido en esos precios
+            o se suma en el momento del pago. Decídelo ahora, que después es un lío.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 8</span>
+        <h3>Comprobar que funciona de verdad</h3>
+      </div>
+      <p class="phase-note">Que una página cargue no significa que el flujo funcione.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Recorrer los caminos completos</h4>
+          <span class="pill warning">Importante</span>
+          <span class="pill me">Juntos</span>
+        </div>
+        <p class="what">
+          Aquí tengo que reconocer un error mío: la página de reservas que te monté con el
+          calendario <strong>no habría funcionado</strong>. Las reglas de seguridad de tu
+          web bloquean incrustar contenido de otras páginas, así que se vería un hueco
+          vacío. Yo comprobé que la página cargaba, pero eso no era comprobar que el
+          calendario se veía. Lo arreglo con un botón que lleve a tu página de Cal.com, o
+          abriendo esa regla solo en esa ruta — tú eliges.
+        </p>
+        <div class="do">
+          <span class="label">Qué probamos</span>
+          <p>
+            Un alta completa de principio a fin. Pedir recuperación de contraseña y ver que
+            el correo llega y no cae en spam. Emitir una factura y abrir su PDF. Escribir
+            al WhatsApp y ver que responde. Mandar una foto de un ticket y comprobar que
+            lee el importe.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head">
+        <span class="phase-num">FASE 9</span>
+        <h3>Después de abrir, no antes</h3>
+      </div>
+      <p class="phase-note">Importante, pero no te impide empezar.</p>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Copia de seguridad fuera de Railway</h4>
+          <span class="pill later">Después</span>
+          <span class="pill me">Tú y yo</span>
+        </div>
+        <p class="what">
+          Hoy tus copias viven en el mismo sitio que la aplicación. Si Railway tuviera un
+          problema serio, se irían las dos cosas a la vez. Con clientes reales pagando,
+          conviene una copia en otro proveedor y probar una restauración de verdad.
+        </p>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Antivirus para los archivos que suban</h4>
+          <span class="pill later">Después</span>
+          <span class="pill me">Tú y yo</span>
+        </div>
+        <p class="what">
+          Tus clientes van a subir fotos y PDFs. El código ya sabe hablar con un antivirus
+          y puede rechazar lo infectado sin llegar a guardarlo; falta instalarlo.
+        </p>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Acceso con Google</h4>
+          <span class="pill later">Después</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Está construido pero oculto hasta que existan sus credenciales. Ojo: la dirección
+          de retorno registrada apunta al dominio antiguo, así que habrá que rehacerla.
+        </p>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Certificado de la AEAT para Veri*Factu</h4>
+          <span class="pill later">Después</span>
+          <span class="pill you">Tú, con tu gestor</span>
+        </div>
+        <p class="what">
+          La cadena de registros inalterables ya funciona. Falta el certificado real y
+          validar las respuestas de la Agencia en su entorno de pruebas antes de usarlo en
+          serio.
+        </p>
+      </article>
+
+      <article class="task">
+        <div class="task-head">
+          <h4>Revisión externa y piloto acompañado</h4>
+          <span class="pill later">Después</span>
+          <span class="pill you">Tú</span>
+        </div>
+        <p class="what">
+          Una revisión de seguridad y privacidad hecha por alguien de fuera, y el piloto
+          con tres a cinco autónomos durante dos cierres semanales. Mi revisión no
+          sustituye a la primera: yo he leído el código, no he intentado atacarlo.
+        </p>
+      </article>
+    </div>
+  </section>
+
+
+  <section class="glossary">
+    <h2>Diccionario</h2>
+    <dl>
+      <div>
+        <dt>Variable de entorno</dt>
+        <dd>
+          Un ajuste con nombre y valor que se guarda fuera del código, en el panel de
+          Railway. Sirve para que datos sensibles (contraseñas, claves) o cosas que cambian
+          entre tu ordenador y el servidor real no estén escritas dentro del programa. La
+          app las lee por su nombre exacto, así que un nombre mal escrito es como si no
+          existiera.
+        </dd>
+      </div>
+      <div>
+        <dt>Desplegar</dt>
+        <dd>
+          Publicar el código en el servidor real. Hasta que no se despliega, lo que
+          programamos no lo ve nadie: la web pública sigue con la versión anterior.
+        </dd>
+      </div>
+      <div>
+        <dt>Migración</dt>
+        <dd>
+          Un cambio con número de versión en la estructura de la base de datos — por
+          ejemplo, añadir una tabla nueva para guardar las solicitudes de acceso. Se
+          aplican en orden y quedan registradas, para que la base de datos del servidor
+          siempre coincida con lo que el código espera encontrar.
+        </dd>
+      </div>
+      <div>
+        <dt>Webhook</dt>
+        <dd>
+          Una dirección de tu web a la que un servicio externo llama para avisarte de algo.
+          Meta la usa para decirte «te ha escrito alguien»; Stripe, para decirte «te han
+          pagado». Es el timbre de tu casa.
+        </dd>
+      </div>
+      <div>
+        <dt>Token</dt>
+        <dd>
+          Una contraseña larga que usa un programa (no una persona) para identificarse ante
+          otro servicio. Los hay temporales, que caducan en horas, y permanentes, que son
+          los que se usan en producción.
+        </dd>
+      </div>
+      <div>
+        <dt>SMTP</dt>
+        <dd>
+          El protocolo estándar para enviar correo electrónico. «Configurar SMTP» significa
+          darle a Noesis la dirección del servidor de correo y la contraseña del buzón
+          desde el que enviará.
+        </dd>
+      </div>
+      <div>
+        <dt>Degradación digna</dt>
+        <dd>
+          Un principio de diseño de este proyecto: cuando falta un servicio externo, la
+          función no revienta, se reduce. Sin clave de inteligencia artificial el asistente
+          usa el cerebro local; sin lector de imágenes, guarda la foto y pide el importe a
+          mano. Es bueno para la estabilidad, pero tiene un efecto secundario: los fallos
+          de configuración no se ven como errores, sino como un producto más pobre.
+        </dd>
+      </div>
+      <div>
+        <dt>Encargado del tratamiento</dt>
+        <dd>
+          Figura del RGPD. Tu cliente es el «responsable» de los datos de sus propios
+          clientes; tú, al guardarlos en Noesis para prestarle el servicio, eres el
+          «encargado». La relación entre ambos debe estar escrita en un contrato, que es
+          una de las páginas legales pendientes.
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+</div>

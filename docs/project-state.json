@@ -1,8 +1,8 @@
 {
   "state_date": "2026-07-27",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 35,
-  "verified_test_count": 354,
+  "schema_version": 36,
+  "verified_test_count": 361,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -35,7 +35,9 @@
       "monthly",
       "annual"
     ],
-    "visual_qa": "computed_style_rendering_verified_screenshot_tool_unavailable"
+    "visual_qa": "computed_style_rendering_verified_screenshot_tool_unavailable",
+    "contact_booking": "cal_com_iframe_points_to_a_concrete_event_using_its_normal_url_not_the_embed_view_which_needs_their_script_csp_frame_src_allowed_only_on_that_route",
+    "access_request_form": "public_site_layout_short_form_name_email_phone_trade_optional_message_plan_travels_hidden_from_pricing"
   },
   "authentication": {
     "password": "available",
@@ -45,7 +47,8 @@
     "commercial_onboarding": "trial_or_subscribe_then_business_invoice_collection_messages_whatsapp_and_checkout",
     "onboarding_sector_capture": "free_text_up_to_80_characters",
     "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",
-    "public_opening_gate": "production_signup_fail_closed_until_legal_identity_and_explicit_enable_existing_accounts_keep_access",
+    "public_opening_gate": "production_signup_fail_closed_until_legal_identity_and_explicit_enable_existing_accounts_keep_access_and_the_closed_onboarding_redirects_to_the_request_form",
+    "access_requests": "schema_36_public_form_stored_with_plan_interest_rate_limited_honeypot_founder_approves_and_invitation_link_lets_owner_set_own_password",
     "legal_consent_version": "single_source_shared_by_pages_and_account_events",
     "capability_promises": "public_copy_reflects_runtime_voice_and_image_reading_availability",
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",

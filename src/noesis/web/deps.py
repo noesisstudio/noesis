@@ -30,6 +30,8 @@ def _asset_version() -> str:
 
 # Disponible en todas las plantillas como {{ asset_v }}.
 TEMPLATES.env.globals["asset_v"] = _asset_version()
+# Dominio público: lo usan las etiquetas canónicas y de compartición social.
+TEMPLATES.env.globals["base_url"] = config.BASE_URL
 TEMPLATES.env.globals["public_signup_available"] = config.public_signup_available()
 TEMPLATES.env.globals["public_contact_email"] = config.PUBLIC_CONTACT_EMAIL
 TEMPLATES.env.globals["voice_available"] = transcription.available()

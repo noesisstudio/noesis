@@ -27,6 +27,11 @@ def valid_email(email: str) -> bool:
     return bool(_EMAIL_RE.match((email or "").strip()))
 
 
+def hash_token(token: str) -> str:
+    """Huella del token de un solo uso. En base solo se guarda esta huella."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 # -------- Límite compartido y pseudonimizado por IP/identidad/acción --------------
 _WINDOW = 300        # 5 minutos
 _MAX_ATTEMPTS = 8    # intentos permitidos por ventana

@@ -1761,16 +1761,30 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Beta con acceso preferente", public_page.text)
                 self.assertIn("1 mes gratis", public_page.text)
                 self.assertIn('data-annual="319"', public_page.text)
+                # Con el registro abierto los planes llevan al alta normal.
                 self.assertIn(
-                    '/onboarding?intent=trial&plan=autonomo&billing=monthly',
-                    public_page.text,
+                    "/onboarding?intent=trial&plan=autonomo", public_page.text
                 )
-                self.assertIn("intent=trial", public_page.text)
-                self.assertIn("intent=subscribe", public_page.text)
-                for route in ("/", "/producto", "/equipo", "/preguntas"):
+                # Con el registro cerrado llevan al formulario de solicitud, y en
+                # ambos casos se conserva el plan que miraba el visitante. El
+                # indicador es un global de plantilla fijado al arrancar, así que
+                # se sustituye ahí y no en la configuración.
+                from noesis.web.deps import TEMPLATES
+
+                with patch.dict(
+                    TEMPLATES.env.globals, {"public_signup_available": False}
+                ):
+                    closed_page = client.get("/precios")
+                self.assertIn("/solicitar-acceso?plan=autonomo", closed_page.text)
+                self.assertNotIn("/onboarding?intent=", closed_page.text)
+                for route in ("/", "/equipo", "/preguntas", "/contacto"):
                     page = client.get(route)
                     self.assertEqual(page.status_code, 200, route)
                     self.assertIn('href="/equipo"', page.text)
+                # Producto se fusionó con la portada; su enlace antiguo sigue vivo.
+                retired = client.get("/producto", follow_redirects=False)
+                self.assertEqual(retired.status_code, 301)
+                self.assertEqual(retired.headers["location"], "/#como-funciona")
                 team_page = client.get("/equipo")
                 self.assertIn("Un equipo pequeño", team_page.text)
                 self.assertNotIn("4,9", team_page.text)
@@ -2216,10 +2230,15 @@ class PortalHttpTestCase(BackendTestCase):
             patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "test-secret"),
         ):
             with TestClient(server.app) as client:
-                page = client.get("/onboarding")
-                self.assertEqual(page.status_code, 503)
-                self.assertIn("Acceso piloto", page.text)
-                self.assertNotIn("Crear cuenta y configurarla", page.text)
+                # Con el alta cerrada no se enseña una pantalla intermedia: se
+                # lleva directamente al formulario de solicitud.
+                page = client.get("/onboarding", follow_redirects=False)
+                self.assertEqual(page.status_code, 303)
+                self.assertEqual(page.headers["location"], "/solicitar-acceso")
+                form = client.get("/solicitar-acceso")
+                self.assertEqual(form.status_code, 200)
+                self.assertNotIn("Crear cuenta y configurarla", form.text)
+                # Lo que de verdad protege es que el envío siga rechazándose.
                 attempt = client.post(
                     "/onboarding/signup",
                     data={

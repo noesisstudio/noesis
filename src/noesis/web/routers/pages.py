@@ -63,19 +63,31 @@ def app_entry(request: Request):
 
 # Apartados del sitio publico: cada seccion es su propia pagina.
 _SITE_PAGES = {
-    "producto": "site_producto.html",
     "precios": "site_precios.html",
     "equipo": "site_equipo.html",
     "preguntas": "site_preguntas.html",
+    "contacto": "site_contacto.html",
 }
 
 
-@router.get("/producto", response_class=HTMLResponse)
+@router.get("/producto", include_in_schema=False)
+def producto_redirect():
+    """La portada absorbió el contenido de Producto; los enlaces antiguos siguen vivos."""
+    return RedirectResponse("/#como-funciona", status_code=301)
+
+
+@router.get("/demo", include_in_schema=False)
+def demo_redirect():
+    """Las reservas viven ahora en Contáctanos."""
+    return RedirectResponse("/contacto", status_code=301)
+
+
 @router.get("/precios", response_class=HTMLResponse)
 @router.get("/equipo", response_class=HTMLResponse)
 @router.get("/preguntas", response_class=HTMLResponse)
+@router.get("/contacto", response_class=HTMLResponse)
 def site_page(request: Request):
-    section = request.url.path.strip("/") or "producto"
+    section = request.url.path.strip("/") or "precios"
     return TEMPLATES.TemplateResponse(request, _SITE_PAGES[section], {
         "site_active": section,
         "business_id": request.session.get("bid"),

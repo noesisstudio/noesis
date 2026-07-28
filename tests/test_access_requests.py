@@ -1,0 +1,199 @@
+"""Pruebas del alta controlada: solicitud publica y aprobacion del fundador."""
+
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from noesis import config, db
+from noesis.web import auth
+
+
+class AccessRequestTestCase(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.original = {
+            name: getattr(config, name)
+            for name in ("DB_PATH", "DOCS_PATH", "BACKUP_DIR", "DATABASE_URL",
+                         "ADMIN_EMAIL", "IS_PRODUCTION")
+        }
+        root = Path(self.temporary.name)
+        config.DATABASE_URL = ""
+        config.DB_PATH = root / "access-requests.db"
+        config.DOCS_PATH = root / "uploads"
+        config.BACKUP_DIR = root / "backups"
+        config.ADMIN_EMAIL = "fundador@bynoesis.com"
+        config.IS_PRODUCTION = False
+        db.init_db()
+
+    def tearDown(self):
+        for name, value in self.original.items():
+            setattr(config, name, value)
+        self.temporary.cleanup()
+
+    def _client(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        return patch.object(server, "start_scheduler", lambda: None), TestClient(
+            server.app
+        )
+
+    # ------------------------------------------------------------ formulario --
+    def test_valid_request_is_stored_with_its_commercial_context(self):
+        scheduler, client = self._client()
+        with scheduler, client as http, patch(
+            "noesis.adapters.email.send_email", return_value=True
+        ) as notify:
+            response = http.post("/solicitar-acceso", data={
+                "name": "Marta Vidal", "email": "Marta@Ejemplo.com",
+                "business_name": "Fontanería Vidal", "sector": "Fontanería",
+                "phone": "600123456", "message": "Facturo tarde",
+                "plan": "pro", "acepto": "1",
+            }, follow_redirects=False)
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("enviado=1", response.headers["location"])
+        stored = db.list_access_requests()
+        self.assertEqual(len(stored), 1)
+        # El correo se normaliza para que no entren duplicados por mayúsculas.
+        self.assertEqual(stored[0]["email"], "marta@ejemplo.com")
+        self.assertEqual(stored[0]["plan_interest"], "pro")
+        self.assertEqual(stored[0]["status"], "nueva")
+        # Salen dos correos: el aviso al equipo y la confirmación al solicitante.
+        destinatarios = [llamada.args[0] for llamada in notify.call_args_list]
+        self.assertIn(config.ADMIN_EMAIL, destinatarios)
+        self.assertIn("marta@ejemplo.com", destinatarios)
+
+    def test_request_without_consent_or_valid_email_is_rejected(self):
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            no_consent = http.post("/solicitar-acceso", data={
+                "name": "Sin permiso", "email": "a@b.com", "sector": "Obra",
+            }, follow_redirects=False)
+            bad_email = http.post("/solicitar-acceso", data={
+                "name": "Correo raro", "email": "no-es-un-correo",
+                "sector": "Obra", "acepto": "1",
+            }, follow_redirects=False)
+
+        self.assertIn("error=consent", no_consent.headers["location"])
+        self.assertIn("error=email", bad_email.headers["location"])
+        self.assertEqual(db.list_access_requests(), [])
+
+    def test_honeypot_looks_successful_but_stores_nothing(self):
+        """Al robot se le responde como a una persona: no aprende del rechazo."""
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            response = http.post("/solicitar-acceso", data={
+                "name": "Robot", "email": "robot@spam.com", "sector": "x",
+                "acepto": "1", "web": "http://spam.example",
+            }, follow_redirects=False)
+
+        self.assertIn("enviado=1", response.headers["location"])
+        self.assertEqual(db.list_access_requests(), [])
+
+    def test_repeated_requests_from_same_email_are_throttled(self):
+        scheduler, client = self._client()
+        payload = {
+            "name": "Insistente", "email": "insistente@ejemplo.com",
+            "sector": "Reformas", "acepto": "1",
+        }
+        with scheduler, client as http, patch(
+            "noesis.adapters.email.send_email", return_value=True
+        ), patch.object(auth, "is_rate_limited", return_value=False):
+            for _ in range(3):
+                http.post("/solicitar-acceso", data=payload, follow_redirects=False)
+            extra = http.post(
+                "/solicitar-acceso", data=payload, follow_redirects=False
+            )
+
+        self.assertIn("error=throttle", extra.headers["location"])
+        self.assertEqual(len(db.list_access_requests()), 3)
+
+    # -------------------------------------------------------------- aprobación --
+    def test_approval_creates_account_without_a_password_anyone_knows(self):
+        request = db.create_access_request(
+            "Luis Soler", "luis@ejemplo.com",
+            business_name="Electricidad Soler", sector="Electricidad",
+        )
+        admin_business, admin_user = db.create_account(
+            "Noesis", config.ADMIN_EMAIL, auth.hash_password("clave-larga-admin"),
+            "software",
+        )
+
+        scheduler, client = self._client()
+        with scheduler, client as http, patch(
+            "noesis.adapters.email.send_email", return_value=True
+        ) as invitation:
+            http.post("/login", data={
+                "email": config.ADMIN_EMAIL,
+                "password": "clave-larga-admin",  # pragma: allowlist secret
+            }, follow_redirects=False)
+            response = http.post(
+                f"/admin/solicitudes/{request['id']}/alta", follow_redirects=False
+            )
+
+        self.assertEqual(response.status_code, 303)
+        updated = db.get_access_request(request["id"])
+        self.assertEqual(updated["status"], "alta")
+        self.assertIsNotNone(updated["business_id"])
+
+        created = db.get_user_by_email("luis@ejemplo.com")
+        self.assertIsNotNone(created)
+        self.assertNotEqual(created["business_id"], admin_business["id"])
+        self.assertNotEqual(created["id"], admin_user["id"])
+
+        # La invitación lleva el enlace para que elija contraseña él mismo.
+        body = invitation.call_args.args[2]
+        self.assertIn("/restablecer?token=", body)
+
+    def test_approval_is_refused_when_the_email_already_has_an_account(self):
+        db.create_account(
+            "Ya existe", "repetido@ejemplo.com",
+            auth.hash_password("clave-larga-cliente"), "obra",
+        )
+        request = db.create_access_request("Repetido", "repetido@ejemplo.com")
+        db.create_account(
+            "Noesis", config.ADMIN_EMAIL, auth.hash_password("clave-larga-admin"),
+            "software",
+        )
+
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            http.post("/login", data={
+                "email": config.ADMIN_EMAIL,
+                "password": "clave-larga-admin",  # pragma: allowlist secret
+            }, follow_redirects=False)
+            http.post(
+                f"/admin/solicitudes/{request['id']}/alta", follow_redirects=False
+            )
+
+        self.assertEqual(db.get_access_request(request["id"])["status"], "nueva")
+
+    def test_requests_are_only_visible_to_the_founder(self):
+        db.create_access_request("Privada", "privada@ejemplo.com")
+        db.create_account(
+            "Cliente normal", "cliente@ejemplo.com",
+            auth.hash_password("clave-larga-cliente"), "obra",
+        )
+
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            http.post("/login", data={
+                "email": "cliente@ejemplo.com",
+                "password": "clave-larga-cliente",  # pragma: allowlist secret
+            }, follow_redirects=False)
+            panel = http.get("/admin", follow_redirects=False)
+            approve = http.post(
+                "/admin/solicitudes/1/alta", follow_redirects=False
+            )
+
+        self.assertEqual(panel.headers["location"], "/login")
+        self.assertEqual(approve.headers["location"], "/login")
+        self.assertEqual(db.get_access_request(1)["status"], "nueva")
+
+
+if __name__ == "__main__":
+    unittest.main()

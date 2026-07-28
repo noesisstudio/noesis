@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+import logging
+import secrets
+
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from ... import config, db, readiness, security_center
+from ...adapters import email as email_adapter
 from .. import auth, backups
 from ..deps import TEMPLATES
 
 router = APIRouter()
+log = logging.getLogger("uvicorn.error")
 
 # ========================================================= ADMIN (fundador) = #
 def _is_admin(request: Request) -> bool:
@@ -42,8 +47,95 @@ def admin_panel(request: Request):
     data["backup"] = backups.admin_backup_status()
     data["readiness"] = readiness.collect_readiness(check_database=False)
     data["security"] = security_center.build_security_report()
-    return TEMPLATES.TemplateResponse(request, "admin.html",
-                                      {"data": data})
+    requests_list = db.list_access_requests()
+    return TEMPLATES.TemplateResponse(request, "admin.html", {
+        "data": data,
+        "access_requests": requests_list,
+        "access_pending": sum(1 for r in requests_list if r["status"] == "nueva"),
+        "invite": request.session.pop("last_invite", None),
+        "admin_error": request.session.pop("admin_error", None),
+    })
+
+
+@router.post("/admin/solicitudes/{request_id}/estado")
+def admin_request_status(request: Request, request_id: int, status: str = Form(...)):
+    """Marca una solicitud como contactada o descartada."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        db.update_access_request(request_id, status=status)
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse("/admin#solicitudes", status_code=303)
+
+
+@router.post("/admin/solicitudes/{request_id}/alta")
+def admin_request_approve(request: Request, request_id: int):
+    """Crea la cuenta del solicitante y devuelve su enlace de invitación.
+
+    La contraseña la elige el propio titular con el enlace: aquí nunca se fija
+    ninguna, de modo que el equipo no llega a conocerla.
+    """
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    solicitud = db.get_access_request(request_id)
+    if not solicitud:
+        request.session["admin_error"] = "Esa solicitud ya no existe."
+        return RedirectResponse("/admin#solicitudes", status_code=303)
+    if solicitud["status"] == "alta":
+        request.session["admin_error"] = "Esa solicitud ya tiene cuenta creada."
+        return RedirectResponse("/admin#solicitudes", status_code=303)
+    if db.get_user_by_email(solicitud["email"]):
+        request.session["admin_error"] = (
+            f"Ya existe una cuenta con {solicitud['email']}."
+        )
+        return RedirectResponse("/admin#solicitudes", status_code=303)
+
+    business_name = solicitud["business_name"] or solicitud["name"]
+    # Contraseña imposible de adivinar y que nadie usará: el alta se completa
+    # siempre por el enlace de invitación.
+    placeholder = auth.hash_password(secrets.token_urlsafe(32))
+    try:
+        biz, user = db.create_account(
+            business_name, solicitud["email"], placeholder,
+            solicitud["sector"] or "", trial_days=config.TRIAL_DAYS,
+        )
+    except (ValueError, *db.IntegrityError) as exc:
+        request.session["admin_error"] = f"No se pudo crear la cuenta: {exc}"
+        return RedirectResponse("/admin#solicitudes", status_code=303)
+
+    token = secrets.token_urlsafe(32)
+    db.create_password_reset(
+        user["id"], auth.hash_token(token), ttl_minutes=config.INVITE_TTL_MINUTES
+    )
+    invite_url = f"{config.BASE_URL}/restablecer?token={token}"
+    db.update_access_request(request_id, status="alta", business_id=biz["id"])
+    db.record_product_event(biz["id"], "account_created_by_admin")
+
+    try:
+        email_adapter.send_email(
+            solicitud["email"],
+            "Tu acceso a Noesis ya está listo",
+            "\n".join([
+                f"Hola, {solicitud['name']}:",
+                "",
+                "Ya tienes tu cuenta de Noesis preparada. Elige tu contraseña aquí:",
+                invite_url,
+                "",
+                f"El enlace caduca en {config.INVITE_TTL_MINUTES // 1440} días.",
+                "Tus 14 días de prueba empiezan hoy.",
+                "",
+                "Cualquier duda, respóndenos a este correo.",
+            ]),
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo enviar la invitación de la solicitud %s.", request_id)
+
+    # Se muestra una sola vez para poder enviarlo por WhatsApp si el correo falla.
+    request.session["last_invite"] = {
+        "name": solicitud["name"], "email": solicitud["email"], "url": invite_url,
+    }
+    return RedirectResponse("/admin#solicitudes", status_code=303)
 
 
 @router.get("/admin/backups/latest")

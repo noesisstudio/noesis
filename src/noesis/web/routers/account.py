@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 import json
+import logging
 import secrets
 import time
+from datetime import datetime
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
@@ -21,6 +22,7 @@ from .. import auth, whatsapp
 from ..deps import TEMPLATES, _read_json
 
 router = APIRouter()
+log = logging.getLogger("uvicorn.error")
 
 _GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -274,16 +276,130 @@ def delete_account(request: Request, business_id: int, confirm: str = Form(""),
 
 
 
+# ================================================= SOLICITUD DE ACCESO ===== #
+_REQUEST_ERRORS = {
+    "name": "Dinos tu nombre para saber con quién hablamos.",
+    "email": "Ese correo no parece válido. Revísalo, por favor.",
+    "consent": "Necesitamos tu permiso para guardar tus datos y responderte.",
+    "throttle": "Ya hemos recibido tu solicitud. Te escribimos en menos de 24 horas.",
+    "sector": "Cuéntanos a qué se dedica tu negocio.",
+    "error": "No hemos podido registrar la solicitud. Inténtalo de nuevo.",
+}
+
+
+@router.get("/solicitar-acceso", response_class=HTMLResponse)
+def access_request_form(
+    request: Request, error: str = "", enviado: str = "", plan: str = "",
+):
+    """Formulario público: el alta la aprueba el equipo, no el visitante."""
+    return TEMPLATES.TemplateResponse(request, "solicitar_acceso.html", {
+        "site_active": "solicitar",
+        "error": _REQUEST_ERRORS.get(error, ""),
+        "sent": bool(enviado),
+        "plan_catalog": billing_adapter.PLANS,
+        "selected_plan": plan if plan in billing_adapter.PLAN_PRICES else "",
+    })
+
+
+@router.post("/solicitar-acceso")
+def access_request_submit(
+    request: Request,
+    name: str = Form(""),
+    email: str = Form(""),
+    business_name: str = Form(""),
+    sector: str = Form(""),
+    phone: str = Form(""),
+    message: str = Form(""),
+    plan: str = Form(""),
+    acepto: str = Form(""),
+    # Campo señuelo: invisible para personas, irresistible para robots de spam.
+    web: str = Form(""),
+):
+    name, email = (name or "").strip(), (email or "").strip().lower()
+    if web.strip():
+        # Un robot lo ha rellenado: respondemos como si todo hubiera ido bien.
+        return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
+    if not name:
+        return RedirectResponse("/solicitar-acceso?error=name", status_code=303)
+    if not auth.valid_email(email):
+        return RedirectResponse("/solicitar-acceso?error=email", status_code=303)
+    if not (sector or "").strip():
+        return RedirectResponse("/solicitar-acceso?error=sector", status_code=303)
+    if not acepto:
+        return RedirectResponse("/solicitar-acceso?error=consent", status_code=303)
+
+    ip_key = f"access-request:{auth.client_ip(request)}"
+    today = datetime.now().strftime("%Y-%m-%d")
+    if auth.is_rate_limited(ip_key) or db.count_access_requests_since(email, today) >= 3:
+        return RedirectResponse("/solicitar-acceso?error=throttle", status_code=303)
+
+    try:
+        created = db.create_access_request(
+            name, email, business_name=business_name, sector=sector,
+            phone=phone, message=message,
+            plan_interest=plan if plan in billing_adapter.PLAN_PRICES else "",
+        )
+    except (ValueError, *db.IntegrityError):
+        return RedirectResponse("/solicitar-acceso?error=error", status_code=303)
+    auth.record_failed_attempt(ip_key)
+
+    # Los avisos nunca pueden tumbar una solicitud ya guardada: si el correo
+    # falla, la petición sigue estando en el panel.
+    inbox = config.ADMIN_EMAIL or config.PUBLIC_CONTACT_EMAIL
+    if inbox:
+        try:
+            email_adapter.send_email(
+                inbox,
+                f"Nueva solicitud de acceso: {created['name']}",
+                "\n".join([
+                    f"Nombre: {created['name']}",
+                    f"Correo: {created['email']}",
+                    f"Teléfono: {created['phone'] or '—'}",
+                    f"A qué se dedica: {created['sector'] or '—'}",
+                    f"Negocio: {created['business_name'] or '—'}",
+                    f"Plan que miraba: {created['plan_interest'] or '—'}",
+                    "",
+                    f"Mensaje: {created['message'] or '—'}",
+                    "",
+                    f"Darle de alta: {config.BASE_URL}/admin#solicitudes",
+                ]),
+            )
+        except Exception:  # noqa: BLE001
+            log.exception("No se pudo avisar de la solicitud %s.", created["id"])
+    try:
+        email_adapter.send_email(
+            created["email"],
+            "Hemos recibido tu solicitud · Noesis",
+            "\n".join([
+                f"Hola, {created['name']}:",
+                "",
+                "Hemos recibido tu solicitud de acceso a Noesis. La revisamos y te",
+                "escribimos en menos de 24 horas laborables con tu acceso y una fecha",
+                "para ponerlo en marcha juntos.",
+                "",
+                "Si prefieres que hablemos antes, puedes reservar una llamada aquí:",
+                f"{config.BASE_URL}/contacto",
+                "",
+                "Un saludo,",
+                "El equipo de Noesis",
+            ]),
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo confirmar la solicitud %s.", created["id"])
+    return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
+
+
 # =========================================================== ONBOARDING ===== #
 @router.get("/onboarding", response_class=HTMLResponse)
 def onboarding(request: Request, error: str = "", plan: str = "",
                billing: str = "monthly", intent: str = "trial"):
     if not config.public_signup_available():
-        return TEMPLATES.TemplateResponse(
-            request, "registro-cerrado.html",
-            {"contact_email": config.PUBLIC_CONTACT_EMAIL},
-            status_code=503,
-        )
+        # Con el alta cerrada no se enseña una pantalla intermedia: se lleva
+        # directamente al formulario, conservando el plan que venía mirando.
+        target = "/solicitar-acceso"
+        if plan in billing_adapter.PLAN_PRICES:
+            target += f"?plan={plan}"
+        return RedirectResponse(target, status_code=303)
     selected_plan, selected_billing, selected_intent = _signup_selection(
         plan, billing, intent
     )
@@ -913,10 +1029,6 @@ def subscription_portal(request: Request, business_id: int):
 # ===================================================== RESET DE CONTRASEÑA == #
 
 
-def _hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode()).hexdigest()
-
-
 @router.get("/recuperar", response_class=HTMLResponse)
 def forgot_page(request: Request, sent: str = ""):
     return TEMPLATES.TemplateResponse(request, "forgot.html", {"sent": sent})
@@ -936,14 +1048,14 @@ def forgot_submit(request: Request, email: str = Form(...)):
     user = db.get_user_by_email(email)
     if user:  # Si no existe, no lo revelamos (respuesta idéntica).
         token = secrets.token_urlsafe(32)
-        db.create_password_reset(user["id"], _hash_token(token), ttl_minutes=60)
+        db.create_password_reset(user["id"], auth.hash_token(token), ttl_minutes=60)
         link = f"{config.BASE_URL}/restablecer?token={token}"
         email_adapter.queue_email(
             email, "Restablecer tu contraseña de Noesis",
             f"Hola,\n\nPara crear una contraseña nueva, abre este enlace (válido 1 hora):\n"
             f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Noesis",
             business_id=user["business_id"],
-            idempotency_key=f"password-reset:{user['id']}:{_hash_token(token)[:20]}",
+            idempotency_key=f"password-reset:{user['id']}:{auth.hash_token(token)[:20]}",
         )
     return RedirectResponse("/recuperar?sent=1", status_code=303)
 
@@ -959,7 +1071,7 @@ def reset_submit(request: Request, token: str = Form(...), password: str = Form(
     if len(password) < 12 or len(password) > 1024:
         return RedirectResponse(f"/restablecer?token={token}&error=password",
                                 status_code=303)
-    row = db.use_password_reset(_hash_token(token))
+    row = db.use_password_reset(auth.hash_token(token))
     if not row:
         return RedirectResponse("/restablecer?error=token", status_code=303)
     db.set_password(row["user_id"], auth.hash_password(password))

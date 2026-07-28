@@ -1,0 +1,69 @@
+{% extends "site_base.html" %}
+{% block page_title %}Contáctanos{% endblock %}
+{% block meta_description %}Reserva una llamada de 20 minutos con el equipo de Noesis o escríbenos. Te enseñamos el producto con un caso parecido al tuyo.{% endblock %}
+{% block content %}
+  <section class="public-page-hero">
+    <div>
+      <span class="eyebrow">Contáctanos</span>
+      <h1>Hablemos veinte minutos.</h1>
+    </div>
+    <p>Te enseñamos Noesis funcionando con un caso parecido al tuyo y resolvemos tus dudas
+      antes de que decidas nada. Elige el hueco que mejor te venga o escríbenos.</p>
+  </section>
+
+  <section class="public-section contact-section" aria-labelledby="agenda-title">
+    <div class="section-heading">
+      <span class="eyebrow">Reserva directa</span>
+      <h2 id="agenda-title">Coge hueco en nuestra agenda.</h2>
+      <p>Verás nuestra disponibilidad real. Al reservar recibirás la confirmación y el
+        enlace de la videollamada en tu correo.</p>
+    </div>
+
+    {# Se apunta a una reunión concreta, no al perfil: así se ven los huecos
+       disponibles desde el primer momento en vez de una lista que hay que pulsar.
+       Se usa la URL normal y NO la vista /embed de cal.com: esa espera que la
+       página anfitriona cargue su script y se queda en blanco sin él. #}
+    <div class="cal-embed">
+      <iframe
+        src="https://cal.com/bynoesis/sesion-de-estrategia"
+        title="Calendario para reservar una reunión de 30 minutos con Noesis"
+        loading="lazy"
+      ></iframe>
+    </div>
+    <p class="cal-fallback">
+      ¿Prefieres una llamada más corta? Reserva
+      <a href="https://cal.com/bynoesis/15min" target="_blank" rel="noopener">15 minutos</a>,
+      o abre el calendario completo en
+      <a href="https://cal.com/bynoesis" target="_blank" rel="noopener">cal.com/bynoesis</a>.
+    </p>
+  </section>
+
+  <section class="public-section contact-ways" aria-labelledby="ways-title">
+    <div class="section-heading centered">
+      <span class="eyebrow">Otras formas</span>
+      <h2 id="ways-title">O escríbenos y te contestamos.</h2>
+    </div>
+    <div class="contact-grid">
+      <article>
+        <h3>Quiero probar Noesis</h3>
+        <p>Damos de alta los negocios uno a uno para acompañarte en la puesta en marcha.
+          Déjanos tus datos y te escribimos en menos de 24 horas laborables.</p>
+        <a class="btn primary" href="/solicitar-acceso">Solicitar acceso</a>
+      </article>
+      <article>
+        <h3>Tengo una duda concreta</h3>
+        <p>Sobre precios, Veri*Factu, cómo funciona con tu gestoría o si encaja con tu
+          oficio. Contesta una persona del equipo, no un robot.</p>
+        <a class="btn" href="mailto:info@bynoesis.com">info@bynoesis.com</a>
+      </article>
+      <article>
+        <h3>Ya soy cliente</h3>
+        <p>Si ya usas Noesis y necesitas ayuda, escríbenos por WhatsApp desde el mismo
+          número que tienes vinculado y te atendemos ahí.</p>
+        <a class="btn" href="/login">Ir a mi panel</a>
+      </article>
+    </div>
+  </section>
+{% endblock %}
+{% block cta_title %}¿Prefieres verlo por tu cuenta primero?{% endblock %}
+{% block cta_text %}Solicita acceso y te preparamos la cuenta con tus datos reales.{% endblock %}

@@ -16,6 +16,57 @@ con textos incompletos, evitar callbacks divididos entre dominios y convertir la
 apertura comercial en una decisión verificable, no en el efecto accidental de un
 despliegue.
 
+## Con el alta cerrada se va directo al formulario, y cal.com se incrusta sin su script (2026-07-27)
+
+`/onboarding` mostraba una pantalla intermedia («estamos abriendo con pocos negocios»)
+antes de dejar llegar al formulario. Un paso de más que no aportaba nada: ahora redirige
+directamente a `/solicitar-acceso` conservando el plan. La protección real nunca fue esa
+pantalla sino el rechazo del envío, que se mantiene: no se puede crear una cuenta con el
+alta cerrada aunque se llame a la ruta a mano.
+
+Sobre el calendario, dos intentos fallidos dejan la lección anotada. Apuntar al **perfil**
+de cal.com muestra la lista de tipos de reunión y obliga a pulsar antes de ver una sola
+hora. Y su vista **`/embed`** no sirve para un iframe suelto: espera que la página
+anfitriona cargue el script de cal.com y complete un saludo por mensajes, así que sin él
+se queda en blanco. Lo que funciona es la **URL normal de una cita concreta**, que se
+pinta sola y no obliga a traer JavaScript de terceros —algo que además chocaría con la
+regla de no depender de CDNs en tiempo de ejecución.
+
+## El alta la aprueba el equipo, y la contraseña la elige siempre el titular (2026-07-27)
+
+Durante el piloto no interesa que nadie se cree una cuenta solo: se acompaña negocio
+a negocio. La captación pasa por un formulario que guarda la solicitud en
+`access_requests`, y el alta la ejecuta el fundador desde `/admin`.
+
+Al aprobar **no se fija ninguna contraseña**. Se crea la cuenta con un valor aleatorio
+que nadie conocerá nunca y se genera un enlace de un solo uso —reaprovechando la
+maquinaria ya probada de `password_resets`, con caducidad más larga— para que el
+titular elija la suya. El enlace se envía por correo y además se muestra en pantalla,
+porque el SMTP puede fallar y el cliente objetivo vive en WhatsApp. El motivo de fondo
+es de responsabilidad: si el equipo nunca conoce la contraseña de un cliente, no puede
+ser señalado ante un incidente con los datos de *sus* clientes, de los que Noesis es
+encargada del tratamiento.
+
+La prueba de 14 días arranca el día de la aprobación, no el del formulario, para que
+nadie gaste días esperando respuesta.
+
+Esto convive con el interruptor de registro público (`public_signup_available`): con el
+registro abierto los planes llevan al alta normal; con el registro cerrado —el estado de
+producción— llevan al formulario. La página `registro-cerrado.html` deja de ofrecer solo
+un correo y apunta al formulario.
+
+## Producto se fusiona con la portada y el calendario vive en Contáctanos (2026-07-27)
+
+Mantener una página de Producto que repetía el recorrido y los momentos ya presentes en
+la portada dividía la atención sin añadir nada. Se conserva lo que sí era único —el
+bloque del asistente y el de cumplimiento legal— dentro de la portada, y `/producto`
+redirige con 301 a `#como-funciona` para no perder enlaces ni posicionamiento.
+
+La reserva de reunión pasa a `/contacto` con el calendario **incrustado** en vez de un
+enlace que saca al visitante del sitio. Eso obliga a abrir `frame-src` para cal.com,
+pero **solo en esa ruta**: el resto del sitio mantiene `frame-src 'none'`. Ampliar la
+CSP globalmente por una única página habría sido desproporcionado.
+
 ## Los backfills de migración deben desactivar el disparador de inmutabilidad, no esquivarlo (2026-07-27)
 
 Una migración que rellena retroactivamente un campo nuevo en filas ya existentes
