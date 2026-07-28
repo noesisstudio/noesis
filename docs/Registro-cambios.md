@@ -23,6 +23,38 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-07-28 15:00 — merge de main con origin/main (13 commits: solicitud de acceso, calendario, equipo)
+
+- **Autor/agente:** Claude.
+- **Objetivo:** `main` local llevaba 3 commits sin subir (fotos reales del equipo,
+  restauración de bitácora, reconciliación previa) mientras `origin/main` llevaba
+  13 sin bajar (alta por solicitud, migración 36 `access_requests`, calendario de
+  contacto embebido, portada única). `git merge origin/main` dejó tres conflictos.
+- **Áreas y archivos:**
+  - `docs/Decisiones.md` y `docs/Registro-QA.md`: conflicto solo de posición —ambas
+    ramas añadieron entradas distintas el mismo día. Se conservan **ambas** entradas
+    completas, sin descartar ninguna.
+  - `src/noesis/web/templates/site_equipo.html`: ambas ramas cambiaron la foto de
+    los fundadores por vías distintas (`team-xavier-grino.jpg`/`team-miquel-colell.jpg`
+    en local vs `equipo-xavier.jpg`/`equipo-miquel.jpg` en origin, con clases CSS
+    distintas `founder-avatar` vs `founder-photo`). Se optó por la versión local por
+    ser el commit más reciente y explícito ("Añade fotos reales de los fundadores").
+    Se eliminaron `equipo-xavier.jpg`/`equipo-miquel.jpg` (sin otras referencias en
+    el código) y la regla CSS `.founder-photo` ahora muerta en `app.css`.
+- **Cambios de datos/migración:** ninguno propio; se incorpora la migración 36
+  (`access_requests`) ya presente en origin.
+- **Pruebas ejecutadas:** `pytest` completo (359 verdes / 361; los 2 fallos son el
+  artefacto conocido de macOS `/private/var` vs `/var` en `test_backups.py`, sin
+  relación), `ruff check src/` limpio, `scripts/check_project_truth.py` en verde.
+- **Dependencias o validaciones externas:** ninguna nueva; no se llamó a
+  cal.com/SMTP/Stripe reales en este merge.
+- **Riesgo/punto probable de fallo:** si alguna referencia externa (CDN, caché de
+  navegador) apuntaba a `equipo-xavier.jpg`/`equipo-miquel.jpg`, dará 404 tras el
+  despliegue; no había referencias internas.
+- **Diagnóstico y rollback:** commit de merge `dbfd1bd` sobre `main`; revertir con
+  `git revert -m 1 dbfd1bd` si algo se rompe. El commit no reescribe historia.
+- **Estado de publicación:** local / commit; pendiente subir a `origin/main`.
+
 ## 2026-07-27 — reconciliación del merge que mezcló dos arreglos del mismo bug
 
 - **Autor/agente:** Claude.
