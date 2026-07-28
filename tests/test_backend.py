@@ -2230,10 +2230,15 @@ class PortalHttpTestCase(BackendTestCase):
             patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "test-secret"),
         ):
             with TestClient(server.app) as client:
-                page = client.get("/onboarding")
-                self.assertEqual(page.status_code, 503)
-                self.assertIn("Acceso piloto", page.text)
-                self.assertNotIn("Crear cuenta y configurarla", page.text)
+                # Con el alta cerrada no se enseña una pantalla intermedia: se
+                # lleva directamente al formulario de solicitud.
+                page = client.get("/onboarding", follow_redirects=False)
+                self.assertEqual(page.status_code, 303)
+                self.assertEqual(page.headers["location"], "/solicitar-acceso")
+                form = client.get("/solicitar-acceso")
+                self.assertEqual(form.status_code, 200)
+                self.assertNotIn("Crear cuenta y configurarla", form.text)
+                # Lo que de verdad protege es que el envío siga rechazándose.
                 attempt = client.post(
                     "/onboarding/signup",
                     data={

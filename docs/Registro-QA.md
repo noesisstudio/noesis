@@ -4,12 +4,20 @@
 
 ### Qué se probó y con qué resultado
 
-- **Calendario**: revisada la captura de producción. No fallaba la carga: el iframe
-  apuntaba al **perfil** de cal.com, que muestra la lista de tipos de reunión y obliga a
-  pulsar antes de ver horas, dejando además medio recuadro vacío. Se comprobó contra
-  cal.com que existen dos citas publicadas (`sesion-de-estrategia` y `15min`, ambas
-  responden 200 en su vista de incrustar) y se apunta ya a la de 30 minutos, para que
-  los huecos disponibles se vean de entrada. Alto reducido a 640 px.
+- **Calendario, en dos pasos**: la primera captura mostraba el **perfil** de cal.com —la
+  lista de tipos de reunión, que obliga a pulsar antes de ver horas— con medio recuadro
+  vacío. Se apuntó entonces a la cita concreta usando la vista `/embed`, y la segunda
+  captura salió **en blanco**: esa vista espera que la página anfitriona cargue el script
+  de cal.com y haga un saludo por mensajes, y sin él se queda esperando. Queda apuntando
+  a la URL normal de `sesion-de-estrategia`, que se pinta sola, con 820 px de alto para
+  que el calendario no se corte.
+- **`/onboarding` con el alta cerrada**: deja de mostrar una pantalla intermedia y
+  redirige (303) directamente al formulario, conservando el plan. Verificado con el
+  servidor en modo producción. El envío del alta sigue rechazándose, que es lo que de
+  verdad protege.
+- **Correos de la solicitud**: comprobado que se generan los dos —aviso al equipo y
+  confirmación al solicitante— con sus destinatarios correctos. El aviso cae en
+  `NOESIS_ADMIN_EMAIL` y, si faltara, en el contacto público.
 - **`/solicitar-acceso` rediseñada**: pasa a usar el diseño del sitio público (cabecera,
   menú y pie) en lugar del formato del flujo de cuenta. Verificado que renderiza esos
   elementos y responde 200.
@@ -21,9 +29,11 @@
 
 ### Qué no se pudo probar
 
-- **Que el calendario se pinte ya correctamente**: el cambio de URL es coherente con lo
-  observado, pero no se ha vuelto a abrir en un navegador con red tras desplegar.
-  Confirmar visualmente en producción.
+- **Que el calendario se pinte ya correctamente**: la URL actual es la misma familia que
+  la que sí funcionaba en la primera captura, pero no se ha abierto en un navegador con
+  red tras este cambio. Confirmar visualmente en producción; es el segundo intento.
+- **Entrega real de los dos correos**: en local no hay SMTP, así que solo se comprueba
+  que se emiten y a quién. Falta ver que llegan y no caen en spam.
 - **Aspecto real de la página rediseñada**: verificada por marcado y estilos, no con una
   captura en navegador.
 
