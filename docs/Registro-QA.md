@@ -1,5 +1,48 @@
 # Registro de QA
 
+## 2026-07-27 — alta por solicitud, contacto con calendario y portada única
+
+### Qué se probó y con qué resultado
+
+- **Migración 36 (`access_requests`)**: ciclo limpio `35 → 36 → 35 → 36` en SQLite.
+  El humo obligatorio del PR la aplicó en PostgreSQL 16 y quedó en verde, que es
+  el entorno que usa producción.
+- **Formulario público `/solicitar-acceso`**: envío válido guardado con su
+  contexto comercial (plan que miraba, teléfono, sector); correo normalizado a
+  minúsculas para no duplicar por mayúsculas; rechazo sin consentimiento y con
+  correo inválido; señuelo antispam que responde como a una persona pero no
+  guarda nada; corte a la cuarta solicitud del mismo correo en el día.
+- **Aprobación desde `/admin`**: recorrido completo ejecutado a mano contra el
+  servidor local — solicitud, alta, enlace de invitación, contraseña elegida por
+  el titular, inicio de sesión y acceso a su propio panel. El enlace no se puede
+  reutilizar. La prueba arranca el día del alta (verificado: alta el 27/07,
+  caducidad el 10/08). Un cliente normal no ve ni aprueba solicitudes ajenas.
+- **Sitio público**: las once páginas responden 200 y `/producto` y `/demo`
+  redirigen con 301 sin dejar enlaces rotos. Cabeceras `Open Graph` y canónica
+  presentes. Fotos del equipo servidas correctamente.
+- **CSP del calendario**: `frame-src` permite cal.com **solo** en `/contacto`;
+  comprobado que en el resto del sitio sigue en `'none'`.
+- **Suite completa**: 361 pruebas en local. Herramientas en verde: Ruff, Bandit,
+  detector de secretos sobre todos los archivos versionados y validador de la
+  fuente de verdad.
+
+### Qué no se pudo probar
+
+- **Suite completa sin incidencias en Windows**: queda un error intermitente al
+  limpiar carpetas temporales (`PermissionError` de `tearDown`), porque un hilo
+  del planificador mantiene abierto el SQLite y Windows no permite borrar
+  ficheros en uso. Cambia de prueba en cada ejecución y desaparece al ejecutar
+  los archivos aislados. En Linux, que es donde corre el CI, no se reproduce.
+- **Renderizado real del calendario incrustado**: la CSP ya lo permite, pero no
+  se ha abierto `/contacto` en un navegador con red para confirmar que cal.com
+  pinta el iframe. Verificar tras el despliegue.
+- **Entrega real de los correos** (aviso de solicitud al equipo e invitación al
+  cliente): sin SMTP en local solo se registran en el log. Falta comprobar que
+  llegan y no caen en spam.
+- **Comportamiento en producción**: nada de esto se ha ejecutado aún contra
+  `bynoesis.com`. Antes del despliegue hay que confirmar `NOESIS_BASE_URL` y
+  `NOESIS_ALLOWED_HOSTS`, ya corregidas en Railway.
+
 ## 2026-07-27 — equipo real y botón de agendar reunión en la web pública
 
 - `/equipo`: captura de escritorio (1400px) y móvil (390px) con Playwright/Chromium
