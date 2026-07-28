@@ -725,6 +725,10 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .faq-grid p { color:var(--muted); }
 .final-cta { text-align:center; }
 .final-cta p { max-width:620px; margin:14px auto 24px; }
+.cal-embed { border:1px solid var(--border); border-radius:16px; overflow:hidden;
+  background:#fff; }
+.cal-embed iframe { display:block; width:100%; height:760px; border:0; }
+.cal-embed-fallback { text-align:center; padding:18px; color:var(--muted); font-size:13.5px; }
 .site-footer { max-width:1180px; margin:0 auto; padding:26px 24px 40px; display:flex;
   justify-content:space-between; gap:16px; color:var(--faint); border-top:1px solid var(--border); }
 @media (max-width: 900px) {
@@ -1646,6 +1650,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   justify-content:center; font-family:var(--serif); font-weight:600; font-size:21px;
   letter-spacing:.02em; margin-bottom:18px; overflow:hidden; }
 .founder-avatar img { width:100%; height:100%; object-fit:cover; }
+/* Retrato real del fundador: mismo hueco que el avatar de iniciales. */
+.founder-photo { width:72px; height:72px; border-radius:50%; object-fit:cover; display:block;
+  border:1px solid var(--border-strong); background:var(--brand-soft); margin-bottom:18px; }
 .founder-card h3 { font-family:var(--serif); font-weight:500; font-size:22px; color:var(--brand); margin:0; }
 .founder-role { display:block; color:var(--brand-2); font-weight:700; font-size:12.5px; margin:5px 0 16px; }
 .founder-card p { color:var(--muted); line-height:1.68; font-size:14.5px; margin:0 0 18px; }
@@ -1681,6 +1688,25 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   display:flex; align-items:center; justify-content:space-between; gap:35px; background:var(--brand); border-radius:12px; color:#fff; }
 .public-final-cta h2 { color:#fff; font-size:30px; margin:6px 0 5px; }
 .public-final-cta p { color:rgba(255,255,255,.7); margin:0; }
+.public-final-cta-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.public-final-cta .btn.ghost { color:#fff; border-color:rgba(255,255,255,.35); background:rgba(255,255,255,.08); }
+
+/* Contacto: calendario incrustado y vías alternativas. */
+.cal-embed { border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  background:var(--surface); }
+.cal-embed iframe { display:block; width:100%; height:740px; border:0; }
+.cal-fallback { margin-top:12px; color:var(--muted); font-size:13px; text-align:center; }
+.contact-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+.contact-grid article { display:flex; flex-direction:column; gap:10px; padding:24px;
+  border:1px solid var(--border); border-radius:14px; background:var(--surface); }
+.contact-grid h3 { font-size:17px; color:var(--brand); letter-spacing:-.01em; }
+.contact-grid p { flex:1; color:var(--muted); font-size:14px; line-height:1.6; }
+.contact-grid .btn { align-self:flex-start; }
+
+@media (max-width: 860px) {
+  .contact-grid { grid-template-columns:1fr; }
+  .cal-embed iframe { height:640px; }
+}
 .public-footer { width:min(var(--public-max), calc(100% - 40px)); margin:0 auto; padding:60px 0 28px; }
 .public-footer-grid { display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:54px; }
 .public-footer-brand .site-brand { font-family:var(--serif); font-weight:500; font-size:22px; }
@@ -1844,6 +1870,22 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .auth-error, .auth-success { padding:11px 13px; margin-bottom:17px; border-radius:8px; color:var(--red); background:var(--red-soft); font-size:12.5px; }
 .auth-success { color:var(--green); background:var(--green-soft); }
 .auth-safe { display:block; margin-top:16px; color:var(--faint); text-align:center; line-height:1.5; }
+.public-auth-form textarea.input { min-height:88px; padding-top:11px; resize:vertical; line-height:1.55; }
+/* Señuelo antispam: fuera de la vista y del recorrido con teclado, nunca display:none. */
+.hp-field { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+.request-next { margin:20px 0; padding:17px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); }
+.request-next p { margin:0 0 12px; color:var(--muted); font-size:12.5px; line-height:1.55; }
+
+/* Solicitudes de acceso en el panel del fundador. */
+.admin-note { margin:0 0 14px; padding:13px 16px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-size:13px; }
+.admin-note.error { border-color:var(--red); color:var(--red); background:var(--red-soft); }
+.admin-note.success { border-color:var(--green); background:var(--green-soft); }
+.admin-note p { margin:6px 0 10px; color:var(--muted); font-size:12.5px; line-height:1.5; }
+.invite-link { width:100%; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; }
+.requests-table td small { display:block; margin-top:3px; color:var(--faint); font-size:11.5px; }
+.requests-table .req-msg { font-style:italic; max-width:34ch; }
+.req-actions { white-space:nowrap; }
+.req-actions form { display:inline-block; margin:2px 4px 2px 0; }
 .public-login-layout { min-height:calc(100vh - 76px); grid-template-columns:1fr 430px; }
 .login-message { min-height:490px; }
 .login-links { display:flex; justify-content:space-between; gap:15px; margin-top:19px; font-size:11.5px; }

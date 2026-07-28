@@ -8553,6 +8553,99 @@ def use_password_reset(token_hash) -> dict | None:
         return dict(row)
 
 
+# ------------------------------------------------- Solicitudes de acceso ---
+ACCESS_REQUEST_STATUSES = ("nueva", "contactada", "alta", "descartada")
+
+
+def create_access_request(
+    name: str, email: str, *, business_name: str = "", sector: str = "",
+    phone: str = "", message: str = "", plan_interest: str = "",
+) -> dict:
+    """Guarda una solicitud del formulario público. No crea cuenta ninguna."""
+    name = (name or "").strip()[:120]
+    email = (email or "").strip().lower()[:160]
+    if not name or not email:
+        raise ValueError("Hacen falta el nombre y el correo.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO access_requests "
+            "(name, business_name, sector, email, phone, message, plan_interest, "
+            "status, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, 'nueva', ?) RETURNING *",
+            (name, (business_name or "").strip()[:160],
+             (sector or "").strip()[:80], email,
+             (phone or "").strip()[:40], (message or "").strip()[:2000],
+             (plan_interest or "").strip()[:40], _now()),
+        ).fetchone()
+    return dict(row)
+
+
+def list_access_requests(
+    *, status: str | None = None, limit: int = 200,
+) -> list[dict]:
+    """Solicitudes ordenadas por llegada, las nuevas primero."""
+    query = "SELECT * FROM access_requests"
+    params: list = []
+    if status:
+        query += " WHERE status=?"
+        params.append(status)
+    # Las nuevas arriba; dentro de cada estado, la más reciente primero.
+    query += (
+        " ORDER BY CASE status WHEN 'nueva' THEN 0 WHEN 'contactada' THEN 1"
+        " WHEN 'alta' THEN 2 ELSE 3 END, created_at DESC, id DESC LIMIT ?"
+    )
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        return [dict(row) for row in conn.execute(query, params).fetchall()]
+
+
+def get_access_request(request_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM access_requests WHERE id=?", (int(request_id),)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def update_access_request(
+    request_id: int, *, status: str | None = None,
+    internal_note: str | None = None, business_id: int | None = None,
+) -> dict | None:
+    """Cambia el estado o la nota interna de una solicitud."""
+    fields, params = [], []
+    if status is not None:
+        if status not in ACCESS_REQUEST_STATUSES:
+            raise ValueError("Estado de solicitud no válido.")
+        fields.append("status=?")
+        params.append(status)
+    if internal_note is not None:
+        fields.append("internal_note=?")
+        params.append(internal_note.strip()[:2000])
+    if business_id is not None:
+        fields.append("business_id=?")
+        params.append(int(business_id))
+    if not fields:
+        return get_access_request(request_id)
+    fields.append("updated_at=?")
+    params.extend([_now(), int(request_id)])
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE access_requests SET {', '.join(fields)} WHERE id=?", params
+        )
+    return get_access_request(request_id)
+
+
+def count_access_requests_since(email: str, since: str) -> int:
+    """Solicitudes recientes del mismo correo: frena envíos repetidos."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS total FROM access_requests "
+            "WHERE email=? AND created_at >= ?",
+            ((email or "").strip().lower(), since),
+        ).fetchone()
+    return int(row["total"] if row else 0)
+
+
 # --------------------------------------------------------- Suscripción ---
 def set_trial(business_id, days: int = 14) -> None:
     ends = (date.today() + timedelta(days=days)).isoformat()

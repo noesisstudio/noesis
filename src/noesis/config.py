@@ -335,6 +335,9 @@ STRIPE_PRICE_AUTONOMO_ANNUAL = os.getenv("STRIPE_PRICE_AUTONOMO_ANNUAL", "")
 STRIPE_PRICE_PRO_ANNUAL = os.getenv("STRIPE_PRICE_PRO_ANNUAL", "")
 STRIPE_PRICE_PREMIUM_ANNUAL = os.getenv("STRIPE_PRICE_PREMIUM_ANNUAL", "")
 TRIAL_DAYS = int(os.getenv("NOESIS_TRIAL_DAYS", "14"))
+# Caducidad del enlace de invitación con el que el titular elige su contraseña.
+# Más largo que un "he olvidado la contraseña" porque el alta la inicia el equipo.
+INVITE_TTL_MINUTES = int(os.getenv("NOESIS_INVITE_TTL_MINUTES", str(7 * 24 * 60)))
 
 # Firma de webhooks y límites de entrada.
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")

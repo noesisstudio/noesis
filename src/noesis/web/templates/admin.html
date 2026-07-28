@@ -28,6 +28,78 @@
     <div class="stat"><div class="lbl">Alarmas</div><div class="val {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="delta flat">ahora mismo</div></div>
   </div>
 
+  <!-- ================= 📬 Solicitudes de acceso ================= -->
+  <div class="dept-head" id="solicitudes">
+    <span class="dept-ic">📬</span>
+    <div>
+      <h2>Solicitudes de acceso</h2>
+      <p>{% if access_pending %}Tienes {{ access_pending }} solicitud(es) sin atender.{% else %}Todas las solicitudes están atendidas.{% endif %}</p>
+    </div>
+  </div>
+
+  {% if admin_error %}<div class="admin-note error">{{ admin_error }}</div>{% endif %}
+
+  {% if invite %}
+  <div class="admin-note success">
+    <b>Cuenta creada para {{ invite.name }} ({{ invite.email }}).</b>
+    <p>Le hemos enviado este enlace por correo. Cópialo si prefieres mandárselo por WhatsApp;
+       solo se muestra ahora y caduca en 7 días.</p>
+    <input class="input invite-link" value="{{ invite.url }}" readonly onclick="this.select()">
+  </div>
+  {% endif %}
+
+  <div class="card">
+    {% if access_requests %}
+    <div class="table-wrap">
+      <table class="requests-table">
+        <thead><tr><th>Solicitante</th><th>Negocio</th><th>Contacto</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          {% for req in access_requests %}
+          <tr>
+            <td>
+              <b>{{ req.name }}</b>
+              <small>{{ req.created_at[:10] }}</small>
+              {% if req.message %}<small class="req-msg">“{{ req.message[:160] }}”</small>{% endif %}
+            </td>
+            <td>{{ req.business_name or '—' }}<small>{{ req.sector or '' }}</small>{% if req.plan_interest %}<small>mira el plan {{ req.plan_interest }}</small>{% endif %}</td>
+            <td>
+              <a href="mailto:{{ req.email }}">{{ req.email }}</a>
+              {% if req.phone %}<small>{{ req.phone }}</small>{% endif %}
+            </td>
+            <td>
+              <span class="badge {{ 'b-green' if req.status == 'alta' else ('b-amber' if req.status == 'nueva' else '') }}">{{ req.status }}</span>
+            </td>
+            <td class="req-actions">
+              {% if req.status != 'alta' %}
+              <form method="post" action="/admin/solicitudes/{{ req.id }}/alta">
+                <button class="btn primary sm" type="submit">Dar de alta</button>
+              </form>
+              {% endif %}
+              {% if req.status == 'nueva' %}
+              <form method="post" action="/admin/solicitudes/{{ req.id }}/estado">
+                <input type="hidden" name="status" value="contactada">
+                <button class="btn sm" type="submit">Contactada</button>
+              </form>
+              {% endif %}
+              {% if req.status not in ('alta', 'descartada') %}
+              <form method="post" action="/admin/solicitudes/{{ req.id }}/estado">
+                <input type="hidden" name="status" value="descartada">
+                <button class="btn sm" type="submit">Descartar</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">Todavía no ha llegado ninguna solicitud. Cuando alguien rellene el
+      formulario de <a href="/solicitar-acceso">solicitar acceso</a>, aparecerá aquí y
+      recibirás un aviso por correo.</p>
+    {% endif %}
+  </div>
+
   <!-- ================= 💰 Finanzas ================= -->
   <div class="dept-head">
     <span class="dept-ic">💰</span>

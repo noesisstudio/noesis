@@ -58,6 +58,12 @@
 - `src/noesis/web/templates/site_equipo.html`: página pública de equipo y principios;
   explica responsabilidades reales sin atribuir personas, clientes o credenciales
   todavía no verificadas.
+- `src/noesis/web/templates/site_contacto.html`: contacto y reserva de reunión con el
+  calendario incrustado. Es la única ruta donde la CSP permite `frame-src` de cal.com;
+  el resto del sitio mantiene `'none'`.
+- `src/noesis/web/templates/solicitar_acceso.html`: formulario público de solicitud de
+  acceso. Producto se fusionó con la portada, que conserva las anclas `#como-funciona`
+  y `#cumplimiento-legal` a las que redirigen los enlaces antiguos.
 - `src/noesis/web/static/public-site.js`: hace navegable la cuenta simulada de la
   Home y sincroniza el selector mensual/anual, sus importes, ahorro, CTA y campos de
   checkout sin tocar datos reales.
@@ -89,9 +95,15 @@
   expone el diagnóstico de proveedores en la API del cliente.
 - `src/noesis/web/templates/onboarding_preferences.html`: aplica fiscalidad,
   factura, cobro, recordatorios, informes y gestoría antes de entrar al producto.
+- `src/noesis/web/routers/account.py` (`/solicitar-acceso`) + tabla `access_requests`:
+  recoge la solicitud pública con su plan de interés, valida, limita repeticiones por
+  correo y descarta robots con un campo señuelo. No crea ninguna cuenta.
 - `src/noesis/web/routers/admin.py` + `templates/admin.html`: diagnóstico técnico,
   parte CISO y evidencia de seguridad reservados al fundador; audita acceso y
-  descarga de copias sin guardar contenido de clientes.
+  descarga de copias sin guardar contenido de clientes. Desde aquí se aprueban las
+  solicitudes: el alta crea el negocio, arranca la prueba ese día y devuelve un
+  enlace de un solo uso —reutiliza `password_resets`— para que el titular elija su
+  contraseña, de modo que el equipo nunca llega a conocerla.
 - `src/noesis/web/templates/ajustes.html`: datos, preferencias, memoria y conexiones
   que el cliente puede usar; no muestra qué proveedor falta o está caído.
 - `src/noesis/web/static/app.css`: tokens, componentes y responsive sin CDN.

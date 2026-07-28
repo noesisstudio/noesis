@@ -74,7 +74,10 @@ class SecurityOperationsTestCase(unittest.TestCase):
                 conn.execute("DELETE FROM security_events WHERE id=?", (first["id"],))
 
     def test_migration_35_roundtrip_reinstalls_security_guards(self):
-        self.assertEqual(migrations.current_version(), 35)
+        # Se compara contra la última versión, no contra un número fijo: así el
+        # test sigue cubriendo el ciclo cuando se añaden migraciones nuevas.
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
+        # La 34 es la anterior a que existiera la bitácora de seguridad.
         self.assertEqual(migrations.downgrade(34), 34)
         with db.get_conn() as conn:
             table = conn.execute(
@@ -82,7 +85,7 @@ class SecurityOperationsTestCase(unittest.TestCase):
                 "AND name='security_events'"
             ).fetchone()
         self.assertIsNone(table)
-        self.assertEqual(migrations.upgrade(), 35)
+        self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
         db.record_security_event("security.migration_verified")
 
     def test_clamav_protocol_clean_and_malware(self):

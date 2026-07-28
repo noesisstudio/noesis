@@ -9,6 +9,15 @@
   <link rel="manifest" href="/static/manifest.webmanifest">
   <meta name="theme-color" content="#14463b">
   <link rel="apple-touch-icon" href="/static/noesis-mark.svg">
+  {# Cómo se ve el enlace al compartirlo por WhatsApp, LinkedIn o correo. #}
+  <meta property="og:site_name" content="Noesis">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:title" content="{{ self.page_title() }}">
+  <meta property="og:description" content="{{ self.meta_description() }}">
+  <meta property="og:image" content="{{ base_url }}/static/noesis-product-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="{{ base_url }}{{ request.url.path }}">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
 <body class="landing-body public-site">
@@ -20,11 +29,11 @@
       </a>
 
       <nav class="public-nav" aria-label="Principal">
-        <a href="/producto" class="{{ 'active' if site_active == 'producto' }}">Producto</a>
-        <a href="/producto#como-funciona">Cómo funciona</a>
+        <a href="/#como-funciona">Cómo funciona</a>
         <a href="/precios" class="{{ 'active' if site_active == 'precios' }}">Precios</a>
         <a href="/equipo" class="{{ 'active' if site_active == 'equipo' }}">Equipo</a>
         <a href="/preguntas" class="{{ 'active' if site_active == 'preguntas' }}">Preguntas</a>
+        <a href="/contacto" class="{{ 'active' if site_active == 'contacto' }}">Contáctanos</a>
       </nav>
 
       <div class="site-actions">
@@ -36,20 +45,22 @@
         {% if public_signup_available %}
         <a class="btn primary" href="/onboarding?intent=trial">Prueba 14 días <span aria-hidden="true">→</span></a>
         {% else %}
-        <a class="btn primary" href="/onboarding">Solicitar acceso <span aria-hidden="true">→</span></a>
+        <a class="btn primary" href="/solicitar-acceso">Solicitar acceso <span aria-hidden="true">→</span></a>
         {% endif %}
       </div>
 
       <details class="public-menu">
         <summary>Menú</summary>
         <nav aria-label="Menú móvil">
-          <a href="/producto">Producto</a>
-          <a href="/producto#como-funciona">Cómo funciona</a>
+          <a href="/#como-funciona">Cómo funciona</a>
           <a href="/precios">Precios</a>
           <a href="/equipo">Equipo</a>
           <a href="/preguntas">Preguntas</a>
+          <a href="/contacto">Contáctanos</a>
           {% if business_id %}<a href="/b/{{ business_id }}/resumen">Mi panel</a>{% else %}<a href="/login">Iniciar sesión</a>{% endif %}
-          {% if not business_id %}<a href="/onboarding">{% if public_signup_available %}Prueba 14 días{% else %}Solicitar acceso{% endif %}</a>{% endif %}
+          {% if not business_id %}
+          {% if public_signup_available %}<a href="/onboarding?intent=trial">Prueba 14 días</a>{% else %}<a href="/solicitar-acceso">Solicitar acceso</a>{% endif %}
+          {% endif %}
         </nav>
       </details>
     </div>
@@ -65,7 +76,16 @@
         <h2 id="final-cta-title">{% block cta_title %}{% if public_signup_available %}Catorce días para poner orden de verdad.{% else %}Abrimos con pocos negocios y acompañamiento directo.{% endif %}{% endblock %}</h2>
         <p>{% block cta_text %}{% if public_signup_available %}Sin tarjeta, sin permanencia y con tus datos siempre exportables.{% else %}Solicita acceso y configuraremos contigo el primer ciclo completo.{% endif %}{% endblock %}</p>
       </div>
-      <a class="btn light" href="/onboarding{% if public_signup_available %}?intent=trial{% endif %}">{% if public_signup_available %}Prueba 14 días{% else %}Solicitar acceso{% endif %} <span aria-hidden="true">→</span></a>
+      <div class="public-final-cta-actions">
+        {% if public_signup_available %}
+        <a class="btn light" href="/onboarding?intent=trial">Prueba 14 días <span aria-hidden="true">→</span></a>
+        {% else %}
+        <a class="btn light" href="/solicitar-acceso">Solicitar acceso <span aria-hidden="true">→</span></a>
+        {% endif %}
+        {% if site_active != 'contacto' %}
+        <a class="btn ghost" href="/contacto">Reservar una llamada</a>
+        {% endif %}
+      </div>
     </section>
     {% endblock %}
   </main>
@@ -78,16 +98,17 @@
       </div>
       <div class="public-footer-col">
         <b>Producto</b>
-        <a href="/producto">Qué hace</a>
-        <a href="/producto#como-funciona">Cómo funciona</a>
+        <a href="/#como-funciona">Cómo funciona</a>
+        <a href="/#cumplimiento-legal">Cumplimiento legal</a>
         <a href="/precios">Precios</a>
         <a href="/preguntas">Preguntas</a>
       </div>
       <div class="public-footer-col">
         <b>Empresa</b>
         <a href="/equipo">Equipo</a>
+        <a href="/contacto">Contáctanos</a>
         <a href="/cumplimiento">Cumplimiento</a>
-        <a href="mailto:{{ public_contact_email }}">Contacto</a>
+        <a href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a>
       </div>
       <div class="public-footer-col">
         <b>Legal</b>

@@ -175,10 +175,17 @@ async def security_headers(request: Request, call_next):
         if request.url.path.startswith("/t/")
         else "camera=(), geolocation=(), payment=()"
     )
+    # El calendario de reservas es el único contenido externo que se incrusta, y
+    # solo en su propia página: el resto del sitio mantiene frame-src 'none'.
+    frame_src = (
+        "https://cal.com https://app.cal.com"
+        if request.url.path == "/contacto"
+        else "'none'"
+    )
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; img-src 'self' data:; font-src 'self'; "
         "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
-        "connect-src 'self'; object-src 'none'; frame-src 'none'; "
+        f"connect-src 'self'; object-src 'none'; frame-src {frame_src}; "
         "frame-ancestors 'none'; base-uri 'self'; "
         "form-action 'self' https://checkout.stripe.com"
     )
@@ -186,7 +193,7 @@ async def security_headers(request: Request, call_next):
         response.headers["Content-Security-Policy-Report-Only"] = (
             "default-src 'self'; img-src 'self' data:; font-src 'self'; "
             "style-src 'self'; script-src 'self'; connect-src 'self'; "
-            "object-src 'none'; frame-src 'none'; frame-ancestors 'none'; "
+            f"object-src 'none'; frame-src {frame_src}; frame-ancestors 'none'; "
             "base-uri 'self'; form-action 'self' https://checkout.stripe.com"
         )
     if config.HTTPS_ONLY or config.IS_PRODUCTION:
