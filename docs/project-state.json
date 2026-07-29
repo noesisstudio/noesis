@@ -57,7 +57,7 @@
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",
     "private_calendar_feed": "implemented_revocable_ics",
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",
-    "email_delivery": "implemented_durable_outbox_with_retry",
+    "email_delivery": "implemented_durable_outbox_with_retry_smtp_picks_implicit_ssl_on_465_and_starttls_otherwise_public_forms_never_talk_to_smtp_during_the_request",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",

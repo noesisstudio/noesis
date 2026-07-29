@@ -113,7 +113,9 @@ def admin_request_approve(request: Request, request_id: int):
     db.record_product_event(biz["id"], "account_created_by_admin")
 
     try:
-        email_adapter.send_email(
+        # Se encola en vez de enviarse aquí: el enlace ya se enseña en pantalla,
+        # así que no hay motivo para dejar al fundador esperando a SMTP.
+        email_adapter.queue_email(
             solicitud["email"],
             "Tu acceso a Noesis ya está listo",
             "\n".join([
@@ -127,6 +129,8 @@ def admin_request_approve(request: Request, request_id: int):
                 "",
                 "Cualquier duda, respóndenos a este correo.",
             ]),
+            business_id=biz["id"],
+            idempotency_key=f"access-invite:{request_id}",
         )
     except Exception:  # noqa: BLE001
         log.exception("No se pudo enviar la invitación de la solicitud %s.", request_id)

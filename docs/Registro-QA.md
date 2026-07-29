@@ -1,5 +1,31 @@
 # Registro de QA
 
+## 2026-07-27 — el formulario se colgaba: puerto SMTP y envío bloqueante
+
+### Qué se probó y con qué resultado
+
+- **Causa 1, afecta a TODO el correo del sistema**: `_send_msg` abría siempre `SMTP` y
+  pedía `starttls()`, que es el modo del puerto 587. Producción usa el **465**, que exige
+  TLS desde el primer byte. Con el modo equivocado la conexión no falla rápido: se queda
+  esperando hasta agotar los 15 segundos. Ahora se elige `SMTP_SSL` para el 465 y se
+  mantiene STARTTLS para el resto.
+- **Causa 2, introducida por mí**: los dos correos de la solicitud se enviaban durante la
+  petición, así que el visitante esperaba hasta 15 segundos por cada uno —30 en total—
+  ante una pantalla en blanco. El proyecto ya tenía cola durable con reintentos
+  (`queue_email` + `process_email_outbox`) y no la usé. Corregido también en la
+  invitación del panel, donde el enlace ya se muestra en pantalla.
+- **Medido con un SMTP configurado que no responde**: la respuesta pasa de colgarse a
+  **0,22 s**, y los dos correos quedan encolados con estado `queued`.
+- Claves de idempotencia por solicitud para que un reintento no duplique correos.
+- Pruebas del módulo: **8 verdes**. Ruff en verde.
+
+### Qué no se pudo probar
+
+- **Un envío real por el puerto 465**: la corrección es la estándar para SSL implícito,
+  pero sin credenciales válidas en local no se ha completado un envío de verdad. Es justo
+  lo que hay que confirmar tras desplegar: enviar una solicitud y comprobar que el correo
+  llega a `info@bynoesis.com`.
+
 ## 2026-07-27 — el señuelo antispam podía tragarse solicitudes reales
 
 ### Qué se probó y con qué resultado

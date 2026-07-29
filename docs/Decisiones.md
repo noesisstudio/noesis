@@ -2,6 +2,24 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Ningún formulario público habla con SMTP durante la petición (2026-07-27)
+
+El formulario de solicitud enviaba sus dos correos dentro de la propia petición. Con el
+servidor de correo mal configurado, el visitante se quedaba hasta treinta segundos ante
+una pantalla en blanco y muchos se habrían ido pensando que la web estaba rota.
+
+La regla queda fija: **lo que se dispara desde una página pública se encola**
+(`queue_email`) y lo envía el scheduler, que además reintenta. Vale igual para la
+invitación del panel, donde el enlace ya se enseña en pantalla y no hay motivo para
+esperar a SMTP. Cada correo lleva clave de idempotencia para que un reintento no lo
+duplique.
+
+La causa de fondo era otra y afectaba a todo el correo del sistema: `_send_msg` abría
+siempre una conexión en claro y pedía `STARTTLS`, que es el modo del puerto **587**. El
+**465** exige TLS desde el primer byte, y usar el modo equivocado no da un error
+inmediato — la conexión se queda esperando hasta agotar el tiempo límite. Ahora el modo
+se elige según el puerto.
+
 ## Un antispam que se traga clientes es peor que el spam (2026-07-27)
 
 El campo señuelo del formulario de solicitud se llamaba `web`. El autorrelleno del

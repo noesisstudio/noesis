@@ -358,8 +358,9 @@ def access_request_submit(
         return RedirectResponse("/solicitar-acceso?error=error", status_code=303)
     auth.record_failed_attempt(ip_key)
 
-    # Los avisos nunca pueden tumbar una solicitud ya guardada: si el correo
-    # falla, la petición sigue estando en el panel.
+    # Los correos se encolan, no se envían aquí: hablar con SMTP durante la
+    # petición deja al visitante esperando ante una pantalla en blanco si el
+    # servidor de correo tarda. El scheduler los envía y reintenta después.
     inbox = (
         config.ACCESS_REQUESTS_EMAIL
         or config.ADMIN_EMAIL
@@ -367,7 +368,7 @@ def access_request_submit(
     )
     if inbox:
         try:
-            email_adapter.send_email(
+            email_adapter.queue_email(
                 inbox,
                 f"Nueva solicitud de acceso: {created['name']}",
                 "\n".join([
@@ -382,11 +383,12 @@ def access_request_submit(
                     "",
                     f"Darle de alta: {config.BASE_URL}/admin#solicitudes",
                 ]),
+                idempotency_key=f"access-request-notice:{created['id']}",
             )
         except Exception:  # noqa: BLE001
             log.exception("No se pudo avisar de la solicitud %s.", created["id"])
     try:
-        email_adapter.send_email(
+        email_adapter.queue_email(
             created["email"],
             "Hemos recibido tu solicitud · Noesis",
             "\n".join([
@@ -402,6 +404,7 @@ def access_request_submit(
                 "Un saludo,",
                 "El equipo de Noesis",
             ]),
+            idempotency_key=f"access-request-confirmation:{created['id']}",
         )
     except Exception:  # noqa: BLE001
         log.exception("No se pudo confirmar la solicitud %s.", created["id"])
