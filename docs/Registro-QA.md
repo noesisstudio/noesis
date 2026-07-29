@@ -1,5 +1,35 @@
 # Registro de QA
 
+## 2026-07-27 — repaso de copy y una colisión de CSS en los retratos
+
+### Qué se probó y con qué resultado
+
+- **Retratos de los fundadores, corregidos**: la regla `.pilot-stories img`, escrita para
+  la ilustración del taller, alcanzaba también a las fotos nuevas por estar en la misma
+  sección y, al declararse después con igual especificidad, ganaba: los estiraba al 100 %
+  y les aplicaba `mix-blend-mode: multiply`, fundiendo el fondo blanco del retrato con el
+  crema de la página. Se acota con la clase `.pilot-illustration`, también en la regla
+  responsive. Verificado que ninguna regla alcanza ya a los retratos.
+- **Tamaños declarados alineados con el CSS**: los retratos anunciaban 56 px con el CSS
+  pintando 44, y en equipo 112 contra 72. Se igualan para evitar saltos de maquetación.
+- **Banda del hero**: usaba la maqueta de cifras de impacto (dato grande en serif) con
+  conceptos dentro, así que «1 hilo» se leía como una métrica inexistente. Pasa a tres
+  promesas en columnas. Se retira la nota que recordaba que aún no hay resultados medidos.
+- **Bloque del asistente**: el titular se definía negando («No es un chat aparte») y la
+  cita informaba sin ofrecerse a actuar, incumpliendo la regla de voz documentada. Se
+  reescribe con un caso de cobros —módulo central, no proyectos, que es secundario— que
+  cierra ofreciendo hacer.
+- **Jerga interna barrida del sitio público**: «cerebro local» y «modo consulta» no
+  significan nada para un cliente. Traducidos en precios, equipo y preguntas; comprobado
+  que no queda ninguna aparición.
+- Las seis páginas públicas responden 200, Ruff en verde y las pruebas de precios y de
+  páginas legales siguen pasando.
+
+### Qué no se pudo probar
+
+- **El aspecto final**: revisado por el founder en el servidor local durante los cambios,
+  pero sin captura de navegador por mi parte ni comprobación en pantalla de móvil.
+
 ## 2026-07-27 — portada: un día real en vez de listas de funciones
 
 ### Qué se probó y con qué resultado

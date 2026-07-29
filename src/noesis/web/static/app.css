@@ -1292,12 +1292,14 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 /* Home: jerarquía de campaña clara y el producto real como prueba principal. */
 .marketing-hero { background:#102820; color:#fff; }
 .marketing-hero-inner { width:min(1420px, calc(100% - 64px)); min-height:0; margin:0 auto; padding:96px 0 72px; }
-.hero-impact { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:18px 64px;
-  max-width:960px; margin:44px auto 0; padding-top:30px; border-top:1px solid rgba(255,255,255,.14); }
-.hero-impact > div { display:flex; align-items:baseline; gap:10px; }
-.hero-impact strong { font-family:var(--serif); font-weight:550; font-size:36px; letter-spacing:-.01em; color:#fff; }
-.hero-impact span { max-width:21ch; color:rgba(255,255,255,.66); font-size:13px; line-height:1.4; }
-.hero-impact-note { margin:16px 0 0; text-align:center; color:rgba(255,255,255,.38); font-size:11px; }
+/* Tres promesas, no tres cifras: la maqueta de dato grande hacía leer "1 hilo"
+   como una métrica que no existe. */
+.hero-impact { display:grid; grid-template-columns:repeat(3,1fr); gap:36px;
+  max-width:1020px; margin:48px auto 0; padding-top:32px;
+  border-top:1px solid rgba(255,255,255,.14); text-align:left; }
+.hero-impact > div { display:grid; gap:7px; }
+.hero-impact strong { color:#fff; font-size:15px; font-weight:750; letter-spacing:-.005em; }
+.hero-impact span { color:rgba(255,255,255,.62); font-size:13.5px; line-height:1.55; }
 .marketing-hero-copy { max-width:960px; margin:0 auto; text-align:center; }
 .hero-kicker { color:#9fd6bd; }
 .marketing-hero-copy h1 { font-family:var(--serif); font-weight:500; font-size:clamp(52px, 5.6vw, 84px);
@@ -1502,14 +1504,20 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 
 .pilot-stories { min-height:260px; display:grid; grid-template-columns:1fr .9fr; gap:40px; align-items:center;
   padding:28px 28px 28px 48px; background:#f8f5ed; border:1px solid var(--border); border-radius:14px; }
-.founders-inline { display:flex; align-items:center; gap:10px; margin:20px 0 16px; }
-.founders-inline img { width:44px; height:44px; border-radius:50%; object-fit:cover;
-  border:2px solid #fff; box-shadow:0 1px 3px rgba(20,70,59,.12); }
-.founders-inline img + img { margin-left:-16px; }
-.founders-inline span { margin-left:6px; color:var(--muted); font-size:13px; font-weight:700; }
+.founders-inline { display:flex; align-items:center; gap:12px; margin:22px 0 18px; }
+/* flex:0 0 auto evita que el contenedor flexible los aplaste. */
+.founders-inline img { flex:0 0 auto; width:56px; height:56px; border-radius:50%;
+  object-fit:cover; object-position:center top; background:#fff;
+  border:2px solid #fff; box-shadow:0 2px 6px rgba(20,70,59,.14); }
+.founders-inline img + img { margin-left:-18px; }
+.founders-inline span { margin-left:8px; display:grid; gap:1px; color:var(--text);
+  font-size:13.5px; font-weight:700; line-height:1.35; }
+.founders-inline small { color:var(--muted); font-size:12px; font-weight:600; }
 .pilot-stories h2 { font-size:clamp(28px,3vw,40px); margin:10px 0 14px; }
 .pilot-stories p { color:var(--muted); line-height:1.65; max-width:58ch; }
-.pilot-stories img { width:100%; max-height:230px; object-fit:cover; object-position:center; mix-blend-mode:multiply; }
+/* Acotada a la ilustración: antes alcanzaba también a los retratos de los
+   fundadores y los estiraba al 100 % con el fondo fusionado. */
+.pilot-illustration { width:100%; max-height:230px; object-fit:cover; object-position:center; mix-blend-mode:multiply; }
 
 /* Precios y preguntas. */
 .pricing-preview { padding-bottom:78px; }
@@ -1647,7 +1655,12 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .price-included { background:var(--brand); color:#fff; }
 .price-included h2 { color:#fff; }
 .price-included ul { list-style:none; padding:0; margin:0; display:grid; grid-template-columns:1fr 1fr; }
-.price-included li { padding:18px; border-left:1px solid rgba(255,255,255,.18); border-bottom:1px solid rgba(255,255,255,.18); color:rgba(255,255,255,.82); }
+.price-included li { padding:20px; border-left:1px solid rgba(255,255,255,.18);
+  border-bottom:1px solid rgba(255,255,255,.18); color:rgba(255,255,255,.68);
+  font-size:13px; line-height:1.55; }
+.price-included li b { display:block; margin-bottom:6px; color:#fff; font-size:14px;
+  font-weight:750; line-height:1.35; }
+.price-included > div > p { color:rgba(255,255,255,.66); line-height:1.65; margin:0; }
 .pricing-faq { display:grid; grid-template-columns:.55fr 1fr; gap:80px; }
 .faq-page-hero { align-items:center; }
 .faq-layout { display:grid; grid-template-columns:220px 1fr; gap:84px; align-items:start; }
@@ -1728,6 +1741,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .contact-grid { grid-template-columns:1fr; }
   .cal-embed iframe { height:640px; }
 }
+@media (max-width: 860px) {
+  .hero-impact { grid-template-columns:1fr; gap:22px; }
+}
 @media (max-width: 620px) {
   /* En móvil la hora pasa encima: 74px de sangría se comen el ancho útil. */
   .workday-timeline > li { padding-left:0; }
@@ -1779,7 +1795,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .public-pricing-grid .recommended { order:-1; grid-column:1/-1; }
   .pilot-stories, .faq-preview, .public-page-hero, .companion-section, .compliance-section,
   .price-included, .pricing-faq, .team-manifesto, .principles-list { grid-template-columns:1fr; }
-  .pilot-stories img { max-height:260px; }
+  .pilot-illustration { max-height:260px; }
   .process-rows article { grid-template-columns:42px 1fr; }
   .process-rows article > p { grid-column:2; }
   .product-moment-list article { grid-template-columns:1fr; gap:10px; }
