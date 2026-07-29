@@ -2,6 +2,29 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## El correo sale por API porque Railway bloquea SMTP (2026-07-27)
+
+Ningún correo salía de producción. El registro daba `[Errno 101] Network is
+unreachable` al conectar con `smtp.hostinger.com`, y se descartó que fuera la
+contraseña, el remitente o el puerto: desde fuera de Railway ese servidor conecta y
+acepta autenticación en el 465, y el dominio solo resuelve a IPv4, así que tampoco era
+un problema de rutas IPv6.
+
+La causa es que **Railway bloquea la salida a los puertos de SMTP**, como hacen otras
+plataformas del mismo tipo para impedir que sus servidores se usen para enviar spam.
+No hay arreglo posible en el código mientras se hable SMTP.
+
+La salida es enviar por **HTTPS**, que nunca está bloqueado. Se añade Brevo como vía
+preferida en el adaptador de correo, incluidos los adjuntos —las facturas viajan
+codificadas en el propio cuerpo—, y el SMTP se conserva como alternativa para
+instalaciones donde sí funcione. Se elige un proveedor europeo por el encaje con la
+documentación de encargados del tratamiento, que maneja datos fiscales españoles.
+
+La lección general: en una plataforma gestionada no se puede dar por hecho que la
+salida a un puerto cualquiera está abierta. Los servicios que hablan por HTTPS son
+más portables.
+
+
 ## Ningún formulario público habla con SMTP durante la petición (2026-07-27)
 
 El formulario de solicitud enviaba sus dos correos dentro de la propia petición. Con el

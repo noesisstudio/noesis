@@ -251,6 +251,14 @@ PUBLIC_CONTACT_EMAIL = os.getenv(
 ACCESS_REQUESTS_EMAIL = os.getenv(
     "NOESIS_REQUESTS_EMAIL", "info@bynoesis.com"
 ).strip().lower()
+# Envío de correo por API (HTTPS). Necesario en plataformas como Railway, que
+# bloquean la salida a los puertos de SMTP para evitar el envío de spam. Si hay
+# clave, se usa esta vía; si no, se cae al SMTP de siempre.
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
+BREVO_API_URL = os.getenv(
+    "BREVO_API_URL", "https://api.brevo.com/v3/smtp/email"
+).strip()
+BREVO_TIMEOUT_SECONDS = int(os.getenv("BREVO_TIMEOUT_SECONDS", "15"))
 SMTP_PROVIDER_NAME = os.getenv("NOESIS_SMTP_PROVIDER_NAME", "").strip()
 SMTP_PROVIDER_REGION = os.getenv("NOESIS_SMTP_PROVIDER_REGION", "").strip()
 PUBLIC_SIGNUP_ENABLED = env_bool(

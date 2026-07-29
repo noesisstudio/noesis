@@ -1,5 +1,32 @@
 # Registro de QA
 
+## 2026-07-27 — el correo no salía: Railway bloquea SMTP
+
+### Qué se probó y con qué resultado
+
+- **Diagnóstico**: el registro de Railway mostraba `[Errno 101] Network is unreachable`
+  al conectar con `smtp.hostinger.com`. Se descartaron una a una las causas habituales:
+  desde fuera de Railway ese servidor **conecta y acepta autenticación en el 465**, el
+  dominio **solo resuelve a IPv4** (así que no era un problema de rutas IPv6), y el MX y
+  el SPF del dominio están bien. La conclusión es que Railway bloquea la salida a los
+  puertos de SMTP, como otras plataformas del mismo tipo.
+- **Vía nueva por HTTPS**: se añade Brevo al adaptador de correo, solo con biblioteca
+  estándar para no incumplir la regla de mínimas dependencias. Verificado contra un
+  servidor simulado que la petición lleva la clave en su cabecera, el remitente separado
+  en nombre y dirección como exige la API, y los adjuntos codificados en el cuerpo.
+- **Degradación conservada**: sin clave de API se sigue usando SMTP igual que antes, y
+  sin ningún proveedor se registra en el log en lugar de fallar. Ambos casos con prueba.
+- Pruebas nuevas: **5 verdes** en `test_email_api.py`. Las 8 de solicitudes siguen
+  pasando y Ruff está limpio.
+
+### Qué no se pudo probar
+
+- **Un envío real por la API**: falta la clave de Brevo, que da de alta el founder. La
+  prueba definitiva es enviar una solicitud tras configurarla y comprobar que el correo
+  llega a `info@bynoesis.com`.
+- **Que el dominio quede verificado** en el proveedor: sin ese paso los correos saldrían
+  pero acabarían en spam.
+
 ## 2026-07-27 — el formulario se colgaba: puerto SMTP y envío bloqueante
 
 ### Qué se probó y con qué resultado
