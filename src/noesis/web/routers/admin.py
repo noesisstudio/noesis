@@ -21,9 +21,7 @@ def _is_admin(request: Request) -> bool:
     user = auth.current_user(request)
     if not user:
         return False
-    allowed = bool(user.get("is_admin")) or (
-        bool(config.ADMIN_EMAIL) and user["email"].lower() == config.ADMIN_EMAIL
-    )
+    allowed = bool(user.get("is_admin")) or config.is_admin_email(user["email"])
     if not allowed:
         return False
     if config.ADMIN_REQUIRE_GOOGLE_OAUTH:

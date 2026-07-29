@@ -17,7 +17,7 @@ class AccessRequestTestCase(unittest.TestCase):
         self.original = {
             name: getattr(config, name)
             for name in ("DB_PATH", "DOCS_PATH", "BACKUP_DIR", "DATABASE_URL",
-                         "ADMIN_EMAIL", "IS_PRODUCTION")
+                         "ADMIN_EMAIL", "ADMIN_EMAILS", "IS_PRODUCTION")
         }
         root = Path(self.temporary.name)
         config.DATABASE_URL = ""
@@ -25,6 +25,7 @@ class AccessRequestTestCase(unittest.TestCase):
         config.DOCS_PATH = root / "uploads"
         config.BACKUP_DIR = root / "backups"
         config.ADMIN_EMAIL = "fundador@bynoesis.com"
+        config.ADMIN_EMAILS = (config.ADMIN_EMAIL,)
         config.IS_PRODUCTION = False
         db.init_db()
 
@@ -219,3 +220,29 @@ class AccessRequestTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AdminEmailsTestCase(unittest.TestCase):
+    """El panel admite varios responsables sin compartir una misma cuenta."""
+
+    def setUp(self):
+        self.original = config.ADMIN_EMAILS
+
+    def tearDown(self):
+        config.ADMIN_EMAILS = self.original
+
+    def test_several_addresses_are_accepted_and_normalised(self):
+        config.ADMIN_EMAILS = ("xavier@bynoesis.com", "miquel@bynoesis.com")
+        self.assertTrue(config.is_admin_email("xavier@bynoesis.com"))
+        # Mayúsculas y espacios no deben dejar fuera a un responsable.
+        self.assertTrue(config.is_admin_email("  Miquel@Bynoesis.com  "))
+
+    def test_anyone_else_is_refused(self):
+        config.ADMIN_EMAILS = ("xavier@bynoesis.com",)
+        self.assertFalse(config.is_admin_email("cliente@ejemplo.com"))
+        self.assertFalse(config.is_admin_email(""))
+        self.assertFalse(config.is_admin_email(None))
+
+    def test_without_configuration_nobody_is_admin(self):
+        config.ADMIN_EMAILS = ()
+        self.assertFalse(config.is_admin_email("cualquiera@ejemplo.com"))
