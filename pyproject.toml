@@ -40,7 +40,7 @@ security = [
     "pip-audit>=2.9.0,<3",
     "ruff>=0.16.0,<1",
 ]
-test = ["hypothesis>=6.130.0,<7"]
+test = ["hypothesis>=6.163.0,<7"]
 
 [project.scripts]
 noesis = "noesis.cli:main"
