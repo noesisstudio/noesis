@@ -1,26 +1,101 @@
 """Adaptador de email (solo stdlib).
 
-Envía correos por SMTP si está configurado (SMTP_HOST...). Si no lo está —como en
-local o antes de contratar un proveedor— NO falla: registra el contenido en el log
-para poder probar el flujo (p. ej. el enlace de reset de contraseña). Mismo patrón
-que el resto de adaptadores: se activa con variables de entorno y degrada con
-elegancia.
+Dos vías de salida, por este orden:
+
+1. **API HTTPS** (Brevo) si hay `BREVO_API_KEY`. Es la única que funciona en
+   plataformas como Railway, que bloquean la salida a los puertos de SMTP para
+   evitar que se usen sus servidores para enviar spam.
+2. **SMTP** clásico si está configurado.
+
+Si no hay ninguna —como en local— NO falla: registra el contenido en el log para
+poder probar el flujo (por ejemplo, el enlace de recuperar contraseña). Mismo
+patrón que el resto de adaptadores: se activa con variables de entorno y degrada
+con elegancia.
 """
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
+import re
 import smtplib
 import ssl
+import urllib.error
+import urllib.request
 from email.message import EmailMessage
 
 from .. import config, db
 
 log = logging.getLogger("noesis.email")
 
+# "Noesis <info@bynoesis.com>" -> ("Noesis", "info@bynoesis.com")
+_REMITENTE = re.compile(r"^\s*(?P<nombre>.*?)\s*<(?P<correo>[^>]+)>\s*$")
+
+
+def _api_available() -> bool:
+    return bool(config.BREVO_API_KEY)
+
 
 def available() -> bool:
-    return bool(config.SMTP_HOST and config.SMTP_USER and config.SMTP_PASS)
+    return _api_available() or bool(
+        config.SMTP_HOST and config.SMTP_USER and config.SMTP_PASS
+    )
+
+
+def _sender() -> dict:
+    """Separa nombre y dirección del remitente configurado."""
+    bruto = (config.SMTP_FROM or "").strip()
+    coincidencia = _REMITENTE.match(bruto)
+    if coincidencia:
+        return {
+            "name": coincidencia.group("nombre") or "Noesis",
+            "email": coincidencia.group("correo"),
+        }
+    return {"name": "Noesis", "email": bruto or config.SMTP_USER}
+
+
+def _send_via_api(
+    to: str, subject: str, body: str, html: str | None = None,
+    attachments: list[tuple[str, bytes, str, str]] | None = None,
+) -> bool:
+    """Entrega por HTTPS, adjuntos incluidos (van codificados en el cuerpo)."""
+    carga = {
+        "sender": _sender(),
+        "to": [{"email": to}],
+        "subject": subject,
+        "textContent": body,
+    }
+    if html:
+        carga["htmlContent"] = html
+    if attachments:
+        carga["attachment"] = [
+            {"name": nombre, "content": base64.b64encode(datos).decode("ascii")}
+            for nombre, datos, _maintype, _subtype in attachments
+        ]
+    peticion = urllib.request.Request(
+        config.BREVO_API_URL,
+        data=json.dumps(carga).encode("utf-8"),
+        headers={
+            "api-key": config.BREVO_API_KEY,
+            "content-type": "application/json",
+            "accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(
+            peticion, timeout=config.BREVO_TIMEOUT_SECONDS
+        ) as respuesta:
+            return 200 <= respuesta.status < 300
+    except urllib.error.HTTPError as exc:
+        # El cuerpo explica el motivo (clave inválida, remitente sin verificar…).
+        detalle = exc.read().decode(errors="replace")[:500]
+        log.error("Fallo enviando email a %s: %s %s", to, exc.code, detalle)
+        return False
+    except Exception as exc:  # noqa: BLE001
+        log.error("Fallo enviando email a %s: %s", to, exc)
+        return False
 
 
 def send_email(
@@ -30,18 +105,20 @@ def send_email(
     html: str | None = None,
     attachments: list[tuple[str, bytes, str, str]] | None = None,
 ) -> bool:
-    """Envía un email de texto. Devuelve True si salió por SMTP; False si solo se
-    registró en log (sin SMTP configurado o ante un fallo de envío)."""
+    """Envía un email. Devuelve True si salió; False si solo se registró en log
+    (sin proveedor configurado o ante un fallo de envío)."""
     if not available():
         if config.IS_PRODUCTION:
             log.error(
-                "SMTP no está configurado: no se pudo enviar '%s' a %s.",
-                subject, to,
+                "No hay proveedor de correo configurado: no se pudo enviar "
+                "'%s' a %s.", subject, to,
             )
         else:
-            log.warning("[EMAIL local sin SMTP] Para: %s | Asunto: %s\n%s",
+            log.warning("[EMAIL local sin proveedor] Para: %s | Asunto: %s\n%s",
                         to, subject, body)
         return False
+    if _api_available():
+        return _send_via_api(to, subject, body, html, attachments)
     msg = EmailMessage()
     msg["From"] = config.SMTP_FROM
     msg["To"] = to

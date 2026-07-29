@@ -129,8 +129,11 @@
   de outbox. WhatsApp, correo y Veri*Factu se persisten y reintentan; la remisión
   fiscal de altas y anulaciones verifica una cadena común y continúa aunque la
   suscripción SaaS quede inactiva. Ejecuta copia diaria y simulacro semanal.
-- `src/noesis/adapters/email.py`: frontera SMTP; toda comunicación nueva se encola
-  antes de salir para no perderla ante una caída del proveedor.
+- `src/noesis/adapters/email.py`: frontera de correo con dos vías. Con `BREVO_API_KEY`
+  sale por HTTPS —única forma de que salga correo desde Railway, que bloquea los
+  puertos de SMTP—, adjuntos incluidos; sin ella usa SMTP, con SSL directo en el 465 y
+  STARTTLS en el resto. Toda comunicación nueva se encola antes de salir para no
+  perderla ante una caída del proveedor.
 - `src/noesis/adapters/`: Meta, email, pagos, voz, extracción y fiscalidad detrás de
   fronteras reemplazables. La extracción externa respeta la decisión de IA de cada
   negocio y conserva el clasificador local cuando está desactivada.
