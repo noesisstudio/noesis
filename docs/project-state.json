@@ -31,6 +31,7 @@
     "product_view": "real_panel_templates_replicated_with_sample_company",
     "product_preview": "all_sections_and_subsections_navigable_including_caja_analisis_ingresos_costes_presupuestos_cobros_impuestos_crm_productos",
     "demo_frame": "block_layout_960px_aligned_with_hero_copy",
+    "landing_narrative": "hero_subhead_leads_with_whatsapp_then_a_real_workday_conversation_replaces_the_abstract_moments_grid_and_the_founders_replace_the_no_testimonials_section",
     "billing_periods": [
       "monthly",
       "annual"

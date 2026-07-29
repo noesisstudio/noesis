@@ -1,5 +1,37 @@
 # Registro de QA
 
+## 2026-07-27 — portada: un día real en vez de listas de funciones
+
+### Qué se probó y con qué resultado
+
+- **Entradilla del hero**: pasa a nombrar WhatsApp lo primero, cumpliendo la ley 2 de
+  `PRODUCT_PRINCIPLES` («primero WhatsApp, después app»). El titular **no se toca**: es
+  la frase canónica del producto, fijada como base de la landing.
+- **Sección «cada momento de tu día» sustituida** por «Así se ve un día con Noesis»: una
+  conversación real de WhatsApp con las cuatro horas del día perfecto descrito en
+  `WhatsApp-Cerebro` §10. Elimina de paso la redundancia con «Cómo funciona», que contaba
+  el mismo ciclo con otras palabras.
+- **Sección «Historias reales, cuando estén verificadas» sustituida**: anunciaba en un
+  sitio privilegiado que no hay testimonios. Ahora presenta a los dos fundadores con sus
+  caras y explica el acompañamiento, que es la confianza que sí se puede ofrecer hoy.
+- **CSS muerto retirado**: los estilos de la sección eliminada, incluidos sus selectores
+  dentro de las reglas responsive compartidas, comprobando antes que ninguna plantilla
+  los usara. Hoja de estilos 806 bytes más pequeña.
+- Las siete páginas públicas responden 200, la hoja de estilos sirve las clases nuevas,
+  Ruff en verde y la prueba de precios sigue pasando.
+
+### Qué no se pudo probar
+
+- **El aspecto real**: la línea de tiempo y el bloque de fundadores están verificados por
+  marcado y estilos, no con una captura de navegador. Falta mirar en móvil que la hora
+  sobre la burbuja no descuadre.
+
+### Decisión del founder registrada
+
+- Las promesas de foto de ticket y notas de voz **se mantienen** en la portada aunque las
+  funciones no respondan todavía por falta de claves externas. Queda advertido y es una
+  decisión consciente suya: primero la web, luego el sistema.
+
 ## 2026-07-27 — optimización de la carga del sitio público
 
 ### Qué se probó y con qué resultado

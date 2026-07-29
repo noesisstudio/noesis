@@ -1283,10 +1283,11 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   font-family:var(--serif); font-weight:500; color:var(--brand); letter-spacing:-.025em; line-height:1.05; }
 .section-heading h2 { font-size:clamp(32px, 4vw, 48px); margin-top:10px; }
 .section-heading p { color:var(--muted); font-size:16px; line-height:1.65; margin:15px 0 0; }
-.public-section, .workflow-section, .moments-section, .pricing-preview, .faq-preview,
+.public-section, .workflow-section, .workday-section, .pricing-preview, .faq-preview,
 .pilot-stories, .companion-section, .compliance-section, .price-included,
 .team-manifesto, .principles-list, .team-contact { width:min(var(--public-max), calc(100% - 40px)); margin:0 auto; }
-.public-section, .workflow-section, .moments-section, .pricing-preview { padding:92px 0; }
+.public-section, .workflow-section, .workday-section,
+.pricing-preview { padding:92px 0; }
 
 /* Home: jerarquía de campaña clara y el producto real como prueba principal. */
 .marketing-hero { background:#102820; color:#fff; }
@@ -1476,17 +1477,36 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   border-radius:50%; background:var(--brand); color:#fff; font-size:11px; }
 .workflow-line h3 { font-family:var(--serif); font-weight:500; color:var(--brand); font-size:22px; }
 .workflow-line p { color:var(--muted); font-size:13px; line-height:1.6; margin:9px auto 0; max-width:25ch; }
-.moments-section { padding-top:76px; }
-.moments-grid { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
-.moments-grid article { padding:30px 26px; border-right:1px solid var(--border); }
-.moments-grid article:last-child { border-right:0; }
-.moments-grid article > span, .product-moment-list article span, .team-responsibilities article span { color:var(--brand-2); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
-.moments-grid h3 { font-family:var(--serif); font-size:20px; font-weight:500; color:var(--brand); margin:9px 0 15px; }
-.moments-grid ul, .companion-copy ul, .public-price-list { list-style:none; padding:0; margin:0; }
-.moments-grid li { position:relative; padding:5px 0 5px 14px; color:var(--muted); font-size:12.5px; }
-.moments-grid li::before { content:""; position:absolute; left:0; top:11px; width:4px; height:4px; border-radius:50%; background:var(--brand-2); }
+.team-responsibilities article span { color:var(--brand-2); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.companion-copy ul, .public-price-list { list-style:none; padding:0; margin:0; }
+/* Un día con Noesis: conversación de WhatsApp, no lista de funciones. */
+.workday-timeline { list-style:none; margin:0; padding:0; display:grid; gap:34px;
+  max-width:660px; margin-inline:auto; }
+.workday-timeline > li { position:relative; display:grid; gap:9px; padding-left:74px; }
+.workday-timeline > li::before { content:""; position:absolute; left:31px; top:26px;
+  bottom:-34px; width:1px; background:var(--border); }
+.workday-timeline > li:last-child::before { display:none; }
+.workday-hour { position:absolute; left:0; top:2px; width:54px; text-align:right;
+  color:var(--brand-2); font-size:12.5px; font-weight:800;
+  font-variant-numeric:tabular-nums; }
+.workday-bubble { position:relative; padding:14px 17px; border-radius:14px 14px 14px 4px;
+  background:#fff; border:1px solid var(--border); }
+.workday-bubble.mine { border-radius:14px 14px 4px 14px; background:var(--brand-soft);
+  border-color:transparent; margin-left:36px; }
+.workday-bubble p { margin:0; color:var(--text); font-size:14px; line-height:1.6; }
+.workday-bubble i { color:var(--muted); }
+.workday-reply { display:block; margin-top:10px; padding-top:10px;
+  border-top:1px solid var(--border); color:var(--green); font-size:13px; font-weight:700; }
+.workday-note { margin:34px auto 0; max-width:660px; text-align:center;
+  color:var(--faint); font-size:13px; }
+
 .pilot-stories { min-height:260px; display:grid; grid-template-columns:1fr .9fr; gap:40px; align-items:center;
   padding:28px 28px 28px 48px; background:#f8f5ed; border:1px solid var(--border); border-radius:14px; }
+.founders-inline { display:flex; align-items:center; gap:10px; margin:20px 0 16px; }
+.founders-inline img { width:44px; height:44px; border-radius:50%; object-fit:cover;
+  border:2px solid #fff; box-shadow:0 1px 3px rgba(20,70,59,.12); }
+.founders-inline img + img { margin-left:-16px; }
+.founders-inline span { margin-left:6px; color:var(--muted); font-size:13px; font-weight:700; }
 .pilot-stories h2 { font-size:clamp(28px,3vw,40px); margin:10px 0 14px; }
 .pilot-stories p { color:var(--muted); line-height:1.65; max-width:58ch; }
 .pilot-stories img { width:100%; max-height:230px; object-fit:cover; object-position:center; mix-blend-mode:multiply; }
@@ -1708,6 +1728,13 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .contact-grid { grid-template-columns:1fr; }
   .cal-embed iframe { height:640px; }
 }
+@media (max-width: 620px) {
+  /* En móvil la hora pasa encima: 74px de sangría se comen el ancho útil. */
+  .workday-timeline > li { padding-left:0; }
+  .workday-timeline > li::before { display:none; }
+  .workday-hour { position:static; width:auto; text-align:left; display:block; }
+  .workday-bubble.mine { margin-left:24px; }
+}
 .public-footer { width:min(var(--public-max), calc(100% - 40px)); margin:0 auto; padding:60px 0 28px; }
 .public-footer-grid { display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:54px; }
 .public-footer-brand .site-brand { font-family:var(--serif); font-weight:500; font-size:22px; }
@@ -1745,10 +1772,10 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .public-header .site-actions { justify-self:end; }
   .marketing-hero-inner { grid-template-columns:1fr; min-height:auto; }
   .interactive-product-demo .hero-desk, .product-home-preview .hero-desk { grid-template-columns:112px 1fr; }
-  .workflow-line, .moments-grid, .public-pricing-grid, .team-responsibilities { grid-template-columns:1fr 1fr; }
-  .workflow-line li:nth-child(2), .moments-grid article:nth-child(2) { border-right:0; }
-  .workflow-line li, .moments-grid article { padding-top:25px; padding-bottom:25px; border-bottom:1px solid var(--border); }
-  .workflow-line li:nth-last-child(-n+2), .moments-grid article:nth-last-child(-n+2) { border-bottom:0; }
+  .workflow-line, .public-pricing-grid, .team-responsibilities { grid-template-columns:1fr 1fr; }
+  .workflow-line li:nth-child(2) { border-right:0; }
+  .workflow-line li { padding-top:25px; padding-bottom:25px; border-bottom:1px solid var(--border); }
+  .workflow-line li:nth-last-child(-n+2) { border-bottom:0; }
   .public-pricing-grid .recommended { order:-1; grid-column:1/-1; }
   .pilot-stories, .faq-preview, .public-page-hero, .companion-section, .compliance-section,
   .price-included, .pricing-faq, .team-manifesto, .principles-list { grid-template-columns:1fr; }
@@ -1765,7 +1792,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 }
 @media (max-width: 580px) {
   .public-header-inner, .marketing-hero-inner, .public-page-hero, .public-section,
-  .workflow-section, .moments-section, .pricing-preview, .faq-preview, .pilot-stories,
+  .workflow-section, .workday-section, .pricing-preview, .faq-preview, .pilot-stories,
   .companion-section, .compliance-section, .price-included, .team-manifesto,
   .principles-list, .team-contact, .public-final-cta, .public-footer { width:min(100% - 28px, var(--public-max)); }
   .public-header .site-brand span { display:none; }
@@ -1801,13 +1828,13 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .demo-real-dashboard .home-main-grid, .demo-real-dashboard .home-lower-grid { grid-template-columns:1fr; }
   .demo-real-dashboard .money-summary { grid-template-columns:1fr 1fr; }
   .demo-real-dashboard .money-summary p { grid-column:1/-1; text-align:left; }
-  .workflow-line, .moments-grid, .public-pricing-grid, .team-responsibilities, .founders-grid { grid-template-columns:1fr; }
-  .workflow-line li, .workflow-line li:nth-child(2), .moments-grid article, .moments-grid article:nth-child(2) { border-right:0; border-bottom:1px solid var(--border); }
-  .workflow-line li:last-child, .moments-grid article:last-child { border-bottom:0; }
+  .workflow-line, .public-pricing-grid, .team-responsibilities, .founders-grid { grid-template-columns:1fr; }
+  .workflow-line li, .workflow-line li:nth-child(2) { border-right:0; border-bottom:1px solid var(--border); }
+  .workflow-line li:last-child { border-bottom:0; }
   .founder-card { border-right:0; border-bottom:1px solid var(--border); padding:30px 24px; }
   .founder-card:last-child { border-bottom:0; }
   .public-pricing-grid .recommended { grid-column:auto; }
-  .public-section, .workflow-section, .moments-section, .pricing-preview { padding:68px 0; }
+  .public-section, .workflow-section, .workday-section, .pricing-preview { padding:68px 0; }
   .pilot-stories { padding:30px 24px; grid-template-columns:1fr; }
   .public-page-hero { grid-template-columns:1fr; gap:24px; padding:65px 0 50px; }
   .public-page-hero h1 { font-size:45px; }
