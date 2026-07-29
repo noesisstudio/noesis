@@ -360,7 +360,11 @@ def access_request_submit(
 
     # Los avisos nunca pueden tumbar una solicitud ya guardada: si el correo
     # falla, la petición sigue estando en el panel.
-    inbox = config.ADMIN_EMAIL or config.PUBLIC_CONTACT_EMAIL
+    inbox = (
+        config.ACCESS_REQUESTS_EMAIL
+        or config.ADMIN_EMAIL
+        or config.PUBLIC_CONTACT_EMAIL
+    )
     if inbox:
         try:
             email_adapter.send_email(

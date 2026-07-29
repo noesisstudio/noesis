@@ -1942,6 +1942,10 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .request-done { display:flex; justify-content:center; }
 .request-done-card { max-width:620px; padding:44px; text-align:center; border:1px solid var(--border);
   border-radius:16px; background:var(--surface); }
+.request-done-check { width:58px; height:58px; margin:0 auto 22px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--green-soft); color:var(--green); }
+.request-done-check svg { width:28px; height:28px; }
 .request-done-card h2 { font-size:28px; color:var(--brand); margin:10px 0 12px; letter-spacing:-.015em; }
 .request-done-card p { color:var(--muted); line-height:1.68; margin:0 0 24px; }
 .request-done-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }

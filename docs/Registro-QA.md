@@ -4,6 +4,14 @@
 
 ### Qué se probó y con qué resultado
 
+- **Mensaje de confirmación reescrito**: al enviar sale «Gracias, tu solicitud se ha
+  enviado» con un icono de visto y la promesa explícita de contacto en 24 horas
+  laborables. Si el envío se repite, el texto se adapta para no dar a entender que se ha
+  creado otra solicitud.
+- **Destino del aviso**: las solicitudes van ahora a `info@bynoesis.com` mediante su
+  propia variable `NOESIS_REQUESTS_EMAIL`, no al correo del administrador. Verificado con
+  el servidor: el aviso sale a ese buzón y la confirmación al solicitante.
+
 - **Campo señuelo renombrado**: se llamaba `web`, y el autorrelleno del navegador puede
   completar solo un campo con ese nombre (Chrome ignora a menudo `autocomplete="off"`).
   Si ocurría, el visitante veía la pantalla de gracias pero su solicitud se descartaba

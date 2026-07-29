@@ -245,6 +245,12 @@ LEGAL_DOCUMENT_VERSION = "2026-07-27"
 PUBLIC_CONTACT_EMAIL = os.getenv(
     "NOESIS_CONTACT_EMAIL", LEGAL_EMAIL or "noesisstudioo@gmail.com"
 ).strip().lower()
+# Buzón donde caen las solicitudes de acceso. Tiene variable propia para que no
+# dependa del correo del administrador ni del de contacto público: quien atiende
+# las solicitudes no tiene por qué ser quien administra el sistema.
+ACCESS_REQUESTS_EMAIL = os.getenv(
+    "NOESIS_REQUESTS_EMAIL", "info@bynoesis.com"
+).strip().lower()
 SMTP_PROVIDER_NAME = os.getenv("NOESIS_SMTP_PROVIDER_NAME", "").strip()
 SMTP_PROVIDER_REGION = os.getenv("NOESIS_SMTP_PROVIDER_REGION", "").strip()
 PUBLIC_SIGNUP_ENABLED = env_bool(

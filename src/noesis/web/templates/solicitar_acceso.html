@@ -14,15 +14,20 @@
   {% if sent %}
   <section class="public-section request-done" aria-labelledby="done-title">
     <div class="request-done-card">
+      <div class="request-done-check" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
       <span class="eyebrow">Solicitud recibida</span>
       {% if repeated %}
-      <h2 id="done-title">Tranquilo, ya la teníamos.</h2>
-      <p>Habíamos recibido tu solicitud antes, así que no hemos creado otra. Seguimos
-        con ella: te escribimos en menos de 24 horas laborables.</p>
+      <h2 id="done-title">Gracias, ya teníamos tu solicitud.</h2>
+      <p>La habíamos recibido antes, así que no hemos creado otra. Seguimos con ella y
+        nos pondremos en contacto contigo en menos de 24 horas laborables.</p>
       {% else %}
-      <h2 id="done-title">Gracias. Ya la tenemos.</h2>
-      <p>Revisamos tu caso y te escribimos en menos de 24 horas laborables con tu acceso
-        y una fecha para ponerlo en marcha juntos.</p>
+      <h2 id="done-title">Gracias, tu solicitud se ha enviado.</h2>
+      <p>Nos pondremos en contacto contigo en menos de 24 horas laborables, con tu acceso
+        y una fecha para ponerlo en marcha juntos. Te hemos mandado un correo de
+        confirmación.</p>
       {% endif %}
       <div class="request-done-actions">
         <a class="btn primary" href="/contacto">Reservar una llamada</a>
