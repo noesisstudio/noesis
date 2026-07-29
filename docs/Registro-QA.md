@@ -1,5 +1,29 @@
 # Registro de QA
 
+## 2026-07-27 — el señuelo antispam podía tragarse solicitudes reales
+
+### Qué se probó y con qué resultado
+
+- **Campo señuelo renombrado**: se llamaba `web`, y el autorrelleno del navegador puede
+  completar solo un campo con ese nombre (Chrome ignora a menudo `autocomplete="off"`).
+  Si ocurría, el visitante veía la pantalla de gracias pero su solicitud se descartaba
+  en silencio por parecer un robot. Pasa a `nsx_check`, que no casa con ninguna heurística
+  de autorrelleno, y cada descarte queda registrado en el log: un falso positivo aquí
+  significa perder un cliente sin que nadie se entere.
+- **Repetir el envío deja de ser un error**: con el mismo correo tres veces, la cuarta
+  devolvía una caja roja con un texto que sonaba a éxito. Ahora se agradece y se explica
+  que ya la teníamos, sin duplicar la solicitud. El corte por IP se mantiene para frenar
+  envíos masivos, que es el caso que sí es un ataque.
+- Verificado el ciclo completo contra el servidor: envío normal, envío repetido, mensaje
+  correcto en cada caso y que no se crean duplicados en base de datos.
+- Pruebas del módulo: **8 verdes** (una nueva para separar al insistente del bombardeo).
+
+### Qué no se pudo probar
+
+- **El autorrelleno real de un navegador**: la causa es conocida y documentada, pero no
+  se ha reproducido con Chrome rellenando el campo. Conviene enviar una solicitud real
+  desde el móvil tras desplegar y confirmar que aparece en el panel.
+
 ## 2026-07-27 — repaso de copy y una colisión de CSS en los retratos
 
 ### Qué se probó y con qué resultado

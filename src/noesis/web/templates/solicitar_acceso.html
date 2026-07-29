@@ -15,9 +15,15 @@
   <section class="public-section request-done" aria-labelledby="done-title">
     <div class="request-done-card">
       <span class="eyebrow">Solicitud recibida</span>
+      {% if repeated %}
+      <h2 id="done-title">Tranquilo, ya la teníamos.</h2>
+      <p>Habíamos recibido tu solicitud antes, así que no hemos creado otra. Seguimos
+        con ella: te escribimos en menos de 24 horas laborables.</p>
+      {% else %}
       <h2 id="done-title">Gracias. Ya la tenemos.</h2>
       <p>Revisamos tu caso y te escribimos en menos de 24 horas laborables con tu acceso
         y una fecha para ponerlo en marcha juntos.</p>
+      {% endif %}
       <div class="request-done-actions">
         <a class="btn primary" href="/contacto">Reservar una llamada</a>
         <a class="btn ghost" href="/">Volver al inicio</a>
@@ -63,8 +69,14 @@
             <textarea class="input" name="message" rows="3" maxlength="2000" placeholder="Ej. Facturo tarde y persigo cobros por teléfono"></textarea>
           </label>
 
-          {# Señuelo antispam: oculto para personas, tentador para robots. #}
-          <div class="hp-field" aria-hidden="true"><label>No rellenes este campo<input name="web" tabindex="-1" autocomplete="off"></label></div>
+          {# Señuelo antispam. El nombre no puede parecerse a ningún campo real
+             (web, empresa, dirección…) o el autorrelleno del navegador lo
+             completaría solo y tiraríamos solicitudes de personas. #}
+          <div class="hp-field" aria-hidden="true">
+            <label>No rellenes este campo
+              <input name="nsx_check" tabindex="-1" autocomplete="off" inputmode="none">
+            </label>
+          </div>
 
           <label class="auth-consent">
             <input type="checkbox" name="acepto" value="1" required>

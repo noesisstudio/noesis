@@ -2,6 +2,24 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Un antispam que se traga clientes es peor que el spam (2026-07-27)
+
+El campo señuelo del formulario de solicitud se llamaba `web`. El autorrelleno del
+navegador completa campos por heurística de nombre y Chrome ignora a menudo
+`autocomplete="off"`, así que podía rellenarlo por su cuenta: la persona veía la
+pantalla de gracias y su solicitud se descartaba en silencio.
+
+Dos reglas que quedan para cualquier señuelo futuro. **El nombre no puede parecerse a
+ningún campo real** (web, empresa, dirección, teléfono); se usa uno sin significado,
+hoy `nsx_check`. Y **cada descarte se registra en el log**: un falso positivo aquí no
+produce ningún error visible, así que sin rastro nadie se enteraría de que se están
+perdiendo clientes.
+
+En la misma línea, repetir el envío con el mismo correo dejó de tratarse como error.
+Quien insiste suele ser una persona impaciente, no un ataque: se le agradece y se le
+dice que ya la teníamos, sin duplicar la solicitud. El corte por IP se mantiene, porque
+ese sí describe un envío masivo.
+
 ## Apertura pública cerrada por defecto y dominio canónico único (2026-07-27)
 
 En producción, Noesis no acepta nuevas cuentas ni inicia altas con Google mientras

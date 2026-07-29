@@ -290,12 +290,14 @@ _REQUEST_ERRORS = {
 @router.get("/solicitar-acceso", response_class=HTMLResponse)
 def access_request_form(
     request: Request, error: str = "", enviado: str = "", plan: str = "",
+    repetida: str = "",
 ):
     """Formulario público: el alta la aprueba el equipo, no el visitante."""
     return TEMPLATES.TemplateResponse(request, "solicitar_acceso.html", {
         "site_active": "solicitar",
         "error": _REQUEST_ERRORS.get(error, ""),
         "sent": bool(enviado),
+        "repeated": bool(repetida),
         "plan_catalog": billing_adapter.PLANS,
         "selected_plan": plan if plan in billing_adapter.PLAN_PRICES else "",
     })
@@ -313,11 +315,19 @@ def access_request_submit(
     plan: str = Form(""),
     acepto: str = Form(""),
     # Campo señuelo: invisible para personas, irresistible para robots de spam.
-    web: str = Form(""),
+    # No puede llamarse como un campo real o el autorrelleno del navegador lo
+    # completaría solo y descartaríamos solicitudes de personas.
+    nsx_check: str = Form(""),
 ):
     name, email = (name or "").strip(), (email or "").strip().lower()
-    if web.strip():
-        # Un robot lo ha rellenado: respondemos como si todo hubiera ido bien.
+    if nsx_check.strip():
+        # Un robot lo ha rellenado: se responde como si todo hubiera ido bien para
+        # no enseñarle qué le delató. Se deja rastro porque un falso positivo aquí
+        # significa perder una solicitud real sin que nadie se entere.
+        log.warning(
+            "Solicitud descartada por el señuelo antispam (ip=%s).",
+            auth.client_ip(request),
+        )
         return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
     if not name:
         return RedirectResponse("/solicitar-acceso?error=name", status_code=303)
@@ -328,9 +338,14 @@ def access_request_submit(
     if not acepto:
         return RedirectResponse("/solicitar-acceso?error=consent", status_code=303)
 
-    ip_key = f"access-request:{auth.client_ip(request)}"
+    # Un mismo correo repitiendo el envío suele ser una persona impaciente, no un
+    # ataque: se le agradece y se le dice que ya la tenemos, sin pintarlo de error.
     today = datetime.now().strftime("%Y-%m-%d")
-    if auth.is_rate_limited(ip_key) or db.count_access_requests_since(email, today) >= 3:
+    if db.count_access_requests_since(email, today) >= 3:
+        return RedirectResponse("/solicitar-acceso?enviado=1&repetida=1", status_code=303)
+    # El corte por IP sí frena envíos masivos desde el mismo sitio.
+    ip_key = f"access-request:{auth.client_ip(request)}"
+    if auth.is_rate_limited(ip_key):
         return RedirectResponse("/solicitar-acceso?error=throttle", status_code=303)
 
     try:
