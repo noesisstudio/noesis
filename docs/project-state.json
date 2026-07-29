@@ -51,7 +51,7 @@
     "onboarding_sector_capture": "free_text_up_to_80_characters",
     "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",
     "public_opening_gate": "production_signup_fail_closed_until_legal_identity_and_explicit_enable_existing_accounts_keep_access_and_the_closed_onboarding_redirects_to_the_request_form",
-    "access_requests": "schema_36_public_form_stored_with_plan_interest_rate_limited_honeypot_founder_approves_and_invitation_link_lets_owner_set_own_password",
+    "access_requests": "schema_36_public_form_stored_with_plan_interest_honeypot_named_so_browser_autofill_cannot_trigger_it_and_logged_when_it_does_repeat_senders_are_thanked_not_errored_notice_goes_to_its_own_requests_mailbox_and_the_sender_gets_a_confirmation_founder_approves_and_invitation_link_lets_owner_set_own_password",
     "legal_consent_version": "single_source_shared_by_pages_and_account_events",
     "capability_promises": "public_copy_reflects_runtime_voice_and_image_reading_availability",
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",

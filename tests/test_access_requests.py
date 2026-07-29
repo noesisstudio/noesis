@@ -62,9 +62,11 @@ class AccessRequestTestCase(unittest.TestCase):
         self.assertEqual(stored[0]["email"], "marta@ejemplo.com")
         self.assertEqual(stored[0]["plan_interest"], "pro")
         self.assertEqual(stored[0]["status"], "nueva")
-        # Salen dos correos: el aviso al equipo y la confirmación al solicitante.
+        # Salen dos correos: el aviso al buzón de solicitudes y la confirmación
+        # al solicitante. El aviso no va al correo del administrador: quien
+        # atiende las solicitudes no tiene por qué ser quien administra.
         destinatarios = [llamada.args[0] for llamada in notify.call_args_list]
-        self.assertIn(config.ADMIN_EMAIL, destinatarios)
+        self.assertIn(config.ACCESS_REQUESTS_EMAIL, destinatarios)
         self.assertIn("marta@ejemplo.com", destinatarios)
 
     def test_request_without_consent_or_valid_email_is_rejected(self):
@@ -88,13 +90,14 @@ class AccessRequestTestCase(unittest.TestCase):
         with scheduler, client as http:
             response = http.post("/solicitar-acceso", data={
                 "name": "Robot", "email": "robot@spam.com", "sector": "x",
-                "acepto": "1", "web": "http://spam.example",
+                "acepto": "1", "nsx_check": "http://spam.example",
             }, follow_redirects=False)
 
         self.assertIn("enviado=1", response.headers["location"])
         self.assertEqual(db.list_access_requests(), [])
 
-    def test_repeated_requests_from_same_email_are_throttled(self):
+    def test_repeating_the_same_email_is_thanked_not_treated_as_an_error(self):
+        """Quien insiste suele ser una persona impaciente, no un ataque."""
         scheduler, client = self._client()
         payload = {
             "name": "Insistente", "email": "insistente@ejemplo.com",
@@ -108,9 +111,28 @@ class AccessRequestTestCase(unittest.TestCase):
             extra = http.post(
                 "/solicitar-acceso", data=payload, follow_redirects=False
             )
+            pagina = http.get("/solicitar-acceso?enviado=1&repetida=1")
 
-        self.assertIn("error=throttle", extra.headers["location"])
+        destino = extra.headers["location"]
+        self.assertIn("enviado=1", destino)
+        self.assertIn("repetida=1", destino)
+        self.assertNotIn("error=", destino)
+        # No se duplica la solicitud, pero se le dice que ya la tenemos.
         self.assertEqual(len(db.list_access_requests()), 3)
+        self.assertIn("ya teníamos tu solicitud", pagina.text)
+
+    def test_a_flood_from_one_address_is_still_cut(self):
+        scheduler, client = self._client()
+        with scheduler, client as http, patch(
+            "noesis.adapters.email.send_email", return_value=True
+        ), patch.object(auth, "is_rate_limited", return_value=True):
+            respuesta = http.post("/solicitar-acceso", data={
+                "name": "Bombardeo", "email": "otro@ejemplo.com",
+                "sector": "Obra", "acepto": "1",
+            }, follow_redirects=False)
+
+        self.assertIn("error=throttle", respuesta.headers["location"])
+        self.assertEqual(db.list_access_requests(), [])
 
     # -------------------------------------------------------------- aprobación --
     def test_approval_creates_account_without_a_password_anyone_knows(self):
