@@ -45,7 +45,7 @@ class AccessRequestTestCase(unittest.TestCase):
     def test_valid_request_is_stored_with_its_commercial_context(self):
         scheduler, client = self._client()
         with scheduler, client as http, patch(
-            "noesis.adapters.email.send_email", return_value=True
+            "noesis.adapters.email.queue_email", return_value=True
         ) as notify:
             response = http.post("/solicitar-acceso", data={
                 "name": "Marta Vidal", "email": "Marta@Ejemplo.com",
@@ -104,7 +104,7 @@ class AccessRequestTestCase(unittest.TestCase):
             "sector": "Reformas", "acepto": "1",
         }
         with scheduler, client as http, patch(
-            "noesis.adapters.email.send_email", return_value=True
+            "noesis.adapters.email.queue_email", return_value=True
         ), patch.object(auth, "is_rate_limited", return_value=False):
             for _ in range(3):
                 http.post("/solicitar-acceso", data=payload, follow_redirects=False)
@@ -124,7 +124,7 @@ class AccessRequestTestCase(unittest.TestCase):
     def test_a_flood_from_one_address_is_still_cut(self):
         scheduler, client = self._client()
         with scheduler, client as http, patch(
-            "noesis.adapters.email.send_email", return_value=True
+            "noesis.adapters.email.queue_email", return_value=True
         ), patch.object(auth, "is_rate_limited", return_value=True):
             respuesta = http.post("/solicitar-acceso", data={
                 "name": "Bombardeo", "email": "otro@ejemplo.com",
@@ -147,7 +147,7 @@ class AccessRequestTestCase(unittest.TestCase):
 
         scheduler, client = self._client()
         with scheduler, client as http, patch(
-            "noesis.adapters.email.send_email", return_value=True
+            "noesis.adapters.email.queue_email", return_value=True
         ) as invitation:
             http.post("/login", data={
                 "email": config.ADMIN_EMAIL,

@@ -119,12 +119,25 @@ def send_reminder_email(to: str, biz_name: str, client_name: str,
 
 
 def _send_msg(msg: EmailMessage) -> bool:
+    """Envía por SMTP eligiendo el modo de cifrado según el puerto.
+
+    El 465 exige TLS desde el primer byte (SSL implícito); el 587 empieza en
+    claro y sube a TLS con STARTTLS. Usar el modo equivocado no da un error
+    inmediato: la conexión se queda esperando hasta agotar el tiempo límite.
+    """
+    ctx = ssl.create_default_context()
     try:
-        ctx = ssl.create_default_context()
-        with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=15) as s:
-            s.starttls(context=ctx)
-            s.login(config.SMTP_USER, config.SMTP_PASS)
-            s.send_message(msg)
+        if int(config.SMTP_PORT) == 465:
+            with smtplib.SMTP_SSL(
+                config.SMTP_HOST, config.SMTP_PORT, timeout=15, context=ctx
+            ) as s:
+                s.login(config.SMTP_USER, config.SMTP_PASS)
+                s.send_message(msg)
+        else:
+            with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=15) as s:
+                s.starttls(context=ctx)
+                s.login(config.SMTP_USER, config.SMTP_PASS)
+                s.send_message(msg)
         return True
     except Exception as e:  # noqa: BLE001
         log.error("Fallo enviando email a %s: %s", msg["To"], e)
