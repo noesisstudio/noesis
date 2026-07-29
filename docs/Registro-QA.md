@@ -1,5 +1,27 @@
 # Registro de QA
 
+## 2026-07-29 — el panel admite varios responsables
+
+### Qué se probó y con qué resultado
+
+- **`NOESIS_ADMIN_EMAIL` acepta ahora varios correos separados por coma**, como ya hacía
+  `NOESIS_ALLOWED_HOSTS`. El motivo: un equipo de dos no debería compartir una misma
+  cuenta para entrar al panel, porque entonces ninguna acción queda atribuida a nadie.
+  La marca `is_admin` de la base seguía existiendo pero no había forma de activarla sin
+  tocar la base a mano.
+- Se centraliza la comprobación en `config.is_admin_email()`, usada por el guardia de
+  sesión y por el panel, en lugar de repetir la misma condición en dos sitios.
+- **Pruebas nuevas: 3 verdes.** Cubren varios correos, normalización de mayúsculas y
+  espacios, rechazo de cualquier otro y el caso sin configurar, donde nadie es
+  administrador. Las 8 de solicitudes siguen pasando; Ruff limpio.
+
+### Qué no se pudo probar
+
+- **Entrar de verdad con el segundo correo** en producción: hace falta que exista esa
+  cuenta, y el alta pública sigue cerrada.
+- Queda el error intermitente conocido de Windows al limpiar carpetas temporales
+  (`PermissionError` en `tearDown`), ajeno a este cambio y que no se reproduce en Linux.
+
 ## 2026-07-27 — el correo no salía: Railway bloquea SMTP
 
 ### Qué se probó y con qué resultado

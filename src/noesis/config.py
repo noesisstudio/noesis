@@ -323,8 +323,21 @@ GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
 def google_oauth_available() -> bool:
     return bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET)
 
-# Email del fundador con acceso al panel de administración (/admin).
-ADMIN_EMAIL = os.getenv("NOESIS_ADMIN_EMAIL", "").strip().lower()
+# Correos con acceso al panel de administración (/admin). Admite varios separados
+# por coma, para que un equipo pequeño no tenga que compartir una misma cuenta.
+ADMIN_EMAILS = tuple(dict.fromkeys(
+    correo.strip().lower()
+    for correo in os.getenv("NOESIS_ADMIN_EMAIL", "").split(",")
+    if correo.strip()
+))
+# El primero sigue siendo el responsable principal: es el que reciben los avisos
+# y el que se muestra en los diagnósticos.
+ADMIN_EMAIL = ADMIN_EMAILS[0] if ADMIN_EMAILS else ""
+
+
+def is_admin_email(correo: str | None) -> bool:
+    """True si ese correo puede entrar al panel interno."""
+    return bool(correo) and str(correo).strip().lower() in ADMIN_EMAILS
 ADMIN_REQUIRE_GOOGLE_OAUTH = env_bool(
     "NOESIS_ADMIN_REQUIRE_GOOGLE_OAUTH",
     IS_PRODUCTION,

@@ -117,9 +117,8 @@ def current_user(request) -> dict | None:
     from .. import config
     now = int(time.time())
     last_seen = int(request.session.get("seen") or now)
-    is_admin = bool(user.get("is_admin")) or (
-        bool(config.ADMIN_EMAIL)
-        and str(user.get("email") or "").lower() == config.ADMIN_EMAIL
+    is_admin = bool(user.get("is_admin")) or config.is_admin_email(
+        user.get("email")
     )
     idle_minutes = (
         config.ADMIN_SESSION_IDLE_MINUTES if is_admin else config.SESSION_IDLE_MINUTES
