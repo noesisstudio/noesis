@@ -1018,7 +1018,7 @@
         sus experiencias cuando podamos verificar cada caso y contarlo con su permiso.</p>
       <a class="text-link" href="/equipo">Conoce cómo construimos Noesis <span aria-hidden="true">→</span></a>
     </div>
-    <img src="/static/noesis-trades-workshop.webp" alt="Ilustración de un pequeño taller de servicios con una furgoneta">
+    <img src="/static/noesis-trades-workshop.webp" alt="Ilustración de un pequeño taller de servicios con una furgoneta" loading="lazy" decoding="async" width="640" height="420">
   </section>
 
   <section class="pricing-preview" aria-labelledby="pricing-title">
@@ -1092,5 +1092,7 @@
 {% endblock %}
 
 {% block page_scripts %}
-  <script src="/static/vendor/chart.umd.min.js"></script>
+  {# La librería de gráficos la carga public-site.js al llegar a la demo: pesa
+     más que el resto de la portada y la mayoría de visitantes no la necesita. #}
+  <script>document.body.dataset.chartSrc = "/static/vendor/chart.umd.min.js?v={{ asset_v }}";</script>
 {% endblock %}

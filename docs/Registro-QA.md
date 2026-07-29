@@ -1,5 +1,42 @@
 # Registro de QA
 
+## 2026-07-27 — optimización de la carga del sitio público
+
+### Qué se probó y con qué resultado
+
+- **Medición previa en producción**: portada 92 KB de HTML, `app.css` 174 KB, Chart.js
+  205 KB, sin `Cache-Control` (solo `etag`). Comprimido, que es lo que viaja de verdad:
+  portada 16,8 KB, CSS 34,6 KB y **Chart.js 70,4 KB**, con diferencia el activo más
+  pesado del sitio.
+- **Cacheo de estáticos**: se sirve `Cache-Control: public, max-age=31536000, immutable`
+  en producción y `no-cache` en desarrollo. Verificado arrancando el servidor en los dos
+  modos. Es seguro porque las plantillas ya piden los archivos con `?v=`, sello que
+  cambia en cada despliegue.
+- **Chart.js deja de cargarse de entrada**: la portada ya no trae la etiqueta de script;
+  la librería se descarga al acercarse la demo al viewport, o al primer clic dentro de
+  ella. Comprobado que la portada no la referencia al cargar y que conserva la ruta
+  versionada para pedirla después.
+- **Imagen del taller** (72 KB, muy abajo en la página) pasa a carga diferida con sus
+  dimensiones declaradas para no provocar saltos de maquetación.
+- Ruff y las pruebas de solicitudes y de hardening siguen en verde; las páginas responden.
+
+### Qué se descartó tras medirlo
+
+- **Partir el HTML de la portada**: pesaba 92 KB en bruto, pero comprime a 16,8 KB porque
+  los 19 paneles de demo son muy repetitivos. El ahorro no compensaba el riesgo de tocar
+  la página que más convierte.
+- **Convertir a WebP la captura del producto**: solo se usa como imagen de compartir en
+  redes; no la descarga ningún visitante y varias plataformas no admiten WebP ahí.
+- **Separar el CSS público del panel**: ahorraría del orden de 15 KB comprimidos a cambio
+  de un refactor amplio de clases justo antes de entrar clientes reales. Queda anotado
+  para cuando el piloto esté estable.
+
+### Qué no se pudo probar
+
+- **El efecto real en un navegador**: no se ha medido con herramientas de rendimiento ni
+  comprobado visualmente que las gráficas aparezcan al bajar hasta la demo. Confirmar
+  tras el despliegue.
+
 ## 2026-07-27 — corrección del calendario y rediseño de la solicitud
 
 ### Qué se probó y con qué resultado
