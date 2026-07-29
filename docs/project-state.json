@@ -31,11 +31,14 @@
     "product_view": "real_panel_templates_replicated_with_sample_company",
     "product_preview": "all_sections_and_subsections_navigable_including_caja_analisis_ingresos_costes_presupuestos_cobros_impuestos_crm_productos",
     "demo_frame": "block_layout_960px_aligned_with_hero_copy",
+    "landing_narrative": "hero_subhead_leads_with_whatsapp_then_a_real_workday_conversation_replaces_the_abstract_moments_grid_and_the_founders_replace_the_no_testimonials_section",
+    "public_copy_language": "no_internal_jargon_on_public_pages_local_brain_and_read_only_mode_are_explained_as_customer_benefits",
     "billing_periods": [
       "monthly",
       "annual"
     ],
     "visual_qa": "computed_style_rendering_verified_screenshot_tool_unavailable",
+    "asset_delivery": "static_files_immutable_year_long_cache_in_production_versioned_by_query_and_chart_library_loaded_only_when_the_demo_is_reached",
     "contact_booking": "cal_com_iframe_points_to_a_concrete_event_using_its_normal_url_not_the_embed_view_which_needs_their_script_csp_frame_src_allowed_only_on_that_route",
     "access_request_form": "public_site_layout_short_form_name_email_phone_trade_optional_message_plan_travels_hidden_from_pricing"
   },
