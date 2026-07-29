@@ -50,6 +50,12 @@
 
 ## Web y acompañante
 
+- `src/noesis/web/routers/pages.py`: además de las páginas públicas sirve
+  `robots.txt`, `sitemap.xml` y `/favicon.ico`. La lista `_INDEXABLES` decide qué
+  ve un buscador: si se añade una página pública, hay que incluirla ahí.
+- `src/noesis/web/templates/404.html`: dirección inexistente con el diseño del
+  sitio. El manejador de `server.py` sigue devolviendo JSON bajo `/api/` y
+  `/webhook/`, que esperan datos y no una página.
 - `src/noesis/web/server.py`: ensamblador FastAPI, seguridad y routers.
 - `src/noesis/web/templates/site_base.html`: estructura compartida del sitio público,
   navegación responsive, llamada final y pie legal. Home, Producto, Precios, Equipo

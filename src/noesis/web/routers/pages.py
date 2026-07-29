@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse, HTMLResponse, RedirectResponse, Response,
+)
 
 from ... import config, db, verifactu_client
 from ...adapters import billing as billing_adapter
@@ -68,6 +72,73 @@ _SITE_PAGES = {
     "preguntas": "site_preguntas.html",
     "contacto": "site_contacto.html",
 }
+
+
+# Páginas que deben salir en buscadores. El panel, el acceso y los portales
+# privados quedan fuera a propósito: no aportan nada en una búsqueda y no
+# queremos que se indexen enlaces con datos de clientes.
+_INDEXABLES = (
+    ("/", "1.0"),
+    ("/precios", "0.9"),
+    ("/solicitar-acceso", "0.9"),
+    ("/contacto", "0.8"),
+    ("/preguntas", "0.7"),
+    ("/equipo", "0.6"),
+    ("/cumplimiento", "0.5"),
+    ("/privacidad", "0.3"),
+    ("/terminos", "0.3"),
+    ("/aviso-legal", "0.3"),
+    ("/cookies", "0.3"),
+    ("/encargado-tratamiento", "0.3"),
+)
+
+
+@router.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Navegadores y agregadores antiguos piden esta ruta fija; se sirve el SVG."""
+    return FileResponse(
+        HERE / "static" / "noesis-mark.svg", media_type="image/svg+xml"
+    )
+
+
+@router.get("/robots.txt", include_in_schema=False)
+def robots():
+    """Qué puede rastrear un buscador y dónde está el mapa del sitio."""
+    lineas = [
+        "User-agent: *",
+        # Nada de esto tiene sentido en un buscador y algunos llevan datos privados.
+        "Disallow: /b/",
+        "Disallow: /api/",
+        "Disallow: /admin",
+        "Disallow: /p/",
+        "Disallow: /g/",
+        "Disallow: /t/",
+        "Disallow: /login",
+        "Disallow: /onboarding",
+        "Disallow: /recuperar",
+        "Disallow: /restablecer",
+        "",
+        f"Sitemap: {config.BASE_URL}/sitemap.xml",
+        "",
+    ]
+    return Response("\n".join(lineas), media_type="text/plain")
+
+
+@router.get("/sitemap.xml", include_in_schema=False)
+def sitemap():
+    """Mapa del sitio con las páginas públicas que sí queremos indexadas."""
+    hoy = date.today().isoformat()
+    urls = "".join(
+        f"<url><loc>{config.BASE_URL}{ruta}</loc>"
+        f"<lastmod>{hoy}</lastmod><priority>{prioridad}</priority></url>"
+        for ruta, prioridad in _INDEXABLES
+    )
+    cuerpo = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{urls}</urlset>"
+    )
+    return Response(cuerpo, media_type="application/xml")
 
 
 @router.get("/producto", include_in_schema=False)

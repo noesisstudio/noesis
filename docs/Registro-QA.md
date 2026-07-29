@@ -1,5 +1,26 @@
 # Registro de QA
 
+## 2026-07-29 — buscadores y página de dirección inexistente
+
+### Qué se probó y con qué resultado
+
+- **`robots.txt` y `sitemap.xml`**, que no existían: sin ellos un buscador descubre el
+  sitio a tropezones y puede indexar lo que no debe. El robots excluye panel, API,
+  portales por token y formularios de sesión; el mapa lista solo las doce páginas
+  públicas. Verificado que el XML es válido y que **ninguna ruta privada aparece** en él.
+- **Página 404 propia**: una dirección mal escrita devolvía `{"detail":"Not Found"}`, el
+  error crudo del servidor, que parece una avería. Ahora se pinta con el diseño del sitio
+  y ofrece salidas. Comprobado que **la API sigue devolviendo JSON**: quien la consume
+  espera datos, no una página.
+- **`/favicon.ico`** daba 404; los navegadores antiguos piden esa ruta fija. Se sirve el
+  logotipo existente.
+- Pruebas nuevas: **5 verdes** en `test_seo.py`. Ruff limpio.
+
+### Qué no se pudo probar
+
+- **Que Google indexe de verdad**: eso exige dar de alta el sitio en Search Console y
+  esperar días. El sitemap está listo para enviárselo.
+
 ## 2026-07-29 — el panel admite varios responsables
 
 ### Qué se probó y con qué resultado

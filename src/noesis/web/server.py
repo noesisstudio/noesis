@@ -32,7 +32,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .. import config, db
 from ..adapters import billing as billing_adapter  # noqa: F401 -- compatibilidad de tests/integraciones
 from . import auth
-from .deps import HERE, auth_guard
+from .deps import HERE, TEMPLATES, auth_guard
 from .routers import (
     account,
     admin,
@@ -329,6 +329,19 @@ app.include_router(gestoria.router)
 
 # ========================================================= ADMIN (fundador) = #
 app.include_router(admin.router)
+
+
+@app.exception_handler(404)
+async def pagina_no_encontrada(request: Request, exc):
+    """Una dirección mal escrita no debe enseñar el error crudo del servidor.
+
+    La API sigue respondiendo JSON: quien la consume espera datos, no una
+    página. Solo se pinta la página en las rutas de navegación.
+    """
+    ruta = request.url.path
+    if ruta.startswith(("/api/", "/webhook/")):
+        return JSONResponse({"error": "no encontrado"}, status_code=404)
+    return TEMPLATES.TemplateResponse(request, "404.html", {}, status_code=404)
 
 
 

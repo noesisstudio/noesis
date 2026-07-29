@@ -37,6 +37,7 @@
       "monthly",
       "annual"
     ],
+    "search_engines": "robots_and_sitemap_expose_only_public_pages_private_areas_excluded_custom_404_page_keeps_json_for_the_api",
     "visual_qa": "computed_style_rendering_verified_screenshot_tool_unavailable",
     "asset_delivery": "static_files_immutable_year_long_cache_in_production_versioned_by_query_and_chart_library_loaded_only_when_the_demo_is_reached",
     "contact_booking": "cal_com_iframe_points_to_a_concrete_event_using_its_normal_url_not_the_embed_view_which_needs_their_script_csp_frame_src_allowed_only_on_that_route",
