@@ -1,5 +1,104 @@
 # Registro de QA
 
+## 2026-07-27 — repaso de copy y una colisión de CSS en los retratos
+
+### Qué se probó y con qué resultado
+
+- **Retratos de los fundadores, corregidos**: la regla `.pilot-stories img`, escrita para
+  la ilustración del taller, alcanzaba también a las fotos nuevas por estar en la misma
+  sección y, al declararse después con igual especificidad, ganaba: los estiraba al 100 %
+  y les aplicaba `mix-blend-mode: multiply`, fundiendo el fondo blanco del retrato con el
+  crema de la página. Se acota con la clase `.pilot-illustration`, también en la regla
+  responsive. Verificado que ninguna regla alcanza ya a los retratos.
+- **Tamaños declarados alineados con el CSS**: los retratos anunciaban 56 px con el CSS
+  pintando 44, y en equipo 112 contra 72. Se igualan para evitar saltos de maquetación.
+- **Banda del hero**: usaba la maqueta de cifras de impacto (dato grande en serif) con
+  conceptos dentro, así que «1 hilo» se leía como una métrica inexistente. Pasa a tres
+  promesas en columnas. Se retira la nota que recordaba que aún no hay resultados medidos.
+- **Bloque del asistente**: el titular se definía negando («No es un chat aparte») y la
+  cita informaba sin ofrecerse a actuar, incumpliendo la regla de voz documentada. Se
+  reescribe con un caso de cobros —módulo central, no proyectos, que es secundario— que
+  cierra ofreciendo hacer.
+- **Jerga interna barrida del sitio público**: «cerebro local» y «modo consulta» no
+  significan nada para un cliente. Traducidos en precios, equipo y preguntas; comprobado
+  que no queda ninguna aparición.
+- Las seis páginas públicas responden 200, Ruff en verde y las pruebas de precios y de
+  páginas legales siguen pasando.
+
+### Qué no se pudo probar
+
+- **El aspecto final**: revisado por el founder en el servidor local durante los cambios,
+  pero sin captura de navegador por mi parte ni comprobación en pantalla de móvil.
+
+## 2026-07-27 — portada: un día real en vez de listas de funciones
+
+### Qué se probó y con qué resultado
+
+- **Entradilla del hero**: pasa a nombrar WhatsApp lo primero, cumpliendo la ley 2 de
+  `PRODUCT_PRINCIPLES` («primero WhatsApp, después app»). El titular **no se toca**: es
+  la frase canónica del producto, fijada como base de la landing.
+- **Sección «cada momento de tu día» sustituida** por «Así se ve un día con Noesis»: una
+  conversación real de WhatsApp con las cuatro horas del día perfecto descrito en
+  `WhatsApp-Cerebro` §10. Elimina de paso la redundancia con «Cómo funciona», que contaba
+  el mismo ciclo con otras palabras.
+- **Sección «Historias reales, cuando estén verificadas» sustituida**: anunciaba en un
+  sitio privilegiado que no hay testimonios. Ahora presenta a los dos fundadores con sus
+  caras y explica el acompañamiento, que es la confianza que sí se puede ofrecer hoy.
+- **CSS muerto retirado**: los estilos de la sección eliminada, incluidos sus selectores
+  dentro de las reglas responsive compartidas, comprobando antes que ninguna plantilla
+  los usara. Hoja de estilos 806 bytes más pequeña.
+- Las siete páginas públicas responden 200, la hoja de estilos sirve las clases nuevas,
+  Ruff en verde y la prueba de precios sigue pasando.
+
+### Qué no se pudo probar
+
+- **El aspecto real**: la línea de tiempo y el bloque de fundadores están verificados por
+  marcado y estilos, no con una captura de navegador. Falta mirar en móvil que la hora
+  sobre la burbuja no descuadre.
+
+### Decisión del founder registrada
+
+- Las promesas de foto de ticket y notas de voz **se mantienen** en la portada aunque las
+  funciones no respondan todavía por falta de claves externas. Queda advertido y es una
+  decisión consciente suya: primero la web, luego el sistema.
+
+## 2026-07-27 — optimización de la carga del sitio público
+
+### Qué se probó y con qué resultado
+
+- **Medición previa en producción**: portada 92 KB de HTML, `app.css` 174 KB, Chart.js
+  205 KB, sin `Cache-Control` (solo `etag`). Comprimido, que es lo que viaja de verdad:
+  portada 16,8 KB, CSS 34,6 KB y **Chart.js 70,4 KB**, con diferencia el activo más
+  pesado del sitio.
+- **Cacheo de estáticos**: se sirve `Cache-Control: public, max-age=31536000, immutable`
+  en producción y `no-cache` en desarrollo. Verificado arrancando el servidor en los dos
+  modos. Es seguro porque las plantillas ya piden los archivos con `?v=`, sello que
+  cambia en cada despliegue.
+- **Chart.js deja de cargarse de entrada**: la portada ya no trae la etiqueta de script;
+  la librería se descarga al acercarse la demo al viewport, o al primer clic dentro de
+  ella. Comprobado que la portada no la referencia al cargar y que conserva la ruta
+  versionada para pedirla después.
+- **Imagen del taller** (72 KB, muy abajo en la página) pasa a carga diferida con sus
+  dimensiones declaradas para no provocar saltos de maquetación.
+- Ruff y las pruebas de solicitudes y de hardening siguen en verde; las páginas responden.
+
+### Qué se descartó tras medirlo
+
+- **Partir el HTML de la portada**: pesaba 92 KB en bruto, pero comprime a 16,8 KB porque
+  los 19 paneles de demo son muy repetitivos. El ahorro no compensaba el riesgo de tocar
+  la página que más convierte.
+- **Convertir a WebP la captura del producto**: solo se usa como imagen de compartir en
+  redes; no la descarga ningún visitante y varias plataformas no admiten WebP ahí.
+- **Separar el CSS público del panel**: ahorraría del orden de 15 KB comprimidos a cambio
+  de un refactor amplio de clases justo antes de entrar clientes reales. Queda anotado
+  para cuando el piloto esté estable.
+
+### Qué no se pudo probar
+
+- **El efecto real en un navegador**: no se ha medido con herramientas de rendimiento ni
+  comprobado visualmente que las gráficas aparezcan al bajar hasta la demo. Confirmar
+  tras el despliegue.
+
 ## 2026-07-27 — reconciliación del merge: recupera el refactor perdido de la migración
 
 - El merge `796e49e` (fusión manual de `main` con dos arreglos independientes del

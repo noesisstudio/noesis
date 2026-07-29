@@ -139,11 +139,47 @@
     });
   }
 
-  function initDemoChart() {
+  function drawVisibleDemoCharts() {
     // Solo los gráficos visibles al cargar; el resto se crea al abrir su panel.
     document.querySelectorAll('.demo-panel:not([hidden]) canvas[id^="demo-"], canvas#demo-home-chart').forEach(canvas => {
       ensureDemoCharts(canvas.closest('.demo-panel') || document);
     });
+  }
+
+  // La librería de gráficos pesa más que el resto de la portada junta, así que
+  // no se descarga hasta que el visitante llega de verdad a la demo.
+  let chartLibraryRequested = false;
+  function loadChartLibrary() {
+    if (chartLibraryRequested) return;
+    chartLibraryRequested = true;
+    if (typeof window.Chart === 'function') {
+      drawVisibleDemoCharts();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = document.body.dataset.chartSrc || '/static/vendor/chart.umd.min.js';
+    script.defer = true;
+    script.addEventListener('load', drawVisibleDemoCharts);
+    document.head.appendChild(script);
+  }
+
+  function initDemoChart() {
+    const demo = document.querySelector('[data-product-demo]');
+    if (!demo) return;
+    // Sin IntersectionObserver (navegadores antiguos) se carga sin más.
+    if (!('IntersectionObserver' in window)) {
+      loadChartLibrary();
+      return;
+    }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect();
+        loadChartLibrary();
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(demo);
+    // Cambiar de pestaña dentro de la demo también necesita la librería.
+    demo.addEventListener('click', loadChartLibrary, { once: true });
   }
 
   function setBillingPeriod(period) {

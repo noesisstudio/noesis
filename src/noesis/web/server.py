@@ -69,7 +69,24 @@ app = FastAPI(
     redoc_url=None if config.IS_PRODUCTION else "/redoc",
     openapi_url=None if config.IS_PRODUCTION else "/openapi.json",
 )
-app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
+class _CachedStaticFiles(StaticFiles):
+    """Estáticos cacheables: las plantillas los piden con `?v=` y ese sello cambia
+    en cada despliegue, así que el navegador puede guardarlos sin miedo a
+    quedarse con una versión vieja."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = (
+            "public, max-age=31536000, immutable"
+            if config.IS_PRODUCTION
+            else "no-cache"
+        )
+        return response
+
+
+app.mount(
+    "/static", _CachedStaticFiles(directory=str(HERE / "static")), name="static"
+)
 
 
 # --- Guardia de seguridad: protege /b/ y /api/ y comprueba que el usuario sea
