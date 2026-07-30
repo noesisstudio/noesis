@@ -1,20 +1,9 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Aviso legal</title>
-  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-</head>
-<body class="landing-body">
-  <header class="site-nav">
-    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""> <span>Noesis</span></a>
-    <div class="site-actions"><a class="btn ghost" href="/login">Iniciar sesión</a></div>
-  </header>
-
-  <main class="legal-wrap legal">
-    <a class="legal-back" href="/">&#8249; Volver al inicio</a>
+{% extends "site_base.html" %}
+{% block page_title %}Aviso legal{% endblock %}
+{% block meta_description %}Datos identificativos del responsable de Noesis y condiciones generales del sitio web.{% endblock %}
+{% block final_cta %}{% endblock %}
+{% block content %}
+<div class="legal-wrap legal">
     <h1>Aviso legal</h1>
     <p class="updated">Última actualización: {{ legal_document_version }}</p>
 
@@ -68,8 +57,5 @@
       controversias, las partes se someten a los juzgados y tribunales que correspondan
       conforme a la normativa aplicable, incluida la de consumidores y usuarios cuando
       proceda.</p>
-  </main>
-
-  {% include "_legal_footer.html" %}
-</body>
-</html>
+</div>
+{% endblock %}

@@ -1,22 +1,11 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Política de cookies</title>
-  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-</head>
-<body class="landing-body">
-  <header class="site-nav">
-    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""> <span>Noesis</span></a>
-    <div class="site-actions"><a class="btn ghost" href="/login">Iniciar sesión</a></div>
-  </header>
-
-  <main class="legal-wrap legal">
-    <a class="legal-back" href="/">&#8249; Volver al inicio</a>
+{% extends "site_base.html" %}
+{% block page_title %}Política de cookies{% endblock %}
+{% block meta_description %}Noesis usa una sola cookie técnica, exenta de consentimiento. Sin cookies de analítica, sin publicidad y sin seguimiento de terceros.{% endblock %}
+{% block final_cta %}{% endblock %}
+{% block content %}
+<div class="legal-wrap legal">
     <h1>Política de cookies</h1>
-    <p class="updated">Última actualización: 30 de junio de 2026</p>
+    <p class="updated">Última actualización: {{ legal_document_version }}</p>
 
     <div class="note">
       Noesis está diseñado para usar <b>el mínimo de cookies posible</b>. Hoy solo emplea
@@ -59,9 +48,6 @@
     <h2>4. Más información</h2>
     <p>El tratamiento de tus datos se explica en la
       <a href="/privacidad">Política de privacidad</a>. Para dudas, escribe a
-      <a href="mailto:noesisstudioo@gmail.com">noesisstudioo@gmail.com</a>.</p>
-  </main>
-
-  {% include "_legal_footer.html" %}
-</body>
-</html>
+      <a href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a>.</p>
+</div>
+{% endblock %}

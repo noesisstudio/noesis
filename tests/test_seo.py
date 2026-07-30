@@ -74,6 +74,53 @@ class SeoTestCase(unittest.TestCase):
 
         self.assertEqual(respuesta.status_code, 200)
 
+    def test_every_indexable_page_describes_itself_and_keeps_the_site_menu(self):
+        """Una página del sitemap puede ser la primera que alguien vea.
+
+        Si no lleva descripción, el buscador se inventa un fragmento del texto; y
+        si no lleva el menú, quien aterrice ahí desde Google no tiene forma de
+        llegar al resto. Las legales estuvieron mucho tiempo así.
+        """
+        from noesis.web.routers import pages
+
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            for ruta, _ in pages._INDEXABLES:
+                with self.subTest(ruta=ruta):
+                    html = http.get(ruta).text
+                    self.assertIn('name="description"', html)
+                    self.assertIn('rel="canonical"', html)
+                    self.assertIn('class="public-nav"', html)
+
+    def test_the_home_page_has_a_single_main_heading(self):
+        """La maqueta del producto reproduce pantallas con título propio.
+
+        Como son el retrato de una app dentro de la página, no pueden competir con
+        el encabezado real: un buscador no sabría de qué trata la portada y un
+        lector de pantalla anunciaría diecinueve títulos principales.
+        """
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            html = http.get("/").text
+
+        self.assertEqual(html.count("<h1"), 1)
+
+    def test_search_engines_get_a_company_card_they_can_read(self):
+        import json
+        import re
+
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            html = http.get("/precios").text
+
+        bloque = re.search(
+            r'<script type="application/ld\+json">(.*?)</script>', html, re.S
+        )
+        self.assertIsNotNone(bloque, "falta la ficha de empresa para buscadores")
+        datos = json.loads(bloque.group(1))  # inválido = ignorado por Google
+        self.assertEqual(datos["@type"], "Organization")
+        self.assertEqual(datos["name"], "Noesis")
+
 
 if __name__ == "__main__":
     unittest.main()

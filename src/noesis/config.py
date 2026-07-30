@@ -242,8 +242,11 @@ LEGAL_ADDRESS = os.getenv("NOESIS_LEGAL_ADDRESS", "").strip()
 LEGAL_EMAIL = os.getenv("NOESIS_LEGAL_EMAIL", "").strip().lower()
 LEGAL_REGISTRY = os.getenv("NOESIS_LEGAL_REGISTRY", "").strip()
 LEGAL_DOCUMENT_VERSION = "2026-07-27"
+# Buzón que se enseña en la web. El de respaldo es el del dominio propio, no una
+# cuenta personal: aparece en el pie, en la política de cookies y en contacto, y
+# tres direcciones distintas en un mismo sitio restan credibilidad.
 PUBLIC_CONTACT_EMAIL = os.getenv(
-    "NOESIS_CONTACT_EMAIL", LEGAL_EMAIL or "noesisstudioo@gmail.com"
+    "NOESIS_CONTACT_EMAIL", LEGAL_EMAIL or "info@bynoesis.com"
 ).strip().lower()
 # Buzón donde caen las solicitudes de acceso. Tiene variable propia para que no
 # dependa del correo del administrador ni del de contacto público: quien atiende

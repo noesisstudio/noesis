@@ -27,9 +27,14 @@ _PAGES = {
 }
 
 
-def _legal_context() -> dict:
-    """Datos legales públicos; nunca incluye credenciales ni valores internos."""
+def _legal_context(request: Request) -> dict:
+    """Datos legales públicos; nunca incluye credenciales ni valores internos.
+
+    Lleva también la sesión porque estas páginas comparten cabecera con el resto
+    del sitio: quien ya ha entrado debe ver su panel, no una invitación a entrar.
+    """
     return {
+        "business_id": request.session.get("bid"),
         "legal_name": config.LEGAL_NAME,
         "legal_nif": config.LEGAL_NIF,
         "legal_address": config.LEGAL_ADDRESS,
@@ -177,34 +182,34 @@ def service_worker():
 
 @router.get("/privacidad", response_class=HTMLResponse)
 def privacidad(request: Request):
-    return TEMPLATES.TemplateResponse(request, "privacidad.html", _legal_context())
+    return TEMPLATES.TemplateResponse(request, "privacidad.html", _legal_context(request))
 
 
 @router.get("/terminos", response_class=HTMLResponse)
 def terminos(request: Request):
-    return TEMPLATES.TemplateResponse(request, "terminos.html", _legal_context())
+    return TEMPLATES.TemplateResponse(request, "terminos.html", _legal_context(request))
 
 
 @router.get("/aviso-legal", response_class=HTMLResponse)
 def aviso_legal(request: Request):
-    return TEMPLATES.TemplateResponse(request, "aviso-legal.html", _legal_context())
+    return TEMPLATES.TemplateResponse(request, "aviso-legal.html", _legal_context(request))
 
 
 @router.get("/cookies", response_class=HTMLResponse)
 def cookies(request: Request):
-    return TEMPLATES.TemplateResponse(request, "cookies.html", {})
+    return TEMPLATES.TemplateResponse(request, "cookies.html", _legal_context(request))
 
 
 @router.get("/encargado-tratamiento", response_class=HTMLResponse)
 def encargado_tratamiento(request: Request):
     return TEMPLATES.TemplateResponse(
-        request, "encargado-tratamiento.html", _legal_context()
+        request, "encargado-tratamiento.html", _legal_context(request)
     )
 
 
 @router.get("/cumplimiento", response_class=HTMLResponse)
 def cumplimiento(request: Request):
-    return TEMPLATES.TemplateResponse(request, "cumplimiento.html", {})
+    return TEMPLATES.TemplateResponse(request, "cumplimiento.html", _legal_context(request))
 
 
 @router.get("/b/{business_id}/suscripcion", response_class=HTMLResponse)

@@ -1,5 +1,51 @@
 # Registro de QA
 
+## 2026-07-30 — las páginas legales entran en el sitio y la portada recupera su título
+
+### Qué se probó y con qué resultado
+
+- **Las seis páginas legales usaban un armazón propio y más viejo**: sin descripción
+  para buscadores, sin canonical y, sobre todo, **sin el menú del sitio**. Están en el
+  sitemap, así que alguien podía aterrizar en `/privacidad` desde Google y quedarse sin
+  forma de llegar al resto de la web. Ahora extienden la misma plantilla que las demás.
+  Verificado en las seis: 200, menú presente, canonical correcto y descripción propia
+  escrita para cada una. La llamada a la acción se retira de los textos legales —no es
+  sitio para vender— y se mantiene en `/cumplimiento`, que es divulgativa.
+- **La portada tenía diecinueve `<h1>`.** La maqueta del producto reproduce dieciocho
+  pantallas del panel y cada una traía el suyo. Es el retrato de una app dentro de una
+  página: un buscador no sabe de qué trata la portada y un lector de pantalla anuncia
+  diecinueve títulos principales. Convertidos a `<h2 class="demo-title">` y extendidas
+  **solo las cuatro reglas CSS que les afectaban**, comprobado una por una, para que se
+  vean igual. Ahora la portada tiene un `<h1>` y las doce páginas públicas pasan la
+  revisión de jerarquía sin saltos de nivel.
+- **Tres direcciones de correo distintas conviviendo**: el pie mostraba una variable, la
+  política de cookies un Gmail escrito a mano y la página de contacto otra puesta a
+  mano. Todas pasan a la misma variable y el valor de respaldo deja de ser una cuenta
+  personal. Igual con la fecha de actualización, que estaba a mano en dos páginas.
+- **Enlaces internos e imágenes**: recorridas las doce páginas públicas, **ningún enlace
+  roto** y **ninguna imagen sin texto alternativo**.
+- **Añadido**: ficha de empresa para buscadores (JSON-LD, se comprueba que es JSON
+  válido porque uno inválido Google lo ignora sin avisar) y un salto al contenido para
+  quien navega con teclado, visible solo al recibir el foco.
+- **Retirado**: `_legal_footer.html`, que ya no usaba nadie.
+- Pruebas nuevas: **3 verdes** en `test_seo.py` (8 en total). Fijan que toda página del
+  sitemap se describa y conserve el menú, que la portada tenga un solo encabezado y que
+  la ficha de empresa sea legible.
+- **Suite completa: 384 tests, todos los cuerpos en verde.** Los dos únicos errores son
+  el artefacto de Windows ya conocido al limpiar la carpeta temporal de
+  `test_security_operations`; ejecutado solo, pasa. Ruff, bandit y el validador de la
+  fuente de verdad, limpios.
+
+### Qué no se pudo probar
+
+- **El aspecto real de las páginas legales y de la maqueta.** No hay navegador headless
+  disponible en el entorno, así que la comprobación del CSS es por lectura de reglas, no
+  por captura. El riesgo está acotado —se extendieron cuatro selectores concretos y la
+  clase nueva no la usa nada más—, pero conviene una mirada humana a `/privacidad` y a
+  la maqueta de la portada.
+- **Que Google reconozca la ficha de empresa**: eso se ve en Search Console días
+  después. Aquí solo se garantiza que el JSON es válido.
+
 ## 2026-07-30 — recuento de visitas sin cookies ni terceros
 
 ### Qué se probó y con qué resultado

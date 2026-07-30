@@ -19,8 +19,20 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="{{ base_url }}{{ request.url.path }}">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  {# Ficha de la empresa para buscadores. No es código que se ejecute, sino datos:
+     sirve para que Google muestre el nombre y el logotipo correctos, en vez de
+     deducirlos del texto. Solo se declara aquí lo que es cierto y comprobable. #}
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Organization",
+   "name":"Noesis","url":"{{ base_url }}",
+   "logo":"{{ base_url }}/static/noesis-mark.svg",
+   "email":"{{ public_contact_email }}",
+   "areaServed":"ES",
+   "description":"Noesis ordena trabajos, clientes, documentos, facturas y cobros desde WhatsApp para autónomos y pequeños negocios de servicios."}
+  </script>
 </head>
 <body class="landing-body public-site">
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
   <header class="public-header">
     <div class="public-header-inner">
       <a class="site-brand" href="/" aria-label="Noesis, inicio">
@@ -66,7 +78,7 @@
     </div>
   </header>
 
-  <main>
+  <main id="contenido">
     {% block content %}{% endblock %}
 
     {% block final_cta %}

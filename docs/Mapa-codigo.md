@@ -58,9 +58,16 @@
   `/webhook/`, que esperan datos y no una página.
 - `src/noesis/web/server.py`: ensamblador FastAPI, seguridad y routers.
 - `src/noesis/web/templates/site_base.html`: estructura compartida del sitio público,
-  navegación responsive, llamada final y pie legal. Home, Producto, Precios, Equipo
-  y Preguntas usan composiciones propias según su objetivo, sin replicar el panel
-  interno ni inventar prueba social.
+  navegación responsive, llamada final y pie legal. Home, Precios, Equipo y Preguntas
+  usan composiciones propias según su objetivo, sin replicar el panel interno ni
+  inventar prueba social. También la usan las seis páginas legales: están en el
+  sitemap, así que alguien puede aterrizar en ellas desde un buscador y debe encontrar
+  el menú del sitio. Cada página aporta su título y su descripción; los textos legales
+  además vacían la llamada final, porque no son sitio para vender. Aquí viven el
+  canonical, la ficha de empresa para buscadores y el salto al contenido por teclado.
+- `src/noesis/web/templates/landing.html`: la maqueta del producto reproduce pantallas
+  del panel con `h2.demo-title`, no con `<h1>`: dentro de la portada son el retrato de
+  una app, y competirían con el único encabezado real de la página.
 - `src/noesis/web/templates/site_equipo.html`: página pública de equipo y principios;
   explica responsabilidades reales sin atribuir personas, clientes o credenciales
   todavía no verificadas.
