@@ -2,6 +2,36 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Una página por oficio, y cada una escrita de verdad (2026-07-30)
+
+La web hablaba de «autónomos y pequeños negocios de servicios». Es exacto y no
+significa nada: un fontanero que busca cómo ordenar sus avisos no se reconoce ahí. Y en
+buscadores, competir por «software de facturación» contra empresas con años de ventaja
+y presupuestos de seis cifras no es una estrategia, es un deseo.
+
+Las páginas por oficio atacan las dos cosas a la vez. Convierten mejor porque nombran a
+quien lee, y compiten en frases largas —«programa para fontaneros», «app para
+cerrajeros»— donde todavía queda sitio.
+
+La trampa evidente es hacer cinco copias de la misma página cambiando la palabra. Eso
+tiene nombre —páginas puente— y Google lo penaliza, así que saldría peor que no
+hacerlas. Por eso lo que cambia en cada una no es el nombre del oficio sino el problema:
+el fontanero pierde dinero en urgencias que no factura; el electricista necesita
+encontrar un certificado dos años después; la empresa de reformas no sabe si la obra
+gana hasta que termina; el instalador de climatización vive de mantenimientos que se le
+pasan; el cerrajero cobra en mano veinte veces por semana y no le queda rastro. Cada
+oficio factura de una manera distinta y ahí está el contenido.
+
+Para que no se degrade con el tiempo hay una prueba que mide el solapamiento de
+vocabulario entre todas las parejas de páginas y falla si supera el 55%. Hoy el peor
+caso es 35%, y esa parte es menú y pie. Quien añada un oficio nuevo tendrá que
+escribirlo.
+
+Lo que esto no es: una promesa de tráfico. Sin dar de alta el sitio en Search Console y
+sin tiempo, estas páginas no las ve nadie. Son la parte del trabajo que sí depende de
+nosotros.
+
+
 ## Las páginas legales dejan de ser un sitio aparte (2026-07-30)
 
 Privacidad, términos, aviso legal, cookies, encargado del tratamiento y cumplimiento

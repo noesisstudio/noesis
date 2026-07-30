@@ -2652,3 +2652,42 @@ body { background: var(--bg); }
   .operational-grid > div { border-left:0; border-top:1px solid var(--border); }
   .operational-grid > div:first-child { border-top:0; }
 }
+
+/* ---------- Páginas por oficio ---------- */
+.oficio-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; }
+.oficio-card { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:28px 26px; }
+.oficio-card h3 { font-family:var(--serif); font-weight:500; font-size:21px; color:var(--brand);
+  line-height:1.25; }
+.oficio-card p { color:var(--muted); font-size:15.5px; line-height:1.65; margin:13px 0 0; }
+
+.oficio-mensaje { padding-top:0; }
+.oficio-chat { background:var(--brand-soft); border-radius:16px; padding:34px 32px;
+  max-width:760px; }
+/* Se lee como un mensaje suyo, no como una cita de marketing. */
+.oficio-burbuja { font-family:var(--serif); font-size:clamp(21px,2.4vw,27px); font-weight:500;
+  color:var(--brand-ink); line-height:1.35; margin:0; }
+.oficio-respuesta { color:var(--muted); font-size:16px; line-height:1.65; margin:18px 0 0;
+  padding-top:18px; border-top:1px solid rgba(20,70,59,.14); }
+.oficio-nota { color:var(--muted); font-size:15px; line-height:1.65; margin:22px 0 0;
+  max-width:70ch; }
+.oficio-nota a { color:var(--brand); text-decoration:underline; }
+.oficio-detalle { color:var(--muted); font-size:17px; line-height:1.75; max-width:65ch; }
+
+.oficio-otros { padding-top:0; }
+.oficio-enlaces { display:flex; flex-wrap:wrap; gap:12px; }
+.oficio-enlaces a { border:1px solid var(--border-strong); border-radius:999px;
+  padding:10px 18px; font-size:15px; color:var(--brand); background:var(--surface); }
+.oficio-enlaces a:hover { border-color:var(--brand); }
+
+/* Tira de oficios en la portada: entrada a las páginas largas y enlace interno,
+   que es como un buscador llega hasta ellas. */
+.trades-strip { display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; }
+.trades-strip a { border:1px solid var(--border-strong); border-radius:999px;
+  padding:10px 18px; font-size:15px; color:var(--brand); background:var(--surface); }
+.trades-strip a:hover { border-color:var(--brand); }
+
+@media (max-width: 900px) {
+  .oficio-grid { grid-template-columns:1fr; }
+  .oficio-chat { padding:26px 22px; }
+}

@@ -65,6 +65,11 @@
   el menú del sitio. Cada página aporta su título y su descripción; los textos legales
   además vacían la llamada final, porque no son sitio para vender. Aquí viven el
   canonical, la ficha de empresa para buscadores y el salto al contenido por teclado.
+- `src/noesis/web/oficios.py` + `templates/site_oficio.html` (`/para-{oficio}`): una
+  página por oficio, con el problema propio de cada uno —urgencias, certificados, obra
+  larga, mantenimientos, avisos sueltos—, no un mismo texto con la palabra cambiada.
+  Un oficio inexistente devuelve 404 para no indexar direcciones vacías. La portada
+  enlaza a todas y cada una a las demás: es como un buscador llega hasta ellas.
 - `src/noesis/web/templates/landing.html`: la maqueta del producto reproduce pantallas
   del panel con `h2.demo-title`, no con `<h1>`: dentro de la portada son el retrato de
   una app, y competirían con el único encabezado real de la página.

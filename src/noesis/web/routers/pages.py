@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import (
     FileResponse, HTMLResponse, RedirectResponse, Response,
 )
 
 from ... import config, db, verifactu_client
 from ...adapters import billing as billing_adapter
+from .. import oficios as oficios_mod
 from .. import whatsapp
 from ..deps import HERE, TEMPLATES
 
@@ -55,6 +56,7 @@ def home(request: Request):
     return TEMPLATES.TemplateResponse(request, "landing.html", {
         "business_id": bid,
         "site_active": "inicio",
+        "oficios": oficios_mod.listado(),
         "prices": billing_adapter.PLAN_PRICES,
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
         "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
@@ -86,6 +88,9 @@ _INDEXABLES = (
     ("/", "1.0"),
     ("/precios", "0.9"),
     ("/solicitar-acceso", "0.9"),
+    # Las páginas por oficio compiten en búsquedas largas —«programa para
+    # fontaneros»— donde todavía hay sitio, no en las genéricas.
+    *((f"/para-{slug}", "0.8") for slug, _ in oficios_mod.listado()),
     ("/contacto", "0.8"),
     ("/preguntas", "0.7"),
     ("/equipo", "0.6"),
@@ -170,6 +175,24 @@ def site_page(request: Request):
         "prices": billing_adapter.PLAN_PRICES,
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
         "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
+    })
+
+
+@router.get("/para-{slug}", response_class=HTMLResponse)
+def oficio_page(request: Request, slug: str):
+    """Página dedicada a un oficio.
+
+    Un oficio que no existe devuelve 404 en vez de una página vacía: si aceptara
+    cualquier palabra, un buscador podría indexar direcciones inventadas.
+    """
+    oficio = oficios_mod.OFICIOS.get(slug)
+    if not oficio:
+        raise HTTPException(status_code=404)
+    return TEMPLATES.TemplateResponse(request, "site_oficio.html", {
+        "oficio": oficio,
+        "activo": slug,
+        "oficios": oficios_mod.listado(),
+        "business_id": request.session.get("bid"),
     })
 
 

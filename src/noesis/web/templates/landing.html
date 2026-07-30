@@ -1048,6 +1048,20 @@
     <p class="workday-note">Nada se envía ni se cobra sin que tú lo confirmes.</p>
   </section>
 
+  <section class="public-section" aria-labelledby="trades-title">
+    <div class="section-heading">
+      <span class="eyebrow">Por oficio</span>
+      <h2 id="trades-title">Un fontanero y una empresa de reformas no facturan igual.</h2>
+      <p>Uno cierra veinte avisos en una semana; la otra, una obra en cuatro meses.
+        Noesis es el mismo, pero el problema que resuelve cambia. Mira el tuyo.</p>
+    </div>
+    <div class="trades-strip">
+      {% for slug, oficio in oficios %}
+      <a href="/para-{{ slug }}">Para {{ oficio.nombre }}</a>
+      {% endfor %}
+    </div>
+  </section>
+
   <section class="pilot-stories" aria-labelledby="stories-title">
     <div>
       <span class="eyebrow">Quién te atiende</span>

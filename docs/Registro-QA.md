@@ -1,5 +1,43 @@
 # Registro de QA
 
+## 2026-07-30 — páginas por oficio
+
+### Qué se probó y con qué resultado
+
+- **Cinco páginas nuevas** (`/para-fontaneros`, `/para-electricistas`,
+  `/para-reformas`, `/para-climatizacion`, `/para-cerrajeros`). Verificado en las
+  cinco: 200, un solo `<h1>`, y título y descripción propios. Si los compartieran, un
+  buscador elegiría una y descartaría el resto.
+- **El riesgo real de esta función es el contenido duplicado**, no un fallo técnico.
+  Cinco páginas con el mismo texto y la palabra cambiada son lo que Google llama
+  páginas puente, y se penalizan: tenerlas así sería peor que no tenerlas. Medido el
+  solapamiento de vocabulario entre las diez parejas posibles: **máximo 35%**, y esa
+  parte es menú, pie y palabras corrientes del castellano. Queda una prueba que falla
+  por encima del 55%, para que quien añada un oficio nuevo tenga que escribirlo de
+  verdad en vez de copiar el anterior.
+- **Un oficio inventado devuelve 404**, no una página vacía: si la ruta aceptara
+  cualquier palabra, se podrían indexar direcciones sin contenido.
+- **Enlaces internos**: la portada enlaza a las cinco y cada página enlaza a las otras
+  cuatro. Es como un buscador llega hasta ellas; sin enlaces, estar en el sitemap sirve
+  de poco.
+- **Promesas**: la mención a leer fotos de albaranes usa el mismo condicional que el
+  resto del sitio (`ocr_available`), así que no promete nada que no esté activo.
+- Pruebas nuevas: **5 verdes** en `test_oficios.py`. **Suite completa: 389 tests, todos
+  los cuerpos en verde**; el único error es el artefacto conocido de Windows al limpiar
+  la carpeta temporal de `test_security_operations`. Ruff, bandit y el validador de la
+  fuente de verdad, limpios.
+
+### Qué no se pudo probar
+
+- **Que posicionen.** Es lo único que importa de esta función y no se puede comprobar
+  aquí: depende de que el sitio esté dado de alta en Search Console, del tiempo y de la
+  competencia. Semanas, en el mejor caso.
+- **Que el texto convenza a un fontanero de verdad.** El contenido está escrito con el
+  vocabulario del oficio, pero no lo ha leído nadie del gremio. Es la primera
+  corrección que conviene hacer cuando entren los primeros clientes del piloto.
+- **El aspecto de las páginas**: sigue sin haber navegador headless. Los estilos nuevos
+  reutilizan los patrones ya existentes del sitio, pero no hay captura que lo confirme.
+
 ## 2026-07-30 — las páginas legales entran en el sitio y la portada recupera su título
 
 ### Qué se probó y con qué resultado

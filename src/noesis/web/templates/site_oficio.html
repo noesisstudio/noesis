@@ -1,0 +1,65 @@
+{% extends "site_base.html" %}
+{% block page_title %}{{ oficio.titulo }}{% endblock %}
+{% block meta_description %}{{ oficio.descripcion }}{% endblock %}
+{% block content %}
+  <section class="public-page-hero">
+    <div><span class="eyebrow">Para {{ oficio.nombre }}</span><h1>{{ oficio.h1 }}</h1></div>
+    <p>{{ oficio.entradilla }}</p>
+  </section>
+
+  <section class="public-section" aria-labelledby="situaciones-title">
+    <div class="section-heading">
+      <span class="eyebrow">El día a día</span>
+      <h2 id="situaciones-title">Lo que pasa de verdad en la semana.</h2>
+    </div>
+    <div class="oficio-grid">
+      {% for situacion in oficio.situaciones %}
+      <article class="oficio-card">
+        <h3>{{ situacion.titulo }}</h3>
+        <p>{{ situacion.texto }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="public-section oficio-mensaje" aria-labelledby="mensaje-title">
+    <div class="section-heading">
+      <span class="eyebrow">Cómo se le habla</span>
+      <h2 id="mensaje-title">Se lo cuentas como se lo contarías a alguien.</h2>
+    </div>
+    <div class="oficio-chat">
+      <p class="oficio-burbuja">«{{ oficio.mensaje }}»</p>
+      <p class="oficio-respuesta">{{ oficio.mensaje_resultado }}</p>
+    </div>
+    <p class="oficio-nota">
+      {% if ocr_available %}También puedes mandarle la foto de un albarán o un ticket y
+      lo lee para dejarlo donde toca.{% else %}También puedes mandarle la foto de un
+      albarán o un ticket: se guarda ordenado en el trabajo que le corresponde, y
+      durante la puesta en marcha se activa la lectura automática de los datos.{% endif %}
+      Nada se envía ni se cobra sin que lo confirmes tú.
+    </p>
+  </section>
+
+  <section class="public-section" aria-labelledby="detalle-title">
+    <div class="section-heading">
+      <span class="eyebrow">El detalle que cambia el mes</span>
+      <h2 id="detalle-title">{{ oficio.detalle_titulo }}</h2>
+    </div>
+    <p class="oficio-detalle">{{ oficio.detalle_texto }}</p>
+  </section>
+
+  <section class="public-section oficio-otros" aria-labelledby="otros-title">
+    <div class="section-heading">
+      <span class="eyebrow">Otros oficios</span>
+      <h2 id="otros-title">Cada uno factura a su manera.</h2>
+    </div>
+    <div class="oficio-enlaces">
+      {% for slug, otro in oficios %}{% if slug != activo %}
+      <a href="/para-{{ slug }}">Para {{ otro.nombre }}</a>
+      {% endif %}{% endfor %}
+    </div>
+    <p class="oficio-nota">¿El tuyo no está? Noesis sirve igual: lo que cambia es el
+      ejemplo, no el funcionamiento. <a href="/preguntas">Mira las preguntas frecuentes</a>
+      o <a href="/contacto">cuéntanoslo</a>.</p>
+  </section>
+{% endblock %}
