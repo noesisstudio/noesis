@@ -336,8 +336,20 @@ ADMIN_EMAIL = ADMIN_EMAILS[0] if ADMIN_EMAILS else ""
 
 
 def is_admin_email(correo: str | None) -> bool:
-    """True si ese correo puede entrar al panel interno."""
-    return bool(correo) and str(correo).strip().lower() in ADMIN_EMAILS
+    """True si ese correo puede entrar al panel interno.
+
+    Mira las dos variables a propósito. `ADMIN_EMAIL` se deriva de `ADMIN_EMAILS`,
+    así que en producción no añade nada; pero quien cambie solo una de las dos
+    —una prueba, un script— esperaría que surtiera efecto, y si no lo hiciera el
+    resultado sería un permiso concedido o denegado sin que nada lo avise. Es
+    exactamente la clase de silencio que no puede permitirse un control de acceso.
+    """
+    if not correo:
+        return False
+    permitidos = set(ADMIN_EMAILS)
+    if ADMIN_EMAIL:
+        permitidos.add(ADMIN_EMAIL.strip().lower())
+    return str(correo).strip().lower() in permitidos
 ADMIN_REQUIRE_GOOGLE_OAUTH = env_bool(
     "NOESIS_ADMIN_REQUIRE_GOOGLE_OAUTH",
     IS_PRODUCTION,

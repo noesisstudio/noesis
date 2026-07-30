@@ -1,5 +1,72 @@
 # Registro de QA
 
+## 2026-07-30 — recuento de visitas sin cookies ni terceros
+
+### Qué se probó y con qué resultado
+
+- **Migración 37 (`page_views`)** con ciclo completo de ida y vuelta: 37 → 36 → 37 sin
+  residuos. La tabla guarda página, día y dominio de procedencia con índice único sobre
+  los tres, de modo que una segunda visita **suma en la fila existente** en lugar de
+  añadir una nueva: crece con el número de páginas, no con el de visitas.
+- **Solo se guarda el dominio de procedencia, nunca la URL entera.** Probado con
+  `https://www.google.com/search?q=algo+personal`: en la tabla queda `www.google.com` y
+  se comprueba que el término buscado **no aparece en ninguna columna**. Es lo que
+  convertiría el recuento en dato personal.
+- **Exclusiones verificadas**: `/static/`, `/robots.txt`, `/health`, `/api/...`, el panel
+  y las rutas de sesión no se cuentan. Esta última exclusión la descubrió la propia
+  prueba: al pedir `/admin` el cliente sigue la redirección a `/login`, que sí se estaba
+  contando. Se añadieron las rutas de sesión a la lista, para no contar lo mismo que
+  `robots.txt` esconde de los buscadores.
+- **Que fallar midiendo no tumbe la web**: forzando una excepción en el recuento, la
+  página sigue devolviendo 200. Medir es información, no funcionalidad.
+- **Panel del fundador**: la sección «Visitas de la web» se pinta con totales, páginas
+  más vistas y procedencias, comprobado con datos reales en local.
+- **Política de cookies actualizada**: mantiene que no hay cookies de analítica —sigue
+  siendo cierto— y añade qué se cuenta y qué no se guarda.
+- Pruebas nuevas: **5 verdes** en `test_page_views.py`. Ruff limpio.
+
+### Hallazgo aparte: el acceso al panel estaba roto y ningún test lo decía
+
+Al pasar la suite completa apareció un fallo que **no venía del recuento**, sino del
+cambio anterior a varios administradores. `is_admin_email()` mira `ADMIN_EMAILS`, pero
+`ADMIN_EMAIL` se deriva de ella y quedaban desacopladas: cambiar solo una no surtía
+efecto. Consecuencias reales, las dos malas:
+
+- El test que comprueba que el panel muestra el diagnóstico interno **fallaba**: el
+  fundador acababa redirigido al login.
+- Peor, el test que comprueba que **falta de Google OAuth bloquea al administrador**
+  seguía en verde por el motivo equivocado: no bloqueaba por OAuth, sino porque ya no
+  reconocía a nadie como administrador. Un test que pasa por casualidad es peor que
+  uno que falla, porque nadie lo mira.
+
+Arreglado en el origen: `is_admin_email()` consulta ambas variables, de modo que no
+puedan divergir en silencio. Se añade una prueba que fija justo eso. Los 14 tests del
+centro de mando y los 12 de solicitudes quedan en verde, y el de OAuth ya comprueba lo
+que dice comprobar.
+
+### Qué no se pudo probar
+
+- **El recuento en producción con visitas reales**: hasta que se despliegue no hay
+  tráfico que contar. En local solo se han simulado peticiones.
+- **Cuánto ocupa a largo plazo**: la estimación es baja por el diseño agregado, pero no
+  hay medida sobre meses de tráfico real. No hay borrado automático de filas antiguas;
+  si algún día molesta, se añade.
+- **Límite conocido, no cerrado**: la procedencia la envía el navegador, así que quien
+  quiera puede mandar cabeceras `Referer` inventadas y crear una fila por cada dominio
+  falso. La longitud está acotada (200 caracteres la ruta, 120 el dominio) y solo se
+  cuentan respuestas correctas de páginas públicas, pero no hay tope de dominios
+  distintos por día. Se deja así a propósito: hoy no hay tráfico que lo justifique y la
+  única consecuencia sería una lista de procedencias sucia. Si aparece, la solución es
+  un tope diario, no más validación.
+- **Comparar la cifra con otra fuente**: no hay Google Analytics ni logs del proveedor
+  con los que cruzar el número, así que no se ha validado contra una segunda medida.
+- **Suite completa en Windows, con un aviso**: 381 tests, todos los cuerpos en verde. El
+  único error aparece al limpiar la carpeta temporal de `test_security_operations`
+  cuando corre dentro de la suite: Windows no deja borrar un fichero SQLite que sigue
+  abierto. Ejecutado solo, pasa. En Linux —donde corre CI— borrar un fichero abierto es
+  legal, así que no afecta. Es ruido del entorno de desarrollo, no del código, y queda
+  anotado para no confundirlo con un fallo real la próxima vez.
+
 ## 2026-07-29 — buscadores y página de dirección inexistente
 
 ### Qué se probó y con qué resultado

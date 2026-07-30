@@ -1,8 +1,8 @@
 {
-  "state_date": "2026-07-27",
+  "state_date": "2026-07-30",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 36,
-  "verified_test_count": 361,
+  "schema_version": 37,
+  "verified_test_count": 381,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -41,7 +41,8 @@
     "visual_qa": "computed_style_rendering_verified_screenshot_tool_unavailable",
     "asset_delivery": "static_files_immutable_year_long_cache_in_production_versioned_by_query_and_chart_library_loaded_only_when_the_demo_is_reached",
     "contact_booking": "cal_com_iframe_points_to_a_concrete_event_using_its_normal_url_not_the_embed_view_which_needs_their_script_csp_frame_src_allowed_only_on_that_route",
-    "access_request_form": "public_site_layout_short_form_name_email_phone_trade_optional_message_plan_travels_hidden_from_pricing"
+    "access_request_form": "public_site_layout_short_form_name_email_phone_trade_optional_message_plan_travels_hidden_from_pricing",
+    "visitor_measurement": "schema_37_own_server_counts_public_page_views_by_day_no_script_no_cookie_no_third_party_because_csp_forbids_external_scripts_only_page_day_and_referrer_host_are_stored_never_ip_user_agent_or_identifier_private_static_api_and_session_routes_excluded_like_in_robots_and_a_failure_to_count_never_breaks_the_page"
   },
   "authentication": {
     "password": "available",

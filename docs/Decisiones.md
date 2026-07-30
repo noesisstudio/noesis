@@ -2,6 +2,39 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Las visitas se cuentan en nuestro servidor, no con Google Analytics (2026-07-30)
+
+Hacía falta saber cuánta gente entra en la web y por dónde llega. La respuesta
+inmediata era Google Analytics, o alguna de las alternativas respetuosas tipo
+Plausible, pero cualquiera de las tres choca con dos cosas que ya habíamos decidido:
+la CSP solo permite `script-src 'self'`, y la regla de arquitectura dice «sin CDNs en
+runtime». Instalar cualquiera de ellas obligaba a abrir la CSP a un dominio ajeno y a
+que la web pública dependiera de que ese dominio esté en pie.
+
+Además tiene un coste legal. En cuanto un tercero recibe la IP de quien visita, hay
+tratamiento de datos personales, y eso arrastra banner de consentimiento previo,
+encargado del tratamiento y, con Google, la discusión de las transferencias a Estados
+Unidos. Todo eso para responder a una pregunta muy modesta.
+
+Así que el recuento se hace **en el propio servidor**, en el middleware que ya
+atraviesa cada petición. Se guardan tres cosas: la página, el día y el dominio desde
+el que se llegó. Nada más: ni IP, ni navegador, ni identificador, ni cookie, ni
+script. De la procedencia se conserva solo el dominio, nunca la URL completa —una
+búsqueda en Google lleva en la URL lo que la persona escribió, y eso sí sería un dato
+personal—. Al no poder distinguir a nadie, no hay recorrido que reconstruir y no hay
+consentimiento que pedir; la política de cookies lo explica en esos términos.
+
+Se excluyen del recuento las mismas rutas que `robots.txt` esconde de los buscadores
+—el panel de clientes, la API, los estáticos y las de sesión—: sería incoherente
+decirle a Google que no las mire y contarlas nosotros, y ninguna describe interés por
+la web. El recuento va envuelto en `try/except`, porque medir es información y no
+funcionalidad: si la base de datos falla, la página se sirve igual.
+
+Lo que se pierde a cambio: no hay visitantes únicos, ni sesiones, ni embudos, ni
+tiempo en página. Son justamente las métricas que exigen identificar a alguien. Para
+la pregunta real de esta etapa —qué páginas sirven y qué canal trae gente— sobra.
+
+
 ## El correo sale por API porque Railway bloquea SMTP (2026-07-27)
 
 Ningún correo salía de producción. El registro daba `[Errno 101] Network is

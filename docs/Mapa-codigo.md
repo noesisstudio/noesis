@@ -109,7 +109,15 @@
   descarga de copias sin guardar contenido de clientes. Desde aquí se aprueban las
   solicitudes: el alta crea el negocio, arranca la prueba ese día y devuelve un
   enlace de un solo uso —reutiliza `password_resets`— para que el titular elija su
-  contraseña, de modo que el equipo nunca llega a conocerla.
+  contraseña, de modo que el equipo nunca llega a conocerla. También resume las
+  visitas de la web del último mes.
+- `src/noesis/web/server.py` (`_count_public_view`) + tabla `page_views`: suma una
+  visita por página y día en el propio servidor, sin script, cookie ni tercero
+  —la CSP prohíbe scripts externos—. Guarda solo página, día y dominio de
+  procedencia; nunca IP, navegador ni identificador, así que no hay dato personal
+  que consentir. Excluye lo mismo que `robots.txt` —panel, API, estáticos y rutas
+  de sesión— y si el recuento falla la página se sirve igual: medir es
+  información, no funcionalidad.
 - `src/noesis/web/templates/ajustes.html`: datos, preferencias, memoria y conexiones
   que el cliente puede usar; no muestra qué proveedor falta o está caído.
 - `src/noesis/web/static/app.css`: tokens, componentes y responsive sin CDN.

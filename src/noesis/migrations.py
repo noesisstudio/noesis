@@ -2958,6 +2958,39 @@ def _downgrade_access_requests(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS access_requests")
 
 
+def _upgrade_page_views(conn) -> None:
+    """Recuento agregado de visitas públicas, sin dato personal alguno.
+
+    No se guarda IP, navegador, sesión ni cookie: solo cuántas veces se vio una
+    página cada día y de qué sitio venía la gente. Al no identificar a nadie, no
+    hace falta consentimiento y la política de cookies sigue siendo cierta.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS page_views ("
+        f"id {t['id']}, "
+        "day TEXT NOT NULL, "
+        "path TEXT NOT NULL, "
+        # Solo el dominio de procedencia, nunca la URL completa: una URL puede
+        # llevar términos de búsqueda o identificadores de la persona.
+        "referrer_host TEXT NOT NULL DEFAULT '', "
+        "views INTEGER NOT NULL DEFAULT 0)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_page_views_day_path_ref "
+        "ON page_views(day, path, referrer_host)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_page_views_day ON page_views(day)"
+    )
+
+
+def _downgrade_page_views(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_page_views_day")
+    conn.execute("DROP INDEX IF EXISTS uq_page_views_day_path_ref")
+    conn.execute("DROP TABLE IF EXISTS page_views")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3000,6 +3033,7 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_security_audit),
     (36, "solicitudes_acceso", _upgrade_access_requests,
      _downgrade_access_requests),
+    (37, "visitas_agregadas", _upgrade_page_views, _downgrade_page_views),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
