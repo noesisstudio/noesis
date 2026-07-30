@@ -50,6 +50,7 @@ def admin_panel(request: Request):
         "data": data,
         "access_requests": requests_list,
         "access_pending": sum(1 for r in requests_list if r["status"] == "nueva"),
+        "visits": db.page_views_summary(30),
         "invite": request.session.pop("last_invite", None),
         "admin_error": request.session.pop("admin_error", None),
     })

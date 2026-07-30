@@ -226,10 +226,23 @@ class AdminEmailsTestCase(unittest.TestCase):
     """El panel admite varios responsables sin compartir una misma cuenta."""
 
     def setUp(self):
-        self.original = config.ADMIN_EMAILS
+        self.original = (config.ADMIN_EMAILS, config.ADMIN_EMAIL)
+        config.ADMIN_EMAIL = ""
 
     def tearDown(self):
-        config.ADMIN_EMAILS = self.original
+        config.ADMIN_EMAILS, config.ADMIN_EMAIL = self.original
+
+    def test_the_single_address_setting_still_grants_access(self):
+        """`ADMIN_EMAIL` y `ADMIN_EMAILS` no pueden divergir en silencio.
+
+        La segunda se deriva de la primera, así que quien cambie solo una espera
+        que surta efecto. Si no lo hiciera, un permiso quedaría concedido o negado
+        sin que nada lo avisara: en un control de acceso eso no se puede permitir.
+        """
+        config.ADMIN_EMAILS = ()
+        config.ADMIN_EMAIL = "xavier@bynoesis.com"
+        self.assertTrue(config.is_admin_email("xavier@bynoesis.com"))
+        self.assertFalse(config.is_admin_email("otro@ejemplo.com"))
 
     def test_several_addresses_are_accepted_and_normalised(self):
         config.ADMIN_EMAILS = ("xavier@bynoesis.com", "miquel@bynoesis.com")

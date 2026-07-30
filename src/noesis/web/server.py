@@ -22,6 +22,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -32,7 +33,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .. import config, db
 from ..adapters import billing as billing_adapter  # noqa: F401 -- compatibilidad de tests/integraciones
 from . import auth
-from .deps import HERE, auth_guard
+from .deps import HERE, TEMPLATES, auth_guard
 from .routers import (
     account,
     admin,
@@ -116,6 +117,47 @@ app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY,
 _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 _request_log = logging.getLogger("noesis.request")
 
+# Zonas que no se cuentan: el panel del cliente, la API, los portales por token y
+# los estáticos. Solo interesa la web pública, y nunca la actividad de un cliente
+# dentro de su cuenta.
+_NO_CONTAR = ("/b/", "/api/", "/admin", "/p/", "/g/", "/t/", "/static/",
+              "/webhook/", "/health", "/ready", "/favicon.ico", "/robots.txt",
+              "/sitemap.xml", "/sw.js",
+              # Las mismas rutas que robots.txt esconde de los buscadores: no
+              # describen interés por la web, sino uso de una cuenta existente.
+              "/login", "/logout", "/onboarding", "/recuperar", "/restablecer")
+
+
+def _count_public_view(request: Request, status: int) -> None:
+    """Suma una visita pública al recuento agregado.
+
+    Sin cookies, sin IP y sin navegador: solo la página, el día y el dominio de
+    procedencia. Al no identificar a nadie no necesita consentimiento, y por eso
+    tampoco puede reconstruirse el recorrido de una persona concreta.
+    """
+    if request.method != "GET" or status >= 400:
+        return
+    ruta = request.url.path
+    if ruta.startswith(_NO_CONTAR):
+        return
+    procedencia = ""
+    referer = request.headers.get("referer") or ""
+    if referer:
+        try:
+            host = urlsplit(referer).hostname or ""
+        except ValueError:
+            host = ""
+        # El propio sitio no es una procedencia: solo interesa quién nos trae gente.
+        if host and host.lower() not in config.ALLOWED_HOSTS:
+            procedencia = host.lower()
+    try:
+        db.record_page_view(ruta, procedencia)
+    except Exception:  # noqa: BLE001
+        # Medir nunca puede tumbar una página: es información, no funcionalidad.
+        _request_log.warning(json.dumps(
+            {"event": "page_view_not_counted"}, separators=(",", ":")
+        ))
+
 
 @app.middleware("http")
 async def request_observability(request: Request, call_next):
@@ -154,6 +196,7 @@ async def request_observability(request: Request, call_next):
         response = await call_next(request)
         status = response.status_code
         response.headers["X-Request-ID"] = request_id
+        _count_public_view(request, status)
         return response
     except Exception:
         # No adjuntar el traceback aquí: excepciones de proveedores o BD pueden
@@ -329,6 +372,19 @@ app.include_router(gestoria.router)
 
 # ========================================================= ADMIN (fundador) = #
 app.include_router(admin.router)
+
+
+@app.exception_handler(404)
+async def pagina_no_encontrada(request: Request, exc):
+    """Una dirección mal escrita no debe enseñar el error crudo del servidor.
+
+    La API sigue respondiendo JSON: quien la consume espera datos, no una
+    página. Solo se pinta la página en las rutas de navegación.
+    """
+    ruta = request.url.path
+    if ruta.startswith(("/api/", "/webhook/")):
+        return JSONResponse({"error": "no encontrado"}, status_code=404)
+    return TEMPLATES.TemplateResponse(request, "404.html", {}, status_code=404)
 
 
 

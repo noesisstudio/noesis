@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse, HTMLResponse, RedirectResponse, Response,
+)
 
 from ... import config, db, verifactu_client
 from ...adapters import billing as billing_adapter
@@ -23,9 +27,14 @@ _PAGES = {
 }
 
 
-def _legal_context() -> dict:
-    """Datos legales públicos; nunca incluye credenciales ni valores internos."""
+def _legal_context(request: Request) -> dict:
+    """Datos legales públicos; nunca incluye credenciales ni valores internos.
+
+    Lleva también la sesión porque estas páginas comparten cabecera con el resto
+    del sitio: quien ya ha entrado debe ver su panel, no una invitación a entrar.
+    """
     return {
+        "business_id": request.session.get("bid"),
         "legal_name": config.LEGAL_NAME,
         "legal_nif": config.LEGAL_NIF,
         "legal_address": config.LEGAL_ADDRESS,
@@ -70,6 +79,73 @@ _SITE_PAGES = {
 }
 
 
+# Páginas que deben salir en buscadores. El panel, el acceso y los portales
+# privados quedan fuera a propósito: no aportan nada en una búsqueda y no
+# queremos que se indexen enlaces con datos de clientes.
+_INDEXABLES = (
+    ("/", "1.0"),
+    ("/precios", "0.9"),
+    ("/solicitar-acceso", "0.9"),
+    ("/contacto", "0.8"),
+    ("/preguntas", "0.7"),
+    ("/equipo", "0.6"),
+    ("/cumplimiento", "0.5"),
+    ("/privacidad", "0.3"),
+    ("/terminos", "0.3"),
+    ("/aviso-legal", "0.3"),
+    ("/cookies", "0.3"),
+    ("/encargado-tratamiento", "0.3"),
+)
+
+
+@router.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Navegadores y agregadores antiguos piden esta ruta fija; se sirve el SVG."""
+    return FileResponse(
+        HERE / "static" / "noesis-mark.svg", media_type="image/svg+xml"
+    )
+
+
+@router.get("/robots.txt", include_in_schema=False)
+def robots():
+    """Qué puede rastrear un buscador y dónde está el mapa del sitio."""
+    lineas = [
+        "User-agent: *",
+        # Nada de esto tiene sentido en un buscador y algunos llevan datos privados.
+        "Disallow: /b/",
+        "Disallow: /api/",
+        "Disallow: /admin",
+        "Disallow: /p/",
+        "Disallow: /g/",
+        "Disallow: /t/",
+        "Disallow: /login",
+        "Disallow: /onboarding",
+        "Disallow: /recuperar",
+        "Disallow: /restablecer",
+        "",
+        f"Sitemap: {config.BASE_URL}/sitemap.xml",
+        "",
+    ]
+    return Response("\n".join(lineas), media_type="text/plain")
+
+
+@router.get("/sitemap.xml", include_in_schema=False)
+def sitemap():
+    """Mapa del sitio con las páginas públicas que sí queremos indexadas."""
+    hoy = date.today().isoformat()
+    urls = "".join(
+        f"<url><loc>{config.BASE_URL}{ruta}</loc>"
+        f"<lastmod>{hoy}</lastmod><priority>{prioridad}</priority></url>"
+        for ruta, prioridad in _INDEXABLES
+    )
+    cuerpo = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{urls}</urlset>"
+    )
+    return Response(cuerpo, media_type="application/xml")
+
+
 @router.get("/producto", include_in_schema=False)
 def producto_redirect():
     """La portada absorbió el contenido de Producto; los enlaces antiguos siguen vivos."""
@@ -106,34 +182,34 @@ def service_worker():
 
 @router.get("/privacidad", response_class=HTMLResponse)
 def privacidad(request: Request):
-    return TEMPLATES.TemplateResponse(request, "privacidad.html", _legal_context())
+    return TEMPLATES.TemplateResponse(request, "privacidad.html", _legal_context(request))
 
 
 @router.get("/terminos", response_class=HTMLResponse)
 def terminos(request: Request):
-    return TEMPLATES.TemplateResponse(request, "terminos.html", _legal_context())
+    return TEMPLATES.TemplateResponse(request, "terminos.html", _legal_context(request))
 
 
 @router.get("/aviso-legal", response_class=HTMLResponse)
 def aviso_legal(request: Request):
-    return TEMPLATES.TemplateResponse(request, "aviso-legal.html", _legal_context())
+    return TEMPLATES.TemplateResponse(request, "aviso-legal.html", _legal_context(request))
 
 
 @router.get("/cookies", response_class=HTMLResponse)
 def cookies(request: Request):
-    return TEMPLATES.TemplateResponse(request, "cookies.html", {})
+    return TEMPLATES.TemplateResponse(request, "cookies.html", _legal_context(request))
 
 
 @router.get("/encargado-tratamiento", response_class=HTMLResponse)
 def encargado_tratamiento(request: Request):
     return TEMPLATES.TemplateResponse(
-        request, "encargado-tratamiento.html", _legal_context()
+        request, "encargado-tratamiento.html", _legal_context(request)
     )
 
 
 @router.get("/cumplimiento", response_class=HTMLResponse)
 def cumplimiento(request: Request):
-    return TEMPLATES.TemplateResponse(request, "cumplimiento.html", {})
+    return TEMPLATES.TemplateResponse(request, "cumplimiento.html", _legal_context(request))
 
 
 @router.get("/b/{business_id}/suscripcion", response_class=HTMLResponse)

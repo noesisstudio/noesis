@@ -53,6 +53,13 @@ body {
 a { color: inherit; text-decoration: none; }
 h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: 0; }
 
+/* Quien navega con teclado entra por el primer enlace de la página y tendría que
+   recorrer todo el menú en cada visita. Este atajo salta al contenido y solo se
+   ve al recibir el foco: para el resto de visitantes no existe. */
+.skip-link { position:absolute; left:-9999px; top:0; z-index:100; }
+.skip-link:focus { left:12px; top:12px; padding:10px 16px; border-radius:8px;
+  background:var(--brand); color:#fff; font-weight:600; }
+
 /* ---------- Layout ---------- */
 .app { display: flex; min-height: 100vh; }
 
@@ -136,7 +143,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: 0; }
 .page-head { margin-bottom: 22px; display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
 .page-title { min-width:0; }
 .page-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-.page-head h1 { font-family: var(--serif); font-weight: 500; font-size: 28px; letter-spacing: -.01em; }
+.page-head h1, .page-head .demo-title { font-family: var(--serif); font-weight: 500; font-size: 28px; letter-spacing: -.01em; }
 .page-head p { color: var(--muted); margin: 8px 0 0; max-width: 60ch; line-height: 1.55; }
 .kicker { color: var(--brand-2); font-size: 12px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
@@ -1376,7 +1383,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .demo-real-dashboard .home-brief { gap:14px; padding:14px 15px; border-radius:11px; }
 .demo-real-dashboard .home-eyebrow { gap:5px; font-size:7px; }
 .demo-real-dashboard .home-eyebrow img { width:13px; height:13px; }
-.demo-real-dashboard .home-brief h1 { font-size:18px; margin-top:5px; }
+.demo-real-dashboard .home-brief h1, .demo-real-dashboard .home-brief .demo-title { font-size:18px; margin-top:5px; }
 .demo-real-dashboard .home-brief > .home-brief-copy > p { margin:4px 0 9px; font-size:10.5px; line-height:1.4; }
 .demo-real-dashboard .home-brief-side { gap:10px; font-size:8px; }
 .demo-real-dashboard .home-brief-side button, .demo-real-dashboard .home-panel > header > button { padding:0; border:0; color:var(--brand); background:transparent; font:inherit; font-size:8px; font-weight:750; cursor:pointer; }
@@ -1939,6 +1946,18 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .request-form .input:focus { background:#fff; border-color:var(--brand-2);
   box-shadow:0 0 0 3px rgba(46,139,116,.12); }
 .request-safe { display:block; color:var(--faint); text-align:center; line-height:1.5; }
+/* Página de dirección inexistente: informa sin parecer una avería. */
+.not-found { display:flex; justify-content:center; padding:96px 0; }
+.not-found-card { max-width:620px; text-align:center; }
+.not-found-card h1 { font-size:clamp(32px,4vw,44px); color:var(--brand);
+  margin:12px 0 14px; letter-spacing:-.02em; }
+.not-found-card p { color:var(--muted); font-size:16px; line-height:1.65; margin:0 0 26px; }
+.not-found-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.not-found-links { margin-top:34px; padding-top:24px; border-top:1px solid var(--border);
+  display:flex; gap:16px; justify-content:center; flex-wrap:wrap;
+  color:var(--faint); font-size:13.5px; }
+.not-found-links a { color:var(--brand-2); font-weight:700; }
+
 .request-done { display:flex; justify-content:center; }
 .request-done-card { max-width:620px; padding:44px; text-align:center; border:1px solid var(--border);
   border-radius:16px; background:var(--surface); }
@@ -2411,7 +2430,7 @@ body { background: var(--bg); }
 .home-eyebrow { display:flex; align-items:center; gap:8px; color:var(--brand); font-size:11px;
   text-transform:uppercase; letter-spacing:.075em; font-weight:800; }
 .home-eyebrow img { width:21px; height:21px; }
-.home-brief h1 { font-family:var(--serif); color:var(--brand-ink); font-size:29px; line-height:1.18;
+.home-brief h1, .home-brief .demo-title { font-family:var(--serif); color:var(--brand-ink); font-size:29px; line-height:1.18;
   font-weight:550; letter-spacing:-.02em; margin-top:9px; }
 .home-brief > .home-brief-copy > p { color:#40594f; font-family:var(--serif); font-size:17px; line-height:1.45;
   margin:6px 0 16px; max-width:70ch; }
@@ -2495,7 +2514,7 @@ body { background: var(--bg); }
 }
 @media (max-width:620px) {
   .home-brief { grid-template-columns:1fr; padding:20px 17px; gap:10px; }
-  .home-brief h1 { font-size:25px; }
+  .home-brief h1, .home-brief .demo-title { font-size:25px; }
   .home-brief > .home-brief-copy > p { font-size:15.5px; }
   .home-brief-side { flex-direction:row; align-items:center; }
   .home-priority { grid-template-columns:1fr; }

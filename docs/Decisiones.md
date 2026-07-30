@@ -2,6 +2,82 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Las páginas legales dejan de ser un sitio aparte (2026-07-30)
+
+Privacidad, términos, aviso legal, cookies, encargado del tratamiento y cumplimiento
+arrastraban un armazón propio y más viejo que el resto de la web: cabecera distinta,
+pie distinto, y ni descripción para buscadores ni canonical. Se quedaron atrás cuando
+el sitio público se rehizo.
+
+El problema no es estético. Esas seis páginas están en el sitemap, o sea que las
+ofrecemos a Google. Quien busque «encargado del tratamiento autónomos» puede aterrizar
+ahí sin haber pasado por la portada, y se encontraba una página sin menú: ningún camino
+hacia precios, ni hacia el formulario, ni hacia nada. Una puerta de entrada convertida
+en callejón sin salida.
+
+Ahora extienden la misma plantilla que el resto. Ganan menú, canonical y una
+descripción escrita para cada una. Se les quita la llamada final a la acción, porque un
+texto legal no es sitio para vender; la excepción es `/cumplimiento`, que es
+divulgativa y ahí sí encaja.
+
+De paso se elimina una incoherencia que restaba credibilidad: había tres direcciones de
+correo distintas conviviendo en la misma web —una por variable en el pie, un Gmail
+escrito a mano en cookies y otra dirección a mano en contacto—. Todas pasan por la
+misma variable, y el valor de respaldo deja de ser una cuenta personal para ser la del
+dominio propio.
+
+
+## La maqueta de la portada no puede tener dieciocho títulos principales (2026-07-30)
+
+La portada enseña una cuenta simulada reproduciendo las pantallas reales del panel. Como
+se copiaron tal cual, cada una traía su `<h1>`: diecinueve en total contando el de la
+página.
+
+Un `<h1>` declara de qué trata la página. Con diecinueve, un buscador no sabe cuál
+pesa, y un lector de pantalla anuncia diecinueve títulos principales a quien navega a
+ciegas. La maqueta no es la estructura del documento: es el retrato de una app dentro
+de una página.
+
+Pasan a `<h2 class="demo-title">`. La clase existe para no tocar el panel real, donde
+esos `<h1>` sí son correctos, y para poder extender solo las cuatro reglas de estilo que
+les afectaban sin arriesgar nada más. Se comprobó una por una cuáles eran; no hay
+navegador headless en el entorno, así que la verificación es por lectura de reglas y
+queda anotada como pendiente de una mirada humana.
+
+
+## Las visitas se cuentan en nuestro servidor, no con Google Analytics (2026-07-30)
+
+Hacía falta saber cuánta gente entra en la web y por dónde llega. La respuesta
+inmediata era Google Analytics, o alguna de las alternativas respetuosas tipo
+Plausible, pero cualquiera de las tres choca con dos cosas que ya habíamos decidido:
+la CSP solo permite `script-src 'self'`, y la regla de arquitectura dice «sin CDNs en
+runtime». Instalar cualquiera de ellas obligaba a abrir la CSP a un dominio ajeno y a
+que la web pública dependiera de que ese dominio esté en pie.
+
+Además tiene un coste legal. En cuanto un tercero recibe la IP de quien visita, hay
+tratamiento de datos personales, y eso arrastra banner de consentimiento previo,
+encargado del tratamiento y, con Google, la discusión de las transferencias a Estados
+Unidos. Todo eso para responder a una pregunta muy modesta.
+
+Así que el recuento se hace **en el propio servidor**, en el middleware que ya
+atraviesa cada petición. Se guardan tres cosas: la página, el día y el dominio desde
+el que se llegó. Nada más: ni IP, ni navegador, ni identificador, ni cookie, ni
+script. De la procedencia se conserva solo el dominio, nunca la URL completa —una
+búsqueda en Google lleva en la URL lo que la persona escribió, y eso sí sería un dato
+personal—. Al no poder distinguir a nadie, no hay recorrido que reconstruir y no hay
+consentimiento que pedir; la política de cookies lo explica en esos términos.
+
+Se excluyen del recuento las mismas rutas que `robots.txt` esconde de los buscadores
+—el panel de clientes, la API, los estáticos y las de sesión—: sería incoherente
+decirle a Google que no las mire y contarlas nosotros, y ninguna describe interés por
+la web. El recuento va envuelto en `try/except`, porque medir es información y no
+funcionalidad: si la base de datos falla, la página se sirve igual.
+
+Lo que se pierde a cambio: no hay visitantes únicos, ni sesiones, ni embudos, ni
+tiempo en página. Son justamente las métricas que exigen identificar a alguien. Para
+la pregunta real de esta etapa —qué páginas sirven y qué canal trae gente— sobra.
+
+
 ## El correo sale por API porque Railway bloquea SMTP (2026-07-27)
 
 Ningún correo salía de producción. El registro daba `[Errno 101] Network is

@@ -8553,6 +8553,61 @@ def use_password_reset(token_hash) -> dict | None:
         return dict(row)
 
 
+# --------------------------------------------------- Visitas del sitio ---
+def record_page_view(path: str, referrer_host: str = "", day: str = "") -> None:
+    """Suma una visita al recuento del día. Nunca guarda dato personal."""
+    path = (path or "/")[:200]
+    referrer_host = (referrer_host or "")[:120].lower()
+    day = day or date.today().isoformat()
+    with get_conn() as conn:
+        # Una fila por día, página y procedencia: se incrementa, no se acumulan filas.
+        actualizadas = conn.execute(
+            "UPDATE page_views SET views = views + 1 "
+            "WHERE day=? AND path=? AND referrer_host=?",
+            (day, path, referrer_host),
+        ).rowcount
+        if not actualizadas:
+            try:
+                conn.execute(
+                    "INSERT INTO page_views (day, path, referrer_host, views) "
+                    "VALUES (?, ?, ?, 1)", (day, path, referrer_host),
+                )
+            except IntegrityError:
+                # Dos peticiones simultáneas creando la misma fila: basta sumar.
+                conn.execute(
+                    "UPDATE page_views SET views = views + 1 "
+                    "WHERE day=? AND path=? AND referrer_host=?",
+                    (day, path, referrer_host),
+                )
+
+
+def page_views_summary(days: int = 30) -> dict:
+    """Visitas del periodo: total, por día, por página y de dónde vienen."""
+    desde = (date.today() - timedelta(days=max(1, int(days)))).isoformat()
+    with get_conn() as conn:
+        total = conn.execute(
+            "SELECT COALESCE(SUM(views), 0) AS total FROM page_views WHERE day >= ?",
+            (desde,),
+        ).fetchone()["total"]
+        por_dia = [dict(r) for r in conn.execute(
+            "SELECT day, SUM(views) AS views FROM page_views WHERE day >= ? "
+            "GROUP BY day ORDER BY day", (desde,),
+        ).fetchall()]
+        por_pagina = [dict(r) for r in conn.execute(
+            "SELECT path, SUM(views) AS views FROM page_views WHERE day >= ? "
+            "GROUP BY path ORDER BY views DESC LIMIT 15", (desde,),
+        ).fetchall()]
+        procedencia = [dict(r) for r in conn.execute(
+            "SELECT referrer_host, SUM(views) AS views FROM page_views "
+            "WHERE day >= ? AND referrer_host <> '' "
+            "GROUP BY referrer_host ORDER BY views DESC LIMIT 10", (desde,),
+        ).fetchall()]
+    return {
+        "days": int(days), "total": int(total or 0), "by_day": por_dia,
+        "by_path": por_pagina, "by_referrer": procedencia,
+    }
+
+
 # ------------------------------------------------- Solicitudes de acceso ---
 ACCESS_REQUEST_STATUSES = ("nueva", "contactada", "alta", "descartada")
 

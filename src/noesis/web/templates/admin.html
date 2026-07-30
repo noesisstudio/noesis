@@ -28,6 +28,58 @@
     <div class="stat"><div class="lbl">Alarmas</div><div class="val {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="delta flat">ahora mismo</div></div>
   </div>
 
+  <!-- ================= 📈 Visitas de la web ================= -->
+  <div class="dept-head" id="visitas">
+    <span class="dept-ic">📈</span>
+    <div>
+      <h2>Visitas de la web</h2>
+      <p>Últimos {{ visits.days }} días. Recuento propio, sin cookies ni terceros:
+         no se guarda IP ni navegador, así que no se puede seguir a nadie.</p>
+    </div>
+  </div>
+  <div class="admin-grid">
+    <div class="stat"><div class="lbl">Visitas totales</div><div class="val">{{ visits.total }}</div><div class="delta flat">{{ visits.days }} días</div></div>
+    <div class="stat"><div class="lbl">Solicitudes recibidas</div><div class="val green">{{ access_requests|length }}</div><div class="delta flat">desde el inicio</div></div>
+    <div class="stat"><div class="lbl">Días con visitas</div><div class="val">{{ visits.by_day|length }}</div><div class="delta flat">de {{ visits.days }}</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h"><h2>Páginas más vistas</h2><span class="hint">últimos {{ visits.days }} días</span></div>
+      <div class="card-b">
+        {% if visits.by_path %}
+        <div class="table-wrap"><table>
+          <thead><tr><th>Página</th><th class="t-right">Visitas</th></tr></thead>
+          <tbody>
+            {% for fila in visits.by_path %}
+            <tr><td>{{ fila.path }}</td><td class="t-right">{{ fila.views }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+        {% else %}
+        <p class="empty">Todavía no hay visitas registradas.</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>De dónde llega la gente</h2><span class="hint">sitios que te traen visitas</span></div>
+      <div class="card-b">
+        {% if visits.by_referrer %}
+        <div class="table-wrap"><table>
+          <thead><tr><th>Procedencia</th><th class="t-right">Visitas</th></tr></thead>
+          <tbody>
+            {% for fila in visits.by_referrer %}
+            <tr><td>{{ fila.referrer_host }}</td><td class="t-right">{{ fila.views }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+        {% else %}
+        <p class="empty">Nadie ha llegado desde otro sitio todavía. Cuando compartas
+          el enlace o Google te indexe, aparecerá aquí.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- ================= 📬 Solicitudes de acceso ================= -->
   <div class="dept-head" id="solicitudes">
     <span class="dept-ic">📬</span>

@@ -1,5 +1,139 @@
 # Registro de QA
 
+## 2026-07-30 — las páginas legales entran en el sitio y la portada recupera su título
+
+### Qué se probó y con qué resultado
+
+- **Las seis páginas legales usaban un armazón propio y más viejo**: sin descripción
+  para buscadores, sin canonical y, sobre todo, **sin el menú del sitio**. Están en el
+  sitemap, así que alguien podía aterrizar en `/privacidad` desde Google y quedarse sin
+  forma de llegar al resto de la web. Ahora extienden la misma plantilla que las demás.
+  Verificado en las seis: 200, menú presente, canonical correcto y descripción propia
+  escrita para cada una. La llamada a la acción se retira de los textos legales —no es
+  sitio para vender— y se mantiene en `/cumplimiento`, que es divulgativa.
+- **La portada tenía diecinueve `<h1>`.** La maqueta del producto reproduce dieciocho
+  pantallas del panel y cada una traía el suyo. Es el retrato de una app dentro de una
+  página: un buscador no sabe de qué trata la portada y un lector de pantalla anuncia
+  diecinueve títulos principales. Convertidos a `<h2 class="demo-title">` y extendidas
+  **solo las cuatro reglas CSS que les afectaban**, comprobado una por una, para que se
+  vean igual. Ahora la portada tiene un `<h1>` y las doce páginas públicas pasan la
+  revisión de jerarquía sin saltos de nivel.
+- **Tres direcciones de correo distintas conviviendo**: el pie mostraba una variable, la
+  política de cookies un Gmail escrito a mano y la página de contacto otra puesta a
+  mano. Todas pasan a la misma variable y el valor de respaldo deja de ser una cuenta
+  personal. Igual con la fecha de actualización, que estaba a mano en dos páginas.
+- **Enlaces internos e imágenes**: recorridas las doce páginas públicas, **ningún enlace
+  roto** y **ninguna imagen sin texto alternativo**.
+- **Añadido**: ficha de empresa para buscadores (JSON-LD, se comprueba que es JSON
+  válido porque uno inválido Google lo ignora sin avisar) y un salto al contenido para
+  quien navega con teclado, visible solo al recibir el foco.
+- **Retirado**: `_legal_footer.html`, que ya no usaba nadie.
+- Pruebas nuevas: **3 verdes** en `test_seo.py` (8 en total). Fijan que toda página del
+  sitemap se describa y conserve el menú, que la portada tenga un solo encabezado y que
+  la ficha de empresa sea legible.
+- **Suite completa: 384 tests, todos los cuerpos en verde.** Los dos únicos errores son
+  el artefacto de Windows ya conocido al limpiar la carpeta temporal de
+  `test_security_operations`; ejecutado solo, pasa. Ruff, bandit y el validador de la
+  fuente de verdad, limpios.
+
+### Qué no se pudo probar
+
+- **El aspecto real de las páginas legales y de la maqueta.** No hay navegador headless
+  disponible en el entorno, así que la comprobación del CSS es por lectura de reglas, no
+  por captura. El riesgo está acotado —se extendieron cuatro selectores concretos y la
+  clase nueva no la usa nada más—, pero conviene una mirada humana a `/privacidad` y a
+  la maqueta de la portada.
+- **Que Google reconozca la ficha de empresa**: eso se ve en Search Console días
+  después. Aquí solo se garantiza que el JSON es válido.
+
+## 2026-07-30 — recuento de visitas sin cookies ni terceros
+
+### Qué se probó y con qué resultado
+
+- **Migración 37 (`page_views`)** con ciclo completo de ida y vuelta: 37 → 36 → 37 sin
+  residuos. La tabla guarda página, día y dominio de procedencia con índice único sobre
+  los tres, de modo que una segunda visita **suma en la fila existente** en lugar de
+  añadir una nueva: crece con el número de páginas, no con el de visitas.
+- **Solo se guarda el dominio de procedencia, nunca la URL entera.** Probado con
+  `https://www.google.com/search?q=algo+personal`: en la tabla queda `www.google.com` y
+  se comprueba que el término buscado **no aparece en ninguna columna**. Es lo que
+  convertiría el recuento en dato personal.
+- **Exclusiones verificadas**: `/static/`, `/robots.txt`, `/health`, `/api/...`, el panel
+  y las rutas de sesión no se cuentan. Esta última exclusión la descubrió la propia
+  prueba: al pedir `/admin` el cliente sigue la redirección a `/login`, que sí se estaba
+  contando. Se añadieron las rutas de sesión a la lista, para no contar lo mismo que
+  `robots.txt` esconde de los buscadores.
+- **Que fallar midiendo no tumbe la web**: forzando una excepción en el recuento, la
+  página sigue devolviendo 200. Medir es información, no funcionalidad.
+- **Panel del fundador**: la sección «Visitas de la web» se pinta con totales, páginas
+  más vistas y procedencias, comprobado con datos reales en local.
+- **Política de cookies actualizada**: mantiene que no hay cookies de analítica —sigue
+  siendo cierto— y añade qué se cuenta y qué no se guarda.
+- Pruebas nuevas: **5 verdes** en `test_page_views.py`. Ruff limpio.
+
+### Hallazgo aparte: el acceso al panel estaba roto y ningún test lo decía
+
+Al pasar la suite completa apareció un fallo que **no venía del recuento**, sino del
+cambio anterior a varios administradores. `is_admin_email()` mira `ADMIN_EMAILS`, pero
+`ADMIN_EMAIL` se deriva de ella y quedaban desacopladas: cambiar solo una no surtía
+efecto. Consecuencias reales, las dos malas:
+
+- El test que comprueba que el panel muestra el diagnóstico interno **fallaba**: el
+  fundador acababa redirigido al login.
+- Peor, el test que comprueba que **falta de Google OAuth bloquea al administrador**
+  seguía en verde por el motivo equivocado: no bloqueaba por OAuth, sino porque ya no
+  reconocía a nadie como administrador. Un test que pasa por casualidad es peor que
+  uno que falla, porque nadie lo mira.
+
+Arreglado en el origen: `is_admin_email()` consulta ambas variables, de modo que no
+puedan divergir en silencio. Se añade una prueba que fija justo eso. Los 14 tests del
+centro de mando y los 12 de solicitudes quedan en verde, y el de OAuth ya comprueba lo
+que dice comprobar.
+
+### Qué no se pudo probar
+
+- **El recuento en producción con visitas reales**: hasta que se despliegue no hay
+  tráfico que contar. En local solo se han simulado peticiones.
+- **Cuánto ocupa a largo plazo**: la estimación es baja por el diseño agregado, pero no
+  hay medida sobre meses de tráfico real. No hay borrado automático de filas antiguas;
+  si algún día molesta, se añade.
+- **Límite conocido, no cerrado**: la procedencia la envía el navegador, así que quien
+  quiera puede mandar cabeceras `Referer` inventadas y crear una fila por cada dominio
+  falso. La longitud está acotada (200 caracteres la ruta, 120 el dominio) y solo se
+  cuentan respuestas correctas de páginas públicas, pero no hay tope de dominios
+  distintos por día. Se deja así a propósito: hoy no hay tráfico que lo justifique y la
+  única consecuencia sería una lista de procedencias sucia. Si aparece, la solución es
+  un tope diario, no más validación.
+- **Comparar la cifra con otra fuente**: no hay Google Analytics ni logs del proveedor
+  con los que cruzar el número, así que no se ha validado contra una segunda medida.
+- **Suite completa en Windows, con un aviso**: 381 tests, todos los cuerpos en verde. El
+  único error aparece al limpiar la carpeta temporal de `test_security_operations`
+  cuando corre dentro de la suite: Windows no deja borrar un fichero SQLite que sigue
+  abierto. Ejecutado solo, pasa. En Linux —donde corre CI— borrar un fichero abierto es
+  legal, así que no afecta. Es ruido del entorno de desarrollo, no del código, y queda
+  anotado para no confundirlo con un fallo real la próxima vez.
+
+## 2026-07-29 — buscadores y página de dirección inexistente
+
+### Qué se probó y con qué resultado
+
+- **`robots.txt` y `sitemap.xml`**, que no existían: sin ellos un buscador descubre el
+  sitio a tropezones y puede indexar lo que no debe. El robots excluye panel, API,
+  portales por token y formularios de sesión; el mapa lista solo las doce páginas
+  públicas. Verificado que el XML es válido y que **ninguna ruta privada aparece** en él.
+- **Página 404 propia**: una dirección mal escrita devolvía `{"detail":"Not Found"}`, el
+  error crudo del servidor, que parece una avería. Ahora se pinta con el diseño del sitio
+  y ofrece salidas. Comprobado que **la API sigue devolviendo JSON**: quien la consume
+  espera datos, no una página.
+- **`/favicon.ico`** daba 404; los navegadores antiguos piden esa ruta fija. Se sirve el
+  logotipo existente.
+- Pruebas nuevas: **5 verdes** en `test_seo.py`. Ruff limpio.
+
+### Qué no se pudo probar
+
+- **Que Google indexe de verdad**: eso exige dar de alta el sitio en Search Console y
+  esperar días. El sitemap está listo para enviárselo.
+
 ## 2026-07-29 — el panel admite varios responsables
 
 ### Qué se probó y con qué resultado

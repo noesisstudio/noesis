@@ -50,11 +50,24 @@
 
 ## Web y acompañante
 
+- `src/noesis/web/routers/pages.py`: además de las páginas públicas sirve
+  `robots.txt`, `sitemap.xml` y `/favicon.ico`. La lista `_INDEXABLES` decide qué
+  ve un buscador: si se añade una página pública, hay que incluirla ahí.
+- `src/noesis/web/templates/404.html`: dirección inexistente con el diseño del
+  sitio. El manejador de `server.py` sigue devolviendo JSON bajo `/api/` y
+  `/webhook/`, que esperan datos y no una página.
 - `src/noesis/web/server.py`: ensamblador FastAPI, seguridad y routers.
 - `src/noesis/web/templates/site_base.html`: estructura compartida del sitio público,
-  navegación responsive, llamada final y pie legal. Home, Producto, Precios, Equipo
-  y Preguntas usan composiciones propias según su objetivo, sin replicar el panel
-  interno ni inventar prueba social.
+  navegación responsive, llamada final y pie legal. Home, Precios, Equipo y Preguntas
+  usan composiciones propias según su objetivo, sin replicar el panel interno ni
+  inventar prueba social. También la usan las seis páginas legales: están en el
+  sitemap, así que alguien puede aterrizar en ellas desde un buscador y debe encontrar
+  el menú del sitio. Cada página aporta su título y su descripción; los textos legales
+  además vacían la llamada final, porque no son sitio para vender. Aquí viven el
+  canonical, la ficha de empresa para buscadores y el salto al contenido por teclado.
+- `src/noesis/web/templates/landing.html`: la maqueta del producto reproduce pantallas
+  del panel con `h2.demo-title`, no con `<h1>`: dentro de la portada son el retrato de
+  una app, y competirían con el único encabezado real de la página.
 - `src/noesis/web/templates/site_equipo.html`: página pública de equipo y principios;
   explica responsabilidades reales sin atribuir personas, clientes o credenciales
   todavía no verificadas.
@@ -103,7 +116,15 @@
   descarga de copias sin guardar contenido de clientes. Desde aquí se aprueban las
   solicitudes: el alta crea el negocio, arranca la prueba ese día y devuelve un
   enlace de un solo uso —reutiliza `password_resets`— para que el titular elija su
-  contraseña, de modo que el equipo nunca llega a conocerla.
+  contraseña, de modo que el equipo nunca llega a conocerla. También resume las
+  visitas de la web del último mes.
+- `src/noesis/web/server.py` (`_count_public_view`) + tabla `page_views`: suma una
+  visita por página y día en el propio servidor, sin script, cookie ni tercero
+  —la CSP prohíbe scripts externos—. Guarda solo página, día y dominio de
+  procedencia; nunca IP, navegador ni identificador, así que no hay dato personal
+  que consentir. Excluye lo mismo que `robots.txt` —panel, API, estáticos y rutas
+  de sesión— y si el recuento falla la página se sirve igual: medir es
+  información, no funcionalidad.
 - `src/noesis/web/templates/ajustes.html`: datos, preferencias, memoria y conexiones
   que el cliente puede usar; no muestra qué proveedor falta o está caído.
 - `src/noesis/web/static/app.css`: tokens, componentes y responsive sin CDN.

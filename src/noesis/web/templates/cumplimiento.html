@@ -1,22 +1,10 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Requisitos para usar Noesis en regla</title>
-  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-</head>
-<body class="landing-body">
-  <header class="site-nav">
-    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""> <span>Noesis</span></a>
-    <div class="site-actions"><a class="btn ghost" href="/login">Iniciar sesión</a></div>
-  </header>
-
-  <main class="legal-wrap legal">
-    <a class="legal-back" href="/">&#8249; Volver al inicio</a>
+{% extends "site_base.html" %}
+{% block page_title %}Usar Noesis en regla{% endblock %}
+{% block meta_description %}Qué necesitas tener en orden para trabajar con Noesis: alta, facturación, conservación de documentos y obligaciones fiscales.{% endblock %}
+{% block content %}
+<div class="legal-wrap legal">
     <h1>Usar Noesis en regla</h1>
-    <p class="updated">Guía orientativa · actualizada el 30 de junio de 2026</p>
+    <p class="updated">Guía orientativa · actualizada el {{ legal_document_version }}</p>
 
     <div class="note">
       Noesis te ayuda a llevar tu negocio ordenado, pero <b>el cumplimiento legal y fiscal
@@ -78,8 +66,5 @@
       información a tus clientes y la presentación de impuestos. Si tienes dudas, un gestor
       lo deja resuelto en una visita.
     </div>
-  </main>
-
-  {% include "_legal_footer.html" %}
-</body>
-</html>
+</div>
+{% endblock %}
