@@ -4185,6 +4185,18 @@ def _series_document_type(invoice_type: str) -> str:
     return "invoice"
 
 
+# Límite general de la factura simplificada (RD 1619/2012, art. 4). Vive en un
+# solo sitio para que el aviso y la validación no puedan contradecirse.
+SIMPLIFIED_INVOICE_LIMIT = Decimal("400")
+
+
+def _fits_simplified_invoice(total) -> bool:
+    try:
+        return Decimal(str(total or 0)) <= SIMPLIFIED_INVOICE_LIMIT
+    except (InvalidOperation, TypeError, ValueError):
+        return False
+
+
 def _ensure_default_invoice_series(conn, business_id: int, document_type: str):
     if document_type not in _SERIES_DEFAULTS:
         raise ValueError("El tipo de serie no es válido.")
@@ -5367,9 +5379,21 @@ def issue_invoice(
             if not (value or "").strip():
                 missing.append(label)
         if missing:
-            raise ValueError(
-                "Antes de emitir completa: " + ", ".join(missing) + "."
+            aviso = "Antes de emitir completa: " + ", ".join(missing) + "."
+            # Si lo único que falta son los datos del destinatario y el importe
+            # cabe en una simplificada, el autónomo tiene salida legal sin
+            # perseguir al cliente: se la ofrecemos en vez de dejarle parado.
+            solo_falta_el_cliente = missing and all(
+                label in {"NIF del cliente", "domicilio del cliente"}
+                for label in missing
             )
+            if solo_falta_el_cliente and _fits_simplified_invoice(inv["total"]):
+                aviso += (
+                    " Si es un particular, puedes emitirla como factura"
+                    " simplificada: hasta 400 € no necesita NIF ni domicilio"
+                    " del cliente."
+                )
+            raise ValueError(aviso)
         lines = [dict(row) for row in conn.execute(
             "SELECT * FROM invoice_lines WHERE business_id=? AND invoice_id=? "
             "ORDER BY position, id",
@@ -5386,7 +5410,7 @@ def issue_invoice(
                     "Los totales del borrador no coinciden con sus líneas; "
                     "revísalo antes de emitir."
                 )
-        if invoice_type == "F2" and Decimal(str(inv["total"])) > Decimal("400"):
+        if invoice_type == "F2" and not _fits_simplified_invoice(inv["total"]):
             raise ValueError(
                 "La factura simplificada supera el límite general de 400 €. "
                 "Emítela como factura completa con los datos fiscales del cliente."

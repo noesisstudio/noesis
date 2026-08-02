@@ -205,6 +205,31 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   revisar `email.available()` y el payload de `checkout/sessions`. El cambio no altera
   tablas ni datos y puede revertirse por adaptador.
 - **Estado de publicación:** local sobre `main`, validado y pendiente de push.
+## 2026-08-02 20:10 — el error de emisión ofrece la factura simplificada cuando es legal
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el fundador se topó con «Antes de emitir completa: NIF del cliente,
+  domicilio del cliente» y no sabía que existía una salida. Si el destinatario es un
+  particular y el total cabe en el límite general de 400 € (RD 1619/2012), la factura
+  simplificada es legal y el producto ya la soporta; solo faltaba decirlo.
+- **Áreas y archivos:** `src/noesis/db.py` (aviso condicionado y
+  `_fits_simplified_invoice` como fuente única del límite), `src/noesis/tools.py`
+  (usa el mismo ayudante), `tests/test_backend.py` (dos pruebas nuevas),
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** suite completa **400 pasan, 71 subtests, 0 fallos**. Además,
+  con servidor real: aviso con 150 € (sugiere) y con 900 € (no sugiere), ciclo completo
+  de simplificada emitida sin datos del destinatario con serie `T2026/0001`, y rechazo
+  al crear un ticket de 900 €.
+- **Dependencias o validaciones externas:** el límite de 400 € es el general; hay
+  supuestos sectoriales de 3.000 €. **Conviene confirmarlo con la asesoría fiscal**
+  antes de ofrecerlo a sectores con ese régimen.
+- **Riesgo/punto probable de fallo:** el aviso solo aparece si lo único que falta son
+  los datos del destinatario. Si alguien informa de que no lo ve, comprobar que no
+  falte además el NIF o el domicilio del propio negocio.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k simplified`. Revertir es
+  devolver el `raise ValueError` original en `issue_invoice`.
+- **Estado de publicación:** commit local, pendiente de subir.
 
 ## 2026-08-02 18:40 — el chat web emite el borrador, y la voz del plan Sin Límites deja de prometerse como activa
 

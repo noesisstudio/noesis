@@ -961,6 +961,42 @@ class BackendTestCase(unittest.TestCase):
             db.get_invoice(invoice["id"], business["id"])["status"], "borrador"
         )
 
+    def test_missing_client_data_offers_the_simplified_invoice_when_it_fits(self):
+        # Sin NIF del cliente no se puede emitir una factura completa, pero si
+        # el importe cabe en una simplificada el autónomo tiene salida legal.
+        business, _ = self.make_business()
+        chat.handle(business["id"], "factura a Vecino por reparación 150 euros")
+        small = db.list_invoices(business["id"])[0]
+        reply = chat.handle(business["id"], f"emitir factura {small['id']}")["reply"]
+        self.assertIn("factura simplificada", reply)
+        self.assertIn("400", reply)
+
+        # Por encima del límite no se ofrece, porque no sería legal.
+        chat.handle(business["id"], "factura a Vecino por reforma 900 euros")
+        big = [
+            invoice for invoice in db.list_invoices(business["id"])
+            if invoice["total"] > 400
+        ][0]
+        reply = chat.handle(business["id"], f"emitir factura {big['id']}")["reply"]
+        self.assertNotIn("simplificada", reply)
+
+    def test_simplified_invoice_issues_without_client_tax_data(self):
+        business, _ = self.make_business()
+        chat.handle(
+            business["id"], "ticket de venta a Particular por grifo 150 euros"
+        )
+        ticket = db.list_invoices(business["id"])[0]
+        self.assertEqual(ticket["invoice_type"], "F2")
+
+        chat.handle(business["id"], f"emitir factura {ticket['id']}")
+        issued = db.get_invoice(ticket["id"], business["id"])
+        self.assertEqual(issued["status"], "enviada")
+        self.assertTrue(issued["number"])
+        # El destinatario no necesita datos fiscales en una simplificada.
+        self.assertFalse(
+            (db.get_client(issued["client_id"], business["id"]) or {}).get("nif")
+        )
+
     def test_nlu_extended_synonyms_stay_local(self):
         # Más formas naturales que el cerebro local resuelve gratis (sin IA).
         self.assertEqual(nlu.parse("compré 30 de tornillos")[0], "registrar_gasto")

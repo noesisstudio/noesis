@@ -123,6 +123,40 @@
 - Railway todavía debe desplegar el candidato y demostrar la huella por HTTP.
 - No se han usado credenciales de Brevo ni Stripe; entregabilidad e IVA real se
   validarán en la fase externa.
+## 2026-08-02 (2) — el error de emisión ofrece la salida legal, y prueba de concurrencia real
+
+### Qué se probó y con qué resultado
+
+- **«No puedo emitir» sin decir qué alternativa hay.** Al emitir una factura completa sin
+  NIF ni domicilio del cliente, el mensaje enumeraba lo que falta y ahí terminaba. Si el
+  cliente es un particular y el importe cabe en el límite general de 400 € del
+  RD 1619/2012, la factura simplificada es una salida legal y el producto ya la soporta.
+  Ahora el aviso la ofrece **solo cuando procede**: comprobado que con 150 € la sugiere y
+  con 900 € no, porque ahí no sería legal.
+- **El límite de 400 € estaba escrito dos veces** (`db.issue_invoice` y `tools`). Unificado
+  en `_fits_simplified_invoice` para que aviso y validación no puedan contradecirse.
+- **Ciclo completo de simplificada**, verificado con servidor real: «ticket de venta a
+  Particular por grifo 150 €» crea F2 con el IVA calculado hacia atrás (base 123,97 +
+  IVA 26,03), se emite **sin datos fiscales del destinatario** y recibe número de su
+  serie separada `T2026/0001`. Por encima de 400 € se rechaza al crearlo.
+- **Concurrencia de tres actores a la vez**, que era una duda abierta del fundador:
+  36 peticiones simultáneas mezclando al titular creando facturas, la gestoría abriendo
+  su portal y el trabajador su portal de fichaje. **Todas 200, ningún bloqueo de base de
+  datos, ninguna traza de error.**
+- **Numeración bajo emisión concurrente**, que es donde un fallo sería grave: 12 facturas
+  emitidas en paralelo mientras la gestoría descargaba. Resultado: `2026/0001` a
+  `2026/0013` **sin duplicados ni huecos**. La asignación de número es segura en
+  transacción.
+- **Portal del trabajador revisado**: `/t/{token}` con PIN, fichaje, trabajos del día,
+  tareas de proyecto, parte de trabajo, historial de 30 días y el aviso legal del
+  registro de jornada (art. 34.9 ET, conservación cuatro años). Responde 200.
+- **Suite completa: 400 pasan, 71 subtests, ningún fallo.**
+
+### Qué no se ha probado
+
+- La concurrencia se midió sobre SQLite con WAL. En producción con PostgreSQL el
+  comportamiento debería ser mejor, pero **no está medido en el entorno real**.
+- Sigue sin probarse nada que dependa de credenciales externas.
 
 ## 2026-08-02 — el chat web emite el borrador que él mismo te dice que emitas
 

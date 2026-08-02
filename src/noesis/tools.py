@@ -314,7 +314,7 @@ def _crear_factura(
     inv = db.add_invoice(c["id"], concepto, base, vat_rate=rate,
                          irpf_rate=irpf_rate, business_id=business_id,
                          invoice_type=invoice_type, lines=lineas)
-    if invoice_type == "F2" and Decimal(str(inv["total"])) > Decimal("400"):
+    if invoice_type == "F2" and not db._fits_simplified_invoice(inv["total"]):
         db.delete_invoice(inv["id"], business_id)
         raise ValueError(
             "El ticket supera el límite general de 400 € IVA incluido. "
