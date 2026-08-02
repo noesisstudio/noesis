@@ -1,5 +1,6 @@
 # Registro de QA
 
+<<<<<<< HEAD
 ## 2026-08-06 — cartera multiempresa y PDF contextual desde WhatsApp
 
 ### Qué se probó y con qué resultado
@@ -123,6 +124,42 @@
 - Railway todavía debe desplegar el candidato y demostrar la huella por HTTP.
 - No se han usado credenciales de Brevo ni Stripe; entregabilidad e IVA real se
   validarán en la fase externa.
+=======
+## 2026-08-02 (3) — catálogos por oficio y aviso del tipo reducido en obras de vivienda
+
+### Qué se probó y con qué resultado
+
+- **Migración 38**: `invoice_lines` gana `kind` ('servicio' o 'producto'). Sin ese dato
+  no se puede saber qué parte de una factura es material, que es lo que decide si se
+  sostiene el 10%. Las líneas ya emitidas quedan como 'servicio': **no se reinterpreta
+  una factura cerrada**. Verificado el ciclo completo de migración y el roundtrip de
+  bajada y subida, que al principio fallaba por intentar añadir la columna dos veces.
+- **Catálogos por oficio** (`trades.py`): fontanería 10, electricidad 9, reformas 9,
+  limpieza 5 y jardinería 6 conceptos, cada uno con su tipo y su IVA habitual. Cargar
+  dos veces el mismo oficio **no duplica** nada y un oficio inexistente da error claro.
+  Probado por API: `POST /api/{id}/oficios/reformas/cargar` creó los 9.
+- **Aviso del 40%** (art. 91.Uno.2.10º LIVA), probado en tres casos reales:
+  material al 28,6% → no avisa; material al 60% → avisa; factura entera al 21% → no
+  avisa, porque la regla no aplica y no hay que molestar.
+- **El aviso no decide**: comprobado que tras avisar los tipos siguen como los puso el
+  titular (10% y 21%) y **la factura se emite igualmente** (`2026/0002`). Noesis no
+  puede conocer las otras condiciones del reducido —vivienda de particular, terminada
+  hace más de dos años—, así que la elección es del autónomo.
+- El aviso viaja al detalle de la factura (`aviso_fiscal`) y al chat al crear el
+  borrador.
+- **Suite completa: 408 pasan, 71 subtests, ningún fallo.**
+
+### Qué no se ha probado ni validado
+
+- **La regla del 40% no la ha revisado un asesor fiscal.** Está implementada como
+  advertencia informativa según el tipo general; hay supuestos particulares. Debe
+  validarse antes de presentarla como garantía de cumplimiento.
+- Los precios de los catálogos son orientativos y no se han contrastado con tarifas
+  reales de mercado; están para ajustarlos con el cliente en la puesta en marcha.
+- La migración 38 se probó en SQLite. **Falta ejecutarla en PostgreSQL** antes de
+  desplegar.
+
+>>>>>>> d32ff10 (Catálogos por oficio y aviso del 40% en obras de vivienda)
 ## 2026-08-02 (2) — el error de emisión ofrece la salida legal, y prueba de concurrencia real
 
 ### Qué se probó y con qué resultado

@@ -23,6 +23,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+<<<<<<< HEAD
 ## 2026-08-06 18:30 — cartera profesional y papeles con contexto
 
 - **Autor/agente:** Codex.
@@ -205,6 +206,36 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   revisar `email.available()` y el payload de `checkout/sessions`. El cambio no altera
   tablas ni datos y puede revertirse por adaptador.
 - **Estado de publicación:** local sobre `main`, validado y pendiente de push.
+=======
+## 2026-08-02 21:30 — catálogos por oficio y aviso del 40% en obras de vivienda
+
+- **Autor/agente:** Claude.
+- **Objetivo:** que la puesta en marcha deje de teclear el catálogo cliente a cliente, y
+  avisar del error fiscal más fácil de cometer en reformas: el tipo reducido del 10%
+  decae si el material supera el 40% de la base (art. 91.Uno.2.10º LIVA) y entonces la
+  obra tributa entera al 21%.
+- **Áreas y archivos:** `src/noesis/migrations.py` (migración 38), `src/noesis/db.py`
+  (`kind` en líneas y sus cuatro inserciones), `src/noesis/trades.py` (nuevo: catálogos
+  y regla), `src/noesis/tools.py` y `src/noesis/nlu.py` (el aviso llega al chat),
+  `src/noesis/web/routers/invoicing.py` (dos rutas y `aviso_fiscal`),
+  `tests/test_backend.py`, `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** **esquema 38**. `invoice_lines` gana `kind` con valor
+  'servicio' por defecto; lo ya emitido no se reinterpreta.
+- **Pruebas ejecutadas:** suite completa **408 pasan, 71 subtests, 0 fallos**. Con
+  servidor real: carga de catálogo por API, aviso al 60% de material, silencio al 28,6%
+  y con factura al 21%, y emisión efectiva pese al aviso.
+- **Dependencias o validaciones externas:** **la regla del 40% necesita revisión de
+  asesoría fiscal** antes de venderse como garantía. Falta ejecutar la migración 38 en
+  PostgreSQL.
+- **Riesgo/punto probable de fallo:** el aviso depende de que las líneas estén marcadas
+  como material. Una factura escrita a mano sin marcar nada cuenta como mano de obra y
+  no avisará: es un falso negativo consciente, preferible a alarmar sin motivo.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k "trade_catalog or
+  reduced_rate"`. Para desactivar solo el aviso basta con que `reduced_rate_warning`
+  devuelva `None`; la migración puede quedarse sin efecto secundario.
+- **Estado de publicación:** commit local, pendiente de subir.
+
+>>>>>>> d32ff10 (Catálogos por oficio y aviso del 40% en obras de vivienda)
 ## 2026-08-02 20:10 — el error de emisión ofrece la factura simplificada cuando es legal
 
 - **Autor/agente:** Claude.

@@ -4326,9 +4326,13 @@ def _normalize_invoice_lines(
         vat = (base * Decimal(str(vat_rate)) / 100).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
+        kind = (raw.get("kind") or "servicio").strip().lower()
+        if kind not in PRODUCT_KINDS:
+            raise ValueError("El tipo de línea debe ser 'producto' o 'servicio'.")
         normalized.append({
             "position": position,
             "description": description,
+            "kind": kind,
             "quantity": float(quantity),
             "unit_price": float(unit_price.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)),
             "discount_rate": float(discount),
@@ -4431,12 +4435,12 @@ def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
         for line in normalized:
             conn.execute(
                 "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, quantity, "
+                "(business_id, invoice_id, position, description, kind, quantity, "
                 "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     business_id, new_id, line["position"], line["description"],
-                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
                     line["vat_rate"], line["base"], line["vat_amount"],
                     line["total"], created_at,
                 ),
@@ -4522,12 +4526,12 @@ def create_rectifying_invoice(
         for line in normalized:
             conn.execute(
                 "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, quantity, "
+                "(business_id, invoice_id, position, description, kind, quantity, "
                 "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     business_id, new_id, line["position"], line["description"],
-                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
                     line["vat_rate"], line["base"], line["vat_amount"],
                     line["total"], created_at,
                 ),
@@ -4690,12 +4694,12 @@ def update_invoice_draft(
         for line in normalized:
             conn.execute(
                 "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, quantity, "
+                "(business_id, invoice_id, position, description, kind, quantity, "
                 "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     business_id, invoice_id, line["position"], line["description"],
-                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
                     line["vat_rate"], line["base"], line["vat_amount"],
                     line["total"], created_at,
                 ),
@@ -8616,9 +8620,9 @@ def accept_quote(quote_id, business_id) -> dict | None:
         invoice_id = invoice_row["id"]
         conn.execute(
             "INSERT INTO invoice_lines "
-            "(business_id, invoice_id, position, description, quantity, unit_price, "
-            "discount_rate, vat_rate, base, vat_amount, total, created_at) "
-            "VALUES (?, ?, 1, ?, 1, ?, 0, ?, ?, ?, ?, ?)",
+            "(business_id, invoice_id, position, description, kind, quantity, "
+            "unit_price, discount_rate, vat_rate, base, vat_amount, total, created_at) "
+            "VALUES (?, ?, 1, ?, 'servicio', 1, ?, 0, ?, ?, ?, ?, ?)",
             (
                 business_id, invoice_id, q["concept"], q["base"], q["vat_rate"],
                 q["base"], q["vat_amount"], q["base"] + q["vat_amount"], _now(),

@@ -324,7 +324,13 @@ def _crear_factura(
            f"+ IVA {inv['vat_amount']:.2f}")
     if inv["irpf_amount"]:
         msg += f" − IRPF {inv['irpf_amount']:.2f}"
-    return {"ok": True, "factura": inv, "mensaje": msg + ")."}
+    from . import trades
+    return {
+        "ok": True, "factura": inv, "mensaje": msg + ").",
+        "aviso_fiscal": trades.reduced_rate_warning(
+            db.get_invoice_lines(inv["id"], business_id)
+        ),
+    }
 
 
 def _preparar_factura_trabajo(business_id, trabajo_id):

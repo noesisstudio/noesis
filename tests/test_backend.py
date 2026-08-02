@@ -997,6 +997,74 @@ class BackendTestCase(unittest.TestCase):
             (db.get_client(issued["client_id"], business["id"]) or {}).get("nif")
         )
 
+    def test_trade_catalog_loads_once_and_marks_material(self):
+        from noesis import trades
+
+        business, _ = self.make_business()
+        result = trades.load_catalog(business["id"], "fontaneria")
+        self.assertGreater(result["created"], 0)
+
+        products = db.list_products(business["id"])
+        kinds = {product["kind"] for product in products}
+        self.assertEqual(kinds, {"servicio", "producto"})
+
+        # Volver a cargarlo no duplica el catálogo del autónomo.
+        again = trades.load_catalog(business["id"], "fontaneria")
+        self.assertEqual(again["created"], 0)
+        self.assertEqual(len(db.list_products(business["id"])), len(products))
+
+        with self.assertRaises(ValueError):
+            trades.load_catalog(business["id"], "astronauta")
+
+    def test_reduced_rate_warns_only_when_material_breaks_the_limit(self):
+        from noesis import trades
+
+        business, client = self.make_business()
+
+        # Material por debajo del 40%: el 10% se sostiene y no se molesta.
+        ok = db.add_invoice(
+            client["id"], "Reforma baño", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 2000, "vat_rate": 10},
+                {"description": "Azulejo", "kind": "producto",
+                 "quantity": 1, "unit_price": 800, "vat_rate": 21},
+            ],
+        )
+        lines_ok = db.get_invoice_lines(ok["id"], business["id"])
+        self.assertIsNone(trades.reduced_rate_warning(lines_ok))
+
+        # Material por encima del 40%: el tipo reducido decae y hay que avisar.
+        risky = db.add_invoice(
+            client["id"], "Reforma cocina", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 1000, "vat_rate": 10},
+                {"description": "Muebles", "kind": "producto",
+                 "quantity": 1, "unit_price": 1500, "vat_rate": 21},
+            ],
+        )
+        lines_risky = db.get_invoice_lines(risky["id"], business["id"])
+        aviso = trades.reduced_rate_warning(lines_risky)
+        self.assertIsNotNone(aviso)
+        self.assertIn("21%", aviso)
+        # Avisa, pero no toca la factura: los tipos siguen como los puso el titular.
+        self.assertEqual({line["vat_rate"] for line in lines_risky}, {10.0, 21.0})
+
+        # Sin ninguna línea al tipo reducido, la regla no aplica.
+        plain = db.add_invoice(
+            client["id"], "Local comercial", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 500, "vat_rate": 21},
+                {"description": "Material", "kind": "producto",
+                 "quantity": 1, "unit_price": 900, "vat_rate": 21},
+            ],
+        )
+        self.assertIsNone(trades.reduced_rate_warning(
+            db.get_invoice_lines(plain["id"], business["id"])
+        ))
+
     def test_nlu_extended_synonyms_stay_local(self):
         # Más formas naturales que el cerebro local resuelve gratis (sin IA).
         self.assertEqual(nlu.parse("compré 30 de tornillos")[0], "registrar_gasto")

@@ -1,8 +1,8 @@
 {
   "state_date": "2026-08-06",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 39,
-  "verified_test_count": 405,
+  "schema_version": 40,
+  "verified_test_count": 0,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -78,7 +78,8 @@
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",
     "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
     "security_hardening": "schema_35_append_only_hash_chained_security_audit_internal_read_only_ciso_independent_restore_drill_optional_private_clamav_fail_closed_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request",
-    "simplified_invoice_guidance": "when_only_the_recipient_tax_data_is_missing_and_the_total_fits_the_general_400_eur_limit_of_rd_1619_2012_the_issue_error_offers_the_simplified_invoice_as_a_legal_way_out_and_the_limit_now_lives_in_a_single_shared_helper"
+    "simplified_invoice_guidance": "when_only_the_recipient_tax_data_is_missing_and_the_total_fits_the_general_400_eur_limit_of_rd_1619_2012_the_issue_error_offers_the_simplified_invoice_as_a_legal_way_out_and_the_limit_now_lives_in_a_single_shared_helper",
+    "trade_catalogs_and_reduced_rate_guard": "schema_38_invoice_lines_record_whether_they_are_labour_or_material_so_the_installation_can_preload_a_catalog_per_trade_fontaneria_electricidad_reformas_limpieza_jardineria_and_the_product_can_warn_when_material_exceeds_the_forty_percent_that_the_reduced_ten_percent_rate_allows_in_dwelling_renovation_it_warns_and_never_changes_a_rate_or_blocks_issuing_because_the_remaining_conditions_are_only_known_by_the_owner"
   },
   "ai_route": [
     "reglas_locales",

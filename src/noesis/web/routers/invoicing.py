@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
-from ... import config, db, tools as invoice_tools
+from ... import config, db, tools as invoice_tools, trades
 from ...tools import run_tool
 from ..deps import _read_json
 
@@ -25,7 +25,24 @@ def api_invoice(business_id: int, invoice_id: int):
     invoice = db.get_invoice(invoice_id, business_id)
     if invoice is None:
         return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
-    return invoice
+    aviso = trades.reduced_rate_warning(
+        db.get_invoice_lines(invoice_id, business_id)
+    )
+    return {**invoice, "aviso_fiscal": aviso} if aviso else invoice
+
+
+@router.get("/api/{business_id}/oficios")
+def api_trades(business_id: int):
+    """Catálogos listos para cargar en la puesta en marcha."""
+    return trades.available_trades()
+
+
+@router.post("/api/{business_id}/oficios/{trade}/cargar")
+def api_load_trade_catalog(business_id: int, trade: str):
+    try:
+        return trades.load_catalog(business_id, trade)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
 
 
 @router.get("/api/{business_id}/invoices/{invoice_id}/history")
