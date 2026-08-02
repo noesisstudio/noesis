@@ -52,7 +52,10 @@ POSTGRES_DUMP_FORMAT = "noesis-postgres-logical-v1"
 def _backup_dir() -> Path:
     directory = Path(config.BACKUP_DIR)
     directory.mkdir(parents=True, exist_ok=True)
-    return directory
+    # Normalizada en el origen: en macOS /var es un enlace a /private/var, así
+    # que comparar una ruta normalizada con otra que no lo está daba falsos
+    # negativos al localizar la última copia verificada.
+    return directory.resolve()
 
 
 def _destination(suffix: str) -> Path:

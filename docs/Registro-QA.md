@@ -1,5 +1,46 @@
 # Registro de QA
 
+## 2026-08-02 — el chat web emite el borrador que él mismo te dice que emitas
+
+### Qué se probó y con qué resultado
+
+- **El producto daba una instrucción que no sabía cumplir.** Al crear una factura
+  hablando, la respuesta termina con «escribe *emitir factura 2*». Esa orden solo la
+  entendía la capa de WhatsApp (`_prepare_invoice_action`), pero el texto se genera en
+  `nlu.format_reply`, que también usa la web. Reproducido: por el chat web la orden
+  caía al coach general y **el borrador se quedaba sin emitir**. Ahora el cerebro común
+  la reconoce y emite: comprobado de punta a punta con servidor real, factura
+  `2026/0002` por 605,00 €, estado `enviada` y vencimiento asignado.
+- **No se ha tocado el flujo de WhatsApp**, que es el que más protección necesita
+  porque una nota de voz puede entenderse mal. Verificado con el webhook real: pedir
+  «emitir factura 3» sigue creando la acción pendiente `emitir_factura` y dejando la
+  factura en `borrador` hasta recibir el SÍ.
+- **La validación fiscal sigue mandando.** Con el cliente sin NIF ni domicilio, la
+  emisión se rechaza por los dos canales. Se comprobó también que crear una factura
+  nueva no se confunde con emitir una existente: «factura a Juan por reparación 95 €»
+  sigue creando borrador y «factura el trabajo 42» sigue conectando el trabajo.
+- **Los errores dejan de filtrar jerga interna.** Antes se leía «Parámetros inválidos
+  para enviar_factura: …». Ahora solo el motivo accionable: «Antes de emitir completa:
+  NIF del cliente, domicilio del cliente».
+- **Promesa de voz del plan Sin Límites.** «100 minutos de llamadas incluidos» figuraba
+  como prestación activa en la página pública de precios y, más grave, en la pantalla
+  de contratación del panel, cuando no existe telefonía en el código. Se traslada al
+  bloque de la recepcionista en beta, indicando que se incluirán cuando se active y
+  que hasta entonces no se cobra por ella.
+- **Copias de seguridad: dos pruebas en rojo permanente en macOS.** `_backup_dir()`
+  devolvía la ruta sin normalizar y `latest_verified_backup()` sí la normalizaba; en
+  macOS `/var` es un enlace a `/private/var`, así que nunca coincidían. Normalizada en
+  el origen, conservando la comprobación de que el fichero cuelga del directorio de
+  copias. Las cinco pruebas de copias pasan.
+- **Suite completa: 392 pasan, 71 subtests, ningún fallo** (antes 382 con 2 en rojo).
+
+### Qué no se ha probado
+
+- Nada con credenciales reales: Stripe, Meta, SMTP, AEAT y Google siguen sin validar
+  extremo a extremo. Este cambio no los toca.
+- La entrega al cliente tras emitir desde la web sigue haciéndose desde Facturas; el
+  chat web no prepara el envío, solo emite.
+
 ## 2026-07-30 — las páginas legales entran en el sitio y la portada recupera su título
 
 ### Qué se probó y con qué resultado

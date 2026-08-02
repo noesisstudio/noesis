@@ -906,6 +906,49 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(invoice["base"], 100.0)
         self.assertEqual(invoice["total"], 121.0)
 
+    def test_web_chat_issues_the_draft_it_told_you_to_issue(self):
+        # El mensaje que confirma el borrador sugiere «emitir factura N». Esa
+        # orden solo la entendía WhatsApp, así que en la web el borrador se
+        # quedaba sin emitir siguiendo una instrucción del propio producto.
+        self.assertEqual(
+            nlu.parse("emitir factura 2"), ("enviar_factura", {"factura_id": 2})
+        )
+        self.assertEqual(
+            nlu.parse("emitir y enviar factura 7"),
+            ("enviar_factura", {"factura_id": 7}),
+        )
+        # Crear una factura nueva no puede confundirse con emitir una existente.
+        self.assertEqual(
+            nlu.parse("factura a Juan por reparación 95 euros")[0], "crear_factura"
+        )
+
+        business, _ = self.make_business()
+        chat.handle(business["id"], "factura a Juan por reparación 100 euros")
+        invoice = db.list_invoices(business["id"])[0]
+        db.update_client(
+            invoice["client_id"], business_id=business["id"],
+            nif="87654321X", address="Calle Mayor 1, Valencia",
+        )
+
+        reply = chat.handle(business["id"], f"emitir factura {invoice['id']}")
+        issued = db.get_invoice(invoice["id"], business["id"])
+        self.assertEqual(issued["status"], "enviada")
+        self.assertTrue(issued["number"])
+        self.assertIn(issued["number"], reply["reply"])
+
+    def test_issue_order_without_tax_data_explains_itself_without_jargon(self):
+        business, _ = self.make_business()
+        chat.handle(business["id"], "factura a Juan por reparación 100 euros")
+        invoice = db.list_invoices(business["id"])[0]
+
+        reply = chat.handle(business["id"], f"emitir factura {invoice['id']}")["reply"]
+        # Se explica qué falta y no se filtra el nombre interno de la herramienta.
+        self.assertIn("Antes de emitir completa", reply)
+        self.assertNotIn("enviar_factura", reply)
+        self.assertEqual(
+            db.get_invoice(invoice["id"], business["id"])["status"], "borrador"
+        )
+
     def test_nlu_extended_synonyms_stay_local(self):
         # Más formas naturales que el cerebro local resuelve gratis (sin IA).
         self.assertEqual(nlu.parse("compré 30 de tornillos")[0], "registrar_gasto")

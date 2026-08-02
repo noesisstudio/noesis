@@ -23,6 +23,38 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-02 18:40 — el chat web emite el borrador, y la voz del plan Sin Límites deja de prometerse como activa
+
+- **Autor/agente:** Claude.
+- **Objetivo:** cerrar tres hallazgos de la auditoría del 2-ago-2026. (1) El mensaje que
+  confirma un borrador sugiere «emitir factura N», pero esa orden solo la entendía
+  WhatsApp: por la web el borrador se quedaba sin emitir siguiendo una instrucción del
+  propio producto. (2) La página de precios y la de contratación anunciaban «100 minutos
+  de llamadas incluidos» sin telefonía en el código. (3) Dos pruebas de copias llevaban
+  en rojo permanente en macOS.
+- **Áreas y archivos:** `src/noesis/nlu.py` (intent de emisión y limpieza del mensaje de
+  error), `src/noesis/web/backups.py` (`_backup_dir` normalizada),
+  `src/noesis/web/templates/site_precios.html` y `suscripcion.html` (voz dentro de la
+  beta), `tests/test_backend.py` (dos pruebas nuevas), `docs/project-state.json`,
+  `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno. Esquema 37 sin tocar.
+- **Pruebas ejecutadas:** suite completa **392 pasan, 71 subtests, 0 fallos** (antes 382
+  con 2 en rojo). Además, verificación manual con servidor real: crear borrador por
+  chat web, rechazo por falta de NIF/domicilio, emisión efectiva `2026/0002`, y webhook
+  de WhatsApp confirmando que sigue exigiendo SÍ antes de emitir.
+- **Dependencias o validaciones externas:** ninguna nueva. No toca Stripe, Meta, SMTP ni
+  AEAT.
+- **Riesgo/punto probable de fallo:** el intent nuevo se evalúa **antes** que el de crear
+  factura. Si alguien informa de que «factura a Fulano…» dejó de crear borradores, el
+  sospechoso es esa expresión regular en `nlu.parse`; exige verbo de emisión y un
+  identificador numérico al final, y hay prueba que cubre los dos casos.
+- **Diagnóstico y rollback:** `python -m pytest tests/test_backend.py -k "issues_the_draft
+  or without_jargon"` reproduce el comportamiento esperado. Para revertir solo la emisión
+  por web basta con quitar el bloque `issue = re.search(...)` de `nlu.parse`; el resto de
+  cambios es independiente.
+- **Estado de publicación:** commit local, pendiente de revisión del fundador antes de
+  subir a `main` (auto-despliega).
+
 ## 2026-07-28 15:00 — merge de main con origin/main (13 commits: solicitud de acceso, calendario, equipo)
 
 - **Autor/agente:** Claude.

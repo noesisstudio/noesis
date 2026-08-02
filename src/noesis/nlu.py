@@ -215,6 +215,17 @@ def parse(text: str) -> tuple[str, dict] | None:
     if simplified:
         return ("crear_factura", simplified)
 
+    # --- Emitir un borrador ya revisado. El mensaje que confirma la creación
+    #     sugiere esta misma orden, así que tiene que valer en la web igual que
+    #     en WhatsApp; si no, el borrador se queda sin emitir.
+    issue = re.search(
+        r"\b(?:emitir\s+y\s+enviar|enviar\s+y\s+emitir|emitir|emite|emitela)\s+"
+        r"(?:la\s+)?(?:factura|tiquet|ticket)\s*#?\s*(\d{1,9})\s*$",
+        norm,
+    )
+    if issue:
+        return ("enviar_factura", {"factura_id": int(issue.group(1))})
+
     # --- Crear factura: acepta varios órdenes naturales ---
     if "factura" in norm:
         args = _parse_doc_command(text, norm, r"factura(?:r|me)?")
@@ -313,7 +324,12 @@ def help_text() -> str:
 
 def format_reply(tool: str, result: dict) -> str:
     if result.get("error"):
-        return f"Uy, algo no ha ido bien: {result['error']}"
+        # El nombre de la herramienta le sirve al agente, no a quien lee: deja
+        # solo el motivo, que es lo único accionable.
+        motivo = re.sub(
+            r"^Par[áa]metros inv[áa]lidos para \w+:\s*", "", str(result["error"])
+        )
+        return f"Uy, algo no ha ido bien: {motivo}"
 
     if tool == "crear_factura":
         f = result["factura"]
@@ -326,6 +342,15 @@ def format_reply(tool: str, result: dict) -> str:
                 f"que lo revises. Cuando esté correcto, escribe «emitir factura "
                 f"{f['id']}»; para entregarlo también, «emitir y enviar factura "
                 f"{f['id']}».")
+    if tool == "enviar_factura":
+        f = result["factura"]
+        quien = f.get("client_name") or f.get("recipient_name") or "tu cliente"
+        return (
+            f"✅ Factura **{f['number']}** emitida por {_eur(f['total'])} para "
+            f"{quien}. Ya tiene número definitivo y cuenta en tus ingresos, "
+            "impuestos y gestoría. El PDF y el envío al cliente los tienes en "
+            "Facturas."
+        )
     if tool == "preparar_factura_trabajo":
         f = result["factura"]
         return (

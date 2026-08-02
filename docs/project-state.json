@@ -1,8 +1,8 @@
 {
-  "state_date": "2026-07-30",
+  "state_date": "2026-08-02",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 37,
-  "verified_test_count": 384,
+  "verified_test_count": 392,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -65,6 +65,8 @@
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",
+    "issue_order_available_on_both_channels": "the_draft_confirmation_message_suggests_emitir_factura_n_and_the_shared_brain_now_understands_it_so_the_web_chat_issues_the_draft_instead_of_falling_back_to_the_coach_whatsapp_keeps_its_extra_yes_no_confirmation_because_a_voice_note_can_be_misheard_and_tool_errors_no_longer_leak_internal_names",
+    "voice_reception_promise": "premium_call_minutes_are_presented_inside_the_receptionist_beta_block_not_as_an_active_included_feature_because_no_telephony_exists_yet",
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",
     "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
     "security_hardening": "schema_35_append_only_hash_chained_security_audit_internal_read_only_ciso_independent_restore_drill_optional_private_clamav_fail_closed_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request"
