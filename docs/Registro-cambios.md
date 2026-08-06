@@ -26,19 +26,21 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 ## 2026-08-06 19:42 — excepción explícita para la clave pública de demo
 
 - **Autor/agente:** Codex.
-- **Objetivo:** corregir el único fallo propio del primer CI sin debilitar el guardián
-  de secretos.
-- **Áreas y archivos:** `demo.py`, QA, bitácora y estado verificable.
+- **Objetivo:** corregir los falsos positivos de las dos claves públicas de demo sin
+  debilitar el guardián de secretos.
+- **Áreas y archivos:** `demo.py`, `.secrets.baseline`, QA, bitácora y estado.
 - **Cambios de datos/migración:** ninguno; esquema 40.
-- **Pruebas ejecutadas:** log exacto del job, detector de secretos sobre todo el repo,
-  pruebas focalizadas, Ruff y fuente de verdad. El humo PostgreSQL falló antes de
-  descargar Actions por indisponibilidad de GitHub y debe reintentarse.
+- **Pruebas ejecutadas:** logs exactos de dos intentos, detector de secretos, pruebas
+  focalizadas, Ruff y fuente de verdad. La clave comercial nueva y la demo local
+  histórica quedan exceptuadas en su propia línea; la baseline deja de depender de
+  la posición de `demo.py`. PostgreSQL falló antes de descargar Actions por una
+  indisponibilidad de GitHub y debe reintentarse.
 - **Dependencias o validaciones externas:** GitHub Actions.
 - **Riesgo/punto probable de fallo:** la credencial es pública por diseño; solo es
   segura mientras `is_demo` siga bloqueando cambios, envíos y automatizaciones.
-- **Diagnóstico y rollback:** la excepción está únicamente en la asignación
-  `SHOWCASE_PASSWORD`; eliminarla vuelve a poner CI rojo. No añadir el valor a la
-  baseline global ni reutilizarlo fuera de las empresas demo.
+- **Diagnóstico y rollback:** las excepciones están únicamente en `DEMO_PASSWORD` y
+  `SHOWCASE_PASSWORD`; eliminarlas vuelve a poner CI rojo. No añadir esos valores a
+  la baseline global ni reutilizarlos fuera de empresas demo.
 - **Estado de publicación:** `main` tras este commit; CI pendiente de repetición.
 
 ## 2026-08-06 19:17 — cuentas comerciales reales y OCR privado de escaneados

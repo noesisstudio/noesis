@@ -116,7 +116,7 @@ def seed(*, reset: bool = True) -> int:
 # ---------------------------------------------------------------------------
 
 DEMO_EMAIL = "demo@noesis.app"
-DEMO_PASSWORD = "demo1234"
+DEMO_PASSWORD = "demo1234"  # pragma: allowlist secret — demo local histórica
 
 
 def seed_rich(*, reset: bool = True, force: bool = False,

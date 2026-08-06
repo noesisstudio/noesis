@@ -31,9 +31,11 @@
   0 → 40 → 0 → 40 verdes. `check_project_truth.py` confirma estado/esquema/precios.
 - **CI tras publicar:** el primer run identificó correctamente la contraseña pública
   de la demo como `Secret Keyword`. Se marcó con la excepción inline oficial y una
-  explicación de alcance —no se relajó el detector ni la baseline—. El primer humo
-  PostgreSQL no llegó a descargar las Actions por un `Service Unavailable` de GitHub,
-  sin ejecutar código de Noesis; se reintentó el workflow completo.
+  explicación de alcance. La reejecución mostró que la antigua clave de demo local,
+  ya registrada en la baseline, había cambiado de línea: también quedó exceptuada
+  inline y se retiró solo esa huella histórica de la baseline. No se relajó el
+  detector. Los primeros humos PostgreSQL no llegaron a descargar las Actions por
+  un `Service Unavailable` de GitHub, sin ejecutar código de Noesis.
 
 ### Qué no se ha probado
 
