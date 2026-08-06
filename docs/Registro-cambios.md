@@ -23,6 +23,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 11:45 — una sola copia de cada documento por negocio
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar la duplicación exacta de fotos y PDF sin crear otro canal ni
+  comparar información entre clientes.
+- **Áreas y archivos:** migración 38; repositorio, servicio y router de documentos;
+  humo PostgreSQL, baseline de secretos; pruebas y documentación viva de
+  arquitectura, decisión y estado.
+- **Cambios de datos/migración:** `documents.content_sha256` e índice parcial único
+  `(business_id, content_sha256)`; los históricos se completan de forma perezosa.
+- **Pruebas ejecutadas:** 17 pruebas focalizadas; ciclo 37 → 38 → 37 → 38; Ruff,
+  Bandit y suite completa 398/398. Se leyó el log del CI anterior: solo fallaba porque
+  tres números de línea del baseline habían quedado antiguos. El humo PostgreSQL y
+  `detect-secrets-hook` se ejecutarán también en CI Linux.
+- **Dependencias o validaciones externas:** ninguna credencial ni proveedor nuevo.
+- **Riesgo/punto probable de fallo:** almacenamiento histórico ausente o una carrera
+  de subida; el primer caso se ignora de forma segura y el segundo lo decide la base
+  eliminando el fichero sobrante.
+- **Diagnóstico y rollback:** un duplicado responde HTTP 409 con
+  `document_duplicate` y el id existente. Para aislar una regresión, revisar
+  `content_sha256`, el índice `uq_documents_business_content` y el fichero
+  físico; la migración 38 se puede bajar a 37 sin alterar el resto del documento.
+- **Estado de publicación:** local sobre `main`, validado y pendiente de commit/push.
+
 ## 2026-08-06 11:30 — el detector distingue la clave ficticia de la prueba
 
 - **Autor/agente:** Codex.
@@ -37,7 +61,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   reconocida por el escáner y el formato de esa prueba.
 - **Diagnóstico y rollback:** si el paso «Detectar secrets nous» vuelve a fallar,
   revisar el hallazgo exacto; nunca ampliar la allowlist a archivos de producción.
-- **Estado de publicación:** corrección local sobre `main`, pendiente de push.
+- **Estado de publicación:** commit en `main`; la anotación evitó el falso positivo,
+  pero el CI siguió rojo porque el baseline conservaba números de línea antiguos. La
+  sincronización completa queda en la entrada inmediatamente anterior.
 
 ## 2026-08-06 11:15 — producción identificable y adaptadores alineados con Railway
 

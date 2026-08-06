@@ -8,6 +8,7 @@ import traceback
 from starlette.testclient import TestClient
 
 from noesis import config, db, demo
+from noesis.documents import repo as document_repo
 from noesis.web import server
 
 
@@ -264,12 +265,40 @@ def _check_security_audit(business_id: int) -> None:
     raise RuntimeError("Postgres permitio modificar la bitacora append-only.")
 
 
+def _check_document_deduplication(business_id: int) -> None:
+    """Comprueba que PostgreSQL aplica la huella única dentro del negocio."""
+    digest = hashlib.sha256(
+        f"postgres-document-smoke:{business_id}:{datetime.now().isoformat()}".encode()
+    ).hexdigest()
+    document_repo.add(
+        business_id,
+        filename="huella-postgres.pdf",
+        stored_name="smoke/huella-postgres.pdf",
+        mime="application/pdf",
+        size=24,
+        content_sha256=digest,
+    )
+    try:
+        document_repo.add(
+            business_id,
+            filename="huella-postgres-copia.pdf",
+            stored_name="smoke/huella-postgres-copia.pdf",
+            mime="application/pdf",
+            size=24,
+            content_sha256=digest,
+        )
+    except db.IntegrityError:
+        return
+    raise RuntimeError("Postgres permitio duplicar una huella documental del negocio.")
+
+
 def main() -> int:
     try:
         _ensure_postgres()
         db.init_db()
         business = _seed_if_empty()
         _check_security_audit(int(business["id"]))
+        _check_document_deduplication(int(business["id"]))
         with TestClient(server.app) as client:
             _login(client)
             failures = _check_gets(client, int(business["id"]))

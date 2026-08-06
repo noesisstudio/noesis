@@ -64,6 +64,47 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
         self.assertEqual(doc["classification"]["kind"], "documento")
         self.assertEqual(docrepo.get(doc["id"], self.business["id"])["kind"], "documento")
 
+    def test_identical_documents_are_deduplicated_only_inside_the_business(self):
+        first = docservice.upload(
+            self.business["id"], "ticket-uno.jpg", TINY_JPEG, run_ocr=False
+        )
+
+        with self.assertRaises(docservice.DuplicateDocument) as duplicate:
+            docservice.upload(
+                self.business["id"], "ticket-copia.jpg", TINY_JPEG, run_ocr=False
+            )
+
+        self.assertEqual(duplicate.exception.existing_id, first["id"])
+        self.assertEqual(len(first["content_sha256"]), 64)
+        self.assertEqual(len(docrepo.list_for_business(self.business["id"])), 1)
+        stored = list((config.DOCS_PATH / str(self.business["id"])).iterdir())
+        self.assertEqual(len(stored), 1)
+
+        other = docservice.upload(
+            self.other["id"], "mismo-ticket.jpg", TINY_JPEG, run_ocr=False
+        )
+        self.assertEqual(other["content_sha256"], first["content_sha256"])
+
+    def test_legacy_document_gets_its_hash_when_the_same_file_returns(self):
+        first = docservice.upload(
+            self.business["id"], "historico.jpg", TINY_JPEG, run_ocr=False
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE documents SET content_sha256=NULL "
+                "WHERE id=? AND business_id=?",
+                (first["id"], self.business["id"]),
+            )
+
+        with self.assertRaises(docservice.DuplicateDocument):
+            docservice.upload(
+                self.business["id"], "historico-repetido.jpg", TINY_JPEG,
+                run_ocr=False,
+            )
+
+        recovered = docrepo.get(first["id"], self.business["id"])
+        self.assertEqual(len(recovered["content_sha256"]), 64)
+
     def _upload_doc(self, business_id, filename="factura-luz.pdf"):
         return docservice.upload(business_id, filename, b"%PDF-1.4 demo",
                                  run_ocr=False)

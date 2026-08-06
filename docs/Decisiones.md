@@ -2,6 +2,19 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## La deduplicación documental termina en la frontera del negocio (2026-08-06)
+
+La misma foto o PDF no se guarda dos veces dentro de una empresa: el servicio calcula
+SHA-256 después de validar y escanear, y la base impone unicidad por
+`(business_id, content_sha256)`. La restricción decide también cuando dos canales
+suben el archivo a la vez; el segundo fichero se elimina y se devuelve el documento
+ya existente. Los documentos anteriores a la migración reciben huella solo cuando
+reaparece un candidato del mismo tamaño.
+
+No se hace deduplicación global. Confirmar que otra empresa ya posee una huella
+crearía un canal lateral entre clientes y mezclaría sus ciclos de conservación. El
+pequeño ahorro adicional de almacenamiento no compensa ese riesgo de privacidad.
+
 ## Publicado significa release y esquema verificables (2026-08-06)
 
 El repositorio, GitHub y Railway pueden contar tres verdades distintas durante un

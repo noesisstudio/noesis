@@ -31,21 +31,53 @@ def add(business_id: int, *, filename: str, stored_name: str, mime: str, size: i
         invoice_id: int | None = None, project_id: int | None = None,
         ocr_text: str | None = None,
         ocr_amount: float | None = None, note: str | None = None,
-        doc_status: str = "revisado", confidence: float | None = None) -> dict:
+        doc_status: str = "revisado", confidence: float | None = None,
+        content_sha256: str | None = None) -> dict:
     kind = kind if kind in KINDS else "documento"
     doc_status = doc_status if doc_status in DOC_STATUSES else "revisado"
     with _conn() as conn:
         row = conn.execute(
             "INSERT INTO documents (business_id, client_id, invoice_id, project_id, kind, "
             "filename, stored_name, mime, size, ocr_text, ocr_amount, note, "
-            "doc_status, confidence, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "doc_status, confidence, content_sha256, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (business_id, client_id, invoice_id, project_id, kind, filename, stored_name, mime,
              int(size), ocr_text, ocr_amount, note, doc_status, confidence,
-             _now()),
+             content_sha256, _now()),
         ).fetchone()
         new_id = row["id"]
     return get(new_id, business_id)
+
+
+def find_by_content_hash(business_id: int, content_sha256: str) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM documents WHERE business_id=? AND content_sha256=? "
+            "ORDER BY id LIMIT 1",
+            (business_id, content_sha256),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def legacy_hash_candidates(business_id: int, size: int) -> list[dict]:
+    """Históricos sin huella que pueden coincidir; el contenido decide después."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM documents WHERE business_id=? AND size=? "
+            "AND content_sha256 IS NULL ORDER BY id",
+            (business_id, int(size)),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def set_content_hash(doc_id: int, business_id: int, content_sha256: str) -> dict | None:
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE documents SET content_sha256=? "
+            "WHERE id=? AND business_id=? AND content_sha256 IS NULL",
+            (content_sha256, doc_id, business_id),
+        )
+    return get(doc_id, business_id)
 
 
 def set_review(doc_id: int, business_id: int, *, kind: str | None = None,

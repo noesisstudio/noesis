@@ -1,5 +1,27 @@
 # Registro de QA
 
+## 2026-08-06 — deduplicación documental aislada por negocio
+
+### Qué se probó y con qué resultado
+
+- **Servicio universal:** dos subidas con bytes idénticos al mismo negocio devuelven
+  el documento existente y solo dejan una fila y un fichero. Los mismos bytes en
+  otro negocio se aceptan como documento propio.
+- **Históricos:** si un documento anterior no tiene huella, la repetición compara
+  únicamente candidatos del mismo negocio y tamaño, completa SHA-256 y rechaza la
+  copia. No se recorre ni consulta contenido de otro cliente.
+- **Carreras:** el índice parcial único resuelve dos inserciones simultáneas; el
+  servicio borra el fichero sobrante antes de devolver el conflicto HTTP 409.
+- **Migración 38:** ciclo SQLite 37 → 38 → 37 → 38 correcto. El humo PostgreSQL
+  incorpora una inserción doble y debe recibir la restricción de integridad real.
+- **Pruebas:** 17 focalizadas pasan; Ruff pasa y Bandit no encuentra severidad alta.
+  Suite completa final: **398 pruebas, 0 fallos**.
+
+### Qué no se ha probado
+
+- La migración y la restricción PostgreSQL quedan pendientes del CI y del despliegue
+  de este commit. No se usaron credenciales ni almacenamiento externo.
+
 ## 2026-08-06 — release verificable, correo coherente y Checkout con IVA
 
 ### Qué se probó y con qué resultado

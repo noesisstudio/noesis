@@ -54,6 +54,15 @@ async def api_upload_document(business_id: int, file: UploadFile = File(...),
                                 invoice_id=_opt_int(invoice_id),
                                 project_id=_opt_int(project_id), note=note or None,
                                 auto_classify=True)
+    except docservice.DuplicateDocument as exc:
+        return JSONResponse(
+            {
+                "error": str(exc),
+                "code": "document_duplicate",
+                "document_id": exc.existing_id,
+            },
+            status_code=409,
+        )
     except docservice.UploadError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return doc

@@ -7,6 +7,7 @@ toda junta y aislada.
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 from .. import config
@@ -15,6 +16,34 @@ from . import malware, ocr, repo, storage, validation
 
 class UploadError(Exception):
     """Error de validación al subir un documento (mensaje apto para el usuario)."""
+
+
+class DuplicateDocument(UploadError):
+    """El contenido ya está archivado en el mismo negocio."""
+
+    def __init__(self, existing_id: int):
+        self.existing_id = int(existing_id)
+        super().__init__(
+            f"Este archivo ya estaba guardado como documento {self.existing_id}."
+        )
+
+
+def _existing_document(business_id: int, data: bytes, digest: str) -> dict | None:
+    """Encuentra huellas nuevas y completa históricos sin recorrer otros negocios."""
+    from .. import db
+
+    existing = repo.find_by_content_hash(business_id, digest)
+    if existing:
+        return existing
+    for candidate in repo.legacy_hash_candidates(business_id, len(data)):
+        previous = storage.read(business_id, candidate["stored_name"])
+        if previous is None or hashlib.sha256(previous).hexdigest() != digest:
+            continue
+        try:
+            return repo.set_content_hash(candidate["id"], business_id, digest) or candidate
+        except db.IntegrityError:  # la restricción única resuelve una carrera
+            return repo.find_by_content_hash(business_id, digest)
+    return None
 
 
 def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documento",
@@ -26,6 +55,8 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
 
     Lanza UploadError con un mensaje claro si el archivo no es válido.
     """
+    from .. import db
+
     if not data:
         raise UploadError("El archivo está vacío.")
     if not storage.is_allowed(filename):
@@ -74,6 +105,11 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
     else:
         project_id = None
 
+    content_sha256 = hashlib.sha256(data).hexdigest()
+    existing = _existing_document(business_id, data, content_sha256)
+    if existing:
+        raise DuplicateDocument(existing["id"])
+
     ocr_text = ocr_amount = None
     if run_ocr and storage.ext_of(filename) in storage.IMAGE_EXTS:
         result = ocr.extract(data)
@@ -82,12 +118,24 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
             ocr_amount = result.get("amount")
 
     stored_name = storage.save(business_id, filename, data)
-    doc = repo.add(
-        business_id, filename=filename, stored_name=stored_name,
-        mime=storage.mime_for(filename), size=len(data), kind=kind,
-        client_id=client_id, invoice_id=invoice_id, project_id=project_id, note=note,
-        ocr_text=ocr_text, ocr_amount=ocr_amount,
-        doc_status="pendiente_revisar" if auto_classify else "revisado")
+    try:
+        doc = repo.add(
+            business_id, filename=filename, stored_name=stored_name,
+            mime=storage.mime_for(filename), size=len(data), kind=kind,
+            client_id=client_id, invoice_id=invoice_id, project_id=project_id, note=note,
+            ocr_text=ocr_text, ocr_amount=ocr_amount,
+            doc_status="pendiente_revisar" if auto_classify else "revisado",
+            content_sha256=content_sha256,
+        )
+    except db.IntegrityError as exc:
+        storage.delete(business_id, stored_name)
+        existing = repo.find_by_content_hash(business_id, content_sha256)
+        if existing:
+            raise DuplicateDocument(existing["id"]) from exc
+        raise
+    except Exception:
+        storage.delete(business_id, stored_name)
+        raise
     if auto_classify:
         proposal = classify(business_id, doc["id"])
         doc = repo.get(doc["id"], business_id) or doc

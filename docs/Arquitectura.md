@@ -66,6 +66,10 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `documents/malware.py` — transmite el archivo validado a un ClamAV privado por
   `INSTREAM`; si el despliegue exige el escáner, una caída falla cerrada antes de
   escribir en almacenamiento.
+- `documents/service.py` + `documents/repo.py` — calculan SHA-256 tras validar y
+  escanear, y la migración 38 impone una huella única por negocio. La búsqueda de
+  históricos se limita al mismo `business_id` y tamaño para evitar comparación o
+  filtración entre clientes; una colisión concurrente elimina el fichero sobrante.
 - `security_center.py` + `security_events` — parte CISO de solo lectura sobre una
   bitácora append-only y encadenada, sin contenido operativo ni datos de contacto.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
@@ -79,6 +83,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - `business_id` es obligatorio en todo acceso operativo. Las FKs compuestas
   `(business_id, id)` impiden enlazar un trabajo, factura, presupuesto o documento
   con entidades de otra empresa.
+- Un contenido documental idéntico no se almacena dos veces dentro del mismo
+  negocio. La restricción vive también en PostgreSQL, no solo en la interfaz, y no
+  existe deduplicación global que permita inferir archivos de otra empresa.
 - La emisión de factura es atómica e idempotente. La secuencia se persiste por
   negocio/serie/año y los datos fiscales y líneas quedan congelados en la factura.
   General, rectificativas y tickets usan series separadas sin renumerar históricos.

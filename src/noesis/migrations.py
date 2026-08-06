@@ -2991,6 +2991,28 @@ def _downgrade_page_views(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS page_views")
 
 
+def _upgrade_document_fingerprints(conn) -> None:
+    """Deduplicación por contenido dentro de cada negocio.
+
+    Los históricos quedan con huella nula: el servicio los completa de forma
+    perezosa al recibir un archivo del mismo tamaño, porque una migración de base
+    de datos no debe leer el volumen documental.
+    """
+    if "content_sha256" not in _column_names(conn, "documents"):
+        conn.execute("ALTER TABLE documents ADD COLUMN content_sha256 TEXT")
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_business_content "
+        "ON documents(business_id, content_sha256) "
+        "WHERE content_sha256 IS NOT NULL"
+    )
+
+
+def _downgrade_document_fingerprints(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS uq_documents_business_content")
+    if "content_sha256" in _column_names(conn, "documents"):
+        conn.execute("ALTER TABLE documents DROP COLUMN content_sha256")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3034,6 +3056,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (36, "solicitudes_acceso", _upgrade_access_requests,
      _downgrade_access_requests),
     (37, "visitas_agregadas", _upgrade_page_views, _downgrade_page_views),
+    (38, "huellas_documentales", _upgrade_document_fingerprints,
+     _downgrade_document_fingerprints),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
