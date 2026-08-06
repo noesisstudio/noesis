@@ -13,14 +13,15 @@
 - **Carreras:** el índice parcial único resuelve dos inserciones simultáneas; el
   servicio borra el fichero sobrante antes de devolver el conflicto HTTP 409.
 - **Migración 38:** ciclo SQLite 37 → 38 → 37 → 38 correcto. El humo PostgreSQL
-  incorpora una inserción doble y debe recibir la restricción de integridad real.
+  incorporó una inserción doble y recibió la restricción de integridad real.
 - **Pruebas:** 17 focalizadas pasan; Ruff pasa y Bandit no encuentra severidad alta.
   Suite completa final: **398 pruebas, 0 fallos**.
 
 ### Qué no se ha probado
 
-- La migración y la restricción PostgreSQL quedan pendientes del CI y del despliegue
-  de este commit. No se usaron credenciales ni almacenamiento externo.
+- Producción respondió `/health` con el release del commit y `/ready` con estado 200
+  y esquema 38. No se ha repetido todavía una subida manual con almacenamiento
+  externo ni se usaron credenciales de proveedores.
 
 ## 2026-08-06 — release verificable, correo coherente y Checkout con IVA
 

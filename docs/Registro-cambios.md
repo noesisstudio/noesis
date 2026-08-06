@@ -23,6 +23,24 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 11:50 — producción confirma release y esquema 38
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir la publicación del bloque documental en un hecho verificable,
+  no en una inferencia a partir de GitHub.
+- **Áreas y archivos:** fuente de verdad de proyecto, registro de QA y bitácora.
+- **Cambios de datos/migración:** ninguno nuevo; Railway ya aplicó la migración 38.
+- **Pruebas ejecutadas:** CI verde completo; humo PostgreSQL verde; petición HTTPS
+  directa a `/health` con el release esperado y a `/ready` con HTTP 200/esquema 38.
+- **Dependencias o validaciones externas:** despliegue automático de Railway; ninguna
+  credencial de producto utilizada.
+- **Riesgo/punto probable de fallo:** un despliegue documental posterior puede cambiar
+  la huella sin cambiar el esquema; se vuelve a verificar tras publicar esta foto.
+- **Diagnóstico y rollback:** comparar siempre `/health.release`, `/ready.release` y
+  `/ready.schema`; si divergen de `main`/38, Railway está sirviendo otro candidato.
+- **Estado de publicación:** runtime validado; sincronización documental pendiente de
+  commit y despliegue.
+
 ## 2026-08-06 11:45 — una sola copia de cada documento por negocio
 
 - **Autor/agente:** Codex.
@@ -45,7 +63,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `document_duplicate` y el id existente. Para aislar una regresión, revisar
   `content_sha256`, el índice `uq_documents_business_content` y el fichero
   físico; la migración 38 se puede bajar a 37 sin alterar el resto del documento.
-- **Estado de publicación:** local sobre `main`, validado y pendiente de commit/push.
+- **Estado de publicación:** commit en `main`, CI verde, desplegado y validado por
+  `/health` y `/ready` con esquema 38.
 
 ## 2026-08-06 11:30 — el detector distingue la clave ficticia de la prueba
 
