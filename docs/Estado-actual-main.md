@@ -12,7 +12,9 @@
   presupuestos, contratos y albaranes; propone y pide confirmación cuando el efecto
   puede ser contable. La huella SHA-256 evita guardar dos veces el mismo contenido
   dentro de un negocio, incluso ante subidas simultáneas; los históricos adquieren
-  la huella al reaparecer y nunca se comparan archivos entre negocios.
+  la huella al reaparecer y nunca se comparan archivos entre negocios. La bandeja
+  busca por archivo, cliente, proyecto, nota, contenido leído y tipo, siempre dentro
+  de la empresa activa.
 - Hay portales privados para cliente, trabajador y gestoría; el fichaje y Veri*Factu
   conservan registros inmutables.
 - El cerebro funciona por capas: reglas locales, compositor interno, servicio privado

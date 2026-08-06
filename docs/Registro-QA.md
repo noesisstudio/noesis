@@ -1,5 +1,27 @@
 # Registro de QA
 
+## 2026-08-06 — búsqueda útil dentro de Documentos
+
+### Qué se probó y con qué resultado
+
+- **Campos:** una misma consulta encuentra nombre de archivo, nota, texto OCR,
+  cliente y proyecto. El tipo interno `factura_recibida` también responde a la
+  búsqueda humana «factura recibida».
+- **Comportamiento:** ignora mayúsculas, limita la entrada a 120 caracteres y usa
+  parámetros SQL. Un resultado del segundo negocio con el mismo nombre/nota nunca
+  aparece en el primero.
+- **Interfaz:** el campo vive junto al filtro de estado, espera 180 ms mientras se
+  escribe, explica cuántos resultados hay y conserva el vacío de primera subida
+  cuando no se está buscando.
+- **Pruebas focalizadas:** 18 pasan y Ruff pasa. La ruta con búsqueda se añade al
+  humo PostgreSQL. Suite completa final: **400 pruebas, 0 fallos**.
+
+### Qué no se ha probado
+
+- Falta el CI PostgreSQL y desplegar la pantalla. No se ha construido índice de texto
+  completo: el `LIKE` parametrizado es suficiente para el volumen del piloto; se
+  medirá antes de añadir FTS o un buscador externo.
+
 ## 2026-08-06 — un solo origen público
 
 ### Qué se probó y con qué resultado

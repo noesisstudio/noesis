@@ -67,8 +67,9 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 - [ ] Evaluar servicio privado y proveedor compatible con el mismo corpus en
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
-- [ ] Documentos: la deduplicación exacta por negocio ya está cerrada; faltan HEIC,
-  PDF escaneado, líneas, búsqueda y corrección masiva con corpus real.
+- [ ] Documentos: deduplicación y búsqueda aislada por negocio ya están cerradas;
+  faltan lectura completa de HEIC/PDF escaneado, líneas y corrección masiva con
+  corpus real.
 - [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por

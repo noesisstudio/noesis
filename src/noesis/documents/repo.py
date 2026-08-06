@@ -190,7 +190,12 @@ def get(doc_id: int, business_id: int) -> dict | None:
         return dict(row) if row else None
 
 
-def list_for_business(business_id: int, client_id: int | None = None) -> list[dict]:
+def list_for_business(
+    business_id: int,
+    client_id: int | None = None,
+    *,
+    search: str | None = None,
+) -> list[dict]:
     q = ("SELECT d.*, c.name AS client_name, p.name AS project_name "
          "FROM documents d "
          "LEFT JOIN clients c ON c.id = d.client_id "
@@ -201,6 +206,19 @@ def list_for_business(business_id: int, client_id: int | None = None) -> list[di
     if client_id is not None:
         q += " AND d.client_id=?"
         params.append(client_id)
+    term = (search or "").strip().lower()[:120]
+    if term:
+        like = f"%{term}%"
+        kind_like = f"%{term.replace(' ', '_')}%"
+        q += (
+            " AND (LOWER(COALESCE(d.filename, '')) LIKE ? "
+            "OR LOWER(COALESCE(d.note, '')) LIKE ? "
+            "OR LOWER(COALESCE(d.ocr_text, '')) LIKE ? "
+            "OR LOWER(COALESCE(c.name, '')) LIKE ? "
+            "OR LOWER(COALESCE(p.name, '')) LIKE ? "
+            "OR LOWER(COALESCE(d.kind, '')) LIKE ?)"
+        )
+        params.extend([like, like, like, like, like, kind_like])
     q += " ORDER BY d.created_at DESC"
     with _conn() as conn:
         return [dict(r) for r in conn.execute(q, params).fetchall()]

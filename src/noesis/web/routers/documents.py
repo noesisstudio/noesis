@@ -13,9 +13,13 @@ router = APIRouter()
 
 # =========================================================== DOCUMENTOS ===== #
 @router.get("/api/{business_id}/documents")
-def api_documents(business_id: int, client_id: int = 0):
+def api_documents(business_id: int, client_id: int = 0, q: str = ""):
     from ...documents import repo as docrepo
-    return docrepo.list_for_business(business_id, client_id or None)
+    return docrepo.list_for_business(
+        business_id,
+        client_id or None,
+        search=q,
+    )
 
 
 @router.get("/api/{business_id}/documents/ocr-status")

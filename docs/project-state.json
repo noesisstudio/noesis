@@ -2,13 +2,13 @@
   "state_date": "2026-08-06",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 38,
-  "verified_test_count": 399,
+  "verified_test_count": 400,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Release identificable, migración 38 y redirección www -> bynoesis.com con 308 verificados por HTTP; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Desplegar la búsqueda documental y verificarla con PostgreSQL manteniendo release identificable, migración 38 y redirección canónica; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -65,6 +65,7 @@
     "email_delivery": "implemented_durable_outbox_with_retry_https_api_provider_preferred_because_railway_blocks_outbound_smtp_ports_smtp_kept_as_fallback_with_implicit_ssl_on_465_and_public_forms_never_send_during_the_request",
     "deployment_identity": "health_exposes_a_sanitized_release_fingerprint_and_ready_exposes_release_plus_current_schema_so_published_never_means_only_merged",
     "document_deduplication": "schema_38_sha256_per_business_unique_index_concurrent_upload_protection_and_lazy_fingerprinting_of_same_size_legacy_files_without_cross_tenant_comparison",
+    "document_search": "case_insensitive_parameterized_search_inside_one_business_by_filename_note_ocr_client_project_and_humanized_kind",
     "stripe_tax": "checkout_requests_billing_address_tax_id_collection_and_automatic_tax_for_the_public_plus_vat_catalog_real_tax_result_still_requires_stripe_test_validation",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",

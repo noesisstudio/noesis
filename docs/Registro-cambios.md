@@ -23,6 +23,24 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 12:35 — los papeles se encuentran sin conocer carpetas
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar la búsqueda documental del piloto reutilizando la bandeja y
+  el repositorio existentes, sin otro índice, servicio ni pantalla.
+- **Áreas y archivos:** repositorio/route de documentos, bandeja web, prueba de
+  aislamiento, humo PostgreSQL, estado, tareas, mapa y QA.
+- **Cambios de datos/migración:** ninguno; esquema 38.
+- **Pruebas ejecutadas:** 18 pruebas focalizadas, Ruff y suite completa 400/400; la
+  búsqueda se incorpora al humo PostgreSQL de CI.
+- **Dependencias o validaciones externas:** ninguna credencial ni motor de búsqueda.
+- **Riesgo/punto probable de fallo:** `LIKE` sobre texto OCR puede perder rendimiento
+  si el volumen deja de ser el del piloto; antes de FTS se medirá latencia y tamaño.
+- **Diagnóstico y rollback:** probar `/api/{negocio}/documents?q=factura`; si falla
+  solo PostgreSQL, revisar `LOWER/COALESCE` del repositorio. Retirar `search` conserva
+  íntegros documentos y metadatos.
+- **Estado de publicación:** local sobre `main`, pendiente de suite/commit/push.
+
 ## 2026-08-06 12:20 — redirección canónica verificada en Railway
 
 - **Autor/agente:** Codex.

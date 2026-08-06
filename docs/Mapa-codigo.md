@@ -142,7 +142,8 @@
   escanea en memoria y permite fallo cerrado sin una API externa.
 - `src/noesis/documents/repo.py`: metadatos, huellas SHA-256 y vínculos con cliente,
   proyecto, gasto o factura recibida. La migración 38 impone unicidad parcial por
-  negocio y permite completar históricos de forma perezosa.
+  negocio, permite completar históricos de forma perezosa y busca con parámetros
+  solo dentro del negocio activo.
 - `src/noesis/web/gestoria.py`: paquete ordenado, manifiesto, huella y versionado.
 - `src/noesis/web/whatsapp.py`: texto, audio local, fotos/PDF, confirmaciones,
   trabajador y cola durable. Emisión y entrega usan una segunda confirmación,

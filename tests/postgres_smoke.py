@@ -31,6 +31,7 @@ HOT_API_PATHS = [
     "/api/{bid}/invoice-series",
     "/api/{bid}/recurring-invoices",
     "/api/{bid}/projects",
+    "/api/{bid}/documents?q=factura",
 ]
 
 

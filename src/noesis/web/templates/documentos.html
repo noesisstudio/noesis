@@ -42,13 +42,19 @@
 
   <div class="card col-2">
     <div class="card-h"><h2>Tus documentos <span class="hint" id="d-hint"></span></h2>
-      <select id="d-filter" onchange="renderList()" style="max-width:220px">
-        <option value="">Todos</option>
-        <option value="pendiente_revisar">Pendientes de revisar</option>
-        <option value="revisado">Revisados</option>
-        <option value="enviado_gestoria">Enviados a gestoría</option>
-        <option value="validado">Validados</option>
-      </select>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
+        <input class="input" id="d-search" type="search"
+               placeholder="Buscar archivo, cliente o contenido"
+               aria-label="Buscar documentos" oninput="scheduleDocumentSearch()"
+               style="max-width:300px">
+        <select id="d-filter" onchange="renderList()" style="max-width:220px">
+          <option value="">Todos</option>
+          <option value="pendiente_revisar">Pendientes de revisar</option>
+          <option value="revisado">Revisados</option>
+          <option value="enviado_gestoria">Enviados a gestoría</option>
+          <option value="validado">Validados</option>
+        </select>
+      </div>
     </div>
     <div class="card-b table-pad" style="padding-top:6px">
       <div class="table-wrap">
@@ -113,6 +119,7 @@ const STATUS = { pendiente_revisar:['Pendiente','b-amber'], revisado:['Revisado'
   enviado_gestoria:['En gestoría','b-blue'], validado:['Validado','b-green'],
   rechazado:['Rechazado','b-red'], duplicado:['Duplicado','b-gray'] };
 let reviewDocId = null;
+let documentSearchTimer = null;
 
 async function load() {
   try {
@@ -161,14 +168,20 @@ async function replyRequest(id) {
   renderRequests();
 }
 
+function scheduleDocumentSearch() {
+  clearTimeout(documentSearchTimer);
+  documentSearchTimer = setTimeout(renderList, 180);
+}
+
 async function renderList() {
-  const docs = await api('/documents');
+  const query = el('d-search').value.trim();
+  const docs = await api('/documents' + (query ? `?q=${encodeURIComponent(query)}` : ''));
   const filter = el('d-filter').value;
   const shown = filter ? docs.filter(d => d.doc_status === filter) : docs;
 
   const pending = docs.filter(d => d.doc_status === 'pendiente_revisar').length;
   el('d-hint').textContent = docs.length
-    ? `· ${docs.length} guardado(s)${pending ? ` · ${pending} por revisar` : ''}` : '';
+    ? `· ${docs.length} ${query ? 'encontrado(s)' : 'guardado(s)'}${pending ? ` · ${pending} por revisar` : ''}` : '';
 
   el('d-body').innerHTML = shown.map(d => {
     const st = STATUS[d.doc_status] || STATUS.revisado;
@@ -205,7 +218,7 @@ async function renderList() {
     </tr>`;
   }).join('');
   el('d-empty').innerHTML = shown.length ? '' :
-    emptyState('Nada por aquí', filter ? 'No hay documentos en este estado.' :
+    emptyState('Nada por aquí', query ? 'No encuentro documentos con esas palabras.' : filter ? 'No hay documentos en este estado.' :
       'Sube un PDF o haz una foto de un ticket para empezar.', '#subir', 'Subir documento');
 }
 

@@ -105,6 +105,49 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
         recovered = docrepo.get(first["id"], self.business["id"])
         self.assertEqual(len(recovered["content_sha256"]), 64)
 
+    def test_document_search_is_human_and_isolated_by_business(self):
+        client = db.add_client(
+            "Marta Instalaciones", business_id=self.business["id"]
+        )
+        expected = docrepo.add(
+            self.business["id"],
+            filename="Factura-Caldera-2026.pdf",
+            stored_name="search-one.pdf",
+            mime="application/pdf",
+            size=20,
+            kind="factura_recibida",
+            client_id=client["id"],
+            note="Revisión anual del quemador",
+            ocr_text="Proveedor Fuego Norte número F-204",
+        )
+        docrepo.add(
+            self.other["id"],
+            filename="Factura-Caldera-2026.pdf",
+            stored_name="search-other.pdf",
+            mime="application/pdf",
+            size=20,
+            kind="factura_recibida",
+            note="Revisión anual del quemador",
+        )
+
+        for query in (
+            "caldera",
+            "MARTA",
+            "quemador",
+            "f-204",
+            "factura recibida",
+        ):
+            with self.subTest(query=query):
+                found = docrepo.list_for_business(
+                    self.business["id"], search=query
+                )
+                self.assertEqual([row["id"] for row in found], [expected["id"]])
+
+        self.assertEqual(
+            docrepo.list_for_business(self.business["id"], search="sin resultado"),
+            [],
+        )
+
     def _upload_doc(self, business_id, filename="factura-luz.pdf"):
         return docservice.upload(business_id, filename, b"%PDF-1.4 demo",
                                  run_ocr=False)
