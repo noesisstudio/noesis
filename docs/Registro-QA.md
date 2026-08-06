@@ -18,9 +18,10 @@
 
 ### Qué no se ha probado
 
-- Falta el CI PostgreSQL y desplegar la pantalla. No se ha construido índice de texto
-  completo: el `LIKE` parametrizado es suficiente para el volumen del piloto; se
-  medirá antes de añadir FTS o un buscador externo.
+- CI ejecutó la consulta con PostgreSQL y producción sirve el release/esquema
+  esperado. Falta recorrer visualmente la pantalla con una sesión real. No se ha
+  construido índice de texto completo: el `LIKE` parametrizado es suficiente para
+  el volumen del piloto; se medirá antes de añadir FTS o un buscador externo.
 
 ## 2026-08-06 — un solo origen público
 

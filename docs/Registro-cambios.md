@@ -23,6 +23,23 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 12:45 — búsqueda documental publicada sobre PostgreSQL
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar la diferencia entre búsqueda construida y búsqueda publicada.
+- **Áreas y archivos:** estado verificable, QA y bitácora.
+- **Cambios de datos/migración:** ninguno; esquema 38.
+- **Pruebas ejecutadas:** CI completo 400/400, ciclo de migraciones, humo PostgreSQL
+  incluyendo `documents?q=factura`, `/health` con el release esperado y `/ready`
+  listo en esquema 38.
+- **Dependencias o validaciones externas:** Railway/PostgreSQL; sin credenciales.
+- **Riesgo/punto probable de fallo:** falta una revisión visual autenticada del campo;
+  backend, aislamiento y compatibilidad de motor sí están verificados.
+- **Diagnóstico y rollback:** comparar release, revisar la ruta con sesión y consultar
+  el log por `X-Request-ID` si la interfaz no recibe resultados.
+- **Estado de publicación:** runtime validado; sincronización documental pendiente de
+  commit/despliegue.
+
 ## 2026-08-06 12:35 — los papeles se encuentran sin conocer carpetas
 
 - **Autor/agente:** Codex.
@@ -39,7 +56,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** probar `/api/{negocio}/documents?q=factura`; si falla
   solo PostgreSQL, revisar `LOWER/COALESCE` del repositorio. Retirar `search` conserva
   íntegros documentos y metadatos.
-- **Estado de publicación:** local sobre `main`, pendiente de suite/commit/push.
+- **Estado de publicación:** commit en `main`, CI/PostgreSQL verdes y release/esquema
+  verificados en producción; revisión visual autenticada pendiente.
 
 ## 2026-08-06 12:20 — redirección canónica verificada en Railway
 

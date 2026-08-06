@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar la búsqueda documental y verificarla con PostgreSQL manteniendo release identificable, migración 38 y redirección canónica; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Búsqueda documental verificada en CI PostgreSQL y release/esquema 38 confirmados por HTTP; repetir la pantalla con una sesión real; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
