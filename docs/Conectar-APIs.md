@@ -146,6 +146,12 @@ y verificar que ambos responden con el release esperado y que `/ready` muestra l
 migración vigente. Después se ejecuta `noesis-doctor --strict`. Nunca activar
 `NOESIS_RESET_DB` con datos.
 
+Para crear las dos cuentas comerciales dentro del producto, activar
+`NOESIS_SEED_DEMO=true` durante un despliegue y seguir
+[`Demo-comercial.md`](Demo-comercial.md). No es una credencial ni una base aparte;
+la migración 40 marca esas empresas como solo lectura. Después puede volver a
+`false` sin borrar los registros.
+
 Si una contraseña, token o `NOESIS_SECRET` ha aparecido en una captura, PDF o chat,
 se considera expuesto: se genera otro valor en el gestor del proveedor, se revoca
 el anterior y se redacta el documento. No se copia a `.env.example`, Git ni tickets.
@@ -415,7 +421,25 @@ de tamaño. Si se usa local, instalar el extra `audio`, persistir el modelo en
 `NOESIS_WHISPER_DIR` y no hace falta una API. Referencia:
 [Speech to Text de Groq](https://console.groq.com/docs/speech-to-text).
 
-## 7. Backups externos S3-compatible
+## 7. OCR privado de imágenes y PDF escaneado
+
+No necesita API ni credenciales. `pytesseract` y `pypdfium2` son dependencias del
+producto y `railpack.json` instala en Railway `tesseract-ocr` y los idiomas
+`spa/eng`. Los PDF digitales se leen primero sin rasterizar; solo los que no tienen
+texto útil pasan por OCR local.
+
+Prueba de aceptación:
+
+- Subir una foto de ticket y un PDF escaneado de una o varias páginas.
+- Confirmar que el texto y el total se extraen sin llamada a un proveedor externo.
+- Probar castellano y catalán, giro, baja calidad, PDF corrupto y PDF cifrado.
+- Confirmar que un PDF de más de cuatro páginas o una página desmesurada queda
+  acotado y que un fallo de Tesseract lleva a revisión manual, no a una clasificación
+  inventada.
+- Repetir el mismo flujo por WhatsApp y comprobar que cliente/proyecto solo se
+  vinculan ante una coincidencia inequívoca.
+
+## 8. Backups externos S3-compatible
 
 Crear un bucket privado con usuario limitado a ese bucket y, si el proveedor lo
 permite, versionado, cifrado y política de retención.
@@ -432,7 +456,7 @@ NOESIS_BACKUP_S3_PREFIX=noesis
 Una subida correcta no basta: restaurar base y documentos en un entorno aislado,
 comprobar hashes y registrar RPO/RTO y tiempo real de recuperación.
 
-## 8. AEAT Veri*Factu
+## 9. AEAT Veri*Factu
 
 No usa una API key. Usa SOAP con autenticación mTLS mediante certificado y clave PEM.
 Primero se valida contra el portal de pruebas de la AEAT y con asesoría fiscal.
@@ -469,7 +493,7 @@ cancelada no puede detener una remisión fiscal ya encolada.
 
 Referencia: [esquemas y WSDL oficiales de la AEAT](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/esquemas.html).
 
-## 9. Servicios que no forman parte de la arquitectura
+## 10. Servicios que no forman parte de la arquitectura
 
 Noesis **no se conecta a Holded ni delega la facturación**. Numeración, emisión, PDF,
 registro Veri*Factu, cola y remisión AEAT son desarrollo propio. Holded puede seguir
@@ -488,7 +512,7 @@ Tampoco existe todavía un adaptador conectable para:
 No crear credenciales ni pagar proveedores para estos puntos hasta que exista una
 tarea aprobada, adaptador, pruebas y política de permisos.
 
-## 10. Orden recomendado de conexión
+## 11. Orden recomendado de conexión
 
 1. Desplegar `main`, migrar, `/ready` y `noesis-doctor --strict`.
 2. Correo por API HTTPS y Google OAuth: rápidos, visibles y de bajo riesgo operativo.

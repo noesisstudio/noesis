@@ -29,14 +29,25 @@ def available() -> bool:
         return False
 
 
-def _read_text(data: bytes) -> str | None:
+def _read_image(image) -> str | None:
     try:
         import pytesseract
-        from PIL import Image
-        img = Image.open(io.BytesIO(data))
-        return pytesseract.image_to_string(img, lang="spa+eng")
+        return pytesseract.image_to_string(
+            image, lang="spa+eng", timeout=8,
+        )
     except Exception as e:  # noqa: BLE001
         log.warning("OCR falló: %s", e)
+        return None
+
+
+def _read_text(data: bytes) -> str | None:
+    try:
+        from PIL import Image
+        with Image.open(io.BytesIO(data)) as image:
+            image.load()
+            return _read_image(image)
+    except Exception as e:  # noqa: BLE001
+        log.warning("La imagen no se pudo preparar para OCR: %s", e)
         return None
 
 
@@ -91,6 +102,16 @@ def extract(data: bytes) -> dict | None:
     if not available():
         return None
     text = _read_text(data)
+    if text is None:
+        return None
+    return {"text": text.strip(), "amount": detect_amount(text)}
+
+
+def extract_image(image) -> dict | None:
+    """Lee una imagen PIL ya validada/rasterizada sin volverla a codificar."""
+    if not available():
+        return None
+    text = _read_image(image)
     if text is None:
         return None
     return {"text": text.strip(), "amount": detect_amount(text)}

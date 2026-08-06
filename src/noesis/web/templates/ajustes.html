@@ -92,13 +92,18 @@
           Desconectar este número
         </button>
         <div id="whatsapp-preference-msg" class="meta" role="status"></div>
-      {% else %}
+      {% elif wa is defined %}
         <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.</p>
         <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener">
           Abrir WhatsApp y vincular mi número
         </a>
         <p class="meta" style="margin:10px 0 0;text-align:center">
           Envía el mensaje preparado. Código temporal: <b>{{ wa.code }}</b>
+        </p>
+      {% else %}
+        <p style="margin-top:0">
+          WhatsApp no está conectado en esta demostración. La vista es de solo lectura
+          y no enviará mensajes reales.
         </p>
       {% endif %}
       <div class="insight" style="margin-top:14px">

@@ -59,8 +59,11 @@ Copy-Item .env.example .env  # solo si se van a configurar opciones externas
 noesis-web                   # http://127.0.0.1:8000
 ```
 
-- Demo básica, si está activado `NOESIS_SEED_DEMO`: `demo@bynoesis.com / demo1234`.
-- Demo rica para QA: `python -m noesis.demo` crea `demo@noesis.app / demo1234`.
+- Demo comercial dentro del producto, si está activado `NOESIS_SEED_DEMO`: dos
+  accesos reales —autónomo y gestoría—, una cartera multiempresa y un portal de
+  cliente, todos con datos ficticios y escritura bloqueada. Credenciales y
+  activación en [`Demo-comercial.md`](Demo-comercial.md). En local se prepara con
+  `python -m noesis.demo`.
 - CLI de conversación: `python -m noesis`.
 - Sin `DATABASE_URL`, se usa SQLite; con `DATABASE_URL`, Postgres.
 - Sin API de IA, el cerebro determinista local sigue funcionando.
@@ -203,7 +206,10 @@ El modo consulta se fuerza en servidor, no solo con botones ocultos: web, API, W
 El mismo servicio (`documents/service.py`) se usa desde la web y WhatsApp:
 
 1. Guarda primero el fichero y sus metadatos en almacenamiento persistente.
-2. Ejecuta OCR/clasificación local cuando está disponible; puede usar extracción externa solo si el negocio lo ha autorizado y respeta el límite diario.
+2. Ejecuta OCR/clasificación local cuando está disponible. En PDF intenta primero
+   la capa de texto y, si está vacía, rasteriza de forma acotada con PDFium y lee con
+   Tesseract; puede usar extracción externa solo si el negocio lo ha autorizado y
+   respeta el límite diario.
 3. Propone tipo: ticket/gasto, factura recibida, presupuesto, contrato, albarán, proveedor o documento general.
 4. Si hay efecto contable, crea un **borrador**. Solo una revisión/confirmación crea el gasto o registra la factura recibida y enlaza el documento en la misma transacción.
 
@@ -276,7 +282,7 @@ Para trabajadores existe una vinculación específica. Tras enlazarse, los coman
 | Texto | reglas/IA y respuesta por la outbox |
 | Nota de voz | transcripción por API o `faster-whisper` local; una orden sensible se confirma con SÍ/NO |
 | Foto | se guarda como documento, se intenta lectura y se pregunta antes de crear gasto |
-| PDF | se archiva, clasifica y, si parece factura recibida, propone el registro |
+| PDF | lee texto digital o aplica OCR privado si está escaneado; se archiva, clasifica y, si parece factura recibida, propone el registro |
 | SÍ / NO | ejecuta o descarta la acción pendiente del propio teléfono |
 | Estado Meta | actualiza `sent`, `delivered`, `read` o error de salida |
 

@@ -56,7 +56,8 @@ pip install -e .
 noesis-web        # → http://127.0.0.1:8000
 ```
 
-- Login de demo: **demo@bynoesis.com / demo1234**.
+- Demo comercial dentro del producto: autónomo y gestoría con datos ficticios
+  conectados, más portal de cliente. Ver [`docs/Demo-comercial.md`](docs/Demo-comercial.md).
 - CLI de prueba (chat tipo WhatsApp): `py -m noesis`.
 - La IA es opcional: sin `ANTHROPIC_API_KEY` en `.env`, el chat funciona con el
   cerebro local. Sin `DATABASE_URL` usa SQLite local.

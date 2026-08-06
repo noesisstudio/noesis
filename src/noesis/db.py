@@ -8921,6 +8921,15 @@ def set_subscription(business_id, status, plan=None, customer_id=None,
     return get_business(business_id)
 
 
+def mark_business_as_demo(business_id: int) -> dict | None:
+    """Convierte una empresa ficticia en escaparate persistente de solo lectura."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET is_demo=TRUE WHERE id=?", (business_id,)
+        )
+    return get_business(business_id)
+
+
 def get_business_by_stripe_customer(customer_id) -> dict | None:
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM businesses WHERE stripe_customer_id=?",
@@ -8935,6 +8944,8 @@ def subscription_allows_access(business: dict | None) -> bool:
     sigue visible, pero las escrituras y automatizaciones exigen suscripción activa.
     """
     if not business:
+        return False
+    if business.get("is_demo"):
         return False
     status = business.get("subscription_status") or "trial"
     if status == "active":

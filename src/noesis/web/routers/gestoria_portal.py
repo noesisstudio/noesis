@@ -271,21 +271,25 @@ def package(request: Request, business_id: int, label: str):
     allowed = _business_for(request, business_id)
     if not allowed:
         return JSONResponse({"error": "no autorizado"}, status_code=403)
-    if not db.subscription_allows_access(allowed[1]):
+    is_demo = bool(allowed[1].get("is_demo"))
+    if not is_demo and not db.subscription_allows_access(allowed[1]):
         return JSONResponse({"error": "cuenta en modo consulta"}, status_code=402)
     from .. import gestoria as gestoria_service
     try:
-        built = gestoria_service.build_package(business_id, label)
+        built = gestoria_service.build_package(
+            business_id, label, record_delivery=not is_demo
+        )
     except ValueError:
         built = None
     if not built:
         return JSONResponse({"error": "Período no válido."}, status_code=404)
     data, meta = built
-    db.mark_gestoria_delivery(business_id, label, "downloaded")
-    db.record_product_event(
-        business_id, "gestoria_package_downloaded",
-        f"label={label};version={meta['version']}",
-    )
+    if not is_demo:
+        db.mark_gestoria_delivery(business_id, label, "downloaded")
+        db.record_product_event(
+            business_id, "gestoria_package_downloaded",
+            f"label={label};version={meta['version']}",
+        )
     return Response(data, media_type="application/zip", headers={
         "Content-Disposition": f'attachment; filename="noesis-{label}.zip"',
     })

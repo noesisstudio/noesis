@@ -32,7 +32,6 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .. import config, db
 from ..adapters import billing as billing_adapter  # noqa: F401 -- compatibilidad de tests/integraciones
-from . import auth
 from .deps import HERE, TEMPLATES, auth_guard
 from .routers import (
     account,
@@ -342,14 +341,11 @@ def _startup() -> None:
         db.init_db()
     # Datos demo solo si se piden explícitamente (producción arranca limpia y real).
     if config.SEED_DEMO:
-        demo_user = db.get_user_by_email("demo@bynoesis.com")
-        if not demo_user:
-            from .. import demo
-            demo_business_id = demo.seed(reset=False)
-            db.create_user(
-                "demo@bynoesis.com", auth.hash_password("demo1234"),
-                demo_business_id,
-            )
+        from .. import demo
+        try:
+            demo.seed_showcase(force=True)
+        except Exception:  # noqa: BLE001 - una demo nunca tumba el SaaS real.
+            log.exception("No se pudo preparar la demo comercial.")
     start_scheduler()
 
 

@@ -3082,6 +3082,21 @@ def _downgrade_gestoria_accounts(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS gestoria_accounts")
 
 
+def _upgrade_showcase_demo(conn) -> None:
+    """Marca persistente para demos comerciales aisladas y de solo lectura."""
+    if "is_demo" not in _column_names(conn, "businesses"):
+        boolean = _types(conn.dialect)["boolean"]
+        conn.execute(
+            f"ALTER TABLE businesses ADD COLUMN is_demo {boolean} "
+            "NOT NULL DEFAULT FALSE"
+        )
+
+
+def _downgrade_showcase_demo(conn) -> None:
+    if "is_demo" in _column_names(conn, "businesses"):
+        conn.execute("ALTER TABLE businesses DROP COLUMN is_demo")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3129,6 +3144,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_document_fingerprints),
     (39, "cuentas_gestoria", _upgrade_gestoria_accounts,
      _downgrade_gestoria_accounts),
+    (40, "demo_comercial", _upgrade_showcase_demo,
+     _downgrade_showcase_demo),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

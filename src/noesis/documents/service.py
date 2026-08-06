@@ -13,7 +13,7 @@ import re
 import unicodedata
 
 from .. import config
-from . import malware, ocr, pdf_text, repo, storage, validation
+from . import malware, ocr, pdf_ocr, pdf_text, repo, storage, validation
 
 
 class UploadError(Exception):
@@ -150,6 +150,12 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
                 ocr_amount = result.get("amount")
         elif storage.ext_of(filename) == ".pdf":
             ocr_text = pdf_text.extract(data)
+            # Un PDF escaneado suele no tener capa de texto. Solo entonces se
+            # rasteriza localmente; no duplicamos trabajo en documentos digitales.
+            if not ocr_text or len(ocr_text.strip()) < 24:
+                scanned_text = pdf_ocr.extract(data)
+                if scanned_text:
+                    ocr_text = scanned_text
             ocr_amount = ocr.detect_amount(ocr_text)
 
     stored_name = storage.save(business_id, filename, data)

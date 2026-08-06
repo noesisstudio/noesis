@@ -17,13 +17,16 @@ Dos niveles:
 Ejecutar:  ``python -m noesis.demo``  → siembra y muestra las credenciales.
 
 Seguridad: ``seed_rich`` **se niega a correr sobre la base de producción**
-(``DATABASE_URL`` definido) salvo ``force=True``, porque hace ``reset`` y borraría
-datos reales. Nunca debe ejecutarse en el arranque del servidor.
+(``DATABASE_URL`` definido) salvo ``force=True``, porque su modo histórico podía
+hacer ``reset``. El arranque solo llama a ``seed_showcase``, que reutiliza
+``seed_rich(reset=False)``, cuando el founder activa expresamente
+`NOESIS_SEED_DEMO`; nunca reinicia la base.
 """
 
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+import secrets
 
 from . import config, db
 
@@ -150,24 +153,32 @@ def seed_rich(*, reset: bool = True, force: bool = False,
 
     # -- Clientes (con domicilio: hace falta para emitir factura) ---------
     clients = {}
-    for key, name, phone, zone, nif, address in [
-        ("marta", "Marta García", "+34600111222", "Badalona", "11111111H",
-         "Carrer de la Marina 10, 08911 Badalona"),
-        ("carlos", "Carlos Ruiz", "+34600333444", "Barcelona", "22222222J",
+    for key, name, phone, email, zone, nif, address in [
+        ("marta", "Marta García", "+34600111222", "marta.garcia@example.com",
+         "Badalona", "11111111H", "Carrer de la Marina 10, 08911 Badalona"),
+        ("carlos", "Carlos Ruiz", "+34600333444", "carlos.ruiz@example.com",
+         "Barcelona", "22222222J",
          "Carrer d'Aragó 20, 08015 Barcelona"),
-        ("laura", "Laura Soler", "+34600555666", "L'Hospitalet", "33333333P",
+        ("laura", "Laura Soler", "+34600555666", "laura.soler@example.com",
+         "L'Hospitalet", "33333333P",
          "Carrer de Mallorca 30, 08901 L'Hospitalet"),
-        ("comunidad", "Comunidad Aragó 121", "+34934445566", "Barcelona", "H66000111",
+        ("comunidad", "Comunidad Aragó 121", "+34934445566",
+         "administracion.arago121@example.com", "Barcelona", "H66000111",
          "Carrer d'Aragó 121, 08015 Barcelona"),
-        ("bar", "Bar El Rincón", "+34600777888", "Barcelona", "44444444A",
+        ("bar", "Bar El Rincón", "+34600777888", "bar.rincon@example.com",
+         "Barcelona", "44444444A",
          "Carrer de Sants 88, 08014 Barcelona"),
-        ("inmo", "Inmobiliaria Vallès", "+34937771122", "Sabadell", "B66222333",
+        ("inmo", "Inmobiliaria Vallès", "+34937771122", "valles@example.com",
+         "Sabadell", "B66222333",
          "Rambla de Sabadell 45, 08202 Sabadell"),
-        ("ana", "Ana Torres", "+34600999000", "Barcelona", "55555555K",
+        ("ana", "Ana Torres", "+34600999000", "ana.torres@example.com",
+         "Barcelona", "55555555K",
          "Carrer del Rosselló 200, 08008 Barcelona"),
     ]:
-        clients[key] = db.add_client(name, phone=phone, zone=zone, nif=nif,
-                                     address=address, business_id=bid)
+        clients[key] = db.add_client(
+            name, phone=phone, email=email, zone=zone, nif=nif,
+            address=address, business_id=bid,
+        )
 
     # -- Catálogo (con márgenes reales y dos productos en stock bajo) ------
     for name, kind, price, cost, vat, stock, alert in [
@@ -304,11 +315,34 @@ def seed_rich(*, reset: bool = True, force: bool = False,
     def demo_bytes(filename: str) -> bytes:
         if filename.lower().endswith((".jpg", ".jpeg")):
             from io import BytesIO
-            from PIL import Image
+            from PIL import Image, ImageDraw
             output = BytesIO()
-            Image.new("RGB", (2, 2), (244, 241, 232)).save(output, format="JPEG")
+            image = Image.new("RGB", (1000, 1400), "white")
+            draw = ImageDraw.Draw(image)
+            draw.text((80, 90), "FERRETERIA CENTRAL", fill="black")
+            draw.text((80, 150), "Ticket de ejemplo Noesis", fill="black")
+            draw.text((80, 230), "Material y consumibles       80,00 EUR", fill="black")
+            draw.text((80, 290), "IVA 21%                      16,80 EUR", fill="black")
+            draw.text((80, 370), "TOTAL                         96,80 EUR", fill="black")
+            draw.text((80, 500), "Documento ficticio para demostracion.", fill="black")
+            image.save(output, format="JPEG", quality=88)
             return output.getvalue()
-        return b"%PDF-1.4 demo\n%%EOF"
+        from fpdf import FPDF
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 18)
+        pdf.cell(0, 12, "Documento de ejemplo Noesis", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", size=11)
+        safe_name = filename.encode("latin-1", errors="replace").decode("latin-1")
+        pdf.cell(0, 9, safe_name, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(8)
+        pdf.multi_cell(
+            0, 7,
+            "Contenido ficticio preparado para recorrer el gestor documental "
+            "y la cartera de gestoria sin utilizar datos reales.",
+        )
+        return bytes(pdf.output())
 
     def doc(filename, status, confidence=None, note=None):
         dd = docservice.upload(bid, filename, demo_bytes(filename),
@@ -337,11 +371,286 @@ def seed_rich(*, reset: bool = True, force: bool = False,
     db.add_job(clients["laura"]["id"], "Visita presupuesto reforma",
                scheduled_for=at(17, 30), zone="L'Hospitalet", business_id=bid)
 
+    # -- Histórico para que las gráficas expliquen una evolución real --------
+    for offset, client_key, base, expense in [
+        (2, "carlos", 980, 410),
+        (3, "bar", 1260, 575),
+        (4, "comunidad", 2140, 920),
+        (5, "inmo", 1680, 710),
+    ]:
+        emitida(
+            client_key, f"Servicios completados hace {offset} meses", base,
+            issued_days=-(offset * 30), pay="full",
+        )
+        db.add_expense(
+            f"Material y desplazamientos hace {offset} meses", expense,
+            vat_rate=21, category="Materiales",
+            spent_on=d(-(offset * 30) + 3), business_id=bid,
+        )
+
+    # -- Equipo, proyectos y presupuestos: la feina conecta todo -----------
+    pau = db.create_worker(
+        bid, "Pau Martínez", phone="+34610777888", color="#2e8b74",
+    )
+    nuria = db.create_worker(
+        bid, "Núria Vidal", phone="+34610999000", color="#b7831f",
+    )
+    project = db.add_project(
+        "Reforma integral del baño 2ºA", 8000,
+        client_id=clients["comunidad"]["id"],
+        location="Carrer d'Aragó 121, Barcelona", planned_hours=112,
+        starts_on=d(-18), ends_on=d(24),
+        note="Obra activa con costes, equipo y tareas de ejemplo.",
+        business_id=bid,
+    )
+    db.update_project(project["id"], business_id=bid, progress=46,
+                      status="en_curso")
+    db.add_project_member(project["id"], pau["id"], 22, "Oficial",
+                          business_id=bid)
+    db.add_project_member(project["id"], nuria["id"], 18, "Ayudante",
+                          business_id=bid)
+    db.add_project_entry(
+        project["id"], "material", "Sanitarios y grifería", 1, 1640,
+        entry_on=d(-12), business_id=bid,
+    )
+    db.add_project_entry(
+        project["id"], "horas", "Demolición y preparación", 31, 22,
+        worker_id=pau["id"], entry_on=d(-8), business_id=bid,
+    )
+    project_job = db.add_job(
+        clients["comunidad"]["id"], "Instalación de sanitarios",
+        scheduled_for=at(13, 0), zone="Barcelona", project_id=project["id"],
+        worker_id=pau["id"], business_id=bid,
+    )
+    db.add_project_task(
+        project["id"], "Confirmar entrega de mampara", business_id=bid,
+        kind="checklist", worker_id=nuria["id"], due_on=d(2),
+    )
+    db.add_project_task(
+        project["id"], "Instalar sanitarios y comprobar fugas", business_id=bid,
+        worker_id=pau["id"], job_id=project_job["id"], due_on=d(1),
+    )
+    quote = db.add_quote(
+        clients["comunidad"]["id"],
+        "Fase final: mampara, pintura y puesta en marcha", 1850,
+        vat_rate=10, business_id=bid,
+    )
+    db.mark_quote_sent(quote["id"], bid)
+
     return {
         "business_id": bid,
         "email": email,
         "password": password,
         "clients": len(clients),
+    }
+
+
+# ---------------------------------------------------------------------------
+#  Escenario comercial conectado (autónomo + cliente + gestoría)
+# ---------------------------------------------------------------------------
+
+SHOWCASE_OWNER_EMAIL = "demo.autonomo@bynoesis.com"
+SHOWCASE_SECONDARY_EMAIL = "demo.electricidad@bynoesis.com"
+SHOWCASE_GESTORIA_EMAIL = "demo.gestoria@bynoesis.com"
+SHOWCASE_PASSWORD = "NoesisDemo2026!"
+SHOWCASE_PORTAL_CLIENT = "Comunidad Aragó 121"
+SHOWCASE_GESTORIA_NAME = "Gestoría Mirall · Demo"
+
+
+def _seed_secondary_showcase(password_hash: str) -> int:
+    existing = db.get_user_by_email(SHOWCASE_SECONDARY_EMAIL)
+    if existing:
+        business = db.get_business(existing["business_id"])
+        if not business or not business.get("is_demo"):
+            raise RuntimeError(
+                "El correo reservado de la demo secundaria ya está en uso."
+            )
+        return int(existing["business_id"])
+    business, _ = db.create_account(
+        "Electricidad Montseny · Demo", SHOWCASE_SECONDARY_EMAIL, password_hash,
+        sector="Electricidad y mantenimiento",
+    )
+    bid = business["id"]
+    db.update_fiscal(
+        bid, name="Electricidad Montseny SL · Demo", nif="B67555123",
+        address="Carrer Major 42, 08460 Santa Maria de Palautordera",
+    )
+    db.update_business_profile(
+        bid, sector="Electricidad y mantenimiento", team_size="2-5",
+        province="Barcelona", primary_goal="control",
+    )
+    db.update_payment_details(
+        bid, iban="ES79 2100 0813 6101 2345 6789", bizum="600 00 01 02",
+        note="Pago a 15 días desde la fecha de factura.",
+    )
+    db.update_payment_reminder_settings(bid, enabled=True, days="3,7,15")
+    db.set_whatsapp_status(bid, "conectado", "000000102")
+    db.finish_onboarding(bid)
+    db.update_gestoria_settings(
+        bid, name=SHOWCASE_GESTORIA_NAME,
+        email=SHOWCASE_GESTORIA_EMAIL, cadence="mensual",
+    )
+    db.set_subscription(bid, "active", plan="premium")
+    db.mark_business_as_demo(bid)
+    today = date.today()
+    clients = [
+        db.add_client(
+            "Hotel Can Mar", phone="+34938400011", zone="Montseny",
+            email="administracion.hotel@example.com",
+            nif="B60333001", address="Carretera del Montseny 18, 08460",
+            business_id=bid,
+        ),
+        db.add_client(
+            "Forn Serra", phone="+34938400022", zone="Sant Celoni",
+            email="forn.serra@example.com",
+            nif="B60333002", address="Carrer Sant Martí 7, 08470",
+            business_id=bid,
+        ),
+        db.add_client(
+            "Laia Puig", phone="+34622000113", zone="Cardedeu",
+            email="laia.puig@example.com",
+            nif="47777111R", address="Carrer Llinars 26, 08440",
+            business_id=bid,
+        ),
+    ]
+    worker = db.create_worker(
+        bid, "Àlex Riera", phone="+34622000444", color="#2e8b74",
+    )
+    project = db.add_project(
+        "Renovació elèctrica Hotel Can Mar", 12600,
+        client_id=clients[0]["id"], location="Montseny", planned_hours=148,
+        starts_on=(today - timedelta(days=26)).isoformat(),
+        ends_on=(today + timedelta(days=35)).isoformat(), business_id=bid,
+    )
+    db.update_project(project["id"], business_id=bid, progress=58,
+                      status="en_curso")
+    db.add_project_member(project["id"], worker["id"], 24, "Electricista",
+                          business_id=bid)
+    db.add_project_entry(
+        project["id"], "material", "Cuadros, protecciones y cableado", 1, 3840,
+        entry_on=(today - timedelta(days=18)).isoformat(), business_id=bid,
+    )
+    db.add_project_task(
+        project["id"], "Certificar el cuadro de la planta primera",
+        business_id=bid, worker_id=worker["id"],
+        due_on=(today + timedelta(days=3)).isoformat(),
+    )
+    for index, (client, base, days) in enumerate([
+        (clients[0], 3200, -52), (clients[1], 680, -24),
+        (clients[2], 410, -7),
+    ]):
+        invoice = db.add_invoice(
+            client["id"], f"Servicio eléctrico {index + 1}", base,
+            business_id=bid,
+        )
+        db.issue_invoice(
+            invoice["id"], bid,
+            _issued_at_override=(today + timedelta(days=days)).isoformat(),
+        )
+        if index < 2:
+            db.mark_invoice_paid(invoice["id"], bid)
+    for concept, amount, days in [
+        ("Material eléctrico", 1450, -48),
+        ("Combustible furgoneta", 92, -19),
+        ("Instrumentació i EPIs", 385, -6),
+    ]:
+        db.add_expense(
+            concept, amount, vat_rate=21, category="Materiales",
+            spent_on=(today + timedelta(days=days)).isoformat(), business_id=bid,
+        )
+    db.add_gestoria_request(
+        "Falta el justificant del material del quadre elèctric.",
+        requested_by="gestoria", business_id=bid,
+    )
+    return bid
+
+
+def seed_showcase(*, force: bool = False) -> dict:
+    """Crea una demo comercial completa sin borrar ni mezclar datos existentes."""
+    if config.DATABASE_URL and not (force and config.SEED_DEMO):
+        raise RuntimeError(
+            "La demo comercial en producción exige NOESIS_SEED_DEMO=true."
+        )
+    from .web import auth
+
+    owner = db.get_user_by_email(SHOWCASE_OWNER_EMAIL)
+    if owner:
+        existing_business = db.get_business(owner["business_id"])
+        if not existing_business or not existing_business.get("is_demo"):
+            raise RuntimeError(
+                "El correo reservado de la demo principal ya está en uso."
+            )
+        primary_id = int(owner["business_id"])
+    else:
+        primary_id = int(seed_rich(
+            reset=False, force=True, email=SHOWCASE_OWNER_EMAIL,
+            password=SHOWCASE_PASSWORD,
+        )["business_id"])
+    db.set_subscription(primary_id, "active", plan="premium")
+    db.update_fiscal(
+        primary_id, name="Reformas y Fontanería Delta SL · Demo"
+    )
+    db.update_business_profile(
+        primary_id, sector="Fontanería y reformas", team_size="2-5",
+        province="Barcelona", primary_goal="control",
+    )
+    db.update_payment_reminder_settings(
+        primary_id, enabled=True, days="3,7,15"
+    )
+    db.set_whatsapp_status(primary_id, "conectado", "000000101")
+    db.finish_onboarding(primary_id)
+    db.update_gestoria_settings(
+        primary_id, name=SHOWCASE_GESTORIA_NAME,
+        email=SHOWCASE_GESTORIA_EMAIL, cadence="mensual",
+    )
+    db.mark_business_as_demo(primary_id)
+
+    secondary_id = _seed_secondary_showcase(
+        auth.hash_password(SHOWCASE_PASSWORD)
+    )
+    clients = db.list_clients(primary_id)
+    portal_client = next(
+        (client for client in clients if client["name"] == SHOWCASE_PORTAL_CLIENT),
+        clients[0] if clients else None,
+    )
+    portal_token = (
+        db.get_or_create_portal_token(primary_id, portal_client["id"], ttl_days=3650)
+        if portal_client else None
+    )
+
+    account = db.get_gestoria_account_by_email(SHOWCASE_GESTORIA_EMAIL)
+    if account and account.get("firm_name") != SHOWCASE_GESTORIA_NAME:
+        raise RuntimeError(
+            "El correo reservado de la demo de gestoría ya está en uso."
+        )
+    if not account:
+        account = db.create_gestoria_account(
+            SHOWCASE_GESTORIA_EMAIL, auth.hash_password(SHOWCASE_PASSWORD),
+            SHOWCASE_GESTORIA_NAME,
+        )
+    for business_id in (primary_id, secondary_id):
+        if db.gestoria_account_can_access(account["id"], business_id):
+            continue
+        raw_token = secrets.token_urlsafe(32)
+        invitation = db.create_gestoria_invitation(
+            business_id, account["email"], auth.hash_token(raw_token),
+            (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+        )
+        db.accept_gestoria_invitation(invitation["id"], account["id"])
+
+    return {
+        "autonomo": {
+            "email": SHOWCASE_OWNER_EMAIL, "password": SHOWCASE_PASSWORD,
+            "business_id": primary_id,
+        },
+        "cliente": {
+            "name": portal_client["name"] if portal_client else None,
+            "path": f"/p/{portal_token}" if portal_token else None,
+        },
+        "gestoria": {
+            "email": SHOWCASE_GESTORIA_EMAIL, "password": SHOWCASE_PASSWORD,
+            "businesses": len(db.list_gestoria_businesses(account["id"])),
+        },
     }
 
 
@@ -351,10 +660,11 @@ if __name__ == "__main__":
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # acentos en consola de Windows
     db.init_db()
-    info = seed_rich()
-    print("\n  Demo cargado en Reformas y Fontanería Delta")
+    info = seed_showcase()
+    print("\n  Demo comercial conectada")
     print("  " + "-" * 44)
     print("  Entra en:   /login")
-    print(f"  Email:      {info['email']}")
-    print(f"  Contraseña: {info['password']}")
-    print(f"  Negocio #{info['business_id']} - {info['clients']} clientes\n")
+    print(f"  Autónomo:   {info['autonomo']['email']}")
+    print(f"  Gestoría:   {info['gestoria']['email']}")
+    print(f"  Contraseña: {info['autonomo']['password']}")
+    print(f"  Cliente:    {info['cliente']['path']}\n")

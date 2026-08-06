@@ -17,5 +17,5 @@ crear ciclos de importación.
 
 from __future__ import annotations
 
-from . import ocr, repo, service, storage  # noqa: F401
-__all__ = ["service", "repo", "storage", "ocr"]
+from . import ocr, pdf_ocr, repo, service, storage  # noqa: F401
+__all__ = ["service", "repo", "storage", "ocr", "pdf_ocr"]

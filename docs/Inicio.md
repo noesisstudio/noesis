@@ -20,6 +20,8 @@ usa la vista de grafo para navegar.
   web, datos, cerebro, automatizaciones, WhatsApp y despliegue.
 - [[Conectar-APIs]] — guía única de credenciales, callbacks, variables y pruebas
   externas para conectar producción sin confundir código con servicio activo.
+- [[Demo-comercial]] — dos accesos dentro del SaaS real, portal de cliente,
+  credenciales, solo lectura y activación segura.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.

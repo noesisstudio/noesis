@@ -15,8 +15,10 @@
   la huella al reaparecer y nunca se comparan archivos entre negocios. La bandeja
   busca por archivo, cliente, proyecto, nota, contenido leído y tipo, siempre dentro
   de la empresa activa. Los PDF digitales se leen localmente con límites de páginas,
-  texto y descompresión; los escaneados sin capa de texto quedan pendientes hasta
-  disponer de OCR o visión autorizada. Una referencia inequívoca del mensaje puede
+  texto y descompresión. Si no tienen una capa de texto útil, PDFium rasteriza como
+  máximo cuatro páginas y Tesseract aplica OCR privado en el mismo servidor, con
+  límites de píxeles, tiempo y caracteres; no se envía el documento a una API. Una
+  referencia inequívoca del mensaje puede
   asociar el papel al cliente/proyecto, pero nunca se adivina ante ambigüedad.
 - Hay portales privados para cliente y trabajador. La gestoría conserva el enlace
   histórico por empresa y añade una cuenta profesional: una misma gestoría puede
@@ -24,6 +26,12 @@
   revocable, bandeja de revisión, solicitudes y paquetes por período. No puede emitir,
   mover dinero ni ejecutar decisiones fiscales desde esa cartera. El fichaje y
   Veri*Factu conservan registros inmutables.
+- La demostración comercial no replica ni simula otra aplicación: crea dos accesos
+  dentro del producto real —autónomo y gestoría—, una segunda empresa en la cartera
+  multiempresa y un portal real para el cliente final. Todos comparten datos
+  ficticios coherentes. Las empresas llevan una marca persistente de demostración:
+  se pueden recorrer y descargar sus documentos/paquetes, pero el servidor bloquea
+  cambios, automatizaciones, WhatsApp, correo, cobros y acciones fiscales.
 - El cerebro funciona por capas: reglas locales, compositor interno, servicio privado
   compatible, proveedor externo compatible y Anthropic como respaldo autorizado.
   Que falle una IA nunca apaga el producto local.
@@ -113,10 +121,11 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   requiere además cerrar cómo se aplica el IVA. La facturación es nativa y no se
   conecta a otro SaaS. El calendario bidireccional y la conexión bancaria automática
   siguen pendientes; la suscripción ICS y la conciliación CSV ya funcionan en local.
-- La transcripción y el OCR tienen adaptadores y degradación segura, pero requieren
-  desplegar y validar respectivamente Groq/faster-whisper y
-  Tesseract/pytesseract o una extracción externa consentida. Hasta entonces la web
-  no los presenta como capacidades activas.
+- La transcripción mantiene adaptadores y degradación segura, pero requiere desplegar
+  y validar Groq/faster-whisper. El OCR de imágenes y PDF escaneado ya es íntegramente
+  local con pytesseract, PDFium y los idiomas `spa/eng`; falta confirmar el binario
+  desplegado y medirlo con un corpus real en castellano/catalán antes de prometer una
+  precisión comercial. La extracción externa consentida queda solo como respaldo.
 - La cartera de gestoría ya cubre identidad, varias empresas y revisión documental;
   antes de abrirla a despachos reales faltan MFA/passkeys, recuperación de contraseña,
   permisos más finos y una prueba piloto con datos y responsables reales.

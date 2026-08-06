@@ -27,15 +27,16 @@ dependencies = [
     "qrcode>=8.0,<9",
     # Lectura local y acotada de texto en PDFs digitales; no sustituye OCR.
     "pypdf>=6.13.0,<7",
+    # OCR privado en producción: PDFium rasteriza PDFs escaneados y Tesseract
+    # lee las imágenes. El binario se instala en Railway mediante railpack.json.
+    "pypdfium2>=5.6.0,<6",
+    "pytesseract>=0.3.13,<1",
 ]
 
 [project.optional-dependencies]
 # Transcripción de voz local (notas de voz -> factura/agenda). Pesa y pide RAM,
 # por eso es opcional: pip install -e ".[audio]"
 audio = ["faster-whisper>=1.0.0,<2"]
-# OCR local de tickets. Además de este extra, el servidor necesita el binario
-# tesseract y los idiomas spa/eng. Sin él, se usa extracción autorizada o revisión.
-ocr = ["pytesseract>=0.3.13,<1"]
 security = [
     "bandit>=1.8.0,<2",
     "detect-secrets>=1.5.0,<2",

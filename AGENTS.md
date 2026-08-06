@@ -33,8 +33,9 @@ pip install -e .
 noesis-web
 ```
 
-- Demo básica: `demo@bynoesis.com / demo1234` con `NOESIS_SEED_DEMO` activo.
-- Demo rica: `python -m noesis.demo` crea `demo@noesis.app / demo1234`.
+- Demo comercial real: `python -m noesis.demo` crea un autónomo, una cartera de
+  gestoría y un portal de cliente conectados y de solo lectura. Accesos y activación
+  en [`docs/Demo-comercial.md`](docs/Demo-comercial.md).
 - CLI de chat: `py -m noesis`.
 - Sin proveedor de IA, el producto funciona con `nlu.py`. Un servicio privado se
   configura según [`docs/IA-local.md`](docs/IA-local.md); la IA externa requiere

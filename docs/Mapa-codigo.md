@@ -5,13 +5,17 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 39;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 40;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
   transaccional, asigna serie/línea a las emitidas históricas y lo reinstala antes
   de continuar. La 39 separa las cuentas profesionales de gestoría de los usuarios
-  titulares y exige una relación explícita y revocable por negocio.
+  titulares y exige una relación explícita y revocable por negocio. La 40 añade la
+  marca persistente `is_demo` para bloquear en servidor las empresas ficticias.
+- `src/noesis/demo.py`: siembra dos accesos dentro del producto real —autónomo y
+  gestoría—, una segunda empresa para la cartera y un portal de cliente. Rellena
+  todos los módulos con datos ficticios conectados y no reinicia producción.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
@@ -142,14 +146,20 @@
   Valida también que cliente, proyecto y factura pertenezcan al mismo negocio y solo
   asocia referencias humanas inequívocas.
 - `src/noesis/documents/pdf_text.py`: lectura local de PDF digital con límites de
-  páginas, caracteres y streams descomprimidos; no finge OCR sobre PDF escaneado.
+  páginas, caracteres y streams descomprimidos.
+- `src/noesis/documents/pdf_ocr.py` + `ocr.py`: si un PDF no tiene texto útil,
+  PDFium rasteriza hasta cuatro páginas con límite de píxeles y Tesseract `spa/eng`
+  las lee con timeout; la misma extracción local sirve imágenes de web y WhatsApp.
+- `railpack.json`: instala Tesseract y los idiomas de OCR en el contenedor de
+  despliegue; `pypdfium2` aporta ruedas precompiladas sin servicio externo.
 - `src/noesis/documents/malware.py`: cliente stdlib del protocolo ClamAV INSTREAM;
   escanea en memoria y permite fallo cerrado sin una API externa.
 - `src/noesis/documents/repo.py`: metadatos, huellas SHA-256 y vínculos con cliente,
   proyecto, gasto o factura recibida. La migración 38 impone unicidad parcial por
   negocio, permite completar históricos de forma perezosa y busca con parámetros
   solo dentro del negocio activo.
-- `src/noesis/web/gestoria.py`: paquete ordenado, manifiesto, huella y versionado.
+- `src/noesis/web/gestoria.py`: paquete ordenado, manifiesto, huella y versionado;
+  en una empresa demo puede generarlo sin registrar una entrega ficticia.
 - `src/noesis/web/routers/gestoria_portal.py` + plantillas `gestoria_*`: identidad
   profesional, invitación de un solo uso, cartera multiempresa, revisión documental,
   solicitudes y descarga por período; cada ruta vuelve a comprobar la relación de

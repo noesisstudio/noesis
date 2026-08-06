@@ -91,7 +91,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
           <span class="search-hint">Buscar</span><kbd>Ctrl K</kbd>
         </button>
-        {% if subscription_read_only %}
+        {% if business.is_demo %}
+        <span class="wa-pill">Demo · solo lectura</span>
+        {% elif subscription_read_only %}
         <a class="btn primary sm subscription-activate" href="/b/{{ business.id }}/suscripcion">Activar Noesis</a>
         {% else %}
         <div class="quick-create">
@@ -139,7 +141,11 @@
       <a class="{{ 'active' if active=='productos' }}" href="/b/{{ b }}/productos">Productos</a>
     </div>
     {% endif %}
-    {% if subscription_read_only %}
+    {% if business.is_demo %}
+    <div class="readonly-banner" role="status">
+      <div><b>Datos de demostración</b><span>Puedes recorrer todo Noesis con información ficticia. Las acciones que enviarían o cambiarían datos están bloqueadas.</span></div>
+    </div>
+    {% elif subscription_read_only %}
     <div class="readonly-banner" role="status">
       <div><b>Modo consulta</b><span>Puedes revisar todo tu negocio. Para crear, cambiar o enviar, activa tu plan.</span></div>
       <a class="btn primary sm" href="/b/{{ business.id }}/suscripcion">Ver planes</a>
@@ -179,7 +185,11 @@
     <span class="ic">{{ ic('resumen') }}</span>Inicio</a>
   <a class="bn-item {{ 'active' if active=='agenda' }}" href="/b/{{ business.id }}/agenda">
     <span class="ic">{{ ic('agenda') }}</span>Trabajos</a>
-  {% if subscription_read_only %}
+  {% if business.is_demo %}
+  <span class="bn-create locked" aria-label="Demo de solo lectura">
+    <span aria-hidden="true">â€“</span>
+  </span>
+  {% elif subscription_read_only %}
   <a class="bn-create locked" aria-label="Activar Noesis" href="/b/{{ business.id }}/suscripcion">
     <span aria-hidden="true">€</span>
   </a>
@@ -237,7 +247,9 @@
   {% endif %}
   {% endif %}
   <div class="companion-log" id="companion-log" aria-live="polite"></div>
-  {% if subscription_read_only %}
+  {% if business.is_demo %}
+  <p class="companion-subscribe">Demo de solo lectura: Noesis te enseña el contexto sin ejecutar acciones.</p>
+  {% elif subscription_read_only %}
   <a class="companion-subscribe" href="/b/{{ business.id }}/suscripcion">
     Activa Noesis para conversar y actuar</a>
   {% else %}

@@ -30,9 +30,14 @@
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
   reintentos y bloqueo de cuenta inactiva.
 - [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
-  (Tesseract/pytesseract o extracción externa autorizada) con corpus real en
-  castellano/catalán; sin estos servicios, mantener las promesas públicas
-  degradadas.
+  con corpus real en castellano/catalán. La ruta privada de OCR ya incorpora
+  Tesseract/pytesseract para imágenes y PDFium para PDF escaneado, y Railpack instala
+  los idiomas `spa/eng`; falta comprobar el despliegue y medir precisión/tiempo. Sin
+  esa validación, mantener las promesas públicas degradadas.
+- [ ] Activar una vez `NOESIS_SEED_DEMO=true` en Railway, desplegar y recorrer los
+  accesos reales de autónomo y gestoría y `/demo/cliente`. Confirmar que ambos
+  negocios muestran datos completos y que cualquier escritura, envío o automatización
+  queda bloqueada. Después se puede volver a `false`: los registros persisten.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.
@@ -67,9 +72,9 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 - [ ] Evaluar servicio privado y proveedor compatible con el mismo corpus en
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
-- [ ] Documentos: deduplicación, búsqueda y lectura acotada de PDF digital están
-  cerradas; faltan lectura completa de HEIC/PDF escaneado, líneas y corrección
-  masiva con corpus real.
+- [ ] Documentos: deduplicación, búsqueda, PDF digital y OCR acotado de PDF escaneado
+  están construidos; faltan HEIC, extracción fiable de líneas y corrección masiva,
+  y validar el conjunto con corpus real.
 - [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por

@@ -1,5 +1,48 @@
 # Registro de QA
 
+## 2026-08-06 — dos cuentas demo reales y OCR privado de PDF escaneado
+
+### Qué se probó y con qué resultado
+
+- **Datos conectados:** la siembra crea/reutiliza el acceso real del autónomo,
+  una cuenta real de gestoría, dos empresas en su cartera y el portal del cliente
+  correcto. Repetirla no duplica negocios, clientes ni facturas.
+- **Contenido útil:** la cuenta principal tiene al menos siete clientes, facturas y
+  gastos en seis meses activos, catálogo, proveedores, CRM, trabajos, dos
+  trabajadores, proyecto con presupuesto/costes/horas/tareas, documentos PDF/JPEG
+  válidos y solicitudes de gestoría. El portal de cliente tiene factura y
+  presupuesto; la gestoría tiene dos empresas y puede descargar un paquete ficticio.
+- **Navegación real:** login del autónomo y render de todas las secciones del panel
+  —Inicio, Trabajos, Proyectos, Clientes, Dinero, Análisis, Ingresos, Costes,
+  Presupuestos, Facturas, Cobros, Impuestos, Equipo, CRM, Productos, Documentos,
+  Asistente y Ajustes—; login/cartera/ficha/paquete de gestoría y portal/PDF del
+  cliente. No se usó una aplicación o plantilla alternativa.
+- **Solo lectura:** una mutación de API del autónomo queda en 403, aceptar un
+  presupuesto desde el portal queda en 402 y descargar el PDF o paquete de demo no
+  registra eventos ni entregas ficticias. Automatizaciones y envíos reutilizan el
+  mismo bloqueo de suscripción del servidor.
+- **PDF escaneado:** un PDF compuesto únicamente por una imagen se rasteriza realmente
+  con PDFium y pasa cada imagen por el adaptador OCR local; el resultado alimenta
+  importe y clasificación. Una página de dimensiones absurdas se rechaza antes de
+  renderizar. Los límites son cuatro páginas, cinco millones de píxeles por página,
+  ocho segundos de Tesseract por página y 24.000 caracteres por documento.
+- **Pruebas:** 4 pruebas focalizadas, Ruff, `compileall`, Bandit alto, detección de
+  secretos y `pip-audit` verdes; suite completa final **409/409** y ciclo SQLite
+  0 → 40 → 0 → 40 verdes. `check_project_truth.py` confirma estado/esquema/precios.
+
+### Qué no se ha probado
+
+- El Windows local no tiene instalado el binario de Tesseract: se verificaron las
+  dependencias Python, la rasterización real y el contrato del adaptador con un OCR
+  controlado. `railpack.json` instala Tesseract `spa/eng` en Railway, pero todavía
+  hay que verificar ese binario y medir precisión/latencia con tickets y PDFs reales
+  en castellano/catalán después del despliegue.
+- No se enviaron WhatsApps, correos, cobros ni registros fiscales y no se hizo QA
+  visual en navegador. La demo los bloquea deliberadamente; el render y los enlaces
+  principales sí se recorrieron mediante la aplicación FastAPI real.
+- El candidato aún no se considera publicado: falta commit, despliegue, esquema 40,
+  activación temporal de `NOESIS_SEED_DEMO` y prueba autenticada en producción.
+
 ## 2026-08-06 — cartera multiempresa y PDF contextual desde WhatsApp
 
 ### Qué se probó y con qué resultado

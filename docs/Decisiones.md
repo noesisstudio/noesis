@@ -2,6 +2,26 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## La demo son cuentas reales dentro de Noesis, no otro producto (2026-08-06)
+
+Para enseñar Noesis no se mantendrá una segunda interfaz ni un conjunto de pantallas
+inventadas. El acceso de autónomo, la cuenta profesional de gestoría y el portal del
+cliente recorren el mismo código y los mismos datos relacionados que usaría un
+cliente real. Así una reunión también prueba el producto y no una promesa separada.
+
+Las empresas ficticias llevan una marca persistente y el servidor las trata como
+solo lectura. Se permiten lecturas y descargas útiles, pero no altas, cambios,
+aceptaciones, envíos, automatizaciones, cobros ni acciones fiscales. La contraseña
+puede ser conocida porque nunca abre datos reales ni autoridad operativa.
+
+## Los PDF escaneados se leen primero dentro de nuestra infraestructura (2026-08-06)
+
+Un PDF sin capa de texto no debe obligar a enviar una factura o ticket a una API de
+visión. PDFium rasteriza localmente y el mismo Tesseract de las fotos aplica OCR con
+límites estrictos. Si no puede leerlo con suficiente evidencia, el documento pasa a
+revisión; Noesis no inventa una clasificación. La extracción externa autorizada
+queda como respaldo explícito, no como requisito del recorrido normal.
+
 ## El alias público llega al servidor, pero nunca sirve una segunda web (2026-08-06)
 
 `www.bynoesis.com` debe estar permitido por el guardián de Host para que el servidor

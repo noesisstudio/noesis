@@ -158,6 +158,31 @@ def demo_redirect():
     return RedirectResponse("/contacto", status_code=301)
 
 
+@router.get("/demo/cliente", include_in_schema=False)
+def showcase_client_redirect():
+    """Entrada estable al portal ficticio de la demostración comercial."""
+    from ... import demo
+
+    owner = db.get_user_by_email(demo.SHOWCASE_OWNER_EMAIL)
+    business = db.get_business(owner["business_id"]) if owner else None
+    if not business or not business.get("is_demo"):
+        return RedirectResponse("/contacto", status_code=303)
+    clients = db.list_clients(business["id"])
+    portal_client = next(
+        (
+            client for client in clients
+            if client["name"] == demo.SHOWCASE_PORTAL_CLIENT
+        ),
+        clients[0] if clients else None,
+    )
+    if not portal_client:
+        return RedirectResponse("/contacto", status_code=303)
+    token = db.get_or_create_portal_token(
+        business["id"], portal_client["id"], ttl_days=3650
+    )
+    return RedirectResponse(f"/p/{token}", status_code=303)
+
+
 @router.get("/precios", response_class=HTMLResponse)
 @router.get("/equipo", response_class=HTMLResponse)
 @router.get("/preguntas", response_class=HTMLResponse)

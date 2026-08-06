@@ -23,6 +23,34 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 19:17 — cuentas comerciales reales y OCR privado de escaneados
+
+- **Autor/agente:** Codex.
+- **Objetivo:** crear dentro del SaaS real un acceso de autónomo lleno, un acceso de
+  gestoría con cartera multiempresa y el portal de su cliente; leer localmente los
+  PDF formados por imágenes sin contratar una API.
+- **Áreas y archivos:** siembra y DB, middleware de permisos, portales/panel,
+  documentos/OCR, Railpack/dependencias, pruebas y documentación operativa.
+- **Cambios de datos/migración:** esquema 40 añade `businesses.is_demo` con valor
+  falso por defecto. Solo las empresas ficticias preparadas expresamente se marcan
+  como demo; las cuentas existentes no cambian.
+- **Pruebas ejecutadas:** cuatro pruebas focalizadas, navegación de todas las rutas,
+  aislamiento y solo lectura, PDFium sobre PDF de imagen, rechazo previo de páginas
+  absurdas, Ruff, `compileall`, Bandit alto, secretos, `pip-audit`, fuente de verdad,
+  suite 409/409 y ciclo SQLite 0 → 40 → 0 → 40. Evidencia en `Registro-QA.md`.
+- **Dependencias o validaciones externas:** `pypdfium2` y `pytesseract`; Railpack
+  instala Tesseract `spa/eng`. Falta verificar el binario y un corpus real tras el
+  despliegue. Meta, correo, Stripe y AEAT no intervienen en la demo.
+- **Riesgo/punto probable de fallo:** paquete APT/idiomas ausente en la imagen final,
+  consumo de CPU del OCR y una cuenta sembrada parcialmente si el primer arranque se
+  interrumpe. La demo falla hacia revisión manual y nunca tumba el arranque real.
+- **Diagnóstico y rollback:** revisar el log `noesis.pdf_ocr`, disponibilidad de
+  Tesseract, `businesses.is_demo` y las cuentas reservadas `demo.*@bynoesis.com`.
+  Revertir el commit y bajar 40 elimina solo la marca; los datos ficticios deben
+  borrarse de forma controlada si se decide retirar el escaparate.
+- **Estado de publicación:** `main` tras este commit; pendiente despliegue,
+  migración 40, activación temporal de `NOESIS_SEED_DEMO` y validación real.
+
 ## 2026-08-06 18:30 — cartera profesional y papeles con contexto
 
 - **Autor/agente:** Codex.

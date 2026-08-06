@@ -105,15 +105,32 @@ async def auth_guard(request: Request, call_next):
                 return JSONResponse({"error": "no autorizado"}, status_code=403)
             return RedirectResponse(f"/b/{own_business_id}/resumen")
         business = db.get_business(own_business_id)
+        is_demo = bool(business and business.get("is_demo"))
         allowed_when_blocked = (
-            path.startswith(f"/b/{own_business_id}/suscripcion")
-            or path == f"/b/{own_business_id}/account/delete"
-            or path == f"/api/{own_business_id}/export"
+            not is_demo
+            and (
+                path.startswith(f"/b/{own_business_id}/suscripcion")
+                or path == f"/b/{own_business_id}/account/delete"
+                or path == f"/api/{own_business_id}/export"
+            )
         )
         can_write = db.subscription_allows_access(business)
         request.state.subscription_read_only = not can_write
         safe_read = request.method in {"GET", "HEAD", "OPTIONS"}
         if not can_write and not safe_read and not allowed_when_blocked:
+            if is_demo:
+                if path.startswith("/api/"):
+                    return JSONResponse(
+                        {
+                            "error": "La demostración es de solo lectura.",
+                            "code": "demo_read_only",
+                        },
+                        status_code=403,
+                    )
+                return RedirectResponse(
+                    f"/b/{own_business_id}/resumen?demo=readonly",
+                    status_code=303,
+                )
             if path.startswith("/api/"):
                 return JSONResponse(
                     {
