@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import unicodedata
 
 from .. import config
-from . import malware, ocr, repo, storage, validation
+from . import malware, ocr, pdf_text, repo, storage, validation
 
 
 class UploadError(Exception):
@@ -94,14 +96,43 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
             metadata={"scanner": "clamav"},
         )
         raise UploadError("El archivo no ha superado el control de seguridad.")
+    if client_id not in (None, ""):
+        try:
+            client_id = int(client_id)
+        except (TypeError, ValueError) as exc:
+            raise UploadError("El cliente no es válido.") from exc
+        if not db.get_client(client_id, business_id):
+            raise UploadError("El cliente no pertenece a este negocio.")
+    else:
+        client_id = None
+    if invoice_id not in (None, ""):
+        try:
+            invoice_id = int(invoice_id)
+        except (TypeError, ValueError) as exc:
+            raise UploadError("La factura no es válida.") from exc
+        invoice = db.get_invoice(invoice_id, business_id)
+        if not invoice:
+            raise UploadError("La factura no pertenece a este negocio.")
+        invoice_client_id = invoice.get("client_id")
+        if client_id is None and invoice_client_id:
+            client_id = int(invoice_client_id)
+        elif client_id and invoice_client_id not in (None, client_id):
+            raise UploadError("El cliente no coincide con la factura.")
+    else:
+        invoice_id = None
     if project_id not in (None, ""):
-        from .. import db
         try:
             project_id = int(project_id)
         except (TypeError, ValueError) as exc:
             raise UploadError("El proyecto no es válido.") from exc
-        if not db.get_project(project_id, business_id):
+        project = db.get_project(project_id, business_id)
+        if not project:
             raise UploadError("El proyecto no pertenece a este negocio.")
+        project_client_id = project.get("client_id")
+        if client_id is None and project_client_id:
+            client_id = int(project_client_id)
+        elif client_id and project_client_id not in (None, client_id):
+            raise UploadError("El cliente no coincide con el proyecto.")
     else:
         project_id = None
 
@@ -111,11 +142,15 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
         raise DuplicateDocument(existing["id"])
 
     ocr_text = ocr_amount = None
-    if run_ocr and storage.ext_of(filename) in storage.IMAGE_EXTS:
-        result = ocr.extract(data)
-        if result:
-            ocr_text = result.get("text") or None
-            ocr_amount = result.get("amount")
+    if run_ocr:
+        if storage.ext_of(filename) in storage.IMAGE_EXTS:
+            result = ocr.extract(data)
+            if result:
+                ocr_text = result.get("text") or None
+                ocr_amount = result.get("amount")
+        elif storage.ext_of(filename) == ".pdf":
+            ocr_text = pdf_text.extract(data)
+            ocr_amount = ocr.detect_amount(ocr_text)
 
     stored_name = storage.save(business_id, filename, data)
     try:
@@ -141,6 +176,71 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
         doc = repo.get(doc["id"], business_id) or doc
         doc["classification"] = proposal
     return doc
+
+
+def _fold_reference(value: str | None) -> str:
+    text = unicodedata.normalize("NFKD", str(value or "").strip().lower())
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", text).split())
+
+
+def associate_context(business_id: int, doc_id: int, reference: str | None,
+                      *, customer: str | None = None,
+                      customer_nif: str | None = None) -> dict:
+    """Relaciona un documento solo ante una coincidencia inequívoca.
+
+    Se prioriza el proyecto citado (y de él se hereda el cliente). Si el texto
+    encaja con más de una opción, no se adivina: el documento queda sin asociar.
+    """
+    from .. import db
+
+    document = repo.get(doc_id, business_id)
+    if not document:
+        return {"document": None, "matched": None, "ambiguous": False}
+    folded = _fold_reference(reference)
+
+    def mentioned(name: str | None) -> bool:
+        candidate = _fold_reference(name)
+        return bool(candidate and folded and re.search(
+            rf"(?:^| )({re.escape(candidate)})(?: |$)", folded
+        ))
+
+    projects = [project for project in db.list_projects(business_id)
+                if mentioned(project.get("name"))]
+    if len(projects) == 1:
+        project = projects[0]
+        saved = repo.set_context(
+            doc_id, business_id, project_id=project["id"],
+            client_id=project.get("client_id"),
+        )
+        return {"document": saved, "matched": "project",
+                "label": project.get("name"), "ambiguous": False}
+    if len(projects) > 1:
+        return {"document": document, "matched": None, "ambiguous": True}
+
+    clients = db.list_clients(business_id)
+    if customer_nif:
+        target_nif = re.sub(r"\W", "", customer_nif).upper()
+        by_nif = [client for client in clients if re.sub(
+            r"\W", "", str(client.get("nif") or "")
+        ).upper() == target_nif]
+        if len(by_nif) == 1:
+            client = by_nif[0]
+            saved = repo.set_context(doc_id, business_id, client_id=client["id"])
+            return {"document": saved, "matched": "client",
+                    "label": client.get("name"), "ambiguous": False}
+    named = [client for client in clients if mentioned(client.get("name"))]
+    if not named and customer:
+        customer_folded = _fold_reference(customer)
+        named = [client for client in clients
+                 if _fold_reference(client.get("name")) == customer_folded]
+    if len(named) == 1:
+        client = named[0]
+        saved = repo.set_context(doc_id, business_id, client_id=client["id"])
+        return {"document": saved, "matched": "client",
+                "label": client.get("name"), "ambiguous": False}
+    return {"document": document, "matched": None,
+            "ambiguous": len(named) > 1}
 
 
 def classify(business_id: int, doc_id: int) -> dict | None:

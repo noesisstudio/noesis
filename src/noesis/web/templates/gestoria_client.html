@@ -1,0 +1,46 @@
+{% extends "gestoria_base.html" %}
+{% block title %}{{ business.name }}{% endblock %}
+{% block content %}
+<a class="gestoria-back" href="/gestoria">← Volver a la cartera</a>
+<div class="gestoria-page-head client">
+  <div><span class="eyebrow">Cliente de la cartera</span><h1>{{ business.name }}</h1><p>{{ business.nif or 'NIF pendiente' }}{% if business.sector %} · {{ business.sector }}{% endif %}</p></div>
+  <span class="badge {{ 'b-green' if business.subscription_status in ['active','trialing'] else 'b-gray' }}">{{ business.subscription_status or 'consulta' }}</span>
+</div>
+{% if request.query_params.get('ok') %}<div class="banner ok">Cambio guardado. La empresa lo verá también en su Noesis.</div>{% endif %}
+
+<div class="gestoria-client-grid">
+  <section class="card gestoria-primary-card">
+    <div class="card-h"><div><span class="eyebrow">Primero</span><h2>Documentos por revisar</h2></div><span class="badge b-amber">{{ pending_documents|length }}</span></div>
+    <div class="card-b">
+      {% if not pending_documents %}<div class="gestoria-empty small"><b>No hay documentos pendientes.</b><p>Todo lo recibido está revisado o validado.</p></div>{% endif %}
+      {% for doc in pending_documents %}
+      <details class="gestoria-document">
+        <summary><div><b>{{ doc.filename }}</b><small>{{ doc.kind|replace('_',' ') }} · {{ doc.created_at[:10] }}{% if doc.client_name %} · {{ doc.client_name }}{% endif %}{% if doc.project_name %} · {{ doc.project_name }}{% endif %}</small></div><span>Revisar</span></summary>
+        <div class="gestoria-document-body">
+          <a class="btn sm" target="_blank" rel="noopener" href="/gestoria/cliente/{{ business.id }}/documento/{{ doc.id }}">Ver original</a>
+          <form method="post" action="/gestoria/cliente/{{ business.id }}/documento/{{ doc.id }}/revisar">
+            <div class="grid g2"><div><label class="fld">Tipo</label><select class="input" name="kind"><option value="documento">Documento</option><option value="ticket">Ticket</option><option value="factura_recibida">Factura recibida</option><option value="factura_emitida">Factura emitida</option><option value="contrato">Contrato</option><option value="albaran">Albarán</option><option value="presupuesto">Presupuesto</option></select></div>
+            <div><label class="fld">Cliente</label><select class="input" name="client_id"><option value="">Sin asignar</option>{% for client in clients %}<option value="{{ client.id }}" {{ 'selected' if doc.client_id == client.id }}>{{ client.name }}</option>{% endfor %}</select></div></div>
+            <label class="fld">Proyecto</label><select class="input" name="project_id"><option value="">Sin proyecto</option>{% for project in projects %}<option value="{{ project.id }}" {{ 'selected' if doc.project_id == project.id }}>{{ project.name }}</option>{% endfor %}</select>
+            <label class="fld">Nota de revisión</label><input class="input" name="review_note" maxlength="500" value="{{ doc.review_note or '' }}">
+            <button class="btn primary">Validar documento</button>
+          </form>
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+
+  <aside class="card gestoria-request-card">
+    <div class="card-h"><h2>Pedir documentación</h2></div><div class="card-b"><p class="muted">La petición aparecerá en Documentos dentro del panel del autónomo.</p>
+    <form method="post" action="/gestoria/cliente/{{ business.id }}/solicitud"><textarea class="input" name="message" rows="4" maxlength="2000" required placeholder="Ej. Falta la factura de la furgoneta de julio."></textarea><button class="btn primary gestoria-full">Enviar solicitud</button></form></div>
+  </aside>
+</div>
+
+<section class="card gestoria-periods-card"><div class="card-h"><div><span class="eyebrow">Archivo ordenado</span><h2>Períodos preparados</h2></div></div><div class="card-b">
+  {% if not periods %}<p class="muted">Todavía no hay períodos cerrados con actividad.</p>{% endif %}
+  {% for period in periods %}<div class="gestoria-period-row"><div><b>{{ period.label }}</b><small>{{ period.invoices }} factura(s) · {{ period.expenses }} gasto(s)</small></div><a class="btn sm" href="/gestoria/cliente/{{ business.id }}/paquete/{{ period.label }}">Descargar ZIP</a></div>{% endfor %}
+</div></section>
+
+{% if requests %}<section class="card gestoria-periods-card"><div class="card-h"><h2>Seguimiento</h2></div><div class="card-b">{% for item in requests %}<div class="gestoria-period-row"><div><b>{{ item.message }}</b><small>{{ item.created_at[:10] }} · {{ item.status }} · {{ 'gestoría' if item.requested_by == 'gestoria' else 'cliente' }}</small></div></div>{% endfor %}</div></section>{% endif %}
+{% endblock %}

@@ -111,6 +111,43 @@ def set_review(doc_id: int, business_id: int, *, kind: str | None = None,
     return get(doc_id, business_id)
 
 
+def set_context(doc_id: int, business_id: int, *,
+                client_id: int | None = None,
+                project_id: int | None = None) -> dict | None:
+    """Asocia cliente/proyecto sin permitir referencias de otro negocio."""
+    from .. import db
+
+    document = get(doc_id, business_id)
+    if not document:
+        return None
+    project = None
+    if project_id not in (None, ""):
+        project = db.get_project(int(project_id), business_id)
+        if not project:
+            raise ValueError("El proyecto no pertenece a este negocio.")
+        project_id = int(project_id)
+        project_client_id = project.get("client_id")
+        if client_id in (None, "") and project_client_id:
+            client_id = int(project_client_id)
+        elif client_id not in (None, "") and project_client_id not in (None, int(client_id)):
+            raise ValueError("El cliente no coincide con el proyecto.")
+    else:
+        project_id = None
+    if client_id not in (None, ""):
+        client_id = int(client_id)
+        if not db.get_client(client_id, business_id):
+            raise ValueError("El cliente no pertenece a este negocio.")
+    else:
+        client_id = None
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE documents SET client_id=?, project_id=? "
+            "WHERE id=? AND business_id=?",
+            (client_id, project_id, doc_id, business_id),
+        )
+    return get(doc_id, business_id)
+
+
 def record_classification(
     doc_id: int,
     business_id: int,

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Gestoría{% endblock %} · Noesis</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body class="gestoria-app">
+  <header class="gestoria-topbar">
+    <a class="gestoria-brand" href="/gestoria">
+      <img src="/static/noesis-mark.svg" alt=""> Noesis
+      <span>para gestorías</span>
+    </a>
+    {% if account %}
+    <div class="gestoria-account">
+      <span>{{ account.firm_name }}</span>
+      <form method="post" action="/gestoria/logout"><button class="btn sm">Salir</button></form>
+    </div>
+    {% endif %}
+  </header>
+  <main class="gestoria-shell">{% block content %}{% endblock %}</main>
+</body>
+</html>

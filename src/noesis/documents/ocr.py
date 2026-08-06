@@ -81,6 +81,11 @@ def _detect_amount(text: str) -> float | None:
     return round(max(vals), 2) if vals else None
 
 
+def detect_amount(text: str | None) -> float | None:
+    """Expone la misma heurística para texto PDF extraído localmente."""
+    return _detect_amount(text or "")
+
+
 def extract(data: bytes) -> dict | None:
     """Devuelve {text, amount} de una imagen, o None si el OCR no está disponible."""
     if not available():
@@ -88,4 +93,4 @@ def extract(data: bytes) -> dict | None:
     text = _read_text(data)
     if text is None:
         return None
-    return {"text": text.strip(), "amount": _detect_amount(text)}
+    return {"text": text.strip(), "amount": detect_amount(text)}

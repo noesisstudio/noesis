@@ -1,0 +1,27 @@
+{% extends "gestoria_base.html" %}
+{% block title %}Acceso de gestoría{% endblock %}
+{% block content %}
+<div class="gestoria-auth-wrap">
+  <section class="gestoria-auth-intro">
+    <span class="eyebrow">Cartera profesional</span>
+    <h1>Tus clientes, ordenados en un solo lugar.</h1>
+    <p>Revisa documentación, pide lo que falta y descarga cada período sin mezclar empresas.</p>
+  </section>
+  <section class="gestoria-auth-card">
+    <h2>Entrar a la cartera</h2>
+    <p class="muted">Usa el correo al que tu cliente envió la invitación.</p>
+    {% if error %}<div class="banner warn">
+      {% if error == 'throttle' %}Demasiados intentos. Espera unos minutos.
+      {% else %}El correo o la contraseña no coinciden.{% endif %}
+    </div>{% endif %}
+    <form method="post" action="/gestoria/login">
+      <label class="fld">Correo profesional</label>
+      <input class="input" type="email" name="email" autocomplete="username" required>
+      <label class="fld">Contraseña</label>
+      <input class="input" type="password" name="password" autocomplete="current-password" required>
+      <button class="btn primary gestoria-full">Entrar</button>
+    </form>
+    <p class="gestoria-help">¿Aún no tienes cuenta? Tu primer cliente debe invitarte desde Ajustes.</p>
+  </section>
+</div>
+{% endblock %}

@@ -1,5 +1,34 @@
 # Registro de QA
 
+## 2026-08-06 — cartera multiempresa y PDF contextual desde WhatsApp
+
+### Qué se probó y con qué resultado
+
+- **Aislamiento:** una cuenta profesional recibe acceso explícito a dos empresas y
+  no ve una tercera. La revocación corta el acceso. Cliente y proyecto de otro
+  negocio —incluida una factura— se rechazan aunque se envíen identificadores válidos.
+- **Invitaciones:** token de un solo uso guardado solo como huella, correo fijado por
+  la invitación, contraseña mínima de 12 caracteres, rate limit compartido y sesión
+  con caducidad por inactividad. El portal histórico `/g/` sigue funcionando.
+- **Baja RGPD:** una empresa con invitación y acceso profesional aceptado se elimina
+  sin dejar acceso huérfano ni bloquear la baja; la cuenta de gestoría conserva sus
+  otros clientes.
+- **Documentos:** un PDF digital se lee localmente, detecta `48,40` y se clasifica
+  como ticket. Un PDF enviado por WhatsApp con el texto «Instalación Hotel Mar» se
+  enlaza al proyecto y hereda su cliente; una coincidencia ambigua queda sin enlazar.
+- **Interfaz:** comparación visual conjunta con el panel principal y revisión de
+  acceso, cartera y ficha de empresa en navegador. Conserva marca, lienzo, tipografía
+  y jerarquía «primero», con estructura propia para una gestoría.
+- **Pruebas:** Ruff verde; 11 pruebas focalizadas de gestoría y la prueba directa de
+  WhatsApp verdes; suite completa final **405/405**. Bandit, detección de secretos,
+  `pip-audit`, `compileall`, fuente de verdad y ciclo 0 → 39 → 0 → 39 verdes.
+
+### Qué no se ha probado
+
+- No se llamó a Meta, correo, Stripe, AEAT ni a una gestoría real. Un PDF compuesto
+  solo por imágenes no lo puede leer pypdf: necesita Tesseract/visión autorizada.
+  MFA/passkeys, recuperación de contraseña y permisos por rol siguen pendientes.
+
 ## 2026-08-06 — búsqueda útil dentro de Documentos
 
 ### Qué se probó y con qué resultado

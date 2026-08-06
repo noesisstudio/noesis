@@ -784,9 +784,25 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
         return {"phone": phone, "media": "image", "ingested": False}
 
     classification = document.get("classification") or {}
+    context = docservice.associate_context(
+        business["id"], document["id"], message.get("caption")
+    )
+    context_note = (
+        f" Lo he asociado a {context['label']}." if context.get("matched")
+        else " Hay varias coincidencias: revisa el cliente o proyecto en Documentos."
+        if context.get("ambiguous") else ""
+    )
     detected_kind = classification.get("kind") or document.get("kind") or "documento"
     if detected_kind in {"factura_recibida", "factura_emitida"}:
         draft = docservice.invoice_draft(business["id"], document["id"])
+        if draft and draft.get("direction") == "emitida":
+            context = docservice.associate_context(
+                business["id"], document["id"], message.get("caption"),
+                customer=draft.get("customer"),
+                customer_nif=draft.get("customer_nif"),
+            )
+            if context.get("matched"):
+                context_note = f" Lo he asociado a {context['label']}."
         if detected_kind == "factura_recibida" and draft and draft.get("total"):
             payload = {**draft, "document_id": document["id"]}
             db.set_pending_action(business["id"], phone, "factura_recibida", payload)
@@ -794,7 +810,8 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
                 phone,
                 f"📄 Parece una factura recibida de "
                 f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
-                "¿La guardo como factura de proveedor? Responde SÍ o NO.",
+                "¿La guardo como factura de proveedor? Responde SÍ o NO."
+                + context_note,
                 business_id=business["id"],
             )
             return {"phone": phone, "media": "image", "ingested": True,
@@ -804,7 +821,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             phone,
             "He guardado la foto. Parece una factura emitida por ti, así que no "
             "la reemitiré ni la meteré en Veri*Factu. Revísala en Documentos para "
-            "confirmar que es histórica.",
+            "confirmar que es histórica." + context_note,
             business_id=business["id"],
         )
         return {"phone": phone, "media": "image", "ingested": True,
@@ -817,7 +834,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
         send(
             phone,
             f"📎 Guardado. Parece {labels[detected_kind]}. Lo he dejado pendiente "
-            "de tu confirmación en Documentos.",
+            "de tu confirmación en Documentos." + context_note,
             business_id=business["id"],
         )
         return {"phone": phone, "media": "image", "ingested": True,
@@ -850,7 +867,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             detail += f", del {fields['date']}"
         send(
             phone,
-            detail + ". ¿Lo apunto como gasto? Responde SÍ o NO.",
+            detail + ". ¿Lo apunto como gasto? Responde SÍ o NO." + context_note,
             business_id=business["id"],
         )
         return {
@@ -861,7 +878,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
         phone,
         "He guardado la foto en tus papeles, pero no he podido leer el "
         "importe. Dímelo en un mensaje (ej.: «gasto 25,50 ferretería») o "
-        "complétalo desde la web.",
+        "complétalo desde la web." + context_note,
         business_id=business["id"],
     )
     return {
@@ -898,13 +915,21 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
     try:
         document = docservice.upload(
             business["id"], filename, data,
-            kind="documento", note="Recibido por WhatsApp", run_ocr=False,
+            kind="documento", note="Recibido por WhatsApp", run_ocr=True,
             auto_classify=True,
         )
     except docservice.UploadError as exc:
         send(phone, str(exc), business_id=business["id"])
         return {"phone": phone, "media": "document", "ingested": False}
     classification = document.get("classification") or {}
+    context = docservice.associate_context(
+        business["id"], document["id"], message.get("caption")
+    )
+    context_note = (
+        f" Lo he asociado a {context['label']}." if context.get("matched")
+        else " Hay varias coincidencias: revisa el cliente o proyecto en Documentos."
+        if context.get("ambiguous") else ""
+    )
     kind = classification.get("kind") or "documento"
     if kind == "factura_recibida":
         draft = docservice.invoice_draft(business["id"], document["id"])
@@ -917,7 +942,7 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
                 phone,
                 f"📄 He leído «{filename}»: parece una factura recibida de "
                 f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
-                "¿La registro? Responde SÍ o NO.",
+                "¿La registro? Responde SÍ o NO." + context_note,
                 business_id=business["id"],
             )
             return {"phone": phone, "media": "document", "ingested": True,
@@ -930,7 +955,8 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
         phone,
         f"📎 Guardado «{filename}» en tus papeles. "
         + (f"Parece {reading}; confírmalo en Documentos." if reading
-           else "No estoy segura del tipo; te lo he dejado pendiente para revisar."),
+           else "No estoy segura del tipo; te lo he dejado pendiente para revisar.")
+        + context_note,
         business_id=business["id"],
     )
     return {

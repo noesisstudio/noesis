@@ -23,6 +23,95 @@ No hay que contratar todas las IAs. Para el piloto basta con conservar el cerebr
 local y conectar **un** respaldo avanzado fiable. Groq Whisper es otra integración:
 transcribe audio y no sustituye al modelo que razona o redacta.
 
+## Guía rápida para el founder: dónde entrar y qué copiar
+
+No pegues ninguna clave en un chat ni en un documento. En Railway abre el proyecto
+de Noesis, entra en el servicio web, **Variables**, pulsa **New variable** y añade
+cada nombre y valor. Haz primero todas las pruebas con Stripe y Meta en modo test.
+
+### Stripe, paso a paso
+
+1. Entra en [Stripe Dashboard · API keys](https://dashboard.stripe.com/test/apikeys)
+   y comprueba que estás en un **sandbox**, no en live.
+2. Crea una clave restringida para Noesis si el panel permite asignar los permisos
+   de Customers, Checkout Sessions, Billing Portal, Products, Prices,
+   Subscriptions, Invoices y Tax. Si la configuración bloquea el piloto, usa
+   temporalmente la `sk_test_...` estándar y sustitúyela antes de producción.
+3. Copia la clave privada en Railway como `STRIPE_SECRET_KEY`. Noesis no necesita
+   una `pk_...` porque crea Checkout desde el servidor.
+4. En **Product catalog**, crea Autónomo, Negocio y Sin Límites. Dentro de cada
+   producto crea un precio mensual y otro anual con los importes de la sección 3.
+   Copia los seis identificadores `price_...` a sus seis variables exactas.
+5. En [Stripe Webhooks](https://dashboard.stripe.com/test/webhooks), crea un
+   endpoint HTTPS con URL `https://bynoesis.com/webhook/stripe`, selecciona los
+   seis eventos de la sección 3 y guarda.
+6. Abre el endpoint recién creado, revela **Signing secret** y guarda el
+   `whsec_...` como `STRIPE_WEBHOOK_SECRET`. No es la misma clave que la API.
+7. En **Settings → Billing → Customer portal**, activa el portal y permite al
+   cliente actualizar método de pago y cancelar según la política comercial.
+8. Despliega y ejecuta los seis checkouts de prueba. Solo después repite la
+   configuración en live con claves, precios y webhook live nuevos.
+
+Stripe recomienda separar sandbox/live, guardar las claves en variables de entorno
+y usar claves restringidas cuando sea posible: [documentación oficial de claves](https://docs.stripe.com/keys)
+y [webhooks](https://docs.stripe.com/webhooks).
+
+### WhatsApp de Meta, paso a paso
+
+1. Entra en [Meta for Developers](https://developers.facebook.com/apps/), crea una
+   app de tipo empresa y añade el producto **WhatsApp**. El asistente te crea o te
+   deja escoger una cuenta de WhatsApp Business (WABA).
+2. En **WhatsApp → API Setup**, usa primero el número de prueba. Copia el
+   **Phone number ID** a `WHATSAPP_PHONE_ID` y el número en formato internacional,
+   sin `+` ni espacios, a `NOESIS_WHATSAPP_NUMBER`.
+3. El token temporal del panel sirve para probar, pero caduca. Para producción ve
+   a **Business Settings → Users → System users**, crea un usuario de sistema,
+   asígnale la app y la WABA y genera un token con
+   `whatsapp_business_messaging` y `whatsapp_business_management`. Guárdalo como
+   `WHATSAPP_TOKEN`.
+4. A `WHATSAPP_VERIFY_TOKEN` ponle tú una cadena aleatoria larga. No es una clave
+   que Meta te entregue: Meta la usará para comprobar que controlas el webhook.
+5. En **App settings → Basic**, copia **App secret** a `WHATSAPP_APP_SECRET`.
+   Noesis lo usa para verificar `X-Hub-Signature-256` y rechazar callbacks falsos.
+6. En **WhatsApp → Configuration → Webhooks**, configura callback
+   `https://bynoesis.com/webhook/whatsapp`, pega el mismo verify token y suscribe
+   el campo `messages` de la WABA.
+7. En **WhatsApp Manager → Message templates**, crea y envía a aprobación las
+   plantillas con los nombres exactos de la sección 4. No cambies el nombre en
+   Meta sin cambiar también la variable correspondiente en Railway.
+8. Cuando el número de prueba complete texto, audio, foto, PDF y estados de
+   entrega, añade el número real, verifica la empresa si Meta lo exige y repite la
+   prueba con una cuenta piloto.
+
+La [colección oficial de Meta](https://www.postman.com/meta/whatsapp-business-platform/overview)
+documenta Cloud API, permisos, tokens, WABA, números y webhooks.
+
+### Google, correo, audio e IA
+
+1. **Google:** entra en [Google Auth Platform · Clients](https://console.cloud.google.com/auth/clients),
+   configura Branding/Audience y crea un cliente **Web application**. Añade
+   `https://bynoesis.com` como origen y
+   `https://bynoesis.com/auth/google/callback` como URI exacta. Copia Client ID y
+   Client secret a `GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET`.
+   Google exige coincidencia exacta de la redirección: [guía oficial](https://developers.google.com/identity/protocols/oauth2/web-server).
+2. **Brevo:** entra en [Brevo](https://app.brevo.com/), autentica `bynoesis.com`
+   en **Settings → Senders & IP → Domains**, publica los DNS que muestra Brevo,
+   crea/verifica `no-reply@bynoesis.com` y genera una API key en **SMTP & API →
+   API Keys**. Guárdala como `BREVO_API_KEY` y configura `SMTP_FROM`. Referencia:
+   [remitentes y dominios](https://developers.brevo.com/docs/getting-started-with-senders-and-domains).
+3. **Groq para notas de voz:** crea una clave en
+   [Groq Console · API Keys](https://console.groq.com/keys) y guárdala como
+   `GROQ_API_KEY`. No es necesaria si se despliega Whisper local.
+4. **IA avanzada:** si eliges Anthropic, crea una clave en
+   [Claude Console](https://console.anthropic.com/settings/keys), configura límite
+   de gasto y guárdala como `ANTHROPIC_API_KEY`. Es respaldo del cerebro local,
+   no sustituye los controles ni la confirmación humana.
+5. **Backups:** elige un proveedor S3-compatible, crea un bucket privado y un
+   usuario limitado solo a ese bucket; copia endpoint, bucket, región y par de
+   credenciales a las variables de la sección 7.
+6. **AEAT:** no busques una API key. Hace falta un certificado admitido y su clave
+   privada, montados como archivos, más los datos reales del productor.
+
 ## 0. Base de producción
 
 Antes de cualquier proveedor:

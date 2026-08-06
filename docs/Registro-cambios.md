@@ -23,6 +23,31 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 18:30 — cartera profesional y papeles con contexto
+
+- **Autor/agente:** Codex.
+- **Objetivo:** conectar WhatsApp, documentos y gestoría en un flujo multiempresa
+  seguro sin duplicar los portales existentes.
+- **Áreas y archivos:** migraciones/DB, documentos, WhatsApp, routers y plantillas de
+  gestoría, diseño, pruebas, guía de APIs y estado compartido.
+- **Cambios de datos/migración:** esquema 39; cuentas de gestoría, relación explícita
+  negocio-cuenta e invitaciones de un solo uso. No migra ni elimina enlaces antiguos.
+- **Pruebas ejecutadas:** compileall, Ruff, 405/405, ciclo 0 → 39 → 0 → 39,
+  Bandit, detección de secretos, auditoría de dependencias y QA visual comparada
+  con el panel principal; detalle en `Registro-QA.md`.
+- **Dependencias o validaciones externas:** añade pypdf puro Python para texto PDF
+  digital. Meta, Stripe, correo, OAuth, OCR de escaneados y AEAT siguen sin prueba real.
+- **Riesgo/punto probable de fallo:** despliegue de migración 39, entregabilidad de la
+  invitación y PDFs escaneados sin texto. MFA/recuperación aún no forman parte del acceso.
+- **Diagnóstico y rollback:** revisar `gestoria_accounts`, `gestoria_business_access`
+  y `gestoria_invitations`; las rutas `/g/` permiten continuidad. El downgrade 39
+  elimina solo las tablas nuevas y el revert del commit restaura UI/rutas.
+- **Baja RGPD comprobada:** las relaciones nuevas usan borrado en cascada y el
+  procedimiento elimina invitaciones y accesos antes del negocio, sin dejar filas
+  huérfanas ni bloquear la baja.
+- **Estado de publicación:** local validado; pendiente commit, push, migración y
+  prueba real de Railway.
+
 ## 2026-08-06 12:45 — búsqueda documental publicada sobre PostgreSQL
 
 - **Autor/agente:** Codex.

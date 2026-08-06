@@ -1,0 +1,39 @@
+{% extends "gestoria_base.html" %}
+{% block title %}Cartera{% endblock %}
+{% block content %}
+<div class="gestoria-page-head">
+  <div><span class="eyebrow">Parte de cartera</span><h1>Buenos días, {{ account.firm_name }}.</h1>
+  <p>Primero, lo que necesita atención. Después, cada cliente por separado.</p></div>
+  <form class="gestoria-search" method="get"><input class="input" name="q" value="{{ q }}" placeholder="Buscar empresa o NIF"><button class="btn">Buscar</button></form>
+</div>
+
+<section class="gestoria-brief">
+  {% if pending_total or requests_total %}
+  <span class="badge b-amber">POR REVISAR</span>
+  <div><b>{{ pending_total }} documento(s) pendientes y {{ requests_total }} solicitud(es) abierta(s).</b>
+  <small>Entra en cada empresa para revisar sin mezclar información.</small></div>
+  {% else %}
+  <span class="badge b-green">TODO EN ORDEN</span>
+  <div><b>No hay nada urgente ahora mismo.</b><small>La cartera se actualizará cuando llegue nueva documentación.</small></div>
+  {% endif %}
+</section>
+
+<div class="gestoria-section-title"><div><span class="eyebrow">Empresas</span><h2>Tu cartera</h2></div><span>{{ businesses|length }} cliente(s)</span></div>
+{% if businesses %}
+<div class="gestoria-company-list">
+  {% for item in businesses %}
+  <a class="gestoria-company-row" href="/gestoria/cliente/{{ item.id }}">
+    <div class="gestoria-company-main"><span class="gestoria-avatar">{{ (item.name or 'N')[:1] }}</span><div><b>{{ item.name }}</b><small>{{ item.nif or 'NIF pendiente' }}{% if item.sector %} · {{ item.sector }}{% endif %}</small></div></div>
+    <div class="gestoria-company-state">
+      {% if item.pending_documents %}<span class="badge b-amber">{{ item.pending_documents }} por revisar</span>{% endif %}
+      {% if item.open_requests %}<span class="badge b-blue">{{ item.open_requests }} solicitud(es)</span>{% endif %}
+      {% if not item.pending_documents and not item.open_requests %}<span class="badge b-green">al día</span>{% endif %}
+    </div>
+    <span class="gestoria-open">Abrir →</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="gestoria-empty"><h2>Aún no hay empresas en tu cartera</h2><p>Un autónomo debe guardar tu correo en Noesis y enviarte una invitación desde Ajustes.</p></div>
+{% endif %}
+{% endblock %}

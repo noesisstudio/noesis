@@ -167,6 +167,12 @@ async def api_document_review(business_id: int, doc_id: int, request: Request):
             kind=chosen_kind,
             doc_status=body.get("doc_status") or None,
             review_note=body.get("review_note") or None)
+        if "client_id" in body or "project_id" in body:
+            doc = docrepo.set_context(
+                doc_id, business_id,
+                client_id=body.get("client_id") or None,
+                project_id=body.get("project_id") or None,
+            )
         if chosen_kind:
             docrepo.confirm_classification(doc_id, business_id, chosen_kind)
             db.record_product_event(

@@ -42,6 +42,7 @@ from .routers import (
     documents,
     finance,
     gestoria,
+    gestoria_portal,
     invoicing,
     pages,
     portal,
@@ -120,7 +121,7 @@ _request_log = logging.getLogger("noesis.request")
 # Zonas que no se cuentan: el panel del cliente, la API, los portales por token y
 # los estáticos. Solo interesa la web pública, y nunca la actividad de un cliente
 # dentro de su cuenta.
-_NO_CONTAR = ("/b/", "/api/", "/admin", "/p/", "/g/", "/t/", "/static/",
+_NO_CONTAR = ("/b/", "/api/", "/admin", "/gestoria", "/p/", "/g/", "/t/", "/static/",
               "/webhook/", "/health", "/ready", "/favicon.ico", "/robots.txt",
               "/sitemap.xml", "/sw.js",
               # Las mismas rutas que robots.txt esconde de los buscadores: no
@@ -277,9 +278,9 @@ async def security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-    if request.url.path.startswith(("/b/", "/api/", "/admin", "/p/", "/g/", "/t/")):
+    if request.url.path.startswith(("/b/", "/api/", "/admin", "/gestoria", "/p/", "/g/", "/t/")):
         response.headers["Cache-Control"] = "no-store"
-    if request.url.path.startswith(("/p/", "/g/", "/t/")):
+    if request.url.path.startswith(("/gestoria", "/p/", "/g/", "/t/")):
         response.headers["Referrer-Policy"] = "no-referrer"
     return response
 
@@ -381,6 +382,7 @@ app.include_router(documents.router)
 
 
 app.include_router(gestoria.router)
+app.include_router(gestoria_portal.router)
 
 
 # ============================================================== WEBHOOK ===== #

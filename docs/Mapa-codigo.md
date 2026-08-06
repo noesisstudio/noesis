@@ -5,12 +5,13 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 35;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 39;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
   transaccional, asigna serie/línea a las emitidas históricas y lo reinstala antes
-  de continuar.
+  de continuar. La 39 separa las cuentas profesionales de gestoría de los usuarios
+  titulares y exige una relación explícita y revocable por negocio.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
@@ -138,6 +139,10 @@
 - `src/noesis/documents/service.py`: entrada universal, validación, antivirus,
   huella de contenido aislada por negocio, clasificación y confirmación antes de
   almacenar o contabilizar; una carrera concurrente no deja un fichero huérfano.
+  Valida también que cliente, proyecto y factura pertenezcan al mismo negocio y solo
+  asocia referencias humanas inequívocas.
+- `src/noesis/documents/pdf_text.py`: lectura local de PDF digital con límites de
+  páginas, caracteres y streams descomprimidos; no finge OCR sobre PDF escaneado.
 - `src/noesis/documents/malware.py`: cliente stdlib del protocolo ClamAV INSTREAM;
   escanea en memoria y permite fallo cerrado sin una API externa.
 - `src/noesis/documents/repo.py`: metadatos, huellas SHA-256 y vínculos con cliente,
@@ -145,6 +150,10 @@
   negocio, permite completar históricos de forma perezosa y busca con parámetros
   solo dentro del negocio activo.
 - `src/noesis/web/gestoria.py`: paquete ordenado, manifiesto, huella y versionado.
+- `src/noesis/web/routers/gestoria_portal.py` + plantillas `gestoria_*`: identidad
+  profesional, invitación de un solo uso, cartera multiempresa, revisión documental,
+  solicitudes y descarga por período; cada ruta vuelve a comprobar la relación de
+  acceso antes de leer o escribir.
 - `src/noesis/web/whatsapp.py`: texto, audio local, fotos/PDF, confirmaciones,
   trabajador y cola durable. Emisión y entrega usan una segunda confirmación,
   validación fiscal previa, PDF y canal habitual; la entrada y la salida se detienen

@@ -294,6 +294,12 @@ def page(request: Request, business_id: int, page: str):
         context["gestoria_deliveries"] = db.list_gestoria_deliveries(
             business_id, limit=6
         )
+        context["gestoria_access"] = db.list_gestoria_access_for_business(
+            business_id
+        )
+        context["gestoria_invite_link"] = request.session.pop(
+            "gestoria_invite_link", ""
+        )
         context["wa_reports"] = db.resolve_whatsapp_reports(
             biz.get("whatsapp_reports")
         )

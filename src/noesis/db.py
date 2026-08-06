@@ -783,6 +783,204 @@ def resolve_gestoria_token(token: str) -> dict | None:
         return dict(row) if row else None
 
 
+def create_gestoria_account(email: str, password_hash: str,
+                            firm_name: str) -> dict:
+    """Crea una identidad de gestoría; nunca la liga implícitamente a empresas."""
+    clean_email = (email or "").strip().lower()[:200]
+    clean_name = (firm_name or "").strip()[:160]
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", clean_email):
+        raise ValueError("El email de la gestoría no es válido.")
+    if not clean_name:
+        raise ValueError("El nombre de la gestoría es obligatorio.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO gestoria_accounts "
+            "(email, password_hash, firm_name, created_at) "
+            "VALUES (?, ?, ?, ?) RETURNING id",
+            (clean_email, password_hash, clean_name, _now()),
+        ).fetchone()
+    return get_gestoria_account(row["id"])
+
+
+def get_gestoria_account(account_id: int | None) -> dict | None:
+    if not account_id:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM gestoria_accounts WHERE id=?", (account_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_gestoria_account_by_email(email: str) -> dict | None:
+    clean_email = (email or "").strip().lower()
+    if not clean_email:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM gestoria_accounts WHERE email=?", (clean_email,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def mark_gestoria_login(account_id: int) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE gestoria_accounts SET last_login_at=? WHERE id=?",
+            (_now(), account_id),
+        )
+
+
+def create_gestoria_invitation(business_id: int, email: str,
+                               token_hash: str, expires_at: str) -> dict:
+    """Emite una invitación revocable y anula las anteriores del mismo destino."""
+    clean_email = (email or "").strip().lower()[:200]
+    if not get_business(business_id):
+        raise ValueError("Negocio no encontrado.")
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", clean_email):
+        raise ValueError("El email de la gestoría no es válido.")
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "UPDATE gestoria_invitations SET revoked_at=? "
+            "WHERE business_id=? AND email=? AND used_at IS NULL "
+            "AND revoked_at IS NULL",
+            (now, business_id, clean_email),
+        )
+        row = conn.execute(
+            "INSERT INTO gestoria_invitations "
+            "(business_id, email, token_hash, expires_at, created_at) "
+            "VALUES (?, ?, ?, ?, ?) RETURNING id",
+            (business_id, clean_email, token_hash, expires_at, now),
+        ).fetchone()
+        saved = conn.execute(
+            "SELECT * FROM gestoria_invitations WHERE id=?", (row["id"],)
+        ).fetchone()
+    return dict(saved)
+
+
+def resolve_gestoria_invitation(token_hash: str) -> dict | None:
+    if not token_hash:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT i.*, b.name AS business_name, b.nif AS business_nif, "
+            "b.gestoria_name FROM gestoria_invitations i "
+            "JOIN businesses b ON b.id=i.business_id "
+            "WHERE i.token_hash=? AND i.used_at IS NULL "
+            "AND i.revoked_at IS NULL AND i.expires_at>=?",
+            (token_hash, _now()),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def accept_gestoria_invitation(invitation_id: int,
+                               account_id: int) -> dict | None:
+    """Acepta una invitación una sola vez y crea/renueva el acceso en transacción."""
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        invitation = conn.execute(
+            "SELECT * FROM gestoria_invitations WHERE id=?" + lock,
+            (invitation_id,),
+        ).fetchone()
+        account = conn.execute(
+            "SELECT * FROM gestoria_accounts WHERE id=?" + lock,
+            (account_id,),
+        ).fetchone()
+        if (
+            not invitation or not account
+            or invitation["used_at"] is not None
+            or invitation["revoked_at"] is not None
+            or str(invitation["expires_at"]) < now
+            or invitation["email"] != account["email"]
+        ):
+            return None
+        conn.execute(
+            "INSERT INTO gestoria_business_access "
+            "(gestoria_account_id, business_id, role, status, created_at, accepted_at) "
+            "VALUES (?, ?, 'gestor', 'active', ?, ?) "
+            "ON CONFLICT(gestoria_account_id, business_id) DO UPDATE SET "
+            "status='active', accepted_at=excluded.accepted_at, revoked_at=NULL",
+            (account_id, invitation["business_id"], now, now),
+        )
+        conn.execute(
+            "UPDATE gestoria_invitations SET used_at=? WHERE id=? "
+            "AND used_at IS NULL AND revoked_at IS NULL",
+            (now, invitation_id),
+        )
+        saved = conn.execute(
+            "SELECT * FROM gestoria_business_access "
+            "WHERE gestoria_account_id=? AND business_id=?",
+            (account_id, invitation["business_id"]),
+        ).fetchone()
+    return dict(saved) if saved else None
+
+
+def gestoria_account_can_access(account_id: int, business_id: int) -> bool:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT 1 AS allowed FROM gestoria_business_access a "
+            "JOIN gestoria_accounts g ON g.id=a.gestoria_account_id "
+            "WHERE a.gestoria_account_id=? AND a.business_id=? "
+            "AND a.status='active' AND g.is_active=TRUE",
+            (account_id, business_id),
+        ).fetchone()
+    return bool(row)
+
+
+def gestoria_business_for_account(account_id: int,
+                                  business_id: int) -> dict | None:
+    if not gestoria_account_can_access(account_id, business_id):
+        return None
+    return get_business(business_id)
+
+
+def list_gestoria_businesses(account_id: int) -> list[dict]:
+    """Cartera resumida sin mezclar datos: cada agregado conserva business_id."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT b.*, "
+            "(SELECT COUNT(*) FROM documents d WHERE d.business_id=b.id "
+            "AND d.doc_status='pendiente_revisar') AS pending_documents, "
+            "(SELECT COUNT(*) FROM gestoria_requests r WHERE r.business_id=b.id "
+            "AND r.status='abierta') AS open_requests, "
+            "(SELECT MAX(gd.prepared_at) FROM gestoria_deliveries gd "
+            "WHERE gd.business_id=b.id) AS last_package_at "
+            "FROM gestoria_business_access a "
+            "JOIN gestoria_accounts g ON g.id=a.gestoria_account_id "
+            "JOIN businesses b ON b.id=a.business_id "
+            "WHERE a.gestoria_account_id=? AND a.status='active' "
+            "AND g.is_active=TRUE ORDER BY b.name, b.id",
+            (account_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_gestoria_access_for_business(business_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT a.*, g.email, g.firm_name, g.last_login_at "
+            "FROM gestoria_business_access a "
+            "JOIN gestoria_accounts g ON g.id=a.gestoria_account_id "
+            "WHERE a.business_id=? ORDER BY a.created_at DESC",
+            (business_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def revoke_gestoria_access(business_id: int, account_id: int) -> bool:
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE gestoria_business_access SET status='revoked', revoked_at=? "
+            "WHERE business_id=? AND gestoria_account_id=? AND status='active'",
+            (_now(), business_id, account_id),
+        )
+    return cur.rowcount == 1
+
+
 def gestoria_period_range(label: str) -> tuple[str, str]:
     """'2026-06' → mes natural; '2026-T2' → trimestre. Valida el formato."""
     label = (label or "").strip()
@@ -9988,6 +10186,7 @@ def delete_business_cascade(business_id) -> bool:
             )
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
+            "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
             "email_outbox",
             "verifactu_cancellation_outbox", "verifactu_outbox",

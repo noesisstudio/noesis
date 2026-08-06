@@ -25,6 +25,8 @@ dependencies = [
     "pillow>=12.3.0,<13",
     # Generador QR puro Python; Pillow ya es dependencia transitiva de fpdf2.
     "qrcode>=8.0,<9",
+    # Lectura local y acotada de texto en PDFs digitales; no sustituye OCR.
+    "pypdf>=6.13.0,<7",
 ]
 
 [project.optional-dependencies]

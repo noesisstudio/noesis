@@ -678,11 +678,23 @@ class BackendTestCase(unittest.TestCase):
             message_type="text",
             text_body="Pendiente",
         )
+        gestoria = db.create_gestoria_account(
+            "baja@gestoria.com", auth.hash_password(TEST_PASSWORD),
+            "GestorÃ­a baja",
+        )
+        invitation = db.create_gestoria_invitation(
+            business["id"], gestoria["email"], auth.hash_token("baja-invite"),
+            (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+        )
+        self.assertIsNotNone(
+            db.accept_gestoria_invitation(invitation["id"], gestoria["id"])
+        )
         db.claim_scheduled_run(f"gestoria:{business['id']}:2026-06")
 
         self.assertTrue(db.delete_business_cascade(business["id"]))
 
         self.assertIsNone(db.get_business(business["id"]))
+        self.assertEqual(db.list_gestoria_businesses(gestoria["id"]), [])
         self.assertIsNone(repo.get(document["id"], business["id"]))
         self.assertFalse(file_path.exists())
         with db.get_conn() as conn:
@@ -4161,6 +4173,38 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(docs[0]["filename"], "factura-luz.pdf")
         self.assertIn("papeles", replies[-1])
 
+    def test_whatsapp_pdf_caption_links_the_right_project_and_client(self):
+        from fpdf import FPDF
+        from noesis.documents import repo as docrepo
+
+        business, client = self._connected_business("PDF contextual")
+        project = db.add_project(
+            "Instalación Hotel Mar", 8000, client_id=client["id"],
+            business_id=business["id"],
+        )
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("helvetica", size=12)
+        pdf.multi_cell(0, 8, "TICKET SIMPLIFICADA\nTOTAL 35,20 EUR")
+        replies = []
+        with (
+            patch.object(whatsapp, "_download_media",
+                         return_value=bytes(pdf.output())),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-pdf-context-1",
+                "media_document_id": "media-context",
+                "media_document_mime": "application/pdf",
+                "media_document_filename": "ticket-material.pdf",
+                "caption": "Material de Instalación Hotel Mar",
+            })
+        document = docrepo.list_for_business(business["id"])[0]
+        self.assertEqual(document["project_id"], project["id"])
+        self.assertEqual(document["client_id"], client["id"])
+        self.assertIn("Lo he asociado a Instalación Hotel Mar", replies[-1])
+
     def test_pdf_received_invoice_is_classified_and_confirmed_by_whatsapp(self):
         business, _ = self._connected_business("Factura PDF")
         replies = []
@@ -4431,6 +4475,126 @@ class GestoriaTestCase(unittest.TestCase):
         self.assertEqual(resolved["id"], business["id"])
         db.revoke_gestoria_token(business["id"])
         self.assertIsNone(db.resolve_gestoria_token(token))
+
+    def test_professional_account_only_sees_explicitly_invited_businesses(self):
+        first, _ = self.make_business("Gestoría Cartera Uno")
+        second, _ = self.make_business("Gestoría Cartera Dos")
+        foreign, _ = self.make_business("Gestoría Fuera")
+        account = db.create_gestoria_account(
+            "equipo@gestoria.com", auth.hash_password(TEST_PASSWORD),
+            "Gestoría de prueba",
+        )
+        for business in (first, second):
+            raw = f"invite-{business['id']}"
+            invitation = db.create_gestoria_invitation(
+                business["id"], account["email"], auth.hash_token(raw),
+                (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+            )
+            self.assertIsNotNone(
+                db.accept_gestoria_invitation(invitation["id"], account["id"])
+            )
+        self.assertEqual(
+            {item["id"] for item in db.list_gestoria_businesses(account["id"])},
+            {first["id"], second["id"]},
+        )
+        self.assertFalse(db.gestoria_account_can_access(
+            account["id"], foreign["id"]
+        ))
+        self.assertTrue(db.revoke_gestoria_access(first["id"], account["id"]))
+        self.assertFalse(db.gestoria_account_can_access(
+            account["id"], first["id"]
+        ))
+
+    def test_professional_portfolio_accepts_two_clients_without_mixing_them(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        first, _ = self.make_business("Cartera Web Uno")
+        second, _ = self.make_business("Cartera Web Dos")
+        tokens = []
+        for business in (first, second):
+            raw = f"token-web-{business['id']}"
+            db.create_gestoria_invitation(
+                business["id"], "cartera@gestoria.com", auth.hash_token(raw),
+                (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+            )
+            tokens.append(raw)
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                created = client.post(
+                    f"/gestoria/accept/{tokens[0]}",
+                    data={"firm_name": "Gestoría Web", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(created.status_code, 303)
+                accepted = client.post(
+                    f"/gestoria/accept/{tokens[1]}",
+                    data={"password": TEST_PASSWORD}, follow_redirects=False,
+                )
+                self.assertEqual(accepted.status_code, 303)
+                portfolio = client.get("/gestoria")
+                self.assertEqual(portfolio.status_code, 200)
+                self.assertIn("Cartera Web Uno", portfolio.text)
+                self.assertIn("Cartera Web Dos", portfolio.text)
+
+    def test_document_context_never_accepts_foreign_client_or_project(self):
+        from noesis.documents import repo as docrepo, service as docservice
+
+        business, client = self.make_business("Contexto propio")
+        foreign, foreign_client = self.make_business("Contexto ajeno")
+        project = db.add_project(
+            "Reforma Avenida", 5000, client_id=client["id"],
+            business_id=business["id"],
+        )
+        foreign_project = db.add_project(
+            "Reforma Avenida", 3000, client_id=foreign_client["id"],
+            business_id=foreign["id"],
+        )
+        foreign_invoice = db.add_invoice(
+            foreign_client["id"], "Trabajo ajeno", 100,
+            business_id=foreign["id"],
+        )
+        with self.assertRaises(docservice.UploadError):
+            docservice.upload(
+                business["id"], "factura-ajena.jpg", TINY_JPEG,
+                invoice_id=foreign_invoice["id"], run_ocr=False,
+            )
+        document = docservice.upload(
+            business["id"], "ticket.jpg", TINY_JPEG,
+            run_ocr=False,
+        )
+        associated = docservice.associate_context(
+            business["id"], document["id"], "Para Reforma Avenida"
+        )["document"]
+        self.assertEqual(associated["project_id"], project["id"])
+        self.assertEqual(associated["client_id"], client["id"])
+        with self.assertRaises(ValueError):
+            docrepo.set_context(
+                document["id"], business["id"],
+                client_id=foreign_client["id"],
+            )
+        with self.assertRaises(ValueError):
+            docrepo.set_context(
+                document["id"], business["id"],
+                project_id=foreign_project["id"],
+            )
+
+    def test_digital_pdf_is_read_locally_with_bounded_amount_detection(self):
+        from fpdf import FPDF
+        from noesis.documents import service as docservice
+
+        business, _ = self.make_business("PDF local")
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("helvetica", size=12)
+        pdf.multi_cell(0, 8, "TICKET SIMPLIFICADA\nMaterial eléctrico\nTOTAL 48,40 EUR")
+        document = docservice.upload(
+            business["id"], "compra.pdf", bytes(pdf.output()),
+            run_ocr=True, auto_classify=True,
+        )
+        self.assertIn("TOTAL 48,40", document["ocr_text"])
+        self.assertEqual(document["ocr_amount"], 48.4)
+        self.assertEqual(document["classification"]["kind"], "ticket")
 
     def test_periods_and_ranges(self):
         business, _ = self.make_business("Gestoría Periodos")

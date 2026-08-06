@@ -3013,6 +3013,75 @@ def _downgrade_document_fingerprints(conn) -> None:
         conn.execute("ALTER TABLE documents DROP COLUMN content_sha256")
 
 
+def _upgrade_gestoria_accounts(conn) -> None:
+    """Cuenta profesional de gestoría con acceso explícito a varias empresas.
+
+    El enlace histórico por negocio se conserva para no romper entregas antiguas.
+    La cartera nueva usa invitaciones de un solo uso y una relación revocable:
+    ninguna cuenta de gestoría obtiene acceso por compartir el mismo correo.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_accounts ("
+        f"id {t['id']}, "
+        "email TEXT NOT NULL, "
+        "password_hash TEXT NOT NULL, "
+        "firm_name TEXT NOT NULL, "
+        "session_version INTEGER NOT NULL DEFAULT 0, "
+        f"is_active {t['boolean']} NOT NULL DEFAULT TRUE, "
+        f"created_at {t['timestamp']} NOT NULL, "
+        f"last_login_at {t['timestamp']})"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_gestoria_accounts_email "
+        "ON gestoria_accounts(email)"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_business_access ("
+        f"gestoria_account_id {t['ref']} NOT NULL REFERENCES gestoria_accounts(id) ON DELETE CASCADE, "
+        f"business_id {t['ref']} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE, "
+        "role TEXT NOT NULL DEFAULT 'gestor', "
+        "status TEXT NOT NULL DEFAULT 'active', "
+        f"created_at {t['timestamp']} NOT NULL, "
+        f"accepted_at {t['timestamp']}, "
+        f"revoked_at {t['timestamp']}, "
+        "PRIMARY KEY (gestoria_account_id, business_id))"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gestoria_access_business "
+        "ON gestoria_business_access(business_id, status)"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_invitations ("
+        f"id {t['id']}, "
+        f"business_id {t['ref']} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE, "
+        "email TEXT NOT NULL, "
+        "token_hash TEXT NOT NULL, "
+        f"expires_at {t['timestamp']} NOT NULL, "
+        f"used_at {t['timestamp']}, "
+        f"revoked_at {t['timestamp']}, "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_gestoria_invitation_token "
+        "ON gestoria_invitations(token_hash)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gestoria_invitation_business "
+        "ON gestoria_invitations(business_id, email, created_at)"
+    )
+
+
+def _downgrade_gestoria_accounts(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_gestoria_invitation_business")
+    conn.execute("DROP INDEX IF EXISTS uq_gestoria_invitation_token")
+    conn.execute("DROP TABLE IF EXISTS gestoria_invitations")
+    conn.execute("DROP INDEX IF EXISTS idx_gestoria_access_business")
+    conn.execute("DROP TABLE IF EXISTS gestoria_business_access")
+    conn.execute("DROP INDEX IF EXISTS uq_gestoria_accounts_email")
+    conn.execute("DROP TABLE IF EXISTS gestoria_accounts")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3058,6 +3127,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (37, "visitas_agregadas", _upgrade_page_views, _downgrade_page_views),
     (38, "huellas_documentales", _upgrade_document_fingerprints,
      _downgrade_document_fingerprints),
+    (39, "cuentas_gestoria", _upgrade_gestoria_accounts,
+     _downgrade_gestoria_accounts),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

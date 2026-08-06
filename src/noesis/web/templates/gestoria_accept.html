@@ -1,0 +1,38 @@
+{% extends "gestoria_base.html" %}
+{% block title %}Aceptar invitación{% endblock %}
+{% block content %}
+<div class="gestoria-auth-wrap compact">
+  <section class="gestoria-auth-intro">
+    <span class="eyebrow">Acceso privado</span>
+    <h1>Añade un cliente a tu cartera.</h1>
+    {% if invitation %}
+    <p><b>{{ invitation.business_name }}</b>{% if invitation.business_nif %}, NIF {{ invitation.business_nif }}{% endif %}, te invita a revisar su documentación.</p>
+    {% else %}<p>Esta invitación ya no está disponible.</p>{% endif %}
+  </section>
+  <section class="gestoria-auth-card">
+    {% if not invitation %}
+      <h2>Enlace no válido</h2>
+      <p class="muted">Puede haber caducado, haberse usado o haber sido revocado. Pide a tu cliente una invitación nueva.</p>
+      <a class="btn primary gestoria-full" href="/gestoria/login">Volver al acceso</a>
+    {% else %}
+      <h2>{{ 'Confirma tu acceso' if existing_account else 'Crea tu cuenta de gestoría' }}</h2>
+      <p class="muted">La cuenta quedará vinculada a {{ invitation.email }}.</p>
+      {% if error %}<div class="banner warn">
+        {% if error == 'password' %}La contraseña no coincide con tu cuenta.
+        {% elif error == 'weak' %}Usa una contraseña de al menos 12 caracteres.
+        {% elif error == 'firm' %}Indica el nombre de tu gestoría.
+        {% else %}No se ha podido aceptar la invitación.{% endif %}
+      </div>{% endif %}
+      <form method="post" action="/gestoria/accept/{{ token }}">
+        {% if not existing_account %}
+        <label class="fld">Nombre de la gestoría</label>
+        <input class="input" name="firm_name" maxlength="160" required placeholder="Gestoría García">
+        {% endif %}
+        <label class="fld">{{ 'Tu contraseña' if existing_account else 'Crea una contraseña' }}</label>
+        <input class="input" type="password" name="password" minlength="12" maxlength="1024" autocomplete="{{ 'current-password' if existing_account else 'new-password' }}" required>
+        <button class="btn primary gestoria-full">Aceptar y abrir la cartera</button>
+      </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

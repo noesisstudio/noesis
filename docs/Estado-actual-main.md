@@ -14,9 +14,16 @@
   dentro de un negocio, incluso ante subidas simultáneas; los históricos adquieren
   la huella al reaparecer y nunca se comparan archivos entre negocios. La bandeja
   busca por archivo, cliente, proyecto, nota, contenido leído y tipo, siempre dentro
-  de la empresa activa.
-- Hay portales privados para cliente, trabajador y gestoría; el fichaje y Veri*Factu
-  conservan registros inmutables.
+  de la empresa activa. Los PDF digitales se leen localmente con límites de páginas,
+  texto y descompresión; los escaneados sin capa de texto quedan pendientes hasta
+  disponer de OCR o visión autorizada. Una referencia inequívoca del mensaje puede
+  asociar el papel al cliente/proyecto, pero nunca se adivina ante ambigüedad.
+- Hay portales privados para cliente y trabajador. La gestoría conserva el enlace
+  histórico por empresa y añade una cuenta profesional: una misma gestoría puede
+  llevar varias empresas mediante invitaciones de un solo uso, acceso explícito y
+  revocable, bandeja de revisión, solicitudes y paquetes por período. No puede emitir,
+  mover dinero ni ejecutar decisiones fiscales desde esa cartera. El fichaje y
+  Veri*Factu conservan registros inmutables.
 - El cerebro funciona por capas: reglas locales, compositor interno, servicio privado
   compatible, proveedor externo compatible y Anthropic como respaldo autorizado.
   Que falle una IA nunca apaga el producto local.
@@ -110,6 +117,9 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   desplegar y validar respectivamente Groq/faster-whisper y
   Tesseract/pytesseract o una extracción externa consentida. Hasta entonces la web
   no los presenta como capacidades activas.
+- La cartera de gestoría ya cubre identidad, varias empresas y revisión documental;
+  antes de abrirla a despachos reales faltan MFA/passkeys, recuperación de contraseña,
+  permisos más finos y una prueba piloto con datos y responsables reales.
 - Antes del piloto deben rotarse todos los secretos que hayan aparecido en capturas
   o documentos compartidos, completar la identidad legal del prestador y someter
   privacidad, términos y contrato de encargo a revisión jurídica. Ningún secreto

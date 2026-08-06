@@ -67,9 +67,9 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 - [ ] Evaluar servicio privado y proveedor compatible con el mismo corpus en
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
-- [ ] Documentos: deduplicación y búsqueda aislada por negocio ya están cerradas;
-  faltan lectura completa de HEIC/PDF escaneado, líneas y corrección masiva con
-  corpus real.
+- [ ] Documentos: deduplicación, búsqueda y lectura acotada de PDF digital están
+  cerradas; faltan lectura completa de HEIC/PDF escaneado, líneas y corrección
+  masiva con corpus real.
 - [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por
@@ -77,7 +77,10 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Correo: panel interno de detalle/reejecución manual si los avisos agregados de
   la outbox resultan insuficientes durante el piloto.
 - [ ] Equipo: varios trabajadores reales, offline, ausencias y permisos finos.
-- [ ] Gestoría con cuentas/MFA, varias empresas y revisión por documento.
+- [x] Gestoría con cuenta profesional, invitaciones de un solo uso, varias empresas,
+  acceso revocable y revisión por documento sin permisos financieros/fiscales.
+- [ ] Gestoría: MFA/passkeys, recuperación de contraseña, roles finos y piloto real
+  con un despacho antes de abrir el acceso a terceros.
 - [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,
   correcciones y coste.
 - [ ] Eliminar `unsafe-inline` de la CSP efectiva tras migrar scripts/estilos inline;

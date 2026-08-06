@@ -224,6 +224,12 @@
       <div class="banner ok" style="margin-bottom:12px">
         Paquete listo. El email no está configurado: comparte tú el enlace de abajo.
       </div>
+      {% elif request.query_params.get('ok') in ['gestoria-invitada', 'gestoria-invitacion-lista'] %}
+      <div class="banner ok" style="margin-bottom:12px">
+        Invitación preparada para que tu gestoría te añada a su cartera.
+      </div>
+      {% elif request.query_params.get('ok') == 'gestoria-revocada' %}
+      <div class="banner ok" style="margin-bottom:12px">Acceso de gestoría revocado.</div>
       {% endif %}
       <p class="muted" style="margin-bottom:12px">
         Al cerrar cada período, tu gestoría recibe sola las facturas emitidas
@@ -246,6 +252,26 @@
         </select>
         <button class="btn primary" style="margin-top:14px">Guardar gestoría</button>
       </form>
+      {% if business.gestoria_email %}
+      <form method="post" action="/b/{{ business.id }}/gestoria/invite" style="margin-top:10px">
+        <button class="btn">Invitar a su cartera profesional</button>
+      </form>
+      {% endif %}
+      {% if gestoria_invite_link %}
+      <div class="insight" style="margin-top:12px">
+        Enlace de un solo uso (caduca en 7 días): <a href="{{ gestoria_invite_link }}">{{ gestoria_invite_link }}</a>
+      </div>
+      {% endif %}
+      {% if gestoria_access %}
+      <div class="gestoria-deliveries">
+        <div class="fld">Accesos profesionales</div>
+        {% for access in gestoria_access %}
+        <div class="gestoria-delivery"><div><b>{{ access.firm_name }}</b><small class="muted">{{ access.email }} · {{ access.status }}</small></div>
+          {% if access.status == 'active' %}<form method="post" action="/b/{{ business.id }}/gestoria/access/{{ access.gestoria_account_id }}/revoke"><button class="btn sm">Revocar</button></form>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% if gestoria_link %}
       <div class="insight" style="margin-top:14px">
         Enlace privado de tu gestoría:

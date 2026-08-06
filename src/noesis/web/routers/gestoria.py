@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import secrets
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from ... import db
+from ... import config
+from ...adapters import email as email_adapter
+from .. import auth
 
 router = APIRouter()
 
@@ -78,6 +83,54 @@ def update_gestoria(
     db.record_product_event(business_id, "gestoria_settings_updated")
     return RedirectResponse(
         f"/b/{business_id}/ajustes#gestoria", status_code=303
+    )
+
+
+@router.post("/b/{business_id}/gestoria/invite")
+def invite_gestoria(business_id: int, request: Request):
+    """Invitación de un solo uso para añadir el negocio a una cartera."""
+    business = db.get_business(business_id)
+    email = str((business or {}).get("gestoria_email") or "").strip().lower()
+    if not business or not auth.valid_email(email):
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?error=gestoria#gestoria", status_code=303
+        )
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.now() + timedelta(days=7)).isoformat(timespec="seconds")
+    db.create_gestoria_invitation(
+        business_id, email, auth.hash_token(token), expires_at
+    )
+    link = f"{config.BASE_URL}/gestoria/accept/{token}"
+    emailed = email_adapter.queue_email(
+        email,
+        f"{business.get('name') or 'Un cliente'} te invita a su cartera Noesis",
+        (
+            f"Hola,\n\n{business.get('name') or 'Tu cliente'} te ha dado acceso "
+            "a su documentación en Noesis. Acepta la invitación durante los "
+            f"próximos 7 días:\n\n{link}\n\nEl enlace es personal y de un solo uso.\n\n— Noesis"
+        ),
+        business_id=business_id,
+        idempotency_key=(
+            f"gestoria-invite:{business_id}:{auth.hash_token(token)[:20]}"
+        ),
+    )
+    request.session["gestoria_invite_link"] = link
+    db.record_product_event(
+        business_id, "gestoria_invited",
+        json.dumps({"emailed": bool(emailed)}, separators=(",", ":")),
+    )
+    result = "gestoria-invitada" if emailed else "gestoria-invitacion-lista"
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes?ok={result}#gestoria", status_code=303
+    )
+
+
+@router.post("/b/{business_id}/gestoria/access/{account_id}/revoke")
+def revoke_gestoria(business_id: int, account_id: int):
+    db.revoke_gestoria_access(business_id, account_id)
+    db.record_product_event(business_id, "gestoria_access_revoked")
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes?ok=gestoria-revocada#gestoria", status_code=303
     )
 
 

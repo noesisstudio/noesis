@@ -1,14 +1,14 @@
 {
   "state_date": "2026-08-06",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 38,
-  "verified_test_count": 400,
+  "schema_version": 39,
+  "verified_test_count": 405,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Búsqueda documental verificada en CI PostgreSQL y release/esquema 38 confirmados por HTTP; repetir la pantalla con una sesión real; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Desplegar el candidato con esquema 39, verificar /ready y probar invitación, acceso, cartera y revocación con una gestoría real; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -66,6 +66,9 @@
     "deployment_identity": "health_exposes_a_sanitized_release_fingerprint_and_ready_exposes_release_plus_current_schema_so_published_never_means_only_merged",
     "document_deduplication": "schema_38_sha256_per_business_unique_index_concurrent_upload_protection_and_lazy_fingerprinting_of_same_size_legacy_files_without_cross_tenant_comparison",
     "document_search": "case_insensitive_parameterized_search_inside_one_business_by_filename_note_ocr_client_project_and_humanized_kind",
+    "document_pdf_local_reading": "bounded_pypdf_text_and_amount_extraction_for_digital_pdfs_scanned_image_only_pdfs_stay_pending_until_ocr_or_authorized_vision",
+    "document_context": "web_and_whatsapp_validate_client_project_and_invoice_inside_the_same_business_caption_or_invoice_customer_only_links_on_unambiguous_match",
+    "gestoria_portfolio": "schema_39_professional_account_single_use_invites_revocable_explicit_multi_business_access_action_first_portfolio_document_validation_requests_and_versioned_period_packages_legacy_links_preserved",
     "stripe_tax": "checkout_requests_billing_address_tax_id_collection_and_automatic_tax_for_the_public_plus_vat_catalog_real_tax_result_still_requires_stripe_test_validation",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
