@@ -23,6 +23,24 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 19:42 — excepción explícita para la clave pública de demo
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el único fallo propio del primer CI sin debilitar el guardián
+  de secretos.
+- **Áreas y archivos:** `demo.py`, QA, bitácora y estado verificable.
+- **Cambios de datos/migración:** ninguno; esquema 40.
+- **Pruebas ejecutadas:** log exacto del job, detector de secretos sobre todo el repo,
+  pruebas focalizadas, Ruff y fuente de verdad. El humo PostgreSQL falló antes de
+  descargar Actions por indisponibilidad de GitHub y debe reintentarse.
+- **Dependencias o validaciones externas:** GitHub Actions.
+- **Riesgo/punto probable de fallo:** la credencial es pública por diseño; solo es
+  segura mientras `is_demo` siga bloqueando cambios, envíos y automatizaciones.
+- **Diagnóstico y rollback:** la excepción está únicamente en la asignación
+  `SHOWCASE_PASSWORD`; eliminarla vuelve a poner CI rojo. No añadir el valor a la
+  baseline global ni reutilizarlo fuera de las empresas demo.
+- **Estado de publicación:** `main` tras este commit; CI pendiente de repetición.
+
 ## 2026-08-06 19:17 — cuentas comerciales reales y OCR privado de escaneados
 
 - **Autor/agente:** Codex.

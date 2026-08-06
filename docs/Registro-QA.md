@@ -29,6 +29,11 @@
 - **Pruebas:** 4 pruebas focalizadas, Ruff, `compileall`, Bandit alto, detección de
   secretos y `pip-audit` verdes; suite completa final **409/409** y ciclo SQLite
   0 → 40 → 0 → 40 verdes. `check_project_truth.py` confirma estado/esquema/precios.
+- **CI tras publicar:** el primer run identificó correctamente la contraseña pública
+  de la demo como `Secret Keyword`. Se marcó con la excepción inline oficial y una
+  explicación de alcance —no se relajó el detector ni la baseline—. El primer humo
+  PostgreSQL no llegó a descargar las Actions por un `Service Unavailable` de GitHub,
+  sin ejecutar código de Noesis; se reintentó el workflow completo.
 
 ### Qué no se ha probado
 

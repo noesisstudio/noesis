@@ -452,7 +452,9 @@ def seed_rich(*, reset: bool = True, force: bool = False,
 SHOWCASE_OWNER_EMAIL = "demo.autonomo@bynoesis.com"
 SHOWCASE_SECONDARY_EMAIL = "demo.electricidad@bynoesis.com"
 SHOWCASE_GESTORIA_EMAIL = "demo.gestoria@bynoesis.com"
-SHOWCASE_PASSWORD = "NoesisDemo2026!"
+# Credencial deliberadamente pública: solo abre empresas ficticias bloqueadas en
+# servidor. La excepción evita que el guardián la confunda con un secreto real.
+SHOWCASE_PASSWORD = "NoesisDemo2026!"  # pragma: allowlist secret
 SHOWCASE_PORTAL_CLIENT = "Comunidad Aragó 121"
 SHOWCASE_GESTORIA_NAME = "Gestoría Mirall · Demo"
 
