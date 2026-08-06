@@ -1,6 +1,7 @@
 """Configuración central. Lee variables del archivo .env."""
 
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -9,6 +10,27 @@ from dotenv import load_dotenv
 # Carga el .env de la raíz del proyecto (si existe).
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / ".env")
+
+
+def _release_id() -> str:
+    """Identificador publicable del despliegue, nunca una variable arbitraria.
+
+    Railway expone el SHA del commit. ``NOESIS_RELEASE_ID`` permite conservar la
+    misma comprobacion en otro proveedor, pero solo se aceptan caracteres seguros
+    y se publica una huella corta.
+    """
+    raw = (
+        os.getenv("NOESIS_RELEASE_ID", "").strip()
+        or os.getenv("RAILWAY_GIT_COMMIT_SHA", "").strip()
+    )
+    if not raw:
+        return "unknown" if os.getenv("RAILWAY_ENVIRONMENT") else "local"
+    if not re.fullmatch(r"[A-Za-z0-9._-]{7,64}", raw):
+        return "invalid"
+    return raw[:12]
+
+
+RELEASE_ID = _release_id()
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -376,6 +398,9 @@ STRIPE_PRICE_PREMIUM = os.getenv("STRIPE_PRICE_PREMIUM", "")    # 99 € + IVA /
 STRIPE_PRICE_AUTONOMO_ANNUAL = os.getenv("STRIPE_PRICE_AUTONOMO_ANNUAL", "")
 STRIPE_PRICE_PRO_ANNUAL = os.getenv("STRIPE_PRICE_PRO_ANNUAL", "")
 STRIPE_PRICE_PREMIUM_ANNUAL = os.getenv("STRIPE_PRICE_PREMIUM_ANNUAL", "")
+# El catálogo se comunica sin IVA. Checkout debe calcularlo con la dirección y
+# el NIF fiscal del cliente; desactivarlo solo sirve para pruebas controladas.
+STRIPE_AUTOMATIC_TAX = env_bool("NOESIS_STRIPE_AUTOMATIC_TAX", True)
 TRIAL_DAYS = int(os.getenv("NOESIS_TRIAL_DAYS", "14"))
 # Caducidad del enlace de invitación con el que el titular elige su contraseña.
 # Más largo que un "he olvidado la contraseña" porque el alta la inicia el equipo.

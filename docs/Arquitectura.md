@@ -37,8 +37,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   pre-deploy.
 - `web/whatsapp.py` — entrada idempotente y cola durable de salida. Persiste antes
   de enviar, reintenta con backoff y aplica estados `sent/delivered/read` de Meta.
-- `adapters/email.py` + `email_outbox` — el correo se persiste antes de SMTP y el
-  scheduler lo entrega con idempotencia, bloqueo entre réplicas y backoff.
+- `adapters/email.py` + `email_outbox` — el correo se persiste antes de salir por API
+  HTTPS o SMTP y el scheduler lo entrega con idempotencia, bloqueo entre réplicas y
+  backoff.
 - `web/routers/finance.py` — publica un feed ICS secreto y revocable para la agenda;
   no requiere OAuth ni una API de calendario para la suscripción de solo lectura.
 - `web/scheduler.py` — genera los proactivos con plantillas aprobadas y ejecuta el
@@ -113,8 +114,8 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - La outbox de correo aplica la misma frontera durable. Los fallos agotados y los
   servicios sin configurar se muestran solo en administración, nunca como un centro
   de estado técnico para el cliente.
-- `/health` comprueba que el proceso responde y `/ready` que la versión de esquema
-  esperada está aplicada y la base de datos disponible.
+- `/health` comprueba que el proceso responde e identifica el release desplegado;
+  `/ready` devuelve esa misma huella y la versión de esquema realmente aplicada.
 - Los backups incluyen una copia verificada de la base de datos y un ZIP separado,
   también verificado por hashes, con los archivos de `DOCS_PATH`. Un simulacro
   semanal independiente repite la restauración en un fichero/esquema descartable y

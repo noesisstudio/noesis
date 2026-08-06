@@ -162,7 +162,11 @@ def send_invoice_email(to: str, biz_name: str, invoice_number: str,
                        total: str, pdf_data: bytes | None = None) -> bool:
     """Envía un email con la factura adjunta en PDF."""
     if not available():
-        log.warning("[EMAIL] Factura %s no enviada (sin SMTP): %s", invoice_number, to)
+        log.warning(
+            "[EMAIL] Factura %s no enviada (sin proveedor): %s",
+            invoice_number,
+            to,
+        )
         return False
     subject = f"Factura {invoice_number} — {biz_name}"
     body = (f"Hola,\n\nAdjunto la factura {invoice_number} por {total}.\n\n"
@@ -172,16 +176,15 @@ def send_invoice_email(to: str, biz_name: str, invoice_number: str,
             f"<p>Adjunto la factura <b>{invoice_number}</b> por <b>{total}</b>.</p>"
             f"<p>Si tienes alguna duda, responde a este correo.</p>"
             f"<p style='color:#666'>— {biz_name} vía Noesis</p></div>")
-    msg = EmailMessage()
-    msg["From"] = config.SMTP_FROM
-    msg["To"] = to
-    msg["Subject"] = subject
-    msg.set_content(body)
-    msg.add_alternative(html, subtype="html")
+    attachments = None
     if pdf_data:
-        msg.add_attachment(pdf_data, maintype="application", subtype="pdf",
-                           filename=f"factura_{invoice_number.replace('/', '-')}.pdf")
-    return _send_msg(msg)
+        attachments = [(
+            f"factura_{invoice_number.replace('/', '-')}.pdf",
+            pdf_data,
+            "application",
+            "pdf",
+        )]
+    return send_email(to, subject, body, html, attachments)
 
 
 def send_reminder_email(to: str, biz_name: str, client_name: str,

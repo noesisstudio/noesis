@@ -87,6 +87,23 @@ class EmailApiTestCase(unittest.TestCase):
         self.assertEqual(adjunto["name"], "F-2026-001.pdf")
         self.assertEqual(base64.b64decode(adjunto["content"]), pdf)
 
+    def test_invoice_helper_uses_the_configured_https_provider(self):
+        pdf = b"%PDF-1.4 factura"
+        capturado = self._capturar()
+        with (
+            capturado["patch"],
+            patch.object(email_adapter, "_send_msg") as smtp,
+        ):
+            enviado = email_adapter.send_invoice_email(
+                "cliente@ejemplo.com", "Taller", "2026/0042", "121,00 EUR", pdf
+            )
+
+        self.assertTrue(enviado)
+        smtp.assert_not_called()
+        adjunto = capturado["cuerpo"]["attachment"][0]
+        self.assertEqual(adjunto["name"], "factura_2026-0042.pdf")
+        self.assertEqual(base64.b64decode(adjunto["content"]), pdf)
+
     def test_a_rejection_is_reported_not_swallowed(self):
         import urllib.error
 

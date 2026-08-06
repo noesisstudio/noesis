@@ -2,6 +2,26 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Publicado significa release y esquema verificables (2026-08-06)
+
+El repositorio, GitHub y Railway pueden contar tres verdades distintas durante un
+despliegue. Un documento llegó a marcar el candidato como publicado mientras la web
+seguía sirviendo el copy anterior. Desde ahora no basta con que CI esté verde ni con
+que exista un deployment: `/health` expone una huella corta y saneada del commit y
+`/ready` devuelve esa huella junto a la migración aplicada. Si producción no puede
+identificar el release, `noesis-doctor --strict` la bloquea. No se publica nombre de
+rama, variables arbitrarias ni secretos.
+
+## El catálogo «más IVA» obliga a activar impuestos en Checkout (2026-08-06)
+
+Los seis precios de Stripe representan base imponible porque toda la comunicación
+comercial dice 29/49/99 € más IVA. Checkout pide desde código dirección de
+facturación, NIF fiscal y `automatic_tax`; no se deja esa regla escondida en una
+configuración manual del proveedor. Desactivarla convierte el doctor en bloqueo.
+Sigue siendo obligatorio validar en Stripe test base, IVA, total y factura antes de
+usar claves live: pedir cálculo automático no garantiza por sí solo que la cuenta de
+Stripe esté fiscalmente bien configurada.
+
 ## Las páginas legales dejan de ser un sitio aparte (2026-07-30)
 
 Privacidad, términos, aviso legal, cookies, encargado del tratamiento y cumplimiento

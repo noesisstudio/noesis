@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 11:15 — producción identificable y adaptadores alineados con Railway
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar desajustes encontrados al auditar el `main` estable sin tocar
+  credenciales: demostrar qué release/esquema sirve producción, reconocer el correo
+  HTTPS ya construido y aplicar en Stripe la política comercial «precio + IVA».
+- **Áreas y archivos:** configuración, salud/readiness, adaptadores de email y
+  billing, pruebas y documentos vivos de arquitectura, estado y conexión de APIs.
+- **Cambios de datos/migración:** ninguno; esquema 37 sin tocar.
+- **Pruebas ejecutadas:** baseline completo 392/392; después 17 pruebas focalizadas,
+  Ruff, Bandit y `pip-audit`, todo correcto. Suite completa final 396/396 y fuente
+  de verdad documental validada.
+- **Dependencias o validaciones externas:** ninguna credencial utilizada. Quedan la
+  entrega real de correo, Stripe test y el despliegue de Railway.
+- **Riesgo/punto probable de fallo:** proveedor que no inyecte SHA deja release
+  desconocido en producción; se resuelve con `NOESIS_RELEASE_ID`. Stripe Tax requiere
+  configuración correcta de la cuenta aunque Checkout lo solicite.
+- **Diagnóstico y rollback:** comparar `release` de `/health` y `schema` de `/ready`;
+  revisar `email.available()` y el payload de `checkout/sessions`. El cambio no altera
+  tablas ni datos y puede revertirse por adaptador.
+- **Estado de publicación:** local sobre `main`, validado y pendiente de push.
+
 ## 2026-08-02 18:40 — el chat web emite el borrador, y la voz del plan Sin Límites deja de prometerse como activa
 
 - **Autor/agente:** Claude.

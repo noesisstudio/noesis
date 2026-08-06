@@ -9,7 +9,8 @@
   captura, PDF o conversación; revocar la anterior y eliminar/redactar las copias
   compartidas. No reutilizar secretos sugeridos por una IA.
 - [ ] Desplegar el `main` actual, aplicar la migración indicada en
-  `project-state.json` y confirmar `/health`, `/ready`, dominio canónico, cookies
+  `project-state.json` y confirmar que `/health` devuelve el release esperado y
+  `/ready` la migración vigente; comprobar además dominio canónico, cookies
   `__Host-`, hosts, logs sin query string, Google OAuth admin, panel CISO, bitácora
   encadenada, Home, modo consulta y ficha de proyecto.
 - [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
@@ -21,8 +22,9 @@
   repetir prueba, contratación, preferencias, checkout, webhook, modo consulta y
   reactivación.
 - [ ] Crear o actualizar en Stripe los productos **29/49/99 € + IVA**, enlazar sus
-  seis `price_id`, resolver cómo aplica el IVA el Checkout y probar checkout,
-  webhook, impago, reactivación y portal de cliente antes de usar claves live.
+  seis `price_id` y probar en modo test dirección, NIF y `automatic_tax`; comprobar
+  importe e IVA resultantes, checkout, webhook, impago, reactivación y portal de
+  cliente antes de usar claves live.
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
   reintentos y bloqueo de cuenta inactiva.
 - [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
@@ -32,8 +34,9 @@
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.
-- [ ] SMTP real: credenciales, invitaciones, facturas, avisos, reintentos de la outbox
-  y entregabilidad. La cola durable ya está construida.
+- [ ] Correo real por API HTTPS o SMTP: credenciales, dominio autenticado,
+  invitaciones, facturas, avisos, reintentos de la outbox y entregabilidad. La cola
+  durable y las dos vías de salida ya están construidas.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El

@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 
 from . import config, migrations
 from .adapters import ai as ai_adapter
+from .adapters import email as email_adapter
 from .adapters import transcription
 from .documents import ocr
 
@@ -75,6 +76,21 @@ def collect_readiness(*, check_database: bool = True) -> dict:
             "Decide un único dominio y actualiza NOESIS_BASE_URL, OAuth, "
             "Stripe, Meta y enlaces transaccionales."
         ) if not canonical_ok else "",
+    ))
+
+    release_ok = config.RELEASE_ID not in {"unknown", "invalid"}
+    checks.append(ReadinessCheck(
+        "despliegue",
+        "ok" if release_ok else ("blocker" if config.IS_PRODUCTION else "warning"),
+        (
+            f"Release identificable: {config.RELEASE_ID}."
+            if release_ok else
+            "El proceso no puede identificar el commit desplegado."
+        ),
+        (
+            "Comprueba RAILWAY_GIT_COMMIT_SHA o configura NOESIS_RELEASE_ID "
+            "con una referencia publica y no sensible."
+        ) if not release_ok else "",
     ))
 
     legal_ok = config.legal_identity_ready()
@@ -164,17 +180,27 @@ def collect_readiness(*, check_database: bool = True) -> dict:
         if not wa_ok else "Ejecuta el smoke con el número real.",
     ))
 
-    smtp_names = ("SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_FROM")
+    smtp_names = ("SMTP_HOST", "SMTP_USER", "SMTP_PASS")
     smtp_present, smtp_missing = _env_ready(smtp_names)
+    api_email_ok = bool(config.BREVO_API_KEY)
     smtp_ok = not smtp_missing
+    email_ok = email_adapter.available()
+    email_partial = not api_email_ok and bool(smtp_present) and bool(smtp_missing)
     checks.append(ReadinessCheck(
-        "correo", "ok" if smtp_ok else (
-            "blocker" if external_required else "warning"
+        "correo", "ok" if email_ok else (
+            "blocker" if email_partial or external_required else "warning"
         ),
-        "Correo saliente configurado." if smtp_ok else
-        "El correo real no está completo.",
-        "Completa SMTP y prueba recuperación, factura y gestoría."
-        if not smtp_ok else "",
+        (
+            "Correo saliente por API HTTPS configurado."
+            if api_email_ok else
+            "Correo saliente por SMTP configurado."
+            if smtp_ok else
+            "El correo SMTP está configurado a medias."
+            if email_partial else
+            "El correo real no está completo."
+        ),
+        "Configura API HTTPS o SMTP y prueba recuperación, factura y gestoría."
+        if not email_ok else "",
     ))
 
     google_names = ("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET")
@@ -203,16 +229,25 @@ def collect_readiness(*, check_database: bool = True) -> dict:
         "STRIPE_PRICE_PREMIUM_ANNUAL",
     )
     stripe_present, stripe_missing = _env_ready(stripe_names)
-    stripe_ok = not stripe_missing
+    stripe_credentials_ok = not stripe_missing
+    stripe_ok = stripe_credentials_ok and config.STRIPE_AUTOMATIC_TAX
     stripe_partial = bool(stripe_present) and bool(stripe_missing)
+    stripe_tax_missing = stripe_credentials_ok and not config.STRIPE_AUTOMATIC_TAX
     checks.append(ReadinessCheck(
         "stripe", "ok" if stripe_ok else (
-            "blocker" if stripe_partial or external_required else "warning"
+            "blocker"
+            if stripe_partial or stripe_tax_missing or external_required
+            else "warning"
         ),
         "Cobro de suscripción configurado." if stripe_ok else
+        "Stripe no calculará el IVA del catálogo." if stripe_tax_missing else
         ("Stripe está configurado a medias." if stripe_partial else
          "Stripe real aún no está configurado."),
-        "Completa webhook y precios; prueba alta, renovación, fallo y cancelación."
+        (
+            "Activa NOESIS_STRIPE_AUTOMATIC_TAX y valida dirección y NIF en Checkout."
+            if stripe_tax_missing else
+            "Completa webhook y precios; prueba alta, renovación, fallo y cancelación."
+        )
         if not stripe_ok else "",
     ))
 

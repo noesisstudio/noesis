@@ -96,6 +96,11 @@ class StripeBillingProvider:
             "mode": "subscription",
             "line_items[0][price]": price,
             "line_items[0][quantity]": 1,
+            "automatic_tax[enabled]": (
+                "true" if config.STRIPE_AUTOMATIC_TAX else "false"
+            ),
+            "tax_id_collection[enabled]": "true",
+            "billing_address_collection": "required",
             "success_url": success_url,
             "cancel_url": cancel_url,
             "client_reference_id": str(business["id"]),
@@ -108,6 +113,8 @@ class StripeBillingProvider:
         }
         if business.get("stripe_customer_id"):
             data["customer"] = business["stripe_customer_id"]
+            data["customer_update[address]"] = "auto"
+            data["customer_update[name]"] = "auto"
         elif business.get("owner_email"):
             data["customer_email"] = business["owner_email"]
         try:

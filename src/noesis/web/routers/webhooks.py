@@ -20,7 +20,12 @@ router = APIRouter()
 @router.get("/health")
 def health(request: Request):
     """Liveness para el proveedor cloud: el proceso HTTP esta respondiendo."""
-    return {"status": "ok", "service": "noesis", "version": request.app.version}
+    return {
+        "status": "ok",
+        "service": "noesis",
+        "version": request.app.version,
+        "release": config.RELEASE_ID,
+    }
 
 
 @router.get("/ready")
@@ -29,12 +34,28 @@ def readiness():
     try:
         from ... import migrations
 
-        ready = migrations.is_current()
+        current = migrations.current_version()
+        expected = migrations.LATEST_VERSION
+        ready = current == expected
     except db.DatabaseError:
+        current = None
+        expected = None
         ready = False
     if not ready:
-        return JSONResponse({"status": "not_ready"}, status_code=503)
-    return {"status": "ready"}
+        return JSONResponse(
+            {
+                "status": "not_ready",
+                "release": config.RELEASE_ID,
+                "schema": current,
+                "expected_schema": expected,
+            },
+            status_code=503,
+        )
+    return {
+        "status": "ready",
+        "release": config.RELEASE_ID,
+        "schema": current,
+    }
 
 
 # ============================================================== WEBHOOK ===== #
@@ -160,4 +181,3 @@ def _apply_stripe_event(event: dict) -> None:
         if biz:
             db.set_subscription(biz["id"], "active")
             db.record_product_event(biz["id"], "subscription_invoice_paid")
-

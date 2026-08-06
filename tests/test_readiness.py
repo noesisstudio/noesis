@@ -9,6 +9,18 @@ from noesis import config, readiness
 
 
 class ReadinessTestCase(unittest.TestCase):
+    def test_production_without_release_identity_is_blocked(self):
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "RELEASE_ID", "unknown"),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        deploy = next(
+            item for item in report["checks"] if item["area"] == "despliegue"
+        )
+        self.assertEqual(deploy["status"], "blocker")
+
     def test_report_never_contains_secret_values(self):
         secret = "secreto-super-largo-que-no-debe-aparecer"
         with (
@@ -60,6 +72,45 @@ class ReadinessTestCase(unittest.TestCase):
         self.assertTrue(report["ready"])
         self.assertEqual(report["counts"]["blocker"], 0)
         self.assertGreater(report["counts"]["warning"], 0)
+
+    def test_https_email_provider_satisfies_the_email_check_without_smtp(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(config, "BREVO_API_KEY", "configured-not-exposed"),
+            patch.object(config, "SMTP_HOST", ""),
+            patch.object(config, "SMTP_USER", ""),
+            patch.object(config, "SMTP_PASS", ""),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        email = next(
+            item for item in report["checks"] if item["area"] == "correo"
+        )
+        self.assertEqual(email["status"], "ok")
+        self.assertIn("API HTTPS", email["summary"])
+
+    def test_stripe_prices_without_automatic_tax_are_a_blocker(self):
+        stripe_env = {
+            "STRIPE_SECRET_KEY": "configured",
+            "STRIPE_WEBHOOK_SECRET": "configured",
+            "STRIPE_PRICE_AUTONOMO": "price_1",
+            "STRIPE_PRICE_PRO": "price_2",
+            "STRIPE_PRICE_PREMIUM": "price_3",
+            "STRIPE_PRICE_AUTONOMO_ANNUAL": "price_4",
+            "STRIPE_PRICE_PRO_ANNUAL": "price_5",
+            "STRIPE_PRICE_PREMIUM_ANNUAL": "price_6",
+        }
+        with (
+            patch.dict(os.environ, stripe_env, clear=True),
+            patch.object(config, "STRIPE_AUTOMATIC_TAX", False),
+        ):
+            report = readiness.collect_readiness(check_database=False)
+
+        stripe = next(
+            item for item in report["checks"] if item["area"] == "stripe"
+        )
+        self.assertEqual(stripe["status"], "blocker")
+        self.assertIn("IVA", stripe["summary"])
 
     def test_external_compatible_provider_requires_https_and_legal_identity(self):
         with (

@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-08-02",
+  "state_date": "2026-08-06",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 37,
-  "verified_test_count": 392,
+  "verified_test_count": 396,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, SMTP, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Desplegar el candidato y verificar que /health devuelve su release y /ready la migración 37; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -62,6 +62,8 @@
     "private_calendar_feed": "implemented_revocable_ics",
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",
     "email_delivery": "implemented_durable_outbox_with_retry_https_api_provider_preferred_because_railway_blocks_outbound_smtp_ports_smtp_kept_as_fallback_with_implicit_ssl_on_465_and_public_forms_never_send_during_the_request",
+    "deployment_identity": "health_exposes_a_sanitized_release_fingerprint_and_ready_exposes_release_plus_current_schema_so_published_never_means_only_merged",
+    "stripe_tax": "checkout_requests_billing_address_tax_id_collection_and_automatic_tax_for_the_public_plus_vat_catalog_real_tax_result_still_requires_stripe_test_validation",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",

@@ -1780,6 +1780,9 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertEqual(url, "https://checkout.example/year")
         payload = post.call_args.args[1]
         self.assertEqual(payload["line_items[0][price]"], "price_pro_annual")
+        self.assertEqual(payload["automatic_tax[enabled]"], "true")
+        self.assertEqual(payload["tax_id_collection[enabled]"], "true")
+        self.assertEqual(payload["billing_address_collection"], "required")
         self.assertEqual(payload["metadata[billing_period]"], "annual")
         self.assertEqual(
             payload["subscription_data[metadata][billing_period]"], "annual"
@@ -2188,8 +2191,13 @@ class PortalHttpTestCase(BackendTestCase):
 
         with patch.object(server, "start_scheduler", lambda: None):
             with TestClient(server.app) as client:
-                self.assertEqual(client.get("/health").json()["status"], "ok")
-                self.assertEqual(client.get("/ready").json()["status"], "ready")
+                health = client.get("/health").json()
+                ready = client.get("/ready").json()
+                self.assertEqual(health["status"], "ok")
+                self.assertEqual(health["release"], config.RELEASE_ID)
+                self.assertEqual(ready["status"], "ready")
+                self.assertEqual(ready["release"], config.RELEASE_ID)
+                self.assertEqual(ready["schema"], migrations.LATEST_VERSION)
                 signup = client.post(
                     "/onboarding/signup",
                     data={

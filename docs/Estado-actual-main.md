@@ -23,8 +23,8 @@
   Apple Calendar u Outlook sin contratar una API. Cobros importa extractos CSV,
   propone coincidencias explicables y solo registra el pago cuando el titular lo
   confirma.
-- Los correos confirmados se persisten antes de intentar SMTP, se deduplican y
-  reintentan con backoff. Los errores de proveedores y el diagnóstico de preparación
+- Los correos confirmados se persisten antes de intentar la API HTTPS o SMTP, se
+  deduplican y reintentan con backoff. Los errores de proveedores y el diagnóstico de preparación
   viven en administración; el cliente ve funciones y preferencias, no infraestructura.
 - El panel del fundador incorpora un responsable CISO interno, determinista y de
   solo lectura. Resume controles con evidencia, presión de acceso agregada y eventos
@@ -44,7 +44,7 @@
   mínima y activar expresamente la apertura. Las cuentas existentes siguen entrando
   y la web cambia sus llamadas a «Solicitar acceso» sin enseñar diagnósticos internos.
 - El diagnóstico previo a apertura comprueba un dominio canónico único, identidad
-  legal, copias externas, WhatsApp, SMTP, Stripe, voz, lectura de imágenes y ClamAV.
+  legal, copias externas, WhatsApp, correo, Stripe, voz, lectura de imágenes y ClamAV.
   Las capacidades de audio/OCR se describen en la web según disponibilidad real.
 - La facturación nativa admite borradores editables, varias líneas con cantidad,
   precio, descuento e IVA, series separadas para factura completa, simplificada y
@@ -56,6 +56,11 @@
   con su borrador y exige otro SÍ para emitir o entregar. Tras confirmarlo asigna
   número, valida los datos obligatorios, genera el PDF y prepara email o plantilla
   WhatsApp; la misma factura alimenta KPIs, impuestos, cobros y gestoría.
+- La salud pública identifica el release desplegado con una huella segura y
+  `/ready` devuelve además la versión real del esquema. El checkout de Stripe pide
+  dirección de facturación, NIF fiscal y cálculo automático de impuestos porque el
+  catálogo se comunica como base imponible más IVA; el resultado todavía debe
+  validarse en modo test antes de cobrar.
 - Una anulación Veri*Factu nunca borra la factura: exige confirmación escrita,
   conserva el alta, crea otro registro inmutable con huella oficial, lo encadena al
   anterior y lo remite mediante una cola durable independiente.
@@ -88,7 +93,7 @@ algo está en producción porque exista en una rama o haya pasado tests.**
 
 ## Límites que siguen abiertos
 
-- WhatsApp, Stripe, SMTP, Google OAuth, el proveedor privado de IA y AEAT están
+- WhatsApp, Stripe, correo, Google OAuth, el proveedor privado de IA y AEAT están
   implementados detrás de adaptadores, pero necesitan credenciales y una prueba real
   extremo a extremo. La secuencia exacta está en [[Conectar-APIs]]. Stripe live
   requiere además cerrar cómo se aplica el IVA. La facturación es nativa y no se

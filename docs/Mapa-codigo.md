@@ -35,6 +35,9 @@
   identidad legal, dominio canónico, apertura pública, audio/OCR, datos, copias,
   WhatsApp, correo, Stripe, AEAT, IA y operaciones. Al abrir el alta pública,
   servicios críticos incompletos pasan de aviso a bloqueo.
+- `src/noesis/config.py` + `web/routers/webhooks.py`: toman una huella publicable del
+  commit de Railway (o `NOESIS_RELEASE_ID`) y la exponen en `/health`; `/ready`
+  añade el esquema aplicado para distinguir sin ambigüedad fusionado de desplegado.
 - `deploy/local-ai/`: Ollama privado ligado a localhost y perfil de descarga de
   Qwen3 8B para evaluación; no expone el modelo ni lo convierte en un SLA.
 - `analysis/build_unit_economics.mjs`: genera el modelo editable de costes, márgenes,
@@ -155,6 +158,10 @@
   puertos de SMTP—, adjuntos incluidos; sin ella usa SMTP, con SSL directo en el 465 y
   STARTTLS en el resto. Toda comunicación nueva se encola antes de salir para no
   perderla ante una caída del proveedor.
+- `src/noesis/adapters/billing.py`: Checkout de suscripción propio sobre la API REST
+  de Stripe. Además del precio y metadatos aislados por negocio, solicita dirección,
+  NIF fiscal y `automatic_tax`; las credenciales y el resultado fiscal se validan
+  externamente antes de pasar a live.
 - `src/noesis/adapters/`: Meta, email, pagos, voz, extracción y fiscalidad detrás de
   fronteras reemplazables. La extracción externa respeta la decisión de IA de cada
   negocio y conserva el clasificador local cuando está desactivada.

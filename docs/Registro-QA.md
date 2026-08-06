@@ -1,5 +1,30 @@
 # Registro de QA
 
+## 2026-08-06 — release verificable, correo coherente y Checkout con IVA
+
+### Qué se probó y con qué resultado
+
+- **Punto de partida:** suite completa del `main` recibido, **392 pruebas, 0 fallos**.
+- **Release:** `/health` devuelve la huella saneada configurada y `/ready` devuelve
+  la misma huella más la migración aplicada. En producción, un release desconocido o
+  inválido es bloqueo del doctor; en local sigue siendo solo informativo.
+- **Correo:** el doctor acepta la API HTTPS sin exigir SMTP. El helper de factura
+  adjunta reutiliza `send_email`, por lo que una instalación con Brevo ya no intenta
+  saltarse la API hacia un puerto SMTP bloqueado. El PDF conserva nombre y bytes.
+- **Stripe:** Checkout anual conserva el `price_id` correcto y añade dirección
+  obligatoria, recogida de NIF y `automatic_tax=true`. Una configuración completa de
+  credenciales con el cálculo desactivado se marca como bloqueo.
+- **Pruebas focalizadas:** 17 pasan, 0 fallos. Ruff y Bandit pasan sin hallazgos;
+  `pip-audit` no encuentra vulnerabilidades conocidas en las dependencias instaladas.
+- **Suite completa final:** 396 pruebas, 0 fallos. La comprobación de verdad
+  documental también se ejecuta antes de publicar.
+
+### Qué no se ha probado
+
+- Railway todavía debe desplegar el candidato y demostrar la huella por HTTP.
+- No se han usado credenciales de Brevo ni Stripe; entregabilidad e IVA real se
+  validarán en la fase externa.
+
 ## 2026-08-02 — el chat web emite el borrador que él mismo te dice que emitas
 
 ### Qué se probó y con qué resultado

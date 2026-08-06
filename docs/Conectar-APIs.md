@@ -10,7 +10,7 @@
 | Servicio | Estado del código | Acción externa | Prioridad | ¿Activar ya? |
 |---|---|---|---|---|
 | PostgreSQL / Railway | Construido y usado | Desplegar `main`, migrar y verificar | P0 | Sí |
-| SMTP | Outbox durable construida | Crear credenciales y autenticar dominio | P0 | Sí |
+| Correo HTTPS / SMTP | Outbox y dos transportes construidos | Crear credenciales y autenticar dominio | P0 | Sí |
 | Google OAuth | Alta y acceso construidos | Crear cliente web OAuth | P0 | Sí |
 | Stripe Billing | Checkout, portal y webhook construidos | Crear 6 precios y webhook | P0 | Solo test hasta cerrar el IVA |
 | Meta WhatsApp Cloud API | Entrada, salida, firma y reintentos construidos | Verificar empresa/número y plantillas | P0 | Sí, primero con número de prueba |
@@ -49,10 +49,13 @@ NOESIS_SEED_DEMO=false
 NOESIS_RESET_DB=false
 ```
 
-Railway inyecta `PORT`, `RAILWAY_ENVIRONMENT` y `RAILWAY_PUBLIC_DOMAIN`. Tras el
+Railway inyecta `PORT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_PUBLIC_DOMAIN` y el SHA del
+commit. Tras el
 despliegue hay que aplicar la versión de esquema indicada en
 [`project-state.json`](project-state.json), comprobar `GET /health`, `GET /ready`
-y ejecutar `noesis-doctor --strict`. Nunca activar `NOESIS_RESET_DB` con datos.
+y verificar que ambos responden con el release esperado y que `/ready` muestra la
+migración vigente. Después se ejecuta `noesis-doctor --strict`. Nunca activar
+`NOESIS_RESET_DB` con datos.
 
 Si una contraseña, token o `NOESIS_SECRET` ha aparecido en una captura, PDF o chat,
 se considera expuesto: se genera otro valor en el gestor del proveedor, se revoca
@@ -63,13 +66,23 @@ El registro público está diseñado para fallar cerrado. Primero se despliega c
 Stripe, WhatsApp, audio/OCR, ClamAV y copias. Solo al completar la prueba de
 aceptación se cambia a `true` y se repite `noesis-doctor --strict`.
 
-## 1. Correo por SMTP
+## 1. Correo por API HTTPS o SMTP
 
 ### Qué crear
 
-Una cuenta transaccional en un proveedor con SMTP (por ejemplo, Postmark, Brevo,
-Mailgun, Amazon SES o el SMTP corporativo) y un remitente del dominio de Noesis.
-El código actual habla SMTP; una clave para la API REST del proveedor no sirve.
+Una cuenta transaccional y un remitente verificado del dominio de Noesis. En Railway
+se prefiere la API HTTPS de Brevo porque la plataforma bloquea los puertos SMTP. En
+otra infraestructura puede usarse SMTP como alternativa. La outbox y los reintentos
+son comunes: cambiar de transporte no cambia el flujo del producto.
+
+Vía recomendada en Railway:
+
+```dotenv
+BREVO_API_KEY=<clave de la API transaccional>
+SMTP_FROM=Noesis <no-reply@bynoesis.com>
+```
+
+Alternativa SMTP:
 
 ```dotenv
 SMTP_HOST=<host SMTP>
@@ -79,8 +92,10 @@ SMTP_PASS=<contraseña SMTP>
 SMTP_FROM=Noesis <no-reply@bynoesis.com>
 ```
 
-El adaptador usa STARTTLS. En DNS hay que publicar SPF y DKIM según el proveedor y
-añadir DMARC antes de escalar envíos.
+El adaptador SMTP usa TLS implícito en el puerto 465 y STARTTLS en los demás. En
+ambas vías hay que publicar SPF y DKIM según el proveedor y añadir DMARC antes de
+escalar envíos. `noesis-doctor` considera preparada cualquiera de las dos vías y
+no exige SMTP si la API HTTPS está activa.
 
 ### Prueba de aceptación
 
@@ -122,19 +137,17 @@ Referencia: [OpenID Connect de Google](https://developers.google.com/identity/op
 Stripe aquí cobra **la suscripción SaaS de Noesis**. No cobra las facturas que el
 autónomo emite a sus clientes y no es todavía un «cobro por enlace».
 
-### Bloqueo previo: IVA
+### IVA del catálogo
 
-El catálogo se comunica como **29 / 49 / 99 EUR + IVA**, pero el Checkout actual
-solo envía el `price_id`: no activa `automatic_tax` ni añade una tasa fiscal. Por
-eso, antes de usar claves `live` hay que elegir y probar una solución coherente:
+El catálogo se comunica como **29 / 49 / 99 EUR + IVA**. Checkout ya envía
+`automatic_tax[enabled]=true`, pide dirección de facturación y habilita la recogida
+del NIF fiscal. `noesis-doctor` bloquea una configuración completa de Stripe si se
+desactiva `NOESIS_STRIPE_AUTOMATIC_TAX` mientras el catálogo siga expresado sin IVA.
 
-1. recomendada: añadir Stripe Tax al Checkout, recopilar la dirección necesaria y
-   validar factura/IVA intracomunitario; o
-2. crear precios con IVA incluido y cambiar todo el copy comercial que dice `+ IVA`.
-
-Hasta resolverlo, Stripe se conecta y prueba **en modo test**, no se cobra a un
-cliente real. Stripe documenta que Checkout solo calcula impuestos automáticamente
-cuando se habilita `automatic_tax`.
+Esto cierra la decisión de código, pero no demuestra todavía el resultado fiscal.
+Antes de usar claves `live` se prueba cada plan en Stripe test, con y sin NIF válido,
+y se comprueban base, IVA, total y factura. Una configuración incorrecta de Stripe
+Tax puede cobrar mal aunque los parámetros del Checkout sean correctos.
 
 ### Qué crear
 
@@ -155,6 +168,7 @@ STRIPE_PRICE_PREMIUM=price_...
 STRIPE_PRICE_AUTONOMO_ANNUAL=price_...
 STRIPE_PRICE_PRO_ANNUAL=price_...
 STRIPE_PRICE_PREMIUM_ANNUAL=price_...
+NOESIS_STRIPE_AUTOMATIC_TAX=true
 ```
 
 Crear el webhook `https://bynoesis.com/webhook/stripe` con:
@@ -388,7 +402,7 @@ tarea aprobada, adaptador, pruebas y política de permisos.
 ## 10. Orden recomendado de conexión
 
 1. Desplegar `main`, migrar, `/ready` y `noesis-doctor --strict`.
-2. SMTP y Google OAuth: rápidos, visibles y de bajo riesgo operativo.
+2. Correo por API HTTPS y Google OAuth: rápidos, visibles y de bajo riesgo operativo.
 3. Stripe en test; cerrar IVA; repetir todos los ciclos antes de pasar a live.
 4. Meta con número de prueba, después número real y plantillas aprobadas.
 5. Un respaldo de IA con presupuesto; Groq Whisper solo si hace falta para audio.
