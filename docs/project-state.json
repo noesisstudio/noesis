@@ -2,13 +2,13 @@
   "state_date": "2026-08-06",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 38,
-  "verified_test_count": 398,
+  "verified_test_count": 399,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Release identificable y migración 38 verificados por HTTP; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Desplegar la redirección canónica y verificar www -> bynoesis.com con 308, release identificable y migración 38; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -39,6 +39,7 @@
     ],
     "search_engines": "robots_and_sitemap_expose_only_public_pages_private_areas_excluded_custom_404_page_keeps_json_for_the_api_every_indexable_page_carries_its_own_description_and_canonical_plus_an_organization_json_ld_card",
     "shared_public_shell": "legal_pages_extend_the_same_base_as_the_rest_so_someone_landing_from_search_keeps_the_site_menu_selling_calls_to_action_are_removed_from_legal_texts_and_kept_on_the_compliance_guide_contact_address_and_document_date_come_from_a_single_source",
+    "canonical_origin": "the_public_alias_is_always_allowed_but_runtime_redirects_it_with_308_to_the_configured_canonical_base_preserving_path_and_query",
     "heading_structure": "one_h1_per_page_the_product_mockup_reproduces_panel_screens_as_h2_demo_title_so_it_cannot_compete_with_the_real_heading_and_a_focus_only_skip_link_leads_to_the_content",
     "visual_qa": "computed_style_rendering_verified_screenshot_tool_unavailable",
     "asset_delivery": "static_files_immutable_year_long_cache_in_production_versioned_by_query_and_chart_library_loaded_only_when_the_demo_is_reached",

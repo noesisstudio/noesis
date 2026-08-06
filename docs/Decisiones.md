@@ -2,6 +2,14 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## El alias público llega al servidor, pero nunca sirve una segunda web (2026-08-06)
+
+`www.bynoesis.com` debe estar permitido por el guardián de Host para que el servidor
+pueda responder, pero no puede devolver otro 200: duplicaría la web para buscadores y
+permitiría que una configuración accidental repartiera enlaces entre dos orígenes.
+El runtime lo redirige con 308 a `NOESIS_BASE_URL`, conservando ruta y parámetros.
+Railway, localhost y sus healthchecks exactos no participan en esa redirección.
+
 ## La deduplicación documental termina en la frontera del negocio (2026-08-06)
 
 La misma foto o PDF no se guarda dos veces dentro de una empresa: el servicio calcula

@@ -59,7 +59,8 @@
 - `src/noesis/web/templates/404.html`: dirección inexistente con el diseño del
   sitio. El manejador de `server.py` sigue devolviendo JSON bajo `/api/` y
   `/webhook/`, que esperan datos y no una página.
-- `src/noesis/web/server.py`: ensamblador FastAPI, seguridad y routers.
+- `src/noesis/web/server.py`: ensamblador FastAPI, seguridad, redirección al origen
+  canónico y routers.
 - `src/noesis/web/templates/site_base.html`: estructura compartida del sitio público,
   navegación responsive, llamada final y pie legal. Home, Precios, Equipo y Preguntas
   usan composiciones propias según su objetivo, sin replicar el panel interno ni

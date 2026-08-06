@@ -100,6 +100,8 @@ class SecurityHardeningTestCase(unittest.TestCase):
             allowed_hosts = config.build_allowed_hosts()
 
         self.assertIn("healthcheck.railway.app", allowed_hosts)
+        self.assertIn("bynoesis.com", allowed_hosts)
+        self.assertIn("www.bynoesis.com", allowed_hosts)
         self.assertNotIn("*", allowed_hosts)
 
         probe = FastAPI()
@@ -129,6 +131,32 @@ class SecurityHardeningTestCase(unittest.TestCase):
                 headers={"Content-Length": "100"},
             )
         self.assertEqual(response.status_code, 413)
+
+    def test_public_alias_redirects_to_canonical_host_preserving_path_and_query(self):
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "BASE_URL", "https://bynoesis.com"),
+            patch.object(config, "CANONICAL_PUBLIC_HOST", "bynoesis.com"),
+            patch.object(config, "PUBLIC_HOST_ALIAS", "www.bynoesis.com"),
+            patch.object(config, "SECRET_KEY", "x" * 40),
+            TestClient(server.app) as client,
+        ):
+            response = client.get(
+                "http://www.bynoesis.com/precios?plan=pro",
+                follow_redirects=False,
+            )
+            canonical = client.get(
+                "http://bynoesis.com/precios?plan=pro",
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 308)
+        self.assertEqual(
+            response.headers["location"],
+            "https://bynoesis.com/precios?plan=pro",
+        )
+        self.assertEqual(response.headers["x-frame-options"], "DENY")
+        self.assertEqual(canonical.status_code, 200)
 
     def test_private_portals_do_not_cache_or_leak_the_token_as_referrer(self):
         with patch.object(config, "LOG_REQUESTS", False), TestClient(server.app) as client:

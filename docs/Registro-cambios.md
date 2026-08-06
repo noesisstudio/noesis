@@ -23,6 +23,27 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 12:10 — el alias público deja de duplicar la web
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar el doble origen observado en producción sin depender de una
+  regla manual del proxy ni abrir hosts por comodín.
+- **Áreas y archivos:** configuración de hosts, middleware web, prueba de seguridad,
+  baseline de secretos, arquitectura, decisión, estado, tareas y QA.
+- **Cambios de datos/migración:** ninguno; esquema 38.
+- **Pruebas ejecutadas:** auditoría HTTPS de dominio, alta, legales y cabeceras; 3
+  pruebas focalizadas, Ruff y suite completa 399/399.
+- **Dependencias o validaciones externas:** ninguna credencial. La respuesta real de
+  `www` debe repetirse cuando Railway sirva el commit.
+- **Riesgo/punto probable de fallo:** orden de middlewares o `BASE_URL` no canónica;
+  el redirect solo actúa si la base coincide con `CANONICAL_PUBLIC_HOST` y la prueba
+  exige que conserve las cabeceras de seguridad.
+- **Diagnóstico y rollback:** `curl -I https://www.bynoesis.com/precios?plan=pro`
+  debe devolver 308 a `https://bynoesis.com/precios?plan=pro`; el canónico debe
+  devolver 200. Revertir el middleware restaura el comportamiento anterior.
+- **Estado de publicación:** local sobre `main`, suite validada y pendiente de
+  commit/push.
+
 ## 2026-08-06 11:50 — producción confirma release y esquema 38
 
 - **Autor/agente:** Codex.

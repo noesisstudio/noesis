@@ -25,7 +25,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -219,6 +219,23 @@ async def request_observability(request: Request, call_next):
                 "status": status,
                 "duration_ms": round((time.perf_counter() - started) * 1000, 2),
             }, separators=(",", ":")))
+
+
+@app.middleware("http")
+async def canonical_public_host(request: Request, call_next):
+    """Envía el alias público al único origen que firma enlaces y callbacks."""
+    base_host = (urlsplit(config.BASE_URL).hostname or "").lower()
+    request_host = (request.url.hostname or "").lower()
+    if (
+        config.IS_PRODUCTION
+        and base_host == config.CANONICAL_PUBLIC_HOST
+        and request_host == config.PUBLIC_HOST_ALIAS
+    ):
+        location = f"{config.BASE_URL}{request.url.path}"
+        if request.url.query:
+            location += f"?{request.url.query}"
+        return RedirectResponse(location, status_code=308)
+    return await call_next(request)
 
 
 @app.middleware("http")

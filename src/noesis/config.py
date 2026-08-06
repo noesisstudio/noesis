@@ -220,6 +220,11 @@ BASE_URL = os.getenv("NOESIS_BASE_URL", _DEFAULT_BASE_URL).strip().rstrip("/")
 CANONICAL_PUBLIC_HOST = os.getenv(
     "NOESIS_CANONICAL_PUBLIC_HOST", "bynoesis.com"
 ).strip().lower()
+PUBLIC_HOST_ALIAS = (
+    CANONICAL_PUBLIC_HOST[4:]
+    if CANONICAL_PUBLIC_HOST.startswith("www.")
+    else f"www.{CANONICAL_PUBLIC_HOST}"
+)
 
 # Host header: en producción solo se aceptan el dominio público y los hosts
 # declarados explícitamente. Evita que enlaces y redirecciones se construyan con un
@@ -247,6 +252,8 @@ def build_allowed_hosts() -> list[str]:
     return list(dict.fromkeys(
         configured_hosts
         + ([base_host] if base_host else [])
+        + ([CANONICAL_PUBLIC_HOST, PUBLIC_HOST_ALIAS]
+           if CANONICAL_PUBLIC_HOST else [])
         + ([railway_private_host] if railway_private_host else [])
         + ([railway_healthcheck_host] if railway_healthcheck_host else [])
         + ["localhost", "127.0.0.1"]

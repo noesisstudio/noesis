@@ -1,5 +1,26 @@
 # Registro de QA
 
+## 2026-08-06 — un solo origen público
+
+### Qué se probó y con qué resultado
+
+- **Hallazgo real:** `https://www.bynoesis.com/` respondía 200 igual que el dominio
+  canónico. Las cabeceras y etiquetas eran correctas, pero había dos orígenes
+  públicos sirviendo la misma web.
+- **Perímetro:** la construcción de hosts permitidos incorpora el canónico y su alias
+  sin comodines. Railway privado, healthcheck, localhost y hosts configurados siguen
+  tratados de forma independiente.
+- **Redirección:** en producción solo el alias recibe 308 hacia `BASE_URL`; ruta y
+  query se conservan. El dominio canónico sigue en 200 y la respuesta 308 conserva
+  las cabeceras anti-iframe y demás controles del middleware exterior.
+- **Pruebas focalizadas:** 3 pasan y Ruff pasa. Suite completa final: **399 pruebas,
+  0 fallos**.
+
+### Qué no se ha probado
+
+- Falta desplegar este commit y repetir por HTTPS que `www` devuelve 308 y el dominio
+  canónico 200. No requiere credenciales.
+
 ## 2026-08-06 — deduplicación documental aislada por negocio
 
 ### Qué se probó y con qué resultado

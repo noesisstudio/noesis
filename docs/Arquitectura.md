@@ -61,6 +61,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   gasto desde una foto; sin clave devuelve `None` y mantiene el flujo manual.
 - `verifactu.py` — formato técnico AEAT: cadena de huella, SHA-256, URL/QR y XML.
 - `web/auth.py` — login (PBKDF2, sesiones firmadas). Aislamiento por dueño.
+- `web/server.py` — `TrustedHostMiddleware` admite el origen canónico, su único alias
+  público y los hosts internos exactos. En producción el alias recibe 308 hacia
+  `BASE_URL` conservando ruta/query; no se redirigen healthchecks ni hosts privados.
 - `documents/validation.py` — valida el contenido real de imágenes y PDF antes de
   OCR o almacenamiento; limita píxeles/páginas y bloquea acciones PDF activas.
 - `documents/malware.py` — transmite el archivo validado a un ClamAV privado por

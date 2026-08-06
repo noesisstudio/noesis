@@ -63,6 +63,9 @@
   dirección de facturación, NIF fiscal y cálculo automático de impuestos porque el
   catálogo se comunica como base imponible más IVA; el resultado todavía debe
   validarse en modo test antes de cobrar.
+- El perímetro admite el alias público para que llegue al servidor, pero lo redirige
+  con 308 al único dominio canónico conservando ruta y parámetros. Los enlaces,
+  callbacks y etiquetas canonical se construyen siempre desde ese mismo origen.
 - Una anulación Veri*Factu nunca borra la factura: exige confirmación escrita,
   conserva el alta, crea otro registro inmutable con huella oficial, lo encadena al
   anterior y lo remite mediante una cola durable independiente.
