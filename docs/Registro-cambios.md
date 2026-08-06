@@ -45,8 +45,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Baja RGPD comprobada:** las relaciones nuevas usan borrado en cascada y el
   procedimiento elimina invitaciones y accesos antes del negocio, sin dejar filas
   huérfanas ni bloquear la baja.
-- **Estado de publicación:** local validado; pendiente commit, push, migración y
-  prueba real de Railway.
+- **Estado de publicación:** commit `1228da6` en `main`; CI general y humo PostgreSQL
+  verdes. Railway validado por HTTP con release `1228da63f625`, `/health` correcto y
+  `/ready` listo en esquema 39.
 
 ## 2026-08-06 12:45 — búsqueda documental publicada sobre PostgreSQL
 

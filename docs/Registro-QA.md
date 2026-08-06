@@ -22,6 +22,8 @@
 - **Pruebas:** Ruff verde; 11 pruebas focalizadas de gestoría y la prueba directa de
   WhatsApp verdes; suite completa final **405/405**. Bandit, detección de secretos,
   `pip-audit`, `compileall`, fuente de verdad y ciclo 0 → 39 → 0 → 39 verdes.
+- **Publicación:** CI general y humo PostgreSQL verdes para `1228da6`. Producción
+  devuelve release `1228da63f625` en `/health` y estado `ready` con esquema 39.
 
 ### Qué no se ha probado
 
