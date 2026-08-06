@@ -18,8 +18,9 @@
 
 ### Qué no se ha probado
 
-- Falta desplegar este commit y repetir por HTTPS que `www` devuelve 308 y el dominio
-  canónico 200. No requiere credenciales.
+- Producción sirve el release del commit: `www` devuelve 308 con la ruta/query intacta,
+  seguirlo termina en 200 y el canónico directo devuelve 200. Las pruebas autenticadas
+  del P0 siguen separadas porque requieren una cuenta real.
 
 ## 2026-08-06 — deduplicación documental aislada por negocio
 

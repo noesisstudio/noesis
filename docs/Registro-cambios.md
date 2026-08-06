@@ -23,6 +23,23 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 12:20 — redirección canónica verificada en Railway
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar con evidencia HTTP la publicación del origen único.
+- **Áreas y archivos:** estado verificable, QA, tareas y bitácora.
+- **Cambios de datos/migración:** ninguno; esquema 38 permanece listo.
+- **Pruebas ejecutadas:** CI verde completo; `www` 308 con `Location` exacta,
+  seguimiento a 200, canónico directo 200, `/health` con el release esperado y
+  `/ready` listo en esquema 38.
+- **Dependencias o validaciones externas:** Railway y DNS públicos; sin credenciales.
+- **Riesgo/punto probable de fallo:** un cambio futuro de dominio o `BASE_URL`;
+  readiness y la prueba de middleware deben moverse juntos.
+- **Diagnóstico y rollback:** repetir las tres peticiones HTTP descritas en la entrada
+  anterior y comparar release/esquema.
+- **Estado de publicación:** runtime validado; sincronización documental pendiente de
+  commit y despliegue.
+
 ## 2026-08-06 12:10 — el alias público deja de duplicar la web
 
 - **Autor/agente:** Codex.
@@ -41,8 +58,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** `curl -I https://www.bynoesis.com/precios?plan=pro`
   debe devolver 308 a `https://bynoesis.com/precios?plan=pro`; el canónico debe
   devolver 200. Revertir el middleware restaura el comportamiento anterior.
-- **Estado de publicación:** local sobre `main`, suite validada y pendiente de
-  commit/push.
+- **Estado de publicación:** commit en `main`, CI verde, desplegado y validado por
+  HTTPS con release identificable y esquema 38.
 
 ## 2026-08-06 11:50 — producción confirma release y esquema 38
 
