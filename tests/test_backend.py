@@ -997,6 +997,52 @@ class BackendTestCase(unittest.TestCase):
             (db.get_client(issued["client_id"], business["id"]) or {}).get("nif")
         )
 
+    def test_series_can_continue_a_numbering_brought_from_another_program(self):
+        # Quien llega desde otro programa ya lleva facturas emitidas del año. Si
+        # Noesis empezara en el 1, repetiría números dentro del mismo ejercicio.
+        business, client = self.make_business()
+        first = db.add_invoice(
+            client["id"], "Primera", 100, business_id=business["id"]
+        )
+        db.issue_invoice(first["id"], business["id"])
+        self.assertTrue(
+            db.get_invoice(first["id"], business["id"])["number"].endswith("0001")
+        )
+
+        series = [
+            item for item in db.list_invoice_series(business["id"])
+            if item["document_type"] == "invoice"
+        ][0]
+        result = db.set_series_next_number(business["id"], series["id"], 88)
+        self.assertEqual(result["next_number"], 88)
+
+        following = db.add_invoice(
+            client["id"], "Siguiente", 200, business_id=business["id"]
+        )
+        db.issue_invoice(following["id"], business["id"])
+        self.assertTrue(
+            db.get_invoice(following["id"], business["id"])["number"].endswith("0088")
+        )
+
+    def test_series_numbering_can_never_go_back_over_issued_invoices(self):
+        business, client = self.make_business()
+        issued = db.add_invoice(
+            client["id"], "Emitida", 100, business_id=business["id"]
+        )
+        db.issue_invoice(issued["id"], business["id"])
+        series = [
+            item for item in db.list_invoice_series(business["id"])
+            if item["document_type"] == "invoice"
+        ][0]
+
+        # Retroceder crearía el duplicado que la ley no permite.
+        with self.assertRaises(ValueError):
+            db.set_series_next_number(business["id"], series["id"], 1)
+        # Y una serie de otro negocio nunca es accesible.
+        otro, _ = self.make_business("Negocio Ajeno")
+        with self.assertRaises(ValueError):
+            db.set_series_next_number(otro["id"], series["id"], 500)
+
     def test_trade_catalog_loads_once_and_marks_material(self):
         from noesis import trades
 

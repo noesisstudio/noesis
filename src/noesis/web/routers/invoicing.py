@@ -183,6 +183,21 @@ async def api_add_invoice_series(business_id: int, request: Request):
         return JSONResponse({"error": str(exc)}, status_code=400)
 
 
+@router.post("/api/{business_id}/invoice-series/{series_id}/next-number")
+async def api_set_series_next_number(
+    business_id: int, series_id: int, request: Request
+):
+    """Continúa la numeración que el autónomo traía de otro programa."""
+    try:
+        body = await _read_json(request)
+        return db.set_series_next_number(
+            business_id, series_id,
+            body.get("next_number"), body.get("year"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
 @router.get("/api/{business_id}/recurring-invoices")
 def api_recurring_invoices(business_id: int):
     return db.list_recurring_invoices(business_id)

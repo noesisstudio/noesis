@@ -24,6 +24,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 ```
 
 <<<<<<< HEAD
+## 2026-08-06 21:00 — continuar la numeración que el autónomo traía de otro programa
+
+- **Autor/agente:** Claude.
+- **Objetivo:** quien llega desde Holded, Quipu o una plantilla ya lleva facturas
+  emitidas del ejercicio. Noesis empezaba siempre en el 1 y habría repetido números
+  dentro del mismo año y la misma serie. Era un bloqueo de venta para el cliente que
+  más interesa: el que ya factura.
+- **Áreas y archivos:** `src/noesis/db.py` (`set_series_next_number` y `_series_prefix`),
+  `src/noesis/web/routers/invoicing.py` (ruta nueva), `tests/test_backend.py`,
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno nuevo. Este commit **renumera a 40** la
+  migración `material_o_mano_de_obra`, que en local era la 38 y chocaba con la 38
+  `huellas_documentales` ya desplegada.
+- **Pruebas ejecutadas:** suite completa **429 pasan, 76 subtests, 0 fallos**. Verificado
+  a mano: sin ajustar emite `2026/0001`; declarando 88 emite `2026/0088` y sigue en
+  `2026/0089`; retroceder por debajo de lo emitido se rechaza con el motivo.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** solo se permite avanzar. Si alguien informa de que
+  no puede fijar un número, será porque ya hay una factura emitida igual o superior en
+  ese prefijo; el mensaje lo dice.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k "series_can_continue or
+  never_go_back"`. Revertir es quitar la función y su ruta; no hay dato que migrar.
+- **Estado de publicación:** commit local, pendiente de subir.
+
 ## 2026-08-06 18:30 — cartera profesional y papeles con contexto
 
 - **Autor/agente:** Codex.

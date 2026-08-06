@@ -5038,6 +5038,89 @@ def _next_invoice_series_number(conn, business_id: int, series_id: int) -> str:
     return f"{prefix}{number:0{int(series['padding'])}d}"
 
 
+def _series_prefix(series, year: int) -> str:
+    """Prefijo real de una serie en un ejercicio concreto."""
+    return str(series["prefix_template"]).replace("{YYYY}", str(year))
+
+
+def set_series_next_number(
+    business_id: int, series_id: int, next_number: int, year: int | None = None
+) -> dict:
+    """Fija el próximo número de una serie para continuar otra numeración.
+
+    Quien llega desde otro programa ya lleva emitidas facturas de este ejercicio.
+    Si Noesis empezara en el 1 repetiría números dentro del mismo año y la misma
+    serie, que es justo lo que la ley no permite. Por eso el titular puede decir
+    por dónde va, y por eso **solo se puede avanzar**: retroceder por debajo de lo
+    ya emitido aquí crearía el duplicado que se quiere evitar.
+    """
+    year = int(year or date.today().year)
+    try:
+        next_number = int(next_number)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("El número siguiente debe ser un entero.") from exc
+    if not 1 <= next_number <= 99_999_999:
+        raise ValueError("El número siguiente está fuera de rango.")
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        series = conn.execute(
+            "SELECT * FROM invoice_series WHERE id=? AND business_id=?",
+            (series_id, business_id),
+        ).fetchone()
+        if not series:
+            raise ValueError("Esa serie no pertenece a este negocio.")
+        prefix = _series_prefix(series, year)
+        # Se comprueba por prefijo, no por serie: el duplicado que importa es el
+        # número impreso en la factura, venga de la serie que venga.
+        issued = conn.execute(
+            "SELECT number FROM invoices WHERE business_id=? AND number LIKE ?",
+            (business_id, f"{prefix}%"),
+        ).fetchall()
+        used = []
+        for row in issued:
+            suffix = str(row["number"])[len(prefix):]
+            if suffix.isdigit():
+                used.append(int(suffix))
+        highest = max(used, default=0)
+        if next_number <= highest:
+            raise ValueError(
+                f"En esta serie ya has emitido hasta el {prefix}"
+                f"{highest:0{int(series['padding'])}d}. El siguiente número debe "
+                f"ser mayor que {highest} para no repetir ninguno."
+            )
+        sequence_kind = f"invoice_series:{series_id}"
+        conn.execute(
+            "INSERT INTO document_sequences (business_id, kind, year, last_number) "
+            "VALUES (?, ?, ?, ?) ON CONFLICT (business_id, kind, year) DO UPDATE "
+            "SET last_number=EXCLUDED.last_number",
+            (business_id, sequence_kind, year, next_number - 1),
+        )
+        # Queda traza de quién movió la numeración y a qué número: no es un
+        # evento fiscal de una factura concreta, pero sí debe poder explicarse.
+        conn.execute(
+            "INSERT INTO product_events "
+            "(business_id, event_name, event_data, created_at) VALUES (?, ?, ?, ?)",
+            (
+                business_id, "serie_renumerada",
+                json.dumps(
+                    {
+                        "series_id": series_id, "year": year,
+                        "next_number": next_number, "previous_highest": highest,
+                    },
+                    separators=(",", ":"),
+                ),
+                _now(),
+            ),
+        )
+    return {
+        "series_id": series_id,
+        "year": year,
+        "next_number": next_number,
+        "next_number_preview": f"{prefix}{next_number:0{int(series['padding'])}d}",
+    }
+
+
 def _record_invoice_event(
     conn,
     business_id: int,
