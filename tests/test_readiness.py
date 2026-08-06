@@ -76,7 +76,9 @@ class ReadinessTestCase(unittest.TestCase):
     def test_https_email_provider_satisfies_the_email_check_without_smtp(self):
         with (
             patch.dict(os.environ, {}, clear=True),
-            patch.object(config, "BREVO_API_KEY", "configured-not-exposed"),
+            patch.object(
+                config, "BREVO_API_KEY", "configured-not-exposed"  # pragma: allowlist secret
+            ),
             patch.object(config, "SMTP_HOST", ""),
             patch.object(config, "SMTP_USER", ""),
             patch.object(config, "SMTP_PASS", ""),
@@ -91,8 +93,8 @@ class ReadinessTestCase(unittest.TestCase):
 
     def test_stripe_prices_without_automatic_tax_are_a_blocker(self):
         stripe_env = {
-            "STRIPE_SECRET_KEY": "configured",
-            "STRIPE_WEBHOOK_SECRET": "configured",
+            "STRIPE_SECRET_KEY": "configured",  # pragma: allowlist secret
+            "STRIPE_WEBHOOK_SECRET": "configured",  # pragma: allowlist secret
             "STRIPE_PRICE_AUTONOMO": "price_1",
             "STRIPE_PRICE_PRO": "price_2",
             "STRIPE_PRICE_PREMIUM": "price_3",

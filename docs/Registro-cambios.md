@@ -23,6 +23,22 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-06 11:30 — el detector distingue la clave ficticia de la prueba
+
+- **Autor/agente:** Codex.
+- **Objetivo:** recuperar el CI de `main`; `detect-secrets` confundió el valor
+  deliberadamente ficticio de la prueba de correo HTTPS con una credencial real.
+- **Áreas y archivos:** `tests/test_readiness.py` y esta bitácora.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** el log del run identificó un único hallazgo en la línea de
+  prueba; el humo PostgreSQL del mismo commit terminó correctamente.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** ninguno en runtime; solo cambia una anotación
+  reconocida por el escáner y el formato de esa prueba.
+- **Diagnóstico y rollback:** si el paso «Detectar secrets nous» vuelve a fallar,
+  revisar el hallazgo exacto; nunca ampliar la allowlist a archivos de producción.
+- **Estado de publicación:** corrección local sobre `main`, pendiente de push.
+
 ## 2026-08-06 11:15 — producción identificable y adaptadores alineados con Railway
 
 - **Autor/agente:** Codex.
