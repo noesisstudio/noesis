@@ -5,14 +5,20 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 40;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 41;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
   transaccional, asigna serie/línea a las emitidas históricas y lo reinstala antes
   de continuar. La 39 separa las cuentas profesionales de gestoría de los usuarios
   titulares y exige una relación explícita y revocable por negocio. La 40 añade la
-  marca persistente `is_demo` para bloquear en servidor las empresas ficticias.
+  marca persistente `is_demo` para bloquear en servidor las empresas ficticias. La
+  41 añade un perfil fiscal por negocio, firmado por la cuenta de gestoría que lo
+  actualiza, sin convertirlo en una declaración ni en autorización de presentación.
+- `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
+  reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
+  borradores explicables, detecta huecos y candidatos 347, y genera una primera
+  página segura de imágenes/PDF para previsualizar sin iframe.
 - `src/noesis/demo.py`: siembra dos accesos dentro del producto real —autónomo y
   gestoría—, una segunda empresa para la cartera y un portal de cliente. Rellena
   todos los módulos con datos ficticios conectados y no reinicia producción.
@@ -164,7 +170,8 @@
 - `src/noesis/web/gestoria.py`: paquete ordenado, manifiesto, huella y versionado;
   en una empresa demo puede generarlo sin registrar una entrega ficticia.
 - `src/noesis/web/routers/gestoria_portal.py` + plantillas `gestoria_*`: identidad
-  profesional, invitación de un solo uso, cartera multiempresa, revisión documental,
+  profesional, invitación de un solo uso, cartera multiempresa, preparación por
+  trimestre/año, filtros, previsualización, perfil fiscal, borradores de modelos,
   solicitudes y descarga por período; cada ruta vuelve a comprobar la relación de
   acceso antes de leer o escribir.
 - `src/noesis/web/whatsapp.py`: texto, audio local, fotos/PDF, confirmaciones,

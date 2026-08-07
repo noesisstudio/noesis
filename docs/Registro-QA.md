@@ -1,5 +1,39 @@
 # Registro de QA
 
+## 2026-08-07 — cartera fiscal y documental para gestorías
+
+### Qué se probó y con qué resultado
+
+- **Auditoría de partida:** las cuatro capturas reales del founder confirman login,
+  cartera, ficha, períodos y solicitudes en Chrome. La estructura era legible y
+  coherente con la marca, pero demasiado vacía, mensual y sin una tarea fiscal
+  completa; el nuevo flujo conserva el sistema real y no crea una demo paralela.
+- **Aislamiento:** el perfil fiscal solo puede actualizarlo una cuenta con acceso
+  activo al negocio. La previsualización vuelve a validar cuenta, relación y
+  `business_id`; pedir el documento de otra empresa devuelve 403.
+- **Vista previa segura:** imágenes se sirven con caché privada desactivada; un PDF
+  se rasteriza en servidor a JPEG, solo primera página, sin iframe/plugin y con
+  techo de 2,5 millones de píxeles. El original conserva descarga separada.
+- **Cálculo:** una factura emitida de base 100/IVA 21 y una recibida de base 100/IVA
+  21 producen IVA previo cero. La factura recibida entra tanto en IVA soportado como
+  en costes; si faltan base o cuota, el borrador declara el dato incompleto.
+- **Flujo profesional:** render real de cartera, ficha, filtros de documentos,
+  borradores fiscales, perfil y vista anual mediante FastAPI/TestClient. El portal
+  sigue siendo de lectura/validación: no presenta impuestos ni mueve dinero.
+- **Pruebas:** Ruff verde; 281/281 backend y 134/134 del resto de módulos, total
+  **415/415**; 14/14 de `GestoriaTestCase`, incluidas tres regresiones nuevas;
+  ciclo SQLite 0 → 41 → 0 → 41, `compileall` y `check_project_truth.py` verdes.
+
+### Qué no se ha probado
+
+- No se abrió un navegador automatizado porque las sesiones anteriores de la app se
+  cerraban al usarlo. Las capturas aportadas son evidencia del flujo anterior, no
+  QA visual del rediseño ya compilado; tras desplegar hay que revisar escritorio y
+  móvil con la demo real.
+- Los modelos son una primera lectura, no una confección oficial. Faltan validación
+  con despacho, prorrata, regímenes especiales, operaciones intracomunitarias,
+  ajustes de Sociedades y pagos efectivamente presentados en períodos anteriores.
+
 ## 2026-08-07 — login de gestoría detrás del proxy de Railway
 
 ### Qué se probó y con qué resultado

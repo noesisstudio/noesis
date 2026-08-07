@@ -16,9 +16,11 @@
   el proxy real. Release/esquema, cabeceras, textos legales, alta cerrada y
   redirección 308 de `www` ya se comprobaron el 6-ago. El 7-ago se verificaron el
   nuevo release, esquema, CI, humo PostgreSQL, origen propio 303/origen externo 403
-  y login/cartera/logout sintéticos de la gestoría demo, pero Chrome reprodujo aún
-  el 403. Falta desplegar la prioridad `Sec-Fetch-Site: same-origin`, repetirla en
-  navegador y completar las demás pruebas autenticadas.
+  y login/cartera/logout sintéticos de la gestoría demo. El founder confirmó después
+  que Chrome ya entra y muestra la cartera/ficha con la prioridad
+  `Sec-Fetch-Site: same-origin`. Falta desplegar el espacio fiscal del esquema 41,
+  recorrer sus filtros, vista previa y perfil en navegador y completar las demás
+  pruebas autenticadas.
 - [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
   `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL`; revisar aviso legal, privacidad,
   términos, DPA y fiscalidad con profesionales. Mantener
@@ -87,7 +89,14 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   la outbox resultan insuficientes durante el piloto.
 - [ ] Equipo: varios trabajadores reales, offline, ausencias y permisos finos.
 - [x] Gestoría con cuenta profesional, invitaciones de un solo uso, varias empresas,
-  acceso revocable y revisión por documento sin permisos financieros/fiscales.
+  acceso revocable, revisión y previsualización por documento, filtros, períodos,
+  perfil fiscal y borradores explicables sin permisos de presentación o dinero.
+- [ ] Gestoría: validar con un despacho real el cálculo previo de 303/130/111/115 y
+  candidatos 347; definir deducibilidad, prorrata, regímenes especiales y los datos
+  que faltan para 131/349/200/202 antes de prometer confección completa.
+- [ ] Canal de gestorías: aprobar atribución, descuento para el cliente, comisión,
+  duración, liquidación, devoluciones y fiscalidad del incentivo. El producto solo
+  muestra clientes conectados hasta que el founder apruebe esas condiciones.
 - [ ] Gestoría: MFA/passkeys, recuperación de contraseña, roles finos y piloto real
   con un despacho antes de abrir el acceso a terceros.
 - [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,

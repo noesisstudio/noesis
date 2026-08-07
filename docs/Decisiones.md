@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## La gestoría recibe borradores explicables, no impuestos «hechos» (2026-08-07)
+
+El espacio profesional puede sumar IVA, ordenar documentos y anticipar qué modelos
+merecen revisión, pero no debe deducir por un NIF qué obligaciones tiene el cliente
+ni presentar una cifra como definitiva. Cada empresa guarda un perfil fiscal
+explícito, corregible y trazado por la gestoría. Cuando faltan base, cuota, régimen,
+prorrata o una característica de la operación, la interfaz pide criterio en lugar
+de rellenar el hueco.
+
+Noesis tampoco fija todavía una comisión para el canal de gestorías. La cartera
+puede medir clientes conectados y demostrar el ahorro operativo, pero descuento,
+porcentaje, duración, devoluciones y liquidación son condiciones comerciales que
+debe aprobar el founder antes de prometer dinero a un despacho o a su cliente.
+
 ## La demo son cuentas reales dentro de Noesis, no otro producto (2026-08-06)
 
 Para enseñar Noesis no se mantendrá una segunda interfaz ni un conjunto de pantallas

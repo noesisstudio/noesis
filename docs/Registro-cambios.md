@@ -23,6 +23,36 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-07 12:11 — espacio fiscal profesional para gestorías
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir la cartera funcional pero vacía en una mesa de trabajo
+  real para despachos: prioridad por cliente, períodos, archivo, revisión y primera
+  lectura fiscal, manteniendo a Noesis como canal compartido con el autónomo.
+- **Áreas y archivos:** migración y datos de gestoría, nuevo
+  `gestoria_workspace.py`, router profesional, demo comercial, plantillas/CSS,
+  pruebas, mapa, decisiones, estado y pendientes.
+- **Cambios de datos/migración:** esquema 41 añade `gestoria_fiscal_profiles`, una
+  fila por negocio con tipo de contribuyente, regímenes, periodicidad, obligaciones,
+  nota y gestoría que lo actualizó. No guarda declaraciones ni autoriza envíos.
+- **Pruebas ejecutadas:** Ruff verde; 281/281 backend y 134/134 del resto de
+  módulos, total 415/415; 14/14 de `GestoriaTestCase`; regresiones focalizadas de
+  perfil, cálculo, cartera y previsualización; ciclo SQLite 0 → 41 → 0 → 41 y
+  `check_project_truth.py` verdes.
+- **Dependencias o validaciones externas:** contraste de alcance con documentación
+  oficial AEAT 2026 y las propuestas para despachos de Holded/Sage. Ninguna API
+  nueva. Falta validar criterio y casos especiales con una gestoría real.
+- **Riesgo/punto probable de fallo:** confundir una suma orientativa con una
+  declaración fiscal. La UI etiqueta borradores, muestra datos incompletos y exige
+  perfil explícito. La vista previa rasteriza solo la primera página con límite de
+  píxeles y cada acceso revalida cuenta y `business_id`.
+- **Diagnóstico y rollback:** comprobar esquema 41, `gestoria_fiscal_profiles`,
+  filtros de `/gestoria/cliente/{id}` y endpoint `/preview`. Revertir aplicación
+  restaura la cartera anterior; el downgrade 41 elimina únicamente perfiles
+  configurables, nunca facturas, documentos ni registros fiscales.
+- **Estado de publicación:** local verificado; pendiente commit, autodespliegue,
+  `/ready` 41 y recorrido visual del nuevo diseño en producción.
+
 ## 2026-08-07 11:42 — prioridad Fetch Metadata para gestorias reales y demo
 
 - **Autor/agente:** Codex.

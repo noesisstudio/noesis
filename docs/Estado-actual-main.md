@@ -26,6 +26,15 @@
   revocable, bandeja de revisión, solicitudes y paquetes por período. No puede emitir,
   mover dinero ni ejecutar decisiones fiscales desde esa cartera. El fichaje y
   Veri*Factu conservan registros inmutables.
+- La cartera profesional ya funciona como espacio de trabajo fiscal: prioriza
+  empresas, compara preparación por trimestre, abre una vista anual, separa
+  ingresos, gastos, tickets y pendientes, y previsualiza imágenes o la primera
+  página de un PDF dentro del expediente sin habilitar plugins ni iframes. Cada
+  negocio conserva un perfil fiscal explícito y corregible. Los modelos 303, 390,
+  130/131, 111, 115, 347, 349 y 200/202 se muestran como borradores o necesidades
+  de configuración según los datos disponibles; nunca como declaraciones
+  presentadas. Las facturas recibidas alimentan el IVA soportado y el resultado
+  junto con los gastos simples, sin inventar cuotas que falten.
 - La demostración comercial no replica ni simula otra aplicación: crea dos accesos
   dentro del producto real —autónomo y gestoría—, una segunda empresa en la cartera
   multiempresa y un portal real para el cliente final. Todos comparten datos
@@ -131,9 +140,10 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   local con pytesseract, PDFium y los idiomas `spa/eng`; falta confirmar el binario
   desplegado y medirlo con un corpus real en castellano/catalán antes de prometer una
   precisión comercial. La extracción externa consentida queda solo como respaldo.
-- La cartera de gestoría ya cubre identidad, varias empresas y revisión documental;
-  antes de abrirla a despachos reales faltan MFA/passkeys, recuperación de contraseña,
-  permisos más finos y una prueba piloto con datos y responsables reales.
+- La cartera de gestoría ya cubre identidad, varias empresas, revisión documental,
+  primera lectura fiscal y períodos. Antes de abrirla a despachos reales faltan
+  MFA/passkeys, recuperación de contraseña, permisos más finos, revisión del
+  cálculo con un asesor fiscal y una prueba piloto con datos y responsables reales.
 - Antes del piloto deben rotarse todos los secretos que hayan aparecido en capturas
   o documentos compartidos, completar la identidad legal del prestador y someter
   privacidad, términos y contrato de encargo a revisión jurídica. Ningún secreto

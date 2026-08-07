@@ -981,6 +981,99 @@ def revoke_gestoria_access(business_id: int, account_id: int) -> bool:
     return cur.rowcount == 1
 
 
+GESTORIA_TAXPAYER_TYPES = {"sin_configurar", "autonomo", "sociedad", "otro"}
+GESTORIA_INCOME_TAX_REGIMES = {
+    "sin_configurar", "estimacion_directa", "estimacion_objetiva", "sociedades",
+}
+GESTORIA_VAT_REGIMES = {
+    "sin_configurar", "general", "simplificado", "recargo", "exento",
+}
+GESTORIA_FILING_CADENCES = {"mensual", "trimestral"}
+GESTORIA_TAX_OBLIGATIONS = {
+    "303", "390", "130", "131", "111", "115", "347", "349", "200", "202",
+}
+
+
+def get_gestoria_fiscal_profile(business_id: int) -> dict:
+    """Perfil de obligaciones; la ausencia siempre se muestra como no configurada."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM gestoria_fiscal_profiles WHERE business_id=?",
+            (business_id,),
+        ).fetchone()
+    if not row:
+        return {
+            "business_id": business_id,
+            "taxpayer_type": "sin_configurar",
+            "income_tax_regime": "sin_configurar",
+            "vat_regime": "sin_configurar",
+            "filing_cadence": "trimestral",
+            "obligations": [],
+            "notes": None,
+            "updated_at": None,
+        }
+    profile = dict(row)
+    try:
+        obligations = json.loads(profile.get("obligations") or "[]")
+    except (TypeError, json.JSONDecodeError):
+        obligations = []
+    profile["obligations"] = [
+        str(item) for item in obligations
+        if str(item) in GESTORIA_TAX_OBLIGATIONS
+    ]
+    return profile
+
+
+def update_gestoria_fiscal_profile(
+    business_id: int,
+    gestoria_account_id: int,
+    *,
+    taxpayer_type: str,
+    income_tax_regime: str,
+    vat_regime: str,
+    filing_cadence: str,
+    obligations,
+    notes: str | None = None,
+) -> dict:
+    """Guarda criterio del despacho sin presentar ni confirmar ningún impuesto."""
+    if not gestoria_account_can_access(gestoria_account_id, business_id):
+        raise ValueError("La gestoría no tiene acceso a esta empresa.")
+    taxpayer_type = (taxpayer_type or "").strip()
+    income_tax_regime = (income_tax_regime or "").strip()
+    vat_regime = (vat_regime or "").strip()
+    filing_cadence = (filing_cadence or "").strip()
+    if taxpayer_type not in GESTORIA_TAXPAYER_TYPES:
+        raise ValueError("El tipo de contribuyente no es válido.")
+    if income_tax_regime not in GESTORIA_INCOME_TAX_REGIMES:
+        raise ValueError("El régimen de renta no es válido.")
+    if vat_regime not in GESTORIA_VAT_REGIMES:
+        raise ValueError("El régimen de IVA no es válido.")
+    if filing_cadence not in GESTORIA_FILING_CADENCES:
+        raise ValueError("La periodicidad fiscal no es válida.")
+    normalized = sorted({
+        str(item).strip() for item in (obligations or [])
+        if str(item).strip() in GESTORIA_TAX_OBLIGATIONS
+    }, key=lambda item: (len(item), item))
+    notes = (notes or "").strip()[:1000] or None
+    now = _now()
+    payload = json.dumps(normalized, separators=(",", ":"))
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO gestoria_fiscal_profiles "
+            "(business_id, taxpayer_type, income_tax_regime, vat_regime, "
+            "filing_cadence, obligations, notes, updated_by_gestoria_id, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(business_id) DO UPDATE SET taxpayer_type=excluded.taxpayer_type, "
+            "income_tax_regime=excluded.income_tax_regime, vat_regime=excluded.vat_regime, "
+            "filing_cadence=excluded.filing_cadence, obligations=excluded.obligations, "
+            "notes=excluded.notes, updated_by_gestoria_id=excluded.updated_by_gestoria_id, "
+            "updated_at=excluded.updated_at",
+            (business_id, taxpayer_type, income_tax_regime, vat_regime,
+             filing_cadence, payload, notes, gestoria_account_id, now),
+        )
+    return get_gestoria_fiscal_profile(business_id)
+
+
 def gestoria_period_range(label: str) -> tuple[str, str]:
     """'2026-06' → mes natural; '2026-T2' → trimestre. Valida el formato."""
     label = (label or "").strip()
@@ -7603,7 +7696,8 @@ def get_received_invoice(received_id, business_id) -> dict | None:
 
 
 def list_received_invoices(business_id, status=None) -> list[dict]:
-    q = ("SELECT r.*, s.name AS supplier_name FROM received_invoices r "
+    q = ("SELECT r.*, s.name AS supplier_name, s.nif AS supplier_nif "
+         "FROM received_invoices r "
          "LEFT JOIN suppliers s ON s.id=r.supplier_id "
          "AND s.business_id=r.business_id WHERE r.business_id=?")
     params: list = [business_id]
@@ -8642,6 +8736,7 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
         if i.get("status") in ("enviada", "parcial", "cobrada")
     ]
     all_expenses = list_expenses(business_id)
+    all_received = list_received_invoices(business_id)
     invoices = [
         i for i in all_invoices
         if _in_range(i.get("issued_at") or i.get("created_at"), year_start)
@@ -8658,20 +8753,38 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
         e for e in all_expenses
         if _in_range(e.get("spent_on") or e.get("created_at"), quarter_start)
     ]
+    received = [
+        item for item in all_received
+        if _in_range(item.get("issued_on") or item.get("created_at"), year_start)
+    ]
+    quarter_received = [
+        item for item in all_received
+        if _in_range(item.get("issued_on") or item.get("created_at"), quarter_start)
+    ]
 
     ingresos = round(sum(i["base"] for i in invoices), 2)
     iva_repercutido = round(
         sum(i.get("vat_amount") or 0 for i in quarter_invoices), 2
     )
     irpf_retenido = round(sum(i.get("irpf_amount") or 0 for i in invoices), 2)
-    gastos = round(sum(e["amount"] for e in expenses), 2)
+    gastos = round(
+        sum(e["amount"] for e in expenses)
+        + sum(item["total"] for item in received), 2
+    )
     # IVA soportado solo de gastos que registran su tipo (no se inventa).
     iva_soportado = round(sum(
         (e["amount"] - e["amount"] / (1 + (e["vat_rate"] or 0) / 100)) if e.get("vat_rate") else 0
         for e in quarter_expenses), 2)
+    iva_soportado = round(iva_soportado + sum(
+        item.get("vat_amount") or 0 for item in quarter_received
+    ), 2)
     base_gastos = round(sum(
         (e["amount"] / (1 + (e["vat_rate"] or 0) / 100)) if e.get("vat_rate") else e["amount"]
         for e in expenses), 2)
+    base_gastos = round(base_gastos + sum(
+        item.get("base") if item.get("base") is not None else item["total"]
+        for item in received
+    ), 2)
 
     iva_resultado = round(iva_repercutido - iva_soportado, 2)          # modelo 303
     rendimiento = round(ingresos - base_gastos, 2)
@@ -8692,6 +8805,11 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
         "rendimiento": rendimiento, "irpf_acumulado": irpf_acumulado,
         "pagos_previos_estimados": pagos_previos, "irpf_pago": irpf_pago,
         "n_facturas": len(quarter_invoices), "n_gastos": len(quarter_expenses),
+        "n_facturas_recibidas": len(quarter_received),
+        "datos_incompletos": sum(
+            item.get("base") is None or item.get("vat_amount") is None
+            for item in quarter_received
+        ) + sum(item.get("vat_rate") is None for item in quarter_expenses),
     }
 
 

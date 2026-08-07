@@ -640,6 +640,23 @@ def seed_showcase(*, force: bool = False) -> dict:
         )
         db.accept_gestoria_invitation(invitation["id"], account["id"])
 
+    # La demo enseña el mismo perfil fiscal explícito que usará un despacho real.
+    # No se infieren obligaciones por el NIF y no se presenta ningún modelo.
+    db.update_gestoria_fiscal_profile(
+        primary_id, account["id"], taxpayer_type="sociedad",
+        income_tax_regime="sociedades", vat_regime="general",
+        filing_cadence="trimestral",
+        obligations=["303", "390", "111", "115", "347", "200", "202"],
+        notes="Demo: régimen general y cierre trimestral revisado por la gestoría.",
+    )
+    db.update_gestoria_fiscal_profile(
+        secondary_id, account["id"], taxpayer_type="sociedad",
+        income_tax_regime="sociedades", vat_regime="general",
+        filing_cadence="trimestral",
+        obligations=["303", "390", "347", "200", "202"],
+        notes="Demo: actividad de instalaciones eléctricas en régimen general.",
+    )
+
     return {
         "autonomo": {
             "email": SHOWCASE_OWNER_EMAIL, "password": SHOWCASE_PASSWORD,

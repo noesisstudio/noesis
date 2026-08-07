@@ -4505,6 +4505,64 @@ class GestoriaTestCase(unittest.TestCase):
             account["id"], first["id"]
         ))
 
+    def test_fiscal_profile_is_explicit_and_isolated_per_business(self):
+        first, _ = self.make_business("Perfil fiscal propio")
+        foreign, _ = self.make_business("Perfil fiscal ajeno")
+        account = db.create_gestoria_account(
+            "fiscal@gestoria.com", auth.hash_password(TEST_PASSWORD),
+            "Gestoría Fiscal",
+        )
+        invitation = db.create_gestoria_invitation(
+            first["id"], account["email"], auth.hash_token("fiscal-profile"),
+            (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+        )
+        db.accept_gestoria_invitation(invitation["id"], account["id"])
+        self.assertEqual(
+            db.get_gestoria_fiscal_profile(first["id"])["taxpayer_type"],
+            "sin_configurar",
+        )
+        saved = db.update_gestoria_fiscal_profile(
+            first["id"], account["id"], taxpayer_type="autonomo",
+            income_tax_regime="estimacion_directa", vat_regime="general",
+            filing_cadence="trimestral", obligations=["303", "130", "347"],
+            notes="Estimación directa simplificada.",
+        )
+        self.assertEqual(saved["obligations"], ["130", "303", "347"])
+        with self.assertRaises(ValueError):
+            db.update_gestoria_fiscal_profile(
+                foreign["id"], account["id"], taxpayer_type="sociedad",
+                income_tax_regime="sociedades", vat_regime="general",
+                filing_cadence="trimestral", obligations=["200"],
+            )
+
+    def test_workspace_includes_received_invoice_in_tax_preview(self):
+        from noesis import gestoria_workspace
+
+        business, client = self.make_business("Fiscal completo")
+        invoice = db.add_invoice(
+            client["id"], "Servicio", 100, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+        supplier = db.add_supplier(
+            "Proveedor Fiscal", nif="B12345678", business_id=business["id"]
+        )
+        today = date.today()
+        db.add_received_invoice(
+            121, supplier_id=supplier["id"], base=100, vat_rate=21,
+            vat_amount=21, issued_on=today.isoformat(),
+            business_id=business["id"],
+        )
+        quarter = (today.month - 1) // 3 + 1
+        data = gestoria_workspace.workspace(
+            business["id"], year=today.year, quarter=quarter
+        )
+        self.assertEqual(data["period"]["output_vat"], 21.0)
+        self.assertEqual(data["period"]["input_vat"], 21.0)
+        self.assertEqual(data["period"]["vat_result"], 0.0)
+        fiscal = db.tax_quarter(today.year, quarter, business["id"])
+        self.assertEqual(fiscal["n_facturas_recibidas"], 1)
+        self.assertEqual(fiscal["iva_soportado"], 21.0)
+
     def test_professional_portfolio_accepts_two_clients_without_mixing_them(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -4536,6 +4594,49 @@ class GestoriaTestCase(unittest.TestCase):
                 self.assertEqual(portfolio.status_code, 200)
                 self.assertIn("Cartera Web Uno", portfolio.text)
                 self.assertIn("Cartera Web Dos", portfolio.text)
+
+    def test_professional_client_workspace_previews_only_own_documents(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import service as docservice
+        from noesis.web import server
+
+        business, _ = self.make_business("Gestoría documentos")
+        foreign, _ = self.make_business("Gestoría documento ajeno")
+        own_doc = docservice.upload(
+            business["id"], "ticket-propio.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        foreign_doc = docservice.upload(
+            foreign["id"], "ticket-ajeno.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        raw = "gestoria-doc-preview"
+        db.create_gestoria_invitation(
+            business["id"], "docs@gestoria.com", auth.hash_token(raw),
+            (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                accepted = client.post(
+                    f"/gestoria/accept/{raw}",
+                    data={"firm_name": "Gestoría Docs", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(accepted.status_code, 303)
+                page = client.get(
+                    f"/gestoria/cliente/{business['id']}?view=tickets&doc={own_doc['id']}"
+                )
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("ticket-propio.jpg", page.text)
+                self.assertIn("Primera lectura fiscal", page.text)
+                preview = client.get(
+                    f"/gestoria/cliente/{business['id']}/documento/{own_doc['id']}/preview"
+                )
+                self.assertEqual(preview.status_code, 200)
+                denied = client.get(
+                    f"/gestoria/cliente/{foreign['id']}/documento/{foreign_doc['id']}/preview"
+                )
+                self.assertEqual(denied.status_code, 403)
 
     def test_document_context_never_accepts_foreign_client_or_project(self):
         from noesis.documents import repo as docrepo, service as docservice

@@ -3097,6 +3097,31 @@ def _downgrade_showcase_demo(conn) -> None:
         conn.execute("ALTER TABLE businesses DROP COLUMN is_demo")
 
 
+def _upgrade_gestoria_fiscal_workspace(conn) -> None:
+    """Perfil fiscal mínimo y explícito para la cartera profesional.
+
+    No guarda declaraciones ni autoriza presentaciones: solo permite que el
+    despacho indique qué obligaciones debe preparar Noesis para cada negocio.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_fiscal_profiles ("
+        f"business_id {t['ref']} PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE, "
+        "taxpayer_type TEXT NOT NULL DEFAULT 'sin_configurar', "
+        "income_tax_regime TEXT NOT NULL DEFAULT 'sin_configurar', "
+        "vat_regime TEXT NOT NULL DEFAULT 'sin_configurar', "
+        "filing_cadence TEXT NOT NULL DEFAULT 'trimestral', "
+        "obligations TEXT NOT NULL DEFAULT '[]', "
+        "notes TEXT, "
+        f"updated_by_gestoria_id {t['ref']} REFERENCES gestoria_accounts(id) ON DELETE SET NULL, "
+        f"updated_at {t['timestamp']} NOT NULL)"
+    )
+
+
+def _downgrade_gestoria_fiscal_workspace(conn) -> None:
+    conn.execute("DROP TABLE IF EXISTS gestoria_fiscal_profiles")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3146,6 +3171,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_gestoria_accounts),
     (40, "demo_comercial", _upgrade_showcase_demo,
      _downgrade_showcase_demo),
+    (41, "espacio_fiscal_gestoria", _upgrade_gestoria_fiscal_workspace,
+     _downgrade_gestoria_fiscal_workspace),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

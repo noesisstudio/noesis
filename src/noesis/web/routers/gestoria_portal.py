@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import time
+from datetime import date
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
-from ... import config, db
+from ... import config, db, gestoria_workspace
 from ...documents import repo as docrepo, service as docservice
 from .. import auth
 from ..deps import TEMPLATES
@@ -164,7 +165,8 @@ def accept(request: Request, token: str, password: str = Form(...),
 
 
 @router.get("/gestoria", response_class=HTMLResponse)
-def portfolio(request: Request, q: str = ""):
+def portfolio(request: Request, q: str = "", year: int | None = None,
+              quarter: int | None = None):
     account = _require_account(request)
     if isinstance(account, RedirectResponse):
         return account
@@ -174,27 +176,55 @@ def portfolio(request: Request, q: str = ""):
         businesses = [business for business in businesses if term in (
             f"{business.get('name') or ''} {business.get('nif') or ''}"
         ).lower()]
+    today = date.today()
+    selected_year = year if year and 2000 <= year <= today.year + 1 else today.year
+    selected_quarter = quarter if quarter in {1, 2, 3, 4} else (today.month - 1) // 3 + 1
+    for business in businesses:
+        business["workspace"] = gestoria_workspace.portfolio_snapshot(
+            business["id"], year=selected_year, quarter=selected_quarter
+        )
     return TEMPLATES.TemplateResponse(request, "gestoria_portfolio.html", {
         "account": account, "businesses": businesses, "q": term,
+        "selected_year": selected_year, "selected_quarter": selected_quarter,
+        "years": range(today.year, max(today.year - 4, 1999), -1),
         "pending_total": sum(int(b.get("pending_documents") or 0)
                              for b in businesses),
         "requests_total": sum(int(b.get("open_requests") or 0)
                               for b in businesses),
+        "ready_total": sum(
+            int(b["workspace"]["readiness_pct"] == 100 and not b["workspace"]["attention"])
+            for b in businesses
+        ),
+        "period_documents": sum(b["workspace"]["documents"] for b in businesses),
     })
 
 
 @router.get("/gestoria/cliente/{business_id}", response_class=HTMLResponse)
-def client_detail(request: Request, business_id: int):
+def client_detail(request: Request, business_id: int, year: int | None = None,
+                  quarter: int | None = None, view: str = "todos",
+                  doc: int | None = None):
     allowed = _business_for(request, business_id)
     if not allowed:
         return RedirectResponse("/gestoria/login", status_code=303)
     account, business = allowed
-    documents = docrepo.list_for_business(business_id)
+    today = date.today()
+    selected_year = year if year and 2000 <= year <= today.year + 1 else today.year
+    selected_quarter = quarter if quarter in {1, 2, 3, 4} else (today.month - 1) // 3 + 1
+    view = view if view in gestoria_workspace.DOCUMENT_FILTERS else "todos"
+    workspace = gestoria_workspace.workspace(
+        business_id, year=selected_year, quarter=selected_quarter,
+        document_view=view,
+    )
+    preview_document = next(
+        (item for item in workspace["documents"] if item["id"] == doc), None
+    )
     return TEMPLATES.TemplateResponse(request, "gestoria_client.html", {
         "account": account, "business": business,
-        "documents": documents,
-        "pending_documents": [d for d in documents
-                              if d.get("doc_status") == "pendiente_revisar"],
+        "workspace": workspace, "documents": workspace["documents"],
+        "pending_documents": workspace["pending_documents"],
+        "preview_document": preview_document,
+        "selected_year": selected_year, "selected_quarter": selected_quarter,
+        "years": range(today.year, max(today.year - 4, 1999), -1),
         "periods": db.gestoria_periods(business_id),
         "requests": db.list_gestoria_requests(business_id),
         "clients": db.list_clients(business_id),
@@ -214,7 +244,59 @@ def document_file(request: Request, business_id: int, doc_id: int):
                         for char in filename)[:120]
     return Response(data, media_type=mime, headers={
         "Content-Disposition": f'inline; filename="{safe_name}"',
+        "Cache-Control": "private, no-store",
     })
+
+
+@router.get("/gestoria/cliente/{business_id}/documento/{doc_id}/preview")
+def document_preview(request: Request, business_id: int, doc_id: int):
+    if not _business_for(request, business_id):
+        return JSONResponse({"error": "no autorizado"}, status_code=403)
+    payload = docservice.file_bytes(business_id, doc_id)
+    if not payload:
+        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+    data, mime, _filename = payload
+    preview = gestoria_workspace.preview_image(data, mime)
+    if not preview:
+        return JSONResponse(
+            {"error": "Este formato no admite vista previa."}, status_code=415
+        )
+    image, image_mime = preview
+    return Response(image, media_type=image_mime, headers={
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": "inline",
+    })
+
+
+@router.post("/gestoria/cliente/{business_id}/perfil-fiscal")
+def update_fiscal_profile(
+    request: Request, business_id: int,
+    taxpayer_type: str = Form("sin_configurar"),
+    income_tax_regime: str = Form("sin_configurar"),
+    vat_regime: str = Form("sin_configurar"),
+    filing_cadence: str = Form("trimestral"),
+    obligations: list[str] = Form(default=[]),
+    notes: str = Form(""),
+):
+    allowed = _business_for(request, business_id)
+    if not allowed:
+        return JSONResponse({"error": "no autorizado"}, status_code=403)
+    account, business = allowed
+    if not db.subscription_allows_access(business):
+        return JSONResponse({"error": "cuenta en modo consulta"}, status_code=402)
+    try:
+        db.update_gestoria_fiscal_profile(
+            business_id, account["id"], taxpayer_type=taxpayer_type,
+            income_tax_regime=income_tax_regime, vat_regime=vat_regime,
+            filing_cadence=filing_cadence, obligations=obligations,
+            notes=notes,
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    db.record_product_event(business_id, "gestoria_fiscal_profile_updated")
+    return RedirectResponse(
+        f"/gestoria/cliente/{business_id}?ok=fiscal", status_code=303
+    )
 
 
 @router.post("/gestoria/cliente/{business_id}/documento/{doc_id}/revisar")
