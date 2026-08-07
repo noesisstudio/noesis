@@ -34,17 +34,18 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Pruebas ejecutadas:** tres regresiones nuevas; módulos completos 13 + 61 + 60 +
   278, total 412/412; Ruff. En producción, `/health` y `/ready` responden 200 con
   release `53d7f83da282` y esquema 40; origen propio devuelve 303 y uno externo 403.
-- **Dependencias o validaciones externas:** Railway desplegado y humo PostgreSQL
-  verde; falta repetir el login con `demo.gestoria@bynoesis.com` en navegador.
+- **Dependencias o validaciones externas:** Railway desplegado, CI general y humo
+  PostgreSQL verdes. La cuenta `demo.gestoria@bynoesis.com` entra, muestra una
+  cartera de dos empresas y cierra sesión por HTTP real; falta inspección visual.
 - **Riesgo/punto probable de fallo:** una allowlist demasiado amplia convertiría el
   arreglo en una relajación CSRF. La implementación exige HTTPS estándar, origen
   público propio y `Host` receptor configurado; `cross-site` conserva prioridad.
 - **Diagnóstico y rollback:** buscar `origen no autorizado` en `POST
   /gestoria/login`; revertir este commit restaura la comparación literal, pero
   también reproduce el 403 detrás del proxy.
-- **Estado de publicación:** desplegado y validado en el perímetro real; pendiente
-  prueba autenticada de cartera y cierre de sesión. Esta actualización documental
-  queda en el commit de verificación inmediatamente posterior.
+- **Estado de publicación:** desplegado y validado en el perímetro real, incluida
+  autenticación, cartera y cierre de sesión; pendiente solo inspección visual. Las
+  actualizaciones documentales quedan en los commits de verificación posteriores.
 
 ## 2026-08-06 19:42 — excepción explícita para la clave pública de demo
 

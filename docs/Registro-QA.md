@@ -21,13 +21,15 @@
 - **Producción después del cambio:** `/health` y `/ready` devuelven 200 con el
   release `53d7f83da282` y esquema 40. Un `POST` real con origen propio llega al
   flujo normal y responde 303; el mismo `POST` con `https://evil.example` responde
-  403. El humo PostgreSQL del commit también está verde.
+  403. El login con la cuenta demo devuelve 303 a `/gestoria`, la cartera responde
+  200 con dos empresas y el logout vuelve en 303 a `/gestoria/login`. El CI general
+  y el humo PostgreSQL del commit están verdes.
 
 ### Qué no se ha probado
 
-- No se enviaron credenciales reales a producción ni se inspeccionaron cookies del
-  navegador. Hay que iniciar sesión con la cuenta demo de gestoría y confirmar
-  cartera, segunda empresa y cierre de sesión.
+- No se inspeccionaron visualmente la cookie y las pantallas en navegador ni se
+  abrió el detalle de cada empresa. La sesión HTTP real sí confirmó autenticación,
+  cartera de dos empresas y cierre de sesión.
 
 ## 2026-08-06 — dos cuentas demo reales y OCR privado de PDF escaneado
 
