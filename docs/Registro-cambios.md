@@ -43,8 +43,10 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** comprobar `section` en `/gestoria/cliente/{id}`, estado
   activo del submenú y `Location` de perfil/documento/solicitud. Revertir plantillas,
   CSS y router restaura la página única sin tocar datos.
-- **Estado de publicación:** local verificado; pendiente commit, CI, despliegue y
-  capturas visuales del candidato.
+- **Estado de publicación:** `9db728c` en `main`; CI y humo PostgreSQL verdes. El
+  reintento `4fd5f15` también pasó CI, pero Railway rechazó ambos despliegues antes
+  de cambiar contenedor. Producción conserva sana la release `0341986290f2` con
+  esquema 41. Pendientes redeploy y capturas visuales del candidato.
 
 ## 2026-08-07 12:11 — espacio fiscal profesional para gestorías
 

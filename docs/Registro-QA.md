@@ -17,6 +17,10 @@
 - **Regresión:** 14/14 pruebas de `GestoriaTestCase` y suite completa **415/415**;
   Ruff verde en router y prueba modificada. Se verificó además que Documentos no
   renderiza Impuestos y viceversa, sin romper la previsualización aislada.
+- **CI y despliegue:** los commits `9db728c` y el reintento vacío `4fd5f15`
+  completaron en verde tests/migraciones y humo PostgreSQL. Railway marcó ambos
+  despliegues como fallidos antes de sustituir la release; producción siguió sana
+  con `0341986290f2` y esquema 41. No se confunde `main` verde con publicado.
 
 ### Límite visual
 
