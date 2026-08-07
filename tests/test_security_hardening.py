@@ -132,6 +132,92 @@ class SecurityHardeningTestCase(unittest.TestCase):
             )
         self.assertEqual(response.status_code, 413)
 
+    def test_csrf_accepts_public_origin_behind_railway_private_host(self):
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "BASE_URL", "https://bynoesis.com"),
+            patch.object(config, "CANONICAL_PUBLIC_HOST", "bynoesis.com"),
+            patch.object(config, "PUBLIC_HOST_ALIAS", "www.bynoesis.com"),
+            patch.object(config, "SECRET_KEY", "x" * 40),
+            patch.object(
+                config,
+                "ALLOWED_HOSTS",
+                ["bynoesis.com", "www.bynoesis.com", "noesis.railway.internal"],
+            ),
+            TestClient(server.app) as client,
+        ):
+            response = client.post(
+                "/gestoria/login",
+                data={"email": "nadie@example.com", "password": "incorrecta"},  # pragma: allowlist secret
+                headers={
+                    "Host": "noesis.railway.internal",
+                    "Origin": "https://bynoesis.com",
+                    "Sec-Fetch-Site": "same-origin",
+                },
+                follow_redirects=False,
+            )
+
+        # Las credenciales fallan mediante el flujo normal; CSRF ya no intercepta.
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "/gestoria/login?error=1")
+
+    def test_csrf_rejects_external_origin_behind_railway_private_host(self):
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "BASE_URL", "https://bynoesis.com"),
+            patch.object(config, "CANONICAL_PUBLIC_HOST", "bynoesis.com"),
+            patch.object(config, "PUBLIC_HOST_ALIAS", "www.bynoesis.com"),
+            patch.object(config, "SECRET_KEY", "x" * 40),
+            patch.object(
+                config,
+                "ALLOWED_HOSTS",
+                ["bynoesis.com", "www.bynoesis.com", "noesis.railway.internal"],
+            ),
+            TestClient(server.app) as client,
+        ):
+            response = client.post(
+                "/gestoria/login",
+                data={"email": "nadie@example.com", "password": "incorrecta"},  # pragma: allowlist secret
+                headers={
+                    "Host": "noesis.railway.internal",
+                    "Origin": "https://evil.example",
+                },
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["error"], "origen no autorizado")
+
+    def test_csrf_normalizes_default_https_port_but_not_another_port(self):
+        with (
+            patch.object(config, "IS_PRODUCTION", True),
+            patch.object(config, "BASE_URL", "https://bynoesis.com"),
+            patch.object(config, "SECRET_KEY", "x" * 40),
+            patch.object(config, "ALLOWED_HOSTS", ["bynoesis.com"]),
+            TestClient(server.app) as client,
+        ):
+            accepted = client.post(
+                "/gestoria/login",
+                data={"email": "nadie@example.com", "password": "incorrecta"},  # pragma: allowlist secret
+                headers={
+                    "Host": "bynoesis.com:443",
+                    "Origin": "https://bynoesis.com",
+                },
+                follow_redirects=False,
+            )
+            rejected = client.post(
+                "/gestoria/login",
+                data={"email": "nadie@example.com", "password": "incorrecta"},  # pragma: allowlist secret
+                headers={
+                    "Host": "bynoesis.com:8443",
+                    "Origin": "https://bynoesis.com",
+                },
+                follow_redirects=False,
+            )
+
+        self.assertEqual(accepted.status_code, 303)
+        self.assertEqual(rejected.status_code, 403)
+
     def test_public_alias_redirects_to_canonical_host_preserving_path_and_query(self):
         with (
             patch.object(config, "IS_PRODUCTION", True),

@@ -1,5 +1,33 @@
 # Registro de QA
 
+## 2026-08-07 — login de gestoría detrás del proxy de Railway
+
+### Qué se probó y con qué resultado
+
+- **Regresión reproducida:** un `POST /gestoria/login` podía recibir
+  `{"error":"origen no autorizado"}` porque el navegador enviaba el origen público
+  y Railway podía entregar al contenedor un `Host` privado o con puerto. La
+  comparación anterior era textual y no entendía esa frontera de proxy.
+- **Caso legítimo:** `Origin: https://bynoesis.com` con un `Host` privado de Railway
+  autorizado atraviesa la guardia y llega al flujo normal de credenciales.
+- **Casos hostiles:** `https://evil.example`, un puerto HTTPS no estándar, un origen
+  mal formado y `Sec-Fetch-Site: cross-site` continúan en 403. No se confía en
+  `X-Forwarded-Host` ni se habilitan comodines.
+- **Pruebas:** 13/13 del módulo de seguridad; 61/61 de demo, plataforma, accesos,
+  operaciones y readiness; 60/60 de web/documentos/correos/backups; 278/278 de
+  backend. Total **412/412** ejecutadas por módulos. Ruff verde. La ejecución
+  monolítica alcanzó el límite local de diez minutos sin registrar fallos; la misma
+  batería separada por módulos terminó íntegramente en verde.
+- **Producción antes del cambio:** `/health` y `/ready` devolvían 200 con el release
+  `243c3f626f2e` y esquema 40; el arreglo aún requiere despliegue y prueba real del
+  login de gestoría.
+
+### Qué no se ha probado
+
+- No se enviaron credenciales reales a producción ni se inspeccionaron cookies del
+  navegador. Tras desplegar hay que iniciar sesión con la cuenta demo de gestoría y
+  confirmar cartera, segunda empresa y cierre de sesión.
+
 ## 2026-08-06 — dos cuentas demo reales y OCR privado de PDF escaneado
 
 ### Qué se probó y con qué resultado

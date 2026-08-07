@@ -64,6 +64,77 @@ def require_business(request: Request, business_id: int) -> dict | None:
     return db.get_business(business_id)
 
 
+def _host_parts(value: str) -> tuple[str, int | None]:
+    """Normaliza un ``Host`` sin confiar en comparaciones de texto literales."""
+    try:
+        parsed = urlsplit(f"//{value}")
+        return (parsed.hostname or "").lower(), parsed.port
+    except ValueError:
+        return "", None
+
+
+def _trusted_origin(request: Request, origin: str) -> bool:
+    """Acepta el origen público aunque Railway entregue un Host interno.
+
+    El navegador ve ``bynoesis.com``, pero el proxy puede reenviar la petición al
+    contenedor con el dominio privado de Railway. Ambos extremos deben estar en
+    listas configuradas; nunca se confía en ``X-Forwarded-Host`` aportado por el
+    cliente ni se abre un comodín de orígenes.
+    """
+    try:
+        parsed = urlsplit(origin)
+        origin_host = (parsed.hostname or "").lower()
+        origin_port = parsed.port
+    except ValueError:
+        return False
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not origin_host
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        return False
+
+    request_host, request_port = _host_parts(request.headers.get("host", ""))
+    if not request_host:
+        return False
+    allowed_request_hosts = {
+        host.lower() for host in config.ALLOWED_HOSTS if host and host != "*"
+    }
+    if config.IS_PRODUCTION and request_host not in allowed_request_hosts:
+        return False
+
+    # Mismo host: conserva la semántica same-origin y admite el puerto HTTPS
+    # explícito que algunos proxies añaden al Host.
+    if origin_host == request_host:
+        default_port = 443 if parsed.scheme == "https" else 80
+        if origin_port is not None and request_port not in {origin_port, None}:
+            return False
+        if request_port is not None and origin_port is None and request_port != default_port:
+            return False
+        return not config.IS_PRODUCTION or parsed.scheme == "https"
+
+    if not config.IS_PRODUCTION:
+        return False
+
+    # Salto legítimo del proxy: el origen solo puede ser el público de Noesis,
+    # siempre HTTPS estándar, y el Host interno también debe estar autorizado.
+    public_hosts = {
+        (urlsplit(config.BASE_URL).hostname or "").lower(),
+        config.CANONICAL_PUBLIC_HOST.lower(),
+        config.PUBLIC_HOST_ALIAS.lower(),
+    }
+    return (
+        parsed.scheme == "https"
+        and origin_port in {None, 443}
+        and origin_host in public_hosts
+        and request_host in allowed_request_hosts
+    )
+
+
 def csrf_response(request: Request) -> JSONResponse | None:
     path = request.url.path
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
@@ -74,10 +145,8 @@ def csrf_response(request: Request) -> JSONResponse | None:
     fetch_site = request.headers.get("sec-fetch-site", "")
     if fetch_site == "cross-site":
         return JSONResponse({"error": "petición cross-site rechazada"}, status_code=403)
-    if origin:
-        origin_url = urlsplit(origin)
-        if origin_url.netloc.lower() != request.headers.get("host", "").lower():
-            return JSONResponse({"error": "origen no autorizado"}, status_code=403)
+    if origin and not _trusted_origin(request, origin):
+        return JSONResponse({"error": "origen no autorizado"}, status_code=403)
     return None
 
 

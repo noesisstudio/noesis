@@ -83,6 +83,10 @@
 - El perímetro admite el alias público para que llegue al servidor, pero lo redirige
   con 308 al único dominio canónico conservando ruta y parámetros. Los enlaces,
   callbacks y etiquetas canonical se construyen siempre desde ese mismo origen.
+- Los formularios mutables validan `Sec-Fetch-Site` y `Origin`. Detrás de Railway,
+  el origen público HTTPS puede atravesar un `Host` privado únicamente cuando ambos
+  dominios figuran en las listas cerradas de Noesis; dominios externos, puertos no
+  estándar y orígenes mal formados siguen rechazándose antes de autenticar.
 - Una anulación Veri*Factu nunca borra la factura: exige confirmación escrita,
   conserva el alta, crea otro registro inmutable con huella oficial, lo encadena al
   anterior y lo remite mediante una cola durable independiente.

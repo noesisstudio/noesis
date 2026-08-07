@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-07 11:26 — origen seguro para el login de gestoría en Railway
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el 403 `origen no autorizado` del formulario real de
+  gestoría cuando Railway separa el dominio público del `Host` interno.
+- **Áreas y archivos:** `web/deps.py`, regresiones de seguridad, mapa, estado, QA,
+  pendientes y fuente de verdad.
+- **Cambios de datos/migración:** ninguno; esquema 40.
+- **Pruebas ejecutadas:** tres regresiones nuevas; módulos completos 13 + 61 + 60 +
+  278, total 412/412; Ruff. `/health` y `/ready` de producción responden 200 antes
+  del despliegue del arreglo, con release `243c3f626f2e` y esquema 40.
+- **Dependencias o validaciones externas:** falta que Railway despliegue el commit y
+  repetir el login real de `demo.gestoria@bynoesis.com`.
+- **Riesgo/punto probable de fallo:** una allowlist demasiado amplia convertiría el
+  arreglo en una relajación CSRF. La implementación exige HTTPS estándar, origen
+  público propio y `Host` receptor configurado; `cross-site` conserva prioridad.
+- **Diagnóstico y rollback:** buscar `origen no autorizado` en `POST
+  /gestoria/login`; revertir este commit restaura la comparación literal, pero
+  también reproduce el 403 detrás del proxy.
+- **Estado de publicación:** `main` tras este commit; pendiente despliegue y prueba
+  autenticada.
+
 ## 2026-08-06 19:42 — excepción explícita para la clave pública de demo
 
 - **Autor/agente:** Codex.

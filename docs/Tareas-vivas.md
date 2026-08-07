@@ -12,9 +12,10 @@
   `project-state.json` y confirmar que `/health` devuelve el release esperado y
   `/ready` la migración vigente; comprobar además dominio canónico, cookies
   `__Host-`, hosts, logs sin query string, Google OAuth admin, panel CISO, bitácora
-  encadenada, Home, modo consulta y ficha de proyecto. Release/esquema, cabeceras,
-  textos legales, alta cerrada y redirección 308 de `www` ya se comprobaron el
-  6-ago; faltan las pruebas autenticadas restantes.
+  encadenada, Home, modo consulta, ficha de proyecto y login de gestoría mediante
+  el proxy real. Release/esquema, cabeceras, textos legales, alta cerrada y
+  redirección 308 de `www` ya se comprobaron el 6-ago; faltan las pruebas
+  autenticadas restantes.
 - [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
   `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL`; revisar aviso legal, privacidad,
   términos, DPA y fiscalidad con profesionales. Mantener
