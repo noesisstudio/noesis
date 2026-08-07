@@ -23,12 +23,15 @@
 - **Pruebas:** Ruff verde; 281/281 backend y 134/134 del resto de módulos, total
   **415/415**; 14/14 de `GestoriaTestCase`, incluidas tres regresiones nuevas;
   ciclo SQLite 0 → 41 → 0 → 41, `compileall` y `check_project_truth.py` verdes.
+- **Publicación:** GitHub Actions completó en verde el candidato `2d14e2b`.
+  Producción respondió 200 en `/health` con release `2d14e2b6f3b8` y en
+  `/ready` con el mismo release, estado `ready` y esquema 41.
 
 ### Qué no se ha probado
 
 - No se abrió un navegador automatizado porque las sesiones anteriores de la app se
   cerraban al usarlo. Las capturas aportadas son evidencia del flujo anterior, no
-  QA visual del rediseño ya compilado; tras desplegar hay que revisar escritorio y
+  QA visual del rediseño ya desplegado; hay que revisar escritorio y
   móvil con la demo real.
 - Los modelos son una primera lectura, no una confección oficial. Faltan validación
   con despacho, prorrata, regímenes especiales, operaciones intracomunitarias,

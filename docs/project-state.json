@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar el espacio fiscal de gestoría, comprobar /ready en esquema 41 y recorrer en navegador cartera, ficha, filtros, vista previa, perfil fiscal y ZIP con la demo de dos empresas; el founder ya confirmó que el login y las pantallas de cartera/ficha funcionan en Chrome tras la corrección Sec-Fetch-Site; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Recorrer visualmente en Chrome escritorio y móvil cartera, ficha, filtros, vista previa, perfil fiscal y ZIP con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

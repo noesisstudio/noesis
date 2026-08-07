@@ -50,8 +50,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   filtros de `/gestoria/cliente/{id}` y endpoint `/preview`. Revertir aplicación
   restaura la cartera anterior; el downgrade 41 elimina únicamente perfiles
   configurables, nunca facturas, documentos ni registros fiscales.
-- **Estado de publicación:** local verificado; pendiente commit, autodespliegue,
-  `/ready` 41 y recorrido visual del nuevo diseño en producción.
+- **Estado de publicación:** commit `2d14e2b` en `main`, CI verde y producción
+  validada por HTTP con release `2d14e2b6f3b8` y `/ready` en esquema 41. Queda el
+  recorrido visual autenticado del nuevo diseño en escritorio y móvil.
 
 ## 2026-08-07 11:42 — prioridad Fetch Metadata para gestorias reales y demo
 
