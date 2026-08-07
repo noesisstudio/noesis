@@ -18,9 +18,10 @@
   nuevo release, esquema, CI, humo PostgreSQL, origen propio 303/origen externo 403
   y login/cartera/logout sintéticos de la gestoría demo. El founder confirmó después
   que Chrome ya entra y muestra la cartera/ficha con la prioridad
-  `Sec-Fetch-Site: same-origin`. Falta desplegar el espacio fiscal del esquema 41,
-  recorrer sus filtros, vista previa y perfil en navegador y completar las demás
-  pruebas autenticadas.
+  `Sec-Fetch-Site: same-origin`. El espacio fiscal del esquema 41 ya se desplegó y
+  `/ready` lo confirmó. Falta desplegar y recorrer visualmente la separación nueva
+  entre Resumen, Documentos, Impuestos, Períodos y Solicitudes, además de completar
+  las demás pruebas autenticadas.
 - [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
   `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL`; revisar aviso legal, privacidad,
   términos, DPA y fiscalidad con profesionales. Mantener

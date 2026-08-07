@@ -4624,11 +4624,42 @@ class GestoriaTestCase(unittest.TestCase):
                 )
                 self.assertEqual(accepted.status_code, 303)
                 page = client.get(
-                    f"/gestoria/cliente/{business['id']}?view=tickets&doc={own_doc['id']}"
+                    f"/gestoria/cliente/{business['id']}?section=documentos"
+                    f"&view=tickets&doc={own_doc['id']}"
                 )
                 self.assertEqual(page.status_code, 200)
                 self.assertIn("ticket-propio.jpg", page.text)
-                self.assertIn("Primera lectura fiscal", page.text)
+                self.assertIn("Documentos y movimientos", page.text)
+                self.assertNotIn("Primera lectura fiscal", page.text)
+                fiscal_page = client.get(
+                    f"/gestoria/cliente/{business['id']}?section=impuestos"
+                )
+                self.assertEqual(fiscal_page.status_code, 200)
+                self.assertIn("Primera lectura fiscal", fiscal_page.text)
+                self.assertNotIn("Documentos y movimientos", fiscal_page.text)
+                saved_profile = client.post(
+                    f"/gestoria/cliente/{business['id']}/perfil-fiscal",
+                    data={"year": "2026", "quarter": "2"},
+                    follow_redirects=False,
+                )
+                self.assertEqual(saved_profile.status_code, 303)
+                self.assertIn(
+                    "section=impuestos&year=2026&quarter=2",
+                    saved_profile.headers["location"],
+                )
+                requested = client.post(
+                    f"/gestoria/cliente/{business['id']}/solicitud",
+                    data={
+                        "message": "Falta el justificante.",
+                        "year": "2026", "quarter": "2",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(requested.status_code, 303)
+                self.assertIn(
+                    "section=solicitudes&year=2026&quarter=2",
+                    requested.headers["location"],
+                )
                 preview = client.get(
                     f"/gestoria/cliente/{business['id']}/documento/{own_doc['id']}/preview"
                 )

@@ -16,6 +16,16 @@ from ..deps import TEMPLATES
 router = APIRouter()
 
 
+def _period_query(year: int | None, quarter: int | None) -> str:
+    """Conserva el contexto temporal sin aceptar valores arbitrarios."""
+    parts: list[str] = []
+    if year is not None and 2000 <= year <= date.today().year + 1:
+        parts.append(f"year={year}")
+    if quarter in {1, 2, 3, 4}:
+        parts.append(f"quarter={quarter}")
+    return "".join(f"&{part}" for part in parts)
+
+
 def _start_session(request: Request, account: dict) -> None:
     request.session.clear()
     request.session.update({
@@ -202,7 +212,7 @@ def portfolio(request: Request, q: str = "", year: int | None = None,
 @router.get("/gestoria/cliente/{business_id}", response_class=HTMLResponse)
 def client_detail(request: Request, business_id: int, year: int | None = None,
                   quarter: int | None = None, view: str = "todos",
-                  doc: int | None = None):
+                  doc: int | None = None, section: str = "resumen"):
     allowed = _business_for(request, business_id)
     if not allowed:
         return RedirectResponse("/gestoria/login", status_code=303)
@@ -211,6 +221,9 @@ def client_detail(request: Request, business_id: int, year: int | None = None,
     selected_year = year if year and 2000 <= year <= today.year + 1 else today.year
     selected_quarter = quarter if quarter in {1, 2, 3, 4} else (today.month - 1) // 3 + 1
     view = view if view in gestoria_workspace.DOCUMENT_FILTERS else "todos"
+    section = section if section in {
+        "resumen", "documentos", "impuestos", "periodos", "solicitudes"
+    } else "resumen"
     workspace = gestoria_workspace.workspace(
         business_id, year=selected_year, quarter=selected_quarter,
         document_view=view,
@@ -223,6 +236,7 @@ def client_detail(request: Request, business_id: int, year: int | None = None,
         "workspace": workspace, "documents": workspace["documents"],
         "pending_documents": workspace["pending_documents"],
         "preview_document": preview_document,
+        "active_section": section,
         "selected_year": selected_year, "selected_quarter": selected_quarter,
         "years": range(today.year, max(today.year - 4, 1999), -1),
         "periods": db.gestoria_periods(business_id),
@@ -277,6 +291,8 @@ def update_fiscal_profile(
     filing_cadence: str = Form("trimestral"),
     obligations: list[str] = Form(default=[]),
     notes: str = Form(""),
+    year: int | None = Form(None),
+    quarter: int | None = Form(None),
 ):
     allowed = _business_for(request, business_id)
     if not allowed:
@@ -294,15 +310,20 @@ def update_fiscal_profile(
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     db.record_product_event(business_id, "gestoria_fiscal_profile_updated")
+    period_query = _period_query(year, quarter)
     return RedirectResponse(
-        f"/gestoria/cliente/{business_id}?ok=fiscal", status_code=303
+        f"/gestoria/cliente/{business_id}?section=impuestos{period_query}&ok=fiscal",
+        status_code=303,
     )
 
 
 @router.post("/gestoria/cliente/{business_id}/documento/{doc_id}/revisar")
 def review_document(request: Request, business_id: int, doc_id: int,
                     kind: str = Form(""), client_id: str = Form(""),
-                    project_id: str = Form(""), review_note: str = Form("")):
+                    project_id: str = Form(""), review_note: str = Form(""),
+                    year: int | None = Form(None),
+                    quarter: int | None = Form(None),
+                    view: str = Form("todos")):
     allowed = _business_for(request, business_id)
     if not allowed:
         return JSONResponse({"error": "no autorizado"}, status_code=403)
@@ -324,14 +345,20 @@ def review_document(request: Request, business_id: int, doc_id: int,
     if not saved:
         return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
     db.record_product_event(business_id, "document_validated_by_gestoria")
+    period_query = _period_query(year, quarter)
+    safe_view = view if view in gestoria_workspace.DOCUMENT_FILTERS else "todos"
     return RedirectResponse(
-        f"/gestoria/cliente/{business_id}?ok=reviewed", status_code=303
+        f"/gestoria/cliente/{business_id}?section=documentos{period_query}"
+        f"&view={safe_view}&ok=reviewed",
+        status_code=303,
     )
 
 
 @router.post("/gestoria/cliente/{business_id}/solicitud")
 def request_document(request: Request, business_id: int,
-                     message: str = Form("")):
+                     message: str = Form(""),
+                     year: int | None = Form(None),
+                     quarter: int | None = Form(None)):
     allowed = _business_for(request, business_id)
     if not allowed:
         return JSONResponse({"error": "no autorizado"}, status_code=403)
@@ -343,8 +370,11 @@ def request_document(request: Request, business_id: int,
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
+    period_query = _period_query(year, quarter)
     return RedirectResponse(
-        f"/gestoria/cliente/{business_id}?ok=requested", status_code=303
+        f"/gestoria/cliente/{business_id}?section=solicitudes{period_query}"
+        "&ok=requested",
+        status_code=303,
     )
 
 

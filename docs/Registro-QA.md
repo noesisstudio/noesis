@@ -1,5 +1,30 @@
 # Registro de QA
 
+## 2026-08-07 — jerarquía y navegación del expediente de gestoría
+
+### Qué se probó y con qué resultado
+
+- **Evidencia de partida:** ocho capturas reales del founder mostraban una cartera
+  correcta, pero el expediente reunía resumen, archivo, diez modelos, perfil,
+  comparativa, ZIP y solicitudes en una sola página. La navegación sticky llegaba a
+  superponerse al contenido y todas las secciones tenían un peso parecido.
+- **Separación real:** el servidor solo admite `resumen`, `documentos`, `impuestos`,
+  `periodos` o `solicitudes`; cualquier otro valor vuelve a Resumen. Cada vista
+  renderiza su tarea y no deja debajo el resto del expediente.
+- **Contexto preservado:** cambiar el período, guardar el perfil fiscal, validar un
+  documento o enviar una solicitud conserva la pestaña, el año, el trimestre y el
+  filtro documental aplicable. Los valores se vuelven a validar en el servidor.
+- **Regresión:** 14/14 pruebas de `GestoriaTestCase` y suite completa **415/415**;
+  Ruff verde en router y prueba modificada. Se verificó además que Documentos no
+  renderiza Impuestos y viceversa, sin romper la previsualización aislada.
+
+### Límite visual
+
+- Las ocho capturas aportadas se inspeccionaron como evidencia del estado anterior.
+  No se abrió el navegador automatizado porque el founder ya identificó que esa
+  acción cierra Codex. El QA visual posterior queda bloqueado hasta disponer de
+  capturas del candidato desplegado en escritorio y móvil.
+
 ## 2026-08-07 — cartera fiscal y documental para gestorías
 
 ### Qué se probó y con qué resultado

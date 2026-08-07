@@ -35,6 +35,10 @@
   de configuración según los datos disponibles; nunca como declaraciones
   presentadas. Las facturas recibidas alimentan el IVA soportado y el resultado
   junto con los gastos simples, sin inventar cuotas que falten.
+- El expediente profesional no obliga a recorrer una página interminable: Resumen,
+  Documentos, Impuestos, Períodos y Solicitudes son vistas independientes. La
+  navegación marca el trabajo activo, conserva trimestre y filtro después de cada
+  validación y evita que la cabecera tape tablas al desplazarse.
 - La demostración comercial no replica ni simula otra aplicación: crea dos accesos
   dentro del producto real —autónomo y gestoría—, una segunda empresa en la cartera
   multiempresa y un portal real para el cliente final. Todos comparten datos

@@ -110,4 +110,30 @@ La comparación del hero confirma:
   el cierre del navegador integrado. La comprobación se limita explícitamente a
   HTML, CSS responsive, JavaScript y pruebas automáticas.
 
+## Expediente de gestoría por tareas · 2026-08-07
+
+- **Fuente visual:** las ocho capturas
+  `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-5ebf13e7-2eff-449d-becd-8715ee34a33c.png`,
+  `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-3fc0f128-1392-4403-8266-280021f9df74.png`,
+  `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-d574fe8d-dd60-4f57-a869-3e2c154136b1.png`,
+  `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-ec60cd07-b35b-494c-8acd-38ef174b1571.png`,
+  `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-3eeaf9b4-ede2-4a23-a995-ca9175a32a14.png`,
+  `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-52226f42-3782-4dfc-814d-efa9f13c3879.png`,
+  `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-63ddc3d2-2cb5-4471-b116-ab590144a86c.png`
+  y `C:\Users\mikic\AppData\Local\Temp\codex-clipboard-5842cf5c-d968-4e24-a66d-4f5920adac02.png`,
+  aportadas por el founder a 1867×896,
+  1742×905, 1822×893, 1651×896, 1645×896, 1517×896, 1588×896 y
+  1518×870 px respectivamente.
+- **Estado de referencia:** cartera y expediente autenticados en escritorio, con
+  Resumen, Documentos, Impuestos, Períodos y Solicitudes visibles durante scroll.
+- **Hallazgos P1/P2:** una sola página mezclaba cinco tareas; el submenú sticky
+  ocultaba filas; faltaba estado activo y cada bloque competía con el anterior.
+- **Corrección implementada:** cinco vistas reales, estado activo con explicación,
+  selector temporal común, superficies delimitadas y contexto conservado en POST.
+- **Captura implementada y comparación conjunta:** no disponibles. Por petición
+  previa del founder no se usa el navegador integrado, ya que cerraba la aplicación.
+  No se afirma fidelidad visual posterior desde HTML/CSS o pruebas automáticas.
+- **Comprobación no visual:** 415/415 pruebas, incluyendo separación de contenido,
+  acceso documental y redirecciones que preservan el contexto.
+
 **final result: blocked**

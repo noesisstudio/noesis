@@ -23,6 +23,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-07 12:47 — expediente de gestoría separado por trabajo
+
+- **Autor/agente:** Codex.
+- **Objetivo:** reducir densidad y desorientación: que el despacho vea una sola tarea
+  cada vez y entienda siempre cliente, período y apartado activo.
+- **Áreas y archivos:** router/plantillas/CSS de gestoría, prueba de regresión,
+  estado, mapa, QA y fuente de verdad.
+- **Cambios de datos/migración:** ninguno; conserva esquema 41 y todos los cálculos,
+  documentos, perfiles, solicitudes y permisos existentes.
+- **Pruebas ejecutadas:** Ruff verde; 14/14 de `GestoriaTestCase`; suite completa
+  415/415. Render de las cinco secciones y retornos de formularios cubiertos con
+  FastAPI/TestClient.
+- **Dependencias o validaciones externas:** ninguna API nueva. Ocho capturas reales
+  del founder sirvieron de evidencia del problema anterior.
+- **Riesgo/punto probable de fallo:** perder año, trimestre o filtro al cambiar de
+  vista o volver de un POST. Los parámetros aceptados se limitan y las redirecciones
+  tienen pruebas específicas.
+- **Diagnóstico y rollback:** comprobar `section` en `/gestoria/cliente/{id}`, estado
+  activo del submenú y `Location` de perfil/documento/solicitud. Revertir plantillas,
+  CSS y router restaura la página única sin tocar datos.
+- **Estado de publicación:** local verificado; pendiente commit, CI, despliegue y
+  capturas visuales del candidato.
+
 ## 2026-08-07 12:11 — espacio fiscal profesional para gestorías
 
 - **Autor/agente:** Codex.

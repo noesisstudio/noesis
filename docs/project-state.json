@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Recorrer visualmente en Chrome escritorio y móvil cartera, ficha, filtros, vista previa, perfil fiscal y ZIP con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Desplegar la navegación separada del expediente de gestoría y recorrer visualmente en Chrome escritorio y móvil Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -68,7 +68,7 @@
     "document_search": "case_insensitive_parameterized_search_inside_one_business_by_filename_note_ocr_client_project_and_humanized_kind",
     "document_pdf_local_reading": "bounded_pypdf_text_extraction_for_digital_pdfs_then_private_pypdfium2_rasterization_and_tesseract_ocr_for_image_only_pdfs_with_page_pixel_time_and_text_limits_no_external_api",
     "document_context": "web_and_whatsapp_validate_client_project_and_invoice_inside_the_same_business_caption_or_invoice_customer_only_links_on_unambiguous_match",
-    "gestoria_portfolio": "schema_41_professional_multi_business_workspace_with_explicit_fiscal_profile_quarter_and_year_views_document_filters_safe_inline_first_page_preview_explainable_tax_drafts_requests_and_versioned_packages_without_filing_or_money_authority",
+    "gestoria_portfolio": "schema_41_professional_multi_business_workspace_with_explicit_fiscal_profile_and_five_separate_task_views_summary_documents_taxes_periods_requests_quarter_and_year_context_safe_inline_first_page_preview_explainable_tax_drafts_and_versioned_packages_without_filing_or_money_authority",
     "commercial_showcase": "schema_40_two_real_logins_inside_the_product_owner_and_gestoria_plus_real_customer_portal_all_populated_connected_and_server_side_read_only_external_delivery_and_automations_blocked_public_demo_credential_explicitly_allowlisted_not_a_production_secret",
     "stripe_tax": "checkout_requests_billing_address_tax_id_collection_and_automatic_tax_for_the_public_plus_vat_catalog_real_tax_result_still_requires_stripe_test_validation",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",

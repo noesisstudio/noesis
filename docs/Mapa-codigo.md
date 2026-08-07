@@ -172,8 +172,10 @@
 - `src/noesis/web/routers/gestoria_portal.py` + plantillas `gestoria_*`: identidad
   profesional, invitación de un solo uso, cartera multiempresa, preparación por
   trimestre/año, filtros, previsualización, perfil fiscal, borradores de modelos,
-  solicitudes y descarga por período; cada ruta vuelve a comprobar la relación de
-  acceso antes de leer o escribir.
+  solicitudes y descarga por período. El expediente sirve cinco vistas separadas
+  mediante una sección validada en servidor y conserva período/filtro tras cada
+  formulario; cada ruta vuelve a comprobar la relación de acceso antes de leer o
+  escribir.
 - `src/noesis/web/whatsapp.py`: texto, audio local, fotos/PDF, confirmaciones,
   trabajador y cola durable. Emisión y entrega usan una segunda confirmación,
   validación fiscal previa, PDF y canal habitual; la entrada y la salida se detienen
