@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Recorrer en navegador el acceso de autónomo y el portal de cliente, confirmar su solo lectura y decidir si NOESIS_SEED_DEMO se mantiene activo; el login, cartera de dos empresas y cierre de sesión de la gestoría demo ya se validaron por HTTP real; probar invitación, acceso, cartera y revocación con una gestoría real; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Desplegar la prioridad segura de Sec-Fetch-Site same-origin y repetir el login en Chrome, después recorrer el acceso de autónomo y el portal de cliente, confirmar su solo lectura y decidir si NOESIS_SEED_DEMO se mantiene activo; el login sintético, cartera de dos empresas y cierre de sesión de la gestoría demo ya se validaron por HTTP real, pero no sustituyen la prueba del navegador; probar invitación, acceso, cartera y revocación con una gestoría real; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -78,7 +78,7 @@
     "voice_reception_promise": "premium_call_minutes_are_presented_inside_the_receptionist_beta_block_not_as_an_active_included_feature_because_no_telephony_exists_yet",
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",
     "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
-    "security_hardening": "schema_35_append_only_hash_chained_security_audit_internal_read_only_ciso_independent_restore_drill_optional_private_clamav_fail_closed_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_proxy_aware_strict_origin_validation_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request"
+    "security_hardening": "schema_35_append_only_hash_chained_security_audit_internal_read_only_ciso_independent_restore_drill_optional_private_clamav_fail_closed_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_fetch_metadata_same_origin_and_proxy_aware_strict_origin_validation_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request"
   },
   "ai_route": [
     "reglas_locales",

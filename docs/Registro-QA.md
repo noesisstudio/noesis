@@ -8,11 +8,19 @@
   `{"error":"origen no autorizado"}` porque el navegador enviaba el origen público
   y Railway podía entregar al contenedor un `Host` privado o con puerto. La
   comparación anterior era textual y no entendía esa frontera de proxy.
+- **Segunda evidencia real:** aunque el cliente HTTP sintético entró correctamente,
+  Chrome volvió a mostrar `origen no autorizado` sobre el release `2a7c59a5cfbc`.
+  Por tanto, la primera validación no se consideró suficiente ni el incidente
+  cerrado. La corrección posterior prioriza `Sec-Fetch-Site: same-origin`, cabecera
+  controlada por el navegador, antes de interpretar el `Host` interno del proxy.
 - **Caso legítimo:** `Origin: https://bynoesis.com` con un `Host` privado de Railway
   autorizado atraviesa la guardia y llega al flujo normal de credenciales.
 - **Casos hostiles:** `https://evil.example`, un puerto HTTPS no estándar, un origen
   mal formado y `Sec-Fetch-Site: cross-site` continúan en 403. No se confía en
   `X-Forwarded-Host` ni se habilitan comodines.
+- **Cobertura de producto:** 28/28 pruebas focalizadas verdes: perímetro de
+  seguridad, demo completa y `GestoriaTestCase` para cuentas profesionales reales,
+  dos empresas invitadas sin mezcla, revocación, paquetes, correo y portal.
 - **Pruebas:** 13/13 del módulo de seguridad; 61/61 de demo, plataforma, accesos,
   operaciones y readiness; 60/60 de web/documentos/correos/backups; 278/278 de
   backend. Total **412/412** ejecutadas por módulos. Ruff verde. La ejecución
@@ -27,9 +35,9 @@
 
 ### Qué no se ha probado
 
-- No se inspeccionaron visualmente la cookie y las pantallas en navegador ni se
-  abrió el detalle de cada empresa. La sesión HTTP real sí confirmó autenticación,
-  cartera de dos empresas y cierre de sesión.
+- La segunda corrección todavía no se ha desplegado ni repetido desde Chrome. La
+  sesión HTTP real confirmó autenticación, cartera de dos empresas y cierre, pero
+  esa evidencia ya no se usa como sustituto de la prueba del navegador.
 
 ## 2026-08-06 — dos cuentas demo reales y OCR privado de PDF escaneado
 

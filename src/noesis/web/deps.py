@@ -142,9 +142,16 @@ def csrf_response(request: Request) -> JSONResponse | None:
     if path.startswith("/webhook/"):
         return None
     origin = request.headers.get("origin")
-    fetch_site = request.headers.get("sec-fetch-site", "")
+    fetch_site = request.headers.get("sec-fetch-site", "").strip().lower()
     if fetch_site == "cross-site":
         return JSONResponse({"error": "petición cross-site rechazada"}, status_code=403)
+    # ``Sec-Fetch-Site`` es una cabecera controlada por el navegador. Chrome la
+    # envía en formularios normales y describe mejor el origen visto por el usuario
+    # que el Host interno que Railway entregue al contenedor. Priorizar
+    # ``same-origin`` evita falsos 403 sin abrir formularios a otra web. Navegadores
+    # antiguos o clientes que no la envían siguen pasando por la allowlist estricta.
+    if fetch_site == "same-origin":
+        return None
     if origin and not _trusted_origin(request, origin):
         return JSONResponse({"error": "origen no autorizado"}, status_code=403)
     return None

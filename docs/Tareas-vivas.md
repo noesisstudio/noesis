@@ -16,7 +16,9 @@
   el proxy real. Release/esquema, cabeceras, textos legales, alta cerrada y
   redirección 308 de `www` ya se comprobaron el 6-ago. El 7-ago se verificaron el
   nuevo release, esquema, CI, humo PostgreSQL, origen propio 303/origen externo 403
-  y login/cartera/logout de la gestoría demo; faltan las demás pruebas autenticadas.
+  y login/cartera/logout sintéticos de la gestoría demo, pero Chrome reprodujo aún
+  el 403. Falta desplegar la prioridad `Sec-Fetch-Site: same-origin`, repetirla en
+  navegador y completar las demás pruebas autenticadas.
 - [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
   `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL`; revisar aviso legal, privacidad,
   términos, DPA y fiscalidad con profesionales. Mantener

@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-07 11:42 — prioridad Fetch Metadata para gestorias reales y demo
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar el 403 que Chrome todavía reproducía aunque una prueba HTTP
+  sintética hubiera pasado; el mismo acceso debe servir a demos y gestorías reales.
+- **Áreas y archivos:** guardia web transversal, regresiones de seguridad, estado,
+  mapa, QA, pendientes y fuente de verdad.
+- **Cambios de datos/migración:** ninguno; esquema 40.
+- **Pruebas ejecutadas:** 28/28 focalizadas verdes: seguridad, demo completa y
+  `GestoriaTestCase` para cuentas profesionales reales; Ruff. La prueba legítima usa
+  un `Host` de proxy no listado con `Sec-Fetch-Site: same-origin`; origen externo,
+  `cross-site` y puerto no estándar continúan en 403.
+- **Dependencias o validaciones externas:** requiere despliegue Railway y repetición
+  desde Chrome; la prueba HTTP anterior ya no se considera evidencia suficiente.
+- **Riesgo/punto probable de fallo:** confiar en una cabecera libre permitiría
+  falsificar el origen. `Sec-Fetch-Site` es una cabecera Fetch Metadata controlada
+  por el navegador; clientes antiguos sin ella conservan la allowlist estricta.
+- **Diagnóstico y rollback:** si reaparece el JSON, correlacionar navegador/release
+  antes de cerrar el incidente. Revertir este commit restaura el falso 403 de Chrome.
+- **Estado de publicación:** local verificado; `main` tras este commit, pendiente
+  Railway y prueba visual real.
+
 ## 2026-08-07 11:26 — origen seguro para el login de gestoría en Railway
 
 - **Autor/agente:** Codex.

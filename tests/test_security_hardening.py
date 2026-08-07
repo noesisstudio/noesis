@@ -142,7 +142,7 @@ class SecurityHardeningTestCase(unittest.TestCase):
             patch.object(
                 config,
                 "ALLOWED_HOSTS",
-                ["bynoesis.com", "www.bynoesis.com", "noesis.railway.internal"],
+                ["bynoesis.com", "www.bynoesis.com"],
             ),
             TestClient(server.app) as client,
         ):
@@ -150,7 +150,9 @@ class SecurityHardeningTestCase(unittest.TestCase):
                 "/gestoria/login",
                 data={"email": "nadie@example.com", "password": "incorrecta"},  # pragma: allowlist secret
                 headers={
-                    "Host": "noesis.railway.internal",
+                    # Reproduce la discrepancia real: Chrome sabe que la petición
+                    # es same-origin aunque el proxy use un Host no público.
+                    "Host": "proxy-unlisted.railway.internal",
                     "Origin": "https://bynoesis.com",
                     "Sec-Fetch-Site": "same-origin",
                 },
@@ -184,9 +186,23 @@ class SecurityHardeningTestCase(unittest.TestCase):
                 },
                 follow_redirects=False,
             )
+            cross_site = client.post(
+                "/gestoria/login",
+                data={"email": "nadie@example.com", "password": "incorrecta"},  # pragma: allowlist secret
+                headers={
+                    "Host": "noesis.railway.internal",
+                    "Origin": "https://bynoesis.com",
+                    "Sec-Fetch-Site": "cross-site",
+                },
+                follow_redirects=False,
+            )
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["error"], "origen no autorizado")
+        self.assertEqual(cross_site.status_code, 403)
+        self.assertEqual(
+            cross_site.json()["error"], "petición cross-site rechazada"
+        )
 
     def test_csrf_normalizes_default_https_port_but_not_another_port(self):
         with (

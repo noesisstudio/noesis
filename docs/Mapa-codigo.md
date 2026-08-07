@@ -93,8 +93,9 @@
   un `price_id` distinto por plan y periodicidad; el anual cobra 11 meses y da 12.
 - `src/noesis/web/deps.py`: aislamiento de sesión, modo consulta y guardia CSRF
   transversal. Una cuenta inactiva puede leer; toda mutación web/API devuelve
-  redirección o HTTP 402. El `Origin` público se valida contra dominios cerrados y
-  puede cruzar el `Host` privado de Railway sin aceptar orígenes externos.
+  redirección o HTTP 402. La evidencia `Sec-Fetch-Site: same-origin` del navegador
+  tiene prioridad sobre el `Host` privado de Railway; sin ella, `Origin` pasa por
+  la allowlist pública estricta y `cross-site` nunca se acepta.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
   de acciones de Noesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve
