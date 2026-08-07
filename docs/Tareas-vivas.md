@@ -14,8 +14,9 @@
   `__Host-`, hosts, logs sin query string, Google OAuth admin, panel CISO, bitácora
   encadenada, Home, modo consulta, ficha de proyecto y login de gestoría mediante
   el proxy real. Release/esquema, cabeceras, textos legales, alta cerrada y
-  redirección 308 de `www` ya se comprobaron el 6-ago; faltan las pruebas
-  autenticadas restantes.
+  redirección 308 de `www` ya se comprobaron el 6-ago. El 7-ago se verificaron el
+  nuevo release, esquema, humo PostgreSQL y origen propio 303/origen externo 403;
+  faltan las pruebas autenticadas restantes.
 - [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
   `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL`; revisar aviso legal, privacidad,
   términos, DPA y fiscalidad con profesionales. Mantener

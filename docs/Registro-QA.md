@@ -18,15 +18,16 @@
   backend. Total **412/412** ejecutadas por módulos. Ruff verde. La ejecución
   monolítica alcanzó el límite local de diez minutos sin registrar fallos; la misma
   batería separada por módulos terminó íntegramente en verde.
-- **Producción antes del cambio:** `/health` y `/ready` devolvían 200 con el release
-  `243c3f626f2e` y esquema 40; el arreglo aún requiere despliegue y prueba real del
-  login de gestoría.
+- **Producción después del cambio:** `/health` y `/ready` devuelven 200 con el
+  release `53d7f83da282` y esquema 40. Un `POST` real con origen propio llega al
+  flujo normal y responde 303; el mismo `POST` con `https://evil.example` responde
+  403. El humo PostgreSQL del commit también está verde.
 
 ### Qué no se ha probado
 
 - No se enviaron credenciales reales a producción ni se inspeccionaron cookies del
-  navegador. Tras desplegar hay que iniciar sesión con la cuenta demo de gestoría y
-  confirmar cartera, segunda empresa y cierre de sesión.
+  navegador. Hay que iniciar sesión con la cuenta demo de gestoría y confirmar
+  cartera, segunda empresa y cierre de sesión.
 
 ## 2026-08-06 — dos cuentas demo reales y OCR privado de PDF escaneado
 
