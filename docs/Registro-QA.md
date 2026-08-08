@@ -1,5 +1,21 @@
 # Registro de QA
 
+## 2026-08-08 — perfil documental, presupuesto trazable y OCR trilingüe
+
+- Migración 42 compatible con SQLite/Postgres: pie documental, condiciones y
+  validez predeterminada por negocio; notas y evidencia de decisión en presupuestos.
+  Subir/bajar el esquema y el histórico de cobros parciales pasan sus pruebas.
+- PDF de presupuesto verificado desde negocio y portal. El token de un cliente no
+  puede descargar el presupuesto de otro; aceptar registra `client_portal` y una
+  huella SHA-256, y crea una única factura borrador conservando las notas.
+- OCR privado con detección `cat/spa/eng`, orientación, escala y contraste; importes
+  probados con «Import total», «Importe total» y «Amount due». Railpack solicita el
+  paquete catalán y el estado del servidor expone si están los tres idiomas.
+- Suite completa: **424/424** en 260 segundos. Ruff y pruebas focalizadas verdes.
+  Las trazas de Stripe, Meta, correo, backup e IA son caídas adversas simuladas.
+- Pendiente externo: desplegar esquema 42 y validar precisión/latencia con un corpus
+  real representativo; una suite sintética no mide calidad OCR de fotos deficientes.
+
 ## 2026-08-08 — diagnóstico técnico privado por cuenta
 
 - El administrador abre una cuenta desde el centro de mando y recibe únicamente

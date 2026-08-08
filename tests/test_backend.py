@@ -1365,19 +1365,38 @@ class BackendTestCase(unittest.TestCase):
 
     def test_branding_validation_and_portal_exposure(self):
         business, client = self.make_business()
-        db.update_branding(business["id"], template="editorial", brand_color="#7a1f4b")
+        db.update_branding(
+            business["id"], template="editorial", brand_color="#7a1f4b",
+            document_footer="Gracias por confiar en nosotros.",
+            quote_terms="Materiales incluidos según descripción.",
+            default_quote_validity_days=45,
+        )
         biz = db.get_business(business["id"])
         self.assertEqual(biz["invoice_template"], "editorial")
         self.assertEqual(db.business_brand_color(biz), "#7a1f4b")
+        self.assertEqual(biz["default_quote_validity_days"], 45)
         with self.assertRaises(ValueError):
             db.update_branding(business["id"], template="rara")
         with self.assertRaises(ValueError):
             db.update_branding(business["id"], brand_color="rojo")
+        with self.assertRaises(ValueError):
+            db.update_branding(business["id"], default_quote_validity_days=13)
         self.assertEqual(db.business_initials("Reformas Garcia"), "RG")
         # El portal expone color e iniciales del negocio que atiende, aislado.
         view = db.client_portal_view(business["id"], client["id"])
         self.assertEqual(view["business"]["brand_color"], "#7a1f4b")
+        self.assertIn("Materiales incluidos", view["business"]["quote_terms"])
         self.assertTrue(view["business"]["initials"])
+
+        quote = db.add_quote(
+            client["id"], "Instalación completa", 1200,
+            notes="Incluye montaje y puesta en marcha.", business_id=business["id"],
+        )
+        self.assertEqual(quote["valid_until"], (date.today() + timedelta(days=45)).isoformat())
+        from noesis.web.invoice_pdf import build_quote_pdf
+        pdf = build_quote_pdf(quote["id"], business["id"])
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertGreater(len(pdf), 2_000)
 
     def test_portal_token_never_crosses_clients(self):
         business_a, client_a = self.make_business("Negocio A")
@@ -2146,11 +2165,22 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertIn("aceptado", ok.headers["location"])
                 accepted = db.get_quote(quote_a["id"], business_a["id"])
                 self.assertEqual(accepted["status"], "aceptado")
+                self.assertEqual(accepted["decision_source"], "client_portal")
+                self.assertEqual(len(accepted["decision_ip_hash"]), 64)
                 self.assertTrue(accepted["invoice_id"])
                 self.assertEqual(
                     db.get_invoice(accepted["invoice_id"], business_a["id"])["status"],
                     "borrador",
                 )
+                pdf = client.get(
+                    f"/p/{token_a}/quotes/{quote_a['id']}/pdf"
+                )
+                self.assertEqual(pdf.status_code, 200)
+                self.assertTrue(pdf.content.startswith(b"%PDF"))
+                blocked_pdf = client.get(
+                    f"/p/{token_a}/quotes/{quote_b['id']}/pdf"
+                )
+                self.assertEqual(blocked_pdf.status_code, 404)
 
     def test_portal_stays_visible_but_cannot_mutate_in_read_only_mode(self):
         from starlette.testclient import TestClient

@@ -6,7 +6,7 @@ guarda igual, solo que sin lectura automática).
 
 Para activarlo: pip install -e ".[ocr]" (y el binario `tesseract`).
 En Mac:  brew install tesseract tesseract-lang
-En Debian/Railway:  apt-get install tesseract-ocr tesseract-ocr-spa
+En Debian/Railway: instala tesseract-ocr y los paquetes cat/spa/eng.
 """
 
 from __future__ import annotations
@@ -16,6 +16,20 @@ import logging
 import re
 
 log = logging.getLogger("noesis.ocr")
+PREFERRED_LANGUAGES = ("cat", "spa", "eng")
+
+
+def installed_languages() -> tuple[str, ...]:
+    """Idiomas disponibles, en orden estable y sin asumir la imagen del servidor."""
+    try:
+        import pytesseract
+        found = set(pytesseract.get_languages(config=""))
+    except Exception:  # noqa: BLE001
+        return ()
+    preferred = tuple(language for language in PREFERRED_LANGUAGES if language in found)
+    if preferred:
+        return preferred
+    return tuple(sorted(found - {"osd"}))
 
 
 def available() -> bool:
@@ -24,7 +38,7 @@ def available() -> bool:
         import pytesseract  # noqa: F401
         from PIL import Image  # noqa: F401
         pytesseract.get_tesseract_version()
-        return True
+        return bool(installed_languages())
     except Exception:  # noqa: BLE001
         return False
 
@@ -32,8 +46,12 @@ def available() -> bool:
 def _read_image(image) -> str | None:
     try:
         import pytesseract
+        languages = installed_languages()
+        if not languages:
+            return None
         return pytesseract.image_to_string(
-            image, lang="spa+eng", timeout=8,
+            image, lang="+".join(languages), timeout=12,
+            config="--oem 1 --psm 3",
         )
     except Exception as e:  # noqa: BLE001
         log.warning("OCR falló: %s", e)
@@ -42,10 +60,17 @@ def _read_image(image) -> str | None:
 
 def _read_text(data: bytes) -> str | None:
     try:
-        from PIL import Image
+        from PIL import Image, ImageOps
         with Image.open(io.BytesIO(data)) as image:
             image.load()
-            return _read_image(image)
+            prepared = ImageOps.exif_transpose(image)
+            prepared = ImageOps.autocontrast(ImageOps.grayscale(prepared))
+            if prepared.width < 1_400:
+                scale = min(2.0, 1_400 / max(prepared.width, 1))
+                prepared = prepared.resize(
+                    (int(prepared.width * scale), int(prepared.height * scale))
+                )
+            return _read_image(prepared)
     except Exception as e:  # noqa: BLE001
         log.warning("La imagen no se pudo preparar para OCR: %s", e)
         return None
@@ -54,7 +79,7 @@ def _read_text(data: bytes) -> str | None:
 def _detect_amount(text: str) -> float | None:
     """Heurística para el importe total de un ticket/factura.
 
-    1) Si hay una línea con 'total', coge el mayor importe de esa línea.
+    1) Prioriza líneas equivalentes a «total a pagar» en catalán, castellano e inglés.
     2) Si no, coge el mayor importe del documento (suele ser el total).
     Formatos europeos: 1.234,56 y americanos: 1,234.56.
     """
@@ -77,9 +102,17 @@ def _detect_amount(text: str) -> float | None:
         except ValueError:
             return None
 
+    total_markers = (
+        "total a pagar", "import total", "importe total", "total factura",
+        "grand total", "amount due", "total due", "payment due", "a pagar",
+        "total",
+    )
     best_total = None
     for line in text.splitlines():
-        if "total" in line.lower():
+        normalized = " ".join(line.lower().split())
+        if any(marker in normalized for marker in total_markers) and not re.search(
+            r"\b(subtotal|base imponible|base imposable|taxable amount)\b", normalized
+        ):
             vals = [to_float(m) for m in amount_re.findall(line)]
             vals = [v for v in vals if v is not None]
             if vals:
@@ -104,7 +137,10 @@ def extract(data: bytes) -> dict | None:
     text = _read_text(data)
     if text is None:
         return None
-    return {"text": text.strip(), "amount": detect_amount(text)}
+    return {
+        "text": text.strip(), "amount": detect_amount(text),
+        "languages": list(installed_languages()),
+    }
 
 
 def extract_image(image) -> dict | None:
@@ -114,4 +150,7 @@ def extract_image(image) -> dict | None:
     text = _read_image(image)
     if text is None:
         return None
-    return {"text": text.strip(), "amount": detect_amount(text)}
+    return {
+        "text": text.strip(), "amount": detect_amount(text),
+        "languages": list(installed_languages()),
+    }

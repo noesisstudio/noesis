@@ -81,7 +81,13 @@ def portal_accept_quote(request: Request, token: str, quote_id: int):
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
     try:
-        db.accept_quote(quote_id, ref["business_id"])
+        db.accept_quote(
+            quote_id,
+            ref["business_id"],
+            decision_source="client_portal",
+            decision_ip_hash=_signer_ip_hash(request, token),
+            decision_user_agent=request.headers.get("user-agent"),
+        )
     except ValueError:
         return RedirectResponse(f"/p/{token}?ok=error", status_code=303)
     return RedirectResponse(f"/p/{token}?ok=aceptado", status_code=303)
@@ -98,8 +104,47 @@ def portal_reject_quote(request: Request, token: str, quote_id: int):
     q = db.get_quote(quote_id, ref["business_id"])
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
-    db.reject_quote(quote_id, ref["business_id"])
+    try:
+        db.reject_quote(
+            quote_id,
+            ref["business_id"],
+            decision_source="client_portal",
+            decision_ip_hash=_signer_ip_hash(request, token),
+            decision_user_agent=request.headers.get("user-agent"),
+        )
+    except ValueError:
+        return RedirectResponse(f"/p/{token}?ok=error", status_code=303)
     return RedirectResponse(f"/p/{token}?ok=rechazado", status_code=303)
+
+
+@router.get("/p/{token}/quotes/{quote_id}/pdf")
+def portal_quote_pdf(request: Request, token: str, quote_id: int):
+    if _token_scan_blocked(request, "portal"):
+        return Response("Demasiados intentos. Espera unos minutos.", status_code=429)
+    ref = db.resolve_portal_token(token)
+    if not ref:
+        _record_token_miss(request, "portal")
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    quote = db.get_quote(quote_id, ref["business_id"])
+    if (
+        not quote
+        or quote.get("client_id") != ref["client_id"]
+        or quote.get("status") not in {"enviado", "aceptado", "rechazado"}
+    ):
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    from ..invoice_pdf import build_quote_pdf
+    data = build_quote_pdf(quote_id, ref["business_id"])
+    if data is None:
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    name = f"presupuesto_{quote.get('number') or quote_id}.pdf"
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{name}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.post("/p/{token}/jobs/{job_id}/completion")

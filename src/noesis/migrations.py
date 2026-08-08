@@ -3122,6 +3122,53 @@ def _downgrade_gestoria_fiscal_workspace(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS gestoria_fiscal_profiles")
 
 
+def _upgrade_professional_document_profiles(conn) -> None:
+    """Preferencias documentales y evidencia de la decisión de presupuestos.
+
+    Son datos del documento, no un segundo motor de facturación. Las facturas
+    emitidas no se tocan y siguen protegidas por sus disparadores de integridad.
+    """
+    timestamp = _types(conn.dialect)["timestamp"]
+    business_columns = {
+        "document_footer": "TEXT",
+        "quote_terms": "TEXT",
+        "default_quote_validity_days": "INTEGER NOT NULL DEFAULT 30",
+    }
+    quote_columns = {
+        "notes": "TEXT",
+        "decision_source": "TEXT",
+        "decision_ip_hash": "TEXT",
+        "decision_user_agent": "TEXT",
+        "rejected_at": timestamp,
+    }
+    existing_business = _column_names(conn, "businesses")
+    existing_quotes = _column_names(conn, "quotes")
+    for column, ddl in business_columns.items():
+        if column not in existing_business:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {column} {ddl}")
+    for column, ddl in quote_columns.items():
+        if column not in existing_quotes:
+            conn.execute(f"ALTER TABLE quotes ADD COLUMN {column} {ddl}")
+
+
+def _downgrade_professional_document_profiles(conn) -> None:
+    quote_columns = _column_names(conn, "quotes")
+    for column in (
+        "rejected_at", "decision_user_agent", "decision_ip_hash",
+        "decision_source", "notes",
+    ):
+        if column in quote_columns:
+            suffix = "" if conn.dialect == "sqlite" else " IF EXISTS"
+            conn.execute(f"ALTER TABLE quotes DROP COLUMN{suffix} {column}")
+    business_columns = _column_names(conn, "businesses")
+    for column in (
+        "default_quote_validity_days", "quote_terms", "document_footer",
+    ):
+        if column in business_columns:
+            suffix = "" if conn.dialect == "sqlite" else " IF EXISTS"
+            conn.execute(f"ALTER TABLE businesses DROP COLUMN{suffix} {column}")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3173,6 +3220,9 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_showcase_demo),
     (41, "espacio_fiscal_gestoria", _upgrade_gestoria_fiscal_workspace,
      _downgrade_gestoria_fiscal_workspace),
+    (42, "perfiles_documentales_profesionales",
+     _upgrade_professional_document_profiles,
+     _downgrade_professional_document_profiles),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

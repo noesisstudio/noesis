@@ -2364,6 +2364,9 @@ BRAND_COLOR_DEFAULT = "#14463b"
 INVOICE_TEMPLATES = {"clasica", "minimal", "editorial"}
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_LOGO_B64 = 400_000  # ~300 KB de imagen
+MAX_DOCUMENT_FOOTER = 800
+MAX_QUOTE_TERMS = 1_500
+QUOTE_VALIDITY_DAYS = {7, 15, 30, 45, 60, 90}
 
 
 def business_initials(name: str | None) -> str:
@@ -2440,8 +2443,10 @@ def update_panel_layout(business_id, order, hidden) -> dict:
 
 
 def update_branding(business_id, *, template=None, brand_color=None,
-                    logo_data=None, logo_mime=None, clear_logo=False) -> dict | None:
-    """Guarda la personalización de documentos: plantilla, color y logo/monograma."""
+                    logo_data=None, logo_mime=None, clear_logo=False,
+                    document_footer=None, quote_terms=None,
+                    default_quote_validity_days=None) -> dict | None:
+    """Guarda una configuración documental segura y común a todo el negocio."""
     fields: list[str] = []
     params: list = []
     if template is not None:
@@ -2463,6 +2468,31 @@ def update_branding(business_id, *, template=None, brand_color=None,
             raise ValueError("El logo es demasiado grande (máximo ~300 KB).")
         fields += ["logo_data=?", "logo_mime=?"]
         params += [logo_data, logo_mime]
+    if document_footer is not None:
+        footer = str(document_footer or "").strip()
+        if len(footer) > MAX_DOCUMENT_FOOTER:
+            raise ValueError(
+                f"El pie del documento no puede superar {MAX_DOCUMENT_FOOTER} caracteres."
+            )
+        fields.append("document_footer=?")
+        params.append(footer or None)
+    if quote_terms is not None:
+        terms = str(quote_terms or "").strip()
+        if len(terms) > MAX_QUOTE_TERMS:
+            raise ValueError(
+                f"Las condiciones no pueden superar {MAX_QUOTE_TERMS} caracteres."
+            )
+        fields.append("quote_terms=?")
+        params.append(terms or None)
+    if default_quote_validity_days is not None:
+        try:
+            validity = int(default_quote_validity_days)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("La validez predeterminada no es válida.") from exc
+        if validity not in QUOTE_VALIDITY_DAYS:
+            raise ValueError("La validez debe ser de 7, 15, 30, 45, 60 o 90 días.")
+        fields.append("default_quote_validity_days=?")
+        params.append(validity)
     if not fields:
         return get_business(business_id)
     params.append(business_id)
@@ -8733,7 +8763,7 @@ def monthly_series(business_id, months: int = 6) -> list[dict]:
 
 # ----------------------------------------------------------- Presupuestos ---
 def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
-              irpf_rate=0, valid_days=30, *, business_id: int) -> dict:
+              irpf_rate=0, valid_days=None, notes=None, *, business_id: int) -> dict:
     """Crea un presupuesto (mismo cálculo que una factura, pero sin valor fiscal
     hasta que se acepta y se convierte en factura)."""
     if not get_client(client_id, business_id):
@@ -8744,6 +8774,20 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     base = _positive_money(base, "La base")
     vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
     irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
+    business = get_business(business_id) or {}
+    try:
+        valid_days = int(
+            valid_days
+            if valid_days not in (None, "")
+            else business.get("default_quote_validity_days") or 30
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La validez del presupuesto no es válida.") from exc
+    if valid_days not in QUOTE_VALIDITY_DAYS:
+        raise ValueError("La validez debe ser de 7, 15, 30, 45, 60 o 90 días.")
+    notes = str(notes or "").strip()
+    if len(notes) > 2_000:
+        raise ValueError("Las notas no pueden superar 2.000 caracteres.")
     vat_amount = _tax_amount(base, vat_rate)
     irpf_amount = _tax_amount(base, irpf_rate)
     total = float(
@@ -8757,10 +8801,11 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO quotes (business_id, client_id, concept, base, vat_rate, "
-            "vat_amount, irpf_rate, irpf_amount, total, status, valid_until, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?) RETURNING id",
+            "vat_amount, irpf_rate, irpf_amount, total, status, valid_until, notes, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?, ?) "
+            "RETURNING id",
             (business_id, client_id, concept, base, vat_rate, vat_amount,
-             irpf_rate or 0, irpf_amount, total, valid_until, _now()),
+             irpf_rate or 0, irpf_amount, total, valid_until, notes or None, _now()),
         ).fetchone()
         new_id = row["id"]
     return get_quote(new_id, business_id)
@@ -8819,15 +8864,32 @@ def mark_quote_sent(quote_id, business_id) -> dict | None:
     return get_quote(quote_id, business_id)
 
 
-def reject_quote(quote_id, business_id) -> dict | None:
+def reject_quote(quote_id, business_id, *, decision_source="owner",
+                 decision_ip_hash=None, decision_user_agent=None) -> dict | None:
     with get_conn() as conn:
-        cur = conn.execute("UPDATE quotes SET status='rechazado' "
-                           "WHERE id=? AND business_id=?", (quote_id, business_id))
+        row = conn.execute(
+            "SELECT status FROM quotes WHERE id=? AND business_id=?",
+            (quote_id, business_id),
+        ).fetchone()
+        if not row:
+            return None
+        if row["status"] == "rechazado":
+            return get_quote(quote_id, business_id)
+        if row["status"] != "enviado":
+            raise ValueError("Solo se puede rechazar un presupuesto enviado.")
+        cur = conn.execute(
+            "UPDATE quotes SET status='rechazado', rejected_at=?, decision_source=?, "
+            "decision_ip_hash=?, decision_user_agent=? "
+            "WHERE id=? AND business_id=? AND status='enviado'",
+            (_now(), str(decision_source or "owner")[:30], decision_ip_hash,
+             str(decision_user_agent or "")[:300] or None, quote_id, business_id),
+        )
         ok = cur.rowcount > 0
     return get_quote(quote_id, business_id) if ok else None
 
 
-def accept_quote(quote_id, business_id) -> dict | None:
+def accept_quote(quote_id, business_id, *, decision_source="owner",
+                 decision_ip_hash=None, decision_user_agent=None) -> dict | None:
     """Acepta un presupuesto y crea la factura borrador equivalente. Aislado por
     negocio: si el presupuesto no es de ese negocio, no hace nada."""
     with get_conn() as conn:
@@ -8850,12 +8912,12 @@ def accept_quote(quote_id, business_id) -> dict | None:
         invoice_row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
             "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
-            "series_id, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
-            "'borrador', 'F1', ?, 'EUR', ?) RETURNING id",
+            "series_id, currency, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "'borrador', 'F1', ?, 'EUR', ?, ?) RETURNING id",
             (
                 business_id, q["client_id"], q["concept"], q["base"], q["vat_rate"],
                 q["vat_amount"], q["irpf_rate"], q["irpf_amount"], q["total"],
-                series["id"], _now(),
+                series["id"], q["notes"], _now(),
             ),
         ).fetchone()
         invoice_id = invoice_row["id"]
@@ -8870,9 +8932,12 @@ def accept_quote(quote_id, business_id) -> dict | None:
             ),
         )
         conn.execute(
-            "UPDATE quotes SET status='aceptado', accepted_at=?, invoice_id=? "
+            "UPDATE quotes SET status='aceptado', accepted_at=?, invoice_id=?, "
+            "decision_source=?, decision_ip_hash=?, decision_user_agent=? "
             "WHERE id=? AND business_id=? AND status='enviado'",
-            (_now(), invoice_id, quote_id, business_id),
+            (_now(), invoice_id, str(decision_source or "owner")[:30],
+             decision_ip_hash, str(decision_user_agent or "")[:300] or None,
+             quote_id, business_id),
         )
     return {
         "quote": get_quote(quote_id, business_id),
@@ -9788,7 +9853,8 @@ def client_portal_view(business_id: int, client_id: int) -> dict | None:
                      "initials": business_initials(biz.get("name")),
                      "payment_iban": biz.get("payment_iban"),
                      "payment_bizum": biz.get("payment_bizum"),
-                     "payment_note": biz.get("payment_note")},
+                     "payment_note": biz.get("payment_note"),
+                     "quote_terms": biz.get("quote_terms")},
         "client": {"id": client["id"], "name": client.get("name")},
         "quotes": quotes,
         "invoices": invoices,

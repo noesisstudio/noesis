@@ -963,6 +963,9 @@ def update_verifactu_mode(
 @router.post("/b/{business_id}/branding")
 async def update_branding(business_id: int, template: str = Form("clasica"),
                           brand_color: str = Form(""), remove_logo: str = Form(""),
+                          document_footer: str = Form(""),
+                          quote_terms: str = Form(""),
+                          default_quote_validity_days: int = Form(30),
                           logo: UploadFile = File(None)):
     """Personalización de documentos: plantilla, color de marca y logo (o monograma
     automático si no se sube ninguno). El logo se guarda en base64 en la BD."""
@@ -981,7 +984,9 @@ async def update_branding(business_id: int, template: str = Form("clasica"),
         logo_mime = logo.content_type
     try:
         db.update_branding(business_id, template=template, brand_color=brand_color,
-                           logo_data=logo_data, logo_mime=logo_mime, clear_logo=clear)
+                           logo_data=logo_data, logo_mime=logo_mime, clear_logo=clear,
+                           document_footer=document_footer, quote_terms=quote_terms,
+                           default_quote_validity_days=default_quote_validity_days)
     except ValueError:
         return RedirectResponse(
             f"/b/{business_id}/ajustes?error=marca", status_code=303)

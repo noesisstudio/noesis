@@ -23,6 +23,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-08 20:15 — documentos comerciales y OCR listos para validar en piloto
+
+- **Autor/agente:** Codex.
+- **Objetivo:** completar la personalización profesional de facturas/presupuestos y
+  preparar lectura privada de tickets en catalán, castellano e inglés.
+- **Áreas y archivos:** migración y DB; perfil de marca; creador/listado/portal de
+  presupuestos; PDF compartido; OCR, clasificador y Railpack; pruebas y fuentes de
+  verdad.
+- **Cambios de datos/migración:** esquema 41→42. Añade preferencias documentales al
+  negocio y notas/evidencia de decisión al presupuesto; no modifica ninguna factura
+  emitida ni sus disparadores.
+- **Pruebas ejecutadas:** migración descendente/ascendente, branding, PDF, aislamiento
+  del portal, decisión trazable, PDF escaneado, clasificación e importes trilingües;
+  suite completa 424/424 y Ruff verdes.
+- **Dependencias o validaciones externas:** Railpack añade `tesseract-ocr-cat`.
+  Falta verificar que la imagen real lo instala y medir precisión con corpus real.
+- **Riesgo/punto probable de fallo:** paquete catalán no disponible en la imagen,
+  maquetación PDF con textos extremos o migración 42 pendiente en producción.
+- **Diagnóstico y rollback:** `/api/{business_id}/documents/ocr-status` informa los
+  idiomas; `/ready` debe mostrar esquema 42. El downgrade elimina solo preferencias
+  nuevas y evidencia de presupuestos; revertir código no altera facturas emitidas.
+- **Estado de publicación:** local verificado; pendiente commit, push y despliegue.
+
 ## 2026-08-08 18:03 — diagnóstico de soporte por cuenta sin puerta trasera
 
 - **Autor/agente:** Codex.

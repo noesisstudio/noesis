@@ -113,6 +113,8 @@ TOOLS: list[dict] = [
                 "base": {"type": "number", "description": "Importe SIN IVA."},
                 "iva": {"type": "number"},
                 "irpf": {"type": "number"},
+                "validez_dias": {"type": "integer"},
+                "notas": {"type": "string"},
             },
             "required": ["cliente", "concepto", "base"],
         },
@@ -332,12 +334,14 @@ def _preparar_factura_trabajo(business_id, trabajo_id):
     return {"ok": True, "factura": invoice}
 
 
-def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None):
+def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None,
+                       validez_dias=None, notas=None):
     biz = db.get_business(business_id) or {}
     c = db.get_or_create_client(cliente, business_id=business_id)
     rate = biz.get("default_vat", 21) if iva is None else iva
     irpf_rate = biz.get("default_irpf", 0) if irpf is None else irpf
     q = db.add_quote(c["id"], concepto, base, vat_rate=rate, irpf_rate=irpf_rate,
+                     valid_days=validez_dias, notes=notas,
                      business_id=business_id)
     return {"ok": True, "presupuesto": q}
 

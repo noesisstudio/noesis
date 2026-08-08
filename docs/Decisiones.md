@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## La personalización no puede convertir la factura en un lienzo libre (2026-08-08)
+
+El titular puede elegir una de tres composiciones probadas, color, logotipo, pie y
+textos comerciales. No se permiten imágenes arbitrarias ni maquetación libre dentro
+del documento fiscal: dificultaría garantizar legibilidad, tamaño, conservación y
+datos obligatorios. Los detalles variables pertenecen a las líneas y notas del
+documento; las condiciones generales se guardan una sola vez en el perfil.
+
+El presupuesto comparte identidad visual con la factura, pero se identifica como
+oferta y su aceptación solo genera un borrador. El portal guarda fecha, canal y una
+huella seudónima para investigar discrepancias sin almacenar la IP en claro. Esa
+evidencia ayuda, pero no sustituye una firma electrónica cualificada ni permite a
+Noesis emitir por el titular.
+
 ## La gestoría recibe borradores explicables, no impuestos «hechos» (2026-08-07)
 
 El espacio profesional puede sumar IVA, ordenar documentos y anticipar qué modelos

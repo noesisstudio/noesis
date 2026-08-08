@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 41;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 42;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -15,6 +15,8 @@
   marca persistente `is_demo` para bloquear en servidor las empresas ficticias. La
   41 añade un perfil fiscal por negocio, firmado por la cuenta de gestoría que lo
   actualiza, sin convertirlo en una declaración ni en autorización de presentación.
+  La 42 amplía el perfil documental y conserva evidencia seudónima de la decisión
+  de presupuestos sin alterar facturas emitidas.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -29,6 +31,9 @@
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro y flujo común de
   entrega de factura: PDF, canal habitual, email/plantilla WhatsApp, idempotencia y
   evento trazable.
+- `src/noesis/documents/ocr.py` + `pdf_ocr.py`: lectura local de imágenes y PDF
+  escaneado; detecta modelos Tesseract instalados, prioriza `cat+spa+eng`, prepara
+  la imagen y limita páginas, píxeles, tiempo y texto antes de clasificar.
 - `src/noesis/verifactu.py`: huellas de alta y anulación, QR y XML nativos validados
   contra los XSD AEAT.
 - `src/noesis/verifactu_client.py`: SOAP/mTLS directo, endpoints oficiales para
@@ -122,6 +127,10 @@
   PDF, entrega durable, historial, anulación confirmada y rectificación guiada por
   diferencias. `db.py` conserva el original, bloquea borradores rectificativos
   duplicados, valida F2/R5 y permite revisar el ajuste solo antes de emitir.
+- `src/noesis/web/invoice_pdf.py` + `templates/presupuestos.html`: facturas y
+  presupuestos comparten marca y pie. El presupuesto añade condiciones, validez,
+  notas y PDF; el portal guarda evidencia de la decisión y solo la aceptación
+  prepara una factura borrador.
 - `src/noesis/gestoria_workspace.py` + `routers/documents.py` +
   `templates/documentos.html`: archivo documental común para titular y gestoría.
   Deriva fecha efectiva, período y grupo una vez; el panel normal añade navegación,

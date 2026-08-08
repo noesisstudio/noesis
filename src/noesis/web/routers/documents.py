@@ -50,7 +50,12 @@ def api_document_archive(
 def api_ocr_status(business_id: int):
     """Indica si la lectura de fotos (OCR) está activa en este servidor."""
     from ...documents import ocr
-    return {"ocr": ocr.available()}
+    languages = ocr.installed_languages()
+    return {
+        "ocr": ocr.available(),
+        "languages": list(languages),
+        "trilingual_ready": all(code in languages for code in ("cat", "spa", "eng")),
+    }
 
 
 @router.post("/api/{business_id}/documents")

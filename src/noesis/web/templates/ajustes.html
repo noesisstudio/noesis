@@ -405,6 +405,28 @@
       <p class="hint" style="margin-top:12px">Si no subes logo, usamos un <b>monograma</b>
         automático con tus iniciales (<b>{{ business.name[:2] | upper }}</b>) sobre tu color de marca.</p>
       {% endif %}
+      <div class="grid g2" style="margin-top:14px">
+        <div>
+          <label class="fld" for="document-footer">Pie predeterminado</label>
+          <textarea class="input" id="document-footer" name="document_footer" rows="4"
+            maxlength="800" placeholder="Ej. Gracias por confiar en nuestro equipo.">{{ business.document_footer or '' }}</textarea>
+          <p class="hint">Aparece al final de tus facturas y presupuestos.</p>
+        </div>
+        <div>
+          <label class="fld" for="quote-terms">Condiciones del presupuesto</label>
+          <textarea class="input" id="quote-terms" name="quote_terms" rows="4"
+            maxlength="1500" placeholder="Ej. Incluye materiales descritos. Forma de pago: 50% al aceptar y 50% al finalizar.">{{ business.quote_terms or '' }}</textarea>
+          <p class="hint">Condiciones generales que verá el cliente antes de aprobar.</p>
+        </div>
+      </div>
+      <div style="max-width:280px;margin-top:12px">
+        <label class="fld" for="quote-validity">Validez predeterminada</label>
+        <select class="input" id="quote-validity" name="default_quote_validity_days">
+          {% for days in [7, 15, 30, 45, 60, 90] %}
+          <option value="{{ days }}" {{ 'selected' if (business.default_quote_validity_days or 30) == days }}>{{ days }} días</option>
+          {% endfor %}
+        </select>
+      </div>
       <button class="btn primary" style="margin-top:14px">Guardar marca</button>
     </form>
     <div class="insight" style="margin-top:14px">

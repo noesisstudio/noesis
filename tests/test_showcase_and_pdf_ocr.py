@@ -12,7 +12,7 @@ from fpdf import FPDF
 from PIL import Image, ImageDraw
 
 from noesis import config, db, demo
-from noesis.documents import pdf_ocr, service as docservice
+from noesis.documents import ocr, pdf_ocr, service as docservice
 from noesis.web import auth
 
 
@@ -132,6 +132,14 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "demasiado grande"):
             pdf_ocr._safe_scale(HugePage())
+
+    def test_amount_detection_understands_three_pilot_languages(self):
+        self.assertEqual(ocr.detect_amount("Import total 1.234,56 EUR"), 1234.56)
+        self.assertEqual(ocr.detect_amount("Importe total: 843,20 €"), 843.20)
+        self.assertEqual(ocr.detect_amount("Amount due USD 95.40"), 95.40)
+        self.assertEqual(
+            ocr.detect_amount("Subtotal 200,00\nTotal a pagar 242,00 EUR"), 242.00
+        )
 
     def test_three_showcase_experiences_are_navigable(self):
         from starlette.testclient import TestClient

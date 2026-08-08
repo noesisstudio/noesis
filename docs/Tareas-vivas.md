@@ -41,10 +41,11 @@
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
   reintentos y bloqueo de cuenta inactiva.
 - [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
-  con corpus real en castellano/catalán. La ruta privada de OCR ya incorpora
+  con corpus real en castellano/catalán/inglés. La ruta privada de OCR ya incorpora
   Tesseract/pytesseract para imágenes y PDFium para PDF escaneado, y Railpack instala
-  los idiomas `spa/eng`; falta comprobar el despliegue y medir precisión/tiempo. Sin
-  esa validación, mantener las promesas públicas degradadas.
+  `cat/spa/eng`, prepara orientación/contraste/escala e informa los modelos presentes;
+  falta comprobar el despliegue y medir precisión/tiempo. Sin esa validación,
+  mantener las promesas públicas degradadas.
 - [ ] Activar una vez `NOESIS_SEED_DEMO=true` en Railway, desplegar y recorrer los
   accesos reales de autónomo y gestoría y `/demo/cliente`. Confirmar que ambos
   negocios muestran datos completos y que cualquier escritura, envío o automatización
@@ -96,8 +97,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Evaluar servicio privado y proveedor compatible con el mismo corpus en
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
 - [ ] Documentos: deduplicación, búsqueda, PDF digital y OCR acotado de PDF escaneado
-  están construidos; faltan HEIC, extracción fiable de líneas y corrección masiva,
-  y validar el conjunto con corpus real.
+  trilingüe están construidos; faltan HEIC, extracción fiable de líneas y corrección
+  masiva, y validar el conjunto con corpus real.
+- [x] Perfil documental sin maquetador libre: tres plantillas probadas, color, logo,
+  pie, condiciones y validez; presupuesto PDF, revisión previa, portal aislado y
+  aceptación/rechazo con evidencia seudónima antes de preparar la factura borrador.
 - [x] Archivo del titular por años, trimestres y tipos con el mismo criterio que la
   gestoría, filtros de estado, búsqueda y vista previa privada acotada.
 - [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir

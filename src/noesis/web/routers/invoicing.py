@@ -506,6 +506,21 @@ def api_quotes(business_id: int):
     return db.list_quotes(business_id)
 
 
+@router.get("/api/{business_id}/quotes/{quote_id}/pdf")
+def api_quote_pdf(business_id: int, quote_id: int):
+    from ..invoice_pdf import build_quote_pdf
+    quote = db.get_quote(quote_id, business_id)
+    data = build_quote_pdf(quote_id, business_id) if quote else None
+    if data is None:
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    name = f"presupuesto_{quote.get('number') or quote_id}.pdf"
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{name}"'},
+    )
+
+
 @router.post("/api/{business_id}/quotes")
 async def api_add_quote(business_id: int, request: Request):
     try:
@@ -526,6 +541,10 @@ async def api_add_quote(business_id: int, request: Request):
         args["iva"] = body["iva"]
     if body.get("irpf") is not None:
         args["irpf"] = body["irpf"]
+    if body.get("validez_dias") is not None:
+        args["validez_dias"] = body["validez_dias"]
+    if body.get("notas") is not None:
+        args["notas"] = body["notas"]
     result = json.loads(run_tool("crear_presupuesto", args, business_id))
     if not result.get("ok"):
         return JSONResponse({"error": result.get("error", "No se pudo crear.")},
@@ -547,7 +566,7 @@ def api_send_quote(business_id: int, quote_id: int):
 @router.post("/api/{business_id}/quotes/{quote_id}/accept")
 def api_accept_quote(business_id: int, quote_id: int):
     try:
-        res = db.accept_quote(quote_id, business_id)
+        res = db.accept_quote(quote_id, business_id, decision_source="owner")
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=409)
     if res is None:
@@ -557,7 +576,10 @@ def api_accept_quote(business_id: int, quote_id: int):
 
 @router.post("/api/{business_id}/quotes/{quote_id}/reject")
 def api_reject_quote(business_id: int, quote_id: int):
-    q = db.reject_quote(quote_id, business_id)
+    try:
+        q = db.reject_quote(quote_id, business_id, decision_source="owner")
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=409)
     if q is None:
         return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
     return q

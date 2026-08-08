@@ -6,6 +6,18 @@
 
 ## Producto construido
 
+- El perfil documental del negocio controla plantilla, color, logotipo, pie común,
+  condiciones y validez predeterminada. Los presupuestos incorporan IVA/IRPF,
+  notas específicas y PDF profesional con la misma marca que la factura. Antes de
+  compartir se exige revisión; el cliente descarga el PDF desde su enlace aislado y
+  su aceptación o rechazo conserva origen, fecha, navegador acotado y una huella
+  seudónima de red, nunca la IP en claro. La aceptación solo crea una factura en
+  borrador: el titular continúa decidiendo su emisión.
+- El OCR privado detecta en ejecución qué modelos de idioma están realmente
+  instalados, prioriza catalán, castellano e inglés, corrige orientación/contraste y
+  mejora tickets pequeños antes de leerlos. Los importes reconocen expresiones de
+  total en los tres idiomas y el endpoint de diagnóstico distingue disponibilidad
+  general de preparación trilingüe. La precisión real sigue pendiente de corpus.
 - La web pública tiene una sola puerta de acceso y explica antes de pedir
   credenciales si la persona entra como autónomo/empresa o como gestoría. Las dos
   identidades conservan sesiones y permisos separados. El cliente final no aparece

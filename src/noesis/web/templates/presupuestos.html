@@ -69,8 +69,9 @@ function render() {
     <td class="meta">${dateIso(q.valid_until)}</td>
     <td><span class="badge ${badge(q.status)}">${esc(q.status)}</span></td>
     <td class="t-right table-actions">
-      ${q.status==='borrador'?`<button class="btn sm" onclick="send(${q.id})">Enviar</button>`:''}
-      ${(q.status==='enviado'||q.status==='aceptado')?`<button class="btn sm" onclick='shareQuote(${q.client_id||'null'}, ${JSON.stringify(q.client_name||"")})' title="Enviarle el enlace para aprobarlo">Enviar al cliente</button>`:''}
+      <a class="btn sm" href="/api/${BIZ}/quotes/${q.id}/pdf" target="_blank" rel="noopener">Ver PDF</a>
+      ${q.status==='borrador'?`<button class="btn sm" onclick="send(${q.id})">Preparar envío</button>`:''}
+      ${(q.status==='enviado'||q.status==='aceptado')?`<button class="btn sm" onclick='shareQuote(${q.client_id||'null'}, ${JSON.stringify(q.client_name||"")})' title="Previsualiza y comparte el enlace privado">Compartir con cliente</button>`:''}
       ${q.status==='enviado'?`<button class="btn sm" onclick="accept(${q.id})">Aceptado → factura</button>
         <button class="btn sm" onclick="reject(${q.id})">Rechazado</button>`:''}
       ${q.status==='aceptado'?`<a class="btn sm" href="/b/${BIZ}/facturas">Ver factura</a>`:''}
@@ -89,16 +90,30 @@ function nuevo(){
       {name:'cliente', label:'Cliente', placeholder:'Nombre del cliente'},
       {name:'concepto', label:'Concepto', placeholder:'Ej. Reforma de baño'},
       {name:'base', label:'Importe sin IVA (€)', type:'number', placeholder:'1200'},
+      {name:'iva', label:'IVA', value:'{{ business.default_vat or 21 }}', options:[
+        {value:'21',label:'21%'},{value:'10',label:'10%'},{value:'4',label:'4%'},{value:'0',label:'0%'}]},
+      {name:'irpf', label:'IRPF', value:'{{ business.default_irpf or 0 }}', options:[
+        {value:'0',label:'Sin retención'},{value:'7',label:'7%'},{value:'15',label:'15%'}]},
+      {name:'validez_dias', label:'Validez', value:'{{ business.default_quote_validity_days or 30 }}', options:[
+        {value:'7',label:'7 días'},{value:'15',label:'15 días'},{value:'30',label:'30 días'},
+        {value:'45',label:'45 días'},{value:'60',label:'60 días'},{value:'90',label:'90 días'}]},
+      {name:'notas', label:'Detalles específicos (opcional)', type:'textarea', rows:4,
+        placeholder:'Materiales incluidos, fases del trabajo o condiciones específicas.'},
     ],
     onSubmit: async (v) => {
       try {
-        await apiPost('/quotes', {cliente:v.cliente, concepto:v.concepto, base:parseFloat(v.base)});
+        await apiPost('/quotes', {cliente:v.cliente, concepto:v.concepto,
+          base:parseFloat(v.base), iva:parseFloat(v.iva), irpf:parseFloat(v.irpf),
+          validez_dias:parseInt(v.validez_dias,10), notas:v.notas});
         load();
       } catch(e){ alert('No se pudo crear: ' + e.message); }
     }
   });
 }
-async function send(id){ await apiPost('/quotes/'+id+'/send', {}); load(); }
+async function send(id){
+  if(!confirm('¿Has revisado el cliente, el importe, los impuestos y las condiciones? Al continuar se asignará número y quedará listo para compartir.')) return;
+  await apiPost('/quotes/'+id+'/send', {}); load();
+}
 async function reject(id){ await apiPost('/quotes/'+id+'/reject', {}); load(); }
 async function accept(id){
   if(!confirm('¿Marcar como aceptado? Se creará la factura en borrador automáticamente.')) return;

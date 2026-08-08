@@ -117,6 +117,11 @@
           <div class="doc-meta">
             Base {{ q.base | eur }} · IVA {{ q.vat_rate }}%{% if q.irpf_rate %} · IRPF {{ q.irpf_rate }}%{% endif %}
             {% if q.valid_until %}<br>Válido hasta el {{ q.valid_until }}{% endif %}
+            {% if q.notes %}<br><br>{{ q.notes }}{% endif %}
+            {% if data.business.quote_terms %}<br><br><b>Condiciones:</b><br>{{ data.business.quote_terms }}{% endif %}
+          </div>
+          <div class="doc-actions">
+            <a class="pill-link" href="/p/{{ token }}/quotes/{{ q.id }}/pdf" target="_blank" rel="noopener">Ver PDF completo</a>
           </div>
           <div class="doc-actions">
             <form method="post" action="/p/{{ token }}/quotes/{{ q.id }}/accept">
@@ -147,7 +152,9 @@
               {% else %}<span class="badge b-red">Rechazado</span>{% endif %}
             </div>
           </div>
-          <div class="doc-meta">{{ q.total | eur }}</div>
+          <div class="doc-meta">{{ q.total | eur }} ·
+            <a class="pill-link" href="/p/{{ token }}/quotes/{{ q.id }}/pdf" target="_blank" rel="noopener">Ver PDF</a>
+          </div>
         </div>
       {% endfor %}
     {% endif %}
