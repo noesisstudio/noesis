@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Aplicar el esquema 44 y comprobar en producción configuración/PDF de presupuesto, descarga aislada y decisión trazable; abrir y revocar una autorización temporal desde Ajustes y confirmar que administración solo muestra su alcance; registrar facturas reales de infraestructura en el CFO y comprobar margen observado; verificar Tesseract cat/spa/eng y medir precisión/tiempos con corpus real; revisar términos con abogado y forzar nueva aceptación si lo exige su criterio; verificar rectificativas, archivo del titular, entrada por perfil y cinco vistas de gestoría; probar una gestoría real; configurar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración independiente con RPO/RTO; rotar secretos y repetir Meta, Stripe, correo, Google, audio, backup y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Validar con usuarios reales configuración/PDF de presupuesto, descarga aislada y decisión trazable; abrir y revocar una autorización temporal desde Ajustes; registrar facturas reales de infraestructura en el CFO; comprobar Tesseract cat/spa/eng y medir precisión/tiempos con corpus real; revisar términos con abogado y forzar nueva aceptación si lo exige su criterio; verificar rectificativas, archivo del titular, entrada por perfil y cinco vistas de gestoría; probar una gestoría real; configurar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración independiente con RPO/RTO; rotar secretos y repetir Meta, Stripe, correo, Google, audio, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

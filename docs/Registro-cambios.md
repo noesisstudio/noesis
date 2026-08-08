@@ -44,7 +44,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar eventos `support.*`/`admin.platform_cost_*`,
   `/ready`=44 y ledger del mes. El downgrade elimina solo estas tablas; el
   diagnóstico de solo lectura y las cuentas siguen funcionando.
-- **Estado de publicación:** local verificado; pendiente commit, push y despliegue.
+- **Estado de publicación:** commit `f472d08` en `main`, CI general/PostgreSQL verde
+  y producción verificada con release `f472d08d85cb` y esquema 44.
 
 ## 2026-08-08 20:15 — documentos comerciales y OCR listos para validar en piloto
 

@@ -19,7 +19,7 @@
   total en los tres idiomas y el endpoint de diagnóstico distingue disponibilidad
   general de preparación trilingüe. La precisión real sigue pendiente de corpus.
 - El titular puede abrir desde Ajustes una ventana de soporte de 1, 4, 24 o 72 horas,
-  con motivo y permisos concretos. Solo un usuario de la misma empresa puede crearla;
+  con motivo y permisos concretos. Solo el correo titular puede crearla;
   el administrador no puede autoconcedérsela. Caduca, se revoca y deja evidencia en
   la bitácora encadenada. Por ahora habilita la autorización y muestra el alcance en
   el centro técnico; no existe suplantación silenciosa ni un editor universal.

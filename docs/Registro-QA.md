@@ -2,6 +2,10 @@
 
 ## 2026-08-08 — soporte consentido, CFO observado y términos operativos
 
+- CI de `main` [31269731863](https://github.com/noesisstudio/noesis/actions/runs/31269731863)
+  verde: suite/migraciones, dependencias, secretos, análisis estático y humo
+  PostgreSQL. Producción respondió `/health` con release `f472d08d85cb` y `/ready`
+  con esquema 44; publicación técnica verificada sin navegador.
 - Migraciones 43-44 verificadas en subida y bajada: autorización de soporte y libro
   de costes. Solo el correo titular abre/revoca una ventana por motivo, alcance y
   duración; un usuario de otra empresa o un usuario secundario de la misma empresa
