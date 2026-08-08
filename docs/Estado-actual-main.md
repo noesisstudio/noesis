@@ -26,6 +26,10 @@
   límites de píxeles, tiempo y caracteres; no se envía el documento a una API. Una
   referencia inequívoca del mensaje puede
   asociar el papel al cliente/proyecto, pero nunca se adivina ante ambigüedad.
+- El titular dispone del mismo archivo temporal que la gestoría: año, trimestre,
+  ingresos, gastos, tickets, pendientes y otros, con búsqueda, estado y primera
+  página privada. La fecha efectiva procede de la factura, gasto o recepción ligada;
+  no se mueve ni duplica el archivo original.
 - Hay portales privados para cliente y trabajador. La gestoría conserva el enlace
   histórico por empresa y añade una cuenta profesional: una misma gestoría puede
   llevar varias empresas mediante invitaciones de un solo uso, acceso explícito y

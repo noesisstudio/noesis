@@ -147,7 +147,6 @@ async def api_update_rectifying_invoice(
         )
     except (TypeError, ValueError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
-    return invoice
 
 
 @router.post("/api/{business_id}/invoices/{invoice_id}/cancel-verifactu")

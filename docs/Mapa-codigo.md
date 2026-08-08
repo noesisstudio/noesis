@@ -122,6 +122,10 @@
   PDF, entrega durable, historial, anulación confirmada y rectificación guiada por
   diferencias. `db.py` conserva el original, bloquea borradores rectificativos
   duplicados, valida F2/R5 y permite revisar el ajuste solo antes de emitir.
+- `src/noesis/gestoria_workspace.py` + `routers/documents.py` +
+  `templates/documentos.html`: archivo documental común para titular y gestoría.
+  Deriva fecha efectiva, período y grupo una vez; el panel normal añade navegación,
+  búsqueda, revisión y primera página privada sin duplicar ficheros.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
   Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
   cerrada en producción si falta identidad legal o autorización explícita y no

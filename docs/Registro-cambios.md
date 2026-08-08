@@ -23,6 +23,26 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-08 — archivo del titular alineado con gestoría
+
+- **Autor/agente:** Codex.
+- **Objetivo:** que el autónomo encuentre y previsualice sus papeles por período y
+  tipo con la misma clasificación que verá su despacho.
+- **Áreas y archivos:** lectura documental compartida, router, pantalla Documentos,
+  estilos, pruebas, estado y trazabilidad. Incluye la retirada del retorno residual
+  señalado por Ruff en el endpoint rectificativo anterior.
+- **Cambios de datos/migración:** ninguno; esquema 41. No mueve ni copia archivos.
+- **Pruebas ejecutadas:** 37/37 focalizadas; suite completa 422/422; `ruff` y
+  `compileall` verdes.
+- **Dependencias o validaciones externas:** ninguna. OCR y preview usan el recorrido
+  local ya existente.
+- **Riesgo/punto probable de fallo:** representación responsive o generación de
+  primera página de un PDF real. El endpoint es acotado, autenticado y `no-store`.
+- **Diagnóstico y rollback:** abrir Documentos, cambiar T/año/tipo y previsualizar;
+  comparar con Documentos de la gestoría en el mismo período. Revertir no pierde
+  datos porque la organización es una lectura de metadatos existentes.
+- **Estado de publicación:** probado en local; pendiente de commit, CI y despliegue.
+
 ## 2026-08-08 — rectificativas guiadas sin alterar la factura emitida
 
 - **Autor/agente:** Codex.
@@ -42,7 +62,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** crear una F1/F2, emitirla, abrir «Rectificar», guardar
   y revisar el borrador; comprobar que el total original no cambia y que no se crea
   un segundo borrador. Revertir este commit conserva datos porque no migra esquema.
-- **Estado de publicación:** probado en local; pendiente de commit, CI y despliegue.
+- **Estado de publicación:** commit `6a0e961` en `main`; humo PostgreSQL verde. La
+  suite del CI se detuvo por un retorno residual de Ruff, corregido en el siguiente
+  commit junto con el archivo documental.
 
 ## 2026-08-08 — corrige vulnerabilidades conocidas de pypdf
 

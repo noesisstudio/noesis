@@ -151,6 +151,29 @@ def _filter_documents(documents: list[dict], view: str) -> list[dict]:
     return [item for item in documents if item.get("group") == view]
 
 
+def document_archive(
+    business_id: int,
+    *,
+    year: int,
+    quarter: int | None,
+    document_view: str = "todos",
+) -> dict:
+    """Archivo común para titular y gestoría, con una única regla de período."""
+    period = _period(year, quarter)
+    all_documents = _period_documents(business_id, period, view="todos")
+    return {
+        "period": period,
+        "documents": _filter_documents(all_documents, document_view),
+        "document_view": (
+            document_view if document_view in DOCUMENT_FILTERS else "todos"
+        ),
+        "document_counts": {
+            key: len(_filter_documents(all_documents, key))
+            for key in DOCUMENT_FILTERS
+        },
+    }
+
+
 def _annual_347(invoices: list[dict], received: list[dict]) -> list[dict]:
     parties: dict[tuple[str, str], float] = defaultdict(float)
     for item in invoices:
@@ -230,7 +253,10 @@ def workspace(business_id: int, *, year: int, quarter: int | None,
     current = fiscal_period(business_id, year, quarter)
     annual = fiscal_period(business_id, year, None)
     quarters = [fiscal_period(business_id, year, value) for value in range(1, 5)]
-    all_period_documents = _period_documents(business_id, current, view="todos")
+    archive = document_archive(
+        business_id, year=year, quarter=quarter, document_view="todos"
+    )
+    all_period_documents = archive["documents"]
     documents = _filter_documents(all_period_documents, document_view)
     pending = [item for item in all_period_documents
                if item.get("doc_status") == "pendiente_revisar"]
@@ -300,11 +326,11 @@ def workspace(business_id: int, *, year: int, quarter: int | None,
     ]
     return {
         "period": current, "annual": annual, "quarters": quarters,
-        "documents": documents, "document_view": document_view,
-        "document_counts": {
-            key: len(_filter_documents(all_period_documents, key))
-            for key in DOCUMENT_FILTERS
-        },
+        "documents": documents,
+        "document_view": (
+            document_view if document_view in DOCUMENT_FILTERS else "todos"
+        ),
+        "document_counts": archive["document_counts"],
         "pending_documents": pending, "unlinked_documents": unlinked,
         "profile": profile, "models": models,
         "model_347_candidates": _annual_347(

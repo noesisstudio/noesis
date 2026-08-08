@@ -92,6 +92,8 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Documentos: deduplicación, búsqueda, PDF digital y OCR acotado de PDF escaneado
   están construidos; faltan HEIC, extracción fiable de líneas y corrección masiva,
   y validar el conjunto con corpus real.
+- [x] Archivo del titular por años, trimestres y tipos con el mismo criterio que la
+  gestoría, filtros de estado, búsqueda y vista previa privada acotada.
 - [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por

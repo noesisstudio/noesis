@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-08-08 — archivo documental común para titular y gestoría
+
+- El titular navega por año, trimestre, ingresos, gastos, tickets, pendientes y
+  otros con los mismos cálculos de fecha efectiva que el expediente profesional.
+  Búsqueda y estado se aplican sobre el período seleccionado; no crean carpetas ni
+  copias físicas divergentes.
+- PDF e imágenes ofrecen una primera página acotada en un endpoint autenticado con
+  `no-store`; abrir el original sigue disponible. Una sesión de otro negocio recibe
+  403 incluso con identificadores válidos.
+- 37/37 pruebas focalizadas de gestoría, documentos, PDF/OCR, backups y seguridad;
+  suite completa **422/422** en 246 segundos. `ruff`, `compileall` y el aislamiento
+  del endpoint están verdes.
+- El CI del commit rectificativo confirmó el humo PostgreSQL, pero detuvo la suite
+  por un `return invoice` residual detectado por Ruff. Esta rama lo elimina y la
+  misma regla está verificada localmente antes de volver a publicar.
+- Falta recorrido visual real de escritorio/móvil; no se usa navegador automatizado
+  por el cierre recurrente de la aplicación indicado por el founder.
+
 ## 2026-08-08 — rectificación segura y revisable de facturas emitidas
 
 - La pantalla muestra la factura original, importe, causa, dirección del ajuste,
@@ -14,8 +32,9 @@
 - Pruebas focalizadas: 5/5 verdes sobre series, API, revisión, PDF y Veri*Factu.
   Suite completa: **421/421** en 277 segundos. `compileall` y `git diff --check`
   verdes. Los logs de caídas externas son escenarios adversos simulados.
-- Falta CI PostgreSQL y recorrido visual real tras desplegar; no se usó navegador
-  automatizado por el cierre recurrente indicado por el founder.
+- El humo PostgreSQL quedó verde. Ruff detectó un retorno residual en el endpoint
+  nuevo; se corrige en el siguiente commit antes de repetir el CI completo. Falta
+  recorrido visual real tras desplegar.
 
 ## 2026-08-08 — actualización de seguridad de pypdf
 

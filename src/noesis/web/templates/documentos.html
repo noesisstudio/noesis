@@ -17,8 +17,8 @@
   <div class="card-b" id="g-requests"></div>
 </div>
 
-<div class="grid g3" style="margin-top:16px">
-  <div class="card" id="subir">
+<div class="document-library-layout" style="margin-top:16px">
+  <aside class="card document-upload-card" id="subir">
     <div class="card-h"><h2>Subir un documento</h2></div>
     <div class="card-b">
       <label class="fld">Archivo (PDF o foto)</label>
@@ -38,35 +38,47 @@
       <div id="d-msg" class="meta" style="margin-top:10px"></div>
       <div id="d-ocr" class="meta" style="margin-top:6px"></div>
     </div>
-  </div>
+  </aside>
 
-  <div class="card col-2">
-    <div class="card-h"><h2>Tus documentos <span class="hint" id="d-hint"></span></h2>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
+  <section class="card document-archive-card">
+    <div class="card-h document-archive-head">
+      <div><div class="kicker">Archivo del negocio</div><h2>Documentos por período</h2>
+        <span class="hint" id="d-hint">Todo localizado sin mover carpetas.</span></div>
+      <div class="document-period-picker">
+        <label><span>Año</span><select id="d-year" onchange="renderList()"></select></label>
+        <label><span>Trimestre</span><select id="d-quarter" onchange="renderList()">
+          <option value="1">T1</option><option value="2">T2</option>
+          <option value="3">T3</option><option value="4">T4</option>
+        </select></label>
+      </div>
+    </div>
+    <div class="card-b document-archive-body">
+      <div class="document-toolbar">
+        <div class="document-tabs" id="d-kind-tabs"></div>
+        <div class="document-search-tools">
         <input class="input" id="d-search" type="search"
                placeholder="Buscar archivo, cliente o contenido"
                aria-label="Buscar documentos" oninput="scheduleDocumentSearch()"
-               style="max-width:300px">
-        <select id="d-filter" onchange="renderList()" style="max-width:220px">
-          <option value="">Todos</option>
+               >
+        <select id="d-filter" onchange="paintDocuments()">
+          <option value="">Cualquier estado</option>
           <option value="pendiente_revisar">Pendientes de revisar</option>
           <option value="revisado">Revisados</option>
           <option value="enviado_gestoria">Enviados a gestoría</option>
           <option value="validado">Validados</option>
         </select>
       </div>
-    </div>
-    <div class="card-b table-pad" style="padding-top:6px">
-      <div class="table-wrap">
-        <table class="fx-table">
-          <thead><tr><th>Documento</th><th>Estado</th>
-            <th class="t-right">Importe</th><th></th></tr></thead>
-          <tbody id="d-body"></tbody>
-        </table>
+      </div>
+      <div class="document-workspace" id="d-workspace">
+        <div class="document-file-list" id="d-body"></div>
+        <aside class="document-preview" id="d-preview">
+          <div class="document-preview-empty"><b>Selecciona un documento</b>
+            <span>Verás la primera página y sus datos sin salir del archivo.</span></div>
+        </aside>
       </div>
       <div id="d-empty"></div>
     </div>
-  </div>
+  </section>
 </div>
 
 <!-- Revisión del borrador leído por IA: el usuario corrige y confirma. -->
@@ -120,8 +132,19 @@ const STATUS = { pendiente_revisar:['Pendiente','b-amber'], revisado:['Revisado'
   rechazado:['Rechazado','b-red'], duplicado:['Duplicado','b-gray'] };
 let reviewDocId = null;
 let documentSearchTimer = null;
+let DOCUMENT_ARCHIVE = {documents:[], document_counts:{}};
+let DOCUMENT_VIEW = 'todos';
+let selectedDocumentId = null;
+const DOCUMENT_VIEWS = [
+  ['todos','Todos'], ['ingresos','Ingresos'], ['gastos','Gastos'],
+  ['tickets','Tickets'], ['pendientes','Por revisar'], ['otros','Otros']
+];
 
 async function load() {
+  const now = new Date();
+  el('d-year').innerHTML = Array.from({length:6}, (_,i)=>now.getFullYear()-i)
+    .map(year=>`<option value="${year}">${year}</option>`).join('');
+  el('d-quarter').value=String(Math.floor(now.getMonth()/3)+1);
   try {
     const clients = await api('/clients');
     el('d-client').innerHTML = '<option value="">— Sin cliente —</option>' +
@@ -170,18 +193,44 @@ async function replyRequest(id) {
 
 function scheduleDocumentSearch() {
   clearTimeout(documentSearchTimer);
-  documentSearchTimer = setTimeout(renderList, 180);
+  documentSearchTimer = setTimeout(paintDocuments, 180);
 }
 
 async function renderList() {
+  const year=el('d-year').value, quarter=el('d-quarter').value;
+  DOCUMENT_ARCHIVE = await api(`/document-archive?year=${encodeURIComponent(year)}&quarter=${encodeURIComponent(quarter)}&view=${encodeURIComponent(DOCUMENT_VIEW)}`);
+  if (!DOCUMENT_ARCHIVE.documents.some(item=>item.id===selectedDocumentId)) {
+    selectedDocumentId = DOCUMENT_ARCHIVE.documents[0]?.id || null;
+  }
+  paintDocuments();
+}
+
+function selectDocumentView(view) {
+  DOCUMENT_VIEW = DOCUMENT_VIEWS.some(item=>item[0]===view) ? view : 'todos';
+  selectedDocumentId = null;
+  renderList();
+}
+
+function showPreview(id) {
+  selectedDocumentId = id;
+  paintDocuments();
+}
+
+function paintDocuments() {
   const query = el('d-search').value.trim();
-  const docs = await api('/documents' + (query ? `?q=${encodeURIComponent(query)}` : ''));
+  const normalized=query.toLocaleLowerCase('es');
+  const docs = DOCUMENT_ARCHIVE.documents.filter(item=>!normalized || [
+    item.filename,item.note,item.review_note,item.ocr_text,item.client_name,
+    item.project_name,KINDS[item.kind],item.kind
+  ].some(value=>String(value||'').toLocaleLowerCase('es').includes(normalized)));
   const filter = el('d-filter').value;
   const shown = filter ? docs.filter(d => d.doc_status === filter) : docs;
-
-  const pending = docs.filter(d => d.doc_status === 'pendiente_revisar').length;
-  el('d-hint').textContent = docs.length
-    ? `· ${docs.length} ${query ? 'encontrado(s)' : 'guardado(s)'}${pending ? ` · ${pending} por revisar` : ''}` : '';
+  const counts=DOCUMENT_ARCHIVE.document_counts||{};
+  el('d-kind-tabs').innerHTML=DOCUMENT_VIEWS.map(([key,label])=>
+    `<button class="document-tab ${DOCUMENT_VIEW===key?'active':''}" onclick="selectDocumentView('${key}')">${label}<span>${counts[key]||0}</span></button>`
+  ).join('');
+  const period=DOCUMENT_ARCHIVE.period?.label||'';
+  el('d-hint').textContent = `${period} · ${counts.todos||0} documento(s)${(counts.pendientes||0)?` · ${counts.pendientes} por revisar`:''}`;
 
   el('d-body').innerHTML = shown.map(d => {
     const st = STATUS[d.doc_status] || STATUS.revisado;
@@ -203,23 +252,39 @@ async function renderList() {
       actions.push(`<button class="iconbtn" title="Marcar como enviado a gestoría" onclick="setStatus(${d.id},'enviado_gestoria')">📤</button>`);
     }
     actions.push(`<button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button>`);
-    return `<tr>
-      <td>
-        <div class="fx-main">
-          <a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener"><b>${esc(d.filename)}</b></a>
-          <span class="badge b-gray">${esc(KINDS[d.kind] || d.kind)}</span>
-        </div>
-        <div class="meta">${dateIso(d.created_at)}${d.project_name ? ` · Proyecto ${esc(d.project_name)}` : ''}</div>
-        ${d.review_note ? `<div class="meta">${esc(d.review_note)}</div>` : ''}
-      </td>
-      <td><span class="badge ${st[1]}">${st[0]}</span>${d.confidence ? `<div class="meta">${Math.round(d.confidence)}% seguro</div>` : ''}</td>
-      <td class="t-right num">${importe}</td>
-      <td class="t-right table-actions">${actions.join(' ')}</td>
-    </tr>`;
+    const context=[d.client_name,d.project_name].filter(Boolean).map(esc).join(' · ');
+    return `<article class="document-file-row ${selectedDocumentId===d.id?'selected':''}">
+      <button class="document-file-open" onclick="showPreview(${d.id})" aria-label="Previsualizar ${esc(d.filename)}">
+        <span class="document-file-kind">${d.mime==='application/pdf'?'PDF':String(d.mime||'').startsWith('image/')?'IMG':'DOC'}</span>
+        <span class="document-file-main"><b>${esc(d.filename)}</b><small>${esc(KINDS[d.kind]||d.kind)}${context?` · ${context}`:''}</small></span>
+      </button>
+      <div class="document-file-facts"><span>${esc(d.effective_on||dateIso(d.created_at))}</span><b>${importe}</b></div>
+      <div class="document-file-state"><span class="badge ${st[1]}">${st[0]}</span>${d.confidence?`<small>${Math.round(d.confidence)}% seguro</small>`:''}</div>
+      <div class="document-file-actions">${actions.join(' ')}</div>
+    </article>`;
   }).join('');
   el('d-empty').innerHTML = shown.length ? '' :
     emptyState('Nada por aquí', query ? 'No encuentro documentos con esas palabras.' : filter ? 'No hay documentos en este estado.' :
       'Sube un PDF o haz una foto de un ticket para empezar.', '#subir', 'Subir documento');
+  el('d-workspace').style.display=shown.length?'grid':'none';
+  const selected=shown.find(item=>item.id===selectedDocumentId)||shown[0];
+  if(selected && selected.id!==selectedDocumentId) selectedDocumentId=selected.id;
+  paintPreview(selected);
+}
+
+function paintPreview(d) {
+  if(!d){el('d-preview').innerHTML='<div class="document-preview-empty"><b>Sin documento seleccionado</b><span>Cambia de filtro o sube un archivo.</span></div>';return;}
+  const st=STATUS[d.doc_status]||STATUS.revisado;
+  const context=[d.client_name&&`Cliente: ${d.client_name}`,d.project_name&&`Proyecto: ${d.project_name}`].filter(Boolean);
+  el('d-preview').innerHTML=`<div class="document-preview-head">
+      <div><div class="kicker">Vista previa</div><h3>${esc(d.filename)}</h3></div>
+      <a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener">Abrir original ↗</a>
+    </div>
+    ${d.previewable?`<div class="document-preview-canvas"><img src="/api/${BIZ}/documents/${d.id}/preview" alt="Primera página de ${esc(d.filename)}" onerror="this.parentElement.innerHTML='<span>No se pudo generar la vista previa.</span>'"></div>`:
+      '<div class="document-preview-canvas unavailable"><span>Este formato se abre desde el original.</span></div>'}
+    <div class="document-preview-meta"><span>Tipo<b>${esc(KINDS[d.kind]||d.kind)}</b></span><span>Fecha<b>${esc(d.effective_on||dateIso(d.created_at))}</b></span><span>Estado<b>${st[0]}</b></span>${d.ocr_amount?`<span>Importe leído<b>${eur(d.ocr_amount)}</b></span>`:''}</div>
+    ${context.length?`<div class="document-preview-context">${context.map(value=>`<span>${esc(value)}</span>`).join('')}</div>`:''}
+    ${d.review_note?`<p class="meta">${esc(d.review_note)}</p>`:''}`;
 }
 
 async function uploadDoc() {

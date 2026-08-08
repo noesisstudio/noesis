@@ -4650,6 +4650,55 @@ class GestoriaTestCase(unittest.TestCase):
         self.assertEqual(fiscal["n_facturas_recibidas"], 1)
         self.assertEqual(fiscal["iva_soportado"], 21.0)
 
+    def test_owner_document_archive_reuses_periods_and_private_preview(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import service as docservice
+        from noesis.web import server
+
+        business, _ = self.make_business("Archivo titular")
+        foreign, _ = self.make_business("Archivo ajeno")
+        own_doc = docservice.upload(
+            business["id"], "ticket-propio.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        foreign_doc = docservice.upload(
+            foreign["id"], "ticket-ajeno.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        db.create_user(
+            "archivo@example.com", auth.hash_password(TEST_PASSWORD), business["id"]
+        )
+        today = date.today()
+        quarter = (today.month - 1) // 3 + 1
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login",
+                    data={"email": "archivo@example.com", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                page = client.get(f"/b/{business['id']}/documentos")
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("Documentos por período", page.text)
+                archive = client.get(
+                    f"/api/{business['id']}/document-archive"
+                    f"?year={today.year}&quarter={quarter}&view=tickets"
+                )
+                self.assertEqual(archive.status_code, 200, archive.text)
+                payload = archive.json()
+                self.assertEqual(payload["document_counts"]["tickets"], 1)
+                self.assertEqual(payload["documents"][0]["id"], own_doc["id"])
+                preview = client.get(
+                    f"/api/{business['id']}/documents/{own_doc['id']}/preview"
+                )
+                self.assertEqual(preview.status_code, 200)
+                self.assertIn("no-store", preview.headers["cache-control"])
+                blocked = client.get(
+                    f"/api/{foreign['id']}/documents/{foreign_doc['id']}/preview"
+                )
+                self.assertEqual(blocked.status_code, 403)
+
     def test_professional_portfolio_accepts_two_clients_without_mixing_them(self):
         from starlette.testclient import TestClient
         from noesis.web import server
