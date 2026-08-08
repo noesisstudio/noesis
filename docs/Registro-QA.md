@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-08-08 — diagnóstico técnico privado por cuenta
+
+- El administrador abre una cuenta desde el centro de mando y recibe únicamente
+  activación, estados de integración, recuentos y distribución de colas/documentos/
+  facturas. La consulta no recupera nombres de clientes, importes, conceptos,
+  mensajes, archivos ni credenciales.
+- La ruta reutiliza la autenticación reforzada del admin —Google OAuth obligatorio
+  en producción— y cada apertura registra actor, negocio afectado, `request_id` y
+  modo `read_only` en la bitácora append-only encadenada.
+- Prueba específica verde: administrador autorizado obtiene 200, el contenido
+  sensible sembrado no aparece, un usuario ordinario recibe redirección y el evento
+  auditado identifica actor y negocio. Suite completa: **423/423**; Ruff,
+  `compileall`, verdad del proyecto y diff verdes.
+- La primera pasada completa encontró únicamente un `WinError 32` de Windows al
+  limpiar la base temporal de una prueba OCR después de ejecutarla. La prueba
+  afectada pasó al repetirla aislada y la segunda suite completa terminó 423/423;
+  no hubo fallo funcional ni se modificó el producto para ocultar la incidencia.
+- Falta recorrido visual autenticado tras desplegar. No se habilita mutación ni
+  suplantación: requiere diseñar primero consentimiento temporal y permisos finos.
+
 ## 2026-08-08 — archivo documental común para titular y gestoría
 
 - El titular navega por año, trimestre, ingresos, gastos, tickets, pendientes y
@@ -12,9 +32,9 @@
 - 37/37 pruebas focalizadas de gestoría, documentos, PDF/OCR, backups y seguridad;
   suite completa **422/422** en 246 segundos. `ruff`, `compileall` y el aislamiento
   del endpoint están verdes.
-- El CI del commit rectificativo confirmó el humo PostgreSQL, pero detuvo la suite
-  por un `return invoice` residual detectado por Ruff. Esta rama lo elimina y la
-  misma regla está verificada localmente antes de volver a publicar.
+- El primer commit rectificativo confirmó el humo PostgreSQL, pero Ruff detectó un
+  `return invoice` residual. El commit posterior lo eliminó y el CI completo —suite,
+  migraciones y humo PostgreSQL— terminó verde.
 - Falta recorrido visual real de escritorio/móvil; no se usa navegador automatizado
   por el cierre recurrente de la aplicación indicado por el founder.
 
@@ -33,8 +53,8 @@
   Suite completa: **421/421** en 277 segundos. `compileall` y `git diff --check`
   verdes. Los logs de caídas externas son escenarios adversos simulados.
 - El humo PostgreSQL quedó verde. Ruff detectó un retorno residual en el endpoint
-  nuevo; se corrige en el siguiente commit antes de repetir el CI completo. Falta
-  recorrido visual real tras desplegar.
+  nuevo; el commit documental posterior lo corrigió y repitió el CI completo en
+  verde. Falta recorrido visual real tras desplegar.
 
 ## 2026-08-08 — actualización de seguridad de pypdf
 

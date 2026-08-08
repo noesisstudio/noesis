@@ -72,6 +72,11 @@
   solo lectura. Resume controles con evidencia, presión de acceso agregada y eventos
   sin contenido de clientes. Las acciones administrativas quedan en una bitácora
   append-only encadenada por hash; producción exige Google OAuth para el admin.
+- Desde cada cuenta, el fundador puede abrir un diagnóstico técnico de solo lectura:
+  activación, integración, volúmenes, estados y colas. No enseña nombres de clientes,
+  importes, conceptos, mensajes, archivos ni credenciales, y cada apertura queda
+  auditada. El soporte todavía no puede modificar datos ni suplantar al titular;
+  esa intervención requerirá consentimiento temporal, motivo y alcance explícitos.
 - Cada backup se restaura al crearlo y, además, un simulacro semanal independiente
   vuelve a restaurar la última base y verifica el ZIP documental en un entorno
   descartable. La entrada documental admite ClamAV privado por streaming y puede

@@ -5091,6 +5091,55 @@ class AdminCommandCenterTestCase(unittest.TestCase):
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
 
+    def test_support_snapshot_is_admin_only_private_and_audited(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección Noesis")
+        target, _ = self.make_business("Cuenta diagnosticada")
+        db.add_client(
+            "CLIENTE-SECRETO-NO-MOSTRAR", phone="699999999",
+            business_id=target["id"],
+        )
+        admin = db.create_user(
+            "founder-support@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        db.create_user(
+            "ordinary@example.com", auth.hash_password(TEST_PASSWORD), target["id"]
+        )
+        with (
+            patch.object(config, "ADMIN_EMAIL", "founder-support@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "founder-support@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Cuenta diagnosticada", page.text)
+                self.assertIn("Solo lectura", page.text)
+                self.assertNotIn("CLIENTE-SECRETO-NO-MOSTRAR", page.text)
+                client.post("/logout")
+                client.post("/login", data={
+                    "email": "ordinary@example.com", "password": TEST_PASSWORD,
+                })
+                blocked = client.get(
+                    f"/admin/cuentas/{target['id']}", follow_redirects=False
+                )
+        self.assertEqual(blocked.status_code, 303)
+        self.assertEqual(blocked.headers["location"], "/login")
+        event = next(
+            item for item in db.list_security_events()
+            if item["event_type"] == "admin.support_snapshot_viewed"
+        )
+        self.assertEqual(event["actor_user_id"], admin["id"])
+        self.assertEqual(event["subject_business_id"], target["id"])
+        self.assertEqual(event["metadata"], {"mode": "read_only"})
+
     def test_missing_required_google_blocks_admin_not_the_whole_service(self):
         from starlette.testclient import TestClient
         from noesis.web import server

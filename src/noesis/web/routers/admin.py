@@ -56,6 +56,28 @@ def admin_panel(request: Request):
     })
 
 
+@router.get("/admin/cuentas/{business_id}", response_class=HTMLResponse)
+def admin_account_support(request: Request, business_id: int):
+    """Diagnóstico técnico de una cuenta, deliberadamente de solo lectura."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    snapshot = db.admin_support_snapshot(business_id)
+    if not snapshot:
+        return Response("Cuenta no encontrada.", status_code=404)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.support_snapshot_viewed",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=business_id,
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"mode": "read_only"},
+    )
+    return TEMPLATES.TemplateResponse(request, "admin_account.html", {
+        "snapshot": snapshot,
+    })
+
+
 @router.post("/admin/solicitudes/{request_id}/estado")
 def admin_request_status(request: Request, request_id: int, status: str = Form(...)):
     """Marca una solicitud como contactada o descartada."""

@@ -23,6 +23,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-08 18:03 — diagnóstico de soporte por cuenta sin puerta trasera
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir que dirección diagnostique incidencias de un negocio sin
+  abrir ni exponer su contenido operativo.
+- **Áreas y archivos:** lectura agregada en `db.py`, ruta y pantalla interna de
+  administración, enlace desde cuentas, responsive, prueba y documentación viva.
+- **Cambios de datos/migración:** ninguno; esquema 41. Cada consulta añade un evento
+  a la bitácora de seguridad existente.
+- **Pruebas ejecutadas:** prueba específica de autorización, privacidad y auditoría;
+  suite completa 423/423 en la segunda pasada; Ruff, `compileall`, verdad del
+  proyecto y diff verdes. La primera pasada tuvo un bloqueo temporal de Windows al
+  borrar la base de una prueba OCR; esa prueba aislada y la repetición completa
+  quedaron verdes.
+- **Dependencias o validaciones externas:** ninguna credencial nueva. En producción
+  el panel continúa exigiendo Google OAuth configurado.
+- **Riesgo/punto probable de fallo:** una consulta agregada sobre una tabla grande o
+  una plantilla admin en móvil; no hay mutaciones ni lectura de contenidos.
+- **Diagnóstico y rollback:** abrir «Diagnóstico» desde Cuentas y buscar el evento
+  `admin.support_snapshot_viewed`. Revertir la ruta/vista no afecta datos de negocio;
+  los eventos de auditoría ya escritos se conservan.
+- **Estado de publicación:** probado en local; pendiente de commit, CI, despliegue y
+  recorrido visual autenticado.
+
 ## 2026-08-08 — archivo del titular alineado con gestoría
 
 - **Autor/agente:** Codex.
@@ -41,7 +65,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** abrir Documentos, cambiar T/año/tipo y previsualizar;
   comparar con Documentos de la gestoría en el mismo período. Revertir no pierde
   datos porque la organización es una lectura de metadatos existentes.
-- **Estado de publicación:** probado en local; pendiente de commit, CI y despliegue.
+- **Estado de publicación:** commit `84ad8c3` en `main`; CI completo y humo
+  PostgreSQL verdes. Despliegue y recorrido visual aún no verificados.
 
 ## 2026-08-08 — rectificativas guiadas sin alterar la factura emitida
 

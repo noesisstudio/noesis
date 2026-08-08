@@ -10212,6 +10212,80 @@ def admin_overview() -> dict:
     }
 
 
+def admin_support_snapshot(business_id: int) -> dict | None:
+    """Diagnóstico técnico por cuenta sin exponer contenido operativo.
+
+    Devuelve estados y recuentos. No devuelve nombres de clientes, conceptos,
+    mensajes, documentos, importes de facturas ni credenciales.
+    """
+    business = get_business(business_id)
+    if not business:
+        return None
+
+    def _grouped(conn, table: str, column: str) -> dict[str, int]:
+        rows = conn.execute(
+            f"SELECT {column} AS value, COUNT(*) AS total FROM {table} "
+            f"WHERE business_id=? GROUP BY {column}",
+            (business_id,),
+        ).fetchall()
+        return {str(row["value"] or "sin_estado"): int(row["total"]) for row in rows}
+
+    with get_conn() as conn:
+        counts = conn.execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM users WHERE business_id=?) AS users, "
+            "(SELECT COUNT(*) FROM clients WHERE business_id=?) AS clients, "
+            "(SELECT COUNT(*) FROM jobs WHERE business_id=?) AS jobs, "
+            "(SELECT COUNT(*) FROM projects WHERE business_id=?) AS projects, "
+            "(SELECT COUNT(*) FROM workers WHERE business_id=?) AS workers, "
+            "(SELECT COUNT(*) FROM invoices WHERE business_id=?) AS invoices, "
+            "(SELECT COUNT(*) FROM expenses WHERE business_id=?) AS expenses, "
+            "(SELECT COUNT(*) FROM received_invoices WHERE business_id=?) "
+            "AS received_invoices, "
+            "(SELECT COUNT(*) FROM documents WHERE business_id=?) AS documents, "
+            "(SELECT COUNT(*) FROM documents WHERE business_id=? "
+            "AND doc_status='pendiente_revisar') AS documents_pending, "
+            "(SELECT COUNT(*) FROM gestoria_business_access WHERE business_id=? "
+            "AND revoked_at IS NULL) AS gestoria_accesses",
+            (business_id,) * 11,
+        ).fetchone()
+        queues = {
+            "whatsapp": _grouped(conn, "whatsapp_outbox", "status"),
+            "email": _grouped(conn, "email_outbox", "status"),
+            "verifactu": _grouped(conn, "verifactu_outbox", "status"),
+        }
+        invoice_states = _grouped(conn, "invoices", "status")
+        document_states = _grouped(conn, "documents", "doc_status")
+        last_event = conn.execute(
+            "SELECT event_name, created_at FROM product_events "
+            "WHERE business_id=? ORDER BY id DESC LIMIT 1",
+            (business_id,),
+        ).fetchone()
+    activation = activation_snapshot(business_id)
+    return {
+        "business": {
+            "id": business["id"],
+            "name": business["name"],
+            "owner_email": business.get("owner_email"),
+            "sector": business.get("sector"),
+            "plan": business.get("plan"),
+            "subscription_status": business.get("subscription_status"),
+            "trial_ends_at": business.get("trial_ends_at"),
+            "whatsapp_status": business.get("whatsapp_status"),
+            "fiscal_profile_complete": bool(
+                business.get("nif") and business.get("address")
+            ),
+            "created_at": business.get("created_at"),
+        },
+        "counts": dict(counts),
+        "queues": queues,
+        "invoice_states": invoice_states,
+        "document_states": document_states,
+        "activation": activation,
+        "last_event": dict(last_event) if last_event else None,
+    }
+
+
 # ----------------------------------------------------------- RGPD (export/borrado) ---
 def export_business_data(business_id) -> dict:
     """Vuelca TODOS los datos de un negocio (derecho de portabilidad RGPD)."""

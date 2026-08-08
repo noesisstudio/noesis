@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Diagnóstico de {{ snapshot.business.name }}</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body style="background:var(--bg)">
+<main class="admin-wrap support-console">
+  <a class="back" href="/admin#cuentas">← Volver al centro de mando</a>
+
+  <header class="page-head support-head">
+    <div class="page-title">
+      <div class="kicker">Soporte técnico · Solo lectura</div>
+      <h1>{{ snapshot.business.name }}</h1>
+      <p>{{ snapshot.business.owner_email or 'Sin correo titular' }} · {{ snapshot.business.sector or 'Sector sin completar' }}</p>
+    </div>
+    <div class="support-status">
+      <span class="badge {{ 'b-green' if snapshot.business.subscription_status == 'active' else 'b-amber' }}">{{ snapshot.business.subscription_status or 'sin estado' }}</span>
+      <span class="badge b-gray">Plan {{ snapshot.business.plan or 'sin asignar' }}</span>
+    </div>
+  </header>
+
+  <section class="support-boundary" aria-label="Límite de privacidad">
+    <div>
+      <div class="kicker">Límite de privacidad</div>
+      <h2>Diagnóstico sin abrir el negocio del cliente</h2>
+      <p>Esta vista enseña estados técnicos y recuentos. No expone nombres de clientes, importes, conceptos, mensajes, archivos ni credenciales.</p>
+    </div>
+    <span class="badge b-green">Acceso auditado</span>
+  </section>
+
+  <section class="support-section">
+    <div class="support-section-head">
+      <div><div class="kicker">Estado general</div><h2>Cuenta y activación</h2></div>
+      <span class="meta">Alta {{ snapshot.business.created_at|string|truncate(10, True, '') }}</span>
+    </div>
+    <div class="admin-grid">
+      <div class="stat"><div class="lbl">Activación</div><div class="val">{{ snapshot.activation.progress }}%</div><div class="delta flat">{{ 'activada' if snapshot.activation.activated else 'en configuración' }}</div></div>
+      <div class="stat"><div class="lbl">WhatsApp</div><div class="val support-value">{{ snapshot.business.whatsapp_status or 'sin configurar' }}</div><div class="delta flat">estado de integración</div></div>
+      <div class="stat"><div class="lbl">Perfil fiscal</div><div class="val support-value {{ 'green' if snapshot.business.fiscal_profile_complete }}">{{ 'completo' if snapshot.business.fiscal_profile_complete else 'incompleto' }}</div><div class="delta flat">sin mostrar datos fiscales</div></div>
+      <div class="stat"><div class="lbl">Última señal</div><div class="val support-value">{{ snapshot.last_event.created_at|string|truncate(10, True, '') if snapshot.last_event else 'sin actividad' }}</div><div class="delta flat">{{ snapshot.last_event.event_name if snapshot.last_event else 'ningún evento' }}</div></div>
+    </div>
+  </section>
+
+  <section class="support-section">
+    <div class="support-section-head"><div><div class="kicker">Volumen</div><h2>Elementos de la cuenta</h2></div><span class="meta">Solo cantidades</span></div>
+    <div class="support-counts">
+      {% for label, key in [('Usuarios','users'),('Clientes','clients'),('Trabajos','jobs'),('Proyectos','projects'),('Equipo','workers'),('Facturas','invoices'),('Gastos','expenses'),('Facturas recibidas','received_invoices'),('Documentos','documents'),('Por revisar','documents_pending'),('Gestorías','gestoria_accesses')] %}
+      <div><span>{{ label }}</span><strong>{{ snapshot.counts[key] }}</strong></div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="support-columns">
+    <section class="support-section">
+      <div class="support-section-head"><div><div class="kicker">Datos</div><h2>Estados internos</h2></div></div>
+      <h3 class="support-subtitle">Facturas</h3>
+      <div class="support-list">
+        {% for state, total in snapshot.invoice_states.items() %}<div><span>{{ state|replace('_',' ') }}</span><b>{{ total }}</b></div>{% else %}<p class="meta">Sin facturas.</p>{% endfor %}
+      </div>
+      <h3 class="support-subtitle">Documentos</h3>
+      <div class="support-list">
+        {% for state, total in snapshot.document_states.items() %}<div><span>{{ state|replace('_',' ') }}</span><b>{{ total }}</b></div>{% else %}<p class="meta">Sin documentos.</p>{% endfor %}
+      </div>
+    </section>
+
+    <section class="support-section">
+      <div class="support-section-head"><div><div class="kicker">Entregas</div><h2>Colas de integraciones</h2></div></div>
+      {% for channel, states in snapshot.queues.items() %}
+      <h3 class="support-subtitle">{{ channel|capitalize }}</h3>
+      <div class="support-list">
+        {% for state, total in states.items() %}<div><span>{{ state|replace('_',' ') }}</span><b>{{ total }}</b></div>{% else %}<p class="meta">Sin elementos en cola.</p>{% endfor %}
+      </div>
+      {% endfor %}
+    </section>
+  </div>
+
+  <section class="support-locked">
+    <div><div class="kicker">Intervención</div><h2>Modificar datos no está habilitado</h2><p>Un acceso de soporte futuro exigirá autorización explícita y temporal del titular, motivo, alcance limitado y registro completo. Las facturas emitidas seguirán siendo inmutables.</p></div>
+    <span class="badge b-gray">Protegido</span>
+  </section>
+</main>
+</body>
+</html>

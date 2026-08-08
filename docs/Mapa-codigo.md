@@ -139,13 +139,16 @@
 - `src/noesis/web/routers/account.py` (`/solicitar-acceso`) + tabla `access_requests`:
   recoge la solicitud pública con su plan de interés, valida, limita repeticiones por
   correo y descarta robots con un campo señuelo. No crea ninguna cuenta.
-- `src/noesis/web/routers/admin.py` + `templates/admin.html`: diagnóstico técnico,
+- `src/noesis/web/routers/admin.py` + `templates/admin.html` +
+  `templates/admin_account.html`: diagnóstico técnico,
   parte CISO y evidencia de seguridad reservados al fundador; audita acceso y
   descarga de copias sin guardar contenido de clientes. Desde aquí se aprueban las
   solicitudes: el alta crea el negocio, arranca la prueba ese día y devuelve un
   enlace de un solo uso —reutiliza `password_resets`— para que el titular elija su
   contraseña, de modo que el equipo nunca llega a conocerla. También resume las
-  visitas de la web del último mes.
+  visitas de la web del último mes. La ficha técnica por cuenta llama a
+  `db.admin_support_snapshot`: solo devuelve estados y recuentos, nunca contenido
+  operativo, y registra cada consulta en la bitácora encadenada.
 - `src/noesis/web/server.py` (`_count_public_view`) + tabla `page_views`: suma una
   visita por página y día en el propio servidor, sin script, cookie ni tercero
   —la CSP prohíbe scripts externos—. Guarda solo página, día y dominio de

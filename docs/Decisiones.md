@@ -604,6 +604,15 @@ simulacro semanal independiente vuelve a verificar el último juego. Pentest, MF
 la cuenta Google, restauración desde otro proveedor, RGPD y red siguen siendo
 responsabilidades externas verificables.
 
+## Soporte sin suplantación silenciosa (2026-08-08)
+
+El administrador puede diagnosticar una cuenta con metadatos, estados y recuentos,
+pero no abrir su contenido operativo ni modificarlo por defecto. Cada consulta queda
+auditada. Cualquier intervención futura exigirá consentimiento explícito y temporal
+del titular, motivo, alcance por acciones y registro antes/después; nunca permitirá
+alterar una factura emitida. Motivo: resolver incidencias no justifica una puerta
+trasera permanente ni romper la confianza o el aislamiento entre negocios.
+
 ## Seguridad por capas y sin dependencia obligatoria de Redis (2026-07-21)
 
 Los límites de autenticación se comparten mediante la misma base de datos y guardan

@@ -81,6 +81,12 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 ## P1 — profundidad después del primer piloto
 
+- [x] Diagnóstico técnico por cuenta para soporte: solo metadatos, estados y
+  recuentos; acceso exclusivo de administración, registrado en la bitácora y sin
+  contenido operativo ni credenciales.
+- [ ] Diseñar la intervención de soporte con autorización explícita del titular,
+  caducidad, motivo, permisos por acción y registro antes/después. No habilitar
+  suplantación silenciosa ni edición de facturas emitidas.
 - [x] Facturas emitidas: corrección guiada mediante rectificativa por diferencias,
   original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
   R5 limitada a facturas simplificadas F2.

@@ -412,7 +412,7 @@
   </div>
 
   <!-- ================= 👥 Clientes ================= -->
-  <div class="dept-head">
+  <div class="dept-head" id="cuentas">
     <span class="dept-ic">👥</span>
     <div>
       <h2>Clientes</h2>
@@ -428,7 +428,7 @@
             <th class="t-right">Activación</th><th class="t-right">Última actividad</th>
             <th class="t-right">Clientes</th><th class="t-right">Facturas</th>
             <th class="t-right">Facturado</th><th class="t-right">Cobrado</th>
-            <th class="t-right">IA (in/out)</th></tr></thead>
+            <th class="t-right">IA (in/out)</th><th></th></tr></thead>
           <tbody>
           {% for b in data.businesses %}
             <tr>
@@ -459,6 +459,7 @@
                   {% if b.ai.extractions %} +{{ b.ai.extractions }}📷{% endif %}
                 {% else %}—{% endif %}
               </td>
+              <td class="t-right"><a class="btn sm" href="/admin/cuentas/{{ b.id }}">Diagnóstico</a></td>
             </tr>
           {% endfor %}
           </tbody>

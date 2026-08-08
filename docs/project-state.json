@@ -2,13 +2,13 @@
   "state_date": "2026-08-08",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 41,
-  "verified_test_count": 422,
+  "verified_test_count": 423,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Verificar en producción que una factura F1/F2 emitida abre el asistente rectificativo, conserva el original, crea un único borrador por diferencias y permite revisarlo antes de emitir; recorrer en escritorio y móvil el archivo del titular por año, trimestre y tipo, búsqueda, acciones y vista previa; recorrer visualmente la elección Autónomo o empresa / Gestoría, ambos logins y la solicitud profesional; recorrer Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "pending_after_deploy": "Verificar en producción que una factura F1/F2 emitida abre el asistente rectificativo, conserva el original, crea un único borrador por diferencias y permite revisarlo antes de emitir; recorrer en escritorio y móvil el archivo del titular por año, trimestre y tipo, búsqueda, acciones y vista previa; abrir desde el admin el diagnóstico de una cuenta y confirmar que solo enseña estados y recuentos, exige Google OAuth y registra el acceso; recorrer visualmente la elección Autónomo o empresa / Gestoría, ambos logins y la solicitud profesional; recorrer Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -81,7 +81,7 @@
     "voice_reception_promise": "premium_call_minutes_are_presented_inside_the_receptionist_beta_block_not_as_an_active_included_feature_because_no_telephony_exists_yet",
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",
     "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
-    "security_hardening": "schema_35_append_only_hash_chained_security_audit_internal_read_only_ciso_independent_restore_drill_optional_private_clamav_fail_closed_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_fetch_metadata_same_origin_and_proxy_aware_strict_origin_validation_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request"
+    "security_hardening": "schema_35_append_only_hash_chained_security_audit_internal_read_only_ciso_per_account_support_snapshot_without_operational_content_and_with_audited_access_independent_restore_drill_optional_private_clamav_fail_closed_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_fetch_metadata_same_origin_and_proxy_aware_strict_origin_validation_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request"
   },
   "ai_route": [
     "reglas_locales",
