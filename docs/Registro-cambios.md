@@ -23,6 +23,27 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-08 — rectificativas guiadas sin alterar la factura emitida
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir corregir un importe erróneo de forma entendible, trazable
+  y compatible con la inmutabilidad fiscal del motor nativo.
+- **Áreas y archivos:** motor y listado de facturas, API, pantalla de facturación,
+  estilos, pruebas y documentación viva.
+- **Cambios de datos/migración:** ninguno; esquema 41. Se reutilizan relación,
+  motivo y tipo rectificativo existentes.
+- **Pruebas ejecutadas:** 5/5 focalizadas y suite completa 421/421 mediante
+  `unittest`; `compileall` y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** ninguna credencial. La modalidad por
+  sustitución queda pendiente de validar con asesoría y XSD AEAT.
+- **Riesgo/punto probable de fallo:** consulta correlacionada nueva en el listado o
+  diferencias SQLite/PostgreSQL al bloquear el original. El CI debe ejecutar humo
+  PostgreSQL antes de darlo por publicado.
+- **Diagnóstico y rollback:** crear una F1/F2, emitirla, abrir «Rectificar», guardar
+  y revisar el borrador; comprobar que el total original no cambia y que no se crea
+  un segundo borrador. Revertir este commit conserva datos porque no migra esquema.
+- **Estado de publicación:** probado en local; pendiente de commit, CI y despliegue.
+
 ## 2026-08-08 — corrige vulnerabilidades conocidas de pypdf
 
 - **Autor/agente:** Codex.

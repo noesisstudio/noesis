@@ -4534,11 +4534,12 @@ def create_rectifying_invoice(
     vat_rate=config.DEFAULT_VAT_RATE,
     irpf_rate=0,
     invoice_type: str = "R1",
+    rectification_type: str = "I",
     reason: str,
     lines=None,
     series_id: int | None = None,
 ) -> dict:
-    """Crea una rectificativa incremental; el original nunca se modifica."""
+    """Crea una rectificativa por diferencias; el original nunca se modifica."""
     original = get_invoice(original_invoice_id, business_id)
     if not original or original.get("status") not in {
         "enviada", "parcial", "cobrada"
@@ -4551,6 +4552,16 @@ def create_rectifying_invoice(
     invoice_type = (invoice_type or "").strip().upper()
     if invoice_type not in {"R1", "R2", "R3", "R4", "R5"}:
         raise ValueError("El tipo de factura rectificativa no es válido.")
+    if invoice_type == "R5" and original.get("invoice_type") != "F2":
+        raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
+    if invoice_type != "R5" and original.get("invoice_type") == "F2":
+        raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
+    rectification_type = (rectification_type or "").strip().upper()
+    if rectification_type != "I":
+        raise ValueError(
+            "Noesis solo prepara rectificativas por diferencias. "
+            "La rectificación por sustitución requiere revisión fiscal."
+        )
     concept = (concept or "").strip()
     reason = (reason or "").strip()
     if not concept or len(concept) > 500:
@@ -4572,6 +4583,39 @@ def create_rectifying_invoice(
         concept = f"{concept} y {len(normalized) - 1} línea(s) más"
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        current_original = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
+            (original_invoice_id, business_id),
+        ).fetchone()
+        if not current_original or current_original["status"] not in {
+            "enviada", "parcial", "cobrada"
+        }:
+            raise ValueError("Solo se puede rectificar una factura ya emitida.")
+        cancelled = conn.execute(
+            "SELECT 1 FROM invoice_cancellation_records "
+            "WHERE invoice_id=? AND business_id=? LIMIT 1",
+            (original_invoice_id, business_id),
+        ).fetchone()
+        if cancelled:
+            raise ValueError(
+                "El registro fiscal de esta factura está anulado; no puede rectificarse."
+            )
+        pending = conn.execute(
+            "SELECT id FROM invoices WHERE business_id=? "
+            "AND rectifies_invoice_id=? AND status='borrador' LIMIT 1",
+            (business_id, original_invoice_id),
+        ).fetchone()
+        if pending:
+            raise ValueError(
+                "Ya existe una rectificativa en borrador para esta factura. "
+                "Revísala antes de crear otra."
+            )
+        original = dict(current_original)
+        if invoice_type == "R5" and original.get("invoice_type") != "F2":
+            raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
+        if invoice_type != "R5" and original.get("invoice_type") == "F2":
+            raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
         if series_id is None:
             series = _ensure_default_invoice_series(
                 conn, business_id, "rectifying"
@@ -4590,12 +4634,12 @@ def create_rectifying_invoice(
             "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
             "rectifies_invoice_id, rectification_type, rectification_reason, "
             "series_id, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
-            "'borrador', ?, ?, 'I', ?, ?, 'EUR', ?) RETURNING id",
+            "'borrador', ?, ?, ?, ?, ?, 'EUR', ?) RETURNING id",
             (
                 business_id, original["client_id"], concept, totals["base"],
                 totals["vat_rate"], totals["vat_amount"], totals["irpf_rate"],
                 totals["irpf_amount"], totals["total"], invoice_type,
-                original_invoice_id, reason, series_id, _now(),
+                original_invoice_id, rectification_type, reason, series_id, _now(),
             ),
         ).fetchone()
         new_id = row["id"]
@@ -4614,6 +4658,129 @@ def create_rectifying_invoice(
                 ),
             )
     return get_invoice(new_id, business_id)
+
+
+def update_rectifying_invoice_draft(
+    invoice_id: int,
+    business_id: int,
+    *,
+    concept: str,
+    base,
+    vat_rate=config.DEFAULT_VAT_RATE,
+    irpf_rate=0,
+    invoice_type: str = "R1",
+    rectification_type: str = "I",
+    reason: str,
+    lines=None,
+    series_id: int | None = None,
+) -> dict:
+    """Revisa un borrador rectificativo sin alterar la factura original."""
+    invoice_type = (invoice_type or "").strip().upper()
+    if invoice_type not in {"R1", "R2", "R3", "R4", "R5"}:
+        raise ValueError("El tipo de factura rectificativa no es válido.")
+    rectification_type = (rectification_type or "").strip().upper()
+    if rectification_type != "I":
+        raise ValueError(
+            "Noesis solo prepara rectificativas por diferencias. "
+            "La rectificación por sustitución requiere revisión fiscal."
+        )
+    concept = (concept or "").strip()
+    reason = (reason or "").strip()
+    if not concept or len(concept) > 500:
+        raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
+    if len(reason) < 3 or len(reason) > 1000:
+        raise ValueError("El motivo de rectificación es obligatorio.")
+    normalized = _normalize_invoice_lines(
+        lines,
+        fallback_concept=concept,
+        fallback_base=base,
+        fallback_vat=vat_rate,
+        allow_negative=True,
+    )
+    totals = _invoice_totals(normalized, irpf_rate)
+    if totals["base"] == 0:
+        raise ValueError("La base rectificada debe ser distinta de cero.")
+    concept = normalized[0]["description"]
+    if len(normalized) > 1:
+        concept = f"{concept} y {len(normalized) - 1} línea(s) más"
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        current = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
+            (invoice_id, business_id),
+        ).fetchone()
+        if not current:
+            raise ValueError("Factura rectificativa no encontrada.")
+        if (
+            current["status"] != "borrador"
+            or current.get("number")
+            or not current.get("rectifies_invoice_id")
+            or not str(current.get("invoice_type") or "").startswith("R")
+        ):
+            raise ValueError("Solo puede editarse un borrador rectificativo.")
+        original = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?",
+            (current["rectifies_invoice_id"], business_id),
+        ).fetchone()
+        if not original or original["status"] not in {"enviada", "parcial", "cobrada"}:
+            raise ValueError("La factura original ya no puede rectificarse.")
+        if invoice_type == "R5" and original.get("invoice_type") != "F2":
+            raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
+        if invoice_type != "R5" and original.get("invoice_type") == "F2":
+            raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
+        cancelled = conn.execute(
+            "SELECT 1 FROM invoice_cancellation_records "
+            "WHERE invoice_id=? AND business_id=? LIMIT 1",
+            (original["id"], business_id),
+        ).fetchone()
+        if cancelled:
+            raise ValueError(
+                "El registro fiscal de la factura original está anulado."
+            )
+        if series_id is None:
+            series = _ensure_default_invoice_series(conn, business_id, "rectifying")
+            series_id = series["id"]
+        else:
+            series = conn.execute(
+                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
+                "AND document_type='rectifying' AND active=TRUE",
+                (series_id, business_id),
+            ).fetchone()
+            if not series:
+                raise ValueError("La serie rectificativa no es válida.")
+        conn.execute(
+            "UPDATE invoices SET concept=?, base=?, vat_rate=?, vat_amount=?, "
+            "irpf_rate=?, irpf_amount=?, total=?, invoice_type=?, "
+            "rectification_type=?, rectification_reason=?, series_id=? "
+            "WHERE id=? AND business_id=? AND status='borrador'",
+            (
+                concept, totals["base"], totals["vat_rate"], totals["vat_amount"],
+                totals["irpf_rate"], totals["irpf_amount"], totals["total"],
+                invoice_type, rectification_type, reason, series_id,
+                invoice_id, business_id,
+            ),
+        )
+        conn.execute(
+            "DELETE FROM invoice_lines WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        )
+        created_at = _now()
+        for line in normalized:
+            conn.execute(
+                "INSERT INTO invoice_lines "
+                "(business_id, invoice_id, position, description, quantity, "
+                "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    business_id, invoice_id, line["position"], line["description"],
+                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["vat_rate"], line["base"], line["vat_amount"],
+                    line["total"], created_at,
+                ),
+            )
+    return get_invoice(invoice_id, business_id)
 
 
 def _invoice_payment_state(invoice: dict) -> dict:
@@ -4795,6 +4962,12 @@ def list_invoices(business_id, status=None) -> list[dict]:
         "THEN TRUE ELSE FALSE END AS verifactu_registered, "
         "vo.status AS verifactu_status, vo.aeat_csv AS verifactu_csv, "
         "vo.aeat_error_description AS verifactu_error, s.name AS series_name, "
+        "original.number AS rectified_number, "
+        "original.issued_at AS rectified_issued_at, "
+        "(SELECT pending.id FROM invoices pending WHERE "
+        "pending.business_id=i.business_id AND pending.rectifies_invoice_id=i.id "
+        "AND pending.status='borrador' ORDER BY pending.id DESC LIMIT 1) "
+        "AS pending_rectification_id, "
         "(SELECT co.status FROM verifactu_cancellation_outbox co WHERE "
         "co.business_id=i.business_id AND co.invoice_id=i.id "
         "ORDER BY co.id DESC LIMIT 1) AS cancellation_status, "
@@ -4806,6 +4979,8 @@ def list_invoices(business_id, status=None) -> list[dict]:
         "AND vo.business_id=i.business_id "
         "LEFT JOIN invoice_series s ON s.id=i.series_id "
         "AND s.business_id=i.business_id "
+        "LEFT JOIN invoices original ON original.id=i.rectifies_invoice_id "
+        "AND original.business_id=i.business_id "
         "WHERE i.business_id=?"
     )
     params: list = [business_id]

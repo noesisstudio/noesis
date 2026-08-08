@@ -116,11 +116,36 @@ async def api_rectify_invoice(
             vat_rate=body.get("vat_rate", 21),
             irpf_rate=body.get("irpf_rate", 0),
             invoice_type=body.get("invoice_type", "R1"),
+            rectification_type=body.get("rectification_type", "I"),
             reason=body.get("reason"),
             lines=body.get("lines"),
             series_id=body.get("series_id"),
         )
     except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return invoice
+
+
+@router.patch("/api/{business_id}/invoices/{invoice_id}/rectification")
+async def api_update_rectifying_invoice(
+    business_id: int, invoice_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        return db.update_rectifying_invoice_draft(
+            invoice_id,
+            business_id,
+            concept=body.get("concept"),
+            base=body.get("base"),
+            vat_rate=body.get("vat_rate", config.DEFAULT_VAT_RATE),
+            irpf_rate=body.get("irpf_rate", 0),
+            invoice_type=body.get("invoice_type", "R1"),
+            rectification_type=body.get("rectification_type", "I"),
+            reason=body.get("reason"),
+            lines=body.get("lines"),
+            series_id=body.get("series_id"),
+        )
+    except (TypeError, ValueError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     return invoice
 

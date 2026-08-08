@@ -319,6 +319,12 @@ nuevo, encadenado e inmutable, y exige confirmación escrita del titular. Motivo
 combinar la facilidad de Noesis con la trazabilidad profesional observada en Holded,
 sin copiar su arquitectura de ERP ni permitir atajos legalmente inseguros.
 
+La rectificativa operativa usa por defecto diferencias (`I`): conserva el original,
+solo permite un borrador pendiente y reserva R5 para rectificar F2. La sustitución
+(`S`) queda bloqueada hasta que una asesoría valide los importes rectificados y el
+registro AEAT completo. Noesis no ofrece una opción fiscal que todavía no puede
+explicar ni exportar correctamente.
+
 ## La obligación fiscal sobrevive al estado de la suscripción (2026-07-20)
 
 Una cuenta caducada queda en modo consulta para impedir nuevas operaciones, pero

@@ -119,7 +119,9 @@
 - `src/noesis/web/templates/fichaje.html`: jornada, trabajos y checklist personal.
 - `src/noesis/web/routers/invoicing.py` + `templates/facturas.html`: editor de
   borradores con líneas e impuestos, series, recurrencia, duplicación, emisión,
-  PDF, entrega durable, historial, rectificación y anulación confirmada.
+  PDF, entrega durable, historial, anulación confirmada y rectificación guiada por
+  diferencias. `db.py` conserva el original, bloquea borradores rectificativos
+  duplicados, valida F2/R5 y permite revisar el ajuste solo antes de emitir.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
   Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
   cerrada en producción si falta identidad legal o autorización explícita y no

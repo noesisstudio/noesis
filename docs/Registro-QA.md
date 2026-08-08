@@ -1,5 +1,22 @@
 # Registro de QA
 
+## 2026-08-08 — rectificación segura y revisable de facturas emitidas
+
+- La pantalla muestra la factura original, importe, causa, dirección del ajuste,
+  diferencia de base, impuestos, serie y efecto total antes de crear nada. Si el
+  período ya cambió, advierte que debe confirmarse el criterio con la gestoría.
+- La operación crea un borrador por diferencias (`I`), nunca edita el original y
+  exige una confirmación explícita. El borrador usa un editor propio y se puede
+  revisar; la pantalla genérica F1/F2 ya no intenta abrirlo.
+- La base de datos vuelve a validar original, estado, anulación y serie dentro de
+  la transacción; impide dos borradores pendientes para el mismo original. R5 solo
+  rectifica F2 y una F2 solo admite R5. La modalidad por sustitución se rechaza.
+- Pruebas focalizadas: 5/5 verdes sobre series, API, revisión, PDF y Veri*Factu.
+  Suite completa: **421/421** en 277 segundos. `compileall` y `git diff --check`
+  verdes. Los logs de caídas externas son escenarios adversos simulados.
+- Falta CI PostgreSQL y recorrido visual real tras desplegar; no se usó navegador
+  automatizado por el cierre recurrente indicado por el founder.
+
 ## 2026-08-08 — actualización de seguridad de pypdf
 
 - El CI detectó CVE-2026-71852 y CVE-2026-71870 en `pypdf 6.14.2` antes de

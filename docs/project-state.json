@@ -2,13 +2,13 @@
   "state_date": "2026-08-08",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 41,
-  "verified_test_count": 417,
+  "verified_test_count": 421,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Recorrer visualmente en escritorio y móvil la elección Autónomo o empresa / Gestoría, ambos logins y la solicitud profesional; recorrer Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Verificar en producción que una factura F1/F2 emitida abre el asistente rectificativo, conserva el original, crea un único borrador por diferencias y permite revisarlo antes de emitir; recorrer visualmente en escritorio y móvil la elección Autónomo o empresa / Gestoría, ambos logins y la solicitud profesional; recorrer Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -73,7 +73,7 @@
     "gestoria_portfolio": "schema_41_professional_multi_business_workspace_with_explicit_fiscal_profile_and_five_separate_task_views_summary_documents_taxes_periods_requests_quarter_and_year_context_safe_inline_first_page_preview_explainable_tax_drafts_and_versioned_packages_without_filing_or_money_authority",
     "commercial_showcase": "schema_40_two_real_logins_inside_the_product_owner_and_gestoria_plus_real_customer_portal_all_populated_connected_and_server_side_read_only_external_delivery_and_automations_blocked_public_demo_credential_explicitly_allowlisted_not_a_production_secret",
     "stripe_tax": "checkout_requests_billing_address_tax_id_collection_and_automatic_tax_for_the_public_plus_vat_catalog_real_tax_result_still_requires_stripe_test_validation",
-    "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_rectifying_no_external_billing_saas",
+    "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_safe_difference_rectification_single_pending_draft_original_immutable_no_external_billing_saas",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",
     "issue_order_available_on_both_channels": "the_draft_confirmation_message_suggests_emitir_factura_n_and_the_shared_brain_now_understands_it_so_the_web_chat_issues_the_draft_instead_of_falling_back_to_the_coach_whatsapp_keeps_its_extra_yes_no_confirmation_because_a_voice_note_can_be_misheard_and_tool_errors_no_longer_leak_internal_names",

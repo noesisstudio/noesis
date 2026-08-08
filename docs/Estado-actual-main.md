@@ -89,6 +89,10 @@
   rectificativa, vencimiento configurable, duplicación y programaciones recurrentes.
   La emisión congela cabecera y líneas. La entrega genera el PDF al salir de la
   outbox de correo y el historial reúne emisión, remisión, visualización y cobros.
+- Una factura emitida se corrige mediante un asistente rectificativo por diferencias:
+  enseña original, período y efecto económico, exige causa y confirmación, crea un
+  único borrador revisable y mantiene el original intacto. R5 queda reservado a F2;
+  la modalidad por sustitución no se ofrece sin validación fiscal externa.
 - WhatsApp distingue un ticket de gasto de un `ticket de venta` F2. Reutiliza un
   cliente habitual solo si la referencia es inequívoca, conecta trabajos cerrados
   con su borrador y exige otro SÍ para emitir o entregar. Tras confirmarlo asigna

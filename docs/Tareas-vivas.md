@@ -81,6 +81,12 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 ## P1 — profundidad después del primer piloto
 
+- [x] Facturas emitidas: corrección guiada mediante rectificativa por diferencias,
+  original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
+  R5 limitada a facturas simplificadas F2.
+- [ ] Validar con asesoría y XSD AEAT si el piloto necesita rectificación por
+  sustitución (`S`) y sus importes rectificados; hasta entonces Noesis la rechaza
+  expresamente y no inventa un registro fiscal incompleto.
 - [ ] Evaluar servicio privado y proveedor compatible con el mismo corpus en
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
 - [ ] Documentos: deduplicación, búsqueda, PDF digital y OCR acotado de PDF escaneado

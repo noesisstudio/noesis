@@ -428,6 +428,66 @@ class BackendTestCase(unittest.TestCase):
         rectifying = db.issue_invoice(rectifying["id"], business["id"])
         self.assertEqual(rectifying["number"], f"R{date.today().year}/0001")
 
+    def test_rectifying_draft_is_unique_editable_and_cause_matches_original(self):
+        business, client = self.make_business("Rectificativa Segura")
+        original = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Instalación original", 200,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        draft = db.create_rectifying_invoice(
+            original["id"], business["id"], concept="Corrección inicial",
+            base=-20, invoice_type="R1", reason="Importe duplicado",
+        )
+        with self.assertRaisesRegex(ValueError, "Ya existe"):
+            db.create_rectifying_invoice(
+                original["id"], business["id"], concept="Otra corrección",
+                base=-10, invoice_type="R1", reason="Segundo borrador",
+            )
+        with self.assertRaisesRegex(ValueError, "sustitución"):
+            db.update_rectifying_invoice_draft(
+                draft["id"], business["id"], concept="Corrección",
+                base=-25, invoice_type="R1", rectification_type="S",
+                reason="Cambio de modalidad",
+            )
+        with self.assertRaisesRegex(ValueError, "R5"):
+            db.update_rectifying_invoice_draft(
+                draft["id"], business["id"], concept="Corrección",
+                base=-25, invoice_type="R5", reason="Causa incompatible",
+            )
+        edited = db.update_rectifying_invoice_draft(
+            draft["id"], business["id"], concept="Corrección final",
+            base=-25, vat_rate=21, invoice_type="R1",
+            reason="Importe duplicado confirmado",
+        )
+        self.assertEqual(edited["base"], -25)
+        self.assertEqual(edited["rectification_reason"], "Importe duplicado confirmado")
+        listed = {item["id"]: item for item in db.list_invoices(business["id"])}
+        self.assertEqual(listed[draft["id"]]["rectified_number"], original["number"])
+        self.assertEqual(
+            listed[original["id"]]["pending_rectification_id"], draft["id"]
+        )
+
+        simplified = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Servicio menor", 100, invoice_type="F2",
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        with self.assertRaisesRegex(ValueError, "R5"):
+            db.create_rectifying_invoice(
+                simplified["id"], business["id"], concept="Corrección",
+                base=-10, invoice_type="R1", reason="Error simplificado",
+            )
+        simplified_draft = db.create_rectifying_invoice(
+            simplified["id"], business["id"], concept="Corrección",
+            base=-10, invoice_type="R5", reason="Error simplificado",
+        )
+        self.assertEqual(simplified_draft["invoice_type"], "R5")
+
     def test_recurring_invoices_prepare_once_and_require_opt_in_to_issue(self):
         business, client = self.make_business("Facturas Programadas")
         db.set_trial(business["id"], days=14)
@@ -3163,6 +3223,33 @@ class ProfessionalInvoicingHttpTestCase(unittest.TestCase):
                     json={},
                 )
                 self.assertEqual(issued.status_code, 200, issued.text)
+                rectified = client.post(
+                    f"/api/{business['id']}/invoices/{invoice['id']}/rectify",
+                    json={
+                        "invoice_type": "R1", "rectification_type": "I",
+                        "reason": "Importe de material incorrecto",
+                        "concept": "Corrección de material", "base": -10,
+                        "vat_rate": 21, "irpf_rate": 0,
+                    },
+                )
+                self.assertEqual(rectified.status_code, 200, rectified.text)
+                correction = rectified.json()
+                revised = client.patch(
+                    f"/api/{business['id']}/invoices/{correction['id']}/rectification",
+                    json={
+                        "invoice_type": "R1", "rectification_type": "I",
+                        "reason": "Importe de material revisado",
+                        "concept": "Corrección final de material", "base": -12,
+                        "vat_rate": 21, "irpf_rate": 0,
+                    },
+                )
+                self.assertEqual(revised.status_code, 200, revised.text)
+                self.assertEqual(revised.json()["base"], -12)
+                invoices = client.get(f"/api/{business['id']}/invoices").json()
+                original_row = next(row for row in invoices if row["id"] == invoice["id"])
+                self.assertEqual(
+                    original_row["pending_rectification_id"], correction["id"]
+                )
                 delivered = client.post(
                     f"/api/{business['id']}/invoices/{invoice['id']}/deliver",
                     json={"channel": "auto"},
