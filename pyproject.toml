@@ -26,7 +26,7 @@ dependencies = [
     # Generador QR puro Python; Pillow ya es dependencia transitiva de fpdf2.
     "qrcode>=8.0,<9",
     # Lectura local y acotada de texto en PDFs digitales; no sustituye OCR.
-    "pypdf>=6.13.0,<7",
+    "pypdf>=6.15.0,<7",
     # OCR privado en producción: PDFium rasteriza PDFs escaneados y Tesseract
     # lee las imágenes. El binario se instala en Railway mediante railpack.json.
     "pypdfium2>=5.6.0,<6",

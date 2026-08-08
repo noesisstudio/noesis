@@ -23,6 +23,24 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-08 — corrige vulnerabilidades conocidas de pypdf
+
+- **Autor/agente:** Codex.
+- **Objetivo:** desbloquear el guardián de dependencias sin rebajar el control de
+  seguridad que detectó dos CVE nuevas en el lector local de PDF.
+- **Áreas y archivos:** `pyproject.toml`, `uv.lock`, QA y bitácora.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** `uv run pip-audit` sin vulnerabilidades conocidas y 40/40
+  pruebas de PDF/OCR, facturas recibidas, copias y seguridad verdes.
+- **Dependencias o validaciones externas:** `pypdf` pasa de 6.14.2 a 6.15.0, versión
+  corregida indicada por los avisos CVE-2026-71852 y CVE-2026-71870 del CI.
+- **Riesgo/punto probable de fallo:** cambios de parsing en PDF digitales. Se cubren
+  extracción acotada, PDF escaneado, documentos y copias; el CI repetirá la suite.
+- **Diagnóstico y rollback:** ejecutar `uv run pip-audit` y las pruebas documentales.
+  No volver a 6.14.2; ante incompatibilidad, subir a una versión 6.x posterior.
+- **Estado de publicación:** corrección local posterior al fallo del run
+  `31264310221`; pendiente nuevo commit, CI y despliegue.
+
 ## 2026-08-08 — puerta única para negocio y gestoría
 
 - **Autor/agente:** Codex.

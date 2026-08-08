@@ -1,5 +1,16 @@
 # Registro de QA
 
+## 2026-08-08 — actualización de seguridad de pypdf
+
+- El CI detectó CVE-2026-71852 y CVE-2026-71870 en `pypdf 6.14.2` antes de
+  ejecutar la suite. Se elevó el mínimo y el lock a `6.15.0`, versión corregida
+  indicada por `pip-audit`; no se añadió ninguna excepción ni se ocultó el aviso.
+- `uv run pip-audit`: ninguna vulnerabilidad conocida en dependencias publicadas;
+  el paquete local `noesis` se omite porque no existe en PyPI.
+- 40/40 pruebas focalizadas de lectura/OCR de PDF, facturas recibidas, copias y
+  endurecimiento verdes con el lock nuevo. El humo PostgreSQL del primer commit ya
+  había terminado verde; el CI completo se repetirá con la corrección.
+
 ## 2026-08-08 — puerta de acceso por tipo de relación
 
 ### Qué se probó y con qué resultado
