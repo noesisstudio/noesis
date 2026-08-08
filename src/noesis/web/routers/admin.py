@@ -90,6 +90,35 @@ def admin_request_status(request: Request, request_id: int, status: str = Form(.
     return RedirectResponse("/admin#solicitudes", status_code=303)
 
 
+@router.post("/admin/costes")
+def admin_add_cost(
+    request: Request,
+    period: str = Form(...),
+    category: str = Form(...),
+    amount_eur: str = Form(...),
+    source: str = Form("actual"),
+    note: str = Form(""),
+):
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        entry = db.add_platform_cost(
+            period, category, amount_eur, source=source, note=note,
+            created_by_user_id=user["id"],
+        )
+        db.record_security_event(
+            "admin.platform_cost_recorded", area="admin",
+            actor_user_id=user["id"], subject_business_id=user["business_id"],
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"entry_id": entry["id"], "period": period,
+                      "category": category, "source": source},
+        )
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse("/admin#finanzas", status_code=303)
+
+
 @router.post("/admin/solicitudes/{request_id}/alta")
 def admin_request_approve(request: Request, request_id: int):
     """Crea la cuenta del solicitante y devuelve su enlace de invitación.

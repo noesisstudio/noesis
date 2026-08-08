@@ -324,6 +324,10 @@ def page(request: Request, business_id: int, page: str):
     ):
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
+        context["support_grant"] = db.active_support_grant(business_id)
+        context["support_scopes"] = db.SUPPORT_SCOPES
+        context["support_notice"] = request.session.pop("support_notice", "")
+        context["support_error"] = request.session.pop("support_error", "")
         ai_setting = db.integration_setting(business_id, "ai_external") or {}
         context["ai_external_preference"] = (
             ai_setting.get("mode") != "disabled"

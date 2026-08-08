@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Soporte se autoriza por alcance; el CFO distingue observado de supuesto (2026-08-08)
+
+Administración conserva por defecto solo el diagnóstico agregado. Si el cliente
+necesita intervención, el correo identificado como titular abre una ventana con
+motivo, permisos y caducidad;
+puede revocarla y el administrador no puede concedérsela. Esta puerta no habilita
+suplantación: cada corrección futura deberá comprobar un permiso concreto y auditar
+el antes/después. Facturas emitidas, dinero e impuestos quedan fuera siempre.
+
+Dirección tampoco llamará «margen real» a MRR menos tokens estimados. El libro CFO
+conserva entradas reales, previsiones y ajustes por separado. Solo si existen costes
+observados calcula contribución, margen y coste por cuenta; la factura del proveedor
+y la caja cobrada siguen mandando sobre cualquier supuesto.
+
 ## La personalización no puede convertir la factura en un lienzo libre (2026-08-08)
 
 El titular puede elegir una de tres composiciones probadas, color, logotipo, pie y

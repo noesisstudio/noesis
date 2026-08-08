@@ -153,7 +153,7 @@
   </div>
 
   <!-- ================= 💰 Finanzas ================= -->
-  <div class="dept-head">
+  <div class="dept-head" id="finanzas">
     <span class="dept-ic">💰</span>
     <div>
       <h2>Finanzas</h2>
@@ -164,10 +164,54 @@
     <div class="stat"><div class="lbl">MRR</div><div class="val">{{ data.finanzas.mrr }} €</div><div class="delta flat">ingreso recurrente mensual</div></div>
     <div class="stat"><div class="lbl">Run-rate anual</div><div class="val">{{ data.finanzas.run_rate }} €</div><div class="delta flat">MRR × 12</div></div>
     <div class="stat"><div class="lbl">Coste IA (mes)</div><div class="val amber">{{ '%.2f'|format(data.finanzas.ai_cost_eur) }} €</div><div class="delta flat">estimado por tokens</div></div>
-    <div class="stat"><div class="lbl">Margen bruto</div>
+    <div class="stat"><div class="lbl">Margen IA estimado</div>
       <div class="val {{ 'green' if data.finanzas.margen_pct and data.finanzas.margen_pct >= 70 }}">{{ data.finanzas.margen_pct ~ '%' if data.finanzas.margen_pct is not none else '—' }}</div>
-      <div class="delta flat">MRR menos coste IA</div></div>
+      <div class="delta flat">hipótesis técnica, no margen contable</div></div>
   </div>
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Margen observado · {{ data.finanzas.cost_ledger.period }}</h2>
+        {% if data.finanzas.cost_ledger.has_observed_data %}<span class="badge b-green">con costes registrados</span>
+        {% else %}<span class="badge b-amber">faltan costes reales</span>{% endif %}</div>
+      <div class="card-b">
+        <div class="lrow"><span>MRR comprometido</span><b>{{ data.finanzas.mrr }} €</b></div>
+        <div class="lrow"><span>Costes reales + ajustes</span><b>{{ '%.2f'|format(data.finanzas.observed_costs) }} €</b></div>
+        <div class="lrow"><span>Contribución observada</span><b>{{ ('%.2f €'|format(data.finanzas.observed_contribution)) if data.finanzas.observed_contribution is not none else 'Sin datos suficientes' }}</b></div>
+        <div class="lrow"><span>Margen observado</span><b>{{ (data.finanzas.observed_margin_pct ~ '%') if data.finanzas.observed_margin_pct is not none else '—' }}</b></div>
+        <div class="lrow"><span>Coste por cuenta de pago</span><b>{{ ('%.2f €'|format(data.finanzas.observed_cost_per_active_account)) if data.finanzas.observed_cost_per_active_account is not none else '—' }}</b></div>
+        <p class="meta">Solo usa entradas marcadas como reales y ajustes. Las previsiones se conservan separadas y el MRR no equivale a caja cobrada.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Registrar coste</h2><span class="hint">factura o dato verificable</span></div>
+      <div class="card-b">
+        <form method="post" action="/admin/costes">
+          <div class="grid g2">
+            <div><label class="fld">Período</label><input class="input" type="month" name="period" value="{{ data.finanzas.cost_ledger.period }}" required></div>
+            <div><label class="fld">Importe (€)</label><input class="input" type="number" step="0.01" name="amount_eur" required></div>
+            <div><label class="fld">Categoría</label><select class="input" name="category">{% for key, label in data.finanzas.cost_ledger.category_labels.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
+            <div><label class="fld">Origen</label><select class="input" name="source"><option value="actual">Real</option><option value="forecast">Previsión</option><option value="adjustment">Ajuste trazable</option></select></div>
+          </div>
+          <label class="fld" style="margin-top:10px">Nota o fuente</label>
+          <input class="input" name="note" maxlength="500" placeholder="Ej. Factura Railway de agosto">
+          <button class="btn primary" style="margin-top:12px">Registrar sin sobrescribir históricos</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% if data.finanzas.cost_ledger.entries %}
+  <div class="card">
+    <div class="card-h"><h2>Entradas del período</h2><span class="hint">registro append-only</span></div>
+    <div class="card-b table-pad"><div class="table-wrap"><table>
+      <thead><tr><th>Origen</th><th>Categoría</th><th>Nota</th><th class="t-right">Importe</th></tr></thead>
+      <tbody>{% for entry in data.finanzas.cost_ledger.entries %}<tr>
+        <td><span class="badge b-gray">{{ entry.source }}</span></td>
+        <td>{{ data.finanzas.cost_ledger.category_labels.get(entry.category, entry.category) }}</td>
+        <td class="meta">{{ entry.note or 'Sin nota' }}</td><td class="t-right num">{{ '%.2f'|format(entry.amount_eur) }} €</td>
+      </tr>{% endfor %}</tbody>
+    </table></div></div>
+  </div>
+  {% endif %}
   <div class="grid g2 admin-charts">
     <div class="card">
       <div class="card-h"><h2>Facturado vs. cobrado</h2><span class="hint">top cuentas por volumen</span></div>

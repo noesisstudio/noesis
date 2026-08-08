@@ -270,7 +270,7 @@ LEGAL_NIF = os.getenv("NOESIS_LEGAL_NIF", "").strip().upper()
 LEGAL_ADDRESS = os.getenv("NOESIS_LEGAL_ADDRESS", "").strip()
 LEGAL_EMAIL = os.getenv("NOESIS_LEGAL_EMAIL", "").strip().lower()
 LEGAL_REGISTRY = os.getenv("NOESIS_LEGAL_REGISTRY", "").strip()
-LEGAL_DOCUMENT_VERSION = "2026-07-27"
+LEGAL_DOCUMENT_VERSION = "2026-08-08"
 # Buzón que se enseña en la web. El de respaldo es el del dominio propio, no una
 # cuenta personal: aparece en el pie, en la política de cookies y en contacto, y
 # tres direcciones distintas en un mismo sitio restan credibilidad.

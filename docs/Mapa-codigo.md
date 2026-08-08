@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 42;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 44;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -17,6 +17,8 @@
   actualiza, sin convertirlo en una declaración ni en autorización de presentación.
   La 42 amplía el perfil documental y conserva evidencia seudónima de la decisión
   de presupuestos sin alterar facturas emitidas.
+  La 43 registra autorizaciones de soporte temporales y acotadas creadas por el
+  titular. La 44 añade el libro append-only de costes internos por período.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -26,6 +28,9 @@
   todos los módulos con datos ficticios conectados y no reinicia producción.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
+- `src/noesis/db.py` + `routers/admin.py`: diagnóstico privado, autorización de
+  soporte con motivo/alcance/caducidad/revocación y CFO observado. Los costes reales,
+  previsiones y ajustes no se sobrescriben ni se mezclan.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
   y propuestas explicables de conciliación; nunca confirma un pago por sí solo.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro y flujo común de

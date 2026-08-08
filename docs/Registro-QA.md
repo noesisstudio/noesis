@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-08-08 — soporte consentido, CFO observado y términos operativos
+
+- Migraciones 43-44 verificadas en subida y bajada: autorización de soporte y libro
+  de costes. Solo el correo titular abre/revoca una ventana por motivo, alcance y
+  duración; un usuario de otra empresa o un usuario secundario de la misma empresa
+  no puede concederla y administración solo la visualiza. El libro rechaza cambios
+  y borrados en la propia base de datos.
+- Eventos `support.access_granted`, `support.access_revoked` y
+  `admin.platform_cost_recorded` identifican actor y ámbito sin guardar contenido
+  del cliente. No hay suplantación ni mutación genérica.
+- CFO probado con coste real, previsión y abono: solo real+ajuste alimentan 18 € de
+  coste observado, 81 € de contribución y 81,8% sobre 99 € de MRR; la previsión de
+  100 € permanece separada.
+- Términos ampliados y versión legal 2026-08-08. Es cobertura funcional y de copy,
+  no validación jurídica; identidad y revisión profesional siguen bloqueando alta.
+- Suite completa: **426/426** en 256 segundos. Ruff y migraciones focalizadas verdes.
+  Las trazas de proveedores y backups son fallos adversos simulados.
+
 ## 2026-08-08 — perfil documental, presupuesto trazable y OCR trilingüe
 
 - Migración 42 compatible con SQLite/Postgres: pie documental, condiciones y

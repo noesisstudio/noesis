@@ -85,9 +85,13 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [x] Diagnóstico técnico por cuenta para soporte: solo metadatos, estados y
   recuentos; acceso exclusivo de administración, registrado en la bitácora y sin
   contenido operativo ni credenciales.
-- [ ] Diseñar la intervención de soporte con autorización explícita del titular,
-  caducidad, motivo, permisos por acción y registro antes/después. No habilitar
-  suplantación silenciosa ni edición de facturas emitidas.
+- [x] Puerta de intervención de soporte: autorización explícita creada por el
+  titular, motivo, alcances, caducidad 1/4/24/72 h, revocación y eventos encadenados.
+  Administración no puede autoconcedérsela ni suplantar al usuario.
+- [ ] Habilitar una a una las correcciones de soporte que demuestre el piloto,
+  comprobando el permiso efectivo y registrando antes/después. Empezar por
+  configuración y metadatos documentales; no crear un editor universal ni permitir
+  edición de facturas emitidas.
 - [x] Facturas emitidas: corrección guiada mediante rectificativa por diferencias,
   original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
   R5 limitada a facturas simplificadas F2.
@@ -124,6 +128,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   con un despacho antes de abrir el acceso a terceros.
 - [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,
   correcciones y coste.
+- [x] Libro CFO interno por mes: costes reales, previsiones y ajustes append-only;
+  contribución, margen observado y coste por cuenta de pago sin inventar gastos.
+- [ ] Cargar facturas reales de Railway, proveedores, seguridad, correo, Meta,
+  Stripe y horas de soporte durante el piloto; conciliar MRR comprometido con cobros
+  reales y añadir CAC/churn cuando exista una muestra válida.
 - [ ] Eliminar `unsafe-inline` de la CSP efectiva tras migrar scripts/estilos inline;
   mientras tanto observar la política estricta en report-only sin romper la UI.
 - [ ] Evaluar MFA/passkeys y permisos finos para gestoría antes de abrir acceso a

@@ -23,6 +23,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-08 21:05 — soporte temporal, CFO real y términos reforzados
+
+- **Autor/agente:** Codex.
+- **Objetivo:** preparar soporte seguro para el piloto, sustituir márgenes supuestos
+  por costes observables y aclarar responsabilidad/rectificación en los términos.
+- **Áreas y archivos:** migraciones/DB, Ajustes, centro admin, CFO, términos, tests y
+  documentación operativa.
+- **Cambios de datos/migración:** 42→44; grants temporales y ledger mensual
+  protegido contra `UPDATE`/`DELETE` también en base de datos. No se modifica
+  contenido de cliente ni facturas emitidas.
+- **Pruebas ejecutadas:** permisos entre negocios y rechazo a un usuario del mismo
+  negocio que no sea el titular, creación/revocación HTTP, auditoría, render admin,
+  costes reales/previsión/ajuste, inmutabilidad, cálculos y downgrade; suite completa
+  426/426 y Ruff verdes.
+- **Dependencias o validaciones externas:** ninguna credencial. Términos pendientes
+  de abogado; recuperación externa y RPO/RTO requieren otra infraestructura.
+- **Riesgo/punto probable de fallo:** formulario multipart de alcances, caducidad en
+  reloj del servidor, datos CFO incompletos o interpretación jurídica del texto.
+- **Diagnóstico y rollback:** revisar eventos `support.*`/`admin.platform_cost_*`,
+  `/ready`=44 y ledger del mes. El downgrade elimina solo estas tablas; el
+  diagnóstico de solo lectura y las cuentas siguen funcionando.
+- **Estado de publicación:** local verificado; pendiente commit, push y despliegue.
+
 ## 2026-08-08 20:15 — documentos comerciales y OCR listos para validar en piloto
 
 - **Autor/agente:** Codex.

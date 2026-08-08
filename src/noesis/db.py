@@ -10103,6 +10103,86 @@ def admin_alerts() -> list[dict]:
     return alerts
 
 
+PLATFORM_COST_CATEGORIES = {
+    "hosting": "Infraestructura y hosting",
+    "ai": "IA y extracción",
+    "whatsapp": "WhatsApp",
+    "email": "Correo",
+    "payments": "Pagos y comisiones",
+    "security_storage": "Seguridad y copias",
+    "support": "Soporte y onboarding",
+    "legal_admin": "Legal y administración",
+    "marketing": "Marketing y ventas",
+    "other": "Otros",
+}
+PLATFORM_COST_SOURCES = {"actual", "forecast", "adjustment"}
+
+
+def add_platform_cost(period: str, category: str, amount_eur, *, source: str,
+                      note: str = "", created_by_user_id: int | None = None) -> dict:
+    period = str(period or "").strip()
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", period):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    if category not in PLATFORM_COST_CATEGORIES:
+        raise ValueError("La categoría de coste no es válida.")
+    if source not in PLATFORM_COST_SOURCES:
+        raise ValueError("El origen del coste no es válido.")
+    try:
+        amount = Decimal(str(amount_eur)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError("El importe no es válido.") from exc
+    if amount == 0 or abs(amount) > Decimal("1000000"):
+        raise ValueError("El coste debe ser distinto de cero y razonable.")
+    if source != "adjustment" and amount < 0:
+        raise ValueError("Solo los ajustes pueden tener importe negativo.")
+    note = " ".join(str(note or "").split())[:500]
+    if source == "adjustment" and len(note) < 10:
+        raise ValueError("Un ajuste necesita explicar qué corrige.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO platform_cost_entries "
+            "(period, category, amount_eur, source, note, created_by_user_id, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (period, category, float(amount), source, note or None,
+             created_by_user_id, _now()),
+        ).fetchone()
+        entry = conn.execute(
+            "SELECT * FROM platform_cost_entries WHERE id=?", (row["id"],)
+        ).fetchone()
+    return dict(entry)
+
+
+def platform_cost_summary(period: str) -> dict:
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", str(period or "")):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    with get_conn() as conn:
+        entries = [dict(row) for row in conn.execute(
+            "SELECT * FROM platform_cost_entries WHERE period=? ORDER BY id DESC",
+            (period,),
+        ).fetchall()]
+    totals = {source: 0.0 for source in PLATFORM_COST_SOURCES}
+    by_category: dict[str, float] = {}
+    for entry in entries:
+        amount = float(entry["amount_eur"] or 0)
+        totals[entry["source"]] = round(totals.get(entry["source"], 0) + amount, 2)
+        if entry["source"] in {"actual", "adjustment"}:
+            by_category[entry["category"]] = round(
+                by_category.get(entry["category"], 0) + amount, 2
+            )
+    return {
+        "period": period, "entries": entries, "totals": totals,
+        "observed_total": round(totals["actual"] + totals["adjustment"], 2),
+        "forecast_total": totals["forecast"],
+        "by_category": by_category,
+        "category_labels": PLATFORM_COST_CATEGORIES,
+        "has_observed_data": any(
+            entry["source"] in {"actual", "adjustment"} for entry in entries
+        ),
+    }
+
+
 def admin_overview() -> dict:
     """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
     operativos de cada autónomo, solo metadatos de cuenta y agregados."""
@@ -10220,11 +10300,28 @@ def admin_overview() -> dict:
         "ok": "última copia verificada OK",
         "error": "la última copia FALLÓ",
     }.get((backup or {}).get("status"), "sin copias todavía")
+    cost_ledger = platform_cost_summary(today.strftime("%Y-%m"))
+    observed_costs = cost_ledger["observed_total"]
+    observed_margin = (
+        round((mrr - observed_costs) / mrr * 100, 1)
+        if mrr and cost_ledger["has_observed_data"] else None
+    )
     finanzas = {
         "mrr": mrr,
         "run_rate": mrr * 12,
         "ai_cost_eur": ai_cost_eur,
         "margen_pct": margen_pct,
+        "cost_ledger": cost_ledger,
+        "observed_costs": observed_costs,
+        "observed_margin_pct": observed_margin,
+        "observed_contribution": (
+            round(mrr - observed_costs, 2)
+            if cost_ledger["has_observed_data"] else None
+        ),
+        "observed_cost_per_active_account": (
+            round(observed_costs / len(activos), 2)
+            if activos and cost_ledger["has_observed_data"] else None
+        ),
     }
     dept_reports = {
         "finanzas": (
@@ -10276,6 +10373,125 @@ def admin_overview() -> dict:
         "ai_usage": usage,
         "alerts": alerts,
     }
+
+
+SUPPORT_CONSENT_VERSION = "support-access-v1"
+SUPPORT_SCOPES = {
+    "configuration": "Configuración de la cuenta",
+    "document_metadata": "Organización de documentos",
+    "draft_records": "Borradores no emitidos",
+    "integrations": "Diagnóstico de integraciones",
+}
+
+
+def _support_grant_dict(row) -> dict | None:
+    if not row:
+        return None
+    grant = dict(row)
+    try:
+        scopes = json.loads(grant.pop("scopes_json") or "[]")
+    except (TypeError, ValueError):
+        scopes = []
+    grant["scopes"] = [scope for scope in scopes if scope in SUPPORT_SCOPES]
+    grant["scope_labels"] = [SUPPORT_SCOPES[scope] for scope in grant["scopes"]]
+    return grant
+
+
+def active_support_grant(business_id: int) -> dict | None:
+    """Autorización vigente del titular; caduca aunque nadie abra el panel admin."""
+    now = _now()
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE support_access_grants SET status='expired' "
+            "WHERE business_id=? AND status='active' AND expires_at<=?",
+            (business_id, now),
+        )
+        row = conn.execute(
+            "SELECT * FROM support_access_grants WHERE business_id=? "
+            "AND status='active' AND expires_at>? ORDER BY id DESC LIMIT 1",
+            (business_id, now),
+        ).fetchone()
+    return _support_grant_dict(row)
+
+
+def create_support_grant(business_id: int, user_id: int, *, purpose: str,
+                         scopes: list[str], duration_hours: int) -> dict:
+    """El titular abre una ventana acotada; nunca la puede crear administración."""
+    user = get_user(user_id)
+    business = get_business(business_id)
+    is_owner = bool(
+        user and business
+        and int(user.get("business_id") or 0) == int(business_id)
+        and str(user.get("email") or "").strip().lower()
+        == str(business.get("owner_email") or "").strip().lower()
+    )
+    if not is_owner:
+        raise ValueError("Solo el titular de la cuenta puede autorizar soporte.")
+    purpose = " ".join(str(purpose or "").split())
+    if len(purpose) < 10 or len(purpose) > 500:
+        raise ValueError("Explica el motivo del soporte (entre 10 y 500 caracteres).")
+    clean_scopes = sorted({str(scope) for scope in scopes if scope in SUPPORT_SCOPES})
+    if not clean_scopes:
+        raise ValueError("Selecciona al menos un permiso para soporte.")
+    try:
+        duration_hours = int(duration_hours)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La duración del acceso no es válida.") from exc
+    if duration_hours not in {1, 4, 24, 72}:
+        raise ValueError("La duración debe ser de 1, 4, 24 o 72 horas.")
+    now = _now()
+    expires_at = (datetime.now() + timedelta(hours=duration_hours)).isoformat(
+        timespec="seconds"
+    )
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "UPDATE support_access_grants SET status='revoked', revoked_at=? "
+            "WHERE business_id=? AND status='active'",
+            (now, business_id),
+        )
+        row = conn.execute(
+            "INSERT INTO support_access_grants "
+            "(business_id, created_by_user_id, purpose, scopes_json, consent_version, "
+            "status, expires_at, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?, ?) "
+            "RETURNING id",
+            (business_id, user_id, purpose, json.dumps(clean_scopes),
+             SUPPORT_CONSENT_VERSION, expires_at, now),
+        ).fetchone()
+        grant_id = row["id"]
+    record_security_event(
+        "support.access_granted", area="support", actor_user_id=user_id,
+        subject_business_id=business_id,
+        metadata={"grant_id": grant_id, "scopes": clean_scopes,
+                  "duration_hours": duration_hours},
+    )
+    return active_support_grant(business_id)
+
+
+def revoke_support_grant(business_id: int, user_id: int) -> bool:
+    user = get_user(user_id)
+    business = get_business(business_id)
+    is_owner = bool(
+        user and business
+        and int(user.get("business_id") or 0) == int(business_id)
+        and str(user.get("email") or "").strip().lower()
+        == str(business.get("owner_email") or "").strip().lower()
+    )
+    if not is_owner:
+        raise ValueError("Solo el titular de la cuenta puede revocar soporte.")
+    now = _now()
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE support_access_grants SET status='revoked', revoked_at=? "
+            "WHERE business_id=? AND status='active'",
+            (now, business_id),
+        )
+    if cur.rowcount:
+        record_security_event(
+            "support.access_revoked", area="support", actor_user_id=user_id,
+            subject_business_id=business_id,
+        )
+    return bool(cur.rowcount)
 
 
 def admin_support_snapshot(business_id: int) -> dict | None:
@@ -10349,6 +10565,7 @@ def admin_support_snapshot(business_id: int) -> dict | None:
         "document_states": document_states,
         "activation": activation,
         "last_event": dict(last_event) if last_event else None,
+        "support_grant": active_support_grant(business_id),
     }
 
 

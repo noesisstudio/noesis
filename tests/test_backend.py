@@ -5121,6 +5121,90 @@ class AdminCommandCenterTestCase(unittest.TestCase):
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
 
+    def test_admin_records_observed_cost_without_overwriting_history(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Dirección CFO")
+        admin = db.create_user(
+            "cfo-admin@example.com", auth.hash_password(TEST_PASSWORD), business["id"]
+        )
+        period = date.today().strftime("%Y-%m")
+        with (
+            patch.object(config, "ADMIN_EMAIL", "cfo-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "cfo-admin@example.com", "password": TEST_PASSWORD,
+                })
+                saved = client.post(
+                    "/admin/costes",
+                    data={
+                        "period": period, "category": "hosting",
+                        "amount_eur": "24.50", "source": "actual",
+                        "note": "Factura Railway agosto",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(saved.status_code, 303)
+                page = client.get("/admin")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Factura Railway agosto", page.text)
+                self.assertIn("Margen observado", page.text)
+        ledger = db.platform_cost_summary(period)
+        self.assertEqual(ledger["observed_total"], 24.5)
+        event = next(
+            item for item in db.list_security_events()
+            if item["event_type"] == "admin.platform_cost_recorded"
+        )
+        self.assertEqual(event["actor_user_id"], admin["id"])
+
+    def test_owner_opens_and_revokes_scoped_support_window(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Cuenta con soporte")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("support-owner@example.com", business["id"]),
+            )
+        owner = db.create_user(
+            "support-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "support-owner@example.com", "password": TEST_PASSWORD,
+                })
+                response = client.post(
+                    f"/b/{business['id']}/support-access",
+                    data={
+                        "purpose": "Revisar la configuración de documentos",
+                        "scopes": ["configuration", "document_metadata"],
+                        "duration_hours": "1", "consent": "yes",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                grant = db.active_support_grant(business["id"])
+                self.assertEqual(
+                    grant["scopes"], ["configuration", "document_metadata"]
+                )
+                revoked = client.post(
+                    f"/b/{business['id']}/support-access/revoke",
+                    follow_redirects=False,
+                )
+                self.assertEqual(revoked.status_code, 303)
+        self.assertIsNone(db.active_support_grant(business["id"]))
+        events = [event["event_type"] for event in db.list_security_events()]
+        self.assertIn("support.access_granted", events)
+        self.assertIn("support.access_revoked", events)
+        self.assertEqual(owner["business_id"], business["id"])
+
     def test_support_snapshot_is_admin_only_private_and_audited(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -5135,9 +5219,19 @@ class AdminCommandCenterTestCase(unittest.TestCase):
             "founder-support@example.com", auth.hash_password(TEST_PASSWORD),
             admin_business["id"],
         )
-        db.create_user(
+        owner = db.create_user(
             "ordinary@example.com", auth.hash_password(TEST_PASSWORD), target["id"]
         )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("ordinary@example.com", target["id"]),
+            )
+        grant = db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar una integración bloqueada",
+            scopes=["integrations"], duration_hours=4,
+        )
+        self.assertEqual(grant["scopes"], ["integrations"])
         with (
             patch.object(config, "ADMIN_EMAIL", "founder-support@example.com"),
             patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
@@ -5151,7 +5245,8 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 page = client.get(f"/admin/cuentas/{target['id']}")
                 self.assertEqual(page.status_code, 200, page.text)
                 self.assertIn("Cuenta diagnosticada", page.text)
-                self.assertIn("Solo lectura", page.text)
+                self.assertIn("Ventana temporal abierta", page.text)
+                self.assertIn("Diagnóstico de integraciones", page.text)
                 self.assertNotIn("CLIENTE-SECRETO-NO-MOSTRAR", page.text)
                 client.post("/logout")
                 client.post("/login", data={
@@ -5169,6 +5264,22 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertEqual(event["actor_user_id"], admin["id"])
         self.assertEqual(event["subject_business_id"], target["id"])
         self.assertEqual(event["metadata"], {"mode": "read_only"})
+        self.assertTrue(db.revoke_support_grant(target["id"], owner["id"]))
+        self.assertIsNone(db.active_support_grant(target["id"]))
+        with self.assertRaises(ValueError):
+            db.create_support_grant(
+                admin_business["id"], owner["id"], purpose="Intento fuera de cuenta",
+                scopes=["configuration"], duration_hours=1,
+            )
+        same_business_non_owner = db.create_user(
+            "employee@example.com", auth.hash_password(TEST_PASSWORD), target["id"]
+        )
+        with self.assertRaises(ValueError):
+            db.create_support_grant(
+                target["id"], same_business_non_owner["id"],
+                purpose="Intento sin permiso del titular",
+                scopes=["configuration"], duration_hours=1,
+            )
 
     def test_missing_required_google_blocks_admin_not_the_whole_service(self):
         from starlette.testclient import TestClient
@@ -5273,6 +5384,17 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 "plan='premium' WHERE id=?",
                 (business["id"],),
             )
+        period = date.today().strftime("%Y-%m")
+        db.add_platform_cost(
+            period, "hosting", 20, source="actual", note="Factura hosting"
+        )
+        db.add_platform_cost(
+            period, "hosting", -2, source="adjustment",
+            note="Abono aplicado a la factura",
+        )
+        db.add_platform_cost(
+            period, "support", 100, source="forecast", note="Previsión soporte"
+        )
         data = db.admin_overview()
         self.assertIn("marketing", data["dept_reports"])
         charts = data["charts"]
@@ -5281,6 +5403,25 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertEqual(charts["funnel"][labels.index("Checkout")], 1)
         self.assertEqual(charts["funnel"][labels.index("De pago")], 1)
         self.assertEqual(data["mrr"], 99)
+        self.assertEqual(data["finanzas"]["observed_costs"], 18)
+        self.assertEqual(data["finanzas"]["observed_contribution"], 81)
+        self.assertEqual(data["finanzas"]["observed_margin_pct"], 81.8)
+        self.assertEqual(data["finanzas"]["observed_cost_per_active_account"], 18)
+        self.assertEqual(data["finanzas"]["cost_ledger"]["forecast_total"], 100)
+        with self.assertRaises(ValueError):
+            db.add_platform_cost(
+                "agosto", "hosting", 20, source="actual"
+            )
+        with self.assertRaises(ValueError):
+            db.add_platform_cost(
+                period, "hosting", -20, source="actual", note="Coste imposible"
+            )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE platform_cost_entries SET amount_eur=999 WHERE period=?",
+                    (period,),
+                )
 
     def test_alerts_flag_failed_whatsapp_and_broken_backup(self):
         business, _ = self.make_business("Admin Alarmas")

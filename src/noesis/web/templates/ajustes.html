@@ -436,6 +436,55 @@
   </div>
 </div>
 
+<div class="card" id="soporte" style="margin-top:16px">
+  <div class="card-h">
+    <div><div class="kicker">Privacidad y soporte</div><h2>Acceso temporal de soporte</h2></div>
+    {% if support_grant %}<span class="badge b-amber">activo hasta {{ support_grant.expires_at|string|truncate(16, True, '') }}</span>
+    {% else %}<span class="badge b-green">cerrado</span>{% endif %}
+  </div>
+  <div class="card-b">
+    {% if support_notice %}<p class="notice success">{{ support_notice }}</p>{% endif %}
+    {% if support_error %}<p class="notice error">{{ support_error }}</p>{% endif %}
+    {% if support_grant %}
+      <p>Has autorizado a soporte para: <b>{{ support_grant.scope_labels|join(' · ') }}</b>.</p>
+      <div class="insight"><b>Motivo registrado:</b> {{ support_grant.purpose }}<br>
+        Caduca automáticamente el {{ support_grant.expires_at }}. Puedes cerrarlo ahora sin esperar.</div>
+      <form method="post" action="/b/{{ business.id }}/support-access/revoke" style="margin-top:14px">
+        <button class="btn">Revocar acceso ahora</button>
+      </form>
+    {% else %}
+      <p>Soporte solo ve el diagnóstico técnico agregado. Si necesitas que revise o
+        corrija algo contigo, abre una ventana limitada. No comparte contraseñas y
+        nunca autoriza pagos, emisiones, impuestos ni cambios en facturas emitidas.</p>
+      <form method="post" action="/b/{{ business.id }}/support-access">
+        <label class="fld" for="support-purpose">Motivo concreto</label>
+        <textarea class="input" id="support-purpose" name="purpose" rows="3" maxlength="500"
+          required placeholder="Ej. El ticket de julio quedó en la carpeta incorrecta y necesito ayuda para revisarlo."></textarea>
+        <fieldset style="border:0;padding:0;margin:14px 0">
+          <legend class="fld">Qué puede revisar soporte</legend>
+          <div class="choice-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          {% for key, label in support_scopes.items() %}
+            <label class="choice-card"><input type="checkbox" name="scopes" value="{{ key }}"><span>{{ label }}</span></label>
+          {% endfor %}
+          </div>
+        </fieldset>
+        <div style="max-width:280px">
+          <label class="fld" for="support-duration">Duración máxima</label>
+          <select class="input" id="support-duration" name="duration_hours">
+            <option value="1">1 hora</option><option value="4" selected>4 horas</option>
+            <option value="24">24 horas</option><option value="72">72 horas</option>
+          </select>
+        </div>
+        <label style="display:flex;gap:9px;align-items:flex-start;margin-top:14px">
+          <input type="checkbox" name="consent" value="yes" required>
+          <span>Autorizo expresamente este acceso temporal para el motivo y los permisos seleccionados. Sé que puedo revocarlo en cualquier momento.</span>
+        </label>
+        <button class="btn primary" style="margin-top:14px">Autorizar acceso temporal</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
 <div class="card" style="margin-top:16px">
   <div class="card-h">
     <h2>Política de registro de jornada</h2>

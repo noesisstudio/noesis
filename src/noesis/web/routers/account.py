@@ -993,6 +993,44 @@ async def update_branding(business_id: int, template: str = Form("clasica"),
     return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
 
 
+@router.post("/b/{business_id}/support-access")
+def create_support_access(
+    request: Request,
+    business_id: int,
+    purpose: str = Form(""),
+    scopes: list[str] = Form([]),
+    duration_hours: int = Form(4),
+    consent: str = Form(""),
+):
+    user = auth.current_user(request)
+    if not user or user.get("business_id") != business_id:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        if consent != "yes":
+            raise ValueError("Debes confirmar expresamente el acceso temporal.")
+        db.create_support_grant(
+            business_id, user["id"], purpose=purpose, scopes=scopes,
+            duration_hours=duration_hours,
+        )
+        request.session["support_notice"] = "Acceso temporal autorizado."
+    except ValueError as exc:
+        request.session["support_error"] = str(exc)
+    return RedirectResponse(f"/b/{business_id}/ajustes#soporte", status_code=303)
+
+
+@router.post("/b/{business_id}/support-access/revoke")
+def revoke_support_access(request: Request, business_id: int):
+    user = auth.current_user(request)
+    if not user or user.get("business_id") != business_id:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        db.revoke_support_grant(business_id, user["id"])
+        request.session["support_notice"] = "Acceso de soporte revocado."
+    except ValueError as exc:
+        request.session["support_error"] = str(exc)
+    return RedirectResponse(f"/b/{business_id}/ajustes#soporte", status_code=303)
+
+
 @router.post("/onboarding/whatsapp/{business_id}/connect")
 def onboarding_whatsapp_connect(request: Request, business_id: int):
     # La vinculación real solo ocurre al recibir el código desde ese WhatsApp.

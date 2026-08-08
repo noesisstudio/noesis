@@ -3169,6 +3169,102 @@ def _downgrade_professional_document_profiles(conn) -> None:
             conn.execute(f"ALTER TABLE businesses DROP COLUMN{suffix} {column}")
 
 
+def _upgrade_scoped_support_access(conn) -> None:
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS support_access_grants ("
+        f"id {t['id']}, "
+        f"business_id {t['ref']} NOT NULL REFERENCES businesses(id), "
+        f"created_by_user_id {t['ref']} NOT NULL REFERENCES users(id), "
+        "purpose TEXT NOT NULL, scopes_json TEXT NOT NULL, "
+        "consent_version TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', "
+        f"expires_at {t['timestamp']} NOT NULL, "
+        f"created_at {t['timestamp']} NOT NULL, "
+        f"revoked_at {t['timestamp']}, "
+        "UNIQUE (business_id, id))"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_support_grants_business_status "
+        "ON support_access_grants(business_id, status, expires_at)"
+    )
+
+
+def _downgrade_scoped_support_access(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_support_grants_business_status")
+    conn.execute("DROP TABLE IF EXISTS support_access_grants")
+
+
+def _upgrade_platform_cost_ledger(conn) -> None:
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS platform_cost_entries ("
+        f"id {t['id']}, period TEXT NOT NULL, category TEXT NOT NULL, "
+        f"amount_eur {t['real']} NOT NULL, source TEXT NOT NULL, note TEXT, "
+        f"created_by_user_id {t['ref']} REFERENCES users(id), "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_platform_cost_entries_period "
+        "ON platform_cost_entries(period, category, id)"
+    )
+    if conn.dialect == "sqlite":
+        conn.executescript(
+            """
+CREATE TRIGGER IF NOT EXISTS platform_cost_entries_append_only_update
+BEFORE UPDATE ON platform_cost_entries
+BEGIN
+    SELECT RAISE(ABORT, 'el libro de costes es inalterable');
+END;
+CREATE TRIGGER IF NOT EXISTS platform_cost_entries_append_only_delete
+BEFORE DELETE ON platform_cost_entries
+BEGIN
+    SELECT RAISE(ABORT, 'el libro de costes es inalterable');
+END;
+"""
+        )
+    else:
+        conn.execute(
+            """
+CREATE OR REPLACE FUNCTION noesis_platform_costs_append_only()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'el libro de costes es inalterable'
+        USING ERRCODE = '23514';
+END;
+$$ LANGUAGE plpgsql
+"""
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only "
+            "ON platform_cost_entries"
+        )
+        conn.execute(
+            "CREATE TRIGGER platform_cost_entries_append_only "
+            "BEFORE UPDATE OR DELETE ON platform_cost_entries "
+            "FOR EACH ROW EXECUTE FUNCTION noesis_platform_costs_append_only()"
+        )
+
+
+def _downgrade_platform_cost_ledger(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only_update"
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only_delete"
+        )
+    else:
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only "
+            "ON platform_cost_entries"
+        )
+        conn.execute(
+            "DROP FUNCTION IF EXISTS noesis_platform_costs_append_only()"
+        )
+    conn.execute("DROP INDEX IF EXISTS idx_platform_cost_entries_period")
+    conn.execute("DROP TABLE IF EXISTS platform_cost_entries")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3223,6 +3319,10 @@ MIGRATIONS: tuple[Migration, ...] = (
     (42, "perfiles_documentales_profesionales",
      _upgrade_professional_document_profiles,
      _downgrade_professional_document_profiles),
+    (43, "acceso_soporte_acotado", _upgrade_scoped_support_access,
+     _downgrade_scoped_support_access),
+    (44, "costes_reales_plataforma", _upgrade_platform_cost_ledger,
+     _downgrade_platform_cost_ledger),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

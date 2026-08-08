@@ -79,8 +79,16 @@
   </div>
 
   <section class="support-locked">
-    <div><div class="kicker">Intervención</div><h2>Modificar datos no está habilitado</h2><p>Un acceso de soporte futuro exigirá autorización explícita y temporal del titular, motivo, alcance limitado y registro completo. Las facturas emitidas seguirán siendo inmutables.</p></div>
-    <span class="badge b-gray">Protegido</span>
+    {% if snapshot.support_grant %}
+    <div><div class="kicker">Intervención autorizada</div><h2>Ventana temporal abierta por el titular</h2>
+      <p><b>Motivo:</b> {{ snapshot.support_grant.purpose }}<br>
+        <b>Alcance:</b> {{ snapshot.support_grant.scope_labels|join(' · ') }}<br>
+        <b>Caduca:</b> {{ snapshot.support_grant.expires_at }}. La autorización no permite emitir facturas, mover dinero, presentar impuestos ni ver credenciales.</p></div>
+    <span class="badge b-amber">Autorizado hasta {{ snapshot.support_grant.expires_at|string|truncate(16, True, '') }}</span>
+    {% else %}
+    <div><div class="kicker">Intervención</div><h2>Modificar datos no está habilitado</h2><p>El titular debe abrir desde Ajustes una autorización temporal, indicar motivo y seleccionar cada alcance. Sin ella, esta cuenta permanece exclusivamente en diagnóstico. Las facturas emitidas siguen siendo inmutables.</p></div>
+    <span class="badge b-gray">Sin autorización</span>
+    {% endif %}
   </section>
 </main>
 </body>
