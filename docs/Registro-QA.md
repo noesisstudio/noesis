@@ -1,5 +1,32 @@
 # Registro de QA
 
+## 2026-08-08 — puerta de acceso por tipo de relación
+
+### Qué se probó y con qué resultado
+
+- La cabecera pública lleva a `/acceso`, que presenta únicamente
+  «Autónomo o empresa» y «Gestoría» y deriva a los dos logins ya existentes; el
+  cliente final se explica como acceso por enlace privado, no como otra cuenta.
+- `/app` sin sesión conduce al selector. Las sesiones titular y profesional siguen
+  usando claves diferentes y no se ha unido ni relajado ninguna autorización.
+- La solicitud de gestoría pide despacho y tamaño aproximado de cartera, se guarda
+  como interés profesional y no crea `gestoria_account` ni acceso a ningún negocio.
+- Pruebas focalizadas de SEO/rutas, solicitudes y endurecimiento: **35/35** verdes
+  mediante `unittest`. El entorno local no incluye `pytest`; no se instaló una
+  dependencia solo para ejecutar pruebas que ya funcionan con la biblioteca base.
+- Suite completa: **417/417** pruebas verdes en 269 segundos; los logs de caídas de
+  IA, Stripe, Meta, correo, backup y Veri*Factu son escenarios adversos simulados
+  por las propias pruebas. `compileall`, `check_project_truth.py` y
+  `git diff --check` también verdes.
+
+### Límite visual y de publicación
+
+- No se abrió navegador automatizado por el cierre recurrente de Codex indicado por
+  el founder. Falta captura real de escritorio/móvil después del despliegue.
+- Antes de estos cambios, producción se verificó sana con release `e6e15b1eea7a` y
+  esquema 41. Esta puerta nueva no se considerará publicada hasta que el commit se
+  despliegue y `/health` muestre su release.
+
 ## 2026-08-07 — jerarquía y navegación del expediente de gestoría
 
 ### Qué se probó y con qué resultado

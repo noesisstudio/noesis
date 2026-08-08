@@ -3,6 +3,7 @@
 {% block content %}
 <div class="gestoria-auth-wrap">
   <section class="gestoria-auth-intro">
+    <a class="gestoria-back" href="/acceso">← Elegir otro acceso</a>
     <span class="eyebrow">Cartera profesional</span>
     <h1>Tus clientes, ordenados en un solo lugar.</h1>
     <p>Revisa documentación, pide lo que falta y descarga cada período sin mezclar empresas.</p>
@@ -21,7 +22,7 @@
       <input class="input" type="password" name="password" autocomplete="current-password" required>
       <button class="btn primary gestoria-full">Entrar</button>
     </form>
-    <p class="gestoria-help">¿Aún no tienes cuenta? Tu primer cliente debe invitarte desde Ajustes.</p>
+    <p class="gestoria-help">¿Aún no tienes cuenta? <a href="/solicitar-acceso?perfil=gestoria">Solicita tu espacio profesional</a> o pide a tu primer cliente que te invite desde Ajustes.</p>
   </section>
 </div>
 {% endblock %}

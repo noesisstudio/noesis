@@ -283,6 +283,7 @@ _REQUEST_ERRORS = {
     "consent": "Necesitamos tu permiso para guardar tus datos y responderte.",
     "throttle": "Ya hemos recibido tu solicitud. Te escribimos en menos de 24 horas.",
     "sector": "Cuéntanos a qué se dedica tu negocio.",
+    "business_name": "Dinos el nombre de la gestoría o despacho.",
     "error": "No hemos podido registrar la solicitud. Inténtalo de nuevo.",
 }
 
@@ -290,7 +291,7 @@ _REQUEST_ERRORS = {
 @router.get("/solicitar-acceso", response_class=HTMLResponse)
 def access_request_form(
     request: Request, error: str = "", enviado: str = "", plan: str = "",
-    repetida: str = "",
+    repetida: str = "", perfil: str = "",
 ):
     """Formulario público: el alta la aprueba el equipo, no el visitante."""
     return TEMPLATES.TemplateResponse(request, "solicitar_acceso.html", {
@@ -300,6 +301,7 @@ def access_request_form(
         "repeated": bool(repetida),
         "plan_catalog": billing_adapter.PLANS,
         "selected_plan": plan if plan in billing_adapter.PLAN_PRICES else "",
+        "selected_profile": "gestoria" if perfil == "gestoria" else "negocio",
     })
 
 
@@ -313,6 +315,7 @@ def access_request_submit(
     phone: str = Form(""),
     message: str = Form(""),
     plan: str = Form(""),
+    perfil: str = Form(""),
     acepto: str = Form(""),
     # Campo señuelo: invisible para personas, irresistible para robots de spam.
     # No puede llamarse como un campo real o el autorrelleno del navegador lo
@@ -320,6 +323,11 @@ def access_request_submit(
     nsx_check: str = Form(""),
 ):
     name, email = (name or "").strip(), (email or "").strip().lower()
+    is_gestoria = perfil == "gestoria"
+    request_kind = "gestoría" if is_gestoria else "acceso"
+    profile_query = "&perfil=gestoria" if is_gestoria else ""
+    if is_gestoria:
+        sector = "Gestoría y asesoría"
     if nsx_check.strip():
         # Un robot lo ha rellenado: se responde como si todo hubiera ido bien para
         # no enseñarle qué le delató. Se deja rastro porque un falso positivo aquí
@@ -328,25 +336,44 @@ def access_request_submit(
             "Solicitud descartada por el señuelo antispam (ip=%s).",
             auth.client_ip(request),
         )
-        return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?enviado=1{profile_query}", status_code=303
+        )
     if not name:
-        return RedirectResponse("/solicitar-acceso?error=name", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=name{profile_query}", status_code=303
+        )
     if not auth.valid_email(email):
-        return RedirectResponse("/solicitar-acceso?error=email", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=email{profile_query}", status_code=303
+        )
+    if is_gestoria and not (business_name or "").strip():
+        return RedirectResponse(
+            f"/solicitar-acceso?error=business_name{profile_query}", status_code=303
+        )
     if not (sector or "").strip():
-        return RedirectResponse("/solicitar-acceso?error=sector", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=sector{profile_query}", status_code=303
+        )
     if not acepto:
-        return RedirectResponse("/solicitar-acceso?error=consent", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=consent{profile_query}", status_code=303
+        )
 
     # Un mismo correo repitiendo el envío suele ser una persona impaciente, no un
     # ataque: se le agradece y se le dice que ya la tenemos, sin pintarlo de error.
     today = datetime.now().strftime("%Y-%m-%d")
     if db.count_access_requests_since(email, today) >= 3:
-        return RedirectResponse("/solicitar-acceso?enviado=1&repetida=1", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?enviado=1&repetida=1{profile_query}",
+            status_code=303,
+        )
     # El corte por IP sí frena envíos masivos desde el mismo sitio.
     ip_key = f"access-request:{auth.client_ip(request)}"
     if auth.is_rate_limited(ip_key):
-        return RedirectResponse("/solicitar-acceso?error=throttle", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=throttle{profile_query}", status_code=303
+        )
 
     try:
         created = db.create_access_request(
@@ -355,7 +382,9 @@ def access_request_submit(
             plan_interest=plan if plan in billing_adapter.PLAN_PRICES else "",
         )
     except (ValueError, *db.IntegrityError):
-        return RedirectResponse("/solicitar-acceso?error=error", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=error{profile_query}", status_code=303
+        )
     auth.record_failed_attempt(ip_key)
 
     # Los correos se encolan, no se envían aquí: hablar con SMTP durante la
@@ -370,7 +399,7 @@ def access_request_submit(
         try:
             email_adapter.queue_email(
                 inbox,
-                f"Nueva solicitud de acceso: {created['name']}",
+                f"Nueva solicitud de {request_kind}: {created['name']}",
                 "\n".join([
                     f"Nombre: {created['name']}",
                     f"Correo: {created['email']}",
@@ -408,7 +437,9 @@ def access_request_submit(
         )
     except Exception:  # noqa: BLE001
         log.exception("No se pudo confirmar la solicitud %s.", created["id"])
-    return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
+    return RedirectResponse(
+        f"/solicitar-acceso?enviado=1{profile_query}", status_code=303
+    )
 
 
 # =========================================================== ONBOARDING ===== #

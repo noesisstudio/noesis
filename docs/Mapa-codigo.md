@@ -123,7 +123,11 @@
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
   Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
   cerrada en producción si falta identidad legal o autorización explícita y no
-  expone el diagnóstico de proveedores en la API del cliente.
+  expone el diagnóstico de proveedores en la API del cliente. La solicitud pública
+  distingue también un despacho profesional sin crearle una cuenta ni permisos.
+- `src/noesis/web/routers/pages.py` + `templates/access_entry.html`: `/acceso` es la
+  puerta pública única. Deriva autónomo/empresa al login titular y gestoría a su
+  identidad profesional separada; un cliente final conserva el portal por enlace.
 - `src/noesis/web/templates/onboarding_preferences.html`: aplica fiscalidad,
   factura, cobro, recordatorios, informes y gestoría antes de entrar al producto.
 - `src/noesis/web/routers/account.py` (`/solicitar-acceso`) + tabla `access_requests`:

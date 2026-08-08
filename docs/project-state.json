@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-08-07",
+  "state_date": "2026-08-08",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
   "schema_version": 41,
-  "verified_test_count": 415,
+  "verified_test_count": 417,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar la navegación separada del expediente de gestoría y recorrer visualmente en Chrome escritorio y móvil Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "pending_after_deploy": "Desplegar la puerta común de acceso y recorrer en escritorio y móvil la elección Autónomo o empresa / Gestoría, ambos logins y la solicitud profesional; recorrer visualmente Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -49,7 +49,9 @@
   },
   "authentication": {
     "password": "available",
-    "google_oauth": "implemented_hidden_until_client_and_secret_are_configured"
+    "google_oauth": "implemented_hidden_until_client_and_secret_are_configured",
+    "access_gateway": "one_public_entry_routes_owner_or_business_and_professional_accounting_firm_without_mixing_sessions_client_portal_keeps_private_link_entry",
+    "gestoria_onboarding": "professional_request_or_explicit_client_invitation_never_self_grants_business_access"
   },
   "internal_capabilities": {
     "commercial_onboarding": "trial_or_subscribe_then_business_invoice_collection_messages_whatsapp_and_checkout",

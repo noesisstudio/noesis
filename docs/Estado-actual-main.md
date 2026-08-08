@@ -6,6 +6,12 @@
 
 ## Producto construido
 
+- La web pública tiene una sola puerta de acceso y explica antes de pedir
+  credenciales si la persona entra como autónomo/empresa o como gestoría. Las dos
+  identidades conservan sesiones y permisos separados. El cliente final no aparece
+  como un tercer panel: entra únicamente por el enlace privado de su profesional.
+  Una gestoría sin cuenta puede solicitar el espacio profesional o aceptar la
+  invitación de un cliente, pero nunca obtiene acceso a empresas por registrarse.
 - Noesis cubre el ciclo cliente → presupuesto → trabajo/proyecto → fichaje y costes
   → factura → cobro, aislado siempre por `business_id`.
 - La entrada documental es común para web y WhatsApp: clasifica tickets, facturas,

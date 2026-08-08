@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
 <body class="public-auth-body login-page">
-  <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a><a href="/onboarding{% if public_signup_available %}?intent=trial{% endif %}">{% if public_signup_available %}Prueba 14 días{% else %}Solicitar acceso{% endif %} →</a></header>
+  <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a><a href="/acceso">Cambiar tipo de acceso</a></header>
   <main class="public-login-layout">
     <section class="login-message"><span class="eyebrow light-eyebrow">Vuelve a tu negocio</span><h1>Lo importante sigue en su sitio.</h1><p>Entra para revisar el día, preguntar a Noesis y decidir el siguiente paso.</p></section>
     <section class="public-auth-panel" aria-labelledby="login-title">
@@ -23,6 +23,7 @@
         <button class="btn primary full">Entrar</button>
       </form>
       <div class="login-links"><a href="/recuperar">¿Has olvidado la contraseña?</a><a href="/onboarding">{% if public_signup_available %}Crear una cuenta{% else %}Solicitar acceso{% endif %}</a></div>
+      <p class="auth-role-switch">¿Trabajas desde una gestoría? <a href="/gestoria/login">Entra a la cartera profesional</a>.</p>
     </section>
   </main>
 </body>

@@ -85,6 +85,30 @@ class AccessRequestTestCase(unittest.TestCase):
         self.assertIn("error=email", bad_email.headers["location"])
         self.assertEqual(db.list_access_requests(), [])
 
+    def test_gestoria_request_is_identified_without_opening_client_access(self):
+        scheduler, client = self._client()
+        with scheduler, client as http, patch(
+            "noesis.adapters.email.queue_email", return_value=True
+        ):
+            page = http.get("/solicitar-acceso?perfil=gestoria")
+            response = http.post("/solicitar-acceso", data={
+                "perfil": "gestoria", "name": "Núria Serra",
+                "email": "nuria@gestoria.example",
+                "business_name": "Serra Assessors", "phone": "600000000",
+                "message": "Llevamos unas 30 empresas", "acepto": "1",
+            }, follow_redirects=False)
+
+        self.assertIn("Tu cartera, preparada para asesorar", page.text)
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("perfil=gestoria", response.headers["location"])
+        stored = db.list_access_requests()
+        self.assertEqual(len(stored), 1)
+        self.assertEqual(stored[0]["business_name"], "Serra Assessors")
+        self.assertEqual(stored[0]["sector"], "Gestoría y asesoría")
+        self.assertIsNone(db.get_gestoria_account_by_email(
+            "nuria@gestoria.example"
+        ))
+
     def test_honeypot_looks_successful_but_stores_nothing(self):
         """Al robot se le responde como a una persona: no aprende del rechazo."""
         scheduler, client = self._client()

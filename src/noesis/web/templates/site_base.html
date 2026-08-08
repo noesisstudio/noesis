@@ -52,7 +52,7 @@
         {% if business_id %}
         <a class="btn ghost" href="/b/{{ business_id }}/resumen">Mi panel</a>
         {% else %}
-        <a class="btn ghost public-login" href="/login">Iniciar sesión</a>
+        <a class="btn ghost public-login" href="/acceso">Iniciar sesión</a>
         {% endif %}
         {% if public_signup_available %}
         <a class="btn primary" href="/onboarding?intent=trial">Prueba 14 días <span aria-hidden="true">→</span></a>
@@ -69,7 +69,7 @@
           <a href="/equipo">Equipo</a>
           <a href="/preguntas">Preguntas</a>
           <a href="/contacto">Contáctanos</a>
-          {% if business_id %}<a href="/b/{{ business_id }}/resumen">Mi panel</a>{% else %}<a href="/login">Iniciar sesión</a>{% endif %}
+          {% if business_id %}<a href="/b/{{ business_id }}/resumen">Mi panel</a>{% else %}<a href="/acceso">Iniciar sesión</a>{% endif %}
           {% if not business_id %}
           {% if public_signup_available %}<a href="/onboarding?intent=trial">Prueba 14 días</a>{% else %}<a href="/solicitar-acceso">Solicitar acceso</a>{% endif %}
           {% endif %}

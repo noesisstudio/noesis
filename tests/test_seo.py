@@ -27,7 +27,10 @@ class SeoTestCase(unittest.TestCase):
         texto = respuesta.text
         # Paneles, portales por token y formularios de sesión no deben indexarse:
         # unos no aportan nada en una búsqueda y otros llevan datos de clientes.
-        for privado in ("/b/", "/api/", "/admin", "/p/", "/g/", "/t/", "/login"):
+        for privado in (
+            "/b/", "/api/", "/admin", "/p/", "/g/", "/t/", "/login",
+            "/acceso", "/gestoria",
+        ):
             self.assertIn(f"Disallow: {privado}", texto)
         self.assertIn("Sitemap:", texto)
 
@@ -73,6 +76,22 @@ class SeoTestCase(unittest.TestCase):
             respuesta = http.get("/favicon.ico")
 
         self.assertEqual(respuesta.status_code, 200)
+
+    def test_public_login_opens_a_clear_role_selector(self):
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            home = http.get("/")
+            selector = http.get("/acceso")
+            app = http.get("/app", follow_redirects=False)
+
+        self.assertIn('href="/acceso">Iniciar sesión', home.text)
+        self.assertEqual(selector.status_code, 200)
+        self.assertIn("Autónomo o empresa", selector.text)
+        self.assertIn("Gestoría", selector.text)
+        self.assertIn('href="/login"', selector.text)
+        self.assertIn('href="/gestoria/login"', selector.text)
+        self.assertIn("cliente", selector.text.lower())
+        self.assertEqual(app.headers["location"], "/acceso")
 
     def test_every_indexable_page_describes_itself_and_keeps_the_site_menu(self):
         """Una página del sitemap puede ser la primera que alguien vea.

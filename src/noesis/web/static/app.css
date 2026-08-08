@@ -1987,6 +1987,33 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .public-login-layout { min-height:calc(100vh - 76px); grid-template-columns:1fr 430px; }
 .login-message { min-height:490px; }
 .login-links { display:flex; justify-content:space-between; gap:15px; margin-top:19px; font-size:11.5px; }
+.auth-role-switch { margin:22px 0 0; padding-top:18px; border-top:1px solid var(--border);
+  color:var(--muted); font-size:12px; line-height:1.55; text-align:center; }
+.auth-role-switch a, .gestoria-help a { color:var(--brand); font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+.access-entry { width:min(980px, calc(100% - 40px)); margin:0 auto; padding:64px 0 80px; }
+.access-entry-head { max-width:660px; margin:0 auto 38px; text-align:center; }
+.access-entry-head h1 { margin:10px 0 12px; color:var(--brand); font-family:var(--serif);
+  font-size:clamp(38px,5vw,56px); font-weight:500; line-height:1.04; letter-spacing:-.03em; }
+.access-entry-head p { margin:0; color:var(--muted); font-size:16px; line-height:1.65; }
+.access-entry-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.access-role-card { position:relative; display:flex; flex-direction:column; min-height:470px; padding:34px;
+  overflow:hidden; border:1px solid var(--border); border-radius:18px; background:#fff;
+  box-shadow:0 14px 34px rgba(20,70,59,.05); }
+.access-role-card.primary-role { border-color:#bfd5cc; }
+.access-role-mark { position:absolute; top:24px; right:26px; color:#cad4cf; font:600 12px/1 var(--font);
+  letter-spacing:.12em; }
+.access-role-card h2 { margin:10px 0 12px; color:var(--brand); font-family:var(--serif);
+  font-size:32px; font-weight:500; }
+.access-role-card > p { min-height:72px; margin:0; color:var(--muted); line-height:1.6; }
+.access-role-card ul { display:grid; gap:11px; margin:26px 0 30px; padding:22px 0 0;
+  border-top:1px solid var(--border); list-style:none; }
+.access-role-card li { position:relative; padding-left:21px; color:var(--text); font-size:13px; }
+.access-role-card li::before { content:""; position:absolute; left:0; top:.42em; width:7px; height:7px;
+  border-radius:50%; background:var(--brand-2); }
+.access-role-actions { display:grid; gap:13px; margin-top:auto; text-align:center; }
+.access-role-actions > a:not(.btn) { color:var(--brand); font-size:12px; font-weight:700; }
+.access-entry-note { max-width:680px; margin:28px auto 0; color:var(--muted); font-size:12px;
+  line-height:1.6; text-align:center; }
 .public-auth-body .onboarding-center { min-height:calc(100vh - 76px); padding-top:36px; }
 .public-auth-body .onboarding-card { border:1px solid var(--border); border-radius:14px; box-shadow:0 14px 34px rgba(20,70,59,.06); }
 .public-auth-body .onboarding-card h1 { font-size:39px; letter-spacing:-.02em; }
@@ -2056,6 +2083,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .public-auth-story dl div { padding:14px 10px; border-right:1px solid rgba(255,255,255,.18); }
   .onboarding-switch-grid { grid-template-columns:1fr; }
   .subscription-ready { align-items:flex-start; flex-direction:column; }
+  .access-entry-grid { grid-template-columns:1fr; }
+  .access-role-card { min-height:auto; }
 }
 @media (max-width: 520px) {
   .auth-topbar, .public-auth-layout, .public-login-layout { width:calc(100% - 28px); }
@@ -2066,6 +2095,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .public-auth-panel { padding:28px 20px; }
   .auth-progress span { display:none; }
   .login-links { flex-direction:column; }
+  .access-entry { width:calc(100% - 28px); padding-top:38px; }
+  .access-role-card { padding:28px 22px; }
   .signup-intent-grid, .signup-plan-row { grid-template-columns:1fr; }
   .onboarding-config-section { padding:17px 15px; }
   .onboarding-submit-bar { align-items:stretch; flex-direction:column; bottom:6px; }

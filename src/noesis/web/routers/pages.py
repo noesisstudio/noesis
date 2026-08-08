@@ -64,10 +64,26 @@ def home(request: Request):
 
 @router.get("/app")
 def app_entry(request: Request):
-    """Punto de entrada de la app instalada (PWA): directo al panel o al login."""
+    """Punto de entrada de la app instalada: panel activo o selector de acceso."""
     bid = request.session.get("bid")
-    target = f"/b/{bid}/resumen" if bid else "/login"
+    if bid:
+        target = f"/b/{bid}/resumen"
+    elif request.session.get("gid"):
+        target = "/gestoria"
+    else:
+        target = "/acceso"
     return RedirectResponse(target, status_code=303)
+
+
+@router.get("/acceso", response_class=HTMLResponse)
+def access_entry(request: Request):
+    """Puerta común que explica cada espacio sin mezclar identidades ni permisos."""
+    bid = request.session.get("bid")
+    if bid:
+        return RedirectResponse(f"/b/{bid}/resumen", status_code=303)
+    if request.session.get("gid"):
+        return RedirectResponse("/gestoria", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "access_entry.html", {})
 
 
 # Apartados del sitio publico: cada seccion es su propia pagina.
@@ -119,6 +135,8 @@ def robots():
         "Disallow: /g/",
         "Disallow: /t/",
         "Disallow: /login",
+        "Disallow: /acceso",
+        "Disallow: /gestoria",
         "Disallow: /onboarding",
         "Disallow: /recuperar",
         "Disallow: /restablecer",

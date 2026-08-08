@@ -5,6 +5,10 @@
 
 ## P0 — publicar y pilotar con seguridad
 
+- [ ] Desplegar y validar visualmente en escritorio y móvil la nueva entrada
+  `/acceso`: selección autónomo/empresa o gestoría, retorno entre accesos, login de
+  ambos perfiles y solicitud profesional. Confirmar que una solicitud de gestoría
+  no crea cuenta ni concede acceso a ninguna empresa.
 - [ ] Rotar `NOESIS_SECRET`, SMTP y cualquier credencial que haya aparecido en una
   captura, PDF o conversación; revocar la anterior y eliminar/redactar las copias
   compartidas. No reutilizar secretos sugeridos por una IA.

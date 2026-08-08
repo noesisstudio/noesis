@@ -23,6 +23,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-08 — puerta única para negocio y gestoría
+
+- **Autor/agente:** Codex.
+- **Objetivo:** hacer visible el canal profesional desde la web sin confundir al
+  autónomo, la gestoría ni el cliente final y sin duplicar autenticación.
+- **Áreas y archivos:** rutas públicas, selector y logins, solicitud de acceso,
+  estilos responsive, pruebas SEO/alta y documentación viva.
+- **Cambios de datos/migración:** ninguno; esquema 41. La solicitud profesional
+  reutiliza `access_requests` y no crea identidad ni relación de acceso.
+- **Pruebas ejecutadas:** 35/35 focalizadas de SEO, solicitudes y seguridad y suite
+  completa 417/417 mediante `unittest`; `compileall`, `check_project_truth.py` y
+  `git diff --check` verdes. CI queda antes de confirmar publicación real.
+- **Dependencias o validaciones externas:** ninguna credencial. Falta QA visual real
+  de escritorio/móvil tras desplegar porque no se usa el navegador que cierra Codex.
+- **Riesgo/punto probable de fallo:** enlaces públicos cacheados o pérdida del perfil
+  al devolver un error del formulario. Las redirecciones conservan `perfil=gestoria`
+  y los assets llevan versión.
+- **Diagnóstico y rollback:** comprobar `/acceso`, `/login`, `/gestoria/login`,
+  `/solicitar-acceso?perfil=gestoria` y que `gestoria_business_access` no cambie.
+  Revertir el commit devuelve los enlaces directos anteriores sin tocar datos.
+- **Estado de publicación:** candidato local; producción seguía sana en
+  `e6e15b1eea7a`, esquema 41, antes de este cambio.
+
 ## 2026-08-07 12:47 — expediente de gestoría separado por trabajo
 
 - **Autor/agente:** Codex.
