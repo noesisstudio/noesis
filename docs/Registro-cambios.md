@@ -44,8 +44,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** abrir «Diagnóstico» desde Cuentas y buscar el evento
   `admin.support_snapshot_viewed`. Revertir la ruta/vista no afecta datos de negocio;
   los eventos de auditoría ya escritos se conservan.
-- **Estado de publicación:** probado en local; pendiente de commit, CI, despliegue y
-  recorrido visual autenticado.
+- **Estado de publicación:** commit `8e9f9c4` en `main`, CI completo y humo
+  PostgreSQL verdes; producción confirmó release `8e9f9c412880` y esquema 41.
+  Pendiente solo el recorrido visual autenticado.
 
 ## 2026-08-08 — archivo del titular alineado con gestoría
 

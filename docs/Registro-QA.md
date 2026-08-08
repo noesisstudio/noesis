@@ -19,6 +19,9 @@
   no hubo fallo funcional ni se modificó el producto para ocultar la incidencia.
 - Falta recorrido visual autenticado tras desplegar. No se habilita mutación ni
   suplantación: requiere diseñar primero consentimiento temporal y permisos finos.
+- CI remoto verde: 423 pruebas, migraciones, auditoría de dependencias y humo
+  PostgreSQL. Producción respondió `/health` y `/ready` con release `8e9f9c412880`
+  y esquema 41; queda pendiente únicamente el recorrido visual autenticado.
 
 ## 2026-08-08 — archivo documental común para titular y gestoría
 
