@@ -38,8 +38,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   extracción acotada, PDF escaneado, documentos y copias; el CI repetirá la suite.
 - **Diagnóstico y rollback:** ejecutar `uv run pip-audit` y las pruebas documentales.
   No volver a 6.14.2; ante incompatibilidad, subir a una versión 6.x posterior.
-- **Estado de publicación:** corrección local posterior al fallo del run
-  `31264310221`; pendiente nuevo commit, CI y despliegue.
+- **Estado de publicación:** `b4f502b` desplegado y verificado en producción;
+  `/ready` devuelve esa release y esquema 41. CI completo y humo PostgreSQL verdes.
 
 ## 2026-08-08 — puerta única para negocio y gestoría
 
@@ -61,8 +61,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** comprobar `/acceso`, `/login`, `/gestoria/login`,
   `/solicitar-acceso?perfil=gestoria` y que `gestoria_business_access` no cambie.
   Revertir el commit devuelve los enlaces directos anteriores sin tocar datos.
-- **Estado de publicación:** candidato local; producción seguía sana en
-  `e6e15b1eea7a`, esquema 41, antes de este cambio.
+- **Estado de publicación:** selector en `0af37af` y actualización de seguridad en
+  `b4f502b`; producción verificada en esta última release y esquema 41. Falta QA
+  visual del founder en escritorio y móvil.
 
 ## 2026-08-07 12:47 — expediente de gestoría separado por trabajo
 

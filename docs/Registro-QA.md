@@ -34,9 +34,9 @@
 
 - No se abrió navegador automatizado por el cierre recurrente de Codex indicado por
   el founder. Falta captura real de escritorio/móvil después del despliegue.
-- Antes de estos cambios, producción se verificó sana con release `e6e15b1eea7a` y
-  esquema 41. Esta puerta nueva no se considerará publicada hasta que el commit se
-  despliegue y `/health` muestre su release.
+- Producción quedó verificada con release `b4f502bdb831` y esquema 41. `/acceso`,
+  `/gestoria/login` y `/solicitar-acceso?perfil=gestoria` responden y contienen las
+  decisiones/copy esperados. El CI completo y el humo PostgreSQL están verdes.
 
 ## 2026-08-07 — jerarquía y navegación del expediente de gestoría
 

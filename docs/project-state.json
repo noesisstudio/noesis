@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar la puerta común de acceso y recorrer en escritorio y móvil la elección Autónomo o empresa / Gestoría, ambos logins y la solicitud profesional; recorrer visualmente Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Recorrer visualmente en escritorio y móvil la elección Autónomo o empresa / Gestoría, ambos logins y la solicitud profesional; recorrer Resumen, Documentos, Impuestos, Períodos y Solicitudes con la demo de dos empresas; probar invitación, acceso, cartera, perfil y revocación con una gestoría real; validar los borradores y casos especiales con un despacho; acordar las condiciones económicas del canal colaborador antes de mostrar comisiones; configurar y validar identidad legal, Google OAuth admin, ClamAV privado, copia externa y restauración; rotar cualquier secreto expuesto y repetir los flujos reales de Meta, Stripe, correo, Google, audio/OCR, backup y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
