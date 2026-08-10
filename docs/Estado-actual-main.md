@@ -6,6 +6,32 @@
 
 ## Producto construido
 
+- WhatsApp separa dos contextos que no deben confundirse. El número central de
+  Noesis identifica al titular o al trabajador y sirve para órdenes internas,
+  fichaje, parte, costes, justificantes y dudas. Cada negocio puede conectar además
+  su propio número comercial para sus clientes finales. El webhook resuelve primero
+  `phone_number_id` y WABA receptores y solo después el remitente; contactos,
+  conversaciones, documentos y salidas conservan `business_id` y conexión. Un
+  número receptor desconocido o discordante se ignora sin crear datos ni responder
+  desde otro negocio. Mientras no exista Embedded Signup, administración puede dar
+  de alta WABA y `phone_number_id` como conexión pendiente desde la ficha técnica de
+  la cuenta; no recibe ni muestra tokens y toda activación queda auditada.
+- Los mensajes comerciales crean una bandeja trazable y un lead o vínculo con el
+  cliente dentro de la empresa correcta. Fotos y PDF pasan por la entrada documental
+  existente, se previsualizan desde Clientes y nunca se convierten por sí solos en
+  gasto o factura. El cliente recibe acuse seguro, puede solicitar baja y el titular
+  responde desde el panel únicamente dentro de la ventana de 24 horas; fuera de ella
+  se exige una plantilla aprobada.
+- El equipo escribe al número central, no al teléfono personal del titular. Puede
+  consultar su parte y fichar, enviar `COSTE #trabajo`, dudas, bloqueos y fotos/PDF.
+  Todo queda pendiente de revisión. Aceptar un coste lo aplica una sola vez al
+  trabajo; descartarlo no altera proyecto ni contabilidad. Campo no ve márgenes;
+  un responsable solo puede consultar el presupuesto de proyectos asignados cuando
+  el titular activa ese permiso. El parte diario resume aportaciones, costes y
+  conversaciones pendientes para evitar interrupciones constantes.
+- Un teléfono del canal central solo puede identificar a un titular o a un
+  trabajador. Noesis rechaza una segunda vinculación y, ante una ambigüedad heredada,
+  falla cerrado: informa del conflicto sin ejecutar órdenes ni asociar documentos.
 - El perfil documental del negocio controla plantilla, color, logotipo, pie común,
   condiciones y validez predeterminada. Los presupuestos incorporan IVA/IRPF,
   notas específicas y PDF profesional con la misma marca que la factura. Antes de

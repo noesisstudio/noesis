@@ -83,6 +83,24 @@ y [webhooks](https://docs.stripe.com/webhooks).
    entrega, añade el número real, verifica la empresa si Meta lo exige y repite la
    prueba con una cuenta piloto.
 
+El número configurado en `WHATSAPP_PHONE_ID` es el **canal central privado** al que
+escriben titular y trabajadores. Los números comerciales de los clientes de Noesis
+no se añaden como nuevas variables de Railway ni guardan tokens propios: cada WABA
+y `phone_number_id` se registra en `whatsapp_connections` después de que Meta haya
+concedido el activo al usuario de sistema de Noesis. El mismo token permanente solo
+puede usarse si tiene permiso real sobre todos esos activos.
+
+Para validar el modo multicanal del esquema 45, usa dos negocios y dos números de
+prueba/reales distintos: envía desde el mismo remitente a ambos, verifica dos
+contactos y conversaciones aisladas, responde desde el panel y confirma en Meta que
+cada salida usa el número receptor original. Prueba también WABA discordante,
+número revocado, opt-out, respuesta dentro y fuera de 24 horas y un PDF por negocio.
+Hasta construir/validar Embedded Signup, el alta técnica de WABA y número debe hacerla
+administración desde **Admin → cuenta → Números de WhatsApp del negocio**. La
+conexión nace `pending`; solo se marca `active` y con recepción después de probar el
+webhook. Ese formulario admite identificadores públicos, nunca tokens o secretos, y
+cada cambio queda auditado. Nunca se aceptan IDs técnicos escritos por un cliente.
+
 La [colección oficial de Meta](https://www.postman.com/meta/whatsapp-business-platform/overview)
 documenta Cloud API, permisos, tokens, WABA, números y webhooks.
 

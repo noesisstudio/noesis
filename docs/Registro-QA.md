@@ -1,5 +1,40 @@
 # Registro de QA
 
+## 2026-08-10 — WhatsApp multicanal y equipo sin ruido
+
+- Esquema 45 creado desde cero en SQLite. La primera suite completa detectó que
+  PostgreSQL exige índices únicos explícitos antes de tres claves foráneas compuestas
+  nuevas; se añadieron antes de las tablas dependientes y la guardia de orden DDL
+  quedó verde.
+- Suite completa final: **432/432** en 326 segundos. Ruff, `compileall`,
+  `git diff --check`, migración 45 y 41 pruebas focalizadas de WhatsApp/equipo/admin
+  verdes. Las trazas de Meta, Stripe, correo, IA, backup y AEAT son fallos adversos
+  simulados ya cubiertos por la suite; queda el aviso conocido Starlette/httpx y un
+  job del scheduler que alcanza una base temporal ya eliminada después de terminar
+  las pruebas, sin fallo de test.
+- Las pruebas nuevas demuestran que un mismo remitente queda separado por número
+  receptor y negocio; un destinatario o WABA desconocido no crea datos ni recibe
+  respuesta; la outbox usa el `phone_number_id` de la conexión correcta; y un coste
+  de trabajador no crea material hasta aceptación del titular y solo se aplica una
+  vez aunque se repita la decisión.
+- El canal central rechaza vincular un teléfono como titular y trabajador, o como
+  dos trabajadores distintos. Si encuentra una ambigüedad histórica, no elige un
+  negocio por aproximación: responde con el bloqueo de seguridad y no ejecuta nada.
+- Verificación funcional sin credenciales: permisos de rol, privacidad de márgenes,
+  bandeja de aportaciones, resumen al titular, contactos/conversaciones por negocio,
+  opt-out, documentos de cliente sin efecto contable, respuesta desde panel y
+  bloqueo de texto libre fuera de 24 horas.
+- Humo HTTP autenticado con base temporal: login 303; Ajustes, Clientes y Equipo
+  200; API del canal comercial y aportaciones 200. Las tres plantillas nuevas se
+  renderizan sin excepción. No sustituye la revisión visual de escritorio/móvil.
+- El centro administrador registra WABA y `phone_number_id` como pendientes, los
+  activa de forma explícita y audita actor y negocio. La prueba HTTP confirma que
+  un campo de token inesperado se ignora, el secreto no se almacena ni se renderiza
+  y la recepción solo puede habilitarse para una conexión activa.
+- No se validó Meta real, Embedded Signup, plantillas aprobadas, entrega de audio o
+  medios ni dos WABA reales. Tampoco se realizó QA visual con navegador por el cierre
+  recurrente indicado por el founder. Esos extremos permanecen en `Tareas-vivas.md`.
+
 ## 2026-08-08 — soporte consentido, CFO observado y términos operativos
 
 - CI de `main` [31269731863](https://github.com/noesisstudio/noesis/actions/runs/31269731863)

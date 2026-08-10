@@ -81,7 +81,7 @@
   </div>
 
   <div class="card card-action" id="whatsapp-conexion">
-    <div class="card-h"><h2>WhatsApp</h2>
+    <div class="card-h"><h2>WhatsApp privado con Noesis</h2>
       {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>
       {% else %}<span class="badge b-amber">no conectado</span>{% endif %}</div>
     <div class="card-b">
@@ -110,6 +110,32 @@
         Funciona con la API oficial de Meta (WhatsApp Cloud API). Cuando esté el número
         de empresa activo, podrás dar órdenes —y enviar notas de voz— y recibir tus
         avisos de cobro y resúmenes por aquí.
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-action" id="whatsapp-negocio">
+    <div class="card-h">
+      <h2>WhatsApp para tus clientes</h2>
+      <span class="badge b-gray" id="wb-status">Consultando…</span>
+    </div>
+    <div class="card-b">
+      <p style="margin-top:0">
+        Conecta un número comercial propio para que Noesis reciba solicitudes,
+        documentos y consultas de tus clientes sin mezclarlos con tus órdenes internas.
+      </p>
+      <div class="grid g3" style="margin-top:14px">
+        <div class="soft-card"><b>Clientes</b><p class="meta">Escriben al número de tu negocio. Cada remitente queda dentro de tu expediente.</p></div>
+        <div class="soft-card"><b>Equipo</b><p class="meta">Escribe al número central de Noesis. Costes y dudas esperan tu revisión.</p></div>
+        <div class="soft-card"><b>Tú decides</b><p class="meta">Noesis ordena y resume; no confirma importes ni compromisos por ti.</p></div>
+      </div>
+      <div id="wb-connections" style="margin-top:14px">
+        <div class="empty">Comprobando tu canal comercial…</div>
+      </div>
+      <div class="insight" style="margin-top:14px">
+        Un mensaje siempre se asigna primero por el número que lo recibe y después por
+        el remitente. Así dos empresas pueden tener un “Juan” con el mismo teléfono sin
+        compartir conversaciones, clientes ni documentos.
       </div>
     </div>
   </div>
@@ -786,5 +812,48 @@ async function forgetMemory(memoryId) {
     el('memory-list').innerHTML = '<div class="memory-empty">No guardo ninguna preferencia permanente.</div>';
   }
 }
+async function loadBusinessWhatsApp() {
+  const host = el('wb-connections'), badge = el('wb-status');
+  try {
+    const data = await api('/whatsapp-business');
+    const connections = data.connections || [];
+    const active = connections.filter(item => item.status === 'active');
+    badge.className = `badge ${active.length ? 'b-green' : 'b-gray'}`;
+    badge.textContent = active.length ? 'activo' : 'listo para conectar';
+    if (!connections.length) {
+      host.innerHTML = `<div class="empty"><strong>Tu canal comercial aún no está vinculado.</strong><br>
+        Al activar tu número, tus clientes podrán escribirle directamente y cada entrada
+        aparecerá separada por cliente, conversación y documento.</div>`;
+      return;
+    }
+    host.innerHTML = connections.map(item => `
+      <div class="lrow" style="align-items:center">
+        <span><b>${esc(item.verified_name || 'WhatsApp del negocio')}</b>
+          <small class="muted" style="display:block;margin-top:4px">${esc(item.display_phone || 'Número validado por Meta')} · ${esc(item.status)}</small></span>
+        <label style="display:flex;gap:8px;align-items:center">
+          <span class="meta">Recepción automática</span>
+          <input type="checkbox" ${item.receptionist_enabled ? 'checked' : ''}
+            ${item.status === 'active' ? '' : 'disabled'}
+            onchange="toggleBusinessReception(${item.id}, this)">
+        </label>
+      </div>`).join('');
+  } catch (error) {
+    badge.textContent = 'no disponible';
+    host.innerHTML = `<div class="empty">${esc(error.message)}</div>`;
+  }
+}
+async function toggleBusinessReception(connectionId, input) {
+  const previous = !input.checked;
+  input.disabled = true;
+  try {
+    await apiPost(`/whatsapp-business/${connectionId}/receptionist`, {
+      enabled: input.checked
+    });
+  } catch (error) {
+    input.checked = previous;
+    alert(error.message);
+  } finally { input.disabled = false; }
+}
+loadBusinessWhatsApp();
 </script>
 {% endblock %}

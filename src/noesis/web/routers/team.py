@@ -66,6 +66,9 @@ async def api_create_worker(business_id: int, request: Request):
             phone=body.get("phone"),
             color=body.get("color"),
             pin=body.get("pin"),
+            role=body.get("role") or "campo",
+            can_submit_costs=body.get("can_submit_costs", True),
+            can_view_assigned_budget=body.get("can_view_assigned_budget", False),
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -84,6 +87,14 @@ async def api_update_worker(
             name=body.get("name") if "name" in body else None,
             phone=body.get("phone") if "phone" in body else None,
             color=body.get("color") if "color" in body else None,
+            role=body.get("role") if "role" in body else None,
+            can_submit_costs=(
+                body.get("can_submit_costs") if "can_submit_costs" in body else None
+            ),
+            can_view_assigned_budget=(
+                body.get("can_view_assigned_budget")
+                if "can_view_assigned_budget" in body else None
+            ),
         )
         if worker is not None and "pin" in body:
             worker = db.set_worker_pin(
@@ -94,6 +105,36 @@ async def api_update_worker(
     if worker is None:
         return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
     return _worker_json(worker)
+
+
+@router.get("/api/{business_id}/workers/submissions")
+def api_worker_submissions(
+    business_id: int, status: str | None = None, limit: int = 100
+):
+    try:
+        items = db.list_worker_submissions(
+            business_id, status=status, limit=limit
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"items": items}
+
+
+@router.post("/api/{business_id}/workers/submissions/{submission_id}/resolve")
+async def api_resolve_worker_submission(
+    business_id: int, submission_id: int, request: Request
+):
+    try:
+        body = await _read_json(request)
+        submission = db.resolve_worker_submission(
+            submission_id, business_id, decision=body.get("decision"),
+            resolution_note=body.get("note"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if submission is None:
+        return JSONResponse({"error": "Aportación no encontrada."}, status_code=404)
+    return submission
 
 
 @router.post("/api/{business_id}/workers/{worker_id}/active")
@@ -273,4 +314,3 @@ def api_worker_report(
             )
         },
     )
-

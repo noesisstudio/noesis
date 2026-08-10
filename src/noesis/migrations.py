@@ -3265,6 +3265,202 @@ def _downgrade_platform_cost_ledger(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS platform_cost_entries")
 
 
+def _upgrade_whatsapp_multichannel(conn) -> None:
+    """Separa el canal privado de Noesis del WhatsApp comercial de cada negocio.
+
+    Los números empresariales se resuelven por ``phone_number_id`` antes de mirar al
+    remitente. Las tablas conservan el negocio en todas las relaciones para que una
+    referencia equivocada no pueda cruzar clientes, documentos o trabajadores.
+    """
+    t = _types(conn.dialect)
+    if "role" not in _column_names(conn, "workers"):
+        conn.execute("ALTER TABLE workers ADD COLUMN role TEXT NOT NULL DEFAULT 'campo'")
+    if "can_submit_costs" not in _column_names(conn, "workers"):
+        conn.execute(
+            f"ALTER TABLE workers ADD COLUMN can_submit_costs {t['boolean']} "
+            "NOT NULL DEFAULT TRUE"
+        )
+    if "can_view_assigned_budget" not in _column_names(conn, "workers"):
+        conn.execute(
+            f"ALTER TABLE workers ADD COLUMN can_view_assigned_budget {t['boolean']} "
+            "NOT NULL DEFAULT FALSE"
+        )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_job_materials_business_id "
+        "ON job_materials(business_id, id)"
+    )
+
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS whatsapp_connections (
+    id                     {t["id"]},
+    business_id            {t["ref"]} NOT NULL REFERENCES businesses(id),
+    mode                   TEXT NOT NULL DEFAULT 'business',
+    waba_id                TEXT NOT NULL,
+    phone_number_id        TEXT NOT NULL,
+    display_phone          TEXT,
+    verified_name          TEXT,
+    status                 TEXT NOT NULL DEFAULT 'pending',
+    receptionist_enabled   {t["boolean"]} NOT NULL DEFAULT FALSE,
+    inbound_enabled        {t["boolean"]} NOT NULL DEFAULT TRUE,
+    outbound_enabled       {t["boolean"]} NOT NULL DEFAULT TRUE,
+    created_at             {t["timestamp"]} NOT NULL,
+    updated_at             {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (phone_number_id),
+    CHECK (mode IN ('business')),
+    CHECK (status IN ('pending', 'active', 'paused', 'error', 'revoked'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_connections_business
+    ON whatsapp_connections(business_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_connections_business_id
+    ON whatsapp_connections(business_id, id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+    id              {t["id"]},
+    business_id     {t["ref"]} NOT NULL REFERENCES businesses(id),
+    connection_id   {t["ref"]} NOT NULL,
+    wa_id            TEXT NOT NULL,
+    phone_norm       TEXT NOT NULL,
+    display_name     TEXT,
+    client_id        {t["ref"]},
+    lead_id          {t["ref"]},
+    consent_status   TEXT NOT NULL DEFAULT 'active',
+    created_at       {t["timestamp"]} NOT NULL,
+    updated_at       {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (connection_id, wa_id),
+    FOREIGN KEY (business_id, connection_id)
+        REFERENCES whatsapp_connections(business_id, id),
+    FOREIGN KEY (business_id, client_id)
+        REFERENCES clients(business_id, id),
+    CHECK (consent_status IN ('active', 'opted_out', 'blocked'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_contacts_business
+    ON whatsapp_contacts(business_id, phone_norm);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_contacts_business_id
+    ON whatsapp_contacts(business_id, id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+    id                  {t["id"]},
+    business_id         {t["ref"]} NOT NULL REFERENCES businesses(id),
+    connection_id       {t["ref"]} NOT NULL,
+    contact_id          {t["ref"]} NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'open',
+    human_handoff       {t["boolean"]} NOT NULL DEFAULT FALSE,
+    summary             TEXT,
+    last_inbound_at     {t["timestamp"]},
+    last_outbound_at    {t["timestamp"]},
+    created_at          {t["timestamp"]} NOT NULL,
+    updated_at          {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (connection_id, contact_id),
+    FOREIGN KEY (business_id, connection_id)
+        REFERENCES whatsapp_connections(business_id, id),
+    FOREIGN KEY (business_id, contact_id)
+        REFERENCES whatsapp_contacts(business_id, id),
+    CHECK (status IN ('open', 'waiting_owner', 'resolved', 'archived'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_conversations_business
+    ON whatsapp_conversations(business_id, status, updated_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_conversations_business_id
+    ON whatsapp_conversations(business_id, id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_inbox (
+    id                  {t["id"]},
+    business_id         {t["ref"]} NOT NULL REFERENCES businesses(id),
+    connection_id       {t["ref"]} NOT NULL,
+    conversation_id     {t["ref"]} NOT NULL,
+    contact_id          {t["ref"]} NOT NULL,
+    meta_message_id     TEXT NOT NULL UNIQUE,
+    sender_phone        TEXT NOT NULL,
+    actor_role          TEXT NOT NULL DEFAULT 'customer',
+    message_type        TEXT NOT NULL,
+    text_body           TEXT,
+    document_id         {t["ref"]},
+    job_id              {t["ref"]},
+    processing_status   TEXT NOT NULL DEFAULT 'received',
+    error               TEXT,
+    received_at         {t["timestamp"]} NOT NULL,
+    processed_at        {t["timestamp"]},
+    FOREIGN KEY (business_id, connection_id)
+        REFERENCES whatsapp_connections(business_id, id),
+    FOREIGN KEY (business_id, conversation_id)
+        REFERENCES whatsapp_conversations(business_id, id),
+    FOREIGN KEY (business_id, contact_id)
+        REFERENCES whatsapp_contacts(business_id, id),
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id),
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    CHECK (actor_role IN ('customer', 'owner', 'worker', 'unknown')),
+    CHECK (message_type IN ('text', 'audio', 'image', 'document', 'interactive', 'unknown')),
+    CHECK (processing_status IN ('received', 'processed', 'failed', 'ignored'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_inbox_business
+    ON whatsapp_inbox(business_id, received_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_inbox_conversation
+    ON whatsapp_inbox(conversation_id, received_at);
+
+CREATE TABLE IF NOT EXISTS worker_submissions (
+    id              {t["id"]},
+    business_id     {t["ref"]} NOT NULL REFERENCES businesses(id),
+    worker_id       {t["ref"]} NOT NULL,
+    job_id          {t["ref"]},
+    project_id      {t["ref"]},
+    document_id     {t["ref"]},
+    applied_material_id {t["ref"]},
+    kind            TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    amount          {t["real"]},
+    status          TEXT NOT NULL DEFAULT 'pending',
+    resolution_note TEXT,
+    created_at      {t["timestamp"]} NOT NULL,
+    resolved_at     {t["timestamp"]},
+    UNIQUE (business_id, id),
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id),
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    FOREIGN KEY (business_id, project_id)
+        REFERENCES projects(business_id, id),
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id),
+    FOREIGN KEY (business_id, applied_material_id)
+        REFERENCES job_materials(business_id, id),
+    CHECK (kind IN ('cost', 'document', 'question', 'blocker', 'note')),
+    CHECK (status IN ('pending', 'accepted', 'rejected', 'resolved'))
+);
+CREATE INDEX IF NOT EXISTS idx_worker_submissions_business
+    ON worker_submissions(business_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_worker_submissions_worker
+    ON worker_submissions(business_id, worker_id, created_at);
+"""
+    )
+    if "connection_id" not in _column_names(conn, "whatsapp_outbox"):
+        conn.execute(f"ALTER TABLE whatsapp_outbox ADD COLUMN connection_id {t['ref']}")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_whatsapp_outbox_connection "
+        "ON whatsapp_outbox(connection_id, created_at)"
+    )
+
+
+def _downgrade_whatsapp_multichannel(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_whatsapp_outbox_connection")
+    if conn.dialect != "sqlite" and "connection_id" in _column_names(conn, "whatsapp_outbox"):
+        conn.execute("ALTER TABLE whatsapp_outbox DROP COLUMN IF EXISTS connection_id")
+    for table in (
+        "worker_submissions", "whatsapp_inbox", "whatsapp_conversations",
+        "whatsapp_contacts", "whatsapp_connections",
+    ):
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+    conn.execute("DROP INDEX IF EXISTS uq_job_materials_business_id")
+    if conn.dialect != "sqlite":
+        conn.execute("ALTER TABLE workers DROP COLUMN IF EXISTS can_view_assigned_budget")
+        conn.execute("ALTER TABLE workers DROP COLUMN IF EXISTS can_submit_costs")
+        conn.execute("ALTER TABLE workers DROP COLUMN IF EXISTS role")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3323,6 +3519,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_scoped_support_access),
     (44, "costes_reales_plataforma", _upgrade_platform_cost_ledger,
      _downgrade_platform_cost_ledger),
+    (45, "whatsapp_multicanal", _upgrade_whatsapp_multichannel,
+     _downgrade_whatsapp_multichannel),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

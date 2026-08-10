@@ -152,6 +152,32 @@ secreto válidos.
 
 Detalle y pendientes: [[Backend_Hardening]].
 
+## Identidades y canales de WhatsApp
+
+```text
+Titular ───────┐
+Trabajador ────┴─> número central Noesis
+                    ├─ identidad por teléfono vinculado
+                    ├─ órdenes/parte/fichaje
+                    └─ aportación pendiente -> revisión titular -> efecto
+
+Cliente final ───> número comercial del negocio
+                    ├─ WABA + phone_number_id -> business_id
+                    ├─ remitente -> contacto/cliente/lead dentro del negocio
+                    ├─ conversación + inbox + documento
+                    └─ acuse/escala/respuesta por la misma conexión
+```
+
+El destinatario se valida antes del remitente. No existe fallback desde un número
+empresarial desconocido al canal central, porque responder con la identidad errónea
+sería una filtración. Todas las relaciones nuevas repiten `business_id` y usan claves
+foráneas compuestas o validación equivalente. La outbox guarda `connection_id`; por
+eso un reintento conserva el número emisor correcto. Un coste de campo es una
+aportación, no un asiento: solo la aceptación transaccional crea una línea de material
+y la operación es idempotente. El teléfono central tiene una sola identidad efectiva:
+titular o trabajador. Se rechaza una segunda vinculación y una ambigüedad histórica
+bloquea la orden completa, sin escoger un negocio por aproximación.
+
 ## Principios
 - Datos en infraestructura propia/gestionada; solo el proveedor externo autorizado
   recibe el contexto que el nivel local no resuelve.

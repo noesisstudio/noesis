@@ -23,6 +23,35 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-10 11:45 — WhatsApp multicanal y coordinación del equipo
+
+- **Autor/agente:** Codex.
+- **Objetivo:** separar el canal interno de Noesis de la recepción comercial de cada
+  negocio, quitar interrupciones al titular y garantizar que clientes, documentos,
+  conversaciones y costes nunca se crucen entre empresas.
+- **Áreas y archivos:** migración/DB, motor y outbox de WhatsApp, resumen diario,
+  routers de equipo, canal comercial y administración, pantallas
+  Clientes/Equipo/Ajustes/soporte, estilos, pruebas específicas y documentación viva.
+- **Cambios de datos/migración:** esquema 44→45. Añade conexiones WABA/número por
+  negocio, contactos, conversaciones, inbox, relación de salida con conexión,
+  aportaciones revisables del equipo y permisos de rol. No modifica facturas
+  emitidas ni crea asientos a partir de mensajes históricos.
+- **Pruebas ejecutadas:** migración limpia a 45, guardia de DDL PostgreSQL, 41 tests
+  focalizados, Ruff, `compileall`, diff y suite completa **432/432** en 326 s.
+- **Dependencias o validaciones externas:** ninguna credencial usada. Meta real,
+  plantillas, medios, Embedded Signup/alta de activos y dos WABA siguen pendientes.
+- **Riesgo/punto probable de fallo:** configuración incorrecta de WABA/Phone Number
+  ID, plantilla no aprobada, mensaje fuera de 24 h, OCR real deficiente o asociación
+  manual equivocada. El código falla cerrado ante receptor/WABA desconocido y no
+  convierte documentos o costes sin revisión. También bloquea cualquier teléfono
+  central con más de una identidad interna en vez de escoger un negocio.
+- **Diagnóstico y rollback:** comprobar `/ready`=45, `whatsapp_connections`, inbox,
+  outbox con `connection_id`, webhook events y aportaciones pendientes. Revertir el
+  código detiene el canal empresarial; no bajar la migración en producción sin copia
+  porque eliminaría conversaciones y aportaciones creadas desde el despliegue.
+- **Estado de publicación:** incluido en el commit de `main` asociado a esta
+  entrada; despliegue y validación con Meta real pendientes.
+
 ## 2026-08-08 21:05 — soporte temporal, CFO real y términos reforzados
 
 - **Autor/agente:** Codex.

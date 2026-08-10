@@ -214,6 +214,116 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
             "plan": True,
         }
 
+    if normalized in {"ayuda", "comandos", "help"}:
+        return {
+            "business_id": worker["business_id"],
+            "worker_id": worker["id"],
+            "reply": (
+                "Puedes escribir: HOY; ENTRADA #n, PAUSA, REANUDAR o SALIDA; "
+                "HECHO Tn; COSTE #n 25,40 material; DUDA #n texto; "
+                "BLOQUEO #n texto; o enviar una foto/PDF con #n en el comentario. "
+                "Los costes y documentos quedan pendientes de revisión: no cambian "
+                "las cuentas sin confirmación del titular."
+            ),
+            "clocked": False,
+        }
+
+    cost_match = re.fullmatch(
+        r"coste\s+(?:(?:trabajo\s*)?(\d+)\s+)?"
+        r"(\d+(?:[\.,]\d{1,2})?)\s*(?:€|eur)?\s+(.+)",
+        normalized,
+    )
+    if cost_match:
+        explicit_job = int(cost_match.group(1)) if cost_match.group(1) else None
+        open_shift = db.worker_open_shift(worker["id"], worker["business_id"])
+        job_id = explicit_job or (open_shift or {}).get("job_id")
+        try:
+            submission = db.create_worker_submission(
+                worker["business_id"], worker["id"], kind="cost",
+                job_id=job_id,
+                amount=float(cost_match.group(2).replace(",", ".")),
+                description=cost_match.group(3).strip(),
+            )
+        except ValueError as exc:
+            reply = str(exc)
+            submission = None
+        else:
+            reply = (
+                f"Coste #{submission['id']} recibido para el trabajo "
+                f"#{submission['job_id']}: {_eur(submission['amount'])}. "
+                "Queda pendiente de revisión; todavía no afecta al margen ni a "
+                "la contabilidad."
+            )
+        return {
+            "business_id": worker["business_id"], "worker_id": worker["id"],
+            "reply": reply, "clocked": False,
+            "submission_id": submission["id"] if submission else None,
+        }
+
+    question_match = re.fullmatch(
+        r"(duda|pregunta|bloqueo|nota)\s+"
+        r"(?:(?:trabajo\s*)?(\d+)\s+)?(.+)", normalized,
+    )
+    if question_match:
+        explicit_job = int(question_match.group(2)) if question_match.group(2) else None
+        open_shift = db.worker_open_shift(worker["id"], worker["business_id"])
+        job_id = explicit_job or (open_shift or {}).get("job_id")
+        kind = {
+            "duda": "question", "pregunta": "question",
+            "bloqueo": "blocker", "nota": "note",
+        }[question_match.group(1)]
+        try:
+            submission = db.create_worker_submission(
+                worker["business_id"], worker["id"], kind=kind,
+                job_id=job_id, description=question_match.group(3).strip(),
+            )
+        except ValueError as exc:
+            reply = str(exc)
+            submission = None
+        else:
+            reply = (
+                "Lo he registrado y lo incluiré en el resumen del titular. "
+                + ("Lo marcaré como bloqueo prioritario."
+                   if kind == "blocker" else
+                   "Solo le interrumpiré si requiere una decisión urgente.")
+            )
+        return {
+            "business_id": worker["business_id"], "worker_id": worker["id"],
+            "reply": reply, "clocked": False,
+            "submission_id": submission["id"] if submission else None,
+        }
+
+    margin_match = re.fullmatch(r"margen(?:\s+(?:trabajo\s*)?(\d+))?", normalized)
+    if margin_match:
+        if not worker.get("can_view_assigned_budget"):
+            reply = (
+                "Tu perfil no muestra márgenes ni cifras globales del negocio. "
+                "Puedes consultar tu trabajo, horas, tareas y costes enviados."
+            )
+        else:
+            explicit_job = int(margin_match.group(1)) if margin_match.group(1) else None
+            open_shift = db.worker_open_shift(worker["id"], worker["business_id"])
+            job_id = explicit_job or (open_shift or {}).get("job_id")
+            job = db.get_job(job_id, worker["business_id"]) if job_id else None
+            if not job or not db.worker_can_access_job(
+                job["id"], worker["id"], worker["business_id"]
+            ):
+                reply = "Indica un trabajo asignado: MARGEN #n."
+            elif not job.get("project_id"):
+                reply = "Ese trabajo no está dentro de un proyecto con presupuesto."
+            else:
+                project = db.get_project(job["project_id"], worker["business_id"])
+                reply = (
+                    f"Proyecto {project['name']}: presupuesto {_eur(project['budget'])}; "
+                    f"coste registrado {_eur(project['actual_cost'])}; "
+                    f"disponible {_eur(max(0, project['margin']))}. "
+                    "Es una referencia operativa, no el resultado global del negocio."
+                )
+        return {
+            "business_id": worker["business_id"], "worker_id": worker["id"],
+            "reply": reply, "clocked": False,
+        }
+
     task_match = re.fullmatch(
         r"(?:hecho|hecha|empezar|bloquear|bloqueada)\s+t?\s*(\d+)",
         normalized,
@@ -315,20 +425,48 @@ def _extract_messages(payload: dict) -> list[dict]:
             "media_document_mime": payload.get("media_document_mime"),
             "media_document_filename": payload.get("media_document_filename"),
             "caption": str(payload.get("caption") or ""),
+            "recipient_phone_id": str(payload.get("recipient_phone_id") or ""),
+            "recipient_display_phone": str(
+                payload.get("recipient_display_phone") or ""
+            ),
+            "waba_id": str(payload.get("waba_id") or ""),
+            "profile_name": str(payload.get("profile_name") or ""),
+            "message_type": str(payload.get("message_type") or (
+                "audio" if payload.get("audio_id") else
+                "image" if payload.get("image_id") else
+                "document" if payload.get("media_document_id") else "text"
+            )),
         }]
     for entry in payload.get("entry", []) or []:
         for change in entry.get("changes", []) or []:
             value = change.get("value", {}) or {}
+            metadata = value.get("metadata", {}) or {}
+            profiles = {
+                str(contact.get("wa_id") or ""): str(
+                    (contact.get("profile", {}) or {}).get("name") or ""
+                )
+                for contact in (value.get("contacts", []) or [])
+            }
             for message in value.get("messages", []) or []:
                 phone = message.get("from", "")
                 if not phone:
                     continue
                 image = message.get("image", {}) or {}
                 document = message.get("document", {}) or {}
+                message_type = str(message.get("type") or "unknown")
+                interactive = message.get("interactive", {}) or {}
+                interactive_text = (
+                    (interactive.get("button_reply", {}) or {}).get("title")
+                    or (interactive.get("list_reply", {}) or {}).get("title")
+                    or ""
+                )
                 out.append({
                     "id": str(message.get("id") or ""),
                     "phone": phone,
-                    "text": (message.get("text", {}) or {}).get("body", ""),
+                    "text": (
+                        (message.get("text", {}) or {}).get("body", "")
+                        or interactive_text
+                    ),
                     "audio_id": (message.get("audio", {}) or {}).get("id"),
                     "image_id": image.get("id"),
                     "image_mime": image.get("mime_type"),
@@ -338,6 +476,15 @@ def _extract_messages(payload: dict) -> list[dict]:
                     "caption": str(
                         image.get("caption") or document.get("caption") or ""
                     ),
+                    "recipient_phone_id": str(
+                        metadata.get("phone_number_id") or ""
+                    ),
+                    "recipient_display_phone": str(
+                        metadata.get("display_phone_number") or ""
+                    ),
+                    "waba_id": str(entry.get("id") or ""),
+                    "profile_name": profiles.get(str(phone), ""),
+                    "message_type": message_type,
                 })
     return out
 
@@ -965,6 +1112,226 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
     }
 
 
+def _message_job_id(message: dict) -> int | None:
+    match = re.search(
+        r"(?:#|trabajo\s+)(\d+)\b",
+        str(message.get("caption") or message.get("text") or ""),
+        re.I,
+    )
+    return int(match.group(1)) if match else None
+
+
+def _ingest_worker_media(worker: dict, phone: str, message: dict) -> dict:
+    """Guarda un justificante de campo sin convertirlo todavía en gasto."""
+    from ..adapters import extraction
+    from ..documents import repo as document_repo
+    from ..documents import service as docservice
+
+    business_id = worker["business_id"]
+    job_id = _message_job_id(message)
+    if job_id is None:
+        job_id = (db.worker_open_shift(worker["id"], business_id) or {}).get("job_id")
+    if not job_id or not db.worker_can_access_job(job_id, worker["id"], business_id):
+        send(
+            phone,
+            "Indica el trabajo en el comentario, por ejemplo #24. "
+            "No guardaré el documento en un expediente equivocado.",
+            business_id=business_id,
+        )
+        return {"phone": phone, "worker_id": worker["id"], "ingested": False}
+    job = db.get_job(job_id, business_id)
+    if message.get("image_id"):
+        media_id = message["image_id"]
+        mime = message.get("image_mime") or "image/jpeg"
+        extension = {
+            "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+        }.get(mime)
+        if not extension:
+            send(phone, "Solo acepto JPG, PNG, WEBP o PDF.", business_id=business_id)
+            return {"phone": phone, "worker_id": worker["id"], "ingested": False}
+        filename = f"equipo-trabajo-{job_id}{extension}"
+    else:
+        media_id = message.get("media_document_id")
+        mime = message.get("media_document_mime") or "application/pdf"
+        filename = message.get("media_document_filename") or f"trabajo-{job_id}.pdf"
+        if mime != "application/pdf" and not filename.lower().endswith(".pdf"):
+            send(phone, "Por ahora los documentos deben ser PDF.", business_id=business_id)
+            return {"phone": phone, "worker_id": worker["id"], "ingested": False}
+    data = _download_media(media_id, max_bytes=config.MAX_UPLOAD_MB * 1024 * 1024)
+    if not data:
+        send(phone, "No he podido descargar el archivo. Vuelve a enviarlo.",
+             business_id=business_id)
+        return {"phone": phone, "worker_id": worker["id"], "ingested": False}
+    try:
+        document = docservice.upload(
+            business_id, filename, data, kind="documento",
+            note=f"Aportado por {worker['name']} para trabajo #{job_id}",
+            run_ocr=True, auto_classify=True,
+        )
+        document = document_repo.set_context(
+            document["id"], business_id, client_id=job.get("client_id"),
+            project_id=job.get("project_id"),
+        ) or document
+    except (docservice.UploadError, ValueError) as exc:
+        send(phone, str(exc), business_id=business_id)
+        return {"phone": phone, "worker_id": worker["id"], "ingested": False}
+
+    amount = document.get("ocr_amount")
+    if message.get("image_id") and not amount and worker.get("can_submit_costs"):
+        fields = extraction.extract_expense(
+            data, mime,
+            allow_external=db.integration_enabled(
+                business_id, "ai_external", available=bool(config.ANTHROPIC_API_KEY)
+            ),
+        )
+        amount = (fields or {}).get("amount")
+    kind = "cost" if amount and worker.get("can_submit_costs") else "document"
+    submission = db.create_worker_submission(
+        business_id, worker["id"], kind=kind, job_id=job_id,
+        document_id=document["id"], amount=amount,
+        description=(
+            f"Justificante: {filename}"
+            if kind == "document" else
+            f"Coste detectado en {filename}"
+        ),
+    )
+    amount_text = f" por {_eur(amount)}" if amount else ""
+    send(
+        phone,
+        f"Documento guardado en el trabajo #{job_id}{amount_text}. "
+        "Queda pendiente de revisión y no modifica las cuentas todavía.",
+        business_id=business_id,
+    )
+    return {
+        "phone": phone, "worker_id": worker["id"], "ingested": True,
+        "document_id": document["id"], "submission_id": submission["id"],
+    }
+
+
+def _ingest_customer_media(
+    business: dict, connection: dict, contact: dict, message: dict
+) -> dict:
+    """Archiva documentos de clientes externos dentro del negocio receptor."""
+    from ..documents import repo as document_repo
+    from ..documents import service as docservice
+
+    business_id = business["id"]
+    if message.get("image_id"):
+        media_id = message["image_id"]
+        mime = message.get("image_mime") or "image/jpeg"
+        extension = {
+            "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+        }.get(mime)
+        if not extension:
+            raise ValueError("El formato de imagen no es compatible.")
+        filename = f"cliente-whatsapp{extension}"
+    else:
+        media_id = message.get("media_document_id")
+        mime = message.get("media_document_mime") or "application/pdf"
+        filename = message.get("media_document_filename") or "documento-cliente.pdf"
+        if mime != "application/pdf" and not filename.lower().endswith(".pdf"):
+            raise ValueError("El documento debe ser un PDF.")
+    data = _download_media(media_id, max_bytes=config.MAX_UPLOAD_MB * 1024 * 1024)
+    if not data:
+        raise ValueError("No he podido descargar el archivo; vuelve a enviarlo.")
+    document = docservice.upload(
+        business_id, filename, data, kind="documento",
+        note="Recibido de un cliente por el WhatsApp del negocio",
+        run_ocr=True, auto_classify=True,
+    )
+    if contact.get("client_id"):
+        document = document_repo.set_context(
+            document["id"], business_id, client_id=contact["client_id"]
+        ) or document
+    return document
+
+
+def _handle_business_customer_message(connection: dict, message: dict) -> dict:
+    """Recepcionista segura: organiza, acusa recibo y escala sin revelar datos."""
+    from ..documents.service import UploadError
+
+    business_id = connection["business_id"]
+    business = db.get_business(business_id)
+    if not business or not db.subscription_allows_access(business):
+        return {"business_id": business_id, "customer_channel": True, "paused": True}
+    contact = db.ensure_whatsapp_customer_contact(
+        connection["id"], business_id, message["phone"], message.get("profile_name")
+    )
+    conversation = db.get_or_create_whatsapp_conversation(
+        connection["id"], contact["id"], business_id
+    )
+    text = str(message.get("text") or message.get("caption") or "").strip()
+    inbox = db.record_whatsapp_inbox(
+        business_id=business_id, connection_id=connection["id"],
+        conversation_id=conversation["id"], contact_id=contact["id"],
+        meta_message_id=message.get("id") or secrets.token_hex(12),
+        sender_phone=message["phone"],
+        message_type=message.get("message_type") or "unknown", text_body=text,
+    )
+    normalized = _normalized_word(text)
+    if normalized in {"stop", "baja", "cancelar mensajes"}:
+        db.set_whatsapp_contact_consent(contact["id"], business_id, "opted_out")
+        db.update_whatsapp_conversation(
+            conversation["id"], business_id, status="archived"
+        )
+        reply = "De acuerdo. No recibirás más respuestas automáticas por este canal."
+        send(message["phone"], reply, business_id=business_id,
+             connection_id=connection["id"])
+        db.finish_whatsapp_inbox(inbox["id"], business_id)
+        return {"business_id": business_id, "customer_channel": True,
+                "contact_id": contact["id"], "opted_out": True}
+    if contact.get("consent_status") in {"opted_out", "blocked"}:
+        db.finish_whatsapp_inbox(inbox["id"], business_id, status="ignored")
+        return {"business_id": business_id, "customer_channel": True,
+                "contact_id": contact["id"], "ignored": True}
+
+    document_id = None
+    if message.get("image_id") or message.get("media_document_id"):
+        try:
+            document = _ingest_customer_media(business, connection, contact, message)
+        except (UploadError, ValueError) as exc:
+            db.finish_whatsapp_inbox(
+                inbox["id"], business_id, status="failed", error=str(exc)
+            )
+            send(message["phone"], str(exc), business_id=business_id,
+                 connection_id=connection["id"])
+            return {"business_id": business_id, "customer_channel": True,
+                    "contact_id": contact["id"], "ingested": False}
+        document_id = document["id"]
+        db.update_whatsapp_conversation(
+            conversation["id"], business_id, status="waiting_owner",
+            summary=f"Documento recibido: {document.get('filename') or 'archivo'}",
+        )
+        reply = (
+            f"He recibido y archivado {document.get('filename') or 'el documento'} "
+            f"para {business.get('name')}. El equipo lo revisará antes de usarlo."
+        )
+    else:
+        urgent = bool(re.search(
+            r"\b(urgente|fuga|aver[ií]a|sin luz|emergencia|peligro)\b", text, re.I
+        ))
+        db.update_whatsapp_conversation(
+            conversation["id"], business_id,
+            status="waiting_owner", human_handoff=urgent,
+            summary=text or "Mensaje de cliente pendiente de revisar",
+        )
+        reply = (
+            f"He registrado tu mensaje para {business.get('name')}. "
+            + ("Lo he marcado como urgente para que lo revisen cuanto antes."
+               if urgent else
+               "Queda ordenado en su bandeja y te responderán desde este mismo número.")
+        )
+    send(message["phone"], reply, business_id=business_id,
+         connection_id=connection["id"])
+    db.finish_whatsapp_inbox(
+        inbox["id"], business_id, document_id=document_id
+    )
+    return {
+        "business_id": business_id, "customer_channel": True,
+        "contact_id": contact["id"], "document_id": document_id,
+    }
+
+
 def _finish_inbound_message(
     message_id: str | None, claimed_ids: list[str]
 ) -> None:
@@ -990,22 +1357,58 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
         phone = message["phone"]
         text = message["text"]
         audio_id = message.get("audio_id")
+        recipient_id = str(message.get("recipient_phone_id") or "").strip()
+        connection = None
+        if recipient_id and recipient_id != str(_PHONE_ID or "").strip():
+            connection = db.get_whatsapp_connection_by_phone_number_id(recipient_id)
+            if not connection:
+                results.append({
+                    "phone": phone, "recipient_phone_id": recipient_id,
+                    "ignored": True, "reason": "unknown_recipient",
+                })
+                _finish_inbound_message(message_id, claimed_ids)
+                continue
+            event_waba = str(message.get("waba_id") or "").strip()
+            if event_waba and event_waba != str(connection.get("waba_id") or ""):
+                results.append({
+                    "phone": phone, "recipient_phone_id": recipient_id,
+                    "ignored": True, "reason": "waba_mismatch",
+                })
+                _finish_inbound_message(message_id, claimed_ids)
+                continue
+            if not connection.get("receptionist_enabled"):
+                results.append({
+                    "phone": phone, "business_id": connection["business_id"],
+                    "ignored": True, "reason": "receptionist_paused",
+                })
+                _finish_inbound_message(message_id, claimed_ids)
+                continue
 
         if audio_id and not text:
             text = _audio_to_text(audio_id) or ""
             if not text:
-                business = db.get_business_by_phone(phone)
+                business = (
+                    db.get_business(connection["business_id"])
+                    if connection else db.get_business_by_phone(phone)
+                )
                 send(
                     phone,
                     "He recibido tu nota de voz pero no he podido transcribirla. "
                     "Escríbeme la orden en texto, por favor.",
                     business_id=business["id"] if business else None,
+                    connection_id=connection["id"] if connection else None,
                 )
                 results.append({
                     "phone": phone, "audio": True, "transcribed": False,
                 })
                 _finish_inbound_message(message_id, claimed_ids)
                 continue
+
+        message["text"] = text
+        if connection:
+            results.append(_handle_business_customer_message(connection, message))
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
 
         worker_link = _try_worker_link(phone, text)
         if worker_link is not None:
@@ -1036,6 +1439,27 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
+        identity = db.central_whatsapp_identity(phone)
+        if identity["ambiguous"]:
+            send(
+                phone,
+                "Este teléfono tiene más de una identidad interna vinculada. "
+                "Por seguridad no he ejecutado nada. El titular debe corregir la "
+                "vinculación desde Equipo o Ajustes.",
+            )
+            results.append({
+                "phone": phone, "ignored": True,
+                "reason": "ambiguous_central_identity",
+            })
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
+
+        worker = identity["worker"]
+        if worker and (message.get("image_id") or message.get("media_document_id")):
+            results.append(_ingest_worker_media(worker, phone, message))
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
+
         worker_clock = _try_worker_clock(phone, text)
         if worker_clock is not None:
             send(
@@ -1055,7 +1479,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
-        business = db.get_business_by_phone(phone)
+        business = identity["business"]
         if not business:
             send(
                 phone,
@@ -1200,13 +1624,14 @@ def _meta_payload(message: dict) -> dict:
     }
 
 
-def _post_to_meta(payload: dict) -> str:
+def _post_to_meta(payload: dict, phone_number_id: str | None = None) -> str:
     """Realiza un intento y devuelve el wamid asignado por Meta."""
-    if not (_TOKEN and _PHONE_ID):
+    target_phone_id = str(phone_number_id or _PHONE_ID).strip()
+    if not (_TOKEN and target_phone_id):
         raise RuntimeError("WhatsApp Cloud API no está configurada.")
     url = (
         f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/"
-        f"{_PHONE_ID}/messages"
+        f"{target_phone_id}/messages"
     )
     request = urllib.request.Request(
         url,
@@ -1259,7 +1684,20 @@ def process_outbox(
                 })
                 continue
         try:
-            meta_message_id = _post_to_meta(_meta_payload(message))
+            connection_id = message.get("connection_id")
+            if connection_id:
+                connection = db.get_whatsapp_connection(
+                    connection_id, message["business_id"]
+                )
+                if not connection or connection.get("status") != "active":
+                    raise RuntimeError("La conexión empresarial no está activa.")
+                if not connection.get("outbound_enabled"):
+                    raise RuntimeError("Los envíos de esta conexión están pausados.")
+                meta_message_id = _post_to_meta(
+                    _meta_payload(message), connection["phone_number_id"]
+                )
+            else:
+                meta_message_id = _post_to_meta(_meta_payload(message))
             db.mark_whatsapp_sent(message["id"], meta_message_id, now_text)
             processed.append({
                 "id": message["id"],
@@ -1299,12 +1737,14 @@ def queue_text(
     text: str,
     *,
     business_id: int | None = None,
+    connection_id: int | None = None,
     idempotency_key: str | None = None,
     now: datetime | None = None,
 ) -> dict:
     point = now or datetime.now()
     return db.enqueue_whatsapp_message(
         business_id=business_id,
+        connection_id=connection_id,
         to_phone=to,
         message_type="text",
         text_body=text,
@@ -1320,6 +1760,7 @@ def queue_template(
     params: list[str] | None = None,
     *,
     business_id: int | None = None,
+    connection_id: int | None = None,
     language: str | None = None,
     idempotency_key: str | None = None,
     now: datetime | None = None,
@@ -1327,6 +1768,7 @@ def queue_template(
     point = now or datetime.now()
     return db.enqueue_whatsapp_message(
         business_id=business_id,
+        connection_id=connection_id,
         to_phone=to,
         message_type="template",
         template_name=template_name,
@@ -1343,6 +1785,7 @@ def send(
     text: str,
     *,
     business_id: int | None = None,
+    connection_id: int | None = None,
     idempotency_key: str | None = None,
 ) -> bool:
     """Encola de forma durable y hace un primer intento inmediato."""
@@ -1350,6 +1793,7 @@ def send(
         to,
         text,
         business_id=business_id,
+        connection_id=connection_id,
         idempotency_key=idempotency_key,
     )
     process_outbox(only_ids=[message["id"]], limit=1)
@@ -1362,6 +1806,7 @@ def send_template(
     params: list[str] | None = None,
     *,
     business_id: int | None = None,
+    connection_id: int | None = None,
     language: str | None = None,
     idempotency_key: str | None = None,
 ) -> bool:
@@ -1371,6 +1816,7 @@ def send_template(
         template_name,
         params,
         business_id=business_id,
+        connection_id=connection_id,
         language=language,
         idempotency_key=idempotency_key,
     )

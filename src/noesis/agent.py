@@ -446,6 +446,13 @@ def daily_summary_text(business_id: int) -> str:
     pend = db.pending_payments(business_id)
     total_pend = round(sum(p["total"] for p in pend), 2)
     sin_confirmar = [j for j in jobs if j["status"] == "pendiente"]
+    team_pending = db.list_worker_submissions(
+        business_id, status="pending", limit=100
+    )
+    customer_inbox = [
+        item for item in db.list_whatsapp_inbox(business_id, limit=100)
+        if item.get("conversation_status") == "waiting_owner"
+    ]
 
     lines = [f"☀️ Buenos días. Parte del día ({today}):"]
     if jobs:
@@ -467,6 +474,26 @@ def daily_summary_text(business_id: int) -> str:
             d = p.get("days_outstanding")
             aviso = f" ({d} días)" if d else ""
             lines.append(f"   • {p['client_name']}: {p['total']:.2f} €{aviso}")
+
+    if team_pending:
+        blockers = sum(item.get("kind") == "blocker" for item in team_pending)
+        pending_cost = round(sum(
+            float(item.get("amount") or 0) for item in team_pending
+            if item.get("kind") == "cost"
+        ), 2)
+        detail = f" · {pending_cost:.2f} € en costes" if pending_cost else ""
+        priority = f" · {blockers} bloqueo(s)" if blockers else ""
+        lines.append(
+            f"\n👷 Equipo: {len(team_pending)} aportación(es) por revisar"
+            f"{detail}{priority}."
+        )
+    if customer_inbox:
+        urgent = sum(bool(item.get("human_handoff")) for item in customer_inbox)
+        priority = f" · {urgent} urgente(s)" if urgent else ""
+        lines.append(
+            f"\n💬 Clientes: {len(customer_inbox)} conversación(es) esperan "
+            f"respuesta{priority}."
+        )
 
     lines.append("\n¿Quieres que confirme yo a los clientes o reordene la ruta?")
     return "\n".join(lines)

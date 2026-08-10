@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 44;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 45;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -18,7 +18,9 @@
   La 42 amplía el perfil documental y conserva evidencia seudónima de la decisión
   de presupuestos sin alterar facturas emitidas.
   La 43 registra autorizaciones de soporte temporales y acotadas creadas por el
-  titular. La 44 añade el libro append-only de costes internos por período.
+  titular. La 44 añade el libro append-only de costes internos por período. La 45
+  separa conexiones, contactos, conversaciones, bandeja y salidas de WhatsApp por
+  negocio/número, y añade aportaciones de campo revisables y permisos de equipo.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -29,8 +31,9 @@
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/db.py` + `routers/admin.py`: diagnóstico privado, autorización de
-  soporte con motivo/alcance/caducidad/revocación y CFO observado. Los costes reales,
-  previsiones y ajustes no se sobrescriben ni se mezclan.
+  soporte con motivo/alcance/caducidad/revocación, alta técnica auditada de números
+  comerciales sin tokens y CFO observado. Los costes reales, previsiones y ajustes
+  no se sobrescriben ni se mezclan.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
   y propuestas explicables de conciliación; nunca confirma un pago por sí solo.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro y flujo común de
@@ -203,10 +206,16 @@
   mediante una sección validada en servidor y conserva período/filtro tras cada
   formulario; cada ruta vuelve a comprobar la relación de acceso antes de leer o
   escribir.
-- `src/noesis/web/whatsapp.py`: texto, audio local, fotos/PDF, confirmaciones,
-  trabajador y cola durable. Emisión y entrega usan una segunda confirmación,
-  validación fiscal previa, PDF y canal habitual; la entrada y la salida se detienen
-  en modo consulta.
+- `src/noesis/web/whatsapp.py`: dos canales sobre la misma frontera durable. El
+  número central atiende titular/equipo; los números comerciales se resuelven por
+  WABA + `phone_number_id` y atienden clientes dentro del negocio receptor. Incluye
+  texto, audio local, fotos/PDF, opt-out, ventana de 24 horas, confirmaciones y
+  salidas por la conexión correcta. El trabajador envía costes/documentos/dudas a
+  una bandeja revisable; no escribe contabilidad ni ve márgenes globales.
+- `src/noesis/web/routers/whatsapp_business.py`: estado del canal comercial,
+  activación de recepción solo tras conexión Meta activa, bandeja por negocio,
+  respuesta dentro de la ventana permitida y cierre de conversaciones. Las altas
+  técnicas de WABA/número no se aceptan desde un formulario de cliente.
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el
   titular y calendario ICS privado/revocable.
 - `src/noesis/web/backups.py`: copia, restauración descartable, manifiesto documental,

@@ -48,6 +48,7 @@ from .routers import (
     projects,
     team,
     webhooks,
+    whatsapp_business,
 )
 from .scheduler import start_scheduler
 
@@ -368,6 +369,7 @@ app.include_router(team.router)
 app.include_router(clients.router)
 app.include_router(invoicing.router)
 app.include_router(projects.router)
+app.include_router(whatsapp_business.router)
 
 
 app.include_router(assistant.router)

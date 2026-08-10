@@ -2,6 +2,22 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## WhatsApp separa operación interna y recepción comercial (2026-08-10)
+
+Titular y trabajadores escriben al número central de Noesis. El equipo no escribe
+al teléfono personal del titular: fichajes, costes, documentos, dudas y bloqueos
+entran en una bandeja y el titular recibe un resumen. Ningún coste cambia un proyecto
+sin aceptación, y los márgenes permanecen privados salvo permiso explícito y proyecto
+asignado. Cada teléfono central solo puede representar una identidad; la ambigüedad
+se bloquea en vez de intentar adivinar el negocio.
+
+Los clientes finales escriben al número comercial de su proveedor. El receptor
+(`phone_number_id` y WABA) determina primero el negocio y el remitente se resuelve
+después dentro de ese ámbito. Un receptor desconocido nunca cae al canal central.
+Los documentos quedan trazados y pendientes, las respuestas salen por la misma
+conexión y fuera de 24 horas se exige una plantilla aprobada. Noesis prepara y
+clasifica; no crea contabilidad ni compromisos irreversibles por un mensaje entrante.
+
 ## Soporte se autoriza por alcance; el CFO distingue observado de supuesto (2026-08-08)
 
 Administración conserva por defecto solo el diagnóstico agregado. Si el cliente

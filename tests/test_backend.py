@@ -5281,6 +5281,74 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 scopes=["configuration"], duration_hours=1,
             )
 
+    def test_admin_registers_and_activates_business_whatsapp_without_secrets(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección multicanal")
+        target, _ = self.make_business("Cuenta con WhatsApp comercial")
+        admin = db.create_user(
+            "whatsapp-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with (
+            patch.object(config, "ADMIN_EMAIL", "whatsapp-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "whatsapp-admin@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                created = client.post(
+                    f"/admin/cuentas/{target['id']}/whatsapp-business",
+                    data={
+                        "waba_id": "123 456",
+                        "phone_number_id": "654 321",
+                        "display_phone": "+34 600 123 456",
+                        "verified_name": "Taller Exemple",
+                        "access_token": "no-debe-aceptarse",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(created.status_code, 303)
+                connection = db.list_whatsapp_connections(target["id"])[0]
+                self.assertEqual(connection["status"], "pending")
+                self.assertFalse(connection["receptionist_enabled"])
+                self.assertEqual(connection["waba_id"], "123456")
+                self.assertNotIn("token", connection)
+
+                activated = client.post(
+                    f"/admin/cuentas/{target['id']}/whatsapp-business/"
+                    f"{connection['id']}",
+                    data={"status": "active", "receptionist_enabled": "1"},
+                    follow_redirects=False,
+                )
+                self.assertEqual(activated.status_code, 303)
+                connection = db.get_whatsapp_connection(
+                    connection["id"], target["id"]
+                )
+                self.assertEqual(connection["status"], "active")
+                self.assertTrue(connection["receptionist_enabled"])
+
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Taller Exemple", page.text)
+                self.assertNotIn("no-debe-aceptarse", page.text)
+
+        events = {
+            item["event_type"]: item for item in db.list_security_events()
+        }
+        self.assertEqual(
+            events["admin.whatsapp_connection_registered"]["actor_user_id"],
+            admin["id"],
+        )
+        self.assertEqual(
+            events["admin.whatsapp_connection_updated"]["subject_business_id"],
+            target["id"],
+        )
+
     def test_missing_required_google_blocks_admin_not_the_whole_service(self):
         from starlette.testclient import TestClient
         from noesis.web import server

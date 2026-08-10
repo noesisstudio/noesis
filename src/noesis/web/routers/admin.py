@@ -75,7 +75,71 @@ def admin_account_support(request: Request, business_id: int):
     )
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
+        "whatsapp_connections": db.list_whatsapp_connections(business_id),
+        "admin_error": request.session.pop("admin_error", None),
     })
+
+
+@router.post("/admin/cuentas/{business_id}/whatsapp-business")
+def admin_add_whatsapp_business(
+    request: Request,
+    business_id: int,
+    waba_id: str = Form(...),
+    phone_number_id: str = Form(...),
+    display_phone: str = Form(""),
+    verified_name: str = Form(""),
+):
+    """Alta técnica pendiente; nunca acepta tokens ni secretos por formulario."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        connection = db.create_whatsapp_connection(
+            business_id, waba_id=waba_id, phone_number_id=phone_number_id,
+            display_phone=display_phone, verified_name=verified_name,
+            status="pending", receptionist_enabled=False,
+        )
+        db.record_security_event(
+            "admin.whatsapp_connection_registered", area="admin",
+            actor_user_id=user["id"], subject_business_id=business_id,
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"connection_id": connection["id"], "status": "pending"},
+        )
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse(f"/admin/cuentas/{business_id}#whatsapp", status_code=303)
+
+
+@router.post("/admin/cuentas/{business_id}/whatsapp-business/{connection_id}")
+def admin_update_whatsapp_business(
+    request: Request,
+    business_id: int,
+    connection_id: int,
+    status: str = Form(...),
+    receptionist_enabled: str = Form(""),
+):
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        connection = db.update_whatsapp_connection(
+            connection_id, business_id, status=status,
+            receptionist_enabled=(receptionist_enabled == "1" and status == "active"),
+        )
+        if not connection:
+            raise ValueError("Conexión no encontrada.")
+        db.record_security_event(
+            "admin.whatsapp_connection_updated", area="admin",
+            actor_user_id=user["id"], subject_business_id=business_id,
+            request_id=getattr(request.state, "request_id", None),
+            metadata={
+                "connection_id": connection_id, "status": status,
+                "receptionist_enabled": bool(connection["receptionist_enabled"]),
+            },
+        )
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse(f"/admin/cuentas/{business_id}#whatsapp", status_code=303)
 
 
 @router.post("/admin/solicitudes/{request_id}/estado")

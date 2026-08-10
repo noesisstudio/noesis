@@ -38,8 +38,14 @@
   seis `price_id` y probar en modo test dirección, NIF y `automatic_tax`; comprobar
   importe e IVA resultantes, checkout, webhook, impago, reactivación y portal de
   cliente antes de usar claves live.
-- [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
-  reintentos y bloqueo de cuenta inactiva.
+- [ ] Meta real: validar el número central y al menos dos números comerciales de
+  negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
+  Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente
+  aislado entre empresas, texto, audio, foto/PDF, opt-out, ventana de 24 horas,
+  plantillas fuera de ventana, estados, reintentos, revocación y cuenta inactiva.
+  El motor multicanal, la bandeja y el alta manual auditada desde administración ya
+  están construidos; falta Embedded Signup para autoservicio y la prueba extremo a
+  extremo con números reales.
 - [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
   con corpus real en castellano/catalán/inglés. La ruta privada de OCR ya incorpora
   Tesseract/pytesseract para imágenes y PDFium para PDF escaneado, y Railpack instala
@@ -114,7 +120,10 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   enlace para después del piloto. Ningún movimiento se confirma automáticamente.
 - [ ] Correo: panel interno de detalle/reejecución manual si los avisos agregados de
   la outbox resultan insuficientes durante el piloto.
-- [ ] Equipo: varios trabajadores reales, offline, ausencias y permisos finos.
+- [ ] Equipo: validar con varios trabajadores reales el canal central, offline,
+  ausencias, permisos por rol y el resumen al titular. Costes, justificantes, dudas,
+  bloqueos, revisión previa y presupuesto limitado al proyecto asignado ya están
+  construidos; falta medir claridad, errores de asociación y carga de revisión.
 - [x] Gestoría con cuenta profesional, invitaciones de un solo uso, varias empresas,
   acceso revocable, revisión y previsualización por documento, filtros, períodos,
   perfil fiscal y borradores explicables sin permisos de presentación o dinero.

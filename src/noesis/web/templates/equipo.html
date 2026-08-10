@@ -22,6 +22,31 @@
 
 <div class="card" style="margin-top:16px">
   <div class="card-h">
+    <div><div class="kicker">Bandeja de campo</div><h2>Aportaciones por revisar</h2></div>
+    <span class="hint" id="submissions-count">Cargando…</span>
+  </div>
+  <div class="card-b table-pad">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Persona y origen</th><th>Aportación</th><th>Trabajo</th>
+          <th class="t-right">Importe</th><th class="t-right">Decisión</th>
+        </tr></thead>
+        <tbody id="submissions-body">
+          <tr><td colspan="5"><div class="empty">Cargando aportaciones…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="insight" style="margin:14px">
+      El equipo escribe al número central de Noesis. Sus justificantes, costes y
+      dudas quedan aquí: el titular recibe un resumen y ningún coste cambia el
+      proyecto o la contabilidad hasta que lo acepta.
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-h">
     <h2>Rendimiento del equipo</h2>
     <select id="perf-days" class="input select-inline" onchange="loadPerformance()" aria-label="Período">
       <option value="7">Últimos 7 días</option>
@@ -143,12 +168,28 @@ function workerModal(worker) {
       {name:'name', label:'Nombre', value:worker?.name || '', placeholder:'Ej. Marta Ruiz'},
       {name:'phone', label:'Teléfono (opcional)', value:worker?.phone || '', placeholder:'+34 600 000 000'},
       {name:'color', label:'Color', type:'color', value:worker?.color || '#2e8b74'},
+      {name:'role', label:'Rol operativo', value:worker?.role || 'campo', options:[
+        {value:'campo', label:'Campo · trabajos y fichaje'},
+        {value:'responsable', label:'Responsable · coordina un proyecto'},
+        {value:'oficina', label:'Oficina · apoyo administrativo'}]},
+      {name:'can_submit_costs', label:'Puede enviar costes',
+       value:String(worker?.can_submit_costs ?? true), options:[
+        {value:'true', label:'Sí, siempre pendientes de revisión'},
+        {value:'false', label:'No'}]},
+      {name:'can_view_assigned_budget', label:'Puede ver presupuesto de sus proyectos',
+       value:String(worker?.can_view_assigned_budget ?? false), options:[
+        {value:'false', label:'No · recomendado'},
+        {value:'true', label:'Sí · solo proyectos asignados'}]},
       {name:'pin', label: editing ? 'Nuevo PIN (vacío para mantenerlo)' : 'PIN de 4–8 números (opcional)',
        type:'password', value:'', placeholder:'Solo números'}
     ],
     onSubmit: async values => {
       try {
-        const payload = {name:values.name, phone:values.phone, color:values.color};
+        const payload = {
+          name:values.name, phone:values.phone, color:values.color, role:values.role,
+          can_submit_costs: values.can_submit_costs === 'true',
+          can_view_assigned_budget: values.can_view_assigned_budget === 'true'
+        };
         if (values.pin) payload.pin = values.pin;
         await apiPost(editing ? `/workers/${worker.id}` : '/workers',
           editing ? payload : {...payload, pin:values.pin});
@@ -162,6 +203,36 @@ function workerModal(worker) {
 }
 function newWorker(){ workerModal(null); }
 function editWorker(id){ workerModal(workers.find(w => w.id === id)); }
+
+const submissionKinds = {
+  cost:'Coste', document:'Documento', question:'Duda', blocker:'Bloqueo', note:'Nota'
+};
+async function loadSubmissions() {
+  const data = await api('/workers/submissions?status=pending');
+  const items = data.items || [];
+  el('submissions-count').textContent = `${items.length} pendiente(s)`;
+  el('submissions-body').innerHTML = items.length ? items.map(item => `
+    <tr>
+      <td><strong>${esc(item.worker_name)}</strong><br>
+        <span class="badge ${item.kind === 'blocker' ? 'b-amber' : 'b-gray'}">${esc(submissionKinds[item.kind] || item.kind)}</span></td>
+      <td>${esc(item.description)}${item.document_id ? `<br><a href="/api/${BIZ}/documents/${item.document_id}/preview" target="_blank">Ver justificante</a>` : ''}</td>
+      <td>${item.job_id ? `#${item.job_id} · ${esc(item.job_description || '')}` : '<span class="muted">General</span>'}</td>
+      <td class="num">${item.amount == null ? '—' : money(item.amount)}</td>
+      <td class="t-right table-actions">
+        <button class="btn sm primary" onclick="resolveSubmission(${item.id},'accepted')">Aceptar</button>
+        <button class="btn sm" onclick="resolveSubmission(${item.id},'rejected')">Descartar</button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="5">${emptyState('Todo revisado', 'No hay costes, documentos o dudas pendientes del equipo.', '', '')}</td></tr>`;
+}
+async function resolveSubmission(id, decision) {
+  const verb = decision === 'accepted' ? 'aceptar' : 'descartar';
+  if (!confirm(`¿${verb.charAt(0).toUpperCase() + verb.slice(1)} esta aportación?`)) return;
+  try {
+    await apiPost(`/workers/submissions/${id}/resolve`, {decision});
+    await Promise.all([loadSubmissions(), loadPerformance()]);
+  } catch (error) { alert(error.message); }
+}
 
 async function toggleWorker(id, active) {
   if (!confirm(active ? '¿Reactivar a esta persona?' : '¿Desactivar su acceso y enlaces?')) return;
@@ -304,5 +375,8 @@ loadWorkers().catch(error => {
   el('workers-body').innerHTML = `<tr><td colspan="6"><div class="empty">${esc(error.message)}</div></td></tr>`;
 });
 loadPerformance();
+loadSubmissions().catch(error => {
+  el('submissions-body').innerHTML = `<tr><td colspan="5"><div class="empty">${esc(error.message)}</div></td></tr>`;
+});
 </script>
 {% endblock %}

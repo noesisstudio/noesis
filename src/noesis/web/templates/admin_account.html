@@ -13,7 +13,7 @@
 
   <header class="page-head support-head">
     <div class="page-title">
-      <div class="kicker">Soporte técnico · Solo lectura</div>
+      <div class="kicker">Soporte técnico · Diagnóstico y conexiones</div>
       <h1>{{ snapshot.business.name }}</h1>
       <p>{{ snapshot.business.owner_email or 'Sin correo titular' }} · {{ snapshot.business.sector or 'Sector sin completar' }}</p>
     </div>
@@ -23,11 +23,13 @@
     </div>
   </header>
 
+  {% if admin_error %}<div class="banner warn">{{ admin_error }}</div>{% endif %}
+
   <section class="support-boundary" aria-label="Límite de privacidad">
     <div>
       <div class="kicker">Límite de privacidad</div>
       <h2>Diagnóstico sin abrir el negocio del cliente</h2>
-      <p>Esta vista enseña estados técnicos y recuentos. No expone nombres de clientes, importes, conceptos, mensajes, archivos ni credenciales.</p>
+      <p>Esta vista enseña estados técnicos y recuentos. No expone nombres de clientes, importes, conceptos, mensajes, archivos ni credenciales. Solo permite administrar identificadores públicos de una conexión Meta; nunca tokens.</p>
     </div>
     <span class="badge b-green">Acceso auditado</span>
   </section>
@@ -77,6 +79,36 @@
       {% endfor %}
     </section>
   </div>
+
+  <section class="support-section" id="whatsapp">
+    <div class="support-section-head">
+      <div><div class="kicker">Canal comercial</div><h2>Números de WhatsApp del negocio</h2></div>
+      <span class="meta">Alta técnica auditada</span>
+    </div>
+    <p class="meta">Registra únicamente activos que el usuario de sistema de Noesis ya pueda administrar en Meta. La conexión nace pendiente; actívala después de probar webhook y envío. Los tokens siguen exclusivamente en Railway.</p>
+    <div class="support-list" style="margin:16px 0">
+      {% for connection in whatsapp_connections %}
+      <div style="align-items:flex-start;gap:16px">
+        <span><b>{{ connection.verified_name or 'WhatsApp del negocio' }}</b><br>
+          <small>{{ connection.display_phone or 'Sin número visible' }} · WABA {{ connection.waba_id }} · Phone ID {{ connection.phone_number_id }}</small></span>
+        <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/whatsapp-business/{{ connection.id }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="input" name="status" style="width:auto">
+            {% for value in ['pending','active','paused','error','revoked'] %}<option value="{{ value }}" {{ 'selected' if connection.status == value }}>{{ value }}</option>{% endfor %}
+          </select>
+          <label class="meta"><input type="checkbox" name="receptionist_enabled" value="1" {{ 'checked' if connection.receptionist_enabled }}> Recepción</label>
+          <button class="btn sm">Guardar</button>
+        </form>
+      </div>
+      {% else %}<p class="meta">No hay números comerciales registrados.</p>{% endfor %}
+    </div>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/whatsapp-business" class="grid g2">
+      <label><span class="fld">WABA ID</span><input class="input" name="waba_id" inputmode="numeric" required></label>
+      <label><span class="fld">Phone Number ID</span><input class="input" name="phone_number_id" inputmode="numeric" required></label>
+      <label><span class="fld">Número visible</span><input class="input" name="display_phone" placeholder="+34 600 000 000"></label>
+      <label><span class="fld">Nombre verificado</span><input class="input" name="verified_name" maxlength="160"></label>
+      <div><button class="btn primary">Registrar como pendiente</button></div>
+    </form>
+  </section>
 
   <section class="support-locked">
     {% if snapshot.support_grant %}

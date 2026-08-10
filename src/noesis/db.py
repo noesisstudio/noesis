@@ -611,6 +611,29 @@ def get_business_by_phone(phone: str) -> dict | None:
         return dict(row) if row else None
 
 
+def central_whatsapp_identity(phone: str) -> dict:
+    """Resuelve un teléfono central sin elegir nunca entre identidades ambiguas."""
+    target = normalize_phone(phone)
+    if len(target) != 9:
+        return {"business": None, "worker": None, "ambiguous": False}
+    with get_conn() as conn:
+        businesses = conn.execute(
+            "SELECT * FROM businesses WHERE whatsapp_phone_norm=?",
+            (target,),
+        ).fetchall()
+        workers = conn.execute(
+            "SELECT *, CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END AS has_pin "
+            "FROM workers WHERE phone_norm=? AND active=TRUE ORDER BY id",
+            (target,),
+        ).fetchall()
+    total = len(businesses) + len(workers)
+    return {
+        "business": dict(businesses[0]) if total == 1 and businesses else None,
+        "worker": dict(workers[0]) if total == 1 and workers else None,
+        "ambiguous": total > 1,
+    }
+
+
 def list_businesses() -> list[dict]:
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(
@@ -625,6 +648,14 @@ def set_whatsapp_status(business_id, status, phone=None) -> dict:
             norm = normalize_phone(phone)
             if status == "conectado" and len(norm) != 9:
                 raise ValueError("El teléfono debe tener 9 dígitos.")
+            if status == "conectado" and conn.execute(
+                "SELECT 1 AS found FROM workers WHERE phone_norm=? AND active=TRUE",
+                (norm,),
+            ).fetchone():
+                raise ValueError(
+                    "Ese teléfono ya identifica a un trabajador en Noesis. "
+                    "Cada número central debe tener una sola identidad."
+                )
             conn.execute("UPDATE businesses SET whatsapp_status=?, whatsapp_phone=? "
                          ", whatsapp_phone_norm=? WHERE id=?",
                          (status, phone, norm or None, business_id))
@@ -2874,14 +2905,18 @@ def _worker_phone_in_use(
     if not phone_norm:
         return False
     extra = " AND id<>?" if exclude_id is not None else ""
-    params: list[Any] = [business_id, phone_norm]
+    params: list[Any] = [phone_norm]
     if exclude_id is not None:
         params.append(exclude_id)
-    return bool(conn.execute(
-        "SELECT 1 AS found FROM workers "
-        "WHERE business_id=? AND phone_norm=?" + extra,
+    worker = conn.execute(
+        "SELECT 1 AS found FROM workers WHERE phone_norm=?" + extra,
         tuple(params),
-    ).fetchone())
+    ).fetchone()
+    owner = conn.execute(
+        "SELECT 1 AS found FROM businesses WHERE whatsapp_phone_norm=?",
+        (phone_norm,),
+    ).fetchone()
+    return bool(worker or owner)
 
 
 def list_workers(business_id: int, *, include_inactive: bool = True) -> list[dict]:
@@ -2889,7 +2924,8 @@ def list_workers(business_id: int, *, include_inactive: bool = True) -> list[dic
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT id, business_id, name, phone, phone_norm, color, access_code, "
-            "active, created_at, CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END "
+            "role, can_submit_costs, can_view_assigned_budget, active, created_at, "
+            "CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END "
             "AS has_pin FROM workers WHERE business_id=?" + where
             + " ORDER BY active DESC, name",
             (business_id,),
@@ -2926,6 +2962,9 @@ def create_worker(
     phone: str | None = None,
     color: str | None = None,
     pin: str | None = None,
+    role: str = "campo",
+    can_submit_costs: bool = True,
+    can_view_assigned_budget: bool = False,
 ) -> dict:
     name = (name or "").strip()
     if not name:
@@ -2935,17 +2974,24 @@ def create_worker(
     phone, phone_norm = _worker_phone(phone)
     color = _worker_color(color)
     pin_hash = _worker_pin_hash(pin)
+    role = str(role or "campo").strip().lower()
+    if role not in {"campo", "responsable", "oficina"}:
+        raise ValueError("El rol del equipo no es válido.")
     with get_conn() as conn:
         if _worker_phone_in_use(conn, business_id, phone_norm):
-            raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+            raise ValueError(
+                "Ese teléfono ya tiene otra identidad en el WhatsApp central."
+            )
         access_code = _new_worker_access_code(conn, business_id)
         row = conn.execute(
             "INSERT INTO workers "
             "(business_id, name, phone, phone_norm, color, access_code, pin_hash, "
-            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "role, can_submit_costs, can_view_assigned_budget, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (
                 business_id, name[:120], phone, phone_norm, color,
-                access_code, pin_hash, _now(),
+                access_code, pin_hash, role, bool(can_submit_costs),
+                bool(can_view_assigned_budget), _now(),
             ),
         ).fetchone()
         worker_id = row["id"]
@@ -2959,6 +3005,9 @@ def update_worker(
     name: str | None = None,
     phone: str | None = None,
     color: str | None = None,
+    role: str | None = None,
+    can_submit_costs: bool | None = None,
+    can_view_assigned_budget: bool | None = None,
 ) -> dict | None:
     if not get_worker(worker_id, business_id):
         return None
@@ -2977,6 +3026,18 @@ def update_worker(
     if color is not None:
         fields.append("color=?")
         params.append(_worker_color(color))
+    if role is not None:
+        clean_role = str(role).strip().lower()
+        if clean_role not in {"campo", "responsable", "oficina"}:
+            raise ValueError("El rol del equipo no es válido.")
+        fields.append("role=?")
+        params.append(clean_role)
+    if can_submit_costs is not None:
+        fields.append("can_submit_costs=?")
+        params.append(bool(can_submit_costs))
+    if can_view_assigned_budget is not None:
+        fields.append("can_view_assigned_budget=?")
+        params.append(bool(can_view_assigned_budget))
     if fields:
         params.extend((worker_id, business_id))
         with get_conn() as conn:
@@ -2986,7 +3047,9 @@ def update_worker(
                     conn, business_id, phone_norm, exclude_id=worker_id
                 )
             ):
-                raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+                raise ValueError(
+                    "Ese teléfono ya tiene otra identidad en el WhatsApp central."
+                )
             conn.execute(
                 f"UPDATE workers SET {', '.join(fields)} "
                 "WHERE id=? AND business_id=?",
@@ -3043,13 +3106,12 @@ def bind_worker_phone(
         ).fetchone()
         if not worker:
             return None
-        duplicate = conn.execute(
-            "SELECT id FROM workers WHERE business_id=? AND phone_norm=? "
-            "AND id<>? AND active=TRUE",
-            (business_id, phone_norm, worker["id"]),
-        ).fetchone()
-        if duplicate:
-            raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+        if _worker_phone_in_use(
+            conn, business_id, phone_norm, exclude_id=worker["id"]
+        ):
+            raise ValueError(
+                "Ese teléfono ya tiene otra identidad en el WhatsApp central."
+            )
         conn.execute(
             "UPDATE workers SET phone=?, phone_norm=? "
             "WHERE id=? AND business_id=?",
@@ -3288,6 +3350,11 @@ def _worker_can_access_job(job: dict, worker_id: int, business_id: int) -> bool:
             (business_id, job["project_id"], worker_id),
         ).fetchone()
     return bool(member)
+
+
+def worker_can_access_job(job_id: int, worker_id: int, business_id: int) -> bool:
+    job = get_job(job_id, business_id)
+    return bool(job and _worker_can_access_job(job, worker_id, business_id))
 
 
 def _field_worker(job: dict, worker_id, business_id: int) -> int | None:
@@ -8182,6 +8249,11 @@ def convert_lead_to_client(lead_id, *, business_id: int) -> dict:
             "UPDATE leads SET status='ganado', client_id=?, updated_at=? "
             "WHERE id=? AND business_id=?",
             (client["id"], _now(), lead_id, business_id))
+        conn.execute(
+            "UPDATE whatsapp_contacts SET client_id=?, lead_id=NULL, updated_at=? "
+            "WHERE business_id=? AND lead_id=?",
+            (client["id"], _now(), business_id, lead_id),
+        )
     return {"lead": get_lead(lead_id, business_id), "client": client}
 
 
@@ -9387,9 +9459,549 @@ def fail_webhook_event(source: str, event_id: str, error: str) -> None:
         )
 
 
+# ------------------------------------- WhatsApp multicanal y recepción ---
+def _wa_id(value: str | None) -> str:
+    digits = "".join(char for char in str(value or "") if char.isdigit())
+    return digits[2:] if digits.startswith("00") else digits
+
+
+def create_whatsapp_connection(
+    business_id: int,
+    *,
+    waba_id: str,
+    phone_number_id: str,
+    display_phone: str | None = None,
+    verified_name: str | None = None,
+    status: str = "pending",
+    receptionist_enabled: bool = False,
+) -> dict:
+    """Registra un número empresarial sin almacenar credenciales del proveedor."""
+    if not get_business(business_id):
+        raise ValueError("El negocio no existe.")
+    waba_id = _wa_id(waba_id)
+    phone_number_id = _wa_id(phone_number_id)
+    if not waba_id or not phone_number_id:
+        raise ValueError("Faltan los identificadores de la cuenta de WhatsApp.")
+    if status not in {"pending", "active", "paused", "error", "revoked"}:
+        raise ValueError("El estado de la conexión no es válido.")
+    now = _now()
+    with get_conn() as conn:
+        try:
+            row = conn.execute(
+                "INSERT INTO whatsapp_connections "
+                "(business_id, mode, waba_id, phone_number_id, display_phone, "
+                "verified_name, status, receptionist_enabled, created_at, updated_at) "
+                "VALUES (?, 'business', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                (
+                    business_id, waba_id, phone_number_id,
+                    str(display_phone or "").strip() or None,
+                    str(verified_name or "").strip()[:160] or None,
+                    status, bool(receptionist_enabled), now, now,
+                ),
+            ).fetchone()
+        except IntegrityError as exc:
+            raise ValueError("Ese número de WhatsApp ya está conectado.") from exc
+        connection_id = row["id"]
+    return get_whatsapp_connection(connection_id, business_id)
+
+
+def get_whatsapp_connection(connection_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_connections WHERE id=? AND business_id=?",
+            (connection_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_whatsapp_connection_by_phone_number_id(phone_number_id: str) -> dict | None:
+    target = _wa_id(phone_number_id)
+    if not target:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_connections WHERE phone_number_id=? "
+            "AND status='active' AND inbound_enabled=TRUE",
+            (target,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_whatsapp_connections(business_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM whatsapp_connections WHERE business_id=? "
+            "ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, id",
+            (business_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_whatsapp_connection(
+    connection_id: int,
+    business_id: int,
+    *,
+    status: str | None = None,
+    receptionist_enabled: bool | None = None,
+    inbound_enabled: bool | None = None,
+    outbound_enabled: bool | None = None,
+) -> dict | None:
+    if not get_whatsapp_connection(connection_id, business_id):
+        return None
+    fields = ["updated_at=?"]
+    params: list[Any] = [_now()]
+    if status is not None:
+        if status not in {"pending", "active", "paused", "error", "revoked"}:
+            raise ValueError("El estado de la conexión no es válido.")
+        fields.append("status=?")
+        params.append(status)
+    for key, value in (
+        ("receptionist_enabled", receptionist_enabled),
+        ("inbound_enabled", inbound_enabled),
+        ("outbound_enabled", outbound_enabled),
+    ):
+        if value is not None:
+            fields.append(f"{key}=?")
+            params.append(bool(value))
+    params.extend((connection_id, business_id))
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE whatsapp_connections SET {', '.join(fields)} "
+            "WHERE id=? AND business_id=?",
+            tuple(params),
+        )
+    return get_whatsapp_connection(connection_id, business_id)
+
+
+def _clients_by_phone(conn, business_id: int, phone: str) -> list[dict]:
+    target = normalize_phone(phone)
+    if len(target) != 9:
+        return []
+    rows = conn.execute(
+        "SELECT * FROM clients WHERE business_id=? AND phone IS NOT NULL ORDER BY id",
+        (business_id,),
+    ).fetchall()
+    return [dict(row) for row in rows if normalize_phone(row["phone"]) == target]
+
+
+def _leads_by_phone(conn, business_id: int, phone: str) -> list[dict]:
+    target = normalize_phone(phone)
+    if len(target) != 9:
+        return []
+    rows = conn.execute(
+        "SELECT * FROM leads WHERE business_id=? AND phone IS NOT NULL "
+        "AND status NOT IN ('ganado','perdido') ORDER BY id",
+        (business_id,),
+    ).fetchall()
+    return [dict(row) for row in rows if normalize_phone(row["phone"]) == target]
+
+
+def ensure_whatsapp_customer_contact(
+    connection_id: int,
+    business_id: int,
+    sender_phone: str,
+    display_name: str | None = None,
+) -> dict:
+    """Crea una identidad externa acotada al número empresarial receptor."""
+    connection = get_whatsapp_connection(connection_id, business_id)
+    if not connection or connection.get("status") != "active":
+        raise ValueError("La conexión de WhatsApp no está activa.")
+    wa_id = _wa_id(sender_phone)
+    phone_norm = normalize_phone(sender_phone)
+    if not wa_id or len(phone_norm) != 9:
+        raise ValueError("El remitente de WhatsApp no es válido.")
+    clean_name = str(display_name or "").strip()[:160]
+    with get_conn() as conn:
+        current = conn.execute(
+            "SELECT * FROM whatsapp_contacts WHERE connection_id=? AND wa_id=?",
+            (connection_id, wa_id),
+        ).fetchone()
+        if current:
+            if clean_name and clean_name != current.get("display_name"):
+                conn.execute(
+                    "UPDATE whatsapp_contacts SET display_name=?, updated_at=? "
+                    "WHERE id=? AND business_id=?",
+                    (clean_name, _now(), current["id"], business_id),
+                )
+            saved = conn.execute(
+                "SELECT * FROM whatsapp_contacts WHERE id=? AND business_id=?",
+                (current["id"], business_id),
+            ).fetchone()
+            return dict(saved)
+
+        clients = _clients_by_phone(conn, business_id, sender_phone)
+        client_id = clients[0]["id"] if len(clients) == 1 else None
+        leads = _leads_by_phone(conn, business_id, sender_phone)
+        lead_id = leads[0]["id"] if len(leads) == 1 else None
+        if client_id is None and lead_id is None:
+            lead_name = clean_name or f"Contacto WhatsApp · {phone_norm[-4:]}"
+            lead = conn.execute(
+                "INSERT INTO leads (business_id, name, phone, source, status, note, "
+                "created_at) VALUES (?, ?, ?, 'WhatsApp del negocio', 'nuevo', ?, ?) "
+                "RETURNING id",
+                (
+                    business_id, lead_name, sender_phone,
+                    "Entrada creada por Noesis; pendiente de revisar y convertir.",
+                    _now(),
+                ),
+            ).fetchone()
+            lead_id = lead["id"]
+        row = conn.execute(
+            "INSERT INTO whatsapp_contacts "
+            "(business_id, connection_id, wa_id, phone_norm, display_name, client_id, "
+            "lead_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "RETURNING id",
+            (
+                business_id, connection_id, wa_id, phone_norm, clean_name or None,
+                client_id, lead_id, _now(), _now(),
+            ),
+        ).fetchone()
+        saved = conn.execute(
+            "SELECT * FROM whatsapp_contacts WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def get_or_create_whatsapp_conversation(
+    connection_id: int, contact_id: int, business_id: int
+) -> dict:
+    now = _now()
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_conversations WHERE connection_id=? "
+            "AND contact_id=? AND business_id=?",
+            (connection_id, contact_id, business_id),
+        ).fetchone()
+        if not row:
+            inserted = conn.execute(
+                "INSERT INTO whatsapp_conversations "
+                "(business_id, connection_id, contact_id, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?) RETURNING id",
+                (business_id, connection_id, contact_id, now, now),
+            ).fetchone()
+            row = conn.execute(
+                "SELECT * FROM whatsapp_conversations WHERE id=? AND business_id=?",
+                (inserted["id"], business_id),
+            ).fetchone()
+    return dict(row)
+
+
+def set_whatsapp_contact_consent(
+    contact_id: int, business_id: int, consent_status: str
+) -> dict | None:
+    if consent_status not in {"active", "opted_out", "blocked"}:
+        raise ValueError("El estado de consentimiento no es válido.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE whatsapp_contacts SET consent_status=?, updated_at=? "
+            "WHERE id=? AND business_id=?",
+            (consent_status, _now(), contact_id, business_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM whatsapp_contacts WHERE id=? AND business_id=?",
+            (contact_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def update_whatsapp_conversation(
+    conversation_id: int,
+    business_id: int,
+    *,
+    status: str | None = None,
+    human_handoff: bool | None = None,
+    summary: str | None = None,
+) -> dict | None:
+    if status is not None and status not in {
+        "open", "waiting_owner", "resolved", "archived"
+    }:
+        raise ValueError("El estado de conversación no es válido.")
+    fields = ["updated_at=?"]
+    params: list[Any] = [_now()]
+    if status is not None:
+        fields.append("status=?")
+        params.append(status)
+    if human_handoff is not None:
+        fields.append("human_handoff=?")
+        params.append(bool(human_handoff))
+    if summary is not None:
+        fields.append("summary=?")
+        params.append(str(summary).strip()[:1000] or None)
+    params.extend((conversation_id, business_id))
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE whatsapp_conversations SET {', '.join(fields)} "
+            "WHERE id=? AND business_id=?",
+            tuple(params),
+        )
+        row = conn.execute(
+            "SELECT * FROM whatsapp_conversations WHERE id=? AND business_id=?",
+            (conversation_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_whatsapp_conversation(
+    conversation_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT v.*, c.wa_id, c.phone_norm, c.display_name, c.consent_status "
+            "FROM whatsapp_conversations v JOIN whatsapp_contacts c "
+            "ON c.id=v.contact_id AND c.business_id=v.business_id "
+            "WHERE v.id=? AND v.business_id=?",
+            (conversation_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def record_whatsapp_inbox(
+    *,
+    business_id: int,
+    connection_id: int,
+    conversation_id: int,
+    contact_id: int,
+    meta_message_id: str,
+    sender_phone: str,
+    message_type: str,
+    text_body: str | None = None,
+) -> dict:
+    if message_type not in {"text", "audio", "image", "document", "interactive", "unknown"}:
+        message_type = "unknown"
+    now = _now()
+    try:
+        with get_conn() as conn:
+            row = conn.execute(
+                "INSERT INTO whatsapp_inbox "
+                "(business_id, connection_id, conversation_id, contact_id, "
+                "meta_message_id, sender_phone, actor_role, message_type, text_body, "
+                "received_at) VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, ?, ?) "
+                "RETURNING id",
+                (
+                    business_id, connection_id, conversation_id, contact_id,
+                    str(meta_message_id)[:200], sender_phone, message_type,
+                    str(text_body or "")[:4000] or None, now,
+                ),
+            ).fetchone()
+            conn.execute(
+                "UPDATE whatsapp_conversations SET last_inbound_at=?, updated_at=? "
+                "WHERE id=? AND business_id=?",
+                (now, now, conversation_id, business_id),
+            )
+            inbox_id = row["id"]
+    except IntegrityError:
+        with get_conn() as conn:
+            existing = conn.execute(
+                "SELECT * FROM whatsapp_inbox WHERE meta_message_id=?",
+                (str(meta_message_id)[:200],),
+            ).fetchone()
+        if not existing or existing.get("business_id") != business_id:
+            raise
+        return dict(existing)
+    return get_whatsapp_inbox(inbox_id, business_id)
+
+
+def get_whatsapp_inbox(inbox_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_inbox WHERE id=? AND business_id=?",
+            (inbox_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def finish_whatsapp_inbox(
+    inbox_id: int,
+    business_id: int,
+    *,
+    status: str = "processed",
+    document_id: int | None = None,
+    job_id: int | None = None,
+    error: str | None = None,
+) -> dict | None:
+    if status not in {"processed", "failed", "ignored"}:
+        raise ValueError("El estado de entrada no es válido.")
+    if document_id is not None:
+        from .documents import repo as document_repo
+        if not document_repo.get(document_id, business_id):
+            raise ValueError("El documento no pertenece a este negocio.")
+    if job_id is not None and not get_job(job_id, business_id):
+        raise ValueError("El trabajo no pertenece a este negocio.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE whatsapp_inbox SET processing_status=?, document_id=?, job_id=?, error=?, "
+            "processed_at=? WHERE id=? AND business_id=?",
+            (
+                status, document_id, job_id, str(error or "")[:1000] or None,
+                _now(), inbox_id, business_id,
+            ),
+        )
+    return get_whatsapp_inbox(inbox_id, business_id)
+
+
+def list_whatsapp_inbox(business_id: int, *, limit: int = 100) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT i.*, c.display_name, c.client_id, c.lead_id, "
+            "v.status AS conversation_status, v.human_handoff "
+            "FROM whatsapp_inbox i "
+            "JOIN whatsapp_contacts c ON c.id=i.contact_id AND c.business_id=i.business_id "
+            "JOIN whatsapp_conversations v ON v.id=i.conversation_id "
+            "AND v.business_id=i.business_id WHERE i.business_id=? "
+            "ORDER BY i.received_at DESC, i.id DESC LIMIT ?",
+            (business_id, max(1, min(int(limit), 500))),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def create_worker_submission(
+    business_id: int,
+    worker_id: int,
+    *,
+    kind: str,
+    description: str,
+    job_id: int | None = None,
+    document_id: int | None = None,
+    amount: float | None = None,
+) -> dict:
+    """Registra una aportación de campo sin convertirla en coste definitivo."""
+    worker = get_worker(worker_id, business_id)
+    if not worker or not worker.get("active"):
+        raise ValueError("El trabajador no está disponible.")
+    if kind not in {"cost", "document", "question", "blocker", "note"}:
+        raise ValueError("El tipo de aportación no es válido.")
+    description = str(description or "").strip()
+    if not description or len(description) > 2000:
+        raise ValueError("La aportación necesita una descripción válida.")
+    job = None
+    project_id = None
+    if job_id is not None:
+        job = get_job(int(job_id), business_id)
+        if not job or not _worker_can_access_job(job, worker_id, business_id):
+            raise ValueError("Ese trabajo no está asignado a esta persona.")
+        job_id = job["id"]
+        project_id = job.get("project_id")
+    if document_id is not None:
+        from .documents import repo as document_repo
+        if not document_repo.get(int(document_id), business_id):
+            raise ValueError("El documento no pertenece a este negocio.")
+        document_id = int(document_id)
+    if amount is not None:
+        amount = round(float(amount), 2)
+        if amount < 0:
+            raise ValueError("El importe no puede ser negativo.")
+    if kind == "cost":
+        if not worker.get("can_submit_costs"):
+            raise ValueError("No tienes permiso para enviar costes.")
+        if job is None:
+            raise ValueError("Indica el trabajo al que corresponde el coste.")
+        if amount is None:
+            raise ValueError("Indica el importe del coste.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO worker_submissions "
+            "(business_id, worker_id, job_id, project_id, document_id, kind, "
+            "description, amount, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "RETURNING id",
+            (
+                business_id, worker_id, job_id, project_id, document_id, kind,
+                description, amount, _now(),
+            ),
+        ).fetchone()
+        saved = conn.execute(
+            "SELECT * FROM worker_submissions WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def list_worker_submissions(
+    business_id: int, *, status: str | None = None, limit: int = 100
+) -> list[dict]:
+    params: list[Any] = [business_id]
+    where = ""
+    if status:
+        if status not in {"pending", "accepted", "rejected", "resolved"}:
+            raise ValueError("El estado de aportación no es válido.")
+        where = " AND s.status=?"
+        params.append(status)
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT s.*, w.name AS worker_name, j.description AS job_description, "
+            "p.name AS project_name FROM worker_submissions s "
+            "JOIN workers w ON w.id=s.worker_id AND w.business_id=s.business_id "
+            "LEFT JOIN jobs j ON j.id=s.job_id AND j.business_id=s.business_id "
+            "LEFT JOIN projects p ON p.id=s.project_id AND p.business_id=s.business_id "
+            "WHERE s.business_id=?" + where
+            + " ORDER BY CASE s.status WHEN 'pending' THEN 0 ELSE 1 END, "
+            "s.created_at DESC, s.id DESC LIMIT ?",
+            tuple(params),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def resolve_worker_submission(
+    submission_id: int,
+    business_id: int,
+    *,
+    decision: str,
+    resolution_note: str | None = None,
+) -> dict | None:
+    """Acepta o descarta una aportación; un coste solo se aplica una vez."""
+    if decision not in {"accepted", "rejected", "resolved"}:
+        raise ValueError("La decisión no es válida.")
+    material_added = False
+    with get_conn() as conn:
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        if conn.dialect == "sqlite":
+            conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT * FROM worker_submissions WHERE id=? AND business_id=?" + lock,
+            (submission_id, business_id),
+        ).fetchone()
+        if not row:
+            return None
+        submission = dict(row)
+        if submission["status"] != "pending":
+            return submission
+        material_id = submission.get("applied_material_id")
+        if decision == "accepted" and submission["kind"] == "cost":
+            material = conn.execute(
+                "INSERT INTO job_materials (business_id, job_id, worker_id, "
+                "description, quantity, unit_cost, total, created_at) "
+                "VALUES (?, ?, ?, ?, 1, ?, ?, ?) RETURNING id",
+                (
+                    business_id, submission["job_id"], submission["worker_id"],
+                    submission["description"], submission["amount"],
+                    submission["amount"], _now(),
+                ),
+            ).fetchone()
+            material_id = material["id"]
+            material_added = True
+        conn.execute(
+            "UPDATE worker_submissions SET status=?, resolution_note=?, "
+            "applied_material_id=?, resolved_at=? WHERE id=? AND business_id=? "
+            "AND status='pending'",
+            (
+                decision, str(resolution_note or "").strip()[:1000] or None,
+                material_id, _now(), submission_id, business_id,
+            ),
+        )
+        saved = conn.execute(
+            "SELECT * FROM worker_submissions WHERE id=? AND business_id=?",
+            (submission_id, business_id),
+        ).fetchone()
+    if material_added:
+        record_product_event(business_id, "job_material_added")
+    return dict(saved)
+
+
 def enqueue_whatsapp_message(
     *,
     business_id: int | None,
+    connection_id: int | None = None,
     to_phone: str,
     message_type: str,
     text_body: str | None = None,
@@ -9409,18 +10021,21 @@ def enqueue_whatsapp_message(
         raise ValueError("Un mensaje de plantilla necesita nombre.")
     if not to_phone:
         raise ValueError("Falta el teléfono de destino.")
+    if connection_id is not None:
+        if business_id is None or not get_whatsapp_connection(connection_id, business_id):
+            raise ValueError("La conexión de WhatsApp no pertenece al negocio.")
     created_at = now or _now()
     try:
         with get_conn() as conn:
             row = conn.execute(
                 "INSERT INTO whatsapp_outbox "
-                "(business_id, to_phone, message_type, text_body, template_name, "
+                "(business_id, connection_id, to_phone, message_type, text_body, template_name, "
                 "template_language, template_params, idempotency_key, status, "
                 "attempts, max_attempts, next_attempt_at, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) "
                 "RETURNING id",
                 (
-                    business_id, to_phone, message_type, text_body, template_name,
+                    business_id, connection_id, to_phone, message_type, text_body, template_name,
                     template_language, template_params, idempotency_key,
                     max_attempts, created_at, created_at, created_at,
                 ),
@@ -9439,6 +10054,10 @@ def enqueue_whatsapp_message(
             if existing.get("business_id") != business_id:
                 raise ValueError(
                     "La clave idempotente pertenece a otro negocio."
+                )
+            if existing.get("connection_id") != connection_id:
+                raise ValueError(
+                    "La clave idempotente pertenece a otro canal de WhatsApp."
                 )
             return dict(existing)
     return _get_whatsapp_message_internal(message_id)
