@@ -23,6 +23,41 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-10 — runbook y explicación de WhatsApp, actualizados al modelo multicanal
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidió entender el canal multicanal que construyó el socio y
+  dejar la documentación al día. Los dos documentos se escribieron primero sobre una
+  rama con 46 commits de retraso; se rehacen contra `main` y se trasladan aquí.
+- **Áreas y archivos:** solo documentación, ningún cambio en `src/`.
+  - `docs/WhatsApp-Como-funciona.html` + `.pdf` (nuevos): los dos canales, el enrutado
+    por receptor con sus tres salidas, las cuatro reglas de negocio (identidad única,
+    aportación pendiente, permisos cerrados por defecto, bandeja de equipo), el
+    recorrido de un coste, la matriz de quién ve qué y los límites deliberados.
+  - `docs/WhatsApp-Puesta-en-marcha.html` + `.pdf` (nuevos): runbook rehecho. Sustituye
+    la premisa antigua de «un único número para todos los negocios» por las dos clases
+    de número, añade la fase de alta de un número comercial desde administración
+    (`pending` -> probar -> `active`), la exigencia de que el usuario de sistema tenga
+    concedidos los activos de cada cliente, y una prueba de aceptación en dos bloques
+    con el aislamiento entre dos negocios.
+  - `docs/Inicio.md`: ambos entran en el mapa de contenido.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** ninguna ejecutable. Modelo verificado contra
+  `web/whatsapp.py` (`_handle_inbound`), `web/routers/whatsapp_business.py`, `db.py`
+  (`central_whatsapp_identity`, `resolve_worker_submission`) y la migración 45. HTML
+  comprobado sin etiquetas sin cerrar antes de imprimir cada PDF.
+- **Dependencias o validaciones externas:** las tareas de Meta siguen abiertas; los
+  documentos las ordenan, no las cierran.
+- **Riesgo/punto probable de fallo:** **hallazgo abierto y verificado hoy sobre
+  `main`.** Meta rechaza los parámetros de plantilla con saltos de línea, tabuladores
+  o más de cuatro espacios seguidos. `web/scheduler.py` sigue pasando
+  `"
+".join(lines)` como parámetro único en resumen diario, semanal, cierre, aviso
+  fiscal y aviso de cobros, y `_meta_payload()` no lo sanea. Los cinco proactivos
+  agotarán reintentos contra un número real; las pruebas no lo ven porque simulan Meta.
+- **Diagnóstico y rollback:** cambio solo documental.
+- **Estado de publicación:** local / commit en `main`.
+
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 
 - **Autor/agente:** Codex.

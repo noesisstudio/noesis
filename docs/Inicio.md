@@ -18,6 +18,13 @@ usa la vista de grafo para navegar.
   salida segura al piloto.
 - [[Guia-tecnica-ingeniero]] — entrada técnica de extremo a extremo para ingeniería:
   web, datos, cerebro, automatizaciones, WhatsApp y despliegue.
+- [`WhatsApp-Como-funciona.pdf`](WhatsApp-Como-funciona.pdf) — el canal multicanal
+  explicado sin código: los dos tipos de número, por qué el receptor decide antes
+  que el remitente, qué ve cada rol y qué falta por validar.
+- [`WhatsApp-Puesta-en-marcha.pdf`](WhatsApp-Puesta-en-marcha.pdf) — runbook visual
+  para llevar Meta Cloud API del número de prueba a clientes reales: canal central,
+  alta de números comerciales, plantillas y prueba con dos negocios. El `.html` del
+  mismo nombre es la fuente: se edita ahí y se reimprime el PDF.
 - [[Conectar-APIs]] — guía única de credenciales, callbacks, variables y pruebas
   externas para conectar producción sin confundir código con servicio activo.
 - [[Demo-comercial]] — dos accesos dentro del SaaS real, portal de cliente,
