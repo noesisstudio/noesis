@@ -11,6 +11,12 @@
   no se excluyó el archivo y no se debilitó el control. El hook sobre todos los
   archivos versionados, Ruff, `git diff --check` y las 4 pruebas MFA pasan después
   de la corrección.
+- La repetición completa
+  [31411139501](https://github.com/noesisstudio/noesis/actions/runs/31411139501)
+  quedó verde: 469 pruebas, auditoría de dependencias, secretos, patrones de
+  seguridad, estática, verdad del proyecto, ciclo de migraciones y humo PostgreSQL.
+  Producción respondió `/health` con release `40d564555c07`, `/ready` con esquema
+  47 y HTTP 200 en `/`, `/acceso` y `/gestoria/login`.
 - Suite completa: **469/469** en 335 segundos. Después de retirar los códigos en
   claro de la cookie de sesión, las cuatro pruebas focalizadas volvieron a pasar;
   Ruff y `git diff --check` están verdes. Permanece el aviso conocido de
@@ -29,7 +35,8 @@
 - La primera suite completa tras subir el esquema encontró una prueba histórica que
   usaba “última versión” para verificar 45→46. Se corrigió para apuntar a 46 y evitar
   que futuras migraciones rompan evidencias históricas; la repetición final quedó
-  469/469. Faltan CI/PostgreSQL, despliegue, prueba visual y validación externa.
+  469/469. CI, PostgreSQL y despliegue ya están verificados; faltan prueba visual,
+  autenticador/cuenta profesional reales y validación externa.
 
 ## 2026-08-10 — suscripciones ordenadas y permisos comerciales efectivos
 

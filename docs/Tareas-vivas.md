@@ -23,10 +23,12 @@
   y login/cartera/logout sintéticos de la gestoría demo. El founder confirmó después
   que Chrome ya entra y muestra la cartera/ficha con la prioridad
   `Sec-Fetch-Site: same-origin`. El espacio fiscal del esquema 41 ya se desplegó y
-  `/ready` lo confirmó. Falta desplegar y recorrer visualmente la separación nueva
-  entre Resumen, Documentos, Impuestos, Períodos y Solicitudes, además de completar
-  las demás pruebas autenticadas. El candidato siguiente añade el esquema 47 y MFA
-  de gestoría; falta publicarlo y repetir `/ready` y el login con TOTP.
+  `/ready` lo confirmó. Falta recorrer visualmente la separación nueva entre
+  Resumen, Documentos, Impuestos, Períodos y Solicitudes, además de completar las
+  demás pruebas autenticadas. El release `40d5645` con esquema 47 y MFA de gestoría
+  ya está publicado: CI completo/PostgreSQL verdes, `/health` y `/ready` coherentes
+  y portada, `/acceso` y `/gestoria/login` en 200. Falta activar y recorrer TOTP,
+  anti-replay y recuperación con una cuenta profesional y un autenticador reales.
 - [ ] La identidad legal ya está completada y publicada. Revisar aviso legal,
   privacidad, términos, DPA y fiscalidad con profesionales. Mantener
   `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.

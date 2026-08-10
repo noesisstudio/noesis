@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar esquema 47 y validar login de gestoria con TOTP, anti_replay y recuperacion; validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelacion, reactivacion, cambio de plan por price_id y eventos fuera de orden; comprobar con cuentas reales los derechos de Autonomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoria; despues validar Meta real, Google OAuth admin, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Validar con una cuenta profesional real la activacion TOTP, anti_replay, recuperacion y rotacion controlada de NOESIS_SECRET; validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelacion, reactivacion, cambio de plan por price_id y eventos fuera de orden; comprobar con cuentas reales los derechos de Autonomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoria; despues validar Meta real, Google OAuth admin, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

@@ -13,7 +13,10 @@
   en la respuesta inmediata, nunca en la cookie de sesión. Activar, regenerar o
   desactivar exige contraseña, segundo factor cuando corresponde y límites de
   intentos compartidos. La semilla se deriva de la clave maestra y no se almacena
-  reversible en la base.
+  reversible en la base. El release `40d564555c07` está desplegado: CI completo y
+  humo PostgreSQL verdes, `/ready` confirma esquema 47 y las entradas pública,
+  unificada y profesional responden correctamente. Falta el recorrido humano con
+  una aplicación autenticadora y una cuenta de gestoría real.
 - La suscripción ya no depende de que los webhooks de Stripe lleguen ordenados.
   El esquema 46 conserva el último evento aplicado por negocio; Checkout solo
   guarda la relación con cliente/suscripción y nunca activa por sí mismo. La

@@ -40,17 +40,19 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   quedaron marcadas en su misma línea como fixtures permitidos, sin modificar la
   línea base ni relajar el detector. El hook completo, Ruff, diff y las 4 pruebas
   MFA volvieron a quedar verdes antes del commit correctivo.
-- **Dependencias o validaciones externas:** no usa credenciales ni proveedor. Falta
-  CI/PostgreSQL, despliegue, recorrido visual, gestoría real y revisión externa.
+- **Dependencias o validaciones externas:** no usa credenciales ni proveedor. CI,
+  PostgreSQL y despliegue están validados; faltan recorrido con autenticador,
+  gestoría real, revisión visual y revisión externa.
 - **Riesgo/punto probable de fallo:** rotar `NOESIS_SECRET` invalida TOTP; conservar
   y probar códigos de recuperación antes de una rotación. Relojes con más de 30 s de
   desfase fallarán cerrado. La recuperación de contraseña aún no está construida.
 - **Diagnóstico y rollback:** revisar `mfa_enabled`, `mfa_last_counter`,
   `mfa_recovery_hashes`, `session_version` y límites `gestoria-mfa/security`. Revertir
   el commit desactiva las rutas; mantener columnas 47 inertes evita perder acceso.
-- **Estado de publicación:** commit funcional `9b7d053` en `main`; primer CI con
-  PostgreSQL verde y falsa alarma documentada en secretos de prueba. Pendiente del
-  commit correctivo, nuevo CI, migración 47 y validación de producción.
+- **Estado de publicación:** funcionalidad `9b7d053` y correctivo de prueba
+  `40d5645` en `main`; CI 31411139501 completo y PostgreSQL verdes. Producción
+  verificada con release `40d564555c07`, esquema 47 y HTTP 200 en portada,
+  `/acceso` y `/gestoria/login`.
 
 ## 2026-08-10 19:30 — cobro seguro y planes coherentes en todos los canales
 
