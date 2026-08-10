@@ -14,7 +14,7 @@ from noesis import config, db, migrations
 from noesis.web import auth, mfa, server
 
 
-PASSWORD = "Clave-profesional-2026"
+PASSWORD = "Clave-profesional-2026"  # pragma: allowlist secret
 
 
 class GestoriaMfaTestCase(unittest.TestCase):
@@ -129,7 +129,10 @@ class GestoriaMfaTestCase(unittest.TestCase):
                 self.assertIn("Activar segundo factor", setup.text)
                 rejected = client.post(
                     "/gestoria/seguridad/activar",
-                    data={"password": "incorrecta", "code": code},
+                    data={
+                        "password": "incorrecta",  # pragma: allowlist secret
+                        "code": code,
+                    },
                     follow_redirects=False,
                 )
                 self.assertIn("error=verify", rejected.headers["location"])

@@ -2,6 +2,15 @@
 
 ## 2026-08-10 — MFA de gestoría sin semilla reversible
 
+- El primer CI de `main`
+  [31410800904](https://github.com/noesisstudio/noesis/actions/runs/31410800904)
+  validó el ciclo de migraciones y el humo PostgreSQL con esquema 47. La suite se
+  detuvo antes de ejecutarse porque `detect-secrets` clasificó como posibles
+  secretos dos contraseñas literales exclusivas del test MFA. Se añadieron
+  permisos inline exactamente sobre esos fixtures: no se cambió `.secrets.baseline`,
+  no se excluyó el archivo y no se debilitó el control. El hook sobre todos los
+  archivos versionados, Ruff, `git diff --check` y las 4 pruebas MFA pasan después
+  de la corrección.
 - Suite completa: **469/469** en 335 segundos. Después de retirar los códigos en
   claro de la cookie de sesión, las cuatro pruebas focalizadas volvieron a pasar;
   Ruff y `git diff --check` están verdes. Permanece el aviso conocido de

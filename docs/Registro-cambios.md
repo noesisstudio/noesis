@@ -35,7 +35,11 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   sesiones o accesos existentes.
 - **Pruebas ejecutadas:** 5 focalizadas verdes; suite completa **469/469** en 335 s,
   Ruff y diff verdes. Tras sacar los códigos en claro de la sesión, las 4 pruebas
-  MFA volvieron a pasar.
+  MFA volvieron a pasar. El primer CI confirmó migración y humo PostgreSQL, pero
+  `detect-secrets` detuvo la suite al reconocer dos contraseñas ficticias de prueba;
+  quedaron marcadas en su misma línea como fixtures permitidos, sin modificar la
+  línea base ni relajar el detector. El hook completo, Ruff, diff y las 4 pruebas
+  MFA volvieron a quedar verdes antes del commit correctivo.
 - **Dependencias o validaciones externas:** no usa credenciales ni proveedor. Falta
   CI/PostgreSQL, despliegue, recorrido visual, gestoría real y revisión externa.
 - **Riesgo/punto probable de fallo:** rotar `NOESIS_SECRET` invalida TOTP; conservar
@@ -44,8 +48,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar `mfa_enabled`, `mfa_last_counter`,
   `mfa_recovery_hashes`, `session_version` y límites `gestoria-mfa/security`. Revertir
   el commit desactiva las rutas; mantener columnas 47 inertes evita perder acceso.
-- **Estado de publicación:** local verificado; pendiente de commit, push, CI,
-  migración 47 y validación de producción.
+- **Estado de publicación:** commit funcional `9b7d053` en `main`; primer CI con
+  PostgreSQL verde y falsa alarma documentada en secretos de prueba. Pendiente del
+  commit correctivo, nuevo CI, migración 47 y validación de producción.
 
 ## 2026-08-10 19:30 — cobro seguro y planes coherentes en todos los canales
 
