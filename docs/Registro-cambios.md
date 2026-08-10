@@ -52,8 +52,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   producto y respuesta `plan_upgrade_required`. Para aislar, revertir el commit
   detiene la guardia; no bajar el esquema en producción porque las columnas son
   compatibles e inertes para versiones anteriores.
-- **Estado de publicación:** local verificado; pendiente de commit, push, CI,
-  migración 46 y validación de producción.
+- **Estado de publicación:** commit `c63bf0e` en `main`; CI 31407830116 verde, humo
+  PostgreSQL verde y producción validada con release `c63bf0e13d0d`, esquema 46 y
+  portada HTTP 200. Falta la validación real de Stripe test y el recorrido visual.
 
 ## 2026-08-10 11:45 — WhatsApp multicanal y coordinación del equipo
 

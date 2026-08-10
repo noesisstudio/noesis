@@ -12,9 +12,9 @@
 - [ ] Rotar `NOESIS_SECRET`, SMTP y cualquier credencial que haya aparecido en una
   captura, PDF o conversación; revocar la anterior y eliminar/redactar las copias
   compartidas. No reutilizar secretos sugeridos por una IA.
-- [ ] Desplegar el `main` actual, aplicar el esquema 46 indicado en
-  `project-state.json` y confirmar que `/health` devuelve el release esperado y
-  `/ready` la migración vigente; comprobar además dominio canónico, cookies
+- [ ] El release `c63bf0e` y el esquema 46 ya están desplegados: CI completo y humo
+  PostgreSQL verdes, `/health` identifica el release, `/ready` confirma 46 y la
+  portada responde 200. Completar la comprobación de dominio canónico, cookies
   `__Host-`, hosts, logs sin query string, Google OAuth admin, panel CISO, bitácora
   encadenada, Home, modo consulta, ficha de proyecto y login de gestoría mediante
   el proxy real. Release/esquema, cabeceras, textos legales, alta cerrada y
@@ -41,7 +41,7 @@
   con cuentas reales que Autónomo no puede usar Proyectos, Equipo, Gestoría ni
   Análisis avanzado y que Negocio/Premium sí pueden hacerlo por web, API, asistente,
   WhatsApp y portales. La máquina de estados y los permisos en servidor ya están
-  construidos; falta validarlos contra Stripe test y desplegar el esquema 46.
+  construidos y desplegados; falta validarlos contra Stripe test.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente

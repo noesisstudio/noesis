@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar el candidato actual, aplicar esquema 46 y validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelación, reactivación y eventos fuera de orden; comprobar los derechos de Autónomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoría; después validar Meta real, Google OAuth admin, correo, OCR trilingüe con corpus, ClamAV privado, copia externa/restauración independiente, revisión jurídica/fiscal, gestoría real y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelación, reactivación, cambio de plan por price_id y eventos fuera de orden; comprobar con cuentas reales los derechos de Autónomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoría; después validar Meta real, Google OAuth admin, correo, OCR trilingüe con corpus, ClamAV privado, copia externa/restauración independiente, revisión jurídica/fiscal, gestoría real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

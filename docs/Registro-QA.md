@@ -2,6 +2,10 @@
 
 ## 2026-08-10 — suscripciones ordenadas y permisos comerciales efectivos
 
+- CI de `main` [31407830116](https://github.com/noesisstudio/noesis/actions/runs/31407830116)
+  verde: dependencias, secretos, seguridad, estática, verdad del proyecto, suite,
+  ciclo completo de migraciones y humo PostgreSQL. Producción respondió `/health`
+  con release `c63bf0e13d0d`, `/ready` con esquema 46 y la portada con HTTP 200.
 - Suite completa final: **465/465** en 338 segundos. Ruff, `git diff --check` y las
   pruebas focalizadas de Stripe, migración y permisos están verdes. Las trazas de
   IA, Meta, correo, backup, AEAT y el primer intento del webhook Stripe son fallos
@@ -29,8 +33,8 @@
 - El control también quedó aplicado a WhatsApp y portal de trabajadores, cartera y
   paquetes de gestoría, herramientas internas y scheduler. No se usaron
   credenciales Stripe ni se hizo prueba visual con navegador: Stripe test,
-  PostgreSQL del CI, despliegue, esquema 46 y QA visual siguen siendo validaciones
-  posteriores al commit.
+  Stripe test con credenciales y QA visual siguen siendo validaciones externas
+  pendientes; PostgreSQL, despliegue y esquema 46 ya quedaron verificados.
 - Una ejecución previa completó las comprobaciones funcionales pero Windows retuvo
   un SQLite temporal al limpiar una prueba de WhatsApp. La prueba aislada pasó y la
   repetición completa terminó 465/465; queda registrado como incidencia ambiental

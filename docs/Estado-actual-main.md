@@ -231,9 +231,10 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   siguen pendientes; la suscripción ICS y la conciliación CSV ya funcionan en local.
 - La transcripción mantiene adaptadores y degradación segura, pero requiere desplegar
   y validar Groq/faster-whisper. El OCR de imágenes y PDF escaneado ya es íntegramente
-  local con pytesseract, PDFium y los idiomas `spa/eng`; falta confirmar el binario
-  desplegado y medirlo con un corpus real en castellano/catalán antes de prometer una
-  precisión comercial. La extracción externa consentida queda solo como respaldo.
+  local con pytesseract, PDFium y los idiomas `cat/spa/eng`; falta confirmar los
+  binarios desplegados y medirlo con un corpus real en catalán/castellano/inglés
+  antes de prometer una precisión comercial. La extracción externa consentida queda
+  solo como respaldo.
 - La cartera de gestoría ya cubre identidad, varias empresas, revisión documental,
   primera lectura fiscal y períodos. Antes de abrirla a despachos reales faltan
   MFA/passkeys, recuperación de contraseña, permisos más finos, revisión del
