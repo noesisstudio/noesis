@@ -2,6 +2,10 @@
 
 ## 2026-08-10 — WhatsApp multicanal y equipo sin ruido
 
+- CI de `main` [31377826100](https://github.com/noesisstudio/noesis/actions/runs/31377826100)
+  verde: dependencias, secretos, seguridad, estática, verdad del proyecto, suite,
+  ciclo de migraciones y humo PostgreSQL. Producción respondió `/health` y `/ready`
+  con release `a803da4343e6`, estado `ready` y esquema 45.
 - Esquema 45 creado desde cero en SQLite. La primera suite completa detectó que
   PostgreSQL exige índices únicos explícitos antes de tres claves foráneas compuestas
   nuevas; se añadieron antes de las tablas dependientes y la guardia de orden DDL

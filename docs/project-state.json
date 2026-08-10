@@ -7,7 +7,7 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
+    "current_repository_candidate_deployed": true,
     "pending_after_deploy": "Aplicar esquema 45 y validar con Meta real el número central y dos números empresariales, enrutado por phone_number_id/WABA, texto, audio, foto/PDF, ventana de 24 horas, plantillas, opt-out, reintentos y aislamiento; pilotar aportaciones de equipo y revisión de costes; además completar identidad legal, Stripe, Google OAuth admin, correo, OCR trilingüe con corpus, ClamAV privado, copia externa/restauración independiente, revisión jurídica/fiscal, gestoría real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {

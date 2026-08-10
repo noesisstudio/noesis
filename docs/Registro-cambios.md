@@ -49,8 +49,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   outbox con `connection_id`, webhook events y aportaciones pendientes. Revertir el
   código detiene el canal empresarial; no bajar la migración en producción sin copia
   porque eliminaría conversaciones y aportaciones creadas desde el despliegue.
-- **Estado de publicación:** incluido en el commit de `main` asociado a esta
-  entrada; despliegue y validación con Meta real pendientes.
+- **Estado de publicación:** commit `a803da4` en `main`; CI general/PostgreSQL verde
+  y producción verificada con release `a803da4343e6`, `/ready` y esquema 45. La
+  validación extremo a extremo con Meta real permanece pendiente.
 
 ## 2026-08-08 21:05 — soporte temporal, CFO real y términos reforzados
 
