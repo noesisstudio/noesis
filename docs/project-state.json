@@ -1,14 +1,14 @@
 {
   "state_date": "2026-08-10",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 45,
-  "verified_test_count": 432,
+  "schema_version": 46,
+  "verified_test_count": 465,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Aplicar esquema 45 y validar con Meta real el número central y dos números empresariales, enrutado por phone_number_id/WABA, texto, audio, foto/PDF, ventana de 24 horas, plantillas, opt-out, reintentos y aislamiento; pilotar aportaciones de equipo y revisión de costes; además completar identidad legal, Stripe, Google OAuth admin, correo, OCR trilingüe con corpus, ClamAV privado, copia externa/restauración independiente, revisión jurídica/fiscal, gestoría real y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Desplegar el candidato actual, aplicar esquema 46 y validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelación, reactivación y eventos fuera de orden; comprobar los derechos de Autónomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoría; después validar Meta real, Google OAuth admin, correo, OCR trilingüe con corpus, ClamAV privado, copia externa/restauración independiente, revisión jurídica/fiscal, gestoría real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -83,7 +83,10 @@
     "aeat_delivery": "soap_mtls_durable_alta_and_cancellation_queues_built_real_certificate_acceptance_pending",
     "security_hardening": "schema_35_append_only_hash_chained_security_audit_internal_read_only_ciso_per_account_support_snapshot_schema_43_owner_created_scoped_expiring_revocable_support_grants_without_admin_self_grant_or_impersonation_independent_restore_drill_optional_private_clamav_fail_closed_shared_pseudonymous_auth_limits_bounded_postgres_pool_content_validated_uploads_secure_production_sessions_hosts_headers_fetch_metadata_same_origin_and_proxy_aware_strict_origin_validation_safe_logs_locked_supply_chain_and_encrypted_offsite_backup_request",
     "internal_cfo": "schema_44_append_only_monthly_platform_cost_ledger_separates_actual_forecast_and_adjustments_then_calculates_observed_contribution_margin_and_cost_per_paying_account_only_when_actual_data_exists",
-    "whatsapp_multichannel": "schema_45_central_private_number_with_one_fail_closed_identity_per_phone_for_owner_or_worker_plus_business_owned_customer_numbers_routed_by_recipient_phone_number_id_and_waba_before_sender_scoped_contacts_conversations_inbox_documents_opt_out_and_durable_outbound_worker_costs_documents_questions_and_blockers_wait_for_owner_review_before_affecting_projects_or_accounting"
+    "whatsapp_multichannel": "schema_45_central_private_number_with_one_fail_closed_identity_per_phone_for_owner_or_worker_plus_business_owned_customer_numbers_routed_by_recipient_phone_number_id_and_waba_before_sender_scoped_contacts_conversations_inbox_documents_opt_out_and_durable_outbound_worker_costs_documents_questions_and_blockers_wait_for_owner_review_before_affecting_projects_or_accounting",
+    "billing_state_machine": "schema_46_orders_stripe_events_per_business_checkout_never_activates_or_grants_an_upgrade_without_invoice_or_subscription_evidence_subscription_price_id_governs_portal_plan_changes_unknown_incomplete_paused_unpaid_and_past_due_fail_closed_old_foreign_or_unknown_price_events_cannot_override_current_state",
+    "plan_entitlements": "server_side_autonomo_keeps_core_pro_and_premium_unlock_projects_team_gestoria_and_advanced_analysis_trial_and_demo_show_full_product_same_policy_applies_to_web_api_internal_tools_whatsapp_worker_portal_schedulers_and_professional_gestoria_portal",
+    "premium_naming": "premium_replaces_sin_limites_because_the_plan_has_explicit_ai_and_future_voice_fair_use_limits"
   },
   "ai_route": [
     "reglas_locales",
@@ -94,7 +97,7 @@
   ],
   "external_validation_pending": [
     "rotate_any_secret_exposed_in_shared_material",
-    "legal_identity_and_professional_legal_review",
+    "professional_legal_review",
     "meta_whatsapp_central_and_business_numbers_real",
     "stripe_real",
     "smtp_real",

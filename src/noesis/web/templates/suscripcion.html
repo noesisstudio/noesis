@@ -10,9 +10,11 @@
   <div class="page-actions">
     {% set st = business.subscription_status or 'trial' %}
     <span class="sub-state {{ st }}">
-      {% if st == 'active' %}Suscripción activa
+      {% if st in ('active', 'trialing') %}Suscripción activa
       {% elif st == 'trial' %}En prueba{% if business.trial_ends_at %} · hasta {{ business.trial_ends_at }}{% endif %}
-      {% elif st == 'past_due' %}Pago pendiente
+      {% elif st in ('pending', 'incomplete') %}Confirmando el pago
+      {% elif st in ('past_due', 'unpaid') %}Pago pendiente
+      {% elif st == 'paused' %}Suscripción pausada
       {% else %}Cancelada{% endif %}
     </span>
   </div>
@@ -20,11 +22,16 @@
 
 {% if status == 'checkout_return' %}
 <div class="subscription-notice subscription-success" style="margin-bottom:16px">
-  {% if business.subscription_status == 'active' %}
+  {% if business.subscription_status in ('active', 'trialing') %}
   <b>Suscripción activada.</b><span>Tu configuración y tus datos siguen exactamente donde los dejaste.</span>
   {% else %}
   <b>Pago completado. Estamos confirmando la activación.</b><span>Normalmente tarda unos segundos; puedes recargar esta página.</span>
   {% endif %}
+</div>
+{% elif status == 'upgrade' %}
+<div class="subscription-notice" style="margin-bottom:16px">
+  <b>{{ upgrade_feature_label or 'Esta función' }} forma parte del plan Negocio.</b>
+  <span>Tu información no cambia: al ampliar el plan se habilita en el mismo panel.</span>
 </div>
 {% elif status == 'ready' %}
 <div class="subscription-ready" style="margin-bottom:18px">
@@ -96,7 +103,7 @@
   </div>
   <div class="plan {{ 'selected-plan' if preferred_plan == 'premium' }}" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
     {% if preferred_plan == 'premium' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
-    <h3>Sin Límites</h3>
+    <h3>Premium</h3>
     <p class="price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
     <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
@@ -109,12 +116,12 @@
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="premium">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Activar plan Sin Límites</button>
+      <button class="btn primary full" type="submit">Activar plan Premium</button>
     </form>
   </div>
 </div>
 
-{% if business.subscription_status == 'active' %}
+{% if business.subscription_status in ('active', 'trialing') %}
 <div class="card" style="margin-top:16px"><div class="card-b">
   <b>Gestionar mi suscripción</b>
   <p class="hint" style="margin:6px 0 12px">Cambia de plan, actualiza la tarjeta o cancela cuando quieras.</p>

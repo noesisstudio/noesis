@@ -77,7 +77,7 @@ assumptions.getRange("A2:F2").merge();
 assumptions.getRange("A2").values = [["Celdas azules = inputs. Importes sin IVA salvo que se indique. Fecha de referencia: 15/07/2026."]];
 assumptions.getRange("A2").format = { font: { color: C.muted, italic: true }, wrapText: true };
 section(assumptions, "A4:F4", "Supuestos por plan");
-assumptions.getRange("A5:F5").values = [["Driver", "Autónomo", "Negocio", "Sin Límites", "Unidad", "Fuente / criterio"]];
+assumptions.getRange("A5:F5").values = [["Driver", "Autónomo", "Negocio", "Premium", "Unidad", "Fuente / criterio"]];
 headers(assumptions.getRange("A5:F5"));
 const planInputs = [
   ["Precio actual", 29, 39, 79, "€/mes + IVA", "Catálogo actual"],
@@ -371,7 +371,7 @@ summary.getRange("A12:H13").format.font = { size: 18, bold: true, color: C.fores
 section(summary, "A16:H16", "Precio, coste y margen de contribución");
 summary.getRange("A17:D17").values = [["Plan", "Precio actual", "Precio recomendado", "Margen recomendado"]];
 headers(summary.getRange("A17:D17"));
-summary.getRange("A18:A20").values = [["Autónomo"],["Negocio"],["Sin Límites"]];
+summary.getRange("A18:A20").values = [["Autónomo"],["Negocio"],["Premium"]];
 summary.getRange("B18:B20").formulas = [["='Unit_Economics'!B5"],["='Unit_Economics'!C5"],["='Unit_Economics'!D5"]];
 summary.getRange("C18:C20").formulas = [["='Unit_Economics'!E5"],["='Unit_Economics'!F5"],["='Unit_Economics'!G5"]];
 summary.getRange("D18:D20").formulas = [["='Unit_Economics'!E19"],["='Unit_Economics'!F19"],["='Unit_Economics'!G19"]];
@@ -380,7 +380,7 @@ summary.getRange("D18:D20").format.numberFormat = "0.0%";
 summary.getRange("A23:E24").merge();
 summary.getRange("A23").values = [["Regla de control: Noesis puede preparar, pero el autónomo autoriza transferencias, cobros, emisiones definitivas y envíos sensibles."]];
 summary.getRange("A23").format = { fill: C.warn, font: { bold: true, color: C.ink }, wrapText: true, rowHeight: 38 };
-summary.getRange("F31:G34").values = [["Plan", "Margen"],["Autónomo", null],["Negocio", null],["Sin Límites", null]];
+summary.getRange("F31:G34").values = [["Plan", "Margen"],["Autónomo", null],["Negocio", null],["Premium", null]];
 summary.getRange("G32:G34").formulas = [["=D18*100"],["=D19*100"],["=D20*100"]];
 headers(summary.getRange("F31:G31"));
 summary.getRange("G32:G34").format.numberFormat = "0.0\"%\"";

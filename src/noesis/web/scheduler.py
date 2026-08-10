@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from .. import config, db
+from ..adapters import billing as billing_adapter
 from ..agent import daily_summary_text
 from . import backups
 
@@ -466,6 +467,10 @@ def send_gestoria_packages(now: datetime | None = None) -> int:
     notified = 0
     for business in db.list_businesses():
         if not db.subscription_allows_access(business):
+            continue
+        if not billing_adapter.has_entitlement(
+            business, billing_adapter.ENTITLEMENT_GESTORIA
+        ):
             continue
         cadence = business.get("gestoria_cadence") or "off"
         if cadence == "off" or not business.get("gestoria_email"):

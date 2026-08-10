@@ -9351,6 +9351,112 @@ def set_subscription(business_id, status, plan=None, customer_id=None,
     return get_business(business_id)
 
 
+STRIPE_SUBSCRIPTION_STATUSES = {
+    "trial", "pending", "trialing", "active", "incomplete", "past_due", "unpaid",
+    "paused", "canceled", "unknown",
+}
+
+
+def apply_stripe_subscription_event(
+    business_id: int,
+    *,
+    status: str,
+    event_created_at: int,
+    event_priority: int,
+    event_id: str,
+    plan: str | None = None,
+    customer_id: str | None = None,
+    subscription_id: str | None = None,
+    allow_subscription_change: bool = False,
+) -> dict:
+    """Aplica un estado de Stripe solo si el evento sigue siendo vigente.
+
+    Los webhooks pueden repetirse y llegar desordenados. La comparacion se hace
+    bajo bloqueo de fila y usa fecha, prioridad semantica e id como desempate
+    determinista. Un evento de una suscripcion antigua nunca puede modificar la
+    suscripcion actual salvo que el propio alta/checkout autorice el reemplazo.
+    """
+    if status not in STRIPE_SUBSCRIPTION_STATUSES:
+        raise ValueError("Estado de suscripcion Stripe no valido.")
+    if not event_id:
+        raise ValueError("El evento de Stripe necesita identificador.")
+    try:
+        created_at = max(0, int(event_created_at))
+        priority = max(0, int(event_priority))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Orden de evento Stripe no valido.") from exc
+    if plan is not None:
+        from .adapters.billing import PLANS
+
+        if plan not in PLANS:
+            raise ValueError("Plan de Stripe no reconocido.")
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not row:
+            return {"applied": False, "reason": "business_not_found", "business": None}
+
+        existing_customer = str(row.get("stripe_customer_id") or "")
+        incoming_customer = str(customer_id or "")
+        if existing_customer and incoming_customer and existing_customer != incoming_customer:
+            raise ValueError("El cliente de Stripe no coincide con la cuenta.")
+
+        existing_subscription = str(row.get("stripe_subscription_id") or "")
+        incoming_subscription = str(subscription_id or "")
+        if (
+            existing_subscription
+            and incoming_subscription
+            and existing_subscription != incoming_subscription
+            and not allow_subscription_change
+        ):
+            return {
+                "applied": False,
+                "reason": "subscription_mismatch",
+                "business": dict(row),
+            }
+
+        current_order = (
+            int(row.get("stripe_event_created_at") or 0),
+            int(row.get("stripe_event_priority") or 0),
+            str(row.get("stripe_event_id") or ""),
+        )
+        incoming_order = (created_at, priority, event_id)
+        if incoming_order <= current_order:
+            return {
+                "applied": False,
+                "reason": "stale_event",
+                "business": dict(row),
+            }
+
+        fields = [
+            "subscription_status=?",
+            "stripe_event_created_at=?",
+            "stripe_event_priority=?",
+            "stripe_event_id=?",
+        ]
+        params: list = [status, created_at, priority, event_id]
+        for column, value in (
+            ("plan", plan),
+            ("stripe_customer_id", customer_id),
+            ("stripe_subscription_id", subscription_id),
+        ):
+            if value is not None:
+                fields.append(f"{column}=?")
+                params.append(value)
+        params.append(business_id)
+        conn.execute(
+            f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params
+        )
+        updated = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        return {"applied": True, "reason": "applied", "business": dict(updated)}
+
+
 def mark_business_as_demo(business_id: int) -> dict | None:
     """Convierte una empresa ficticia en escaparate persistente de solo lectura."""
     with get_conn() as conn:
@@ -9378,7 +9484,7 @@ def subscription_allows_access(business: dict | None) -> bool:
     if business.get("is_demo"):
         return False
     status = business.get("subscription_status") or "trial"
-    if status == "active":
+    if status in {"active", "trialing"}:
         return True
     if status != "trial":
         return False

@@ -6,6 +6,23 @@
 
 ## Producto construido
 
+- La suscripción ya no depende de que los webhooks de Stripe lleguen ordenados.
+  El esquema 46 conserva el último evento aplicado por negocio; Checkout solo
+  guarda la relación con cliente/suscripción y nunca activa por sí mismo. La
+  activación exige una factura pagada o que Stripe confirme `active`/`trialing`.
+  `incomplete`, `paused`, `unpaid`, `past_due` y estados desconocidos quedan en
+  modo consulta. Facturas aisladas, eventos antiguos y eventos de una suscripción
+  anterior no pueden reactivar ni degradar la suscripción vigente. Checkout tampoco
+  concede un upgrade antes del cobro, y los cambios desde el portal toman el plan
+  del `price_id` vigente del catálogo, no de metadata histórica.
+- Los planes tienen permisos efectivos en servidor. Autónomo conserva el núcleo de
+  clientes, trabajos, facturas, cobros, documentos, impuestos y asistente; Negocio
+  y Premium habilitan Proyectos, Equipo, Gestoría y Análisis avanzado. La prueba y
+  la demostración enseñan el recorrido completo. La misma regla se aplica a web,
+  API, herramientas del cerebro, WhatsApp del equipo, portal del trabajador,
+  automatizaciones y cartera profesional; no se puede saltar cambiando de canal.
+  El plan superior se llama **Premium**, no “Sin Límites”, porque conserva límites
+  transparentes de uso avanzado y de la futura voz.
 - WhatsApp separa dos contextos que no deben confundirse. El número central de
   Noesis identifica al titular o al trabajador y sirve para órdenes internas,
   fichaje, parte, costes, justificantes y dudas. Cada negocio puede conectar además
@@ -181,6 +198,9 @@
 ## Política comercial en el código actual
 
 - Catálogo: **29 / 49 / 99 € al mes + IVA**.
+- Planes: **Autónomo / Negocio / Premium**. Los derechos comercializados se validan
+  en servidor; una cuenta sin plan reconocido recibe como máximo el núcleo de
+  Autónomo, nunca acceso total por error.
 - La prueba dura 14 días y permite operar con normalidad.
 - El código permite probar o contratar cada plan en modalidad mensual/anual. Quien
   contrata configura primero el negocio y después revisa el plan antes de ir al
@@ -204,8 +224,9 @@ algo está en producción porque exista en una rama o haya pasado tests.**
 
 - WhatsApp, Stripe, correo, Google OAuth, el proveedor privado de IA y AEAT están
   implementados detrás de adaptadores, pero necesitan credenciales y una prueba real
-  extremo a extremo. La secuencia exacta está en [[Conectar-APIs]]. Stripe live
-  requiere además cerrar cómo se aplica el IVA. La facturación es nativa y no se
+  extremo a extremo. La secuencia exacta está en [[Conectar-APIs]]. Stripe debe
+  probar además la nueva máquina de estados, eventos fuera de orden, derechos por
+  plan y el IVA antes de usar claves live. La facturación es nativa y no se
   conecta a otro SaaS. El calendario bidireccional y la conexión bancaria automática
   siguen pendientes; la suscripción ICS y la conciliación CSV ya funcionan en local.
 - La transcripción mantiene adaptadores y degradación segura, pero requiere desplegar
@@ -218,9 +239,9 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   MFA/passkeys, recuperación de contraseña, permisos más finos, revisión del
   cálculo con un asesor fiscal y una prueba piloto con datos y responsables reales.
 - Antes del piloto deben rotarse todos los secretos que hayan aparecido en capturas
-  o documentos compartidos, completar la identidad legal del prestador y someter
-  privacidad, términos y contrato de encargo a revisión jurídica. Ningún secreto
-  propuesto en un informe debe reutilizarse.
+  o documentos compartidos y someter privacidad, términos y contrato de encargo a
+  revisión jurídica profesional. La identidad legal mínima ya está completada y
+  publicada; ningún secreto propuesto en un informe debe reutilizarse.
 - La entrega de factura por WhatsApp requiere aprobar en Meta la plantilla
   `noesis_factura_lista`; el recorrido interno y la cola ya están construidos.
 - Falta auditoría externa de seguridad, privacidad y fiscalidad, desplegar y probar

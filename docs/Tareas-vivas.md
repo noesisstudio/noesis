@@ -12,7 +12,7 @@
 - [ ] Rotar `NOESIS_SECRET`, SMTP y cualquier credencial que haya aparecido en una
   captura, PDF o conversación; revocar la anterior y eliminar/redactar las copias
   compartidas. No reutilizar secretos sugeridos por una IA.
-- [ ] Desplegar el `main` actual, aplicar la migración indicada en
+- [ ] Desplegar el `main` actual, aplicar el esquema 46 indicado en
   `project-state.json` y confirmar que `/health` devuelve el release esperado y
   `/ready` la migración vigente; comprobar además dominio canónico, cookies
   `__Host-`, hosts, logs sin query string, Google OAuth admin, panel CISO, bitácora
@@ -26,9 +26,8 @@
   `/ready` lo confirmó. Falta desplegar y recorrer visualmente la separación nueva
   entre Resumen, Documentos, Impuestos, Períodos y Solicitudes, además de completar
   las demás pruebas autenticadas.
-- [ ] Completar `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`,
-  `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL`; revisar aviso legal, privacidad,
-  términos, DPA y fiscalidad con profesionales. Mantener
+- [ ] La identidad legal ya está completada y publicada. Revisar aviso legal,
+  privacidad, términos, DPA y fiscalidad con profesionales. Mantener
   `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.
 - [ ] Validar en producción la puerta de apertura: con el alta cerrada, las cuentas
   existentes entran y una alta por contraseña o Google no crea cuenta; al abrirla,
@@ -36,8 +35,13 @@
   reactivación.
 - [ ] Crear o actualizar en Stripe los productos **29/49/99 € + IVA**, enlazar sus
   seis `price_id` y probar en modo test dirección, NIF y `automatic_tax`; comprobar
-  importe e IVA resultantes, checkout, webhook, impago, reactivación y portal de
-  cliente antes de usar claves live.
+  importe e IVA resultantes, Checkout sin activación prematura, `invoice.paid`,
+  `trialing`, `incomplete`, `paused`, impago, cancelación, reactivación, eventos
+  fuera de orden y portal de cliente antes de usar claves live. Verificar además
+  con cuentas reales que Autónomo no puede usar Proyectos, Equipo, Gestoría ni
+  Análisis avanzado y que Negocio/Premium sí pueden hacerlo por web, API, asistente,
+  WhatsApp y portales. La máquina de estados y los permisos en servidor ya están
+  construidos; falta validarlos contra Stripe test y desplegar el esquema 46.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente

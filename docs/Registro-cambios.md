@@ -23,6 +23,38 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-10 19:30 — cobro seguro y planes coherentes en todos los canales
+
+- **Autor/agente:** Codex.
+- **Objetivo:** impedir activaciones erróneas por webhooks Stripe desordenados y
+  hacer que cada plan entregue exactamente las funciones publicadas, sin atajos por
+  API, asistente, WhatsApp o portales.
+- **Áreas y archivos:** billing, DB/migraciones, webhook Stripe, middleware web,
+  cerebro/herramientas, WhatsApp, portales de trabajador y gestoría, scheduler,
+  navegación/Ajustes/Suscripción, catálogo público, tests y documentación viva.
+- **Cambios de datos/migración:** esquema 45→46. Añade a `businesses` el instante,
+  prioridad e id del último evento Stripe aplicado. No cambia planes, estados ni
+  facturas existentes. El nombre comercial del plan de 99 € pasa de “Sin Límites”
+  a “Premium”; precios y límites permanecen iguales.
+- **Pruebas ejecutadas:** 12 pruebas focalizadas de migración, activación, upgrade,
+  estados, desorden, facturas aisladas y permisos; Ruff y diff verdes; suite
+  completa final **465/465** en 338 s. Un Checkout superior no concede plan ni
+  permisos antes de la confirmación verificable de Stripe y el `price_id` vigente
+  gobierna los cambios desde su portal. Una pasada anterior tuvo un bloqueo temporal
+  de limpieza SQLite en Windows; la prueba aislada y la repetición completa pasaron.
+- **Dependencias o validaciones externas:** ninguna credencial usada. Faltan Stripe
+  test/live, PostgreSQL del CI, despliegue/esquema 46 y recorrido visual.
+- **Riesgo/punto probable de fallo:** metadata o `price_id` incorrectos en Stripe,
+  cuenta histórica con plan no reconocido que cae al núcleo Autónomo, plantilla
+  que no reciba `entitlements` o una ruta premium futura no añadida a la matriz.
+- **Diagnóstico y rollback:** revisar `subscription_status`, `plan`,
+  `stripe_event_created_at`, `stripe_event_priority`, `stripe_event_id`, eventos de
+  producto y respuesta `plan_upgrade_required`. Para aislar, revertir el commit
+  detiene la guardia; no bajar el esquema en producción porque las columnas son
+  compatibles e inertes para versiones anteriores.
+- **Estado de publicación:** local verificado; pendiente de commit, push, CI,
+  migración 46 y validación de producción.
+
 ## 2026-08-10 11:45 — WhatsApp multicanal y coordinación del equipo
 
 - **Autor/agente:** Codex.

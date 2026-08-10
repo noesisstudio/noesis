@@ -21,6 +21,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 from .. import config, db
+from ..adapters import billing as billing_adapter
 from . import chat
 
 log = logging.getLogger("uvicorn.error")
@@ -127,6 +128,17 @@ def _try_worker_link(from_phone: str, text: str) -> dict | None:
                 "activar Noesis antes de vincular el equipo."
             ),
         }
+    if not billing_adapter.has_entitlement(
+        business, billing_adapter.ENTITLEMENT_TEAM
+    ):
+        return {
+            "business_id": business_id,
+            "subscription_required": True,
+            "reply": (
+                "El canal de equipo forma parte del plan Negocio. "
+                "El titular puede activarlo desde Suscripción."
+            ),
+        }
     try:
         worker = db.bind_worker_phone(business_id, parts[3], from_phone)
     except ValueError as exc:
@@ -200,6 +212,19 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
             "reply": (
                 "La cuenta está en modo consulta. El titular debe activar Noesis "
                 "antes de fichar o actualizar trabajos."
+            ),
+            "clocked": False,
+            "subscription_required": True,
+        }
+    if not billing_adapter.has_entitlement(
+        business, billing_adapter.ENTITLEMENT_TEAM
+    ):
+        return {
+            "business_id": worker["business_id"],
+            "worker_id": worker["id"],
+            "reply": (
+                "El canal de equipo no está incluido en el plan actual. "
+                "El titular puede activarlo desde Suscripción."
             ),
             "clocked": False,
             "subscription_required": True,
@@ -1128,6 +1153,23 @@ def _ingest_worker_media(worker: dict, phone: str, message: dict) -> dict:
     from ..documents import service as docservice
 
     business_id = worker["business_id"]
+    business = db.get_business(business_id)
+    if (
+        not db.subscription_allows_access(business)
+        or not billing_adapter.has_entitlement(
+            business, billing_adapter.ENTITLEMENT_TEAM
+        )
+    ):
+        send(
+            phone,
+            "El canal de equipo no está disponible en el plan actual. "
+            "No he guardado el archivo.",
+            business_id=None,
+        )
+        return {
+            "phone": phone, "worker_id": worker["id"], "ingested": False,
+            "subscription_required": True,
+        }
     job_id = _message_job_id(message)
     if job_id is None:
         job_id = (db.worker_open_shift(worker["id"], business_id) or {}).get("job_id")

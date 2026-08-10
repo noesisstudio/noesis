@@ -12,7 +12,7 @@
   coste esperado es de unos 0,05 / 0,22 / 0,69 € por cuenta y mes. Pesan más el
   soporte y los 100 minutos de voz del plan superior.
 - **Precio adoptado: 29 / 49 / 99 € + IVA.** El plan Autónomo se mantiene.
-  Negocio necesita más distancia por el soporte y valor que incluye. Sin Límites
+  Negocio necesita más distancia por el soporte y valor que incluye. Premium
   necesita 99 € si conserva 100 minutos de voz; alternativa: 79 € sin voz y add-on
   de voz de al menos 15 €.
 - Con un mix 55% / 35% / 10% y 3.500 € de opex fijo supuesto, el break-even baja de
@@ -59,19 +59,19 @@ cuenta. No incluye IVA ni CAC en el margen mensual.
 |---|---:|---:|---:|---:|---:|
 | Autónomo | 29 € | 1,48 € | 94,9% | 20,83 € | 71,8% |
 | Negocio | 39 € | 2,82 € | 92,8% | 25,11 € | 64,4% |
-| Sin Límites | 79 € | 18,03 € | 77,2% | 37,40 € | 47,3% |
+| Premium | 79 € | 18,03 € | 77,2% | 37,40 € | 47,3% |
 
 | Plan | Precio adoptado | COGS software | Margen bruto | Contribución | Margen contribución |
 |---|---:|---:|---:|---:|---:|
 | Autónomo | 29 € | 1,48 € | 94,9% | 20,83 € | 71,8% |
 | Negocio | 49 € | 3,04 € | 93,8% | 34,89 € | 71,2% |
-| Sin Límites | 99 € | 18,47 € | 81,3% | 56,96 € | 57,5% |
+| Premium | 99 € | 18,47 € | 81,3% | 56,96 € | 57,5% |
 
 ### Tarifa anual adoptada
 
 El anual cobra **11 meses y da acceso durante 12**: 319 / 539 / 1.089 € + IVA.
 Es un descuento real del 8,3% y una mensualidad completa de ahorro. Se elige este
-nivel —en lugar de dos meses gratis— para proteger el margen de Sin Límites mientras
+nivel —en lugar de dos meses gratis— para proteger el margen de Premium mientras
 el piloto todavía no ha medido el consumo real de voz y soporte.
 
 Con el mismo uso mensual, soporte y onboarding del escenario base, y una sola
@@ -81,7 +81,7 @@ comisión Stripe anual prorrateada, la estimación queda así:
 |---|---:|---:|---:|---:|---:|
 | Autónomo | 319 € | 26,58 € | 29 € | 18,69 € | 70,3% |
 | Negocio | 539 € | 44,92 € | 49 € | 31,12 € | 69,3% |
-| Sin Límites | 1.089 € | 90,75 € | 99 € | 49,12 € | 54,1% |
+| Premium | 1.089 € | 90,75 € | 99 € | 49,12 € | 54,1% |
 
 Son supuestos de planificación, no márgenes observados. El anual mejora caja y
 reduce comisiones fijas, pero obliga a reservar capacidad de servicio durante doce

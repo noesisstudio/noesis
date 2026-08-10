@@ -3461,6 +3461,43 @@ def _downgrade_whatsapp_multichannel(conn) -> None:
         conn.execute("ALTER TABLE workers DROP COLUMN IF EXISTS role")
 
 
+def _upgrade_stripe_subscription_ordering(conn) -> None:
+    """Conserva el orden de los webhooks que gobiernan una suscripcion.
+
+    Stripe no garantiza el orden de entrega. Estas columnas permiten ignorar un
+    evento antiguo que llegue despues de otro mas reciente y evitan que un
+    ``checkout.session.completed`` tardio reactive una cuenta impagada o cancelada.
+    """
+    columns = _column_names(conn, "businesses")
+    if "stripe_event_created_at" not in columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN stripe_event_created_at "
+            "INTEGER NOT NULL DEFAULT 0"
+        )
+    if "stripe_event_priority" not in columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN stripe_event_priority "
+            "INTEGER NOT NULL DEFAULT 0"
+        )
+    if "stripe_event_id" not in columns:
+        conn.execute("ALTER TABLE businesses ADD COLUMN stripe_event_id TEXT")
+
+
+def _downgrade_stripe_subscription_ordering(conn) -> None:
+    # SQLite no permite retirar columnas de forma segura en todas las versiones
+    # soportadas. Se dejan inertes y la subida posterior las reutiliza.
+    if conn.dialect != "sqlite":
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS stripe_event_id"
+        )
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS stripe_event_priority"
+        )
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS stripe_event_created_at"
+        )
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3521,6 +3558,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_platform_cost_ledger),
     (45, "whatsapp_multicanal", _upgrade_whatsapp_multichannel,
      _downgrade_whatsapp_multichannel),
+    (46, "orden_suscripcion_stripe", _upgrade_stripe_subscription_ordering,
+     _downgrade_stripe_subscription_ordering),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

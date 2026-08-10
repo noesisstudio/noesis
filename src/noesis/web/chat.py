@@ -14,6 +14,7 @@ from datetime import date, datetime
 
 from .. import config, db, internal_brain, nlu
 from ..adapters import ai as ai_adapter
+from ..adapters import billing as billing_adapter
 from ..tools import run_tool
 
 # Agentes por negocio. El historial y el bloqueo nunca se comparten entre empresas.
@@ -33,6 +34,7 @@ def _count(n: int, singular: str, plural: str | None = None) -> str:
 
 
 def _business_state(business_id: int) -> dict:
+    business = db.get_business(business_id)
     today = date.today().isoformat()
     billing = db.month_billing(business_id=business_id)
     pending = db.pending_payments(business_id)
@@ -40,7 +42,13 @@ def _business_state(business_id: int) -> dict:
     clients = db.client_stats(business_id)
     expenses = db.list_expenses(business_id)
     late = [p for p in pending if (p.get("days_outstanding") or 0) > 7]
-    projects = db.list_projects(business_id)
+    projects = (
+        db.list_projects(business_id)
+        if billing_adapter.has_entitlement(
+            business, billing_adapter.ENTITLEMENT_PROJECTS
+        )
+        else []
+    )
     project_alerts = []
     if db.automation_decision(business_id, "project_alerts")["allowed"]:
         for project in projects:
@@ -74,10 +82,18 @@ def _business_state(business_id: int) -> dict:
         "leads_due": db.leads_due_today(business_id),
         # Solo lo que pide la gestoría espera respuesta del autónomo; sus
         # propias notas no son una tarea pendiente.
-        "gestoria_open": [
-            r for r in db.list_gestoria_requests(business_id, status="abierta")
-            if r["requested_by"] == "gestoria"
-        ],
+        "gestoria_open": (
+            [
+                r for r in db.list_gestoria_requests(
+                    business_id, status="abierta"
+                )
+                if r["requested_by"] == "gestoria"
+            ]
+            if billing_adapter.has_entitlement(
+                business, billing_adapter.ENTITLEMENT_GESTORIA
+            )
+            else []
+        ),
         "projects": projects,
         "project_alerts": project_alerts,
     }

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from ... import config, db, gestoria_workspace
+from ...adapters import billing as billing_adapter
 from ...documents import repo as docrepo, service as docservice
 from .. import auth
 from ..deps import TEMPLATES
@@ -64,7 +65,11 @@ def _business_for(request: Request, business_id: int) -> tuple[dict, dict] | Non
     if not account:
         return None
     business = db.gestoria_business_for_account(account["id"], business_id)
-    return (account, business) if business else None
+    if not business or not billing_adapter.has_entitlement(
+        business, billing_adapter.ENTITLEMENT_GESTORIA
+    ):
+        return None
+    return account, business
 
 
 @router.get("/gestoria/login", response_class=HTMLResponse)
@@ -181,6 +186,12 @@ def portfolio(request: Request, q: str = "", year: int | None = None,
     if isinstance(account, RedirectResponse):
         return account
     businesses = db.list_gestoria_businesses(account["id"])
+    businesses = [
+        business for business in businesses
+        if billing_adapter.has_entitlement(
+            business, billing_adapter.ENTITLEMENT_GESTORIA
+        )
+    ]
     term = (q or "").strip().lower()[:120]
     if term:
         businesses = [business for business in businesses if term in (

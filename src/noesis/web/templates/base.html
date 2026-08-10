@@ -47,12 +47,12 @@
       {% set g_ventas = ['clientes', 'crm', 'productos'] %}
       <a class="nav-item {{ 'active' if active=='resumen' }}" href="/b/{{ b }}/resumen"><span class="ic">{{ ic('resumen') }}</span> Inicio</a>
       <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Trabajos</a>
-      <a class="nav-item {{ 'active' if active=='proyectos' }}" href="/b/{{ b }}/proyectos"><span class="ic">{{ ic('proyectos') }}</span> Proyectos</a>
+      {% if 'projects' in entitlements %}<a class="nav-item {{ 'active' if active=='proyectos' }}" href="/b/{{ b }}/proyectos"><span class="ic">{{ ic('proyectos') }}</span> Proyectos</a>{% endif %}
       <a class="nav-item {{ 'active' if active in g_ventas }}" href="/b/{{ b }}/clientes"><span class="ic">{{ ic('clientes') }}</span> Clientes</a>
       <div class="section-label">Gestión</div>
       <a class="nav-item {{ 'active' if active in g_tesoreria }}" href="/b/{{ b }}/tesoreria"><span class="ic">{{ ic('tesoreria') }}</span> Dinero</a>
       <a class="nav-item {{ 'active' if active in g_facturacion }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturas</a>
-      <a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>
+      {% if 'team' in entitlements %}<a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>{% endif %}
       <a class="nav-item {{ 'active' if active=='documentos' }}" href="/b/{{ b }}/documentos"><span class="ic">{{ ic('documentos') }}</span> Documentos</a>
       <div class="section-label">Noesis</div>
       <a class="nav-item {{ 'active' if active=='asistente' }}" href="/b/{{ b }}/asistente"><span class="ic">{{ ic('asistente') }}</span> Asistente</a>
@@ -107,7 +107,7 @@
             <a role="menuitem" href="/b/{{ business.id }}/presupuestos?nuevo=1">Presupuesto</a>
             <a role="menuitem" href="/b/{{ business.id }}/clientes?nuevo=1">Cliente</a>
             <a role="menuitem" href="/b/{{ business.id }}/costes?nuevo=1">Gasto</a>
-            <a role="menuitem" href="/b/{{ business.id }}/equipo?nuevo=1">Persona del equipo</a>
+            {% if 'team' in entitlements %}<a role="menuitem" href="/b/{{ business.id }}/equipo?nuevo=1">Persona del equipo</a>{% endif %}
             <a role="menuitem" href="/b/{{ business.id }}/asistente">Trabajo (por chat)</a>
           </div>
         </div>
@@ -123,7 +123,7 @@
     {% if active in g_tesoreria %}
     <div class="subnav" role="tablist" aria-label="Secciones de Dinero">
       <a class="{{ 'active' if active=='tesoreria' }}" href="/b/{{ b }}/tesoreria">Caja</a>
-      <a class="{{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis">Análisis</a>
+      {% if 'advanced_analysis' in entitlements %}<a class="{{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis">Análisis</a>{% endif %}
       <a class="{{ 'active' if active=='ingresos' }}" href="/b/{{ b }}/ingresos">Ingresos</a>
       <a class="{{ 'active' if active=='costes' }}" href="/b/{{ b }}/costes">Costes</a>
     </div>

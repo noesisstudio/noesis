@@ -32,7 +32,7 @@ _API = "https://api.stripe.com/v1"
 PLANS = {
     "autonomo": {"name": "Autónomo", "price": 29, "credits": 75},
     "pro": {"name": "Negocio", "price": 49, "credits": 300},
-    "premium": {"name": "Sin Límites", "price": 99, "credits": 1500},
+    "premium": {"name": "Premium", "price": 99, "credits": 1500},
 }
 PLAN_PRICES = {key: plan["price"] for key, plan in PLANS.items()}
 ANNUAL_MONTHS_CHARGED = 11
@@ -42,6 +42,61 @@ PLAN_ANNUAL_PRICES = {
 PLAN_ANNUAL_SAVINGS = {
     key: price * (12 - ANNUAL_MONTHS_CHARGED) for key, price in PLAN_PRICES.items()
 }
+
+# Capacidades vendidas por plan. La prueba y la demo muestran el producto completo;
+# una cuenta de pago recibe solo lo contratado. Mantener este catálogo en servidor
+# evita que ocultar un botón sea el único control comercial.
+ENTITLEMENT_PROJECTS = "projects"
+ENTITLEMENT_TEAM = "team"
+ENTITLEMENT_GESTORIA = "gestoria"
+ENTITLEMENT_ADVANCED_ANALYSIS = "advanced_analysis"
+ENTITLEMENTS = frozenset({
+    ENTITLEMENT_PROJECTS,
+    ENTITLEMENT_TEAM,
+    ENTITLEMENT_GESTORIA,
+    ENTITLEMENT_ADVANCED_ANALYSIS,
+})
+PLAN_ENTITLEMENTS = {
+    "autonomo": frozenset(),
+    "pro": ENTITLEMENTS,
+    "premium": ENTITLEMENTS,
+}
+ENTITLEMENT_MINIMUM_PLAN = {
+    ENTITLEMENT_PROJECTS: "pro",
+    ENTITLEMENT_TEAM: "pro",
+    ENTITLEMENT_GESTORIA: "pro",
+    ENTITLEMENT_ADVANCED_ANALYSIS: "pro",
+}
+ENTITLEMENT_LABELS = {
+    ENTITLEMENT_PROJECTS: "Proyectos, costes y rentabilidad",
+    ENTITLEMENT_TEAM: "Equipo y registro de jornada",
+    ENTITLEMENT_GESTORIA: "Gestoría conectada",
+    ENTITLEMENT_ADVANCED_ANALYSIS: "Análisis financiero avanzado",
+}
+
+
+def effective_plan(business: dict | None) -> str:
+    """Devuelve el nivel aplicable sin convertir datos heredados en acceso total."""
+    if not business:
+        return "autonomo"
+    if business.get("is_demo") or business.get("subscription_status") == "trial":
+        return "premium"
+    plan = str(business.get("plan") or "")
+    return plan if plan in PLAN_ENTITLEMENTS else "autonomo"
+
+
+def entitlements_for(business: dict | None) -> frozenset[str]:
+    return PLAN_ENTITLEMENTS[effective_plan(business)]
+
+
+def has_entitlement(business: dict | None, entitlement: str) -> bool:
+    if entitlement not in ENTITLEMENTS:
+        return False
+    return entitlement in entitlements_for(business)
+
+
+def minimum_plan_for(entitlement: str) -> str:
+    return ENTITLEMENT_MINIMUM_PLAN.get(entitlement, "premium")
 
 
 class BillingProvider(Protocol):
@@ -66,6 +121,17 @@ def _price_id(plan: str, billing_period: str = "monthly") -> str:
         },
     }
     return catalog.get(billing_period, {}).get(plan, "")
+
+
+def plan_for_price_id(price_id: str | None) -> str | None:
+    """Resuelve el plan contratado desde el catálogo configurado en Stripe."""
+    if not price_id:
+        return None
+    for billing_period in ("monthly", "annual"):
+        for plan in PLANS:
+            if _price_id(plan, billing_period) == price_id:
+                return plan
+    return None
 
 
 class StripeBillingProvider:

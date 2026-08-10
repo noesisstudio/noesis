@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 45;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 46;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -20,7 +20,9 @@
   La 43 registra autorizaciones de soporte temporales y acotadas creadas por el
   titular. La 44 añade el libro append-only de costes internos por período. La 45
   separa conexiones, contactos, conversaciones, bandeja y salidas de WhatsApp por
-  negocio/número, y añade aportaciones de campo revisables y permisos de equipo.
+  negocio/número, y añade aportaciones de campo revisables y permisos de equipo. La
+  46 conserva el orden de webhooks Stripe por negocio para impedir que un evento
+  antiguo sobrescriba el estado de suscripción vigente.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -36,7 +38,8 @@
   no se sobrescriben ni se mezclan.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
   y propuestas explicables de conciliación; nunca confirma un pago por sí solo.
-- `src/noesis/tools.py`: herramientas que puede invocar el cerebro y flujo común de
+- `src/noesis/tools.py`: herramientas que puede invocar el cerebro, aplica los
+  derechos del plan antes de consultar o modificar módulos premium y mantiene el flujo común de
   entrega de factura: PDF, canal habitual, email/plantilla WhatsApp, idempotencia y
   evento trazable.
 - `src/noesis/documents/ocr.py` + `pdf_ocr.py`: lectura local de imágenes y PDF
@@ -108,13 +111,19 @@
 - `src/noesis/web/static/public-site.js`: hace navegable la cuenta simulada de la
   Home y sincroniza el selector mensual/anual, sus importes, ahorro, CTA y campos de
   checkout sin tocar datos reales.
-- `src/noesis/adapters/billing.py`: catálogo mensual y anual compartido. Stripe usa
-  un `price_id` distinto por plan y periodicidad; el anual cobra 11 meses y da 12.
-- `src/noesis/web/deps.py`: aislamiento de sesión, modo consulta y guardia CSRF
+- `src/noesis/adapters/billing.py`: catálogo mensual/anual y matriz central de
+  derechos. Stripe usa un `price_id` distinto por plan y periodicidad; el anual
+  cobra 11 meses y da 12. Autónomo conserva el núcleo y Negocio/Premium habilitan
+  Proyectos, Equipo, Gestoría y Análisis avanzado.
+- `src/noesis/web/deps.py`: aislamiento de sesión, modo consulta, derechos por plan y guardia CSRF
   transversal. Una cuenta inactiva puede leer; toda mutación web/API devuelve
   redirección o HTTP 402. La evidencia `Sec-Fetch-Site: same-origin` del navegador
   tiene prioridad sobre el `Host` privado de Railway; sin ella, `Origin` pasa por
   la allowlist pública estricta y `cross-site` nunca se acepta.
+- `src/noesis/web/routers/webhooks.py` + `db.apply_stripe_subscription_event`:
+  Checkout solo vincula ids; la activación exige factura pagada o suscripción
+  `active`/`trialing`. El bloqueo de fila, orden persistente y comprobación de
+  customer/subscription rechazan duplicados, cruces y eventos atrasados.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
   de acciones de Noesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve
@@ -231,8 +240,10 @@
   perderla ante una caída del proveedor.
 - `src/noesis/adapters/billing.py`: Checkout de suscripción propio sobre la API REST
   de Stripe. Además del precio y metadatos aislados por negocio, solicita dirección,
-  NIF fiscal y `automatic_tax`; las credenciales y el resultado fiscal se validan
-  externamente antes de pasar a live.
+  NIF fiscal y `automatic_tax`. El catálogo traduce cada `price_id` mensual/anual al
+  plan efectivo para que el portal de Stripe no conserve permisos de una metadata
+  antigua; las credenciales y el resultado fiscal se validan externamente antes de
+  pasar a live.
 - `src/noesis/adapters/`: Meta, email, pagos, voz, extracción y fiscalidad detrás de
   fronteras reemplazables. La extracción externa respeta la decisión de IA de cada
   negocio y conserva el clasificador local cuando está desactivada.

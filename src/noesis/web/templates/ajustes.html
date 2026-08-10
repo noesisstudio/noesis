@@ -233,6 +233,7 @@
     </div>
   </div>
 
+  {% if 'gestoria' in entitlements %}
   <div class="card" id="gestoria">
     <div class="card-h"><h2>Tu gestoría</h2>
       {% if business.gestoria_cadence and business.gestoria_cadence != 'off' %}
@@ -338,6 +339,15 @@
       {% endif %}
     </div>
   </div>
+  {% else %}
+  <div class="card" id="gestoria">
+    <div class="card-h"><h2>Tu gestoría</h2><span class="badge b-gray">plan Negocio</span></div>
+    <div class="card-b">
+      <p class="muted">Con el plan Negocio conectas el despacho, preparas los períodos y compartes documentos sin perseguir correos.</p>
+      <a class="btn primary" href="/b/{{ business.id }}/suscripcion?plan=pro&status=upgrade&feature=gestoria">Ver plan Negocio</a>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="card" id="verifactu" style="margin-top:16px">
@@ -511,6 +521,7 @@
   </div>
 </div>
 
+{% if 'team' in entitlements %}
 <div class="card" style="margin-top:16px">
   <div class="card-h">
     <h2>Política de registro de jornada</h2>
@@ -529,6 +540,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <div class="card autonomy-card" id="control-noesis" style="margin-top:16px">
   <div class="card-h">

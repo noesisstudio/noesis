@@ -10,6 +10,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from ... import db
+from ...adapters import billing as billing_adapter
 from .. import auth
 from ..deps import TEMPLATES, _read_json
 
@@ -28,6 +29,21 @@ def _subscription_required(business: dict | None) -> JSONResponse | None:
             "code": "subscription_required",
         },
         status_code=402,
+    )
+
+
+def _entitlement_required(
+    business: dict | None, entitlement: str
+) -> JSONResponse | None:
+    if billing_adapter.has_entitlement(business, entitlement):
+        return None
+    return JSONResponse(
+        {
+            "error": "Esta función no está incluida en el plan actual de la empresa.",
+            "code": "plan_upgrade_required",
+            "required_plan": billing_adapter.minimum_plan_for(entitlement),
+        },
+        status_code=403,
     )
 
 
@@ -302,6 +318,10 @@ def _worker_portal_context(request: Request, token: str) -> dict:
         return {"token": token, "data": None}
     worker = ref["worker"]
     business = ref["business"]
+    if not billing_adapter.has_entitlement(
+        business, billing_adapter.ENTITLEMENT_TEAM
+    ):
+        return {"token": token, "data": None}
     pin_required = bool(worker.get("pin_hash"))
     unlocked = not pin_required or _worker_token_verified(request, token)
     safe_worker = {
@@ -385,6 +405,9 @@ async def worker_portal_pin(request: Request, token: str):
     ref = db.resolve_worker_token(token)
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
+    if blocked:
+        return blocked
     worker = ref["worker"]
     if not worker.get("pin_hash"):
         request.session["worker_token_hash"] = hashlib.sha256(token.encode()).hexdigest()
@@ -412,6 +435,9 @@ async def worker_portal_clock(request: Request, token: str):
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
     blocked = _subscription_required(ref["business"])
+    if blocked:
+        return blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
     if blocked:
         return blocked
     worker = ref["worker"]
@@ -447,6 +473,9 @@ def worker_portal_ack(request: Request, token: str):
     blocked = _subscription_required(ref["business"])
     if blocked:
         return blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
+    if blocked:
+        return blocked
     worker = ref["worker"]
     if worker.get("pin_hash") and not _worker_token_verified(request, token):
         return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
@@ -471,6 +500,9 @@ async def worker_portal_task(
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
     blocked = _subscription_required(ref["business"])
+    if blocked:
+        return blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
     if blocked:
         return blocked
     worker = ref["worker"]
@@ -498,6 +530,9 @@ def _worker_ref(request: Request, token: str):
             {"error": "Enlace no válido o caducado."}, status_code=404
         )
     blocked = _subscription_required(ref["business"])
+    if blocked:
+        return None, blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
     if blocked:
         return None, blocked
     if ref["worker"].get("pin_hash") and not _worker_token_verified(request, token):

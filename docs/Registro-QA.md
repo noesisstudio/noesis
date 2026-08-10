@@ -1,5 +1,41 @@
 # Registro de QA
 
+## 2026-08-10 — suscripciones ordenadas y permisos comerciales efectivos
+
+- Suite completa final: **465/465** en 338 segundos. Ruff, `git diff --check` y las
+  pruebas focalizadas de Stripe, migración y permisos están verdes. Las trazas de
+  IA, Meta, correo, backup, AEAT y el primer intento del webhook Stripe son fallos
+  adversos simulados y esperados por sus pruebas; permanece el aviso conocido de
+  deprecación Starlette/httpx.
+- Esquema 46 probado desde una base en 45: añade orden de evento, prioridad e id
+  Stripe sin cambiar plan ni acceso existentes. La migración limpia y el salto
+  histórico terminan en 46.
+- Checkout pagado no activa una cuenta cancelada: queda pendiente y conserva
+  customer/subscription. Solo `invoice.paid` o una suscripción `active`/`trialing`
+  habilitan escritura. `incomplete`, `paused` y un estado desconocido no se
+  convierten en prueba gratuita. Un Checkout Premium iniciado por una cuenta
+  Autónoma activa tampoco cambia el plan ni concede módulos antes de confirmarse.
+  Un cambio desde el portal usa el `price_id` actual incluso si la metadata conserva
+  el plan anterior; un precio ajeno al catálogo falla cerrado.
+- Se reprodujeron entregas fuera de orden: un fallo de pago antiguo y un Checkout
+  todavía más antiguo no deshacen una factura pagada posterior. Una factura sin
+  suscripción y una factura de una suscripción reemplazada tampoco cambian el
+  estado vigente.
+- Una cuenta activa Autónoma conserva Clientes y el núcleo, pero recibe 403
+  `plan_upgrade_required` para Proyectos, Equipo y Análisis avanzado; la pantalla
+  directa redirige a la ampliación y el cerebro rechaza crear el proyecto. Negocio
+  y la prueba mantienen las mismas rutas operativas. La navegación no anuncia
+  módulos no contratados.
+- El control también quedó aplicado a WhatsApp y portal de trabajadores, cartera y
+  paquetes de gestoría, herramientas internas y scheduler. No se usaron
+  credenciales Stripe ni se hizo prueba visual con navegador: Stripe test,
+  PostgreSQL del CI, despliegue, esquema 46 y QA visual siguen siendo validaciones
+  posteriores al commit.
+- Una ejecución previa completó las comprobaciones funcionales pero Windows retuvo
+  un SQLite temporal al limpiar una prueba de WhatsApp. La prueba aislada pasó y la
+  repetición completa terminó 465/465; queda registrado como incidencia ambiental
+  intermitente, no como resultado verde omitido.
+
 ## 2026-08-10 — WhatsApp multicanal y equipo sin ruido
 
 - CI de `main` [31377826100](https://github.com/noesisstudio/noesis/actions/runs/31377826100)

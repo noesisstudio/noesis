@@ -94,6 +94,29 @@ class HistoricalInvoiceMigrationTestCase(unittest.TestCase):
             config.DATABASE_URL = old_url
             tempdir.cleanup()
 
+    def test_schema_46_adds_stripe_event_order_without_changing_access(self):
+        tempdir = tempfile.TemporaryDirectory()
+        old_path = config.DB_PATH
+        old_url = config.DATABASE_URL
+        config.DATABASE_URL = ""
+        config.DB_PATH = Path(tempdir.name) / "migration-45.db"
+        try:
+            migrations.upgrade(45)
+            business = db.create_business("Suscripcion historica", "old@example.com")
+            db.set_subscription(business["id"], "active", plan="pro")
+
+            self.assertEqual(migrations.upgrade(), 46)
+            migrated = db.get_business(business["id"])
+            self.assertEqual(migrated["subscription_status"], "active")
+            self.assertEqual(migrated["plan"], "pro")
+            self.assertEqual(migrated["stripe_event_created_at"], 0)
+            self.assertEqual(migrated["stripe_event_priority"], 0)
+            self.assertIsNone(migrated["stripe_event_id"])
+        finally:
+            config.DB_PATH = old_path
+            config.DATABASE_URL = old_url
+            tempdir.cleanup()
+
 
 class BackendTestCase(unittest.TestCase):
     def setUp(self):
@@ -693,8 +716,8 @@ class BackendTestCase(unittest.TestCase):
             ),
             patch.object(
                 db,
-                "set_subscription",
-                side_effect=[RuntimeError("fallo transitorio"), None],
+                "apply_stripe_subscription_event",
+                side_effect=[RuntimeError("fallo transitorio"), {"applied": True}],
             ) as update,
             TestClient(server.app) as client,
         ):
@@ -709,6 +732,261 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(
             db.webhook_event("stripe", event["id"])["status"], "done"
         )
+
+    def test_stripe_checkout_never_activates_without_paid_evidence(self):
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe pendiente")
+        db.set_subscription(business["id"], "canceled", plan="autonomo")
+        webhooks._apply_stripe_event({
+            "id": "evt_checkout_pending",
+            "created": 100,
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                "metadata": {
+                    "business_id": str(business["id"]),
+                    "plan": "autonomo",
+                },
+                "customer": "cus_pending",
+                "subscription": "sub_pending",
+                "payment_status": "paid",
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "pending")
+        self.assertEqual(updated["stripe_customer_id"], "cus_pending")
+        self.assertEqual(updated["stripe_subscription_id"], "sub_pending")
+        self.assertFalse(db.subscription_allows_access(updated))
+
+    def test_stripe_checkout_never_grants_an_upgrade_before_confirmation(self):
+        from noesis.adapters import billing
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe upgrade pendiente")
+        db.set_subscription(business["id"], "active", plan="autonomo")
+        webhooks._apply_stripe_event({
+            "id": "evt_checkout_upgrade",
+            "created": 120,
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                "metadata": {
+                    "business_id": str(business["id"]),
+                    "plan": "premium",
+                },
+                "customer": "cus_upgrade",
+                "subscription": "sub_upgrade",
+                "payment_status": "paid",
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["plan"], "autonomo")
+        self.assertFalse(
+            billing.has_entitlement(updated, billing.ENTITLEMENT_PROJECTS)
+        )
+
+    def test_stripe_subscription_price_governs_portal_plan_changes(self):
+        from noesis.adapters import billing
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe cambio portal")
+        db.set_subscription(business["id"], "active", plan="premium")
+        with (
+            patch.object(billing.config, "STRIPE_PRICE_AUTONOMO", "price_auto"),
+            patch.object(billing.config, "STRIPE_PRICE_PREMIUM", "price_premium"),
+        ):
+            webhooks._apply_stripe_event({
+                "id": "evt_portal_downgrade",
+                "created": 140,
+                "type": "customer.subscription.updated",
+                "data": {"object": {
+                    "id": "sub_portal",
+                    "customer": "cus_portal",
+                    "status": "active",
+                    # La metadata de Stripe puede conservar el plan original;
+                    # el precio vigente es la evidencia comercial autoritativa.
+                    "metadata": {
+                        "business_id": str(business["id"]),
+                        "plan": "premium",
+                    },
+                    "items": {"data": [{"price": {"id": "price_auto"}}]},
+                }},
+            })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["plan"], "autonomo")
+        self.assertFalse(
+            billing.has_entitlement(updated, billing.ENTITLEMENT_PROJECTS)
+        )
+
+    def test_stripe_unknown_incomplete_and_paused_never_become_trial(self):
+        from noesis.web.routers import webhooks
+
+        for offset, stripe_status in enumerate(("incomplete", "paused", "new_state")):
+            with self.subTest(status=stripe_status):
+                business, _ = self.make_business(f"Stripe {stripe_status}")
+                db.set_subscription(business["id"], "canceled", plan="autonomo")
+                webhooks._apply_stripe_event({
+                    "id": f"evt_status_{offset}",
+                    "created": 200 + offset,
+                    "type": "customer.subscription.updated",
+                    "data": {"object": {
+                        "id": f"sub_status_{offset}",
+                        "customer": f"cus_status_{offset}",
+                        "status": stripe_status,
+                        "metadata": {
+                            "business_id": str(business["id"]),
+                            "plan": "autonomo",
+                        },
+                    }},
+                })
+                expected = stripe_status if stripe_status != "new_state" else "unknown"
+                updated = db.get_business(business["id"])
+                self.assertEqual(updated["subscription_status"], expected)
+                self.assertFalse(db.subscription_allows_access(updated))
+
+    def test_stripe_out_of_order_events_cannot_undo_a_newer_payment(self):
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe desordenado")
+        db.set_subscription(business["id"], "canceled", plan="pro")
+        subscription = {
+            "subscription": "sub_ordered",
+            "customer": "cus_ordered",
+            "metadata": {"business_id": str(business["id"]), "plan": "pro"},
+        }
+        webhooks._apply_stripe_event({
+            "id": "evt_paid_new",
+            "created": 500,
+            "type": "invoice.paid",
+            "data": {"object": subscription},
+        })
+        webhooks._apply_stripe_event({
+            "id": "evt_failed_old",
+            "created": 400,
+            "type": "invoice.payment_failed",
+            "data": {"object": subscription},
+        })
+        webhooks._apply_stripe_event({
+            "id": "evt_checkout_old",
+            "created": 300,
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                **subscription, "client_reference_id": str(business["id"])
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["stripe_event_id"], "evt_paid_new")
+
+    def test_stripe_one_time_invoice_and_old_subscription_are_ignored(self):
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe aislado")
+        db.apply_stripe_subscription_event(
+            business["id"], status="active", event_created_at=100,
+            event_priority=60, event_id="evt_current", plan="pro",
+            customer_id="cus_isolated", subscription_id="sub_current",
+            allow_subscription_change=True,
+        )
+        webhooks._apply_stripe_event({
+            "id": "evt_one_time",
+            "created": 200,
+            "type": "invoice.payment_failed",
+            "data": {"object": {"customer": "cus_isolated"}},
+        })
+        webhooks._apply_stripe_event({
+            "id": "evt_old_subscription",
+            "created": 300,
+            "type": "invoice.payment_failed",
+            "data": {"object": {
+                "customer": "cus_isolated", "subscription": "sub_old"
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["stripe_event_id"], "evt_current")
+
+    def test_paid_plan_entitlements_are_enforced_in_server_and_brain(self):
+        from starlette.testclient import TestClient
+        from noesis import tools
+        from noesis.web import server
+
+        business, _ = self.make_business("Plan autonomo")
+        db.create_user(
+            "plan-autonomo@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(business["id"], "active", plan="autonomo")
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "plan-autonomo@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                basic = client.get(f"/api/{business['id']}/clients")
+                projects = client.get(f"/api/{business['id']}/projects")
+                workers = client.get(f"/api/{business['id']}/workers")
+                analysis = client.get(f"/api/{business['id']}/analysis")
+                project_page = client.get(
+                    f"/b/{business['id']}/proyectos", follow_redirects=False
+                )
+                home = client.get(f"/b/{business['id']}/resumen")
+
+        self.assertEqual(basic.status_code, 200)
+        for response in (projects, workers, analysis):
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.json()["code"], "plan_upgrade_required")
+            self.assertEqual(response.json()["required_plan"], "pro")
+        self.assertEqual(project_page.status_code, 303)
+        self.assertIn("status=upgrade", project_page.headers["location"])
+        self.assertNotIn("> Proyectos</a>", home.text)
+        self.assertNotIn("> Equipo</a>", home.text)
+        self.assertNotIn(">Análisis</a>", home.text)
+
+        blocked_tool = json.loads(
+            tools.run_tool("crear_proyecto", {
+                "nombre": "No crear", "presupuesto": 1000,
+            }, business["id"])
+        )
+        self.assertEqual(blocked_tool["code"], "plan_upgrade_required")
+        self.assertEqual(db.list_projects(business["id"]), [])
+
+    def test_business_plan_and_trial_keep_the_complete_sold_workflow(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        for suffix, status, plan in (
+            ("pro", "active", "pro"),
+            ("trial", "trial", "trial"),
+        ):
+            with self.subTest(account=suffix):
+                business, _ = self.make_business(f"Plan {suffix}")
+                email = f"plan-{suffix}@example.com"
+                db.create_user(email, auth.hash_password(TEST_PASSWORD), business["id"])
+                db.set_subscription(business["id"], status, plan=plan)
+                with patch.object(server, "start_scheduler", lambda: None):
+                    with TestClient(server.app) as client:
+                        client.post("/login", data={
+                            "email": email, "password": TEST_PASSWORD,
+                        })
+                        self.assertEqual(
+                            client.get(f"/api/{business['id']}/projects").status_code,
+                            200,
+                        )
+                        self.assertEqual(
+                            client.get(f"/api/{business['id']}/workers").status_code,
+                            200,
+                        )
+                        self.assertEqual(
+                            client.get(f"/api/{business['id']}/analysis").status_code,
+                            200,
+                        )
 
     def test_account_delete_cleans_dependencies_before_files(self):
         from noesis.documents import repo, service, storage

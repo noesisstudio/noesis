@@ -39,7 +39,7 @@ cada nombre y valor. Haz primero todas las pruebas con Stripe y Meta en modo tes
    temporalmente la `sk_test_...` estándar y sustitúyela antes de producción.
 3. Copia la clave privada en Railway como `STRIPE_SECRET_KEY`. Noesis no necesita
    una `pk_...` porque crea Checkout desde el servidor.
-4. En **Product catalog**, crea Autónomo, Negocio y Sin Límites. Dentro de cada
+4. En **Product catalog**, crea Autónomo, Negocio y Premium. Dentro de cada
    producto crea un precio mensual y otro anual con los importes de la sección 3.
    Copia los seis identificadores `price_...` a sus seis variables exactas.
 5. En [Stripe Webhooks](https://dashboard.stripe.com/test/webhooks), crea un
@@ -270,7 +270,7 @@ Tres productos y dos precios recurrentes EUR por producto:
 |---|---:|---:|
 | Autónomo | 29 EUR | 319 EUR |
 | Negocio | 49 EUR | 539 EUR |
-| Sin Límites | 99 EUR | 1.089 EUR |
+| Premium | 99 EUR | 1.089 EUR |
 
 ```dotenv
 STRIPE_SECRET_KEY=sk_test_...

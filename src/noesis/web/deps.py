@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .. import config, db
+from ..adapters import billing as billing_adapter
 from ..adapters import transcription
 from ..documents import ocr
 from . import auth
@@ -157,6 +158,39 @@ def csrf_response(request: Request) -> JSONResponse | None:
     return None
 
 
+def required_entitlement(path: str, business_id: int) -> str | None:
+    """Traduce rutas vendidas como modulo a una capacidad comprobable."""
+    web_prefix = f"/b/{business_id}/"
+    api_prefix = f"/api/{business_id}/"
+    if path.startswith(web_prefix):
+        area = path[len(web_prefix):].split("/", 1)[0]
+        return {
+            "proyectos": billing_adapter.ENTITLEMENT_PROJECTS,
+            "equipo": billing_adapter.ENTITLEMENT_TEAM,
+            "clockin-policy": billing_adapter.ENTITLEMENT_TEAM,
+            "gestoria": billing_adapter.ENTITLEMENT_GESTORIA,
+            "analisis": billing_adapter.ENTITLEMENT_ADVANCED_ANALYSIS,
+        }.get(area)
+    if not path.startswith(api_prefix):
+        return None
+    parts = path[len(api_prefix):].strip("/").split("/")
+    area = parts[0] if parts else ""
+    if area == "projects":
+        return billing_adapter.ENTITLEMENT_PROJECTS
+    if area == "workers":
+        return billing_adapter.ENTITLEMENT_TEAM
+    if area == "gestoria":
+        return billing_adapter.ENTITLEMENT_GESTORIA
+    if area in {"analysis", "forecast", "pnl"}:
+        return billing_adapter.ENTITLEMENT_ADVANCED_ANALYSIS
+    if area == "jobs" and len(parts) >= 3:
+        if parts[2] == "project":
+            return billing_adapter.ENTITLEMENT_PROJECTS
+        if parts[2] == "assign":
+            return billing_adapter.ENTITLEMENT_TEAM
+    return None
+
+
 async def auth_guard(request: Request, call_next):
     path = request.url.path
     csrf_error = csrf_response(request)
@@ -181,6 +215,32 @@ async def auth_guard(request: Request, call_next):
                 return JSONResponse({"error": "no autorizado"}, status_code=403)
             return RedirectResponse(f"/b/{own_business_id}/resumen")
         business = db.get_business(own_business_id)
+        entitlements = billing_adapter.entitlements_for(business)
+        request.state.entitlements = entitlements
+        required = required_entitlement(path, own_business_id)
+        if required and required not in entitlements:
+            plan = billing_adapter.minimum_plan_for(required)
+            if path.startswith("/api/"):
+                return JSONResponse(
+                    {
+                        "error": (
+                            f"{billing_adapter.ENTITLEMENT_LABELS[required]} "
+                            "no está incluido en tu plan actual."
+                        ),
+                        "code": "plan_upgrade_required",
+                        "required_plan": plan,
+                        "subscription_url": (
+                            f"/b/{own_business_id}/suscripcion?plan={plan}"
+                            f"&status=upgrade&feature={required}"
+                        ),
+                    },
+                    status_code=403,
+                )
+            return RedirectResponse(
+                f"/b/{own_business_id}/suscripcion?plan={plan}"
+                f"&status=upgrade&feature={required}",
+                status_code=303,
+            )
         is_demo = bool(business and business.get("is_demo"))
         allowed_when_blocked = (
             not is_demo

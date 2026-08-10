@@ -678,3 +678,27 @@ de 2026-07-20: la facturación y Veri*Factu son desarrollo propio de Noesis.
 ## Marca
 Paleta del logo: verde bosque #14463b + teal #2e8b74 + crema #f4f1e8. Dominio
 previsto: bynoesis.com. Ver [[Producto]].
+
+## Stripe confirma; Checkout no autoriza (2026-08-10)
+
+`checkout.session.completed` vincula cliente y suscripción, pero no activa ni
+concede el plan solicitado por sí solo. Noesis solo cambia acceso y plan cuando
+Stripe acredita una factura pagada o una suscripción `active`/`trialing`; en cambios
+desde su portal manda el `price_id` vigente del catálogo, no metadata histórica.
+Los eventos se ordenan por negocio y una factura aislada, un evento antiguo, una
+suscripción reemplazada o un precio ajeno no pueden cambiar el acceso actual.
+Motivo: Stripe entrega webhooks al menos una vez y sin orden garantizado; preparar
+el pago no equivale a cobrarlo.
+
+## Los planes se hacen cumplir en servidor (2026-08-10)
+
+Autónomo incluye el núcleo operativo. Negocio y Premium añaden Proyectos, Equipo,
+Gestoría y Análisis avanzado. La prueba y la demostración enseñan el producto
+completo. La regla se aplica a web, API, herramientas del cerebro, WhatsApp,
+portales y tareas programadas; ocultar botones nunca es el control principal. Una
+cuenta activa con un plan heredado o desconocido cae al núcleo de Autónomo, no a
+acceso total. Motivo: que precio, coste y producto sean coherentes antes de cobrar.
+
+El plan de 99 € pasa de “Sin Límites” a **Premium**. Conserva más uso y atención,
+pero no promete infinito cuando existen límites explícitos de IA, soporte y futura
+voz.

@@ -258,7 +258,7 @@ def cumplimiento(request: Request):
 @router.get("/b/{business_id}/suscripcion", response_class=HTMLResponse)
 def subscription_page(
     request: Request, business_id: int, status: str = "", plan: str = "",
-    billing: str = "",
+    billing: str = "", feature: str = "",
 ):
     # Definida antes de la ruta generica /b/{id}/{page} para que no la capture esta.
     biz = db.get_business(business_id)
@@ -278,6 +278,8 @@ def subscription_page(
         "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
         "preferred_plan": preferred_plan,
         "preferred_billing": preferred_billing,
+        "upgrade_feature_label": billing_adapter.ENTITLEMENT_LABELS.get(feature, ""),
+        "entitlements": billing_adapter.entitlements_for(biz),
         "subscription_read_only": not db.subscription_allows_access(biz),
     })
 
@@ -296,6 +298,7 @@ def page(request: Request, business_id: int, page: str):
         "active": page,
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
+        "entitlements": billing_adapter.entitlements_for(biz),
         # El parte de sección: la figura de Noesis en cada pantalla — lectura,
         # cifras clave y puerta al acompañante (None en el Home, que tiene el suyo).
         "page_brief": chat.page_brief(business_id, page),
