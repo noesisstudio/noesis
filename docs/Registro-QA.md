@@ -1,5 +1,27 @@
 # Registro de QA
 
+## 2026-08-10 — MFA de gestoría sin semilla reversible
+
+- Suite completa: **469/469** en 335 segundos. Después de retirar los códigos en
+  claro de la cookie de sesión, las cuatro pruebas focalizadas volvieron a pasar;
+  Ruff y `git diff --check` están verdes. Permanece el aviso conocido de
+  deprecación Starlette/httpx.
+- Esquema 47 probado desde 46: las cuentas profesionales existentes conservan
+  identidad y accesos, empiezan con MFA desactivado y reciben contador anti-replay,
+  hashes de recuperación y fecha de alta sin datos ficticios.
+- La contraseña correcta no abre cartera cuando MFA está activo. El código TOTP
+  vigente abre una vez; repetirlo falla. Un código de recuperación abre una vez y se
+  elimina atómicamente. El reto expira a los cinco minutos y comparte límites por IP
+  y cuenta seudonimizados.
+- Activar MFA exige la contraseña actual y un TOTP generado desde el QR/clave. Una
+  sesión robada sin contraseña no puede bloquear al titular. Regenerar o desactivar
+  también exige doble verificación; los ocho códigos aleatorios se almacenan solo
+  como SHA-256 y su texto aparece únicamente en la respuesta inmediata.
+- La primera suite completa tras subir el esquema encontró una prueba histórica que
+  usaba “última versión” para verificar 45→46. Se corrigió para apuntar a 46 y evitar
+  que futuras migraciones rompan evidencias históricas; la repetición final quedó
+  469/469. Faltan CI/PostgreSQL, despliegue, prueba visual y validación externa.
+
 ## 2026-08-10 — suscripciones ordenadas y permisos comerciales efectivos
 
 - CI de `main` [31407830116](https://github.com/noesisstudio/noesis/actions/runs/31407830116)

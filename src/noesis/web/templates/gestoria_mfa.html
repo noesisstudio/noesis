@@ -1,0 +1,26 @@
+{% extends "gestoria_base.html" %}
+{% block title %}Verificar acceso{% endblock %}
+{% block content %}
+<div class="gestoria-auth-wrap compact">
+  <section class="gestoria-auth-intro">
+    <span class="eyebrow">Segundo paso</span>
+    <h1>Confirma que eres tú.</h1>
+    <p>La contraseña ya coincide. Abre tu aplicación de códigos e introduce el número actual.</p>
+  </section>
+  <section class="gestoria-auth-card">
+    <h2>Código de seguridad</h2>
+    <p class="muted">También puedes usar uno de tus códigos de recuperación.</p>
+    {% if error %}<div class="banner warn">
+      {% if error == 'throttle' %}Demasiados intentos. Espera unos minutos.
+      {% else %}El código no es válido o ya se ha utilizado.{% endif %}
+    </div>{% endif %}
+    <form method="post" action="/gestoria/mfa">
+      <label class="fld" for="mfa-code">Código de 6 cifras o recuperación</label>
+      <input class="input mfa-code-input" id="mfa-code" name="code"
+             inputmode="numeric" autocomplete="one-time-code" autofocus required>
+      <button class="btn primary gestoria-full">Entrar de forma segura</button>
+    </form>
+    <p class="gestoria-help"><a href="/gestoria/login">Volver a empezar</a></p>
+  </section>
+</div>
+{% endblock %}

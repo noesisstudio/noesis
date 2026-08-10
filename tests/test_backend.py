@@ -105,7 +105,7 @@ class HistoricalInvoiceMigrationTestCase(unittest.TestCase):
             business = db.create_business("Suscripcion historica", "old@example.com")
             db.set_subscription(business["id"], "active", plan="pro")
 
-            self.assertEqual(migrations.upgrade(), 46)
+            self.assertEqual(migrations.upgrade(46), 46)
             migrated = db.get_business(business["id"])
             self.assertEqual(migrated["subscription_status"], "active")
             self.assertEqual(migrated["plan"], "pro")

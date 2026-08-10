@@ -25,7 +25,8 @@
   `Sec-Fetch-Site: same-origin`. El espacio fiscal del esquema 41 ya se desplegó y
   `/ready` lo confirmó. Falta desplegar y recorrer visualmente la separación nueva
   entre Resumen, Documentos, Impuestos, Períodos y Solicitudes, además de completar
-  las demás pruebas autenticadas.
+  las demás pruebas autenticadas. El candidato siguiente añade el esquema 47 y MFA
+  de gestoría; falta publicarlo y repetir `/ready` y el login con TOTP.
 - [ ] La identidad legal ya está completada y publicada. Revisar aviso legal,
   privacidad, términos, DPA y fiscalidad con profesionales. Mantener
   `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.
@@ -137,8 +138,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Canal de gestorías: aprobar atribución, descuento para el cliente, comisión,
   duración, liquidación, devoluciones y fiscalidad del incentivo. El producto solo
   muestra clientes conectados hasta que el founder apruebe esas condiciones.
-- [ ] Gestoría: MFA/passkeys, recuperación de contraseña, roles finos y piloto real
-  con un despacho antes de abrir el acceso a terceros.
+- [x] Gestoría: MFA TOTP opcional, reto tras contraseña, anti-replay, ocho códigos de
+  recuperación de un solo uso y reconfiguración protegida sin semillas reversibles
+  ni códigos en la cookie de sesión.
+- [ ] Gestoría: recuperación de contraseña por correo, passkeys, roles finos y
+  piloto real con un despacho antes de abrir el acceso a terceros.
 - [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,
   correcciones y coste.
 - [x] Libro CFO interno por mes: costes reales, previsiones y ajustes append-only;
@@ -148,7 +152,7 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   reales y añadir CAC/churn cuando exista una muestra válida.
 - [ ] Eliminar `unsafe-inline` de la CSP efectiva tras migrar scripts/estilos inline;
   mientras tanto observar la política estricta en report-only sin romper la UI.
-- [ ] Evaluar MFA/passkeys y permisos finos para gestoría antes de abrir acceso a
+- [ ] Evaluar passkeys y permisos finos para gestoría antes de abrir acceso a
   terceros; valorar RLS PostgreSQL y KMS/cifrado de campos tras el piloto según el
   riesgo y la complejidad observados. El antivirus privado ya tiene adaptador y
   modo de fallo cerrado; falta desplegar el daemon.

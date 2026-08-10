@@ -23,6 +23,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-10 21:15 — segundo factor para la cartera profesional
+
+- **Autor/agente:** Codex.
+- **Objetivo:** proteger el acceso multiempresa de las gestorías antes de abrirlo a
+  terceros, sin crear otra identidad ni depender de una API externa.
+- **Áreas y archivos:** migración/DB de cuentas profesionales, módulo TOTP, login y
+  seguridad de gestoría, plantillas/CSS, pruebas y documentación viva.
+- **Cambios de datos/migración:** esquema 46→47. Añade activación MFA, hashes de
+  recuperación, último contador consumido y fecha de alta. No activa MFA ni cambia
+  sesiones o accesos existentes.
+- **Pruebas ejecutadas:** 5 focalizadas verdes; suite completa **469/469** en 335 s,
+  Ruff y diff verdes. Tras sacar los códigos en claro de la sesión, las 4 pruebas
+  MFA volvieron a pasar.
+- **Dependencias o validaciones externas:** no usa credenciales ni proveedor. Falta
+  CI/PostgreSQL, despliegue, recorrido visual, gestoría real y revisión externa.
+- **Riesgo/punto probable de fallo:** rotar `NOESIS_SECRET` invalida TOTP; conservar
+  y probar códigos de recuperación antes de una rotación. Relojes con más de 30 s de
+  desfase fallarán cerrado. La recuperación de contraseña aún no está construida.
+- **Diagnóstico y rollback:** revisar `mfa_enabled`, `mfa_last_counter`,
+  `mfa_recovery_hashes`, `session_version` y límites `gestoria-mfa/security`. Revertir
+  el commit desactiva las rutas; mantener columnas 47 inertes evita perder acceso.
+- **Estado de publicación:** local verificado; pendiente de commit, push, CI,
+  migración 47 y validación de producción.
+
 ## 2026-08-10 19:30 — cobro seguro y planes coherentes en todos los canales
 
 - **Autor/agente:** Codex.

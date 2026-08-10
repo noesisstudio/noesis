@@ -3498,6 +3498,49 @@ def _downgrade_stripe_subscription_ordering(conn) -> None:
         )
 
 
+def _upgrade_gestoria_mfa(conn) -> None:
+    """Añade MFA profesional sin modificar accesos ni sesiones existentes."""
+    columns = _column_names(conn, "gestoria_accounts")
+    types = _types(conn.dialect)
+    boolean = types["boolean"]
+    if "mfa_enabled" not in columns:
+        conn.execute(
+            f"ALTER TABLE gestoria_accounts ADD COLUMN mfa_enabled {boolean} "
+            "NOT NULL DEFAULT FALSE"
+        )
+    if "mfa_recovery_hashes" not in columns:
+        conn.execute(
+            "ALTER TABLE gestoria_accounts ADD COLUMN mfa_recovery_hashes "
+            "TEXT NOT NULL DEFAULT '[]'"
+        )
+    if "mfa_last_counter" not in columns:
+        conn.execute(
+            "ALTER TABLE gestoria_accounts ADD COLUMN mfa_last_counter "
+            "INTEGER NOT NULL DEFAULT -1"
+        )
+    if "mfa_enrolled_at" not in columns:
+        conn.execute(
+            f"ALTER TABLE gestoria_accounts ADD COLUMN mfa_enrolled_at "
+            f"{types['timestamp']}"
+        )
+
+
+def _downgrade_gestoria_mfa(conn) -> None:
+    if conn.dialect != "sqlite":
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_enrolled_at"
+        )
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_last_counter"
+        )
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_recovery_hashes"
+        )
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_enabled"
+        )
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3560,6 +3603,7 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_whatsapp_multichannel),
     (46, "orden_suscripcion_stripe", _upgrade_stripe_subscription_ordering,
      _downgrade_stripe_subscription_ordering),
+    (47, "mfa_gestoria", _upgrade_gestoria_mfa, _downgrade_gestoria_mfa),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

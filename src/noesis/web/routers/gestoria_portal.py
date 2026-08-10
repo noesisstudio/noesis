@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from ... import config, db, gestoria_workspace
 from ...adapters import billing as billing_adapter
 from ...documents import repo as docrepo, service as docservice
-from .. import auth
+from .. import auth, mfa
 from ..deps import TEMPLATES
 
 router = APIRouter()
@@ -34,6 +34,54 @@ def _start_session(request: Request, account: dict) -> None:
         "gsv": account.get("session_version", 0),
         "gseen": int(time.time()),
     })
+
+
+def _start_mfa_challenge(request: Request, account: dict,
+                         next_url: str = "/gestoria") -> None:
+    request.session.clear()
+    request.session.update({
+        "gmfa_pending": account["id"],
+        "gmfa_seen": int(time.time()),
+        "gmfa_next": (
+            next_url if next_url.startswith("/gestoria") else "/gestoria"
+        ),
+    })
+
+
+def _pending_mfa_account(request: Request) -> dict | None:
+    started = int(request.session.get("gmfa_seen") or 0)
+    if not started or int(time.time()) - started > 300:
+        request.session.clear()
+        return None
+    account = db.get_gestoria_account(request.session.get("gmfa_pending"))
+    if not account or not account.get("is_active") or not account.get("mfa_enabled"):
+        request.session.clear()
+        return None
+    return account
+
+
+def _consume_second_factor(account: dict, value: str) -> bool:
+    if counter := mfa.matching_counter(account, value):
+        return db.consume_gestoria_mfa_counter(account["id"], counter)
+    code_hash = mfa.recovery_hash(value)
+    return db.consume_gestoria_recovery_hash(account["id"], code_hash)
+
+
+def _security_keys(request: Request, account: dict) -> tuple[str, str]:
+    return (
+        f"gestoria-security-ip:{auth.client_ip(request)}",
+        f"gestoria-security-account:{account['id']}",
+    )
+
+
+def _record_security_failure(keys: tuple[str, str]) -> None:
+    for key in keys:
+        auth.record_failed_attempt(key)
+
+
+def _clear_security_failures(keys: tuple[str, str]) -> None:
+    for key in keys:
+        auth.clear_attempts(key)
 
 
 def _current_account(request: Request) -> dict | None:
@@ -91,15 +139,55 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
     if any(auth.is_rate_limited(key) for key in keys):
         return RedirectResponse("/gestoria/login?error=throttle", status_code=303)
     account = db.get_gestoria_account_by_email(email)
-    if not account or not auth.verify_password(password, account["password_hash"]):
+    if (
+        not account or not account.get("is_active")
+        or not auth.verify_password(password, account["password_hash"])
+    ):
         for key in keys:
             auth.record_failed_attempt(key)
         return RedirectResponse("/gestoria/login?error=1", status_code=303)
     for key in keys:
         auth.clear_attempts(key)
+    if account.get("mfa_enabled"):
+        _start_mfa_challenge(request, account)
+        return RedirectResponse("/gestoria/mfa", status_code=303)
     db.mark_gestoria_login(account["id"])
     _start_session(request, account)
     return RedirectResponse("/gestoria", status_code=303)
+
+
+@router.get("/gestoria/mfa", response_class=HTMLResponse)
+def mfa_page(request: Request, error: str = ""):
+    account = _pending_mfa_account(request)
+    if not account:
+        return RedirectResponse("/gestoria/login", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "gestoria_mfa.html", {
+        "error": error,
+        "pending_account": account,
+    })
+
+
+@router.post("/gestoria/mfa")
+def mfa_confirm(request: Request, code: str = Form(...)):
+    account = _pending_mfa_account(request)
+    if not account:
+        return RedirectResponse("/gestoria/login", status_code=303)
+    keys = (
+        f"gestoria-mfa-ip:{auth.client_ip(request)}",
+        f"gestoria-mfa-account:{account['id']}",
+    )
+    if any(auth.is_rate_limited(key) for key in keys):
+        return RedirectResponse("/gestoria/mfa?error=throttle", status_code=303)
+    if not _consume_second_factor(account, code):
+        for key in keys:
+            auth.record_failed_attempt(key)
+        return RedirectResponse("/gestoria/mfa?error=1", status_code=303)
+    for key in keys:
+        auth.clear_attempts(key)
+    next_url = request.session.get("gmfa_next") or "/gestoria"
+    db.mark_gestoria_login(account["id"])
+    _start_session(request, db.get_gestoria_account(account["id"]))
+    return RedirectResponse(next_url, status_code=303)
 
 
 @router.post("/gestoria/logout")
@@ -171,12 +259,115 @@ def accept(request: Request, token: str, password: str = Form(...),
              "error": "invite"}, status_code=409,
         )
     auth.clear_attempts(key)
+    if account.get("mfa_enabled"):
+        _start_mfa_challenge(
+            request, account,
+            f"/gestoria/cliente/{invitation['business_id']}?ok=connected",
+        )
+        return RedirectResponse("/gestoria/mfa", status_code=303)
     db.mark_gestoria_login(account["id"])
     _start_session(request, account)
     return RedirectResponse(
         f"/gestoria/cliente/{invitation['business_id']}?ok=connected",
         status_code=303,
     )
+
+
+@router.get("/gestoria/seguridad", response_class=HTMLResponse)
+def security_page(request: Request, status: str = "", error: str = ""):
+    account = _require_account(request)
+    if isinstance(account, RedirectResponse):
+        return account
+    return _security_response(request, account, status=status, error=error)
+
+
+def _security_response(request: Request, account: dict, *, status: str = "",
+                       error: str = "", recovery_codes: list[str] | None = None):
+    return TEMPLATES.TemplateResponse(request, "gestoria_security.html", {
+        "account": account,
+        "status": status,
+        "error": error,
+        "mfa_secret": mfa.secret_for(account) if not account.get("mfa_enabled") else "",
+        "mfa_qr": mfa.qr_data_uri(account) if not account.get("mfa_enabled") else "",
+        "recovery_codes": recovery_codes,
+        "recovery_remaining": db.gestoria_recovery_codes_remaining(account),
+    })
+
+
+@router.post("/gestoria/seguridad/activar")
+def security_enable(request: Request, password: str = Form(...),
+                    code: str = Form(...)):
+    account = _current_account(request)
+    if not account:
+        return RedirectResponse("/gestoria/login", status_code=303)
+    if account.get("mfa_enabled"):
+        return RedirectResponse("/gestoria/seguridad", status_code=303)
+    keys = _security_keys(request, account)
+    if any(auth.is_rate_limited(key) for key in keys):
+        return RedirectResponse("/gestoria/seguridad?error=throttle", status_code=303)
+    counter = mfa.matching_counter(account, code)
+    if (
+        not auth.verify_password(password, account["password_hash"])
+        or counter is None
+    ):
+        _record_security_failure(keys)
+        return RedirectResponse("/gestoria/seguridad?error=verify", status_code=303)
+    codes = mfa.generate_recovery_codes()
+    account = db.enable_gestoria_mfa(
+        account["id"], [mfa.recovery_hash(value) for value in codes], counter
+    )
+    _clear_security_failures(keys)
+    _start_session(request, account)
+    return _security_response(
+        request, account, status="enabled", recovery_codes=codes
+    )
+
+
+@router.post("/gestoria/seguridad/regenerar")
+def security_regenerate(request: Request, password: str = Form(...),
+                        code: str = Form(...)):
+    account = _current_account(request)
+    if not account:
+        return RedirectResponse("/gestoria/login", status_code=303)
+    keys = _security_keys(request, account)
+    if any(auth.is_rate_limited(key) for key in keys):
+        return RedirectResponse("/gestoria/seguridad?error=throttle", status_code=303)
+    if (
+        not auth.verify_password(password, account["password_hash"])
+        or not _consume_second_factor(account, code)
+    ):
+        _record_security_failure(keys)
+        return RedirectResponse("/gestoria/seguridad?error=verify", status_code=303)
+    codes = mfa.generate_recovery_codes()
+    db.replace_gestoria_recovery_hashes(
+        account["id"], [mfa.recovery_hash(value) for value in codes]
+    )
+    _clear_security_failures(keys)
+    return _security_response(
+        request, db.get_gestoria_account(account["id"]),
+        status="regenerated", recovery_codes=codes,
+    )
+
+
+@router.post("/gestoria/seguridad/desactivar")
+def security_disable(request: Request, password: str = Form(...),
+                     code: str = Form(...)):
+    account = _current_account(request)
+    if not account:
+        return RedirectResponse("/gestoria/login", status_code=303)
+    keys = _security_keys(request, account)
+    if any(auth.is_rate_limited(key) for key in keys):
+        return RedirectResponse("/gestoria/seguridad?error=throttle", status_code=303)
+    if (
+        not auth.verify_password(password, account["password_hash"])
+        or not _consume_second_factor(account, code)
+    ):
+        _record_security_failure(keys)
+        return RedirectResponse("/gestoria/seguridad?error=verify", status_code=303)
+    account = db.disable_gestoria_mfa(account["id"])
+    _clear_security_failures(keys)
+    _start_session(request, account)
+    return RedirectResponse("/gestoria/seguridad?status=disabled", status_code=303)
 
 
 @router.get("/gestoria", response_class=HTMLResponse)

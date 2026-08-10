@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 46;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 47;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -22,7 +22,9 @@
   separa conexiones, contactos, conversaciones, bandeja y salidas de WhatsApp por
   negocio/número, y añade aportaciones de campo revisables y permisos de equipo. La
   46 conserva el orden de webhooks Stripe por negocio para impedir que un evento
-  antiguo sobrescriba el estado de suscripción vigente.
+  antiguo sobrescriba el estado de suscripción vigente. La 47 añade MFA de gestoría,
+  contador anti-replay, códigos de recuperación y fecha de alta sin modificar
+  accesos profesionales existentes.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -215,6 +217,9 @@
   mediante una sección validada en servidor y conserva período/filtro tras cada
   formulario; cada ruta vuelve a comprobar la relación de acceso antes de leer o
   escribir.
+- `src/noesis/web/mfa.py`: TOTP estándar con semilla derivada de la identidad y la
+  clave maestra, QR local y códigos de recuperación de 80 bits. La base solo recibe
+  hashes y el último contador consumido; los códigos en claro no pasan por sesión.
 - `src/noesis/web/whatsapp.py`: dos canales sobre la misma frontera durable. El
   número central atiende titular/equipo; los números comerciales se resuelven por
   WABA + `phone_number_id` y atienden clientes dentro del negocio receptor. Incluye

@@ -6,6 +6,14 @@
 
 ## Producto construido
 
+- La cuenta profesional de gestoría dispone de segundo factor TOTP opcional en el
+  esquema 47. La contraseña abre un reto de cinco minutos; cada código temporal se
+  consume atómicamente y no puede repetirse. Al activar se entregan ocho códigos de
+  recuperación aleatorios de un solo uso, guardados únicamente como hash y mostrados
+  en la respuesta inmediata, nunca en la cookie de sesión. Activar, regenerar o
+  desactivar exige contraseña, segundo factor cuando corresponde y límites de
+  intentos compartidos. La semilla se deriva de la clave maestra y no se almacena
+  reversible en la base.
 - La suscripción ya no depende de que los webhooks de Stripe lleguen ordenados.
   El esquema 46 conserva el último evento aplicado por negocio; Checkout solo
   guarda la relación con cliente/suscripción y nunca activa por sí mismo. La
@@ -236,9 +244,10 @@ algo está en producción porque exista en una rama o haya pasado tests.**
   antes de prometer una precisión comercial. La extracción externa consentida queda
   solo como respaldo.
 - La cartera de gestoría ya cubre identidad, varias empresas, revisión documental,
-  primera lectura fiscal y períodos. Antes de abrirla a despachos reales faltan
-  MFA/passkeys, recuperación de contraseña, permisos más finos, revisión del
-  cálculo con un asesor fiscal y una prueba piloto con datos y responsables reales.
+  primera lectura fiscal, períodos y MFA TOTP con recuperación de emergencia. Antes
+  de abrirla a despachos reales faltan recuperación de contraseña por correo,
+  passkeys/roles más finos, revisión del cálculo con un asesor fiscal y una prueba
+  piloto con datos y responsables reales.
 - Antes del piloto deben rotarse todos los secretos que hayan aparecido en capturas
   o documentos compartidos y someter privacidad, términos y contrato de encargo a
   revisión jurídica profesional. La identidad legal mínima ya está completada y

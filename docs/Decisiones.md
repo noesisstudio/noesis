@@ -702,3 +702,19 @@ acceso total. Motivo: que precio, coste y producto sean coherentes antes de cobr
 El plan de 99 € pasa de “Sin Límites” a **Premium**. Conserva más uso y atención,
 pero no promete infinito cuando existen límites explícitos de IA, soporte y futura
 voz.
+
+## La gestoría puede activar TOTP sin crear otra identidad (2026-08-10)
+
+El segundo factor vive sobre la cuenta profesional existente y nunca concede acceso
+a empresas. La semilla TOTP se deriva de la clave maestra y no se guarda reversible;
+el último contador se consume atómicamente para impedir replay. Se entregan ocho
+códigos de recuperación de 80 bits, de un solo uso y almacenados solo como hash. Los
+códigos en claro se muestran una vez en la respuesta y no pasan por la cookie de
+sesión. Activar, regenerar y desactivar requieren contraseña, factor válido y límites
+de intentos compartidos. Motivo: una cartera multiempresa necesita más protección
+que una contraseña, pero no justifica introducir otro proveedor o una puerta trasera.
+
+Rotar `NOESIS_SECRET` invalida las semillas TOTP derivadas; los códigos de
+recuperación permiten entrar y regenerar después de una rotación planificada. Antes
+de abrir a terceros siguen pendientes recuperación de contraseña por correo,
+passkeys opcionales, roles finos y revisión externa del flujo.

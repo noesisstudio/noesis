@@ -862,6 +862,100 @@ def mark_gestoria_login(account_id: int) -> None:
         )
 
 
+def enable_gestoria_mfa(account_id: int, recovery_hashes: list[str],
+                        last_counter: int) -> dict | None:
+    hashes = [
+        value for value in recovery_hashes
+        if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+    ]
+    if len(hashes) != len(recovery_hashes) or not hashes:
+        raise ValueError("Los códigos de recuperación no son válidos.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_enabled=TRUE, "
+            "mfa_recovery_hashes=?, mfa_last_counter=?, mfa_enrolled_at=?, "
+            "session_version=session_version+1 WHERE id=? AND is_active=TRUE",
+            (json.dumps(hashes), int(last_counter), _now(), account_id),
+        )
+    return get_gestoria_account(account_id)
+
+
+def disable_gestoria_mfa(account_id: int) -> dict | None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_enabled=FALSE, "
+            "mfa_recovery_hashes='[]', mfa_last_counter=-1, "
+            "mfa_enrolled_at=NULL, session_version=session_version+1 "
+            "WHERE id=?",
+            (account_id,),
+        )
+    return get_gestoria_account(account_id)
+
+
+def replace_gestoria_recovery_hashes(account_id: int,
+                                     recovery_hashes: list[str]) -> None:
+    if not recovery_hashes or any(
+        not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
+        for value in recovery_hashes
+    ):
+        raise ValueError("Los códigos de recuperación no son válidos.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_recovery_hashes=? "
+            "WHERE id=? AND mfa_enabled=TRUE",
+            (json.dumps(recovery_hashes), account_id),
+        )
+
+
+def consume_gestoria_mfa_counter(account_id: int, counter: int) -> bool:
+    """Evita reutilizar el mismo TOTP incluso con dos peticiones concurrentes."""
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "UPDATE gestoria_accounts SET mfa_last_counter=? "
+            "WHERE id=? AND mfa_enabled=TRUE AND mfa_last_counter<?",
+            (int(counter), account_id, int(counter)),
+        )
+        return cursor.rowcount == 1
+
+
+def consume_gestoria_recovery_hash(account_id: int, code_hash: str) -> bool:
+    """Consume un código de emergencia una sola vez bajo bloqueo de cuenta."""
+    if not re.fullmatch(r"[0-9a-f]{64}", code_hash or ""):
+        return False
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT mfa_enabled, mfa_recovery_hashes FROM gestoria_accounts "
+            "WHERE id=?" + lock,
+            (account_id,),
+        ).fetchone()
+        if not row or not row["mfa_enabled"]:
+            return False
+        try:
+            hashes = json.loads(row["mfa_recovery_hashes"] or "[]")
+        except (TypeError, json.JSONDecodeError):
+            return False
+        if code_hash not in hashes:
+            return False
+        hashes.remove(code_hash)
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_recovery_hashes=? WHERE id=?",
+            (json.dumps(hashes), account_id),
+        )
+        return True
+
+
+def gestoria_recovery_codes_remaining(account: dict | None) -> int:
+    if not account:
+        return 0
+    try:
+        values = json.loads(account.get("mfa_recovery_hashes") or "[]")
+    except (TypeError, json.JSONDecodeError):
+        return 0
+    return len(values) if isinstance(values, list) else 0
+
+
 def create_gestoria_invitation(business_id: int, email: str,
                                token_hash: str, expires_at: str) -> dict:
     """Emite una invitación revocable y anula las anteriores del mismo destino."""
