@@ -106,9 +106,12 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Habilitar una a una las correcciones de soporte que demuestre el piloto,
   comprobando el permiso efectivo y registrando antes/después. Los metadatos
   documentales ya permiten corregir tipo, estado, cliente, proyecto y nota con
-  permiso transaccional, aislamiento y bloqueo de facturas emitidas; falta validar
-  el flujo real y habilitar después ajustes concretos de configuración según los
-  casos observados. No crear un editor universal.
+  permiso transaccional, aislamiento y bloqueo de facturas emitidas. Configuración
+  ya limita la intervención a perfil, idioma/explicación y apariencia documental
+  futura, dejando identidad fiscal, pagos, suscripción, integraciones y
+  automatizaciones fuera de la firma. Falta validar ambos recorridos con un titular
+  real y habilitar otras correcciones solo si el piloto las demuestra. No crear un
+  editor universal.
 - [x] Facturas emitidas: corrección guiada mediante rectificativa por diferencias,
   original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
   R5 limitada a facturas simplificadas F2.

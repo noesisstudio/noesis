@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-11 12:00 — configuración reversible con permiso de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** resolver errores de configuración durante onboarding/soporte sin
+  abrir acceso a fiscalidad, dinero, suscripción, integraciones o identidad.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración; reutiliza columnas y autorización
+  temporal existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 22 del centro administrativo, 4
+  focalizadas y suite completa **473/473** verde en 384 s; Ruff y verdad documental
+  verdes.
+- **Dependencias o validaciones externas:** ninguna. Falta recorrido visual con una
+  cuenta y autorización reales.
+- **Riesgo/punto probable de fallo:** un formulario parcial no debe inventar valores;
+  equipo y objetivo son obligatorios y muestran un estado sin seleccionar si faltan.
+  Permiso, administrador y caducidad se comprueban en la transacción.
+- **Diagnóstico y rollback:** buscar `admin.support_configuration_updated`,
+  `grant_id`, `changed_fields` y estados before/after seudonimizados. Revertir el
+  bloque devuelve ese alcance a solo lectura sin afectar otras funciones.
+- **Estado de publicación:** local verificado; pendiente de commit, CI y despliegue.
+
 ## 2026-08-11 11:25 — primera corrección segura del centro de soporte
 
 - **Autor/agente:** Codex.

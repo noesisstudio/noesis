@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-08-11 — configuración segura desde soporte
+
+- 2 pruebas nuevas cubren autorización real por el titular, render del formulario,
+  actualización HTTP y auditoría; también administrador falso, alcance documental
+  insuficiente, permiso caducado y ausencia total de escritura ante cada rechazo.
+- La lista blanca solo incluye perfil comercial, idioma/nivel y apariencia de
+  documentos futuros. Las pruebas fijan que correo titular, NIF, dirección, IVA,
+  IRPF, IBAN, plan y estado de suscripción permanecen idénticos. Una factura emitida
+  antes del cambio conserva el nombre original del emisor.
+- Los textos libres no aparecen en claro en la bitácora: perfil y apariencia se
+  registran como estados seudonimizados, junto a autorización y campos modificados.
+- 22 pruebas del centro administrativo y 4 focalizadas de ambas correcciones están
+  verdes. Suite completa **473/473** verde en 384 segundos; Ruff y verdad documental
+  también están verdes.
+
 ## 2026-08-11 — corrección documental acotada desde soporte
 
 - 2 pruebas nuevas cubren el recorrido autenticado completo y el fallo cerrado:

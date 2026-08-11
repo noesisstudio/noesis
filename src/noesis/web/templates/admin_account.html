@@ -124,6 +124,64 @@
     {% endif %}
   </section>
 
+  {% if configuration_support %}
+  {% set config = configuration_support.values %}
+  <section class="support-section support-editor" id="safe-configuration">
+    <div class="support-section-head">
+      <div>
+        <div class="kicker">Corrección autorizada · Configuración</div>
+        <h2>Corregir perfil y apariencia sin tocar datos protegidos</h2>
+      </div>
+      <span class="badge b-amber">Permiso temporal</span>
+    </div>
+    <p class="meta support-editor-intro">Estos cambios son reversibles y afectan a cómo se presenta el negocio y cómo Noesis se explica. No permiten cambiar titular, acceso, NIF, dirección fiscal, impuestos, cuenta de cobro, suscripción, integraciones, automatizaciones ni documentos ya emitidos.</p>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/configuracion-segura" class="support-config-form">
+      <label><span class="fld">Nombre del negocio</span><input class="input" name="name" value="{{ config.name or '' }}" maxlength="160" required><small>Se aplicará a documentos futuros; nunca reescribe facturas emitidas.</small></label>
+      <label><span class="fld">Sector</span><input class="input" name="sector" value="{{ config.sector or '' }}" maxlength="80" required></label>
+      <label><span class="fld">Provincia</span><input class="input" name="province" value="{{ config.province or '' }}" maxlength="80"></label>
+      <label><span class="fld">Tamaño del equipo</span>
+        <select class="input" name="team_size" required>
+          <option value="" disabled {{ 'selected' if not config.team_size }}>Selecciona una opción</option>
+          {% for value, label in [('solo','Trabajo solo'),('2-5','2–5 personas'),('6-10','6–10 personas'),('11+','11 o más')] %}<option value="{{ value }}" {{ 'selected' if config.team_size == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Objetivo principal</span>
+        <select class="input" name="primary_goal" required>
+          <option value="" disabled {{ 'selected' if not config.primary_goal }}>Selecciona una opción</option>
+          {% for value, label in [('facturar','Facturar sin retrasos'),('agenda','Ordenar la agenda'),('cobros','Cobrar antes'),('control','Entender y controlar el negocio')] %}<option value="{{ value }}" {{ 'selected' if config.primary_goal == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Idioma</span>
+        <select class="input" name="language" required>
+          {% for value, label in [('es','Español'),('ca','Català'),('en','English')] %}<option value="{{ value }}" {{ 'selected' if (config.language or 'es') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Cómo explica Noesis</span>
+        <select class="input" name="explanation_level" required>
+          {% for value, label in [('claro','Claro y acompañado'),('directo','Breve y directo'),('detallado','Con más detalle')] %}<option value="{{ value }}" {{ 'selected' if (config.explanation_level or 'claro') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Diseño documental</span>
+        <select class="input" name="invoice_template" required>
+          {% for value, label in [('clasica','Clásica'),('minimal','Minimal'),('editorial','Editorial')] %}<option value="{{ value }}" {{ 'selected' if (config.invoice_template or 'clasica') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Color de marca</span><input class="input" name="brand_color" value="{{ config.brand_color or '' }}" maxlength="7" pattern="#[0-9A-Fa-f]{6}" placeholder="#14463b"></label>
+      <label><span class="fld">Validez de presupuestos</span>
+        <select class="input" name="default_quote_validity_days" required>
+          {% for value in [7,15,30,45,60,90] %}<option value="{{ value }}" {{ 'selected' if (config.default_quote_validity_days or 30) == value }}>{{ value }} días</option>{% endfor %}
+        </select>
+      </label>
+      <label class="support-config-wide"><span class="fld">Pie de facturas y presupuestos</span><textarea class="input" name="document_footer" maxlength="800" rows="3">{{ config.document_footer or '' }}</textarea></label>
+      <label class="support-config-wide"><span class="fld">Condiciones predeterminadas del presupuesto</span><textarea class="input" name="quote_terms" maxlength="1500" rows="4">{{ config.quote_terms or '' }}</textarea></label>
+      <div class="support-config-protected">
+        <div><b>Fuera de este permiso</b><p>NIF, fiscalidad, cobros, plan, usuarios, WhatsApp, Stripe, gestoría, tokens y automatizaciones permanecen bloqueados.</p></div>
+        <button class="btn primary">Guardar configuración auditada</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
   {% if document_support %}
   <section class="support-section support-editor" id="document-metadata">
     <div class="support-section-head">

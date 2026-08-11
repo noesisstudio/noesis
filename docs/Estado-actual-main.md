@@ -6,6 +6,15 @@
 
 ## Producto construido
 
+- La autorización temporal de configuración habilita una segunda corrección
+  administrativa acotada: nombre visible para el futuro, sector, provincia, tamaño,
+  objetivo, idioma, nivel de explicación y apariencia predeterminada de facturas y
+  presupuestos. La función no acepta correo del titular, NIF, dirección fiscal,
+  impuestos, cuenta de cobro, plan, usuarios, Stripe, WhatsApp, gestoría, tokens ni
+  automatizaciones. Revalida administrador, alcance y caducidad dentro de la
+  transacción; la auditoría seudonimiza los textos y una factura ya emitida conserva
+  su emisor congelado. El código está verificado localmente; falta publicación y
+  recorrido visual con autorización real.
 - El centro de soporte puede corregir la organización de documentos únicamente
   cuando el titular abre una ventana temporal con el alcance correspondiente. La
   ficha muestra un editor acotado a tipo, estado, cliente, proyecto y nota de

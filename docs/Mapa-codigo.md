@@ -184,7 +184,12 @@
   proyecto y nota de revisión. La escritura revalida autorización e IDs dentro de
   la transacción, bloquea vínculos con facturas emitidas y registra antes/después
   sin guardar la nota en claro; nunca crea una sesión suplantada ni un editor
-  universal.
+  universal. Con el alcance `configuration`,
+  `db.admin_support_configuration` y
+  `db.admin_update_safe_business_configuration` exponen y corrigen solo perfil,
+  idioma/nivel y apariencia documental futura. La firma de la función no admite
+  identidad fiscal, cobros, suscripción, integraciones, tokens ni automatizaciones;
+  sus textos quedan seudonimizados en la auditoría.
 - `src/noesis/web/server.py` (`_count_public_view`) + tabla `page_views`: suma una
   visita por página y día en el propio servidor, sin script, cookie ni tercero
   —la CSP prohíbe scripts externos—. Guarda solo página, día y dominio de

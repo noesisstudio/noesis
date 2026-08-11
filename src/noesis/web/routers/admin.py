@@ -86,13 +86,75 @@ def admin_account_support(request: Request, business_id: int):
                 "item_count": len(document_support["documents"]),
             },
         )
+    configuration_support = db.admin_support_configuration(business_id)
+    if configuration_support:
+        db.record_security_event(
+            "admin.support_configuration_viewed",
+            area="support",
+            actor_user_id=user["id"],
+            subject_business_id=business_id,
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"grant_id": configuration_support["grant_id"]},
+        )
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
         "whatsapp_connections": db.list_whatsapp_connections(business_id),
         "document_support": document_support,
+        "configuration_support": configuration_support,
         "admin_error": request.session.pop("admin_error", None),
         "admin_success": request.session.pop("admin_success", None),
     })
+
+
+@router.post("/admin/cuentas/{business_id}/configuracion-segura")
+def admin_correct_safe_configuration(
+    request: Request,
+    business_id: int,
+    name: str = Form(...),
+    sector: str = Form(...),
+    team_size: str = Form(...),
+    province: str = Form(""),
+    primary_goal: str = Form(...),
+    language: str = Form(...),
+    explanation_level: str = Form(...),
+    invoice_template: str = Form(...),
+    brand_color: str = Form(""),
+    document_footer: str = Form(""),
+    quote_terms: str = Form(""),
+    default_quote_validity_days: int = Form(...),
+):
+    """Corrige perfil y apariencia, nunca fiscalidad, cobros o integraciones."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        result = db.admin_update_safe_business_configuration(
+            business_id,
+            actor_user_id=user["id"],
+            name=name,
+            sector=sector,
+            team_size=team_size,
+            province=province,
+            primary_goal=primary_goal,
+            language=language,
+            explanation_level=explanation_level,
+            invoice_template=invoice_template,
+            brand_color=brand_color,
+            document_footer=document_footer,
+            quote_terms=quote_terms,
+            default_quote_validity_days=default_quote_validity_days,
+            request_id=getattr(request.state, "request_id", None),
+        )
+        request.session["admin_success"] = (
+            "Configuración corregida y auditada."
+            if result["changed_fields"]
+            else "La cuenta ya tenía esa configuración; no se ha modificado."
+        )
+    except (PermissionError, ValueError) as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse(
+        f"/admin/cuentas/{business_id}#safe-configuration", status_code=303
+    )
 
 
 @router.post("/admin/cuentas/{business_id}/documentos/{document_id}/metadatos")
