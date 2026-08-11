@@ -23,6 +23,41 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-11 — modelo economico en Excel con doble escenario de coste
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio un modelo economico completo en Excel, con todos los
+  costes y sin datos inventados, a partir de una tabla de costes que le paso un
+  tercero. El documento de referencia no llego; solo la tabla.
+- **Areas y archivos:** solo documentacion y analisis, ningun cambio en `src/`.
+  - `docs/Noesis-Modelo-Economico.xlsx` (nuevo): diez hojas con formulas vivas
+    —Resumen, Supuestos, Unit_Economics, Hipotesis_Externa, Comparador,
+    Anual_vs_Mensual, Escala_Breakeven, Opciones_IA, Datos_Pendientes y Fuentes.
+    Entradas en azul, calculos en negro, convencion de modelo financiero.
+  - `analysis/build_modelo_economico.py` (nuevo): generador reproducible con openpyxl.
+    Sustituye a `build_unit_economics.mjs`, que dependia de `@oai/artifact-tool`, una
+    libreria no disponible en este entorno.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** replica independiente del modelo en Python. Las formulas del
+  libro reproducen exactamente las cifras publicadas en
+  `Unit-economics-y-cerebro-interno.md`: COGS 1,48 / 3,04 / 18,47 €, margen bruto
+  94,9 / 93,8 / 81,3 % y contribucion 20,83 / 34,89 / 56,96 €. El break-even
+  calculado da 120 cuentas, el mismo del analisis. Libro reabierto con openpyxl para
+  comprobar que las diez hojas y las formulas persisten.
+- **Dependencias o validaciones externas:** las tarifas son del 15/07/2026 y pueden
+  haber cambiado. La tabla externa no tiene fuente ni fecha conocidas.
+- **Riesgo/punto probable de fallo:** el modelo es un escenario de planificacion, no
+  una contabilidad. La hoja `Datos_Pendientes` recoge las dieciseis cifras que no
+  constan en el repositorio —forma juridica, reparto societario, retiradas de los dos
+  socios, cuota de autonomos, gestoria, factura real de Railway, capital aportado,
+  ingresos y clientes actuales, CAC y churn observados— y se han dejado **vacias a
+  proposito**. Mientras lo esten, ningun total del libro describe la empresa real.
+  Ademas, la hipotesis externa (6,49 €/usuario) multiplica por 4,4 el COGS estimado
+  del plan Autonomo; el comparador cuantifica el impacto en margen.
+- **Diagnostico y rollback:** el libro se regenera con
+  `python analysis/build_modelo_economico.py`. Cambio solo documental.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-10 — runbook y explicación de WhatsApp, actualizados al modelo multicanal
 
 - **Autor/agente:** Claude.
