@@ -13,8 +13,9 @@
   vinculados a facturas emitidas. El permiso se vuelve a comprobar dentro de la
   transacción, todas las referencias filtran por `business_id` y la bitácora
   encadenada conserva actor, autorización, campos y valores anteriores/posteriores
-  sin guardar la nota en claro. El código está verificado localmente; falta
-  publicación y recorrido visual con una autorización real.
+  sin guardar la nota en claro. El release `bf2df0d7afe5` está desplegado: CI
+  completo, humo PostgreSQL y `/health`/`/ready` verdes con esquema 47. Falta el
+  recorrido visual con una autorización real.
 - Documentos separa ahora entrada, archivo y revisión. La carga ocupa una franja
   horizontal apta para cámara móvil; cliente, proyecto y nota son contexto opcional.
   El archivo presenta carpetas por período para ingresos, gastos, tickets,

@@ -12,6 +12,10 @@
 - 25 pruebas focalizadas del centro de administración y medición pública están
   verdes. Suite completa **471/471** verde en 340 segundos; la revisión visual debe
   hacerse después con una autorización temporal real.
+- El CI [31475120052](https://github.com/noesisstudio/noesis/actions/runs/31475120052)
+  quedó completamente verde: dependencias, secretos, Bandit, Ruff, verdad del
+  proyecto, 471 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve
+  release `bf2df0d7afe5`, esquema 47 y HTTP 200 en `/health` y `/ready`.
 
 ## 2026-08-11 — clasificación demo y archivo documental responsive
 

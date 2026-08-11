@@ -43,7 +43,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `admin.support_document_metadata_updated`, `grant_id`, `item_id` y
   `changed_fields` en la bitácora. Revertir el bloque devuelve el centro a solo
   lectura sin deshacer documentos ya corregidos.
-- **Estado de publicación:** local verificado; pendiente de commit, CI y despliegue.
+- **Estado de publicación:** `bf2df0d` en `main`; CI 31475120052 completo y humo
+  PostgreSQL verdes. Producción responde release `bf2df0d7afe5`, esquema 47 y
+  `/health`/`/ready` 200. Falta recorrido visual real.
 
 ## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
 
