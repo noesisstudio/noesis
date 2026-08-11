@@ -11388,6 +11388,202 @@ def admin_support_snapshot(business_id: int) -> dict | None:
     }
 
 
+def admin_support_document_metadata(business_id: int, *, limit: int = 100) -> dict | None:
+    """Metadatos documentales visibles solo durante una autorización explícita.
+
+    No devuelve OCR, importes, binarios, credenciales ni contenido de facturas. La
+    lista está acotada para que el centro de soporte no se convierta en una copia
+    alternativa del archivo del cliente.
+    """
+    grant = active_support_grant(business_id)
+    if not grant or "document_metadata" not in grant["scopes"]:
+        return None
+    limit = max(1, min(int(limit), 200))
+    with get_conn() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) AS total FROM documents WHERE business_id=?",
+            (business_id,),
+        ).fetchone()["total"]
+        documents = conn.execute(
+            "SELECT d.id, d.filename, d.kind, d.doc_status, d.client_id, "
+            "d.project_id, d.review_note, d.reviewed_at, d.invoice_id, "
+            "d.received_invoice_id, d.created_at, c.name AS client_name, "
+            "p.name AS project_name FROM documents d "
+            "LEFT JOIN clients c ON c.id=d.client_id AND c.business_id=d.business_id "
+            "LEFT JOIN projects p ON p.id=d.project_id AND p.business_id=d.business_id "
+            "WHERE d.business_id=? ORDER BY d.created_at DESC, d.id DESC LIMIT ?",
+            (business_id, limit),
+        ).fetchall()
+        clients = conn.execute(
+            "SELECT id, name FROM clients WHERE business_id=? ORDER BY name LIMIT 250",
+            (business_id,),
+        ).fetchall()
+        projects = conn.execute(
+            "SELECT id, name, client_id FROM projects WHERE business_id=? "
+            "ORDER BY name LIMIT 250",
+            (business_id,),
+        ).fetchall()
+    return {
+        "grant_id": grant["id"],
+        "documents": [dict(row) for row in documents],
+        "clients": [dict(row) for row in clients],
+        "projects": [dict(row) for row in projects],
+        "total": int(total or 0),
+        "limit": limit,
+    }
+
+
+def admin_update_document_metadata(
+    business_id: int,
+    document_id: int,
+    *,
+    actor_user_id: int,
+    kind: str,
+    doc_status: str,
+    client_id: int | None,
+    project_id: int | None,
+    review_note: str | None,
+    request_id: str | None = None,
+) -> dict:
+    """Corrección acotada de soporte, autorizada y con antes/después auditado.
+
+    La autorización se vuelve a comprobar dentro de la misma transacción que la
+    escritura. No permite tocar archivos, OCR, importes ni documentos vinculados a
+    una factura emitida. Tampoco concede al administrador una sesión del cliente.
+    """
+    from .documents import repo as document_repo
+
+    actor = get_user(actor_user_id)
+    if not actor or not (
+        bool(actor.get("is_admin")) or config.is_admin_email(actor.get("email"))
+    ):
+        raise PermissionError("Solo administración puede aplicar esta corrección.")
+    if kind not in document_repo.KINDS:
+        raise ValueError("Tipo de documento desconocido.")
+    if doc_status not in document_repo.DOC_STATUSES:
+        raise ValueError("Estado de documento desconocido.")
+    client_id = int(client_id) if client_id not in (None, "") else None
+    project_id = int(project_id) if project_id not in (None, "") else None
+    review_note = str(review_note or "").strip()[:500] or None
+    now = _now()
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        grant_row = conn.execute(
+            "SELECT * FROM support_access_grants WHERE business_id=? "
+            "AND status='active' AND expires_at>? ORDER BY id DESC LIMIT 1",
+            (business_id, now),
+        ).fetchone()
+        grant = _support_grant_dict(grant_row)
+        if not grant or "document_metadata" not in grant["scopes"]:
+            raise PermissionError(
+                "El titular no ha autorizado la organización de documentos o el acceso ha caducado."
+            )
+
+        current_row = conn.execute(
+            "SELECT * FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+        if not current_row:
+            raise ValueError("Documento no encontrado.")
+        current = dict(current_row)
+        if current.get("invoice_id"):
+            invoice = conn.execute(
+                "SELECT status, number FROM invoices WHERE id=? AND business_id=?",
+                (current["invoice_id"], business_id),
+            ).fetchone()
+            if invoice and (invoice["status"] != "borrador" or invoice["number"]):
+                raise ValueError(
+                    "Este documento está vinculado a una factura emitida. Debe corregirse mediante el flujo fiscal correspondiente."
+                )
+
+        project = None
+        if project_id is not None:
+            project = conn.execute(
+                "SELECT id, client_id FROM projects WHERE id=? AND business_id=?",
+                (project_id, business_id),
+            ).fetchone()
+            if not project:
+                raise ValueError("El proyecto no pertenece a este negocio.")
+            project_client_id = project["client_id"]
+            if client_id is None and project_client_id:
+                client_id = int(project_client_id)
+            elif (
+                client_id is not None
+                and project_client_id is not None
+                and int(project_client_id) != client_id
+            ):
+                raise ValueError("El cliente no coincide con el proyecto.")
+        if client_id is not None:
+            client = conn.execute(
+                "SELECT id FROM clients WHERE id=? AND business_id=?",
+                (client_id, business_id),
+            ).fetchone()
+            if not client:
+                raise ValueError("El cliente no pertenece a este negocio.")
+
+        before = {
+            "kind": current.get("kind"),
+            "status": current.get("doc_status"),
+            "client_id": current.get("client_id"),
+            "project_id": current.get("project_id"),
+            "note": current.get("review_note"),
+        }
+        after = {
+            "kind": kind,
+            "status": doc_status,
+            "client_id": client_id,
+            "project_id": project_id,
+            "note": review_note,
+        }
+        changed_fields = [name for name in before if before[name] != after[name]]
+        if changed_fields:
+            conn.execute(
+                "UPDATE documents SET kind=?, doc_status=?, client_id=?, project_id=?, "
+                "review_note=?, reviewed_at=? WHERE id=? AND business_id=?",
+                (
+                    kind, doc_status, client_id, project_id, review_note, now,
+                    document_id, business_id,
+                ),
+            )
+
+    if changed_fields:
+        def _note_hash(value: str | None) -> str | None:
+            if not value:
+                return None
+            return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+        record_security_event(
+            "admin.support_document_metadata_updated",
+            severity="warning",
+            area="support",
+            actor_user_id=actor_user_id,
+            subject_business_id=business_id,
+            request_id=request_id,
+            metadata={
+                "item_id": document_id,
+                "grant_id": grant["id"],
+                "changed_fields": ",".join(changed_fields),
+                "before_kind": before["kind"],
+                "after_kind": after["kind"],
+                "before_status": before["status"],
+                "after_status": after["status"],
+                "before_client_id": before["client_id"],
+                "after_client_id": after["client_id"],
+                "before_project_id": before["project_id"],
+                "after_project_id": after["project_id"],
+                "before_note_hash": _note_hash(before["note"]),
+                "after_note_hash": _note_hash(after["note"]),
+            },
+        )
+    with get_conn() as conn:
+        saved = conn.execute(
+            "SELECT * FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+    return {"document": dict(saved), "changed_fields": changed_fields}
+
+
 # ----------------------------------------------------------- RGPD (export/borrado) ---
 def export_business_data(business_id) -> dict:
     """Vuelca TODOS los datos de un negocio (derecho de portabilidad RGPD)."""

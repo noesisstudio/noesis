@@ -23,13 +23,14 @@
     </div>
   </header>
 
-  {% if admin_error %}<div class="banner warn">{{ admin_error }}</div>{% endif %}
+  {% if admin_error %}<div class="admin-note error">{{ admin_error }}</div>{% endif %}
+  {% if admin_success %}<div class="admin-note success">{{ admin_success }}</div>{% endif %}
 
   <section class="support-boundary" aria-label="Límite de privacidad">
     <div>
       <div class="kicker">Límite de privacidad</div>
       <h2>Diagnóstico sin abrir el negocio del cliente</h2>
-      <p>Esta vista enseña estados técnicos y recuentos. No expone nombres de clientes, importes, conceptos, mensajes, archivos ni credenciales. Solo permite administrar identificadores públicos de una conexión Meta; nunca tokens.</p>
+      <p>Sin autorización, esta vista solo enseña estados técnicos y recuentos. Una ventana abierta por el titular puede habilitar una corrección concreta y auditada; nunca credenciales, importes, OCR, archivos ni facturas emitidas.</p>
     </div>
     <span class="badge b-green">Acceso auditado</span>
   </section>
@@ -122,6 +123,68 @@
     <span class="badge b-gray">Sin autorización</span>
     {% endif %}
   </section>
+
+  {% if document_support %}
+  <section class="support-section support-editor" id="document-metadata">
+    <div class="support-section-head">
+      <div>
+        <div class="kicker">Corrección autorizada · Documentos</div>
+        <h2>Ordenar metadatos sin abrir ni alterar el archivo</h2>
+      </div>
+      <span class="badge b-amber">{{ document_support.total }} documento(s)</span>
+    </div>
+    <p class="meta support-editor-intro">El titular ha autorizado este alcance temporalmente. Solo puedes corregir tipo, estado, cliente, proyecto y nota de revisión. Cada cambio conserva el antes y el después en la bitácora; los archivos, el OCR y las facturas emitidas quedan fuera.</p>
+    {% if document_support.total > document_support.limit %}
+    <div class="admin-note error">Se muestran los {{ document_support.limit }} documentos más recientes. Usa el identificador y el contexto del caso de soporte para localizar el correcto.</div>
+    {% endif %}
+
+    <div class="support-document-list">
+      {% for document in document_support.documents %}
+      <details class="support-document">
+        <summary>
+          <span class="support-document-name"><b>{{ document.filename }}</b><small>#{{ document.id }} · {{ document.created_at|string|truncate(10, True, '') }}</small></span>
+          <span class="support-document-state"><span class="badge b-gray">{{ document.kind|replace('_', ' ') }}</span><span class="badge {{ 'b-amber' if document.doc_status == 'pendiente_revisar' else 'b-green' }}">{{ document.doc_status|replace('_', ' ') }}</span></span>
+        </summary>
+        <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/documentos/{{ document.id }}/metadatos" class="support-document-form">
+          <label><span class="fld">Tipo</span>
+            <select class="input" name="kind" required>
+              {% for value, label in [('documento','Otro documento'),('ticket','Ticket'),('contrato','Contrato'),('proveedor','Proveedor'),('albaran','Albarán'),('factura_emitida','Factura emitida'),('factura_recibida','Factura recibida'),('presupuesto','Presupuesto')] %}
+              <option value="{{ value }}" {{ 'selected' if document.kind == value }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Estado</span>
+            <select class="input" name="doc_status" required>
+              {% for value, label in [('pendiente_revisar','Pendiente de revisar'),('revisado','Revisado'),('enviado_gestoria','Enviado a gestoría'),('validado','Validado'),('rechazado','Rechazado'),('duplicado','Duplicado')] %}
+              <option value="{{ value }}" {{ 'selected' if document.doc_status == value }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Cliente</span>
+            <select class="input" name="client_id">
+              <option value="">Sin cliente</option>
+              {% for client in document_support.clients %}<option value="{{ client.id }}" {{ 'selected' if document.client_id == client.id }}>{{ client.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Proyecto</span>
+            <select class="input" name="project_id">
+              <option value="">Sin proyecto</option>
+              {% for project in document_support.projects %}<option value="{{ project.id }}" {{ 'selected' if document.project_id == project.id }}>{{ project.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="support-document-note"><span class="fld">Nota de revisión</span><input class="input" name="review_note" value="{{ document.review_note or '' }}" maxlength="500" placeholder="Motivo o contexto de la corrección"></label>
+          <div class="support-document-action">
+            {% if document.invoice_id %}<span class="meta">Vinculado a factura: si ya está emitida, el sistema rechazará cualquier cambio.</span>{% else %}<span class="meta">No cambia importes ni contenido.</span>{% endif %}
+            <button class="btn primary">Guardar corrección auditada</button>
+          </div>
+        </form>
+      </details>
+      {% else %}
+      <div class="empty"><b>No hay documentos que organizar.</b><p>Esta autorización puede revocarse desde la cuenta del titular.</p></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 </main>
 </body>
 </html>

@@ -178,7 +178,13 @@
   contraseña, de modo que el equipo nunca llega a conocerla. También resume las
   visitas de la web del último mes. La ficha técnica por cuenta llama a
   `db.admin_support_snapshot`: solo devuelve estados y recuentos, nunca contenido
-  operativo, y registra cada consulta en la bitácora encadenada.
+  operativo, y registra cada consulta en la bitácora encadenada. Si el titular abre
+  el alcance temporal `document_metadata`, `db.admin_support_document_metadata` y
+  `db.admin_update_document_metadata` habilitan únicamente tipo, estado, cliente,
+  proyecto y nota de revisión. La escritura revalida autorización e IDs dentro de
+  la transacción, bloquea vínculos con facturas emitidas y registra antes/después
+  sin guardar la nota en claro; nunca crea una sesión suplantada ni un editor
+  universal.
 - `src/noesis/web/server.py` (`_count_public_view`) + tabla `page_views`: suma una
   visita por página y día en el propio servidor, sin script, cookie ni tercero
   —la CSP prohíbe scripts externos—. Guarda solo página, día y dominio de

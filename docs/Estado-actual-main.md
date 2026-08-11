@@ -6,6 +6,15 @@
 
 ## Producto construido
 
+- El centro de soporte puede corregir la organización de documentos únicamente
+  cuando el titular abre una ventana temporal con el alcance correspondiente. La
+  ficha muestra un editor acotado a tipo, estado, cliente, proyecto y nota de
+  revisión; no abre archivos ni OCR, no toca importes y rechaza documentos
+  vinculados a facturas emitidas. El permiso se vuelve a comprobar dentro de la
+  transacción, todas las referencias filtran por `business_id` y la bitácora
+  encadenada conserva actor, autorización, campos y valores anteriores/posteriores
+  sin guardar la nota en claro. El código está verificado localmente; falta
+  publicación y recorrido visual con una autorización real.
 - Documentos separa ahora entrada, archivo y revisión. La carga ocupa una franja
   horizontal apta para cámara móvil; cliente, proyecto y nota son contexto opcional.
   El archivo presenta carpetas por período para ingresos, gastos, tickets,

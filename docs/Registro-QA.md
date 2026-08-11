@@ -1,5 +1,18 @@
 # Registro de QA
 
+## 2026-08-11 — corrección documental acotada desde soporte
+
+- 2 pruebas nuevas cubren el recorrido autenticado completo y el fallo cerrado:
+  editor invisible sin alcance, autorización creada por el titular, asociación
+  proyecto→cliente, actualización por el administrador, redirección, aislamiento
+  frente a IDs de otro negocio y rechazo de un documento ligado a factura emitida.
+- La bitácora conserva administrador, negocio, autorización, campos cambiados y
+  valores anteriores/posteriores. La nota solo deja una huella SHA-256 truncada;
+  su texto no aparece en eventos de seguridad.
+- 25 pruebas focalizadas del centro de administración y medición pública están
+  verdes. Suite completa **471/471** verde en 340 segundos; la revisión visual debe
+  hacerse después con una autorización temporal real.
+
 ## 2026-08-11 — clasificación demo y archivo documental responsive
 
 - 23 pruebas focalizadas verdes con `unittest`: sembrado repetido sin duplicados,

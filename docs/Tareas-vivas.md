@@ -104,9 +104,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   titular, motivo, alcances, caducidad 1/4/24/72 h, revocación y eventos encadenados.
   Administración no puede autoconcedérsela ni suplantar al usuario.
 - [ ] Habilitar una a una las correcciones de soporte que demuestre el piloto,
-  comprobando el permiso efectivo y registrando antes/después. Empezar por
-  configuración y metadatos documentales; no crear un editor universal ni permitir
-  edición de facturas emitidas.
+  comprobando el permiso efectivo y registrando antes/después. Los metadatos
+  documentales ya permiten corregir tipo, estado, cliente, proyecto y nota con
+  permiso transaccional, aislamiento y bloqueo de facturas emitidas; falta validar
+  el flujo real y habilitar después ajustes concretos de configuración según los
+  casos observados. No crear un editor universal.
 - [x] Facturas emitidas: corrección guiada mediante rectificativa por diferencias,
   original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
   R5 limitada a facturas simplificadas F2.

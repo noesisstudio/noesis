@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-11 11:25 — primera corrección segura del centro de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir resolver errores de organización documental sin acceder
+  como el cliente ni crear un editor administrativo universal.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración. Reutiliza la autorización temporal
+  del esquema 43 y las columnas documentales existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 25 pruebas focalizadas y suite completa
+  **471/471** verde en 340 s; Ruff, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** ninguna credencial ni proveedor. Falta
+  recorrido visual con un titular que abra el alcance documental y un caso real.
+- **Riesgo/punto probable de fallo:** formularios con carteras muy grandes y
+  caducidad/revocación durante una intervención. La escritura revalida alcance e
+  IDs en su misma transacción y falla cerrada.
+- **Diagnóstico y rollback:** buscar
+  `admin.support_document_metadata_updated`, `grant_id`, `item_id` y
+  `changed_fields` en la bitácora. Revertir el bloque devuelve el centro a solo
+  lectura sin deshacer documentos ya corregidos.
+- **Estado de publicación:** local verificado; pendiente de commit, CI y despliegue.
+
 ## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
 
 - **Autor/agente:** Codex.
