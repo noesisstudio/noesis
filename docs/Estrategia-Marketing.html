@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estrategia de marketing · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 56px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 16px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 58ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  section { display: flex; flex-direction: column; gap: 20px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(23px, 3.3vw, 30px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .thesis { background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: var(--radius); padding: 26px 28px; display: flex; flex-direction: column; gap: 12px; }
+  .thesis p { font-family: var(--serif); font-size: clamp(18px, 2.6vw, 22px); line-height: 1.45; color: var(--brand); max-width: 54ch; }
+  .thesis .sub { font-family: var(--sans); font-size: 15px; color: var(--muted); }
+
+  .phases { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .phase { display: grid; grid-template-columns: 74px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--brand-2); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .phase-n { grid-row: 1 / span 3; font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--brand-2); letter-spacing: .04em; text-transform: uppercase; padding-top: 3px; line-height: 1.35; }
+  .phase-body { grid-column: 2; display: flex; flex-direction: column; gap: 11px; }
+  .phase-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+  .gate { font-size: 13.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 15px; }
+  .gate strong { color: var(--ink); }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--warn-soft); border: 1px solid var(--warn); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--warn); }
+  .callout-stop { background: var(--stop-soft); border-color: var(--stop); }
+  .callout-stop h3 { color: var(--stop); }
+  .callout-ok { background: var(--ok-soft); border-color: var(--ok); }
+  .callout-ok h3 { color: var(--ok); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 520px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hi { font-weight: 650; color: var(--brand); }
+
+  .escape { display: flex; flex-direction: column; gap: 14px; }
+  .esc { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--stop); border-radius: var(--radius); padding: 18px 20px 19px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow); }
+  .esc-if { font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--stop); }
+  .esc h3 { font-size: 16px; }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 700px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 42px; }
+    .phase { grid-template-columns: 1fr; padding: 18px; }
+    .phase-n { grid-row: auto; grid-column: 1; }
+    .phase-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 24px; max-width: none; }
+    .phase, .esc, .scroll, .callout, .note, .thesis, .fig { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Documento de estrategia</p>
+    <h1>Cómo se vende Noesis</h1>
+    <p class="standfirst">Estrategia comercial y de marketing para el primer año: a quién, con qué mensaje, por qué canales, con qué presupuesto y con qué criterios para cambiar de rumbo o parar.</p>
+    <p class="crumbs">Cifras económicas de <code>Noesis-Modelo-Economico.xlsx</code> · competencia de <code>Competencia.md</code> · estado de producto de <code>project-state.json</code> · producto de <code>Producto.md</code>.</p>
+  </header>
+
+  <div class="thesis">
+    <p>No vendemos un programa de gestión. Vendemos el trabajo que ya hiciste y se te olvidó facturar.</p>
+    <p class="sub">Es la única promesa que un autónomo puede verificar en una semana, que se mide en euros y que ningún competidor puede copiar sin construir el ciclo completo de trabajo, factura y cobro.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>1. Dónde estamos de verdad</h2>
+      <p class="sec-intro">Una estrategia que ignore el punto de partida es un deseo. Este es el estado real, no el que gustaría.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Frente</th><th>Situación</th><th>Qué implica para marketing</th></tr></thead>
+        <tbody>
+          <tr><td>Producto</td><td>Desplegado en producción, esquema 47</td><td>Se puede enseñar. No es una promesa</td></tr>
+          <tr><td>Alta pública</td><td><strong>Cerrada</strong> por decisión propia</td><td>No se puede hacer captación masiva todavía. Hoy solo hay «Solicitar acceso»</td></tr>
+          <tr><td>Clientes de pago</td><td>Sin confirmar en el repositorio</td><td>No hay testimonios, ni casos, ni CAC observado</td></tr>
+          <tr><td>Piloto</td><td>Comprometido: 3-5 autónomos, dos cierres semanales</td><td><strong>Es el activo de marketing más valioso del año</strong></td></tr>
+          <tr><td>Canales externos</td><td>Meta, Stripe, correo y OAuth sin validar</td><td>Vender antes de tenerlos es prometer lo que no se puede entregar</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <h3>Consecuencia incómoda pero necesaria</h3>
+      <p>Durante las primeras semanas <strong>no hay campaña de marketing</strong>. Hay venta directa y acompañada a un número muy pequeño de personas, con el único objetivo de fabricar evidencia. Gastar en publicidad antes de tener un caso medible es comprar visitas para una página que no puede demostrar nada.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>2. A quién le vendemos</h2>
+      <p class="sec-intro">Cuanto más estrecho sea el primer círculo, más barato es convencer y más creíble es el mensaje.</p>
+    </div>
+
+    <h4>Cliente ideal</h4>
+    <ul>
+      <li><strong>Autónomo de servicios en España</strong>, de una a cinco personas, que trabaja en casa de cliente.</li>
+      <li>Factura a mano, con plantillas de Word o dejándolo todo al gestor a fin de mes.</li>
+      <li><strong>Vive en WhatsApp</strong>: es donde le llegan los avisos, las fotos y los presupuestos.</li>
+      <li>Pierde dinero de forma invisible: trabajos cerrados que no llegan a facturarse y facturas emitidas que nadie reclama.</li>
+      <li>No quiere aprender un ERP y no va a instalar una aplicación nueva.</li>
+    </ul>
+
+    <h4>Los cinco oficios de salida</h4>
+    <p>Fontanería, electricidad, reformas, climatización y cerrajería. Cada uno tiene ya su propia página escrita alrededor de <em>su</em> problema de facturación, no la misma con una palabra cambiada.</p>
+
+    <div class="note"><strong>Este detalle es una ventaja competitiva real, no cosmética.</strong> Existe una prueba automática que falla si dos páginas de oficio comparten más del 55 % de vocabulario. Es decir: el propio código impide fabricar páginas basura para posicionar. Google penaliza exactamente eso, y la mayoría de competidores lo hace.</div>
+
+    <h4>A quién NO le vendemos todavía</h4>
+    <ul>
+      <li>Empresas de más de diez trabajadores: piden integraciones y control de obra que aún no existen.</li>
+      <li>Comercios y hostelería: su ciclo es TPV y caja, no trabajo, presupuesto y cobro.</li>
+      <li>Quien ya tiene ERP contratado y contento: el coste de cambio no lo paga nuestro mensaje.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>3. El mensaje</h2>
+      <p class="sec-intro">Tres formas de decir lo mismo, ordenadas por lo que se puede demostrar.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Mensaje</th><th>Se demuestra con</th><th>Riesgo</th></tr></thead>
+        <tbody>
+          <tr><td class="hi">«Cobras lo que ya has trabajado»</td><td>Trabajos cerrados sin facturar y cobros recuperados, en euros</td><td>Ninguno: es un número del propio panel</td></tr>
+          <tr><td>«Se acabó el papeleo del domingo»</td><td>Horas declaradas por el cliente en la entrevista de cierre</td><td>Es percepción, no dato duro</td></tr>
+          <tr><td>«Tu empresa, por WhatsApp»</td><td>Demostración en vivo de treinta segundos</td><td>Suena a chatbot si no se enseña el ciclo entero</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>El mensaje principal es el primero</strong>, y debe llevar cifra propia del cliente en cuanto el piloto la dé. «Recuperamos 1.240 € en el primer mes» convence a un fontanero; «optimiza tu gestión» no convence a nadie.</p>
+
+    <h4>Frente a la competencia</h4>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Quién</th><th>Qué hace</th><th>Cómo nos separamos</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Forjia</strong></td><td>Lo más parecido: factura y gastos por WhatsApp con voz, Verifactu</td><td>Ciclo completo trabajo → presupuesto → factura → cobro, equipo en campo y proactividad. No competir en precio</td></tr>
+          <tr><td>Holded, Quipu, Billin</td><td>ERP y contabilidad completos</td><td>Ellos exigen que el autónomo se siente al ordenador. Nosotros vamos a donde ya está</td></tr>
+          <tr><td>Agentes de voz para gremios</td><td>Contestan el teléfono</td><td>Cogen la llamada; no cierran el cobro. Son complementarios, no rivales</td></tr>
+          <tr><td>Experi</td><td>Agenda citas por WhatsApp</td><td>Una sola función del ciclo</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><strong>Regla de posicionamiento:</strong> nunca diferenciarse por una función suelta que un competidor pueda añadir en un trimestre. Diferenciarse por el ciclo completo y por la confirmación humana antes de tocar dinero, que es una decisión de arquitectura y no una funcionalidad.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>4. Las cuatro fases</h2>
+      <p class="sec-intro">Cada fase tiene una puerta de salida. No se pasa a la siguiente sin cumplirla, aunque haya prisa.</p>
+    </div>
+
+    <ol class="phases">
+      <li class="phase">
+        <span class="phase-n">Fase 0<br>Mes 1-2</span>
+        <div class="phase-body">
+          <div class="phase-head"><h3>Fabricar la prueba</h3><span class="chip chip-flat">Sin gastar en ads</span></div>
+          <p>Tres a cinco autónomos del entorno cercano, acompañados de cerca durante dos cierres semanales. Gratis o a precio fundador. El objetivo no es facturar: es salir con cifras y con permiso para contarlas.</p>
+          <div class="gate"><strong>Puerta:</strong> al menos tres clientes con un número propio que enseñar —euros recuperados u horas ahorradas— y permiso escrito para usarlo.</div>
+        </div>
+      </li>
+
+      <li class="phase">
+        <span class="phase-n">Fase 1<br>Mes 3-5</span>
+        <div class="phase-body">
+          <div class="phase-head"><h3>Venta directa y prescriptores</h3><span class="chip chip-ok">El canal más barato</span></div>
+          <p>Gestorías y asociaciones gremiales. Una gestoría tiene cien autónomos y sufre cada trimestre la misma pelea por conseguir facturas y tickets. Noesis ya tiene <strong>portal de gestoría construido</strong>: se le puede ofrecer que sus clientes le lleguen ordenados.</p>
+          <p>Aquí el producto se vende enseñándolo, no anunciándolo: visita, demo de diez minutos, alta acompañada.</p>
+          <div class="gate"><strong>Puerta:</strong> 15-25 cuentas de pago y una retención a 60 días medida. Si la gente se va, no se escala nada.</div>
+        </div>
+      </li>
+
+      <li class="phase">
+        <span class="phase-n">Fase 2<br>Mes 6-9</span>
+        <div class="phase-body">
+          <div class="phase-head"><h3>Contenido por oficio y primeros ads</h3><span class="chip chip-warn">Aquí empieza el gasto</span></div>
+          <p>Las páginas por oficio ya existen: se les añade el caso real del piloto correspondiente. El buscador trae a quien ya está buscando solución, que es el tráfico más barato que existe.</p>
+          <p>Solo entonces se abre publicidad pagada, con presupuesto pequeño, un oficio cada vez, y midiendo el CAC contra el techo de la sección 6.</p>
+          <div class="gate"><strong>Puerta:</strong> CAC pagado por debajo del techo del plan que se vende, y LTV/CAC ≥ 3.</div>
+        </div>
+      </li>
+
+      <li class="phase">
+        <span class="phase-n">Fase 3<br>Mes 10-12</span>
+        <div class="phase-body">
+          <div class="phase-head"><h3>Referidos y densidad por zona</h3><span class="chip chip-ok">Coste marginal bajo</span></div>
+          <p>Los gremios se conocen entre ellos y se recomiendan por zona. Un programa de referidos con un mes gratis para ambos cuesta mucho menos que un clic pagado. Concentrar en pocas provincias para que el boca a boca se note.</p>
+          <div class="gate"><strong>Puerta:</strong> que un tercio de las altas llegue sin coste de adquisición.</div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>5. Canales, ordenados por lo que cuestan</h2>
+      <p class="sec-intro">El orden no es por volumen, es por riesgo económico. Se agotan los baratos antes de tocar los caros.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Canal</th><th>Coste</th><th>Velocidad</th><th>Por qué funciona o no</th></tr></thead>
+        <tbody>
+          <tr><td class="hi">Gestorías prescriptoras</td><td>Casi cero</td><td>Media</td><td>Cartera concentrada y dolor real cada trimestre. El portal de gestoría ya está construido</td></tr>
+          <tr><td class="hi">Venta directa del founder</td><td>Tiempo</td><td>Lenta</td><td>Imprescindible al principio: es donde se aprende la objeción real</td></tr>
+          <tr><td>Asociaciones y gremios</td><td>Bajo</td><td>Media</td><td>Dan credibilidad prestada y acceso a listas</td></tr>
+          <tr><td>SEO por oficio</td><td>Ya invertido</td><td>Lenta</td><td>Cinco páginas construidas. Tarda meses, pero luego no cuesta</td></tr>
+          <tr><td>Referidos</td><td>Un mes gratis</td><td>Media</td><td>Solo funciona con un producto que ya gusta. Antes, no</td></tr>
+          <tr><td>Google Ads marca y competidor</td><td>Medio</td><td>Rápida</td><td>Intención altísima. Volumen pequeño</td></tr>
+          <tr><td>Meta Ads por oficio y zona</td><td>Alto</td><td>Rápida</td><td>Buena segmentación, pero interrumpe: el coste por alta sube</td></tr>
+          <tr><td>Ferias del sector</td><td>Muy alto</td><td>Lenta</td><td>No antes de tener producto probado y material</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>6. Cuánto podemos pagar por un cliente</h2>
+      <p class="sec-intro">No es una opinión: sale del margen de contribución del modelo económico. Es el número que evita arruinarse creciendo.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Plan</th><th class="r">Precio</th><th class="r">Contribución</th><th class="r">CAC máximo</th><th>Regla</th></tr></thead>
+        <tbody>
+          <tr><td>Autónomo</td><td class="r">29 €</td><td class="r">20,83 €</td><td class="r hi">250 €</td><td>Recuperar en 12 meses</td></tr>
+          <tr><td>Negocio</td><td class="r">49 €</td><td class="r">34,89 €</td><td class="r hi">419 €</td><td>Recuperar en 12 meses</td></tr>
+          <tr><td>Premium</td><td class="r">99 €</td><td class="r">56,96 €</td><td class="r hi">683 €</td><td>Recuperar en 12 meses</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Con doce meses de recuperación se está en el límite. <strong>El objetivo sano son seis</strong>: 125 € para Autónomo, 209 € para Negocio y 342 € para Premium. Por encima del techo hay que parar la campaña, no «esperar a que mejore».</p>
+
+    <div class="callout">
+      <h3>El plan Autónomo es el que no aguanta publicidad cara</h3>
+      <p>Con 20,83 € de contribución, un CAC de 250 € tarda un año en recuperarse. Si el churn resultara del 5 % mensual, la vida media sería de veinte meses y el margen final sería mínimo. <strong>La publicidad pagada tiene sentido para Negocio y Premium; para Autónomo hay que ganar por canales baratos</strong> o subir el ticket medio.</p>
+    </div>
+
+    <div class="note"><strong>Referencia de escala:</strong> el equilibrio del negocio está en unas 120 cuentas con el mix previsto, que son 66 autónomos, 42 negocios y 12 premium. Si solo se vendiera el plan caro bastarían 62 clientes; solo con el barato harían falta 169. Esa diferencia es la razón para no perseguir volumen barato.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>7. Dónde entra la IA</h2>
+      <p class="sec-intro">Dos usos legítimos y varias tentaciones que hay que rechazar por escrito, porque el daño de marca es irreversible.</p>
+    </div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 860 250" role="img" aria-label="La IA acelera la preparación de contenido, la cualificación de leads y el análisis de objeciones, pero nunca sustituye la evidencia del piloto ni la voz del cliente.">
+        <defs><marker id="am" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/></marker></defs>
+        <text class="lbl" x="4" y="16">Sí: acelera lo repetible</text>
+        <rect class="node node-ok" x="4" y="28" width="250" height="48" rx="9"/>
+        <text class="t" x="18" y="50">Borradores por oficio</text>
+        <text class="s" x="18" y="66">y variantes de anuncio para probar</text>
+        <rect class="node node-ok" x="4" y="86" width="250" height="48" rx="9"/>
+        <text class="t" x="18" y="108">Cualificar solicitudes</text>
+        <text class="s" x="18" y="124">oficio, tamaño y urgencia antes de llamar</text>
+        <rect class="node node-ok" x="4" y="144" width="250" height="48" rx="9"/>
+        <text class="t" x="18" y="166">Agrupar objeciones reales</text>
+        <text class="s" x="18" y="182">de las llamadas del piloto</text>
+        <path class="wire" d="M254,52 H300 V110 H330" marker-end="url(#am)"/>
+        <path class="wire" d="M254,110 H330" marker-end="url(#am)"/>
+        <path class="wire" d="M254,168 H300 V110" />
+        <rect class="node node-brand" x="336" y="86" width="180" height="48" rx="9"/>
+        <text class="t" x="350" y="108">Revisión humana</text>
+        <text class="s" x="350" y="124">siempre, sin excepción</text>
+        <path class="wire" d="M516,110 H556" marker-end="url(#am)"/>
+        <rect class="node" x="562" y="86" width="290" height="48" rx="9"/>
+        <text class="t" x="576" y="108">Publicación</text>
+        <text class="s" x="576" y="124">con el caso y la cifra reales del piloto detrás</text>
+        <text class="lbl" x="4" y="222">Nunca: nada que suplante a un cliente real</text>
+        <rect class="node node-stop" x="336" y="196" width="516" height="42" rx="9"/>
+        <text class="s" x="350" y="222">Testimonios inventados · páginas clonadas por oficio · reseñas propias · datos de ahorro sin cliente que los firme</text>
+      </svg>
+      <figcaption>La IA multiplica lo que ya funciona; no fabrica la prueba que todavía no existe. Ese es el límite exacto.</figcaption>
+    </figure>
+
+    <h4>Sí</h4>
+    <ul>
+      <li><strong>Preparar contenido por oficio</strong> a partir de las conversaciones reales del piloto: las palabras del fontanero, no las del manual.</li>
+      <li><strong>Cualificar solicitudes de acceso</strong> antes de llamar, para no gastar la hora del founder en quien no encaja.</li>
+      <li><strong>Agrupar objeciones</strong> de las llamadas y detectar cuál se repite: es lo que hay que responder en la web.</li>
+      <li><strong>Generar variantes</strong> de titular y anuncio para probar, siempre con revisión humana antes de publicar.</li>
+    </ul>
+
+    <h4>No</h4>
+    <ul>
+      <li><strong>Testimonios o casos inventados.</strong> Vendemos a un gremio donde todos se conocen; se descubre en una conversación de bar.</li>
+      <li><strong>Páginas por oficio clonadas.</strong> Además de que Google las penaliza, el propio repositorio tiene una prueba que lo impide.</li>
+      <li><strong>Reseñas propias</strong> en directorios o comparadores.</li>
+      <li><strong>Cifras de ahorro sin un cliente que las firme.</strong> Nuestro mensaje principal es un número: si ese número no es real, no queda nada.</li>
+    </ul>
+
+    <div class="note"><strong>Coherencia de producto:</strong> Noesis se vende diciendo que prepara pero nunca decide sola sobre el dinero del cliente. Un marketing que fabrique pruebas con IA contradice el argumento central del producto. La forma de vender tiene que parecerse al producto que se vende.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>8. Qué se mide</h2>
+      <p class="sec-intro">Pocas métricas y todas accionables. Si una no cambia una decisión, no se mide.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Métrica</th><th>Cuándo</th><th>Decisión que dispara</th></tr></thead>
+        <tbody>
+          <tr><td>Solicitudes de acceso por canal</td><td>Semanal</td><td>Dónde repetir esfuerzo</td></tr>
+          <tr><td>Solicitud → prueba iniciada</td><td>Semanal</td><td>Si es baja, el problema es la promesa, no el canal</td></tr>
+          <tr><td>Prueba → pago</td><td>Mensual</td><td>La que más mueve el CAC. Si es baja, el producto no engancha en 14 días</td></tr>
+          <tr><td class="hi">CAC por canal</td><td>Mensual</td><td>Por encima del techo: parar ese canal</td></tr>
+          <tr><td class="hi">Retención a 60 días</td><td>Mensual</td><td>Por debajo del objetivo: parar captación y arreglar producto</td></tr>
+          <tr><td>Euros recuperados por cliente</td><td>Mensual</td><td>Es el material de marketing y la justificación del precio</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Las tres primeras se rellenan en la hoja <code>Ads_Captacion</code> del modelo económico y calculan solas el CAC, el LTV y el veredicto.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>9. Vías de escape</h2>
+      <p class="sec-intro">Qué hacer cuando algo no salga. Escrito ahora, en frío, porque en caliente se toman malas decisiones y se tiende a insistir en lo que no funciona.</p>
+    </div>
+
+    <div class="escape">
+
+      <div class="esc">
+        <span class="esc-if">Si el CAC pagado supera el techo</span>
+        <h3>Cortar publicidad y volver a prescriptores</h3>
+        <p>No subir presupuesto esperando que mejore con volumen: en nichos pequeños suele empeorar. Se corta, se vuelve a gestorías y gremios, y se reintenta cuando el mensaje tenga un caso más fuerte detrás.</p>
+      </div>
+
+      <div class="esc">
+        <span class="esc-if">Si el piloto no enseña ahorro medible</span>
+        <h3>Cambiar la promesa por una que sí se mida</h3>
+        <p>Si «horas ahorradas» no sale en los datos, mover todo el mensaje a «trabajos sin facturar detectados» y «cobros recuperados», que salen del propio panel y no dependen de la percepción del cliente.</p>
+      </div>
+
+      <div class="esc">
+        <span class="esc-if">Si el plan Autónomo no es rentable con captación pagada</span>
+        <h3>Convertirlo en producto de entrada, no en el producto</h3>
+        <p>Se mantiene para boca a boca y prescriptor, y todo el esfuerzo pagado se dirige a Negocio y Premium, donde el CAC máximo dobla o triplica. Alternativa ya contemplada: Premium a 79 € sin voz, con la voz como complemento aparte.</p>
+      </div>
+
+      <div class="esc">
+        <span class="esc-if">Si Meta encarece o bloquea WhatsApp</span>
+        <h3>Recordar que el canal no es el producto</h3>
+        <p>Noesis funciona por web con el mismo cerebro. El discurso pasa de «tu empresa por WhatsApp» a «tu empresa sin papeleo», y el canal se vuelve una comodidad y no la razón de compra. Conviene que ningún material diga que Noesis <em>es</em> WhatsApp.</p>
+      </div>
+
+      <div class="esc">
+        <span class="esc-if">Si un competidor copia el ciclo completo</span>
+        <h3>No bajar precio: profundizar en el oficio</h3>
+        <p>Una guerra de precios la gana quien más capital tiene. La defensa es la especialización por gremio y la confirmación humana antes de mover dinero, que es una decisión de arquitectura y cuesta meses replicar.</p>
+      </div>
+
+      <div class="esc">
+        <span class="esc-if">Si la retención a 60 días es mala</span>
+        <h3>Parar la captación por completo</h3>
+        <p>Meter clientes en un producto que abandonan es quemar dinero y reputación en un sector donde todos se conocen. Se para, se entrevista a quien se fue y no se reanuda hasta corregir la causa.</p>
+      </div>
+
+      <div class="esc">
+        <span class="esc-if">Si a los 12 meses no hay tracción</span>
+        <h3>Decidir con criterio fijado de antemano</h3>
+        <p>Criterio de parada: menos de 40 cuentas de pago y retención bajo mínimos al mes doce. Las salidas ordenadas, en orden de preferencia: concentrar en un solo oficio donde funcione mejor; vender el motor de facturación y Veri*Factu a una gestoría o a un competidor como producto de marca blanca; o cerrar de forma limpia, con los datos de los clientes exportados y las obligaciones fiscales cubiertas.</p>
+      </div>
+
+    </div>
+
+    <div class="callout callout-ok">
+      <h3>Por qué esta sección importa más que las otras</h3>
+      <p>Con un capital inicial pequeño, la diferencia entre un proyecto que sobrevive y otro que no rara vez es la idea: es cuánto se tarda en reconocer que algo no funciona. Tener los criterios escritos antes de empezar convierte esa decisión en una comprobación mensual, en lugar de una discusión entre socios cuando ya no queda caja.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>10. Lo que hay que decidir esta semana</h2>
+    </div>
+    <ol>
+      <li><strong>Cerrar los tres a cinco autónomos del piloto</strong> con nombre y apellidos. Sin esto no arranca nada.</li>
+      <li><strong>Acordar el permiso para publicar sus cifras</strong> antes de empezar, no después. Después es incómodo pedirlo.</li>
+      <li><strong>Elegir la provincia de concentración</strong>, para que el boca a boca tenga densidad suficiente.</li>
+      <li><strong>Fijar el presupuesto máximo de publicidad</strong> del primer año y meterlo en el modelo. Mientras esté vacío, no se puede calcular ni el CAC ni el punto de equilibrio real.</li>
+      <li><strong>Rellenar la hoja <code>Datos_Pendientes</code></strong> del modelo económico: retiradas de los dos socios, cuota, gestoría y capital. Es lo que convierte el modelo en un plan.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <span>Cifras económicas verificadas contra <code>Noesis-Modelo-Economico.xlsx</code> y <code>Unit-economics-y-cerebro-interno.md</code> (15/07/2026). Estado de producto de <code>project-state.json</code>. Competencia de <code>Competencia.md</code>.</span>
+    <span>Los objetivos comerciales de este documento son propuestas del análisis, no compromisos verificados: deben confirmarse entre los socios antes de ejecutarse.</span>
+  </footer>
+
+</div>
+</body>
+</html>

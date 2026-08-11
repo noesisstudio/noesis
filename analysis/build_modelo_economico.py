@@ -661,6 +661,299 @@ ws["A42"].font = Font(name="Aptos", size=9.5, color=MUTED)
 ws.merge_cells("A42:F45")
 
 # ==========================================================================
+# 7c. ESCENARIOS
+# ==========================================================================
+ws = sheet("Escenarios")
+title(ws, "Escenarios de planificacion",
+      "Tres futuros con los mismos costes unitarios y distinta velocidad comercial. "
+      "El selector de la celda B5 alimenta la hoja PyG_Proyeccion. Las celdas naranjas "
+      "estan vacias: la velocidad comercial es una decision del founder, no un dato del repositorio.", 6)
+widths(ws, {"A": 34, "B": 18, "C": 18, "D": 18, "E": 14, "F": 40})
+
+ws["A5"] = "Escenario activo"
+ws["A5"].font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+sel = ws["B5"]
+sel.value = "Base"
+sel.font = Font(name="Aptos", size=11, bold=True, color=INPUT)
+sel.fill = PatternFill("solid", fgColor=CREAM)
+sel.border = BOX
+from openpyxl.worksheet.datavalidation import DataValidation
+dv = DataValidation(type="list", formula1='"Pesimista,Base,Optimista"', allow_blank=False)
+ws.add_data_validation(dv)
+dv.add(sel)
+ws["C5"] = "Elige de la lista desplegable"
+ws["C5"].font = Font(name="Aptos", size=9.5, italic=True, color=MUTED)
+
+section(ws, 7, "Palancas por escenario", 6)
+header(ws, 8, ["Palanca", "Pesimista", "Base", "Optimista", "Unidad", "Nota"])
+scen = [
+    ("Altas netas mes 1", None, 4, None, "clientes", "Base = el piloto de 3-5 comprometido en Tareas-vivas"),
+    ("Crecimiento mensual de altas", None, None, None, "%", "PENDIENTE: depende del presupuesto de ads y del boca a boca"),
+    ("Churn mensual", None, None, None, "%", "PENDIENTE: solo se sabra tras dos cierres del piloto"),
+    ("Mix Autonomo", None, 0.55, None, "%", "Base = mix del analisis"),
+    ("Mix Negocio", None, 0.35, None, "%", "Base = mix del analisis"),
+    ("Mix Premium", None, 0.10, None, "%", "Base = mix del analisis"),
+    ("Opex fijo mensual", None, 3500, None, "€/mes", "SUPUESTO hasta rellenar Datos_Pendientes"),
+    ("Presupuesto de ads", None, None, None, "€/mes", "PENDIENTE: enlaza con la hoja Ads_Captacion"),
+]
+fmts = ['#,##0', PCT, PCT, PCT, PCT, PCT, EUR0, EUR0]
+for i, (lab, p, b, o, u, nota) in enumerate(scen):
+    r = 9 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    for j, v in enumerate((p, b, o)):
+        c = ws.cell(row=r, column=2 + j, value=v)
+        c.number_format = fmts[i]
+        c.font = Font(name="Aptos", size=10, color=INPUT)
+        c.fill = PatternFill("solid", fgColor=CREAM if v is not None else "FFFDF3E7")
+        c.border = BOX
+    ws.cell(row=r, column=5, value=u).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6).alignment = Alignment(wrap_text=True, vertical="top")
+
+section(ws, 19, "Valores activos (los que usa la proyeccion)", 6)
+header(ws, 20, ["Palanca", "Valor activo", "", "Unidad", "", ""])
+for i, (lab, _, _, _, u, _) in enumerate(scen):
+    r = 21 + i
+    src = 9 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=2,
+                value=f'=IF($B$5="Pesimista",B{src},IF($B$5="Optimista",D{src},C{src}))')
+    c.number_format = fmts[i]
+    c.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+    c.border = BOX
+    ws.cell(row=r, column=4, value=u).font = Font(name="Aptos", size=9.5, color=MUTED)
+
+# ==========================================================================
+# 7d. PROYECCION 24 MESES
+# ==========================================================================
+ws = sheet("PyG_Proyeccion")
+title(ws, "Proyeccion a 24 meses",
+      "Cuenta de resultados mensual y caja acumulada, gobernada por el escenario activo de la hoja Escenarios. "
+      "Mientras el crecimiento y el churn esten vacios, la cartera se queda plana: es lo honesto, no un fallo.", 13)
+widths(ws, {"A": 8, "B": 13, "C": 10, "D": 10, "E": 13, "F": 14, "G": 13, "H": 13,
+            "I": 12, "J": 11, "K": 13, "L": 14, "M": 15})
+header(ws, 4, ["Mes", "Cartera inicio", "Altas", "Bajas", "Cartera fin", "MRR",
+               "COGS", "Margen bruto", "Opex fijo", "Ads", "Resultado", "Caja acumulada", "ARR"])
+
+ws["A5"] = 0
+ws["A5"].font = Font(name="Aptos", size=10, color=INK)
+ws["B5"] = 0
+ws["B5"].font = Font(name="Aptos", size=10, bold=True, color=INPUT)
+ws["B5"].fill = PatternFill("solid", fgColor="FFFDF3E7")
+ws["B5"].border = BOX
+ws["C5"] = 0
+ws["D5"] = 0
+ws["E5"] = "=B5+C5-D5"
+ws["L5"] = "=Datos_Pendientes!B15"
+
+E = "Escenarios"
+U = "Unit_Economics"
+for m in range(1, 25):
+    r = 5 + m
+    p = r - 1
+    ws.cell(row=r, column=1, value=m).font = Font(name="Aptos", size=10, color=INK)
+    F = {
+        2: f"=E{p}",
+        3: f"=IFERROR(ROUND('{E}'!$B$21*(1+'{E}'!$B$22)^{m - 1},1),0)",
+        4: f"=IFERROR(ROUND(B{r}*'{E}'!$B$23,1),0)",
+        5: f"=B{r}+C{r}-D{r}",
+        6: f"=E{r}*(Supuestos!$B$7*'{E}'!$B$24+Supuestos!$C$7*'{E}'!$B$25+Supuestos!$D$7*'{E}'!$B$26)",
+        7: f"=E{r}*('{U}'!$E$13*'{E}'!$B$24+'{U}'!$F$13*'{E}'!$B$25+'{U}'!$G$13*'{E}'!$B$26)",
+        8: f"=F{r}-G{r}",
+        9: f"='{E}'!$B$27",
+        10: f"=IFERROR('{E}'!$B$28,0)",
+        11: f"=H{r}-I{r}-J{r}",
+        12: f"=L{p}+K{r}",
+        13: f"=F{r}*12",
+    }
+    for col, f in F.items():
+        c = ws.cell(row=r, column=col, value=f)
+        if col in (2, 3, 4, 5):
+            c.number_format = '#,##0.0'
+        elif col == 13:
+            c.number_format = EUR0
+        else:
+            c.number_format = EUR0
+        c.border = BOX
+        if col in (11, 12):
+            c.font = Font(name="Aptos", size=10, bold=True, color=CALC)
+
+ws.conditional_formatting.add(
+    "K6:L29", CellIsRule(operator="lessThan", formula=["0"], font=Font(color=STOP, bold=True)))
+ws.conditional_formatting.add(
+    "K6:L29", CellIsRule(operator="greaterThanOrEqual", formula=["0"], font=Font(color=OKC, bold=True)))
+ws.freeze_panes = "B5"
+
+ws["A31"] = "Indicadores derivados"
+ws["A31"].font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+derived = [
+    ("Mes en que el resultado se vuelve positivo", '=IFERROR(INDEX($A$6:$A$29,MATCH(TRUE,INDEX($K$6:$K$29>=0,0),0)),"No llega en 24 meses")'),
+    ("Caja minima alcanzada", "=MIN(L6:L29)"),
+    ("Mes de caja minima", '=IFERROR(INDEX($A$6:$A$29,MATCH(MIN($L$6:$L$29),$L$6:$L$29,0)),"")'),
+    ("Cartera al mes 24", "=E29"),
+    ("ARR al mes 24", "=M29"),
+]
+for i, (lab, f) in enumerate(derived):
+    r = 32 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=3, value=f)
+    c.number_format = EUR0 if "Caja" in lab or "ARR" in lab else '#,##0'
+    c.font = Font(name="Aptos", size=11, bold=True, color=FOREST)
+    c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+ws.merge_cells("A31:B31")
+
+ws["A38"] = ("La caja minima es la cifra que decide si el proyecto sobrevive: es el dinero que hay que tener "
+             "disponible antes de empezar. Si supera el capital aportado, el plan no es financiable tal cual y "
+             "hay que recortar opex, subir precio o retrasar la contratacion.")
+ws["A38"].alignment = Alignment(wrap_text=True, vertical="top")
+ws["A38"].font = Font(name="Aptos", size=9.5, color=MUTED)
+ws.merge_cells("A38:M40")
+
+# ==========================================================================
+# 7e. SENSIBILIDAD
+# ==========================================================================
+ws = sheet("Sensibilidad")
+title(ws, "Sensibilidad del punto de equilibrio",
+      "Cuantas cuentas hacen falta segun el opex real y la contribucion media. Sirve para responder "
+      "'si me equivoco en el gasto fijo, cuanto me duele'. La fila y la columna gris son entradas.", 8)
+widths(ws, {"A": 26, "B": 13, "C": 13, "D": 13, "E": 13, "F": 13, "G": 13, "H": 13})
+
+section(ws, 4, "Cuentas necesarias para equilibrio", 8)
+ws["A5"] = "Opex \\ Contribucion"
+ws["A5"].font = Font(name="Aptos", size=9.5, bold=True, color=FOREST)
+ws["A5"].fill = PatternFill("solid", fgColor=SAND)
+ws["A5"].border = BOX
+contribs = [20, 25, 29.36, 35, 40, 45, 50]
+for j, cv in enumerate(contribs):
+    c = ws.cell(row=5, column=2 + j, value=cv)
+    c.number_format = EUR
+    c.font = Font(name="Aptos", size=9.5, bold=True, color=INPUT)
+    c.fill = PatternFill("solid", fgColor=SAND)
+    c.border = BOX
+opexes = [1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 8000]
+for i, ov in enumerate(opexes):
+    r = 6 + i
+    c0 = ws.cell(row=r, column=1, value=ov)
+    c0.number_format = EUR0
+    c0.font = Font(name="Aptos", size=9.5, bold=True, color=INPUT)
+    c0.fill = PatternFill("solid", fgColor=SAND)
+    c0.border = BOX
+    for j in range(len(contribs)):
+        col = get_column_letter(2 + j)
+        c = ws.cell(row=r, column=2 + j, value=f"=IFERROR(ROUNDUP($A{r}/{col}$5,0),\"\")")
+        c.number_format = '#,##0'
+        c.border = BOX
+from openpyxl.formatting.rule import ColorScaleRule
+ws.conditional_formatting.add("B6:H14", ColorScaleRule(
+    start_type='min', start_color='FFDDEFE7',
+    end_type='max', end_color='FFF7E8E3'))
+
+ws["A16"] = ("La columna de 29,36 € es la contribucion media ponderada que calcula el modelo con el mix "
+             "55/35/10. Leer la fila del opex real: cada 500 € de gasto fijo de mas son unas 17 cuentas "
+             "adicionales que hay que vender solo para empatar.")
+ws["A16"].alignment = Alignment(wrap_text=True, vertical="top")
+ws["A16"].font = Font(name="Aptos", size=9.5, color=MUTED)
+ws.merge_cells("A16:H18")
+
+# ==========================================================================
+# 7f. CAPACIDAD DE SOPORTE
+# ==========================================================================
+ws = sheet("Capacidad_Soporte")
+title(ws, "Capacidad de soporte y cuando contratar",
+      "El soporte es el coste que primero rompe el margen al crecer. Traduce cuentas en horas de persona "
+      "y avisa del punto en el que una sola persona ya no llega.", 7)
+widths(ws, {"A": 30, "B": 14, "C": 14, "D": 14, "E": 16, "F": 18, "G": 34})
+
+section(ws, 4, "Parametros", 7)
+params = [
+    ("Horas utiles por persona y mes", 130, '#,##0', "Jornada completa descontando festivos y tareas internas"),
+    ("Minutos de soporte Autonomo", "=Supuestos!B19", '#,##0', "De la hoja Supuestos"),
+    ("Minutos de soporte Negocio", "=Supuestos!C19", '#,##0', "De la hoja Supuestos"),
+    ("Minutos de soporte Premium", "=Supuestos!D19", '#,##0', "De la hoja Supuestos"),
+]
+for i, (lab, v, fmt, nota) in enumerate(params):
+    r = 5 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=2, value=v)
+    c.number_format = fmt
+    c.font = Font(name="Aptos", size=10, color=INPUT if not isinstance(v, str) else CALC)
+    c.border = BOX
+    ws.cell(row=r, column=7, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+
+section(ws, 10, "Carga segun tamano de cartera", 7)
+header(ws, 11, ["Cuentas", "Minutos/mes", "Horas/mes", "Personas necesarias", "Coste soporte", "% sobre MRR", "Situacion"])
+for i, n in enumerate([25, 50, 100, 120, 200, 300, 500, 750, 1000]):
+    r = 12 + i
+    c0 = ws.cell(row=r, column=1, value=n)
+    c0.font = Font(name="Aptos", size=10, color=INPUT)
+    c1 = ws.cell(row=r, column=2, value=f"=A{r}*($B$6*Supuestos!$B$8+$B$7*Supuestos!$C$8+$B$8*Supuestos!$D$8)")
+    c2 = ws.cell(row=r, column=3, value=f"=B{r}/60")
+    c3 = ws.cell(row=r, column=4, value=f"=C{r}/$B$5")
+    c4 = ws.cell(row=r, column=5, value=f"=C{r}*Supuestos!$B$39")
+    c5 = ws.cell(row=r, column=6, value=f"=IFERROR(E{r}/(A{r}*(Supuestos!$B$7*Supuestos!$B$8+Supuestos!$C$7*Supuestos!$C$8+Supuestos!$D$7*Supuestos!$D$8)),\"\")")
+    c6 = ws.cell(row=r, column=7, value=f'=IF(D{r}<=0.5,"Lo lleva el founder",IF(D{r}<=1,"Ocupa a una persona entera",IF(D{r}<=2,"Hace falta una segunda persona","Equipo de soporte formal")))')
+    c1.number_format = '#,##0'
+    c2.number_format = '#,##0'
+    c3.number_format = '0.00'
+    c4.number_format = EUR0
+    c5.number_format = PCT
+    c3.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+    for c in (c0, c1, c2, c3, c4, c5, c6):
+        c.border = BOX
+    c6.font = Font(name="Aptos", size=9.5, color=MUTED)
+
+ws["A22"] = ("El salto de 'lo lleva el founder' a 'una persona entera' es el momento mas peligroso: el coste "
+             "aparece de golpe y el ingreso crece poco a poco. Conviene tenerlo cubierto en caja antes de "
+             "llegar, no cuando ya ha llegado.")
+ws["A22"].alignment = Alignment(wrap_text=True, vertical="top")
+ws["A22"].font = Font(name="Aptos", size=9.5, color=MUTED)
+ws.merge_cells("A22:G24")
+
+# ==========================================================================
+# 7g. KPIs DEL PILOTO
+# ==========================================================================
+ws = sheet("KPIs_Piloto")
+ws.sheet_properties.tabColor = TEAL
+title(ws, "KPIs que debe responder el piloto",
+      "Los que ya estan comprometidos en Tareas-vivas y en Unit-economics. La columna Observado se rellena "
+      "durante los dos cierres semanales del piloto con 3-5 autonomos.", 6)
+widths(ws, {"A": 40, "B": 16, "C": 16, "D": 14, "E": 20, "F": 40})
+header(ws, 4, ["Indicador", "Objetivo", "Observado", "Unidad", "Fuente del dato", "Por que importa"])
+kpis = [
+    ("Resolucion por cerebro interno", 0.60, None, "%", "Logs de IA por negocio", "Si baja del 40% el coste de IA se dispara", PCT),
+    ("Activacion: alta hasta primer cobro", None, None, "dias", "Eventos de producto", "Mide si el producto engancha antes de que caduque la prueba"),
+    ("Trabajos cerrados sin facturar", None, None, "n/mes", "Panel de trabajos", "Es el dinero que Noesis rescata: el argumento de venta"),
+    ("Cobros recuperados", None, None, "€/mes", "Recordatorios y portal", "Convierte la suscripcion en inversion con retorno"),
+    ("Tiempo ahorrado declarado", None, None, "h/semana", "Entrevista de cierre", "El testimonio que sostiene el precio"),
+    ("Minutos de soporte por cuenta", 12, None, "min/mes", "Registro de soporte", "Autonomo: el supuesto es 12 min. Es la partida que rompe el margen"),
+    ("Minutos de voz consumidos (Premium)", 100, None, "min/mes", "Adaptador de voz", "Si nadie los usa, sacarlos del plan y venderlos como add-on"),
+    ("Correcciones sobre lo que propone Noesis", None, None, "%", "Eventos de correccion", "Mide la confianza real en el asistente"),
+    ("Coste por cuenta observado", 1.48, None, "€/mes", "Costes por negocio", "Contrasta con el COGS estimado del modelo"),
+    ("Retencion a 60 dias", None, None, "%", "Suscripciones", "Sin esto no hay LTV defendible"),
+    ("CAC por canal", None, None, "€", "Ads_Captacion", "El supuesto de 150 € esta sin validar"),
+]
+for i, k in enumerate(kpis):
+    lab, obj, obs, u, src, why = k[0], k[1], k[2], k[3], k[4], k[5]
+    fmt = k[6] if len(k) > 6 else None
+    r = 5 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c1 = ws.cell(row=r, column=2, value=obj)
+    if fmt:
+        c1.number_format = fmt
+    c1.font = Font(name="Aptos", size=10, color=CALC)
+    c1.border = BOX
+    c2 = ws.cell(row=r, column=3, value=obs)
+    c2.fill = PatternFill("solid", fgColor="FFFDF3E7")
+    c2.font = Font(name="Aptos", size=10, color=INPUT)
+    c2.border = BOX
+    ws.cell(row=r, column=4, value=u).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=5, value=src).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6, value=why).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6).alignment = Alignment(wrap_text=True, vertical="top")
+ws.freeze_panes = "A5"
+
+# ==========================================================================
 # 8. OPCIONES DE IA
 # ==========================================================================
 ws = sheet("Opciones_IA")

@@ -31,6 +31,13 @@ usa la vista de grafo para navegar.
   credenciales, solo lectura y activación segura.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
+- [`Noesis-Modelo-Economico.xlsx`](Noesis-Modelo-Economico.xlsx) — modelo vivo:
+  supuestos, unit economics, escenarios, proyección a 24 meses, sensibilidad,
+  capacidad de soporte, captación y KPIs del piloto. Se regenera con
+  `python analysis/build_modelo_economico.py`.
+- [`Estrategia-Marketing.pdf`](Estrategia-Marketing.pdf) — a quién vendemos, con qué
+  mensaje, por qué canales, cuánto podemos pagar por un cliente, dónde entra la IA
+  y las vías de escape con sus criterios de parada.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
 - [[Analisis-unit-economics.ipynb]] — modelo reproducible completo por plan.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.

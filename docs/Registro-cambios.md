@@ -23,6 +23,41 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-11 — modelo economico completo y estrategia de marketing
+
+- **Autor/agente:** Claude.
+- **Objetivo:** cerrar el analisis economico con todo lo que el repositorio permite
+  sostener y redactar la estrategia comercial de la empresa.
+- **Areas y archivos:** documentacion y analisis; ningun cambio en `src/`.
+  - `analysis/build_modelo_economico.py`: seis hojas nuevas hasta dieciseis en total.
+    `Escenarios` con selector pesimista/base/optimista y validacion de datos;
+    `PyG_Proyeccion` a 24 meses con cartera, MRR, margen, caja acumulada, ARR y los
+    derivados de mes de rentabilidad y caja minima; `Sensibilidad` como matriz de
+    equilibrio opex x contribucion con escala de color; `Capacidad_Soporte`, que
+    traduce cuentas en horas de persona y marca el punto de contratacion;
+    `KPIs_Piloto` con los indicadores comprometidos en Tareas-vivas.
+  - `docs/Estrategia-Marketing.html` + `.pdf` (nuevos): estado real de partida, cliente
+    ideal y quien queda fuera, mensaje jerarquizado por lo demostrable, posicionamiento
+    frente a Forjia y a los ERP, cuatro fases con puerta de salida, canales ordenados
+    por riesgo economico, techos de CAC derivados del margen, uso de IA con sus limites
+    y siete vias de escape con criterio de parada.
+  - `docs/Inicio.md`: ambos entran en el mapa de contenido.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** libro regenerado en copia de verificacion y reabierto con
+  openpyxl: dieciseis hojas y referencias cruzadas comprobadas. Reparto del equilibrio
+  validado a mano (120 cuentas = 66/42/12, contribuyen 3.524 € frente a 3.500 € de
+  opex; por plan unico 169/101/62). Techos de CAC derivados de la contribucion a doce
+  meses: 250/419/683 €. HTML sin etiquetas sin cerrar antes de imprimir.
+- **Dependencias o validaciones externas:** los objetivos comerciales del documento son
+  propuestas del analisis, no compromisos acordados entre los socios.
+- **Riesgo/punto probable de fallo:** el `.xlsx` no pudo regenerarse porque estaba
+  abierto en Excel; el libro versionado conserva las once hojas anteriores y **le
+  faltan las seis nuevas** hasta ejecutar de nuevo el generador. La estrategia asume el
+  mix 55/35/10 y el opex de 3.500 €, ambos sin validar.
+- **Diagnostico y rollback:** `python analysis/build_modelo_economico.py` regenera el
+  libro; admite ruta alternativa como primer argumento.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-11 — desglose del equilibrio por plan y hoja de publicidad
 
 - **Autor/agente:** Claude.
