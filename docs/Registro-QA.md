@@ -1,5 +1,69 @@
 # Registro de QA
 
+## 2026-08-11 — configuración segura desde soporte
+
+- 2 pruebas nuevas cubren autorización real por el titular, render del formulario,
+  actualización HTTP y auditoría; también administrador falso, alcance documental
+  insuficiente, permiso caducado y ausencia total de escritura ante cada rechazo.
+- La lista blanca solo incluye perfil comercial, idioma/nivel y apariencia de
+  documentos futuros. Las pruebas fijan que correo titular, NIF, dirección, IVA,
+  IRPF, IBAN, plan y estado de suscripción permanecen idénticos. Una factura emitida
+  antes del cambio conserva el nombre original del emisor.
+- Los textos libres no aparecen en claro en la bitácora: perfil y apariencia se
+  registran como estados seudonimizados, junto a autorización y campos modificados.
+- 22 pruebas del centro administrativo y 4 focalizadas de ambas correcciones están
+  verdes. Suite completa **473/473** verde en 384 segundos; Ruff y verdad documental
+  también están verdes.
+- El CI [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
+  quedó completamente verde: dependencias, secretos, Bandit, Ruff, verdad del
+  proyecto, 473 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve
+  release `6a879b2b1153`, esquema 47 y HTTP 200 en `/health` y `/ready`.
+
+## 2026-08-11 — corrección documental acotada desde soporte
+
+- 2 pruebas nuevas cubren el recorrido autenticado completo y el fallo cerrado:
+  editor invisible sin alcance, autorización creada por el titular, asociación
+  proyecto→cliente, actualización por el administrador, redirección, aislamiento
+  frente a IDs de otro negocio y rechazo de un documento ligado a factura emitida.
+- La bitácora conserva administrador, negocio, autorización, campos cambiados y
+  valores anteriores/posteriores. La nota solo deja una huella SHA-256 truncada;
+  su texto no aparece en eventos de seguridad.
+- 25 pruebas focalizadas del centro de administración y medición pública están
+  verdes. Suite completa **471/471** verde en 340 segundos; la revisión visual debe
+  hacerse después con una autorización temporal real.
+- El CI [31475120052](https://github.com/noesisstudio/noesis/actions/runs/31475120052)
+  quedó completamente verde: dependencias, secretos, Bandit, Ruff, verdad del
+  proyecto, 471 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve
+  release `bf2df0d7afe5`, esquema 47 y HTTP 200 en `/health` y `/ready`.
+
+## 2026-08-11 — clasificación demo y archivo documental responsive
+
+- 23 pruebas focalizadas verdes con `unittest`: sembrado repetido sin duplicados,
+  seis tipos documentales esperados, OCR de PDF escaneado, clasificación local
+  conservadora, facturas recibidas, deduplicación por negocio, búsqueda aislada,
+  paquete de gestoría y las tres experiencias demo navegables.
+- La prueba de escaparate verifica explícitamente las carpetas del trimestre:
+  6 documentos, 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 en Otros. El HTML
+  autenticado contiene la entrada horizontal, navegación por carpetas y cámara.
+- Suite completa **469/469** verde en 344 s. Ruff, verdad documental y
+  `git diff --check` están verdes. Falta recorrido visual manual en
+  escritorio/móvil; no se abrió navegador gráfico porque el founder ha observado
+  cierres de Codex al utilizarlo.
+- El CI 31469598848 pasó dependencias, secretos, Bandit, Ruff, verdad documental y
+  humo PostgreSQL. La suite seguía progresando sin fallo cuando GitHub canceló el
+  job exactamente por `timeout-minutes: 15`; el límite del job principal pasa a 25
+  minutos para dejar terminar suite y ciclo de migraciones conservando un corte.
+- El segundo CI 31470757084 volvió a dejar verde PostgreSQL y dependencias, pero el
+  guardián de secretos detectó que las tres referencias permitidas dentro de
+  `ci.yml` se habían desplazado dos líneas al documentar el nuevo límite. Se actualiza
+  solo su número de línea; tipos y hashes permanecen idénticos.
+- El CI final 31470941717 quedó completamente verde: secretos, dependencias, Bandit,
+  Ruff, verdad documental, 469 pruebas, ciclo completo de migraciones y humo
+  PostgreSQL. Producción devuelve release `5bb715a68217`, esquema 47 y HTTP 200 en
+  `/health`, `/ready` y portada.
+- No se cambió la regla segura de producción: una factura sin emisor inequívoco no
+  se contabiliza ni se fuerza a ingreso/gasto. OCR/IA propone y el titular confirma.
+
 ## 2026-08-10 — MFA de gestoría sin semilla reversible
 
 - El primer CI de `main`

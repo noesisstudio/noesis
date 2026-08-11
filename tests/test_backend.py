@@ -5559,6 +5559,300 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 scopes=["configuration"], duration_hours=1,
             )
 
+    def test_admin_corrects_only_authorized_document_metadata_and_audits_it(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import repo as document_repo
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección de soporte")
+        target, original_client = self.make_business("Cuenta con documento")
+        admin = db.create_user(
+            "support-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        owner = db.create_user(
+            "document-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                (owner["email"], target["id"]),
+            )
+        corrected_client = db.add_client(
+            "Cliente correcto", business_id=target["id"]
+        )
+        project = db.add_project(
+            "Proyecto correcto", 1200, client_id=corrected_client["id"],
+            business_id=target["id"],
+        )
+        document = document_repo.add(
+            target["id"], filename="archivo-a-revisar.pdf",
+            stored_name="support-document.pdf", mime="application/pdf", size=10,
+            kind="documento", client_id=original_client["id"],
+            doc_status="pendiente_revisar",
+        )
+        document_repo.set_review(
+            document["id"], target["id"], review_note="Nota original"
+        )
+        grant = db.create_support_grant(
+            target["id"], owner["id"],
+            purpose="Corregir la organización de este documento",
+            scopes=["document_metadata"], duration_hours=1,
+        )
+
+        with (
+            patch.object(config, "ADMIN_EMAIL", "support-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "support-admin@example.com", "password": TEST_PASSWORD,
+                })
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("archivo-a-revisar.pdf", page.text)
+                response = client.post(
+                    f"/admin/cuentas/{target['id']}/documentos/{document['id']}/metadatos",
+                    data={
+                        "kind": "ticket", "doc_status": "revisado",
+                        "client_id": "", "project_id": str(project["id"]),
+                        "review_note": "Clasificación confirmada por el titular",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertEqual(
+                    response.headers["location"],
+                    f"/admin/cuentas/{target['id']}#document-metadata",
+                )
+
+        saved = document_repo.get(document["id"], target["id"])
+        self.assertEqual(saved["kind"], "ticket")
+        self.assertEqual(saved["doc_status"], "revisado")
+        self.assertEqual(saved["client_id"], corrected_client["id"])
+        self.assertEqual(saved["project_id"], project["id"])
+        event = next(
+            item for item in reversed(db.list_security_events())
+            if item["event_type"] == "admin.support_document_metadata_updated"
+        )
+        self.assertEqual(event["actor_user_id"], admin["id"])
+        self.assertEqual(event["subject_business_id"], target["id"])
+        self.assertEqual(event["metadata"]["grant_id"], grant["id"])
+        self.assertEqual(event["metadata"]["before_kind"], "documento")
+        self.assertEqual(event["metadata"]["after_kind"], "ticket")
+        self.assertNotIn("Clasificación confirmada", json.dumps(event["metadata"]))
+
+    def test_support_document_correction_fails_closed_without_scope_or_for_issued_invoice(self):
+        from noesis.documents import repo as document_repo
+
+        admin_business, _ = self.make_business("Administración segura")
+        target, target_client = self.make_business("Cuenta protegida")
+        other_business, other_client = self.make_business("Otra cuenta")
+        admin = db.create_user(
+            "closed-support@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        owner = db.create_user(
+            "protected-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                (owner["email"], target["id"]),
+            )
+        document = document_repo.add(
+            target["id"], filename="privado.pdf", stored_name="private.pdf",
+            mime="application/pdf", size=10, kind="documento",
+        )
+        with self.assertRaises(PermissionError):
+            db.admin_update_document_metadata(
+                target["id"], document["id"], actor_user_id=admin["id"],
+                kind="ticket", doc_status="revisado", client_id=None,
+                project_id=None, review_note=None,
+            )
+
+        db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar documento protegido",
+            scopes=["document_metadata"], duration_hours=1,
+        )
+        with self.assertRaisesRegex(ValueError, "no pertenece"):
+            db.admin_update_document_metadata(
+                target["id"], document["id"], actor_user_id=admin["id"],
+                kind="ticket", doc_status="revisado",
+                client_id=other_client["id"], project_id=None, review_note=None,
+            )
+
+        invoice = db.add_invoice(
+            target_client["id"], "Trabajo emitido", 100,
+            business_id=target["id"],
+        )
+        issued = db.issue_invoice(invoice["id"], target["id"])
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE documents SET invoice_id=? WHERE id=? AND business_id=?",
+                (issued["id"], document["id"], target["id"]),
+            )
+        with self.assertRaisesRegex(ValueError, "factura emitida"):
+            db.admin_update_document_metadata(
+                target["id"], document["id"], actor_user_id=admin["id"],
+                kind="ticket", doc_status="revisado", client_id=None,
+                project_id=None, review_note=None,
+            )
+        unchanged = document_repo.get(document["id"], target["id"])
+        self.assertEqual(unchanged["kind"], "documento")
+        self.assertIsNotNone(other_business)
+
+    def test_admin_corrects_only_safe_configuration_with_owner_scope(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Administración de configuración")
+        target, target_client = self.make_business("Nombre anterior")
+        admin = db.create_user(
+            "config-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        owner = db.create_user(
+            "config-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=?, payment_iban=?, plan=?, "
+                "subscription_status=? WHERE id=?",
+                (
+                    owner["email"], TEST_IBAN, "premium", "active", target["id"],
+                ),
+            )
+        original = db.get_business(target["id"])
+        issued = db.issue_invoice(
+            db.add_invoice(
+                target_client["id"], "Trabajo anterior", 100,
+                business_id=target["id"],
+            )["id"],
+            target["id"],
+        )
+        grant = db.create_support_grant(
+            target["id"], owner["id"],
+            purpose="Corregir idioma y apariencia documental",
+            scopes=["configuration"], duration_hours=1,
+        )
+
+        with (
+            patch.object(config, "ADMIN_EMAIL", "config-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "config-admin@example.com", "password": TEST_PASSWORD,
+                })
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Corregir perfil y apariencia", page.text)
+                self.assertNotIn("payment_iban", page.text)
+                response = client.post(
+                    f"/admin/cuentas/{target['id']}/configuracion-segura",
+                    data={
+                        "name": "Taller corregido", "sector": "Climatización",
+                        "team_size": "2-5", "province": "Tarragona",
+                        "primary_goal": "control", "language": "ca",
+                        "explanation_level": "detallado",
+                        "invoice_template": "editorial", "brand_color": "#2e8b74",
+                        "document_footer": "Pie privado del titular",
+                        "quote_terms": "Condiciones privadas del presupuesto",
+                        "default_quote_validity_days": "45",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertEqual(
+                    response.headers["location"],
+                    f"/admin/cuentas/{target['id']}#safe-configuration",
+                )
+
+        saved = db.get_business(target["id"])
+        self.assertEqual(saved["name"], "Taller corregido")
+        self.assertEqual(saved["language"], "ca")
+        self.assertEqual(saved["invoice_template"], "editorial")
+        self.assertEqual(saved["default_quote_validity_days"], 45)
+        frozen_invoice = db.get_invoice(issued["id"], target["id"])
+        self.assertEqual(frozen_invoice["issuer_name"], "Nombre anterior")
+        for protected in (
+            "owner_email", "nif", "address", "default_vat", "default_irpf",
+            "payment_iban", "plan", "subscription_status",
+        ):
+            self.assertEqual(saved[protected], original[protected], protected)
+        event = next(
+            item for item in reversed(db.list_security_events())
+            if item["event_type"] == "admin.support_configuration_updated"
+        )
+        serialized = json.dumps(event["metadata"], ensure_ascii=False)
+        self.assertEqual(event["actor_user_id"], admin["id"])
+        self.assertEqual(event["metadata"]["grant_id"], grant["id"])
+        self.assertIn("language", event["metadata"]["changed_fields"])
+        self.assertNotIn("Taller corregido", serialized)
+        self.assertNotIn("Pie privado", serialized)
+        self.assertNotIn(TEST_IBAN, serialized)
+
+    def test_support_configuration_fails_closed_for_wrong_scope_expiry_and_non_admin(self):
+        target, _ = self.make_business("Configuración cerrada")
+        owner = db.create_user(
+            "closed-config-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        outsider = db.create_user(
+            "not-admin@example.com", auth.hash_password(TEST_PASSWORD), target["id"]
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                (owner["email"], target["id"]),
+            )
+
+        def update(actor_user_id: int):
+            return db.admin_update_safe_business_configuration(
+                target["id"], actor_user_id=actor_user_id,
+                name="Configuración nueva", sector="Servicios", team_size="solo",
+                province="Barcelona", primary_goal="control", language="es",
+                explanation_level="claro", invoice_template="clasica",
+                brand_color="#14463b", document_footer="", quote_terms="",
+                default_quote_validity_days=30,
+            )
+
+        db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar solo documentos",
+            scopes=["document_metadata"], duration_hours=1,
+        )
+        with self.assertRaises(PermissionError):
+            update(outsider["id"])
+
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (outsider["id"],))
+        with self.assertRaises(PermissionError):
+            update(outsider["id"])
+
+        grant = db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar configuración temporal",
+            scopes=["configuration"], duration_hours=1,
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE support_access_grants SET expires_at=? WHERE id=?",
+                ((datetime.now() - timedelta(minutes=1)).isoformat(timespec="seconds"),
+                 grant["id"]),
+            )
+        with self.assertRaises(PermissionError):
+            update(outsider["id"])
+        self.assertEqual(db.get_business(target["id"])["name"], "Configuración cerrada")
+        self.assertIsNone(db.active_support_grant(target["id"]))
+
     def test_admin_registers_and_activates_business_whatsapp_without_secrets(self):
         from starlette.testclient import TestClient
         from noesis.web import server

@@ -19,7 +19,9 @@ jobs:
   tests-and-migrations:
     name: Tests i migracions
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # La suite completa ya roza 15 min en runners compartidos y después valida
+    # upgrade/downgrade/upgrade. El límite debe detectar bloqueos, no cancelar QA sano.
+    timeout-minutes: 25
 
     steps:
       - name: Descarregar el repositori

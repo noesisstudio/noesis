@@ -31,7 +31,8 @@
   página segura de imágenes/PDF para previsualizar sin iframe.
 - `src/noesis/demo.py`: siembra dos accesos dentro del producto real —autónomo y
   gestoría—, una segunda empresa para la cartera y un portal de cliente. Rellena
-  todos los módulos con datos ficticios conectados y no reinicia producción.
+  todos los módulos con datos ficticios conectados, repara de forma idempotente las
+  carpetas documentales históricas y no reinicia producción.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/db.py` + `routers/admin.py`: diagnóstico privado, autorización de
@@ -153,7 +154,8 @@
 - `src/noesis/gestoria_workspace.py` + `routers/documents.py` +
   `templates/documentos.html`: archivo documental común para titular y gestoría.
   Deriva fecha efectiva, período y grupo una vez; el panel normal añade navegación,
-  búsqueda, revisión y primera página privada sin duplicar ficheros.
+  entrada rápida, carpetas responsive, búsqueda, revisión y primera página privada
+  bajo demanda sin duplicar ficheros.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
   Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
   cerrada en producción si falta identidad legal o autorización explícita y no
@@ -176,7 +178,18 @@
   contraseña, de modo que el equipo nunca llega a conocerla. También resume las
   visitas de la web del último mes. La ficha técnica por cuenta llama a
   `db.admin_support_snapshot`: solo devuelve estados y recuentos, nunca contenido
-  operativo, y registra cada consulta en la bitácora encadenada.
+  operativo, y registra cada consulta en la bitácora encadenada. Si el titular abre
+  el alcance temporal `document_metadata`, `db.admin_support_document_metadata` y
+  `db.admin_update_document_metadata` habilitan únicamente tipo, estado, cliente,
+  proyecto y nota de revisión. La escritura revalida autorización e IDs dentro de
+  la transacción, bloquea vínculos con facturas emitidas y registra antes/después
+  sin guardar la nota en claro; nunca crea una sesión suplantada ni un editor
+  universal. Con el alcance `configuration`,
+  `db.admin_support_configuration` y
+  `db.admin_update_safe_business_configuration` exponen y corrigen solo perfil,
+  idioma/nivel y apariencia documental futura. La firma de la función no admite
+  identidad fiscal, cobros, suscripción, integraciones, tokens ni automatizaciones;
+  sus textos quedan seudonimizados en la auditoría.
 - `src/noesis/web/server.py` (`_count_public_view`) + tabla `page_views`: suma una
   visita por página y día en el propio servidor, sin script, cookie ni tercero
   —la CSP prohíbe scripts externos—. Guarda solo página, día y dominio de

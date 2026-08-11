@@ -62,7 +62,9 @@
 - [ ] Activar una vez `NOESIS_SEED_DEMO=true` en Railway, desplegar y recorrer los
   accesos reales de autónomo y gestoría y `/demo/cliente`. Confirmar que ambos
   negocios muestran datos completos y que cualquier escritura, envío o automatización
-  queda bloqueada. Después se puede volver a `false`: los registros persisten.
+  queda bloqueada. Confirmar además en Documentos las carpetas de 1 ingreso,
+  2 gastos, 1 ticket, 2 pendientes y 2 documentos en Otros. Después se puede volver
+  a `false`: los registros persisten.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.
@@ -102,9 +104,14 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   titular, motivo, alcances, caducidad 1/4/24/72 h, revocación y eventos encadenados.
   Administración no puede autoconcedérsela ni suplantar al usuario.
 - [ ] Habilitar una a una las correcciones de soporte que demuestre el piloto,
-  comprobando el permiso efectivo y registrando antes/después. Empezar por
-  configuración y metadatos documentales; no crear un editor universal ni permitir
-  edición de facturas emitidas.
+  comprobando el permiso efectivo y registrando antes/después. Los metadatos
+  documentales ya permiten corregir tipo, estado, cliente, proyecto y nota con
+  permiso transaccional, aislamiento y bloqueo de facturas emitidas. Configuración
+  ya limita la intervención a perfil, idioma/explicación y apariencia documental
+  futura, dejando identidad fiscal, pagos, suscripción, integraciones y
+  automatizaciones fuera de la firma. Falta validar ambos recorridos con un titular
+  real y habilitar otras correcciones solo si el piloto las demuestra. No crear un
+  editor universal.
 - [x] Facturas emitidas: corrección guiada mediante rectificativa por diferencias,
   original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
   R5 limitada a facturas simplificadas F2.
@@ -120,7 +127,8 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   pie, condiciones y validez; presupuesto PDF, revisión previa, portal aislado y
   aceptación/rechazo con evidencia seudónima antes de preparar la factura borrador.
 - [x] Archivo del titular por años, trimestres y tipos con el mismo criterio que la
-  gestoría, filtros de estado, búsqueda y vista previa privada acotada.
+  gestoría, entrada rápida horizontal, carpetas, filtros de estado, búsqueda y vista
+  previa privada acotada bajo demanda, con distribución responsive para móvil.
 - [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por

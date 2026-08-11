@@ -6,6 +6,36 @@
 
 ## Producto construido
 
+- La autorización temporal de configuración habilita una segunda corrección
+  administrativa acotada: nombre visible para el futuro, sector, provincia, tamaño,
+  objetivo, idioma, nivel de explicación y apariencia predeterminada de facturas y
+  presupuestos. La función no acepta correo del titular, NIF, dirección fiscal,
+  impuestos, cuenta de cobro, plan, usuarios, Stripe, WhatsApp, gestoría, tokens ni
+  automatizaciones. Revalida administrador, alcance y caducidad dentro de la
+  transacción; la auditoría seudonimiza los textos y una factura ya emitida conserva
+  su emisor congelado. El release `6a879b2b1153` está desplegado: CI completo,
+  humo PostgreSQL y `/health`/`/ready` verdes con esquema 47. Falta el recorrido
+  visual con una autorización real.
+- El centro de soporte puede corregir la organización de documentos únicamente
+  cuando el titular abre una ventana temporal con el alcance correspondiente. La
+  ficha muestra un editor acotado a tipo, estado, cliente, proyecto y nota de
+  revisión; no abre archivos ni OCR, no toca importes y rechaza documentos
+  vinculados a facturas emitidas. El permiso se vuelve a comprobar dentro de la
+  transacción, todas las referencias filtran por `business_id` y la bitácora
+  encadenada conserva actor, autorización, campos y valores anteriores/posteriores
+  sin guardar la nota en claro. El release `bf2df0d7afe5` está desplegado: CI
+  completo, humo PostgreSQL y `/health`/`/ready` verdes con esquema 47. Falta el
+  recorrido visual con una autorización real.
+- Documentos separa ahora entrada, archivo y revisión. La carga ocupa una franja
+  horizontal apta para cámara móvil; cliente, proyecto y nota son contexto opcional.
+  El archivo presenta carpetas por período para ingresos, gastos, tickets,
+  pendientes y otros, conserva búsqueda/estado y abre la primera página solo cuando
+  se solicita. La demo repara de forma idempotente los tipos históricos y enseña
+  cada carpeta sin duplicar originales. La clasificación real sigue siendo
+  conservadora: una factura sin emisor inequívoco queda pendiente de confirmación.
+  El release `5bb715a68217` está desplegado con esquema 47 y CI completo/PostgreSQL
+  verdes; falta únicamente el recorrido visual manual y ejecutar una vez la
+  reparación de los datos demo ya persistidos.
 - La cuenta profesional de gestoría dispone de segundo factor TOTP opcional en el
   esquema 47. La contraseña abre un reto de cinco minutos; cada código temporal se
   consume atómicamente y no puede repetirse. Al activar se entregan ocho códigos de
@@ -44,6 +74,8 @@
   desde otro negocio. Mientras no exista Embedded Signup, administración puede dar
   de alta WABA y `phone_number_id` como conexión pendiente desde la ficha técnica de
   la cuenta; no recibe ni muestra tokens y toda activación queda auditada.
+  El número comercial es siempre propiedad del negocio: puede reutilizar el suyo o
+  elegir uno separado para atención y citas; Noesis no compra un número por cliente.
 - Los mensajes comerciales crean una bandeja trazable y un lead o vínculo con el
   cliente dentro de la empresa correcta. Fotos y PDF pasan por la entrada documental
   existente, se previsualizan desde Clientes y nunca se convierten por sí solos en

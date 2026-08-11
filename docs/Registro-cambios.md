@@ -188,6 +188,89 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   agotarán reintentos contra un número real; las pruebas no lo ven porque simulan Meta.
 - **Diagnóstico y rollback:** cambio solo documental.
 - **Estado de publicación:** local / commit en `main`.
+## 2026-08-11 12:00 — configuración reversible con permiso de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** resolver errores de configuración durante onboarding/soporte sin
+  abrir acceso a fiscalidad, dinero, suscripción, integraciones o identidad.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración; reutiliza columnas y autorización
+  temporal existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 22 del centro administrativo, 4
+  focalizadas y suite completa **473/473** verde en 384 s; Ruff y verdad documental
+  verdes.
+- **Dependencias o validaciones externas:** CI
+  [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
+  completo; producción verificada en release `6a879b2b1153`, esquema 47 y HTTP 200
+  en `/health` y `/ready`. Falta recorrido visual con una cuenta y autorización
+  reales.
+- **Riesgo/punto probable de fallo:** un formulario parcial no debe inventar valores;
+  equipo y objetivo son obligatorios y muestran un estado sin seleccionar si faltan.
+  Permiso, administrador y caducidad se comprueban en la transacción.
+- **Diagnóstico y rollback:** buscar `admin.support_configuration_updated`,
+  `grant_id`, `changed_fields` y estados before/after seudonimizados. Revertir el
+  bloque devuelve ese alcance a solo lectura sin afectar otras funciones.
+- **Estado de publicación:** commit `6a879b2b1153` en `main`, CI verde y desplegado
+  y verificado en producción.
+
+## 2026-08-11 11:25 — primera corrección segura del centro de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir resolver errores de organización documental sin acceder
+  como el cliente ni crear un editor administrativo universal.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración. Reutiliza la autorización temporal
+  del esquema 43 y las columnas documentales existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 25 pruebas focalizadas y suite completa
+  **471/471** verde en 340 s; Ruff, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** ninguna credencial ni proveedor. Falta
+  recorrido visual con un titular que abra el alcance documental y un caso real.
+- **Riesgo/punto probable de fallo:** formularios con carteras muy grandes y
+  caducidad/revocación durante una intervención. La escritura revalida alcance e
+  IDs en su misma transacción y falla cerrada.
+- **Diagnóstico y rollback:** buscar
+  `admin.support_document_metadata_updated`, `grant_id`, `item_id` y
+  `changed_fields` en la bitácora. Revertir el bloque devuelve el centro a solo
+  lectura sin deshacer documentos ya corregidos.
+- **Estado de publicación:** `bf2df0d` en `main`; CI 31475120052 completo y humo
+  PostgreSQL verdes. Producción responde release `bf2df0d7afe5`, esquema 47 y
+  `/health`/`/ready` 200. Falta recorrido visual real.
+
+## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir la falsa agrupación de la demo y convertir Documentos en
+  un archivo comprensible y cómodo desde móvil sin duplicar el motor existente.
+- **Áreas y archivos:** sembrado comercial, pantalla/CSS de Documentos, prueba de
+  demo/OCR, CI y documentación compartida de producto y WhatsApp.
+- **Cambios de datos/migración:** sin migración. Al ejecutar la siembra explícita,
+  seis archivos ficticios se crean o reparan por nombre de forma idempotente y se
+  distribuyen en ingresos, gastos, tickets, pendientes y otros.
+- **Pruebas ejecutadas:** 23 pruebas focalizadas verdes de demo, OCR, archivo,
+  facturas recibidas, deduplicación, aislamiento y navegación; suite completa
+  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes. El primer CI
+  pasó dependencias, secretos, seguridad, estática, verdad y humo PostgreSQL, pero
+  canceló la suite sana al alcanzar el límite histórico de 15 minutos. Se amplía a
+  25 para cubrir pruebas y ciclo de migraciones sin esconder un bloqueo ilimitado.
+  El segundo CI pidió actualizar únicamente las tres líneas desplazadas de secretos
+  de prueba ya conocidos en `.secrets.baseline`; no apareció hash ni hallazgo nuevo.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
+  reparación de la demo publicada exige una ejecución explícita con
+  `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
+  el navegador gráfico provoca cierres de la aplicación; se verificó la captura
+  aportada y la estructura renderizada mediante TestClient.
+- **Riesgo/punto probable de fallo:** CSS responsive, selector de cámara y modal de
+  vista previa son los puntos a recorrer en un teléfono real. Las facturas ambiguas
+  continúan pendientes por diseño y no se fuerzan a ingreso o gasto.
+- **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
+  petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
+  altera documentos; revertir la reparación conserva los tipos ya corregidos.
+- **Estado de publicación:** funcionalidad `065f8bb`, límite CI `633dcf6` y baseline
+  `5bb715a` en `main`. CI 31470941717 completo y PostgreSQL verdes; producción
+  responde release `5bb715a68217`, esquema 47 y `/health`/`/ready` 200. Falta
+  revisión visual real y ejecutar una vez la reparación de la demo persistida.
 
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 

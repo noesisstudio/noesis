@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
@@ -11,8 +12,8 @@ from unittest.mock import patch
 from fpdf import FPDF
 from PIL import Image, ImageDraw
 
-from noesis import config, db, demo
-from noesis.documents import ocr, pdf_ocr, service as docservice
+from noesis import config, db, demo, gestoria_workspace
+from noesis.documents import ocr, pdf_ocr, repo as docrepo, service as docservice
 from noesis.web import auth
 
 
@@ -52,6 +53,9 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
             "businesses": len(db.list_businesses()),
             "clients": len(db.list_clients(first["autonomo"]["business_id"])),
             "invoices": len(db.list_invoices(first["autonomo"]["business_id"])),
+            "documents": len(docrepo.list_for_business(
+                first["autonomo"]["business_id"]
+            )),
         }
         second = demo.seed_showcase(force=True)
 
@@ -60,6 +64,9 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
             "businesses": len(db.list_businesses()),
             "clients": len(db.list_clients(first["autonomo"]["business_id"])),
             "invoices": len(db.list_invoices(first["autonomo"]["business_id"])),
+            "documents": len(docrepo.list_for_business(
+                first["autonomo"]["business_id"]
+            )),
         })
         owner = db.get_user_by_email(demo.SHOWCASE_OWNER_EMAIL)
         self.assertTrue(auth.verify_password(
@@ -75,6 +82,28 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
         self.assertEqual(activation["completed"], activation["total"])
         self.assertGreaterEqual(len(db.list_clients(business_id)), 7)
         self.assertTrue(db.list_projects(business_id))
+        showcase_documents = {
+            item["filename"]: item
+            for item in docrepo.list_for_business(business_id)
+        }
+        self.assertEqual(
+            {
+                name: showcase_documents[name]["kind"]
+                for name, *_ in demo.SHOWCASE_DOCUMENTS
+            },
+            {name: kind for name, kind, *_ in demo.SHOWCASE_DOCUMENTS},
+        )
+        today = date.today()
+        archive = gestoria_workspace.document_archive(
+            business_id, year=today.year, quarter=((today.month - 1) // 3) + 1,
+        )
+        self.assertEqual(
+            archive["document_counts"],
+            {
+                "todos": 6, "ingresos": 1, "gastos": 2,
+                "tickets": 1, "pendientes": 2, "otros": 2,
+            },
+        )
         self.assertGreaterEqual(
             sum(1 for month in db.monthly_series(business_id)
                 if month["invoiced"] > 0),
@@ -166,6 +195,10 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
                 ):
                     response = client.get(f"/b/{business_id}/{page}")
                     self.assertEqual(response.status_code, 200, page)
+                    if page == "documentos":
+                        self.assertIn("document-upload-strip", response.text)
+                        self.assertIn("document-folder-grid", response.text)
+                        self.assertIn("Usar cámara", response.text)
                 blocked = client.post(
                     f"/api/{business_id}/invoices", json={}
                 )

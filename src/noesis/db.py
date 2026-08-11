@@ -11216,6 +11216,35 @@ def _support_grant_dict(row) -> dict | None:
     return grant
 
 
+def _support_admin_actor(actor_user_id: int) -> dict:
+    actor = get_user(actor_user_id)
+    if not actor or not (
+        bool(actor.get("is_admin")) or config.is_admin_email(actor.get("email"))
+    ):
+        raise PermissionError("Solo administración puede aplicar esta corrección.")
+    return actor
+
+
+def _support_grant_with_scope(conn, business_id: int, scope: str, now: str) -> dict:
+    """Revalida permiso dentro de la transacción que realizará el cambio."""
+    conn.execute(
+        "UPDATE support_access_grants SET status='expired' "
+        "WHERE business_id=? AND status='active' AND expires_at<=?",
+        (business_id, now),
+    )
+    row = conn.execute(
+        "SELECT * FROM support_access_grants WHERE business_id=? "
+        "AND status='active' AND expires_at>? ORDER BY id DESC LIMIT 1",
+        (business_id, now),
+    ).fetchone()
+    grant = _support_grant_dict(row)
+    if not grant or scope not in grant["scopes"]:
+        raise PermissionError(
+            "El titular no ha autorizado esta corrección o el acceso ha caducado."
+        )
+    return grant
+
+
 def active_support_grant(business_id: int) -> dict | None:
     """Autorización vigente del titular; caduca aunque nadie abra el panel admin."""
     now = _now()
@@ -11386,6 +11415,372 @@ def admin_support_snapshot(business_id: int) -> dict | None:
         "last_event": dict(last_event) if last_event else None,
         "support_grant": active_support_grant(business_id),
     }
+
+
+def admin_support_document_metadata(business_id: int, *, limit: int = 100) -> dict | None:
+    """Metadatos documentales visibles solo durante una autorización explícita.
+
+    No devuelve OCR, importes, binarios, credenciales ni contenido de facturas. La
+    lista está acotada para que el centro de soporte no se convierta en una copia
+    alternativa del archivo del cliente.
+    """
+    grant = active_support_grant(business_id)
+    if not grant or "document_metadata" not in grant["scopes"]:
+        return None
+    limit = max(1, min(int(limit), 200))
+    with get_conn() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) AS total FROM documents WHERE business_id=?",
+            (business_id,),
+        ).fetchone()["total"]
+        documents = conn.execute(
+            "SELECT d.id, d.filename, d.kind, d.doc_status, d.client_id, "
+            "d.project_id, d.review_note, d.reviewed_at, d.invoice_id, "
+            "d.received_invoice_id, d.created_at, c.name AS client_name, "
+            "p.name AS project_name FROM documents d "
+            "LEFT JOIN clients c ON c.id=d.client_id AND c.business_id=d.business_id "
+            "LEFT JOIN projects p ON p.id=d.project_id AND p.business_id=d.business_id "
+            "WHERE d.business_id=? ORDER BY d.created_at DESC, d.id DESC LIMIT ?",
+            (business_id, limit),
+        ).fetchall()
+        clients = conn.execute(
+            "SELECT id, name FROM clients WHERE business_id=? ORDER BY name LIMIT 250",
+            (business_id,),
+        ).fetchall()
+        projects = conn.execute(
+            "SELECT id, name, client_id FROM projects WHERE business_id=? "
+            "ORDER BY name LIMIT 250",
+            (business_id,),
+        ).fetchall()
+    return {
+        "grant_id": grant["id"],
+        "documents": [dict(row) for row in documents],
+        "clients": [dict(row) for row in clients],
+        "projects": [dict(row) for row in projects],
+        "total": int(total or 0),
+        "limit": limit,
+    }
+
+
+def admin_support_configuration(business_id: int) -> dict | None:
+    """Configuración reversible visible solo con autorización del titular."""
+    grant = active_support_grant(business_id)
+    if not grant or "configuration" not in grant["scopes"]:
+        return None
+    business = get_business(business_id)
+    if not business:
+        return None
+    allowed = (
+        "name", "sector", "team_size", "province", "primary_goal", "language",
+        "explanation_level", "invoice_template", "brand_color", "document_footer",
+        "quote_terms", "default_quote_validity_days",
+    )
+    return {
+        "grant_id": grant["id"],
+        "values": {field: business.get(field) for field in allowed},
+    }
+
+
+def _support_value_hash(value: str | None) -> str | None:
+    clean = str(value or "").strip()
+    if not clean:
+        return None
+    return hashlib.sha256(clean.encode("utf-8")).hexdigest()[:16]
+
+
+def _support_configuration_audit_state(values: dict) -> tuple[str, str, str]:
+    """Antes/después seudonimizado y acotado para la bitácora de seguridad."""
+    profile = json.dumps({
+        "name": _support_value_hash(values.get("name")),
+        "sector": _support_value_hash(values.get("sector")),
+        "team": values.get("team_size"),
+        "province": _support_value_hash(values.get("province")),
+        "goal": values.get("primary_goal"),
+    }, sort_keys=True, separators=(",", ":"))
+    experience = json.dumps({
+        "language": values.get("language"),
+        "level": values.get("explanation_level"),
+    }, sort_keys=True, separators=(",", ":"))
+    branding = json.dumps({
+        "template": values.get("invoice_template"),
+        "color": values.get("brand_color"),
+        "footer": _support_value_hash(values.get("document_footer")),
+        "terms": _support_value_hash(values.get("quote_terms")),
+        "validity": values.get("default_quote_validity_days"),
+    }, sort_keys=True, separators=(",", ":"))
+    return profile, experience, branding
+
+
+def admin_update_safe_business_configuration(
+    business_id: int,
+    *,
+    actor_user_id: int,
+    name: str,
+    sector: str,
+    team_size: str,
+    province: str | None,
+    primary_goal: str,
+    language: str,
+    explanation_level: str,
+    invoice_template: str,
+    brand_color: str | None,
+    document_footer: str | None,
+    quote_terms: str | None,
+    default_quote_validity_days: int,
+    request_id: str | None = None,
+) -> dict:
+    """Corrige solo perfil y apariencia; excluye fiscalidad, pagos e integraciones."""
+    _support_admin_actor(actor_user_id)
+    name = " ".join(str(name or "").split())
+    sector = " ".join(str(sector or "").split())
+    province = " ".join(str(province or "").split()) or None
+    if not name or len(name) > 160:
+        raise ValueError("El nombre del negocio es obligatorio (máx. 160 caracteres).")
+    if not sector or len(sector) > 80:
+        raise ValueError("El sector es obligatorio (máx. 80 caracteres).")
+    if province and len(province) > 80:
+        raise ValueError("La provincia no puede superar 80 caracteres.")
+    if team_size not in {"solo", "2-5", "6-10", "11+"}:
+        raise ValueError("El tamaño del equipo no es válido.")
+    if primary_goal not in {"facturar", "agenda", "cobros", "control"}:
+        raise ValueError("El objetivo principal no es válido.")
+    if language not in LANGUAGES:
+        raise ValueError("Idioma no disponible.")
+    if explanation_level not in EXPLANATION_LEVELS:
+        raise ValueError("El nivel de explicación no es válido.")
+    if invoice_template not in INVOICE_TEMPLATES:
+        raise ValueError("La plantilla seleccionada no es válida.")
+    brand_color = str(brand_color or "").strip() or None
+    if brand_color and not _HEX_RE.match(brand_color):
+        raise ValueError("El color de marca debe ser un hexadecimal tipo #14463b.")
+    document_footer = str(document_footer or "").strip() or None
+    quote_terms = str(quote_terms or "").strip() or None
+    if document_footer and len(document_footer) > MAX_DOCUMENT_FOOTER:
+        raise ValueError(
+            f"El pie del documento no puede superar {MAX_DOCUMENT_FOOTER} caracteres."
+        )
+    if quote_terms and len(quote_terms) > MAX_QUOTE_TERMS:
+        raise ValueError(
+            f"Las condiciones no pueden superar {MAX_QUOTE_TERMS} caracteres."
+        )
+    try:
+        default_quote_validity_days = int(default_quote_validity_days)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La validez predeterminada no es válida.") from exc
+    if default_quote_validity_days not in QUOTE_VALIDITY_DAYS:
+        raise ValueError("La validez debe ser de 7, 15, 30, 45, 60 o 90 días.")
+
+    allowed = (
+        "name", "sector", "team_size", "province", "primary_goal", "language",
+        "explanation_level", "invoice_template", "brand_color", "document_footer",
+        "quote_terms", "default_quote_validity_days",
+    )
+    after = {
+        "name": name,
+        "sector": sector,
+        "team_size": team_size,
+        "province": province,
+        "primary_goal": primary_goal,
+        "language": language,
+        "explanation_level": explanation_level,
+        "invoice_template": invoice_template,
+        "brand_color": brand_color,
+        "document_footer": document_footer,
+        "quote_terms": quote_terms,
+        "default_quote_validity_days": default_quote_validity_days,
+    }
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        grant = _support_grant_with_scope(conn, business_id, "configuration", now)
+        current_row = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        if not current_row:
+            raise ValueError("Negocio no encontrado.")
+        current = dict(current_row)
+        before = {field: current.get(field) for field in allowed}
+        changed_fields = [field for field in allowed if before[field] != after[field]]
+        if changed_fields:
+            conn.execute(
+                "UPDATE businesses SET name=?, sector=?, team_size=?, province=?, "
+                "primary_goal=?, language=?, explanation_level=?, invoice_template=?, "
+                "brand_color=?, document_footer=?, quote_terms=?, "
+                "default_quote_validity_days=? WHERE id=?",
+                (
+                    name, sector, team_size, province, primary_goal, language,
+                    explanation_level, invoice_template, brand_color,
+                    document_footer, quote_terms, default_quote_validity_days,
+                    business_id,
+                ),
+            )
+
+    if changed_fields:
+        before_profile, before_experience, before_branding = (
+            _support_configuration_audit_state(before)
+        )
+        after_profile, after_experience, after_branding = (
+            _support_configuration_audit_state(after)
+        )
+        record_security_event(
+            "admin.support_configuration_updated",
+            severity="warning",
+            area="support",
+            actor_user_id=actor_user_id,
+            subject_business_id=business_id,
+            request_id=request_id,
+            metadata={
+                "grant_id": grant["id"],
+                "changed_fields": ",".join(changed_fields),
+                "before_profile": before_profile,
+                "after_profile": after_profile,
+                "before_experience": before_experience,
+                "after_experience": after_experience,
+                "before_branding": before_branding,
+                "after_branding": after_branding,
+            },
+        )
+    return {"business": get_business(business_id), "changed_fields": changed_fields}
+
+
+def admin_update_document_metadata(
+    business_id: int,
+    document_id: int,
+    *,
+    actor_user_id: int,
+    kind: str,
+    doc_status: str,
+    client_id: int | None,
+    project_id: int | None,
+    review_note: str | None,
+    request_id: str | None = None,
+) -> dict:
+    """Corrección acotada de soporte, autorizada y con antes/después auditado.
+
+    La autorización se vuelve a comprobar dentro de la misma transacción que la
+    escritura. No permite tocar archivos, OCR, importes ni documentos vinculados a
+    una factura emitida. Tampoco concede al administrador una sesión del cliente.
+    """
+    from .documents import repo as document_repo
+
+    _support_admin_actor(actor_user_id)
+    if kind not in document_repo.KINDS:
+        raise ValueError("Tipo de documento desconocido.")
+    if doc_status not in document_repo.DOC_STATUSES:
+        raise ValueError("Estado de documento desconocido.")
+    client_id = int(client_id) if client_id not in (None, "") else None
+    project_id = int(project_id) if project_id not in (None, "") else None
+    review_note = str(review_note or "").strip()[:500] or None
+    now = _now()
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        grant = _support_grant_with_scope(
+            conn, business_id, "document_metadata", now
+        )
+
+        current_row = conn.execute(
+            "SELECT * FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+        if not current_row:
+            raise ValueError("Documento no encontrado.")
+        current = dict(current_row)
+        if current.get("invoice_id"):
+            invoice = conn.execute(
+                "SELECT status, number FROM invoices WHERE id=? AND business_id=?",
+                (current["invoice_id"], business_id),
+            ).fetchone()
+            if invoice and (invoice["status"] != "borrador" or invoice["number"]):
+                raise ValueError(
+                    "Este documento está vinculado a una factura emitida. Debe corregirse mediante el flujo fiscal correspondiente."
+                )
+
+        project = None
+        if project_id is not None:
+            project = conn.execute(
+                "SELECT id, client_id FROM projects WHERE id=? AND business_id=?",
+                (project_id, business_id),
+            ).fetchone()
+            if not project:
+                raise ValueError("El proyecto no pertenece a este negocio.")
+            project_client_id = project["client_id"]
+            if client_id is None and project_client_id:
+                client_id = int(project_client_id)
+            elif (
+                client_id is not None
+                and project_client_id is not None
+                and int(project_client_id) != client_id
+            ):
+                raise ValueError("El cliente no coincide con el proyecto.")
+        if client_id is not None:
+            client = conn.execute(
+                "SELECT id FROM clients WHERE id=? AND business_id=?",
+                (client_id, business_id),
+            ).fetchone()
+            if not client:
+                raise ValueError("El cliente no pertenece a este negocio.")
+
+        before = {
+            "kind": current.get("kind"),
+            "status": current.get("doc_status"),
+            "client_id": current.get("client_id"),
+            "project_id": current.get("project_id"),
+            "note": current.get("review_note"),
+        }
+        after = {
+            "kind": kind,
+            "status": doc_status,
+            "client_id": client_id,
+            "project_id": project_id,
+            "note": review_note,
+        }
+        changed_fields = [name for name in before if before[name] != after[name]]
+        if changed_fields:
+            conn.execute(
+                "UPDATE documents SET kind=?, doc_status=?, client_id=?, project_id=?, "
+                "review_note=?, reviewed_at=? WHERE id=? AND business_id=?",
+                (
+                    kind, doc_status, client_id, project_id, review_note, now,
+                    document_id, business_id,
+                ),
+            )
+
+    if changed_fields:
+        def _note_hash(value: str | None) -> str | None:
+            if not value:
+                return None
+            return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+        record_security_event(
+            "admin.support_document_metadata_updated",
+            severity="warning",
+            area="support",
+            actor_user_id=actor_user_id,
+            subject_business_id=business_id,
+            request_id=request_id,
+            metadata={
+                "item_id": document_id,
+                "grant_id": grant["id"],
+                "changed_fields": ",".join(changed_fields),
+                "before_kind": before["kind"],
+                "after_kind": after["kind"],
+                "before_status": before["status"],
+                "after_status": after["status"],
+                "before_client_id": before["client_id"],
+                "after_client_id": after["client_id"],
+                "before_project_id": before["project_id"],
+                "after_project_id": after["project_id"],
+                "before_note_hash": _note_hash(before["note"]),
+                "after_note_hash": _note_hash(after["note"]),
+            },
+        )
+    with get_conn() as conn:
+        saved = conn.execute(
+            "SELECT * FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+    return {"document": dict(saved), "changed_fields": changed_fields}
 
 
 # ----------------------------------------------------------- RGPD (export/borrado) ---

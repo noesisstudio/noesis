@@ -58,7 +58,7 @@ def admin_panel(request: Request):
 
 @router.get("/admin/cuentas/{business_id}", response_class=HTMLResponse)
 def admin_account_support(request: Request, business_id: int):
-    """Diagnóstico técnico de una cuenta, deliberadamente de solo lectura."""
+    """Diagnóstico técnico y correcciones autorizadas de alcance mínimo."""
     if not _is_admin(request):
         return RedirectResponse("/login", status_code=303)
     snapshot = db.admin_support_snapshot(business_id)
@@ -73,11 +73,131 @@ def admin_account_support(request: Request, business_id: int):
         request_id=getattr(request.state, "request_id", None),
         metadata={"mode": "read_only"},
     )
+    document_support = db.admin_support_document_metadata(business_id)
+    if document_support:
+        db.record_security_event(
+            "admin.support_document_metadata_viewed",
+            area="support",
+            actor_user_id=user["id"],
+            subject_business_id=business_id,
+            request_id=getattr(request.state, "request_id", None),
+            metadata={
+                "grant_id": document_support["grant_id"],
+                "item_count": len(document_support["documents"]),
+            },
+        )
+    configuration_support = db.admin_support_configuration(business_id)
+    if configuration_support:
+        db.record_security_event(
+            "admin.support_configuration_viewed",
+            area="support",
+            actor_user_id=user["id"],
+            subject_business_id=business_id,
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"grant_id": configuration_support["grant_id"]},
+        )
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
         "whatsapp_connections": db.list_whatsapp_connections(business_id),
+        "document_support": document_support,
+        "configuration_support": configuration_support,
         "admin_error": request.session.pop("admin_error", None),
+        "admin_success": request.session.pop("admin_success", None),
     })
+
+
+@router.post("/admin/cuentas/{business_id}/configuracion-segura")
+def admin_correct_safe_configuration(
+    request: Request,
+    business_id: int,
+    name: str = Form(...),
+    sector: str = Form(...),
+    team_size: str = Form(...),
+    province: str = Form(""),
+    primary_goal: str = Form(...),
+    language: str = Form(...),
+    explanation_level: str = Form(...),
+    invoice_template: str = Form(...),
+    brand_color: str = Form(""),
+    document_footer: str = Form(""),
+    quote_terms: str = Form(""),
+    default_quote_validity_days: int = Form(...),
+):
+    """Corrige perfil y apariencia, nunca fiscalidad, cobros o integraciones."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        result = db.admin_update_safe_business_configuration(
+            business_id,
+            actor_user_id=user["id"],
+            name=name,
+            sector=sector,
+            team_size=team_size,
+            province=province,
+            primary_goal=primary_goal,
+            language=language,
+            explanation_level=explanation_level,
+            invoice_template=invoice_template,
+            brand_color=brand_color,
+            document_footer=document_footer,
+            quote_terms=quote_terms,
+            default_quote_validity_days=default_quote_validity_days,
+            request_id=getattr(request.state, "request_id", None),
+        )
+        request.session["admin_success"] = (
+            "Configuración corregida y auditada."
+            if result["changed_fields"]
+            else "La cuenta ya tenía esa configuración; no se ha modificado."
+        )
+    except (PermissionError, ValueError) as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse(
+        f"/admin/cuentas/{business_id}#safe-configuration", status_code=303
+    )
+
+
+@router.post("/admin/cuentas/{business_id}/documentos/{document_id}/metadatos")
+def admin_correct_document_metadata(
+    request: Request,
+    business_id: int,
+    document_id: int,
+    kind: str = Form(...),
+    doc_status: str = Form(...),
+    client_id: str = Form(""),
+    project_id: str = Form(""),
+    review_note: str = Form(""),
+):
+    """Corrige solo organización documental si el titular la autorizó."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+
+    def _optional_int(value: str) -> int | None:
+        return int(value) if str(value or "").strip() else None
+
+    try:
+        result = db.admin_update_document_metadata(
+            business_id,
+            document_id,
+            actor_user_id=user["id"],
+            kind=kind,
+            doc_status=doc_status,
+            client_id=_optional_int(client_id),
+            project_id=_optional_int(project_id),
+            review_note=review_note,
+            request_id=getattr(request.state, "request_id", None),
+        )
+        request.session["admin_success"] = (
+            "Organización del documento corregida y auditada."
+            if result["changed_fields"]
+            else "El documento ya tenía esa organización; no se ha modificado."
+        )
+    except (PermissionError, ValueError) as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse(
+        f"/admin/cuentas/{business_id}#document-metadata", status_code=303
+    )
 
 
 @router.post("/admin/cuentas/{business_id}/whatsapp-business")

@@ -23,13 +23,14 @@
     </div>
   </header>
 
-  {% if admin_error %}<div class="banner warn">{{ admin_error }}</div>{% endif %}
+  {% if admin_error %}<div class="admin-note error">{{ admin_error }}</div>{% endif %}
+  {% if admin_success %}<div class="admin-note success">{{ admin_success }}</div>{% endif %}
 
   <section class="support-boundary" aria-label="Límite de privacidad">
     <div>
       <div class="kicker">Límite de privacidad</div>
       <h2>Diagnóstico sin abrir el negocio del cliente</h2>
-      <p>Esta vista enseña estados técnicos y recuentos. No expone nombres de clientes, importes, conceptos, mensajes, archivos ni credenciales. Solo permite administrar identificadores públicos de una conexión Meta; nunca tokens.</p>
+      <p>Sin autorización, esta vista solo enseña estados técnicos y recuentos. Una ventana abierta por el titular puede habilitar una corrección concreta y auditada; nunca credenciales, importes, OCR, archivos ni facturas emitidas.</p>
     </div>
     <span class="badge b-green">Acceso auditado</span>
   </section>
@@ -122,6 +123,126 @@
     <span class="badge b-gray">Sin autorización</span>
     {% endif %}
   </section>
+
+  {% if configuration_support %}
+  {% set config = configuration_support.values %}
+  <section class="support-section support-editor" id="safe-configuration">
+    <div class="support-section-head">
+      <div>
+        <div class="kicker">Corrección autorizada · Configuración</div>
+        <h2>Corregir perfil y apariencia sin tocar datos protegidos</h2>
+      </div>
+      <span class="badge b-amber">Permiso temporal</span>
+    </div>
+    <p class="meta support-editor-intro">Estos cambios son reversibles y afectan a cómo se presenta el negocio y cómo Noesis se explica. No permiten cambiar titular, acceso, NIF, dirección fiscal, impuestos, cuenta de cobro, suscripción, integraciones, automatizaciones ni documentos ya emitidos.</p>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/configuracion-segura" class="support-config-form">
+      <label><span class="fld">Nombre del negocio</span><input class="input" name="name" value="{{ config.name or '' }}" maxlength="160" required><small>Se aplicará a documentos futuros; nunca reescribe facturas emitidas.</small></label>
+      <label><span class="fld">Sector</span><input class="input" name="sector" value="{{ config.sector or '' }}" maxlength="80" required></label>
+      <label><span class="fld">Provincia</span><input class="input" name="province" value="{{ config.province or '' }}" maxlength="80"></label>
+      <label><span class="fld">Tamaño del equipo</span>
+        <select class="input" name="team_size" required>
+          <option value="" disabled {{ 'selected' if not config.team_size }}>Selecciona una opción</option>
+          {% for value, label in [('solo','Trabajo solo'),('2-5','2–5 personas'),('6-10','6–10 personas'),('11+','11 o más')] %}<option value="{{ value }}" {{ 'selected' if config.team_size == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Objetivo principal</span>
+        <select class="input" name="primary_goal" required>
+          <option value="" disabled {{ 'selected' if not config.primary_goal }}>Selecciona una opción</option>
+          {% for value, label in [('facturar','Facturar sin retrasos'),('agenda','Ordenar la agenda'),('cobros','Cobrar antes'),('control','Entender y controlar el negocio')] %}<option value="{{ value }}" {{ 'selected' if config.primary_goal == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Idioma</span>
+        <select class="input" name="language" required>
+          {% for value, label in [('es','Español'),('ca','Català'),('en','English')] %}<option value="{{ value }}" {{ 'selected' if (config.language or 'es') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Cómo explica Noesis</span>
+        <select class="input" name="explanation_level" required>
+          {% for value, label in [('claro','Claro y acompañado'),('directo','Breve y directo'),('detallado','Con más detalle')] %}<option value="{{ value }}" {{ 'selected' if (config.explanation_level or 'claro') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Diseño documental</span>
+        <select class="input" name="invoice_template" required>
+          {% for value, label in [('clasica','Clásica'),('minimal','Minimal'),('editorial','Editorial')] %}<option value="{{ value }}" {{ 'selected' if (config.invoice_template or 'clasica') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Color de marca</span><input class="input" name="brand_color" value="{{ config.brand_color or '' }}" maxlength="7" pattern="#[0-9A-Fa-f]{6}" placeholder="#14463b"></label>
+      <label><span class="fld">Validez de presupuestos</span>
+        <select class="input" name="default_quote_validity_days" required>
+          {% for value in [7,15,30,45,60,90] %}<option value="{{ value }}" {{ 'selected' if (config.default_quote_validity_days or 30) == value }}>{{ value }} días</option>{% endfor %}
+        </select>
+      </label>
+      <label class="support-config-wide"><span class="fld">Pie de facturas y presupuestos</span><textarea class="input" name="document_footer" maxlength="800" rows="3">{{ config.document_footer or '' }}</textarea></label>
+      <label class="support-config-wide"><span class="fld">Condiciones predeterminadas del presupuesto</span><textarea class="input" name="quote_terms" maxlength="1500" rows="4">{{ config.quote_terms or '' }}</textarea></label>
+      <div class="support-config-protected">
+        <div><b>Fuera de este permiso</b><p>NIF, fiscalidad, cobros, plan, usuarios, WhatsApp, Stripe, gestoría, tokens y automatizaciones permanecen bloqueados.</p></div>
+        <button class="btn primary">Guardar configuración auditada</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if document_support %}
+  <section class="support-section support-editor" id="document-metadata">
+    <div class="support-section-head">
+      <div>
+        <div class="kicker">Corrección autorizada · Documentos</div>
+        <h2>Ordenar metadatos sin abrir ni alterar el archivo</h2>
+      </div>
+      <span class="badge b-amber">{{ document_support.total }} documento(s)</span>
+    </div>
+    <p class="meta support-editor-intro">El titular ha autorizado este alcance temporalmente. Solo puedes corregir tipo, estado, cliente, proyecto y nota de revisión. Cada cambio conserva el antes y el después en la bitácora; los archivos, el OCR y las facturas emitidas quedan fuera.</p>
+    {% if document_support.total > document_support.limit %}
+    <div class="admin-note error">Se muestran los {{ document_support.limit }} documentos más recientes. Usa el identificador y el contexto del caso de soporte para localizar el correcto.</div>
+    {% endif %}
+
+    <div class="support-document-list">
+      {% for document in document_support.documents %}
+      <details class="support-document">
+        <summary>
+          <span class="support-document-name"><b>{{ document.filename }}</b><small>#{{ document.id }} · {{ document.created_at|string|truncate(10, True, '') }}</small></span>
+          <span class="support-document-state"><span class="badge b-gray">{{ document.kind|replace('_', ' ') }}</span><span class="badge {{ 'b-amber' if document.doc_status == 'pendiente_revisar' else 'b-green' }}">{{ document.doc_status|replace('_', ' ') }}</span></span>
+        </summary>
+        <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/documentos/{{ document.id }}/metadatos" class="support-document-form">
+          <label><span class="fld">Tipo</span>
+            <select class="input" name="kind" required>
+              {% for value, label in [('documento','Otro documento'),('ticket','Ticket'),('contrato','Contrato'),('proveedor','Proveedor'),('albaran','Albarán'),('factura_emitida','Factura emitida'),('factura_recibida','Factura recibida'),('presupuesto','Presupuesto')] %}
+              <option value="{{ value }}" {{ 'selected' if document.kind == value }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Estado</span>
+            <select class="input" name="doc_status" required>
+              {% for value, label in [('pendiente_revisar','Pendiente de revisar'),('revisado','Revisado'),('enviado_gestoria','Enviado a gestoría'),('validado','Validado'),('rechazado','Rechazado'),('duplicado','Duplicado')] %}
+              <option value="{{ value }}" {{ 'selected' if document.doc_status == value }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Cliente</span>
+            <select class="input" name="client_id">
+              <option value="">Sin cliente</option>
+              {% for client in document_support.clients %}<option value="{{ client.id }}" {{ 'selected' if document.client_id == client.id }}>{{ client.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Proyecto</span>
+            <select class="input" name="project_id">
+              <option value="">Sin proyecto</option>
+              {% for project in document_support.projects %}<option value="{{ project.id }}" {{ 'selected' if document.project_id == project.id }}>{{ project.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="support-document-note"><span class="fld">Nota de revisión</span><input class="input" name="review_note" value="{{ document.review_note or '' }}" maxlength="500" placeholder="Motivo o contexto de la corrección"></label>
+          <div class="support-document-action">
+            {% if document.invoice_id %}<span class="meta">Vinculado a factura: si ya está emitida, el sistema rechazará cualquier cambio.</span>{% else %}<span class="meta">No cambia importes ni contenido.</span>{% endif %}
+            <button class="btn primary">Guardar corrección auditada</button>
+          </div>
+        </form>
+      </details>
+      {% else %}
+      <div class="empty"><b>No hay documentos que organizar.</b><p>Esta autorización puede revocarse desde la cuenta del titular.</p></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 </main>
 </body>
 </html>
