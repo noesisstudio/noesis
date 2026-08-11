@@ -29,13 +29,16 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Objetivo:** corregir la falsa agrupación de la demo y convertir Documentos en
   un archivo comprensible y cómodo desde móvil sin duplicar el motor existente.
 - **Áreas y archivos:** sembrado comercial, pantalla/CSS de Documentos, prueba de
-  demo/OCR y documentación compartida de producto y WhatsApp.
+  demo/OCR, CI y documentación compartida de producto y WhatsApp.
 - **Cambios de datos/migración:** sin migración. Al ejecutar la siembra explícita,
   seis archivos ficticios se crean o reparan por nombre de forma idempotente y se
   distribuyen en ingresos, gastos, tickets, pendientes y otros.
 - **Pruebas ejecutadas:** 23 pruebas focalizadas verdes de demo, OCR, archivo,
   facturas recibidas, deduplicación, aislamiento y navegación; suite completa
-  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes.
+  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes. El primer CI
+  pasó dependencias, secretos, seguridad, estática, verdad y humo PostgreSQL, pero
+  canceló la suite sana al alcanzar el límite histórico de 15 minutos. Se amplía a
+  25 para cubrir pruebas y ciclo de migraciones sin esconder un bloqueo ilimitado.
 - **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
   reparación de la demo publicada exige una ejecución explícita con
   `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
@@ -47,7 +50,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
   petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
   altera documentos; revertir la reparación conserva los tipos ya corregidos.
-- **Estado de publicación:** local, validado; pendiente de commit y despliegue.
+- **Estado de publicación:** funcionalidad `065f8bb` en `main`; CI reintentado con
+  límite proporcional en un segundo commit, despliegue/validación real pendientes.
 
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 

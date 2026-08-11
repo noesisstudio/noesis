@@ -13,6 +13,10 @@
   `git diff --check` están verdes. Falta recorrido visual manual en
   escritorio/móvil; no se abrió navegador gráfico porque el founder ha observado
   cierres de Codex al utilizarlo.
+- El CI 31469598848 pasó dependencias, secretos, Bandit, Ruff, verdad documental y
+  humo PostgreSQL. La suite seguía progresando sin fallo cuando GitHub canceló el
+  job exactamente por `timeout-minutes: 15`; el límite del job principal pasa a 25
+  minutos para dejar terminar suite y ciclo de migraciones conservando un corte.
 - No se cambió la regla segura de producción: una factura sin emisor inequívoco no
   se contabiliza ni se fuerza a ingreso/gasto. OCR/IA propone y el titular confirma.
 
