@@ -52,8 +52,10 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
   petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
   altera documentos; revertir la reparación conserva los tipos ya corregidos.
-- **Estado de publicación:** funcionalidad `065f8bb` y límite CI `633dcf6` en
-  `main`; baseline de líneas corregido localmente, despliegue/validación pendientes.
+- **Estado de publicación:** funcionalidad `065f8bb`, límite CI `633dcf6` y baseline
+  `5bb715a` en `main`. CI 31470941717 completo y PostgreSQL verdes; producción
+  responde release `5bb715a68217`, esquema 47 y `/health`/`/ready` 200. Falta
+  revisión visual real y ejecutar una vez la reparación de la demo persistida.
 
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 

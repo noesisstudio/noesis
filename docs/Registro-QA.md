@@ -21,6 +21,10 @@
   guardián de secretos detectó que las tres referencias permitidas dentro de
   `ci.yml` se habían desplazado dos líneas al documentar el nuevo límite. Se actualiza
   solo su número de línea; tipos y hashes permanecen idénticos.
+- El CI final 31470941717 quedó completamente verde: secretos, dependencias, Bandit,
+  Ruff, verdad documental, 469 pruebas, ciclo completo de migraciones y humo
+  PostgreSQL. Producción devuelve release `5bb715a68217`, esquema 47 y HTTP 200 en
+  `/health`, `/ready` y portada.
 - No se cambió la regla segura de producción: una factura sin emisor inequívoco no
   se contabiliza ni se fuerza a ingreso/gasto. OCR/IA propone y el titular confirma.
 

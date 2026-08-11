@@ -13,6 +13,9 @@
   se solicita. La demo repara de forma idempotente los tipos históricos y enseña
   cada carpeta sin duplicar originales. La clasificación real sigue siendo
   conservadora: una factura sin emisor inequívoco queda pendiente de confirmación.
+  El release `5bb715a68217` está desplegado con esquema 47 y CI completo/PostgreSQL
+  verdes; falta únicamente el recorrido visual manual y ejecutar una vez la
+  reparación de los datos demo ya persistidos.
 - La cuenta profesional de gestoría dispone de segundo factor TOTP opcional en el
   esquema 47. La contraseña abre un reto de cinco minutos; cada código temporal se
   consume atómicamente y no puede repetirse. Al activar se entregan ocho códigos de
