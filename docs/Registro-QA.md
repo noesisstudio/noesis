@@ -17,6 +17,10 @@
   humo PostgreSQL. La suite seguía progresando sin fallo cuando GitHub canceló el
   job exactamente por `timeout-minutes: 15`; el límite del job principal pasa a 25
   minutos para dejar terminar suite y ciclo de migraciones conservando un corte.
+- El segundo CI 31470757084 volvió a dejar verde PostgreSQL y dependencias, pero el
+  guardián de secretos detectó que las tres referencias permitidas dentro de
+  `ci.yml` se habían desplazado dos líneas al documentar el nuevo límite. Se actualiza
+  solo su número de línea; tipos y hashes permanecen idénticos.
 - No se cambió la regla segura de producción: una factura sin emisor inequívoco no
   se contabiliza ni se fuerza a ingreso/gasto. OCR/IA propone y el titular confirma.
 

@@ -39,6 +39,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   pasó dependencias, secretos, seguridad, estática, verdad y humo PostgreSQL, pero
   canceló la suite sana al alcanzar el límite histórico de 15 minutos. Se amplía a
   25 para cubrir pruebas y ciclo de migraciones sin esconder un bloqueo ilimitado.
+  El segundo CI pidió actualizar únicamente las tres líneas desplazadas de secretos
+  de prueba ya conocidos en `.secrets.baseline`; no apareció hash ni hallazgo nuevo.
 - **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
   reparación de la demo publicada exige una ejecución explícita con
   `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
@@ -50,8 +52,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
   petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
   altera documentos; revertir la reparación conserva los tipos ya corregidos.
-- **Estado de publicación:** funcionalidad `065f8bb` en `main`; CI reintentado con
-  límite proporcional en un segundo commit, despliegue/validación real pendientes.
+- **Estado de publicación:** funcionalidad `065f8bb` y límite CI `633dcf6` en
+  `main`; baseline de líneas corregido localmente, despliegue/validación pendientes.
 
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 
