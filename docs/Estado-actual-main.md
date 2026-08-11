@@ -13,8 +13,9 @@
   impuestos, cuenta de cobro, plan, usuarios, Stripe, WhatsApp, gestoría, tokens ni
   automatizaciones. Revalida administrador, alcance y caducidad dentro de la
   transacción; la auditoría seudonimiza los textos y una factura ya emitida conserva
-  su emisor congelado. El código está verificado localmente; falta publicación y
-  recorrido visual con autorización real.
+  su emisor congelado. El release `6a879b2b1153` está desplegado: CI completo,
+  humo PostgreSQL y `/health`/`/ready` verdes con esquema 47. Falta el recorrido
+  visual con una autorización real.
 - El centro de soporte puede corregir la organización de documentos únicamente
   cuando el titular abre una ventana temporal con el alcance correspondiente. La
   ficha muestra un editor acotado a tipo, estado, cliente, proyecto y nota de

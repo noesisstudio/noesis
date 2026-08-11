@@ -35,15 +35,19 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Pruebas ejecutadas:** 2 pruebas nuevas, 22 del centro administrativo, 4
   focalizadas y suite completa **473/473** verde en 384 s; Ruff y verdad documental
   verdes.
-- **Dependencias o validaciones externas:** ninguna. Falta recorrido visual con una
-  cuenta y autorización reales.
+- **Dependencias o validaciones externas:** CI
+  [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
+  completo; producción verificada en release `6a879b2b1153`, esquema 47 y HTTP 200
+  en `/health` y `/ready`. Falta recorrido visual con una cuenta y autorización
+  reales.
 - **Riesgo/punto probable de fallo:** un formulario parcial no debe inventar valores;
   equipo y objetivo son obligatorios y muestran un estado sin seleccionar si faltan.
   Permiso, administrador y caducidad se comprueban en la transacción.
 - **Diagnóstico y rollback:** buscar `admin.support_configuration_updated`,
   `grant_id`, `changed_fields` y estados before/after seudonimizados. Revertir el
   bloque devuelve ese alcance a solo lectura sin afectar otras funciones.
-- **Estado de publicación:** local verificado; pendiente de commit, CI y despliegue.
+- **Estado de publicación:** commit `6a879b2b1153` en `main`, CI verde y desplegado
+  y verificado en producción.
 
 ## 2026-08-11 11:25 — primera corrección segura del centro de soporte
 

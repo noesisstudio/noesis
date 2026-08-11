@@ -14,6 +14,10 @@
 - 22 pruebas del centro administrativo y 4 focalizadas de ambas correcciones están
   verdes. Suite completa **473/473** verde en 384 segundos; Ruff y verdad documental
   también están verdes.
+- El CI [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
+  quedó completamente verde: dependencias, secretos, Bandit, Ruff, verdad del
+  proyecto, 473 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve
+  release `6a879b2b1153`, esquema 47 y HTTP 200 en `/health` y `/ready`.
 
 ## 2026-08-11 — corrección documental acotada desde soporte
 
