@@ -486,6 +486,180 @@ be_cell.border = BOX
 ws["C18"] = "Con el catalogo adoptado y el mix 55/35/10. El analisis del 15/07/2026 lo situo en unas 120 cuentas."
 ws["C18"].font = Font(name="Aptos", size=9.5, color=MUTED)
 
+# --- Composicion del equilibrio por plan ---
+section(ws, 20, "Cuantos clientes de cada plan hacen falta", 6)
+header(ws, 21, ["Plan", "Mix", "Clientes", "Precio", "Ingreso mensual", "Contribucion mensual"])
+plan_ref = [("Autonomo", "B", "E"), ("Negocio", "C", "F"), ("Premium", "D", "G")]
+for i, (name, scol, ucol) in enumerate(plan_ref):
+    r = 22 + i
+    ws.cell(row=r, column=1, value=name).font = Font(name="Aptos", size=10, color=INK)
+    c1 = ws.cell(row=r, column=2, value=f"=Supuestos!{scol}8")
+    c2 = ws.cell(row=r, column=3, value=f"=ROUND($B$18*B{r},0)")
+    c3 = ws.cell(row=r, column=4, value=f"=Supuestos!{scol}7")
+    c4 = ws.cell(row=r, column=5, value=f"=C{r}*D{r}")
+    c5 = ws.cell(row=r, column=6, value=f"=C{r}*Unit_Economics!{ucol}18")
+    c1.number_format = PCT
+    c2.number_format = '#,##0'
+    c2.font = Font(name="Aptos", size=11, bold=True, color=FOREST)
+    c2.fill = PatternFill("solid", fgColor=CREAM)
+    for c in (c3, c4, c5):
+        c.number_format = EUR0
+    for c in (c1, c2, c3, c4, c5):
+        c.border = BOX
+
+r = 25
+ws.cell(row=r, column=1, value="TOTAL").font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+for col, fmt in (("B", PCT), ("C", '#,##0'), ("E", EUR0), ("F", EUR0)):
+    c = ws.cell(row=r, column={"B": 2, "C": 3, "E": 5, "F": 6}[col],
+                value=f"=SUM({col}22:{col}24)")
+    c.number_format = fmt
+    c.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+    c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+ws.cell(row=r, column=4, value="").border = BOX
+
+section(ws, 27, "Y si toda la cartera fuera de un solo plan", 6)
+header(ws, 28, ["Plan", "Contribucion/cliente", "Clientes necesarios", "Ingreso mensual", "", ""])
+for i, (name, scol, ucol) in enumerate(plan_ref):
+    r = 29 + i
+    ws.cell(row=r, column=1, value=name).font = Font(name="Aptos", size=10, color=INK)
+    c1 = ws.cell(row=r, column=2, value=f"=Unit_Economics!{ucol}18")
+    c2 = ws.cell(row=r, column=3, value=f"=IFERROR(ROUNDUP(Supuestos!$B$41/B{r},0),\"\")")
+    c3 = ws.cell(row=r, column=4, value=f"=IFERROR(C{r}*Supuestos!{scol}7,\"\")")
+    c1.number_format = EUR
+    c2.number_format = '#,##0'
+    c2.font = Font(name="Aptos", size=11, bold=True, color=FOREST)
+    c3.number_format = EUR0
+    for c in (c1, c2, c3):
+        c.border = BOX
+
+ws["A33"] = ("Leer las dos tablas juntas: la primera reparte el equilibrio segun el mix que esperas; la segunda "
+             "dice cuantos clientes harian falta si solo vendieras un plan. La distancia entre ambas cifras es "
+             "el valor real de vender el plan caro, y es el argumento para decidir a quien dedicar el esfuerzo "
+             "comercial.")
+ws["A33"].alignment = Alignment(wrap_text=True, vertical="top")
+ws["A33"].font = Font(name="Aptos", size=9.5, color=MUTED)
+ws.merge_cells("A33:F35")
+
+# ==========================================================================
+# 7b. ADS Y CAPTACION
+# ==========================================================================
+ws = sheet("Ads_Captacion")
+ws.sheet_properties.tabColor = "FFB7831F"
+title(ws, "Publicidad y coste de captacion",
+      "Gasto variable: la publicidad no escala con los clientes que ya tienes, sino con los que quieres captar. "
+      "Las celdas naranjas estan VACIAS a proposito: ninguna cifra de embudo consta en el repositorio. "
+      "En cuanto escribas presupuesto y conversiones, el resto se calcula solo.", 6)
+widths(ws, {"A": 36, "B": 16, "C": 16, "D": 18, "E": 14, "F": 44})
+
+section(ws, 4, "Entradas de campana", 6)
+header(ws, 5, ["Driver", "Valor", "", "Unidad", "", "Nota"])
+ads_inputs = [
+    ("Presupuesto mensual de ads", None, "€/mes", "El gasto variable principal. Sin el, el resto no calcula", EUR),
+    ("Coste por clic", None, "€/clic", "Meta Ads y Google Ads dan medias distintas: usa la tuya", EUR),
+    ("Conversion clic -> lead", None, "%", "Visitas que dejan datos en Solicitar acceso", PCT),
+    ("Conversion lead -> prueba", None, "%", "Leads que activan la prueba de 14 dias", PCT),
+    ("Conversion prueba -> pago", None, "%", "El dato que mas mueve el CAC", PCT),
+    ("Churn mensual", None, "%", "Bajas sobre cartera. Necesario para el LTV", PCT),
+    ("Altas que vienen de ads", None, "%", "El resto llega por boca a boca y no cuesta ads", PCT),
+]
+for i, (lab, val, u, nota, fmt) in enumerate(ads_inputs):
+    r = 6 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=2, value=val)
+    c.number_format = fmt
+    c.font = Font(name="Aptos", size=10, bold=True, color=INPUT)
+    c.fill = PatternFill("solid", fgColor="FFFDF3E7")
+    c.border = BOX
+    ws.cell(row=r, column=4, value=u).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6).alignment = Alignment(wrap_text=True, vertical="top")
+
+section(ws, 14, "Embudo resultante", 6)
+header(ws, 15, ["Metrica", "Valor", "", "Unidad", "", "Formula"])
+funnel = [
+    ("Clics al mes", "=IFERROR(B6/B7,\"\")", '#,##0', "clics", "Presupuesto / coste por clic"),
+    ("Leads al mes", "=IFERROR(B16*B8,\"\")", '#,##0', "leads", "Clics x conversion a lead"),
+    ("Pruebas iniciadas", "=IFERROR(B17*B9,\"\")", '#,##0', "pruebas", "Leads x conversion a prueba"),
+    ("Clientes nuevos de ads", "=IFERROR(B18*B10,\"\")", '#,##0.0', "clientes/mes", "Pruebas x conversion a pago"),
+    ("Altas totales estimadas", "=IFERROR(IF(B12>0,B19/B12,B19),\"\")", '#,##0.0', "clientes/mes", "Incluye las que no vienen de ads"),
+    ("CAC real", "=IFERROR(B6/B19,\"\")", EUR, "€/cliente", "Presupuesto / clientes captados por ads"),
+    ("CAC supuesto en el modelo", "=Supuestos!B42", EUR, "€/cliente", "150 € sin validar, para contraste"),
+    ("Desviacion frente al supuesto", "=IFERROR(B21-B22,\"\")", EUR, "€/cliente", "Positivo = captar sale mas caro de lo previsto"),
+]
+for i, (lab, f, fmt, u, nota) in enumerate(funnel):
+    r = 16 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=2, value=f)
+    c.number_format = fmt
+    bold = lab in ("CAC real", "Clientes nuevos de ads")
+    c.font = Font(name="Aptos", size=11 if bold else 10, bold=bold, color=FOREST if bold else CALC)
+    if bold:
+        c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+    ws.cell(row=r, column=4, value=u).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+
+section(ws, 25, "Salud de la captacion", 6)
+header(ws, 26, ["Metrica", "Valor", "", "Unidad", "", "Referencia habitual"])
+health = [
+    ("Contribucion media ponderada", "=Unit_Economics!E18*Supuestos!B8+Unit_Economics!F18*Supuestos!C8+Unit_Economics!G18*Supuestos!D8", EUR, "€/mes", "La que ya calcula el modelo"),
+    ("Meses para recuperar el CAC", "=IFERROR(B27>0,\"\")", '#,##0.0', "meses", "Por debajo de 12 se considera sano"),
+    ("Vida media del cliente", "=IFERROR(1/B11,\"\")", '#,##0.0', "meses", "1 / churn mensual"),
+    ("LTV (contribucion x vida)", "=IFERROR(B27*B29,\"\")", EUR, "€", "Sin descuento financiero"),
+    ("LTV / CAC", "=IFERROR(B30/B21,\"\")", '0.0"x"', "veces", "Referencia SaaS: 3x o mas"),
+    ("Veredicto", "=IF(B31=\"\",\"Faltan datos\",IF(AND(B31>=3,B28<=12),\"Sano\",IF(B31>=1,\"Ajustado: revisar precio o embudo\",\"Insostenible: cada cliente pierde dinero\")))", None, "", "Se calcula solo al rellenar las entradas"),
+]
+for i, (lab, f, fmt, u, nota) in enumerate(health):
+    r = 27 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=2, value=f)
+    if fmt:
+        c.number_format = fmt
+    bold = lab in ("LTV / CAC", "Veredicto")
+    c.font = Font(name="Aptos", size=11 if bold else 10, bold=bold, color=FOREST if bold else CALC)
+    if bold:
+        c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+    ws.cell(row=r, column=4, value=u).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+ws["B28"] = "=IFERROR(B21/B27,\"\")"
+ws["B28"].number_format = '#,##0.0'
+ws["B28"].border = BOX
+
+section(ws, 34, "Impacto de los ads en el punto de equilibrio", 6)
+header(ws, 35, ["Metrica", "Sin ads", "Con ads", "Unidad", "", "Nota"])
+impact = [
+    ("Coste fijo mensual", "=Supuestos!B41", "=Supuestos!B41+IFERROR(B6,0)", EUR0, "El presupuesto de ads se suma al opex mientras dure la campana"),
+    ("Clientes para equilibrio", "=IFERROR(ROUNDUP(B36/$B$27,0),\"\")", "=IFERROR(ROUNDUP(C36/$B$27,0),\"\")", '#,##0', "Con la contribucion media ponderada"),
+    ("Clientes adicionales que exige el ads", "", "=IFERROR(C37-B37,\"\")", '#,##0', "Los que la campana debe traer solo para pagarse"),
+    ("Meses para conseguirlos", "", "=IFERROR(C38/B19,\"\")", '#,##0.0', "Al ritmo de captacion calculado arriba"),
+]
+for i, (lab, a, b, fmt, nota) in enumerate(impact):
+    r = 36 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    for j, v in enumerate((a, b)):
+        c = ws.cell(row=r, column=2 + j, value=v if v != "" else None)
+        c.number_format = fmt
+        bold = i >= 2 and j == 1
+        c.font = Font(name="Aptos", size=10, bold=bold, color=WARN if bold else CALC)
+        c.border = BOX
+    ws.cell(row=r, column=4, value="").font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6).alignment = Alignment(wrap_text=True, vertical="top")
+
+ws["A41"] = "Por que los ads van en su propia hoja"
+ws["A41"].font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+ws["A42"] = ("El resto del libro mide lo que cuesta SERVIR a un cliente que ya tienes. La publicidad mide lo que "
+             "cuesta CONSEGUIRLO, y se comporta al reves: si cortas la campana manana, el gasto desaparece pero "
+             "los clientes captados siguen pagando. Por eso no se mezcla con el COGS ni con el margen de "
+             "contribucion: se trata como una inversion con un plazo de recuperacion, que es la fila "
+             "'Meses para recuperar el CAC'. Si ese plazo supera la vida media del cliente, la campana destruye "
+             "valor aunque el margen por cuenta sea excelente.")
+ws["A42"].alignment = Alignment(wrap_text=True, vertical="top")
+ws["A42"].font = Font(name="Aptos", size=9.5, color=MUTED)
+ws.merge_cells("A42:F45")
+
 # ==========================================================================
 # 8. OPCIONES DE IA
 # ==========================================================================
@@ -613,9 +787,19 @@ ws["A18"].font = Font(name="Aptos", size=9.5, color=MUTED)
 ws.merge_cells("A18:D21")
 
 # --- Guardar ---------------------------------------------------------------
-out = r"c:\Users\xavie\Documents\GitHub\noesis\docs\Noesis-Modelo-Economico.xlsx"
+import os
+DEFAULT_OUT = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "docs", "Noesis-Modelo-Economico.xlsx",
+)
+out = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OUT
 for s in wb.worksheets:
     s.sheet_view.showGridLines = False
-wb.save(out)
+try:
+    wb.save(out)
+except PermissionError:
+    raise SystemExit(
+        f"No se puede escribir en {out}: cierra el archivo en Excel y vuelve a ejecutarlo."
+    )
 print("OK ->", out)
 print("hojas:", [s.title for s in wb.worksheets])

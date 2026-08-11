@@ -23,6 +23,38 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-11 — desglose del equilibrio por plan y hoja de publicidad
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio ver en el punto de equilibrio cuantos clientes de cada
+  plan hacen falta, y anadir el gasto variable en publicidad.
+- **Areas y archivos:** `analysis/build_modelo_economico.py` y el libro que genera.
+  - `Escala_Breakeven`: dos tablas nuevas. La primera reparte las cuentas de equilibrio
+    segun el mix y da clientes, ingreso y contribucion por plan. La segunda calcula
+    cuantos clientes harian falta si toda la cartera fuera de un solo plan, que es el
+    argumento para decidir a que plan dedicar el esfuerzo comercial.
+  - `Ads_Captacion` (hoja nueva): embudo completo desde presupuesto y coste por clic
+    hasta CAC real, con LTV, LTV/CAC, meses de recuperacion y un veredicto automatico.
+    Incluye el impacto de la campana sobre el punto de equilibrio: cuantos clientes
+    adicionales debe traer solo para pagarse y en cuantos meses.
+  - El generador acepta ahora una ruta de salida opcional y falla con un mensaje claro
+    si el libro esta abierto en Excel, en vez de con una traza de PermissionError.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** libro regenerado en una copia de verificacion y reabierto con
+  openpyxl: once hojas, referencias de las tablas nuevas comprobadas una a una y las
+  siete entradas de campana confirmadas vacias. Comprobacion manual del reparto: 120
+  cuentas con mix 55/35/10 dan 66/42/12, que contribuyen 3.524 € frente a 3.500 € de
+  opex. Por plan unico: 169 Autonomo, 101 Negocio o 62 Premium.
+- **Dependencias o validaciones externas:** ninguna cifra de embudo publicitario consta
+  en el repositorio; las siete entradas quedan vacias a proposito.
+- **Riesgo/punto probable de fallo:** el CAC de 150 € que ya estaba en el modelo es un
+  supuesto sin validar; la hoja lo contrasta contra el CAC real en cuanto se rellene el
+  embudo. Hasta entonces, todo el bloque de salud de captacion muestra "Faltan datos".
+- **Diagnostico y rollback:** `python analysis/build_modelo_economico.py` regenera el
+  libro; admite una ruta alternativa como primer argumento.
+- **Estado de publicacion:** local / commit en `main`. El `.xlsx` estaba abierto en
+  Excel al cerrar el commit y debe regenerarse tras cerrarlo.
+
 ## 2026-08-11 — modelo economico en Excel con doble escenario de coste
 
 - **Autor/agente:** Claude.
