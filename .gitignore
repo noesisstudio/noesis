@@ -21,3 +21,6 @@ dist/
 
 # Proyecto de referencia externo (no forma parte de la app)
 Automatizacion Facturas - archivo adjuntado/
+
+# Archivos temporales de bloqueo de Office
+~$*
