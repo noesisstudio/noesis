@@ -23,6 +23,35 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-11 — calculadora por numero de clientes
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio poder escribir cuantos clientes tiene y ver los costes
+  y el equilibrio moverse. Las tablas anteriores usaban un mix porcentual, que no se
+  puede tocar de forma intuitiva.
+- **Areas y archivos:** `analysis/build_modelo_economico.py`.
+  - Hoja `Calculadora` nueva, la segunda del libro para que sea lo primero que se toca.
+    Tres celdas de entrada —clientes de cada plan— gobiernan seis bloques: ingreso
+    mensual y anual, las siete lineas de coste variable desglosadas por plan y por
+    cliente, coste de servicio, costes fijos, cuenta de resultados y distancia al
+    equilibrio con veredicto automatico.
+  - Los imports de `CellIsRule`, `ColorScaleRule` y `DataValidation` suben a la
+    cabecera: la hoja nueva se construye antes de donde estaban declarados.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** replica independiente en Python. Con 66/42/12 clientes el
+  libro debe dar ingreso 5.160 €, costes variables 447,00 €, servicio 1.111,25 €,
+  fijos 3.565 € y **resultado +36,75 €/mes**, con contribucion media de 30,01 € y
+  equilibrio en 119 clientes. Diecisiete hojas y referencias comprobadas al reabrir.
+- **Dependencias o validaciones externas:** ninguna nueva.
+- **Riesgo/punto probable de fallo:** la calculadora resta el opex fijo completo en vez
+  del fijo prorrateado por cuenta que usa `Unit_Economics`, asi que su equilibrio da
+  119 clientes y el de la hoja `Resumen` da 120. No es un error: son dos convenciones
+  contables distintas y la de la calculadora es la mas directa. **El `.xlsx` sigue
+  abierto en Excel y no ha podido regenerarse**; el archivo versionado va dos tandas
+  por detras del generador.
+- **Diagnostico y rollback:** `python analysis/build_modelo_economico.py`.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-11 — modelo economico completo y estrategia de marketing
 
 - **Autor/agente:** Claude.

@@ -10,6 +10,8 @@ sys.path.insert(0, r"C:\Users\xavie\AppData\Local\Temp\claude\c--Users-xavie-Doc
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.formatting.rule import CellIsRule, ColorScaleRule
+from openpyxl.worksheet.datavalidation import DataValidation
 
 # --- Paleta de marca (docs/design/STYLE_TOKENS.json) -----------------------
 FOREST = "FF14463B"
@@ -158,6 +160,224 @@ ws["A25"].alignment = Alignment(wrap_text=True, vertical="top")
 ws["A25"].font = Font(name="Aptos", size=9.5, color=MUTED)
 ws.merge_cells("A25:F27")
 body(ws, "A4:F27")
+
+# ==========================================================================
+# 1b. CALCULADORA POR NUMERO DE CLIENTES
+# ==========================================================================
+ws = sheet("Calculadora")
+ws.sheet_properties.tabColor = TEAL
+title(ws, "Calculadora: escribe cuantos clientes tienes",
+      "Cambia solo las tres celdas naranjas de abajo y todo el libro responde: ingresos, cada linea de coste, "
+      "resultado mensual y cuanto falta para el equilibrio. Es la hoja para jugar; el resto explica de donde "
+      "sale cada cifra.", 6)
+widths(ws, {"A": 34, "B": 16, "C": 16, "D": 16, "E": 16, "F": 34})
+
+UE = "Unit_Economics"
+
+# --- 1. Clientes ---
+section(ws, 4, "1 · Cuantos clientes de cada plan", 6)
+header(ws, 5, ["Plan", "Clientes", "Precio", "Ingreso mensual", "Ingreso anual", "Nota"])
+for i, (name, ucol, scol) in enumerate([("Autonomo", "E", "B"), ("Negocio", "F", "C"), ("Premium", "G", "D")]):
+    r = 6 + i
+    ws.cell(row=r, column=1, value=name).font = Font(name="Aptos", size=10, bold=True, color=INK)
+    ci = ws.cell(row=r, column=2, value=0)
+    ci.number_format = '#,##0'
+    ci.font = Font(name="Aptos", size=13, bold=True, color=INPUT)
+    ci.fill = PatternFill("solid", fgColor="FFFDF3E7")
+    ci.border = BOX
+    ci.alignment = Alignment(horizontal="center")
+    c2 = ws.cell(row=r, column=3, value=f"=Supuestos!{scol}7")
+    c3 = ws.cell(row=r, column=4, value=f"=B{r}*C{r}")
+    c4 = ws.cell(row=r, column=5, value=f"=D{r}*12")
+    for c in (c2, c3, c4):
+        c.number_format = EUR0
+        c.border = BOX
+ws.row_dimensions[6].height = 22
+ws.row_dimensions[7].height = 22
+ws.row_dimensions[8].height = 22
+ws.cell(row=9, column=1, value="TOTAL").font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+for col, letter in ((2, "B"), (4, "D"), (5, "E")):
+    c = ws.cell(row=9, column=col, value=f"=SUM({letter}6:{letter}8)")
+    c.number_format = '#,##0' if col == 2 else EUR0
+    c.font = Font(name="Aptos", size=11, bold=True, color=FOREST)
+    c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+ws.cell(row=9, column=6, value="Ingreso sin IVA").font = Font(name="Aptos", size=9.5, color=MUTED)
+
+# --- 2. COGS ---
+section(ws, 11, "2 · Costes variables: lo que cuesta servirlos", 6)
+header(ws, 12, ["Concepto", "Autonomo", "Negocio", "Premium", "Total", "€ por cliente"])
+cogs_rows = [
+    ("Comisiones de Stripe", 6), ("WhatsApp (plantillas)", 7), ("IA avanzada", 8),
+    ("Transcripcion de voz", 9), ("Extraccion de documentos", 10),
+    ("Almacenamiento", 11), ("Voz telefonica (Premium)", 12),
+]
+for i, (lab, ue_row) in enumerate(cogs_rows):
+    r = 13 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    for j, (ucol, bcol) in enumerate([("E", "B"), ("F", "B"), ("G", "B")]):
+        c = ws.cell(row=r, column=2 + j, value=f"=$B${6 + j}*'{UE}'!{ucol}{ue_row}")
+        c.number_format = EUR
+        c.border = BOX
+    ct = ws.cell(row=r, column=5, value=f"=SUM(B{r}:D{r})")
+    ct.number_format = EUR
+    ct.border = BOX
+    cu = ws.cell(row=r, column=6, value=f"=IFERROR(E{r}/$B$9,\"\")")
+    cu.number_format = EUR
+    cu.border = BOX
+r = 20
+ws.cell(row=r, column=1, value="TOTAL COSTES VARIABLES").font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+for j in range(4):
+    col = get_column_letter(2 + j)
+    c = ws.cell(row=r, column=2 + j, value=f"=SUM({col}13:{col}19)")
+    c.number_format = EUR
+    c.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+    c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+c = ws.cell(row=r, column=6, value="=IFERROR(E20/$B$9,\"\")")
+c.number_format = EUR
+c.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+c.fill = PatternFill("solid", fgColor=CREAM)
+c.border = BOX
+
+# --- 3. Servicio ---
+section(ws, 22, "3 · Coste de atender a esos clientes", 6)
+header(ws, 23, ["Concepto", "Autonomo", "Negocio", "Premium", "Total", "€ por cliente"])
+for i, (lab, ue_row) in enumerate([("Soporte humano", 15), ("Onboarding amortizado", 16)]):
+    r = 24 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    for j, ucol in enumerate(["E", "F", "G"]):
+        c = ws.cell(row=r, column=2 + j, value=f"=$B${6 + j}*'{UE}'!{ucol}{ue_row}")
+        c.number_format = EUR
+        c.border = BOX
+    ct = ws.cell(row=r, column=5, value=f"=SUM(B{r}:D{r})")
+    ct.number_format = EUR
+    ct.border = BOX
+    cu = ws.cell(row=r, column=6, value=f"=IFERROR(E{r}/$B$9,\"\")")
+    cu.number_format = EUR
+    cu.border = BOX
+r = 26
+ws.cell(row=r, column=1, value="TOTAL SERVICIO").font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+for j in range(4):
+    col = get_column_letter(2 + j)
+    c = ws.cell(row=r, column=2 + j, value=f"=SUM({col}24:{col}25)")
+    c.number_format = EUR
+    c.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+    c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+
+# --- 4. Fijos ---
+section(ws, 28, "4 · Costes fijos: no dependen de cuantos clientes tengas", 6)
+header(ws, 29, ["Concepto", "Importe mensual", "", "", "Anual", "Nota"])
+fixed_rows = [
+    ("Plataforma (app, correo, copias)", "=Supuestos!B40", "Escala poco con el numero de cuentas"),
+    ("Opex fijo (founder, legal, herramientas)", "=Supuestos!B41", "SUPUESTO de 3.500 €. Sustituir por el real de Datos_Pendientes"),
+    ("Publicidad", "=IFERROR(Ads_Captacion!B6,0)", "Lo que escribas en la hoja Ads_Captacion"),
+]
+for i, (lab, f, nota) in enumerate(fixed_rows):
+    r = 30 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=2, value=f)
+    c.number_format = EUR0
+    c.border = BOX
+    ca = ws.cell(row=r, column=5, value=f"=B{r}*12")
+    ca.number_format = EUR0
+    ca.border = BOX
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6).alignment = Alignment(wrap_text=True, vertical="top")
+r = 33
+ws.cell(row=r, column=1, value="TOTAL FIJOS").font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+for col, letter in ((2, "B"), (5, "E")):
+    c = ws.cell(row=r, column=col, value=f"=SUM({letter}30:{letter}32)")
+    c.number_format = EUR0
+    c.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+    c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+
+# --- 5. Resultado ---
+section(ws, 35, "5 · Resultado", 6)
+header(ws, 36, ["Metrica", "Mensual", "", "", "Anual", "Nota"])
+result_rows = [
+    ("Ingreso", "=D9", "Sin IVA"),
+    ("(-) Costes variables", "=-E20", "Escalan con cada cliente nuevo"),
+    ("= Margen bruto", "=B37+B38", "Lo que queda para pagar estructura"),
+    ("(-) Coste de servicio", "=-E26", "Soporte y onboarding"),
+    ("(-) Costes fijos", "=-B33", "Plataforma, opex y publicidad"),
+    ("= RESULTADO", "=B39+B40+B41", "Lo que gana o pierde la empresa cada mes"),
+]
+for i, (lab, f, nota) in enumerate(result_rows):
+    r = 37 + i
+    is_total = lab.startswith("=")
+    ws.cell(row=r, column=1, value=lab).font = Font(
+        name="Aptos", size=10, bold=is_total, color=FOREST if is_total else INK)
+    c = ws.cell(row=r, column=2, value=f)
+    c.number_format = EUR0
+    c.border = BOX
+    c.font = Font(name="Aptos", size=13 if lab == "= RESULTADO" else 10,
+                  bold=is_total, color=FOREST if is_total else CALC)
+    if is_total:
+        c.fill = PatternFill("solid", fgColor=CREAM)
+    ca = ws.cell(row=r, column=5, value=f"=B{r}*12")
+    ca.number_format = EUR0
+    ca.border = BOX
+    ca.font = Font(name="Aptos", size=10, bold=is_total, color=FOREST if is_total else CALC)
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+ws.row_dimensions[42].height = 24
+ws.conditional_formatting.add(
+    "B42:E42", CellIsRule(operator="lessThan", formula=["0"], font=Font(color=STOP, bold=True, size=13)))
+ws.conditional_formatting.add(
+    "B42:E42", CellIsRule(operator="greaterThanOrEqual", formula=["0"], font=Font(color=OKC, bold=True, size=13)))
+
+c = ws.cell(row=43, column=1, value="Margen sobre ingreso")
+c.font = Font(name="Aptos", size=10, color=INK)
+c = ws.cell(row=43, column=2, value="=IFERROR(B42/B37,\"\")")
+c.number_format = PCT
+c.font = Font(name="Aptos", size=10, bold=True, color=FOREST)
+c.border = BOX
+
+# --- 6. Distancia al equilibrio ---
+section(ws, 45, "6 · Cuanto falta para el equilibrio", 6)
+header(ws, 46, ["Metrica", "Valor", "", "", "Unidad", "Nota"])
+be_rows = [
+    ("Contribucion media por cliente",
+     "=IFERROR((B6*('Unit_Economics'!E5-'Unit_Economics'!E13-'Unit_Economics'!E15-'Unit_Economics'!E16)"
+     "+B7*('Unit_Economics'!F5-'Unit_Economics'!F13-'Unit_Economics'!F15-'Unit_Economics'!F16)"
+     "+B8*('Unit_Economics'!G5-'Unit_Economics'!G13-'Unit_Economics'!G15-'Unit_Economics'!G16))/B9,\"\")",
+     EUR, "€/mes", "Con la mezcla exacta de clientes que has escrito"),
+    ("Clientes actuales", "=B9", '#,##0', "clientes", "La suma de las tres celdas naranjas"),
+    ("Clientes para equilibrio", "=IFERROR(ROUNDUP($B$33/$B$47,0),\"\")", '#,##0', "clientes",
+     "Manteniendo esa misma mezcla de planes"),
+    ("Faltan", "=IFERROR(MAX(0,B49-B48),\"\")", '#,##0', "clientes", "Cero significa que ya estas por encima"),
+    ("Sobran", "=IFERROR(MAX(0,B48-B49),\"\")", '#,##0', "clientes", "Clientes por encima del equilibrio"),
+    ("Veredicto",
+     '=IF(B48=0,"Escribe cuantos clientes tienes arriba",'
+     'IF(B42>=0,"Por encima del equilibrio: la empresa gana dinero",'
+     '"Por debajo del equilibrio: cada mes se consume caja"))',
+     None, "", "Se recalcula solo"),
+]
+for i, (lab, f, fmt, u, nota) in enumerate(be_rows):
+    r = 47 + i
+    ws.cell(row=r, column=1, value=lab).font = Font(name="Aptos", size=10, color=INK)
+    c = ws.cell(row=r, column=2, value=f)
+    if fmt:
+        c.number_format = fmt
+    strong = lab in ("Clientes para equilibrio", "Faltan", "Veredicto")
+    c.font = Font(name="Aptos", size=12 if strong else 10, bold=strong,
+                  color=FOREST if strong else CALC)
+    if strong:
+        c.fill = PatternFill("solid", fgColor=CREAM)
+    c.border = BOX
+    ws.cell(row=r, column=5, value=u).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6, value=nota).font = Font(name="Aptos", size=9.5, color=MUTED)
+    ws.cell(row=r, column=6).alignment = Alignment(wrap_text=True, vertical="top")
+
+ws["A54"] = ("Prueba a escribir 66, 42 y 12: es el reparto del equilibrio con el mix previsto. Despues cambia una "
+             "sola cifra y mira que pasa con el resultado. Diez clientes Premium mas mueven mucho mas la aguja "
+             "que diez Autonomos, y esa es toda la conversacion comercial resumida en una celda.")
+ws["A54"].alignment = Alignment(wrap_text=True, vertical="top")
+ws["A54"].font = Font(name="Aptos", size=9.5, color=MUTED)
+ws.merge_cells("A54:F56")
+ws.freeze_panes = "A5"
 
 # ==========================================================================
 # 2. SUPUESTOS
