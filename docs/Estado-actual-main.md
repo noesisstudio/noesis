@@ -6,6 +6,13 @@
 
 ## Producto construido
 
+- Documentos separa ahora entrada, archivo y revisión. La carga ocupa una franja
+  horizontal apta para cámara móvil; cliente, proyecto y nota son contexto opcional.
+  El archivo presenta carpetas por período para ingresos, gastos, tickets,
+  pendientes y otros, conserva búsqueda/estado y abre la primera página solo cuando
+  se solicita. La demo repara de forma idempotente los tipos históricos y enseña
+  cada carpeta sin duplicar originales. La clasificación real sigue siendo
+  conservadora: una factura sin emisor inequívoco queda pendiente de confirmación.
 - La cuenta profesional de gestoría dispone de segundo factor TOTP opcional en el
   esquema 47. La contraseña abre un reto de cinco minutos; cada código temporal se
   consume atómicamente y no puede repetirse. Al activar se entregan ocho códigos de
@@ -44,6 +51,8 @@
   desde otro negocio. Mientras no exista Embedded Signup, administración puede dar
   de alta WABA y `phone_number_id` como conexión pendiente desde la ficha técnica de
   la cuenta; no recibe ni muestra tokens y toda activación queda auditada.
+  El número comercial es siempre propiedad del negocio: puede reutilizar el suyo o
+  elegir uno separado para atención y citas; Noesis no compra un número por cliente.
 - Los mensajes comerciales crean una bandeja trazable y un lead o vínculo con el
   cliente dentro de la empresa correcta. Fotos y PDF pasan por la entrada documental
   existente, se previsualizan desde Clientes y nunca se convierten por sí solos en

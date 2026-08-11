@@ -23,6 +23,32 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir la falsa agrupación de la demo y convertir Documentos en
+  un archivo comprensible y cómodo desde móvil sin duplicar el motor existente.
+- **Áreas y archivos:** sembrado comercial, pantalla/CSS de Documentos, prueba de
+  demo/OCR y documentación compartida de producto y WhatsApp.
+- **Cambios de datos/migración:** sin migración. Al ejecutar la siembra explícita,
+  seis archivos ficticios se crean o reparan por nombre de forma idempotente y se
+  distribuyen en ingresos, gastos, tickets, pendientes y otros.
+- **Pruebas ejecutadas:** 23 pruebas focalizadas verdes de demo, OCR, archivo,
+  facturas recibidas, deduplicación, aislamiento y navegación; suite completa
+  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
+  reparación de la demo publicada exige una ejecución explícita con
+  `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
+  el navegador gráfico provoca cierres de la aplicación; se verificó la captura
+  aportada y la estructura renderizada mediante TestClient.
+- **Riesgo/punto probable de fallo:** CSS responsive, selector de cámara y modal de
+  vista previa son los puntos a recorrer en un teléfono real. Las facturas ambiguas
+  continúan pendientes por diseño y no se fuerzan a ingreso o gasto.
+- **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
+  petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
+  altera documentos; revertir la reparación conserva los tipos ya corregidos.
+- **Estado de publicación:** local, validado; pendiente de commit y despliegue.
+
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 
 - **Autor/agente:** Codex.

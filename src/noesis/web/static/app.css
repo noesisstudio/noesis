@@ -601,10 +601,33 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
   .series-row .badge { grid-column:1/-1; justify-self:start; }
 }
 
-/* Archivo documental del titular: misma clasificación que gestoría, menos densidad. */
-.document-library-layout { display:grid; grid-template-columns:minmax(250px,300px) minmax(0,1fr);
-  gap:16px; align-items:start; }
-.document-upload-card { position:sticky; top:16px; }
+/* Archivo documental del titular: entrada rápida, carpetas y detalle bajo demanda. */
+.document-upload-strip { padding:18px 20px; }
+.document-upload-main { display:flex; align-items:center; justify-content:space-between; gap:28px; }
+.document-upload-intro { min-width:230px; }
+.document-upload-intro h2 { margin:3px 0 4px; font-family:var(--serif); color:var(--brand);
+  font-size:21px; font-weight:600; }
+.document-upload-intro p { max-width:480px; margin:0; color:var(--muted); font-size:11.5px;
+  line-height:1.5; }
+.document-upload-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px;
+  flex:1; min-width:0; }
+.document-file-picker { display:flex; align-items:center; min-width:220px; max-width:360px; height:38px;
+  padding:0 13px; border:1px solid var(--border); border-radius:9px; background:#fff;
+  color:var(--brand); font-size:11.5px; font-weight:700; cursor:pointer; }
+.document-file-picker span { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.document-file-picker input { display:none; }
+.document-upload-options { margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.document-upload-options summary { width:max-content; color:var(--brand); font-size:11px;
+  font-weight:750; cursor:pointer; }
+.document-upload-fields { display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:10px;
+  margin-top:12px; }
+.document-upload-fields label { display:grid; gap:5px; }
+.document-upload-fields label>span { color:var(--muted); font-size:9px; font-weight:800;
+  letter-spacing:.05em; text-transform:uppercase; }
+.document-upload-feedback { display:flex; justify-content:space-between; gap:18px; margin-top:10px;
+  color:var(--muted); font-size:10.5px; }
+.document-upload-feedback span:first-child:not(:empty) { color:var(--brand); font-weight:650; }
+.document-library-layout { margin-top:16px; }
 .document-archive-card { min-width:0; overflow:hidden; }
 .document-archive-head { align-items:flex-end; gap:20px; }
 .document-archive-head h2 { margin:3px 0 4px; }
@@ -612,24 +635,33 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .document-period-picker label { display:grid; gap:4px; color:var(--muted); font-size:9px;
   font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
 .document-period-picker select { min-width:88px; padding:8px 28px 8px 9px; }
-.document-archive-body { padding-top:12px; }
+.document-archive-body { padding-top:16px; }
+.document-folder-grid { display:grid; grid-template-columns:repeat(6,minmax(118px,1fr)); gap:8px;
+  margin-bottom:18px; }
+.document-folder { display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  min-height:76px; padding:13px; border:1px solid var(--border); border-radius:12px;
+  background:var(--surface-2,#faf8f3); color:var(--brand); text-align:left; cursor:pointer; }
+.document-folder:hover { border-color:var(--brand-2); background:#fff; }
+.document-folder span,.document-folder b,.document-folder small { display:block; min-width:0; }
+.document-folder b { font-size:11.5px; }
+.document-folder small { margin-top:6px; color:var(--muted); font-size:9.5px; line-height:1.3; }
+.document-folder strong { display:grid; place-items:center; min-width:25px; height:25px; padding:0 6px;
+  border-radius:99px; background:#fff; color:var(--brand); font-size:10.5px; }
+.document-folder.active { border-color:var(--brand); background:var(--brand); color:#fff;
+  box-shadow:0 7px 18px rgba(20,70,59,.12); }
+.document-folder.active small { color:rgba(255,255,255,.72); }
+.document-folder.active strong { background:rgba(255,255,255,.15); color:#fff; }
 .document-toolbar { display:flex; justify-content:space-between; align-items:center; gap:14px;
-  padding-bottom:12px; border-bottom:1px solid var(--border); }
-.document-tabs { display:flex; gap:5px; overflow-x:auto; padding:2px; }
-.document-tab { display:flex; align-items:center; gap:6px; white-space:nowrap; padding:7px 9px;
-  border:1px solid var(--border); border-radius:9px; background:#fff; color:var(--muted);
-  font:700 11px/1 var(--font); cursor:pointer; }
-.document-tab span { display:grid; place-items:center; min-width:18px; height:18px; padding:0 4px;
-  border-radius:99px; background:var(--bg); font-size:9px; }
-.document-tab.active { background:var(--brand); border-color:var(--brand); color:#fff; }
-.document-tab.active span { background:rgba(255,255,255,.16); }
+  padding:14px 0 12px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.document-toolbar-copy b,.document-toolbar-copy span { display:block; }
+.document-toolbar-copy b { color:var(--brand); font-size:12px; }
+.document-toolbar-copy span { margin-top:3px; color:var(--muted); font-size:10px; }
 .document-search-tools { display:flex; gap:7px; flex:0 1 370px; }
 .document-search-tools .input { min-width:150px; }
 .document-search-tools select { min-width:150px; }
-.document-workspace { display:grid; grid-template-columns:minmax(430px,1.15fr) minmax(280px,.75fr);
-  min-height:480px; margin:0 -20px -20px; }
-.document-file-list { min-width:0; border-right:1px solid var(--border); }
-.document-file-row { display:grid; grid-template-columns:minmax(210px,1fr) 92px 105px;
+.document-workspace { min-height:260px; margin:0 -20px -20px; }
+.document-file-list { min-width:0; }
+.document-file-row { display:grid; grid-template-columns:minmax(240px,1fr) 110px 128px;
   gap:10px; align-items:center; min-height:82px; padding:11px 14px;
   border-bottom:1px solid var(--border); }
 .document-file-row:hover,.document-file-row.selected { background:var(--surface-2,#faf8f3); }
@@ -650,7 +682,12 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .document-file-actions { grid-column:1/-1; display:none; gap:6px; justify-content:flex-end;
   padding-top:8px; border-top:1px dashed var(--border); }
 .document-file-row.selected .document-file-actions { display:flex; flex-wrap:wrap; }
-.document-preview { min-width:0; padding:18px; background:var(--surface-2,#faf8f3); }
+.document-preview-overlay { padding:18px; }
+.document-preview-modal { position:relative; max-width:900px; max-height:calc(100vh - 36px);
+  overflow:auto; padding:0; }
+.document-preview-close { position:sticky; top:12px; z-index:2; float:right; margin:12px 12px 0 0;
+  background:#fff; border:1px solid var(--border); }
+.document-preview { min-width:0; padding:22px; background:var(--surface-2,#faf8f3); }
 .document-preview-empty { min-height:420px; display:grid; place-content:center; gap:5px;
   padding:30px; text-align:center; color:var(--muted); }
 .document-preview-empty b { color:var(--brand); font-family:var(--serif); font-size:18px; }
@@ -670,9 +707,9 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .document-preview-context { display:flex; flex-wrap:wrap; gap:6px; }
 .document-preview-context span { padding:5px 8px; border-radius:7px; background:var(--brand-soft);
   color:var(--brand); font-size:10px; font-weight:650; }
-@media(max-width:1100px){.document-library-layout{grid-template-columns:1fr}.document-upload-card{position:static}.document-workspace{grid-template-columns:minmax(400px,1fr) minmax(280px,.8fr)}}
-@media(max-width:820px){.document-archive-head,.document-toolbar{align-items:stretch;flex-direction:column}.document-period-picker{width:100%}.document-period-picker label{flex:1}.document-search-tools{flex:0 0 auto;width:100%}.document-workspace{grid-template-columns:1fr;margin-left:-18px;margin-right:-18px}.document-file-list{border-right:0}.document-preview{border-top:1px solid var(--border)}.document-preview-empty{min-height:180px}.document-preview-canvas{min-height:240px}}
-@media(max-width:560px){.document-search-tools{flex-direction:column}.document-search-tools select{width:100%}.document-file-row{grid-template-columns:minmax(180px,1fr) auto}.document-file-facts{display:none}.document-file-state{text-align:right}.document-period-picker select{width:100%}.document-preview{padding:14px}}
+@media(max-width:1100px){.document-upload-main{align-items:flex-start;flex-direction:column;gap:14px}.document-upload-actions{width:100%;justify-content:flex-start}.document-folder-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:820px){.document-archive-head,.document-toolbar{align-items:stretch;flex-direction:column}.document-period-picker{width:100%}.document-period-picker label{flex:1}.document-search-tools{flex:0 0 auto;width:100%}.document-upload-fields{grid-template-columns:1fr}.document-upload-feedback{flex-direction:column;gap:4px}.document-workspace{margin-left:-18px;margin-right:-18px}.document-preview-canvas{min-height:240px}.document-file-row{grid-template-columns:minmax(220px,1fr) 120px}.document-file-facts{display:none}.document-file-state{text-align:right}}
+@media(max-width:560px){.document-upload-strip{padding:16px}.document-upload-actions{display:grid;grid-template-columns:1fr 1fr}.document-file-picker{grid-column:1/-1;min-width:0;max-width:none;width:100%}.document-upload-actions .primary{grid-column:1/-1}.document-folder-grid{grid-template-columns:repeat(2,1fr)}.document-folder{min-height:72px;padding:11px}.document-search-tools{flex-direction:column}.document-search-tools select{width:100%}.document-file-row{grid-template-columns:minmax(0,1fr);padding:13px 16px}.document-file-state{text-align:left}.document-file-actions{justify-content:flex-start}.document-period-picker select{width:100%}.document-preview-overlay{padding:0}.document-preview-modal{max-height:100vh;min-height:100vh;border-radius:0}.document-preview{padding:16px}.document-preview-close{top:8px;margin:8px 8px 0 0}.document-preview-head{padding-right:36px}.document-preview-canvas{min-height:280px}}
 
 /* ---------- Landing pública ---------- */
 .landing-body { background: var(--bg); }

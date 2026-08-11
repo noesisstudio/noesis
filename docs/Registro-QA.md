@@ -1,5 +1,21 @@
 # Registro de QA
 
+## 2026-08-11 — clasificación demo y archivo documental responsive
+
+- 23 pruebas focalizadas verdes con `unittest`: sembrado repetido sin duplicados,
+  seis tipos documentales esperados, OCR de PDF escaneado, clasificación local
+  conservadora, facturas recibidas, deduplicación por negocio, búsqueda aislada,
+  paquete de gestoría y las tres experiencias demo navegables.
+- La prueba de escaparate verifica explícitamente las carpetas del trimestre:
+  6 documentos, 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 en Otros. El HTML
+  autenticado contiene la entrada horizontal, navegación por carpetas y cámara.
+- Suite completa **469/469** verde en 344 s. Ruff, verdad documental y
+  `git diff --check` están verdes. Falta recorrido visual manual en
+  escritorio/móvil; no se abrió navegador gráfico porque el founder ha observado
+  cierres de Codex al utilizarlo.
+- No se cambió la regla segura de producción: una factura sin emisor inequívoco no
+  se contabiliza ni se fuerza a ingreso/gasto. OCR/IA propone y el titular confirma.
+
 ## 2026-08-10 — MFA de gestoría sin semilla reversible
 
 - El primer CI de `main`

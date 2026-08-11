@@ -31,7 +31,8 @@
   página segura de imágenes/PDF para previsualizar sin iframe.
 - `src/noesis/demo.py`: siembra dos accesos dentro del producto real —autónomo y
   gestoría—, una segunda empresa para la cartera y un portal de cliente. Rellena
-  todos los módulos con datos ficticios conectados y no reinicia producción.
+  todos los módulos con datos ficticios conectados, repara de forma idempotente las
+  carpetas documentales históricas y no reinicia producción.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/db.py` + `routers/admin.py`: diagnóstico privado, autorización de
@@ -153,7 +154,8 @@
 - `src/noesis/gestoria_workspace.py` + `routers/documents.py` +
   `templates/documentos.html`: archivo documental común para titular y gestoría.
   Deriva fecha efectiva, período y grupo una vez; el panel normal añade navegación,
-  búsqueda, revisión y primera página privada sin duplicar ficheros.
+  entrada rápida, carpetas responsive, búsqueda, revisión y primera página privada
+  bajo demanda sin duplicar ficheros.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
   Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
   cerrada en producción si falta identidad legal o autorización explícita y no

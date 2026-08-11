@@ -312,40 +312,8 @@ def seed_rich(*, reset: bool = True, force: bool = False,
     from .documents import repo as docrepo
     from .documents import service as docservice
 
-    def demo_bytes(filename: str) -> bytes:
-        if filename.lower().endswith((".jpg", ".jpeg")):
-            from io import BytesIO
-            from PIL import Image, ImageDraw
-            output = BytesIO()
-            image = Image.new("RGB", (1000, 1400), "white")
-            draw = ImageDraw.Draw(image)
-            draw.text((80, 90), "FERRETERIA CENTRAL", fill="black")
-            draw.text((80, 150), "Ticket de ejemplo Noesis", fill="black")
-            draw.text((80, 230), "Material y consumibles       80,00 EUR", fill="black")
-            draw.text((80, 290), "IVA 21%                      16,80 EUR", fill="black")
-            draw.text((80, 370), "TOTAL                         96,80 EUR", fill="black")
-            draw.text((80, 500), "Documento ficticio para demostracion.", fill="black")
-            image.save(output, format="JPEG", quality=88)
-            return output.getvalue()
-        from fpdf import FPDF
-
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Helvetica", "B", 18)
-        pdf.cell(0, 12, "Documento de ejemplo Noesis", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", size=11)
-        safe_name = filename.encode("latin-1", errors="replace").decode("latin-1")
-        pdf.cell(0, 9, safe_name, new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(8)
-        pdf.multi_cell(
-            0, 7,
-            "Contenido ficticio preparado para recorrer el gestor documental "
-            "y la cartera de gestoria sin utilizar datos reales.",
-        )
-        return bytes(pdf.output())
-
     def doc(filename, status, confidence=None, note=None):
-        dd = docservice.upload(bid, filename, demo_bytes(filename),
+        dd = docservice.upload(bid, filename, _showcase_document_bytes(filename),
                                run_ocr=False)
         docrepo.set_review(dd["id"], bid, doc_status=status,
                            confidence=confidence, review_note=note)
@@ -457,6 +425,82 @@ SHOWCASE_GESTORIA_EMAIL = "demo.gestoria@bynoesis.com"
 SHOWCASE_PASSWORD = "NoesisDemo2026!"  # pragma: allowlist secret
 SHOWCASE_PORTAL_CLIENT = "Comunidad Aragó 121"
 SHOWCASE_GESTORIA_NAME = "Gestoría Mirall · Demo"
+
+
+SHOWCASE_DOCUMENTS = (
+    ("factura-hidra-4021.pdf", "factura_recibida", "validado", 96, None),
+    ("caldera-roca.pdf", "factura_recibida", "enviado_gestoria", 91, None),
+    (
+        "ticket-ferreteria.jpg", "ticket", "pendiente_revisar", 54,
+        "La lectura necesita confirmar el total antes de crear el gasto.",
+    ),
+    (
+        "albaran-sin-importe.pdf", "albaran", "pendiente_revisar", None,
+        "Albarán identificado; falta relacionarlo con su factura.",
+    ),
+    ("contrato-alquiler-local.pdf", "contrato", "revisado", None, None),
+    (
+        "factura-comunidad-arago-121.pdf", "factura_emitida", "validado", 100,
+        "Factura emitida de ejemplo, enlazada al archivo de ingresos.",
+    ),
+)
+
+
+def _showcase_document_bytes(filename: str) -> bytes:
+    """Genera originales ficticios válidos para la demo comercial."""
+    if filename.lower().endswith((".jpg", ".jpeg")):
+        from io import BytesIO
+        from PIL import Image, ImageDraw
+
+        output = BytesIO()
+        image = Image.new("RGB", (1000, 1400), "white")
+        draw = ImageDraw.Draw(image)
+        draw.text((80, 90), "FERRETERIA CENTRAL", fill="black")
+        draw.text((80, 150), "Ticket de ejemplo Noesis", fill="black")
+        draw.text((80, 230), "Material y consumibles       80,00 EUR", fill="black")
+        draw.text((80, 290), "IVA 21%                      16,80 EUR", fill="black")
+        draw.text((80, 370), "TOTAL                         96,80 EUR", fill="black")
+        draw.text((80, 500), "Documento ficticio para demostracion.", fill="black")
+        image.save(output, format="JPEG", quality=88)
+        return output.getvalue()
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 12, "Documento de ejemplo Noesis", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=11)
+    safe_name = filename.encode("latin-1", errors="replace").decode("latin-1")
+    pdf.cell(0, 9, safe_name, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(8)
+    pdf.multi_cell(
+        0, 7,
+        "Contenido ficticio preparado para recorrer el gestor documental "
+        "y la cartera de gestoria sin utilizar datos reales.",
+    )
+    return bytes(pdf.output())
+
+
+def _repair_showcase_documents(business_id: int) -> None:
+    """Mantiene la demo idempotente y con carpetas documentales representativas."""
+    from .documents import repo as docrepo
+    from .documents import service as docservice
+
+    existing = {
+        document["filename"]: document
+        for document in docrepo.list_for_business(business_id)
+    }
+    for filename, kind, status, confidence, note in SHOWCASE_DOCUMENTS:
+        document = existing.get(filename)
+        if document is None:
+            document = docservice.upload(
+                business_id, filename, _showcase_document_bytes(filename),
+                kind=kind, run_ocr=False,
+            )
+        docrepo.set_review(
+            document["id"], business_id, kind=kind, doc_status=status,
+            confidence=confidence, review_note=note,
+        )
 
 
 def _seed_secondary_showcase(password_hash: str) -> int:
@@ -606,6 +650,7 @@ def seed_showcase(*, force: bool = False) -> dict:
         email=SHOWCASE_GESTORIA_EMAIL, cadence="mensual",
     )
     db.mark_business_as_demo(primary_id)
+    _repair_showcase_documents(primary_id)
 
     secondary_id = _seed_secondary_showcase(
         auth.hash_password(SHOWCASE_PASSWORD)

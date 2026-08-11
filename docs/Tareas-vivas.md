@@ -62,7 +62,9 @@
 - [ ] Activar una vez `NOESIS_SEED_DEMO=true` en Railway, desplegar y recorrer los
   accesos reales de autónomo y gestoría y `/demo/cliente`. Confirmar que ambos
   negocios muestran datos completos y que cualquier escritura, envío o automatización
-  queda bloqueada. Después se puede volver a `false`: los registros persisten.
+  queda bloqueada. Confirmar además en Documentos las carpetas de 1 ingreso,
+  2 gastos, 1 ticket, 2 pendientes y 2 documentos en Otros. Después se puede volver
+  a `false`: los registros persisten.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.
@@ -120,7 +122,8 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   pie, condiciones y validez; presupuesto PDF, revisión previa, portal aislado y
   aceptación/rechazo con evidencia seudónima antes de preparar la factura borrador.
 - [x] Archivo del titular por años, trimestres y tipos con el mismo criterio que la
-  gestoría, filtros de estado, búsqueda y vista previa privada acotada.
+  gestoría, entrada rápida horizontal, carpetas, filtros de estado, búsqueda y vista
+  previa privada acotada bajo demanda, con distribución responsive para móvil.
 - [ ] Calendario: validar la suscripción ICS en Google/Apple/Outlook; después decidir
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por

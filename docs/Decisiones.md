@@ -14,6 +14,9 @@ se bloquea en vez de intentar adivinar el negocio.
 Los clientes finales escriben al número comercial de su proveedor. El receptor
 (`phone_number_id` y WABA) determina primero el negocio y el remitente se resuelve
 después dentro de ese ámbito. Un receptor desconocido nunca cae al canal central.
+Ese número pertenece al negocio: puede conectar su WhatsApp Business actual o, si
+quiere separar atención y vida personal, contratar por su cuenta uno dedicado a
+citas y clientes. Noesis no compra ni impone un número nuevo por cada suscripción.
 Los documentos quedan trazados y pendientes, las respuestas salen por la misma
 conexión y fuera de 24 horas se exige una plantilla aprobada. Noesis prepara y
 clasifica; no crea contabilidad ni compromisos irreversibles por un mensaje entrante.
