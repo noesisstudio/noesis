@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 47;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 48;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -24,7 +24,9 @@
   46 conserva el orden de webhooks Stripe por negocio para impedir que un evento
   antiguo sobrescriba el estado de suscripción vigente. La 47 añade MFA de gestoría,
   contador anti-replay, códigos de recuperación y fecha de alta sin modificar
-  accesos profesionales existentes.
+  accesos profesionales existentes. La 48 añade distintivos gráficos al perfil
+  documental, versiona la identidad sin duplicar imágenes por factura y congela la
+  versión utilizada al emitir, con referencia multiempresa protegida.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -147,10 +149,12 @@
   PDF, entrega durable, historial, anulación confirmada y rectificación guiada por
   diferencias. `db.py` conserva el original, bloquea borradores rectificativos
   duplicados, valida F2/R5 y permite revisar el ajuste solo antes de emitir.
-- `src/noesis/web/invoice_pdf.py` + `templates/presupuestos.html`: facturas y
-  presupuestos comparten marca y pie. El presupuesto añade condiciones, validez,
-  notas y PDF; el portal guarda evidencia de la decisión y solo la aceptación
-  prepara una factura borrador.
+- `src/noesis/web/invoice_pdf.py` + `templates/ajustes.html` +
+  `templates/presupuestos.html`: facturas y presupuestos comparten marca y pie. El
+  editor sanea logo y distintivo, controla tamaño, alineación y alcance, ofrece una
+  muestra inmediata y un PDF no fiscal; la factura emitida reproduce su versión
+  congelada. El presupuesto añade condiciones, validez, notas y PDF; el portal
+  guarda evidencia de la decisión y solo la aceptación prepara un borrador.
 - `src/noesis/gestoria_workspace.py` + `routers/documents.py` +
   `templates/documentos.html`: archivo documental común para titular y gestoría.
   Deriva fecha efectiva, período y grupo una vez; el panel normal añade navegación,

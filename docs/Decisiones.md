@@ -2,6 +2,21 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## El pie gráfico es una zona segura y la identidad se congela al emitir (2026-08-12)
+
+La prohibición de un maquetador libre se mantiene: ninguna imagen puede entrar en
+la cabecera fiscal, la tabla de conceptos, los impuestos, los totales, el QR o la
+numeración. Sí se admite una única imagen inferior, separada del contenido fiscal,
+porque subvenciones, fondos, certificaciones y asociaciones exigen a menudo mostrar
+un distintivo oficial. El titular elige entre tamaños y alineaciones acotados y si
+se aplica solo a facturas o también a presupuestos.
+
+El servidor no confía en nombre ni MIME: valida los bytes, limita tamaño y píxeles,
+elimina metadatos y guarda un PNG saneado. Cada cambio crea una versión reutilizable
+por negocio; al emitir, la factura enlaza esa versión y el guardián impide cambiarla.
+Así no se duplica una imagen por cada factura y regenerar un PDF histórico conserva
+el aspecto con el que fue emitido.
+
 ## WhatsApp separa operación interna y recepción comercial (2026-08-10)
 
 Titular y trabajadores escriben al número central de Noesis. El equipo no escribe
@@ -38,10 +53,11 @@ y la caja cobrada siguen mandando sobre cualquier supuesto.
 ## La personalización no puede convertir la factura en un lienzo libre (2026-08-08)
 
 El titular puede elegir una de tres composiciones probadas, color, logotipo, pie y
-textos comerciales. No se permiten imágenes arbitrarias ni maquetación libre dentro
-del documento fiscal: dificultaría garantizar legibilidad, tamaño, conservación y
-datos obligatorios. Los detalles variables pertenecen a las líneas y notas del
-documento; las condiciones generales se guardan una sola vez en el perfil.
+textos comerciales. No se permiten imágenes ni maquetación libre dentro del cuerpo
+fiscal: dificultaría garantizar legibilidad, tamaño, conservación y datos
+obligatorios. La excepción posterior es una zona gráfica inferior saneada y
+acotada, descrita en la decisión del 2026-08-12. Los detalles variables pertenecen
+a las líneas y notas; las condiciones generales se guardan una sola vez en el perfil.
 
 El presupuesto comparte identidad visual con la factura, pero se identifica como
 oferta y su aceptación solo genera un borrador. El portal guarda fecha, canal y una

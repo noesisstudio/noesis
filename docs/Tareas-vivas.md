@@ -123,9 +123,12 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [ ] Documentos: deduplicación, búsqueda, PDF digital y OCR acotado de PDF escaneado
   trilingüe están construidos; faltan HEIC, extracción fiable de líneas y corrección
   masiva, y validar el conjunto con corpus real.
-- [x] Perfil documental sin maquetador libre: tres plantillas probadas, color, logo,
-  pie, condiciones y validez; presupuesto PDF, revisión previa, portal aislado y
-  aceptación/rechazo con evidencia seudónima antes de preparar la factura borrador.
+- [x] Perfil documental sin maquetador libre: tres plantillas probadas, color, logo
+  saneado, pie textual, distintivo gráfico con tamaño/alineación/alcance y vista
+  previa; cada factura emitida conserva una versión visual reutilizable. Incluye
+  condiciones y validez, presupuesto PDF, portal aislado y decisión con evidencia
+  seudónima antes de preparar la factura borrador. Falta validación visual con los
+  distintivos reales que usarán los primeros clientes.
 - [x] Archivo del titular por años, trimestres y tipos con el mismo criterio que la
   gestoría, entrada rápida horizontal, carpetas, filtros de estado, búsqueda y vista
   previa privada acotada bajo demanda, con distribución responsive para móvil.

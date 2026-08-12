@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-08-11",
+  "state_date": "2026-08-12",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 47,
-  "verified_test_count": 473,
+  "schema_version": 48,
+  "verified_test_count": 485,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Verificar en escritorio y movil la nueva entrada horizontal, carpetas y vista previa bajo demanda de Documentos y las correcciones autorizadas de configuracion y metadatos documentales del centro de soporte; activar una vez NOESIS_SEED_DEMO para reparar la agrupacion ficticia y devolverlo a false; validar con una cuenta profesional real la activacion TOTP, anti_replay, recuperacion y rotacion controlada de NOESIS_SECRET; validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelacion, reactivacion, cambio de plan por price_id y eventos fuera de orden; comprobar con cuentas reales los derechos de Autonomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoria; despues validar Meta real, Google OAuth admin, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
+    "pending_after_deploy": "Verificar en escritorio y movil el editor documental con el distintivo real del founder y la conservacion visual de una factura emitida; verificar tambien la nueva entrada horizontal, carpetas y vista previa bajo demanda de Documentos y las correcciones autorizadas de configuracion y metadatos documentales del centro de soporte; activar una vez NOESIS_SEED_DEMO para reparar la agrupacion ficticia y devolverlo a false; validar con una cuenta profesional real la activacion TOTP, anti_replay, recuperacion y rotacion controlada de NOESIS_SECRET; validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelacion, reactivacion, cambio de plan por price_id y eventos fuera de orden; comprobar con cuentas reales los derechos de Autonomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoria; despues validar Meta real, Google OAuth admin, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -75,7 +75,7 @@
     "gestoria_mfa": "schema_47_optional_totp_second_factor_derived_without_reversible_database_seed_atomic_counter_anti_replay_eight_single_use_80_bit_recovery_codes_stored_only_as_hash_password_plus_shared_rate_limit_for_enrolment_regeneration_and_disable_codes_render_once_without_session_cookie_persistence",
     "commercial_showcase": "schema_40_two_real_logins_inside_the_product_owner_and_gestoria_plus_real_customer_portal_all_populated_connected_and_server_side_read_only_external_delivery_and_automations_blocked_document_kinds_repaired_idempotently_into_income_expense_ticket_pending_and_other_folders_public_demo_credential_explicitly_allowlisted_not_a_production_secret",
     "stripe_tax": "checkout_requests_billing_address_tax_id_collection_and_automatic_tax_for_the_public_plus_vat_catalog_real_tax_result_still_requires_stripe_test_validation",
-    "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_safe_difference_rectification_single_pending_draft_original_immutable_no_external_billing_saas_schema_42_shared_brand_footer_quote_terms_default_validity_professional_quote_pdf_and_pseudonymous_portal_decision_evidence",
+    "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_safe_difference_rectification_single_pending_draft_original_immutable_no_external_billing_saas_schema_48_three_templates_color_sanitized_logo_text_and_graphic_footer_size_alignment_scope_live_and_pdf_preview_versioned_visual_profile_frozen_on_issue_shared_quote_identity_and_pseudonymous_portal_decision_evidence",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
     "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",
     "issue_order_available_on_both_channels": "the_draft_confirmation_message_suggests_emitir_factura_n_and_the_shared_brain_now_understands_it_so_the_web_chat_issues_the_draft_instead_of_falling_back_to_the_coach_whatsapp_keeps_its_extra_yes_no_confirmation_because_a_voice_note_can_be_misheard_and_tool_errors_no_longer_leak_internal_names",

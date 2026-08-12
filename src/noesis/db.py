@@ -2489,9 +2489,13 @@ BRAND_COLOR_DEFAULT = "#14463b"
 INVOICE_TEMPLATES = {"clasica", "minimal", "editorial"}
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_LOGO_B64 = 400_000  # ~300 KB de imagen
+MAX_FOOTER_IMAGE_B64 = 1_200_000  # ~900 KB tras sanear y recomprimir
 MAX_DOCUMENT_FOOTER = 800
 MAX_QUOTE_TERMS = 1_500
 QUOTE_VALIDITY_DAYS = {7, 15, 30, 45, 60, 90}
+FOOTER_IMAGE_WIDTHS = {25, 50, 75, 100}
+FOOTER_IMAGE_ALIGNMENTS = {"left", "center", "right"}
+FOOTER_IMAGE_SCOPES = {"invoices", "all"}
 
 
 def business_initials(name: str | None) -> str:
@@ -2567,10 +2571,70 @@ def update_panel_layout(business_id, order, hidden) -> dict:
     return get_business(business_id)
 
 
+_DOCUMENT_PROFILE_FIELDS = (
+    "invoice_template", "brand_color", "logo_data", "logo_mime",
+    "document_footer", "footer_image_data", "footer_image_mime",
+    "footer_image_width", "footer_image_alignment", "footer_image_scope",
+)
+
+
+def _ensure_current_document_profile(conn, business: dict) -> dict:
+    """Devuelve la versión visual vigente o crea una nueva si cambió la marca."""
+    latest = conn.execute(
+        "SELECT * FROM document_profiles WHERE business_id=? "
+        "ORDER BY version DESC LIMIT 1", (business["id"],),
+    ).fetchone()
+    current = {
+        "invoice_template": business.get("invoice_template") or "clasica",
+        "brand_color": business.get("brand_color"),
+        "logo_data": business.get("logo_data"),
+        "logo_mime": business.get("logo_mime"),
+        "document_footer": business.get("document_footer"),
+        "footer_image_data": business.get("footer_image_data"),
+        "footer_image_mime": business.get("footer_image_mime"),
+        "footer_image_width": int(business.get("footer_image_width") or 100),
+        "footer_image_alignment": business.get("footer_image_alignment") or "center",
+        "footer_image_scope": business.get("footer_image_scope") or "invoices",
+    }
+    if latest and all(latest.get(key) == value for key, value in current.items()):
+        return dict(latest)
+    version = int(latest["version"] if latest else 0) + 1
+    row = conn.execute(
+        "INSERT INTO document_profiles (business_id, version, invoice_template, "
+        "brand_color, logo_data, logo_mime, document_footer, footer_image_data, "
+        "footer_image_mime, footer_image_width, footer_image_alignment, "
+        "footer_image_scope, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "RETURNING *",
+        (
+            business["id"], version, current["invoice_template"],
+            current["brand_color"], current["logo_data"], current["logo_mime"],
+            current["document_footer"], current["footer_image_data"],
+            current["footer_image_mime"], current["footer_image_width"],
+            current["footer_image_alignment"], current["footer_image_scope"], _now(),
+        ),
+    ).fetchone()
+    return dict(row)
+
+
+def get_invoice_document_profile(invoice_id: int, business_id: int) -> dict | None:
+    """Perfil visual congelado de una factura, siempre aislado por negocio."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT p.* FROM invoices i JOIN document_profiles p "
+            "ON p.id=i.document_profile_id AND p.business_id=i.business_id "
+            "WHERE i.id=? AND i.business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def update_branding(business_id, *, template=None, brand_color=None,
                     logo_data=None, logo_mime=None, clear_logo=False,
                     document_footer=None, quote_terms=None,
-                    default_quote_validity_days=None) -> dict | None:
+                    default_quote_validity_days=None,
+                    footer_image_data=None, footer_image_mime=None,
+                    clear_footer_image=False, footer_image_width=None,
+                    footer_image_alignment=None, footer_image_scope=None) -> dict | None:
     """Guarda una configuración documental segura y común a todo el negocio."""
     fields: list[str] = []
     params: list = []
@@ -2593,6 +2657,37 @@ def update_branding(business_id, *, template=None, brand_color=None,
             raise ValueError("El logo es demasiado grande (máximo ~300 KB).")
         fields += ["logo_data=?", "logo_mime=?"]
         params += [logo_data, logo_mime]
+    if clear_footer_image:
+        fields += ["footer_image_data=?", "footer_image_mime=?"]
+        params += [None, None]
+    elif footer_image_data is not None:
+        if len(footer_image_data) > MAX_FOOTER_IMAGE_B64:
+            raise ValueError("La imagen del pie es demasiado grande (máximo ~900 KB).")
+        if footer_image_mime != "image/png":
+            raise ValueError("La imagen del pie debe estar saneada en formato PNG.")
+        fields += ["footer_image_data=?", "footer_image_mime=?"]
+        params += [footer_image_data, footer_image_mime]
+    if footer_image_width is not None:
+        try:
+            width = int(footer_image_width)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("El ancho de la imagen del pie no es válido.") from exc
+        if width not in FOOTER_IMAGE_WIDTHS:
+            raise ValueError("El ancho del pie debe ser 25, 50, 75 o 100%.")
+        fields.append("footer_image_width=?")
+        params.append(width)
+    if footer_image_alignment is not None:
+        alignment = str(footer_image_alignment or "").strip().lower()
+        if alignment not in FOOTER_IMAGE_ALIGNMENTS:
+            raise ValueError("La alineación de la imagen del pie no es válida.")
+        fields.append("footer_image_alignment=?")
+        params.append(alignment)
+    if footer_image_scope is not None:
+        scope = str(footer_image_scope or "").strip().lower()
+        if scope not in FOOTER_IMAGE_SCOPES:
+            raise ValueError("El uso de la imagen del pie no es válido.")
+        fields.append("footer_image_scope=?")
+        params.append(scope)
     if document_footer is not None:
         footer = str(document_footer or "").strip()
         if len(footer) > MAX_DOCUMENT_FOOTER:
@@ -2620,9 +2715,20 @@ def update_branding(business_id, *, template=None, brand_color=None,
         params.append(validity)
     if not fields:
         return get_business(business_id)
-    params.append(business_id)
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        existing = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not existing:
+            return None
+        params.append(business_id)
         conn.execute(f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params)
+        updated = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        _ensure_current_document_profile(conn, dict(updated))
     return get_business(business_id)
 
 
@@ -5892,15 +5998,16 @@ def issue_invoice(
         due_date = (
             issued_day + timedelta(days=max(0, min(payment_term_days, 365)))
         ).isoformat()
+        document_profile = _ensure_current_document_profile(conn, dict(biz))
         conn.execute(
             "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=?, "
             "issuer_name=?, issuer_nif=?, issuer_address=?, recipient_name=?, "
-            "recipient_nif=?, recipient_address=? "
+            "recipient_nif=?, recipient_address=?, document_profile_id=? "
             "WHERE id=? AND business_id=? AND status='borrador'",
             (
                 number, issued_at, due_date, biz["name"], biz["nif"], biz["address"],
-                client["name"], client.get("nif"), client.get("address"), invoice_id,
-                business_id,
+                client["name"], client.get("nif"), client.get("address"),
+                document_profile["id"], invoice_id, business_id,
             ),
         )
         if biz.get("verifactu_enabled"):
