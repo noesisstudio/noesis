@@ -15,7 +15,8 @@
   metadatos. La migración 48 guarda versiones reutilizables por negocio: al emitir,
   la factura enlaza su perfil visual y posteriores cambios de marca no alteran su
   PDF. Las 485 pruebas, el ciclo completo de migraciones y las revisiones estáticas
-  y de seguridad están verdes; faltan publicación y recorrido visual real.
+  y de seguridad están verdes. Producción responde con el candidato y esquema 48;
+  falta el recorrido visual con el distintivo real del founder.
 - La autorización temporal de configuración habilita una segunda corrección
   administrativa acotada: nombre visible para el futuro, sector, provincia, tamaño,
   objetivo, idioma, nivel de explicación y apariencia predeterminada de facturas y

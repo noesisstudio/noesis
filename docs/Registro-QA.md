@@ -10,8 +10,9 @@
   único compuesto de `document_profiles` debía materializarse antes de la FK en
   PostgreSQL. También están verdes Ruff, Bandit, detección de secretos,
   `git diff --check` y el ciclo local 0 → 48 → 0 → 48.
-- El humo PostgreSQL de CI, la revisión visual y producción quedan pendientes antes
-  de declarar publicado el candidato.
+- CI completo y humo PostgreSQL verdes. Producción confirmó release `c30321c4d8e9`
+  y esquema 48 en `/health` y `/ready`; queda pendiente la revisión visual con el
+  distintivo real del founder en escritorio y móvil.
 
 ## 2026-08-11 — configuración segura desde soporte
 

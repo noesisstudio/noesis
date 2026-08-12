@@ -48,7 +48,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar `document_branding_updated`, última versión en
   `document_profiles`, `invoices.document_profile_id` y el PDF de muestra. Revertir
   la interfaz conserva perfiles; no retirar imágenes referenciadas por emitidas.
-- **Estado de publicación:** local verificado; pendiente de commit, CI y despliegue.
+- **Estado de publicación:** commit `c30321c` en `main`, CI completo y humo
+  PostgreSQL verdes; producción confirma el release y el esquema 48. Pendiente solo
+  recorrido visual con el distintivo real del founder.
 
 ## 2026-08-11 12:00 — configuración reversible con permiso de soporte
 
