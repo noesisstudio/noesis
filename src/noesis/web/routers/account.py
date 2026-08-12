@@ -147,6 +147,11 @@ def _google_profile(code: str) -> dict:
     }
 
 # ================================================================ AUTH ====== #
+def _account_destination(business_id: int) -> str:
+    """Retoma un alta empezada; las cuentas normales entran al parte del día."""
+    return db.onboarding_destination(business_id) or f"/b/{business_id}/resumen"
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str = ""):
     return TEMPLATES.TemplateResponse(request, "login.html", {
@@ -172,7 +177,7 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
     for key in keys:
         auth.clear_attempts(key)
     _start_session(request, user)
-    return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
+    return RedirectResponse(_account_destination(user["business_id"]), status_code=303)
 
 
 @router.post("/logout")
@@ -249,7 +254,7 @@ def google_callback(request: Request, code: str = "", state: str = "",
     user = db.get_user_by_email(profile["email"])
     if user:
         _start_session(request, user, auth_provider="google")
-        return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
+        return RedirectResponse(_account_destination(user["business_id"]), status_code=303)
     request.session["google_signup"] = profile
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
@@ -552,6 +557,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding?error=email{onboarding_query}", status_code=303)
     auth.clear_attempts(key)
     _start_session(request, user)
+    db.start_onboarding(biz["id"], plan=plan, billing=billing, intent=intent)
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
     request.session["signup_intent"] = intent
@@ -626,7 +632,9 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
     existing = db.get_user_by_email(email)
     if existing:
         _start_session(request, existing, auth_provider="google")
-        return RedirectResponse(f"/b/{existing['business_id']}/resumen", status_code=303)
+        return RedirectResponse(
+            _account_destination(existing["business_id"]), status_code=303
+        )
     try:
         biz, user = db.create_account(
             (name or "").strip(), email, auth.hash_password(secrets.token_urlsafe(48)),
@@ -635,6 +643,7 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
     except (ValueError, *db.IntegrityError):
         return RedirectResponse(f"/onboarding/google{error_query}email", status_code=303)
     _start_session(request, user, auth_provider="google")
+    db.start_onboarding(biz["id"], plan=plan, billing=billing, intent=intent)
     request.session.pop("google_signup", None)
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
@@ -668,7 +677,7 @@ def onboarding_setup(request: Request, business_id: int, error: str = ""):
             "business": biz,
             "error": error,
             "ai_credits": db.ai_credit_status(business_id),
-            "signup_intent": request.session.get("signup_intent", "trial"),
+            "signup_intent": biz.get("onboarding_intent") or "trial",
         }
     )
 
@@ -721,6 +730,7 @@ def onboarding_setup_submit(
             "local_first": True,
         }, separators=(",", ":")),
     )
+    db.complete_onboarding_step(business_id, "profile")
     return RedirectResponse(
         f"/onboarding/preferences/{business_id}", status_code=303
     )
@@ -741,13 +751,13 @@ def onboarding_preferences(request: Request, business_id: int, error: str = ""):
             "wa_reports": db.resolve_whatsapp_reports(
                 business.get("whatsapp_reports")
             ),
-            "signup_intent": request.session.get("signup_intent", "trial"),
+            "signup_intent": business.get("onboarding_intent") or "trial",
         },
     )
 
 
 @router.post("/onboarding/preferences/{business_id}")
-def onboarding_preferences_submit(
+async def onboarding_preferences_submit(
     request: Request,
     business_id: int,
     nif: str = Form(""),
@@ -756,6 +766,12 @@ def onboarding_preferences_submit(
     default_irpf: float = Form(0),
     default_payment_term_days: int = Form(15),
     invoice_template: str = Form("clasica"),
+    brand_color: str = Form("#14463b"),
+    document_footer: str = Form(""),
+    quote_terms: str = Form(""),
+    footer_image_width: int = Form(100),
+    footer_image_alignment: str = Form("center"),
+    footer_image_scope: str = Form("invoices"),
     payment_iban: str = Form(""),
     payment_bizum: str = Form(""),
     payment_note: str = Form(""),
@@ -769,6 +785,8 @@ def onboarding_preferences_submit(
     gestoria_name: str = Form(""),
     gestoria_email: str = Form(""),
     gestoria_cadence: str = Form("off"),
+    logo: UploadFile = File(None),
+    footer_image: UploadFile = File(None),
 ):
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
@@ -779,6 +797,10 @@ def onboarding_preferences_submit(
         )
     on = {"1", "true", "on", "si", "sí"}
     try:
+        logo_data, logo_mime = await _sanitized_brand_image(logo)
+        footer_data, footer_mime = await _sanitized_brand_image(
+            footer_image, footer=True
+        )
         if gestoria_cadence not in db.GESTORIA_CADENCES:
             raise ValueError("La cadencia de gestoría no es válida.")
         if gestoria_cadence != "off" and not auth.valid_email(
@@ -812,11 +834,26 @@ def onboarding_preferences_submit(
             email=gestoria_email,
             cadence=gestoria_cadence,
         )
+        db.update_branding(
+            business_id,
+            template=invoice_template,
+            brand_color=brand_color,
+            logo_data=logo_data,
+            logo_mime=logo_mime,
+            document_footer=document_footer,
+            quote_terms=quote_terms,
+            footer_image_data=footer_data,
+            footer_image_mime=footer_mime,
+            footer_image_width=footer_image_width,
+            footer_image_alignment=footer_image_alignment,
+            footer_image_scope=footer_image_scope,
+        )
     except ValueError:
         return RedirectResponse(
             f"/onboarding/preferences/{business_id}?error=preferences",
             status_code=303,
         )
+    db.complete_onboarding_step(business_id, "preferences")
     db.record_product_event(
         business_id, "operational_preferences_completed",
         json.dumps({
@@ -831,7 +868,9 @@ def onboarding_preferences_submit(
 
 
 @router.get("/onboarding/whatsapp/{business_id}", response_class=HTMLResponse)
-def onboarding_whatsapp(request: Request, business_id: int):
+def onboarding_whatsapp(
+    request: Request, business_id: int, status: str = "",
+):
     # Aislamiento: solo el dueño de ESTE negocio puede ver su onboarding.
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
@@ -842,14 +881,21 @@ def onboarding_whatsapp(request: Request, business_id: int):
             f"/b/{business_id}/suscripcion?status=readonly", status_code=303
         )
     link = whatsapp.start_link(business_id)
-    return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html",
-                                      {
-                                          "business": biz,
-                                          "wa": link,
-                                          "signup_intent": request.session.get(
-                                              "signup_intent", "trial"
-                                          ),
-                                      })
+    plan, billing_period, intent = _signup_selection(
+        str(biz.get("onboarding_plan") or "autonomo"),
+        str(biz.get("onboarding_billing") or "monthly"),
+        str(biz.get("onboarding_intent") or "trial"),
+    )
+    return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html", {
+        "business": biz,
+        "wa": link,
+        "status": status,
+        "signup_intent": intent,
+        "selected_plan": plan,
+        "selected_plan_label": billing_adapter.PLANS[plan]["name"],
+        "selected_billing": billing_period,
+        "wa_reports": db.resolve_whatsapp_reports(biz.get("whatsapp_reports")),
+    })
 
 
 @router.post("/b/{business_id}/fiscal")
@@ -1096,7 +1142,9 @@ def revoke_support_access(request: Request, business_id: int):
 
 
 @router.post("/onboarding/whatsapp/{business_id}/connect")
-def onboarding_whatsapp_connect(request: Request, business_id: int):
+def onboarding_whatsapp_connect(
+    request: Request, business_id: int, action: str = Form("later"),
+):
     # La vinculación real solo ocurre al recibir el código desde ese WhatsApp.
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
@@ -1106,18 +1154,34 @@ def onboarding_whatsapp_connect(request: Request, business_id: int):
         return RedirectResponse(
             f"/b/{business_id}/suscripcion?status=readonly", status_code=303
         )
-    if not business or business.get("whatsapp_status") != "conectado":
-        db.set_whatsapp_status(business_id, "no_conectado")
-    db.finish_onboarding(business_id)
+    connected = bool(business and business.get("whatsapp_status") == "conectado")
+    if action == "check" and not connected:
+        return RedirectResponse(
+            f"/onboarding/whatsapp/{business_id}?status=pending", status_code=303
+        )
+    if action not in {"check", "later"}:
+        return RedirectResponse(
+            f"/onboarding/whatsapp/{business_id}?status=invalid", status_code=303
+        )
+    choice = "connected" if connected else "later"
+    try:
+        db.finish_onboarding(business_id, whatsapp_choice=choice)
+    except ValueError:
+        return RedirectResponse(
+            db.onboarding_destination(business_id)
+            or f"/onboarding/setup/{business_id}",
+            status_code=303,
+        )
+    business = db.get_business(business_id)
     db.record_product_event(
         business_id,
         "onboarding_completed",
-        f"whatsapp={business.get('whatsapp_status') if business else 'unknown'}",
+        f"whatsapp={choice}",
     )
     plan, billing_period, intent = _signup_selection(
-        str(request.session.get("signup_plan") or "autonomo"),
-        str(request.session.get("signup_billing") or "monthly"),
-        str(request.session.get("signup_intent") or "trial"),
+        str(business.get("onboarding_plan") or "autonomo"),
+        str(business.get("onboarding_billing") or "monthly"),
+        str(business.get("onboarding_intent") or "trial"),
     )
     if intent == "subscribe":
         query = urlparse.urlencode({
@@ -1126,7 +1190,9 @@ def onboarding_whatsapp_connect(request: Request, business_id: int):
         return RedirectResponse(
             f"/b/{business_id}/suscripcion?{query}", status_code=303
         )
-    return RedirectResponse(f"/b/{business_id}/resumen", status_code=303)
+    return RedirectResponse(
+        f"/b/{business_id}/resumen?welcome=1#puesta-en-marcha", status_code=303
+    )
 
 
 

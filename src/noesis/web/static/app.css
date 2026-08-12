@@ -2186,6 +2186,52 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .onboarding-field-full { margin-top:12px; }
 .onboarding-config-section .input, .onboarding-config-section select { min-height:42px; background:var(--surface); }
 .onboarding-helper { margin:12px 0 0; color:var(--muted); font-size:11px; line-height:1.5; }
+.onboarding-brand-box { margin-top:17px; padding:17px; border:1px solid #cdded7;
+  border-radius:12px; background:#fff; }
+.onboarding-config-heading.compact { margin-bottom:13px; }
+.onboarding-config-heading.compact h3 { margin:0 0 3px; color:var(--brand);
+  font-family:var(--serif); font-size:19px; font-weight:500; }
+.onboarding-brand-box .onboarding-fields + .onboarding-field-full,
+.onboarding-brand-box .onboarding-field-full + .onboarding-fields { margin-top:12px; }
+.onboarding-brand-box label small { color:var(--muted); font-size:10px;
+  font-weight:500; line-height:1.4; }
+.onboarding-color { padding:5px; min-height:42px; }
+.onboarding-review-shell { width:min(980px,calc(100% - 40px)); margin:0 auto;
+  padding:42px 0 80px; }
+.onboarding-review-card { padding:34px; border:1px solid var(--border);
+  border-radius:16px; background:#fff; box-shadow:0 14px 34px rgba(20,70,59,.06); }
+.onboarding-review-head { display:flex; justify-content:space-between; gap:28px;
+  align-items:flex-start; padding-bottom:24px; border-bottom:1px solid var(--border); }
+.onboarding-review-head h1 { margin:7px 0 8px; color:var(--brand); font-family:var(--serif);
+  font-size:clamp(32px,4vw,44px); font-weight:500; letter-spacing:-.025em; }
+.onboarding-review-head p { max-width:650px; margin:0; color:var(--muted); line-height:1.6; }
+.onboarding-plan-pill { flex:none; padding:9px 12px; border-radius:999px;
+  color:var(--brand); background:var(--brand-soft); font-size:11px; font-weight:800; }
+.onboarding-review-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:0; margin:20px 0; overflow:hidden; border:1px solid var(--border);
+  border-radius:12px; }
+.onboarding-review-grid article { min-width:0; padding:16px; border-right:1px solid var(--border); }
+.onboarding-review-grid article:last-child { border-right:0; }
+.onboarding-review-grid span,.onboarding-review-grid small { display:block; color:var(--muted);
+  font-size:10.5px; line-height:1.45; }
+.onboarding-review-grid b { display:block; margin:5px 0; overflow:hidden;
+  color:var(--brand); font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.onboarding-whatsapp-choice { padding:24px; border:1px solid #cdded7; border-radius:14px;
+  background:var(--surface-2); }
+.onboarding-whatsapp-copy h2 { margin:5px 0 5px; color:var(--brand); font-family:var(--serif);
+  font-size:28px; font-weight:500; }
+.onboarding-whatsapp-copy p { margin:0 0 16px; color:var(--muted); line-height:1.55; }
+.onboarding-wa-status { display:flex; justify-content:space-between; gap:12px; margin-bottom:14px;
+  padding:11px 13px; border-radius:10px; font-size:11.5px; }
+.onboarding-wa-status.connected { color:var(--green); background:var(--green-soft); }
+.onboarding-wa-status.pending { color:#7a5b17; background:var(--amber-soft); }
+.onboarding-review-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-top:15px; }
+.onboarding-review-actions form { margin:0; }
+.onboarding-review-actions > a { margin-left:auto; color:var(--brand); font-size:11px;
+  font-weight:750; text-decoration:underline; text-underline-offset:2px; }
+.onboarding-review-safe { margin:18px 0 0; color:var(--muted); font-size:11px;
+  text-align:center; }
 .onboarding-switch-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
 .onboarding-switch-row { display:flex; gap:10px; align-items:flex-start; padding:12px;
   border:1px solid var(--border); border-radius:10px; background:var(--surface); cursor:pointer; }
@@ -2214,7 +2260,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .plan-choice-badge { position:absolute; top:12px; right:12px; padding:4px 7px; border-radius:6px;
   color:var(--brand); background:var(--brand-soft); font-size:9px; font-weight:800;
   letter-spacing:.05em; text-transform:uppercase; }
-.subscription-success { border-color:var(--green); background:var(--green-soft); }
+.subscription-success { display:flex; align-items:center; justify-content:space-between;
+  gap:16px; border-color:var(--green); background:var(--green-soft); }
+.subscription-success span { display:block; color:var(--muted); font-size:11.5px; }
 .subscription-payment-note { margin:16px 0 0; color:var(--muted); font-size:11px; text-align:center; }
 
 @media (max-width: 820px) {
@@ -2224,6 +2272,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .public-auth-story dl div { padding:14px 10px; border-right:1px solid rgba(255,255,255,.18); }
   .onboarding-switch-grid { grid-template-columns:1fr; }
   .subscription-ready { align-items:flex-start; flex-direction:column; }
+  .onboarding-review-grid { grid-template-columns:1fr 1fr; }
+  .onboarding-review-grid article:nth-child(2) { border-right:0; }
+  .onboarding-review-grid article:nth-child(-n+2) { border-bottom:1px solid var(--border); }
   .access-entry-grid { grid-template-columns:1fr; }
   .access-role-card { min-height:auto; }
 }
@@ -2242,6 +2293,18 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .onboarding-config-section { padding:17px 15px; }
   .onboarding-submit-bar { align-items:stretch; flex-direction:column; bottom:6px; }
   .onboarding-submit-bar .btn { width:100%; }
+  .onboarding-review-shell { width:calc(100% - 28px); padding-top:24px; }
+  .onboarding-review-card { padding:24px 18px; }
+  .onboarding-review-head { display:block; }
+  .onboarding-plan-pill { display:inline-block; margin-top:13px; }
+  .onboarding-review-grid { grid-template-columns:1fr; }
+  .onboarding-review-grid article { border-right:0; border-bottom:1px solid var(--border); }
+  .onboarding-review-grid article:last-child { border-bottom:0; }
+  .onboarding-wa-status { align-items:flex-start; flex-direction:column; }
+  .onboarding-review-actions { align-items:stretch; flex-direction:column; }
+  .onboarding-review-actions form,.onboarding-review-actions .btn { width:100%; }
+  .onboarding-review-actions > a { margin:5px 0 0; text-align:center; }
+  .subscription-success { align-items:stretch; flex-direction:column; }
 }
 
 /* ==========================================================================

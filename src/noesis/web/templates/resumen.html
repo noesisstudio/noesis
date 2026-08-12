@@ -32,7 +32,7 @@
   </section>
 
   {% if activation.progress < 100 %}
-  <section class="home-setup" aria-label="Puesta en marcha">
+  <section class="home-setup" id="puesta-en-marcha" aria-label="Puesta en marcha">
     <div><span>Puesta en marcha</span><strong>{{ activation.completed }} de {{ activation.total }} pasos listos</strong></div>
     <div class="home-setup-track" aria-label="{{ activation.progress }}% completado"><i style="width:{{ activation.progress }}%"></i></div>
     {% if activation.next_step %}<a href="{{ activation.next_step.href }}">Siguiente: {{ activation.next_step.label }}</a>{% endif %}

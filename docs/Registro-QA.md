@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-08-12 — alta recuperable y revisión operativa
+
+- El esquema 49 conserva inicio, pasos completados, plan, periodicidad, intención y
+  decisión de WhatsApp sin forzar a cuentas históricas a repetir el recorrido.
+- Las pruebas HTTP cubren alta anual de Negocio, perfil, configuración fiscal,
+  cobros, gestoría, logotipo y distintivo saneados, resumen final, comprobación de
+  WhatsApp todavía pendiente, posposición explícita y continuación al pago. También
+  se verifica que no se puede terminar antes de los datos obligatorios y que Google
+  vuelve al paso exacto.
+- Suite completa: **485/485** verde, repartida en 339 pruebas del núcleo y 146 de
+  plataforma/seguridad/SEO/documentos. `tests.test_seo` mantiene 9/9 en verde y la
+  inspección viva de las 12 URLs del sitemap confirmó 200, canonical, descripción,
+  un H1 e imágenes con atributo `alt`.
+- Pendiente externo: recorrido visual real, webhook de Meta y retorno de Stripe.
+
 ## 2026-08-12 — identidad documental y pie gráfico versionado
 
 - 3 pruebas nuevas cubren carga HTTP real de logo y distintivo, saneado a PNG,

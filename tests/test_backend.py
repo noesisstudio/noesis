@@ -2521,7 +2521,10 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                         follow_redirects=False,
                     )
                 self.assertEqual(signed_in.status_code, 303)
-                self.assertEqual(signed_in.headers["location"], f"/b/{user['business_id']}/resumen")
+                self.assertEqual(
+                    signed_in.headers["location"],
+                    f"/onboarding/setup/{user['business_id']}",
+                )
 
 
 class PortalHttpTestCase(BackendTestCase):
@@ -2867,6 +2870,18 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(signup.status_code, 303)
                 user = db.get_user_by_email("completo@example.com")
                 business_id = user["business_id"]
+                started = db.get_business(business_id)
+                self.assertTrue(started["onboarding_started"])
+                self.assertFalse(started["onboarding_done"])
+                self.assertEqual(started["onboarding_stage"], 2)
+                self.assertEqual(started["onboarding_plan"], "pro")
+                self.assertEqual(started["onboarding_billing"], "annual")
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/setup/{business_id}",
+                )
+                with self.assertRaises(ValueError):
+                    db.finish_onboarding(business_id, whatsapp_choice="later")
                 setup_page = client.get(signup.headers["location"])
                 self.assertIn(
                     'value="Instalación de placas solares"', setup_page.text
@@ -2889,6 +2904,13 @@ class PortalHttpTestCase(BackendTestCase):
                     profile.headers["location"],
                     f"/onboarding/preferences/{business_id}",
                 )
+                self.assertEqual(
+                    db.get_business(business_id)["onboarding_stage"], 3
+                )
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/preferences/{business_id}",
+                )
 
                 preferences_page = client.get(profile.headers["location"])
                 self.assertEqual(preferences_page.status_code, 200)
@@ -2902,6 +2924,12 @@ class PortalHttpTestCase(BackendTestCase):
                         "default_irpf": "15",
                         "default_payment_term_days": "30",
                         "invoice_template": "editorial",
+                        "brand_color": "#2e8b74",
+                        "document_footer": "Programa financiado por la ayuda piloto.",
+                        "quote_terms": "Validez de 30 dias.",
+                        "footer_image_width": "75",
+                        "footer_image_alignment": "right",
+                        "footer_image_scope": "all",
                         "payment_iban": TEST_IBAN,
                         "payment_bizum": "600111222",
                         "payment_note": "Indica el numero de factura.",
@@ -2915,6 +2943,10 @@ class PortalHttpTestCase(BackendTestCase):
                         "gestoria_name": "Gestoria Piloto",
                         "gestoria_email": "gestoria@example.com",
                         "gestoria_cadence": "mensual",
+                    },
+                    files={
+                        "logo": ("logo.png", TINY_PNG, "image/png"),
+                        "footer_image": ("ayuda.png", TINY_PNG, "image/png"),
                     },
                     follow_redirects=False,
                 )
@@ -2930,8 +2962,20 @@ class PortalHttpTestCase(BackendTestCase):
                 )
                 self.assertEqual(configured["default_payment_term_days"], 30)
                 self.assertEqual(configured["invoice_template"], "editorial")
+                self.assertEqual(configured["brand_color"], "#2e8b74")
+                self.assertEqual(configured["footer_image_width"], 75)
+                self.assertEqual(configured["footer_image_alignment"], "right")
+                self.assertEqual(configured["footer_image_scope"], "all")
+                self.assertTrue(configured["logo_data"])
+                self.assertTrue(configured["footer_image_data"])
                 self.assertEqual(configured["payment_reminder_days"], "3,10")
                 self.assertEqual(configured["gestoria_cadence"], "mensual")
+                self.assertEqual(configured["onboarding_stage"], 4)
+                self.assertFalse(configured["onboarding_done"])
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/whatsapp/{business_id}",
+                )
                 reports = db.resolve_whatsapp_reports(
                     configured["whatsapp_reports"]
                 )
@@ -2954,9 +2998,18 @@ class PortalHttpTestCase(BackendTestCase):
 
                 whatsapp_step = client.get(preferences.headers["location"])
                 self.assertEqual(whatsapp_step.status_code, 200)
-                self.assertIn("Continuar y revisar el pago", whatsapp_step.text)
+                self.assertIn("Así queda Negocio Completo", whatsapp_step.text)
+                self.assertIn("Negocio · Anual", whatsapp_step.text)
+                pending = client.post(
+                    f"/onboarding/whatsapp/{business_id}/connect",
+                    data={"action": "check"},
+                    follow_redirects=False,
+                )
+                self.assertIn("status=pending", pending.headers["location"])
+                self.assertFalse(db.get_business(business_id)["onboarding_done"])
                 finished = client.post(
                     f"/onboarding/whatsapp/{business_id}/connect",
+                    data={"action": "later"},
                     follow_redirects=False,
                 )
                 self.assertEqual(finished.status_code, 303)
@@ -2964,6 +3017,12 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertIn("status=ready", finished.headers["location"])
                 self.assertIn("plan=pro", finished.headers["location"])
                 self.assertIn("billing=annual", finished.headers["location"])
+                completed = db.get_business(business_id)
+                self.assertTrue(completed["onboarding_done"])
+                self.assertEqual(completed["onboarding_stage"], 5)
+                self.assertEqual(
+                    completed["whatsapp_onboarding_choice"], "later"
+                )
                 payment_page = client.get(finished.headers["location"])
                 self.assertEqual(payment_page.status_code, 200)
                 self.assertIn("subscription-ready", payment_page.text)

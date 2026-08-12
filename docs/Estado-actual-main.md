@@ -6,6 +6,16 @@
 
 ## Producto construido
 
+- El alta comercial es recuperable en el esquema 49: conserva plan, periodicidad e
+  intención y, al volver a iniciar sesión, lleva al paso exacto pendiente. Negocio y
+  operativa se marcan completos solo después de guardar sus datos obligatorios. La
+  configuración inicial ya incluye las tres plantillas de factura, color, logotipo,
+  pie textual, distintivo gráfico, alcance y condiciones de presupuesto; el último
+  paso muestra un resumen antes de entrar o pagar. WhatsApp solo figura conectado
+  tras recibir el código real, o queda explícitamente pospuesto. Después de Stripe,
+  el titular vuelve a la puesta en marcha para crear su primer cliente. Las 485
+  pruebas están verdes; el candidato todavía no está publicado ni recorrido con
+  Stripe/Meta reales.
 - Ajustes incorpora un editor documental por capas: tres composiciones probadas,
   color, logotipo saneado, pie textual y una imagen inferior para distintivos de
   ayudas, fondos, certificaciones o asociaciones. El titular elige tamaño,

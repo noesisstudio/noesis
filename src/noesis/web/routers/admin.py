@@ -337,6 +337,7 @@ def admin_request_approve(request: Request, request_id: int):
     except (ValueError, *db.IntegrityError) as exc:
         request.session["admin_error"] = f"No se pudo crear la cuenta: {exc}"
         return RedirectResponse("/admin#solicitudes", status_code=303)
+    db.start_onboarding(biz["id"])
 
     token = secrets.token_urlsafe(32)
     db.create_password_reset(

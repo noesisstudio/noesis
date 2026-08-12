@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 48;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 49;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -26,7 +26,9 @@
   contador anti-replay, códigos de recuperación y fecha de alta sin modificar
   accesos profesionales existentes. La 48 añade distintivos gráficos al perfil
   documental, versiona la identidad sin duplicar imágenes por factura y congela la
-  versión utilizada al emitir, con referencia multiempresa protegida.
+  versión utilizada al emitir, con referencia multiempresa protegida. La 49 guarda
+  el punto exacto del alta, el plan y la periodicidad elegidos y diferencia WhatsApp
+  verificado de la decisión explícita de conectarlo más adelante.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -161,7 +163,10 @@
   entrada rápida, carpetas responsive, búsqueda, revisión y primera página privada
   bajo demanda sin duplicar ficheros.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
-  Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
+  Google OAuth, configuración operativa, checkout y cuenta. El recorrido se reanuda
+  en el paso exacto, incluye la identidad completa de facturas y termina en una
+  revisión que no confunde un código de WhatsApp enviado con una conexión verificada;
+  el alta pública falla
   cerrada en producción si falta identidad legal o autorización explícita y no
   expone el diagnóstico de proveedores en la API del cliente. La solicitud pública
   distingue también un despacho profesional sin crearle una cuenta ni permisos.
@@ -169,7 +174,9 @@
   puerta pública única. Deriva autónomo/empresa al login titular y gestoría a su
   identidad profesional separada; un cliente final conserva el portal por enlace.
 - `src/noesis/web/templates/onboarding_preferences.html`: aplica fiscalidad,
-  factura, cobro, recordatorios, informes y gestoría antes de entrar al producto.
+  identidad visual completa de factura, cobro, recordatorios, informes y gestoría
+  antes de entrar al producto; `whatsapp_connect.html` resume lo elegido y permite
+  verificar el canal o posponerlo de forma explícita.
 - `src/noesis/web/routers/account.py` (`/solicitar-acceso`) + tabla `access_requests`:
   recoge la solicitud pública con su plan de interés, valida, limita repeticiones por
   correo y descarta robots con un campo señuelo. No crea ninguna cuenta.

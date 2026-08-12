@@ -5,6 +5,12 @@
 
 ## P0 — publicar y pilotar con seguridad
 
+- [ ] Desplegar y recorrer en escritorio y móvil el alta recuperable del esquema 49:
+  salir y volver en cada paso, revisar la identidad visual de factura, comprobar que
+  WhatsApp no aparece conectado antes del webhook, posponerlo voluntariamente y
+  confirmar que Stripe devuelve a la puesta en marcha y al primer cliente. El flujo,
+  la persistencia y los bloqueos están cubiertos localmente; faltan Meta y Stripe
+  reales.
 - [ ] Validar visualmente en escritorio y móvil la nueva entrada `/acceso` ya
   desplegada: selección autónomo/empresa o gestoría, retorno entre accesos, login de
   ambos perfiles y solicitud profesional. HTTP, aislamiento y ausencia de

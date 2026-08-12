@@ -1,14 +1,14 @@
 {
   "state_date": "2026-08-12",
   "product_stage": "MVP desplegado; piloto real controlado pendiente",
-  "schema_version": 48,
+  "schema_version": 49,
   "verified_test_count": 485,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
-    "pending_after_deploy": "Verificar en escritorio y movil el editor documental con el distintivo real del founder y la conservacion visual de una factura emitida; verificar tambien la nueva entrada horizontal, carpetas y vista previa bajo demanda de Documentos y las correcciones autorizadas de configuracion y metadatos documentales del centro de soporte; activar una vez NOESIS_SEED_DEMO para reparar la agrupacion ficticia y devolverlo a false; validar con una cuenta profesional real la activacion TOTP, anti_replay, recuperacion y rotacion controlada de NOESIS_SECRET; validar en Stripe test checkout, factura pagada, trialing, incomplete, paused, impago, cancelacion, reactivacion, cambio de plan por price_id y eventos fuera de orden; comprobar con cuentas reales los derechos de Autonomo frente a Negocio/Premium en web, API, asistente, WhatsApp, equipo y gestoria; despues validar Meta real, Google OAuth admin, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
+    "current_repository_candidate_deployed": false,
+    "pending_after_deploy": "Verificar en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS_SEED_DEMO y devolverlo a false; validar TOTP de gestoria con una cuenta real; validar Stripe test, permisos por plan, Meta real, Google OAuth, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -54,7 +54,7 @@
     "gestoria_onboarding": "professional_request_or_explicit_client_invitation_never_self_grants_business_access"
   },
   "internal_capabilities": {
-    "commercial_onboarding": "trial_or_subscribe_then_business_invoice_collection_messages_whatsapp_and_checkout",
+    "commercial_onboarding": "schema_49_resumable_exact_step_trial_or_subscribe_then_business_complete_invoice_identity_collection_messages_truthful_whatsapp_review_checkout_and_first_customer_activation",
     "onboarding_sector_capture": "free_text_up_to_80_characters",
     "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",
     "public_opening_gate": "production_signup_fail_closed_until_legal_identity_and_explicit_enable_existing_accounts_keep_access_and_the_closed_onboarding_redirects_to_the_request_form",

@@ -688,9 +688,88 @@ def disconnect_whatsapp(business_id: int) -> dict | None:
     return get_business(business_id)
 
 
-def finish_onboarding(business_id) -> dict:
+def start_onboarding(
+    business_id: int, *, plan: str = "autonomo", billing: str = "monthly",
+    intent: str = "trial",
+) -> dict:
+    """Activa el recorrido recuperable solo para altas que deben completarlo."""
+    if plan not in {"autonomo", "pro", "premium"}:
+        raise ValueError("El plan del alta no es válido.")
+    if billing not in {"monthly", "annual"}:
+        raise ValueError("La periodicidad del alta no es válida.")
+    if intent not in {"trial", "subscribe"}:
+        raise ValueError("La intención del alta no es válida.")
     with get_conn() as conn:
-        conn.execute("UPDATE businesses SET onboarding_done=TRUE WHERE id=?", (business_id,))
+        conn.execute(
+            "UPDATE businesses SET onboarding_started=TRUE, onboarding_done=FALSE, "
+            "onboarding_stage=2, onboarding_plan=?, onboarding_billing=?, "
+            "onboarding_intent=? WHERE id=?",
+            (plan, billing, intent, business_id),
+        )
+    return get_business(business_id)
+
+
+def _onboarding_readiness(business: dict) -> tuple[bool, bool]:
+    profile_done = bool(
+        business.get("onboarding_profile_completed")
+        or (
+            business.get("sector") and business.get("team_size")
+            and business.get("primary_goal")
+        )
+    )
+    preferences_done = bool(
+        business.get("onboarding_preferences_completed")
+        or (business.get("nif") and business.get("address"))
+    )
+    return profile_done, preferences_done
+
+
+def onboarding_destination(business_id: int) -> str | None:
+    """Ruta exacta donde debe continuar un alta iniciada e incompleta."""
+    business = get_business(business_id)
+    if not business or not business.get("onboarding_started"):
+        return None
+    if business.get("onboarding_done"):
+        return f"/b/{business_id}/resumen"
+    profile_done, preferences_done = _onboarding_readiness(business)
+    if not profile_done:
+        return f"/onboarding/setup/{business_id}"
+    if not preferences_done:
+        return f"/onboarding/preferences/{business_id}"
+    return f"/onboarding/whatsapp/{business_id}"
+
+
+def finish_onboarding(business_id: int, whatsapp_choice: str | None = None) -> dict:
+    """Cierra el alta solo tras guardar perfil y operativa obligatorios."""
+    choice = (whatsapp_choice or "").strip().lower()
+    if choice and choice not in {"connected", "later"}:
+        raise ValueError("La decisión de WhatsApp no es válida.")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        business = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not business:
+            raise ValueError("Negocio no encontrado.")
+        profile_done, preferences_done = _onboarding_readiness(dict(business))
+        if not profile_done or not preferences_done:
+            raise ValueError(
+                "Completa el negocio y la operativa antes de terminar el alta."
+            )
+        actual_choice = (
+            "connected" if business.get("whatsapp_status") == "conectado"
+            else choice
+        )
+        if actual_choice not in {"connected", "later"}:
+            raise ValueError("Confirma WhatsApp o elige conectarlo más adelante.")
+        conn.execute(
+            "UPDATE businesses SET onboarding_started=TRUE, onboarding_done=TRUE, "
+            "onboarding_profile_completed=TRUE, "
+            "onboarding_preferences_completed=TRUE, onboarding_stage=5, "
+            "whatsapp_onboarding_choice=? WHERE id=?",
+            (actual_choice, business_id),
+        )
     return get_business(business_id)
 
 
@@ -1559,6 +1638,24 @@ def update_onboarding_preferences(
                 json.dumps(reports, ensure_ascii=False, separators=(",", ":")),
                 business_id,
             ),
+        )
+    return get_business(business_id)
+
+
+def complete_onboarding_step(business_id: int, step: str) -> dict:
+    """Avanza el alta solo después de guardar todas las piezas de ese paso."""
+    if step == "profile":
+        field, stage = "onboarding_profile_completed", 3
+    elif step == "preferences":
+        field, stage = "onboarding_preferences_completed", 4
+    else:
+        raise ValueError("El paso de alta no es válido.")
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE businesses SET {field}=TRUE, onboarding_started=TRUE, "
+            "onboarding_stage=CASE WHEN onboarding_stage<? THEN ? "
+            "ELSE onboarding_stage END WHERE id=?",
+            (stage, stage, business_id),
         )
     return get_business(business_id)
 

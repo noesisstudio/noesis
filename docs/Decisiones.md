@@ -737,3 +737,14 @@ Rotar `NOESIS_SECRET` invalida las semillas TOTP derivadas; los códigos de
 recuperación permiten entrar y regenerar después de una rotación planificada. Antes
 de abrir a terceros siguen pendientes recuperación de contraseña por correo,
 passkeys opcionales, roles finos y revisión externa del flujo.
+
+## El alta termina con hechos comprobados, no con clics (2026-08-12)
+
+Una cuenta nueva conserva en servidor el plan, la periodicidad, la intención y cada
+paso realmente completado. Iniciar sesión la devuelve al primer paso pendiente. El
+perfil y la operativa solo avanzan después de guardar todos sus componentes, y
+WhatsApp solo se considera conectado si el webhook ha verificado el número; de otro
+modo el titular debe elegir expresamente conectarlo más adelante. El último paso es
+una revisión de negocio, factura, cobros y acompañamiento. Tras el pago, el siguiente
+objetivo es crear el primer cliente y completar el ciclo operativo. Motivo: visitar
+una pantalla o pulsar “comprobar” no equivale a haber preparado el negocio.

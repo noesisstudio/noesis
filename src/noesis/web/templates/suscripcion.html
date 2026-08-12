@@ -23,7 +23,8 @@
 {% if status == 'checkout_return' %}
 <div class="subscription-notice subscription-success" style="margin-bottom:16px">
   {% if business.subscription_status in ('active', 'trialing') %}
-  <b>Suscripción activada.</b><span>Tu configuración y tus datos siguen exactamente donde los dejaste.</span>
+  <div><b>Suscripción activada.</b><span>Tu configuración y tus datos siguen exactamente donde los dejaste.</span></div>
+  <a class="btn primary" href="/b/{{ business.id }}/resumen?welcome=1#puesta-en-marcha">Empezar con mi primer cliente</a>
   {% else %}
   <b>Pago completado. Estamos confirmando la activación.</b><span>Normalmente tarda unos segundos; puedes recargar esta página.</span>
   {% endif %}

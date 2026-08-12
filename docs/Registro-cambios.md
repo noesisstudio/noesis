@@ -23,6 +23,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-12 — alta recuperable y preparada para el primer resultado
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar para el piloto la configuración posterior al registro sin
+  perder el punto de avance ni presentar WhatsApp como conectado antes de serlo.
+- **Áreas y archivos:** migraciones y estado de negocio en `migrations.py`/`db.py`;
+  rutas de cuenta, Google, administración y WhatsApp; pantallas de negocio,
+  operativa, revisión, suscripción e inicio; estilos responsive y pruebas HTTP.
+- **Cambios de datos/migración:** esquema 49 añade estado recuperable de onboarding,
+  selección comercial y decisión explícita de WhatsApp. Las cuentas históricas no
+  se obligan a repetirlo; las ya completas se reconstruyen de forma compatible.
+- **Pruebas ejecutadas:** 485/485 unitarias e integrales verdes; 9/9 de SEO;
+  compilación; migración histórica focalizada. El ciclo 0→49→0→49 y las revisiones
+  estáticas se registran al cerrar el commit.
+- **Dependencias o validaciones externas:** ninguna nueva. Stripe, Meta y recorrido
+  visual siguen requiriendo credenciales/servicios reales.
+- **Riesgo/punto probable de fallo:** datos históricos incompletos, carga de imagen
+  inválida o webhook de WhatsApp que no llegue; el recorrido no avanza en silencio.
+- **Diagnóstico y rollback:** `/ready` debe informar esquema 49; revisar las columnas
+  `onboarding_*`, `whatsapp_onboarding_choice` y eventos de producto. Revertir el
+  commit; SQLite conserva las columnas al bajar para no perder el punto de avance.
+- **Estado de publicación:** candidato validado que viaja en este mismo commit a
+  `main`; despliegue y validación real pendientes.
+
 ## 2026-08-11 — calculadora por numero de clientes
 
 - **Autor/agente:** Claude.
