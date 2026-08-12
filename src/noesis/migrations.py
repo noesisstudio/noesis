@@ -2271,16 +2271,25 @@ _IMMUTABLE_INVOICE_FIELDS = (
     "recipient_nif", "recipient_address", "invoice_type",
     "rectifies_invoice_id", "rectification_type", "rectification_reason",
     "source", "external_number", "operation_date", "series_id", "notes",
-    "payment_method", "legal_mention", "currency", "created_at",
+    "payment_method", "legal_mention", "currency", "document_profile_id",
+    "created_at",
 )
 
 
 def _install_issued_invoice_integrity(conn) -> None:
     """Protege en BD la numeración y el contenido de una factura emitida."""
+    # Las instalaciones nuevas recorren migraciones antiguas antes de que existan
+    # campos añadidos después; el guardián se amplía al reinstalarse en cada salto.
+    existing = _column_names(conn, "invoices")
+    immutable_fields = tuple(
+        field for field in _IMMUTABLE_INVOICE_FIELDS if field in existing
+    )
     if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_delete")
         changed = " OR ".join(
             f"OLD.{field} IS NOT NEW.{field}"
-            for field in _IMMUTABLE_INVOICE_FIELDS
+            for field in immutable_fields
         )
         conn.executescript(
             f"""
@@ -2302,7 +2311,7 @@ END;
 
     changed = " OR ".join(
         f"OLD.{field} IS DISTINCT FROM NEW.{field}"
-        for field in _IMMUTABLE_INVOICE_FIELDS
+        for field in immutable_fields
     )
     conn.execute(
         f"""
@@ -3541,6 +3550,137 @@ def _downgrade_gestoria_mfa(conn) -> None:
         )
 
 
+def _upgrade_invoice_visual_profiles(conn) -> None:
+    """Añade pies gráficos y congela la identidad visual al emitir.
+
+    La imagen se guarda una sola vez por versión del perfil, no dentro de cada
+    factura. De este modo cientos de facturas pueden apuntar al mismo diseño sin
+    multiplicar el peso de logos o distintivos de subvenciones.
+    """
+    t = _types(conn.dialect)
+    business_columns = {
+        "footer_image_data": "TEXT",
+        "footer_image_mime": "TEXT",
+        "footer_image_width": "INTEGER NOT NULL DEFAULT 100",
+        "footer_image_alignment": "TEXT NOT NULL DEFAULT 'center'",
+        "footer_image_scope": "TEXT NOT NULL DEFAULT 'invoices'",
+    }
+    existing_business = _column_names(conn, "businesses")
+    for column, ddl in business_columns.items():
+        if column not in existing_business:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {column} {ddl}")
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS document_profiles ("
+        f"id {t['id']}, "
+        f"business_id {t['ref']} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE, "
+        "version INTEGER NOT NULL, invoice_template TEXT NOT NULL, "
+        "brand_color TEXT, logo_data TEXT, logo_mime TEXT, document_footer TEXT, "
+        "footer_image_data TEXT, footer_image_mime TEXT, "
+        "footer_image_width INTEGER NOT NULL DEFAULT 100, "
+        "footer_image_alignment TEXT NOT NULL DEFAULT 'center', "
+        "footer_image_scope TEXT NOT NULL DEFAULT 'invoices', "
+        f"created_at {t['timestamp']} NOT NULL, "
+        "UNIQUE (business_id, version), UNIQUE (business_id, id))"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_document_profiles_business_version "
+        "ON document_profiles(business_id, version)"
+    )
+    # Postgres exige una clave única ya materializada antes de aceptar la FK
+    # compuesta de invoices. Se declara de forma explícita (aunque la tabla ya
+    # incluya UNIQUE) para que el orden sea inequívoco también en instalaciones
+    # heredadas y en el guardián DDL de CI.
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_document_profiles_business_id "
+        "ON document_profiles(business_id, id)"
+    )
+    if "document_profile_id" not in _column_names(conn, "invoices"):
+        conn.execute(
+            f"ALTER TABLE invoices ADD COLUMN document_profile_id {t['ref']}"
+        )
+
+    # Una foto coherente para el histórico: reproduce el aspecto que tenía el
+    # negocio justo antes de instalar esta versión y queda inmutable desde aquí.
+    now = datetime.now().isoformat(timespec="seconds")
+    businesses = conn.execute("SELECT * FROM businesses ORDER BY id").fetchall()
+    for business in businesses:
+        profile = conn.execute(
+            "INSERT INTO document_profiles (business_id, version, invoice_template, "
+            "brand_color, logo_data, logo_mime, document_footer, footer_image_data, "
+            "footer_image_mime, footer_image_width, footer_image_alignment, "
+            "footer_image_scope, created_at) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, version) DO NOTHING RETURNING id",
+            (
+                business["id"], business.get("invoice_template") or "clasica",
+                business.get("brand_color"), business.get("logo_data"),
+                business.get("logo_mime"), business.get("document_footer"),
+                business.get("footer_image_data"), business.get("footer_image_mime"),
+                business.get("footer_image_width") or 100,
+                business.get("footer_image_alignment") or "center",
+                business.get("footer_image_scope") or "invoices", now,
+            ),
+        ).fetchone()
+        if not profile:
+            profile = conn.execute(
+                "SELECT id FROM document_profiles WHERE business_id=? AND version=1",
+                (business["id"],),
+            ).fetchone()
+        conn.execute(
+            "UPDATE invoices SET document_profile_id=? WHERE business_id=? "
+            "AND status<>'borrador' AND document_profile_id IS NULL",
+            (profile["id"], business["id"]),
+        )
+
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "invoices", "document_profile_id", "document_profiles", event
+                )
+            )
+    else:
+        conn.execute(
+            "ALTER TABLE invoices DROP CONSTRAINT IF EXISTS "
+            "invoices_document_profile_same_business"
+        )
+        conn.execute(
+            "ALTER TABLE invoices ADD CONSTRAINT invoices_document_profile_same_business "
+            "FOREIGN KEY (business_id, document_profile_id) "
+            "REFERENCES document_profiles(business_id, id)"
+        )
+    # Reinstala el guardián incluyendo document_profile_id.
+    _install_issued_invoice_integrity(conn)
+
+
+def _downgrade_invoice_visual_profiles(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.execute(
+            "DROP TRIGGER IF EXISTS invoices_document_profile_id_same_business_insert"
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS invoices_document_profile_id_same_business_update"
+        )
+        # SQLite conserva columnas y perfiles: quitarlos exigiría reconstruir dos
+        # tablas y podría destruir la reproducción histórica de PDFs.
+        return
+    conn.execute(
+        "ALTER TABLE invoices DROP CONSTRAINT IF EXISTS "
+        "invoices_document_profile_same_business"
+    )
+    _drop_issued_invoice_integrity(conn)
+    conn.execute("ALTER TABLE invoices DROP COLUMN IF EXISTS document_profile_id")
+    _install_issued_invoice_integrity(conn)
+    conn.execute("DROP INDEX IF EXISTS idx_document_profiles_business_version")
+    conn.execute("DROP INDEX IF EXISTS idx_document_profiles_business_id")
+    conn.execute("DROP TABLE IF EXISTS document_profiles")
+    for column in (
+        "footer_image_scope", "footer_image_alignment", "footer_image_width",
+        "footer_image_mime", "footer_image_data",
+    ):
+        conn.execute(f"ALTER TABLE businesses DROP COLUMN IF EXISTS {column}")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3604,6 +3744,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (46, "orden_suscripcion_stripe", _upgrade_stripe_subscription_ordering,
      _downgrade_stripe_subscription_ordering),
     (47, "mfa_gestoria", _upgrade_gestoria_mfa, _downgrade_gestoria_mfa),
+    (48, "perfiles_visuales_factura", _upgrade_invoice_visual_profiles,
+     _downgrade_invoice_visual_profiles),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

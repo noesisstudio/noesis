@@ -3,26 +3,66 @@
 from __future__ import annotations
 
 import hmac
+import base64
 import json
 import logging
 import secrets
 import time
 from datetime import datetime
+from io import BytesIO
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from ... import config, db
 from ...adapters import billing as billing_adapter
 from ...adapters import email as email_adapter
+from ...documents import validation as document_validation
 from .. import auth, whatsapp
 from ..deps import TEMPLATES, _read_json
 
 router = APIRouter()
 log = logging.getLogger("uvicorn.error")
+
+_BRAND_UPLOAD_BYTES = 3_000_000
+
+
+async def _sanitized_brand_image(
+    upload: UploadFile | None, *, footer: bool = False,
+) -> tuple[str | None, str | None]:
+    """Valida bytes reales, elimina metadatos y limita dimensiones antes de guardar."""
+    if upload is None or not upload.filename:
+        return None, None
+    mime_to_ext = {
+        "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
+    }
+    ext = mime_to_ext.get(upload.content_type or "")
+    if not ext:
+        raise ValueError("Usa una imagen PNG, JPG o WebP.")
+    raw = await upload.read(_BRAND_UPLOAD_BYTES + 1)
+    if not raw or len(raw) > _BRAND_UPLOAD_BYTES:
+        raise ValueError("La imagen no puede superar 3 MB.")
+    document_validation.validate(f"marca{ext}", raw)
+    try:
+        with Image.open(BytesIO(raw)) as source:
+            image = ImageOps.exif_transpose(source)
+            image.thumbnail((1800, 600) if footer else (600, 600))
+            has_alpha = image.mode in {"RGBA", "LA"} or "transparency" in image.info
+            clean = image.convert("RGBA" if has_alpha else "RGB")
+            output = BytesIO()
+            clean.save(output, format="PNG", optimize=True)
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise ValueError("No se ha podido preparar esa imagen.") from exc
+    encoded = base64.b64encode(output.getvalue()).decode("ascii")
+    limit = db.MAX_FOOTER_IMAGE_B64 if footer else db.MAX_LOGO_B64
+    if len(encoded) > limit:
+        label = "pie" if footer else "logo"
+        raise ValueError(f"La imagen del {label} sigue siendo demasiado grande.")
+    return encoded, "image/png"
 
 _GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -966,31 +1006,55 @@ async def update_branding(business_id: int, template: str = Form("clasica"),
                           document_footer: str = Form(""),
                           quote_terms: str = Form(""),
                           default_quote_validity_days: int = Form(30),
-                          logo: UploadFile = File(None)):
-    """Personalización de documentos: plantilla, color de marca y logo (o monograma
-    automático si no se sube ninguno). El logo se guarda en base64 en la BD."""
-    import base64
-    logo_data = logo_mime = None
-    clear = bool(remove_logo)
-    if not clear and logo is not None and logo.filename:
-        if logo.content_type not in ("image/png", "image/jpeg"):
-            return RedirectResponse(
-                f"/b/{business_id}/ajustes?error=logo", status_code=303)
-        raw = await logo.read(db.MAX_LOGO_B64)  # límite de lectura defensivo
-        if not raw or len(raw) >= db.MAX_LOGO_B64:
-            return RedirectResponse(
-                f"/b/{business_id}/ajustes?error=logo", status_code=303)
-        logo_data = base64.b64encode(raw).decode()
-        logo_mime = logo.content_type
+                          footer_image_width: int = Form(100),
+                          footer_image_alignment: str = Form("center"),
+                          footer_image_scope: str = Form("invoices"),
+                          remove_footer_image: str = Form(""),
+                          logo: UploadFile = File(None),
+                          footer_image: UploadFile = File(None)):
+    """Identidad documental saneada y versionada para facturas futuras."""
+    clear_logo = bool(remove_logo)
+    clear_footer = bool(remove_footer_image)
     try:
+        logo_data, logo_mime = (
+            (None, None) if clear_logo else await _sanitized_brand_image(logo)
+        )
+        footer_data, footer_mime = (
+            (None, None) if clear_footer
+            else await _sanitized_brand_image(footer_image, footer=True)
+        )
         db.update_branding(business_id, template=template, brand_color=brand_color,
-                           logo_data=logo_data, logo_mime=logo_mime, clear_logo=clear,
+                           logo_data=logo_data, logo_mime=logo_mime,
+                           clear_logo=clear_logo,
                            document_footer=document_footer, quote_terms=quote_terms,
-                           default_quote_validity_days=default_quote_validity_days)
+                           default_quote_validity_days=default_quote_validity_days,
+                           footer_image_data=footer_data,
+                           footer_image_mime=footer_mime,
+                           clear_footer_image=clear_footer,
+                           footer_image_width=footer_image_width,
+                           footer_image_alignment=footer_image_alignment,
+                           footer_image_scope=footer_image_scope)
     except ValueError:
         return RedirectResponse(
-            f"/b/{business_id}/ajustes?error=marca", status_code=303)
-    return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
+            f"/b/{business_id}/ajustes?error=marca#marca-documental", status_code=303)
+    db.record_product_event(business_id, "document_branding_updated")
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes?ok=marca#marca-documental", status_code=303
+    )
+
+
+@router.get("/api/{business_id}/branding/preview.pdf")
+def branding_preview_pdf(business_id: int):
+    """Vista previa explícita; no crea, numera ni emite una factura."""
+    from ..invoice_pdf import build_brand_preview_pdf
+
+    data = build_brand_preview_pdf(business_id)
+    if data is None:
+        return JSONResponse({"error": "Negocio no encontrado."}, status_code=404)
+    return Response(
+        data, media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="vista_previa_factura.pdf"'},
+    )
 
 
 @router.post("/b/{business_id}/support-access")

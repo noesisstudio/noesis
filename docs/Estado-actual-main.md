@@ -6,6 +6,16 @@
 
 ## Producto construido
 
+- Ajustes incorpora un editor documental por capas: tres composiciones probadas,
+  color, logotipo saneado, pie textual y una imagen inferior para distintivos de
+  ayudas, fondos, certificaciones o asociaciones. El titular elige tamaño,
+  alineación y si la imagen aparece solo en facturas o también en presupuestos;
+  dispone de muestra inmediata y PDF de ejemplo que no crea ni numera documentos.
+  PNG/JPG/WebP se validan por contenido, se limitan y se convierten a PNG sin
+  metadatos. La migración 48 guarda versiones reutilizables por negocio: al emitir,
+  la factura enlaza su perfil visual y posteriores cambios de marca no alteran su
+  PDF. Las 485 pruebas, el ciclo completo de migraciones y las revisiones estáticas
+  y de seguridad están verdes; faltan publicación y recorrido visual real.
 - La autorización temporal de configuración habilita una segunda corrección
   administrativa acotada: nombre visible para el futuro, sector, provincia, tamaño,
   objetivo, idioma, nivel de explicación y apariencia predeterminada de facturas y

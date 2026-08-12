@@ -1676,6 +1676,130 @@ class BackendTestCase(unittest.TestCase):
         self.assertTrue(pdf.startswith(b"%PDF"))
         self.assertGreater(len(pdf), 2_000)
 
+    def test_footer_image_is_versioned_and_frozen_when_invoice_is_issued(self):
+        import base64
+
+        business, client = self.make_business("Marca congelada")
+        footer = base64.b64encode(TINY_PNG).decode("ascii")
+        db.update_branding(
+            business["id"], template="editorial", brand_color="#7a1f4b",
+            footer_image_data=footer, footer_image_mime="image/png",
+            footer_image_width=75, footer_image_alignment="right",
+            footer_image_scope="all",
+        )
+        draft = db.add_invoice(
+            client["id"], "Trabajo con distintivo", 100,
+            business_id=business["id"],
+        )
+        issued = db.issue_invoice(draft["id"], business["id"])
+        frozen = db.get_invoice_document_profile(issued["id"], business["id"])
+        self.assertIsNotNone(frozen)
+        self.assertEqual(frozen["brand_color"], "#7a1f4b")
+        self.assertEqual(frozen["footer_image_data"], footer)
+        self.assertEqual(frozen["footer_image_width"], 75)
+        self.assertEqual(frozen["footer_image_alignment"], "right")
+
+        db.update_branding(
+            business["id"], brand_color="#14463b", clear_footer_image=True,
+            footer_image_width=25, footer_image_alignment="left",
+            footer_image_scope="invoices",
+        )
+        current = db.get_business(business["id"])
+        still_frozen = db.get_invoice_document_profile(issued["id"], business["id"])
+        self.assertIsNone(current["footer_image_data"])
+        self.assertEqual(current["brand_color"], "#14463b")
+        self.assertEqual(still_frozen["brand_color"], "#7a1f4b")
+        self.assertEqual(still_frozen["footer_image_data"], footer)
+
+        from noesis.web.invoice_pdf import build_invoice_pdf
+        pdf = build_invoice_pdf(issued["id"], business["id"])
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertGreater(len(pdf), 2_000)
+
+    def test_document_profile_reference_is_tenant_scoped(self):
+        business_a, client_a = self.make_business("Perfil A")
+        business_b, _ = self.make_business("Perfil B")
+        db.update_branding(business_b["id"], brand_color="#7a1f4b")
+        with db.get_conn() as conn:
+            foreign_profile = conn.execute(
+                "SELECT id FROM document_profiles WHERE business_id=?",
+                (business_b["id"],),
+            ).fetchone()["id"]
+        invoice = db.add_invoice(
+            client_a["id"], "Aislamiento visual", 80,
+            business_id=business_a["id"],
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoices SET document_profile_id=? "
+                    "WHERE id=? AND business_id=?",
+                    (foreign_profile, invoice["id"], business_a["id"]),
+                )
+
+    def test_branding_http_sanitizes_images_and_exposes_pdf_preview(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Vista de marca")
+        user = db.create_user(
+            "marca@example.com", auth.hash_password(TEST_PASSWORD), business["id"]
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": user["email"], "password": TEST_PASSWORD,
+                })
+                response = client.post(
+                    f"/b/{business['id']}/branding",
+                    data={
+                        "template": "minimal", "brand_color": "#2e8b74",
+                        "document_footer": "Proyecto financiado.",
+                        "quote_terms": "Condiciones de ejemplo.",
+                        "default_quote_validity_days": "30",
+                        "footer_image_width": "50",
+                        "footer_image_alignment": "center",
+                        "footer_image_scope": "all",
+                    },
+                    files={
+                        "logo": ("logo.png", TINY_PNG, "image/png"),
+                        "footer_image": ("ayuda.png", TINY_PNG, "image/png"),
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertIn("ok=marca", response.headers["location"])
+                saved = db.get_business(business["id"])
+                self.assertEqual(saved["logo_mime"], "image/png")
+                self.assertEqual(saved["footer_image_mime"], "image/png")
+                self.assertEqual(saved["footer_image_width"], 50)
+                self.assertEqual(saved["footer_image_scope"], "all")
+                page = client.get(f"/b/{business['id']}/ajustes")
+                self.assertIn("Las emitidas no cambian", page.text)
+                self.assertIn("Imagen o distintivo", page.text)
+                preview = client.get(
+                    f"/api/{business['id']}/branding/preview.pdf"
+                )
+                self.assertEqual(preview.status_code, 200)
+                self.assertTrue(preview.content.startswith(b"%PDF"))
+
+                rejected = client.post(
+                    f"/b/{business['id']}/branding",
+                    data={
+                        "template": "minimal", "brand_color": "#2e8b74",
+                        "default_quote_validity_days": "30",
+                        "footer_image_width": "50",
+                        "footer_image_alignment": "center",
+                        "footer_image_scope": "all",
+                    },
+                    files={
+                        "footer_image": ("falsa.png", b"no-es-imagen", "image/png"),
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(rejected.status_code, 303)
+                self.assertIn("error=marca", rejected.headers["location"])
+
     def test_portal_token_never_crosses_clients(self):
         business_a, client_a = self.make_business("Negocio A")
         business_b, client_b = self.make_business("Negocio B")

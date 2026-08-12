@@ -23,6 +23,33 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-12 12:00 — editor documental con pie gráfico versionado
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir que cada negocio adapte sus facturas e incluya distintivos
+  obligatorios de ayudas o certificaciones sin convertir el documento fiscal en un
+  lienzo libre ni alterar facturas ya emitidas.
+- **Áreas y archivos:** migración 48, perfiles visuales y emisión en `db.py`, carga
+  saneada en cuenta, PDF de factura/presupuesto/muestra, Ajustes responsive, pruebas
+  y documentación viva.
+- **Cambios de datos/migración:** añade pie gráfico y opciones a `businesses`, tabla
+  `document_profiles` por versión y referencia multiempresa inmutable desde
+  `invoices`; el histórico recibe una versión común por negocio sin duplicar imagen
+  en cada fila.
+- **Pruebas ejecutadas:** 3 nuevas, 485 completas y ciclo 0 → 48 → 0 → 48 verdes;
+  Ruff, Bandit, detección de secretos y diff verdes. El primer pase completo detectó
+  el orden ambiguo del índice compuesto PostgreSQL; se corrigió y el segundo pasó.
+  Humo PostgreSQL real pendiente de CI.
+- **Dependencias o validaciones externas:** ninguna API. Falta probar en escritorio
+  y móvil con el distintivo real del founder.
+- **Riesgo/punto probable de fallo:** imágenes desproporcionadas o antiguas; se
+  validan bytes/píxeles, se recomprimen sin metadatos y el PDF limita altura, salta
+  de página y degrada sin romper si un perfil histórico estuviera dañado.
+- **Diagnóstico y rollback:** revisar `document_branding_updated`, última versión en
+  `document_profiles`, `invoices.document_profile_id` y el PDF de muestra. Revertir
+  la interfaz conserva perfiles; no retirar imágenes referenciadas por emitidas.
+- **Estado de publicación:** local verificado; pendiente de commit, CI y despliegue.
+
 ## 2026-08-11 12:00 — configuración reversible con permiso de soporte
 
 - **Autor/agente:** Codex.

@@ -1,5 +1,18 @@
 # Registro de QA
 
+## 2026-08-12 — identidad documental y pie gráfico versionado
+
+- 3 pruebas nuevas cubren carga HTTP real de logo y distintivo, saneado a PNG,
+  tamaño/alineación/alcance, render de Ajustes, PDF de muestra y rechazo de bytes
+  falsos; también congelación del perfil al emitir y aislamiento de referencias
+  entre negocios en la base de datos.
+- 485 pruebas completas están verdes después de detectar y corregir que el índice
+  único compuesto de `document_profiles` debía materializarse antes de la FK en
+  PostgreSQL. También están verdes Ruff, Bandit, detección de secretos,
+  `git diff --check` y el ciclo local 0 → 48 → 0 → 48.
+- El humo PostgreSQL de CI, la revisión visual y producción quedan pendientes antes
+  de declarar publicado el candidato.
+
 ## 2026-08-11 — configuración segura desde soporte
 
 - 2 pruebas nuevas cubren autorización real por el titular, render del formulario,
