@@ -44,8 +44,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** `/ready` debe informar esquema 49; revisar las columnas
   `onboarding_*`, `whatsapp_onboarding_choice` y eventos de producto. Revertir el
   commit; SQLite conserva las columnas al bajar para no perder el punto de avance.
-- **Estado de publicación:** candidato validado que viaja en este mismo commit a
-  `main`; despliegue y validación real pendientes.
+- **Estado de publicación:** `main`, CI completo y humo PostgreSQL verdes;
+  producción confirma release `8730826a79ab` y esquema 49. Recorrido visual y
+  proveedores reales pendientes.
 
 ## 2026-08-11 — calculadora por numero de clientes
 

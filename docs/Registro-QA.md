@@ -13,6 +13,10 @@
   plataforma/seguridad/SEO/documentos. `tests.test_seo` mantiene 9/9 en verde y la
   inspección viva de las 12 URLs del sitemap confirmó 200, canonical, descripción,
   un H1 e imágenes con atributo `alt`.
+- CI [31616995507](https://github.com/noesisstudio/noesis/actions/runs/31616995507)
+  completamente verde: dependencias, secretos, Bandit, Ruff, verdad documental,
+  485 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve release
+  `8730826a79ab`, esquema 49 y HTTP 200 en `/health` y `/ready`.
 - Pendiente externo: recorrido visual real, webhook de Meta y retorno de Stripe.
 
 ## 2026-08-12 — identidad documental y pie gráfico versionado
