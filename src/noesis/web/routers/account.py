@@ -1211,6 +1211,23 @@ def subscription_checkout(request: Request, business_id: int,
             f"/b/{business_id}/suscripcion?status=invalid", status_code=303
         )
     biz = db.get_business(business_id)
+    if biz and biz.get("subscription_status") in {"active", "trialing"}:
+        # Una cuenta suscrita nunca abre un segundo Checkout. Los cambios de
+        # nivel, periodicidad, tarjeta o cancelacion se hacen sobre la misma
+        # suscripcion en el portal de Stripe.
+        db.record_product_event(
+            business_id, "subscription_change_requested",
+            f"plan={plan};billing_period={billing_period}",
+        )
+        url = billing_adapter.get_provider().portal_url(
+            biz, f"{config.BASE_URL}/b/{business_id}/suscripcion"
+        )
+        if not url:
+            return RedirectResponse(
+                f"/b/{business_id}/suscripcion?status=noportal",
+                status_code=303,
+            )
+        return RedirectResponse(url, status_code=303)
     db.record_product_event(
         business_id, "checkout_started",
         f"plan={plan};billing_period={billing_period}",

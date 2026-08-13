@@ -144,6 +144,11 @@
   Checkout concurrente nunca rebaja un estado ya activo; la vuelta del pago puede
   reparar una entrega perdida consultando Stripe de forma autenticada mediante
   `db.reconcile_stripe_subscription`, sin confiar en la URL ni en el navegador.
+- `web/templates/suscripcion.html` + `web/routers/account.py`: una cuenta activa
+  distingue el plan actual, niveles incluidos y mejoras. No contiene Checkout;
+  gestionar nivel, anualidad, tarjeta o cancelación abre el portal de Stripe. La
+  ruta de Checkout repite esta protección en servidor ante formularios antiguos o
+  peticiones manipuladas.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
   de acciones de Noesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve

@@ -23,6 +23,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-13 — plan actual sin doble Checkout
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir la pantalla activa en gestión de una única suscripción y
+  eliminar la posibilidad visible o manipulada de volver a comprar el mismo plan.
+- **Áreas y archivos:** contexto en `web/routers/pages.py`; bloqueo y portal en
+  `web/routers/account.py`; jerarquía en `templates/suscripcion.html`; estilos en
+  `static/app.css`; regresión en `tests/test_backend.py`; decisión, mapa y estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 3/3 focalizadas, **493/493** completas en 351,9 s, Ruff,
+  `py_compile`, verdad documental y `git diff --check`.
+- **Dependencias o validaciones externas:** el patrón adapta la gestión centralizada
+  de Billing documentada oficialmente por OpenAI. Stripe debe tener habilitados en
+  el portal los seis precios mensuales/anuales para que upgrade y anualidad sean
+  efectivos.
+- **Riesgo/punto probable de fallo:** si el portal no está configurado, Noesis falla
+  cerrado y vuelve con `status=noportal`; nunca crea un Checkout alternativo activo.
+- **Diagnóstico y rollback:** revisar el evento
+  `subscription_change_requested`, la configuración del portal y la respuesta de
+  `billing_portal/sessions`. Revertir reabre el riesgo de doble suscripción.
+- **Estado de publicación:** local validado; pendiente commit, `main`, despliegue y
+  comprobación sandbox.
+
 ## 2026-08-13 — recupera la activación Stripe sin repetir el pago
 
 - **Autor/agente:** Codex.

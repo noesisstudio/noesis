@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-08-13 — plan actual y bloqueo de recompra Stripe
+
+- Una cuenta activa de Autónomo muestra resumen de plan actual, `Gestionar plan` y
+  mejoras a Negocio/Premium; no renderiza ningún formulario ni texto de activación
+  de Checkout. Una cuenta Premium muestra dos niveles incluidos y ninguna mejora.
+- La regresión envía además un POST directo de upgrade anual a la antigua ruta de
+  Checkout. El servidor abre el portal de la suscripción existente y demuestra que
+  `checkout_url` no se invoca.
+- Pruebas focalizadas: **3/3**. Suite completa: **493/493** en 351,9 s. Ruff,
+  `py_compile` y `git diff --check` verdes. Los avisos de proveedores corresponden
+  a pruebas deliberadas de fallo cerrado.
+- Pendiente externo: publicar y comprobar en Stripe sandbox que el portal permite
+  cambiar entre los seis precios mensual/anual configurados, además de tarjeta y
+  cancelación.
+
 ## 2026-08-13 — activación Stripe resistente a concurrencia y recuperable
 
 - Evidencia sandbox real: Checkout de Autónomo mensual, suscripción `active`,

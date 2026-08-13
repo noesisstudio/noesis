@@ -293,9 +293,12 @@ def subscription_page(
                     business_id, exc,
                 )
     active_plan = str((biz or {}).get("plan") or "")
+    is_active_subscription = (biz or {}).get("subscription_status") in {
+        "active", "trialing",
+    }
     preferred_plan = (
         active_plan
-        if (biz or {}).get("subscription_status") in {"active", "trialing"}
+        if is_active_subscription
         and active_plan in billing_adapter.PLAN_PRICES
         else plan if plan in billing_adapter.PLAN_PRICES
         else str(request.session.get("signup_plan") or "pro")
@@ -312,6 +315,15 @@ def subscription_page(
         "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
         "preferred_plan": preferred_plan,
         "preferred_billing": preferred_billing,
+        "is_active_subscription": is_active_subscription,
+        "current_plan": active_plan if is_active_subscription else "",
+        "current_plan_label": {
+            "autonomo": "Autónomo", "pro": "Negocio", "premium": "Premium",
+        }.get(active_plan, "Plan activo"),
+        "current_plan_rank": {
+            "autonomo": 0, "pro": 1, "premium": 2,
+        }.get(active_plan, -1),
+        "plan_ranks": {"autonomo": 0, "pro": 1, "premium": 2},
         "upgrade_feature_label": billing_adapter.ENTITLEMENT_LABELS.get(feature, ""),
         "entitlements": billing_adapter.entitlements_for(biz),
         "subscription_read_only": not db.subscription_allows_access(biz),

@@ -2,6 +2,18 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Una suscripción activa se modifica; nunca se vuelve a comprar (2026-08-13)
+
+Checkout se reserva al alta de una cuenta sin suscripción. Cuando Stripe ya marca
+una cuenta como `active` o `trialing`, Noesis presenta el plan vigente y centraliza
+nivel, periodicidad, tarjeta y cancelación en el portal seguro sobre la misma
+suscripción. Los planes superiores son mejoras y los inferiores aparecen incluidos.
+
+La regla no es solo visual: cualquier POST al Checkout desde un formulario antiguo
+o manipulado se redirige al portal y no invoca la creación de una nueva sesión de
+compra. Así se reduce el riesgo de doble cobro y se mantiene una única fuente para
+historial, métodos de pago y cambios de plan.
+
 ## El pie gráfico es una zona segura y la identidad se congela al emitir (2026-08-12)
 
 La prohibición de un maquetador libre se mantiene: ninguna imagen puede entrar en

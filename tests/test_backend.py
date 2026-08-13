@@ -2356,6 +2356,59 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertIn('class="plan selected-plan"', page.text)
         provider.subscription_snapshot.assert_called_once()
 
+    def test_active_subscription_is_managed_without_a_second_checkout(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe plan actual")
+        db.create_user(
+            "current-plan@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_current", subscription_id="sub_current",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = "https://billing.example/current"
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "current-plan@example.com",
+                "password": TEST_PASSWORD,
+            })
+            page = client.get(f"/b/{business['id']}/suscripcion")
+            db.set_subscription(
+                business["id"], "active", plan="premium",
+                customer_id="cus_current", subscription_id="sub_current",
+            )
+            premium_page = client.get(f"/b/{business['id']}/suscripcion")
+            change = client.post(
+                f"/b/{business['id']}/suscripcion/checkout",
+                data={"plan": "pro", "billing_period": "annual"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Plan actual", page.text)
+        self.assertIn("Gestionar plan", page.text)
+        self.assertIn("Mejorar a Negocio", page.text)
+        self.assertIn("Mejorar a Premium", page.text)
+        self.assertNotIn("Activar plan Aut", page.text)
+        self.assertNotIn("/suscripcion/checkout", page.text)
+        self.assertEqual(premium_page.text.count("Incluido en tu plan"), 2)
+        self.assertNotIn("Mejorar a ", premium_page.text)
+        self.assertEqual(change.status_code, 303)
+        self.assertEqual(change.headers["location"], "https://billing.example/current")
+        provider.portal_url.assert_called_once()
+        provider.checkout_url.assert_not_called()
+
     def test_public_and_account_pricing_share_the_current_catalog(self):
         from starlette.testclient import TestClient
         from noesis.web import server
