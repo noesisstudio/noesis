@@ -104,7 +104,7 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 ## P1 — profundidad después del primer piloto
 
-- [ ] SEO operativo: tras publicar el candidato del 13-ago, volver a inspeccionar
+- [ ] SEO operativo: publicado y verificado el candidato del 13-ago, volver a inspeccionar
   `/autonomos`, `/gestorias` y `/precios` en Search Console, solicitar indexación y
   revisar durante 2-4 semanas páginas indexadas, consultas, impresiones, clics,
   CTR y Core Web Vitals. No crear valoraciones, casos de éxito ni datos

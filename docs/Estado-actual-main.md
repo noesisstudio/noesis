@@ -12,8 +12,10 @@
   `/autonomos` y `/gestorias` responden a intenciones distintas sin duplicar la Home.
   Login, onboarding, paneles y portales envían `noindex`; el sitemap ya no finge que
   todas las páginas cambian a diario. El dominio está verificado en Search Console,
-  el sitemap se ha enviado y la portada está indexada. Falta publicar el candidato,
-  esperar el nuevo rastreo y tomar decisiones cuando exista rendimiento real.
+  el sitemap se ha enviado y la portada está indexada. El release `e5d1ac5` y el
+  esquema 49 responden en producción; las 14 URLs, canonical y `noindex` se han
+  comprobado sin navegador gráfico. Falta esperar el nuevo rastreo y tomar
+  decisiones cuando exista rendimiento real.
 
 - El alta comercial es recuperable en el esquema 49: conserva plan, periodicidad e
   intención y, al volver a iniciar sesión, lleva al paso exacto pendiente. Negocio y

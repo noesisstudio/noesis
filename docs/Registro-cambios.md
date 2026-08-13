@@ -33,13 +33,16 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   cabeceras en `web/server.py`; metadatos y navegación en `site_base.html`;
   identidad estructurada en `web/deps.py`; páginas `site_autonomos.html` y
   `site_gestorias.html`; portada, icono, estilos responsive, textos públicos y
-  `tests/test_seo.py`.
+  `tests/test_seo.py`; `.secrets.baseline` actualiza únicamente la línea de una
+  coincidencia histórica ya aceptada.
 - **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
 - **Pruebas ejecutadas:** 11/11 de SEO y **487/487** de la suite completa;
   Ruff sobre `src`/`tests`, verdad documental y `git diff --check` verdes.
 - **Dependencias o validaciones externas:** el founder verificó la propiedad de
   dominio en Google Search Console, envió el sitemap y añadió usuarios. Google
-  puede tardar días en rastrear de nuevo y en mostrar rendimiento.
+  puede tardar días en rastrear de nuevo y en mostrar rendimiento. El primer CI
+  dejó verde PostgreSQL y se detuvo porque el baseline de secretos conservaba la
+  línea anterior de `project-state.json`; no apareció ningún hash nuevo.
 - **Riesgo/punto probable de fallo:** canonical incorrecto si `NOESIS_BASE_URL`
   deja de ser el origen público, o una ruta pública nueva que no se añada a la lista
   indexable. Las áreas privadas envían `X-Robots-Tag: noindex, nofollow`.
@@ -47,8 +50,10 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   title/description/canonical/OG y la cabecera de `/login`; las pruebas SEO fallan
   si se duplica un título, desaparece el H1 o se indexa una ruta privada. Revertir
   este commit restaura el sitemap y el armazón público anteriores.
-- **Estado de publicación:** candidato local validado; publicación y recrawl de
-  Google pendientes al cerrar esta entrada.
+- **Estado de publicación:** `main` y producción validados en el release `e5d1ac5`,
+  esquema 49: `/health`, `/ready`, las 14 páginas, sitemap y `noindex` reales en
+  verde. Baseline corregido para repetir el guardián completo; recrawl de Google
+  pendiente.
 
 ## 2026-08-12 — alta recuperable y preparada para el primer resultado
 

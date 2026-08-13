@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Verificar primero las 14 paginas publicas, sitemap, robots, metadatos sociales, JSON-LD y noindex de login/paneles; solicitar indexacion de autonomos, gestorias y precios y esperar datos reales de Search Console; despues recorrer en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS_SEED_DEMO y devolverlo a false; validar TOTP de gestoria con una cuenta real; validar Stripe test, permisos por plan, Meta real, Google OAuth, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Solicitar indexacion de autonomos, gestorias y precios y esperar datos reales de Search Console; recorrer en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS_SEED_DEMO y devolverlo a false; validar TOTP de gestoria con una cuenta real; validar Stripe test, permisos por plan, Meta real, Google OAuth, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

@@ -19,6 +19,12 @@
 - Validación externa: propiedad de dominio verificada, sitemap enviado y usuarios
   añadidos en Search Console por el founder. Falta esperar el recrawl y revisar
   indexación, consultas, impresiones, clics y Core Web Vitals con datos reales.
+- Producción responde con release `e5d1ac57742f`, esquema 49 y 200 en `/health`,
+  `/ready`, las 14 URLs y el sitemap; cada página tiene un H1 y canonical. Login,
+  acceso, gestoría y 404 devuelven el `noindex` esperado. El humo PostgreSQL del CI
+  quedó verde. El guardián general se detuvo antes de Ruff/tests porque el baseline
+  apuntaba a la línea 51 de `project-state.json`, ahora 52; los hashes y el conjunto
+  de coincidencias permanecen idénticos y se versiona esa actualización mecánica.
 
 ## 2026-08-12 — alta recuperable y revisión operativa
 
