@@ -26,12 +26,15 @@ class SeoTestCase(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         texto = respuesta.text
         # Paneles, portales por token y formularios de sesión no deben indexarse:
-        # unos no aportan nada en una búsqueda y otros llevan datos de clientes.
+        # los que llevan datos ni siquiera deben rastrearse. Los accesos públicos sí
+        # se dejan rastrear para que Google pueda leer su cabecera HTTP noindex.
         for privado in (
-            "/b/", "/api/", "/admin", "/p/", "/g/", "/t/", "/login",
-            "/acceso", "/gestoria",
+            "/b/", "/api/", "/admin", "/p/", "/g/", "/t/", "/gestoria",
         ):
             self.assertIn(f"Disallow: {privado}", texto)
+        self.assertNotIn("Disallow: /login", texto)
+        self.assertNotIn("Disallow: /acceso", texto)
+        self.assertIn("Allow: /gestoria/login", texto)
         self.assertIn("Sitemap:", texto)
 
     def test_sitemap_is_valid_and_only_lists_public_pages(self):
@@ -45,11 +48,22 @@ class SeoTestCase(unittest.TestCase):
             url[0].text.replace(config.BASE_URL, "") for url in raiz
         ]
         self.assertIn("/", rutas)
+        self.assertIn("/autonomos", rutas)
+        self.assertIn("/gestorias", rutas)
         self.assertIn("/precios", rutas)
         self.assertIn("/solicitar-acceso", rutas)
         # Ninguna zona privada puede colarse en el mapa.
         for privado in ("/admin", "/login", "/onboarding"):
             self.assertNotIn(privado, rutas)
+
+    def test_sitemap_does_not_claim_fake_freshness_or_ignored_priority(self):
+        """Noesis no debe decir que todo cambió hoy si no puede demostrarlo."""
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            texto = http.get("/sitemap.xml").text
+
+        self.assertNotIn("<lastmod>", texto)
+        self.assertNotIn("<priority>", texto)
 
     def test_a_wrong_address_shows_a_page_not_a_raw_error(self):
         scheduler, client = self._client()
@@ -104,12 +118,26 @@ class SeoTestCase(unittest.TestCase):
 
         scheduler, client = self._client()
         with scheduler, client as http:
-            for ruta, _ in pages._INDEXABLES:
+            titulos = set()
+            descripciones = set()
+            for ruta in pages._INDEXABLES:
                 with self.subTest(ruta=ruta):
                     html = http.get(ruta).text
                     self.assertIn('name="description"', html)
+                    self.assertIn('name="robots" content="index, follow', html)
                     self.assertIn('rel="canonical"', html)
                     self.assertIn('class="public-nav"', html)
+                    self.assertIn('property="og:url"', html)
+                    self.assertIn('name="twitter:description"', html)
+                    self.assertEqual(html.count("<h1"), 1)
+                    titulo = html.split("<title>", 1)[1].split("</title>", 1)[0]
+                    descripcion = html.split(
+                        '<meta name="description" content="', 1
+                    )[1].split('">', 1)[0]
+                    self.assertNotIn(titulo, titulos)
+                    self.assertNotIn(descripcion, descripciones)
+                    titulos.add(titulo)
+                    descripciones.add(descripcion)
 
     def test_the_home_page_has_a_single_main_heading(self):
         """La maqueta del producto reproduce pantallas con título propio.
@@ -130,15 +158,31 @@ class SeoTestCase(unittest.TestCase):
 
         scheduler, client = self._client()
         with scheduler, client as http:
-            html = http.get("/precios").text
+            home = http.get("/").text
+            prices = http.get("/precios").text
 
         bloque = re.search(
-            r'<script type="application/ld\+json">(.*?)</script>', html, re.S
+            r'<script type="application/ld\+json">(.*?)</script>', home, re.S
         )
         self.assertIsNotNone(bloque, "falta la ficha de empresa para buscadores")
         datos = json.loads(bloque.group(1))  # inválido = ignorado por Google
-        self.assertEqual(datos["@type"], "Organization")
-        self.assertEqual(datos["name"], "Noesis")
+        tipos = {item["@type"] for item in datos["@graph"]}
+        self.assertEqual(tipos, {"Organization", "WebSite"})
+        organizacion = next(
+            item for item in datos["@graph"] if item["@type"] == "Organization"
+        )
+        self.assertEqual(organizacion["name"], "Noesis")
+        self.assertNotIn('application/ld+json', prices)
+
+    def test_non_public_routes_send_an_explicit_noindex_header(self):
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            for ruta in ("/login", "/acceso", "/gestoria/login", "/no-existe"):
+                with self.subTest(ruta=ruta):
+                    response = http.get(ruta)
+                    self.assertEqual(
+                        response.headers.get("x-robots-tag"), "noindex, nofollow"
+                    )
 
 
 if __name__ == "__main__":

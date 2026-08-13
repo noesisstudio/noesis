@@ -6,6 +6,15 @@
 
 ## Producto construido
 
+- El sitio público dispone de una base SEO verificable: 14 páginas en el sitemap,
+  títulos y descripciones únicos, canonical, compartición social completa, un H1 por
+  documento y ficha `Organization`/`WebSite` solo en portada. Las nuevas entradas
+  `/autonomos` y `/gestorias` responden a intenciones distintas sin duplicar la Home.
+  Login, onboarding, paneles y portales envían `noindex`; el sitemap ya no finge que
+  todas las páginas cambian a diario. El dominio está verificado en Search Console,
+  el sitemap se ha enviado y la portada está indexada. Falta publicar el candidato,
+  esperar el nuevo rastreo y tomar decisiones cuando exista rendimiento real.
+
 - El alta comercial es recuperable en el esquema 49: conserva plan, periodicidad e
   intención y, al volver a iniciar sesión, lleva al paso exacto pendiente. Negocio y
   operativa se marcan completos solo después de guardar sus datos obligatorios. La

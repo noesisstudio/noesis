@@ -3,33 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · {% block page_title %}Haz tu trabajo. Noesis te ordena el negocio{% endblock %}</title>
+  <title>{% block page_title %}Software de gestión por WhatsApp para autónomos{% endblock %} | Noesis</title>
   <meta name="description" content="{% block meta_description %}Noesis ordena trabajos, clientes, documentos, facturas y cobros desde WhatsApp para autónomos y pequeños negocios de servicios.{% endblock %}">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <meta name="theme-color" content="#14463b">
   <link rel="apple-touch-icon" href="/static/noesis-mark.svg">
+  <link rel="preload" href="/static/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
   {# Cómo se ve el enlace al compartirlo por WhatsApp, LinkedIn o correo. #}
   <meta property="og:site_name" content="Noesis">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_ES">
-  <meta property="og:title" content="{{ self.page_title() }}">
+  <meta property="og:title" content="{{ self.page_title() | striptags | trim }} | Noesis">
   <meta property="og:description" content="{{ self.meta_description() }}">
+  <meta property="og:url" content="{{ base_url }}{{ request.url.path }}">
   <meta property="og:image" content="{{ base_url }}/static/noesis-product-preview.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1265">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="Noesis, el negocio ordenado en una sola vista">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ self.page_title() | striptags | trim }} | Noesis">
+  <meta name="twitter:description" content="{{ self.meta_description() }}">
+  <meta name="twitter:image" content="{{ base_url }}/static/noesis-product-preview.png">
+  <meta name="twitter:image:alt" content="Noesis, el negocio ordenado en una sola vista">
   <link rel="canonical" href="{{ base_url }}{{ request.url.path }}">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-  {# Ficha de la empresa para buscadores. No es código que se ejecute, sino datos:
-     sirve para que Google muestre el nombre y el logotipo correctos, en vez de
-     deducirlos del texto. Solo se declara aquí lo que es cierto y comprobable. #}
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"Organization",
-   "name":"Noesis","url":"{{ base_url }}",
-   "logo":"{{ base_url }}/static/noesis-mark.svg",
-   "email":"{{ public_contact_email }}",
-   "areaServed":"ES",
-   "description":"Noesis ordena trabajos, clientes, documentos, facturas y cobros desde WhatsApp para autónomos y pequeños negocios de servicios."}
-  </script>
+  {% block structured_data %}{% endblock %}
 </head>
 <body class="landing-body public-site">
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
@@ -42,8 +43,9 @@
 
       <nav class="public-nav" aria-label="Principal">
         <a href="/#como-funciona">Cómo funciona</a>
+        <a href="/autonomos" class="{{ 'active' if site_active == 'autonomos' }}">Autónomos</a>
+        <a href="/gestorias" class="{{ 'active' if site_active == 'gestorias' }}">Gestorías</a>
         <a href="/precios" class="{{ 'active' if site_active == 'precios' }}">Precios</a>
-        <a href="/equipo" class="{{ 'active' if site_active == 'equipo' }}">Equipo</a>
         <a href="/preguntas" class="{{ 'active' if site_active == 'preguntas' }}">Preguntas</a>
         <a href="/contacto" class="{{ 'active' if site_active == 'contacto' }}">Contáctanos</a>
       </nav>
@@ -65,6 +67,8 @@
         <summary>Menú</summary>
         <nav aria-label="Menú móvil">
           <a href="/#como-funciona">Cómo funciona</a>
+          <a href="/autonomos">Para autónomos</a>
+          <a href="/gestorias">Para gestorías</a>
           <a href="/precios">Precios</a>
           <a href="/equipo">Equipo</a>
           <a href="/preguntas">Preguntas</a>
@@ -111,7 +115,8 @@
       <div class="public-footer-col">
         <b>Producto</b>
         <a href="/#como-funciona">Cómo funciona</a>
-        <a href="/#cumplimiento-legal">Cumplimiento legal</a>
+        <a href="/autonomos">Para autónomos</a>
+        <a href="/gestorias">Para gestorías</a>
         <a href="/precios">Precios</a>
         <a href="/preguntas">Preguntas</a>
       </div>

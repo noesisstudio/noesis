@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-08-13 — SEO técnico y páginas por audiencia
+
+- Las 14 URLs públicas del sitemap tienen título y descripción únicos, canonical,
+  Open Graph/Twitter, una orden explícita de indexación y exactamente un H1.
+  `/autonomos` y `/gestorias` explican dos recorridos reales sin inventar clientes,
+  valoraciones, declaraciones fiscales automáticas ni comisiones.
+- `Organization` y `WebSite` se declaran una sola vez en la portada mediante JSON-LD
+  válido. El sitemap deja de publicar una fecha diaria falsa y campos de prioridad
+  ignorados por Google. El SVG de marca incorpora tamaño intrínseco.
+- Login, acceso, onboarding, paneles, portales y respuestas inexistentes envían
+  `X-Robots-Tag: noindex, nofollow`; `robots.txt` mantiene fuera las zonas de datos
+  y permite rastrear los accesos públicos para que el buscador lea el `noindex`.
+- `tests.test_seo`: **11/11** verde. Suite completa: **487/487** verde en 439 s;
+  Ruff sobre `src`/`tests`, verdad documental y `git diff --check` también verdes.
+  Los avisos de caídas de proveedores corresponden a pruebas deliberadas de
+  degradación, reintento y fallo cerrado.
+- Validación externa: propiedad de dominio verificada, sitemap enviado y usuarios
+  añadidos en Search Console por el founder. Falta esperar el recrawl y revisar
+  indexación, consultas, impresiones, clics y Core Web Vitals con datos reales.
+
 ## 2026-08-12 — alta recuperable y revisión operativa
 
 - El esquema 49 conserva inicio, pasos completados, plan, periodicidad, intención y

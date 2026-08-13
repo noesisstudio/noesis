@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from xml.sax.saxutils import escape
 
 from fastapi import APIRouter, Request
 from fastapi.responses import (
@@ -88,6 +88,8 @@ def access_entry(request: Request):
 
 # Apartados del sitio publico: cada seccion es su propia pagina.
 _SITE_PAGES = {
+    "autonomos": "site_autonomos.html",
+    "gestorias": "site_gestorias.html",
     "precios": "site_precios.html",
     "equipo": "site_equipo.html",
     "preguntas": "site_preguntas.html",
@@ -99,19 +101,22 @@ _SITE_PAGES = {
 # privados quedan fuera a propósito: no aportan nada en una búsqueda y no
 # queremos que se indexen enlaces con datos de clientes.
 _INDEXABLES = (
-    ("/", "1.0"),
-    ("/precios", "0.9"),
-    ("/solicitar-acceso", "0.9"),
-    ("/contacto", "0.8"),
-    ("/preguntas", "0.7"),
-    ("/equipo", "0.6"),
-    ("/cumplimiento", "0.5"),
-    ("/privacidad", "0.3"),
-    ("/terminos", "0.3"),
-    ("/aviso-legal", "0.3"),
-    ("/cookies", "0.3"),
-    ("/encargado-tratamiento", "0.3"),
+    "/",
+    "/autonomos",
+    "/gestorias",
+    "/precios",
+    "/solicitar-acceso",
+    "/contacto",
+    "/preguntas",
+    "/equipo",
+    "/cumplimiento",
+    "/privacidad",
+    "/terminos",
+    "/aviso-legal",
+    "/cookies",
+    "/encargado-tratamiento",
 )
+INDEXABLE_PATHS = frozenset(_INDEXABLES)
 
 
 @router.get("/favicon.ico", include_in_schema=False)
@@ -134,12 +139,11 @@ def robots():
         "Disallow: /p/",
         "Disallow: /g/",
         "Disallow: /t/",
-        "Disallow: /login",
-        "Disallow: /acceso",
         "Disallow: /gestoria",
-        "Disallow: /onboarding",
-        "Disallow: /recuperar",
-        "Disallow: /restablecer",
+        "Allow: /gestoria/login",
+        "Disallow: /webhook/",
+        "Disallow: /health",
+        "Disallow: /ready",
         "",
         f"Sitemap: {config.BASE_URL}/sitemap.xml",
         "",
@@ -150,11 +154,9 @@ def robots():
 @router.get("/sitemap.xml", include_in_schema=False)
 def sitemap():
     """Mapa del sitio con las páginas públicas que sí queremos indexadas."""
-    hoy = date.today().isoformat()
     urls = "".join(
-        f"<url><loc>{config.BASE_URL}{ruta}</loc>"
-        f"<lastmod>{hoy}</lastmod><priority>{prioridad}</priority></url>"
-        for ruta, prioridad in _INDEXABLES
+        f"<url><loc>{escape(config.BASE_URL + ruta)}</loc></url>"
+        for ruta in _INDEXABLES
     )
     cuerpo = (
         '<?xml version="1.0" encoding="UTF-8"?>'
@@ -202,6 +204,8 @@ def showcase_client_redirect():
 
 
 @router.get("/precios", response_class=HTMLResponse)
+@router.get("/autonomos", response_class=HTMLResponse)
+@router.get("/gestorias", response_class=HTMLResponse)
 @router.get("/equipo", response_class=HTMLResponse)
 @router.get("/preguntas", response_class=HTMLResponse)
 @router.get("/contacto", response_class=HTMLResponse)

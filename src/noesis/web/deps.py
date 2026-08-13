@@ -40,6 +40,43 @@ TEMPLATES.env.globals["ocr_available"] = (
     ocr.available() or bool(config.ANTHROPIC_API_KEY)
 )
 
+# Una sola fuente para la identidad que leen los buscadores. Se publica únicamente
+# en la portada: repetir la misma Organization en todas las páginas añade ruido y
+# hace más fácil que dos copias terminen contradiciéndose.
+_public_origin = config.BASE_URL.rstrip("/")
+TEMPLATES.env.globals["seo_home_graph"] = {
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": "Organization",
+            "@id": f"{_public_origin}/#organization",
+            "name": "Noesis",
+            "url": _public_origin,
+            "logo": f"{_public_origin}/static/noesis-mark.svg",
+            "email": config.PUBLIC_CONTACT_EMAIL,
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer support",
+                "email": config.PUBLIC_CONTACT_EMAIL,
+                "availableLanguage": ["es", "ca", "en"],
+            },
+            "areaServed": "ES",
+            "description": (
+                "Noesis ordena trabajos, clientes, documentos, facturas y cobros "
+                "desde WhatsApp para autónomos y pequeños negocios de servicios."
+            ),
+        },
+        {
+            "@type": "WebSite",
+            "@id": f"{_public_origin}/#website",
+            "name": "Noesis",
+            "url": _public_origin,
+            "inLanguage": "es",
+            "publisher": {"@id": f"{_public_origin}/#organization"},
+        },
+    ],
+}
+
 
 def _eur(value) -> str:
     """Formato de dinero en espanol (1.234,56 EUR) para las plantillas."""

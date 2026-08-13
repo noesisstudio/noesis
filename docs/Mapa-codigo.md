@@ -89,12 +89,14 @@
 
 - `src/noesis/web/routers/pages.py`: además de las páginas públicas sirve
   `robots.txt`, `sitemap.xml` y `/favicon.ico`. La lista `_INDEXABLES` decide qué
-  ve un buscador: si se añade una página pública, hay que incluirla ahí.
+  ve un buscador: si se añade una página pública, hay que incluirla ahí. El sitemap
+  solo declara URLs demostrables; no inventa `lastmod` ni prioridades.
 - `src/noesis/web/templates/404.html`: dirección inexistente con el diseño del
   sitio. El manejador de `server.py` sigue devolviendo JSON bajo `/api/` y
   `/webhook/`, que esperan datos y no una página.
 - `src/noesis/web/server.py`: ensamblador FastAPI, seguridad, redirección al origen
-  canónico y routers.
+  canónico y routers. Su middleware añade `X-Robots-Tag: noindex, nofollow` a toda
+  ruta que no pertenezca explícitamente al sitio público, excepto assets técnicos.
 - `src/noesis/web/templates/site_base.html`: estructura compartida del sitio público,
   navegación responsive, llamada final y pie legal. Home, Precios, Equipo y Preguntas
   usan composiciones propias según su objetivo, sin replicar el panel interno ni
@@ -102,7 +104,11 @@
   sitemap, así que alguien puede aterrizar en ellas desde un buscador y debe encontrar
   el menú del sitio. Cada página aporta su título y su descripción; los textos legales
   además vacían la llamada final, porque no son sitio para vender. Aquí viven el
-  canonical, la ficha de empresa para buscadores y el salto al contenido por teclado.
+  canonical, metadatos Open Graph/Twitter y el salto al contenido por teclado. La
+  ficha `Organization`/`WebSite` se inyecta solo en la portada desde `web/deps.py`.
+- `src/noesis/web/templates/site_autonomos.html` y `site_gestorias.html`: páginas
+  públicas por audiencia; explican los flujos existentes y sus límites sin duplicar
+  el panel ni prometer presentación fiscal, movimientos de dinero o comisiones.
 - `src/noesis/web/templates/landing.html`: la maqueta del producto reproduce pantallas
   del panel con `h2.demo-title`, no con `<h1>`: dentro de la portada son el retrato de
   una app, y competirían con el único encabezado real de la página.

@@ -120,6 +120,25 @@ No se hace deduplicación global. Confirmar que otra empresa ya posee una huella
 crearía un canal lateral entre clientes y mezclaría sus ciclos de conservación. El
 pequeño ahorro adicional de almacenamiento no compensa ese riesgo de privacidad.
 
+## El SEO describe producto y audiencia; no fabrica autoridad (2026-08-13)
+
+Noesis separa las intenciones públicas de autónomos y gestorías en páginas propias,
+pero mantiene una única identidad de empresa en la portada. El marcado estructurado
+solo declara `Organization` y `WebSite`: no se publican estrellas, reseñas, volumen
+de usuarios ni un resultado enriquecido de software hasta que existan evidencias
+reales y requisitos completos.
+
+El sitemap enumera únicamente rutas públicas y no asigna una fecha de modificación
+diaria ni prioridades artificiales. Las rutas privadas se excluyen del rastreo cuando
+contienen datos y, además, toda URL que no pertenezca al sitio público responde con
+`noindex`. Esta doble barrera evita que un enlace conocido termine indexando un login,
+un portal o un error, sin impedir que Google lea el `noindex` de los accesos públicos.
+
+Search Console sirve para observar indexación, consultas, clics y experiencia real;
+no sustituye una estrategia de contenido ni justifica instalar analítica de terceros.
+La medición propia sin cookies se mantiene hasta que una decisión posterior, con
+necesidad y coste de privacidad claros, diga lo contrario.
+
 ## Publicado significa release y esquema verificables (2026-08-06)
 
 El repositorio, GitHub y Railway pueden contar tres verdades distintas durante un
