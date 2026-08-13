@@ -14,7 +14,8 @@
   Stripe; exige coincidencia de negocio, cliente, suscripción, estado activo y
   `price_id` conocido, por lo que ni la URL ni el navegador conceden acceso. El
   panel muestra además el plan realmente contratado. Las 492 pruebas están verdes;
-  falta publicar, recargar el retorno ya pagado y confirmar el acceso en producción.
+  producción responde con el release `9f3dc48d9d4a` y esquema 49. Falta recargar el
+  retorno ya pagado y confirmar el acceso con la cuenta sandbox.
 
 - El sitio público dispone de una base SEO verificable: 14 páginas en el sitemap,
   títulos y descripciones únicos, canonical, compartición social completa, un H1 por

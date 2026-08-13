@@ -54,8 +54,9 @@
   suscripción `active` y entregó `checkout.session.completed`, `invoice.paid` y
   `customer.subscription.created` con HTTP 200. La concurrencia podía dejar la
   cuenta en `pending`; el candidato lo impide bajo bloqueo de fila y recupera el
-  pago mediante lectura autenticada de Stripe. Falta desplegarlo, recargar el
-  retorno ya pagado y completar impago, cancelación, portal y permisos reales.
+  pago mediante lectura autenticada de Stripe. El release `9f3dc48d9d4a` ya está
+  desplegado; falta recargar el retorno ya pagado y completar impago, cancelación,
+  portal y permisos reales.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente

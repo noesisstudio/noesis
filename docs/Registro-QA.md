@@ -15,8 +15,9 @@
 - Pruebas focalizadas Stripe: **4/4**. Suite completa: **492/492** en 390,9 s.
   `py_compile` y Ruff focalizado verdes. Los mensajes de proveedores caídos de la
   suite son escenarios deliberados de fallo cerrado y reintento.
-- Pendiente externo: publicar el candidato, recargar la URL de retorno del pago ya
-  hecho y confirmar que el panel abandona el modo consulta sin repetir el cobro.
+- Producción responde con el release `9f3dc48d9d4a`, `/ready` verde y esquema 49.
+  Pendiente humano: recargar la URL de retorno del pago ya hecho y confirmar que el
+  panel abandona el modo consulta sin repetir el cobro.
 
 ## 2026-08-13 — regresión de robots entre gestoría privada y página pública
 

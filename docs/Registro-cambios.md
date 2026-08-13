@@ -44,8 +44,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   cliente/suscripción del negocio. El evento de producto
   `subscription_reconciled_after_checkout` identifica la recuperación. Revertir el
   commit elimina la consulta de reparación y reabre la carrera de `pending`.
-- **Estado de publicación:** local validado; pendiente commit, `main`, despliegue y
-  comprobación del compte sandbox existent.
+- **Estado de publicación:** commit `9f3dc48`, `main` y producción en el release
+  `9f3dc48d9d4a`, `/ready` verde y esquema 49. Pendiente comprobación humana de la
+  cuenta sandbox existente.
 
 ## 2026-08-13 — separa `/gestorias` del bloqueo privado de robots
 
