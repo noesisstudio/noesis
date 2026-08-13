@@ -9,8 +9,13 @@
   que el buscador reciba su cabecera HTTP `noindex, nofollow`.
 - `tests.test_seo`: **11/11** verde. La regresión comprueba reglas exactas y simula
   coincidencia de prefijo contra `/gestorias`; Ruff focalizado, verdad documental,
-  JSON de estado y `git diff --check` también están verdes. Falta publicar y repetir
-  la prueba real de Google.
+  JSON de estado y `git diff --check` también están verdes.
+- Producción responde con release `18104f0b6806`, esquema 49 y `/gestorias` en 200
+  para Googlebot, sin `X-Robots-Tag`, con canonical e `index, follow`. El robots real
+  contiene `/gestoria$` y `/gestoria/`, no el prefijo ambiguo. CI 31681161643 dejó
+  verdes secretos, Bandit, Ruff, verdad documental, 487 pruebas, ciclo completo de
+  migraciones y humo PostgreSQL. Falta que Search Console renueve su caché y acepte
+  la solicitud externa.
 
 ## 2026-08-13 — SEO técnico y páginas por audiencia
 

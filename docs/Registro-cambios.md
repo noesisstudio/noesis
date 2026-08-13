@@ -42,8 +42,10 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** abrir `/robots.txt` y comprobar que existen
   `/gestoria$` y `/gestoria/`, que `/gestorias` no coincide y que el login puede leer
   su `noindex`. Revertir el commit restaura el patrón anterior, pero reabre el fallo.
-- **Estado de publicación:** candidato local; despliegue y repetición de la prueba
-  publicada de Google pendientes.
+- **Estado de publicación:** `main` y producción en el release `18104f0`, esquema 49;
+  Googlebot recibe 200, canonical, `index, follow` y reglas de robots sin el prefijo
+  conflictivo. CI completo [31681161643](https://github.com/noesisstudio/noesis/actions/runs/31681161643)
+  verde. Search Console puede conservar el robots anterior en caché hasta 24 horas.
 
 ## 2026-08-13 — base SEO verificable y páginas por audiencia
 
