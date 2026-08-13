@@ -139,8 +139,11 @@ def robots():
         "Disallow: /p/",
         "Disallow: /g/",
         "Disallow: /t/",
-        "Disallow: /gestoria",
-        "Allow: /gestoria/login",
+        # El fin de línea evita que la zona privada /gestoria bloquee por prefijo
+        # la página pública /gestorias. Login se deja rastrear para que lea noindex.
+        "Disallow: /gestoria$",
+        "Allow: /gestoria/login$",
+        "Disallow: /gestoria/",
         "Disallow: /webhook/",
         "Disallow: /health",
         "Disallow: /ready",

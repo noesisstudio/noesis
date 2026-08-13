@@ -1,5 +1,17 @@
 # Registro de QA
 
+## 2026-08-13 — regresión de robots entre gestoría privada y página pública
+
+- La prueba reproduce la semántica de prefijo de `robots.txt` y exige que ninguna
+  regla `Disallow` atrape `/gestorias`.
+- La zona profesional conserva dos límites explícitos: `/gestoria$` para la raíz y
+  `/gestoria/` para el árbol privado. `/gestoria/login$` se permite rastrear para
+  que el buscador reciba su cabecera HTTP `noindex, nofollow`.
+- `tests.test_seo`: **11/11** verde. La regresión comprueba reglas exactas y simula
+  coincidencia de prefijo contra `/gestorias`; Ruff focalizado, verdad documental,
+  JSON de estado y `git diff --check` también están verdes. Falta publicar y repetir
+  la prueba real de Google.
+
 ## 2026-08-13 — SEO técnico y páginas por audiencia
 
 - Las 14 URLs públicas del sitemap tienen título y descripción únicos, canonical,

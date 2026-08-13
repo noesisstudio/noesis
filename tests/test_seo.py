@@ -28,13 +28,30 @@ class SeoTestCase(unittest.TestCase):
         # Paneles, portales por token y formularios de sesión no deben indexarse:
         # los que llevan datos ni siquiera deben rastrearse. Los accesos públicos sí
         # se dejan rastrear para que Google pueda leer su cabecera HTTP noindex.
-        for privado in (
-            "/b/", "/api/", "/admin", "/p/", "/g/", "/t/", "/gestoria",
-        ):
+        for privado in ("/b/", "/api/", "/admin", "/p/", "/g/", "/t/"):
             self.assertIn(f"Disallow: {privado}", texto)
+        reglas = set(texto.splitlines())
+        self.assertIn("Disallow: /gestoria$", reglas)
+        self.assertIn("Disallow: /gestoria/", reglas)
+        self.assertNotIn("Disallow: /gestoria", reglas)
         self.assertNotIn("Disallow: /login", texto)
         self.assertNotIn("Disallow: /acceso", texto)
-        self.assertIn("Allow: /gestoria/login", texto)
+        self.assertIn("Allow: /gestoria/login$", reglas)
+        # Las directivas son prefijos salvo que terminen en $. La página comercial
+        # plural no puede volver a quedar atrapada por la zona profesional privada.
+        def bloquea(rule: str, path: str) -> bool:
+            patron = rule.removeprefix("Disallow: ")
+            return (
+                path == patron[:-1]
+                if patron.endswith("$")
+                else path.startswith(patron)
+            )
+
+        self.assertFalse(any(
+            bloquea(rule, "/gestorias")
+            for rule in reglas
+            if rule.startswith("Disallow: ")
+        ))
         self.assertIn("Sitemap:", texto)
 
     def test_sitemap_is_valid_and_only_lists_public_pages(self):

@@ -23,6 +23,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-13 — separa `/gestorias` del bloqueo privado de robots
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el rechazo de indexación de la página comercial de
+  gestorías detectado por Google Search Console.
+- **Áreas y archivos:** reglas de `robots.txt` en `web/routers/pages.py`, regresión
+  en `tests/test_seo.py` y estado/QA/mapa documental.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 11/11 de SEO, Ruff focalizado, verdad documental,
+  JSON de estado y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** Search Console mostró que la prueba en
+  vivo no podía indexar `/gestorias`. La página, canonical y sitemap respondían 200;
+  la causa era semántica de robots: `Disallow: /gestoria` también coincide por
+  prefijo con `/gestorias`.
+- **Riesgo/punto probable de fallo:** usar de nuevo una regla privada sin `/` final o
+  ancla `$` puede bloquear rutas públicas que empiecen igual.
+- **Diagnóstico y rollback:** abrir `/robots.txt` y comprobar que existen
+  `/gestoria$` y `/gestoria/`, que `/gestorias` no coincide y que el login puede leer
+  su `noindex`. Revertir el commit restaura el patrón anterior, pero reabre el fallo.
+- **Estado de publicación:** candidato local; despliegue y repetición de la prueba
+  publicada de Google pendientes.
+
 ## 2026-08-13 — base SEO verificable y páginas por audiencia
 
 - **Autor/agente:** Codex.
