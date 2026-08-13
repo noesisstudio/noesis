@@ -129,7 +129,9 @@
 - `src/noesis/adapters/billing.py`: catálogo mensual/anual y matriz central de
   derechos. Stripe usa un `price_id` distinto por plan y periodicidad; el anual
   cobra 11 meses y da 12. Autónomo conserva el núcleo y Negocio/Premium habilitan
-  Proyectos, Equipo, Gestoría y Análisis avanzado.
+  Proyectos, Equipo, Gestoría y Análisis avanzado. El adaptador también puede leer
+  una suscripción concreta por API y convertirla en evidencia solo si coinciden
+  negocio, cliente, suscripción, estado activo y un precio conocido de Noesis.
 - `src/noesis/web/deps.py`: aislamiento de sesión, modo consulta, derechos por plan y guardia CSRF
   transversal. Una cuenta inactiva puede leer; toda mutación web/API devuelve
   redirección o HTTP 402. La evidencia `Sec-Fetch-Site: same-origin` del navegador
@@ -138,7 +140,10 @@
 - `src/noesis/web/routers/webhooks.py` + `db.apply_stripe_subscription_event`:
   Checkout solo vincula ids; la activación exige factura pagada o suscripción
   `active`/`trialing`. El bloqueo de fila, orden persistente y comprobación de
-  customer/subscription rechazan duplicados, cruces y eventos atrasados.
+  customer/subscription rechazan duplicados, cruces y eventos atrasados. Un
+  Checkout concurrente nunca rebaja un estado ya activo; la vuelta del pago puede
+  reparar una entrega perdida consultando Stripe de forma autenticada mediante
+  `db.reconcile_stripe_subscription`, sin confiar en la URL ni en el navegador.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
   de acciones de Noesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve

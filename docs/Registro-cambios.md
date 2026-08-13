@@ -23,6 +23,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-13 — recupera la activación Stripe sin repetir el pago
+
+- **Autor/agente:** Codex.
+- **Objetivo:** impedir que webhooks concurrentes de Stripe dejen una compra pagada
+  en modo consulta y recuperar de forma segura el alta sandbox ya cobrada.
+- **Áreas y archivos:** adaptador Stripe `adapters/billing.py`; estado transaccional
+  en `db.py`; retorno y selector de plan en `web/routers/pages.py`; regresiones en
+  `tests/test_backend.py`; estado, QA, pendientes y mapa documental.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 4/4 focalizadas de Stripe, **492/492** de la suite completa
+  en 390,9 s, `py_compile` y Ruff focalizado verdes.
+- **Dependencias o validaciones externas:** Stripe sandbox entregó tres eventos con
+  HTTP 200 y mantiene la suscripción activa. Falta validar el candidato publicado
+  recargando el retorno ya pagado; no es necesario crear otro cobro.
+- **Riesgo/punto probable de fallo:** clave sandbox o ids almacenados incoherentes
+  impedirían la reconciliación de forma cerrada; nunca se concede acceso solo por
+  parámetros de URL.
+- **Diagnóstico y rollback:** revisar el estado de entrega en Stripe y los ids de
+  cliente/suscripción del negocio. El evento de producto
+  `subscription_reconciled_after_checkout` identifica la recuperación. Revertir el
+  commit elimina la consulta de reparación y reabre la carrera de `pending`.
+- **Estado de publicación:** local validado; pendiente commit, `main`, despliegue y
+  comprobación del compte sandbox existent.
+
 ## 2026-08-13 — separa `/gestorias` del bloqueo privado de robots
 
 - **Autor/agente:** Codex.

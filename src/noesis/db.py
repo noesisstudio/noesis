@@ -9730,6 +9730,16 @@ def apply_stripe_subscription_event(
                 "business": dict(row),
             }
 
+        # Checkout solo enlaza identificadores. Si llega en paralelo o unos
+        # segundos despues de la evidencia de pago, nunca puede degradar una
+        # suscripcion que ya quedo activa. La decision se toma bajo el mismo
+        # bloqueo de fila para no depender de una lectura previa obsoleta.
+        current_status = str(row.get("subscription_status") or "")
+        if priority == 10 and status == "pending" and current_status in {
+            "active", "trialing",
+        }:
+            status = current_status
+
         fields = [
             "subscription_status=?",
             "stripe_event_created_at=?",
@@ -9753,6 +9763,47 @@ def apply_stripe_subscription_event(
             "SELECT * FROM businesses WHERE id=?", (business_id,)
         ).fetchone()
         return {"applied": True, "reason": "applied", "business": dict(updated)}
+
+
+def reconcile_stripe_subscription(
+    business_id: int,
+    *,
+    status: str,
+    plan: str,
+    customer_id: str,
+    subscription_id: str,
+) -> dict | None:
+    """Recupera un estado activo desde una consulta autenticada a Stripe.
+
+    No sustituye los webhooks: solo repara su entrega concurrente o perdida y
+    exige que cliente y suscripcion coincidan con los ya enlazados a la cuenta.
+    """
+    if status not in {"active", "trialing"}:
+        raise ValueError("La reconciliacion solo acepta suscripciones activas.")
+    from .adapters.billing import PLANS
+
+    if plan not in PLANS or not customer_id or not subscription_id:
+        raise ValueError("Evidencia Stripe incompleta.")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not row:
+            return None
+        if str(row.get("stripe_customer_id") or "") != customer_id:
+            raise ValueError("El cliente de Stripe no coincide con la cuenta.")
+        if str(row.get("stripe_subscription_id") or "") != subscription_id:
+            raise ValueError("La suscripcion de Stripe no coincide con la cuenta.")
+        conn.execute(
+            "UPDATE businesses SET subscription_status=?, plan=? WHERE id=?",
+            (status, plan, business_id),
+        )
+        updated = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        return dict(updated)
 
 
 def mark_business_as_demo(business_id: int) -> dict | None:

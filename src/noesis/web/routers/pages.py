@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from xml.sax.saxutils import escape
 
 from fastapi import APIRouter, Request
@@ -15,6 +16,7 @@ from .. import whatsapp
 from ..deps import HERE, TEMPLATES
 
 router = APIRouter()
+log = logging.getLogger("noesis.billing")
 
 _PAGES = {
     "resumen": "Inicio", "tesoreria": "Tesorería", "analisis": "Análisis",
@@ -269,8 +271,33 @@ def subscription_page(
 ):
     # Definida antes de la ruta generica /b/{id}/{page} para que no la capture esta.
     biz = db.get_business(business_id)
+    if (
+        biz
+        and status == "checkout_return"
+        and biz.get("subscription_status") in {"pending", "incomplete"}
+    ):
+        provider = billing_adapter.get_provider()
+        snapshot = provider.subscription_snapshot(biz)
+        evidence = billing_adapter.subscription_evidence(biz, snapshot)
+        if evidence:
+            try:
+                biz = db.reconcile_stripe_subscription(
+                    business_id, **evidence,
+                )
+                db.record_product_event(
+                    business_id, "subscription_reconciled_after_checkout"
+                )
+            except ValueError as exc:
+                log.warning(
+                    "Stripe no pudo reconciliar la cuenta %s: %s",
+                    business_id, exc,
+                )
+    active_plan = str((biz or {}).get("plan") or "")
     preferred_plan = (
-        plan if plan in billing_adapter.PLAN_PRICES
+        active_plan
+        if (biz or {}).get("subscription_status") in {"active", "trialing"}
+        and active_plan in billing_adapter.PLAN_PRICES
+        else plan if plan in billing_adapter.PLAN_PRICES
         else str(request.session.get("signup_plan") or "pro")
     )
     preferred_billing = (

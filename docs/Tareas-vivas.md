@@ -50,8 +50,12 @@
   fuera de orden y portal de cliente antes de usar claves live. Verificar además
   con cuentas reales que Autónomo no puede usar Proyectos, Equipo, Gestoría ni
   Análisis avanzado y que Negocio/Premium sí pueden hacerlo por web, API, asistente,
-  WhatsApp y portales. La máquina de estados y los permisos en servidor ya están
-  construidos y desplegados; falta validarlos contra Stripe test.
+  WhatsApp y portales. El 13-ago el Checkout sandbox de Autónomo cobró, generó una
+  suscripción `active` y entregó `checkout.session.completed`, `invoice.paid` y
+  `customer.subscription.created` con HTTP 200. La concurrencia podía dejar la
+  cuenta en `pending`; el candidato lo impide bajo bloqueo de fila y recupera el
+  pago mediante lectura autenticada de Stripe. Falta desplegarlo, recargar el
+  retorno ya pagado y completar impago, cancelación, portal y permisos reales.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente

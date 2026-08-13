@@ -105,6 +105,7 @@ class BillingProvider(Protocol):
                      success_url: str, cancel_url: str,
                      billing_period: str = "monthly") -> str | None: ...
     def portal_url(self, business: dict, return_url: str) -> str | None: ...
+    def subscription_snapshot(self, business: dict) -> dict | None: ...
 
 
 def _price_id(plan: str, billing_period: str = "monthly") -> str:
@@ -146,6 +147,12 @@ class StripeBillingProvider:
         req = urllib.request.Request(f"{_API}/{path}", data=body, method="POST")
         req.add_header("Authorization", f"Bearer {self.secret_key}")
         req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode())
+
+    def _get(self, path: str) -> dict:
+        req = urllib.request.Request(f"{_API}/{path}", method="GET")
+        req.add_header("Authorization", f"Bearer {self.secret_key}")
         with urllib.request.urlopen(req, timeout=20) as resp:
             return json.loads(resp.read().decode())
 
@@ -201,6 +208,19 @@ class StripeBillingProvider:
             return None
 
 
+    def subscription_snapshot(self, business: dict) -> dict | None:
+        """Consulta la suscripcion enlazada sin confiar en datos del navegador."""
+        subscription_id = str(business.get("stripe_subscription_id") or "")
+        if not subscription_id:
+            return None
+        try:
+            safe_id = urllib.parse.quote(subscription_id, safe="")
+            return self._get(f"subscriptions/{safe_id}")
+        except Exception as e:  # noqa: BLE001
+            log.error("Stripe no pudo reconciliar la suscripcion: %s", e)
+            return None
+
+
 class ManualBillingProvider:
     """Sin Stripe: no hay pago automático; el alta queda en prueba."""
 
@@ -213,6 +233,51 @@ class ManualBillingProvider:
 
     def portal_url(self, business, return_url) -> str | None:
         return None
+
+    def subscription_snapshot(self, business: dict) -> dict | None:
+        return None
+
+
+def subscription_evidence(
+    business: dict, snapshot: dict | None,
+) -> dict | None:
+    """Valida una lectura autenticada de Stripe antes de conceder el plan."""
+    if not isinstance(snapshot, dict):
+        return None
+    subscription_id = str(snapshot.get("id") or "")
+    expected_subscription = str(business.get("stripe_subscription_id") or "")
+    if not subscription_id or subscription_id != expected_subscription:
+        return None
+    customer_id = str(snapshot.get("customer") or "")
+    expected_customer = str(business.get("stripe_customer_id") or "")
+    if not customer_id or (expected_customer and customer_id != expected_customer):
+        return None
+    metadata = snapshot.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        return None
+    if str(metadata.get("business_id") or "") != str(business.get("id") or ""):
+        return None
+    status = str(snapshot.get("status") or "")
+    if status not in {"active", "trialing"}:
+        return None
+    price_ids: list[str] = []
+    for item in ((snapshot.get("items") or {}).get("data") or []):
+        if not isinstance(item, dict):
+            continue
+        price = item.get("price")
+        price_id = str(price.get("id") if isinstance(price, dict) else price or "")
+        if price_id:
+            price_ids.append(price_id)
+    plans = {plan_for_price_id(price_id) for price_id in price_ids}
+    plans.discard(None)
+    if len(plans) != 1:
+        return None
+    return {
+        "status": status,
+        "plan": plans.pop(),
+        "customer_id": customer_id,
+        "subscription_id": subscription_id,
+    }
 
 
 def get_provider() -> BillingProvider:

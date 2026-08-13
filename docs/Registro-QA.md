@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-08-13 — activación Stripe resistente a concurrencia y recuperable
+
+- Evidencia sandbox real: Checkout de Autónomo mensual, suscripción `active`,
+  metadatos `business_id=1`, `plan=autonomo`, `billing_period=monthly` y entregas
+  `checkout.session.completed`, `invoice.paid` y
+  `customer.subscription.created` aceptadas por Noesis con HTTP 200.
+- La regresión reproduce que un Checkout posterior podía degradar `active` a
+  `pending`; ahora la decisión se toma bajo el bloqueo de la misma fila y conserva
+  `active`/`trialing`.
+- La vuelta del Checkout consulta Stripe con la clave del servidor y solo repara
+  si coinciden negocio, cliente, suscripción, estado activo y un único precio del
+  catálogo. También se verifica que el plan comprado sea el marcado en pantalla.
+- Pruebas focalizadas Stripe: **4/4**. Suite completa: **492/492** en 390,9 s.
+  `py_compile` y Ruff focalizado verdes. Los mensajes de proveedores caídos de la
+  suite son escenarios deliberados de fallo cerrado y reintento.
+- Pendiente externo: publicar el candidato, recargar la URL de retorno del pago ya
+  hecho y confirmar que el panel abandona el modo consulta sin repetir el cobro.
+
 ## 2026-08-13 — regresión de robots entre gestoría privada y página pública
 
 - La prueba reproduce la semántica de prefijo de `robots.txt` y exige que ninguna

@@ -882,6 +882,26 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(updated["subscription_status"], "active")
         self.assertEqual(updated["stripe_event_id"], "evt_paid_new")
 
+    def test_stripe_checkout_cannot_downgrade_concurrent_active_subscription(self):
+        business, _ = self.make_business("Stripe concurrente")
+        db.apply_stripe_subscription_event(
+            business["id"], status="active", event_created_at=100,
+            event_priority=40, event_id="evt_subscription_active",
+            plan="autonomo", customer_id="cus_concurrent",
+            subscription_id="sub_concurrent", allow_subscription_change=True,
+        )
+
+        result = db.apply_stripe_subscription_event(
+            business["id"], status="pending", event_created_at=101,
+            event_priority=10, event_id="evt_checkout_later",
+            customer_id="cus_concurrent", subscription_id="sub_concurrent",
+            allow_subscription_change=True,
+        )
+
+        self.assertTrue(result["applied"])
+        self.assertEqual(result["business"]["subscription_status"], "active")
+        self.assertEqual(db.get_business(business["id"])["plan"], "autonomo")
+
     def test_stripe_one_time_invoice_and_old_subscription_are_ignored(self):
         from noesis.web.routers import webhooks
 
@@ -2280,6 +2300,61 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertEqual(
             payload["subscription_data[metadata][billing_period]"], "annual"
         )
+
+    def test_checkout_return_reconciles_authoritative_active_subscription(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe reconciliado")
+        db.create_user(
+            "reconcile@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "pending", plan="trial",
+            customer_id="cus_reconcile", subscription_id="sub_reconcile",
+        )
+        snapshot = {
+            "id": "sub_reconcile",
+            "customer": "cus_reconcile",
+            "status": "active",
+            "metadata": {"business_id": str(business["id"])},
+            "items": {"data": [{"price": {"id": "price_autonomo"}}]},
+        }
+        provider = MagicMock()
+        provider.subscription_snapshot.return_value = snapshot
+        wrong_business = {
+            **snapshot,
+            "metadata": {"business_id": str(business["id"] + 1)},
+        }
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "STRIPE_PRICE_AUTONOMO", "price_autonomo"),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider
+            ),
+            TestClient(server.app) as client,
+        ):
+            self.assertIsNone(
+                server.billing_adapter.subscription_evidence(
+                    business, wrong_business,
+                )
+            )
+            client.post("/login", data={
+                "email": "reconcile@example.com", "password": TEST_PASSWORD,
+            })
+            page = client.get(
+                f"/b/{business['id']}/suscripcion?status=checkout_return"
+            )
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("subscription-success", page.text)
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["plan"], "autonomo")
+        self.assertIn('class="plan selected-plan"', page.text)
+        provider.subscription_snapshot.assert_called_once()
 
     def test_public_and_account_pricing_share_the_current_catalog(self):
         from starlette.testclient import TestClient
