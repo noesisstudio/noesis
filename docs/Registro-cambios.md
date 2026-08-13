@@ -43,8 +43,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar el evento
   `subscription_change_requested`, la configuración del portal y la respuesta de
   `billing_portal/sessions`. Revertir reabre el riesgo de doble suscripción.
-- **Estado de publicación:** local validado; pendiente commit, `main`, despliegue y
-  comprobación sandbox.
+- **Estado de publicación:** commit `3c7bd03`, `main` y producción en el release
+  `3c7bd034828a`, `/ready` verde y esquema 49. Pendiente comprobación sandbox del
+  portal y sus cambios configurados.
 
 ## 2026-08-13 — recupera la activación Stripe sin repetir el pago
 

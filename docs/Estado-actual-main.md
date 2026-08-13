@@ -12,8 +12,8 @@
   inferiores constan como incluidos. No queda ningún formulario de Checkout en la
   pantalla activa y el servidor redirige también cualquier POST antiguo o
   manipulado al portal, de manera que el mismo negocio no pueda crear una segunda
-  suscripción por error. Las 493 pruebas están verdes; falta publicar y recorrer el
-  portal sandbox real.
+  suscripción por error. Las 493 pruebas están verdes; producción responde con el
+  release `3c7bd034828a` y esquema 49. Falta recorrer el portal sandbox real.
 
 - La primera compra sandbox completa de Stripe confirmó precio mensual de
   Autónomo, IVA externo, suscripción `active` y tres entregas webhook con HTTP 200.

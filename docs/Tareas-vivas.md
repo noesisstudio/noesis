@@ -57,9 +57,10 @@
   pago mediante lectura autenticada de Stripe. El release `9f3dc48d9d4a` ya está
   desplegado y el founder ha confirmado que la cuenta queda activa. El candidato
   siguiente elimina la recompra del mismo plan, centraliza los cambios en el portal
-  y bloquea un segundo Checkout también en el servidor. Falta publicarlo, habilitar
-  en el portal de Stripe los cambios de producto/precio si no lo están y completar
-  impago, cancelación, anualidad, upgrade/downgrade y permisos reales.
+  y bloquea un segundo Checkout también en el servidor. El release `3c7bd034828a`
+  ya está desplegado; falta recorrerlo, habilitar en el portal de Stripe los cambios
+  de producto/precio si no lo están y completar impago, cancelación, anualidad,
+  upgrade/downgrade y permisos reales.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente

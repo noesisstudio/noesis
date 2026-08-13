@@ -11,9 +11,9 @@
 - Pruebas focalizadas: **3/3**. Suite completa: **493/493** en 351,9 s. Ruff,
   `py_compile` y `git diff --check` verdes. Los avisos de proveedores corresponden
   a pruebas deliberadas de fallo cerrado.
-- Pendiente externo: publicar y comprobar en Stripe sandbox que el portal permite
-  cambiar entre los seis precios mensual/anual configurados, además de tarjeta y
-  cancelación.
+- Producción responde con el release `3c7bd034828a`, `/ready` verde y esquema 49.
+  Pendiente externo: comprobar en Stripe sandbox que el portal permite cambiar
+  entre los seis precios mensual/anual configurados, además de tarjeta y cancelación.
 
 ## 2026-08-13 — activación Stripe resistente a concurrencia y recuperable
 
