@@ -7,6 +7,32 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-14 — revisión visual del piloto y cierre de detalles móviles
+
+- **Autor/agente:** Codex.
+- **Objetivo:** recorrer las experiencias comerciales reales y corregir defectos
+  visibles que restaban confianza al piloto sin ampliar permisos ni acciones.
+- **Áreas y archivos:** navegación móvil, asistente, portal de cliente, filtro de
+  fechas de plantillas, regresiones visuales/HTTP y documentos de estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 11/11 focalizadas verdes; suite de **506 pruebas**
+  recorrida en 489,5 s con un cierre temporal de SQLite bloqueado por Windows; la
+  única prueba afectada se repitió aislada y quedó verde. Revisión real local en
+  escritorio y móvil de portada, panel demo, Documentos, asistente, gestoría y
+  portal de cliente; `git diff --check`, Ruff, compilación y verdad documental.
+- **Dependencias o validaciones externas:** el portal Stripe real sigue necesitando
+  una sesión sandbox autenticada; la extensión de Chrome de Codex no está instalada,
+  por lo que en este bloque se verifican los siete contratos del adaptador/rutas,
+  no el clic externo dentro de Stripe.
+- **Riesgo/punto probable de fallo:** caché de CSS/plantillas tras el despliegue o
+  fechas heredadas que no sean ISO; el filtro conserva sin alterar cualquier texto
+  que no pueda interpretar.
+- **Diagnóstico y rollback:** revisar la barra inferior a 375 px, las sugerencias
+  del asistente y `/p/{token}`; si falla, revertir este commit no exige rollback de
+  base de datos. Las capturas quedan fuera del repositorio en la carpeta de auditoría.
+- **Estado de publicación:** candidato preparado para `main`; pendiente CI y
+  confirmación visual del release en producción.
+
 ## Plantilla para toda modificación
 
 ```markdown

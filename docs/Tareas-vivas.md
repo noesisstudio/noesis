@@ -66,7 +66,9 @@
   gestión, tarjeta, cancelación, anualidad y upgrade con sandbox; verificar que
   todos los precios
   usan un `tax_behavior` compatible y distinto de `unspecified`; y completar impago,
-  downgrade, reactivación y permisos reales.
+  downgrade, reactivación y permisos reales. El 14-ago se repitieron 7/7 contratos
+  locales del portal (incluido el bloqueo de segundo Checkout); esto valida Noesis,
+  pero no sustituye el clic autenticado dentro del Customer Portal de Stripe.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente
@@ -88,8 +90,11 @@
   2 gastos, 1 ticket, 2 pendientes y 2 documentos en Otros. Después se puede volver
   a `false`: los registros persisten. El release `ea1f5f3e628f` permite ya consultas
   locales en el asistente demo sin historial, IA externa ni herramientas de
-  escritura; falta recorrer visualmente esos avisos humanos de modo consulta en el
-  portal de cliente y la gestoría.
+  escritura. El 14-ago se recorrieron localmente en escritorio/móvil el panel,
+  Documentos, asistente, cartera de gestoría en escritorio y portal del cliente en
+  móvil; se corrigieron el distintivo central, el desbordamiento de sugerencias y
+  las fechas ISO. Falta confirmar el nuevo release publicado y completar gestoría
+  móvil con navegador estable.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.

@@ -2424,10 +2424,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .content { padding-bottom:96px; }
   .topbar .quick-create { display:none; }
   .chat-wrap { height:auto; min-height:calc(100vh - 60px - 78px); }
-  .chat-wrap > .chips { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+  .chat-wrap > .chips { flex-wrap:wrap; overflow:visible;
     margin-right:0; padding-right:0; max-width:100%; }
-  .chat-wrap > .chips::-webkit-scrollbar { display:none; }
-  .chat-wrap > .chips .chip { flex:0 0 auto; }
+  .chat-wrap > .chips .chip { flex:1 1 145px; white-space:normal; }
   .chat-log { flex:0 0 auto; min-height:210px; max-height:34vh; padding-bottom:12px; }
   .chat-input { position:static; margin:12px 0 18px; }
 
@@ -2545,6 +2544,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   border-radius:14px; background:#fff8e8; color:var(--text); }
 .subscription-notice b { display:block; margin-bottom:3px; }
 .bn-create.locked { text-decoration:none; font-size:20px; font-weight:800; }
+.bn-create.locked.demo { font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
 .page-note {
   display: flex; align-items: center; gap: 12px;
   background: var(--brand-soft);

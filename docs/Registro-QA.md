@@ -1,5 +1,29 @@
 # Registro de QA
 
+## 2026-08-14 — auditoría visual local y contratos Stripe
+
+- La portada, el panel real de la demo, Documentos, el asistente, la cartera de
+  gestoría y el portal del cliente se recorrieron con capturas reales. La jerarquía
+  y la separación por tareas son coherentes con el parte de Noesis; Documentos
+  mantiene 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 elementos en Otros.
+- En móvil se reprodujo un mojibake en el centro de la barra inferior y una fila de
+  sugerencias parcialmente oculta. El centro muestra ahora `DEMO` y todas las
+  sugerencias se distribuyen en dos columnas legibles sin scroll horizontal oculto.
+- La respuesta del asistente escapaba HTML pero dejaba `_Por qué:_` sin formato;
+  ahora mantiene el escape y representa el énfasis como `<em>`. El DOM real confirma
+  cuatro razones accesibles como énfasis, sin guiones bajos visibles.
+- El portal mostraba fechas internas ISO. Presupuestos y facturas usan un filtro
+  común tolerante y presentan `dd/mm/aaaa`; la captura móvil y la regresión HTTP
+  verifican `11/09/2026`, `29/04/2026` y ausencia de `T00:00:00`.
+- Stripe: 7/7 contratos focalizados verdes para portal general, tarjeta,
+  cancelación, upgrade mensual/anual al precio exacto, reutilización de configuración
+  y bloqueo de un segundo Checkout. Falta el recorrido externo autenticado porque
+  esta sesión de Codex no dispone de la extensión de Chrome ni de su sesión Stripe.
+- Suite completa: **506 pruebas** recorridas en 489,5 s. Una limpieza de base SQLite
+  temporal quedó bloqueada por Windows al cerrar; la misma prueba pasó aislada
+  inmediatamente (1/1), por lo que no se atribuye al cambio. `git diff --check`,
+  Ruff, compilación y verdad documental quedan como puertas finales antes del push.
+
 ## 2026-08-14 — fiabilidad de demo, portales y lectura de caja
 
 - La demo comercial responde ahora preguntas locales de agenda, cobros, clientes,

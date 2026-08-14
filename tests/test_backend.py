@@ -3028,6 +3028,25 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                 )
 
 
+class VisualContractTestCase(unittest.TestCase):
+    """Fija los detalles móviles que hacen que el piloto parezca terminado."""
+
+    def test_demo_badge_and_assistant_mobile_controls_are_readable(self):
+        web = Path(__file__).parents[1] / "src" / "noesis" / "web"
+        base = (web / "templates" / "base.html").read_text(encoding="utf-8")
+        assistant = (web / "templates" / "asistente.html").read_text(
+            encoding="utf-8"
+        )
+        css = (web / "static" / "app.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="bn-create locked demo"', base)
+        self.assertIn('aria-hidden="true">Demo</span>', base)
+        self.assertNotIn("â€“", base)
+        self.assertIn(".replace(/_(.+?)_/g,'<em>$1</em>')", assistant)
+        self.assertIn(".chat-wrap > .chips { flex-wrap:wrap;", css)
+        self.assertIn("flex:1 1 145px; white-space:normal;", css)
+
+
 class PortalHttpTestCase(BackendTestCase):
     """El portal público (/p/) no debe dejar que un cliente toque documentos de otro."""
 
@@ -3110,6 +3129,30 @@ class PortalHttpTestCase(BackendTestCase):
         self.assertEqual(
             db.get_quote(quote["id"], business["id"])["status"], "enviado"
         )
+
+    def test_portal_formats_internal_dates_for_people(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        from noesis.web.deps import _human_date
+
+        business, client_ref = self.make_business("Portal fechas")
+        quote = self._quote(business["id"], client_ref["id"])
+        draft = db.add_invoice(
+            client_ref["id"], "Revisión anual", 100,
+            business_id=business["id"],
+        )
+        invoice = db.issue_invoice(draft["id"], business["id"])
+        token = db.get_or_create_portal_token(business["id"], client_ref["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                page = client.get(f"/p/{token}")
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(f"Válido hasta el {_human_date(quote['valid_until'])}", page.text)
+        self.assertIn(f"Vence el {_human_date(invoice['due_date'])}", page.text)
+        self.assertNotIn("T00:00:00", page.text)
+        self.assertEqual(_human_date("2026-09-06T00:00:00"), "06/09/2026")
 
     def test_payment_api_is_isolated_and_portal_shows_remaining_amount(self):
         from starlette.testclient import TestClient

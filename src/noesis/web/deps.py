@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -89,6 +90,30 @@ def _eur(value) -> str:
 
 # Disponible en plantillas como {{ importe | eur }}.
 TEMPLATES.env.filters["eur"] = _eur
+
+
+def _human_date(value) -> str:
+    """Convierte fechas ISO de la base en una fecha legible para personas."""
+    if value in (None, ""):
+        return ""
+    if isinstance(value, datetime):
+        point = value.date()
+    elif isinstance(value, date):
+        point = value
+    else:
+        text = str(value).strip()
+        try:
+            point = datetime.fromisoformat(text.replace("Z", "+00:00")).date()
+        except ValueError:
+            try:
+                point = date.fromisoformat(text[:10])
+            except ValueError:
+                return text
+    return point.strftime("%d/%m/%Y")
+
+
+# Evita que los portales enseñen marcas ISO internas como 2026-08-14T00:00:00.
+TEMPLATES.env.filters["date_es"] = _human_date
 
 
 def current_user(request: Request) -> dict | None:

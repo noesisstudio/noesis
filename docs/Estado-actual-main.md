@@ -6,6 +6,16 @@
 
 ## Producto construido
 
+- La auditoría visual local del piloto ya cubre portada, panel de autónomo demo,
+  Documentos, asistente, cartera de gestoría en escritorio y portal de cliente en
+  móvil. Se corrigieron tres defectos visibles: el distintivo central corrupto de la
+  demo móvil, las sugerencias del asistente ocultas horizontalmente y las fechas ISO
+  del portal; también se representa correctamente el énfasis del criterio de Noesis.
+  Los siete contratos Stripe de gestión, tarjeta, cambio y cancelación siguen verdes
+  y bloquean un segundo Checkout. El esquema continúa en 49 y el repositorio cuenta
+  con **506 pruebas**; falta confirmar estas vistas tras desplegar y recorrer el
+  Customer Portal con una sesión Stripe sandbox real.
+
 - El candidato de fiabilidad del 14 de agosto corrige cinco fricciones visibles del
   piloto sin ampliar permisos: la demostración puede responder consultas locales
   sin guardar historial ni ejecutar acciones; cualquier orden de escritura sigue

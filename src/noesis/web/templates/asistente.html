@@ -48,7 +48,10 @@ const sendBtn = el('send-btn');
 function bubble(text, who, src) {
   const d = document.createElement('div');
   d.className = 'bubble ' + who;
-  d.innerHTML = esc(text).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')
+  d.innerHTML = esc(text)
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/_(.+?)_/g,'<em>$1</em>')
+    .replace(/\n/g,'<br>')
     + (src ? `<span class="src">${src==='ia'?'IA':'local'}</span>` : '');
   log.appendChild(d); log.scrollTop = log.scrollHeight;
   return d;
