@@ -93,8 +93,8 @@
   escritura. El 14-ago se recorrieron localmente en escritorio/móvil el panel,
   Documentos, asistente, cartera de gestoría en escritorio y portal del cliente en
   móvil; se corrigieron el distintivo central, el desbordamiento de sugerencias y
-  las fechas ISO. Falta confirmar el nuevo release publicado y completar gestoría
-  móvil con navegador estable.
+  las fechas ISO. El release `aed36de59e30` ya se confirmó en producción y también
+  se recorrieron el portal de cliente, el asistente y la gestoría móvil a 375 px.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.

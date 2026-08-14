@@ -30,8 +30,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar la barra inferior a 375 px, las sugerencias
   del asistente y `/p/{token}`; si falla, revertir este commit no exige rollback de
   base de datos. Las capturas quedan fuera del repositorio en la carpeta de auditoría.
-- **Estado de publicación:** candidato preparado para `main`; pendiente CI y
-  confirmación visual del release en producción.
+- **Estado de publicación:** `main` y producción en el release `aed36de59e30`;
+  CI completo y humo PostgreSQL verdes, `/ready` confirma esquema 49 y las vistas
+  publicadas de asistente, portal de cliente y gestoría móvil quedaron verificadas.
 
 ## Plantilla para toda modificación
 

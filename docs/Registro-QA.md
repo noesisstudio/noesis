@@ -22,7 +22,11 @@
 - Suite completa: **506 pruebas** recorridas en 489,5 s. Una limpieza de base SQLite
   temporal quedó bloqueada por Windows al cerrar; la misma prueba pasó aislada
   inmediatamente (1/1), por lo que no se atribuye al cambio. `git diff --check`,
-  Ruff, compilación y verdad documental quedan como puertas finales antes del push.
+  Ruff, compilación y verdad documental quedaron verdes antes del push.
+- Producción responde con `aed36de59e30`, `/ready` confirma esquema 49 y el CI
+  completo, el humo PostgreSQL y el ciclo de migraciones están verdes. En el release
+  real se recorrieron a 375 px el asistente demo, el portal de cliente y la cartera
+  de gestoría; el portal no contiene fechas ISO y la barra muestra `DEMO` legible.
 
 ## 2026-08-14 — fiabilidad de demo, portales y lectura de caja
 
