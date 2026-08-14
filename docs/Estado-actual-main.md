@@ -6,6 +6,18 @@
 
 ## Producto construido
 
+- El candidato de fiabilidad del 14 de agosto corrige cinco fricciones visibles del
+  piloto sin ampliar permisos: la demostración puede responder consultas locales
+  sin guardar historial ni ejecutar acciones; cualquier orden de escritura sigue
+  bloqueada. El portal de cliente y el expediente de gestoría vuelven a la misma
+  pantalla con un mensaje comprensible cuando una cuenta está en modo consulta, en
+  vez de mostrar JSON técnico. Los ejemplos del asistente se adaptan al sector y la
+  lectura mensual separa el dinero que entró este mes del cobro de las facturas
+  emitidas este mes, evitando porcentajes superiores al 100% por mezclar cohortes.
+  Las **504 pruebas** completas, Ruff y `git diff --check` están verdes; no cambia
+  el esquema 49. Este candidato todavía no se considera desplegado ni validado en
+  producción.
+
 - La gestión de suscripción separa contratación y mantenimiento. Una cuenta activa
   muestra su **Plan actual** y separa gestión general, cambio de tarjeta,
   cancelación y mejoras mensuales/anuales mediante flujos acotados del portal de

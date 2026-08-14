@@ -1,5 +1,29 @@
 # Registro de QA
 
+## 2026-08-14 — fiabilidad de demo, portales y lectura de caja
+
+- La demo comercial responde ahora preguntas locales de agenda, cobros, clientes,
+  proyectos y resumen sin persistir conversación, consumir IA ni abrir herramientas
+  de escritura. Una orden de factura o agenda explica el límite y no modifica datos;
+  el resto de POST de demostración continúa bloqueado en el servidor.
+- Los formularios de presupuestos del portal de cliente y los de revisión, perfil
+  fiscal, solicitudes y paquetes de gestoría vuelven mediante 303 a la misma vista
+  con un aviso de modo consulta. Los controles aparecen desactivados de antemano y
+  ya no exponen un JSON técnico a una persona.
+- `month_billing` separa `collected` (caja recibida durante el mes) de
+  `invoiced_collected` (cobrado sobre facturas emitidas ese mes). La regresión crea
+  una factura anterior cobrada ahora y demuestra 161 € de caja, 121 € emitidos y
+  solo 40 € cobrados de la cohorte actual, sin el falso 133%.
+- Los ejemplos del asistente cambian según limpieza, electricidad, jardinería,
+  construcción/fontanería o servicio neutro y mantienen las consultas comunes.
+- Pruebas focalizadas: 3/3 verdes. Suite completa: **504/504** en 438,0 s. Ruff,
+  `git diff --check` y el render HTTP de las tres experiencias comerciales verdes.
+  Permanece el aviso conocido Starlette/httpx del cliente de pruebas; no afecta al
+  runtime. Un job del scheduler llegó a una base temporal ya cerrada durante la
+  suite, sin fallo de producto ni de prueba.
+- Validación externa pendiente: recorrido visual de las tres experiencias después
+  del despliegue; no se usaron credenciales ni servicios reales en este bloque.
+
 ## 2026-08-14 — portal Stripe gestionado y todos los botones verificables
 
 - Se reproducía el fallo funcional: los botones dependían de que el Customer Portal

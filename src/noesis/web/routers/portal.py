@@ -82,7 +82,17 @@ def portal_home(request: Request, token: str, ok: str = ""):
             request, "portal.html", {"token": token, "data": None, "ok": ""},
             status_code=404)
     return TEMPLATES.TemplateResponse(
-        request, "portal.html", {"token": token, "data": data, "ok": ok})
+        request,
+        "portal.html",
+        {
+            "token": token,
+            "data": data,
+            "ok": ok,
+            "subscription_read_only": not db.subscription_allows_access(
+                db.get_business(ref["business_id"])
+            ),
+        },
+    )
 
 
 @router.post("/p/{token}/quotes/{quote_id}/accept")
@@ -92,7 +102,7 @@ def portal_accept_quote(request: Request, token: str, quote_id: int):
         return RedirectResponse(f"/p/{token}", status_code=303)
     blocked = _subscription_required(db.get_business(ref["business_id"]))
     if blocked:
-        return blocked
+        return RedirectResponse(f"/p/{token}?ok=readonly", status_code=303)
     q = db.get_quote(quote_id, ref["business_id"])
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
@@ -116,7 +126,7 @@ def portal_reject_quote(request: Request, token: str, quote_id: int):
         return RedirectResponse(f"/p/{token}", status_code=303)
     blocked = _subscription_required(db.get_business(ref["business_id"]))
     if blocked:
-        return blocked
+        return RedirectResponse(f"/p/{token}?ok=readonly", status_code=303)
     q = db.get_quote(quote_id, ref["business_id"])
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)

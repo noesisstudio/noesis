@@ -23,6 +23,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-14 — cierre de fricciones de confianza del piloto
+
+- **Autor/agente:** Codex.
+- **Objetivo:** eliminar respuestas técnicas y datos ambiguos en los recorridos
+  comerciales, manteniendo la demostración estrictamente de solo lectura.
+- **Áreas y archivos:** guardia de suscripción, asistente y prompts, portales de
+  cliente/gestoría, resumen mensual, plantillas y regresiones de backend/demo.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios. Se añade un campo
+  calculado a la respuesta mensual, sin persistencia ni backfill.
+- **Pruebas ejecutadas:** 3/3 focalizadas; **504/504** completas en 438,0 s; Ruff y
+  `git diff --check` verdes.
+- **Dependencias o validaciones externas:** falta el recorrido publicado en
+  escritorio/móvil; no intervienen claves de Stripe, Meta, IA ni AEAT.
+- **Riesgo/punto probable de fallo:** una nueva intención local de solo lectura debe
+  añadirse explícitamente a la lista permitida de la demo; por defecto queda
+  bloqueada. La caja mensual conserva su campo histórico `collected` para no romper
+  consumidores y usa `invoiced_collected` solo para porcentajes de cohorte.
+- **Diagnóstico y rollback:** reproducir `/api/{business_id}/chat` con una cuenta
+  demo y verificar que no crece el historial; revisar redirecciones con
+  `notice=readonly`/`ok=readonly`; comparar ambos campos en `/summary`. Revertir el
+  commit no requiere rollback de base de datos.
+- **Estado de publicación:** candidato local en `main`, verificado y pendiente de
+  despliegue/validación real al escribir esta entrada.
+
 ## 2026-08-14 — portal Stripe autocontenido y fallo visible
 
 - **Autor/agente:** Codex.

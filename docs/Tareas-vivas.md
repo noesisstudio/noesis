@@ -86,7 +86,10 @@
   negocios muestran datos completos y que cualquier escritura, envío o automatización
   queda bloqueada. Confirmar además en Documentos las carpetas de 1 ingreso,
   2 gastos, 1 ticket, 2 pendientes y 2 documentos en Otros. Después se puede volver
-  a `false`: los registros persisten.
+  a `false`: los registros persisten. El candidato del 14-ago permite ya consultas
+  locales en el asistente demo sin historial, IA externa ni herramientas de
+  escritura; falta recorrerlo tras el despliegue junto con los avisos humanos de
+  modo consulta en el portal de cliente y la gestoría.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.

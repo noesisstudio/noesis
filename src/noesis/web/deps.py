@@ -290,7 +290,17 @@ async def auth_guard(request: Request, call_next):
         can_write = db.subscription_allows_access(business)
         request.state.subscription_read_only = not can_write
         safe_read = request.method in {"GET", "HEAD", "OPTIONS"}
-        if not can_write and not safe_read and not allowed_when_blocked:
+        demo_readonly_chat = (
+            is_demo
+            and request.method == "POST"
+            and path == f"/api/{own_business_id}/chat"
+        )
+        if (
+            not can_write
+            and not safe_read
+            and not allowed_when_blocked
+            and not demo_readonly_chat
+        ):
             if is_demo:
                 if path.startswith("/api/"):
                     return JSONResponse(

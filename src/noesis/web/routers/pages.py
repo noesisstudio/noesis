@@ -433,4 +433,5 @@ def page(request: Request, business_id: int, page: str):
         from ...adapters import transcription
 
         context["voice_on"] = transcription.available()
+        context["assistant_prompts"] = chat.assistant_prompts(biz)
     return TEMPLATES.TemplateResponse(request, f"{page}.html", context)

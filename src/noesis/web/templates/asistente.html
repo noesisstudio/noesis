@@ -15,14 +15,9 @@
 
   <div class="chips" id="chips">
     <span class="chip" id="ctx-chip" style="display:none">¿Qué significa esta página?</span>
-    <span class="chip">¿Qué harías tú ahora con mi negocio?</span>
-    <span class="chip">Dame un diagnóstico rápido</span>
-    <span class="chip">¿Qué tengo hoy?</span>
-    <span class="chip">¿Quién me debe dinero?</span>
-    <span class="chip">Factura a Juan por cambio de grifo 95 euros</span>
-    <span class="chip">Agenda a Marta mañana a las 10 en Badalona</span>
-    <span class="chip">Gasté 45 euros en gasolina</span>
-    <span class="chip">Dame el resumen del mes</span>
+    {% for prompt in assistant_prompts %}
+    <span class="chip">{{ prompt }}</span>
+    {% endfor %}
   </div>
 
   <div class="chat-log" id="log"></div>

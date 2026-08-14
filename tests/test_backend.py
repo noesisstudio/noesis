@@ -638,6 +638,44 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(len(exported["invoice_payments"]), 1)
         self.assertEqual(len(client_export["invoice_payments"]), 1)
 
+    def test_month_billing_separates_cash_flow_from_invoice_cohort(self):
+        business, client = self.make_business("Cohortes de cobro")
+        this_month = date.today().strftime("%Y-%m")
+        previous_month = (date.today().replace(day=1) - timedelta(days=1)).strftime(
+            "%Y-%m"
+        )
+        old_invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Trabajo anterior", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+            _issued_at_override=f"{previous_month}-15T10:00:00",
+        )
+        current_invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Trabajo actual", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+            _issued_at_override=f"{this_month}-02T10:00:00",
+        )
+        db.add_invoice_payment(
+            old_invoice["id"], 121, business_id=business["id"],
+            paid_at=f"{this_month}-03T10:00:00",
+        )
+        db.add_invoice_payment(
+            current_invoice["id"], 40, business_id=business["id"],
+            paid_at=f"{this_month}-04T10:00:00",
+        )
+
+        month = db.month_billing(this_month, business_id=business["id"])
+
+        self.assertEqual(month["invoiced"], 121)
+        self.assertEqual(month["collected"], 161)
+        self.assertEqual(month["invoiced_collected"], 40)
+        self.assertEqual(month["pending"], 81)
+
     def test_quote_acceptance_is_idempotent(self):
         business, client = self.make_business()
         quote = db.add_quote(
@@ -3067,8 +3105,8 @@ class PortalHttpTestCase(BackendTestCase):
                     follow_redirects=False,
                 )
 
-        self.assertEqual(blocked.status_code, 402)
-        self.assertEqual(blocked.json()["code"], "subscription_required")
+        self.assertEqual(blocked.status_code, 303)
+        self.assertIn("ok=readonly", blocked.headers["location"])
         self.assertEqual(
             db.get_quote(quote["id"], business["id"])["status"], "enviado"
         )

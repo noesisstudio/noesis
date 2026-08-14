@@ -8749,6 +8749,7 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
             ).fetchall()
         ]
     invoiced = sum(item["total"] for item in invoices)
+    invoiced_collected = sum(item["paid_amount"] for item in invoices)
     revenue_base = sum(item["base"] for item in invoices)
     pending = sum(item["remaining_amount"] for item in invoices)
     vat_output = sum(item["vat_amount"] for item in invoices)
@@ -8764,6 +8765,10 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         "invoiced": round(invoiced, 2),
         "revenue_base": round(revenue_base, 2),
         "collected": round(collected_rows, 2),
+        # Cohorte homogénea para responder "qué parte de lo emitido este mes
+        # ya está cobrada". `collected` conserva su significado de caja que ha
+        # entrado durante el mes, aunque corresponda a facturas anteriores.
+        "invoiced_collected": round(invoiced_collected, 2),
         "pending": round(pending, 2),
         "vat_output": round(vat_output, 2),
         "vat_input": round(vat_input, 2),
