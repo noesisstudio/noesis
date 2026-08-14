@@ -14,9 +14,10 @@
   vez de mostrar JSON técnico. Los ejemplos del asistente se adaptan al sector y la
   lectura mensual separa el dinero que entró este mes del cobro de las facturas
   emitidas este mes, evitando porcentajes superiores al 100% por mezclar cohortes.
-  Las **504 pruebas** completas, Ruff y `git diff --check` están verdes; no cambia
-  el esquema 49. Este candidato todavía no se considera desplegado ni validado en
-  producción.
+  Las **504 pruebas** completas, Ruff, CI y el humo PostgreSQL están verdes; no
+  cambia el esquema 49. Producción responde con el release `ea1f5f3e628f` y
+  `/ready` confirma el esquema 49. Falta el recorrido visual autenticado de las
+  tres experiencias.
 
 - La gestión de suscripción separa contratación y mantenimiento. Una cuenta activa
   muestra su **Plan actual** y separa gestión general, cambio de tarjeta,

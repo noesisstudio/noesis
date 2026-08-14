@@ -44,8 +44,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   demo y verificar que no crece el historial; revisar redirecciones con
   `notice=readonly`/`ok=readonly`; comparar ambos campos en `/summary`. Revertir el
   commit no requiere rollback de base de datos.
-- **Estado de publicación:** candidato local en `main`, verificado y pendiente de
-  despliegue/validación real al escribir esta entrada.
+- **Estado de publicación:** commit `ea1f5f3`, `main` y producción en el release
+  `ea1f5f3e628f`; CI completo, humo PostgreSQL y `/ready` verdes con esquema 49.
+  Pendiente recorrido visual autenticado.
 
 ## 2026-08-14 — portal Stripe autocontenido y fallo visible
 

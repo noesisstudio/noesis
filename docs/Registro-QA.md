@@ -21,8 +21,10 @@
   Permanece el aviso conocido Starlette/httpx del cliente de pruebas; no afecta al
   runtime. Un job del scheduler llegó a una base temporal ya cerrada durante la
   suite, sin fallo de producto ni de prueba.
-- Validación externa pendiente: recorrido visual de las tres experiencias después
-  del despliegue; no se usaron credenciales ni servicios reales en este bloque.
+- CI remoto completo y humo PostgreSQL verdes. Producción responde con
+  `ea1f5f3e628f`, `/ready` verde y esquema 49. Queda el recorrido visual autenticado
+  de las tres experiencias; no se usaron credenciales ni servicios reales en este
+  bloque.
 
 ## 2026-08-14 — portal Stripe gestionado y todos los botones verificables
 
