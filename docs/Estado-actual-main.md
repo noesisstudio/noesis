@@ -19,8 +19,8 @@
   de modo que los botones no dependen de una configuración manual incompleta en
   Stripe. El estado de carga evita dobles envíos y cualquier rechazo vuelve al
   bloque visible de gestión y queda auditado. Las 499 pruebas están verdes; el
-  candidato está verificado localmente con esquema 49 y pendiente de despliegue y
-  recorrido autenticado con la suscripción sandbox real.
+  candidato está desplegado desde el release `52c61f9e6277` con esquema 49. Falta
+  el recorrido autenticado con la suscripción sandbox real.
 
 - La primera compra sandbox completa de Stripe confirmó precio mensual de
   Autónomo, IVA externo, suscripción `active` y tres entregas webhook con HTTP 200.

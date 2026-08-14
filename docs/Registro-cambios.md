@@ -44,8 +44,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `Stripe portal`; revisar la configuración con metadata
   `noesis_portal=noesis-v1`. Revertir el bloque vuelve a depender del portal manual,
   sin tocar suscripciones ni cobros existentes.
-- **Estado de publicación:** candidato local sobre `main`, pendiente de commit,
-  despliegue e inspección sandbox.
+- **Estado de publicación:** commit `52c61f9`, `main` y producción en el release
+  `52c61f9e6277`; `/ready` verde y esquema 49. Pendiente inspección autenticada del
+  portal sandbox.
 
 ## 2026-08-14 — acciones reales para gestionar la suscripción
 

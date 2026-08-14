@@ -16,9 +16,11 @@
 - Pruebas focalizadas: **7/7**. Suite completa: **499/499** en 464,4 s dentro del
   entorno 3.12 del proyecto. Ruff sobre `src`/`tests`, `compileall`, comprobación
   JavaScript y `git diff --check` verdes.
-- Validación externa pendiente: desplegar y abrir los flujos con la subscripción
-  sandbox. Stripe exige además que los precios intercambiables tengan tratamiento
+- Validación externa pendiente: abrir los flujos con la subscripción sandbox.
+  Stripe exige además que los precios intercambiables tengan tratamiento
   fiscal compatible y no `unspecified`; es configuración externa, no se inventa.
+- Producción: `/ready` confirmó `52c61f9e6277` y esquema 49. La carga del JavaScript
+  publicado se comprobó por HTTP; queda la interacción autenticada con Stripe.
 
 ## 2026-08-14 — gestión completa de una suscripción Stripe activa
 

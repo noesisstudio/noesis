@@ -62,8 +62,9 @@
   cancelación y confirmación del plan/período exactos mediante deep links de Stripe.
   El siguiente candidato elimina la dependencia manual: crea y reutiliza una
   configuración de portal versionada con las seis tarifas, registra los fallos y
-  vuelve a un error visible. Falta desplegarlo y recorrer gestión, tarjeta,
-  cancelación, anualidad y upgrade con sandbox; verificar que todos los precios
+  vuelve a un error visible y está desplegado desde `52c61f9e6277`. Falta recorrer
+  gestión, tarjeta, cancelación, anualidad y upgrade con sandbox; verificar que
+  todos los precios
   usan un `tax_behavior` compatible y distinto de `unspecified`; y completar impago,
   downgrade, reactivación y permisos reales.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
