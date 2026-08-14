@@ -13,6 +13,8 @@
   deprecación Starlette/httpx, sin fallo funcional.
 - Validación real pendiente: portal sandbox, sus seis precios, prorrateo, tarjeta,
   cancelación y webhooks de retorno.
+- Producción: `/ready` confirmó `31d0c95abcf0`, esquema 49. Esto valida despliegue e
+  identidad del código, no sustituye el recorrido autenticado del portal sandbox.
 
 ## 2026-08-13 — plan actual y bloqueo de recompra Stripe
 

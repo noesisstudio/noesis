@@ -14,9 +14,9 @@
   una cancelación o un cambio irreversible. No queda ningún formulario de Checkout
   en la pantalla activa y el servidor redirige también cualquier POST antiguo o
   manipulado al portal, de manera que el mismo negocio no pueda crear una segunda
-  suscripción por error. El candidato local amplía la suite a 495 pruebas; producción
-  sigue en el release `3c7bd034828a` y esquema 49 hasta publicar este cambio. Falta
-  recorrer los cuatro flujos con la suscripción sandbox real.
+  suscripción por error. Las 495 pruebas están verdes; la funcionalidad está en
+  producción desde el release `31d0c95abcf0`, con esquema 49. Falta recorrer los
+  cuatro flujos con la suscripción sandbox real.
 
 - La primera compra sandbox completa de Stripe confirmó precio mensual de
   Autónomo, IVA externo, suscripción `active` y tres entregas webhook con HTTP 200.

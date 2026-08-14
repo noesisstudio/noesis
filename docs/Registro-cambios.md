@@ -42,7 +42,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** revisar `subscription_portal_requested`, los logs
   `Stripe portal (<acción>) fallo`, la entrega webhook y la configuración sandbox.
   Revertir este bloque conserva la suscripción, pero devuelve botones genéricos.
-- **Estado de publicación:** local; pendiente suite completa, commit y despliegue.
+- **Estado de publicación:** commit `31d0c95`, `main` y producción en el release
+  `31d0c95abcf0`; `/ready` verde y esquema 49. Pendiente recorrido humano sandbox.
 
 ## 2026-08-13 — plan actual sin doble Checkout
 
