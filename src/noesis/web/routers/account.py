@@ -1220,7 +1220,8 @@ def subscription_checkout(request: Request, business_id: int,
             f"plan={plan};billing_period={billing_period}",
         )
         url = billing_adapter.get_provider().portal_url(
-            biz, f"{config.BASE_URL}/b/{business_id}/suscripcion"
+            biz, f"{config.BASE_URL}/b/{business_id}/suscripcion",
+            action="change", plan=plan, billing_period=billing_period,
         )
         if not url:
             return RedirectResponse(
@@ -1255,10 +1256,34 @@ def subscription_checkout(request: Request, business_id: int,
 
 
 @router.post("/b/{business_id}/suscripcion/portal")
-def subscription_portal(request: Request, business_id: int):
+def subscription_portal(
+    request: Request, business_id: int, action: str = Form("manage"),
+    plan: str = Form(""), billing_period: str = Form("monthly"),
+):
+    if action not in {"manage", "payment_method", "change", "cancel"}:
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=invalid", status_code=303,
+        )
+    if action == "change" and (
+        plan not in billing_adapter.PLAN_PRICES
+        or billing_period not in {"monthly", "annual"}
+    ):
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=invalid", status_code=303,
+        )
     biz = db.get_business(business_id)
+    if not biz or biz.get("subscription_status") not in {"active", "trialing"}:
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=noportal", status_code=303,
+        )
+    db.record_product_event(
+        business_id, "subscription_portal_requested",
+        f"action={action};plan={plan or '-'};billing_period={billing_period}",
+    )
     url = billing_adapter.get_provider().portal_url(
-        biz, f"{config.BASE_URL}/b/{business_id}/suscripcion")
+        biz, f"{config.BASE_URL}/b/{business_id}/suscripcion",
+        action=action, plan=plan, billing_period=billing_period,
+    )
     if not url:
         return RedirectResponse(f"/b/{business_id}/suscripcion?status=noportal",
                                 status_code=303)

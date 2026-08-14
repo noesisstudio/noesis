@@ -2,6 +2,16 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Stripe confirma cada cambio irreversible en un flujo acotado (2026-08-14)
+
+Noesis no modifica directamente la suscripción desde un botón. Gestión general,
+tarjeta, cambio de precio/período y cancelación generan sesiones efímeras distintas
+del Customer Portal; para una mejora se envían el `subscription_item` y el
+`price_id` exactos y Stripe presenta importe, prorrateo y autenticación antes de
+confirmar. La cancelación también se confirma en Stripe y su webhook gobierna el
+estado final. Si un deep link no está habilitado, se abre el portal general; nunca
+se crea un segundo Checkout ni se concede acceso por la URL de retorno.
+
 ## Una suscripción activa se modifica; nunca se vuelve a comprar (2026-08-13)
 
 Checkout se reserva al alta de una cuenta sin suscripción. Cuando Stripe ya marca

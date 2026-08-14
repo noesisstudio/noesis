@@ -7,13 +7,16 @@
 ## Producto construido
 
 - La gestión de suscripción separa contratación y mantenimiento. Una cuenta activa
-  muestra su **Plan actual**, gestiona anualidad, tarjeta, cancelación o cambio en
-  el portal de Stripe y solo ofrece **Mejorar a…** para niveles superiores; los
-  inferiores constan como incluidos. No queda ningún formulario de Checkout en la
-  pantalla activa y el servidor redirige también cualquier POST antiguo o
+  muestra su **Plan actual** y separa gestión general, cambio de tarjeta,
+  cancelación y mejoras mensuales/anuales mediante flujos acotados del portal de
+  Stripe. Cada mejora lleva el plan y período elegidos a la confirmación segura;
+  los niveles inferiores constan como incluidos. Noesis nunca aplica por sí mismo
+  una cancelación o un cambio irreversible. No queda ningún formulario de Checkout
+  en la pantalla activa y el servidor redirige también cualquier POST antiguo o
   manipulado al portal, de manera que el mismo negocio no pueda crear una segunda
-  suscripción por error. Las 493 pruebas están verdes; producción responde con el
-  release `3c7bd034828a` y esquema 49. Falta recorrer el portal sandbox real.
+  suscripción por error. El candidato local amplía la suite a 495 pruebas; producción
+  sigue en el release `3c7bd034828a` y esquema 49 hasta publicar este cambio. Falta
+  recorrer los cuatro flujos con la suscripción sandbox real.
 
 - La primera compra sandbox completa de Stripe confirmó precio mensual de
   Autónomo, IVA externo, suscripción `active` y tres entregas webhook con HTTP 200.

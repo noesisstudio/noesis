@@ -1,5 +1,19 @@
 # Registro de QA
 
+## 2026-08-14 — gestión completa de una suscripción Stripe activa
+
+- Adaptador probado con payloads separados de Customer Portal para actualizar el
+  método de pago, cancelar una suscripción concreta y confirmar un cambio al
+  `price_id` anual exacto sobre su único `subscription_item`.
+- La pantalla activa ofrece gestión, tarjeta, mejoras y cancelación sin ningún
+  segundo Checkout; un fallo externo se explica y garantiza que no hubo cambio ni
+  cargo.
+- Pruebas focalizadas: 4/4 verdes; suite completa **495/495** en 352,1 s;
+  `compileall`, verdad documental y `git diff --check` verdes. Aviso conocido de
+  deprecación Starlette/httpx, sin fallo funcional.
+- Validación real pendiente: portal sandbox, sus seis precios, prorrateo, tarjeta,
+  cancelación y webhooks de retorno.
+
 ## 2026-08-13 — plan actual y bloqueo de recompra Stripe
 
 - Una cuenta activa de Autónomo muestra resumen de plan actual, `Gestionar plan` y

@@ -273,8 +273,10 @@ def subscription_page(
     biz = db.get_business(business_id)
     if (
         biz
-        and status == "checkout_return"
-        and biz.get("subscription_status") in {"pending", "incomplete"}
+        and status in {"checkout_return", "portal_return"}
+        and biz.get("subscription_status") in {
+            "pending", "incomplete", "active", "trialing",
+        }
     ):
         provider = billing_adapter.get_provider()
         snapshot = provider.subscription_snapshot(biz)

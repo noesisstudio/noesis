@@ -104,7 +104,10 @@ class BillingProvider(Protocol):
     def checkout_url(self, business: dict, plan: str,
                      success_url: str, cancel_url: str,
                      billing_period: str = "monthly") -> str | None: ...
-    def portal_url(self, business: dict, return_url: str) -> str | None: ...
+    def portal_url(
+        self, business: dict, return_url: str, *, action: str = "manage",
+        plan: str = "", billing_period: str = "monthly",
+    ) -> str | None: ...
     def subscription_snapshot(self, business: dict) -> dict | None: ...
 
 
@@ -196,15 +199,74 @@ class StripeBillingProvider:
             log.error("Stripe checkout falló: %s", e)
             return None
 
-    def portal_url(self, business, return_url) -> str | None:
+    def portal_url(
+        self, business, return_url, *, action="manage", plan="",
+        billing_period="monthly",
+    ) -> str | None:
         cid = business.get("stripe_customer_id")
         if not cid:
+            log.warning("Stripe portal sin customer_id para business_id=%s.", business.get("id"))
             return None
+        data = {"customer": cid, "return_url": return_url}
+        subscription_id = str(business.get("stripe_subscription_id") or "")
+        if action == "payment_method":
+            data["flow_data[type]"] = "payment_method_update"
+        elif action == "cancel":
+            if not subscription_id:
+                log.warning("Stripe cancelacion sin subscription_id.")
+                return None
+            data.update({
+                "flow_data[type]": "subscription_cancel",
+                "flow_data[subscription_cancel][subscription]": subscription_id,
+            })
+        elif action == "change":
+            target_price = _price_id(plan, billing_period)
+            snapshot = self.subscription_snapshot(business)
+            items = ((snapshot or {}).get("items") or {}).get("data") or []
+            current_item = next(
+                (item for item in items if isinstance(item, dict) and item.get("id")),
+                None,
+            )
+            if not subscription_id or not target_price or not current_item:
+                log.warning(
+                    "Stripe cambio incompleto: subscription=%s price=%s item=%s.",
+                    bool(subscription_id), bool(target_price), bool(current_item),
+                )
+                return self._generic_portal_url(cid, return_url)
+            data.update({
+                "flow_data[type]": "subscription_update_confirm",
+                "flow_data[subscription_update_confirm][subscription]": subscription_id,
+                "flow_data[subscription_update_confirm][items][0][id]": current_item["id"],
+                "flow_data[subscription_update_confirm][items][0][quantity]": 1,
+                "flow_data[subscription_update_confirm][items][0][price]": target_price,
+            })
+        elif action != "manage":
+            log.warning("Accion de portal Stripe no valida: %s.", action)
+            return None
+
+        if action != "manage":
+            data.update({
+                "flow_data[after_completion][type]": "redirect",
+                "flow_data[after_completion][redirect][return_url]": (
+                    f"{return_url}?status=portal_return"
+                ),
+            })
         try:
-            return self._post("billing_portal/sessions",
-                              {"customer": cid, "return_url": return_url}).get("url")
+            return self._post("billing_portal/sessions", data).get("url")
         except Exception as e:  # noqa: BLE001
-            log.error("Stripe portal falló: %s", e)
+            log.error("Stripe portal (%s) fallo: %s", action, e)
+            # Un enlace profundo puede fallar si esa funcion aun no esta
+            # habilitada en Stripe. Abrimos la gestion general como salida segura.
+            return self._generic_portal_url(cid, return_url) if action != "manage" else None
+
+    def _generic_portal_url(self, customer_id: str, return_url: str) -> str | None:
+        try:
+            return self._post(
+                "billing_portal/sessions",
+                {"customer": customer_id, "return_url": return_url},
+            ).get("url")
+        except Exception as e:  # noqa: BLE001
+            log.error("Stripe portal general fallo: %s", e)
             return None
 
 
@@ -231,7 +293,10 @@ class ManualBillingProvider:
                      billing_period="monthly") -> str | None:
         return None
 
-    def portal_url(self, business, return_url) -> str | None:
+    def portal_url(
+        self, business, return_url, *, action="manage", plan="",
+        billing_period="monthly",
+    ) -> str | None:
         return None
 
     def subscription_snapshot(self, business: dict) -> dict | None:

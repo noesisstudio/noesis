@@ -23,6 +23,27 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-14 — acciones reales para gestionar la suscripción
+
+- **Autor/agente:** Codex.
+- **Objetivo:** hacer funcionales gestión, tarjeta, upgrade mensual/anual y
+  cancelación de una suscripción activa sin crear otro Checkout.
+- **Áreas y archivos:** adaptador Stripe, rutas y contexto de suscripción, plantilla
+  y estilos, regresiones HTTP/adaptador, mapa, decisión, conexión externa y estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 4/4 focalizadas, **495/495** completas en 352,1 s,
+  `compileall`, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** Stripe sandbox debe tener habilitados
+  método de pago, cambio entre los seis precios y cancelación. Los deep links siguen
+  la API oficial de Customer Portal; queda recorrerlos con la cuenta real de prueba.
+- **Riesgo/punto probable de fallo:** una configuración incompleta del portal puede
+  rechazar el flujo específico; el adaptador intenta entonces el portal general y,
+  si tampoco abre, Noesis muestra un fallo sin aplicar cambios ni cargos.
+- **Diagnóstico y rollback:** revisar `subscription_portal_requested`, los logs
+  `Stripe portal (<acción>) fallo`, la entrega webhook y la configuración sandbox.
+  Revertir este bloque conserva la suscripción, pero devuelve botones genéricos.
+- **Estado de publicación:** local; pendiente suite completa, commit y despliegue.
+
 ## 2026-08-13 — plan actual sin doble Checkout
 
 - **Autor/agente:** Codex.

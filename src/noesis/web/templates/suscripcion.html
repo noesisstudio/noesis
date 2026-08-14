@@ -50,7 +50,11 @@
 <div class="subscription-notice" style="margin-bottom:16px"><b>Hemos guardado tu elección.</b>
   <span>Nuestro equipo terminará la activación contigo sin que tengas que repetir la configuración.</span></div>
 {% elif status == 'noportal' %}
-<div class="insight" style="margin-bottom:16px">El portal de gestión estará disponible cuando tengas una suscripción activa.</div>
+<div class="subscription-notice" style="margin-bottom:16px"><b>No he podido abrir la gestión segura de Stripe.</b>
+  <span>No se ha hecho ningún cambio ni ningún cargo. Vuelve a intentarlo; si persiste, contacta con soporte.</span></div>
+{% elif status == 'portal_return' %}
+<div class="subscription-notice subscription-success" style="margin-bottom:16px"><div><b>Stripe ha recibido el cambio.</b>
+  <span>Noesis actualizará el plan, el pago o la cancelación en cuanto llegue la confirmación firmada.</span></div></div>
 {% endif %}
 
 {% if is_active_subscription %}
@@ -60,9 +64,16 @@
     <h2>{{ current_plan_label }}</h2>
     <p>Tu suscripción está activa. Los cambios se aplican sobre este mismo plan, sin crear otra suscripción.</p>
   </div>
-  <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
-    <button class="btn primary" type="submit">Gestionar suscripción</button>
-  </form>
+  <div class="current-subscription-actions">
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="manage">
+      <button class="btn primary" type="submit">Gestionar suscripción</button>
+    </form>
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="payment_method">
+      <button class="btn" type="submit">Cambiar tarjeta</button>
+    </form>
+  </div>
 </section>
 {% endif %}
 
@@ -94,12 +105,16 @@
     </ul>
     {% if current_plan == 'autonomo' %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="manage">
       <button class="btn full current-plan-button" type="submit">Gestionar plan</button>
     </form>
     {% elif is_active_subscription and current_plan_rank > plan_ranks.autonomo %}
     <button class="btn full plan-included-button" type="button" disabled>Incluido en tu plan</button>
     {% elif is_active_subscription %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="change">
+      <input type="hidden" name="plan" value="autonomo">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Mejorar a Autónomo</button>
     </form>
     {% else %}
@@ -126,12 +141,16 @@
     </ul>
     {% if current_plan == 'pro' %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="manage">
       <button class="btn full current-plan-button" type="submit">Gestionar plan</button>
     </form>
     {% elif is_active_subscription and current_plan_rank > plan_ranks.pro %}
     <button class="btn full plan-included-button" type="button" disabled>Incluido en tu plan</button>
     {% elif is_active_subscription %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="change">
+      <input type="hidden" name="plan" value="pro">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Mejorar a Negocio</button>
     </form>
     {% else %}
@@ -156,10 +175,14 @@
     </ul>
     {% if current_plan == 'premium' %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="manage">
       <button class="btn full current-plan-button" type="submit">Gestionar plan</button>
     </form>
     {% elif is_active_subscription %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+      <input type="hidden" name="action" value="change">
+      <input type="hidden" name="plan" value="premium">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Mejorar a Premium</button>
     </form>
     {% else %}
@@ -171,6 +194,16 @@
     {% endif %}
   </div>
 </div>
+
+{% if is_active_subscription %}
+<section class="subscription-cancel-card" aria-label="Cancelación de la suscripción">
+  <div><b>¿Necesitas dejar Noesis?</b><span>Stripe te pedirá confirmación. Noesis no cancelará nada sin tu aprobación.</span></div>
+  <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
+    <input type="hidden" name="action" value="cancel">
+    <button class="btn danger" type="submit">Cancelar suscripción</button>
+  </form>
+</section>
+{% endif %}
 
 <p class="subscription-payment-note">Pago seguro · Cancela cuando quieras · Tus datos siempre son exportables.</p>
 {% endblock %}

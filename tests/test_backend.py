@@ -2301,6 +2301,68 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
             payload["subscription_data[metadata][billing_period]"], "annual"
         )
 
+    def test_stripe_portal_uses_scoped_flows_for_billing_actions(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        business = {
+            "id": 42,
+            "stripe_customer_id": "cus_current",
+            "stripe_subscription_id": "sub_current",
+        }
+        snapshot = {
+            "id": "sub_current",
+            "items": {"data": [{"id": "si_current", "price": {"id": "old"}}]},
+        }
+        with (
+            patch.object(config, "STRIPE_PRICE_PRO_ANNUAL", "price_pro_annual"),
+            patch.object(provider, "subscription_snapshot", return_value=snapshot),
+            patch.object(
+                provider, "_post", return_value={"url": "https://billing.example/flow"},
+            ) as post,
+        ):
+            payment_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="payment_method",
+            )
+            payment_payload = post.call_args.args[1]
+            cancel_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="cancel",
+            )
+            cancel_payload = post.call_args.args[1]
+            change_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="change",
+                plan="pro", billing_period="annual",
+            )
+            change_payload = post.call_args.args[1]
+
+        self.assertEqual(payment_url, "https://billing.example/flow")
+        self.assertEqual(cancel_url, "https://billing.example/flow")
+        self.assertEqual(change_url, "https://billing.example/flow")
+        self.assertEqual(payment_payload["flow_data[type]"], "payment_method_update")
+        self.assertEqual(cancel_payload["flow_data[type]"], "subscription_cancel")
+        self.assertEqual(
+            cancel_payload["flow_data[subscription_cancel][subscription]"],
+            "sub_current",
+        )
+        self.assertEqual(
+            change_payload["flow_data[type]"], "subscription_update_confirm",
+        )
+        self.assertEqual(
+            change_payload[
+                "flow_data[subscription_update_confirm][items][0][price]"
+            ],
+            "price_pro_annual",
+        )
+        self.assertEqual(
+            change_payload[
+                "flow_data[subscription_update_confirm][items][0][id]"
+            ],
+            "si_current",
+        )
+        self.assertEqual(
+            change_payload["flow_data[after_completion][type]"], "redirect",
+        )
+
     def test_checkout_return_reconciles_authoritative_active_subscription(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -2400,14 +2462,67 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertIn("Gestionar plan", page.text)
         self.assertIn("Mejorar a Negocio", page.text)
         self.assertIn("Mejorar a Premium", page.text)
+        self.assertIn("Cambiar tarjeta", page.text)
+        self.assertIn("Cancelar suscripción", page.text)
+        self.assertIn('name="action" value="change"', page.text)
         self.assertNotIn("Activar plan Aut", page.text)
         self.assertNotIn("/suscripcion/checkout", page.text)
         self.assertEqual(premium_page.text.count("Incluido en tu plan"), 2)
         self.assertNotIn("Mejorar a ", premium_page.text)
         self.assertEqual(change.status_code, 303)
         self.assertEqual(change.headers["location"], "https://billing.example/current")
-        provider.portal_url.assert_called_once()
+        provider.portal_url.assert_called_once_with(
+            db.get_business(business["id"]),
+            f"{config.BASE_URL}/b/{business['id']}/suscripcion",
+            action="change", plan="pro", billing_period="annual",
+        )
         provider.checkout_url.assert_not_called()
+
+    def test_subscription_portal_routes_only_supported_actions(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe acciones portal")
+        db.create_user(
+            "portal-actions@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="pro",
+            customer_id="cus_actions", subscription_id="sub_actions",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = "https://billing.example/cancel"
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-actions@example.com",
+                "password": TEST_PASSWORD,
+            })
+            cancel = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "cancel"}, follow_redirects=False,
+            )
+            invalid = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "delete_everything"}, follow_redirects=False,
+            )
+
+        self.assertEqual(cancel.status_code, 303)
+        self.assertEqual(cancel.headers["location"], "https://billing.example/cancel")
+        self.assertEqual(invalid.status_code, 303)
+        self.assertTrue(invalid.headers["location"].endswith("status=invalid"))
+        provider.portal_url.assert_called_once_with(
+            db.get_business(business["id"]),
+            f"{config.BASE_URL}/b/{business['id']}/suscripcion",
+            action="cancel", plan="", billing_period="monthly",
+        )
 
     def test_public_and_account_pricing_share_the_current_catalog(self):
         from starlette.testclient import TestClient

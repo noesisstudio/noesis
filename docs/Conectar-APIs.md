@@ -293,8 +293,12 @@ Crear el webhook `https://bynoesis.com/webhook/stripe` con:
 - `invoice.paid`
 - `invoice.payment_failed`
 
-Activar también el Customer Portal en Stripe. No reutilizar secretos de test en
-live ni confundir la clave secreta con la publicable.
+Activar también el Customer Portal en Stripe y habilitar **actualizar método de
+pago**, **cambiar plan** con los seis precios mensuales/anuales y **cancelar al final
+del período**. Noesis abre flujos separados para cada acción y Stripe debe mostrar
+la confirmación antes de aplicar el cambio. Estas opciones se configuran por separado
+en sandbox y live. No reutilizar secretos de test en live ni confundir la clave
+secreta con la publicable.
 
 ### Prueba de aceptación
 
