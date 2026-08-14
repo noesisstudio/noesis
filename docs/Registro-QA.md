@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-08-14 — portal Stripe gestionado y todos los botones verificables
+
+- Se reproducía el fallo funcional: los botones dependían de que el Customer Portal
+  estuviera configurado manualmente en Stripe y un rechazo volvía a la misma página
+  fuera del área visible, por lo que parecía que el clic no hacía nada.
+- El adaptador crea o reutiliza solo una configuración versionada de Noesis con
+  actualización de tarjeta, cancelación al final del período, historial y cambios
+  entre los seis `price_id`. Cada sesión conserva esa configuración también en el
+  fallback general; una configuración externa no se reutiliza por error.
+- La regresión HTTP envía los seis formularios visibles de una cuenta Autonomo y
+  comprueba los flujos `manage`, `payment_method`, `cancel`, mejora mensual y anual.
+  La ruta de error vuelve a `#gestion-suscripcion`, presenta el mensaje enfocable y
+  registra `subscription_portal_failed`.
+- Pruebas focalizadas: **7/7**. Suite completa: **499/499** en 464,4 s dentro del
+  entorno 3.12 del proyecto. Ruff sobre `src`/`tests`, `compileall`, comprobación
+  JavaScript y `git diff --check` verdes.
+- Validación externa pendiente: desplegar y abrir los flujos con la subscripción
+  sandbox. Stripe exige además que los precios intercambiables tengan tratamiento
+  fiscal compatible y no `unspecified`; es configuración externa, no se inventa.
+
 ## 2026-08-14 — gestión completa de una suscripción Stripe activa
 
 - Adaptador probado con payloads separados de Customer Portal para actualizar el

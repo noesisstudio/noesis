@@ -2318,6 +2318,10 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
             patch.object(config, "STRIPE_PRICE_PRO_ANNUAL", "price_pro_annual"),
             patch.object(provider, "subscription_snapshot", return_value=snapshot),
             patch.object(
+                provider, "_managed_portal_configuration",
+                return_value="bpc_noesis",
+            ),
+            patch.object(
                 provider, "_post", return_value={"url": "https://billing.example/flow"},
             ) as post,
         ):
@@ -2362,6 +2366,104 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertEqual(
             change_payload["flow_data[after_completion][type]"], "redirect",
         )
+        self.assertEqual(payment_payload["configuration"], "bpc_noesis")
+        self.assertEqual(cancel_payload["configuration"], "bpc_noesis")
+        self.assertEqual(change_payload["configuration"], "bpc_noesis")
+
+    def test_stripe_builds_managed_portal_with_every_configured_price(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        prices = {
+            "price_autonomo_month": "prod_autonomo",
+            "price_pro_month": "prod_pro",
+            "price_premium_month": "prod_premium",
+            "price_autonomo_year": "prod_autonomo",
+            "price_pro_year": "prod_pro",
+            "price_premium_year": "prod_premium",
+        }
+
+        def stripe_get(path):
+            if path.startswith("billing_portal/configurations?"):
+                return {"data": []}
+            price_id = path.rsplit("/", 1)[-1]
+            return {"id": price_id, "product": prices[price_id]}
+
+        with (
+            patch.multiple(
+                config,
+                STRIPE_PRICE_AUTONOMO="price_autonomo_month",
+                STRIPE_PRICE_PRO="price_pro_month",
+                STRIPE_PRICE_PREMIUM="price_premium_month",
+                STRIPE_PRICE_AUTONOMO_ANNUAL="price_autonomo_year",
+                STRIPE_PRICE_PRO_ANNUAL="price_pro_year",
+                STRIPE_PRICE_PREMIUM_ANNUAL="price_premium_year",
+            ),
+            patch.object(provider, "_get", side_effect=stripe_get),
+            patch.object(
+                provider, "_post", return_value={"id": "bpc_noesis"},
+            ) as post,
+        ):
+            configuration_id = provider._managed_portal_configuration(
+                "https://noesis.test/b/42/suscripcion"
+            )
+
+        self.assertEqual(configuration_id, "bpc_noesis")
+        post.assert_called_once()
+        path, payload = post.call_args.args
+        self.assertEqual(path, "billing_portal/configurations")
+        self.assertEqual(payload["features[payment_method_update][enabled]"], "true")
+        self.assertEqual(payload["features[subscription_cancel][mode]"], "at_period_end")
+        self.assertEqual(payload["features[subscription_update][enabled]"], "true")
+        self.assertEqual(
+            payload["features[subscription_update][products][0][prices][]"],
+            ["price_autonomo_month", "price_autonomo_year"],
+        )
+        self.assertEqual(
+            payload["features[subscription_update][products][2][prices][]"],
+            ["price_premium_month", "price_premium_year"],
+        )
+        self.assertEqual(payload["metadata[noesis_portal]"], "noesis-v1")
+
+    def test_stripe_reuses_the_active_managed_portal_configuration(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        with (
+            patch.multiple(
+                config,
+                STRIPE_PRICE_AUTONOMO="price_autonomo",
+                STRIPE_PRICE_PRO="price_pro",
+                STRIPE_PRICE_PREMIUM="price_premium",
+                STRIPE_PRICE_AUTONOMO_ANNUAL="price_autonomo_year",
+                STRIPE_PRICE_PRO_ANNUAL="price_pro_year",
+                STRIPE_PRICE_PREMIUM_ANNUAL="price_premium_year",
+            ),
+            patch.object(provider, "_get", return_value={"data": [{
+                "id": "bpc_existing",
+                "active": True,
+                "metadata": {"noesis_portal": "noesis-v1"},
+                "features": {
+                    "payment_method_update": {"enabled": True},
+                    "subscription_cancel": {"enabled": True},
+                    "subscription_update": {
+                        "enabled": True,
+                        "products": [{"prices": [
+                            "price_autonomo", "price_pro", "price_premium",
+                            "price_autonomo_year", "price_pro_year",
+                            "price_premium_year",
+                        ]}],
+                    },
+                },
+            }]}),
+            patch.object(provider, "_post") as post,
+        ):
+            configuration_id = provider._managed_portal_configuration(
+                "https://noesis.test/b/42/suscripcion"
+            )
+
+        self.assertEqual(configuration_id, "bpc_existing")
+        post.assert_not_called()
 
     def test_checkout_return_reconciles_authoritative_active_subscription(self):
         from starlette.testclient import TestClient
@@ -2464,6 +2566,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertIn("Mejorar a Premium", page.text)
         self.assertIn("Cambiar tarjeta", page.text)
         self.assertIn("Cancelar suscripción", page.text)
+        self.assertEqual(page.text.count("data-stripe-portal-form"), 6)
         self.assertIn('name="action" value="change"', page.text)
         self.assertNotIn("Activar plan Aut", page.text)
         self.assertNotIn("/suscripcion/checkout", page.text)
@@ -2522,6 +2625,123 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
             db.get_business(business["id"]),
             f"{config.BASE_URL}/b/{business['id']}/suscripcion",
             action="cancel", plan="", billing_period="monthly",
+        )
+
+    def test_every_subscription_button_opens_one_scoped_portal_flow(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe recorrido completo")
+        db.create_user(
+            "portal-e2e@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_e2e", subscription_id="sub_e2e",
+        )
+        provider = MagicMock()
+        provider.portal_url.side_effect = lambda *_args, **kwargs: (
+            f"https://billing.example/{kwargs['action']}"
+        )
+        # Los seis formularios que ve Autonomo: gestión superior, tarjeta,
+        # gestión desde su tarjeta actual, dos mejoras y cancelación.
+        actions = (
+            ({"action": "manage"}, "manage"),
+            ({"action": "payment_method"}, "payment_method"),
+            ({"action": "manage"}, "manage"),
+            ({
+                "action": "change", "plan": "pro",
+                "billing_period": "monthly",
+            }, "change"),
+            ({
+                "action": "change", "plan": "premium",
+                "billing_period": "annual",
+            }, "change"),
+            ({"action": "cancel"}, "cancel"),
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-e2e@example.com",
+                "password": TEST_PASSWORD,
+            })
+            responses = [
+                client.post(
+                    f"/b/{business['id']}/suscripcion/portal",
+                    data=data,
+                    headers={"sec-fetch-site": "same-origin"},
+                    follow_redirects=False,
+                )
+                for data, _action in actions
+            ]
+
+        self.assertEqual([response.status_code for response in responses], [303] * 6)
+        self.assertEqual(
+            [response.headers["location"] for response in responses],
+            [f"https://billing.example/{action}" for _data, action in actions],
+        )
+        self.assertEqual(provider.portal_url.call_count, 6)
+        monthly_change = provider.portal_url.call_args_list[3]
+        annual_change = provider.portal_url.call_args_list[4]
+        self.assertEqual(monthly_change.kwargs, {
+            "action": "change", "plan": "pro", "billing_period": "monthly",
+        })
+        self.assertEqual(annual_change.kwargs, {
+            "action": "change", "plan": "premium", "billing_period": "annual",
+        })
+
+    def test_subscription_portal_failure_returns_to_a_visible_error(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe portal caido")
+        db.create_user(
+            "portal-failure@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_failure", subscription_id="sub_failure",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = None
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-failure@example.com",
+                "password": TEST_PASSWORD,
+            })
+            response = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "manage"}, follow_redirects=False,
+            )
+            page = client.get(response.headers["location"])
+
+        self.assertEqual(response.status_code, 303)
+        self.assertTrue(response.headers["location"].endswith(
+            "?status=noportal#gestion-suscripcion"
+        ))
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('id="gestion-suscripcion"', page.text)
+        self.assertIn("No he podido abrir", page.text)
+        self.assertEqual(
+            db.count_product_events(
+                business["id"], "subscription_portal_failed",
+            ),
+            1,
         )
 
     def test_public_and_account_pricing_share_the_current_catalog(self):

@@ -26,6 +26,7 @@ from .. import config
 
 log = logging.getLogger("noesis.billing")
 _API = "https://api.stripe.com/v1"
+_PORTAL_CONFIGURATION_VERSION = "noesis-v1"
 
 # Catálogo de planes: fuente única de verdad. El precio se comunica siempre + IVA;
 # el modelo reproducible y sus márgenes están en docs/Unit-economics-y-cerebro-interno.md.
@@ -159,6 +160,119 @@ class StripeBillingProvider:
         with urllib.request.urlopen(req, timeout=20) as resp:
             return json.loads(resp.read().decode())
 
+    def _portal_price_ids(self) -> list[str]:
+        return list(dict.fromkeys(
+            price_id
+            for period in ("monthly", "annual")
+            for plan in PLANS
+            if (price_id := _price_id(plan, period))
+        ))
+
+    def _portal_configuration_compatible(self, candidate: dict) -> bool:
+        metadata = candidate.get("metadata") or {}
+        features = candidate.get("features") or {}
+        subscription_update = features.get("subscription_update") or {}
+        configured_prices = set(self._portal_price_ids())
+        portal_prices = {
+            str(price_id)
+            for product in subscription_update.get("products") or []
+            if isinstance(product, dict)
+            for price_id in product.get("prices") or []
+        }
+        return bool(
+            metadata.get("noesis_portal") == _PORTAL_CONFIGURATION_VERSION
+            and candidate.get("active") is True
+            and candidate.get("id")
+            and (features.get("payment_method_update") or {}).get("enabled") is True
+            and (features.get("subscription_cancel") or {}).get("enabled") is True
+            and subscription_update.get("enabled") is True
+            and configured_prices
+            and configured_prices.issubset(portal_prices)
+        )
+
+    def _portal_catalog(self) -> dict[str, list[str]]:
+        """Resuelve productos y precios del entorno Stripe de la clave actual."""
+        price_ids = self._portal_price_ids()
+        if not price_ids:
+            raise ValueError("No hay precios Stripe configurados para el portal.")
+        products: dict[str, list[str]] = {}
+        for price_id in price_ids:
+            safe_id = urllib.parse.quote(price_id, safe="")
+            price = self._get(f"prices/{safe_id}")
+            product_id = str(price.get("product") or "")
+            if not product_id:
+                raise ValueError(f"El precio Stripe {price_id} no tiene producto.")
+            products.setdefault(product_id, []).append(price_id)
+        return products
+
+    def _managed_portal_configuration(self, return_url: str) -> str | None:
+        """Obtiene o crea el portal que necesitan los flujos vendidos por Noesis.
+
+        Stripe separa la sesión del portal de sus capacidades. Esta configuración
+        versionada evita que los botones dependan de ajustes manuales diferentes
+        entre sandbox y producción.
+        """
+        try:
+            configurations = self._get(
+                "billing_portal/configurations?active=true&limit=100"
+            ).get("data") or []
+            for candidate in configurations:
+                if not isinstance(candidate, dict):
+                    continue
+                if self._portal_configuration_compatible(candidate):
+                    return str(candidate["id"])
+
+            data = {
+                "business_profile[headline]": (
+                    "Gestiona tu plan de Noesis de forma segura."
+                ),
+                "business_profile[privacy_policy_url]": (
+                    f"{config.BASE_URL}/privacidad"
+                ),
+                "business_profile[terms_of_service_url]": (
+                    f"{config.BASE_URL}/terminos"
+                ),
+                "default_return_url": return_url,
+                "features[customer_update][enabled]": "true",
+                "features[customer_update][allowed_updates][]": [
+                    "address", "email", "name", "phone", "tax_id",
+                ],
+                "features[invoice_history][enabled]": "true",
+                "features[payment_method_update][enabled]": "true",
+                "features[subscription_cancel][enabled]": "true",
+                "features[subscription_cancel][mode]": "at_period_end",
+                "features[subscription_cancel][proration_behavior]": "none",
+                "features[subscription_cancel][cancellation_reason][enabled]": (
+                    "true"
+                ),
+                "features[subscription_cancel][cancellation_reason][options][]": [
+                    "too_expensive", "missing_features", "switched_service",
+                    "unused", "other",
+                ],
+                "features[subscription_update][enabled]": "true",
+                "features[subscription_update][default_allowed_updates][]": [
+                    "price",
+                ],
+                "features[subscription_update][proration_behavior]": (
+                    "create_prorations"
+                ),
+                "metadata[noesis_portal]": _PORTAL_CONFIGURATION_VERSION,
+            }
+            for product_index, (product_id, prices) in enumerate(
+                self._portal_catalog().items()
+            ):
+                prefix = f"features[subscription_update][products][{product_index}]"
+                data[f"{prefix}[product]"] = product_id
+                data[f"{prefix}[prices][]"] = prices
+            created = self._post("billing_portal/configurations", data)
+            configuration_id = str(created.get("id") or "")
+            return configuration_id or None
+        except Exception as e:  # noqa: BLE001
+            # Conserva el portal predeterminado como salida de compatibilidad. El
+            # detalle queda en Railway sin exponer datos o credenciales al cliente.
+            log.error("Stripe no pudo preparar el portal gestionado: %s", e)
+            return None
+
     def checkout_url(self, business, plan, success_url, cancel_url,
                      billing_period="monthly") -> str | None:
         price = _price_id(plan, billing_period)
@@ -208,6 +322,9 @@ class StripeBillingProvider:
             log.warning("Stripe portal sin customer_id para business_id=%s.", business.get("id"))
             return None
         data = {"customer": cid, "return_url": return_url}
+        configuration_id = self._managed_portal_configuration(return_url)
+        if configuration_id:
+            data["configuration"] = configuration_id
         subscription_id = str(business.get("stripe_subscription_id") or "")
         if action == "payment_method":
             data["flow_data[type]"] = "payment_method_update"
@@ -232,7 +349,9 @@ class StripeBillingProvider:
                     "Stripe cambio incompleto: subscription=%s price=%s item=%s.",
                     bool(subscription_id), bool(target_price), bool(current_item),
                 )
-                return self._generic_portal_url(cid, return_url)
+                return self._generic_portal_url(
+                    cid, return_url, configuration_id=configuration_id,
+                )
             data.update({
                 "flow_data[type]": "subscription_update_confirm",
                 "flow_data[subscription_update_confirm][subscription]": subscription_id,
@@ -257,13 +376,23 @@ class StripeBillingProvider:
             log.error("Stripe portal (%s) fallo: %s", action, e)
             # Un enlace profundo puede fallar si esa funcion aun no esta
             # habilitada en Stripe. Abrimos la gestion general como salida segura.
-            return self._generic_portal_url(cid, return_url) if action != "manage" else None
+            return (
+                self._generic_portal_url(
+                    cid, return_url, configuration_id=configuration_id,
+                )
+                if action != "manage" else None
+            )
 
-    def _generic_portal_url(self, customer_id: str, return_url: str) -> str | None:
+    def _generic_portal_url(
+        self, customer_id: str, return_url: str,
+        configuration_id: str | None = None,
+    ) -> str | None:
+        data = {"customer": customer_id, "return_url": return_url}
+        if configuration_id:
+            data["configuration"] = configuration_id
         try:
             return self._post(
-                "billing_portal/sessions",
-                {"customer": customer_id, "return_url": return_url},
+                "billing_portal/sessions", data,
             ).get("url")
         except Exception as e:  # noqa: BLE001
             log.error("Stripe portal general fallo: %s", e)

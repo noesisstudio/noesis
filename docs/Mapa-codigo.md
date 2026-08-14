@@ -134,7 +134,10 @@
   negocio, cliente, suscripción, estado activo y un precio conocido de Noesis.
   Para una cuenta activa crea sesiones efímeras del portal general o deep links
   acotados a tarjeta, cancelación y confirmación del precio exacto; si Stripe aún no
-  permite un flujo específico, cae al portal general sin crear un Checkout.
+  permite un flujo específico, cae al portal general sin crear un Checkout. Antes
+  prepara una configuración versionada propia del Customer Portal, reutilizable y
+  con las seis tarifas conocidas, para no depender de opciones manuales del panel
+  de Stripe; una configuración ajena nunca se adopta por accidente.
 - `src/noesis/web/deps.py`: aislamiento de sesión, modo consulta, derechos por plan y guardia CSRF
   transversal. Una cuenta inactiva puede leer; toda mutación web/API devuelve
   redirección o HTTP 402. La evidencia `Sec-Fetch-Site: same-origin` del navegador
@@ -150,7 +153,8 @@
 - `web/templates/suscripcion.html` + `web/routers/account.py`: una cuenta activa
   distingue el plan actual, niveles incluidos y mejoras. No contiene Checkout;
   gestionar, cambiar tarjeta, mejorar o cancelar abre una sesión Stripe distinta y
-  la interfaz explica un fallo sin fingir que se ha aplicado nada. La
+  la interfaz bloquea dobles envíos y explica un fallo en el mismo bloque visible
+  sin fingir que se ha aplicado nada; el servidor lo registra para soporte. La
   ruta de Checkout repite esta protección en servidor ante formularios antiguos o
   peticiones manipuladas.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro

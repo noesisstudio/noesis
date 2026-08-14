@@ -59,11 +59,13 @@
   siguiente elimina la recompra del mismo plan, centraliza los cambios en el portal
   y bloquea un segundo Checkout también en el servidor. El release `3c7bd034828a`
   ya está desplegado. El candidato del 14-ago separa gestión general, tarjeta,
-  cancelación y confirmación del plan/período exactos mediante deep links de Stripe,
-  con retorno y error visibles; producción lo sirve desde `31d0c95abcf0`. Falta
-  recorrerlo, habilitar en el portal de Stripe los cambios de producto/precio si no
-  lo están y completar impago, cancelación, anualidad, upgrade/downgrade y permisos
-  reales.
+  cancelación y confirmación del plan/período exactos mediante deep links de Stripe.
+  El siguiente candidato elimina la dependencia manual: crea y reutiliza una
+  configuración de portal versionada con las seis tarifas, registra los fallos y
+  vuelve a un error visible. Falta desplegarlo y recorrer gestión, tarjeta,
+  cancelación, anualidad y upgrade con sandbox; verificar que todos los precios
+  usan un `tax_behavior` compatible y distinto de `unspecified`; y completar impago,
+  downgrade, reactivación y permisos reales.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente

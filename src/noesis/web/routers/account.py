@@ -1224,8 +1224,13 @@ def subscription_checkout(request: Request, business_id: int,
             action="change", plan=plan, billing_period=billing_period,
         )
         if not url:
+            db.record_product_event(
+                business_id, "subscription_portal_failed",
+                f"action=change;plan={plan};billing_period={billing_period}",
+            )
             return RedirectResponse(
-                f"/b/{business_id}/suscripcion?status=noportal",
+                f"/b/{business_id}/suscripcion?status=noportal"
+                "#gestion-suscripcion",
                 status_code=303,
             )
         return RedirectResponse(url, status_code=303)
@@ -1285,8 +1290,15 @@ def subscription_portal(
         action=action, plan=plan, billing_period=billing_period,
     )
     if not url:
-        return RedirectResponse(f"/b/{business_id}/suscripcion?status=noportal",
-                                status_code=303)
+        db.record_product_event(
+            business_id, "subscription_portal_failed",
+            f"action={action};plan={plan or '-'};billing_period={billing_period}",
+        )
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=noportal"
+            "#gestion-suscripcion",
+            status_code=303,
+        )
     return RedirectResponse(url, status_code=303)
 
 

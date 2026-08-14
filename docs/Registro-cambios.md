@@ -23,6 +23,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-14 — portal Stripe autocontenido y fallo visible
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir que los botones de gestionar, tarjeta, cancelación y cambio
+  de plan parecieran inertes aunque la interfaz ya estuviera dibujada.
+- **Áreas y archivos:** `adapters/billing.py`, rutas de cuenta, plantilla de
+  suscripción, JavaScript público, regresiones de backend, mapa y estado documental.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 7/7 focalizadas; **499/499** completas en 464,4 s; Ruff,
+  `compileall`, `node --check` y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** falta el clic autenticado después del
+  despliegue. Stripe puede rechazar upgrades si los precios tienen `tax_behavior`
+  incompatible o sin especificar; tarjeta, cancelación y portal general no deben
+  crear nunca una segunda suscripción.
+- **Riesgo/punto probable de fallo:** permisos de la clave Stripe para crear una
+  configuración de portal o catálogo fiscal incompatible. Si crearla falla, Noesis
+  intenta el portal predeterminado; si también falla, muestra y audita el error.
+- **Diagnóstico y rollback:** buscar `subscription_portal_failed` y el log
+  `Stripe portal`; revisar la configuración con metadata
+  `noesis_portal=noesis-v1`. Revertir el bloque vuelve a depender del portal manual,
+  sin tocar suscripciones ni cobros existentes.
+- **Estado de publicación:** candidato local sobre `main`, pendiente de commit,
+  despliegue e inspección sandbox.
+
 ## 2026-08-14 — acciones reales para gestionar la suscripción
 
 - **Autor/agente:** Codex.
