@@ -157,12 +157,22 @@ NOESIS_RESET_DB=false
 ```
 
 Railway inyecta `PORT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_PUBLIC_DOMAIN` y el SHA del
-commit. Tras el
-despliegue hay que aplicar la versión de esquema indicada en
+commit. Tras el despliegue hay que aplicar la versión de esquema indicada en
 [`project-state.json`](project-state.json), comprobar `GET /health`, `GET /ready`
 y verificar que ambos responden con el release esperado y que `/ready` muestra la
-migración vigente. Después se ejecuta `noesis-doctor --strict`. Nunca activar
-`NOESIS_RESET_DB` con datos.
+migración vigente. Después se ejecutan:
+
+```powershell
+noesis-doctor --strict
+noesis-integrations-check --network --strict
+```
+
+El primer comando comprueba coherencia local y bloqueos de apertura. El segundo
+solo hace lecturas: revisa el runtime OCR y consulta por `GET` la cuenta/remitente
+de Brevo, el proveedor OpenID de Google, los seis precios de Stripe y el modelo de
+Groq. No envía correos, no transcribe audios, no crea cargos y nunca muestra
+secretos. Sin `--network` no sale del servidor. Nunca activar `NOESIS_RESET_DB`
+con datos.
 
 Para crear las dos cuentas comerciales dentro del producto, activar
 `NOESIS_SEED_DEMO=true` durante un despliegue y seguir
@@ -436,6 +446,8 @@ Si Railway no tiene memoria suficiente para `faster-whisper`, conectar Groq:
 ```dotenv
 GROQ_API_KEY=<secreto>
 GROQ_WHISPER_MODEL=whisper-large-v3-turbo
+# Vacío para detectar automáticamente catalán, castellano o inglés.
+NOESIS_WHISPER_LANGUAGE=
 ```
 
 Probar audio corto/largo, catalán/castellano, silencio, formato no admitido y límite
@@ -447,7 +459,7 @@ de tamaño. Si se usa local, instalar el extra `audio`, persistir el modelo en
 
 No necesita API ni credenciales. `pytesseract` y `pypdfium2` son dependencias del
 producto y `railpack.json` instala en Railway `tesseract-ocr` y los idiomas
-`spa/eng`. Los PDF digitales se leen primero sin rasterizar; solo los que no tienen
+`cat/spa/eng`. Los PDF digitales se leen primero sin rasterizar; solo los que no tienen
 texto útil pasan por OCR local.
 
 Prueba de aceptación:
@@ -464,15 +476,19 @@ Prueba de aceptación:
 ## 8. Backups externos S3-compatible
 
 Crear un bucket privado con usuario limitado a ese bucket y, si el proveedor lo
-permite, versionado, cifrado y política de retención.
+permite, versionado, cifrado y política de retención. Para el piloto encaja
+Cloudflare R2 Standard: debe vivir fuera del proyecto de Railway para que una caída,
+un borrado o un bloqueo del proveedor principal no afecte a las dos copias a la vez.
+Los backups nativos de Railway son una capa adicional útil, no la copia externa
+independiente.
 
 ```dotenv
 NOESIS_BACKUP_S3_ENDPOINT=https://<endpoint>
 NOESIS_BACKUP_S3_BUCKET=<bucket>
 NOESIS_BACKUP_S3_ACCESS_KEY=<access key>
 NOESIS_BACKUP_S3_SECRET_KEY=<secret key>
-NOESIS_BACKUP_S3_REGION=<región>
-NOESIS_BACKUP_S3_PREFIX=noesis
+NOESIS_BACKUP_S3_REGION=auto
+NOESIS_BACKUP_S3_PREFIX=production
 ```
 
 Una subida correcta no basta: restaurar base y documentos en un entorno aislado,

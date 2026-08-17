@@ -1,13 +1,13 @@
 {
-  "state_date": "2026-08-14",
+  "state_date": "2026-08-17",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 49,
-  "verified_test_count": 506,
+  "verified_test_count": 516,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
+    "current_repository_candidate_deployed": false,
     "pending_after_deploy": "Recorrer con la suscripcion sandbox activa los flujos del portal Stripe gestionado por Noesis: gestion general, cambio de tarjeta, upgrade mensual y anual al plan exacto y cancelacion confirmada sin segundo Checkout; comprobar tambien que todos los price_id comparten tax_behavior compatible y no unspecified, y que cada webhook actualiza Noesis; repetir la prueba publicada de gestorias cuando Google renueve su cache de robots y solicitar indexacion; solicitar tambien indexacion de autonomos y precios y esperar datos reales de Search Console; recorrer en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS_SEED_DEMO y devolverlo a false; validar TOTP de gestoria con una cuenta real; completar Stripe test con impagos, reactivacion y permisos por plan; validar Meta real, Google OAuth, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {
@@ -62,6 +62,7 @@
     "access_requests": "schema_36_public_form_stored_with_plan_interest_honeypot_named_so_browser_autofill_cannot_trigger_it_and_logged_when_it_does_repeat_senders_are_thanked_not_errored_notice_goes_to_its_own_requests_mailbox_and_the_sender_gets_a_confirmation_founder_approves_and_invitation_link_lets_owner_set_own_password",
     "legal_consent_version": "2026_08_08_single_source_shared_by_pages_and_account_events_professional_review_pending",
     "capability_promises": "public_copy_reflects_runtime_voice_and_image_reading_availability",
+    "safe_integration_validation": "offline_by_default_read_only_checker_for_ocr_brevo_google_openid_six_stripe_prices_groq_and_s3_configuration_never_sends_transcribes_or_charges_and_never_prints_secrets",
     "customer_provider_diagnostics": "hidden_from_customer_available_to_admin",
     "private_calendar_feed": "implemented_revocable_ics",
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",
@@ -70,6 +71,7 @@
     "document_deduplication": "schema_38_sha256_per_business_unique_index_concurrent_upload_protection_and_lazy_fingerprinting_of_same_size_legacy_files_without_cross_tenant_comparison",
     "document_search": "case_insensitive_parameterized_search_inside_one_business_by_filename_note_ocr_client_project_and_humanized_kind",
     "document_pdf_local_reading": "bounded_pypdf_text_extraction_for_digital_pdfs_then_private_pypdfium2_rasterization_and_tesseract_ocr_for_image_only_pdfs_with_page_pixel_time_and_text_limits_cat_spa_eng_runtime_detection_preprocessing_and_no_external_api",
+    "voice_language_selection": "groq_and_private_whisper_auto_detect_language_by_default_with_optional_explicit_iso_639_1_hint_instead_of_forcing_spanish",
     "document_context": "web_and_whatsapp_validate_client_project_and_invoice_inside_the_same_business_caption_or_invoice_customer_only_links_on_unambiguous_match",
     "owner_document_archive": "same_effective_date_period_and_grouping_rules_as_gestoria_year_quarter_income_expense_ticket_pending_other_horizontal_quick_upload_mobile_responsive_folder_navigation_search_status_and_private_bounded_preview_opened_on_demand",
     "gestoria_portfolio": "schema_41_professional_multi_business_workspace_with_explicit_fiscal_profile_and_five_separate_task_views_summary_documents_taxes_periods_requests_quarter_and_year_context_safe_inline_first_page_preview_explainable_tax_drafts_and_versioned_packages_without_filing_or_money_authority_read_only_forms_return_to_the_same_human_workspace_instead_of_raw_json",

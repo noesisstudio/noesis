@@ -6,6 +6,15 @@
 
 ## Producto construido
 
+- El candidato del 17 de agosto añade una comprobación operativa segura para cerrar
+  integraciones del piloto. `noesis-integrations-check` valida OCR de foto y PDF con
+  `cat/spa/eng` y, con `--network`, consulta por lectura Brevo, Google OpenID, los
+  seis precios Stripe y Groq sin enviar correos, transcribir, cobrar ni mostrar
+  secretos. La voz ya no fuerza castellano: detecta automáticamente catalán,
+  castellano o inglés salvo que se configure una pista explícita. La suite completa
+  queda en **516 pruebas**, Ruff y compilación verdes; no cambia el esquema 49.
+  Este candidato aún debe desplegarse y ejecutarse con las credenciales de Railway.
+
 - La auditoría visual local del piloto ya cubre portada, panel de autónomo demo,
   Documentos, asistente, cartera de gestoría en escritorio y portal de cliente en
   móvil. Se corrigieron tres defectos visibles: el distintivo central corrupto de la

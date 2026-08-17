@@ -1,5 +1,21 @@
 # Registro de QA
 
+## 2026-08-17 — comprobador seguro de integraciones y voz multilingüe
+
+- Se añade un comprobador offline por defecto que nunca muestra secretos. Con
+  `--network` solo hace peticiones `GET`: cuenta y remitentes de Brevo, discovery
+  OpenID de Google, seis precios de Stripe y catálogo de modelos Groq. No envía
+  correos, no inicia OAuth, no transcribe y no crea cargos.
+- Stripe valida seis identificadores distintos, mismo entorno test/live, actividad,
+  EUR, importes 29/49/99 mensuales y 319/539/1089 anuales, recurrencia mensual/anual
+  e IVA `exclusive`. Brevo exige que `SMTP_FROM` corresponda a un remitente activo.
+- OCR exige foto, PDFium y los tres paquetes `cat/spa/eng`. Voz Groq y
+  `faster-whisper` dejan de forzar `es` y usan detección automática salvo
+  `NOESIS_WHISPER_LANGUAGE` explícito.
+- Pruebas focalizadas: **36/36**. Suite completa: **516/516** en 435,7 s.
+  Ruff, compilación y `git diff --check` verdes. No se usaron credenciales reales ni
+  se llamó a proveedores durante la suite; la aceptación externa sigue pendiente.
+
 ## 2026-08-14 — auditoría visual local y contratos Stripe
 
 - La portada, el panel real de la demo, Documentos, el asistente, la cartera de

@@ -69,6 +69,9 @@
   identidad legal, dominio canónico, apertura pública, audio/OCR, datos, copias,
   WhatsApp, correo, Stripe, AEAT, IA y operaciones. Al abrir el alta pública,
   servicios críticos incompletos pasan de aviso a bloqueo.
+- `src/noesis/integration_check.py`: comprobación externa segura y de solo lectura.
+  Valida el runtime OCR y, opcionalmente, consulta por `GET` Brevo, Google OpenID,
+  los seis precios Stripe y el catálogo Groq sin enviar, cobrar ni revelar secretos.
 - `src/noesis/config.py` + `web/routers/webhooks.py`: toman una huella publicable del
   commit de Railway (o `NOESIS_RELEASE_ID`) y la exponen en `/health`; `/ready`
   añade el esquema aplicado para distinguir sin ambigüedad fusionado de desplegado.

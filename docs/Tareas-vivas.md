@@ -81,7 +81,9 @@
   con corpus real en castellano/catalán/inglés. La ruta privada de OCR ya incorpora
   Tesseract/pytesseract para imágenes y PDFium para PDF escaneado, y Railpack instala
   `cat/spa/eng`, prepara orientación/contraste/escala e informa los modelos presentes;
-  falta comprobar el despliegue y medir precisión/tiempo. Sin esa validación,
+  voz detecta el idioma automáticamente salvo pista explícita. Ejecutar
+  `noesis-integrations-check --network`, comprobar el despliegue y medir
+  precisión/tiempo. Sin esa validación,
   mantener las promesas públicas degradadas.
 - [ ] Activar una vez `NOESIS_SEED_DEMO=true` en Railway, desplegar y recorrer los
   accesos reales de autónomo y gestoría y `/demo/cliente`. Confirmar que ambos
@@ -100,7 +102,9 @@
   real del titular.
 - [ ] Correo real por API HTTPS o SMTP: credenciales, dominio autenticado,
   invitaciones, facturas, avisos, reintentos de la outbox y entregabilidad. La cola
-  durable y las dos vías de salida ya están construidas.
+  durable y las dos vías de salida ya están construidas. El comprobador de
+  integraciones valida por lectura la cuenta Brevo y que `SMTP_FROM` sea un
+  remitente activo, pero la entregabilidad exige envíos reales a Gmail y Outlook.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El
@@ -110,7 +114,9 @@
   aceptación/rechazo/duplicado/CSV/reintentos, alta y anulación ya construidas,
   subsanación de rechazos, declaración
   responsable y validación con asesoría fiscal antes de producción.
-- [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo.
+- [ ] Ejecutar `noesis-doctor --strict` y
+  `noesis-integrations-check --network --strict` en producción; resolver cada
+  bloqueo y guardar la evidencia sin copiar secretos.
 - [ ] Desplegar ClamAV en red privada, fijar `NOESIS_CLAMAV_REQUIRED=true` y probar
   archivo limpio, EICAR, caída y timeout sin almacenar el payload rechazado.
 - [ ] Ejecutar `noesis-restore-check` y comprobar el simulacro semanal. Después,

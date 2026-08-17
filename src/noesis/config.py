@@ -454,6 +454,9 @@ WHATSAPP_TEMPLATE_TAX_NOTICE = os.getenv(
 # Transcripción de voz vía API (Groq/Whisper). Si falta, se intenta whisper local.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_WHISPER_MODEL = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
+# Vacío = detección automática. Solo se usa como pista ISO-639-1 cuando el
+# despliegue sabe que todo el audio será de un idioma concreto (es/ca/en).
+WHISPER_LANGUAGE = os.getenv("NOESIS_WHISPER_LANGUAGE", "").strip().lower()
 # Tope diario de extracciones con IA por negocio (fotos/PDFs): protege el margen.
 MAX_DAILY_EXTRACTIONS = int(os.getenv("NOESIS_MAX_DAILY_EXTRACTIONS", "30"))
 MAX_JSON_BYTES = int(os.getenv("NOESIS_MAX_JSON_BYTES", "262144"))

@@ -19,7 +19,7 @@ from . import config, migrations
 from .adapters import ai as ai_adapter
 from .adapters import email as email_adapter
 from .adapters import transcription
-from .documents import ocr
+from .documents import ocr, pdf_ocr
 
 
 @dataclass(frozen=True)
@@ -309,24 +309,53 @@ def collect_readiness(*, check_database: bool = True) -> dict:
         ))
 
     voice_ok = transcription.available()
-    image_reading_ok = ocr.available() or bool(config.ANTHROPIC_API_KEY)
+    voice_provider = (
+        "Groq Whisper" if config.GROQ_API_KEY else
+        "Whisper privado" if voice_ok else ""
+    )
     checks.append(ReadinessCheck(
         "audio",
         "ok" if voice_ok else ("blocker" if external_required else "warning"),
-        "Transcripción de voz disponible." if voice_ok else
+        (
+            f"Transcripción de voz disponible con {voice_provider}; "
+            + (
+                f"idioma fijado a {config.WHISPER_LANGUAGE}."
+                if config.WHISPER_LANGUAGE else
+                "detección automática de idioma."
+            )
+        ) if voice_ok else
         "No hay transcripción de voz disponible.",
         "Configura Groq Whisper o instala y valida faster-whisper."
         if not voice_ok else "",
     ))
+    installed_ocr_languages = set(ocr.installed_languages())
+    required_ocr_languages = set(ocr.PREFERRED_LANGUAGES)
+    missing_ocr_languages = sorted(required_ocr_languages - installed_ocr_languages)
+    image_ocr_ok = ocr.available()
+    scanned_pdf_ok = pdf_ocr.available()
+    trilingual_ocr_ok = not missing_ocr_languages
+    local_ocr_ok = image_ocr_ok and scanned_pdf_ok and trilingual_ocr_ok
+    if local_ocr_ok:
+        ocr_summary = "OCR privado completo para foto y PDF en cat/spa/eng."
+        ocr_action = "Valida el corpus real del piloto y la revisión manual."
+    elif image_ocr_ok:
+        details = []
+        if not scanned_pdf_ok:
+            details.append("falta el lector de PDF escaneado")
+        if missing_ocr_languages:
+            details.append("faltan idiomas: " + ", ".join(missing_ocr_languages))
+        ocr_summary = "OCR local incompleto: " + "; ".join(details) + "."
+        ocr_action = "Completa PDFium e idiomas y vuelve a ejecutar noesis-doctor."
+    else:
+        ocr_summary = "Las imágenes se guardan, pero el OCR privado no está operativo."
+        ocr_action = (
+            "Instala Tesseract, cat/spa/eng, pytesseract y pypdfium2 en el runtime."
+        )
     checks.append(ReadinessCheck(
-        "lectura de imágenes",
-        "ok" if image_reading_ok else (
-            "blocker" if external_required else "warning"
-        ),
-        "Lectura automática de imágenes disponible." if image_reading_ok else
-        "Las imágenes se guardan, pero no se leen automáticamente.",
-        "Configura la extracción autorizada o instala Tesseract con pytesseract."
-        if not image_reading_ok else "",
+        "ocr privado",
+        "ok" if local_ocr_ok else ("blocker" if external_required else "warning"),
+        ocr_summary,
+        ocr_action,
     ))
 
     checks.append(ReadinessCheck(

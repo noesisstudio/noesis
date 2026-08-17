@@ -7,6 +7,28 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-17 — cierre verificable de OCR, correo, OAuth, voz, copias y Stripe
+
+- **Autor/agente:** Codex.
+- **Objetivo:** facilitar la conexión del piloto con una verificación segura que
+  distinga variables presentes de capacidades realmente disponibles.
+- **Áreas y archivos:** configuración, transcripción, OCR/readiness, nuevo CLI de
+  comprobación, pruebas y guías operativas/estado compartido.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 36/36 focalizadas y suite completa **516/516** en 435,7 s;
+  Ruff, compilación y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** no se usaron secretos ni proveedores
+  reales. Founder debe configurar Railway y completar los recorridos humanos de
+  correo, OAuth, voz, restauración y Stripe descritos en `Conectar-APIs.md`.
+- **Riesgo/punto probable de fallo:** credencial de otro entorno, remitente Brevo no
+  activo, precio Stripe con IVA `unspecified`, idiomas Tesseract ausentes o bucket
+  configurado sin restauración independiente.
+- **Diagnóstico y rollback:** ejecutar `noesis-doctor --strict` y
+  `noesis-integrations-check --network --strict`. Revertir el commit elimina el CLI
+  y recupera la pista fija anterior, sin tocar datos ni esquema.
+- **Estado de publicación:** candidato local validado; despliegue automático y
+  comprobación con las credenciales de Railway pendientes.
+
 ## 2026-08-14 — revisión visual del piloto y cierre de detalles móviles
 
 - **Autor/agente:** Codex.
