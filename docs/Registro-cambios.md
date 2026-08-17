@@ -26,8 +26,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnóstico y rollback:** ejecutar `noesis-doctor --strict` y
   `noesis-integrations-check --network --strict`. Revertir el commit elimina el CLI
   y recupera la pista fija anterior, sin tocar datos ni esquema.
-- **Estado de publicación:** candidato local validado; despliegue automático y
-  comprobación con las credenciales de Railway pendientes.
+- **Estado de publicación:** `main` y producción en `808a96004b7b`; queda ejecutar
+  el comprobador con las credenciales de Railway y guardar la aceptación externa.
 
 ## 2026-08-14 — revisión visual del piloto y cierre de detalles móviles
 

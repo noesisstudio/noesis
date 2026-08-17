@@ -13,7 +13,8 @@
   secretos. La voz ya no fuerza castellano: detecta automáticamente catalán,
   castellano o inglés salvo que se configure una pista explícita. La suite completa
   queda en **516 pruebas**, Ruff y compilación verdes; no cambia el esquema 49.
-  Este candidato aún debe desplegarse y ejecutarse con las credenciales de Railway.
+  Producción responde con el release `808a96004b7b`; queda ejecutar el comprobador
+  con las credenciales de Railway y completar las pruebas humanas.
 
 - La auditoría visual local del piloto ya cubre portada, panel de autónomo demo,
   Documentos, asistente, cartera de gestoría en escritorio y portal de cliente en

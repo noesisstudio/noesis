@@ -15,6 +15,8 @@
 - Pruebas focalizadas: **36/36**. Suite completa: **516/516** en 435,7 s.
   Ruff, compilación y `git diff --check` verdes. No se usaron credenciales reales ni
   se llamó a proveedores durante la suite; la aceptación externa sigue pendiente.
+- Tras el push, `https://bynoesis.com/health` responde con `808a96004b7b`; el nuevo
+  código está publicado sin necesidad de abrir el navegador integrado.
 
 ## 2026-08-14 — auditoría visual local y contratos Stripe
 
