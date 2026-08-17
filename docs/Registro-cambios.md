@@ -7,6 +7,23 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-17 — sincroniza el OCR con el build real de Railway
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el bloqueo OCR observado mediante SSH en el contenedor real.
+- **Áreas y archivos:** dependencias de producción, regresión de empaquetado y
+  documentación operativa/estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 11/11 focalizadas; suite completa **517/517** en 381,7 s;
+  Ruff, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** Tesseract y `cat/spa/eng` comprobados en
+  Railway; falta redesplegar para verificar los módulos Python y el corpus real.
+- **Riesgo/punto probable de fallo:** caché de build o wheel PDFium incompatible con
+  la imagen; el healthcheck debe impedir publicar si la instalación falla.
+- **Diagnóstico y rollback:** repetir el comprobador mediante SSH. El rollback solo
+  revierte requisitos Python y no toca datos.
+- **Estado de publicación:** candidato local, todavía no desplegado.
+
 ## 2026-08-17 — cierre verificable de OCR, correo, OAuth, voz, copias y Stripe
 
 - **Autor/agente:** Codex.

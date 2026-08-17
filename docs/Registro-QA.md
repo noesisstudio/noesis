@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-08-17 — dependencia OCR real de Railway
+
+- La comprobación por SSH demostró que Tesseract 5.3.0 y `cat/eng/osd/spa` sí estaban
+  instalados, pero el entorno Python no contenía `pytesseract` ni `pypdfium2` porque
+  Railpack construye desde `requirements.txt`, no desde las dependencias de
+  `pyproject.toml`.
+- Se sincronizan `pypdf`, `pypdfium2`, `pytesseract` y la versión mínima de Pillow;
+  una prueba de empaquetado impide retirar otra vez el runtime OCR de Railway.
+- La primera lectura externa confirmó Stripe completamente correcto. Brevo respondió
+  403; Google, Groq y S3 siguen sin configurar. Ninguna comprobación envió, cobró ni
+  transcribió contenido.
+- Prueba focalizada de empaquetado: **11/11**. Suite completa: **517/517** en
+  381,7 s; Ruff, verdad documental y `git diff --check` verdes. Esquema 49 sin
+  cambios.
+
 ## 2026-08-17 — comprobador seguro de integraciones y voz multilingüe
 
 - Se añade un comprobador offline por defecto que nunca muestra secretos. Con

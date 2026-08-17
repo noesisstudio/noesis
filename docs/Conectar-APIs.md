@@ -174,6 +174,20 @@ Groq. No envía correos, no transcribe audios, no crea cargos y nunca muestra
 secretos. Sin `--network` no sale del servidor. Nunca activar `NOESIS_RESET_DB`
 con datos.
 
+Railpack ejecuta la aplicación directamente desde `src` y no instala los entry
+points del paquete. Por eso, dentro de una sesión SSH de producción, la forma
+canónica es:
+
+```bash
+PYTHONPATH=/app/src /app/.venv/bin/python -m noesis.integration_check --network
+```
+
+Desde PowerShell puede ejecutarse sin abrir una shell interactiva:
+
+```powershell
+railway ssh -- sh -lc 'PYTHONPATH=/app/src /app/.venv/bin/python -m noesis.integration_check --network'
+```
+
 Para crear las dos cuentas comerciales dentro del producto, activar
 `NOESIS_SEED_DEMO=true` durante un despliegue y seguir
 [`Demo-comercial.md`](Demo-comercial.md). No es una credencial ni una base aparte;

@@ -2,12 +2,12 @@
   "state_date": "2026-08-17",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 49,
-  "verified_test_count": 516,
+  "verified_test_count": 517,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
+    "current_repository_candidate_deployed": false,
     "pending_after_deploy": "Recorrer con la suscripcion sandbox activa los flujos del portal Stripe gestionado por Noesis: gestion general, cambio de tarjeta, upgrade mensual y anual al plan exacto y cancelacion confirmada sin segundo Checkout; comprobar tambien que todos los price_id comparten tax_behavior compatible y no unspecified, y que cada webhook actualiza Noesis; repetir la prueba publicada de gestorias cuando Google renueve su cache de robots y solicitar indexacion; solicitar tambien indexacion de autonomos y precios y esperar datos reales de Search Console; recorrer en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS_SEED_DEMO y devolverlo a false; validar TOTP de gestoria con una cuenta real; completar Stripe test con impagos, reactivacion y permisos por plan; validar Meta real, Google OAuth, correo, OCR trilingue con corpus, ClamAV privado, copia externa/restauracion independiente, revision juridica/fiscal, gestoria real y certificado AEAT"
   },
   "pricing_eur_ex_vat": {

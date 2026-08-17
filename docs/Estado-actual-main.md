@@ -6,6 +6,13 @@
 
 ## Producto construido
 
+- La primera ejecución del comprobador dentro del contenedor detectó una diferencia
+  real entre desarrollo y despliegue: Railpack instala `requirements.txt`, donde no
+  constaban `pypdf`, `pypdfium2` ni `pytesseract`, aunque sí estaban declarados en
+  `pyproject.toml` y Tesseract tenía `cat/spa/eng`. El candidato sincroniza ambas
+  fuentes y añade una regresión de empaquetado. Queda en **517 pruebas**, sin cambio
+  de esquema, y debe desplegarse para repetir la comprobación OCR.
+
 - El candidato del 17 de agosto añade una comprobación operativa segura para cerrar
   integraciones del piloto. `noesis-integrations-check` valida OCR de foto y PDF con
   `cat/spa/eng` y, con `--network`, consulta por lectura Brevo, Google OpenID, los

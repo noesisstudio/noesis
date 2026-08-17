@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +10,14 @@ from noesis.adapters import transcription
 
 
 class IntegrationCheckTestCase(unittest.TestCase):
+    def test_railway_requirements_include_private_ocr_runtime(self):
+        requirements = (
+            Path(__file__).resolve().parents[1] / "requirements.txt"
+        ).read_text(encoding="utf-8").lower()
+
+        for dependency in ("pypdf>", "pypdfium2>", "pytesseract>"):
+            self.assertIn(dependency, requirements)
+
     def _stripe_config(self):
         return patch.multiple(
             config,
