@@ -11,7 +11,8 @@
   constaban `pypdf`, `pypdfium2` ni `pytesseract`, aunque sí estaban declarados en
   `pyproject.toml` y Tesseract tenía `cat/spa/eng`. El candidato sincroniza ambas
   fuentes y añade una regresión de empaquetado. Queda en **517 pruebas**, sin cambio
-  de esquema, y debe desplegarse para repetir la comprobación OCR.
+  de esquema. Producción responde con `b3c184251374` y la repetición por SSH confirma
+  foto y PDF escaneado disponibles con `cat/spa/eng`.
 
 - El candidato del 17 de agosto añade una comprobación operativa segura para cerrar
   integraciones del piloto. `noesis-integrations-check` valida OCR de foto y PDF con

@@ -14,6 +14,9 @@
 - Prueba focalizada de empaquetado: **11/11**. Suite completa: **517/517** en
   381,7 s; Ruff, verdad documental y `git diff --check` verdes. Esquema 49 sin
   cambios.
+- Producción responde con `b3c184251374`. El comprobador remoto deja OCR en `OK`
+  para foto, PDF y `cat/spa/eng`; Stripe también queda `OK`. Brevo responde 403 y
+  Google, Groq y S3 todavía no están configurados.
 
 ## 2026-08-17 — comprobador seguro de integraciones y voz multilingüe
 

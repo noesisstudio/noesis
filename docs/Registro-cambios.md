@@ -22,7 +22,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   la imagen; el healthcheck debe impedir publicar si la instalación falla.
 - **Diagnóstico y rollback:** repetir el comprobador mediante SSH. El rollback solo
   revierte requisitos Python y no toca datos.
-- **Estado de publicación:** candidato local, todavía no desplegado.
+- **Estado de publicación:** `main` y producción en `b3c184251374`; comprobación
+  SSH confirma OCR de foto/PDF con `cat/spa/eng` y Stripe en `OK`.
 
 ## 2026-08-17 — cierre verificable de OCR, correo, OAuth, voz, copias y Stripe
 
