@@ -2,6 +2,28 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Stripe confirma cada cambio irreversible en un flujo acotado (2026-08-14)
+
+Noesis no modifica directamente la suscripción desde un botón. Gestión general,
+tarjeta, cambio de precio/período y cancelación generan sesiones efímeras distintas
+del Customer Portal; para una mejora se envían el `subscription_item` y el
+`price_id` exactos y Stripe presenta importe, prorrateo y autenticación antes de
+confirmar. La cancelación también se confirma en Stripe y su webhook gobierna el
+estado final. Si un deep link no está habilitado, se abre el portal general; nunca
+se crea un segundo Checkout ni se concede acceso por la URL de retorno.
+
+## Una suscripción activa se modifica; nunca se vuelve a comprar (2026-08-13)
+
+Checkout se reserva al alta de una cuenta sin suscripción. Cuando Stripe ya marca
+una cuenta como `active` o `trialing`, Noesis presenta el plan vigente y centraliza
+nivel, periodicidad, tarjeta y cancelación en el portal seguro sobre la misma
+suscripción. Los planes superiores son mejoras y los inferiores aparecen incluidos.
+
+La regla no es solo visual: cualquier POST al Checkout desde un formulario antiguo
+o manipulado se redirige al portal y no invoca la creación de una nueva sesión de
+compra. Así se reduce el riesgo de doble cobro y se mantiene una única fuente para
+historial, métodos de pago y cambios de plan.
+
 ## El pie gráfico es una zona segura y la identidad se congela al emitir (2026-08-12)
 
 La prohibición de un maquetador libre se mantiene: ninguna imagen puede entrar en
@@ -119,6 +141,25 @@ reaparece un candidato del mismo tamaño.
 No se hace deduplicación global. Confirmar que otra empresa ya posee una huella
 crearía un canal lateral entre clientes y mezclaría sus ciclos de conservación. El
 pequeño ahorro adicional de almacenamiento no compensa ese riesgo de privacidad.
+
+## El SEO describe producto y audiencia; no fabrica autoridad (2026-08-13)
+
+Noesis separa las intenciones públicas de autónomos y gestorías en páginas propias,
+pero mantiene una única identidad de empresa en la portada. El marcado estructurado
+solo declara `Organization` y `WebSite`: no se publican estrellas, reseñas, volumen
+de usuarios ni un resultado enriquecido de software hasta que existan evidencias
+reales y requisitos completos.
+
+El sitemap enumera únicamente rutas públicas y no asigna una fecha de modificación
+diaria ni prioridades artificiales. Las rutas privadas se excluyen del rastreo cuando
+contienen datos y, además, toda URL que no pertenezca al sitio público responde con
+`noindex`. Esta doble barrera evita que un enlace conocido termine indexando un login,
+un portal o un error, sin impedir que Google lea el `noindex` de los accesos públicos.
+
+Search Console sirve para observar indexación, consultas, clics y experiencia real;
+no sustituye una estrategia de contenido ni justifica instalar analítica de terceros.
+La medición propia sin cookies se mantiene hasta que una decisión posterior, con
+necesidad y coste de privacidad claros, diga lo contrario.
 
 ## Publicado significa release y esquema verificables (2026-08-06)
 
@@ -737,3 +778,14 @@ Rotar `NOESIS_SECRET` invalida las semillas TOTP derivadas; los códigos de
 recuperación permiten entrar y regenerar después de una rotación planificada. Antes
 de abrir a terceros siguen pendientes recuperación de contraseña por correo,
 passkeys opcionales, roles finos y revisión externa del flujo.
+
+## El alta termina con hechos comprobados, no con clics (2026-08-12)
+
+Una cuenta nueva conserva en servidor el plan, la periodicidad, la intención y cada
+paso realmente completado. Iniciar sesión la devuelve al primer paso pendiente. El
+perfil y la operativa solo avanzan después de guardar todos sus componentes, y
+WhatsApp solo se considera conectado si el webhook ha verificado el número; de otro
+modo el titular debe elegir expresamente conectarlo más adelante. El último paso es
+una revisión de negocio, factura, cobros y acompañamiento. Tras el pago, el siguiente
+objetivo es crear el primer cliente y completar el ciclo operativo. Motivo: visitar
+una pantalla o pulsar “comprobar” no equivale a haber preparado el negocio.

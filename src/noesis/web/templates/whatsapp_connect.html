@@ -8,20 +8,67 @@
 </head>
 <body class="public-auth-body">
   <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a><a href="/b/{{ business.id }}/resumen">Ir al panel</a></header>
-  <main class="public-auth-layout whatsapp-auth-layout">
-    <section class="public-auth-story">
-      <span class="eyebrow light-eyebrow">Tu canal diario</span>
-      <h1>Noesis vive donde ya trabajas.</h1>
-      <p>Habla por WhatsApp entre clientes, obras y avisos. La web queda para revisar y entender con calma.</p>
-      <dl><div><dt>Texto, audio e imágenes</dt><dd>envía lo que ya tienes a mano</dd></div><div><dt>Una cuenta, un teléfono</dt><dd>vinculación privada para tu negocio</dd></div><div><dt>Siempre bajo tu control</dt><dd>las acciones sensibles se confirman</dd></div></dl>
-    </section>
-    <section class="public-auth-panel" aria-labelledby="whatsapp-title">
-      <div class="auth-progress complete-progress" aria-label="Paso 4 de 4"><b>1</b><span>Cuenta</span><i></i><b>2</b><span>Negocio</span><i></i><b>3</b><span>Operativa</span><i></i><b>4</b><span>WhatsApp</span></div>
-      <span class="eyebrow">Paso 4 de 4</span><h2 id="whatsapp-title">Conecta WhatsApp.</h2><p class="auth-lead">Tu negocio ya está configurado. Solo falta elegir el número desde el que hablarás con Noesis.</p>
-      <ol class="connect-steps"><li><b>1</b><span>Pulsa el botón para abrir WhatsApp con un mensaje preparado.</span></li><li><b>2</b><span>Envíalo tal cual. El teléfono queda vinculado solo a tu cuenta.</span></li><li><b>3</b><span>Prueba con “¿qué tengo hoy?” o envía una nota de voz.</span></li></ol>
-      <a class="btn green full" href="{{ wa.link }}" target="_blank" rel="noopener">Conectar mi WhatsApp ahora</a>
-      <p class="connect-code">Código de vinculación: <b>{{ wa.code }}</b>{% if not wa.number %}<span>El número oficial se activa al aprobar Meta; el enrutado ya está preparado.</span>{% endif %}</p>
-      <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect"><button class="btn full">{% if signup_intent == 'subscribe' %}Continuar y revisar el pago{% else %}Empezar mis 14 días{% endif %}</button></form>
+  <main class="onboarding-review-shell">
+    <section class="onboarding-review-card" aria-labelledby="whatsapp-title">
+      <div class="auth-progress complete-progress" aria-label="Paso 4 de 4">
+        <b>1</b><span>Cuenta</span><i></i><b>2</b><span>Negocio</span><i></i>
+        <b>3</b><span>Operativa</span><i></i><b>4</b><span>Revisión</span>
+      </div>
+      <div class="onboarding-review-head">
+        <div><span class="eyebrow">Último paso</span>
+          <h1 id="whatsapp-title">Así queda {{ business.name }}.</h1>
+          <p>He preparado tus facturas, cobros y avisos. Revisa el resumen y decide
+            si conectas WhatsApp ahora o más adelante.</p></div>
+        <span class="onboarding-plan-pill">{{ selected_plan_label }} · {{ 'Anual' if selected_billing == 'annual' else 'Mensual' }}</span>
+      </div>
+
+      <div class="onboarding-review-grid">
+        <article><span>Negocio</span><b>{{ business.sector }}</b>
+          <small>{{ business.team_size or 'Equipo sin indicar' }} · {{ business.province or 'Sin provincia' }}</small></article>
+        <article><span>Facturas</span><b>{{ business.invoice_template|capitalize }}</b>
+          <small>IVA {{ business.default_vat|int }}% · IRPF {{ business.default_irpf|int }}% · vence a {{ business.default_payment_term_days }} días</small></article>
+        <article><span>Cobros</span><b>{{ 'Recordatorios activos' if business.payment_reminders_enabled else 'Sin recordatorios' }}</b>
+          <small>{{ 'IBAN preparado' if business.payment_iban else ('Bizum preparado' if business.payment_bizum else 'Puedes añadir el método después') }}</small></article>
+        <article><span>Acompañamiento</span><b>{{ 'Parte diario activo' if wa_reports.brief_manana else 'A tu ritmo' }}</b>
+          <small>{{ 'Gestoría ' + business.gestoria_cadence if business.gestoria_cadence and business.gestoria_cadence != 'off' else 'Gestoría pendiente de conectar' }}</small></article>
+      </div>
+
+      <section class="onboarding-whatsapp-choice">
+        <div class="onboarding-whatsapp-copy">
+          <span class="eyebrow">Tu canal diario</span><h2>Conecta WhatsApp</h2>
+          <p>Abre el mensaje preparado y envíalo tal cual. La vinculación solo se
+            considera terminada cuando Noesis recibe y verifica el código.</p>
+        </div>
+        {% if business.whatsapp_status == 'conectado' %}
+        <div class="onboarding-wa-status connected"><b>WhatsApp conectado</b><span>{{ business.whatsapp_phone or 'Número verificado' }}</span></div>
+        {% elif status == 'pending' %}
+        <div class="onboarding-wa-status pending"><b>Aún no ha llegado el código</b><span>Envíalo desde WhatsApp y vuelve a comprobar.</span></div>
+        {% else %}
+        <div class="onboarding-wa-status pending"><b>Pendiente de conectar</b><span>Noesis no marcará este paso como conectado antes de verificarlo.</span></div>
+        {% endif %}
+
+        {% if business.whatsapp_status != 'conectado' %}
+        <a class="btn green full" href="{{ wa.link }}" target="_blank" rel="noopener">Abrir WhatsApp con mi código</a>
+        <p class="connect-code">Código: <b>{{ wa.code }}</b>{% if not wa.number %}<span>El número oficial aún depende de la activación de Meta. Puedes terminar el alta y conectarlo después.</span>{% endif %}</p>
+        {% endif %}
+
+        <div class="onboarding-review-actions">
+          {% if business.whatsapp_status == 'conectado' %}
+          <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
+            <button class="btn primary" name="action" value="check">{% if signup_intent == 'subscribe' %}Continuar al pago{% else %}Entrar y crear mi primer cliente{% endif %}</button>
+          </form>
+          {% else %}
+          <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
+            <button class="btn primary" name="action" value="check">Ya lo he enviado · comprobar</button>
+          </form>
+          <form method="post" action="/onboarding/whatsapp/{{ business.id }}/connect">
+            <button class="btn" name="action" value="later">Conectarlo más adelante</button>
+          </form>
+          {% endif %}
+          <a href="/onboarding/preferences/{{ business.id }}">Volver y cambiar la configuración</a>
+        </div>
+      </section>
+      <p class="onboarding-review-safe">Nada se emite, se cobra ni se envía de forma irreversible sin tu confirmación.</p>
     </section>
   </main>
 </body>

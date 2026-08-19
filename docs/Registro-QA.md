@@ -1,5 +1,229 @@
 # Registro de QA
 
+## 2026-08-17 — dependencia OCR real de Railway
+
+- La comprobación por SSH demostró que Tesseract 5.3.0 y `cat/eng/osd/spa` sí estaban
+  instalados, pero el entorno Python no contenía `pytesseract` ni `pypdfium2` porque
+  Railpack construye desde `requirements.txt`, no desde las dependencias de
+  `pyproject.toml`.
+- Se sincronizan `pypdf`, `pypdfium2`, `pytesseract` y la versión mínima de Pillow;
+  una prueba de empaquetado impide retirar otra vez el runtime OCR de Railway.
+- La primera lectura externa confirmó Stripe completamente correcto. Brevo respondió
+  403; Google, Groq y S3 siguen sin configurar. Ninguna comprobación envió, cobró ni
+  transcribió contenido.
+- Prueba focalizada de empaquetado: **11/11**. Suite completa: **517/517** en
+  381,7 s; Ruff, verdad documental y `git diff --check` verdes. Esquema 49 sin
+  cambios.
+- Producción responde con `b3c184251374`. El comprobador remoto deja OCR en `OK`
+  para foto, PDF y `cat/spa/eng`; Stripe también queda `OK`. Brevo responde 403 y
+  Google, Groq y S3 todavía no están configurados.
+
+## 2026-08-17 — comprobador seguro de integraciones y voz multilingüe
+
+- Se añade un comprobador offline por defecto que nunca muestra secretos. Con
+  `--network` solo hace peticiones `GET`: cuenta y remitentes de Brevo, discovery
+  OpenID de Google, seis precios de Stripe y catálogo de modelos Groq. No envía
+  correos, no inicia OAuth, no transcribe y no crea cargos.
+- Stripe valida seis identificadores distintos, mismo entorno test/live, actividad,
+  EUR, importes 29/49/99 mensuales y 319/539/1089 anuales, recurrencia mensual/anual
+  e IVA `exclusive`. Brevo exige que `SMTP_FROM` corresponda a un remitente activo.
+- OCR exige foto, PDFium y los tres paquetes `cat/spa/eng`. Voz Groq y
+  `faster-whisper` dejan de forzar `es` y usan detección automática salvo
+  `NOESIS_WHISPER_LANGUAGE` explícito.
+- Pruebas focalizadas: **36/36**. Suite completa: **516/516** en 435,7 s.
+  Ruff, compilación y `git diff --check` verdes. No se usaron credenciales reales ni
+  se llamó a proveedores durante la suite; la aceptación externa sigue pendiente.
+- Tras el push, `https://bynoesis.com/health` responde con `808a96004b7b`; el nuevo
+  código está publicado sin necesidad de abrir el navegador integrado.
+
+## 2026-08-14 — auditoría visual local y contratos Stripe
+
+- La portada, el panel real de la demo, Documentos, el asistente, la cartera de
+  gestoría y el portal del cliente se recorrieron con capturas reales. La jerarquía
+  y la separación por tareas son coherentes con el parte de Noesis; Documentos
+  mantiene 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 elementos en Otros.
+- En móvil se reprodujo un mojibake en el centro de la barra inferior y una fila de
+  sugerencias parcialmente oculta. El centro muestra ahora `DEMO` y todas las
+  sugerencias se distribuyen en dos columnas legibles sin scroll horizontal oculto.
+- La respuesta del asistente escapaba HTML pero dejaba `_Por qué:_` sin formato;
+  ahora mantiene el escape y representa el énfasis como `<em>`. El DOM real confirma
+  cuatro razones accesibles como énfasis, sin guiones bajos visibles.
+- El portal mostraba fechas internas ISO. Presupuestos y facturas usan un filtro
+  común tolerante y presentan `dd/mm/aaaa`; la captura móvil y la regresión HTTP
+  verifican `11/09/2026`, `29/04/2026` y ausencia de `T00:00:00`.
+- Stripe: 7/7 contratos focalizados verdes para portal general, tarjeta,
+  cancelación, upgrade mensual/anual al precio exacto, reutilización de configuración
+  y bloqueo de un segundo Checkout. Falta el recorrido externo autenticado porque
+  esta sesión de Codex no dispone de la extensión de Chrome ni de su sesión Stripe.
+- Suite completa: **506 pruebas** recorridas en 489,5 s. Una limpieza de base SQLite
+  temporal quedó bloqueada por Windows al cerrar; la misma prueba pasó aislada
+  inmediatamente (1/1), por lo que no se atribuye al cambio. `git diff --check`,
+  Ruff, compilación y verdad documental quedaron verdes antes del push.
+- Producción responde con `aed36de59e30`, `/ready` confirma esquema 49 y el CI
+  completo, el humo PostgreSQL y el ciclo de migraciones están verdes. En el release
+  real se recorrieron a 375 px el asistente demo, el portal de cliente y la cartera
+  de gestoría; el portal no contiene fechas ISO y la barra muestra `DEMO` legible.
+
+## 2026-08-14 — fiabilidad de demo, portales y lectura de caja
+
+- La demo comercial responde ahora preguntas locales de agenda, cobros, clientes,
+  proyectos y resumen sin persistir conversación, consumir IA ni abrir herramientas
+  de escritura. Una orden de factura o agenda explica el límite y no modifica datos;
+  el resto de POST de demostración continúa bloqueado en el servidor.
+- Los formularios de presupuestos del portal de cliente y los de revisión, perfil
+  fiscal, solicitudes y paquetes de gestoría vuelven mediante 303 a la misma vista
+  con un aviso de modo consulta. Los controles aparecen desactivados de antemano y
+  ya no exponen un JSON técnico a una persona.
+- `month_billing` separa `collected` (caja recibida durante el mes) de
+  `invoiced_collected` (cobrado sobre facturas emitidas ese mes). La regresión crea
+  una factura anterior cobrada ahora y demuestra 161 € de caja, 121 € emitidos y
+  solo 40 € cobrados de la cohorte actual, sin el falso 133%.
+- Los ejemplos del asistente cambian según limpieza, electricidad, jardinería,
+  construcción/fontanería o servicio neutro y mantienen las consultas comunes.
+- Pruebas focalizadas: 3/3 verdes. Suite completa: **504/504** en 438,0 s. Ruff,
+  `git diff --check` y el render HTTP de las tres experiencias comerciales verdes.
+  Permanece el aviso conocido Starlette/httpx del cliente de pruebas; no afecta al
+  runtime. Un job del scheduler llegó a una base temporal ya cerrada durante la
+  suite, sin fallo de producto ni de prueba.
+- CI remoto completo y humo PostgreSQL verdes. Producción responde con
+  `ea1f5f3e628f`, `/ready` verde y esquema 49. Queda el recorrido visual autenticado
+  de las tres experiencias; no se usaron credenciales ni servicios reales en este
+  bloque.
+
+## 2026-08-14 — portal Stripe gestionado y todos los botones verificables
+
+- Se reproducía el fallo funcional: los botones dependían de que el Customer Portal
+  estuviera configurado manualmente en Stripe y un rechazo volvía a la misma página
+  fuera del área visible, por lo que parecía que el clic no hacía nada.
+- El adaptador crea o reutiliza solo una configuración versionada de Noesis con
+  actualización de tarjeta, cancelación al final del período, historial y cambios
+  entre los seis `price_id`. Cada sesión conserva esa configuración también en el
+  fallback general; una configuración externa no se reutiliza por error.
+- La regresión HTTP envía los seis formularios visibles de una cuenta Autonomo y
+  comprueba los flujos `manage`, `payment_method`, `cancel`, mejora mensual y anual.
+  La ruta de error vuelve a `#gestion-suscripcion`, presenta el mensaje enfocable y
+  registra `subscription_portal_failed`.
+- Pruebas focalizadas: **7/7**. Suite completa: **499/499** en 464,4 s dentro del
+  entorno 3.12 del proyecto. Ruff sobre `src`/`tests`, `compileall`, comprobación
+  JavaScript y `git diff --check` verdes.
+- Validación externa pendiente: abrir los flujos con la subscripción sandbox.
+  Stripe exige además que los precios intercambiables tengan tratamiento
+  fiscal compatible y no `unspecified`; es configuración externa, no se inventa.
+- Producción: `/ready` confirmó `52c61f9e6277` y esquema 49. La carga del JavaScript
+  publicado se comprobó por HTTP; queda la interacción autenticada con Stripe.
+
+## 2026-08-14 — gestión completa de una suscripción Stripe activa
+
+- Adaptador probado con payloads separados de Customer Portal para actualizar el
+  método de pago, cancelar una suscripción concreta y confirmar un cambio al
+  `price_id` anual exacto sobre su único `subscription_item`.
+- La pantalla activa ofrece gestión, tarjeta, mejoras y cancelación sin ningún
+  segundo Checkout; un fallo externo se explica y garantiza que no hubo cambio ni
+  cargo.
+- Pruebas focalizadas: 4/4 verdes; suite completa **495/495** en 352,1 s;
+  `compileall`, verdad documental y `git diff --check` verdes. Aviso conocido de
+  deprecación Starlette/httpx, sin fallo funcional.
+- Validación real pendiente: portal sandbox, sus seis precios, prorrateo, tarjeta,
+  cancelación y webhooks de retorno.
+- Producción: `/ready` confirmó `31d0c95abcf0`, esquema 49. Esto valida despliegue e
+  identidad del código, no sustituye el recorrido autenticado del portal sandbox.
+
+## 2026-08-13 — plan actual y bloqueo de recompra Stripe
+
+- Una cuenta activa de Autónomo muestra resumen de plan actual, `Gestionar plan` y
+  mejoras a Negocio/Premium; no renderiza ningún formulario ni texto de activación
+  de Checkout. Una cuenta Premium muestra dos niveles incluidos y ninguna mejora.
+- La regresión envía además un POST directo de upgrade anual a la antigua ruta de
+  Checkout. El servidor abre el portal de la suscripción existente y demuestra que
+  `checkout_url` no se invoca.
+- Pruebas focalizadas: **3/3**. Suite completa: **493/493** en 351,9 s. Ruff,
+  `py_compile` y `git diff --check` verdes. Los avisos de proveedores corresponden
+  a pruebas deliberadas de fallo cerrado.
+- Producción responde con el release `3c7bd034828a`, `/ready` verde y esquema 49.
+  Pendiente externo: comprobar en Stripe sandbox que el portal permite cambiar
+  entre los seis precios mensual/anual configurados, además de tarjeta y cancelación.
+
+## 2026-08-13 — activación Stripe resistente a concurrencia y recuperable
+
+- Evidencia sandbox real: Checkout de Autónomo mensual, suscripción `active`,
+  metadatos `business_id=1`, `plan=autonomo`, `billing_period=monthly` y entregas
+  `checkout.session.completed`, `invoice.paid` y
+  `customer.subscription.created` aceptadas por Noesis con HTTP 200.
+- La regresión reproduce que un Checkout posterior podía degradar `active` a
+  `pending`; ahora la decisión se toma bajo el bloqueo de la misma fila y conserva
+  `active`/`trialing`.
+- La vuelta del Checkout consulta Stripe con la clave del servidor y solo repara
+  si coinciden negocio, cliente, suscripción, estado activo y un único precio del
+  catálogo. También se verifica que el plan comprado sea el marcado en pantalla.
+- Pruebas focalizadas Stripe: **4/4**. Suite completa: **492/492** en 390,9 s.
+  `py_compile` y Ruff focalizado verdes. Los mensajes de proveedores caídos de la
+  suite son escenarios deliberados de fallo cerrado y reintento.
+- Producción responde con el release `9f3dc48d9d4a`, `/ready` verde y esquema 49.
+  Pendiente humano: recargar la URL de retorno del pago ya hecho y confirmar que el
+  panel abandona el modo consulta sin repetir el cobro.
+
+## 2026-08-13 — regresión de robots entre gestoría privada y página pública
+
+- La prueba reproduce la semántica de prefijo de `robots.txt` y exige que ninguna
+  regla `Disallow` atrape `/gestorias`.
+- La zona profesional conserva dos límites explícitos: `/gestoria$` para la raíz y
+  `/gestoria/` para el árbol privado. `/gestoria/login$` se permite rastrear para
+  que el buscador reciba su cabecera HTTP `noindex, nofollow`.
+- `tests.test_seo`: **11/11** verde. La regresión comprueba reglas exactas y simula
+  coincidencia de prefijo contra `/gestorias`; Ruff focalizado, verdad documental,
+  JSON de estado y `git diff --check` también están verdes.
+- Producción responde con release `18104f0b6806`, esquema 49 y `/gestorias` en 200
+  para Googlebot, sin `X-Robots-Tag`, con canonical e `index, follow`. El robots real
+  contiene `/gestoria$` y `/gestoria/`, no el prefijo ambiguo. CI 31681161643 dejó
+  verdes secretos, Bandit, Ruff, verdad documental, 487 pruebas, ciclo completo de
+  migraciones y humo PostgreSQL. Falta que Search Console renueve su caché y acepte
+  la solicitud externa.
+
+## 2026-08-13 — SEO técnico y páginas por audiencia
+
+- Las 14 URLs públicas del sitemap tienen título y descripción únicos, canonical,
+  Open Graph/Twitter, una orden explícita de indexación y exactamente un H1.
+  `/autonomos` y `/gestorias` explican dos recorridos reales sin inventar clientes,
+  valoraciones, declaraciones fiscales automáticas ni comisiones.
+- `Organization` y `WebSite` se declaran una sola vez en la portada mediante JSON-LD
+  válido. El sitemap deja de publicar una fecha diaria falsa y campos de prioridad
+  ignorados por Google. El SVG de marca incorpora tamaño intrínseco.
+- Login, acceso, onboarding, paneles, portales y respuestas inexistentes envían
+  `X-Robots-Tag: noindex, nofollow`; `robots.txt` mantiene fuera las zonas de datos
+  y permite rastrear los accesos públicos para que el buscador lea el `noindex`.
+- `tests.test_seo`: **11/11** verde. Suite completa: **487/487** verde en 439 s;
+  Ruff sobre `src`/`tests`, verdad documental y `git diff --check` también verdes.
+  Los avisos de caídas de proveedores corresponden a pruebas deliberadas de
+  degradación, reintento y fallo cerrado.
+- Validación externa: propiedad de dominio verificada, sitemap enviado y usuarios
+  añadidos en Search Console por el founder. Falta esperar el recrawl y revisar
+  indexación, consultas, impresiones, clics y Core Web Vitals con datos reales.
+- Producción responde con release `e5d1ac57742f`, esquema 49 y 200 en `/health`,
+  `/ready`, las 14 URLs y el sitemap; cada página tiene un H1 y canonical. Login,
+  acceso, gestoría y 404 devuelven el `noindex` esperado. El humo PostgreSQL del CI
+  quedó verde. El guardián general se detuvo antes de Ruff/tests porque el baseline
+  apuntaba a la línea 51 de `project-state.json`, ahora 52; los hashes y el conjunto
+  de coincidencias permanecen idénticos y se versiona esa actualización mecánica.
+
+## 2026-08-12 — alta recuperable y revisión operativa
+
+- El esquema 49 conserva inicio, pasos completados, plan, periodicidad, intención y
+  decisión de WhatsApp sin forzar a cuentas históricas a repetir el recorrido.
+- Las pruebas HTTP cubren alta anual de Negocio, perfil, configuración fiscal,
+  cobros, gestoría, logotipo y distintivo saneados, resumen final, comprobación de
+  WhatsApp todavía pendiente, posposición explícita y continuación al pago. También
+  se verifica que no se puede terminar antes de los datos obligatorios y que Google
+  vuelve al paso exacto.
+- Suite completa: **485/485** verde, repartida en 339 pruebas del núcleo y 146 de
+  plataforma/seguridad/SEO/documentos. `tests.test_seo` mantiene 9/9 en verde y la
+  inspección viva de las 12 URLs del sitemap confirmó 200, canonical, descripción,
+  un H1 e imágenes con atributo `alt`.
+- CI [31616995507](https://github.com/noesisstudio/noesis/actions/runs/31616995507)
+  completamente verde: dependencias, secretos, Bandit, Ruff, verdad documental,
+  485 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve release
+  `8730826a79ab`, esquema 49 y HTTP 200 en `/health` y `/ready`.
+- Pendiente externo: recorrido visual real, webhook de Meta y retorno de Stripe.
+
 ## 2026-08-12 — identidad documental y pie gráfico versionado
 
 - 3 pruebas nuevas cubren carga HTTP real de logo y distintivo, saneado a PNG,

@@ -33,6 +33,48 @@ def _count(n: int, singular: str, plural: str | None = None) -> str:
     return f"{n} {singular if n == 1 else (plural or singular + 's')}"
 
 
+def assistant_prompts(business: dict | None) -> list[str]:
+    """Ejemplos útiles sin asumir que todos los negocios son de fontanería."""
+    sector = nlu._norm(str((business or {}).get("sector") or ""))
+    common = [
+        "¿Qué harías tú ahora con mi negocio?",
+        "Dame un diagnóstico rápido",
+        "¿Qué tengo hoy?",
+        "¿Quién me debe dinero?",
+    ]
+    if "limp" in sector:
+        examples = [
+            "Factura a Marta por limpieza de oficina 95 euros",
+            "Agenda a Marta mañana a las 10 para una limpieza",
+            "Gasté 45 euros en productos de limpieza",
+        ]
+    elif "electric" in sector:
+        examples = [
+            "Factura a Marta por revisión del cuadro eléctrico 95 euros",
+            "Agenda a Marta mañana a las 10 para revisar una avería",
+            "Gasté 45 euros en material eléctrico",
+        ]
+    elif "jardin" in sector:
+        examples = [
+            "Factura a Marta por mantenimiento del jardín 95 euros",
+            "Agenda a Marta mañana a las 10 para podar el jardín",
+            "Gasté 45 euros en plantas y material",
+        ]
+    elif any(word in sector for word in ("fontan", "reform", "constru")):
+        examples = [
+            "Factura a Juan por cambio de grifo 95 euros",
+            "Agenda a Marta mañana a las 10 en Badalona",
+            "Gasté 45 euros en material",
+        ]
+    else:
+        examples = [
+            "Factura a Marta por servicio realizado 95 euros",
+            "Agenda a Marta mañana a las 10 para un trabajo",
+            "Gasté 45 euros en material",
+        ]
+    return [*common, *examples, "Dame el resumen del mes"]
+
+
 def _business_state(business_id: int) -> dict:
     business = db.get_business(business_id)
     today = date.today().isoformat()
@@ -315,7 +357,7 @@ def _coach_reply(business_id: int, message: str = "") -> str:
 
     lines = [
         f"Así veo {biz.get('name', 'tu negocio')} ahora mismo: facturado "
-        f"**{_eur(billing['invoiced'])}** este mes, cobrado {_eur(billing['collected'])}, "
+        f"**{_eur(billing['invoiced'])}** este mes, han entrado {_eur(billing['collected'])}, "
         f"pendiente {_eur(sum(p['total'] for p in pending))} y beneficio estimado "
         f"**{_eur(billing['estimated_profit'])}**.",
         "",
@@ -602,7 +644,7 @@ def _note_stats(page: str, state: dict) -> list[dict]:
     late_total = sum(p["total"] for p in state["late"])
     if page == "facturas":
         chips = [chip("Facturado (mes)", _eur(billing.get("invoiced"))),
-                 chip("Cobrado (mes)", _eur(billing.get("collected")), "good"),
+                 chip("Ha entrado (mes)", _eur(billing.get("collected")), "good"),
                  chip("Te deben", _eur(pend), "warn" if pend else "good")]
         if state["unbilled"]:
             chips.append(chip("Sin facturar", str(len(state["unbilled"])), "bad"))
@@ -863,6 +905,78 @@ def _handle(
             "source": "local",
         }
 
+    return {"reply": _coach_reply(business_id, message), "source": "local"}
+
+
+_READ_ONLY_TOOLS = {
+    "ver_control_noesis",
+    "ver_agenda",
+    "ver_cobros_pendientes",
+    "ver_proyectos",
+    "ver_equipo",
+    "ver_documentos_pendientes",
+    "ver_solicitudes_gestoria",
+    "resumen_negocio",
+    "listar_clientes",
+}
+
+
+def handle_read_only(
+    business_id: int, message: str, page: str | None = None
+) -> dict:
+    """Conversación segura para demos: consulta datos sin persistir ni ejecutar.
+
+    No pasa por agentes privados o externos porque una herramienta de un agente
+    podría escribir. Tampoco guarda historial: la cuenta comercial sigue siendo
+    reproducible y de solo lectura.
+    """
+    norm = nlu._norm(message)
+    if page and any(fragment in norm for fragment in (
+        "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
+        "explica esta", "explicame esta", "que es esto",
+    )):
+        briefing = page_briefing(business_id, page)
+        if briefing:
+            return {"reply": briefing, "source": "local"}
+    if any(fragment in norm for fragment in (
+        "sin facturar", "pendiente de facturar", "por facturar",
+        "que me falta facturar", "trabajos sin cobrar",
+    )):
+        return {"reply": _unbilled_reply(business_id), "source": "local"}
+    if any(fragment in norm for fragment in (
+        "que harias", "prioridad", "aconsej", "recomiend", "diagnostico",
+        "como lo ves", "mente", "piensa", "plan", "que hago",
+        "por donde empiezo", "que toca",
+    )):
+        return {"reply": _coach_reply(business_id, message), "source": "local"}
+
+    parsed = nlu.parse(message)
+    if parsed:
+        tool, args = parsed
+        if tool == nlu.HELP:
+            return {"reply": nlu.help_text(), "source": "local"}
+        if tool == "__need_date__":
+            return {
+                "reply": (
+                    "Te lo podría agendar, pero falta el día. En tu cuenta propia "
+                    "podrás decirlo como por WhatsApp: **mañana por la mañana**, "
+                    "**el jueves a las 10** o **el lunes por la tarde**."
+                ),
+                "source": "local",
+            }
+        if tool in _READ_ONLY_TOOLS:
+            result = json.loads(run_tool(tool, args, business_id))
+            return {"reply": nlu.format_reply(tool, result), "source": "local"}
+        return {
+            "reply": (
+                "Esta demostración es de solo lectura: puedo enseñarte el resultado, "
+                "pero no guardar cambios. Prueba **¿Qué tengo hoy?**, **¿Quién me debe?** "
+                "o **Dame el resumen del mes**. En tu cuenta, Noesis dejará la acción "
+                "preparada para que la revises; nunca enviará dinero o documentación "
+                "fiscal sin tu confirmación."
+            ),
+            "source": "local",
+        }
     return {"reply": _coach_reply(business_id, message), "source": "local"}
 
 

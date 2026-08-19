@@ -10,7 +10,7 @@
 <body class="public-auth-body">
   <header class="auth-topbar">
     <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a>
-    <a href="/b/{{ business.id }}/resumen">Guardar y salir</a>
+    <a href="/b/{{ business.id }}/resumen">Salir · continuaré aquí al volver</a>
   </header>
   <div class="onboarding-center onboarding-operations-center">
     <div class="onboarding-card onboarding-operations-card">
@@ -21,7 +21,7 @@
         <span class="onboarding-line"></span>
         <span class="onboarding-step current">3</span><b>Operativa</b>
         <span class="onboarding-line"></span>
-        <span class="onboarding-step">4</span><span>WhatsApp</span>
+        <span class="onboarding-step">4</span><span>Revisión</span>
       </div>
 
       <div class="kicker">Déjalo listo una vez</div>
@@ -33,7 +33,8 @@
       <div class="form-error">Revisa los datos fiscales, de cobro o de tu gestoría.</div>
       {% endif %}
 
-      <form method="post" action="/onboarding/preferences/{{ business.id }}" class="onboarding-operations-form">
+      <form method="post" action="/onboarding/preferences/{{ business.id }}"
+            enctype="multipart/form-data" class="onboarding-operations-form">
         <section class="onboarding-config-section">
           <div class="onboarding-config-heading">
             <span>1</span><div><h2>Tus facturas</h2><p>Datos reales y valores por defecto.</p></div>
@@ -69,6 +70,60 @@
                 {% endfor %}
               </select>
             </label>
+          </div>
+          <div class="onboarding-brand-box">
+            <div class="onboarding-config-heading compact">
+              <span>+</span><div><h3>Haz que la factura parezca tuya</h3>
+              <p>Puedes afinarlo después en Ajustes sin cambiar las ya emitidas.</p></div>
+            </div>
+            <div class="grid g2 onboarding-fields">
+              <label>Color de marca
+                <input class="input onboarding-color" type="color" name="brand_color"
+                       value="{{ business.brand_color or '#14463b' }}">
+              </label>
+              <label>Logotipo
+                <input class="input" type="file" name="logo"
+                       accept="image/png,image/jpeg,image/webp">
+              </label>
+            </div>
+            <label class="onboarding-field-full">Texto al pie
+              <input class="input" name="document_footer" maxlength="800"
+                     value="{{ business.document_footer or '' }}"
+                     placeholder="Ej. Gracias por confiar en nuestro equipo">
+            </label>
+            <div class="grid g2 onboarding-fields">
+              <label>Imagen o distintivo del pie
+                <input class="input" type="file" name="footer_image"
+                       accept="image/png,image/jpeg,image/webp">
+                <small>Para ayudas, fondos, certificaciones o asociaciones.</small>
+              </label>
+              <label>Condiciones habituales del presupuesto
+                <textarea class="input" name="quote_terms" rows="3" maxlength="1500"
+                          placeholder="Ej. 50% al aceptar y 50% al finalizar">{{ business.quote_terms or '' }}</textarea>
+              </label>
+            </div>
+            <div class="grid g3 onboarding-fields">
+              <label>Tamaño del distintivo
+                <select name="footer_image_width">
+                  {% for value, label in [(25,'Pequeño'),(50,'Mediano'),(75,'Grande'),(100,'Ancho completo')] %}
+                  <option value="{{ value }}" {{ 'selected' if (business.footer_image_width or 100) == value }}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>Alineación
+                <select name="footer_image_alignment">
+                  {% for value, label in [('left','Izquierda'),('center','Centro'),('right','Derecha')] %}
+                  <option value="{{ value }}" {{ 'selected' if (business.footer_image_alignment or 'center') == value }}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>Aplicar en
+                <select name="footer_image_scope">
+                  <option value="invoices">Solo facturas</option>
+                  <option value="all" {{ 'selected' if business.footer_image_scope == 'all' }}>Facturas y presupuestos</option>
+                </select>
+              </label>
+            </div>
           </div>
           <p class="onboarding-helper">Noesis preparará los cálculos con estos valores; tú revisarás cada factura antes de emitirla.</p>
         </section>
@@ -128,17 +183,19 @@
           </div>
           <label>Enviar documentación
             <select name="gestoria_cadence" id="onboarding-gestoria-cadence">
-              <option value="off">Todavía no</option>
-              <option value="mensual">Cada mes</option>
-              <option value="trimestral">Cada trimestre</option>
+              <option value="off" {{ 'selected' if not business.gestoria_cadence or business.gestoria_cadence == 'off' }}>Todavía no</option>
+              <option value="mensual" {{ 'selected' if business.gestoria_cadence == 'mensual' }}>Cada mes</option>
+              <option value="trimestral" {{ 'selected' if business.gestoria_cadence == 'trimestral' }}>Cada trimestre</option>
             </select>
           </label>
           <div class="grid g2 onboarding-fields" id="onboarding-gestoria-fields" hidden>
             <label>Nombre de la gestoría
-              <input class="input" name="gestoria_name" maxlength="120" placeholder="Gestoría García">
+              <input class="input" name="gestoria_name" maxlength="120"
+                     value="{{ business.gestoria_name or '' }}" placeholder="Gestoría García">
             </label>
             <label>Email de la gestoría
-              <input class="input" type="email" name="gestoria_email" maxlength="200" placeholder="clientes@gestoria.com">
+              <input class="input" type="email" name="gestoria_email" maxlength="200"
+                     value="{{ business.gestoria_email or '' }}" placeholder="clientes@gestoria.com">
             </label>
           </div>
         </section>

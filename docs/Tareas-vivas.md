@@ -5,6 +5,13 @@
 
 ## P0 — publicar y pilotar con seguridad
 
+- [ ] Recorrer en escritorio y móvil el alta recuperable del esquema 49 ya
+  desplegada en el release `8730826a79ab`:
+  salir y volver en cada paso, revisar la identidad visual de factura, comprobar que
+  WhatsApp no aparece conectado antes del webhook, posponerlo voluntariamente y
+  confirmar que Stripe devuelve a la puesta en marcha y al primer cliente. El flujo,
+  la persistencia y los bloqueos están cubiertos; CI completo, migración histórica
+  y humo PostgreSQL están verdes. Faltan Meta y Stripe reales.
 - [ ] Validar visualmente en escritorio y móvil la nueva entrada `/acceso` ya
   desplegada: selección autónomo/empresa o gestoría, retorno entre accesos, login de
   ambos perfiles y solicitud profesional. HTTP, aislamiento y ausencia de
@@ -43,8 +50,25 @@
   fuera de orden y portal de cliente antes de usar claves live. Verificar además
   con cuentas reales que Autónomo no puede usar Proyectos, Equipo, Gestoría ni
   Análisis avanzado y que Negocio/Premium sí pueden hacerlo por web, API, asistente,
-  WhatsApp y portales. La máquina de estados y los permisos en servidor ya están
-  construidos y desplegados; falta validarlos contra Stripe test.
+  WhatsApp y portales. El 13-ago el Checkout sandbox de Autónomo cobró, generó una
+  suscripción `active` y entregó `checkout.session.completed`, `invoice.paid` y
+  `customer.subscription.created` con HTTP 200. La concurrencia podía dejar la
+  cuenta en `pending`; el candidato lo impide bajo bloqueo de fila y recupera el
+  pago mediante lectura autenticada de Stripe. El release `9f3dc48d9d4a` ya está
+  desplegado y el founder ha confirmado que la cuenta queda activa. El candidato
+  siguiente elimina la recompra del mismo plan, centraliza los cambios en el portal
+  y bloquea un segundo Checkout también en el servidor. El release `3c7bd034828a`
+  ya está desplegado. El candidato del 14-ago separa gestión general, tarjeta,
+  cancelación y confirmación del plan/período exactos mediante deep links de Stripe.
+  El siguiente candidato elimina la dependencia manual: crea y reutiliza una
+  configuración de portal versionada con las seis tarifas, registra los fallos y
+  vuelve a un error visible y está desplegado desde `52c61f9e6277`. Falta recorrer
+  gestión, tarjeta, cancelación, anualidad y upgrade con sandbox; verificar que
+  todos los precios
+  usan un `tax_behavior` compatible y distinto de `unspecified`; y completar impago,
+  downgrade, reactivación y permisos reales. El 14-ago se repitieron 7/7 contratos
+  locales del portal (incluido el bloqueo de segundo Checkout); esto valida Noesis,
+  pero no sustituye el clic autenticado dentro del Customer Portal de Stripe.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
   negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente
@@ -57,20 +81,30 @@
   con corpus real en castellano/catalán/inglés. La ruta privada de OCR ya incorpora
   Tesseract/pytesseract para imágenes y PDFium para PDF escaneado, y Railpack instala
   `cat/spa/eng`, prepara orientación/contraste/escala e informa los modelos presentes;
-  falta comprobar el despliegue y medir precisión/tiempo. Sin esa validación,
+  voz detecta el idioma automáticamente salvo pista explícita. Ejecutar
+  `noesis-integrations-check --network`, comprobar el despliegue y medir
+  precisión/tiempo. Sin esa validación,
   mantener las promesas públicas degradadas.
 - [ ] Activar una vez `NOESIS_SEED_DEMO=true` en Railway, desplegar y recorrer los
   accesos reales de autónomo y gestoría y `/demo/cliente`. Confirmar que ambos
   negocios muestran datos completos y que cualquier escritura, envío o automatización
   queda bloqueada. Confirmar además en Documentos las carpetas de 1 ingreso,
   2 gastos, 1 ticket, 2 pendientes y 2 documentos en Otros. Después se puede volver
-  a `false`: los registros persisten.
+  a `false`: los registros persisten. El release `ea1f5f3e628f` permite ya consultas
+  locales en el asistente demo sin historial, IA externa ni herramientas de
+  escritura. El 14-ago se recorrieron localmente en escritorio/móvil el panel,
+  Documentos, asistente, cartera de gestoría en escritorio y portal del cliente en
+  móvil; se corrigieron el distintivo central, el desbordamiento de sugerencias y
+  las fechas ISO. El release `aed36de59e30` ya se confirmó en producción y también
+  se recorrieron el portal de cliente, el asistente y la gestoría móvil a 375 px.
 - [ ] Aprobar plantillas Meta para factura (`noesis_factura_lista`), cobro,
   presupuesto y cita; validar SÍ/NO, PDF/enlace privado y entrega desde el WhatsApp
   real del titular.
 - [ ] Correo real por API HTTPS o SMTP: credenciales, dominio autenticado,
   invitaciones, facturas, avisos, reintentos de la outbox y entregabilidad. La cola
-  durable y las dos vías de salida ya están construidas.
+  durable y las dos vías de salida ya están construidas. El comprobador de
+  integraciones valida por lectura la cuenta Brevo y que `SMTP_FROM` sea un
+  remitente activo, pero la entregabilidad exige envíos reales a Gmail y Outlook.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El
@@ -80,7 +114,9 @@
   aceptación/rechazo/duplicado/CSV/reintentos, alta y anulación ya construidas,
   subsanación de rechazos, declaración
   responsable y validación con asesoría fiscal antes de producción.
-- [ ] Ejecutar `noesis-doctor --strict` en producción y resolver todo bloqueo.
+- [ ] Ejecutar `noesis-doctor --strict` y
+  `noesis-integrations-check --network --strict` en producción; resolver cada
+  bloqueo y guardar la evidencia sin copiar secretos.
 - [ ] Desplegar ClamAV en red privada, fijar `NOESIS_CLAMAV_REQUIRED=true` y probar
   archivo limpio, EICAR, caída y timeout sin almacenar el payload rechazado.
 - [ ] Ejecutar `noesis-restore-check` y comprobar el simulacro semanal. Después,
@@ -96,6 +132,13 @@
 Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]].
 
 ## P1 — profundidad después del primer piloto
+
+- [ ] SEO operativo: publicado y verificado el candidato del 13-ago, volver a inspeccionar
+  `/autonomos`, `/gestorias` y `/precios` en Search Console, solicitar indexación y
+  revisar durante 2-4 semanas páginas indexadas, consultas, impresiones, clics,
+  CTR y Core Web Vitals. No crear valoraciones, casos de éxito ni datos
+  `SoftwareApplication` hasta que existan evidencias reales. Mantener la medición
+  propia sin cookies; añadir analítica externa solo mediante una nueva decisión.
 
 - [x] Diagnóstico técnico por cuenta para soporte: solo metadatos, estados y
   recuentos; acceso exclusivo de administración, registrado en la bitácora y sin

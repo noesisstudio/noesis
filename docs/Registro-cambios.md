@@ -7,6 +7,73 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-17 — sincroniza el OCR con el build real de Railway
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el bloqueo OCR observado mediante SSH en el contenedor real.
+- **Áreas y archivos:** dependencias de producción, regresión de empaquetado y
+  documentación operativa/estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 11/11 focalizadas; suite completa **517/517** en 381,7 s;
+  Ruff, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** Tesseract y `cat/spa/eng` comprobados en
+  Railway; falta redesplegar para verificar los módulos Python y el corpus real.
+- **Riesgo/punto probable de fallo:** caché de build o wheel PDFium incompatible con
+  la imagen; el healthcheck debe impedir publicar si la instalación falla.
+- **Diagnóstico y rollback:** repetir el comprobador mediante SSH. El rollback solo
+  revierte requisitos Python y no toca datos.
+- **Estado de publicación:** `main` y producción en `b3c184251374`; comprobación
+  SSH confirma OCR de foto/PDF con `cat/spa/eng` y Stripe en `OK`.
+
+## 2026-08-17 — cierre verificable de OCR, correo, OAuth, voz, copias y Stripe
+
+- **Autor/agente:** Codex.
+- **Objetivo:** facilitar la conexión del piloto con una verificación segura que
+  distinga variables presentes de capacidades realmente disponibles.
+- **Áreas y archivos:** configuración, transcripción, OCR/readiness, nuevo CLI de
+  comprobación, pruebas y guías operativas/estado compartido.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 36/36 focalizadas y suite completa **516/516** en 435,7 s;
+  Ruff, compilación y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** no se usaron secretos ni proveedores
+  reales. Founder debe configurar Railway y completar los recorridos humanos de
+  correo, OAuth, voz, restauración y Stripe descritos en `Conectar-APIs.md`.
+- **Riesgo/punto probable de fallo:** credencial de otro entorno, remitente Brevo no
+  activo, precio Stripe con IVA `unspecified`, idiomas Tesseract ausentes o bucket
+  configurado sin restauración independiente.
+- **Diagnóstico y rollback:** ejecutar `noesis-doctor --strict` y
+  `noesis-integrations-check --network --strict`. Revertir el commit elimina el CLI
+  y recupera la pista fija anterior, sin tocar datos ni esquema.
+- **Estado de publicación:** `main` y producción en `808a96004b7b`; queda ejecutar
+  el comprobador con las credenciales de Railway y guardar la aceptación externa.
+
+## 2026-08-14 — revisión visual del piloto y cierre de detalles móviles
+
+- **Autor/agente:** Codex.
+- **Objetivo:** recorrer las experiencias comerciales reales y corregir defectos
+  visibles que restaban confianza al piloto sin ampliar permisos ni acciones.
+- **Áreas y archivos:** navegación móvil, asistente, portal de cliente, filtro de
+  fechas de plantillas, regresiones visuales/HTTP y documentos de estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 11/11 focalizadas verdes; suite de **506 pruebas**
+  recorrida en 489,5 s con un cierre temporal de SQLite bloqueado por Windows; la
+  única prueba afectada se repitió aislada y quedó verde. Revisión real local en
+  escritorio y móvil de portada, panel demo, Documentos, asistente, gestoría y
+  portal de cliente; `git diff --check`, Ruff, compilación y verdad documental.
+- **Dependencias o validaciones externas:** el portal Stripe real sigue necesitando
+  una sesión sandbox autenticada; la extensión de Chrome de Codex no está instalada,
+  por lo que en este bloque se verifican los siete contratos del adaptador/rutas,
+  no el clic externo dentro de Stripe.
+- **Riesgo/punto probable de fallo:** caché de CSS/plantillas tras el despliegue o
+  fechas heredadas que no sean ISO; el filtro conserva sin alterar cualquier texto
+  que no pueda interpretar.
+- **Diagnóstico y rollback:** revisar la barra inferior a 375 px, las sugerencias
+  del asistente y `/p/{token}`; si falla, revertir este commit no exige rollback de
+  base de datos. Las capturas quedan fuera del repositorio en la carpeta de auditoría.
+- **Estado de publicación:** `main` y producción en el release `aed36de59e30`;
+  CI completo y humo PostgreSQL verdes, `/ready` confirma esquema 49 y las vistas
+  publicadas de asistente, portal de cliente y gestoría móvil quedaron verificadas.
+
 ## Plantilla para toda modificación
 
 ```markdown
@@ -87,6 +154,207 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnostico y rollback:** `pip install -e ".[analysis]"` y despues
   `python analysis/build_modelo_economico.py`.
 - **Estado de publicacion:** local / commit en `main`.
+## 2026-08-14 — cierre de fricciones de confianza del piloto
+
+- **Autor/agente:** Codex.
+- **Objetivo:** eliminar respuestas técnicas y datos ambiguos en los recorridos
+  comerciales, manteniendo la demostración estrictamente de solo lectura.
+- **Áreas y archivos:** guardia de suscripción, asistente y prompts, portales de
+  cliente/gestoría, resumen mensual, plantillas y regresiones de backend/demo.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios. Se añade un campo
+  calculado a la respuesta mensual, sin persistencia ni backfill.
+- **Pruebas ejecutadas:** 3/3 focalizadas; **504/504** completas en 438,0 s; Ruff y
+  `git diff --check` verdes.
+- **Dependencias o validaciones externas:** falta el recorrido publicado en
+  escritorio/móvil; no intervienen claves de Stripe, Meta, IA ni AEAT.
+- **Riesgo/punto probable de fallo:** una nueva intención local de solo lectura debe
+  añadirse explícitamente a la lista permitida de la demo; por defecto queda
+  bloqueada. La caja mensual conserva su campo histórico `collected` para no romper
+  consumidores y usa `invoiced_collected` solo para porcentajes de cohorte.
+- **Diagnóstico y rollback:** reproducir `/api/{business_id}/chat` con una cuenta
+  demo y verificar que no crece el historial; revisar redirecciones con
+  `notice=readonly`/`ok=readonly`; comparar ambos campos en `/summary`. Revertir el
+  commit no requiere rollback de base de datos.
+- **Estado de publicación:** commit `ea1f5f3`, `main` y producción en el release
+  `ea1f5f3e628f`; CI completo, humo PostgreSQL y `/ready` verdes con esquema 49.
+  Pendiente recorrido visual autenticado.
+
+## 2026-08-14 — portal Stripe autocontenido y fallo visible
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir que los botones de gestionar, tarjeta, cancelación y cambio
+  de plan parecieran inertes aunque la interfaz ya estuviera dibujada.
+- **Áreas y archivos:** `adapters/billing.py`, rutas de cuenta, plantilla de
+  suscripción, JavaScript público, regresiones de backend, mapa y estado documental.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 7/7 focalizadas; **499/499** completas en 464,4 s; Ruff,
+  `compileall`, `node --check` y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** falta el clic autenticado después del
+  despliegue. Stripe puede rechazar upgrades si los precios tienen `tax_behavior`
+  incompatible o sin especificar; tarjeta, cancelación y portal general no deben
+  crear nunca una segunda suscripción.
+- **Riesgo/punto probable de fallo:** permisos de la clave Stripe para crear una
+  configuración de portal o catálogo fiscal incompatible. Si crearla falla, Noesis
+  intenta el portal predeterminado; si también falla, muestra y audita el error.
+- **Diagnóstico y rollback:** buscar `subscription_portal_failed` y el log
+  `Stripe portal`; revisar la configuración con metadata
+  `noesis_portal=noesis-v1`. Revertir el bloque vuelve a depender del portal manual,
+  sin tocar suscripciones ni cobros existentes.
+- **Estado de publicación:** commit `52c61f9`, `main` y producción en el release
+  `52c61f9e6277`; `/ready` verde y esquema 49. Pendiente inspección autenticada del
+  portal sandbox.
+
+## 2026-08-14 — acciones reales para gestionar la suscripción
+
+- **Autor/agente:** Codex.
+- **Objetivo:** hacer funcionales gestión, tarjeta, upgrade mensual/anual y
+  cancelación de una suscripción activa sin crear otro Checkout.
+- **Áreas y archivos:** adaptador Stripe, rutas y contexto de suscripción, plantilla
+  y estilos, regresiones HTTP/adaptador, mapa, decisión, conexión externa y estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 4/4 focalizadas, **495/495** completas en 352,1 s,
+  `compileall`, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** Stripe sandbox debe tener habilitados
+  método de pago, cambio entre los seis precios y cancelación. Los deep links siguen
+  la API oficial de Customer Portal; queda recorrerlos con la cuenta real de prueba.
+- **Riesgo/punto probable de fallo:** una configuración incompleta del portal puede
+  rechazar el flujo específico; el adaptador intenta entonces el portal general y,
+  si tampoco abre, Noesis muestra un fallo sin aplicar cambios ni cargos.
+- **Diagnóstico y rollback:** revisar `subscription_portal_requested`, los logs
+  `Stripe portal (<acción>) fallo`, la entrega webhook y la configuración sandbox.
+  Revertir este bloque conserva la suscripción, pero devuelve botones genéricos.
+- **Estado de publicación:** commit `31d0c95`, `main` y producción en el release
+  `31d0c95abcf0`; `/ready` verde y esquema 49. Pendiente recorrido humano sandbox.
+
+## 2026-08-13 — plan actual sin doble Checkout
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir la pantalla activa en gestión de una única suscripción y
+  eliminar la posibilidad visible o manipulada de volver a comprar el mismo plan.
+- **Áreas y archivos:** contexto en `web/routers/pages.py`; bloqueo y portal en
+  `web/routers/account.py`; jerarquía en `templates/suscripcion.html`; estilos en
+  `static/app.css`; regresión en `tests/test_backend.py`; decisión, mapa y estado.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 3/3 focalizadas, **493/493** completas en 351,9 s, Ruff,
+  `py_compile`, verdad documental y `git diff --check`.
+- **Dependencias o validaciones externas:** el patrón adapta la gestión centralizada
+  de Billing documentada oficialmente por OpenAI. Stripe debe tener habilitados en
+  el portal los seis precios mensuales/anuales para que upgrade y anualidad sean
+  efectivos.
+- **Riesgo/punto probable de fallo:** si el portal no está configurado, Noesis falla
+  cerrado y vuelve con `status=noportal`; nunca crea un Checkout alternativo activo.
+- **Diagnóstico y rollback:** revisar el evento
+  `subscription_change_requested`, la configuración del portal y la respuesta de
+  `billing_portal/sessions`. Revertir reabre el riesgo de doble suscripción.
+- **Estado de publicación:** commit `3c7bd03`, `main` y producción en el release
+  `3c7bd034828a`, `/ready` verde y esquema 49. Pendiente comprobación sandbox del
+  portal y sus cambios configurados.
+
+## 2026-08-13 — recupera la activación Stripe sin repetir el pago
+
+- **Autor/agente:** Codex.
+- **Objetivo:** impedir que webhooks concurrentes de Stripe dejen una compra pagada
+  en modo consulta y recuperar de forma segura el alta sandbox ya cobrada.
+- **Áreas y archivos:** adaptador Stripe `adapters/billing.py`; estado transaccional
+  en `db.py`; retorno y selector de plan en `web/routers/pages.py`; regresiones en
+  `tests/test_backend.py`; estado, QA, pendientes y mapa documental.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 4/4 focalizadas de Stripe, **492/492** de la suite completa
+  en 390,9 s, `py_compile` y Ruff focalizado verdes.
+- **Dependencias o validaciones externas:** Stripe sandbox entregó tres eventos con
+  HTTP 200 y mantiene la suscripción activa. Falta validar el candidato publicado
+  recargando el retorno ya pagado; no es necesario crear otro cobro.
+- **Riesgo/punto probable de fallo:** clave sandbox o ids almacenados incoherentes
+  impedirían la reconciliación de forma cerrada; nunca se concede acceso solo por
+  parámetros de URL.
+- **Diagnóstico y rollback:** revisar el estado de entrega en Stripe y los ids de
+  cliente/suscripción del negocio. El evento de producto
+  `subscription_reconciled_after_checkout` identifica la recuperación. Revertir el
+  commit elimina la consulta de reparación y reabre la carrera de `pending`.
+- **Estado de publicación:** commit `9f3dc48`, `main` y producción en el release
+  `9f3dc48d9d4a`, `/ready` verde y esquema 49. Pendiente comprobación humana de la
+  cuenta sandbox existente.
+
+## 2026-08-13 — separa `/gestorias` del bloqueo privado de robots
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el rechazo de indexación de la página comercial de
+  gestorías detectado por Google Search Console.
+- **Áreas y archivos:** reglas de `robots.txt` en `web/routers/pages.py`, regresión
+  en `tests/test_seo.py` y estado/QA/mapa documental.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 11/11 de SEO, Ruff focalizado, verdad documental,
+  JSON de estado y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** Search Console mostró que la prueba en
+  vivo no podía indexar `/gestorias`. La página, canonical y sitemap respondían 200;
+  la causa era semántica de robots: `Disallow: /gestoria` también coincide por
+  prefijo con `/gestorias`.
+- **Riesgo/punto probable de fallo:** usar de nuevo una regla privada sin `/` final o
+  ancla `$` puede bloquear rutas públicas que empiecen igual.
+- **Diagnóstico y rollback:** abrir `/robots.txt` y comprobar que existen
+  `/gestoria$` y `/gestoria/`, que `/gestorias` no coincide y que el login puede leer
+  su `noindex`. Revertir el commit restaura el patrón anterior, pero reabre el fallo.
+- **Estado de publicación:** `main` y producción en el release `18104f0`, esquema 49;
+  Googlebot recibe 200, canonical, `index, follow` y reglas de robots sin el prefijo
+  conflictivo. CI completo [31681161643](https://github.com/noesisstudio/noesis/actions/runs/31681161643)
+  verde. Search Console puede conservar el robots anterior en caché hasta 24 horas.
+
+## 2026-08-13 — base SEO verificable y páginas por audiencia
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir la configuración inicial de Search Console en una base
+  técnica mantenible, sin prometer reseñas, frescura ni capacidades que Noesis no
+  pueda demostrar.
+- **Áreas y archivos:** rutas públicas y sitemap en `web/routers/pages.py`;
+  cabeceras en `web/server.py`; metadatos y navegación en `site_base.html`;
+  identidad estructurada en `web/deps.py`; páginas `site_autonomos.html` y
+  `site_gestorias.html`; portada, icono, estilos responsive, textos públicos y
+  `tests/test_seo.py`; `.secrets.baseline` actualiza únicamente la línea de una
+  coincidencia histórica ya aceptada.
+- **Cambios de datos/migración:** ninguno; esquema 49 sin cambios.
+- **Pruebas ejecutadas:** 11/11 de SEO y **487/487** de la suite completa;
+  Ruff sobre `src`/`tests`, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** el founder verificó la propiedad de
+  dominio en Google Search Console, envió el sitemap y añadió usuarios. Google
+  puede tardar días en rastrear de nuevo y en mostrar rendimiento. El primer CI
+  dejó verde PostgreSQL y se detuvo porque el baseline de secretos conservaba la
+  línea anterior de `project-state.json`; no apareció ningún hash nuevo.
+- **Riesgo/punto probable de fallo:** canonical incorrecto si `NOESIS_BASE_URL`
+  deja de ser el origen público, o una ruta pública nueva que no se añada a la lista
+  indexable. Las áreas privadas envían `X-Robots-Tag: noindex, nofollow`.
+- **Diagnóstico y rollback:** abrir `/robots.txt` y `/sitemap.xml`, inspeccionar
+  title/description/canonical/OG y la cabecera de `/login`; las pruebas SEO fallan
+  si se duplica un título, desaparece el H1 o se indexa una ruta privada. Revertir
+  este commit restaura el sitemap y el armazón público anteriores.
+- **Estado de publicación:** `main` y producción validados en el release `e5d1ac5`,
+  esquema 49: `/health`, `/ready`, las 14 páginas, sitemap y `noindex` reales en
+  verde. Baseline corregido para repetir el guardián completo; recrawl de Google
+  pendiente.
+
+## 2026-08-12 — alta recuperable y preparada para el primer resultado
+
+- **Autor/agente:** Codex.
+- **Objetivo:** cerrar para el piloto la configuración posterior al registro sin
+  perder el punto de avance ni presentar WhatsApp como conectado antes de serlo.
+- **Áreas y archivos:** migraciones y estado de negocio en `migrations.py`/`db.py`;
+  rutas de cuenta, Google, administración y WhatsApp; pantallas de negocio,
+  operativa, revisión, suscripción e inicio; estilos responsive y pruebas HTTP.
+- **Cambios de datos/migración:** esquema 49 añade estado recuperable de onboarding,
+  selección comercial y decisión explícita de WhatsApp. Las cuentas históricas no
+  se obligan a repetirlo; las ya completas se reconstruyen de forma compatible.
+- **Pruebas ejecutadas:** 485/485 unitarias e integrales verdes; 9/9 de SEO;
+  compilación; migración histórica focalizada. El ciclo 0→49→0→49 y las revisiones
+  estáticas se registran al cerrar el commit.
+- **Dependencias o validaciones externas:** ninguna nueva. Stripe, Meta y recorrido
+  visual siguen requiriendo credenciales/servicios reales.
+- **Riesgo/punto probable de fallo:** datos históricos incompletos, carga de imagen
+  inválida o webhook de WhatsApp que no llegue; el recorrido no avanza en silencio.
+- **Diagnóstico y rollback:** `/ready` debe informar esquema 49; revisar las columnas
+  `onboarding_*`, `whatsapp_onboarding_choice` y eventos de producto. Revertir el
+  commit; SQLite conserva las columnas al bajar para no perder el punto de avance.
+- **Estado de publicación:** `main`, CI completo y humo PostgreSQL verdes;
+  producción confirma release `8730826a79ab` y esquema 49. Recorrido visual y
+  proveedores reales pendientes.
 
 ## 2026-08-11 — calculadora por numero de clientes
 

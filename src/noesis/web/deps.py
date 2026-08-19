@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -40,6 +41,43 @@ TEMPLATES.env.globals["ocr_available"] = (
     ocr.available() or bool(config.ANTHROPIC_API_KEY)
 )
 
+# Una sola fuente para la identidad que leen los buscadores. Se publica únicamente
+# en la portada: repetir la misma Organization en todas las páginas añade ruido y
+# hace más fácil que dos copias terminen contradiciéndose.
+_public_origin = config.BASE_URL.rstrip("/")
+TEMPLATES.env.globals["seo_home_graph"] = {
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": "Organization",
+            "@id": f"{_public_origin}/#organization",
+            "name": "Noesis",
+            "url": _public_origin,
+            "logo": f"{_public_origin}/static/noesis-mark.svg",
+            "email": config.PUBLIC_CONTACT_EMAIL,
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer support",
+                "email": config.PUBLIC_CONTACT_EMAIL,
+                "availableLanguage": ["es", "ca", "en"],
+            },
+            "areaServed": "ES",
+            "description": (
+                "Noesis ordena trabajos, clientes, documentos, facturas y cobros "
+                "desde WhatsApp para autónomos y pequeños negocios de servicios."
+            ),
+        },
+        {
+            "@type": "WebSite",
+            "@id": f"{_public_origin}/#website",
+            "name": "Noesis",
+            "url": _public_origin,
+            "inLanguage": "es",
+            "publisher": {"@id": f"{_public_origin}/#organization"},
+        },
+    ],
+}
+
 
 def _eur(value) -> str:
     """Formato de dinero en espanol (1.234,56 EUR) para las plantillas."""
@@ -52,6 +90,30 @@ def _eur(value) -> str:
 
 # Disponible en plantillas como {{ importe | eur }}.
 TEMPLATES.env.filters["eur"] = _eur
+
+
+def _human_date(value) -> str:
+    """Convierte fechas ISO de la base en una fecha legible para personas."""
+    if value in (None, ""):
+        return ""
+    if isinstance(value, datetime):
+        point = value.date()
+    elif isinstance(value, date):
+        point = value
+    else:
+        text = str(value).strip()
+        try:
+            point = datetime.fromisoformat(text.replace("Z", "+00:00")).date()
+        except ValueError:
+            try:
+                point = date.fromisoformat(text[:10])
+            except ValueError:
+                return text
+    return point.strftime("%d/%m/%Y")
+
+
+# Evita que los portales enseñen marcas ISO internas como 2026-08-14T00:00:00.
+TEMPLATES.env.filters["date_es"] = _human_date
 
 
 def current_user(request: Request) -> dict | None:
@@ -253,7 +315,17 @@ async def auth_guard(request: Request, call_next):
         can_write = db.subscription_allows_access(business)
         request.state.subscription_read_only = not can_write
         safe_read = request.method in {"GET", "HEAD", "OPTIONS"}
-        if not can_write and not safe_read and not allowed_when_blocked:
+        demo_readonly_chat = (
+            is_demo
+            and request.method == "POST"
+            and path == f"/api/{own_business_id}/chat"
+        )
+        if (
+            not can_write
+            and not safe_read
+            and not allowed_when_blocked
+            and not demo_readonly_chat
+        ):
             if is_demo:
                 if path.startswith("/api/"):
                     return JSONResponse(

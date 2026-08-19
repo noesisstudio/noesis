@@ -52,6 +52,7 @@ analysis = ["openpyxl>=3.1.0,<4"]
 noesis = "noesis.cli:main"
 noesis-web = "noesis.web.server:main"
 noesis-doctor = "noesis.readiness:main"
+noesis-integrations-check = "noesis.integration_check:main"
 noesis-restore-check = "noesis.web.backups:restore_check_main"
 
 [tool.setuptools.packages.find]

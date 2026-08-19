@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 48;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 49;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -26,7 +26,9 @@
   contador anti-replay, códigos de recuperación y fecha de alta sin modificar
   accesos profesionales existentes. La 48 añade distintivos gráficos al perfil
   documental, versiona la identidad sin duplicar imágenes por factura y congela la
-  versión utilizada al emitir, con referencia multiempresa protegida.
+  versión utilizada al emitir, con referencia multiempresa protegida. La 49 guarda
+  el punto exacto del alta, el plan y la periodicidad elegidos y diferencia WhatsApp
+  verificado de la decisión explícita de conectarlo más adelante.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -67,6 +69,9 @@
   identidad legal, dominio canónico, apertura pública, audio/OCR, datos, copias,
   WhatsApp, correo, Stripe, AEAT, IA y operaciones. Al abrir el alta pública,
   servicios críticos incompletos pasan de aviso a bloqueo.
+- `src/noesis/integration_check.py`: comprobación externa segura y de solo lectura.
+  Valida el runtime OCR y, opcionalmente, consulta por `GET` Brevo, Google OpenID,
+  los seis precios Stripe y el catálogo Groq sin enviar, cobrar ni revelar secretos.
 - `src/noesis/config.py` + `web/routers/webhooks.py`: toman una huella publicable del
   commit de Railway (o `NOESIS_RELEASE_ID`) y la exponen en `/health`; `/ready`
   añade el esquema aplicado para distinguir sin ambigüedad fusionado de desplegado.
@@ -87,12 +92,16 @@
 
 - `src/noesis/web/routers/pages.py`: además de las páginas públicas sirve
   `robots.txt`, `sitemap.xml` y `/favicon.ico`. La lista `_INDEXABLES` decide qué
-  ve un buscador: si se añade una página pública, hay que incluirla ahí.
+  ve un buscador: si se añade una página pública, hay que incluirla ahí. El sitemap
+  solo declara URLs demostrables; no inventa `lastmod` ni prioridades. Las reglas
+  privadas de robots usan `/` final o `$`: `/gestoria` sin ancla bloquearía también
+  la página pública plural `/gestorias` por coincidencia de prefijo.
 - `src/noesis/web/templates/404.html`: dirección inexistente con el diseño del
   sitio. El manejador de `server.py` sigue devolviendo JSON bajo `/api/` y
   `/webhook/`, que esperan datos y no una página.
 - `src/noesis/web/server.py`: ensamblador FastAPI, seguridad, redirección al origen
-  canónico y routers.
+  canónico y routers. Su middleware añade `X-Robots-Tag: noindex, nofollow` a toda
+  ruta que no pertenezca explícitamente al sitio público, excepto assets técnicos.
 - `src/noesis/web/templates/site_base.html`: estructura compartida del sitio público,
   navegación responsive, llamada final y pie legal. Home, Precios, Equipo y Preguntas
   usan composiciones propias según su objetivo, sin replicar el panel interno ni
@@ -100,7 +109,11 @@
   sitemap, así que alguien puede aterrizar en ellas desde un buscador y debe encontrar
   el menú del sitio. Cada página aporta su título y su descripción; los textos legales
   además vacían la llamada final, porque no son sitio para vender. Aquí viven el
-  canonical, la ficha de empresa para buscadores y el salto al contenido por teclado.
+  canonical, metadatos Open Graph/Twitter y el salto al contenido por teclado. La
+  ficha `Organization`/`WebSite` se inyecta solo en la portada desde `web/deps.py`.
+- `src/noesis/web/templates/site_autonomos.html` y `site_gestorias.html`: páginas
+  públicas por audiencia; explican los flujos existentes y sus límites sin duplicar
+  el panel ni prometer presentación fiscal, movimientos de dinero o comisiones.
 - `src/noesis/web/templates/landing.html`: la maqueta del producto reproduce pantallas
   del panel con `h2.demo-title`, no con `<h1>`: dentro de la portada son el retrato de
   una app, y competirían con el único encabezado real de la página.
@@ -119,7 +132,15 @@
 - `src/noesis/adapters/billing.py`: catálogo mensual/anual y matriz central de
   derechos. Stripe usa un `price_id` distinto por plan y periodicidad; el anual
   cobra 11 meses y da 12. Autónomo conserva el núcleo y Negocio/Premium habilitan
-  Proyectos, Equipo, Gestoría y Análisis avanzado.
+  Proyectos, Equipo, Gestoría y Análisis avanzado. El adaptador también puede leer
+  una suscripción concreta por API y convertirla en evidencia solo si coinciden
+  negocio, cliente, suscripción, estado activo y un precio conocido de Noesis.
+  Para una cuenta activa crea sesiones efímeras del portal general o deep links
+  acotados a tarjeta, cancelación y confirmación del precio exacto; si Stripe aún no
+  permite un flujo específico, cae al portal general sin crear un Checkout. Antes
+  prepara una configuración versionada propia del Customer Portal, reutilizable y
+  con las seis tarifas conocidas, para no depender de opciones manuales del panel
+  de Stripe; una configuración ajena nunca se adopta por accidente.
 - `src/noesis/web/deps.py`: aislamiento de sesión, modo consulta, derechos por plan y guardia CSRF
   transversal. Una cuenta inactiva puede leer; toda mutación web/API devuelve
   redirección o HTTP 402. La evidencia `Sec-Fetch-Site: same-origin` del navegador
@@ -128,7 +149,17 @@
 - `src/noesis/web/routers/webhooks.py` + `db.apply_stripe_subscription_event`:
   Checkout solo vincula ids; la activación exige factura pagada o suscripción
   `active`/`trialing`. El bloqueo de fila, orden persistente y comprobación de
-  customer/subscription rechazan duplicados, cruces y eventos atrasados.
+  customer/subscription rechazan duplicados, cruces y eventos atrasados. Un
+  Checkout concurrente nunca rebaja un estado ya activo; la vuelta del pago puede
+  reparar una entrega perdida consultando Stripe de forma autenticada mediante
+  `db.reconcile_stripe_subscription`, sin confiar en la URL ni en el navegador.
+- `web/templates/suscripcion.html` + `web/routers/account.py`: una cuenta activa
+  distingue el plan actual, niveles incluidos y mejoras. No contiene Checkout;
+  gestionar, cambiar tarjeta, mejorar o cancelar abre una sesión Stripe distinta y
+  la interfaz bloquea dobles envíos y explica un fallo en el mismo bloque visible
+  sin fingir que se ha aplicado nada; el servidor lo registra para soporte. La
+  ruta de Checkout repite esta protección en servidor ante formularios antiguos o
+  peticiones manipuladas.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
   de acciones de Noesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve
@@ -161,7 +192,10 @@
   entrada rápida, carpetas responsive, búsqueda, revisión y primera página privada
   bajo demanda sin duplicar ficheros.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
-  Google OAuth, configuración operativa, checkout y cuenta; el alta pública falla
+  Google OAuth, configuración operativa, checkout y cuenta. El recorrido se reanuda
+  en el paso exacto, incluye la identidad completa de facturas y termina en una
+  revisión que no confunde un código de WhatsApp enviado con una conexión verificada;
+  el alta pública falla
   cerrada en producción si falta identidad legal o autorización explícita y no
   expone el diagnóstico de proveedores en la API del cliente. La solicitud pública
   distingue también un despacho profesional sin crearle una cuenta ni permisos.
@@ -169,7 +203,9 @@
   puerta pública única. Deriva autónomo/empresa al login titular y gestoría a su
   identidad profesional separada; un cliente final conserva el portal por enlace.
 - `src/noesis/web/templates/onboarding_preferences.html`: aplica fiscalidad,
-  factura, cobro, recordatorios, informes y gestoría antes de entrar al producto.
+  identidad visual completa de factura, cobro, recordatorios, informes y gestoría
+  antes de entrar al producto; `whatsapp_connect.html` resume lo elegido y permite
+  verificar el canal o posponerlo de forma explícita.
 - `src/noesis/web/routers/account.py` (`/solicitar-acceso`) + tabla `access_requests`:
   recoge la solicitud pública con su plan de interés, valida, limita repeticiones por
   correo y descarta robots con un campo señuelo. No crea ninguna cuenta.

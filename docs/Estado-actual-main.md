@@ -6,6 +6,99 @@
 
 ## Producto construido
 
+- La primera ejecución del comprobador dentro del contenedor detectó una diferencia
+  real entre desarrollo y despliegue: Railpack instala `requirements.txt`, donde no
+  constaban `pypdf`, `pypdfium2` ni `pytesseract`, aunque sí estaban declarados en
+  `pyproject.toml` y Tesseract tenía `cat/spa/eng`. El candidato sincroniza ambas
+  fuentes y añade una regresión de empaquetado. Queda en **517 pruebas**, sin cambio
+  de esquema. Producción responde con `b3c184251374` y la repetición por SSH confirma
+  foto y PDF escaneado disponibles con `cat/spa/eng`.
+
+- El candidato del 17 de agosto añade una comprobación operativa segura para cerrar
+  integraciones del piloto. `noesis-integrations-check` valida OCR de foto y PDF con
+  `cat/spa/eng` y, con `--network`, consulta por lectura Brevo, Google OpenID, los
+  seis precios Stripe y Groq sin enviar correos, transcribir, cobrar ni mostrar
+  secretos. La voz ya no fuerza castellano: detecta automáticamente catalán,
+  castellano o inglés salvo que se configure una pista explícita. La suite completa
+  queda en **516 pruebas**, Ruff y compilación verdes; no cambia el esquema 49.
+  Producción responde con el release `808a96004b7b`; queda ejecutar el comprobador
+  con las credenciales de Railway y completar las pruebas humanas.
+
+- La auditoría visual local del piloto ya cubre portada, panel de autónomo demo,
+  Documentos, asistente, cartera de gestoría en escritorio y portal de cliente en
+  móvil. Se corrigieron tres defectos visibles: el distintivo central corrupto de la
+  demo móvil, las sugerencias del asistente ocultas horizontalmente y las fechas ISO
+  del portal; también se representa correctamente el énfasis del criterio de Noesis.
+  Los siete contratos Stripe de gestión, tarjeta, cambio y cancelación siguen verdes
+  y bloquean un segundo Checkout. El esquema continúa en 49 y el repositorio cuenta
+  con **506 pruebas**. El release `aed36de59e30`, el CI completo, el humo PostgreSQL
+  y las vistas publicadas están verificados; solo queda recorrer el Customer Portal
+  con una sesión Stripe sandbox real.
+
+- El candidato de fiabilidad del 14 de agosto corrige cinco fricciones visibles del
+  piloto sin ampliar permisos: la demostración puede responder consultas locales
+  sin guardar historial ni ejecutar acciones; cualquier orden de escritura sigue
+  bloqueada. El portal de cliente y el expediente de gestoría vuelven a la misma
+  pantalla con un mensaje comprensible cuando una cuenta está en modo consulta, en
+  vez de mostrar JSON técnico. Los ejemplos del asistente se adaptan al sector y la
+  lectura mensual separa el dinero que entró este mes del cobro de las facturas
+  emitidas este mes, evitando porcentajes superiores al 100% por mezclar cohortes.
+  Las **504 pruebas** completas, Ruff, CI y el humo PostgreSQL están verdes; no
+  cambia el esquema 49. Producción responde con el release `ea1f5f3e628f` y
+  `/ready` confirma el esquema 49. Falta el recorrido visual autenticado de las
+  tres experiencias.
+
+- La gestión de suscripción separa contratación y mantenimiento. Una cuenta activa
+  muestra su **Plan actual** y separa gestión general, cambio de tarjeta,
+  cancelación y mejoras mensuales/anuales mediante flujos acotados del portal de
+  Stripe. Cada mejora lleva el plan y período elegidos a la confirmación segura;
+  los niveles inferiores constan como incluidos. Noesis nunca aplica por sí mismo
+  una cancelación o un cambio irreversible. No queda ningún formulario de Checkout
+  en la pantalla activa y el servidor redirige también cualquier POST antiguo o
+  manipulado al portal, de manera que el mismo negocio no pueda crear una segunda
+  suscripción por error. Noesis crea y reutiliza una configuración versionada del
+  Customer Portal con cambio de tarjeta, cancelación y los seis precios conocidos,
+  de modo que los botones no dependen de una configuración manual incompleta en
+  Stripe. El estado de carga evita dobles envíos y cualquier rechazo vuelve al
+  bloque visible de gestión y queda auditado. Las 499 pruebas están verdes; el
+  candidato está desplegado desde el release `52c61f9e6277` con esquema 49. Falta
+  el recorrido autenticado con la suscripción sandbox real.
+
+- La primera compra sandbox completa de Stripe confirmó precio mensual de
+  Autónomo, IVA externo, suscripción `active` y tres entregas webhook con HTTP 200.
+  La prueba real descubrió una carrera: un Checkout procesado después de la señal
+  de pago podía volver a guardar `pending`. El candidato corrige la transición bajo
+  bloqueo de fila y añade reconciliación de retorno mediante API autenticada de
+  Stripe; exige coincidencia de negocio, cliente, suscripción, estado activo y
+  `price_id` conocido, por lo que ni la URL ni el navegador conceden acceso. El
+  panel muestra además el plan realmente contratado. Las 492 pruebas están verdes;
+  producción responde con el release `9f3dc48d9d4a` y esquema 49. El founder ya ha
+  confirmado el acceso activo con la cuenta sandbox.
+
+- El sitio público dispone de una base SEO verificable: 14 páginas en el sitemap,
+  títulos y descripciones únicos, canonical, compartición social completa, un H1 por
+  documento y ficha `Organization`/`WebSite` solo en portada. Las nuevas entradas
+  `/autonomos` y `/gestorias` responden a intenciones distintas sin duplicar la Home.
+  Login, onboarding, paneles y portales envían `noindex`; el sitemap ya no finge que
+  todas las páginas cambian a diario. El dominio está verificado en Search Console,
+  el sitemap se ha enviado y la portada está indexada. El release `18104f0` y el
+  esquema 49 responden en producción; las 14 URLs, canonical y `noindex` se han
+  comprobado sin navegador gráfico. La ruta privada `/gestoria` usa anclas de fin o
+  barra para no bloquear por prefijo la pública `/gestorias`; Googlebot ya recibe
+  esta última en 200 e indexable. Falta que Search Console renueve su caché, esperar
+  el nuevo rastreo y tomar decisiones cuando exista rendimiento real.
+
+- El alta comercial es recuperable en el esquema 49: conserva plan, periodicidad e
+  intención y, al volver a iniciar sesión, lleva al paso exacto pendiente. Negocio y
+  operativa se marcan completos solo después de guardar sus datos obligatorios. La
+  configuración inicial ya incluye las tres plantillas de factura, color, logotipo,
+  pie textual, distintivo gráfico, alcance y condiciones de presupuesto; el último
+  paso muestra un resumen antes de entrar o pagar. WhatsApp solo figura conectado
+  tras recibir el código real, o queda explícitamente pospuesto. Después de Stripe,
+  el titular vuelve a la puesta en marcha para crear su primer cliente. Las 485
+  pruebas, el CI y el humo PostgreSQL están verdes; producción responde con el
+  release `8730826a79ab` y el esquema 49. Falta el recorrido visual y Stripe/Meta
+  reales.
 - Ajustes incorpora un editor documental por capas: tres composiciones probadas,
   color, logotipo saneado, pie textual y una imagen inferior para distintivos de
   ayudas, fondos, certificaciones o asociaciones. El titular elige tamaño,

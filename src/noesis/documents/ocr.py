@@ -4,7 +4,8 @@ Patrón adaptador, igual que la transcripción de voz: si la librería de OCR no
 instalada, `extract` devuelve None y la app sigue funcionando (el documento se
 guarda igual, solo que sin lectura automática).
 
-Para activarlo: pip install -e ".[ocr]" (y el binario `tesseract`).
+La dependencia Python forma parte del producto; también hace falta el binario
+`tesseract` y sus paquetes de idiomas en el servidor.
 En Mac:  brew install tesseract tesseract-lang
 En Debian/Railway: instala tesseract-ocr y los paquetes cat/spa/eng.
 """

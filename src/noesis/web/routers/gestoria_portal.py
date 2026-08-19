@@ -27,6 +27,30 @@ def _period_query(year: int | None, quarter: int | None) -> str:
     return "".join(f"&{part}" for part in parts)
 
 
+def _workspace_redirect(
+    business_id: int,
+    section: str,
+    year: int | None,
+    quarter: int | None,
+    *,
+    view: str = "",
+    notice: str = "readonly",
+) -> RedirectResponse:
+    """Devuelve los formularios HTML a su expediente, nunca a una página JSON."""
+    safe_section = section if section in {
+        "resumen", "documentos", "impuestos", "periodos", "solicitudes"
+    } else "resumen"
+    target = (
+        f"/gestoria/cliente/{business_id}?section={safe_section}"
+        f"{_period_query(year, quarter)}"
+    )
+    if safe_section == "documentos":
+        safe_view = view if view in gestoria_workspace.DOCUMENT_FILTERS else "todos"
+        target += f"&view={safe_view}"
+    safe_notice = notice if notice in {"readonly", "invalid", "missing"} else "invalid"
+    return RedirectResponse(f"{target}&notice={safe_notice}", status_code=303)
+
+
 def _start_session(request: Request, account: dict) -> None:
     request.session.clear()
     request.session.update({
@@ -445,6 +469,7 @@ def client_detail(request: Request, business_id: int, year: int | None = None,
         "requests": db.list_gestoria_requests(business_id),
         "clients": db.list_clients(business_id),
         "projects": db.list_projects(business_id),
+        "gestoria_read_only": not db.subscription_allows_access(business),
     })
 
 
@@ -501,7 +526,9 @@ def update_fiscal_profile(
         return JSONResponse({"error": "no autorizado"}, status_code=403)
     account, business = allowed
     if not db.subscription_allows_access(business):
-        return JSONResponse({"error": "cuenta en modo consulta"}, status_code=402)
+        return _workspace_redirect(
+            business_id, "impuestos", year, quarter
+        )
     try:
         db.update_gestoria_fiscal_profile(
             business_id, account["id"], taxpayer_type=taxpayer_type,
@@ -509,8 +536,10 @@ def update_fiscal_profile(
             filing_cadence=filing_cadence, obligations=obligations,
             notes=notes,
         )
-    except ValueError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=400)
+    except ValueError:
+        return _workspace_redirect(
+            business_id, "impuestos", year, quarter, notice="invalid"
+        )
     db.record_product_event(business_id, "gestoria_fiscal_profile_updated")
     period_query = _period_query(year, quarter)
     return RedirectResponse(
@@ -530,7 +559,9 @@ def review_document(request: Request, business_id: int, doc_id: int,
     if not allowed:
         return JSONResponse({"error": "no autorizado"}, status_code=403)
     if not db.subscription_allows_access(allowed[1]):
-        return JSONResponse({"error": "cuenta en modo consulta"}, status_code=402)
+        return _workspace_redirect(
+            business_id, "documentos", year, quarter, view=view
+        )
     try:
         docrepo.set_context(
             doc_id, business_id, client_id=client_id or None,
@@ -542,10 +573,16 @@ def review_document(request: Request, business_id: int, doc_id: int,
         )
         if kind:
             docrepo.confirm_classification(doc_id, business_id, kind)
-    except (TypeError, ValueError) as exc:
-        return JSONResponse({"error": str(exc)}, status_code=400)
+    except (TypeError, ValueError):
+        return _workspace_redirect(
+            business_id, "documentos", year, quarter,
+            view=view, notice="invalid",
+        )
     if not saved:
-        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+        return _workspace_redirect(
+            business_id, "documentos", year, quarter,
+            view=view, notice="missing",
+        )
     db.record_product_event(business_id, "document_validated_by_gestoria")
     period_query = _period_query(year, quarter)
     safe_view = view if view in gestoria_workspace.DOCUMENT_FILTERS else "todos"
@@ -565,13 +602,17 @@ def request_document(request: Request, business_id: int,
     if not allowed:
         return JSONResponse({"error": "no autorizado"}, status_code=403)
     if not db.subscription_allows_access(allowed[1]):
-        return JSONResponse({"error": "cuenta en modo consulta"}, status_code=402)
+        return _workspace_redirect(
+            business_id, "solicitudes", year, quarter
+        )
     try:
         db.add_gestoria_request(
             message, requested_by="gestoria", business_id=business_id
         )
-    except ValueError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=400)
+    except ValueError:
+        return _workspace_redirect(
+            business_id, "solicitudes", year, quarter, notice="invalid"
+        )
     period_query = _period_query(year, quarter)
     return RedirectResponse(
         f"/gestoria/cliente/{business_id}?section=solicitudes{period_query}"
@@ -587,7 +628,9 @@ def package(request: Request, business_id: int, label: str):
         return JSONResponse({"error": "no autorizado"}, status_code=403)
     is_demo = bool(allowed[1].get("is_demo"))
     if not is_demo and not db.subscription_allows_access(allowed[1]):
-        return JSONResponse({"error": "cuenta en modo consulta"}, status_code=402)
+        return _workspace_redirect(
+            business_id, "periodos", None, None
+        )
     from .. import gestoria as gestoria_service
     try:
         built = gestoria_service.build_package(

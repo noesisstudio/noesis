@@ -638,6 +638,44 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(len(exported["invoice_payments"]), 1)
         self.assertEqual(len(client_export["invoice_payments"]), 1)
 
+    def test_month_billing_separates_cash_flow_from_invoice_cohort(self):
+        business, client = self.make_business("Cohortes de cobro")
+        this_month = date.today().strftime("%Y-%m")
+        previous_month = (date.today().replace(day=1) - timedelta(days=1)).strftime(
+            "%Y-%m"
+        )
+        old_invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Trabajo anterior", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+            _issued_at_override=f"{previous_month}-15T10:00:00",
+        )
+        current_invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Trabajo actual", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+            _issued_at_override=f"{this_month}-02T10:00:00",
+        )
+        db.add_invoice_payment(
+            old_invoice["id"], 121, business_id=business["id"],
+            paid_at=f"{this_month}-03T10:00:00",
+        )
+        db.add_invoice_payment(
+            current_invoice["id"], 40, business_id=business["id"],
+            paid_at=f"{this_month}-04T10:00:00",
+        )
+
+        month = db.month_billing(this_month, business_id=business["id"])
+
+        self.assertEqual(month["invoiced"], 121)
+        self.assertEqual(month["collected"], 161)
+        self.assertEqual(month["invoiced_collected"], 40)
+        self.assertEqual(month["pending"], 81)
+
     def test_quote_acceptance_is_idempotent(self):
         business, client = self.make_business()
         quote = db.add_quote(
@@ -881,6 +919,26 @@ class BackendTestCase(unittest.TestCase):
         updated = db.get_business(business["id"])
         self.assertEqual(updated["subscription_status"], "active")
         self.assertEqual(updated["stripe_event_id"], "evt_paid_new")
+
+    def test_stripe_checkout_cannot_downgrade_concurrent_active_subscription(self):
+        business, _ = self.make_business("Stripe concurrente")
+        db.apply_stripe_subscription_event(
+            business["id"], status="active", event_created_at=100,
+            event_priority=40, event_id="evt_subscription_active",
+            plan="autonomo", customer_id="cus_concurrent",
+            subscription_id="sub_concurrent", allow_subscription_change=True,
+        )
+
+        result = db.apply_stripe_subscription_event(
+            business["id"], status="pending", event_created_at=101,
+            event_priority=10, event_id="evt_checkout_later",
+            customer_id="cus_concurrent", subscription_id="sub_concurrent",
+            allow_subscription_change=True,
+        )
+
+        self.assertTrue(result["applied"])
+        self.assertEqual(result["business"]["subscription_status"], "active")
+        self.assertEqual(db.get_business(business["id"])["plan"], "autonomo")
 
     def test_stripe_one_time_invoice_and_old_subscription_are_ignored(self):
         from noesis.web.routers import webhooks
@@ -2281,6 +2339,449 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
             payload["subscription_data[metadata][billing_period]"], "annual"
         )
 
+    def test_stripe_portal_uses_scoped_flows_for_billing_actions(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        business = {
+            "id": 42,
+            "stripe_customer_id": "cus_current",
+            "stripe_subscription_id": "sub_current",
+        }
+        snapshot = {
+            "id": "sub_current",
+            "items": {"data": [{"id": "si_current", "price": {"id": "old"}}]},
+        }
+        with (
+            patch.object(config, "STRIPE_PRICE_PRO_ANNUAL", "price_pro_annual"),
+            patch.object(provider, "subscription_snapshot", return_value=snapshot),
+            patch.object(
+                provider, "_managed_portal_configuration",
+                return_value="bpc_noesis",
+            ),
+            patch.object(
+                provider, "_post", return_value={"url": "https://billing.example/flow"},
+            ) as post,
+        ):
+            payment_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="payment_method",
+            )
+            payment_payload = post.call_args.args[1]
+            cancel_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="cancel",
+            )
+            cancel_payload = post.call_args.args[1]
+            change_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="change",
+                plan="pro", billing_period="annual",
+            )
+            change_payload = post.call_args.args[1]
+
+        self.assertEqual(payment_url, "https://billing.example/flow")
+        self.assertEqual(cancel_url, "https://billing.example/flow")
+        self.assertEqual(change_url, "https://billing.example/flow")
+        self.assertEqual(payment_payload["flow_data[type]"], "payment_method_update")
+        self.assertEqual(cancel_payload["flow_data[type]"], "subscription_cancel")
+        self.assertEqual(
+            cancel_payload["flow_data[subscription_cancel][subscription]"],
+            "sub_current",
+        )
+        self.assertEqual(
+            change_payload["flow_data[type]"], "subscription_update_confirm",
+        )
+        self.assertEqual(
+            change_payload[
+                "flow_data[subscription_update_confirm][items][0][price]"
+            ],
+            "price_pro_annual",
+        )
+        self.assertEqual(
+            change_payload[
+                "flow_data[subscription_update_confirm][items][0][id]"
+            ],
+            "si_current",
+        )
+        self.assertEqual(
+            change_payload["flow_data[after_completion][type]"], "redirect",
+        )
+        self.assertEqual(payment_payload["configuration"], "bpc_noesis")
+        self.assertEqual(cancel_payload["configuration"], "bpc_noesis")
+        self.assertEqual(change_payload["configuration"], "bpc_noesis")
+
+    def test_stripe_builds_managed_portal_with_every_configured_price(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        prices = {
+            "price_autonomo_month": "prod_autonomo",
+            "price_pro_month": "prod_pro",
+            "price_premium_month": "prod_premium",
+            "price_autonomo_year": "prod_autonomo",
+            "price_pro_year": "prod_pro",
+            "price_premium_year": "prod_premium",
+        }
+
+        def stripe_get(path):
+            if path.startswith("billing_portal/configurations?"):
+                return {"data": []}
+            price_id = path.rsplit("/", 1)[-1]
+            return {"id": price_id, "product": prices[price_id]}
+
+        with (
+            patch.multiple(
+                config,
+                STRIPE_PRICE_AUTONOMO="price_autonomo_month",
+                STRIPE_PRICE_PRO="price_pro_month",
+                STRIPE_PRICE_PREMIUM="price_premium_month",
+                STRIPE_PRICE_AUTONOMO_ANNUAL="price_autonomo_year",
+                STRIPE_PRICE_PRO_ANNUAL="price_pro_year",
+                STRIPE_PRICE_PREMIUM_ANNUAL="price_premium_year",
+            ),
+            patch.object(provider, "_get", side_effect=stripe_get),
+            patch.object(
+                provider, "_post", return_value={"id": "bpc_noesis"},
+            ) as post,
+        ):
+            configuration_id = provider._managed_portal_configuration(
+                "https://noesis.test/b/42/suscripcion"
+            )
+
+        self.assertEqual(configuration_id, "bpc_noesis")
+        post.assert_called_once()
+        path, payload = post.call_args.args
+        self.assertEqual(path, "billing_portal/configurations")
+        self.assertEqual(payload["features[payment_method_update][enabled]"], "true")
+        self.assertEqual(payload["features[subscription_cancel][mode]"], "at_period_end")
+        self.assertEqual(payload["features[subscription_update][enabled]"], "true")
+        self.assertEqual(
+            payload["features[subscription_update][products][0][prices][]"],
+            ["price_autonomo_month", "price_autonomo_year"],
+        )
+        self.assertEqual(
+            payload["features[subscription_update][products][2][prices][]"],
+            ["price_premium_month", "price_premium_year"],
+        )
+        self.assertEqual(payload["metadata[noesis_portal]"], "noesis-v1")
+
+    def test_stripe_reuses_the_active_managed_portal_configuration(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        with (
+            patch.multiple(
+                config,
+                STRIPE_PRICE_AUTONOMO="price_autonomo",
+                STRIPE_PRICE_PRO="price_pro",
+                STRIPE_PRICE_PREMIUM="price_premium",
+                STRIPE_PRICE_AUTONOMO_ANNUAL="price_autonomo_year",
+                STRIPE_PRICE_PRO_ANNUAL="price_pro_year",
+                STRIPE_PRICE_PREMIUM_ANNUAL="price_premium_year",
+            ),
+            patch.object(provider, "_get", return_value={"data": [{
+                "id": "bpc_existing",
+                "active": True,
+                "metadata": {"noesis_portal": "noesis-v1"},
+                "features": {
+                    "payment_method_update": {"enabled": True},
+                    "subscription_cancel": {"enabled": True},
+                    "subscription_update": {
+                        "enabled": True,
+                        "products": [{"prices": [
+                            "price_autonomo", "price_pro", "price_premium",
+                            "price_autonomo_year", "price_pro_year",
+                            "price_premium_year",
+                        ]}],
+                    },
+                },
+            }]}),
+            patch.object(provider, "_post") as post,
+        ):
+            configuration_id = provider._managed_portal_configuration(
+                "https://noesis.test/b/42/suscripcion"
+            )
+
+        self.assertEqual(configuration_id, "bpc_existing")
+        post.assert_not_called()
+
+    def test_checkout_return_reconciles_authoritative_active_subscription(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe reconciliado")
+        db.create_user(
+            "reconcile@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "pending", plan="trial",
+            customer_id="cus_reconcile", subscription_id="sub_reconcile",
+        )
+        snapshot = {
+            "id": "sub_reconcile",
+            "customer": "cus_reconcile",
+            "status": "active",
+            "metadata": {"business_id": str(business["id"])},
+            "items": {"data": [{"price": {"id": "price_autonomo"}}]},
+        }
+        provider = MagicMock()
+        provider.subscription_snapshot.return_value = snapshot
+        wrong_business = {
+            **snapshot,
+            "metadata": {"business_id": str(business["id"] + 1)},
+        }
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "STRIPE_PRICE_AUTONOMO", "price_autonomo"),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider
+            ),
+            TestClient(server.app) as client,
+        ):
+            self.assertIsNone(
+                server.billing_adapter.subscription_evidence(
+                    business, wrong_business,
+                )
+            )
+            client.post("/login", data={
+                "email": "reconcile@example.com", "password": TEST_PASSWORD,
+            })
+            page = client.get(
+                f"/b/{business['id']}/suscripcion?status=checkout_return"
+            )
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("subscription-success", page.text)
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["plan"], "autonomo")
+        self.assertIn('class="plan selected-plan"', page.text)
+        provider.subscription_snapshot.assert_called_once()
+
+    def test_active_subscription_is_managed_without_a_second_checkout(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe plan actual")
+        db.create_user(
+            "current-plan@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_current", subscription_id="sub_current",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = "https://billing.example/current"
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "current-plan@example.com",
+                "password": TEST_PASSWORD,
+            })
+            page = client.get(f"/b/{business['id']}/suscripcion")
+            db.set_subscription(
+                business["id"], "active", plan="premium",
+                customer_id="cus_current", subscription_id="sub_current",
+            )
+            premium_page = client.get(f"/b/{business['id']}/suscripcion")
+            change = client.post(
+                f"/b/{business['id']}/suscripcion/checkout",
+                data={"plan": "pro", "billing_period": "annual"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Plan actual", page.text)
+        self.assertIn("Gestionar plan", page.text)
+        self.assertIn("Mejorar a Negocio", page.text)
+        self.assertIn("Mejorar a Premium", page.text)
+        self.assertIn("Cambiar tarjeta", page.text)
+        self.assertIn("Cancelar suscripción", page.text)
+        self.assertEqual(page.text.count("data-stripe-portal-form"), 6)
+        self.assertIn('name="action" value="change"', page.text)
+        self.assertNotIn("Activar plan Aut", page.text)
+        self.assertNotIn("/suscripcion/checkout", page.text)
+        self.assertEqual(premium_page.text.count("Incluido en tu plan"), 2)
+        self.assertNotIn("Mejorar a ", premium_page.text)
+        self.assertEqual(change.status_code, 303)
+        self.assertEqual(change.headers["location"], "https://billing.example/current")
+        provider.portal_url.assert_called_once_with(
+            db.get_business(business["id"]),
+            f"{config.BASE_URL}/b/{business['id']}/suscripcion",
+            action="change", plan="pro", billing_period="annual",
+        )
+        provider.checkout_url.assert_not_called()
+
+    def test_subscription_portal_routes_only_supported_actions(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe acciones portal")
+        db.create_user(
+            "portal-actions@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="pro",
+            customer_id="cus_actions", subscription_id="sub_actions",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = "https://billing.example/cancel"
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-actions@example.com",
+                "password": TEST_PASSWORD,
+            })
+            cancel = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "cancel"}, follow_redirects=False,
+            )
+            invalid = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "delete_everything"}, follow_redirects=False,
+            )
+
+        self.assertEqual(cancel.status_code, 303)
+        self.assertEqual(cancel.headers["location"], "https://billing.example/cancel")
+        self.assertEqual(invalid.status_code, 303)
+        self.assertTrue(invalid.headers["location"].endswith("status=invalid"))
+        provider.portal_url.assert_called_once_with(
+            db.get_business(business["id"]),
+            f"{config.BASE_URL}/b/{business['id']}/suscripcion",
+            action="cancel", plan="", billing_period="monthly",
+        )
+
+    def test_every_subscription_button_opens_one_scoped_portal_flow(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe recorrido completo")
+        db.create_user(
+            "portal-e2e@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_e2e", subscription_id="sub_e2e",
+        )
+        provider = MagicMock()
+        provider.portal_url.side_effect = lambda *_args, **kwargs: (
+            f"https://billing.example/{kwargs['action']}"
+        )
+        # Los seis formularios que ve Autonomo: gestión superior, tarjeta,
+        # gestión desde su tarjeta actual, dos mejoras y cancelación.
+        actions = (
+            ({"action": "manage"}, "manage"),
+            ({"action": "payment_method"}, "payment_method"),
+            ({"action": "manage"}, "manage"),
+            ({
+                "action": "change", "plan": "pro",
+                "billing_period": "monthly",
+            }, "change"),
+            ({
+                "action": "change", "plan": "premium",
+                "billing_period": "annual",
+            }, "change"),
+            ({"action": "cancel"}, "cancel"),
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-e2e@example.com",
+                "password": TEST_PASSWORD,
+            })
+            responses = [
+                client.post(
+                    f"/b/{business['id']}/suscripcion/portal",
+                    data=data,
+                    headers={"sec-fetch-site": "same-origin"},
+                    follow_redirects=False,
+                )
+                for data, _action in actions
+            ]
+
+        self.assertEqual([response.status_code for response in responses], [303] * 6)
+        self.assertEqual(
+            [response.headers["location"] for response in responses],
+            [f"https://billing.example/{action}" for _data, action in actions],
+        )
+        self.assertEqual(provider.portal_url.call_count, 6)
+        monthly_change = provider.portal_url.call_args_list[3]
+        annual_change = provider.portal_url.call_args_list[4]
+        self.assertEqual(monthly_change.kwargs, {
+            "action": "change", "plan": "pro", "billing_period": "monthly",
+        })
+        self.assertEqual(annual_change.kwargs, {
+            "action": "change", "plan": "premium", "billing_period": "annual",
+        })
+
+    def test_subscription_portal_failure_returns_to_a_visible_error(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe portal caido")
+        db.create_user(
+            "portal-failure@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_failure", subscription_id="sub_failure",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = None
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-failure@example.com",
+                "password": TEST_PASSWORD,
+            })
+            response = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "manage"}, follow_redirects=False,
+            )
+            page = client.get(response.headers["location"])
+
+        self.assertEqual(response.status_code, 303)
+        self.assertTrue(response.headers["location"].endswith(
+            "?status=noportal#gestion-suscripcion"
+        ))
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('id="gestion-suscripcion"', page.text)
+        self.assertIn("No he podido abrir", page.text)
+        self.assertEqual(
+            db.count_product_events(
+                business["id"], "subscription_portal_failed",
+            ),
+            1,
+        )
+
     def test_public_and_account_pricing_share_the_current_catalog(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -2521,7 +3022,29 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                         follow_redirects=False,
                     )
                 self.assertEqual(signed_in.status_code, 303)
-                self.assertEqual(signed_in.headers["location"], f"/b/{user['business_id']}/resumen")
+                self.assertEqual(
+                    signed_in.headers["location"],
+                    f"/onboarding/setup/{user['business_id']}",
+                )
+
+
+class VisualContractTestCase(unittest.TestCase):
+    """Fija los detalles móviles que hacen que el piloto parezca terminado."""
+
+    def test_demo_badge_and_assistant_mobile_controls_are_readable(self):
+        web = Path(__file__).parents[1] / "src" / "noesis" / "web"
+        base = (web / "templates" / "base.html").read_text(encoding="utf-8")
+        assistant = (web / "templates" / "asistente.html").read_text(
+            encoding="utf-8"
+        )
+        css = (web / "static" / "app.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="bn-create locked demo"', base)
+        self.assertIn('aria-hidden="true">Demo</span>', base)
+        self.assertNotIn("â€“", base)
+        self.assertIn(".replace(/_(.+?)_/g,'<em>$1</em>')", assistant)
+        self.assertIn(".chat-wrap > .chips { flex-wrap:wrap;", css)
+        self.assertIn("flex:1 1 145px; white-space:normal;", css)
 
 
 class PortalHttpTestCase(BackendTestCase):
@@ -2601,11 +3124,35 @@ class PortalHttpTestCase(BackendTestCase):
                     follow_redirects=False,
                 )
 
-        self.assertEqual(blocked.status_code, 402)
-        self.assertEqual(blocked.json()["code"], "subscription_required")
+        self.assertEqual(blocked.status_code, 303)
+        self.assertIn("ok=readonly", blocked.headers["location"])
         self.assertEqual(
             db.get_quote(quote["id"], business["id"])["status"], "enviado"
         )
+
+    def test_portal_formats_internal_dates_for_people(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        from noesis.web.deps import _human_date
+
+        business, client_ref = self.make_business("Portal fechas")
+        quote = self._quote(business["id"], client_ref["id"])
+        draft = db.add_invoice(
+            client_ref["id"], "Revisión anual", 100,
+            business_id=business["id"],
+        )
+        invoice = db.issue_invoice(draft["id"], business["id"])
+        token = db.get_or_create_portal_token(business["id"], client_ref["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                page = client.get(f"/p/{token}")
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(f"Válido hasta el {_human_date(quote['valid_until'])}", page.text)
+        self.assertIn(f"Vence el {_human_date(invoice['due_date'])}", page.text)
+        self.assertNotIn("T00:00:00", page.text)
+        self.assertEqual(_human_date("2026-09-06T00:00:00"), "06/09/2026")
 
     def test_payment_api_is_isolated_and_portal_shows_remaining_amount(self):
         from starlette.testclient import TestClient
@@ -2867,6 +3414,18 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(signup.status_code, 303)
                 user = db.get_user_by_email("completo@example.com")
                 business_id = user["business_id"]
+                started = db.get_business(business_id)
+                self.assertTrue(started["onboarding_started"])
+                self.assertFalse(started["onboarding_done"])
+                self.assertEqual(started["onboarding_stage"], 2)
+                self.assertEqual(started["onboarding_plan"], "pro")
+                self.assertEqual(started["onboarding_billing"], "annual")
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/setup/{business_id}",
+                )
+                with self.assertRaises(ValueError):
+                    db.finish_onboarding(business_id, whatsapp_choice="later")
                 setup_page = client.get(signup.headers["location"])
                 self.assertIn(
                     'value="Instalación de placas solares"', setup_page.text
@@ -2889,6 +3448,13 @@ class PortalHttpTestCase(BackendTestCase):
                     profile.headers["location"],
                     f"/onboarding/preferences/{business_id}",
                 )
+                self.assertEqual(
+                    db.get_business(business_id)["onboarding_stage"], 3
+                )
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/preferences/{business_id}",
+                )
 
                 preferences_page = client.get(profile.headers["location"])
                 self.assertEqual(preferences_page.status_code, 200)
@@ -2902,6 +3468,12 @@ class PortalHttpTestCase(BackendTestCase):
                         "default_irpf": "15",
                         "default_payment_term_days": "30",
                         "invoice_template": "editorial",
+                        "brand_color": "#2e8b74",
+                        "document_footer": "Programa financiado por la ayuda piloto.",
+                        "quote_terms": "Validez de 30 dias.",
+                        "footer_image_width": "75",
+                        "footer_image_alignment": "right",
+                        "footer_image_scope": "all",
                         "payment_iban": TEST_IBAN,
                         "payment_bizum": "600111222",
                         "payment_note": "Indica el numero de factura.",
@@ -2915,6 +3487,10 @@ class PortalHttpTestCase(BackendTestCase):
                         "gestoria_name": "Gestoria Piloto",
                         "gestoria_email": "gestoria@example.com",
                         "gestoria_cadence": "mensual",
+                    },
+                    files={
+                        "logo": ("logo.png", TINY_PNG, "image/png"),
+                        "footer_image": ("ayuda.png", TINY_PNG, "image/png"),
                     },
                     follow_redirects=False,
                 )
@@ -2930,8 +3506,20 @@ class PortalHttpTestCase(BackendTestCase):
                 )
                 self.assertEqual(configured["default_payment_term_days"], 30)
                 self.assertEqual(configured["invoice_template"], "editorial")
+                self.assertEqual(configured["brand_color"], "#2e8b74")
+                self.assertEqual(configured["footer_image_width"], 75)
+                self.assertEqual(configured["footer_image_alignment"], "right")
+                self.assertEqual(configured["footer_image_scope"], "all")
+                self.assertTrue(configured["logo_data"])
+                self.assertTrue(configured["footer_image_data"])
                 self.assertEqual(configured["payment_reminder_days"], "3,10")
                 self.assertEqual(configured["gestoria_cadence"], "mensual")
+                self.assertEqual(configured["onboarding_stage"], 4)
+                self.assertFalse(configured["onboarding_done"])
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/whatsapp/{business_id}",
+                )
                 reports = db.resolve_whatsapp_reports(
                     configured["whatsapp_reports"]
                 )
@@ -2954,9 +3542,18 @@ class PortalHttpTestCase(BackendTestCase):
 
                 whatsapp_step = client.get(preferences.headers["location"])
                 self.assertEqual(whatsapp_step.status_code, 200)
-                self.assertIn("Continuar y revisar el pago", whatsapp_step.text)
+                self.assertIn("Así queda Negocio Completo", whatsapp_step.text)
+                self.assertIn("Negocio · Anual", whatsapp_step.text)
+                pending = client.post(
+                    f"/onboarding/whatsapp/{business_id}/connect",
+                    data={"action": "check"},
+                    follow_redirects=False,
+                )
+                self.assertIn("status=pending", pending.headers["location"])
+                self.assertFalse(db.get_business(business_id)["onboarding_done"])
                 finished = client.post(
                     f"/onboarding/whatsapp/{business_id}/connect",
+                    data={"action": "later"},
                     follow_redirects=False,
                 )
                 self.assertEqual(finished.status_code, 303)
@@ -2964,6 +3561,12 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertIn("status=ready", finished.headers["location"])
                 self.assertIn("plan=pro", finished.headers["location"])
                 self.assertIn("billing=annual", finished.headers["location"])
+                completed = db.get_business(business_id)
+                self.assertTrue(completed["onboarding_done"])
+                self.assertEqual(completed["onboarding_stage"], 5)
+                self.assertEqual(
+                    completed["whatsapp_onboarding_choice"], "later"
+                )
                 payment_page = client.get(finished.headers["location"])
                 self.assertEqual(payment_page.status_code, 200)
                 self.assertIn("subscription-ready", payment_page.text)

@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 
 from noesis import config, db, demo, gestoria_workspace
 from noesis.documents import ocr, pdf_ocr, repo as docrepo, service as docservice
-from noesis.web import auth
+from noesis.web import auth, chat
 
 
 def scanned_invoice_pdf() -> bytes:
@@ -170,6 +170,14 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
             ocr.detect_amount("Subtotal 200,00\nTotal a pagar 242,00 EUR"), 242.00
         )
 
+    def test_assistant_examples_follow_the_business_sector(self):
+        cleaning = chat.assistant_prompts({"sector": "Limpieza de oficinas"})
+        generic = chat.assistant_prompts({"sector": "Servicios creativos"})
+
+        self.assertTrue(any("limpieza" in item.lower() for item in cleaning))
+        self.assertFalse(any("grifo" in item.lower() for item in cleaning))
+        self.assertTrue(any("servicio realizado" in item.lower() for item in generic))
+
     def test_three_showcase_experiences_are_navigable(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -199,6 +207,26 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
                         self.assertIn("document-upload-strip", response.text)
                         self.assertIn("document-folder-grid", response.text)
                         self.assertIn("Usar cámara", response.text)
+                    if page == "asistente":
+                        self.assertIn("cambio de grifo", response.text)
+                history_before = len(db.list_assistant_messages(business_id))
+                invoices_before = len(db.list_invoices(business_id))
+                read_only_chat = client.post(
+                    f"/api/{business_id}/chat",
+                    json={"message": "¿Qué tengo hoy?"},
+                )
+                self.assertEqual(read_only_chat.status_code, 200)
+                self.assertIn("reply", read_only_chat.json())
+                mutation_chat = client.post(
+                    f"/api/{business_id}/chat",
+                    json={"message": "Factura a Marta por servicio 95 euros"},
+                )
+                self.assertEqual(mutation_chat.status_code, 200)
+                self.assertIn("solo lectura", mutation_chat.json()["reply"])
+                self.assertEqual(
+                    len(db.list_assistant_messages(business_id)), history_before
+                )
+                self.assertEqual(len(db.list_invoices(business_id)), invoices_before)
                 blocked = client.post(
                     f"/api/{business_id}/invoices", json={}
                 )
@@ -219,6 +247,22 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
                 self.assertEqual(
                     client.get(f"/gestoria/cliente/{business_id}").status_code,
                     200,
+                )
+                pending = next(
+                    item for item in docrepo.list_for_business(business_id)
+                    if item["doc_status"] == "pendiente_revisar"
+                )
+                review = client.post(
+                    f"/gestoria/cliente/{business_id}/documento/"
+                    f"{pending['id']}/revisar",
+                    data={"kind": "ticket", "year": date.today().year},
+                    follow_redirects=False,
+                )
+                self.assertEqual(review.status_code, 303)
+                self.assertIn("notice=readonly", review.headers["location"])
+                self.assertIn(
+                    "modo consulta",
+                    client.get(review.headers["location"]).text.lower(),
                 )
                 periods = db.gestoria_periods(business_id)
                 self.assertTrue(periods)
@@ -260,10 +304,17 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
                 quote = portal["quotes"][0]
                 self.assertEqual(
                     client.post(
-                        f"/p/{token}/quotes/{quote['id']}/accept"
+                        f"/p/{token}/quotes/{quote['id']}/accept",
+                        follow_redirects=False,
                     ).status_code,
-                    402,
+                    303,
                 )
+                read_only_portal = client.post(
+                    f"/p/{token}/quotes/{quote['id']}/accept",
+                    follow_redirects=True,
+                )
+                self.assertEqual(read_only_portal.status_code, 200)
+                self.assertIn("reactivar Noesis", read_only_portal.text)
 
 
 if __name__ == "__main__":

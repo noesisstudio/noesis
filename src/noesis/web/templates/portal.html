@@ -101,6 +101,10 @@
       <div class="banner warn">No se pudo registrar la acción. Vuelve a intentarlo.</div>
     {% elif ok == 'nojusto' %}
       <div class="banner warn">Ese documento ya no está disponible.</div>
+    {% elif ok == 'readonly' %}
+      <div class="banner warn">Puedes consultar el presupuesto, pero el profesional debe reactivar Noesis antes de registrar tu respuesta.</div>
+    {% elif subscription_read_only %}
+      <div class="banner info">Este portal está temporalmente en modo consulta. Puedes abrir y descargar documentos, pero no enviar respuestas todavía.</div>
     {% endif %}
 
     <div class="sec-title">Presupuestos por aprobar</div>
@@ -116,7 +120,7 @@
           </div>
           <div class="doc-meta">
             Base {{ q.base | eur }} · IVA {{ q.vat_rate }}%{% if q.irpf_rate %} · IRPF {{ q.irpf_rate }}%{% endif %}
-            {% if q.valid_until %}<br>Válido hasta el {{ q.valid_until }}{% endif %}
+            {% if q.valid_until %}<br>Válido hasta el {{ q.valid_until | date_es }}{% endif %}
             {% if q.notes %}<br><br>{{ q.notes }}{% endif %}
             {% if data.business.quote_terms %}<br><br><b>Condiciones:</b><br>{{ data.business.quote_terms }}{% endif %}
           </div>
@@ -125,10 +129,10 @@
           </div>
           <div class="doc-actions">
             <form method="post" action="/p/{{ token }}/quotes/{{ q.id }}/accept">
-              <button class="btn green" type="submit">Aprobar</button>
+              <button class="btn green" type="submit" {% if subscription_read_only %}disabled aria-disabled="true" title="Temporalmente en modo consulta"{% endif %}>Aprobar</button>
             </form>
             <form method="post" action="/p/{{ token }}/quotes/{{ q.id }}/reject">
-              <button class="btn" type="submit">Rechazar</button>
+              <button class="btn" type="submit" {% if subscription_read_only %}disabled aria-disabled="true" title="Temporalmente en modo consulta"{% endif %}>Rechazar</button>
             </form>
           </div>
         </div>
@@ -215,7 +219,7 @@
             {% if inv.payment_status == 'pagada' %}<span class="badge b-green">Pagada</span>
             {% elif inv.payment_status == 'parcial' %}<span class="badge b-amber">Pago parcial</span>
             {% else %}<span class="badge b-amber">Pendiente de pago</span>{% endif %}
-            {% if inv.due_date %} · Vence el {{ inv.due_date }}{% endif %}
+            {% if inv.due_date %} · Vence el {{ inv.due_date | date_es }}{% endif %}
           </div>
           {% if inv.payment_status != 'pagada' and (data.business.payment_iban or data.business.payment_bizum) %}
           <div class="pay-box">

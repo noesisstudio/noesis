@@ -253,6 +253,17 @@ async def security_headers(request: Request, call_next):
         if request.url.path.startswith("/t/")
         else "camera=(), geolocation=(), payment=()"
     )
+    # robots.txt evita malgastar rastreo en datos y portales, pero no garantiza por
+    # sí solo que una URL conocida desaparezca del índice. Toda ruta que no forma
+    # parte del sitio público recibe además una orden HTTP explícita de no indexar.
+    # Los estáticos quedan fuera: Google debe poder usar el logo y la imagen social.
+    path = request.url.path
+    if (
+        path not in pages.INDEXABLE_PATHS
+        and not path.startswith("/static/")
+        and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml"}
+    ):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
     # El calendario de reservas es el único contenido externo que se incrusta, y
     # solo en su propia página: el resto del sitio mantiene frame-src 'none'.
     frame_src = (

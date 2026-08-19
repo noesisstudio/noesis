@@ -3681,6 +3681,59 @@ def _downgrade_invoice_visual_profiles(conn) -> None:
         conn.execute(f"ALTER TABLE businesses DROP COLUMN IF EXISTS {column}")
 
 
+def _upgrade_recoverable_onboarding(conn) -> None:
+    """Hace el alta reanudable y separa WhatsApp conectado de pospuesto."""
+    t = _types(conn.dialect)
+    columns = {
+        "onboarding_started": f"{t['boolean']} NOT NULL DEFAULT FALSE",
+        "onboarding_profile_completed": f"{t['boolean']} NOT NULL DEFAULT FALSE",
+        "onboarding_preferences_completed": f"{t['boolean']} NOT NULL DEFAULT FALSE",
+        "onboarding_stage": "INTEGER NOT NULL DEFAULT 2",
+        "onboarding_plan": "TEXT NOT NULL DEFAULT 'autonomo'",
+        "onboarding_billing": "TEXT NOT NULL DEFAULT 'monthly'",
+        "onboarding_intent": "TEXT NOT NULL DEFAULT 'trial'",
+        "whatsapp_onboarding_choice": "TEXT NOT NULL DEFAULT 'pending'",
+    }
+    existing = _column_names(conn, "businesses")
+    for column, ddl in columns.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {column} {ddl}")
+
+    # No forzamos al onboarding a cuentas históricas. Solo reconstruimos el
+    # estado de las que ya lo habían terminado para que la nueva lógica sea
+    # compatible con demos, invitaciones y cuentas creadas antes de este salto.
+    conn.execute(
+        "UPDATE businesses SET onboarding_profile_completed=TRUE "
+        "WHERE sector IS NOT NULL AND TRIM(sector)<>'' "
+        "AND team_size IS NOT NULL AND TRIM(team_size)<>'' "
+        "AND primary_goal IS NOT NULL AND TRIM(primary_goal)<>''"
+    )
+    conn.execute(
+        "UPDATE businesses SET onboarding_preferences_completed=TRUE "
+        "WHERE nif IS NOT NULL AND TRIM(nif)<>'' "
+        "AND address IS NOT NULL AND TRIM(address)<>''"
+    )
+    conn.execute(
+        "UPDATE businesses SET onboarding_stage=5, "
+        "whatsapp_onboarding_choice=CASE WHEN whatsapp_status='conectado' "
+        "THEN 'connected' ELSE 'later' END WHERE onboarding_done=TRUE"
+    )
+
+
+def _downgrade_recoverable_onboarding(conn) -> None:
+    if conn.dialect == "sqlite":
+        # Preservar estas columnas evita perder el punto de reanudación si se
+        # revierte código de emergencia en una instalación local.
+        return
+    for column in (
+        "whatsapp_onboarding_choice", "onboarding_intent", "onboarding_billing",
+        "onboarding_plan", "onboarding_stage",
+        "onboarding_preferences_completed", "onboarding_profile_completed",
+        "onboarding_started",
+    ):
+        conn.execute(f"ALTER TABLE businesses DROP COLUMN IF EXISTS {column}")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3746,6 +3799,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (47, "mfa_gestoria", _upgrade_gestoria_mfa, _downgrade_gestoria_mfa),
     (48, "perfiles_visuales_factura", _upgrade_invoice_visual_profiles,
      _downgrade_invoice_visual_profiles),
+    (49, "onboarding_recuperable", _upgrade_recoverable_onboarding,
+     _downgrade_recoverable_onboarding),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

@@ -38,13 +38,19 @@ class LocalWhisperProvider:
         return self._model
 
     def transcribe(self, audio: bytes, filename: str = "audio") -> str:
+        from .. import config
+
         model = self._load()
         suffix = os.path.splitext(filename)[1] or ".ogg"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
             f.write(audio)
             path = f.name
         try:
-            segments, _info = model.transcribe(path, language="es", beam_size=1)
+            segments, _info = model.transcribe(
+                path,
+                language=config.WHISPER_LANGUAGE or None,
+                beam_size=1,
+            )
             return " ".join(s.text.strip() for s in segments).strip()
         finally:
             try:
@@ -72,11 +78,13 @@ class GroqWhisperProvider:
         boundary = uuid.uuid4().hex
         name = os.path.basename(filename) or "audio.ogg"
         parts = []
-        for field, value in (
+        fields = [
             ("model", config.GROQ_WHISPER_MODEL),
-            ("language", "es"),
             ("response_format", "json"),
-        ):
+        ]
+        if config.WHISPER_LANGUAGE:
+            fields.append(("language", config.WHISPER_LANGUAGE))
+        for field, value in fields:
             parts.append(
                 f"--{boundary}\r\n"
                 f'Content-Disposition: form-data; name="{field}"\r\n\r\n'

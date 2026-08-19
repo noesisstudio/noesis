@@ -186,8 +186,8 @@
   <a class="bn-item {{ 'active' if active=='agenda' }}" href="/b/{{ business.id }}/agenda">
     <span class="ic">{{ ic('agenda') }}</span>Trabajos</a>
   {% if business.is_demo %}
-  <span class="bn-create locked" aria-label="Demo de solo lectura">
-    <span aria-hidden="true">â€“</span>
+  <span class="bn-create locked demo" aria-label="Demo de solo lectura">
+    <span aria-hidden="true">Demo</span>
   </span>
   {% elif subscription_read_only %}
   <a class="bn-create locked" aria-label="Activar Noesis" href="/b/{{ business.id }}/suscripcion">

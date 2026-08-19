@@ -12,8 +12,13 @@ apscheduler>=3.10.0,<4
 python-multipart>=0.0.9,<1
 itsdangerous>=2.1.0,<3
 fpdf2>=2.7.0,<3
-pillow>=11.0.0,<13
+pillow>=12.3.0,<13
 qrcode>=8.0,<9
+# Lectura privada de PDF digital y OCR de PDF escaneado/fotografía. Railway
+# instala además Tesseract y los idiomas cat/spa/eng mediante railpack.json.
+pypdf>=6.15.0,<7
+pypdfium2>=5.6.0,<6
+pytesseract>=0.3.13,<1
 # Audio -> texto (Whisper local). OPCIONAL: instálalo para activar las notas de voz
 # (necesita más RAM; en Railway conviene subir un poco el plan). Quítale el # cuando
 # quieras activarlo, o instálalo aparte con: pip install faster-whisper
