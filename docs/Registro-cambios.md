@@ -90,6 +90,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-19 — guia completa para conectar Google
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio la guia de Google. Al leer el codigo para escribirla
+  aparece el dato que la ordena: **el panel de administracion esta cerrado en
+  produccion** porque `ADMIN_REQUIRE_GOOGLE_OAUTH` vale `IS_PRODUCTION` y las
+  credenciales no existen. La gestion de permisos recien construida es inalcanzable
+  hasta conectarlo.
+- **Areas y archivos:** `docs/Conectar-Google.html` + `.pdf` (nuevos, 7 paginas) y
+  `docs/Inicio.md`. Ningun cambio en `src/`.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** contenido verificado leyendo `web/routers/account.py`
+  (scopes `openid email profile`, `prompt=select_account`, comparacion del `state` con
+  `hmac.compare_digest`, rechazo si `email_verified` no es verdadero o falta `sub`),
+  `config.py`, `web/routers/admin.py`, `web/server.py` y `readiness.py`. HTML sin
+  etiquetas sin cerrar y PDF valido comprobados.
+- **Dependencias o validaciones externas:** la propia conexion sigue pendiente.
+- **Riesgo/punto probable de fallo:** la guia no fija cifras de estado, pero si nombra
+  rutas y variables; si cambian, hay que revisarla. El aviso sobre el panel bloqueado
+  deja de aplicar en cuanto se carguen las credenciales.
+- **Diagnostico y rollback:** cambio solo documental.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-19 — el soporte ya dice por que una entrega esta atascada
 
 - **Autor/agente:** Claude.
