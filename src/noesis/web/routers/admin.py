@@ -102,6 +102,10 @@ def admin_account_support(request: Request, business_id: int):
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
         "trial_expired": bool(trial_ends) and trial_ends < date.today().isoformat(),
+        "delivery_failures": db.admin_support_delivery_failures(business_id),
+        "subscription_blocked": not db.subscription_allows_access(
+            db.get_business(business_id)
+        ),
         "entitlement_labels": billing_adapter.ENTITLEMENT_LABELS,
         "current_entitlements": billing_adapter.entitlements_for(
             db.get_business(business_id)

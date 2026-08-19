@@ -1,5 +1,30 @@
 # Registro de QA
 
+## 2026-08-19 — recorrido real de administracion: dos flujos y tres correcciones
+
+- **Como se probo:** servidor levantado en local con base aparte y un escenario real
+  —propietario y un cliente con la prueba vencida hace 12 dias— recorriendo los dos
+  flujos de verdad, no solo pruebas unitarias.
+- **Flujo 1, activar a un cliente a mano:** funciona extremo a extremo. Desde
+  `/admin/cuentas/<id>` la cuenta pasa a `active`/`pro`, y desde la sesion del cliente
+  desaparece el aviso de modo consulta, la cabecera dice "Suscripcion activa" y el
+  boton de crear se desbloquea.
+- **Flujo 2, un cliente avisa de un bug:** el diagnostico decia "email retrying 1" y
+  nada mas. El motivo estaba en la base (`last_error`) pero no se mostraba, que es
+  justo lo que separa un fallo de configuracion nuestro de una direccion mal escrita
+  del cliente.
+- **Correcciones:** (1) `admin_support_delivery_failures` expone canal, estado,
+  intentos, si se agotaron y el error del proveedor; (2) la etiqueta de fin de prueba
+  ya no dice "vencida" en una cuenta activa, dice "ya no aplica"; (3) los permisos
+  avisan de que la cuenta esta en modo consulta, porque una prueba vencida devuelve
+  entitlements de premium y los cuatro salian como "incluido" en una cuenta bloqueada.
+- **Prueba:** `test_support_shows_why_a_delivery_is_stuck_without_leaking_content`
+  recorre el camino real de la cola (reclamar y fallar) y comprueba el motivo, los
+  intentos y que **no** aparecen destinatario, asunto ni cuerpo. **Verificada por
+  reversion:** introduciendo una fuga del destinatario, la prueba falla.
+- **Alcance:** 109 pruebas de admin, soporte, aislamiento, seguridad y suscripcion en
+  verde; `ruff` limpio.
+
 ## 2026-08-19 — el propietario gestiona permisos de cualquier cuenta
 
 - **Que se anade:** administracion activa con plan, pasa a modo consulta o amplia la

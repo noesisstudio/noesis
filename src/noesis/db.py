@@ -11602,6 +11602,50 @@ def revoke_support_grant(business_id: int, user_id: int) -> bool:
     return bool(cur.rowcount)
 
 
+def admin_support_delivery_failures(business_id: int, limit: int = 12) -> list[dict]:
+    """Entregas atascadas de una cuenta, con el motivo tecnico y sin contenido.
+
+    Cuando un cliente avisa de que "la factura no le ha llegado", el recuento
+    agregado dice que algo falla pero no que hacer. El motivo distingue un
+    problema de configuracion nuestro de una direccion mal escrita suya, que son
+    dos respuestas opuestas. Devuelve metadatos y el error del proveedor: nunca
+    el destinatario, el asunto ni el cuerpo del mensaje.
+    """
+    limit = max(1, min(int(limit), 50))
+    stuck = ("retrying", "failed", "blocked")
+    marks = ",".join("?" for _ in stuck)
+    out: list[dict] = []
+    with get_conn() as conn:
+        for channel, table in (("email", "email_outbox"),
+                               ("whatsapp", "whatsapp_outbox")):
+            rows = conn.execute(
+                f"SELECT id, status, attempts, max_attempts, last_error, "
+                f"updated_at, created_at FROM {table} "
+                f"WHERE business_id=? AND status IN ({marks}) "
+                "ORDER BY updated_at DESC LIMIT ?",
+                (business_id, *stuck, limit),
+            ).fetchall()
+            for row in rows:
+                item = dict(row)
+                error = " ".join(str(item.get("last_error") or "").split())
+                out.append({
+                    "channel": channel,
+                    "id": item["id"],
+                    "status": item["status"],
+                    "attempts": int(item["attempts"] or 0),
+                    "max_attempts": int(item["max_attempts"] or 0),
+                    "exhausted": int(item["attempts"] or 0)
+                    >= int(item["max_attempts"] or 0),
+                    # El error del proveedor es diagnostico, no contenido del
+                    # cliente. Se acota por si alguna traza viniera larga.
+                    "reason": error[:300] or "sin detalle del proveedor",
+                    "updated_at": item["updated_at"],
+                    "created_at": item["created_at"],
+                })
+    out.sort(key=lambda item: str(item["updated_at"] or ""), reverse=True)
+    return out[:limit]
+
+
 def admin_support_snapshot(business_id: int) -> dict | None:
     """Diagnóstico técnico por cuenta sin exponer contenido operativo.
 

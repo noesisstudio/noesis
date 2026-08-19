@@ -6255,6 +6255,46 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertIn("support.access_revoked", events)
         self.assertEqual(owner["business_id"], business["id"])
 
+    def test_support_shows_why_a_delivery_is_stuck_without_leaking_content(self):
+        """Cuando un cliente avisa de que algo no le ha llegado, el recuento
+        agregado dice que falla pero no que hacer. El motivo del proveedor separa
+        un problema de configuracion nuestro de una direccion mal escrita suya."""
+        business, _ = self.make_business("Cuenta con entrega atascada")
+        message = db.enqueue_email_message(
+            business_id=business["id"], to_email="cliente-final@example.com",
+            subject="Factura F-2026-014", text_body="Adjunto su factura.",
+        )
+        # Recorre el camino real: la cola reclama el mensaje antes de fallar.
+        # Sin esto `mark_email_retry` no aplica, porque solo toca 'processing'.
+        # Una marca posterior a la del encolado, para no depender del reloj real.
+        claimed = db.claim_next_email_message(
+            now="2099-01-01T00:00:00", stale_before="2098-12-31T23:55:00",
+        )
+        self.assertEqual(claimed["id"], message["id"])
+        db.mark_email_retry(
+            message["id"], error="SMTP 550 buzon inexistente",
+            next_attempt_at="2026-08-20T10:00:00",
+            updated_at="2026-08-19T10:00:00",
+        )
+
+        fallos = db.admin_support_delivery_failures(business["id"])
+
+        self.assertEqual(len(fallos), 1)
+        fallo = fallos[0]
+        self.assertEqual(fallo["channel"], "email")
+        self.assertEqual(fallo["status"], "retrying")
+        self.assertIn("550", fallo["reason"])
+        self.assertGreaterEqual(fallo["attempts"], 1)
+        self.assertFalse(fallo["exhausted"])
+        # El diagnostico no puede filtrar contenido del cliente.
+        serializado = json.dumps(fallos, default=str)
+        self.assertNotIn("cliente-final@example.com", serializado)
+        self.assertNotIn("Factura F-2026-014", serializado)
+        self.assertNotIn("Adjunto su factura", serializado)
+        # Una cuenta sana no inventa incidencias.
+        limpia, _ = self.make_business("Cuenta sin incidencias")
+        self.assertEqual(db.admin_support_delivery_failures(limpia["id"]), [])
+
     def test_owner_manages_account_permissions_without_entering_the_account(self):
         """El propietario gobierna el plan y el estado de cualquier cuenta, que es
         lo que decide sus permisos. Administracion sigue sin poder abrir el panel

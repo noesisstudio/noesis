@@ -64,7 +64,9 @@
       <div class="stat">
         <div class="lbl">Fin de prueba</div>
         <div class="val support-value">{{ snapshot.business.trial_ends_at | date_es or 'sin fecha' }}</div>
-        <div class="delta flat">{{ 'vencida' if trial_expired else 'vigente' }}</div>
+        <div class="delta flat">
+          {%- if snapshot.business.subscription_status not in ('trial', none) %}ya no aplica
+          {%- elif trial_expired %}vencida{% else %}vigente{% endif %}</div>
       </div>
     </div>
     <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/suscripcion" class="support-form">
@@ -78,6 +80,10 @@
       <button class="btn primary" type="submit" name="action" value="activar">Activar cuenta</button>
     </form>
     <div class="support-subtitle">Qué desbloquea el plan actual</div>
+    {% if subscription_blocked %}
+    <p class="meta" style="margin:0 0 8px">La cuenta está en <b>modo consulta</b>: puede
+      ver estas secciones, pero no crear, cambiar ni enviar nada hasta activarla.</p>
+    {% endif %}
     <div class="support-list">
       {% for key, label in entitlement_labels.items() %}
       <div>
@@ -128,6 +134,31 @@
       {% endfor %}
     </section>
   </div>
+
+  <section class="support-section" id="entregas">
+    <div class="support-section-head">
+      <div><div class="kicker">Diagnóstico</div><h2>Entregas atascadas</h2></div>
+      <span class="meta">Motivo técnico, sin contenido del cliente</span>
+    </div>
+    {% if delivery_failures %}
+    <p class="meta" style="margin:0 0 12px">Esto es lo que responder cuando el cliente
+      dice que algo no ha llegado.</p>
+    <div class="support-list">
+      {% for item in delivery_failures %}
+      <div style="flex-direction:column;align-items:flex-start;gap:4px;text-transform:none">
+        <span><b>{{ item.channel|capitalize }}</b> · {{ item.status|replace('_',' ') }}
+          · intento {{ item.attempts }} de {{ item.max_attempts }}
+          {%- if item.exhausted %} · <b>sin más reintentos</b>{% endif %}</span>
+        <span class="meta">{{ item.reason }}</span>
+        <span class="meta">Último intento: {{ item.updated_at | date_es }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="meta">Ninguna entrega atascada. Si el cliente dice que no ha recibido algo,
+      el problema no está en la cola de salida.</p>
+    {% endif %}
+  </section>
 
   <section class="support-section" id="whatsapp">
     <div class="support-section-head">

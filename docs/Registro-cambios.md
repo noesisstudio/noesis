@@ -90,6 +90,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-19 — el soporte ya dice por que una entrega esta atascada
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio recorrer dos situaciones reales —activar a un cliente
+  a mano y atender un bug suyo— en vez de razonar sobre el codigo. Se levanto la
+  aplicacion en local con un escenario real y se recorrieron ambas.
+- **Areas y archivos:** `db.py` (`admin_support_delivery_failures`),
+  `web/routers/admin.py`, `web/templates/admin_account.html`, `tests/test_backend.py`,
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migracion:** ninguno. Solo lectura sobre las colas existentes.
+- **Pruebas ejecutadas:** prueba nueva verde y **verificada por reversion** (una fuga
+  del destinatario la hace fallar); 109 pruebas de admin, soporte, aislamiento,
+  seguridad y suscripcion en verde; `ruff` limpio; recorrido manual completo de los
+  dos flujos contra el servidor real.
+- **Dependencias o validaciones externas:** ninguna. El recorrido dejo ver que sin
+  SMTP configurado toda entrega de correo se queda en cola: es el P0 de correo real.
+- **Riesgo/punto probable de fallo:** el diagnostico devuelve el error del proveedor,
+  que es texto ajeno. Se acota a 300 caracteres y se normalizan espacios; destinatario,
+  asunto y cuerpo no se leen nunca. La prueba cubre esa frontera.
+- **Diagnostico y rollback:** cambio acotado a una funcion de lectura y su seccion.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-19 — el propietario gestiona permisos; se retira el acceso a cuentas
 
 - **Autor/agente:** Claude.
