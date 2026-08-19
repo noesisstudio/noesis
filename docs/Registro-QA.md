@@ -1,23 +1,18 @@
 # Registro de QA
 
-## 2026-08-19 — mando del propietario sobre las cuentas, sin editor universal
+## 2026-08-19 — el propietario gestiona permisos de cualquier cuenta
 
-- **Que se anade:** administracion puede activar con plan, pasar a modo consulta o
-  ampliar la prueba de cualquier cuenta, y abrir su panel en solo lectura.
-- **Como se contiene:** `auth_guard` es el unico punto que autoriza `/b/` y `/api/`;
-  ahi se permite la vista cruzada solo si hay marca de sesion, el usuario es
-  administrador y el metodo es GET o HEAD. Cualquier otro metodo responde 403 con
-  codigo `admin_read_only`. El aviso en pantalla es permanente y hay salida explicita.
-- **Prueba:** `test_owner_can_switch_a_subscription_and_look_without_editing` recorre
-  el ciclo entero —activar una cuenta ajena, entrar, intentar escribir, salir— y
-  comprueba el 403, el aviso, que el cliente colado no existe, que al salir se cierra
-  la puerta y que `admin.subscription_changed`, `admin.account_entered` y
-  `admin.account_left` estan en la bitacora encadenada. **Verificada por reversion:**
-  desactivando el bloqueo de escritura, la prueba falla.
+- **Que se anade:** administracion activa con plan, pasa a modo consulta o amplia la
+  prueba de cualquier cuenta, y ve que funciones desbloquea el plan vigente.
+- **Que NO se anade:** acceso al panel del cliente. Se construyo y se retiro a peticion
+  del propietario. `auth_guard` queda identico al original.
+- **Prueba:** `test_owner_manages_account_permissions_without_entering_the_account`
+  recorre autonomo -> negocio -> desactivada comprobando el plan, los entitlements
+  efectivos (`frozenset()` en Autonomo, Proyectos incluido en Negocio),
+  `subscription_allows_access` en cada paso, que el panel ajeno sigue redirigiendo
+  fuera y que los tres cambios estan en la bitacora encadenada con el negocio correcto.
 - **Alcance:** 108 pruebas de admin, soporte, aislamiento, seguridad y suscripcion en
   verde; `ruff` limpio.
-- **Limite conocido:** para modificar datos de un negocio sigue haciendo falta la
-  ventana que abre su titular. La vista de administracion no la sustituye.
 
 ## 2026-08-19 — la pagina de suscripcion ensenaba una marca ISO y un estado falso
 

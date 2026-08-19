@@ -2,25 +2,23 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
-## El propietario manda sobre las cuentas, pero mirar no es editar (2026-08-19)
+## El propietario gestiona permisos, no entra en las cuentas (2026-08-19)
 
-Administración puede activar, desactivar o ampliar la prueba de cualquier cuenta, y
-abrir su panel para verlo. Es una necesidad real del propietario: dar de alta a un
-piloto sin pasar por Stripe, devolver una cuenta a modo consulta o entender qué ve un
-cliente que llama con un problema.
+Administración puede activar cualquier cuenta con un plan, devolverla a modo consulta
+o ampliar su prueba, y ver qué funciones desbloquea ese plan. Es el mando comercial
+que el propietario necesitaba: dar de alta a un piloto sin depender de que Stripe esté
+configurado, o retirar el acceso.
 
-La vista de otra cuenta es **de solo lectura**: `auth_guard` rechaza cualquier método
-que no sea GET o HEAD mientras dura, la pantalla lo anuncia con un aviso permanente, y
-la entrada, la salida y cada cambio de suscripción quedan en la bitácora encadenada.
-No se crea una sesión suplantada: el usuario sigue siendo el administrador.
+**No incluye abrir el panel del cliente.** Se evaluó y se descartó a petición del
+propietario: gestionar el acceso de una cuenta no exige ver sus datos. El guardián
+que aísla los negocios (`auth_guard`) queda exactamente como estaba, y para intervenir
+sobre datos sigue haciendo falta la ventana que abre el titular, con motivo, alcance y
+caducidad.
 
-Motivo: el mando sobre el ciclo comercial es del propietario y no debía depender de
-que Stripe estuviera configurado. Pero abrir además la escritura convertiría esto en
-el editor universal que descarta [[Decisiones]] de 2026-08-08, y dejaría al cliente
-sin forma de distinguir lo que hizo él de lo que hicimos nosotros. Para modificar
-datos de un negocio sigue haciendo falta la ventana que abre su titular, con motivo,
-alcance y caducidad. Si el piloto demuestra que hace falta escribir, se amplía por
-ámbitos concretos y auditados, no de golpe.
+Motivo: separar *administrar el contrato* de *acceder al contenido*. Lo primero es una
+función normal de cualquier SaaS y no toca información de terceros. Lo segundo cambia
+la relación de confianza y obligaría a revisar el contrato de encargo. Mantenerlos
+separados deja el mando comercial completo sin ampliar la superficie de riesgo.
 
 ## Stripe confirma cada cambio irreversible en un flujo acotado (2026-08-14)
 

@@ -928,9 +928,6 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .sub-state.past_due, .sub-state.canceled { background:var(--red-soft); color:var(--red); }
 /* Prueba vencida: el estado sigue siendo "trial" pero ya no da acceso. */
 .sub-state.trial.expired { background:var(--red-soft); color:var(--red); }
-/* Vista de administracion: se distingue del modo consulta del cliente. */
-.readonly-banner.admin-view { border-color:var(--amber); background:var(--amber-soft); }
-.readonly-banner.admin-view b { color:var(--amber); }
 /* Controles del propietario en la ficha de cuenta. */
 .support-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; margin-top:12px; }
 .support-form label { display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--muted); }

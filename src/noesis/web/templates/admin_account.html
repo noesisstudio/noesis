@@ -50,9 +50,11 @@
 
   <section class="support-section" id="suscripcion">
     <div class="support-section-head">
-      <div><div class="kicker">Control del propietario</div><h2>Suscripción y acceso</h2></div>
+      <div><div class="kicker">Control del propietario</div><h2>Permisos de la cuenta</h2></div>
       <span class="meta">Cada cambio queda registrado</span>
     </div>
+    <p class="meta" style="margin:0 0 14px">El plan decide qué puede usar esta cuenta.
+      Aquí se cambian sus permisos y su estado; no se accede a sus datos.</p>
     <div class="admin-grid">
       <div class="stat">
         <div class="lbl">Estado</div>
@@ -75,16 +77,22 @@
       </label>
       <button class="btn primary" type="submit" name="action" value="activar">Activar cuenta</button>
     </form>
+    <div class="support-subtitle">Qué desbloquea el plan actual</div>
+    <div class="support-list">
+      {% for key, label in entitlement_labels.items() %}
+      <div>
+        <span>{{ label }}</span>
+        <span class="{{ 'green' if key in current_entitlements else '' }}">
+          {{ 'incluido' if key in current_entitlements else 'bloqueado' }}</span>
+      </div>
+      {% endfor %}
+    </div>
     <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/suscripcion" class="support-form">
       <label>Ampliar la prueba
         <input type="number" name="trial_days" value="14" min="1" max="365">
       </label>
       <button class="btn" type="submit" name="action" value="ampliar_prueba">Ampliar días</button>
       <button class="btn danger" type="submit" name="action" value="desactivar">Pasar a modo consulta</button>
-    </form>
-    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/acceder" class="support-form">
-      <button class="btn" type="submit">Entrar en el panel (solo lectura)</button>
-      <span class="meta">Verás la cuenta como administración, con aviso en pantalla. No podrás modificar nada.</span>
     </form>
   </section>
 

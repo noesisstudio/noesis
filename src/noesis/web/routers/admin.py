@@ -10,6 +10,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from ... import config, db, readiness, security_center
+from ...adapters import billing as billing_adapter
 from ...adapters import email as email_adapter
 from .. import auth, backups
 from ..deps import TEMPLATES
@@ -101,6 +102,10 @@ def admin_account_support(request: Request, business_id: int):
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
         "trial_expired": bool(trial_ends) and trial_ends < date.today().isoformat(),
+        "entitlement_labels": billing_adapter.ENTITLEMENT_LABELS,
+        "current_entitlements": billing_adapter.entitlements_for(
+            db.get_business(business_id)
+        ),
         "whatsapp_connections": db.list_whatsapp_connections(business_id),
         "document_support": document_support,
         "configuration_support": configuration_support,
@@ -315,45 +320,6 @@ def admin_account_subscription(
         metadata=detail,
     )
     return RedirectResponse(target, status_code=303)
-
-
-@router.post("/admin/cuentas/{business_id}/acceder")
-def admin_account_enter(request: Request, business_id: int):
-    """Abre el panel de un negocio en modo lectura para administracion.
-
-    No crea una sesion suplantada: el usuario sigue siendo el administrador y la
-    vista queda marcada en pantalla. Las escrituras siguen bloqueadas, para no
-    convertir esto en el editor universal que Decisiones.md descarta.
-    """
-    if not _is_admin(request):
-        return RedirectResponse("/login", status_code=303)
-    user = auth.current_user(request)
-    business = db.get_business(business_id)
-    if not business:
-        request.session["admin_error"] = "Esa cuenta no existe."
-        return RedirectResponse("/admin#cuentas", status_code=303)
-    request.session["admin_view_business"] = business_id
-    db.record_security_event(
-        "admin.account_entered", area="admin",
-        actor_user_id=user["id"], subject_business_id=business_id,
-        request_id=getattr(request.state, "request_id", None),
-        metadata={"mode": "read_only"},
-    )
-    return RedirectResponse(f"/b/{business_id}/resumen", status_code=303)
-
-
-@router.post("/admin/salir-de-cuenta")
-def admin_account_leave(request: Request):
-    """Cierra la vista de administracion y devuelve al panel."""
-    business_id = request.session.pop("admin_view_business", None)
-    user = auth.current_user(request)
-    if user and business_id:
-        db.record_security_event(
-            "admin.account_left", area="admin",
-            actor_user_id=user["id"], subject_business_id=int(business_id),
-            request_id=getattr(request.state, "request_id", None),
-        )
-    return RedirectResponse("/admin#cuentas", status_code=303)
 
 
 @router.post("/admin/solicitudes/{request_id}/estado")
