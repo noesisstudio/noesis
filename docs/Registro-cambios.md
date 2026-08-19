@@ -23,6 +23,33 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-19 — los documentos dejan de fijar cifras que se desincronizan
+
+- **Autor/agente:** Claude.
+- **Objetivo:** la revision detecto que los tres documentos publicados afirmaban
+  "esquema 47 y 469 pruebas". `project-state.json` ya va por 48 y 485, asi que los PDF
+  mentian nueve dias despues de escribirse.
+- **Areas y archivos:** `docs/WhatsApp-Como-funciona`, `docs/WhatsApp-Puesta-en-marcha`
+  y `docs/Estrategia-Marketing` (html + pdf).
+  - No se actualizan los numeros: se **eliminan**. `AGENTS.md` §5 ya lo prohibe —"no
+    fijar conteos de pruebas ni migraciones: se desincronizan"— y la regla vale igual
+    para un PDF que para el manual. Ahora remiten a `project-state.json`, que es la
+    fuente viva.
+  - Se conserva una unica mencion, fechada: "verificado sobre `main` el 10-ago-2026
+    (esquema 47 entonces)". Es procedencia historica, no estado, y por eso no caduca.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** los tres HTML sin etiquetas sin cerrar, los tres PDF
+  regenerados y validos (8, 16 y 13 paginas) y ninguno mas antiguo que su fuente.
+  Revalidado ademas que **el fallo de plantillas multilinea sigue vivo** en `main`:
+  `web/scheduler.py` conserva `"
+".join(lines)` en dos puntos y `_meta_payload()`
+  sigue sin sanear. Los documentos aciertan al darlo por abierto.
+- **Dependencias o validaciones externas:** ninguna nueva.
+- **Riesgo/punto probable de fallo:** cualquier documento que vuelva a fijar una cifra
+  de estado caducara igual. La regla es remitir a `project-state.json`.
+- **Diagnostico y rollback:** cambio solo documental.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-19 — revision del modelo economico: tres defectos corregidos
 
 - **Autor/agente:** Claude.
