@@ -2558,6 +2558,51 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertIn('class="plan selected-plan"', page.text)
         provider.subscription_snapshot.assert_called_once()
 
+    def test_subscription_page_shows_human_dates_and_a_finished_trial(self):
+        """La cabecera no puede ensenar una marca ISO ni decir "En prueba" a
+        quien ya esta en modo consulta: el estado sigue siendo 'trial' hasta que
+        alguien contrata, y la caducidad solo se ve comparando la fecha."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Prueba caducada")
+        db.create_user(
+            "prueba-caducada@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "prueba-caducada@example.com",
+                "password": TEST_PASSWORD,
+            })
+            db.set_trial(business["id"], days=20)
+            vigente = client.get(f"/b/{business['id']}/suscripcion")
+            db.set_trial(business["id"], days=-30)
+            caducada = client.get(f"/b/{business['id']}/suscripcion")
+
+        self.assertEqual(vigente.status_code, 200)
+        self.assertEqual(caducada.status_code, 200)
+        # Ninguna de las dos ensena la marca ISO interna.
+        self.assertNotIn("T00:00:00", vigente.text)
+        self.assertNotIn("T00:00:00", caducada.text)
+        # Prueba vigente: se anuncia como tal y con fecha legible.
+        futura = (date.today() + timedelta(days=20)).strftime("%d/%m/%Y")
+        self.assertIn("En prueba", vigente.text)
+        self.assertIn(futura, vigente.text)
+        # Prueba vencida: deja de decir "En prueba" y se marca en rojo.
+        pasada = (date.today() - timedelta(days=30)).strftime("%d/%m/%Y")
+        self.assertIn("Prueba terminada", caducada.text)
+        self.assertIn(pasada, caducada.text)
+        self.assertNotIn("En prueba", caducada.text)
+        self.assertIn("sub-state trial expired", caducada.text)
+        # Y el producto coincide: sin acceso de escritura.
+        self.assertFalse(
+            db.subscription_allows_access(db.get_business(business["id"]))
+        )
+
     def test_active_subscription_is_managed_without_a_second_checkout(self):
         from starlette.testclient import TestClient
         from noesis.web import server

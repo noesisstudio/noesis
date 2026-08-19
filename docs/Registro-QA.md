@@ -1,5 +1,26 @@
 # Registro de QA
 
+## 2026-08-19 — la pagina de suscripcion ensenaba una marca ISO y un estado falso
+
+- **Que fallaba:** con la prueba ya vencida, la cabecera de `/b/<id>/suscripcion`
+  mostraba `En prueba · hasta 2026-07-20T00:00:00`. Dos defectos a la vez: la marca
+  ISO interna en lugar de una fecha legible, y la etiqueta "En prueba" en una cuenta
+  que el propio panel ya trataba como modo consulta. El estado en base de datos sigue
+  siendo `trial` hasta que alguien contrata; la caducidad solo se deduce comparando
+  `trial_ends_at` con hoy, como hace `db.subscription_allows_access`.
+- **Correccion:** `pages.py` calcula `trial_expired` con la misma regla y lo pasa a la
+  plantilla; `suscripcion.html` aplica el filtro `date_es` —que ya existia en
+  `deps.py` con el comentario "evita que los portales ensenen marcas ISO internas" y
+  que esta pagina no usaba— y distingue "Prueba terminada" de "En prueba"; `app.css`
+  pinta en rojo el estado vencido.
+- **Prueba:** `test_subscription_page_shows_human_dates_and_a_finished_trial` cubre
+  prueba vigente y vencida, comprueba que no aparece `T00:00:00`, que la fecha sale en
+  `dd/mm/aaaa`, que el rotulo cambia y que coincide con `subscription_allows_access`.
+  Verificada por reversion: sin la correccion, falla.
+- **Alcance:** 97 pruebas de suscripcion, planes y prueba gratuita en verde; `ruff`
+  limpio. Solo afecta a la presentacion del estado: no cambia permisos, cobros ni la
+  maquina de estados de Stripe.
+
 ## 2026-08-17 — dependencia OCR real de Railway
 
 - La comprobación por SSH demostró que Tesseract 5.3.0 y `cat/eng/osd/spa` sí estaban

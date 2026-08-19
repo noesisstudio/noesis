@@ -90,6 +90,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-19 — la suscripcion mostraba una marca ISO y anunciaba una prueba vencida
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder abrio su cuenta y la cabecera decia
+  `En prueba · hasta 2026-07-20T00:00:00`, un mes despues de vencer.
+- **Areas y archivos:** `src/noesis/web/routers/pages.py` (calcula `trial_expired`),
+  `src/noesis/web/templates/suscripcion.html` (filtro `date_es` y rotulo real),
+  `src/noesis/web/static/app.css` (estado vencido en rojo),
+  `tests/test_backend.py` (prueba nueva), `docs/project-state.json`,
+  `docs/Registro-QA.md`.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** prueba nueva verde y **verificada por reversion** —sin la
+  correccion falla—; 97 pruebas de suscripcion, planes y prueba gratuita en verde;
+  `ruff` limpio; `check_project_truth.py` en verde.
+- **Dependencias o validaciones externas:** ninguna. No toca Stripe ni permisos.
+- **Riesgo/punto probable de fallo:** solo presentacion. Si otra pantalla imprime
+  `trial_ends_at` sin `date_es`, repetira el mismo defecto; el filtro existe desde
+  hace tiempo y varias plantillas podrian no usarlo.
+- **Diagnostico y rollback:** revertir el commit devuelve la cabecera anterior sin
+  afectar a datos.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-19 — los documentos dejan de fijar cifras que se desincronizan
 
 - **Autor/agente:** Claude.

@@ -926,6 +926,8 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .sub-state.trial { background:var(--amber-soft); color:var(--amber); }
 .sub-state.active { background:var(--green-soft); color:var(--green); }
 .sub-state.past_due, .sub-state.canceled { background:var(--red-soft); color:var(--red); }
+/* Prueba vencida: el estado sigue siendo "trial" pero ya no da acceso. */
+.sub-state.trial.expired { background:var(--red-soft); color:var(--red); }
 
 /* ---- Onboarding SaaS: cuenta -> perfil -> canal ---- */
 .onboarding-center { min-height:100vh; display:grid; place-items:center; padding:28px; }

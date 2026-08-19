@@ -9,9 +9,10 @@
   </div>
   <div class="page-actions">
     {% set st = business.subscription_status or 'trial' %}
-    <span class="sub-state {{ st }}">
+    <span class="sub-state {{ st }}{% if st == 'trial' and trial_expired %} expired{% endif %}">
       {% if st in ('active', 'trialing') %}Suscripción activa
-      {% elif st == 'trial' %}En prueba{% if business.trial_ends_at %} · hasta {{ business.trial_ends_at }}{% endif %}
+      {% elif st == 'trial' and trial_expired %}Prueba terminada{% if business.trial_ends_at %} · el {{ business.trial_ends_at | date_es }}{% endif %}
+      {% elif st == 'trial' %}En prueba{% if business.trial_ends_at %} · hasta el {{ business.trial_ends_at | date_es }}{% endif %}
       {% elif st in ('pending', 'incomplete') %}Confirmando el pago
       {% elif st in ('past_due', 'unpaid') %}Pago pendiente
       {% elif st == 'paused' %}Suscripción pausada

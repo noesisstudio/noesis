@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 from xml.sax.saxutils import escape
 
 from fastapi import APIRouter, Request
@@ -298,6 +299,11 @@ def subscription_page(
     is_active_subscription = (biz or {}).get("subscription_status") in {
         "active", "trialing",
     }
+    # El estado se queda en "trial" al vencer la prueba: la caducidad se deduce
+    # de la fecha, igual que en db.subscription_allows_access. Sin esto la
+    # pagina anuncia "En prueba" a una cuenta que ya esta en modo consulta.
+    trial_ends = str((biz or {}).get("trial_ends_at") or "")
+    trial_expired = bool(trial_ends) and trial_ends < date.today().isoformat()
     preferred_plan = (
         active_plan
         if is_active_subscription
@@ -318,6 +324,7 @@ def subscription_page(
         "preferred_plan": preferred_plan,
         "preferred_billing": preferred_billing,
         "is_active_subscription": is_active_subscription,
+        "trial_expired": trial_expired,
         "current_plan": active_plan if is_active_subscription else "",
         "current_plan_label": {
             "autonomo": "Autónomo", "pro": "Negocio", "premium": "Premium",
