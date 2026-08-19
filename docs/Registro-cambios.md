@@ -23,6 +23,44 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-19 — revision del modelo economico: tres defectos corregidos
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio revisar que todo funcionase. La revision encontro tres
+  defectos reales en lo entregado los dias 10 y 11, todos ya en `main`.
+- **Areas y archivos:** `analysis/build_modelo_economico.py`, `pyproject.toml` y el
+  libro que genera.
+  1. **Ruta absoluta de una carpeta temporal** codificada en el generador
+     (`sys.path.insert` a un directorio de sesion). El script publicado no podia
+     ejecutarse en ninguna otra maquina, ni en la misma tras limpiarse el temporal.
+     Sustituida por un import normal con mensaje de ayuda si falta la libreria.
+  2. **`openpyxl` no estaba declarado** en ninguna parte. Se anade el extra
+     `analysis` a `pyproject.toml`: `pip install -e ".[analysis]"`.
+  3. **Dos celdas mostraban `#NAME?` en Excel.** Las etiquetas `= Margen bruto` y
+     `= RESULTADO` de la hoja `Calculadora` empiezan por `=`, asi que Excel las
+     interpretaba como formula. Renombradas a `MARGEN BRUTO` y `RESULTADO DEL MES`,
+     con la deteccion de totales por nombre en vez de por prefijo.
+  - Ademas, seis avisos de `ruff` (E402 y F811) por imports duplicados a mitad de
+     fichero, que el CI habria rechazado. Limpiados.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** el generador reproduce el libro publicado con **cero celdas
+  de diferencia**. Barrido completo del libro: 1.014 referencias entre hojas, ninguna
+  a una hoja inexistente, y **cero errores de formula** tras la correccion (antes
+  dos). Contraste de los valores que **Excel calculo de verdad** con los datos que el
+  founder introdujo (1 Autonomo, 5 Negocio, 2 Premium): ingreso 472 €, costes
+  variables 53,64 €, servicio 103,96 €, fijos 3.565 €, resultado -3.250,60 € y
+  equilibrio en 91 clientes; coincide con el calculo independiente en Python. Los
+  cuatro HTML sin etiquetas sin cerrar, los tres PDF validos y ninguno mas antiguo que
+  su fuente, y los cinco enlaces de `Inicio.md` resuelven. `ruff` limpio y
+  `check_project_truth.py` en verde.
+- **Dependencias o validaciones externas:** ninguna nueva.
+- **Riesgo/punto probable de fallo:** el libro versionado conserva los valores 1/5/2
+  que el founder introdujo en la calculadora; una regeneracion limpia los devuelve a
+  cero. No afecta a ninguna formula.
+- **Diagnostico y rollback:** `pip install -e ".[analysis]"` y despues
+  `python analysis/build_modelo_economico.py`.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-11 — calculadora por numero de clientes
 
 - **Autor/agente:** Claude.

@@ -4,10 +4,15 @@ Todas las cifras proceden de docs/Unit-economics-y-cerebro-interno.md y de
 analysis/build_unit_economics.mjs (fechadas 15/07/2026). Lo que no consta en el
 repositorio se deja como celda PENDIENTE: no se inventa ningun dato.
 """
+import os
 import sys
-sys.path.insert(0, r"C:\Users\xavie\AppData\Local\Temp\claude\c--Users-xavie-Documents-GitHub-noesis\c99a232e-eeaa-4dd9-8f3d-e85b1e5a327f\scratchpad\pylibs")
 
-from openpyxl import Workbook
+try:
+    from openpyxl import Workbook
+except ModuleNotFoundError:
+    raise SystemExit(
+        'Falta openpyxl. Instalalo con: pip install -e ".[analysis]"'
+    )
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.formatting.rule import CellIsRule, ColorScaleRule
@@ -300,20 +305,22 @@ header(ws, 36, ["Metrica", "Mensual", "", "", "Anual", "Nota"])
 result_rows = [
     ("Ingreso", "=D9", "Sin IVA"),
     ("(-) Costes variables", "=-E20", "Escalan con cada cliente nuevo"),
-    ("= Margen bruto", "=B37+B38", "Lo que queda para pagar estructura"),
+    ("MARGEN BRUTO", "=B37+B38", "Lo que queda para pagar estructura"),
     ("(-) Coste de servicio", "=-E26", "Soporte y onboarding"),
     ("(-) Costes fijos", "=-B33", "Plataforma, opex y publicidad"),
-    ("= RESULTADO", "=B39+B40+B41", "Lo que gana o pierde la empresa cada mes"),
+    ("RESULTADO DEL MES", "=B39+B40+B41", "Lo que gana o pierde la empresa cada mes"),
 ]
 for i, (lab, f, nota) in enumerate(result_rows):
     r = 37 + i
-    is_total = lab.startswith("=")
+    # Ojo: una etiqueta que empiece por "=" la interpreta Excel como formula
+    # y muestra #NAME?. Los totales se marcan por nombre, no por prefijo.
+    is_total = lab in ("MARGEN BRUTO", "RESULTADO DEL MES")
     ws.cell(row=r, column=1, value=lab).font = Font(
         name="Aptos", size=10, bold=is_total, color=FOREST if is_total else INK)
     c = ws.cell(row=r, column=2, value=f)
     c.number_format = EUR0
     c.border = BOX
-    c.font = Font(name="Aptos", size=13 if lab == "= RESULTADO" else 10,
+    c.font = Font(name="Aptos", size=13 if lab == "RESULTADO DEL MES" else 10,
                   bold=is_total, color=FOREST if is_total else CALC)
     if is_total:
         c.fill = PatternFill("solid", fgColor=CREAM)
@@ -686,7 +693,6 @@ for i, n in enumerate([10, 25, 50, 100, 120, 150, 200, 300, 500, 750, 1000]):
     c4.font = Font(name="Aptos", size=10, bold=True, color=CALC)
 
 ws.conditional_formatting  # marcador: el color se aplica abajo
-from openpyxl.formatting.rule import CellIsRule
 ws.conditional_formatting.add(
     "E5:E15",
     CellIsRule(operator="lessThan", formula=["0"], font=Font(color=STOP, bold=True)))
@@ -897,7 +903,6 @@ sel.value = "Base"
 sel.font = Font(name="Aptos", size=11, bold=True, color=INPUT)
 sel.fill = PatternFill("solid", fgColor=CREAM)
 sel.border = BOX
-from openpyxl.worksheet.datavalidation import DataValidation
 dv = DataValidation(type="list", formula1='"Pesimista,Base,Optimista"', allow_blank=False)
 ws.add_data_validation(dv)
 dv.add(sel)
@@ -1064,7 +1069,6 @@ for i, ov in enumerate(opexes):
         c = ws.cell(row=r, column=2 + j, value=f"=IFERROR(ROUNDUP($A{r}/{col}$5,0),\"\")")
         c.number_format = '#,##0'
         c.border = BOX
-from openpyxl.formatting.rule import ColorScaleRule
 ws.conditional_formatting.add("B6:H14", ColorScaleRule(
     start_type='min', start_color='FFDDEFE7',
     end_type='max', end_color='FFF7E8E3'))
@@ -1300,7 +1304,6 @@ ws["A18"].font = Font(name="Aptos", size=9.5, color=MUTED)
 ws.merge_cells("A18:D21")
 
 # --- Guardar ---------------------------------------------------------------
-import os
 DEFAULT_OUT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "docs", "Noesis-Modelo-Economico.xlsx",
