@@ -90,6 +90,33 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-19 — el propietario ya puede habilitar cuentas y mirarlas
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder, propietario del producto, pidio poder habilitar y
+  deshabilitar perfiles y entrar en el panel de cualquier empresa como administrador.
+  Su propia cuenta estaba bloqueada con la prueba vencida y sin Stripe configurado.
+- **Areas y archivos:** `web/routers/admin.py` (tres rutas nuevas: suscripcion,
+  acceder, salir), `web/deps.py` (`auth_guard` admite la vista cruzada en solo
+  lectura), `web/templates/admin_account.html` (controles), `web/templates/base.html`
+  (aviso permanente), `web/static/app.css`, `tests/test_backend.py`,
+  `docs/Decisiones.md`, `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migracion:** ninguno. Reutiliza `set_subscription` y `set_trial`.
+- **Pruebas ejecutadas:** prueba nueva verde y **verificada por reversion**; 108
+  pruebas de admin, soporte, aislamiento, seguridad y suscripcion en verde; `ruff`
+  limpio; `check_project_truth.py` en verde. Suite completa lanzada aparte.
+- **Dependencias o validaciones externas:** ninguna. Activar desde administracion no
+  cobra: es un alta manual y no sustituye la validacion pendiente de Stripe.
+- **Riesgo/punto probable de fallo:** `auth_guard` es el unico guardian de `/b/` y
+  `/api/`; un fallo ahi afectaria al aislamiento entre negocios, que es la garantia
+  central del producto. Por eso la vista cruzada exige tres condiciones a la vez
+  —marca de sesion, usuario administrador y metodo de lectura— y la prueba cubre el
+  intento de escritura. **Pendiente de decision del founder:** el contrato de encargo
+  publicado debe describir esta vista de administracion; hoy no la menciona.
+- **Diagnostico y rollback:** revertir el commit cierra la vista; los cambios de
+  suscripcion ya aplicados persisten y se revierten desde la misma pantalla.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-19 — la suscripcion mostraba una marca ISO y anunciaba una prueba vencida
 
 - **Autor/agente:** Claude.

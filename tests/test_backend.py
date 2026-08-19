@@ -6255,6 +6255,80 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertIn("support.access_revoked", events)
         self.assertEqual(owner["business_id"], business["id"])
 
+    def test_owner_can_switch_a_subscription_and_look_without_editing(self):
+        """El propietario necesita mando sobre las cuentas, pero mirar una cuenta
+        ajena no puede convertirse en el editor universal que Decisiones.md
+        descarta: la vista entra en solo lectura y queda registrada."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Panel del propietario")
+        target, _ = self.make_business("Cuenta de un piloto")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+        db.set_trial(target["id"], days=-5)
+        self.assertFalse(
+            db.subscription_allows_access(db.get_business(target["id"])),
+            "la prueba vencida deberia dejar la cuenta en modo consulta",
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            })
+            # 1. Activar una cuenta ajena desde administracion.
+            client.post(
+                f"/admin/cuentas/{target['id']}/suscripcion",
+                data={"action": "activar", "plan": "pro"},
+                follow_redirects=False,
+            )
+            activada = db.get_business(target["id"])
+            # 2. Entrar a mirarla.
+            entrada = client.post(
+                f"/admin/cuentas/{target['id']}/acceder", follow_redirects=False,
+            )
+            panel = client.get(f"/b/{target['id']}/resumen")
+            # 3. Intentar escribir mientras se mira.
+            escritura = client.post(
+                f"/api/{target['id']}/clients",
+                json={"name": "Cliente colado"},
+                follow_redirects=False,
+            )
+            # 4. Salir y comprobar que se cierra la puerta.
+            client.post("/admin/salir-de-cuenta", follow_redirects=False)
+            despues = client.get(
+                f"/b/{target['id']}/resumen", follow_redirects=False,
+            )
+
+        self.assertEqual(activada["subscription_status"], "active")
+        self.assertEqual(activada["plan"], "pro")
+        self.assertTrue(db.subscription_allows_access(activada))
+        self.assertEqual(entrada.status_code, 303)
+        # Mira la cuenta ajena y el aviso lo deja claro.
+        self.assertEqual(panel.status_code, 200)
+        self.assertIn("como administración", panel.text)
+        # Pero no puede escribir en ella.
+        self.assertEqual(escritura.status_code, 403)
+        self.assertEqual(
+            len(db.list_clients(target["id"])),
+            len([c for c in db.list_clients(target["id"])
+                 if c["name"] != "Cliente colado"]),
+        )
+        # Al salir vuelve a estar fuera.
+        self.assertEqual(despues.status_code, 307)
+        # Y todo queda en la bitacora encadenada.
+        eventos = {e["event_type"] for e in db.list_security_events(limit=80)}
+        self.assertIn("admin.subscription_changed", eventos)
+        self.assertIn("admin.account_entered", eventos)
+        self.assertIn("admin.account_left", eventos)
+
     def test_support_snapshot_is_admin_only_private_and_audited(self):
         from starlette.testclient import TestClient
         from noesis.web import server

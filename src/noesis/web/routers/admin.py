@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+from datetime import date
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
@@ -96,8 +97,10 @@ def admin_account_support(request: Request, business_id: int):
             request_id=getattr(request.state, "request_id", None),
             metadata={"grant_id": configuration_support["grant_id"]},
         )
+    trial_ends = str((snapshot.get("business") or {}).get("trial_ends_at") or "")
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
+        "trial_expired": bool(trial_ends) and trial_ends < date.today().isoformat(),
         "whatsapp_connections": db.list_whatsapp_connections(business_id),
         "document_support": document_support,
         "configuration_support": configuration_support,
@@ -260,6 +263,97 @@ def admin_update_whatsapp_business(
     except ValueError as exc:
         request.session["admin_error"] = str(exc)
     return RedirectResponse(f"/admin/cuentas/{business_id}#whatsapp", status_code=303)
+
+
+@router.post("/admin/cuentas/{business_id}/suscripcion")
+def admin_account_subscription(
+    request: Request,
+    business_id: int,
+    action: str = Form(...),
+    plan: str = Form("pro"),
+    trial_days: str = Form("14"),
+):
+    """Habilita o deshabilita una cuenta desde administracion.
+
+    Cubre el caso real del propietario: activar a un piloto sin pasar por Stripe,
+    devolver a modo consulta o ampliar una prueba vencida. No toca datos del
+    negocio ni suplanta a nadie: solo mueve el estado de la suscripcion, y cada
+    cambio queda en la bitacora encadenada.
+    """
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    business = db.get_business(business_id)
+    if not business:
+        request.session["admin_error"] = "Esa cuenta no existe."
+        return RedirectResponse("/admin#cuentas", status_code=303)
+    target = f"/admin/cuentas/{business_id}#suscripcion"
+    try:
+        if action == "activar":
+            if plan not in {"autonomo", "pro", "premium"}:
+                raise ValueError("Ese plan no existe.")
+            db.set_subscription(business_id, "active", plan=plan)
+            detail = {"action": "activar", "plan": plan}
+        elif action == "desactivar":
+            db.set_subscription(business_id, "canceled")
+            detail = {"action": "desactivar"}
+        elif action == "ampliar_prueba":
+            days = int(str(trial_days).strip() or "14")
+            if not 1 <= days <= 365:
+                raise ValueError("La prueba debe durar entre 1 y 365 dias.")
+            db.set_trial(business_id, days=days)
+            detail = {"action": "ampliar_prueba", "days": days}
+        else:
+            raise ValueError("Accion no reconocida.")
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+        return RedirectResponse(target, status_code=303)
+    db.record_security_event(
+        "admin.subscription_changed", area="admin",
+        actor_user_id=user["id"], subject_business_id=business_id,
+        request_id=getattr(request.state, "request_id", None),
+        metadata=detail,
+    )
+    return RedirectResponse(target, status_code=303)
+
+
+@router.post("/admin/cuentas/{business_id}/acceder")
+def admin_account_enter(request: Request, business_id: int):
+    """Abre el panel de un negocio en modo lectura para administracion.
+
+    No crea una sesion suplantada: el usuario sigue siendo el administrador y la
+    vista queda marcada en pantalla. Las escrituras siguen bloqueadas, para no
+    convertir esto en el editor universal que Decisiones.md descarta.
+    """
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    business = db.get_business(business_id)
+    if not business:
+        request.session["admin_error"] = "Esa cuenta no existe."
+        return RedirectResponse("/admin#cuentas", status_code=303)
+    request.session["admin_view_business"] = business_id
+    db.record_security_event(
+        "admin.account_entered", area="admin",
+        actor_user_id=user["id"], subject_business_id=business_id,
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"mode": "read_only"},
+    )
+    return RedirectResponse(f"/b/{business_id}/resumen", status_code=303)
+
+
+@router.post("/admin/salir-de-cuenta")
+def admin_account_leave(request: Request):
+    """Cierra la vista de administracion y devuelve al panel."""
+    business_id = request.session.pop("admin_view_business", None)
+    user = auth.current_user(request)
+    if user and business_id:
+        db.record_security_event(
+            "admin.account_left", area="admin",
+            actor_user_id=user["id"], subject_business_id=int(business_id),
+            request_id=getattr(request.state, "request_id", None),
+        )
+    return RedirectResponse("/admin#cuentas", status_code=303)
 
 
 @router.post("/admin/solicitudes/{request_id}/estado")

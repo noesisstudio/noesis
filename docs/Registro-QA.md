@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-08-19 — mando del propietario sobre las cuentas, sin editor universal
+
+- **Que se anade:** administracion puede activar con plan, pasar a modo consulta o
+  ampliar la prueba de cualquier cuenta, y abrir su panel en solo lectura.
+- **Como se contiene:** `auth_guard` es el unico punto que autoriza `/b/` y `/api/`;
+  ahi se permite la vista cruzada solo si hay marca de sesion, el usuario es
+  administrador y el metodo es GET o HEAD. Cualquier otro metodo responde 403 con
+  codigo `admin_read_only`. El aviso en pantalla es permanente y hay salida explicita.
+- **Prueba:** `test_owner_can_switch_a_subscription_and_look_without_editing` recorre
+  el ciclo entero —activar una cuenta ajena, entrar, intentar escribir, salir— y
+  comprueba el 403, el aviso, que el cliente colado no existe, que al salir se cierra
+  la puerta y que `admin.subscription_changed`, `admin.account_entered` y
+  `admin.account_left` estan en la bitacora encadenada. **Verificada por reversion:**
+  desactivando el bloqueo de escritura, la prueba falla.
+- **Alcance:** 108 pruebas de admin, soporte, aislamiento, seguridad y suscripcion en
+  verde; `ruff` limpio.
+- **Limite conocido:** para modificar datos de un negocio sigue haciendo falta la
+  ventana que abre su titular. La vista de administracion no la sustituye.
+
 ## 2026-08-19 — la pagina de suscripcion ensenaba una marca ISO y un estado falso
 
 - **Que fallaba:** con la prueba ya vencida, la cabecera de `/b/<id>/suscripcion`

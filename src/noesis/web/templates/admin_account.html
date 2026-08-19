@@ -48,6 +48,46 @@
     </div>
   </section>
 
+  <section class="support-section" id="suscripcion">
+    <div class="support-section-head">
+      <div><div class="kicker">Control del propietario</div><h2>Suscripción y acceso</h2></div>
+      <span class="meta">Cada cambio queda registrado</span>
+    </div>
+    <div class="admin-grid">
+      <div class="stat">
+        <div class="lbl">Estado</div>
+        <div class="val support-value">{{ snapshot.business.subscription_status or 'trial' }}</div>
+        <div class="delta flat">plan {{ snapshot.business.plan or 'sin plan' }}</div>
+      </div>
+      <div class="stat">
+        <div class="lbl">Fin de prueba</div>
+        <div class="val support-value">{{ snapshot.business.trial_ends_at | date_es or 'sin fecha' }}</div>
+        <div class="delta flat">{{ 'vencida' if trial_expired else 'vigente' }}</div>
+      </div>
+    </div>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/suscripcion" class="support-form">
+      <label>Activar con el plan
+        <select name="plan">
+          <option value="autonomo">Autónomo</option>
+          <option value="pro" selected>Negocio</option>
+          <option value="premium">Premium</option>
+        </select>
+      </label>
+      <button class="btn primary" type="submit" name="action" value="activar">Activar cuenta</button>
+    </form>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/suscripcion" class="support-form">
+      <label>Ampliar la prueba
+        <input type="number" name="trial_days" value="14" min="1" max="365">
+      </label>
+      <button class="btn" type="submit" name="action" value="ampliar_prueba">Ampliar días</button>
+      <button class="btn danger" type="submit" name="action" value="desactivar">Pasar a modo consulta</button>
+    </form>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/acceder" class="support-form">
+      <button class="btn" type="submit">Entrar en el panel (solo lectura)</button>
+      <span class="meta">Verás la cuenta como administración, con aviso en pantalla. No podrás modificar nada.</span>
+    </form>
+  </section>
+
   <section class="support-section">
     <div class="support-section-head"><div><div class="kicker">Volumen</div><h2>Elementos de la cuenta</h2></div><span class="meta">Solo cantidades</span></div>
     <div class="support-counts">

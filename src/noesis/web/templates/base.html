@@ -141,7 +141,14 @@
       <a class="{{ 'active' if active=='productos' }}" href="/b/{{ b }}/productos">Productos</a>
     </div>
     {% endif %}
-    {% if business.is_demo %}
+    {% if request.session.get('admin_view_business') == business.id %}
+    <div class="readonly-banner admin-view" role="status">
+      <div><b>Estás viendo esta cuenta como administración</b><span>Vista de solo lectura de {{ business.name }}. El titular no ha autorizado cambios, así que crear, enviar o modificar está bloqueado. Tu entrada ha quedado registrada.</span></div>
+      <form method="post" action="/admin/salir-de-cuenta">
+        <button class="btn primary sm" type="submit">Salir de la cuenta</button>
+      </form>
+    </div>
+    {% elif business.is_demo %}
     <div class="readonly-banner" role="status">
       <div><b>Datos de demostración</b><span>Puedes recorrer todo Noesis con información ficticia. Las acciones que enviarían o cambiarían datos están bloqueadas.</span></div>
     </div>

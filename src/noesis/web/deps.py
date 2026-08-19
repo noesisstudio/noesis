@@ -272,10 +272,35 @@ async def auth_guard(request: Request, call_next):
         except (IndexError, ValueError):
             wanted = None
         own_business_id = user["business_id"]
-        if wanted is not None and own_business_id != wanted:
+        # Administracion puede abrir otra cuenta, pero solo para mirar: la vista
+        # queda marcada en pantalla, auditada al entrar, y cualquier escritura se
+        # rechaza. Sin esto seria el editor universal que Decisiones.md descarta.
+        admin_view = request.session.get("admin_view_business")
+        is_admin_view = (
+            wanted is not None
+            and admin_view is not None
+            and int(admin_view) == wanted
+            and own_business_id != wanted
+            and (bool(user.get("is_admin")) or config.is_admin_email(user["email"]))
+        )
+        if is_admin_view:
+            if request.method not in {"GET", "HEAD"}:
+                message = (
+                    "Estas viendo esta cuenta como administracion: la vista es de "
+                    "solo lectura y no puede modificar datos del negocio."
+                )
+                if path.startswith("/api/"):
+                    return JSONResponse(
+                        {"error": message, "code": "admin_read_only"},
+                        status_code=403,
+                    )
+                return RedirectResponse(f"/b/{wanted}/resumen", status_code=303)
+            own_business_id = wanted
+        elif wanted is not None and own_business_id != wanted:
             if path.startswith("/api/"):
                 return JSONResponse({"error": "no autorizado"}, status_code=403)
             return RedirectResponse(f"/b/{own_business_id}/resumen")
+        request.state.admin_view = is_admin_view
         business = db.get_business(own_business_id)
         entitlements = billing_adapter.entitlements_for(business)
         request.state.entitlements = entitlements
