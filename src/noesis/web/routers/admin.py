@@ -106,6 +106,8 @@ def admin_account_support(request: Request, business_id: int):
         "subscription_blocked": not db.subscription_allows_access(
             db.get_business(business_id)
         ),
+        "business_users": db.list_business_users(business_id),
+        "gestoria_access": db.list_gestoria_access_for_business(business_id),
         "entitlement_labels": billing_adapter.ENTITLEMENT_LABELS,
         "current_entitlements": billing_adapter.entitlements_for(
             db.get_business(business_id)
@@ -323,6 +325,76 @@ def admin_account_subscription(
         request_id=getattr(request.state, "request_id", None),
         metadata=detail,
     )
+    return RedirectResponse(target, status_code=303)
+
+
+@router.post("/admin/cuentas/{business_id}/usuarios/{user_id}/acceso")
+def admin_user_access(
+    request: Request,
+    business_id: int,
+    user_id: int,
+    action: str = Form(...),
+    note: str = Form(""),
+):
+    """Suspende o restaura el acceso de una persona concreta.
+
+    Es la palanca proporcionada: retirar a quien ya no debe entrar sin apagar la
+    cuenta entera del negocio. No borra datos y es reversible.
+    """
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    actor = auth.current_user(request)
+    target = f"/admin/cuentas/{business_id}#acceso"
+    victim = db.get_user(user_id)
+    if not victim or int(victim.get("business_id") or 0) != business_id:
+        request.session["admin_error"] = "Esa persona no pertenece a esta cuenta."
+        return RedirectResponse(target, status_code=303)
+    active = action == "restaurar"
+    try:
+        db.set_user_access(
+            user_id, active=active, actor_user_id=actor["id"], note=note,
+        )
+    except db.AccessControlError as exc:
+        request.session["admin_error"] = str(exc)
+        return RedirectResponse(target, status_code=303)
+    db.record_security_event(
+        "admin.user_access_restored" if active else "admin.user_access_suspended",
+        area="admin",
+        severity="info" if active else "warning",
+        actor_user_id=actor["id"],
+        subject_business_id=business_id,
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"user_id": user_id, "note": " ".join(str(note or "").split())[:300]},
+    )
+    request.session["admin_success"] = (
+        "Acceso restaurado." if active else
+        "Acceso suspendido. Sus sesiones abiertas se han cerrado."
+    )
+    return RedirectResponse(target, status_code=303)
+
+
+@router.post("/admin/cuentas/{business_id}/gestoria/{account_id}/revocar")
+def admin_revoke_gestoria(request: Request, business_id: int, account_id: int):
+    """Corta el acceso de una gestoria a los datos de un cliente.
+
+    La via normal es que lo revoque el titular desde su panel: la relacion es
+    suya. Esto existe como medida de seguridad —una credencial profesional
+    comprometida no puede esperar— y por eso queda registrado con su motivo.
+    """
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    actor = auth.current_user(request)
+    target = f"/admin/cuentas/{business_id}#acceso"
+    if not db.revoke_gestoria_access(business_id, account_id):
+        request.session["admin_error"] = "Ese acceso ya no estaba activo."
+        return RedirectResponse(target, status_code=303)
+    db.record_security_event(
+        "admin.gestoria_access_revoked", area="admin", severity="warning",
+        actor_user_id=actor["id"], subject_business_id=business_id,
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"gestoria_account_id": account_id},
+    )
+    request.session["admin_success"] = "Acceso de la gestoria revocado."
     return RedirectResponse(target, status_code=303)
 
 

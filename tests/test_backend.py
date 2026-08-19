@@ -6295,6 +6295,246 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         limpia, _ = self.make_business("Cuenta sin incidencias")
         self.assertEqual(db.admin_support_delivery_failures(limpia["id"]), [])
 
+    def test_suspended_user_loses_access_immediately_and_can_be_restored(self):
+        """Retirar el acceso de una persona tiene que ser efectivo en la peticion
+        siguiente, no cuando caduque una cookie, y no puede tocar los datos del
+        negocio ni el acceso de sus companeros."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Reformas con equipo")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("titular@example.com", business["id"]),
+            )
+        titular = db.create_user(
+            "titular@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        empleado = db.create_user(
+            "empleado@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        clientes_antes = len(db.list_clients(business["id"]))
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            # El empleado entra y trabaja con normalidad.
+            client.post("/login", data={
+                "email": "empleado@example.com", "password": TEST_PASSWORD,
+            })
+            antes = client.get(f"/b/{business['id']}/resumen")
+
+            # Se le retira el acceso mientras tiene la sesion abierta.
+            db.set_user_access(
+                empleado["id"], active=False, actor_user_id=titular["id"],
+                note="Ya no trabaja en la empresa",
+            )
+
+            # La sesion viva muere en la peticion siguiente.
+            despues = client.get(
+                f"/b/{business['id']}/resumen", follow_redirects=False,
+            )
+            # Y tampoco puede volver a entrar con su contrasena correcta.
+            reintento = client.post("/login", data={
+                "email": "empleado@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+
+        self.assertEqual(antes.status_code, 200)
+        self.assertEqual(despues.status_code, 307)
+        self.assertIn("/login", despues.headers.get("location", ""))
+        self.assertIn("suspended", reintento.headers.get("location", ""))
+
+        # No se ha borrado nada del negocio.
+        self.assertEqual(len(db.list_clients(business["id"])), clientes_antes)
+        suspendido = db.get_user(empleado["id"])
+        self.assertFalse(suspendido["is_active"])
+        self.assertEqual(suspendido["access_note"], "Ya no trabaja en la empresa")
+        self.assertIsNotNone(suspendido["suspended_at"])
+
+        # El titular conserva su acceso intacto.
+        self.assertTrue(db.get_user(titular["id"])["is_active"])
+
+        # Y la restauracion devuelve el acceso.
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            db.set_user_access(
+                empleado["id"], active=True, actor_user_id=titular["id"],
+            )
+            vuelta = client.post("/login", data={
+                "email": "empleado@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+            panel = client.get(f"/b/{business['id']}/resumen")
+
+        self.assertNotIn("suspended", vuelta.headers.get("location", ""))
+        self.assertEqual(panel.status_code, 200)
+        restaurado = db.get_user(empleado["id"])
+        self.assertTrue(restaurado["is_active"])
+        self.assertIsNone(restaurado["suspended_at"])
+
+    def test_an_inactive_user_is_refused_even_if_the_session_still_matches(self):
+        """Segunda barrera, aislada a proposito.
+
+        `set_user_access` sube `session_version`, asi que en el uso normal la
+        sesion muere por ahi. Esta prueba desactiva la cuenta **sin** tocar la
+        version, que es lo que pasaria si alguien editara la base a mano o si un
+        camino futuro se olvidara de subirla. Sin la comprobacion en
+        `current_user`, la sesion sobreviviria."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Cuenta con sesion viva")
+        db.create_user(
+            "sesion@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        db.create_user(
+            "companero@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "sesion@example.com", "password": TEST_PASSWORD,
+            })
+            antes = client.get(f"/b/{business['id']}/resumen")
+            # Desactivar sin subir session_version: solo queda la barrera de
+            # `current_user`.
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE users SET is_active=FALSE WHERE email=?",
+                    ("sesion@example.com",),
+                )
+            despues = client.get(
+                f"/b/{business['id']}/resumen", follow_redirects=False,
+            )
+
+        self.assertEqual(antes.status_code, 200)
+        self.assertEqual(
+            despues.status_code, 307,
+            "una cuenta desactivada no puede seguir navegando con su sesion",
+        )
+        self.assertIn("/login", despues.headers.get("location", ""))
+
+    def test_access_control_refuses_to_leave_an_account_locked_out(self):
+        """Las tres protecciones que impiden dejar una cuenta sin dueno. Cada una
+        se comprueba por separado: un fallo aqui deja a un cliente fuera de su
+        propio negocio y solo se arregla desde la base de datos."""
+        business, _ = self.make_business("Cuenta de una sola persona")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("solo@example.com", business["id"]),
+            )
+        solo = db.create_user(
+            "solo@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        otro = db.create_user(
+            "otro@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+
+        # 1. Nadie se suspende a si mismo.
+        with self.assertRaises(db.AccessControlError) as caso:
+            db.set_user_access(otro["id"], active=False, actor_user_id=otro["id"])
+        self.assertIn("a ti mismo", str(caso.exception))
+
+        # 2. El titular del negocio no se puede suspender.
+        with self.assertRaises(db.AccessControlError) as caso:
+            db.set_user_access(solo["id"], active=False, actor_user_id=otro["id"])
+        self.assertIn("titular", str(caso.exception))
+
+        # 3. No se puede dejar la cuenta sin nadie que entre.
+        db.set_user_access(otro["id"], active=False, actor_user_id=solo["id"])
+        solitario, _ = self.make_business("Cuenta con un unico usuario")
+        unico = db.create_user(
+            "unico@example.com", auth.hash_password(TEST_PASSWORD), solitario["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("nadie@example.com", solitario["id"]),
+            )
+        with self.assertRaises(db.AccessControlError) as caso:
+            db.set_user_access(unico["id"], active=False, actor_user_id=solo["id"])
+        self.assertIn("ultima persona", str(caso.exception))
+        self.assertTrue(db.get_user(unico["id"])["is_active"])
+
+    def test_admin_manages_access_per_person_and_leaves_a_signed_trail(self):
+        """El recorrido de administracion completo: suspender, ver el motivo y
+        restaurar, con cada paso firmado en la bitacora encadenada."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Panel del propietario")
+        target, _ = self.make_business("Cliente con dos personas")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("jefe@example.com", target["id"]),
+            )
+        db.create_user(
+            "jefe@example.com", auth.hash_password(TEST_PASSWORD), target["id"],
+        )
+        empleado = db.create_user(
+            "curro@example.com", auth.hash_password(TEST_PASSWORD), target["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            })
+            ficha = client.get(f"/admin/cuentas/{target['id']}")
+            client.post(
+                f"/admin/cuentas/{target['id']}/usuarios/{empleado['id']}/acceso",
+                data={"action": "suspender", "note": "Baja voluntaria"},
+                follow_redirects=False,
+            )
+            tras_suspender = db.get_user(empleado["id"])
+            # El titular esta protegido tambien por HTTP, no solo en la capa de datos.
+            jefe = db.get_user_by_email("jefe@example.com")
+            client.post(
+                f"/admin/cuentas/{target['id']}/usuarios/{jefe['id']}/acceso",
+                data={"action": "suspender", "note": "prueba"},
+                follow_redirects=False,
+            )
+            jefe_despues = db.get_user(jefe["id"])
+            client.post(
+                f"/admin/cuentas/{target['id']}/usuarios/{empleado['id']}/acceso",
+                data={"action": "restaurar"}, follow_redirects=False,
+            )
+            tras_restaurar = db.get_user(empleado["id"])
+
+        # La ficha enseña a las dos personas y la frontera de privacidad.
+        self.assertEqual(ficha.status_code, 200)
+        self.assertIn("curro@example.com", ficha.text)
+        self.assertIn("jefe@example.com", ficha.text)
+        self.assertIn("no qué hay dentro", ficha.text)
+
+        self.assertFalse(tras_suspender["is_active"])
+        self.assertEqual(tras_suspender["access_note"], "Baja voluntaria")
+        self.assertTrue(jefe_despues["is_active"], "el titular no debe poder suspenderse")
+        self.assertTrue(tras_restaurar["is_active"])
+
+        eventos = [
+            e["event_type"] for e in db.list_security_events(limit=80)
+            if e["subject_business_id"] == target["id"]
+        ]
+        self.assertIn("admin.user_access_suspended", eventos)
+        self.assertIn("admin.user_access_restored", eventos)
+
     def test_owner_manages_account_permissions_without_entering_the_account(self):
         """El propietario gobierna el plan y el estado de cualquier cuenta, que es
         lo que decide sus permisos. Administracion sigue sin poder abrir el panel

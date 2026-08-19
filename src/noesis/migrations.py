@@ -3734,6 +3734,42 @@ def _downgrade_recoverable_onboarding(conn) -> None:
         conn.execute(f"ALTER TABLE businesses DROP COLUMN IF EXISTS {column}")
 
 
+def _upgrade_user_access_control(conn) -> None:
+    """Permite retirar el acceso de una persona sin tocar el resto de la cuenta.
+
+    Hasta ahora la unica palanca era desactivar el negocio entero, que castiga a
+    todo el equipo por un solo usuario. La suspension es reversible y no borra
+    nada: los datos siguen siendo del negocio, solo deja de poder entrar quien
+    ya no debe. ``suspended_at`` y ``access_note`` documentan el porque, que es
+    lo que exige poder justificar una retirada de acceso ante el cliente.
+    """
+    columns = _column_names(conn, "users")
+    types = _types(conn.dialect)
+    if "is_active" not in columns:
+        conn.execute(
+            f"ALTER TABLE users ADD COLUMN is_active {types['boolean']} "
+            "NOT NULL DEFAULT TRUE"
+        )
+    if "suspended_at" not in columns:
+        conn.execute(
+            f"ALTER TABLE users ADD COLUMN suspended_at {types['timestamp']}"
+        )
+    if "access_note" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN access_note TEXT")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_users_business_active "
+        "ON users(business_id, is_active)"
+    )
+
+
+def _downgrade_user_access_control(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_users_business_active")
+    if conn.dialect != "sqlite":
+        conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS access_note")
+        conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS suspended_at")
+        conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS is_active")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3801,6 +3837,8 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_invoice_visual_profiles),
     (49, "onboarding_recuperable", _upgrade_recoverable_onboarding,
      _downgrade_recoverable_onboarding),
+    (50, "control_acceso_usuarios", _upgrade_user_access_control,
+     _downgrade_user_access_control),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

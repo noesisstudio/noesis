@@ -90,6 +90,38 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-19 — control de acceso por persona y guia de permisos
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio poder dar y quitar acceso a nivel profesional, que el
+  permiso decida lo que se puede hacer, resolver la parte de RGPD y privacidad, y una
+  guia final que lo explique todo.
+- **Areas y archivos:** `migrations.py` (migracion 50), `db.py`
+  (`list_business_users`, `set_user_access`, `user_can_sign_in`, `AccessControlError`),
+  `web/auth.py`, `web/routers/account.py`, `web/routers/admin.py`,
+  `web/templates/admin_account.html`, `web/templates/login.html`,
+  `tests/test_backend.py`, `docs/Permisos-y-acceso.html` + `.pdf` (nuevos, 9 paginas),
+  `docs/Decisiones.md`, `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migracion:** **esquema 50**. Tres columnas en `users` con valor
+  por defecto que conserva el acceso de todos los usuarios existentes, y un indice por
+  `(business_id, is_active)`.
+- **Pruebas ejecutadas:** cuatro nuevas, las cuatro verificadas por reversion; 185
+  pruebas del bloque de seguridad y acceso en verde; migracion probada arriba, abajo,
+  repetida y con un usuario preexistente; `ruff` limpio; `check_project_truth.py` en
+  verde. La suite completa quedo cortada al 31% sin fallos por reinicio de sesion.
+- **Dependencias o validaciones externas:** ninguna nueva. **Queda una tarea juridica
+  del founder:** el contrato de encargo debe describir lo que hace el sistema
+  —administracion gestiona acceso pero no lee contenido, bitacora encadenada,
+  subencargados—; la guia lo deja escrito y `Tareas-vivas.md` lo tiene como P0.
+- **Riesgo/punto probable de fallo:** el bloqueo se aplica en cuatro puntos; si en el
+  futuro se anade otra via de inicio de sesion hay que comprobar
+  `db.user_can_sign_in` tambien alli. La barrera de `current_user` cubre ese olvido,
+  y su prueba la aisla a proposito.
+- **Diagnostico y rollback:** revertir el commit deja la migracion aplicada pero sin
+  usar; `migrations.downgrade(49)` retira las columnas si hiciera falta.
+- **Estado de publicacion:** local / commit en `main`. **Falta desplegar el esquema
+  50.**
+
 ## 2026-08-19 — guia completa para conectar Google
 
 - **Autor/agente:** Claude.

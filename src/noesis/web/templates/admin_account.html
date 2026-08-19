@@ -135,6 +135,97 @@
     </section>
   </div>
 
+  <section class="support-section" id="acceso">
+    <div class="support-section-head">
+      <div><div class="kicker">Control de acceso</div><h2>Quién puede entrar</h2></div>
+      <span class="meta">Suspender no borra nada y es reversible</span>
+    </div>
+
+    <div class="support-subtitle">Personas de la cuenta</div>
+    <div class="support-list">
+      {% for persona in business_users %}
+      <div style="flex-direction:column;align-items:flex-start;gap:6px;text-transform:none">
+        <span>
+          <b>{{ persona.email }}</b>
+          {% if persona.is_owner %}<span class="chip chip-flat">titular</span>{% endif %}
+          {% if persona.is_admin %}<span class="chip chip-warn">administración</span>{% endif %}
+          {% if persona.is_active %}
+            <span class="green">acceso activo</span>
+          {% else %}
+            <span class="red">suspendido {{ persona.suspended_at | date_es }}</span>
+          {% endif %}
+        </span>
+        {% if persona.access_note %}
+        <span class="meta">Motivo: {{ persona.access_note }}</span>
+        {% endif %}
+        {% if persona.is_owner %}
+        <span class="meta">El titular no se puede suspender. Para cerrar la cuenta
+          entera, cámbiala a modo consulta arriba.</span>
+        {% else %}
+        <form method="post"
+              action="/admin/cuentas/{{ snapshot.business.id }}/usuarios/{{ persona.id }}/acceso"
+              class="support-form">
+          {% if persona.is_active %}
+          <label>Motivo de la suspensión
+            <input type="text" name="note" maxlength="300"
+                   placeholder="Ej.: ya no trabaja en la empresa">
+          </label>
+          <button class="btn danger" type="submit" name="action" value="suspender">
+            Suspender acceso</button>
+          {% else %}
+          <button class="btn" type="submit" name="action" value="restaurar">
+            Restaurar acceso</button>
+          {% endif %}
+        </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="meta">Esta cuenta no tiene ninguna persona registrada.</p>
+      {% endfor %}
+    </div>
+
+    <div class="support-subtitle">Gestorías con acceso a estos datos</div>
+    <div class="support-list">
+      {% for acceso in gestoria_access %}
+      <div style="flex-direction:column;align-items:flex-start;gap:6px;text-transform:none">
+        <span>
+          <b>{{ acceso.firm_name or acceso.email }}</b>
+          {% if acceso.status == 'revoked' %}
+            <span class="red">revocado</span>
+          {% else %}
+            <span class="green">acceso activo</span>
+          {% endif %}
+        </span>
+        <span class="meta">Último acceso: {{ acceso.last_login_at | date_es or 'nunca' }}</span>
+        {% if acceso.status != 'revoked' %}
+        <form method="post"
+              action="/admin/cuentas/{{ snapshot.business.id }}/gestoria/{{ acceso.gestoria_account_id }}/revocar"
+              class="support-form">
+          <button class="btn danger" type="submit">Revocar acceso</button>
+          <span class="meta">Medida de seguridad. Lo normal es que lo revoque el
+            titular desde su panel: la relación con su gestoría es suya.</span>
+        </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="meta">Ninguna gestoría tiene acceso a los datos de esta cuenta.</p>
+      {% endfor %}
+    </div>
+
+    <div class="support-locked" style="margin-top:22px">
+      <div>
+        <div class="kicker">Privacidad</div>
+        <h2>Qué permite esto y qué no</h2>
+        <p>Aquí se decide <b>quién puede entrar</b> en una cuenta, no qué hay dentro.
+          Suspender a una persona corta sus sesiones en el acto y no toca ni un dato:
+          la información sigue siendo del negocio y su titular la conserva íntegra.
+          Administración no ve clientes, facturas ni documentos desde esta pantalla.
+          Cada suspensión, restauración y revocación queda firmada en la bitácora
+          encadenada, con quién, cuándo y por qué.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="support-section" id="entregas">
     <div class="support-section-head">
       <div><div class="kicker">Diagnóstico</div><h2>Entregas atascadas</h2></div>

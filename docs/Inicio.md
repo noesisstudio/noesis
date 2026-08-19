@@ -14,6 +14,8 @@ usa la vista de grafo para navegar.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
 - [[Arquitectura]] — cómo está construido el sistema.
+- [`Permisos-y-acceso.pdf`](Permisos-y-acceso.pdf) — las cuatro identidades, qué
+  puede hacer cada una, cómo se da y se quita acceso, y cómo cumple el RGPD.
 - [[Seguridad-operativa]] — amenazas, controles, secretos, incidentes y puerta de
   salida segura al piloto.
 - [[Guia-tecnica-ingeniero]] — entrada técnica de extremo a extremo para ingeniería:

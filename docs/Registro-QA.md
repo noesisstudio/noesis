@@ -1,5 +1,33 @@
 # Registro de QA
 
+## 2026-08-19 — control de acceso por persona (esquema 50)
+
+- **Que se anade:** `users.is_active`, `suspended_at` y `access_note`; suspension y
+  restauracion desde administracion; revocacion del acceso de una gestoria.
+- **Donde se aplica el bloqueo:** cuatro puntos. `set_user_access` sube
+  `session_version` (mata sesiones), `auth.current_user` rechaza al inactivo (segunda
+  barrera), y el login por contrasena y las dos vias de Google lo comprueban antes de
+  abrir sesion.
+- **Pruebas:** cuatro nuevas y **las cuatro verificadas por reversion**, cada una
+  contra la barrera que dice cubrir:
+  1. `test_suspended_user_loses_access_immediately_and_can_be_restored` — falla si se
+     quita la comprobacion del login.
+  2. `test_an_inactive_user_is_refused_even_if_the_session_still_matches` — desactiva
+     la cuenta **sin** subir `session_version`, para aislar la barrera de
+     `current_user`; falla si se quita. **Se escribio despues de descubrir que la
+     primera prueba pasaba igual con esa barrera desactivada**, es decir, que no
+     cubria lo que decia cubrir.
+  3. `test_access_control_refuses_to_leave_an_account_locked_out` — las tres
+     protecciones por separado; falla si se quitan.
+  4. `test_admin_manages_access_per_person_and_leaves_a_signed_trail` — recorrido HTTP
+     completo y eventos en la bitacora.
+- **Migracion 50:** probada arriba, abajo y repetida (idempotente). Comprobado ademas
+  que un usuario creado en el esquema 49 **conserva el acceso** tras migrar.
+- **Alcance:** 185 pruebas de administracion, seguridad, sesion, login, gestoria,
+  aislamiento y suscripcion en verde; `ruff` limpio.
+- **Pendiente:** suite completa cortada al 31% sin fallos por reinicio de sesion; el
+  CI en Linux es el juez.
+
 ## 2026-08-19 — recorrido real de administracion: dos flujos y tres correcciones
 
 - **Como se probo:** servidor levantado en local con base aparte y un escenario real

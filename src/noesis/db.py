@@ -9452,6 +9452,96 @@ def mark_reminder_sent(invoice_id, business_id) -> None:
 
 
 # ------------------------------------------------- Reset de contraseña ---
+class AccessControlError(ValueError):
+    """Una retirada de acceso que dejaria la cuenta sin dueno o sin sentido."""
+
+
+def list_business_users(business_id: int) -> list[dict]:
+    """Personas con acceso a un negocio, sin devolver nunca su contrasena."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT u.id, u.email, u.is_active, u.suspended_at, u.access_note, "
+            "u.is_admin, u.created_at, b.owner_email "
+            "FROM users u JOIN businesses b ON b.id=u.business_id "
+            "WHERE u.business_id=? ORDER BY u.id",
+            (business_id,),
+        ).fetchall()
+    out = []
+    for raw in rows:
+        item = dict(raw)
+        owner_email = str(item.pop("owner_email", "") or "").strip().lower()
+        item["is_owner"] = str(item["email"] or "").strip().lower() == owner_email
+        item["is_active"] = bool(item["is_active"])
+        out.append(item)
+    return out
+
+
+def set_user_access(
+    user_id: int,
+    *,
+    active: bool,
+    actor_user_id: int,
+    note: str = "",
+) -> dict:
+    """Suspende o restaura a una persona y corta sus sesiones al instante.
+
+    No borra nada: los datos siguen siendo del negocio. Subir
+    ``session_version`` invalida las sesiones abiertas, asi que la retirada es
+    efectiva en la peticion siguiente y no cuando caduque una cookie.
+
+    Se protegen tres casos que dejarian el sistema peor de lo que estaba:
+    nadie se suspende a si mismo, no se suspende al titular del negocio, y no
+    se suspende a la ultima persona con acceso.
+    """
+    note = " ".join(str(note or "").split())[:300]
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT u.*, b.owner_email FROM users u "
+            "JOIN businesses b ON b.id=u.business_id WHERE u.id=?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            raise AccessControlError("Esa persona no existe.")
+        user = dict(row)
+        owner_email = str(user.pop("owner_email", "") or "").strip().lower()
+        if not active:
+            if int(actor_user_id) == int(user_id):
+                raise AccessControlError(
+                    "No puedes retirarte el acceso a ti mismo."
+                )
+            if str(user["email"] or "").strip().lower() == owner_email:
+                raise AccessControlError(
+                    "No se puede suspender al titular de la cuenta. Para cerrarla "
+                    "entera, cambia su suscripcion a modo consulta."
+                )
+            restantes = conn.execute(
+                "SELECT COUNT(*) AS total FROM users "
+                "WHERE business_id=? AND is_active=TRUE AND id<>?",
+                (user["business_id"], user_id),
+            ).fetchone()
+            if int(restantes["total"] or 0) == 0:
+                raise AccessControlError(
+                    "Es la ultima persona con acceso: la cuenta quedaria sin "
+                    "nadie que pueda entrar."
+                )
+        if bool(user["is_active"]) == bool(active):
+            return get_user(user_id)
+        conn.execute(
+            "UPDATE users SET is_active=?, suspended_at=?, access_note=?, "
+            "session_version=session_version+1 WHERE id=?",
+            (bool(active), None if active else _now(), note or None, user_id),
+        )
+    return get_user(user_id)
+
+
+def user_can_sign_in(user: dict | None) -> bool:
+    """Una cuenta suspendida no inicia sesion por ninguna via."""
+    if not user:
+        return False
+    return bool(user.get("is_active", True))
+
+
 def set_password(user_id, password_hash) -> None:
     with get_conn() as conn:
         conn.execute("UPDATE users SET password_hash=?, "

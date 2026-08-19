@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Permisos y acceso · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+  /* Tarjetas de regla */
+  .rules { display: flex; flex-direction: column; gap: 14px; }
+  .rule {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--brand-2); border-radius: var(--radius);
+    padding: 20px 22px 21px 19px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 11px;
+  }
+  .rule-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+  .rule-why { font-size: 14.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 16px; }
+  .rule-why strong { color: var(--ink); }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .part { color: var(--warn); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Manual de operación</p>
+    <h1>Quién puede entrar, y quién decide</h1>
+    <p class="standfirst">El sistema de permisos completo: las cuatro identidades que existen, qué puede hacer cada una, cómo se da y se quita acceso, y por qué está diseñado así para cumplir con el RGPD.</p>
+    <p class="crumbs">Verificado sobre <code>main</code>. Decisiones en <code>Decisiones.md</code>; evidencia de pruebas en <code>Registro-QA.md</code>.</p>
+  </header>
+
+  <div class="callout callout-warn">
+    <h3>La regla que ordena todo lo demás</h3>
+    <p>Noesis distingue dos cosas que casi todos los programas mezclan: <strong>administrar una cuenta</strong> y <strong>ver lo que hay dentro</strong>.</p>
+    <p>Tú, como propietario de la plataforma, puedes hacer lo primero de forma completa: dar acceso, quitarlo, cambiar el plan, cortar a un tercero. <strong>No puedes hacer lo segundo.</strong> No es una limitación técnica pendiente de resolver: es la decisión que hace defendible el producto ante un cliente que te confía las facturas de su negocio.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>1. Las cuatro identidades</h2>
+      <p class="sec-intro">Cada una entra por una puerta distinta y tiene un alcance distinto. Confundirlas es el origen de casi todos los errores de permisos.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Identidad</th><th>Quién es</th><th>Entra por</th><th>Alcance</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="hi">Administración</td>
+            <td>Tú y tu socio</td>
+            <td><code>/admin</code>, con Google obligatorio en producción</td>
+            <td>Todas las cuentas, solo para administrarlas</td>
+          </tr>
+          <tr>
+            <td class="hi">Titular</td>
+            <td>El autónomo dueño del negocio</td>
+            <td><code>/login</code>, contraseña o Google</td>
+            <td>Todo lo suyo, y solo lo suyo</td>
+          </tr>
+          <tr>
+            <td>Trabajador</td>
+            <td>Su equipo de campo</td>
+            <td>WhatsApp, con código de un solo uso</td>
+            <td>Su parte del día, sin ver dinero</td>
+          </tr>
+          <tr>
+            <td>Gestoría</td>
+            <td>Su asesor fiscal</td>
+            <td><code>/gestoria/login</code>, con segundo factor</td>
+            <td>Solo los negocios que le hayan dado acceso</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>El aislamiento entre negocios tiene un solo guardián:</strong> la función <code>auth_guard</code>. Cada petición a <code>/b/…</code> o <code>/api/…</code> compara el negocio del usuario con el de la URL y corta si no coinciden. Que sea un único punto es deliberado: una regla repartida por cincuenta sitios se rompe en el sitio cincuenta y uno.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>2. Qué puede hacer cada uno</h2>
+      <p class="sec-intro">La tabla que resuelve las discusiones. Lo importante son las casillas en rojo.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>&nbsp;</th><th>Administración</th><th>Titular</th><th>Trabajador</th><th>Gestoría</th></tr></thead>
+        <tbody>
+          <tr><td>Activar o desactivar una cuenta</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Cambiar el plan de una cuenta</td><td class="yes">Sí</td><td class="part">Vía Stripe</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Suspender el acceso de una persona</td><td class="yes">Sí</td><td class="no">Todavía no</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Ver por qué falló una entrega</td><td class="yes">Sí</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td><b>Ver clientes, facturas y documentos</b></td><td class="no">No</td><td class="yes">Sí</td><td class="no">No</td><td class="part">Los suyos</td></tr>
+          <tr><td><b>Modificar datos del negocio</b></td><td class="no">No</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td><b>Entrar en el panel de un cliente</b></td><td class="no">No</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Emitir o enviar una factura</td><td class="no">No</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Aportar un coste de obra</td><td class="no">No</td><td class="yes">Sí</td><td class="part">Si se le permite</td><td class="no">No</td></tr>
+          <tr><td>Descargar todos sus datos (RGPD)</td><td class="no">No</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Borrar la cuenta entera (RGPD)</td><td class="no">No</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Las cuatro filas en negrita son la frontera de privacidad. <strong>Administración no las cruza</strong>, y por eso el producto puede prometer aislamiento sin letra pequeña.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>3. Qué desbloquea cada plan</h2>
+      <p class="sec-intro">El plan no es solo un precio: es el permiso. Cambiarlo cambia lo que la cuenta puede usar, en el servidor y no solo ocultando botones.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Función</th><th>Autónomo</th><th>Negocio</th><th>Premium</th></tr></thead>
+        <tbody>
+          <tr><td>Agenda, clientes, facturas y cobros</td><td class="yes">Sí</td><td class="yes">Sí</td><td class="yes">Sí</td></tr>
+          <tr><td>Proyectos, costes y rentabilidad</td><td class="no">No</td><td class="yes">Sí</td><td class="yes">Sí</td></tr>
+          <tr><td>Equipo y registro de jornada</td><td class="no">No</td><td class="yes">Sí</td><td class="yes">Sí</td></tr>
+          <tr><td>Gestoría conectada</td><td class="no">No</td><td class="yes">Sí</td><td class="yes">Sí</td></tr>
+          <tr><td>Análisis financiero avanzado</td><td class="no">No</td><td class="yes">Sí</td><td class="yes">Sí</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>Durante la prueba gratuita, la cuenta tiene permisos de Premium.</strong> Es intencionado: el autónomo debe poder ver todo antes de elegir. Al vencer, no pierde funciones: pasa a <b>modo consulta</b>, donde sigue viendo su negocio entero pero no puede crear, cambiar ni enviar. Sus datos nunca se tocan.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>4. Cómo se da y se quita acceso</h2>
+      <p class="sec-intro">Todo ocurre en la ficha de la cuenta, en <code>/admin/cuentas/&lt;id&gt;</code>. Cuatro operaciones.</p>
+    </div>
+
+    <ol class="steps">
+
+      <li class="step first-step">
+        <span class="step-n">01</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Activar una cuenta</h3><span class="chip chip-ok">Sin pasar por Stripe</span></div>
+          <p>Sección <em>Permisos de la cuenta</em> → elige plan → <strong>Activar cuenta</strong>. La cuenta sale de modo consulta al instante y desbloquea las funciones del plan elegido.</p>
+          <div class="note"><strong>Esto no cobra.</strong> Es un alta manual, útil para un piloto o para desbloquear a alguien mientras se resuelve un pago. La facturación real sigue siendo cosa de Stripe.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">02</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Retirar el acceso de una cuenta</h3><span class="chip chip-warn">Reversible</span></div>
+          <p><strong>Pasar a modo consulta</strong>. El titular sigue entrando y viendo todo lo suyo, pero no puede crear, enviar ni ejecutar automatizaciones. No se borra nada.</p>
+          <p>Es la palanca correcta para un impago: castiga el uso, no la propiedad de los datos.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">03</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Suspender a una persona concreta</h3><span class="chip chip-stop">Efecto inmediato</span></div>
+          <p>Sección <em>Quién puede entrar</em> → <strong>Suspender acceso</strong>, con el motivo escrito.</p>
+          <p>Es la palanca proporcionada: un empleado que se va no debería obligar a apagar la cuenta de toda la empresa. Sus sesiones abiertas <strong>se cierran en la petición siguiente</strong>, no cuando caduque una cookie, y tampoco puede volver a entrar aunque su contraseña siga siendo correcta.</p>
+          <div class="note">Hay tres cosas que el sistema <strong>no</strong> te dejará hacer, porque dejarían una cuenta inaccesible: suspenderte a ti mismo, suspender al titular de un negocio, y suspender a la última persona con acceso. Cada una está cubierta por una prueba automática.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">04</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Cortar el acceso de una gestoría</h3><span class="chip chip-warn">Medida de seguridad</span></div>
+          <p>La misma sección lista las gestorías con acceso a esos datos y permite revocarlas.</p>
+          <p><strong>La vía normal es que lo haga el titular</strong> desde su panel: la relación con su asesor es suya, no tuya. Esto existe para lo que no puede esperar —una credencial profesional comprometida— y por eso queda registrado como aviso de seguridad.</p>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>5. Cómo cumple con el RGPD</h2>
+      <p class="sec-intro">Cuatro principios del reglamento y cómo los resuelve el diseño. Esto es lo que hay que poder explicar si un cliente o un inspector lo pregunta.</p>
+    </div>
+
+    <div class="rules">
+
+      <div class="rule">
+        <div class="rule-head"><h3>Minimización</h3><span class="chip chip-flat">Art. 5.1.c</span></div>
+        <p>Administración ve <strong>recuentos y estados</strong>: cuántos clientes, cuántas facturas, qué cola está atascada y con qué error del proveedor. Nunca nombres, conceptos, importes ni documentos.</p>
+        <div class="rule-why"><strong>Por qué así:</strong> para dar soporte no hace falta leer la factura, hace falta saber por qué no salió. El diagnóstico se diseñó para responder eso con el mínimo dato posible, y una prueba automática falla si alguien cuela el destinatario o el asunto.</div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-head"><h3>Papeles claros</h3><span class="chip chip-flat">Art. 28</span></div>
+        <p>El autónomo es el <strong>responsable</strong> de los datos de sus clientes. Noesis es el <strong>encargado</strong>: los trata por cuenta de él y con sus instrucciones.</p>
+        <div class="rule-why"><strong>Por qué importa:</strong> por eso administración no entra en las cuentas. Un encargado que puede leer los datos a voluntad, sin instrucción ni registro, deja de parecer un encargado. Mantener esa puerta cerrada es lo que hace que el contrato que firmáis con cada cliente describa la realidad.</div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-head"><h3>Trazabilidad</h3><span class="chip chip-flat">Art. 30 y 32</span></div>
+        <p>Cada acción administrativa —activar, desactivar, suspender a alguien, revocar a una gestoría— se escribe en una bitácora <strong>encadenada por hash</strong>: cada entrada firma la anterior, así que no se puede alterar el pasado sin que se note.</p>
+        <div class="rule-why"><strong>Por qué así:</strong> un registro que se puede editar no prueba nada. El encadenado convierte la bitácora en evidencia utilizable ante una reclamación.</div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-head"><h3>Derechos de la persona</h3><span class="chip chip-flat">Art. 15 a 20</span></div>
+        <p>El titular descarga <strong>todos</strong> sus datos en JSON cuando quiera, exporta los de un cliente final concreto —cuando ese cliente ejerce su derecho ante él— y puede borrar su cuenta entera escribiendo BORRAR.</p>
+        <div class="rule-why"><strong>Por qué lo ejerce él y no tú:</strong> los derechos se ejercen ante el responsable. Si administración pudiera exportar o borrar los datos de un cliente, estaría actuando como responsable de datos que no le pertenecen.</div>
+      </div>
+
+    </div>
+
+    <div class="callout">
+      <h3>Lo que falta por hacer, y es vuestro</h3>
+      <p>El código respeta estos principios, pero el papel tiene que decir lo mismo. Antes del piloto hay que revisar con un profesional que el <strong>contrato de encargo de tratamiento</strong> describa exactamente lo que hace el sistema: que administración gestiona el acceso pero no lee el contenido, que la bitácora es encadenada, y qué subencargados intervienen (Railway, Meta, Stripe, el proveedor de correo y el de IA).</p>
+      <p>Está anotado como P0 en <code>Tareas-vivas.md</code>. Una revisión propia no sustituye la de un abogado.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>6. Situaciones reales</h2>
+      <p class="sec-intro">Qué hacer en los seis casos que van a pasar de verdad.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Situación</th><th>Qué haces</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Un piloto empieza y quieres darle acceso sin cobrarle</td>
+            <td>Ficha de la cuenta → Activar con el plan Negocio. Recuerda que no cobra.</td>
+          </tr>
+          <tr>
+            <td>Un cliente deja de pagar</td>
+            <td>Pasar a modo consulta. Conserva sus datos y los sigue viendo; recupera todo al reactivar.</td>
+          </tr>
+          <tr>
+            <td>Un empleado de tu cliente se va de la empresa</td>
+            <td>Suspender solo a esa persona, con el motivo. El resto del equipo no se entera.</td>
+          </tr>
+          <tr>
+            <td>Se ha despedido y sospechas que entró anoche</td>
+            <td>Suspender corta sus sesiones al instante. Después, la bitácora dice qué se hizo y cuándo.</td>
+          </tr>
+          <tr>
+            <td>La gestoría de un cliente ha tenido una brecha</td>
+            <td>Revocar su acceso desde la ficha, y avisar al titular: la relación es suya y debe decidir si la restablece.</td>
+          </tr>
+          <tr>
+            <td>Un cliente te pide que borres todo lo suyo</td>
+            <td>No lo haces tú: le explicas dónde está el botón en su panel. Es su derecho y su decisión, y así queda constancia de que fue él.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>7. Cómo sabemos que funciona</h2>
+      <p class="sec-intro">Cada barrera de esta guía tiene una prueba automática, y cada prueba se verificó desactivando lo que protege.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Lo que se garantiza</th><th>Cómo se comprobó</th></tr></thead>
+        <tbody>
+          <tr><td>Una sesión abierta muere al suspender</td><td>Se desactivó el corte y la prueba falló</td></tr>
+          <tr><td>Un suspendido no vuelve a entrar</td><td>Se desactivó la comprobación del login y la prueba falló</td></tr>
+          <tr><td>No se puede dejar una cuenta sin acceso</td><td>Se desactivaron las tres protecciones y la prueba falló</td></tr>
+          <tr><td>El diagnóstico no filtra datos del cliente</td><td>Se coló el destinatario a propósito y la prueba falló</td></tr>
+          <tr><td>Nadie pierde acceso al actualizar la base</td><td>Usuario creado antes de migrar, comprobado después</td></tr>
+          <tr><td>Las cuentas siguen aisladas entre sí</td><td>185 pruebas de administración, seguridad, sesión y aislamiento</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">Una prueba que pasa siempre no protege de nada. Por eso cada una se rompió a propósito antes de darla por buena: si al quitar la protección la prueba sigue verde, es que no estaba probando lo que decía.</div>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>main</code>: <code>web/deps.py</code> (<code>auth_guard</code>), <code>web/auth.py</code>, <code>web/routers/account.py</code>, <code>web/routers/admin.py</code>, <code>db.py</code> (<code>set_user_access</code>, <code>subscription_allows_access</code>, <code>admin_support_delivery_failures</code>, RGPD) y <code>adapters/billing.py</code>.</span>
+    <span>Los permisos por plan y el estado del piloto cambian: la fuente viva es <code>project-state.json</code>.</span>
+  </footer>
+
+</div>
+
+</body>
+</html>

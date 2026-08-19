@@ -176,6 +176,10 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
         return RedirectResponse("/login?error=1", status_code=303)
     for key in keys:
         auth.clear_attempts(key)
+    if not db.user_can_sign_in(user):
+        # Se avisa despues de comprobar la contrasena: asi el mensaje no revela
+        # que una cuenta existe a quien solo esta probando correos.
+        return RedirectResponse("/login?error=suspended", status_code=303)
     _start_session(request, user)
     return RedirectResponse(_account_destination(user["business_id"]), status_code=303)
 
@@ -253,6 +257,8 @@ def google_callback(request: Request, code: str = "", state: str = "",
     auth.clear_attempts(f"google-oauth:{auth.client_ip(request)}")
     user = db.get_user_by_email(profile["email"])
     if user:
+        if not db.user_can_sign_in(user):
+            return RedirectResponse("/login?error=suspended", status_code=303)
         _start_session(request, user, auth_provider="google")
         return RedirectResponse(_account_destination(user["business_id"]), status_code=303)
     request.session["google_signup"] = profile
@@ -631,6 +637,8 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding/google{error_query}consent", status_code=303)
     existing = db.get_user_by_email(email)
     if existing:
+        if not db.user_can_sign_in(existing):
+            return RedirectResponse("/login?error=suspended", status_code=303)
         _start_session(request, existing, auth_provider="google")
         return RedirectResponse(
             _account_destination(existing["business_id"]), status_code=303

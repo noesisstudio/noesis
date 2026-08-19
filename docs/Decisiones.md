@@ -2,6 +2,26 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Retirar acceso a una persona, no apagar la empresa (2026-08-19)
+
+Administracion puede suspender y restaurar el acceso de un usuario concreto, con el
+motivo escrito. Hasta ahora la unica palanca era desactivar el negocio entero, que
+castiga a todo el equipo por una sola persona: cuando un empleado se marcha, lo que
+hay que cortar es su entrada, no la del taller.
+
+La suspension **no borra nada**. Los datos siguen siendo del negocio y su titular los
+conserva integros; lo unico que cambia es quien puede entrar. Es reversible, y al
+restaurar el acceso vuelve tal cual estaba.
+
+Tres protecciones impiden dejar una cuenta inaccesible: nadie se suspende a si mismo,
+no se suspende al titular de un negocio y no se suspende a la ultima persona con
+acceso. Cada una tiene su prueba, porque un fallo aqui deja a un cliente fuera de su
+propio negocio y solo se arregla entrando en la base de datos.
+
+Motivo: la palanca proporcionada al problema. Y la frontera se mantiene intacta:
+esto decide **quien entra**, nunca **que hay dentro**. Administracion sigue sin poder
+abrir el panel de un cliente ni leer sus datos.
+
 ## El propietario gestiona permisos, no entra en las cuentas (2026-08-19)
 
 Administración puede activar cualquier cuenta con un plan, devolverla a modo consulta
