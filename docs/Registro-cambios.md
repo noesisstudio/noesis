@@ -90,6 +90,28 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — guia para conectar el correo
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio que le explicara que es Brevo y una guia para
+  conectarlo. El correo es el P0 mas visible: sin el, un cliente que olvide su
+  contrasena no puede recuperarla.
+- **Areas y archivos:** `docs/Conectar-Correo.html` + `.pdf` (nuevos) y
+  `docs/Inicio.md`. Ningun cambio en `src/`.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** contenido verificado leyendo `adapters/email.py` (API
+  primero, SMTP despues, degradacion a log si no hay ninguna), `config.py`
+  (`BREVO_API_KEY`, `BREVO_API_URL`, `SMTP_FROM`, reintentos de 30 s a 1 h) y
+  `readiness.py`. La peticion real a `api.brevo.com/v3/smtp/email` se comprobo
+  interceptando la llamada HTTPS: construye remitente, destinatario, asunto y
+  cabecera de clave correctamente. **El codigo esta bien; falta la clave.**
+- **Dependencias o validaciones externas:** la conexion sigue pendiente del founder.
+- **Riesgo/punto probable de fallo:** el paso que se salta todo el mundo es autenticar
+  el dominio en el DNS. Sin el, los envios funcionan pero caen en spam, que es peor
+  que no enviar porque no da senal de error. La guia lo marca como el paso critico.
+- **Diagnostico y rollback:** cambio solo documental.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — administracion entra a administrar, no a llevar un negocio
 
 - **Autor/agente:** Claude.

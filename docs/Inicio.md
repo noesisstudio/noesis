@@ -27,6 +27,9 @@ usa la vista de grafo para navegar.
   para llevar Meta Cloud API del número de prueba a clientes reales: canal central,
   alta de números comerciales, plantillas y prueba con dos negocios. El `.html` del
   mismo nombre es la fuente: se edita ahí y se reimprime el PDF.
+- [`Conectar-Correo.pdf`](Conectar-Correo.pdf) — guía del correo saliente con
+  Brevo: por qué un servidor no puede enviar solo, autenticar el dominio para no
+  caer en spam, las dos variables y la prueba de aceptación.
 - [`Conectar-Google.pdf`](Conectar-Google.pdf) — guía completa del acceso con
   Google: por qué bloquea hoy el panel de administración, los cinco pasos en la
   consola, las dos variables, la prueba de aceptación y los errores típicos.

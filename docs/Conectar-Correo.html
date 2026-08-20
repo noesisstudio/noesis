@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conectar el correo · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Runbook de producción</p>
+    <h1>Conectar el correo</h1>
+    <p class="standfirst">Media hora repartida en dos sitios: una cuenta en Brevo y unos registros en el DNS de Hostinger. Cuesta cero euros y es lo que hace que un cliente que olvida su contraseña pueda recuperarla.</p>
+    <p class="crumbs">Variables y criterios de aceptación en <code>Conectar-APIs.md</code>. Estado verificable en <code>project-state.json</code>.</p>
+  </header>
+
+  <div class="callout callout-warn">
+    <h3>Por qué esto no puede esperar</h3>
+    <p>Sin correo, <strong>un cliente que olvide su contraseña se queda fuera para siempre</strong>. No hay otra vía de recuperación.</p>
+    <p>Y hay siete partes del producto que dependen de él: recuperar contraseña, entregar la factura al cliente final, el recordatorio de cobro, el paquete trimestral a la gestoría, las invitaciones de alta, los avisos y tu resumen semanal de dirección.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Qué es Brevo y por qué hace falta</h2>
+      <p class="sec-intro">La parte que no es evidente: un servidor no puede simplemente «mandar correos».</p>
+    </div>
+
+    <p>Técnicamente sí podría. El problema es que <strong>nadie los recibiría</strong>. Gmail y Outlook desconfían por defecto de cualquier servidor desconocido que empieza a enviar, porque es exactamente lo que hace el spam. Un servidor nuevo no tiene reputación, así que sus correos van a la carpeta de spam o se rechazan directamente.</p>
+
+    <p><strong>Brevo envía por ti</strong> desde servidores que llevan años con buena reputación. Podría ser Postmark, Mailgun o Amazon SES; está elegido porque su plan gratuito da <strong>300 correos al día</strong>, de sobra para el piloto.</p>
+
+    <div class="note"><strong>Por qué la API y no SMTP.</strong> SMTP es el protocolo clásico del correo, el que configuras en Outlook. <strong>Railway bloquea sus puertos</strong>, y con razón: si dejaran enviar SMTP a cualquiera, se llenarían de spammers. Por eso Noesis habla con Brevo por HTTPS, que es tráfico web normal. Una configuración SMTP clásica no saldría nunca de Railway.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Paso a paso</h2>
+      <p class="sec-intro">Cuatro pasos. El segundo es el que decide si tus facturas llegan a la bandeja de entrada o a spam.</p>
+    </div>
+
+    <ol class="steps">
+
+      <li class="step first-step">
+        <span class="step-n">01</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Crear la cuenta</h3><span class="chip chip-ok">Gratis</span></div>
+          <p>Entra en <code>brevo.com</code> y regístrate <strong>con el correo de la empresa</strong>, no con uno personal. Es el mismo criterio que con Google: mañana no quieres que el correo de tus clientes dependa de una cuenta que no controla la sociedad.</p>
+          <p>Te pedirá datos de la empresa y para qué la usas. Elige <strong>correo transaccional</strong> —el que se envía por una acción del usuario— y no marketing: son productos distintos y aquí no vas a hacer campañas.</p>
+        </div>
+      </li>
+
+      <li class="step hidden-step">
+        <span class="step-n">02</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Autenticar el dominio</h3><span class="chip chip-stop">El paso que importa</span></div>
+          <p>En Brevo: <strong>Settings → Senders, Domains &amp; Dedicated IPs → Domains → Add a domain</strong>. Escribe <code>bynoesis.com</code>.</p>
+          <p>Brevo te dará <strong>dos o tres registros DNS</strong>. Son líneas de texto que hay que pegar en Hostinger, que es donde tienes el dominio: normalmente un registro de tipo <code>TXT</code> y uno o dos <code>CNAME</code> o <code>DKIM</code>.</p>
+          <p>En Hostinger: <strong>panel del dominio → DNS / Nameservers → Añadir registro</strong>. Copia y pega cada uno tal cual te lo da Brevo.</p>
+          <div class="note"><strong>Qué dicen esos registros, traducido:</strong> «yo, dueño de bynoesis.com, autorizo a Brevo a enviar correo en mi nombre». Gmail los consulta antes de decidir si tu factura va a la bandeja o a spam. <strong>Sin este paso los envíos funcionan pero acaban en spam</strong>, que es peor que no enviar: parece que tu producto no es serio.</div>
+          <p>Los cambios de DNS tardan de unos minutos a unas horas. Brevo te marca el dominio como verificado cuando los detecta.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">03</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Crear el remitente y la clave</h3></div>
+          <p><strong>Remitente:</strong> en la misma sección, crea y verifica <code>no-reply@bynoesis.com</code>. Es la dirección desde la que saldrán los correos.</p>
+          <p><strong>Clave:</strong> ve a <strong>SMTP &amp; API → API Keys → Generate a new API key</strong>. Empieza por <code>xkeysib-</code>.</p>
+          <p>Cópiala en ese momento: como el secreto de Google, se muestra entera una sola vez.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">04</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Dos variables en Railway</h3></div>
+          <pre>BREVO_API_KEY=<span class="c">xkeysib-…</span>
+SMTP_FROM=Noesis &lt;no-reply@bynoesis.com&gt;</pre>
+          <p>El formato de <code>SMTP_FROM</code> importa: Noesis separa el nombre de la dirección con ese patrón <code>Nombre &lt;correo&gt;</code>. Si pones solo la dirección, funciona igual pero los correos saldrán sin nombre visible.</p>
+          <div class="note">El nombre <code>SMTP_FROM</code> despista un poco: se llama así por herencia, pero se usa también cuando el envío va por la API. No hace falta configurar ningún <code>SMTP_HOST</code> ni <code>SMTP_USER</code>.</div>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Comprobar que funciona</h2>
+      <p class="sec-intro">En este orden. El primero se hace sin tocar nada más.</p>
+    </div>
+
+    <ol class="checks">
+      <li>En la web, <strong>«He olvidado mi contraseña»</strong> con tu propio correo. Debe llegarte el enlace.</li>
+      <li>Míralo en <strong>Gmail y en Outlook</strong>, no solo en uno. Y comprueba que <strong>no ha caído en spam</strong>: si cayó, el paso 2 no está bien.</li>
+      <li>Emite una factura de prueba y envíala a un correo tuyo. Debe llegar con su PDF.</li>
+      <li>En Brevo, <strong>Statistics</strong> te muestra cada envío con su estado: entregado, rebotado o abierto.</li>
+      <li>En Noesis, <code>/admin</code> → «Gestionar» de una cuenta → <strong>Entregas atascadas</strong> debe estar vacío. Si algo falló, ahí sale el motivo.</li>
+      <li>Ejecuta <code>noesis-doctor --strict</code>: debe decir «Correo saliente por API HTTPS configurado».</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Si algo falla</h2>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Lo que ves</th><th>Qué pasa en realidad</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>No llega nada, y en «Entregas atascadas» pone <em>SMTP no está configurado</em></td>
+            <td>Falta <code>BREVO_API_KEY</code> en Railway, o el despliegue no ha terminado.</td>
+          </tr>
+          <tr>
+            <td>Llega, pero a la carpeta de spam</td>
+            <td>El dominio no está autenticado o los DNS aún no han propagado. Revisa el paso 2 en Brevo: debe aparecer verificado.</td>
+          </tr>
+          <tr>
+            <td>Brevo responde 401</td>
+            <td>La clave es incorrecta o fue revocada. Genera otra.</td>
+          </tr>
+          <tr>
+            <td>Brevo responde 400 sobre el remitente</td>
+            <td>La dirección de <code>SMTP_FROM</code> no está verificada como remitente en Brevo.</td>
+          </tr>
+          <tr>
+            <td>Falla y se reintenta solo</td>
+            <td>Es lo esperado: la cola reintenta con espera creciente, de 30 segundos hasta una hora, seis veces. No se pierde nada ni se duplica.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>Nada se pierde mientras tanto.</strong> Noesis guarda cada correo en una cola antes de intentar enviarlo. Si el proveedor falla, se reintenta; si no hay proveedor configurado, se registra en el log en vez de romper la operación. Por eso puedes emitir facturas hoy aunque el correo no salga todavía.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Antes de empezar</h2>
+    </div>
+    <ul>
+      <li><strong>Cuenta de empresa, no personal.</strong> El correo de tus clientes no debería depender de una cuenta a nombre de una persona.</li>
+      <li><strong>La clave va a Railway y a ningún otro sitio.</strong> Ni a un chat, ni a un documento, ni a una captura.</li>
+      <li><strong>No te saltes la autenticación del dominio.</strong> Es el único paso que no se nota hasta que un cliente te dice que no le ha llegado la factura, y para entonces ya has quedado mal.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>main</code>: <code>adapters/email.py</code> (dos vías, API primero y degradación a log), <code>config.py</code> (<code>BREVO_API_KEY</code>, <code>BREVO_API_URL</code>, <code>SMTP_FROM</code>, reintentos), <code>readiness.py</code> y la cola durable de <code>db.py</code>. La petición a <code>api.brevo.com</code> se comprobó interceptándola, sin enviar nada real.</span>
+    <span>Se abre en cualquier navegador y se imprime a PDF sin perder el diseño.</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
