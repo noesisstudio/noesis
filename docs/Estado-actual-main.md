@@ -83,6 +83,18 @@
   y reinstala inmediatamente la inmutabilidad. El CI reproduce este salto con una
   factura emitida tanto en SQLite como en PostgreSQL.
 
+- Cada oficio tiene su plantilla de catálogo con el IVA ya puesto en cada partida y
+  la marca de si es material o mano de obra. El autónomo la ve entera antes de
+  cargarla en `/b/{id}/oficios`, con su oficio el primero cuando se deduce de lo que
+  escribió al darse de alta; cargarla dos veces no duplica nada. Ese marcado es lo
+  que permite avisar del 40% de material que hace decaer el tipo reducido en obras
+  de vivienda: Noesis avisa y nunca cambia el tipo.
+- El canal de Meta está construido y revisado —firma, idempotencia, medios acotados
+  y cola durable—, pero **los cinco avisos proactivos al titular no son aprobables
+  todavía**: mandan el mensaje entero en un único hueco de plantilla. Las cuatro
+  plantillas al cliente sí encajan. Los cuerpos de las nueve viven en
+  `noesis/whatsapp_templates.py`. Revisión completa en [[Revision-Meta]].
+
 ## Política comercial en el código actual
 
 - Catálogo: **29 / 49 / 99 € al mes + IVA**.

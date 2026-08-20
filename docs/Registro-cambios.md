@@ -23,7 +23,41 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
-<<<<<<< HEAD
+## 2026-08-20 — revisión del canal de Meta y espacio para las plantillas por oficio
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dos encargos del founder. Revisar entero el canal de Meta antes de
+  encenderlo, y dar pantalla propia a los catálogos por oficio, que existían en
+  código y en dos endpoints pero no se veían por ningún sitio.
+- **Áreas y archivos:** `src/noesis/whatsapp_templates.py` (nuevo),
+  `src/noesis/web/whatsapp.py` (`template_param`, `MetaRejected`, retirada de
+  `send_payment_reminder`), `src/noesis/trades.py` (`suggest_trade`,
+  `catalog_overview`), `src/noesis/web/routers/invoicing.py` (endpoint del detalle),
+  `src/noesis/web/routers/pages.py` y `templates/base.html` (alta de la página),
+  `templates/oficios.html` (nueva), `tests/test_trade_templates.py` (nuevo),
+  `scripts/build_estado_xlsx.py` (nuevo), `docs/Revision-Meta.md` (nuevo),
+  `docs/Estado-Noesis.xlsx` (nuevo), `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno. Los catálogos siguen en código.
+- **Pruebas ejecutadas:** suite completa **437 pasan, 85 subtests, 0 fallos**. Ruff
+  verde. Ocho pruebas nuevas cubren la adivinación del oficio, el IVA por partida,
+  la no duplicación al cargar dos veces, el aislamiento entre negocios, la página y
+  su API, y el contrato de las nueve plantillas de Meta.
+- **Dependencias o validaciones externas:** el bloqueo de los cinco proactivos al
+  titular **no se ha arreglado**: repartir el texto en huecos cambia la redacción
+  que recibe el founder cada mañana y esa decisión es suya. Los cuerpos aprobables
+  ya están escritos y `python -m noesis.whatsapp_templates` señala qué falta.
+- **Riesgo/punto probable de fallo:** `template_param` aplana saltos de línea, así
+  que un proactivo que hoy manda el mensaje entero en un hueco llegará como un
+  párrafo corrido en lugar de fallar. Es un mal menor y transitorio: esas cinco
+  plantillas no son aprobables todavía, de modo que nada empeora en producción.
+- **Diagnóstico y rollback:** `pytest tests/test_trade_templates.py`. La página se
+  desactiva quitando `oficios` de `_PAGES`; el saneado, retirando la llamada en
+  `queue_template`. Nada de esto toca datos.
+- **Aparte:** `Registro-cambios.md` y `Registro-QA.md` tenían marcadores de conflicto
+  de Git **commiteados** desde `d32ff10`. Resueltos conservando ambos lados en orden
+  cronológico; no se ha perdido ninguna entrada.
+- **Estado de publicación:** local sobre `main`, pendiente de subir.
+
 ## 2026-08-06 21:00 — continuar la numeración que el autónomo traía de otro programa
 
 - **Autor/agente:** Claude.
@@ -230,7 +264,6 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   revisar `email.available()` y el payload de `checkout/sessions`. El cambio no altera
   tablas ni datos y puede revertirse por adaptador.
 - **Estado de publicación:** local sobre `main`, validado y pendiente de push.
-=======
 ## 2026-08-02 21:30 — catálogos por oficio y aviso del 40% en obras de vivienda
 
 - **Autor/agente:** Claude.
@@ -259,7 +292,6 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   devuelva `None`; la migración puede quedarse sin efecto secundario.
 - **Estado de publicación:** commit local, pendiente de subir.
 
->>>>>>> d32ff10 (Catálogos por oficio y aviso del 40% en obras de vivienda)
 ## 2026-08-02 20:10 — el error de emisión ofrece la factura simplificada cuando es legal
 
 - **Autor/agente:** Claude.

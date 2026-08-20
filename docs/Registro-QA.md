@@ -1,6 +1,39 @@
 # Registro de QA
 
-<<<<<<< HEAD
+## 2026-08-20 — canal de Meta revisado y plantillas por oficio con pantalla
+
+### Qué se probó y con qué resultado
+
+- **Plantillas por oficio:** el sector es texto libre, así que se comprobó que
+  «Fontanero autónomo», «REFORMAS INTEGRALES» y «lampistería» caen en el oficio
+  correcto y que «consultoría de marca» no cae en ninguno. Cada partida conserva su
+  IVA y si es material o mano de obra; el reparto por tipo cuadra con el total.
+- **No duplicar:** cargar el catálogo de fontanería dos veces crea las partidas la
+  primera vez y ninguna la segunda; el número de productos no se mueve.
+- **Aislamiento:** cargar el catálogo en un negocio no marca ni una partida como
+  «ya la tienes» en otro.
+- **Pantalla y API:** con sesión iniciada, `/b/{id}/oficios` responde 200,
+  `/api/{id}/oficios/plantillas` devuelve los cinco oficios y el sugerido, y la
+  carga desde la propia página deja las partidas en el catálogo real.
+- **Contrato de las plantillas de Meta:** ninguna de las nueve declaradas tiene el
+  cuerpo formado solo por variables ni huecos descolocados, y todas son *utility*.
+- **Saneado de valores:** un salto de línea, un tabulador o seis espacios seguidos
+  dentro de un valor se aplanan antes de encolar, y un valor larguísimo se corta en
+  1024 caracteres. Al encolar `noesis_factura_lista` con «Ana\nGarcía», el outbox
+  guarda «Ana García».
+- **Pruebas:** suite completa **437 pasan, 85 subtests, 0 fallos**. Ruff verde.
+  Fuente de verdad del proyecto verde.
+
+### Qué no se ha probado
+
+- **Nada contra Meta real**: sigue sin credenciales, así que no hay entrega,
+  aprobación de plantilla ni estado de lectura verificados. Todo lo anterior es
+  comportamiento propio con la API simulada.
+- **Cuánto tarda el webhook** con una foto real de ticket: es la medida que decide
+  si hay que contestar 200 antes de procesar. Requiere número real.
+- **Los cinco proactivos al titular** siguen mandando el mensaje entero en un hueco.
+  Está detectado, documentado y con cuerpo alternativo escrito, pero no corregido.
+
 ## 2026-08-06 — cartera multiempresa y PDF contextual desde WhatsApp
 
 ### Qué se probó y con qué resultado
@@ -124,7 +157,6 @@
 - Railway todavía debe desplegar el candidato y demostrar la huella por HTTP.
 - No se han usado credenciales de Brevo ni Stripe; entregabilidad e IVA real se
   validarán en la fase externa.
-=======
 ## 2026-08-02 (3) — catálogos por oficio y aviso del tipo reducido en obras de vivienda
 
 ### Qué se probó y con qué resultado
@@ -159,7 +191,6 @@
 - La migración 38 se probó en SQLite. **Falta ejecutarla en PostgreSQL** antes de
   desplegar.
 
->>>>>>> d32ff10 (Catálogos por oficio y aviso del 40% en obras de vivienda)
 ## 2026-08-02 (2) — el error de emisión ofrece la salida legal, y prueba de concurrencia real
 
 ### Qué se probó y con qué resultado

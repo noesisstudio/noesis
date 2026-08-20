@@ -105,6 +105,79 @@ def available_trades() -> list[dict]:
     ]
 
 
+# Palabras con las que un autónomo describe su oficio al darse de alta. El
+# campo `sector` es texto libre, así que la única forma de adivinar su plantilla
+# es reconocer cómo lo escribe él, no cómo lo llamamos nosotros.
+_TRADE_HINTS: dict[str, tuple[str, ...]] = {
+    "fontaneria": ("fontan", "plomer", "lampist", "sanitari"),
+    "electricidad": ("electric", "electrici", "instalador eléctr"),
+    "reformas": ("reforma", "albañil", "albanil", "obra", "construc", "pintor",
+                 "pintura"),
+    "limpieza": ("limpieza", "limpiez", "neteja"),
+    "jardineria": ("jardin", "jardín", "paisaj", "poda"),
+}
+
+
+def _vat_summary(items) -> list[dict]:
+    """Reparto de partidas por tipo de IVA, para verlo de un vistazo."""
+    counts: dict[int, int] = {}
+    for item in items:
+        counts[item["vat_rate"]] = counts.get(item["vat_rate"], 0) + 1
+    return [
+        {"vat_rate": rate, "items": counts[rate]}
+        for rate in sorted(counts, reverse=True)
+    ]
+
+
+def suggest_trade(sector: str | None) -> str | None:
+    """Adivina el oficio a partir de lo que el autónomo escribió en su alta."""
+    text = (sector or "").strip().lower()
+    if not text:
+        return None
+    for key, hints in _TRADE_HINTS.items():
+        if any(hint in text for hint in hints):
+            return key
+    return None
+
+
+def catalog_overview(business_id: int | None = None) -> list[dict]:
+    """Las plantillas completas, con su IVA y qué parte ya está en el catálogo.
+
+    Es lo que necesita la pantalla de oficios: no solo cuántas partidas trae
+    cada plantilla, sino cuáles, a qué tipo tributa cada una y cuántas tiene ya
+    el negocio, para que cargar una no parezca una caja negra.
+    """
+    from . import db
+
+    existing: set[str] = set()
+    if business_id is not None:
+        existing = {
+            (product["name"] or "").strip().lower()
+            for product in db.list_products(business_id)
+        }
+    overview = []
+    for key in TRADE_CATALOGS:
+        items = catalog_for(key)
+        marked = [
+            {**item, "in_catalog": item["name"].strip().lower() in existing}
+            for item in items
+        ]
+        already = sum(1 for item in marked if item["in_catalog"])
+        overview.append({
+            "key": key,
+            "label": TRADE_CATALOGS[key]["label"],
+            "items": marked,
+            "count": len(marked),
+            "already": already,
+            "pending": len(marked) - already,
+            "vat_summary": _vat_summary(items),
+            "has_reduced_rate": any(
+                item["vat_rate"] == REDUCED_RATE for item in items
+            ),
+        })
+    return overview
+
+
 def catalog_for(trade: str) -> tuple[dict, ...]:
     """Devuelve el catálogo de un oficio como diccionarios listos para guardar."""
     data = TRADE_CATALOGS.get((trade or "").strip().lower())

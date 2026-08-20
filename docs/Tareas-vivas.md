@@ -27,8 +27,23 @@
   seis `price_id` y probar en modo test dirección, NIF y `automatic_tax`; comprobar
   importe e IVA resultantes, checkout, webhook, impago, reactivación y portal de
   cliente antes de usar claves live.
+- [ ] Decidir la redacción de los cinco avisos al titular (resumen diario, cierre,
+  semanal, aviso fiscal y propuesta de cobro) y repartirla en huecos en
+  `scheduler.py`: hoy mandan el mensaje entero en un `{{1}}` y Meta ni aprueba esa
+  plantilla ni envía un valor con saltos de línea. Los cuerpos aprobables ya están
+  escritos en `noesis/whatsapp_templates.py`; `python -m noesis.whatsapp_templates`
+  dice qué falta. Detalle en [[Revision-Meta]].
+- [ ] Crear en WhatsApp Manager las cuatro plantillas al cliente, que ya encajan:
+  `noesis_recordatorio_cobro`, `noesis_factura_lista`,
+  `noesis_seguimiento_presupuesto` y `noesis_recordatorio_cita`.
 - [ ] Meta real: número, webhook firmado, texto, audio, foto/PDF, plantillas, estados,
-  reintentos y bloqueo de cuenta inactiva.
+  reintentos y bloqueo de cuenta inactiva. Medir de paso cuánto tarda el webhook con
+  una foto real: si se pasa del tiempo que Meta espera, hay que contestar 200 antes
+  de procesar el medio.
+- [ ] Confirmar la versión vigente de la Graph API (`META_GRAPH_VERSION`, hoy v23.0)
+  y rehacer el margen por mensaje con la tarifa actual de Meta: el cálculo de
+  [[Unit-economics-y-cerebro-interno]] usa el modelo de conversación de 24 h, que
+  Meta sustituyó por cobro por mensaje de plantilla.
 - [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
   (Tesseract/pytesseract o extracción externa autorizada) con corpus real en
   castellano/catalán; sin estos servicios, mantener las promesas públicas

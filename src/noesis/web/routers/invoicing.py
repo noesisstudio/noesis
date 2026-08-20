@@ -37,6 +37,16 @@ def api_trades(business_id: int):
     return trades.available_trades()
 
 
+@router.get("/api/{business_id}/oficios/plantillas")
+def api_trade_templates(business_id: int):
+    """Plantillas completas: partidas, IVA y qué parte ya tiene el negocio."""
+    business = db.get_business(business_id) or {}
+    return {
+        "sugerido": trades.suggest_trade(business.get("sector")),
+        "oficios": trades.catalog_overview(business_id),
+    }
+
+
 @router.post("/api/{business_id}/oficios/{trade}/cargar")
 def api_load_trade_catalog(business_id: int, trade: str):
     try:

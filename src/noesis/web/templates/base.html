@@ -44,7 +44,7 @@
       {% set b = business.id %}
       {% set g_tesoreria = ['tesoreria', 'analisis', 'ingresos', 'costes'] %}
       {% set g_facturacion = ['facturas', 'presupuestos', 'cobros', 'impuestos'] %}
-      {% set g_ventas = ['clientes', 'crm', 'productos'] %}
+      {% set g_ventas = ['clientes', 'crm', 'productos', 'oficios'] %}
       <a class="nav-item {{ 'active' if active=='resumen' }}" href="/b/{{ b }}/resumen"><span class="ic">{{ ic('resumen') }}</span> Inicio</a>
       <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Trabajos</a>
       <a class="nav-item {{ 'active' if active=='proyectos' }}" href="/b/{{ b }}/proyectos"><span class="ic">{{ ic('proyectos') }}</span> Proyectos</a>
@@ -137,6 +137,7 @@
       <a class="{{ 'active' if active=='clientes' }}" href="/b/{{ b }}/clientes">Clientes</a>
       <a class="{{ 'active' if active=='crm' }}" href="/b/{{ b }}/crm">CRM</a>
       <a class="{{ 'active' if active=='productos' }}" href="/b/{{ b }}/productos">Productos</a>
+      <a class="{{ 'active' if active=='oficios' }}" href="/b/{{ b }}/oficios">Plantillas por oficio</a>
     </div>
     {% endif %}
     {% if subscription_read_only %}
