@@ -105,6 +105,11 @@
   durable y las dos vías de salida ya están construidas. El comprobador de
   integraciones valida por lectura la cuenta Brevo y que `SMTP_FROM` sea un
   remitente activo, pero la entregabilidad exige envíos reales a Gmail y Outlook.
+  **20-ago: primer envío real correcto.** Con `BREVO_API_KEY` y `SMTP_FROM` en
+  Railway, una recuperación de contraseña disparada contra producción llegó al buzón
+  de `xavier@bynoesis.com` con el remitente «Noesis». Queda comprobar que no cae en
+  spam en Gmail y Outlook, y recorrer factura al cliente final, invitación de
+  gestoría y reintento de la outbox.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El

@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-08-20 — primer correo real entregado desde produccion
+
+- **Que se probo:** con `BREVO_API_KEY` y `SMTP_FROM` ya cargadas en Railway, se
+  disparo una recuperacion de contraseña contra `https://bynoesis.com/recuperar`
+  para una direccion del propio founder.
+- **Resultado:** HTTP 303 a `?sent=1` —respuesta identica exista o no la cuenta, por
+  diseño— y **el correo llego** al buzon de `xavier@bynoesis.com` con el asunto
+  "Restablecer tu contraseña de Noesis" y el remitente «Noesis».
+- **Que queda demostrado:** la clave de Brevo es valida, la via HTTPS funciona desde
+  Railway —que bloquea SMTP—, `SMTP_FROM` produce el remitente correcto y la cola
+  entrega. El adaptador ya se habia verificado interceptando la peticion; ahora se
+  confirma extremo a extremo contra el proveedor real.
+- **Que NO queda demostrado, y por eso `smtp_real` sigue pendiente:** entregabilidad
+  en Gmail y Outlook sin caer en spam, que depende de la autenticacion del dominio en
+  el DNS; entrega de factura al cliente final con su PDF; invitacion de gestoria; y
+  reintento de la outbox tras un fallo temporal sin duplicar el mensaje.
+- **Google OAuth:** validado en el mismo periodo. El founder inicia sesion con Google
+  y alcanza `/admin`, que en produccion lo exige.
+
 ## 2026-08-20 — cada identidad aterriza donde trabaja
 
 - **Por que:** el founder lo dijo: administracion "no hace falta que utilice

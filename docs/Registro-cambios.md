@@ -90,6 +90,30 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — correo real entregado y Google validado en produccion
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder cargo `BREVO_API_KEY` en Railway y pidio verificarlo. Se
+  comprueba con un envio real, no con una lectura de configuracion.
+- **Areas y archivos:** solo documentacion. `docs/Tareas-vivas.md` y
+  `docs/Registro-QA.md`; ningun cambio en `src/`.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** recuperacion de contraseña disparada contra
+  `https://bynoesis.com/recuperar`. HTTP 303 a `?sent=1` y el correo **llego** al buzon
+  del founder con el remitente «Noesis». Queda demostrado que la clave es valida, que
+  la via HTTPS atraviesa Railway —que bloquea SMTP— y que la cola entrega.
+- **Dependencias o validaciones externas:** `smtp_real` **sigue pendiente a
+  proposito**. Un envio a un buzon del propio dominio no demuestra entregabilidad:
+  falta comprobar Gmail y Outlook sin caer en spam, que depende de la autenticacion
+  del dominio en el DNS, mas factura al cliente final con PDF, invitacion de gestoria
+  y reintento de la outbox sin duplicar.
+- **Riesgo/punto probable de fallo:** el modo de fallo peligroso del correo es
+  silencioso —entregado a la carpeta de spam— y no lo detecta ninguna prueba
+  automatica. Solo se ve mirando una bandeja real de Gmail y de Outlook.
+- **Diagnostico y rollback:** si un envio falla, el motivo del proveedor aparece en
+  `/admin` -> Gestionar -> Entregas atascadas.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — guia para conectar el correo
 
 - **Autor/agente:** Claude.
