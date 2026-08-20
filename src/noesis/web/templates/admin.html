@@ -16,7 +16,10 @@
       <p>Cada departamento te informa con sus cifras y su parte diario.
          Solo metadatos de cuenta y agregados — sin datos operativos de cada autónomo.</p>
     </div>
-    <div class="page-actions"><form method="post" action="/logout"><button class="btn" type="submit">Salir</button></form></div>
+    <div class="page-actions">
+      {% if data.businesses %}<a class="btn" href="/b/{{ mi_negocio }}/resumen">Mi panel de negocio</a>{% endif %}
+      <form method="post" action="/logout"><button class="btn" type="submit">Salir</button></form>
+    </div>
   </div>
 
   <div class="admin-grid">

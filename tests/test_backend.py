@@ -6295,6 +6295,53 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         limpia, _ = self.make_business("Cuenta sin incidencias")
         self.assertEqual(db.admin_support_delivery_failures(limpia["id"]), [])
 
+    def test_each_identity_lands_where_it_works(self):
+        """Administracion no lleva un negocio con Noesis: gestiona los de los demas.
+
+        Aterrizar en un panel con Trabajos, Clientes y Facturas la obliga a buscar
+        la puerta de su propio trabajo. Un cliente, al reves, no debe acabar nunca
+        en el panel interno."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Noesis Studio")
+        cliente, _ = self.make_business("Fontaneria cliente")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+        db.create_user(
+            "cliente@example.com", auth.hash_password(TEST_PASSWORD), cliente["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            entrada_admin = client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+            panel_admin = client.get("/admin")
+            client.post("/logout")
+            entrada_cliente = client.post("/login", data={
+                "email": "cliente@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+
+        # Administracion entra directa a su trabajo.
+        self.assertEqual(
+            entrada_admin.headers.get("location", ""), "/admin",
+            "administracion deberia aterrizar en el panel interno",
+        )
+        # Pero no queda encerrada: puede volver a su propio negocio.
+        self.assertIn(f"/b/{admin_business['id']}/resumen", panel_admin.text)
+
+        # El cliente entra a su negocio, nunca al panel interno.
+        destino_cliente = entrada_cliente.headers.get("location", "")
+        self.assertIn(f"/b/{cliente['id']}", destino_cliente)
+        self.assertNotIn("/admin", destino_cliente)
+
     def test_admin_dashboard_manages_accounts_without_opening_each_file(self):
         """El propietario tiene que poder gestionar desde el cuadro de mando.
 

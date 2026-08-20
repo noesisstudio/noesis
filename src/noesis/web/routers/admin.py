@@ -51,6 +51,7 @@ def admin_panel(request: Request):
     return TEMPLATES.TemplateResponse(request, "admin.html", {
         "data": data,
         "hoy": date.today().isoformat(),
+        "mi_negocio": user["business_id"],
         "access_requests": requests_list,
         "access_pending": sum(1 for r in requests_list if r["status"] == "nueva"),
         "visits": db.page_views_summary(30),

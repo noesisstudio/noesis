@@ -147,8 +147,18 @@ def _google_profile(code: str) -> dict:
     }
 
 # ================================================================ AUTH ====== #
-def _account_destination(business_id: int) -> str:
-    """Retoma un alta empezada; las cuentas normales entran al parte del día."""
+def _account_destination(business_id: int, user: dict | None = None) -> str:
+    """Cada identidad entra por donde trabaja.
+
+    Administracion no usa Noesis para llevar un negocio: entra a gestionar los de
+    los demas. Aterrizar en un panel con Trabajos, Clientes y Facturas la obliga a
+    buscar la puerta de su propio trabajo, y a completar un alta que no le sirve.
+    Su panel de negocio sigue existiendo y accesible desde el propio /admin.
+    """
+    if user and (
+        bool(user.get("is_admin")) or config.is_admin_email(user.get("email"))
+    ):
+        return "/admin"
     return db.onboarding_destination(business_id) or f"/b/{business_id}/resumen"
 
 
@@ -181,7 +191,9 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
         # que una cuenta existe a quien solo esta probando correos.
         return RedirectResponse("/login?error=suspended", status_code=303)
     _start_session(request, user)
-    return RedirectResponse(_account_destination(user["business_id"]), status_code=303)
+    return RedirectResponse(
+        _account_destination(user["business_id"], user), status_code=303
+    )
 
 
 @router.post("/logout")
@@ -260,7 +272,9 @@ def google_callback(request: Request, code: str = "", state: str = "",
         if not db.user_can_sign_in(user):
             return RedirectResponse("/login?error=suspended", status_code=303)
         _start_session(request, user, auth_provider="google")
-        return RedirectResponse(_account_destination(user["business_id"]), status_code=303)
+        return RedirectResponse(
+        _account_destination(user["business_id"], user), status_code=303
+    )
     request.session["google_signup"] = profile
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
@@ -641,7 +655,7 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
             return RedirectResponse("/login?error=suspended", status_code=303)
         _start_session(request, existing, auth_provider="google")
         return RedirectResponse(
-            _account_destination(existing["business_id"]), status_code=303
+            _account_destination(existing["business_id"], existing), status_code=303
         )
     try:
         biz, user = db.create_account(

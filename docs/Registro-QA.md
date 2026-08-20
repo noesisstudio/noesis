@@ -1,5 +1,28 @@
 # Registro de QA
 
+## 2026-08-20 — cada identidad aterriza donde trabaja
+
+- **Por que:** el founder lo dijo: administracion "no hace falta que utilice
+  software... unicamente es para manejar y hacer de admin". Al entrar aterrizaba en
+  un panel de negocio con Trabajos, Clientes y Facturas, y tenia que encontrar la
+  puerta de su propio trabajo. De ahi venia la confusion con "Clientes".
+- **Que cambia:** `_account_destination` recibe el usuario; si es administracion
+  devuelve `/admin`. Un cliente sigue entrando a su negocio. La regla se aplica igual
+  por contrasena y por las dos vias de Google.
+- **No se encierra a nadie:** el cuadro de mando ofrece "Mi panel de negocio".
+- **Auditoria previa con la aplicacion levantada:** las cinco rutas de administracion
+  responden 200 y el log del servidor no registra ni un error. El unico 404 es
+  `/admin/backups/latest` sin copias, que es correcto.
+- **Prueba:** `test_each_identity_lands_where_it_works` cubre las dos direcciones —
+  administracion a `/admin` con vuelta disponible, y un cliente a su negocio sin
+  acabar nunca en el panel interno.
+- **Correo verificado sin contratar nada:** interceptando la llamada HTTPS se
+  comprueba que el adaptador construye la peticion correcta a
+  `https://api.brevo.com/v3/smtp/email`, con la cabecera de clave, el remitente
+  derivado de `SMTP_FROM` y el destinatario. **El codigo esta bien; falta la clave.**
+- **Alcance:** 98 pruebas de administracion, login, sesion, onboarding y Google en
+  verde; `ruff` limpio.
+
 ## 2026-08-20 — panel de gestion en el cuadro de mando
 
 - **Por que:** el founder entro en `/admin` y no encontro nada. La unica via a las

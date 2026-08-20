@@ -90,6 +90,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — administracion entra a administrar, no a llevar un negocio
+
+- **Autor/agente:** Claude.
+- **Objetivo:** quitar errores del apartado de administracion y separar el perfil de
+  administracion del de cliente, a peticion del founder.
+- **Areas y archivos:** `web/routers/account.py` (`_account_destination` decide por
+  identidad), `web/templates/admin.html` (vuelta a su propio panel),
+  `web/routers/admin.py`, `tests/test_backend.py`, `docs/project-state.json`,
+  `docs/Registro-QA.md`.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** una nueva que cubre las dos direcciones; 98 pruebas de
+  administracion, login, sesion, onboarding y Google en verde; `ruff` limpio.
+  Auditoria manual de las cinco rutas de administracion con la aplicacion levantada:
+  todas 200 y sin errores en el log.
+- **Dependencias o validaciones externas:** el correo sigue sin clave. Verificado que
+  el adaptador construye bien la peticion a Brevo; **falta contratar `BREVO_API_KEY`**,
+  que es la unica via que funciona en Railway porque bloquea los puertos SMTP.
+- **Riesgo/punto probable de fallo:** si en el futuro una cuenta de administracion
+  necesitara usar Noesis para su propio negocio, el enlace "Mi panel de negocio" se lo
+  permite; nada queda inaccesible.
+- **Diagnostico y rollback:** revertir el commit devuelve el aterrizaje anterior.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — panel de gestion y entrada visible a administracion
 
 - **Autor/agente:** Claude.
