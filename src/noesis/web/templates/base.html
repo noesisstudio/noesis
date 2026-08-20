@@ -117,6 +117,9 @@
         {% else %}
           <a href="/b/{{ business.id }}/ajustes" class="wa-pill wa-off"><span class="dot"></span> Conectar WhatsApp</a>
         {% endif %}
+        {% if request.state.is_admin %}
+        <a class="integration-link admin-link" href="/admin">Administración</a>
+        {% endif %}
         <a class="integration-link" href="/b/{{ business.id }}/ajustes#integraciones">Integraciones</a>
       </div>
     </div>

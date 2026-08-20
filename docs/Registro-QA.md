@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-08-20 — panel de gestion en el cuadro de mando
+
+- **Por que:** el founder entro en `/admin` y no encontro nada. La unica via a las
+  acciones era un boton al final de una tabla de doce columnas, y desde su propio
+  panel no habia forma de llegar a `/admin`.
+- **Que se anade:** una seccion `#gestion` al principio de `/admin` con cada cuenta,
+  su estado real —distingue prueba vigente de vencida— y acciones en linea: activar
+  con plan, pasar a modo consulta y ampliar la prueba. Ademas, un enlace a
+  administracion en la barra del panel de negocio, visible solo para administracion.
+- **Comprobado con la aplicacion levantada**, no solo con pruebas: escenario de un
+  propietario y dos clientes, uno con la prueba vencida y otro activo. Se verifico el
+  enlace, el listado, y que activar y desactivar cambian el estado y devuelven a
+  `/admin#gestion`, mientras la misma accion desde la ficha devuelve a la ficha.
+- **Pruebas:** `test_admin_dashboard_manages_accounts_without_opening_each_file` y
+  `test_the_admin_entrance_is_not_offered_to_a_normal_account`, que cubre lo
+  contrario: una cuenta normal no ve el enlace y `/admin` la rechaza.
+- **Alcance:** 95 pruebas de administracion, soporte, seguridad, sesion y login en
+  verde; `ruff` limpio.
+
 ## 2026-08-19 — control de acceso por persona (esquema 50)
 
 - **Que se anade:** `users.is_active`, `suspended_at` y `access_note`; suspension y

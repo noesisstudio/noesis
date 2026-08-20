@@ -276,6 +276,13 @@ async def auth_guard(request: Request, call_next):
             if path.startswith("/api/"):
                 return JSONResponse({"error": "no autorizado"}, status_code=403)
             return RedirectResponse(f"/b/{own_business_id}/resumen")
+        # La plantilla base necesita saber si quien mira es administracion, para
+        # ofrecerle la entrada al panel interno. Es solo para pintar un enlace: el
+        # permiso real lo vuelve a comprobar `routers.admin._is_admin` contra la
+        # base de datos y, en produccion, exige ademas sesion de Google.
+        request.state.is_admin = bool(user.get("is_admin")) or config.is_admin_email(
+            user.get("email")
+        )
         business = db.get_business(own_business_id)
         entitlements = billing_adapter.entitlements_for(business)
         request.state.entitlements = entitlements

@@ -6295,6 +6295,105 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         limpia, _ = self.make_business("Cuenta sin incidencias")
         self.assertEqual(db.admin_support_delivery_failures(limpia["id"]), [])
 
+    def test_admin_dashboard_manages_accounts_without_opening_each_file(self):
+        """El propietario tiene que poder gestionar desde el cuadro de mando.
+
+        Antes, la unica via era entrar cuenta por cuenta a traves de un boton al
+        final de una tabla ancha, y el founder no lo encontro. Se comprueba que el
+        panel lista las cuentas, que sus acciones cambian el estado de verdad, que
+        devuelven al cuadro de mando, y que la ficha sigue devolviendo a la ficha."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Noesis Studio")
+        cliente, _ = self.make_business("Fontaneria de prueba")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+        db.set_trial(cliente["id"], days=-10)
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            })
+            panel = client.get("/admin")
+            # Activar sin entrar en la ficha.
+            activar = client.post(
+                f"/admin/cuentas/{cliente['id']}/suscripcion",
+                data={"action": "activar", "plan": "premium", "volver": "admin"},
+                follow_redirects=False,
+            )
+            activada = db.get_business(cliente["id"])
+            # Retirar el uso sin entrar en la ficha.
+            consulta = client.post(
+                f"/admin/cuentas/{cliente['id']}/suscripcion",
+                data={"action": "desactivar", "volver": "admin"},
+                follow_redirects=False,
+            )
+            apagada = db.get_business(cliente["id"])
+            # La misma accion desde la ficha debe volver a la ficha.
+            desde_ficha = client.post(
+                f"/admin/cuentas/{cliente['id']}/suscripcion",
+                data={"action": "ampliar_prueba", "trial_days": "14"},
+                follow_redirects=False,
+            )
+            # Y el panel del negocio ofrece la entrada a administracion.
+            propio = client.get(f"/b/{admin_business['id']}/resumen")
+
+        # El panel de gestion existe y lista las cuentas.
+        self.assertEqual(panel.status_code, 200)
+        self.assertIn('id="gestion"', panel.text)
+        self.assertIn("Fontaneria de prueba", panel.text)
+
+        # Las acciones cambian el estado de verdad.
+        self.assertEqual(activada["subscription_status"], "active")
+        self.assertEqual(activada["plan"], "premium")
+        self.assertTrue(db.subscription_allows_access(activada))
+        self.assertEqual(apagada["subscription_status"], "canceled")
+        self.assertFalse(db.subscription_allows_access(apagada))
+
+        # Y cada una devuelve a donde estabas.
+        self.assertIn("/admin#gestion", activar.headers.get("location", ""))
+        self.assertIn("/admin#gestion", consulta.headers.get("location", ""))
+        self.assertIn(
+            f"/admin/cuentas/{cliente['id']}",
+            desde_ficha.headers.get("location", ""),
+        )
+
+        # El enlace a administracion solo se pinta para quien lo es.
+        self.assertIn('href="/admin"', propio.text)
+
+    def test_the_admin_entrance_is_not_offered_to_a_normal_account(self):
+        """El enlace a administracion no puede aparecer en el panel de un cliente."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Cliente normal")
+        db.create_user(
+            "normal@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "normal@example.com", "password": TEST_PASSWORD,
+            })
+            panel = client.get(f"/b/{business['id']}/resumen")
+            intento = client.get("/admin", follow_redirects=False)
+
+        self.assertEqual(panel.status_code, 200)
+        self.assertNotIn('href="/admin"', panel.text)
+        self.assertEqual(intento.status_code, 303)
+        self.assertIn("/login", intento.headers.get("location", ""))
+
     def test_suspended_user_loses_access_immediately_and_can_be_restored(self):
         """Retirar el acceso de una persona tiene que ser efectivo en la peticion
         siguiente, no cuando caduque una cookie, y no puede tocar los datos del

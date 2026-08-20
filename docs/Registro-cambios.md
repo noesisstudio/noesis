@@ -90,6 +90,31 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — panel de gestion y entrada visible a administracion
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder lo dijo claro: "despues de iniciar sesion con la cuenta de
+  administrador, alli tendriamos que tener un panel donde poder gestionar todo". Tenia
+  razon en las dos cosas: no habia panel de gestion y no habia forma de llegar a el.
+- **Areas y archivos:** `web/deps.py` (expone `request.state.is_admin`),
+  `web/templates/base.html` (enlace a administracion, solo si lo es),
+  `web/templates/admin.html` (seccion `#gestion`), `web/routers/admin.py` (la accion
+  admite `volver` y recibe la fecha de hoy), `web/static/app.css`,
+  `tests/test_backend.py`, `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migracion:** ninguno. Reutiliza la ruta de suscripcion existente.
+- **Pruebas ejecutadas:** dos nuevas —una para el panel y otra para el caso contrario,
+  que una cuenta normal no ve el enlace ni entra—; 95 pruebas del bloque de
+  administracion, seguridad y sesion en verde; `ruff` limpio; recorrido manual con el
+  servidor levantado y tres cuentas reales.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** `request.state.is_admin` solo decide si se pinta
+  un enlace; el permiso real lo sigue comprobando `routers.admin._is_admin` contra la
+  base de datos y, en produccion, exige sesion de Google. La prueba del caso contrario
+  cubre que un cliente no vea esa entrada.
+- **Diagnostico y rollback:** revertir el commit retira el panel y el enlace sin tocar
+  datos ni permisos.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — la puerta a la gestion de cuentas no se encontraba
 
 - **Autor/agente:** Claude.

@@ -28,6 +28,71 @@
     <div class="stat"><div class="lbl">Alarmas</div><div class="val {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="delta flat">ahora mismo</div></div>
   </div>
 
+  <section class="admin-card gestion-panel" id="gestion">
+    <div class="admin-card-head">
+      <div>
+        <div class="kicker">Gestión</div>
+        <h2>Cuentas de Noesis</h2>
+      </div>
+      <span class="meta">Cada cambio queda registrado en la bitácora</span>
+    </div>
+    <p class="meta gestion-intro">Lo que más vas a hacer, sin entrar en ninguna ficha.
+      Aquí se decide qué puede usar cada cuenta; el contenido de sus negocios no se
+      abre desde aquí ni desde ningún otro sitio.</p>
+
+    <div class="gestion-list">
+      {% for b in data.businesses %}
+      <div class="gestion-row">
+        <div class="gestion-id">
+          <b>{{ b.name }}</b>
+          <span class="meta">{{ b.owner_email or 'sin titular' }}</span>
+        </div>
+
+        <div class="gestion-state">
+          {% if b.subscription_status == 'active' %}
+            <span class="badge b-green">activa · {{ b.plan }}</span>
+          {% elif b.subscription_status == 'trial' %}
+            {% if b.trial_ends_at and b.trial_ends_at < hoy %}
+              <span class="badge b-red">prueba vencida</span>
+              <span class="meta">el {{ b.trial_ends_at | date_es }}</span>
+            {% else %}
+              <span class="badge b-amber">en prueba</span>
+              <span class="meta">hasta el {{ b.trial_ends_at | date_es }}</span>
+            {% endif %}
+          {% else %}
+            <span class="badge b-red">{{ b.subscription_status or 'sin estado' }}</span>
+          {% endif %}
+        </div>
+
+        <div class="gestion-actions">
+          <form method="post" action="/admin/cuentas/{{ b.id }}/suscripcion">
+            <input type="hidden" name="volver" value="admin">
+            <select name="plan" aria-label="Plan para {{ b.name }}">
+              <option value="autonomo">Autónomo</option>
+              <option value="pro" selected>Negocio</option>
+              <option value="premium">Premium</option>
+            </select>
+            <button class="btn sm primary" type="submit" name="action" value="activar">Activar</button>
+          </form>
+
+          <form method="post" action="/admin/cuentas/{{ b.id }}/suscripcion">
+            <input type="hidden" name="volver" value="admin">
+            <input type="hidden" name="trial_days" value="14">
+            <button class="btn sm" type="submit" name="action" value="ampliar_prueba">+14 días</button>
+            {% if b.subscription_status == 'active' %}
+            <button class="btn sm danger" type="submit" name="action" value="desactivar">Modo consulta</button>
+            {% endif %}
+          </form>
+
+          <a class="btn sm" href="/admin/cuentas/{{ b.id }}#acceso">Personas y acceso →</a>
+        </div>
+      </div>
+      {% else %}
+      <p class="meta">Todavía no hay ninguna cuenta.</p>
+      {% endfor %}
+    </div>
+  </section>
+
   <!-- ================= 📈 Visitas de la web ================= -->
   <div class="dept-head" id="visitas">
     <span class="dept-ic">📈</span>

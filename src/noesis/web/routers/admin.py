@@ -50,6 +50,7 @@ def admin_panel(request: Request):
     requests_list = db.list_access_requests()
     return TEMPLATES.TemplateResponse(request, "admin.html", {
         "data": data,
+        "hoy": date.today().isoformat(),
         "access_requests": requests_list,
         "access_pending": sum(1 for r in requests_list if r["status"] == "nueva"),
         "visits": db.page_views_summary(30),
@@ -283,6 +284,7 @@ def admin_account_subscription(
     action: str = Form(...),
     plan: str = Form("pro"),
     trial_days: str = Form("14"),
+    volver: str = Form(""),
 ):
     """Habilita o deshabilita una cuenta desde administracion.
 
@@ -298,7 +300,11 @@ def admin_account_subscription(
     if not business:
         request.session["admin_error"] = "Esa cuenta no existe."
         return RedirectResponse("/admin#cuentas", status_code=303)
-    target = f"/admin/cuentas/{business_id}#suscripcion"
+    # Se vuelve a donde estabas: el panel de gestion o la ficha de la cuenta.
+    target = (
+        "/admin#gestion" if volver == "admin"
+        else f"/admin/cuentas/{business_id}#suscripcion"
+    )
     try:
         if action == "activar":
             if plan not in {"autonomo", "pro", "premium"}:
