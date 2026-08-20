@@ -23,6 +23,9 @@ usa la vista de grafo para navegar.
 - [`WhatsApp-Como-funciona.pdf`](WhatsApp-Como-funciona.pdf) — el canal multicanal
   explicado sin código: los dos tipos de número, por qué el receptor decide antes
   que el remitente, qué ve cada rol y qué falta por validar.
+- [`Meta-Verificacion.pdf`](Meta-Verificacion.pdf) — qué hay que completar de
+  verdad en Meta y qué se puede ignorar: los dos caminos, por qué la revisión de
+  la aplicación no hace falta todavía, y cómo verificar cada pieza.
 - [`WhatsApp-Puesta-en-marcha.pdf`](WhatsApp-Puesta-en-marcha.pdf) — runbook visual
   para llevar Meta Cloud API del número de prueba a clientes reales: canal central,
   alta de números comerciales, plantillas y prueba con dos negocios. El `.html` del

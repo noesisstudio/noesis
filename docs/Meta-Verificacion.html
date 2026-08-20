@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificar Meta · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .part { color: var(--warn); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Runbook de producción</p>
+    <h1>Verificar Meta sin perder semanas</h1>
+    <p class="standfirst">Qué hay que completar de verdad para el piloto, qué se puede ignorar por ahora, y cómo comprobar que cada pieza funciona. La pantalla de Meta ofrece dos caminos y solo uno te hace falta hoy.</p>
+    <p class="crumbs">Complementa el runbook <code>WhatsApp-Puesta-en-marcha.pdf</code>, que tiene el paso a paso. Aquí está qué verificar y qué saltarse.</p>
+  </header>
+
+  <div class="callout">
+    <h3>Lo primero: no hagas la revisión de la aplicación</h3>
+    <p>La lista de <em>Requisitos y personalización</em> termina en «Revisión de la aplicación» y «publica la aplicación». <strong>Ese camino no es el tuyo todavía</strong>, y recorrerlo cuesta semanas de espera con Meta.</p>
+    <p>Esa revisión hace falta cuando <strong>otras empresas conectan su WhatsApp a través de tu aplicación</strong> desde tu propia web, sin tocar el panel de Meta. Se llama Embedded Signup, y <strong>Noesis todavía no lo usa</strong>: hoy cada número comercial lo das de alta tú desde Administración.</p>
+    <p>Lo mismo vale para <em>Inicio de sesión con Facebook para empresas</em> y su pantalla de URIs de redirección: es la pieza de ese futuro. Puedes dejarla en blanco.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Los dos caminos, para que no te confundas otra vez</h2>
+      <p class="sec-intro">Meta mezcla ambos en la misma consola y en la misma lista de tareas. Esta es la diferencia.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>&nbsp;</th><th class="hi">Camino A · el tuyo hoy</th><th>Camino B · más adelante</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Cómo entra un cliente</strong></td>
+            <td>Te concede su WABA y su número desde su Business Manager; tú lo das de alta en Administración</td>
+            <td>Pulsa un botón en bynoesis.com y conecta solo</td>
+          </tr>
+          <tr>
+            <td><strong>Cómo se llama</strong></td>
+            <td>Concesión manual de activos</td>
+            <td>Embedded Signup</td>
+          </tr>
+          <tr>
+            <td><strong>¿Revisión de la app?</strong></td>
+            <td class="yes">No hace falta</td>
+            <td class="no">Sí, obligatoria</td>
+          </tr>
+          <tr>
+            <td><strong>¿Facebook Login?</strong></td>
+            <td class="yes">No</td>
+            <td class="no">Sí</td>
+          </tr>
+          <tr>
+            <td><strong>¿Verificación de empresa?</strong></td>
+            <td class="part">Sí, para los dos</td>
+            <td class="part">Sí</td>
+          </tr>
+          <tr>
+            <td><strong>Cuánto tarda</strong></td>
+            <td>Días</td>
+            <td>Semanas</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>Cuándo saltar al camino B:</strong> cuando el piloto demuestre que el flujo manual funciona y tengas más clientes de los que puedes dar de alta a mano. Con tres a cinco autónomos, dar el alta tú es media hora de trabajo total y te ahorra la revisión.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Qué falta de verdad, y en qué orden</h2>
+      <p class="sec-intro">Cinco cosas. Las dos primeras van en paralelo porque dependen de terceros.</p>
+    </div>
+
+    <ol class="steps">
+
+      <li class="step hidden-step">
+        <span class="step-n">01</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Verificación de la empresa</h3><span class="chip chip-stop">Empieza hoy</span></div>
+          <p>Es el «Paso 3» de tu pantalla y lo único de la lista larga que sí necesitas. De horas a una semana.</p>
+          <p>La identidad legal de Noesis ya está publicada, así que declara <strong>exactamente</strong> ese nombre y ese NIF. Nombre y dirección deben coincidir literalmente en todos los documentos: ahí se concentran casi todos los rechazos.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">02</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Las nueve plantillas</h3><span class="chip chip-warn">1-2 días de aprobación</span></div>
+          <p>No dependen de nada más, así que se envían a aprobar el mismo día. Nombres, cuerpos y número exacto de variables, en el runbook.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">03</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Registrar el número</h3><span class="chip chip-flat">Paso 2 de tu pantalla</span></div>
+          <p>Una SIM nueva dedicada. No puede estar dada de alta en la app de WhatsApp. Copia el <strong>Phone number ID</strong> a <code>WHATSAPP_PHONE_ID</code> y guarda el PIN de seis dígitos.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">04</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Método de pago</h3></div>
+          <p>Sin tarjeta solo puedes escribir a cinco destinatarios de prueba. Pon un límite de gasto el primer día.</p>
+        </div>
+      </li>
+
+      <li class="step hidden-step">
+        <span class="step-n">05</span>
+        <div class="step-body">
+          <div class="step-head"><h3>El token permanente</h3><span class="chip chip-stop">No sale en la lista</span></div>
+          <p>El token del panel caduca en 24 horas. Necesitas uno de <strong>usuario del sistema</strong>, con caducidad «Nunca» y los permisos <code>whatsapp_business_messaging</code> y <code>whatsapp_business_management</code>.</p>
+          <p>Y con los activos asignados: la app, tu WABA y —según lleguen— la de cada cliente.</p>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Cómo verificar que está bien</h2>
+      <p class="sec-intro">Cada pieza con su comprobación. Si una falla, sabes exactamente cuál es.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Pieza</th><th>Cómo lo compruebas</th><th>Si falla</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Webhook</td>
+            <td>Ya está en verde. Confirma que la URL es <code>https://bynoesis.com/webhook/whatsapp</code> y que el campo <code>messages</code> está suscrito <strong>en la WABA</strong>, no solo en la app</td>
+            <td>No entra ningún mensaje, sin error visible</td>
+          </tr>
+          <tr>
+            <td>Firma</td>
+            <td>Manda un POST falso al webhook: debe responder <strong>401</strong></td>
+            <td>Falta <code>WHATSAPP_APP_SECRET</code></td>
+          </tr>
+          <tr>
+            <td>Token</td>
+            <td>Escribe al número desde tu móvil. Si responde, el token sirve</td>
+            <td>Mira <code>/admin</code> → Gestionar → Entregas atascadas: ahí sale el error de Meta</td>
+          </tr>
+          <tr>
+            <td>Número</td>
+            <td>En Meta debe aparecer «Conectado» y con nombre para mostrar aprobado</td>
+            <td>El nombre en revisión bloquea los envíos con plantilla</td>
+          </tr>
+          <tr>
+            <td>Plantillas</td>
+            <td>En WhatsApp Manager, las nueve en «Aprobada»</td>
+            <td>Una rechazada no envía y no avisa hasta que se intenta</td>
+          </tr>
+          <tr>
+            <td>Verificación</td>
+            <td>El Centro de seguridad marca la empresa como verificada</td>
+            <td>Te quedas en 250 conversaciones cada 24 horas</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>La prueba que lo cierra</h2>
+      <p class="sec-intro">Diez minutos desde tu móvil, cuando las cinco piezas estén.</p>
+    </div>
+
+    <ol class="checks">
+      <li>Escribe <code>NOESIS &lt;código&gt;</code> al número, con el código de Ajustes. Debe responder «WhatsApp conectado a…».</li>
+      <li>Pregunta <code>¿qué tengo hoy?</code> — responde el cerebro local, sin coste.</li>
+      <li>Manda una foto de un ticket. Debe proponerte el gasto y esperar un SÍ.</li>
+      <li>Emite una factura con <code>emitir factura &lt;n&gt;</code> y confirma.</li>
+      <li>Lanza un aviso proactivo con plantilla. <strong>Aquí es donde antes fallaba</strong>: el saneado de parámetros ya está corregido y probado.</li>
+      <li>Comprueba los estados <code>sent</code>, <code>delivered</code> y <code>read</code>.</li>
+      <li>Con una cuenta en modo consulta: no ejecuta nada.</li>
+    </ol>
+
+    <div class="note">Cuando entren dos clientes con número propio, queda la prueba de aislamiento: el mismo remitente escribe a los dos números y deben salir dos conversaciones separadas, cada una en su negocio. Es lo único que demuestra que el multicanal aísla de verdad.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Errores que vas a encontrarte</h2>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Lo que ves</th><th>Qué es en realidad</th></tr></thead>
+        <tbody>
+          <tr><td>«Revisión de la aplicación pendiente»</td><td>No te afecta. Es del camino B. Ignóralo hasta que hagas Embedded Signup</td></tr>
+          <tr><td>El token deja de funcionar al día siguiente</td><td>Usaste el temporal del panel. Necesitas el de usuario del sistema</td></tr>
+          <tr><td>Los mensajes entran pero no sale ninguno</td><td>El token no tiene concedido el activo del número, o falta el método de pago</td></tr>
+          <tr><td>La plantilla se rechaza al enviarla</td><td>El número de variables no coincide con el aprobado. El orden lo fija el código</td></tr>
+          <tr><td>Solo puedes escribir a cinco personas</td><td>Falta el método de pago</td></tr>
+          <tr><td>Todo va bien pero se corta a las 250 conversaciones</td><td>La empresa no está verificada todavía</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Lo que ya está resuelto por nuestra parte</h2>
+      <p class="sec-intro">Para que sepas qué no tienes que mirar.</p>
+    </div>
+    <ul>
+      <li><strong>El motor multicanal</strong>: el receptor decide el negocio antes que el remitente, y un número desconocido se descarta en vez de caer al canal central.</li>
+      <li><strong>El alta de números comerciales</strong> desde Administración, que nace pendiente y no atiende hasta que la pruebas.</li>
+      <li><strong>El fallo de los avisos automáticos</strong>: Meta rechazaba los parámetros con saltos de línea y los cinco proactivos habrían agotado sus reintentos en silencio. Corregido y probado el 20-ago.</li>
+      <li><strong>El diagnóstico de entregas</strong>: cuando algo falle, el motivo exacto de Meta aparece en la ficha de la cuenta.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>main</code>: el código no usa Facebook Login ni Embedded Signup, y <code>Conectar-APIs.md</code> confirma que el alta de WABA y número es manual desde administración hasta construirlo.</span>
+    <span>El paso a paso completo está en <code>WhatsApp-Puesta-en-marcha.pdf</code>.</span>
+  </footer>
+
+</div>
+
+</body>
+</html>

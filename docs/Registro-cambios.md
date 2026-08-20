@@ -90,6 +90,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — guia de verificacion de Meta: que hace falta y que no
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder enseño la lista de "Requisitos y personalizacion" de Meta,
+  que termina en revision y publicacion de la aplicacion, y la pantalla de Facebook
+  Login. Estaba a punto de recorrer un camino de semanas que **no necesita**.
+- **Areas y archivos:** `docs/Meta-Verificacion.html` + `.pdf` (nuevos) y
+  `docs/Inicio.md`. Ningun cambio en `src/`.
+- **Cambios de datos/migracion:** ninguno.
+- **Hallazgo principal:** Meta mezcla en la misma consola dos caminos. La revision de
+  la aplicacion y Facebook Login pertenecen a **Embedded Signup**, donde un cliente
+  conecta su numero desde la web del proveedor. **Noesis no lo usa**: verificado por
+  busqueda en `src/`, no hay ni una referencia, y `Conectar-APIs.md` confirma que el
+  alta de WABA y numero la hace administracion a mano. Para el piloto basta con
+  verificacion de empresa, numero, pago, token de sistema y plantillas.
+- **Pruebas ejecutadas:** HTML sin etiquetas sin cerrar y PDF valido de 6 paginas.
+- **Dependencias o validaciones externas:** los cinco tramites de Meta siguen abiertos.
+- **Riesgo/punto probable de fallo:** si algun dia se construye Embedded Signup, la
+  revision de la aplicacion pasa a ser obligatoria y esta guia deja de aplicar en esa
+  parte. Queda dicho en el propio documento.
+- **Diagnostico y rollback:** cambio solo documental.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — corregido el fallo que habria roto los cinco avisos de WhatsApp
 
 - **Autor/agente:** Claude.
