@@ -90,6 +90,31 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — corregido el plazo de verificacion de Meta en la guia
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pregunto cuanto tarda la verificacion de empresa. La guia
+  decia "de horas a una semana", una cifra que yo habia escrito de memoria y sin
+  fuente.
+- **Areas y archivos:** `docs/Meta-Verificacion.html` + `.pdf`.
+- **Cambios de datos/migracion:** ninguno.
+- **Que se corrige:** Meta **no publica ningun compromiso de plazo**. Los proveedores
+  que trabajan con la plataforma dan rangos dispares: de 10 minutos a 14 dias
+  laborables con casos de hasta 30 dias (Respond.io), de 2 horas a 5 dias laborables
+  (ActiveCampaign), unos dias o una semana (Klaviyo). La guia pasa a decir "entre unas
+  horas y dos semanas" y advierte de no comprometer una fecha de piloto que dependa
+  de esto.
+- **Se anaden ademas dos cosas utiles:** los tres motivos por los que Meta rechaza
+  —datos incompletos, documentos ilegibles y datos legales que no coinciden—, porque
+  determinan en que extremo del rango caes y cada rechazo reinicia el reloj; y el
+  matiz de que **la verificacion no bloquea empezar el piloto**: sin ella hay 250
+  conversaciones/24 h y dos numeros, que sobra para 3-5 autonomos. Limita cuando se
+  puede crecer, no cuando se puede empezar.
+- **Pruebas ejecutadas:** HTML sin etiquetas sin cerrar; PDF regenerado y valido.
+- **Riesgo/punto probable de fallo:** son observaciones de terceros y pueden cambiar;
+  el pie del documento lo dice y las fecha.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — guia de verificacion de Meta: que hace falta y que no
 
 - **Autor/agente:** Claude.
