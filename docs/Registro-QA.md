@@ -1,5 +1,31 @@
 # Registro de QA
 
+## 2026-08-20 — corregido el fallo de parametros multilinea de WhatsApp
+
+- **El fallo:** Meta rechaza un parametro de plantilla con salto de linea, tabulador o
+  mas de cuatro espacios seguidos. `web/scheduler.py` compone el resumen diario, el
+  semanal, el cierre, el aviso fiscal y el aviso de cobros como texto de varias lineas
+  y lo pasa como **un unico parametro**. Contra el numero real, esos cinco proactivos
+  habrian agotado sus seis reintentos en silencio. Ninguna prueba lo veia porque todas
+  simulan la respuesta de Meta.
+- **La correccion:** `sanitize_template_param` en `web/whatsapp.py`, aplicada al
+  encolar en `queue_template`. Los saltos se convierten en un separador visible
+  « · » en vez de desaparecer —un resumen sin marcas entre sus puntos se lee como un
+  parrafo confuso—, los tabuladores tambien, y las tiradas de mas de cuatro espacios
+  se acortan. Se limpia al encolar y no al enviar, para que lo guardado coincida con
+  lo que sale: asi un reintento no cambia el texto y el diagnostico no enseña otra cosa.
+- **Pruebas:** `test_template_params_never_carry_what_meta_refuses` comprueba que no
+  sobrevive ningun caracter prohibido, que el contenido sigue siendo legible y que
+  `_meta_payload` envia exactamente lo guardado.
+  `test_every_proactive_summary_survives_the_meta_rules` recorre los cinco avisos con
+  su texto real, uno por subtest: cada uno se compone en un sitio distinto y basta que
+  uno se olvide para que ese aviso no llegue nunca.
+- **Verificadas por reversion:** desactivando el saneado, **fallan seis** —la primera
+  prueba y los cinco subtests, uno por proactivo—.
+- **Alcance:** 64 pruebas de WhatsApp, plantillas y planificador en verde; `ruff`
+  limpio. Documentos `WhatsApp-Puesta-en-marcha` y `WhatsApp-Como-funciona`
+  actualizados: ya no anuncian un fallo abierto.
+
 ## 2026-08-20 — primer correo real entregado desde produccion
 
 - **Que se probo:** con `BREVO_API_KEY` y `SMTP_FROM` ya cargadas en Railway, se

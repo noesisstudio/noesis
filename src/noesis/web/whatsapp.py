@@ -1795,6 +1795,34 @@ def queue_text(
     )
 
 
+# Meta rechaza un parametro de plantilla que lleve salto de linea, tabulador o
+# mas de cuatro espacios seguidos. El planificador compone resumenes multilinea y
+# los pasa como un unico parametro, asi que sin esto los proactivos fallarian
+# contra el numero real y agotarian sus reintentos en silencio: las pruebas no lo
+# ven porque simulan la respuesta de Meta.
+_PARAM_ESPACIOS = re.compile(r" {4,}")
+_PARAM_SALTOS = re.compile("[\r\n\t\v\f  ]+")
+_PARAM_SEPARADOR = " · "
+
+
+def sanitize_template_param(value) -> str:
+    """Aplana un valor para que Meta lo acepte, conservando la lectura.
+
+    Los saltos de linea se convierten en un separador visible en vez de
+    desaparecer: un resumen del dia sin ninguna marca entre sus puntos se lee
+    como un parrafo confuso. Se limpia al encolar y no al enviar, para que lo
+    guardado coincida con lo que sale y un reintento no cambie el texto.
+    """
+    texto = str(value if value is not None else "")
+    texto = _PARAM_SALTOS.sub(_PARAM_SEPARADOR, texto)
+    texto = _PARAM_ESPACIOS.sub("   ", texto)
+    # Separadores pegados aparecen cuando el original traia lineas en blanco.
+    doble = _PARAM_SEPARADOR + " " + _PARAM_SEPARADOR.strip() + " "
+    while doble in texto:
+        texto = texto.replace(doble, _PARAM_SEPARADOR)
+    return texto.strip().strip("·").strip()
+
+
 def queue_template(
     to: str,
     template_name: str,
@@ -1814,7 +1842,10 @@ def queue_template(
         message_type="template",
         template_name=template_name,
         template_language=language or config.WHATSAPP_TEMPLATE_LANGUAGE,
-        template_params=json.dumps(params or [], ensure_ascii=False),
+        template_params=json.dumps(
+            [sanitize_template_param(p) for p in (params or [])],
+            ensure_ascii=False,
+        ),
         idempotency_key=idempotency_key,
         max_attempts=config.WHATSAPP_MAX_ATTEMPTS,
         now=point.isoformat(timespec="seconds"),

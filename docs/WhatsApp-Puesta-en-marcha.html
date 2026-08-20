@@ -297,11 +297,11 @@
       <p class="sec-intro">Verificado hoy contra <code>main</code>, no heredado de una versión anterior. Es el único punto de esta página que es código y no gestión con Meta.</p>
     </div>
 
-    <div class="callout">
-      <h3>Los cinco avisos automáticos fallarán al enviarse</h3>
+    <div class="callout" style="background:var(--ok-soft);border-color:var(--ok)">
+      <h3 style="color:var(--ok)">Corregido el 20-ago: los cinco avisos automáticos ya salen</h3>
       <p>Meta rechaza los parámetros de plantilla que contienen saltos de línea, tabuladores o más de cuatro espacios seguidos. El planificador construye el resumen diario, el semanal, el cierre del día, el aviso fiscal y el aviso de cobros como texto multilínea y lo mete en <strong>un solo parámetro</strong>: <code>web/scheduler.py</code> pasa <code>"\n".join(lines)</code> y <code>_meta_payload()</code> en <code>web/whatsapp.py</code> sigue sin sanearlo.</p>
       <p>Las respuestas dentro de la ventana de 24 horas funcionarán con normalidad. Los cinco proactivos, no: agotarán sus reintentos en silencio. Las pruebas no lo detectan porque simulan la respuesta de Meta.</p>
-      <p><strong>Se corrige</strong> sustituyendo el separador antes de encolar, o repartiendo el texto en varias variables. Debe estar hecho antes de la prueba de aceptación.</p>
+      <p><strong>Ya está corregido.</strong> Al encolar, cada parámetro pasa por un saneado que convierte los saltos de línea en un separador visible «·», de modo que el aviso sigue leyéndose y Meta lo acepta. Se limpia al encolar y no al enviar, para que lo guardado coincida con lo que sale y un reintento no cambie el texto.</p>
     </div>
   </section>
 

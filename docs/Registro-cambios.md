@@ -90,6 +90,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — corregido el fallo que habria roto los cinco avisos de WhatsApp
+
+- **Autor/agente:** Claude.
+- **Objetivo:** cerrar el hallazgo abierto desde el 10-ago. Meta rechaza un parametro
+  de plantilla con salto de linea, tabulador o mas de cuatro espacios seguidos, y el
+  planificador pasaba resumenes multilinea como un unico parametro.
+- **Areas y archivos:** `web/whatsapp.py` (`sanitize_template_param`, aplicada en
+  `queue_template`), `tests/test_backend.py`, los dos documentos de WhatsApp —que
+  anunciaban un fallo abierto— y su PDF, `docs/project-state.json`,
+  `docs/Registro-QA.md`.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** dos nuevas, **verificadas por reversion**: sin el saneado
+  fallan seis comprobaciones, una por cada proactivo mas la general. 64 pruebas de
+  WhatsApp, plantillas y planificador en verde; `ruff` limpio.
+- **Dependencias o validaciones externas:** sigue pendiente el envio real contra un
+  numero de Meta; esto elimina la causa conocida de fallo, no sustituye esa prueba.
+- **Riesgo/punto probable de fallo:** el saneado se aplica al encolar. Un futuro
+  camino que escriba directamente en `whatsapp_outbox` sin pasar por `queue_template`
+  volveria a exponerlo; hoy no existe ninguno.
+- **Diagnostico y rollback:** si un proactivo fallara, el motivo de Meta aparece en
+  `/admin` -> Gestionar -> Entregas atascadas.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — correo real entregado y Google validado en produccion
 
 - **Autor/agente:** Claude.

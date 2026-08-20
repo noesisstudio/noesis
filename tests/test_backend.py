@@ -6295,6 +6295,93 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         limpia, _ = self.make_business("Cuenta sin incidencias")
         self.assertEqual(db.admin_support_delivery_failures(limpia["id"]), [])
 
+    def test_template_params_never_carry_what_meta_refuses(self):
+        """Meta rechaza un parametro con salto de linea, tabulador o mas de cuatro
+        espacios seguidos, y el planificador compone resumenes multilinea que pasa
+        como un unico parametro. Sin saneado, los cinco proactivos —resumen diario,
+        semanal, cierre, aviso fiscal y aviso de cobros— agotarian sus reintentos
+        contra el numero real sin que ninguna prueba lo viera, porque todas simulan
+        la respuesta de Meta."""
+        from noesis.web import whatsapp
+
+        prohibido = "\r\n\t\v\f\u2028\u2029"
+        parte = (
+            "Tu parte de hoy en Noesis:\n"
+            "\n"
+            "Trabajos:\n"
+            "\u2022 #12 \u00b7 09:00 \u00b7 Comunidad Los Olivos: reparar bajante\n"
+            "\n"
+            "\u27a1\ufe0f Manana lo primero: reclamar a Garcia (240,00 \u20ac)."
+        )
+
+        business, _ = self.make_business("Cuenta con proactivos")
+        mensaje = whatsapp.queue_template(
+            "34600000000", "noesis_resumen_diario", [parte],
+            business_id=business["id"],
+        )
+
+        guardado = json.loads(
+            db.get_whatsapp_message(mensaje["id"], business["id"])["template_params"]
+        )
+        self.assertEqual(len(guardado), 1)
+        enviado = guardado[0]
+
+        # 1. Nada de lo que Meta rechaza sobrevive.
+        for caracter in prohibido:
+            self.assertNotIn(
+                caracter, enviado,
+                f"un {caracter!r} en un parametro hace que Meta rechace el envio",
+            )
+        self.assertNotIn("    ", enviado, "mas de cuatro espacios seguidos")
+
+        # 2. Y el contenido sigue siendo legible: no se pierde ni se pega todo.
+        self.assertIn("Comunidad Los Olivos", enviado)
+        self.assertIn("240,00", enviado)
+        self.assertIn("\u00b7", enviado, "los saltos dejan un separador visible")
+        self.assertNotIn("Noesis:Trabajos", enviado, "las lineas no pueden pegarse")
+
+        # 3. Lo guardado es exactamente lo que saldra, para que un reintento no
+        #    cambie el texto ni el diagnostico enseñe otra cosa.
+        payload = whatsapp._meta_payload(
+            db.get_whatsapp_message(mensaje["id"], business["id"])
+        )
+        parametro = payload["template"]["components"][0]["parameters"][0]["text"]
+        self.assertEqual(parametro, enviado)
+
+    def test_every_proactive_summary_survives_the_meta_rules(self):
+        """Los cinco proactivos del planificador, con su texto real de varias
+        lineas, tienen que salir validos. Es la comprobacion que faltaba: cada uno
+        se compone en un sitio distinto y basta que uno se olvide para que ese
+        aviso no llegue nunca."""
+        from noesis.web import whatsapp
+
+        business, _ = self.make_business("Cuenta con los cinco avisos")
+        textos = {
+            "noesis_resumen_diario": "Hoy:\n\u2022 2 trabajos\n\u2022 1 cobro",
+            "noesis_resumen_semanal": "Semana:\n\nFacturado 1.200 \u20ac\nPendiente 340 \u20ac",
+            "noesis_cierre_dia": "Cierre:\n\u2022 3 trabajos cerrados\n\n\u27a1\ufe0f Manana: reclamar",
+            "noesis_aviso_fiscal": "Cierre del 2T:\nIVA 303: 420,00 \u20ac\nIRPF 130: 180,00 \u20ac",
+            "noesis_aviso_cobros": "Garcia te debe 240,00 \u20ac\n(factura 12, 9 dias)",
+        }
+        prohibido = "\r\n\t\v\f"
+
+        for plantilla, texto in textos.items():
+            with self.subTest(plantilla=plantilla):
+                mensaje = whatsapp.queue_template(
+                    "34600000001", plantilla, [texto],
+                    business_id=business["id"],
+                    idempotency_key=f"prueba:{plantilla}",
+                )
+                guardado = json.loads(
+                    db.get_whatsapp_message(
+                        mensaje["id"], business["id"]
+                    )["template_params"]
+                )[0]
+                for caracter in prohibido:
+                    self.assertNotIn(caracter, guardado)
+                self.assertNotIn("    ", guardado)
+                self.assertTrue(guardado, "el aviso no puede quedarse vacio")
+
     def test_each_identity_lands_where_it_works(self):
         """Administracion no lleva un negocio con Noesis: gestiona los de los demas.
 
