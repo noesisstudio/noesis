@@ -90,6 +90,33 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-20 — la puerta a la gestion de cuentas no se encontraba
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder entro en `/admin` con Google y dijo "no me sale nada". No
+  era un fallo de permisos ni de despliegue: produccion ya corria el release
+  `26acdf38` con esquema 50. Era un problema de etiqueta.
+- **Areas y archivos:** `web/templates/admin.html` y `web/templates/admin_account.html`.
+  - El unico enlace a la ficha de una cuenta era un boton que ponia **"Diagnostico"**,
+    en la ultima columna de la tabla. Era exacto cuando esa pagina solo mostraba
+    recuentos; desde que gestiona permisos, acceso de personas y revocacion de
+    gestorias, la etiqueta describia una fraccion de lo que hay detras y escondia el
+    resto. Pasa a **"Gestionar"** y se destaca visualmente.
+  - La cabecera de la ficha decia "Soporte tecnico · Diagnostico y conexiones" y
+    "Diagnostico sin abrir el negocio del cliente". Ahora nombra lo que se hace
+    —gestion de permisos y acceso— sin perder la frontera de privacidad, que se
+    reformula como "se gestiona el acceso, no se abre el negocio".
+- **Cambios de datos/migracion:** ninguno. Solo textos.
+- **Pruebas ejecutadas:** 30 pruebas de administracion y soporte en verde; ambas
+  plantillas compiladas con Jinja.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** ninguno funcional. La leccion es de producto: al
+  anadir capacidades a una pantalla hay que revisar el texto del enlace que lleva a
+  ella, o la funcion existe y nadie la encuentra.
+- **Diagnostico y rollback:** cambio de texto; revertir el commit restaura las
+  etiquetas anteriores.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-19 — control de acceso por persona y guia de permisos
 
 - **Autor/agente:** Claude.
