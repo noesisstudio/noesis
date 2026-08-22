@@ -90,6 +90,33 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-22 — dictar una factura ensuciaba el nombre del cliente
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pregunto donde se ponen las bases al crear una factura y
+  dijo que "la gracia seria hacerlo mediante audio de voz". Al comprobarlo aparecio
+  que el cerebro **ya entiende** crear facturas hablando —"factura a Juan 95 euros"
+  devuelve `crear_factura` con `base: 95.0`— pero que la frase natural rompe el nombre.
+- **Areas y archivos:** `src/noesis/nlu.py` (`_limpiar_cliente`),
+  `tests/test_backend.py`, `docs/project-state.json`.
+- **El fallo:** "factura para Juan Perez de 250 euros" capturaba el cliente
+  "Juan Perez de". El patron busca de forma perezosa hasta el importe y arrastra el
+  conector. Al dictar por voz esa frase es la natural, y el nombre sucio **crea un
+  cliente nuevo mal escrito** en vez de reconocer al que ya existe: el autonomo acaba
+  con "Juan Perez" y "Juan Perez de" como dos clientes distintos.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** cuatro frases dictadas como subtests, **verificadas por
+  reversion**: sin la limpieza fallan las dos que llevan conector. 73 pruebas de
+  cerebro, chat y facturas en verde; `ruff` limpio.
+- **Dependencias o validaciones externas:** el dictado no funciona todavia en
+  produccion. El asistente web **ya graba audio** y el adaptador tiene dos vias
+  —Whisper local y Groq—, pero `get_transcriber()` devuelve `None`: falta
+  `GROQ_API_KEY`. Sin eso se graba y no se transcribe.
+- **Riesgo/punto probable de fallo:** la lista de conectores es finita; una frase con
+  otro enlace volveria a ensuciar el nombre. El sintoma seria un cliente duplicado con
+  una palabra de mas al final.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-22 — el boton de Google no tenia la marca de Google
 
 - **Autor/agente:** Claude.

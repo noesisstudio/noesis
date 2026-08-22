@@ -1330,6 +1330,23 @@ class BackendTestCase(unittest.TestCase):
             nlu.parse("factura a Juan por reparación 95 euros")[0], "crear_factura"
         )
 
+        # Dictada por voz, la frase natural lleva un conector entre el nombre y
+        # el importe. Si se cuela en el nombre, Noesis crea un cliente nuevo mal
+        # escrito en vez de reconocer al que ya existe.
+        for frase, cliente, base in (
+            ("factura para Juan Perez de 250 euros por reparar una bajante",
+             "Juan Perez", 250.0),
+            ("hazme una factura para Los Olivos de 1200 euros por la reforma",
+             "Los Olivos", 1200.0),
+            ("factura a Maria Garcia 80 euros", "Maria Garcia", 80.0),
+            ("factura a Juan 95 euros por cambiar el termo", "Juan", 95.0),
+        ):
+            with self.subTest(frase=frase):
+                herramienta, datos = nlu.parse(frase)
+                self.assertEqual(herramienta, "crear_factura")
+                self.assertEqual(datos["cliente"], cliente)
+                self.assertEqual(datos["base"], base)
+
         business, _ = self.make_business()
         chat.handle(business["id"], "factura a Juan por reparación 100 euros")
         invoice = db.list_invoices(business["id"])[0]
