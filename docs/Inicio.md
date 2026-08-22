@@ -18,6 +18,10 @@ usa la vista de grafo para navegar.
   puede hacer cada una, cómo se da y se quita acceso, y cómo cumple el RGPD.
 - [[Seguridad-operativa]] — amenazas, controles, secretos, incidentes y puerta de
   salida segura al piloto.
+- [`Diagnostico.pdf`](Diagnostico.pdf) — cuando algo falla, dónde mirar: las siete
+  piezas, las cuatro puertas de una petición, síntomas y causas, y qué preguntar.
+- [`Diagnostico-tecnico.pdf`](Diagnostico-tecnico.pdf) — lo mismo con el archivo, la
+  función y la tabla al lado, más cómo levantar el proyecto desde cero.
 - [[Guia-tecnica-ingeniero]] — entrada técnica de extremo a extremo para ingeniería:
   web, datos, cerebro, automatizaciones, WhatsApp y despliegue.
 - [`WhatsApp-Como-funciona.pdf`](WhatsApp-Como-funciona.pdf) — el canal multicanal

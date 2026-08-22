@@ -90,6 +90,33 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-22 — dos manuales de diagnostico
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidio un documento completo del proyecto para tener contexto
+  y saber donde esta el fallo cuando algo va mal. Eligio enfoque de diagnostico y pidio
+  **dos versiones**: una que entienda el y otra mezclada con la referencia tecnica.
+- **Areas y archivos:** `docs/Diagnostico.html` + `.pdf` y
+  `docs/Diagnostico-tecnico.html` + `.pdf` (nuevos, 8 paginas cada uno), y
+  `docs/Inicio.md`. Ningun cambio en `src/`.
+- **Contenido comun:** las siete piezas que pueden fallar por separado y cual es
+  insustituible; las cuatro puertas que atraviesa una peticion —identidad, aislamiento,
+  permisos del plan y estado de suscripcion— con el sintoma distinto de cada rechazo;
+  por que nada se pierde aunque un proveedor falle; y una tabla de sintoma a causa.
+- **La version tecnica anade:** como levantar el proyecto desde cero con sus extras,
+  el mapa de archivos, las tablas de las colas con sus estados, los siete trabajos
+  programados con su hora, la traduccion de sintoma a archivo concreto, y los
+  invariantes que no se rompen nunca.
+- **Cambios de datos/migracion:** ninguno.
+- **Pruebas ejecutadas:** arquitectura verificada leyendo `web/server.py` (orden real
+  de los middlewares), `web/deps.py`, `web/auth.py`, `web/scheduler.py` (horas de cada
+  trabajo), `db.py`, `adapters/` y `pyproject.toml` (extras de instalacion). Ambos HTML
+  sin etiquetas sin cerrar y ambos PDF validos.
+- **Riesgo/punto probable de fallo:** ninguna cifra viva se fija en los documentos
+  salvo el recuento de pruebas y el esquema, que remiten a `project-state.json` como
+  fuente. Si el codigo se reorganiza, el mapa de archivos envejece.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-22 — dictar una factura ensuciaba el nombre del cliente
 
 - **Autor/agente:** Claude.

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Manual de diagnóstico</p>
+    <h1>Cuando algo falla, dónde mirar</h1>
+    <p class="standfirst">Cómo funciona Noesis por dentro, explicado sin jerga, para que cuando un cliente te diga «no me funciona» sepas en qué pieza está el problema antes de preguntarle nada.</p>
+    <p class="crumbs">Versión para leer. Hay una versión gemela con la referencia técnica al lado, en <code>Diagnostico-tecnico.pdf</code>.</p>
+  </header>
+
+  <div class="callout callout-warn">
+    <h3>La regla que ahorra más tiempo</h3>
+    <p>Casi ningún fallo es «Noesis está roto». Casi todos son <strong>una pieza externa que no está conectada</strong> o <strong>una cuenta que no tiene permiso</strong>.</p>
+    <p>Por eso la primera pregunta no es «¿qué ha pasado?» sino <strong>«¿a quién le pasa y en qué pantalla?»</strong>. Con esas dos respuestas, este documento te lleva a la pieza en menos de un minuto.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>1. Las siete piezas</h2>
+      <p class="sec-intro">Noesis no es un bloque. Son siete cosas que pueden fallar por separado, y saber cuál falla es la mitad del trabajo.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Pieza</th><th>De qué se encarga</th><th>Si falla, se nota en</th></tr></thead>
+        <tbody>
+          <tr><td class="hi">La web</td><td>El panel donde trabaja el autónomo</td><td>Todo. Si esto cae, no hay nada</td></tr>
+          <tr><td class="hi">La base de datos</td><td>Guardar clientes, facturas, trabajos</td><td>Todo, y es lo que nunca se puede perder</td></tr>
+          <tr><td>El cerebro</td><td>Entender «factura a Juan 95 euros»</td><td>El asistente y WhatsApp</td></tr>
+          <tr><td>WhatsApp</td><td>Hablar con el autónomo y con sus clientes</td><td>Solo el canal. La web sigue igual</td></tr>
+          <tr><td>El correo</td><td>Enviar facturas, recuperar contraseñas</td><td>Solo los envíos</td></tr>
+          <tr><td>Stripe</td><td>Cobrar la suscripción de Noesis</td><td>Solo activar y cambiar de plan</td></tr>
+          <tr><td>Hacienda</td><td>Veri*Factu, el registro fiscal</td><td>Solo la remisión, no la factura</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>Esto está diseñado a propósito.</strong> Si el correo se cae, el autónomo sigue facturando. Si WhatsApp se cae, sigue entrando a la web. Solo las dos primeras piezas son insustituibles. Cuando algo falle, lo primero es saber si es una de esas dos o una de las otras cinco.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>2. Qué pasa cuando alguien pulsa un botón</h2>
+      <p class="sec-intro">El recorrido de una petición. Cada puerta puede rechazarla, y cada rechazo tiene un aspecto distinto.</p>
+    </div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 900 300" role="img" aria-label="Una petición pasa por cuatro puertas: identidad, aislamiento entre negocios, permiso del plan y estado de la suscripción, antes de llegar a los datos.">
+        <defs><marker id="d1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/></marker></defs>
+        <rect class="node" x="4" y="120" width="120" height="52" rx="9"/>
+        <text class="t" x="18" y="143">Alguien pulsa</text>
+        <text class="s" x="18" y="159">un botón</text>
+        <path class="wire" d="M124,146 H152" marker-end="url(#d1)"/>
+
+        <rect class="node node-warn" x="158" y="120" width="132" height="52" rx="9"/>
+        <text class="t" x="172" y="143">¿Quién eres?</text>
+        <text class="s" x="172" y="159">sesión válida</text>
+        <path class="wire" d="M290,146 H318" marker-end="url(#d1)"/>
+
+        <rect class="node node-warn" x="324" y="120" width="150" height="52" rx="9"/>
+        <text class="t" x="338" y="143">¿Es tu negocio?</text>
+        <text class="s" x="338" y="159">aislamiento entre cuentas</text>
+        <path class="wire" d="M474,146 H502" marker-end="url(#d1)"/>
+
+        <rect class="node node-warn" x="508" y="120" width="140" height="52" rx="9"/>
+        <text class="t" x="522" y="143">¿Tu plan lo incluye?</text>
+        <text class="s" x="522" y="159">permisos</text>
+        <path class="wire" d="M648,146 H676" marker-end="url(#d1)"/>
+
+        <rect class="node node-ok" x="682" y="120" width="214" height="52" rx="9"/>
+        <text class="t" x="696" y="143">¿Puedes escribir?</text>
+        <text class="s" x="696" y="159">suscripción activa · luego, los datos</text>
+
+        <text class="lbl" x="158" y="212">Te manda al login</text>
+        <text class="lbl" x="324" y="212">Te devuelve a tu panel</text>
+        <text class="lbl" x="508" y="212">Te ofrece ampliar plan</text>
+        <text class="lbl" x="682" y="212">Modo consulta</text>
+        <path class="wire" d="M224,172 V200" marker-end="url(#d1)"/>
+        <path class="wire" d="M399,172 V200" marker-end="url(#d1)"/>
+        <path class="wire" d="M578,172 V200" marker-end="url(#d1)"/>
+        <path class="wire" d="M789,172 V200" marker-end="url(#d1)"/>
+      </svg>
+      <figcaption>Cuatro puertas, cuatro síntomas distintos. Si un cliente dice «me echa fuera», es la primera. Si dice «no me deja crear», es la última. Nunca son lo mismo.</figcaption>
+    </figure>
+
+    <div class="note"><strong>La segunda puerta es la más importante del producto.</strong> Es lo que impide que un negocio vea los datos de otro, y vive en un único punto del código. Que sea uno solo es deliberado: una regla repartida por cincuenta sitios se rompe en el sitio cincuenta y uno.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>3. Por qué nada se pierde aunque algo falle</h2>
+      <p class="sec-intro">El concepto que explica la mitad de los comportamientos raros: las colas.</p>
+    </div>
+
+    <p>Cuando Noesis tiene que enviar algo —una factura por correo, un aviso por WhatsApp, un registro a Hacienda— <strong>no lo envía en el momento</strong>. Lo guarda primero en una lista de pendientes y luego lo intenta.</p>
+
+    <p>Parece un rodeo y es justo lo contrario. Si el proveedor está caído, el envío no se pierde: <strong>se reintenta con espera creciente</strong>, de treinta segundos hasta una hora, seis veces. Y si el mismo aviso se pide dos veces, sale una sola: cada envío lleva una marca que impide duplicarlo.</p>
+
+    <div class="note"><strong>Lo que verás como consecuencia:</strong> a veces un correo tarda en llegar en vez de fallar. Eso no es un error, es la cola haciendo su trabajo. Lo que sí es un problema es que se quede atascada, y para eso está la pantalla que te dice el motivo exacto.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>4. El sitio al que ir siempre</h2>
+      <p class="sec-intro">Antes de preguntarle nada al cliente, mira esto.</p>
+    </div>
+
+    <ol class="steps">
+      <li class="step first-step">
+        <span class="step-n">1</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Administración → Gestionar la cuenta</h3></div>
+          <p>Ahí ves, sin abrir sus datos: en qué estado está la suscripción, qué desbloquea su plan, quién tiene acceso, y <strong>qué entregas se han quedado atascadas con el motivo exacto que devolvió el proveedor</strong>.</p>
+          <p>Ese motivo es el que separa un problema tuyo de uno suyo. «SMTP no configurado» es nuestro. «Buzón inexistente» es una dirección mal escrita del cliente.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-n">2</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Las dos direcciones de salud</h3></div>
+          <p><code>bynoesis.com/health</code> dice si el servicio está vivo y qué versión corre. <code>bynoesis.com/ready</code> añade si la base de datos está al día.</p>
+          <p>Si las dos responden y aun así algo no va, <strong>el problema no es Noesis</strong>: es una pieza externa.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-n">3</span>
+        <div class="step-body">
+          <div class="step-head"><h3>La bitácora de seguridad</h3></div>
+          <p>Cada acción administrativa queda firmada y encadenada: quién, cuándo, sobre qué cuenta. Sirve para responder «¿esto lo hicimos nosotros?» con certeza y no con memoria.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>5. Síntomas y causas</h2>
+      <p class="sec-intro">Lo que te va a decir un cliente, y qué significa de verdad.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Lo que te dice</th><th>Casi siempre es</th><th>Dónde miras</th></tr></thead>
+        <tbody>
+          <tr><td>«No me deja crear nada»</td><td>Su suscripción venció: está en modo consulta</td><td>Gestionar la cuenta → estado</td></tr>
+          <tr><td>«Me echa al login todo el rato»</td><td>Sesión caducada, o su acceso está suspendido</td><td>Gestionar → Quién puede entrar</td></tr>
+          <tr><td>«No veo Proyectos / Equipo»</td><td>Su plan es Autónomo; eso es de Negocio</td><td>Gestionar → qué desbloquea el plan</td></tr>
+          <tr><td>«La factura no le llegó al cliente»</td><td>Correo atascado, o el cliente no tiene email</td><td>Gestionar → Entregas atascadas</td></tr>
+          <tr><td>«Mando notas de voz y no pasa nada»</td><td>No hay transcriptor configurado</td><td>Variables del entorno</td></tr>
+          <tr><td>«WhatsApp no responde»</td><td>Su teléfono no está vinculado, o el token caducó</td><td>Entregas atascadas → motivo de Meta</td></tr>
+          <tr><td>«Pagué y sigo bloqueado»</td><td>El aviso de Stripe no llegó o llegó desordenado</td><td>Gestionar → estado; se puede activar a mano</td></tr>
+          <tr><td>«Se ve raro en el móvil»</td><td>Es un fallo de pantalla, no de datos</td><td>Pídele captura y la talla del móvil</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <h3>El fallo que no da señal</h3>
+      <p>Hay uno que no aparece en ninguna pantalla: <strong>que un correo llegue a la carpeta de spam</strong>. Para el sistema es un envío correcto; para el cliente, no llegó.</p>
+      <p>Si alguien dice que no recibió algo y en Entregas atascadas no hay nada, esa es la primera sospecha. Se comprueba mirando una bandeja real de Gmail, no desde Noesis.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>6. Lo que Noesis nunca hace solo</h2>
+      <p class="sec-intro">Conviene saberlo, porque más de una vez te dirán «no lo ha hecho» y la respuesta es que no debía hacerlo.</p>
+    </div>
+    <ul>
+      <li><strong>No emite una factura sin confirmación.</strong> Prepara el borrador y espera un sí.</li>
+      <li><strong>No apunta un gasto de una foto sin preguntar.</strong> Propone y espera.</li>
+      <li><strong>No manda nada a un cliente final por su cuenta</strong> si el titular no lo ha aprobado.</li>
+      <li><strong>No deja que un trabajador cambie las cuentas.</strong> Su aportación queda pendiente hasta que el titular la acepta.</li>
+      <li><strong>No permite que administración abra el negocio de un cliente.</strong> Ni tú.</li>
+    </ul>
+    <div class="note">Si un cliente esperaba que algo pasara solo y no pasó, comprueba primero si es una de estas cinco. No es un fallo: es la promesa del producto, que el autónomo confirma todo lo que toca dinero.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>7. Qué preguntar cuando te avisan</h2>
+      <p class="sec-intro">Cuatro preguntas que resuelven casi todo sin tocar nada.</p>
+    </div>
+    <ol class="checks">
+      <li><strong>¿Quién eres y desde dónde?</strong> Titular o trabajador; web, móvil o WhatsApp. Cambia por completo dónde mirar.</li>
+      <li><strong>¿Qué esperabas y qué pasó?</strong> «No funciona» no es un síntoma; «pulsé emitir y no salió el PDF» sí.</li>
+      <li><strong>¿Desde cuándo?</strong> Si empezó hoy, mira qué se desplegó ayer. Si lleva siempre, es configuración.</li>
+      <li><strong>¿Te pasa solo a ti?</strong> Un cliente es su cuenta; todos, es una pieza externa.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>main</code> con esquema 50. La versión con la referencia técnica al lado está en <code>Diagnostico-tecnico.pdf</code>.</span>
+    <span>El estado vivo del producto no se repite aquí: está en <code>project-state.json</code>, que cambia cada pocos días.</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
