@@ -2,7 +2,7 @@
   "state_date": "2026-08-17",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 50,
-  "verified_test_count": 529,
+  "verified_test_count": 530,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",

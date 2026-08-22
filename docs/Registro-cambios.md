@@ -90,6 +90,33 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-08-22 — el boton de Google no tenia la marca de Google
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder dijo que "no funciona lo del logo" al conectar con Google.
+  No era la pantalla de consentimiento de Google: era **nuestro** boton, que solo
+  llevaba el texto "Continuar con Google" y ningun icono. Nunca lo tuvo.
+- **Areas y archivos:** `web/templates/login.html`, `web/templates/onboarding.html`,
+  `web/static/app.css`, `tests/test_backend.py`, `docs/project-state.json`.
+- **Cambios de datos/migracion:** ninguno.
+- **Como se ha hecho:** la marca oficial de cuatro colores va **en SVG dentro del
+  HTML**, no como imagen externa. Las reglas del proyecto prohiben CDNs en runtime, y
+  ademas un icono servido por un tercero se cae cuando ese tercero se cae y cuenta a
+  quien visita la pagina de acceso. El SVG no cambia de color al pasar el raton,
+  porque las normas de uso de la marca exigen respetar sus colores.
+- **Pruebas ejecutadas:** prueba nueva que comprueba el boton, la clase del logo, los
+  cuatro colores —si falta uno el logo sale roto— y que no hay ninguna URL externa
+  dentro del boton. 65 pruebas de login, Google, onboarding y autenticacion en verde;
+  `ruff` limpio. Verificado ademas contra el servidor real, descargando `/login` y
+  comprobando el HTML entregado.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** ninguno funcional. Aparte, en la consola de
+  Google el nombre y el logo de **Noesis** solo se muestran tras publicar la app y
+  pasar la verificacion de marca, que es automatica en minutos; hasta entonces el
+  usuario ve el dominio. Eso es de Google y no de este cambio.
+- **Diagnostico y rollback:** revertir el commit deja el boton con solo texto.
+- **Estado de publicacion:** local / commit en `main`.
+
 ## 2026-08-20 — corregido el plazo de verificacion de Meta en la guia
 
 - **Autor/agente:** Claude.

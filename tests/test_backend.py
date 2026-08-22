@@ -6382,6 +6382,36 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 self.assertNotIn("    ", guardado)
                 self.assertTrue(guardado, "el aviso no puede quedarse vacio")
 
+    def test_the_google_button_carries_its_official_mark(self):
+        """El boton de Google llevaba solo texto: sin la marca, la gente no lo
+        reconoce como el acceso de Google y desconfia justo en el paso mas
+        delicado. La marca va en SVG dentro del HTML porque el proyecto prohibe
+        CDNs en runtime: un icono servido de fuera se cae cuando ese tercero se
+        cae, y encima cuenta a quien visita la pagina de acceso."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        from noesis import config
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", "x.apps.googleusercontent.com"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "secreto"),
+            TestClient(server.app) as client,
+        ):
+            login = client.get("/login")
+
+        self.assertEqual(login.status_code, 200)
+        self.assertIn("auth-google-btn", login.text)
+        self.assertIn("g-logo", login.text)
+        # Los cuatro colores de la marca: si falta uno, el logo sale roto.
+        for color in ("#4285F4", "#34A853", "#FBBC05", "#EA4335"):
+            self.assertIn(color, login.text, f"falta el color {color} de la marca")
+        # Y no puede llegar de fuera.
+        inicio = login.text.find("auth-google-btn")
+        boton = login.text[inicio:inicio + 1500]
+        self.assertNotIn("http://", boton)
+        self.assertNotIn("https://", boton)
+
     def test_each_identity_lands_where_it_works(self):
         """Administracion no lleva un negocio con Noesis: gestiona los de los demas.
 
