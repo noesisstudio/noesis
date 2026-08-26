@@ -26,9 +26,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   PostgreSQL 16 y reveló una vulnerabilidad en `pip 26.1.2` (`PYSEC-2026-3721`) que
   antes quedaba oculta detrás del lock roto. El extra de seguridad exige ahora
   `pip>=26.2,<27`. El segundo run confirmó auditoría y PostgreSQL, y alcanzó un
-  falso positivo histórico del detector de secretos en el literal de prueba
-  `BACKUP_S3_SECRET_KEY="secret"`; se anota en línea sin excluir el archivo ni
-  debilitar el detector. Queda confirmar el tercer run completo.
+  falso positivo histórico del detector de secretos en una credencial ficticia de
+  backup usada por una prueba; se anota en esa línea sin excluir el archivo ni
+  debilitar el detector. Queda confirmar el siguiente run completo.
 - **Riesgo/punto probable de fallo:** `pyproject.toml` declaraba `openpyxl`, pero
   `uv.lock` no contenía `openpyxl` ni `et-xmlfile`; `uv sync --locked` fallaba antes
   de ejecutar una sola prueba. Después, `pip-audit` detectó el `pip` vulnerable que

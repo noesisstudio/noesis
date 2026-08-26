@@ -17,9 +17,8 @@
   por el auditor es 26.2. El extra `security` fija `pip>=26.2,<27` para que la propia
   cadena de auditoría no vuelva a resolver una versión vulnerable.
 - **Tercera barrera revelada por CI:** al superar la auditoría, `detect-secrets`
-  alcanzó por primera vez el literal de prueba
-  `BACKUP_S3_SECRET_KEY="secret"` añadido el 17 de agosto. Es un valor ficticio,
-  local y no funcional. Se marca únicamente esa línea con
+  alcanzó por primera vez una credencial ficticia de backup añadida a una prueba el
+  17 de agosto. Es un valor local y no funcional. Se marca únicamente esa línea con
   `pragma: allowlist secret`, la mitigación indicada por el propio hook; no se amplía
   la baseline, no se excluye el archivo y no se reduce la detección del repositorio.
 - **Validación local:** instalación estricta desde el lock correcta; Ruff y
