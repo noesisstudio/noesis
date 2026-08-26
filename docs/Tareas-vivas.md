@@ -122,6 +122,11 @@
 - [ ] Ejecutar `noesis-doctor --strict` y
   `noesis-integrations-check --network --strict` en producción; resolver cada
   bloqueo y guardar la evidencia sin copiar secretos.
+- [x] Automatizar una puerta externa sin credenciales sobre producción: el comando
+  `noesis-production-check` contrasta release, esquema, sitemap, las 14 páginas,
+  H1/canonical, marcadores legales y cabeceras de seguridad. GitHub la ejecuta cada
+  seis horas y bajo demanda. Falta contratar o configurar monitor 24/7 independiente,
+  alerta multicanal y guardia de incidentes antes de una apertura masiva.
 - [ ] Desplegar ClamAV en red privada, fijar `NOESIS_CLAMAV_REQUIRED=true` y probar
   archivo limpio, EICAR, caída y timeout sin almacenar el payload rechazado.
 - [ ] Ejecutar `noesis-restore-check` y comprobar el simulacro semanal. Después,

@@ -126,6 +126,11 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   de estado técnico para el cliente.
 - `/health` comprueba que el proceso responde e identifica el release desplegado;
   `/ready` devuelve esa misma huella y la versión de esquema realmente aplicada.
+- `noesis-production-check` consume ambas rutas desde fuera y las cruza con el estado
+  versionado del repositorio. También recorre el sitemap y valida la superficie
+  pública y sus protecciones sin autenticar ni tocar datos. GitHub lo programa cada
+  seis horas; una caída queda registrada como workflow fallido, aunque una operación
+  masiva debe añadir alerta 24/7 y guardia externa independiente de GitHub/Railway.
 - Los backups incluyen una copia verificada de la base de datos y un ZIP separado,
   también verificado por hashes, con los archivos de `DOCS_PATH`. Un simulacro
   semanal independiente repite la restauración en un fichero/esquema descartable y

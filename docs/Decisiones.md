@@ -2,6 +2,21 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Verificar producción desde fuera y sin credenciales (2026-08-26)
+
+Un CI verde demuestra el repositorio, no que Railway haya terminado la migración ni
+que el dominio esté sirviendo ese mismo release. La comprobación pública posterior al
+despliegue se convierte en un contrato ejecutable: `/health` y `/ready` deben coincidir
+en release, el esquema debe ser el declarado, las protecciones HTTP deben seguir
+presentes y todo lo que el sitemap promete debe responder, ser indexable y conservar
+su estructura y sus textos legales completos.
+
+La prueba no inicia sesión ni usa secretos; por eso puede ejecutarse periódicamente
+desde GitHub y bajo demanda sin ampliar superficie de ataque. Agrega fallos para no
+ocultar una segunda regresión detrás de la primera. La frecuencia de seis horas es un
+control de publicación de bajo coste, no un SLA: antes de abrir masivamente se añade
+un monitor externo 24/7, aviso multicanal y responsable de guardia.
+
 ## Retirar acceso a una persona, no apagar la empresa (2026-08-19)
 
 Administracion puede suspender y restaurar el acceso de un usuario concreto, con el

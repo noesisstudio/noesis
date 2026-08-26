@@ -1,8 +1,8 @@
 {
-  "state_date": "2026-08-17",
+  "state_date": "2026-08-26",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 50,
-  "verified_test_count": 531,
+  "verified_test_count": 535,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -68,6 +68,7 @@
     "bank_reconciliation": "implemented_csv_suggests_owner_confirms",
     "email_delivery": "implemented_durable_outbox_with_retry_https_api_provider_preferred_because_railway_blocks_outbound_smtp_ports_smtp_kept_as_fallback_with_implicit_ssl_on_465_and_public_forms_never_send_during_the_request",
     "deployment_identity": "health_exposes_a_sanitized_release_fingerprint_and_ready_exposes_release_plus_current_schema_so_published_never_means_only_merged",
+    "public_release_gate": "credential_free_external_check_aggregates_health_readiness_release_schema_security_headers_sitemap_indexability_canonical_h1_and_legal_placeholders_scheduled_in_github_every_six_hours_and_available_on_demand",
     "document_deduplication": "schema_38_sha256_per_business_unique_index_concurrent_upload_protection_and_lazy_fingerprinting_of_same_size_legacy_files_without_cross_tenant_comparison",
     "document_search": "case_insensitive_parameterized_search_inside_one_business_by_filename_note_ocr_client_project_and_humanized_kind",
     "document_pdf_local_reading": "bounded_pypdf_text_extraction_for_digital_pdfs_then_private_pypdfium2_rasterization_and_tesseract_ocr_for_image_only_pdfs_with_page_pixel_time_and_text_limits_cat_spa_eng_runtime_detection_preprocessing_and_no_external_api",
@@ -116,6 +117,7 @@
     "certificado_y_entorno_aeat",
     "restauracion_externa",
     "auditoria_seguridad_privacidad_fiscal",
+    "external_uptime_alerting_and_incident_on_call",
     "piloto_3_5_negocios"
   ]
 }

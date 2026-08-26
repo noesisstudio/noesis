@@ -6,6 +6,16 @@
 
 ## Producto construido
 
+- La publicación ya no depende solo de una comprobación manual. El comando
+  `noesis-production-check` observa Noesis desde fuera, sin sesiones ni secretos, y
+  rechaza una migración a medias, releases distintos entre `/health` y `/ready`,
+  pérdida de protecciones HTTP, páginas públicas caídas o no indexables, canonical/H1
+  rotos y marcadores legales reaparecidos. Un workflow independiente lo ejecuta cada
+  seis horas y permite lanzarlo bajo demanda. La comprobación real del 26 de agosto
+  confirma esquema 50, release coherente, 14 páginas públicas y todas las barreras
+  verificadas. Esto aporta detección periódica; la apertura masiva sigue necesitando
+  monitor 24/7 externo y procedimiento humano de respuesta.
+
 - La primera ejecución del comprobador dentro del contenedor detectó una diferencia
   real entre desarrollo y despliegue: Railpack instala `requirements.txt`, donde no
   constaban `pypdf`, `pypdfium2` ni `pytesseract`, aunque sí estaban declarados en

@@ -72,6 +72,12 @@
 - `src/noesis/integration_check.py`: comprobación externa segura y de solo lectura.
   Valida el runtime OCR y, opcionalmente, consulta por `GET` Brevo, Google OpenID,
   los seis precios Stripe y el catálogo Groq sin enviar, cobrar ni revelar secretos.
+- `src/noesis/production_check.py`: puerta posterior al despliegue, sin credenciales.
+  Contrasta desde Internet release, esquema, cabeceras de seguridad, sitemap,
+  indexabilidad, H1/canonical y ausencia de marcadores legales; agrega todos los
+  fallos en una sola ejecución para que soporte no dependa de revisar URL por URL.
+- `.github/workflows/production-smoke.yml`: ejecuta esa puerta cada seis horas y a
+  demanda. Es detección periódica, no un sustituto de monitorización 24/7 externa.
 - `src/noesis/config.py` + `web/routers/webhooks.py`: toman una huella publicable del
   commit de Railway (o `NOESIS_RELEASE_ID`) y la exponen en `/health`; `/ready`
   añade el esquema aplicado para distinguir sin ambigüedad fusionado de desplegado.

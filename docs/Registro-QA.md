@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-08-26 — puerta externa automática de producción
+
+- **Alcance:** nueva comprobación sin credenciales para `/health`, `/ready`, release,
+  esquema, cabeceras de seguridad, sitemap, 14 páginas públicas, H1, canonical,
+  indexabilidad y marcadores legales. No abre sesiones, no usa datos de clientes y no
+  ejecuta acciones de negocio.
+- **Regresiones automatizadas:** cuatro contratos cubren release completo, esquema a
+  medias, marcador legal y pérdida de HSTS. La suite completa queda en **534/534**;
+  Ruff, detector de secretos, fuente de verdad y `git diff --check` están verdes. El
+  workflow programado usa el esquema de `project-state.json`, por lo que una
+  migración futura no deja un número duplicado.
+- **Producción real:** `noesis-production-check --json` respondió verde contra
+  `https://bynoesis.com`: release `6d0e0feba7d6`, esquema 50, 14 páginas públicas y
+  las ocho familias de cabeceras/CSP exigidas.
+- **Límite:** un workflow cada seis horas detecta una regresión, pero no garantiza un
+  SLA ni una llamada de guardia; falta monitor externo 24/7 y procedimiento de
+  incidente antes de abrir de forma masiva.
+
 ## 2026-08-26 — auditoría de la semana y reparación del lockfile
 
 - **Punto de partida:** `main` local estaba limpio en `5ae1541`; después de

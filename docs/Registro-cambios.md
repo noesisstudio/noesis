@@ -7,6 +7,27 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-26 — automatiza la puerta externa del release publicado
+
+- **Autor/agente:** Codex.
+- **Objetivo:** detectar automáticamente despliegues incompletos y regresiones de la
+  superficie pública antes de que las reporte un cliente.
+- **Áreas y archivos:** `production_check.py`, su entrypoint, cuatro pruebas, workflow
+  programado de GitHub y documentación operativa/estado. Sin cambios de datos.
+- **Pruebas ejecutadas:** Ruff completo, detector de secretos, fuente de verdad,
+  `git diff --check`, cuatro contratos específicos, comprobación real contra
+  producción y suite completa **534/534**. CI queda pendiente del `push`.
+- **Dependencias o validaciones externas:** no requiere credenciales. Producción real
+  respondió con release coherente, esquema 50, 14 páginas públicas, estructura SEO,
+  textos legales y cabeceras correctas.
+- **Riesgo/punto probable de fallo:** un cambio deliberado de sitemap, cabeceras o
+  esquema obliga a actualizar el contrato; de no hacerlo, el workflow fallará de
+  forma segura sin afectar tráfico ni datos.
+- **Diagnóstico y rollback:** ejecutar `noesis-production-check --json`; cada fallo
+  identifica URL o protección. Revertir el bloque elimina el monitor, pero no cambia
+  producción ni esquema.
+- **Estado de publicación:** local verificado; pendiente de suite, commit, push y CI.
+
 ## 2026-08-26 — recupera el CI tras sincronizar el generador económico
 
 - **Autor/agente:** Codex, revisando los cambios publicados por Claude y el socio.
