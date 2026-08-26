@@ -1,5 +1,30 @@
 # Registro de QA
 
+## 2026-08-26 — auditoría de la semana y reparación del lockfile
+
+- **Punto de partida:** `main` local estaba limpio en `5ae1541`; después de
+  `git fetch` se detectaron 20 commits ya publicados hasta `550262a` y se aplicó
+  un avance rápido, sin crear un merge ni duplicar commits.
+- **Incidencia encontrada:** los runs de CI de los commits nuevos fallaban en
+  `uv sync --locked --extra security --extra test`. El cambio que hizo portable
+  `analysis/build_modelo_economico.py` añadió el extra `analysis` con `openpyxl` a
+  `pyproject.toml`, pero no regeneró `uv.lock`.
+- **Corrección:** lock regenerado con `py -m uv lock`; añade `openpyxl 3.1.5` y su
+  dependencia `et-xmlfile 2.0.0`, además de reflejar el extra `analysis` del
+  proyecto. No se ha cambiado ninguna dependencia de runtime de Noesis.
+- **Validación local:** instalación estricta desde el lock correcta; Ruff y
+  `scripts/check_project_truth.py` verdes; suite estándar de `unittest` completa,
+  **530/530** en 809,6 s. Los logs de caídas de IA, Stripe, WhatsApp, correo,
+  Veri*Factu y backups son escenarios simulados esperados por las pruebas.
+- **Modelo económico:** el generador portable produce 17 hojas y coincide con el
+  libro publicado salvo `Calculadora!B6:B8`: el artefacto conserva los valores de
+  ejemplo 1/5/2 que introdujo el founder, mientras que una regeneración parte de
+  0/0/0. Es la diferencia intencionada ya registrada el 19 de agosto, no una fórmula
+  rota ni una regresión.
+- **Límit:** `project-state.json` conserva el recompte verificat de 531 perquè el CI
+  afegeix comprovacions de migració i PostgreSQL fora de la descoberta estàndard.
+  La validació externa definitiva és el run de GitHub Actions després del `push`.
+
 ## 2026-08-20 — corregido el fallo de parametros multilinea de WhatsApp
 
 - **El fallo:** Meta rechaza un parametro de plantilla con salto de linea, tabulador o

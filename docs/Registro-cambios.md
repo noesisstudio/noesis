@@ -7,6 +7,31 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-26 — recupera el CI tras sincronizar el generador económico
+
+- **Autor/agente:** Codex, revisando los cambios publicados por Claude y el socio.
+- **Objetivo:** sincronizar el repositorio tras una semana de trabajo y corregir el
+  bloqueo que impedía que GitHub Actions validara cualquier commit de `main`.
+- **Áreas y archivos:** `uv.lock` y bitácoras de cambios/QA. No cambia código de
+  producto ni el libro económico publicado.
+- **Cambios de datos/migración:** ninguno; esquema 50 sin cambios.
+- **Pruebas ejecutadas:** `uv sync --locked --extra security --extra test`, Ruff,
+  `check_project_truth.py`, `git diff --check` y suite completa local de **530
+  pruebas**, todas verdes. El generador económico se ejecutó con el extra `analysis`
+  y salida temporal: sus 17 hojas y todas las fórmulas coinciden; solo difieren las
+  tres entradas 1/5/2 que el founder escribió deliberadamente en el libro publicado
+  y que una regeneración limpia devuelve a cero, como ya documentaba su cambio.
+- **Dependencias o validaciones externas:** queda confirmar el nuevo run de GitHub
+  Actions, incluido el humo PostgreSQL 16, después de publicar este commit.
+- **Riesgo/punto probable de fallo:** `pyproject.toml` declaraba `openpyxl`, pero
+  `uv.lock` no contenía `openpyxl` ni `et-xmlfile`; `uv sync --locked` fallaba antes
+  de ejecutar una sola prueba. El lock regenerado incorpora solo esas dependencias.
+- **Diagnóstico y rollback:** si vuelve a aparecer «lockfile needs to be updated»,
+  comparar `pyproject.toml` con `uv.lock` y ejecutar `py -m uv lock`. Revertir este
+  commit devolvería el CI al bloqueo y no afecta a datos ni producción.
+- **Estado de publicación:** corrección local verificada; pendiente de commit,
+  `push` y confirmación del CI al escribir esta entrada.
+
 ## 2026-08-17 — sincroniza el OCR con el build real de Railway
 
 - **Autor/agente:** Codex.
