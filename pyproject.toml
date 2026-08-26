@@ -40,6 +40,9 @@ audio = ["faster-whisper>=1.0.0,<2"]
 security = [
     "bandit>=1.8.0,<2",
     "detect-secrets>=1.5.0,<2",
+    # pip-audit usa pip como librería; se fija un suelo seguro para que la propia
+    # herramienta de auditoría no introduzca una versión con vulnerabilidades.
+    "pip>=26.2,<27",
     "pip-audit>=2.9.0,<3",
     "ruff>=0.16.0,<1",
 ]

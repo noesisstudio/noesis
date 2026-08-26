@@ -12,6 +12,10 @@
 - **Corrección:** lock regenerado con `py -m uv lock`; añade `openpyxl 3.1.5` y su
   dependencia `et-xmlfile 2.0.0`, además de reflejar el extra `analysis` del
   proyecto. No se ha cambiado ninguna dependencia de runtime de Noesis.
+- **Segunda barrera revelada por CI:** una vez reparado el lock, `pip-audit` alcanzó
+  su paso y rechazó `pip 26.1.2` por `PYSEC-2026-3721`; la versión corregida indicada
+  por el auditor es 26.2. El extra `security` fija `pip>=26.2,<27` para que la propia
+  cadena de auditoría no vuelva a resolver una versión vulnerable.
 - **Validación local:** instalación estricta desde el lock correcta; Ruff y
   `scripts/check_project_truth.py` verdes; suite estándar de `unittest` completa,
   **530/530** en 809,6 s. Los logs de caídas de IA, Stripe, WhatsApp, correo,

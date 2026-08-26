@@ -12,8 +12,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Autor/agente:** Codex, revisando los cambios publicados por Claude y el socio.
 - **Objetivo:** sincronizar el repositorio tras una semana de trabajo y corregir el
   bloqueo que impedía que GitHub Actions validara cualquier commit de `main`.
-- **Áreas y archivos:** `uv.lock` y bitácoras de cambios/QA. No cambia código de
-  producto ni el libro económico publicado.
+- **Áreas y archivos:** `pyproject.toml`, `uv.lock` y bitácoras de cambios/QA. No
+  cambia código de producto ni el libro económico publicado.
 - **Cambios de datos/migración:** ninguno; esquema 50 sin cambios.
 - **Pruebas ejecutadas:** `uv sync --locked --extra security --extra test`, Ruff,
   `check_project_truth.py`, `git diff --check` y suite completa local de **530
@@ -21,11 +21,14 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   y salida temporal: sus 17 hojas y todas las fórmulas coinciden; solo difieren las
   tres entradas 1/5/2 que el founder escribió deliberadamente en el libro publicado
   y que una regeneración limpia devuelve a cero, como ya documentaba su cambio.
-- **Dependencias o validaciones externas:** queda confirmar el nuevo run de GitHub
-  Actions, incluido el humo PostgreSQL 16, después de publicar este commit.
+- **Dependencias o validaciones externas:** el primer run confirmó el humo
+  PostgreSQL 16 y reveló una vulnerabilidad en `pip 26.1.2` (`PYSEC-2026-3721`) que
+  antes quedaba oculta detrás del lock roto. El extra de seguridad exige ahora
+  `pip>=26.2,<27`; queda confirmar el segundo run completo después de publicarlo.
 - **Riesgo/punto probable de fallo:** `pyproject.toml` declaraba `openpyxl`, pero
   `uv.lock` no contenía `openpyxl` ni `et-xmlfile`; `uv sync --locked` fallaba antes
-  de ejecutar una sola prueba. El lock regenerado incorpora solo esas dependencias.
+  de ejecutar una sola prueba. Después, `pip-audit` detectó el `pip` vulnerable que
+  usa transitivamente. El lock regenerado incorpora el extra y el suelo seguro.
 - **Diagnóstico y rollback:** si vuelve a aparecer «lockfile needs to be updated»,
   comparar `pyproject.toml` con `uv.lock` y ejecutar `py -m uv lock`. Revertir este
   commit devolvería el CI al bloqueo y no afecta a datos ni producción.
