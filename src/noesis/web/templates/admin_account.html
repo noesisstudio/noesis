@@ -48,6 +48,33 @@
     </div>
   </section>
 
+  {% if account_cost %}
+  <section class="support-section" id="rentabilidad">
+    <div class="support-section-head">
+      <div><div class="kicker">Control interno · {{ cost_control.month }}</div><h2>Consumo y rentabilidad de Noesis</h2></div>
+      <span class="badge {{ 'b-red' if account_cost.risk == 'critical' else 'b-amber' if account_cost.risk == 'review' else 'b-gray' if account_cost.risk == 'demo' else 'b-green' }}">
+        {{ 'revisar ahora' if account_cost.risk == 'critical' else 'vigilar' if account_cost.risk == 'review' else 'demo' if account_cost.risk == 'demo' else 'en orden' }}
+      </span>
+    </div>
+    <p class="meta" style="margin:0 0 14px">Solo combina el precio de la suscripción,
+      metadatos técnicos de uso y el libro CFO de Noesis. No abre facturas, clientes,
+      mensajes, archivos ni importes del negocio.</p>
+    <div class="admin-grid">
+      <div class="stat"><div class="lbl">Ingreso comprometido</div><div class="val support-value">{{ '%.2f'|format(account_cost.revenue_eur) }} €</div><div class="delta flat">mensual, no caja</div></div>
+      <div class="stat"><div class="lbl">Acciones avanzadas</div><div class="val support-value">{{ account_cost.ai_credits_used }} / {{ account_cost.ai_credits_limit }}</div><div class="delta flat">{{ account_cost.ai_credits_pct }} % del plan</div></div>
+      <div class="stat"><div class="lbl">Coste IA medido</div><div class="val support-value">{{ '%.4f'|format(account_cost.ai_estimated_cost_eur) }} €</div><div class="delta flat">tokens con tarifa configurada</div></div>
+      <div class="stat"><div class="lbl">Coste real asignado</div><div class="val support-value">{{ ('%.2f €'|format(account_cost.allocated_observed_cost_eur)) if cost_control.has_observed_data else '—' }}</div><div class="delta flat">{{ 'reparto reconciliado' if cost_control.has_observed_data else 'faltan facturas de proveedores' }}</div></div>
+      <div class="stat"><div class="lbl">Contribución</div><div class="val support-value">{{ ('%.2f €'|format(account_cost.contribution_eur)) if account_cost.contribution_eur is not none else '—' }}</div><div class="delta flat">{{ (account_cost.margin_pct|string ~ ' %') if account_cost.margin_pct is not none else 'aún no calculable' }}</div></div>
+      <div class="stat"><div class="lbl">Canales</div><div class="val support-value">{{ account_cost.whatsapp_in }}↓ · {{ account_cost.whatsapp_out }}↑</div><div class="delta flat">WhatsApp · {{ account_cost.email_out }} correos</div></div>
+    </div>
+    {% if account_cost.risk_reasons %}
+    <div class="support-list">
+      {% for reason in account_cost.risk_reasons %}<div><span>{{ reason }}</span><b>revisar</b></div>{% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
   <section class="support-section" id="suscripcion">
     <div class="support-section-head">
       <div><div class="kicker">Control del propietario</div><h2>Permisos de la cuenta</h2></div>

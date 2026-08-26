@@ -101,6 +101,10 @@ def admin_account_support(request: Request, business_id: int):
             metadata={"grant_id": configuration_support["grant_id"]},
         )
     trial_ends = str((snapshot.get("business") or {}).get("trial_ends_at") or "")
+    cost_control = db.account_cost_control()
+    account_cost = next(
+        (row for row in cost_control["rows"] if row["id"] == business_id), None
+    )
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
         "trial_expired": bool(trial_ends) and trial_ends < date.today().isoformat(),
@@ -117,6 +121,8 @@ def admin_account_support(request: Request, business_id: int):
         "whatsapp_connections": db.list_whatsapp_connections(business_id),
         "document_support": document_support,
         "configuration_support": configuration_support,
+        "cost_control": cost_control,
+        "account_cost": account_cost,
         "admin_error": request.session.pop("admin_error", None),
         "admin_success": request.session.pop("admin_success", None),
     })

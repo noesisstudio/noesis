@@ -11479,6 +11479,258 @@ def platform_cost_summary(period: str) -> dict:
     }
 
 
+def account_cost_control(month: str | None = None) -> dict:
+    """Control operativo por cuenta sin confundir estimaciones con contabilidad.
+
+    Los costes observados proceden exclusivamente del libro CFO. Se reparten con
+    drivers explícitos y reconciliables (uso de IA, plantillas de WhatsApp, correos,
+    ingreso comprometido o reparto uniforme). Si una categoría no tiene un driver
+    medible, permanece sin asignar en vez de inventar rentabilidad por cliente.
+    """
+    from .adapters.billing import PLANS, PLAN_PRICES
+
+    month = month or date.today().strftime("%Y-%m")
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", month):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    prefix = f"{month}%"
+    usage = ai_usage_summary(month)
+    ledger = platform_cost_summary(month)
+
+    with get_conn() as conn:
+        businesses = [dict(row) for row in conn.execute(
+            "SELECT id, name, plan, subscription_status, is_demo "
+            "FROM businesses ORDER BY name, id"
+        ).fetchall()]
+        credit_rows = conn.execute(
+            "SELECT business_id, COUNT(*) AS total FROM product_events "
+            "WHERE event_name='ai_credit_used' "
+            "AND CAST(created_at AS TEXT) LIKE ? GROUP BY business_id",
+            (prefix,),
+        ).fetchall()
+        wa_out_rows = conn.execute(
+            "SELECT business_id, status, message_type, COUNT(*) AS total "
+            "FROM whatsapp_outbox WHERE business_id IS NOT NULL "
+            "AND CAST(created_at AS TEXT) LIKE ? "
+            "GROUP BY business_id, status, message_type",
+            (prefix,),
+        ).fetchall()
+        wa_in_rows = conn.execute(
+            "SELECT business_id, processing_status, COUNT(*) AS total "
+            "FROM whatsapp_inbox WHERE CAST(received_at AS TEXT) LIKE ? "
+            "GROUP BY business_id, processing_status",
+            (prefix,),
+        ).fetchall()
+        email_rows = conn.execute(
+            "SELECT business_id, status, COUNT(*) AS total FROM email_outbox "
+            "WHERE business_id IS NOT NULL AND CAST(created_at AS TEXT) LIKE ? "
+            "GROUP BY business_id, status",
+            (prefix,),
+        ).fetchall()
+
+    credits = {int(row["business_id"]): int(row["total"] or 0)
+               for row in credit_rows}
+    wa_out: dict[int, dict[str, int]] = {}
+    for row in wa_out_rows:
+        bucket = wa_out.setdefault(int(row["business_id"]), {
+            "total": 0, "templates": 0, "failed": 0, "retrying": 0,
+        })
+        count = int(row["total"] or 0)
+        bucket["total"] += count
+        if row["message_type"] == "template":
+            bucket["templates"] += count
+        if row["status"] == "failed":
+            bucket["failed"] += count
+        if row["status"] == "retrying":
+            bucket["retrying"] += count
+    wa_in: dict[int, dict[str, int]] = {}
+    for row in wa_in_rows:
+        bucket = wa_in.setdefault(int(row["business_id"]), {
+            "total": 0, "failed": 0,
+        })
+        count = int(row["total"] or 0)
+        bucket["total"] += count
+        if row["processing_status"] == "failed":
+            bucket["failed"] += count
+    emails: dict[int, dict[str, int]] = {}
+    for row in email_rows:
+        bucket = emails.setdefault(int(row["business_id"]), {
+            "total": 0, "failed": 0, "retrying": 0,
+        })
+        count = int(row["total"] or 0)
+        bucket["total"] += count
+        if row["status"] == "failed":
+            bucket["failed"] += count
+        if row["status"] == "retrying":
+            bucket["retrying"] += count
+
+    rows: list[dict] = []
+    for business in businesses:
+        business_id = int(business["id"])
+        plan = business.get("plan") or "autonomo"
+        plan_data = PLANS.get(plan, PLANS["autonomo"])
+        revenue = (
+            float(PLAN_PRICES.get(plan, 0))
+            if business.get("subscription_status") == "active"
+            and not business.get("is_demo") else 0.0
+        )
+        ai = usage["per_business"].get(business_id, {
+            "calls": 0, "input": 0, "output": 0, "extractions": 0,
+            "estimated_cost_usd": 0.0, "providers": {},
+        })
+        credit_limit = int(plan_data.get("credits") or 0)
+        credit_used = credits.get(business_id, 0)
+        row = {
+            **business,
+            "revenue_eur": round(revenue, 2),
+            "ai_calls": int(ai.get("calls") or 0),
+            "ai_tokens": int(ai.get("input") or 0) + int(ai.get("output") or 0),
+            "ai_estimated_cost_eur": round(
+                float(ai.get("estimated_cost_usd") or 0) * 0.92, 4
+            ),
+            "ai_credits_used": credit_used,
+            "ai_credits_limit": credit_limit,
+            "ai_credits_pct": round(credit_used / credit_limit * 100)
+            if credit_limit else 0,
+            "extractions": int(ai.get("extractions") or 0),
+            "whatsapp_in": wa_in.get(business_id, {}).get("total", 0),
+            "whatsapp_out": wa_out.get(business_id, {}).get("total", 0),
+            "whatsapp_templates": wa_out.get(business_id, {}).get("templates", 0),
+            "whatsapp_failed": (
+                wa_out.get(business_id, {}).get("failed", 0)
+                + wa_in.get(business_id, {}).get("failed", 0)
+            ),
+            "whatsapp_retrying": wa_out.get(business_id, {}).get("retrying", 0),
+            "email_out": emails.get(business_id, {}).get("total", 0),
+            "email_failed": emails.get(business_id, {}).get("failed", 0),
+            "email_retrying": emails.get(business_id, {}).get("retrying", 0),
+            "allocated_observed_cost_eur": 0.0,
+        }
+        rows.append(row)
+
+    eligible = [row for row in rows if not row.get("is_demo")]
+    category_drivers = {
+        "ai": "ai_estimated_cost_eur",
+        "whatsapp": "whatsapp_templates",
+        "email": "email_out",
+        "payments": "revenue_eur",
+    }
+    unallocated_by_category: dict[str, float] = {}
+    allocation_method: dict[str, str] = {}
+    for category, amount in ledger["by_category"].items():
+        amount = round(float(amount or 0), 2)
+        if not amount:
+            continue
+        driver = category_drivers.get(category)
+        if driver:
+            weighted = [row for row in eligible if float(row.get(driver) or 0) > 0]
+            driver_total = sum(float(row[driver]) for row in weighted)
+        else:
+            weighted = eligible
+            driver_total = float(len(weighted))
+        if not weighted or not driver_total:
+            unallocated_by_category[category] = amount
+            allocation_method[category] = "sin driver medible"
+            continue
+        allocated = 0.0
+        for index, row in enumerate(weighted):
+            weight = float(row.get(driver) or 0) if driver else 1.0
+            share = (
+                round(amount - allocated, 2)
+                if index == len(weighted) - 1
+                else round(amount * weight / driver_total, 2)
+            )
+            row["allocated_observed_cost_eur"] = round(
+                row["allocated_observed_cost_eur"] + share, 2
+            )
+            allocated = round(allocated + share, 2)
+        allocation_method[category] = (
+            {
+                "ai": "uso medido de IA",
+                "whatsapp": "plantillas salientes",
+                "email": "correos generados",
+                "payments": "ingreso recurrente comprometido",
+            }.get(category, "reparto uniforme entre cuentas no demo")
+        )
+
+    for row in rows:
+        reasons: list[str] = []
+        severity = "ok"
+        if row["whatsapp_failed"] or row["email_failed"]:
+            severity = "critical"
+            reasons.append("hay entregas fallidas")
+        if row["ai_credits_pct"] >= 100:
+            severity = "critical"
+            reasons.append("ha agotado las acciones avanzadas")
+        elif row["ai_credits_pct"] >= 80:
+            if severity == "ok":
+                severity = "review"
+            reasons.append("se acerca al límite de IA")
+        if ledger["has_observed_data"]:
+            row["contribution_eur"] = round(
+                row["revenue_eur"] - row["allocated_observed_cost_eur"], 2
+            )
+            row["margin_pct"] = (
+                round(row["contribution_eur"] / row["revenue_eur"] * 100, 1)
+                if row["revenue_eur"] else None
+            )
+            if row["revenue_eur"] and row["contribution_eur"] < 0:
+                severity = "critical"
+                reasons.append("coste asignado superior al ingreso")
+            elif row["margin_pct"] is not None and row["margin_pct"] < 60:
+                if severity == "ok":
+                    severity = "review"
+                reasons.append("margen operativo por debajo del 60 %")
+        else:
+            row["contribution_eur"] = None
+            row["margin_pct"] = None
+        if row.get("is_demo"):
+            severity = "demo"
+            reasons = ["cuenta de demostración excluida del reparto"]
+        row["risk"] = severity
+        row["risk_reasons"] = reasons
+
+    risk_order = {"critical": 0, "review": 1, "ok": 2, "demo": 3}
+    rows.sort(key=lambda row: (
+        risk_order.get(row["risk"], 9), -row["revenue_eur"], row["name"]
+    ))
+    observed_total = float(ledger["observed_total"] or 0)
+    unallocated_total = round(sum(unallocated_by_category.values()), 2)
+    allocated_total = round(
+        sum(float(row["allocated_observed_cost_eur"]) for row in rows), 2
+    )
+    revenue_total = round(sum(float(row["revenue_eur"]) for row in rows), 2)
+    return {
+        "month": month,
+        "rows": rows,
+        "revenue_eur": revenue_total,
+        "estimated_ai_cost_eur": round(
+            sum(float(row["ai_estimated_cost_eur"]) for row in rows), 4
+        ),
+        "observed_cost_eur": round(observed_total, 2),
+        "allocated_cost_eur": allocated_total,
+        "unallocated_cost_eur": unallocated_total,
+        "unallocated_by_category": unallocated_by_category,
+        "allocation_method": allocation_method,
+        "observed_contribution_eur": (
+            round(revenue_total - observed_total, 2)
+            if ledger["has_observed_data"] else None
+        ),
+        "observed_margin_pct": (
+            round((revenue_total - observed_total) / revenue_total * 100, 1)
+            if ledger["has_observed_data"] and revenue_total else None
+        ),
+        "cost_coverage_pct": (
+            round(allocated_total / observed_total * 100)
+            if ledger["has_observed_data"] and observed_total > 0 else None
+        ),
+        "paying_accounts": sum(1 for row in rows if row["revenue_eur"] > 0),
+        "accounts_to_review": sum(
+            1 for row in rows if row["risk"] in {"critical", "review"}
+        ),
+        "has_observed_data": ledger["has_observed_data"],
+    }
+
+
 def admin_overview() -> dict:
     """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
     operativos de cada autónomo, solo metadatos de cuenta y agregados."""
@@ -11579,11 +11831,9 @@ def admin_overview() -> dict:
     ai_total = usage["total"]
     # El chat ya registra el coste por modelo/proveedor. La conversión USD→EUR es
     # solo una aproximación operativa; la factura del proveedor sigue mandando.
-    ai_cost_eur = round(
-        ai_total["estimated_cost_usd"] * 0.92
-        + ai_total["extractions"] * 0.014,
-        2,
-    )
+    # Una extracción local no recibe un coste ficticio: si el proveedor no devuelve
+    # uso medible, la factura real se registra en el libro CFO.
+    ai_cost_eur = round(ai_total["estimated_cost_usd"] * 0.92, 2)
     margen_pct = round((mrr - ai_cost_eur) / mrr * 100) if mrr else None
     altas_mes = altas_by_month.get(today.strftime("%Y-%m"), 0)
     en_riesgo = len([
@@ -11597,6 +11847,23 @@ def admin_overview() -> dict:
         "error": "la última copia FALLÓ",
     }.get((backup or {}).get("status"), "sin copias todavía")
     cost_ledger = platform_cost_summary(today.strftime("%Y-%m"))
+    cost_control = account_cost_control(today.strftime("%Y-%m"))
+    if cost_control["accounts_to_review"]:
+        alerts.append({
+            "level": "ambar", "area": "Rentabilidad",
+            "text": (
+                f"{cost_control['accounts_to_review']} cuenta(s) requieren revisar "
+                "consumo, entregas o margen."
+            ),
+        })
+    if cost_control["unallocated_cost_eur"]:
+        alerts.append({
+            "level": "ambar", "area": "Control de costes",
+            "text": (
+                f"{cost_control['unallocated_cost_eur']:.2f} € de costes reales "
+                "siguen sin driver medible para asignarlos por cuenta."
+            ),
+        })
     observed_costs = cost_ledger["observed_total"]
     observed_margin = (
         round((mrr - observed_costs) / mrr * 100, 1)
@@ -11667,6 +11934,7 @@ def admin_overview() -> dict:
         "mrr": mrr, "businesses": biz, "backup": backup,
         "verifactu_queue": vq,
         "ai_usage": usage,
+        "cost_control": cost_control,
         "alerts": alerts,
     }
 

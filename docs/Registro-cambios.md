@@ -7,6 +7,27 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-26 — controla la rentabilidad operativa por cuenta
+
+- **Autor/agente:** Codex.
+- **Objetivo:** saber qué cuentas generan o destruyen margen y dónde crece el coste
+  sin abrir el contenido privado del negocio ni confundir estimación con gasto real.
+- **Áreas y archivos:** agregación CFO en `db.py`, centro de mando y ficha privada
+  de cuenta, estilos, dos regresiones nuevas y documentación viva. Sin migración.
+- **Pruebas ejecutadas:** 4/4 contratos centrados, suite estándar completa
+  **543/543**, Ruff y `git diff --check` verdes; fuente de verdad y barreras de
+  seguridad se ejecutan antes de publicar.
+- **Dependencias o validaciones externas:** ninguna nueva. Para que el margen sea
+  representativo hay que cargar facturas reales de proveedores en el libro CFO.
+- **Riesgo/punto probable de fallo:** un coste sin volumen medible queda sin asignar;
+  esto reduce cobertura, pero evita inventar rentabilidad. El ingreso mostrado es
+  MRR comprometido por plan, no caja cobrada ni contabilidad analítica.
+- **Diagnóstico y rollback:** revisar `platform_cost_entries`, la sección
+  `rentabilidad-cuentas` y `account_cost_control`; revertir elimina la lectura y las
+  alertas sin tocar clientes, facturas, suscripciones ni el libro append-only.
+- **Estado de publicación:** candidato local validado; pendiente de `push`, CI,
+  humo PostgreSQL y despliegue automático.
+
 ## 2026-08-26 — repara la restauración de facturas emitidas en PostgreSQL
 
 - **Autor/agente:** Codex.

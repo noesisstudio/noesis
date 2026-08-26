@@ -219,8 +219,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   sesiones anteriores revocadas y MFA preservado. Falta recorrer el correo real.
 - [ ] Gestoría: passkeys, roles finos y piloto real con un despacho antes de abrir
   el acceso a terceros.
-- [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,
-  correcciones y coste.
+- [x] Control mensual por negocio para consumo de IA, extracciones, WhatsApp,
+  correo, fallos de entrega y coste observado: reparto explícito y reconciliado,
+  demos excluidas, coste sin driver visible y alertas por límite o margen.
+- [ ] Completar la observabilidad por negocio con latencia y tasa de corrección por
+  tipo de extracción/acción; validar umbrales con el piloto antes de prometer SLA.
 - [x] Libro CFO interno por mes: costes reales, previsiones y ajustes append-only;
   contribución, margen observado y coste por cuenta de pago sin inventar gastos.
 - [ ] Cargar facturas reales de Railway, proveedores, seguridad, correo, Meta,

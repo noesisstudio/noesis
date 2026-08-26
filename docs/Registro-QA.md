@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-08-26 — rentabilidad operativa por cuenta
+
+- **Alcance:** nueva lectura interna mensual por cuenta en el centro de mando y en
+  su ficha privada. Usa únicamente plan/estado, metadatos de consumo y entregas y
+  costes reales append-only; no abre clientes, mensajes, facturas ni documentos.
+- **Criterio financiero:** IA se distribuye por coste medido, Meta por plantillas,
+  correo por volumen, pagos por ingreso comprometido y costes compartidos por cuenta
+  no demo. Una categoría sin driver permanece sin asignar y la cobertura lo revela.
+- **Alertas:** entrega fallida, acciones avanzadas agotadas, consumo al 80 %, coste
+  superior al ingreso o margen inferior al 60 %. Demos quedan separadas.
+- **Corrección adicional:** una extracción OCR local ya no suma 0,014 € ficticios;
+  solo se reconoce coste de proveedor medido o factura real del libro CFO.
+- **Regresiones y validación:** reparto de 80 € entre dos cuentas reconcilia al 100 %,
+  alerta de margen/consumo y OCR local sin coste inventado; 4/4 contratos centrados,
+  suite completa **543/543**, Ruff y `git diff --check` verdes.
+- **Límite:** la exactitud económica depende de cargar costes reales y de validar
+  drivers/umbrales con el piloto. Falta medir latencia y correcciones por
+  tipo de acción antes de fijar SLA o automatizar decisiones comerciales.
+
 ## 2026-08-26 — restauración PostgreSQL con facturas inmutables
 
 - **Hallazgo en producción:** `noesis-restore-check` falló de forma segura. La última

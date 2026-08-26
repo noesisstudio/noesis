@@ -6,6 +6,17 @@
 
 ## Producto construido
 
+- Dirección ya puede entender la rentabilidad operativa de Noesis **cuenta por
+  cuenta** sin abrir los datos del negocio del cliente. El centro interno combina
+  el precio mensual comprometido, consumo de IA, plantillas y entregas de WhatsApp,
+  correo y extracciones con los costes reales del libro CFO. Cada coste se reparte
+  con un criterio visible y el total asignado reconcilia con el libro; si falta un
+  driver, queda explícitamente sin asignar. Las demos no contaminan el margen y las
+  alertas priorizan entregas fallidas, límites de IA y cuentas con margen inferior
+  al 60 %. También se ha retirado el falso coste fijo que penalizaba cada OCR local
+  sin factura de proveedor. La ficha de soporte muestra la misma lectura solo con
+  metadatos, nunca clientes, mensajes, documentos ni importes del negocio.
+
 - La recuperación del titular ahora tiene las mismas garantías transaccionales que
   la nueva recuperación de gestoría. Pedir un enlace invalida los anteriores y el
   consumo del token, el cambio de contraseña y el incremento que revoca sesiones se

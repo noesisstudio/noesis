@@ -6289,6 +6289,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 self.assertEqual(page.status_code, 200, page.text)
                 self.assertIn("Factura Railway agosto", page.text)
                 self.assertIn("Margen observado", page.text)
+                self.assertIn("Rentabilidad operativa por cuenta", page.text)
         ledger = db.platform_cost_summary(period)
         self.assertEqual(ledger["observed_total"], 24.5)
         event = next(
@@ -7003,6 +7004,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 self.assertIn("Cuenta diagnosticada", page.text)
                 self.assertIn("Ventana temporal abierta", page.text)
                 self.assertIn("Diagnóstico de integraciones", page.text)
+                self.assertIn("Consumo y rentabilidad de Noesis", page.text)
                 self.assertNotIn("CLIENTE-SECRETO-NO-MOSTRAR", page.text)
                 client.post("/logout")
                 client.post("/login", data={
@@ -7540,6 +7542,74 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                     "UPDATE platform_cost_entries SET amount_eur=999 WHERE period=?",
                     (period,),
                 )
+
+    def test_cost_control_reconciles_real_costs_and_flags_account_risk(self):
+        from noesis.adapters import email as email_adapter
+
+        autonomo, _ = self.make_business("Cuenta Autónoma")
+        negocio, _ = self.make_business("Cuenta Negocio")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET subscription_status='active', plan='autonomo' "
+                "WHERE id=?", (autonomo["id"],),
+            )
+            conn.execute(
+                "UPDATE businesses SET subscription_status='active', plan='pro' "
+                "WHERE id=?", (negocio["id"],),
+            )
+        db.record_product_event(
+            autonomo["id"], "ai_usage",
+            json.dumps({"in": 1000, "out": 100, "estimated_cost_usd": 1}),
+        )
+        db.record_product_event(
+            negocio["id"], "ai_usage",
+            json.dumps({"in": 500, "out": 50, "estimated_cost_usd": 0.5}),
+        )
+        for _ in range(60):
+            db.record_product_event(autonomo["id"], "ai_credit_used", "{}")
+        whatsapp.queue_template(
+            "34600111222", "recordatorio", ["Cliente"],
+            business_id=autonomo["id"], idempotency_key="cost-wa",
+        )
+        email_adapter.queue_email(
+            "cliente@example.com", "Aviso", "Contenido",
+            business_id=negocio["id"], idempotency_key="cost-email",
+        )
+        period = date.today().strftime("%Y-%m")
+        for category, amount in (
+            ("ai", 30), ("whatsapp", 12), ("email", 8),
+            ("hosting", 20), ("payments", 10),
+        ):
+            db.add_platform_cost(
+                period, category, amount, source="actual",
+                note=f"Factura real {category}",
+            )
+
+        control = db.account_cost_control(period)
+        self.assertEqual(control["observed_cost_eur"], 80)
+        self.assertEqual(control["allocated_cost_eur"], 80)
+        self.assertEqual(control["unallocated_cost_eur"], 0)
+        self.assertEqual(control["cost_coverage_pct"], 100)
+        self.assertEqual(control["revenue_eur"], 78)
+        first = next(row for row in control["rows"] if row["id"] == autonomo["id"])
+        second = next(row for row in control["rows"] if row["id"] == negocio["id"])
+        self.assertEqual(first["ai_credits_pct"], 80)
+        self.assertEqual(first["whatsapp_templates"], 1)
+        self.assertAlmostEqual(first["allocated_observed_cost_eur"], 45.72)
+        self.assertEqual(first["risk"], "critical")
+        self.assertAlmostEqual(second["allocated_observed_cost_eur"], 34.28)
+        self.assertEqual(second["email_out"], 1)
+
+    def test_local_document_extractions_do_not_invent_provider_cost(self):
+        business, _ = self.make_business("OCR Local")
+        db.record_product_event(
+            business["id"], "media_ingested",
+            json.dumps({"type": "image", "extracted": True}),
+        )
+        overview = db.admin_overview()
+        self.assertEqual(overview["ai_usage"]["total"]["extractions"], 1)
+        self.assertEqual(overview["finanzas"]["ai_cost_eur"], 0)
+        self.assertIn("cost_control", overview)
 
     def test_alerts_flag_failed_whatsapp_and_broken_backup(self):
         business, _ = self.make_business("Admin Alarmas")
