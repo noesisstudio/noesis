@@ -7,6 +7,23 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-26 — hace atómica la recuperación del titular
+
+- **Autor/agente:** Codex.
+- **Objetivo:** que una caída entre consumir el enlace y guardar la clave no deje un
+  acceso a medias, y que un correo antiguo no siga siendo válido.
+- **Áreas y archivos:** tokens y credenciales en `db.py`, router de cuenta, dos
+  regresiones HTTP y documentación. Sin migración ni cambio visual.
+- **Pruebas ejecutadas:** 2/2 contratos específicos y suite estándar completa
+  **541/541** verdes; controles estáticos y de seguridad antes del commit.
+- **Dependencias o validaciones externas:** ninguna nueva; llegada del enlace sigue
+  dependiendo del correo ya configurado.
+- **Riesgo/punto probable de fallo:** entregabilidad externa, no consistencia local;
+  el estado queda íntegro aunque la petición falle antes del commit.
+- **Diagnóstico y rollback:** eventos `account.password_reset_*` y outbox; revertir
+  devuelve el consumo en dos pasos, sin tocar claves ya establecidas.
+- **Estado de publicación:** local verificado de forma centrada; no publicado.
+
 ## 2026-08-26 — permite reintentar un correo agotado sin abrir su contenido
 
 - **Autor/agente:** Codex.

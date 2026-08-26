@@ -9659,26 +9659,46 @@ def set_password(user_id, password_hash) -> None:
 def create_password_reset(user_id, token_hash, ttl_minutes: int = 60) -> None:
     expires = (datetime.now() + timedelta(minutes=ttl_minutes)).isoformat(timespec="seconds")
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "UPDATE password_resets SET used=TRUE "
+            "WHERE user_id=? AND used=FALSE",
+            (user_id,),
+        )
         conn.execute(
             "INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) "
             "VALUES (?, ?, ?, ?)", (user_id, token_hash, expires, _now()))
 
 
-def use_password_reset(token_hash) -> dict | None:
-    """Devuelve el reset válido (no usado, no caducado) y lo marca usado."""
+def reset_user_password(token_hash: str, password_hash: str) -> dict | None:
+    """Consume el enlace y cambia la clave del titular de forma atómica."""
+    now = datetime.now().isoformat(timespec="seconds")
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         row = conn.execute(
-            "SELECT * FROM password_resets "
-            "WHERE token_hash=? AND used=FALSE" + lock,
-            (token_hash,)).fetchone()
+            "SELECT r.id, r.user_id, u.business_id FROM password_resets r "
+            "JOIN users u ON u.id=r.user_id "
+            "WHERE r.token_hash=? AND r.used=FALSE AND r.expires_at>?" + lock,
+            (token_hash, now),
+        ).fetchone()
         if not row:
             return None
-        if row["expires_at"] < datetime.now().isoformat(timespec="seconds"):
+        consumed = conn.execute(
+            "UPDATE password_resets SET used=TRUE WHERE id=? AND used=FALSE",
+            (row["id"],),
+        )
+        if consumed.rowcount != 1:
             return None
-        conn.execute("UPDATE password_resets SET used=TRUE WHERE id=?", (row["id"],))
-        return dict(row)
+        conn.execute(
+            "UPDATE users SET password_hash=?, session_version=session_version+1 "
+            "WHERE id=?",
+            (password_hash, row["user_id"]),
+        )
+        return {
+            "user_id": int(row["user_id"]),
+            "business_id": int(row["business_id"]),
+        }
 
 
 # --------------------------------------------------- Visitas del sitio ---

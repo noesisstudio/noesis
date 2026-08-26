@@ -2,7 +2,7 @@
   "state_date": "2026-08-26",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 51,
-  "verified_test_count": 540,
+  "verified_test_count": 542,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -49,7 +49,7 @@
     "visitor_measurement": "schema_37_own_server_counts_public_page_views_by_day_no_script_no_cookie_no_third_party_because_csp_forbids_external_scripts_only_page_day_and_referrer_host_are_stored_never_ip_user_agent_or_identifier_private_static_api_and_session_routes_excluded_like_in_robots_and_a_failure_to_count_never_breaks_the_page"
   },
   "authentication": {
-    "password": "available",
+    "local_access": "available_with_atomic_non_enumerating_recovery_new_link_invalidates_previous_one_use_hashed_reset_and_session_revocation_commit_together_and_security_events_are_content_free",
     "google_oauth": "implemented_hidden_until_client_and_secret_are_configured",
     "access_gateway": "one_public_entry_routes_owner_or_business_and_professional_accounting_firm_without_mixing_sessions_client_portal_keeps_private_link_entry",
     "gestoria_onboarding": "professional_request_or_explicit_client_invitation_never_self_grants_business_access",

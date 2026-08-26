@@ -6,6 +6,12 @@
 
 ## Producto construido
 
+- La recuperación del titular ahora tiene las mismas garantías transaccionales que
+  la nueva recuperación de gestoría. Pedir un enlace invalida los anteriores y el
+  consumo del token, el cambio de contraseña y el incremento que revoca sesiones se
+  confirman juntos o no se confirma nada. La respuesta sigue sin revelar si existe
+  una cuenta y solicitud/finalización quedan trazadas sin correo, token ni contenido.
+
 - El centro de soporte ya no se limita a diagnosticar un correo agotado:
   administración puede devolver **un único correo fallido** a la cola desde la ficha
   de la misma empresa. La acción no envía durante la petición, no puede cruzar

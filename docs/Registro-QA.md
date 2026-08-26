@@ -1,5 +1,19 @@
 # Registro de QA
 
+## 2026-08-26 — recuperación atómica del titular
+
+- **Alcance:** endurecimiento del flujo existente `/recuperar` y `/restablecer`, sin
+  cambiar la pantalla ni el correo que conoce el cliente.
+- **Garantías:** enlace nuevo invalida anteriores; token, contraseña y
+  `session_version` cambian en una transacción; el token es de un solo uso; la
+  respuesta de solicitud no enumera cuentas; los eventos no contienen identidad ni
+  secreto.
+- **Regresiones:** dos contratos HTTP cubren doble solicitud, enlace antiguo, uso
+  único, nueva contraseña, revocación de una sesión abierta y trazabilidad. Verdes.
+- **Validación local:** 2/2 contratos centrados y suite estándar completa **541/541**
+  verdes; controles estáticos, secretos y Bandit se ejecutan como barrera final.
+  Quedan CI y PostgreSQL después del `push`.
+
 ## 2026-08-26 — reintento manual y privado de correo fallido
 
 - **Alcance:** una acción POST de administración devuelve a la outbox un correo que

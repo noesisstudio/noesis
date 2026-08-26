@@ -4,7 +4,8 @@
 
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
-  gestoría.
+  gestoría. La recuperación de acceso consume token, cambia credencial y revoca
+  sesiones en una sola transacción; pedir otro enlace invalida los anteriores.
 - `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 51;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
