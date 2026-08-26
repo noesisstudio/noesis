@@ -5,7 +5,7 @@
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 49;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 51;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -28,7 +28,10 @@
   documental, versiona la identidad sin duplicar imágenes por factura y congela la
   versión utilizada al emitir, con referencia multiempresa protegida. La 49 guarda
   el punto exacto del alta, el plan y la periodicidad elegidos y diferencia WhatsApp
-  verificado de la decisión explícita de conectarlo más adelante.
+  verificado de la decisión explícita de conectarlo más adelante. La 50 permite
+  suspender una identidad concreta sin bloquear el negocio entero. La 51 separa la
+  recuperación de contraseña de gestoría de los usuarios de empresa, con tokens
+  hasheados, caducables y de un solo uso.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -275,7 +278,8 @@
   solicitudes y descarga por período. El expediente sirve cinco vistas separadas
   mediante una sección validada en servidor y conserva período/filtro tras cada
   formulario; cada ruta vuelve a comprobar la relación de acceso antes de leer o
-  escribir.
+  escribir. Incluye recuperación no enumerativa por correo; el cambio atómico de
+  contraseña revoca sesiones previas y no desactiva el segundo factor.
 - `src/noesis/web/mfa.py`: TOTP estándar con semilla derivada de la identidad y la
   clave maestra, QR local y códigos de recuperación de 80 bits. La base solo recibe
   hashes y el último contador consumido; los códigos en claro no pasan por sesión.

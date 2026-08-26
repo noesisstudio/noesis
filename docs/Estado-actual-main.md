@@ -6,6 +6,15 @@
 
 ## Producto construido
 
+- La gestoría ya puede recuperar su acceso sin intervención técnica y sin cruzar su
+  identidad con ningún autónomo. El esquema 51 guarda tokens propios, hasheados,
+  caducables y de un solo uso; pedir uno nuevo invalida los anteriores. La respuesta
+  pública nunca revela si el correo existe, el envío pasa por la outbox durable y el
+  cambio de clave es atómico: cierra todas las sesiones previas y conserva el MFA.
+  Tres regresiones cubren no enumeración, caducidad, consumo único, nueva clave,
+  revocación de sesiones y segundo factor. Falta el recorrido con buzón y autenticador
+  reales después de publicar.
+
 - La publicación ya no depende solo de una comprobación manual. El comando
   `noesis-production-check` observa Noesis desde fuera, sin sesiones ni secretos, y
   rechaza que producción siga detrás de `main`, una migración a medias o releases distintos entre `/health` y `/ready`,

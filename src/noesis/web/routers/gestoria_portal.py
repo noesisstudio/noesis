@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 import time
 from datetime import date
 
@@ -9,7 +10,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from ... import config, db, gestoria_workspace
-from ...adapters import billing as billing_adapter
+from ...adapters import billing as billing_adapter, email as email_adapter
 from ...documents import repo as docrepo, service as docservice
 from .. import auth, mfa
 from ..deps import TEMPLATES
@@ -151,6 +152,100 @@ def login_page(request: Request, error: str = ""):
     return TEMPLATES.TemplateResponse(request, "gestoria_login.html", {
         "error": error,
     })
+
+
+@router.get("/gestoria/recuperar", response_class=HTMLResponse)
+def forgot_page(request: Request, sent: str = ""):
+    if _current_account(request):
+        return RedirectResponse("/gestoria", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "gestoria_forgot.html", {
+        "sent": sent,
+    })
+
+
+@router.post("/gestoria/recuperar")
+def forgot_submit(request: Request, email: str = Form(...)):
+    email = (email or "").strip().lower()
+    keys = (
+        f"gestoria-forgot-ip:{auth.client_ip(request)}",
+        f"gestoria-forgot-account:{email}",
+    )
+    if any(auth.is_rate_limited(key) for key in keys):
+        return RedirectResponse("/gestoria/recuperar?sent=1", status_code=303)
+    for key in keys:
+        auth.record_failed_attempt(key)
+    account = db.get_gestoria_account_by_email(email)
+    if account and account.get("is_active"):
+        token = secrets.token_urlsafe(32)
+        token_hash = auth.hash_token(token)
+        db.create_gestoria_password_reset(
+            account["id"], token_hash, ttl_minutes=60
+        )
+        link = f"{config.BASE_URL}/gestoria/restablecer?token={token}"
+        email_adapter.queue_email(
+            email,
+            "Restablecer el acceso profesional a Noesis",
+            "\n".join([
+                f"Hola, equipo de {account['firm_name']}:",
+                "",
+                "Para crear una contraseña nueva, abre este enlace "
+                "(válido durante 1 hora):",
+                link,
+                "",
+                "El cambio cerrará las sesiones abiertas y mantendrá activo "
+                "el segundo factor.",
+                "Si no lo habéis pedido, ignorad este correo.",
+                "",
+                "— Noesis",
+            ]),
+            business_id=None,
+            idempotency_key=(
+                f"gestoria-password-reset:{account['id']}:{token_hash[:20]}"
+            ),
+        )
+        db.record_security_event(
+            "gestoria.password_reset_requested",
+            area="authentication",
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"gestoria_account_id": account["id"]},
+        )
+    return RedirectResponse("/gestoria/recuperar?sent=1", status_code=303)
+
+
+@router.get("/gestoria/restablecer", response_class=HTMLResponse)
+def reset_page(request: Request, token: str = "", error: str = ""):
+    return TEMPLATES.TemplateResponse(request, "gestoria_reset.html", {
+        "token": token,
+        "error": error,
+    })
+
+
+@router.post("/gestoria/restablecer")
+def reset_submit(
+    request: Request,
+    token: str = Form(...),
+    password: str = Form(...),
+):
+    if len(password) < 12 or len(password) > 1024:
+        return RedirectResponse(
+            f"/gestoria/restablecer?token={token}&error=password",
+            status_code=303,
+        )
+    account = db.reset_gestoria_password(
+        auth.hash_token(token), auth.hash_password(password)
+    )
+    if not account:
+        return RedirectResponse(
+            "/gestoria/restablecer?error=token", status_code=303
+        )
+    request.session.clear()
+    db.record_security_event(
+        "gestoria.password_reset_completed",
+        area="authentication",
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"gestoria_account_id": account["id"]},
+    )
+    return RedirectResponse("/gestoria/login?error=reset_ok", status_code=303)
 
 
 @router.post("/gestoria/login")

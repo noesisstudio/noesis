@@ -7,6 +7,25 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-26 — recupera el acceso profesional de gestoría
+
+- **Autor/agente:** Codex.
+- **Objetivo:** que un despacho pueda recuperar su cuenta sin soporte manual y sin
+  reducir la seguridad de todas las empresas de su cartera.
+- **Áreas y archivos:** migración 51, frontera de datos de gestoría, router y dos
+  pantallas de acceso, estilos acotados, tres pruebas y documentación de estado.
+- **Pruebas ejecutadas:** 7/7 contratos centrados de recuperación y MFA, suite
+  estándar completa **538/538**, Ruff, compilación, fuente de verdad y
+  `git diff --check` verdes. Quedan las barreras de seguridad y CI/PostgreSQL.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial; reutiliza
+  el correo durable existente. La llegada a Gmail/Outlook requiere prueba real.
+- **Riesgo/punto probable de fallo:** configuración o entregabilidad del proveedor de
+  correo; el flujo responde igual y conserva la cuenta aunque el envío se retrase.
+- **Diagnóstico y rollback:** revisar solo metadatos de `email_outbox` y los eventos
+  `gestoria.password_reset_*`; revertir el bloque elimina rutas/tabla sin modificar
+  accesos, cartera, MFA ni contraseñas existentes.
+- **Estado de publicación:** local en validación; no publicado todavía.
+
 ## 2026-08-26 — automatiza la puerta externa del release publicado
 
 - **Autor/agente:** Codex.

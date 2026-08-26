@@ -207,8 +207,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [x] Gestoría: MFA TOTP opcional, reto tras contraseña, anti-replay, ocho códigos de
   recuperación de un solo uso y reconfiguración protegida sin semillas reversibles
   ni códigos en la cookie de sesión.
-- [ ] Gestoría: recuperación de contraseña por correo, passkeys, roles finos y
-  piloto real con un despacho antes de abrir el acceso a terceros.
+- [x] Gestoría: recuperación de contraseña por correo separada de los usuarios de
+  negocio, respuesta no enumerativa, token hasheado/caducable/de un solo uso,
+  sesiones anteriores revocadas y MFA preservado. Falta recorrer el correo real.
+- [ ] Gestoría: passkeys, roles finos y piloto real con un despacho antes de abrir
+  el acceso a terceros.
 - [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,
   correcciones y coste.
 - [x] Libro CFO interno por mes: costes reales, previsiones y ajustes append-only;

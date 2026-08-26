@@ -1,5 +1,21 @@
 # Registro de QA
 
+## 2026-08-26 — recuperación segura de contraseña para gestorías
+
+- **Alcance:** rutas y pantallas propias de recuperación profesional, migración 51,
+  persistencia separada de usuarios de negocio y envío mediante la outbox durable.
+- **Contratos de seguridad:** correo existente e inexistente reciben la misma
+  respuesta; solo una cuenta activa encola correo; el token nunca vuelve al HTML ni
+  se guarda en claro; pedir uno nuevo invalida el anterior; consumo y cambio de clave
+  ocurren en una transacción; caducados y reutilizados fallan cerrados; todas las
+  sesiones anteriores se invalidan y el MFA permanece activo.
+- **Pruebas:** 3 regresiones específicas y las 4 de MFA profesional están verdes.
+  Suite estándar completa **538/538**, Ruff, compilación, fuente de verdad y
+  `git diff --check` verdes. Detector de secretos, Bandit y humo PostgreSQL quedan
+  pendientes antes de publicar.
+- **Límite externo:** falta comprobar llegada y entregabilidad con un buzón real y
+  recorrer el segundo factor con un autenticador físico después del despliegue.
+
 ## 2026-08-26 — puerta externa automática de producción
 
 - **Alcance:** nueva comprobación sin credenciales para `/health`, `/ready`, release,

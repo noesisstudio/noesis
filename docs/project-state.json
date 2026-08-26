@@ -1,14 +1,14 @@
 {
   "state_date": "2026-08-26",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 50,
-  "verified_test_count": 536,
+  "schema_version": 51,
+  "verified_test_count": 539,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar el esquema 50 y validar el control de acceso por persona: suspender corta sesiones abiertas, el suspendido no vuelve a entrar por contrasena ni por Google, la restauracion devuelve el acceso y las tres protecciones impiden dejar una cuenta sin nadie. Recorrer con la suscripcion sandbox activa los flujos del portal Stripe gestionado por Noesis: gestion general, cambio de tarjeta, upgrade mensual y anual al plan exacto y cancelacion confirmada sin segundo Checkout; comprobar tambien que todos los price_id comparten tax_behavior compatible y no unspecified, y que cada webhook actualiza Noesis; repetir la prueba publicada de gestorias cuando Google renueve su cache de robots y solicitar indexacion; solicitar tambien indexacion de autonomos y precios y esperar datos reales de Search Console; recorrer en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS"
+    "pending_after_deploy": "Desplegar el esquema 51 y validar con un buzon real la recuperacion profesional de gestoria: respuesta no enumerativa, enlace de un solo uso, caducidad, sesiones anteriores cerradas y MFA conservado. Validar tambien el control de acceso por persona: suspender corta sesiones abiertas, el suspendido no vuelve a entrar por contrasena ni por Google, la restauracion devuelve el acceso y las tres protecciones impiden dejar una cuenta sin nadie. Recorrer con la suscripcion sandbox activa los flujos del portal Stripe gestionado por Noesis: gestion general, cambio de tarjeta, upgrade mensual y anual al plan exacto y cancelacion confirmada sin segundo Checkout; comprobar tambien que todos los price_id comparten tax_behavior compatible y no unspecified, y que cada webhook actualiza Noesis; repetir la prueba publicada de gestorias cuando Google renueve su cache de robots y solicitar indexacion; solicitar tambien indexacion de autonomos y precios y esperar datos reales de Search Console; recorrer en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS"
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -52,7 +52,8 @@
     "password": "available",
     "google_oauth": "implemented_hidden_until_client_and_secret_are_configured",
     "access_gateway": "one_public_entry_routes_owner_or_business_and_professional_accounting_firm_without_mixing_sessions_client_portal_keeps_private_link_entry",
-    "gestoria_onboarding": "professional_request_or_explicit_client_invitation_never_self_grants_business_access"
+    "gestoria_onboarding": "professional_request_or_explicit_client_invitation_never_self_grants_business_access",
+    "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
     "commercial_onboarding": "schema_49_resumable_exact_step_trial_or_subscribe_then_business_complete_invoice_identity_collection_messages_truthful_whatsapp_review_checkout_and_first_customer_activation",

@@ -1,0 +1,29 @@
+{% extends "gestoria_base.html" %}
+{% block title %}Nueva contraseña de gestoría{% endblock %}
+{% block content %}
+<div class="gestoria-auth-wrap compact">
+  <section class="gestoria-auth-intro">
+    <a class="gestoria-back" href="/gestoria/login">← Volver a entrar</a>
+    <span class="eyebrow">Acceso profesional</span>
+    <h1>Vuelve a tu cartera con una clave nueva.</h1>
+    <p>La contraseña protege todas las empresas que te han dado acceso. Usa una clave única y conserva el segundo factor.</p>
+  </section>
+  <section class="gestoria-auth-card">
+    <h2>Nueva contraseña</h2>
+    <p class="muted">Debe tener como mínimo 12 caracteres.</p>
+    {% if error == 'token' %}<div class="banner warn">El enlace no es válido o ha caducado. Pide uno nuevo.</div>
+    {% elif error == 'password' %}<div class="banner warn">La contraseña debe tener entre 12 y 1.024 caracteres.</div>{% endif %}
+    {% if token %}
+    <form method="post" action="/gestoria/restablecer">
+      <input type="hidden" name="token" value="{{ token }}">
+      <label class="fld">Contraseña nueva</label>
+      <input class="input" type="password" name="password" autocomplete="new-password" minlength="12" maxlength="1024" required>
+      <button class="btn primary gestoria-full">Guardar y cerrar sesiones</button>
+    </form>
+    {% else %}
+    <p class="muted">Falta el enlace de recuperación o ya no es válido.</p>
+    <a class="btn primary gestoria-full" href="/gestoria/recuperar">Pedir otro enlace</a>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

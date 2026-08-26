@@ -3770,6 +3770,41 @@ def _downgrade_user_access_control(conn) -> None:
         conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS is_active")
 
 
+def _upgrade_gestoria_password_recovery(conn) -> None:
+    """Tokens propios para recuperar una gestoría sin cruzar identidades.
+
+    Una cuenta de gestoría puede acceder a varias empresas y no pertenece a
+    ninguna de ellas. Por eso sus tokens no se guardan en ``password_resets``
+    (que referencia usuarios de un negocio) ni arrastran un ``business_id``.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_password_resets ("
+        f"id {t['id']}, "
+        f"gestoria_account_id {t['ref']} NOT NULL REFERENCES "
+        "gestoria_accounts(id) ON DELETE CASCADE, "
+        "token_hash TEXT NOT NULL, "
+        f"expires_at {t['timestamp']} NOT NULL, "
+        f"used {t['boolean']} NOT NULL DEFAULT FALSE, "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS "
+        "uq_gestoria_password_reset_token "
+        "ON gestoria_password_resets(token_hash)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gestoria_password_reset_account "
+        "ON gestoria_password_resets(gestoria_account_id, used, expires_at)"
+    )
+
+
+def _downgrade_gestoria_password_recovery(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_gestoria_password_reset_account")
+    conn.execute("DROP INDEX IF EXISTS uq_gestoria_password_reset_token")
+    conn.execute("DROP TABLE IF EXISTS gestoria_password_resets")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3839,6 +3874,9 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_recoverable_onboarding),
     (50, "control_acceso_usuarios", _upgrade_user_access_control,
      _downgrade_user_access_control),
+    (51, "recuperacion_contrasena_gestoria",
+     _upgrade_gestoria_password_recovery,
+     _downgrade_gestoria_password_recovery),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

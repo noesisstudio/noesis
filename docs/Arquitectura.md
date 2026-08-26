@@ -107,7 +107,10 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs. La migración
   16 distingue eventos en proceso, completados y fallidos: un error devuelve 5xx y
   permite reintentar; solo un evento completado se descarta como duplicado.
-- Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
+- Las sesiones se revocan al cambiar contraseña; la gestoría usa una tabla de tokens
+  separada porque su identidad puede abarcar varios negocios. Sus enlaces son
+  hasheados, caducables y de un solo uso, y recuperar la clave conserva el MFA. Las
+  cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
 - En producción las sesiones usan cookie `__Host-`, caducan por inactividad y el
   administrador exige Google OAuth; si faltan sus credenciales el panel queda

@@ -941,6 +941,75 @@ def mark_gestoria_login(account_id: int) -> None:
         )
 
 
+def create_gestoria_password_reset(
+    account_id: int, token_hash: str, ttl_minutes: int = 60
+) -> None:
+    """Crea el único enlace vigente de recuperación para una gestoría."""
+    expires = (
+        datetime.now() + timedelta(minutes=max(1, min(int(ttl_minutes), 1440)))
+    ).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        account = conn.execute(
+            "SELECT id FROM gestoria_accounts WHERE id=? AND is_active=TRUE",
+            (account_id,),
+        ).fetchone()
+        if not account:
+            raise ValueError("Cuenta de gestoría no encontrada.")
+        # Pedir un enlace nuevo invalida los anteriores y evita que un correo
+        # antiguo siga abriendo la cuenta después de recuperar el acceso.
+        conn.execute(
+            "UPDATE gestoria_password_resets SET used=TRUE "
+            "WHERE gestoria_account_id=? AND used=FALSE",
+            (account_id,),
+        )
+        conn.execute(
+            "INSERT INTO gestoria_password_resets "
+            "(gestoria_account_id, token_hash, expires_at, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (account_id, token_hash, expires, _now()),
+        )
+
+
+def reset_gestoria_password(token_hash: str, password_hash: str) -> dict | None:
+    """Consume el token y cambia la clave en una sola transacción.
+
+    Incrementar ``session_version`` expulsa cualquier sesión abierta. El MFA se
+    conserva: recuperar la contraseña nunca rebaja el segundo factor.
+    """
+    now = datetime.now().isoformat(timespec="seconds")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT r.id, r.gestoria_account_id "
+            "FROM gestoria_password_resets r "
+            "JOIN gestoria_accounts a ON a.id=r.gestoria_account_id "
+            "WHERE r.token_hash=? AND r.used=FALSE AND r.expires_at>? "
+            "AND a.is_active=TRUE" + lock,
+            (token_hash, now),
+        ).fetchone()
+        if not row:
+            return None
+        consumed = conn.execute(
+            "UPDATE gestoria_password_resets SET used=TRUE "
+            "WHERE id=? AND used=FALSE",
+            (row["id"],),
+        )
+        if consumed.rowcount != 1:
+            return None
+        conn.execute(
+            "UPDATE gestoria_accounts SET password_hash=?, "
+            "session_version=session_version+1 WHERE id=? AND is_active=TRUE",
+            (password_hash, row["gestoria_account_id"]),
+        )
+        account = conn.execute(
+            "SELECT * FROM gestoria_accounts WHERE id=?",
+            (row["gestoria_account_id"],),
+        ).fetchone()
+        return dict(account) if account else None
+
+
 def enable_gestoria_mfa(account_id: int, recovery_hashes: list[str],
                         last_counter: int) -> dict | None:
     hashes = [
