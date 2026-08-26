@@ -14,9 +14,14 @@
 - **Regresión real:** el humo PostgreSQL ahora crea una copia después de emitir una
   factura con líneas, exige que quede marcada `ok` y vuelve a ejecutar el simulacro
   independiente. Así el fallo que producción escondía no puede volver con CI verde.
-- **Validación local:** 5/5 pruebas de backup SQLite/adaptadores, Ruff y compilación
-  verdes. La evidencia decisiva queda pendiente del humo PostgreSQL de GitHub y,
-  después, de generar y restaurar manualmente una copia nueva en producción.
+- **Validación:** 5/5 pruebas de backup SQLite/adaptadores, Ruff y compilación
+  verdes. El humo PostgreSQL de GitHub creó y restauró un conjunto con facturas
+  emitidas. Producción en `d55be0ae6673` generó después
+  `noesis-20260826-101725-080641.dump.gz`, lo marcó `ok` sin error y el simulacro
+  independiente terminó `ok` en 3,22 s. No se abrió ni descargó contenido.
+- **Límite restante:** el artefacto continúa en el volumen del mismo proveedor; falta
+  S3 privado y una restauración desde otra infraestructura para demostrar RPO/RTO
+  ante pérdida total de Railway.
 
 ## 2026-08-26 — recuperación atómica del titular
 

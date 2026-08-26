@@ -175,18 +175,19 @@ secretos. Sin `--network` no sale del servidor. Nunca activar `NOESIS_RESET_DB`
 con datos.
 
 Railpack ejecuta la aplicación directamente desde `src` y no instala los entry
-points del paquete. Por eso, dentro de una sesión SSH de producción, la forma
-canónica es:
-
-```bash
-PYTHONPATH=/app/src /app/.venv/bin/python -m noesis.integration_check --network
-```
-
-Desde PowerShell puede ejecutarse sin abrir una shell interactiva:
+points del paquete. Por eso `noesis-doctor` escrito directamente dentro del
+contenedor devuelve `command not found`. Desde PowerShell, con el proyecto y el
+servicio `web` ya enlazados, estas son las formas canónicas verificadas:
 
 ```powershell
-railway ssh -- sh -lc 'PYTHONPATH=/app/src /app/.venv/bin/python -m noesis.integration_check --network'
+railway ssh env PYTHONPATH=src python -m noesis.readiness --strict
+railway ssh env PYTHONPATH=src python -m noesis.integration_check --network --strict
+railway ssh env PYTHONPATH=src python -c "from noesis.web.backups import restore_check_main; raise SystemExit(restore_check_main())"
 ```
+
+La tercera orden crea un esquema desechable, restaura la última copia verificada,
+compara esquema/recuentos y verifica el manifiesto documental; no sustituye ni
+modifica la base activa.
 
 Para crear las dos cuentas comerciales dentro del producto, activar
 `NOESIS_SEED_DEMO=true` durante un despliegue y seguir

@@ -327,13 +327,15 @@
   vuelve a restaurar la última base y verifica el ZIP documental en un entorno
   descartable. La comprobación real del 26 de agosto descubrió que las copias nuevas
   fallaban al reconstruir líneas de facturas emitidas: la propia inmutabilidad las
-  confundía con una modificación posterior. El candidato suspende únicamente los
+  confundía con una modificación posterior. El release `d55be0ae6673` suspende únicamente los
   triggers de negocio dentro de la transacción de restauración, conserva claves
   foráneas y restricciones, los reactiva antes de validar y añade el recorrido al
-  humo PostgreSQL. Hasta desplegarlo y generar una copia 51 verificada, la última
-  recuperable sigue siendo antigua y no se considera suficiente. La entrada
-  documental admite ClamAV privado por streaming y puede fallar cerrado sin enviar
-  archivos a una API externa.
+  humo PostgreSQL. El CI restauró correctamente un conjunto con facturas emitidas y
+  en producción se creó después una copia nueva de esquema 51; el simulacro
+  independiente terminó `ok` en 3,22 s. Ya existe recuperación local actual, pero
+  aún falta copiarla a infraestructura externa y ensayar la pérdida total del
+  proveedor. La entrada documental admite ClamAV privado por streaming y puede
+  fallar cerrado sin enviar archivos a una API externa.
 - El alta comercial distingue con claridad entre **probar 14 días** y **contratar
   ahora**. Antes de entrar al panel recoge negocio, nivel de explicación, fiscalidad,
   estilo y vencimiento de factura, medios de cobro, recordatorios, informes,

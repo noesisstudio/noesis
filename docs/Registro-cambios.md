@@ -12,8 +12,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Autor/agente:** Codex.
 - **Objetivo:** recuperar copias actuales sin relajar la inmutabilidad que protege
   una factura emitida durante el funcionamiento normal.
-- **Áreas y archivos:** restaurador PostgreSQL, humo real de CI y documentación viva.
-  Sin migración ni cambio de datos de producción.
+- **Áreas y archivos:** restaurador PostgreSQL, humo real de CI, documentación viva
+  y órdenes Railway verificadas para diagnóstico/integraciones/restauración. Sin
+  migración ni cambio de datos de producción.
 - **Pruebas ejecutadas:** diagnóstico y simulacro reales por SSH; 5/5 pruebas locales
   de backup, Ruff y compilación. Humo PostgreSQL ampliado pendiente del `push`.
 - **Dependencias o validaciones externas:** no añade proveedor ni credencial; la
@@ -23,8 +24,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   el rol no puede hacerlo o si una restricción deja de cumplirse.
 - **Diagnóstico y rollback:** `backup_runs`, evento `backup.restore_drill_*` y
   `noesis-restore-check`; revertir devuelve el fallo conocido y no toca la base real.
-- **Estado de publicación:** candidato local; no publicar como resuelto hasta crear
-  y restaurar una copia nueva de esquema 51 en producción.
+- **Estado de publicación:** release `d55be0ae6673` desplegado. El humo PostgreSQL,
+  una copia nueva de esquema 51 en producción y el simulacro independiente están
+  verdes. Queda únicamente la salida y restauración fuera de Railway.
 
 ## 2026-08-26 — hace atómica la recuperación del titular
 

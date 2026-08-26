@@ -133,10 +133,11 @@
   esquema 31 no quedaban verificadas: al restaurar, el trigger de inmutabilidad
   rechazaba las líneas históricas de facturas ya emitidas. El candidato suspende
   solo triggers de negocio durante la transacción descartable y el humo PostgreSQL
-  crea y restaura una copia con facturas emitidas. Tras desplegar: ejecutar una copia
-  manual, exigir esquema 51 y repetir `noesis-restore-check`. Después, configurar el
-  bucket externo, descargar una copia y restaurarla en infraestructura distinta,
-  documentando RPO/RTO; el mismo servidor no demuestra recuperación ante caída total.
+  crea y restaura una copia con facturas emitidas. Ya desplegado, producción creó una
+  copia nueva de esquema 51 y `noesis-restore-check` terminó `ok` en 3,22 s. Queda
+  configurar el bucket externo, descargar una copia y restaurarla en infraestructura
+  distinta, documentando RPO/RTO; el mismo servidor no demuestra recuperación ante
+  caída total.
 - [ ] Ejecutar un pentest autenticado externo y una revisión de privacidad/RGPD,
   fiscalidad y procedimiento de incidentes. El modelo interno y la puerta de salida
   están en [[Seguridad-operativa]]; una revisión propia no sustituye esta validación.
