@@ -139,7 +139,7 @@ class IntegrationCheckTestCase(unittest.TestCase):
             BACKUP_S3_ENDPOINT="http://storage.example",
             BACKUP_S3_BUCKET="noesis",
             BACKUP_S3_ACCESS_KEY="access",
-            BACKUP_S3_SECRET_KEY="secret",
+            BACKUP_S3_SECRET_KEY="secret",  # pragma: allowlist secret
         ):
             result = integration_check._check_backups()
 

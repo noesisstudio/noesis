@@ -16,6 +16,12 @@
   su paso y rechazó `pip 26.1.2` por `PYSEC-2026-3721`; la versión corregida indicada
   por el auditor es 26.2. El extra `security` fija `pip>=26.2,<27` para que la propia
   cadena de auditoría no vuelva a resolver una versión vulnerable.
+- **Tercera barrera revelada por CI:** al superar la auditoría, `detect-secrets`
+  alcanzó por primera vez el literal de prueba
+  `BACKUP_S3_SECRET_KEY="secret"` añadido el 17 de agosto. Es un valor ficticio,
+  local y no funcional. Se marca únicamente esa línea con
+  `pragma: allowlist secret`, la mitigación indicada por el propio hook; no se amplía
+  la baseline, no se excluye el archivo y no se reduce la detección del repositorio.
 - **Validación local:** instalación estricta desde el lock correcta; Ruff y
   `scripts/check_project_truth.py` verdes; suite estándar de `unittest` completa,
   **530/530** en 809,6 s. Los logs de caídas de IA, Stripe, WhatsApp, correo,
