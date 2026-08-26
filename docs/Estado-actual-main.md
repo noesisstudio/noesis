@@ -6,6 +6,13 @@
 
 ## Producto construido
 
+- El centro de soporte ya no se limita a diagnosticar un correo agotado:
+  administración puede devolver **un único correo fallido** a la cola desde la ficha
+  de la misma empresa. La acción no envía durante la petición, no puede cruzar
+  `business_id`, no duplica un correo ya en curso o enviado, reinicia los intentos y
+  queda registrada en la bitácora encadenada. Destinatario, asunto y cuerpo siguen
+  ocultos para soporte.
+
 - La gestoría ya puede recuperar su acceso sin intervención técnica y sin cruzar su
   identidad con ningún autónomo. El esquema 51 guarda tokens propios, hasheados,
   caducables y de un solo uso; pedir uno nuevo invalida los anteriores. La respuesta

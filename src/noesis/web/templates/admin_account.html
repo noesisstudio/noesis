@@ -242,6 +242,11 @@
           {%- if item.exhausted %} · <b>sin más reintentos</b>{% endif %}</span>
         <span class="meta">{{ item.reason }}</span>
         <span class="meta">Último intento: {{ item.updated_at | date_es }}</span>
+        {% if item.channel == 'email' and item.status == 'failed' %}
+        <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/correos/{{ item.id }}/reintentar" style="margin-top:6px">
+          <button class="btn sm">Reintentar correo</button>
+        </form>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

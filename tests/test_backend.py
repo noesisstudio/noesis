@@ -6188,6 +6188,75 @@ class AdminCommandCenterTestCase(unittest.TestCase):
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
 
+    def test_admin_requeues_only_failed_email_inside_the_same_business(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección Noesis")
+        target, _ = self.make_business("Cuenta con correo bloqueado")
+        other, _ = self.make_business("Otra cuenta")
+        admin = db.create_user(
+            "delivery-admin@example.com",
+            auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        message = db.enqueue_email_message(
+            business_id=target["id"],
+            to_email="destino-privado@example.com",
+            subject="Contenido que no debe ver administración",
+            text_body="Texto privado del cliente",
+            idempotency_key="admin-retry-test",
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE email_outbox SET status='failed', attempts=max_attempts, "
+                "last_error='proveedor temporalmente bloqueado' WHERE id=?",
+                (message["id"],),
+            )
+
+        with (
+            patch.object(config, "ADMIN_EMAIL", "delivery-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "delivery-admin@example.com",
+                "password": TEST_PASSWORD,
+            })
+            page = client.get(f"/admin/cuentas/{target['id']}")
+            wrong_tenant = client.post(
+                f"/admin/cuentas/{other['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+            retried = client.post(
+                f"/admin/cuentas/{target['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+            duplicate = client.post(
+                f"/admin/cuentas/{target['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+
+        self.assertIn("Reintentar correo", page.text)
+        self.assertNotIn("destino-privado@example.com", page.text)
+        self.assertNotIn("Contenido que no debe ver", page.text)
+        self.assertNotIn("Texto privado del cliente", page.text)
+        self.assertEqual(wrong_tenant.status_code, 303)
+        self.assertEqual(retried.headers["location"], f"/admin/cuentas/{target['id']}#entregas")
+        self.assertEqual(duplicate.status_code, 303)
+        queued = db.get_email_message(message["id"])
+        self.assertEqual(queued["status"], "queued")
+        self.assertEqual(queued["attempts"], 0)
+        events = [
+            item for item in db.list_security_events()
+            if item["event_type"] == "admin.email_delivery_requeued"
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["actor_user_id"], admin["id"])
+        self.assertEqual(events[0]["subject_business_id"], target["id"])
+        self.assertEqual(events[0]["metadata"]["outbox_id"], message["id"])
+
     def test_admin_records_observed_cost_without_overwriting_history(self):
         from starlette.testclient import TestClient
         from noesis.web import server

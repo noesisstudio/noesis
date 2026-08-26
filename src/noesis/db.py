@@ -7495,6 +7495,44 @@ def mark_email_retry(
     return get_email_message(message_id)
 
 
+def requeue_failed_email_message(business_id: int, message_id: int) -> dict | None:
+    """Devuelve un correo agotado a la cola sin duplicarlo ni enviarlo aquí.
+
+    Solo administración llama a esta frontera. El filtro por negocio impide que
+    un identificador manipulado actúe sobre otra cuenta y el estado ``failed``
+    evita reencolar un mensaje que ya esté en curso o enviado.
+    """
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT id, status, attempts, max_attempts FROM email_outbox "
+            "WHERE id=? AND business_id=?" + lock,
+            (message_id, business_id),
+        ).fetchone()
+        if not row:
+            return None
+        if row["status"] != "failed":
+            raise ValueError(
+                "Solo se puede reintentar un correo que haya agotado sus intentos."
+            )
+        changed = conn.execute(
+            "UPDATE email_outbox SET status='queued', attempts=0, "
+            "next_attempt_at=?, locked_at=NULL, updated_at=? "
+            "WHERE id=? AND business_id=? AND status='failed'",
+            (now, now, message_id, business_id),
+        )
+        if changed.rowcount != 1:
+            raise ValueError("El estado del correo ha cambiado. Actualiza la ficha.")
+    return {
+        "id": int(row["id"]),
+        "previous_status": str(row["status"]),
+        "previous_attempts": int(row["attempts"] or 0),
+        "max_attempts": int(row["max_attempts"] or 0),
+    }
+
+
 def global_search(business_id, query: str, limit: int = 6) -> dict:
     """Buscador global del negocio: clientes, facturas, presupuestos y trabajos
     por nombre, número, concepto o teléfono. Siempre aislado por business_id."""

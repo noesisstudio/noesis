@@ -7,6 +7,23 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-26 — permite reintentar un correo agotado sin abrir su contenido
+
+- **Autor/agente:** Codex.
+- **Objetivo:** resolver desde soporte un fallo de entrega definitivo sin acceder al
+  correo del cliente ni provocar envíos duplicados.
+- **Áreas y archivos:** frontera de outbox en `db.py`, ruta y ficha de soporte,
+  regresión HTTP y documentación viva. Sin migración.
+- **Pruebas ejecutadas:** contrato específico y suite estándar completa **539/539**
+  verdes; controles estáticos y de seguridad se ejecutan antes del commit.
+- **Dependencias o validaciones externas:** ninguna nueva; una entrega real sigue
+  dependiendo del proveedor configurado y la controla el scheduler.
+- **Riesgo/punto probable de fallo:** proveedor aún caído o dirección inválida; el
+  correo volverá a `retrying/failed` con su motivo técnico visible, sin bucle manual.
+- **Diagnóstico y rollback:** evento `admin.email_delivery_requeued`, estado de
+  `email_outbox` y sección Entregas; revertir restaura el diagnóstico de solo lectura.
+- **Estado de publicación:** local verificado de forma centrada; no publicado.
+
 ## 2026-08-26 — recupera el acceso profesional de gestoría
 
 - **Autor/agente:** Codex.

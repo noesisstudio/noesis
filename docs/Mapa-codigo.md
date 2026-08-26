@@ -44,8 +44,9 @@
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/db.py` + `routers/admin.py`: diagnóstico privado, autorización de
   soporte con motivo/alcance/caducidad/revocación, alta técnica auditada de números
-  comerciales sin tokens y CFO observado. Los costes reales, previsiones y ajustes
-  no se sobrescriben ni se mezclan.
+  comerciales sin tokens, reencolado atómico y auditado de correos agotados sin
+  exponer su contenido y CFO observado. Los costes reales, previsiones y ajustes no
+  se sobrescriben ni se mezclan.
 - `src/noesis/banking.py`: lectura local de CSV bancario, normalización, deduplicación
   y propuestas explicables de conciliación; nunca confirma un pago por sí solo.
 - `src/noesis/tools.py`: herramientas que puede invocar el cerebro, aplica los

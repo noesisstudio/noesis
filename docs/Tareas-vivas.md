@@ -189,8 +189,9 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por
   enlace para después del piloto. Ningún movimiento se confirma automáticamente.
-- [ ] Correo: panel interno de detalle/reejecución manual si los avisos agregados de
-  la outbox resultan insuficientes durante el piloto.
+- [x] Correo: el centro interno muestra fallos sin destinatario/asunto/cuerpo y
+  permite reencolar de forma atómica y auditada solo correos agotados de la misma
+  cuenta; el scheduler conserva la entrega y evita duplicados.
 - [ ] Equipo: validar con varios trabajadores reales el canal central, offline,
   ausencias, permisos por rol y el resumen al titular. Costes, justificantes, dudas,
   bloqueos, revisión previa y presupuesto limitado al proyecto asignado ya están

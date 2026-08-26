@@ -1,5 +1,18 @@
 # Registro de QA
 
+## 2026-08-26 — reintento manual y privado de correo fallido
+
+- **Alcance:** una acción POST de administración devuelve a la outbox un correo que
+  ya agotó sus intentos; el scheduler sigue siendo el único emisor.
+- **Aislamiento y privacidad:** la actualización exige `id + business_id + failed`
+  bajo bloqueo; otro negocio, un segundo clic, un envío activo o uno ya enviado no
+  se pueden reencolar. La pantalla y el evento omiten destinatario, asunto y cuerpo.
+- **Regresión:** el contrato HTTP comprueba botón, aislamiento, no exposición,
+  reinicio de intentos, idempotencia práctica y un solo evento encadenado. Verde.
+- **Validación local:** regresión específica y suite estándar completa **539/539**
+  verdes. Ruff, compilación, fuente de verdad, secretos, Bandit y `diff --check` se
+  ejecutan como barrera final; CI/PostgreSQL quedan para después del `push`.
+
 ## 2026-08-26 — recuperación segura de contraseña para gestorías
 
 - **Alcance:** rutas y pantallas propias de recuperación profesional, migración 51,
