@@ -298,7 +298,9 @@
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el
   titular y calendario ICS privado/revocable.
 - `src/noesis/web/backups.py`: copia, restauración descartable, manifiesto documental,
-  salida S3 y comando `noesis-restore-check`.
+  salida S3 y comando `noesis-restore-check`. Al reconstruir PostgreSQL suspende
+  solo los triggers de negocio dentro de la transacción aislada, mantiene
+  restricciones/FK y reactiva la inmutabilidad antes de comparar el resultado.
 - `src/noesis/web/scheduler.py`: partes, recordatorios, reglas autorizadas y workers
   de outbox. WhatsApp, correo y Veri*Factu se persisten y reintentan; la remisión
   fiscal de altas y anulaciones verifica una cadena común y continúa aunque la

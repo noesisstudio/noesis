@@ -7,6 +7,25 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-26 — repara la restauración de facturas emitidas en PostgreSQL
+
+- **Autor/agente:** Codex.
+- **Objetivo:** recuperar copias actuales sin relajar la inmutabilidad que protege
+  una factura emitida durante el funcionamiento normal.
+- **Áreas y archivos:** restaurador PostgreSQL, humo real de CI y documentación viva.
+  Sin migración ni cambio de datos de producción.
+- **Pruebas ejecutadas:** diagnóstico y simulacro reales por SSH; 5/5 pruebas locales
+  de backup, Ruff y compilación. Humo PostgreSQL ampliado pendiente del `push`.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial; la
+  copia fuera del servidor continúa necesitando un bucket S3-compatible.
+- **Riesgo/punto probable de fallo:** permisos PostgreSQL para `ALTER TABLE ...
+  DISABLE TRIGGER USER`; el CI usa PostgreSQL real y debe rechazar el candidato si
+  el rol no puede hacerlo o si una restricción deja de cumplirse.
+- **Diagnóstico y rollback:** `backup_runs`, evento `backup.restore_drill_*` y
+  `noesis-restore-check`; revertir devuelve el fallo conocido y no toca la base real.
+- **Estado de publicación:** candidato local; no publicar como resuelto hasta crear
+  y restaurar una copia nueva de esquema 51 en producción.
+
 ## 2026-08-26 — hace atómica la recuperación del titular
 
 - **Autor/agente:** Codex.

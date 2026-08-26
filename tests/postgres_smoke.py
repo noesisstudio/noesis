@@ -9,7 +9,7 @@ from starlette.testclient import TestClient
 
 from noesis import config, db, demo
 from noesis.documents import repo as document_repo
-from noesis.web import server
+from noesis.web import backups, server
 
 
 HOT_API_PATHS = [
@@ -293,6 +293,20 @@ def _check_document_deduplication(business_id: int) -> None:
     raise RuntimeError("Postgres permitio duplicar una huella documental del negocio.")
 
 
+def _check_backup_roundtrip() -> None:
+    """Una copia con facturas emitidas debe restaurarse en un esquema aislado."""
+    backup_path = backups.run_backup()
+    latest = db.latest_backup_run()
+    if backup_path is None or not latest or latest.get("status") != "ok":
+        detail = (latest or {}).get("error") or "sin artefacto verificado"
+        raise RuntimeError(f"El backup PostgreSQL no quedó verificado: {detail}")
+    drill = backups.verify_latest_backup_set()
+    if not drill.get("ok"):
+        raise RuntimeError(
+            f"El simulacro de restauración PostgreSQL falló: {drill.get('error')}"
+        )
+
+
 def main() -> int:
     try:
         _ensure_postgres()
@@ -303,6 +317,7 @@ def main() -> int:
         with TestClient(server.app) as client:
             _login(client)
             failures = _check_gets(client, int(business["id"]))
+        _check_backup_roundtrip()
     except Exception as exc:  # noqa: BLE001 - script de CI: reporta y falla.
         traceback.print_exception(type(exc), exc, exc.__traceback__)
         return 1

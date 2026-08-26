@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-08-26 — restauración PostgreSQL con facturas inmutables
+
+- **Hallazgo en producción:** `noesis-restore-check` falló de forma segura. La última
+  copia marcada como recuperable era del 27-jul y declaraba esquema 31/51; las copias
+  diarias recientes existían, pero su verificación terminaba en error porque el
+  trigger de líneas inmutables rechazaba reconstruir una factura ya emitida.
+- **Corrección:** la restauración deshabilita temporalmente `TRIGGER USER` por tabla
+  únicamente en el esquema/transacción descartables. Las FK y restricciones internas
+  siguen activas; tras insertar y alinear secuencias se reactivan los triggers antes
+  de comparar esquema, tablas y recuentos. Un error revierte la transacción y el
+  esquema se elimina siempre.
+- **Regresión real:** el humo PostgreSQL ahora crea una copia después de emitir una
+  factura con líneas, exige que quede marcada `ok` y vuelve a ejecutar el simulacro
+  independiente. Así el fallo que producción escondía no puede volver con CI verde.
+- **Validación local:** 5/5 pruebas de backup SQLite/adaptadores, Ruff y compilación
+  verdes. La evidencia decisiva queda pendiente del humo PostgreSQL de GitHub y,
+  después, de generar y restaurar manualmente una copia nueva en producción.
+
 ## 2026-08-26 — recuperación atómica del titular
 
 - **Alcance:** endurecimiento del flujo existente `/recuperar` y `/restablecer`, sin
