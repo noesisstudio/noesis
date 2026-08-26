@@ -7,7 +7,8 @@ Registro de decisiones importantes y su porqué (las más recientes arriba).
 Un CI verde demuestra el repositorio, no que Railway haya terminado la migración ni
 que el dominio esté sirviendo ese mismo release. La comprobación pública posterior al
 despliegue se convierte en un contrato ejecutable: `/health` y `/ready` deben coincidir
-en release, el esquema debe ser el declarado, las protecciones HTTP deben seguir
+en release, el publicado debe corresponder al `main` actual tras un margen acotado de
+despliegue, el esquema debe ser el declarado, las protecciones HTTP deben seguir
 presentes y todo lo que el sitemap promete debe responder, ser indexable y conservar
 su estructura y sus textos legales completos.
 

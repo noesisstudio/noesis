@@ -16,7 +16,7 @@ jobs:
   public-release:
     name: Porta externa de producció
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - name: Descarregar el repositori
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,5 +36,6 @@ jobs:
       - name: Verificar el release des de fora
         run: >-
           uv run noesis-production-check
-          --attempts 3
+          --expected-release "${{ github.sha }}"
+          --attempts 15
           --delay 20

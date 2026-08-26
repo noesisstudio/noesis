@@ -12,11 +12,11 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Autor/agente:** Codex.
 - **Objetivo:** detectar automáticamente despliegues incompletos y regresiones de la
   superficie pública antes de que las reporte un cliente.
-- **Áreas y archivos:** `production_check.py`, su entrypoint, cuatro pruebas, workflow
+- **Áreas y archivos:** `production_check.py`, su entrypoint, cinco pruebas, workflow
   programado de GitHub y documentación operativa/estado. Sin cambios de datos.
 - **Pruebas ejecutadas:** Ruff completo, detector de secretos, fuente de verdad,
-  `git diff --check`, cuatro contratos específicos, comprobación real contra
-  producción y suite completa **534/534**. CI queda pendiente del `push`.
+  `git diff --check`, cinco contratos específicos, comprobación real contra
+  producción y suite completa **535/535**. CI queda pendiente del `push`.
 - **Dependencias o validaciones externas:** no requiere credenciales. Producción real
   respondió con release coherente, esquema 50, 14 páginas públicas, estructura SEO,
   textos legales y cabeceras correctas.

@@ -8,7 +8,7 @@
 
 - La publicación ya no depende solo de una comprobación manual. El comando
   `noesis-production-check` observa Noesis desde fuera, sin sesiones ni secretos, y
-  rechaza una migración a medias, releases distintos entre `/health` y `/ready`,
+  rechaza que producción siga detrás de `main`, una migración a medias o releases distintos entre `/health` y `/ready`,
   pérdida de protecciones HTTP, páginas públicas caídas o no indexables, canonical/H1
   rotos y marcadores legales reaparecidos. Un workflow independiente lo ejecuta cada
   seis horas y permite lanzarlo bajo demanda. La comprobación real del 26 de agosto

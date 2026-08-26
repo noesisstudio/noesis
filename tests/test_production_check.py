@@ -65,11 +65,23 @@ class ProductionCheckTestCase(unittest.TestCase):
         report = production_check.audit_production(
             self.base_url,
             expected_schema=50,
+            expected_release="release-test-2026-full-commit-reference",
             fetcher=self._fetcher(),
         )
 
         self.assertEqual(report["release"], "release-test-2026")
         self.assertEqual(report["public_pages"], 5)
+
+    def test_rejects_a_stale_release(self):
+        with self.assertRaises(production_check.ProductionCheckError) as raised:
+            production_check.audit_production(
+                self.base_url,
+                expected_schema=50,
+                expected_release="different-release",
+                fetcher=self._fetcher(),
+            )
+
+        self.assertIn("no el esperado", str(raised.exception))
 
     def test_rejects_a_half_applied_schema(self):
         with self.assertRaises(production_check.ProductionCheckError) as raised:

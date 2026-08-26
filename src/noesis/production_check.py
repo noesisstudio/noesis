@@ -158,7 +158,12 @@ def audit_production(
         failures.append("/health no identifica un release público válido")
     if health_release != ready_release:
         failures.append("/health y /ready pertenecen a releases distintos")
-    if expected_release and not health_release.startswith(expected_release):
+    release_matches = (
+        not expected_release
+        or health_release.startswith(expected_release)
+        or expected_release.startswith(health_release)
+    )
+    if not release_matches:
         failures.append(
             f"producción ejecuta {health_release or 'un release desconocido'}, "
             f"no el esperado {expected_release}"
