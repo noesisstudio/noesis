@@ -58,6 +58,7 @@ noesis-doctor = "noesis.readiness:main"
 noesis-integrations-check = "noesis.integration_check:main"
 noesis-restore-check = "noesis.web.backups:restore_check_main"
 noesis-production-check = "noesis.production_check:main"
+noesis-inbound-email-check = "noesis.documents.inbound_email:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

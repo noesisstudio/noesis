@@ -7,6 +7,33 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-27 — prepara facturas por catch-all sin mezclar empresas ni crear clientes a ciegas
+
+- **Autor/agente:** Codex.
+- **Objetivo:** recibir adjuntos de todos los clientes en un único buzón Hostinger,
+  ahorrar alias y convertir una factura con cliente recurrente o nuevo en un flujo
+  sencillo sin aceptar un error de identidad como dato contable.
+- **Áreas y archivos:** migración 52; configuración; frontera de datos; servicio,
+  repositorio y nuevo consumidor documental IMAP; scheduler; página Documentos;
+  CLI; siete regresiones y documentación operativa/arquitectónica.
+- **Pruebas ejecutadas:** 7/7 contratos nuevos y suite completa **550/550** en
+  477,3 s; migración focalizada, página documental autenticada, Ruff, compilación,
+  fuente de verdad y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** usa IMAP SSL de Hostinger, pero permanece
+  apagado por defecto. Falta probar el catch-all real y la conservación del
+  destinatario antes de activar el scheduler en producción.
+- **Riesgo/punto probable de fallo:** que Hostinger reescriba o pierda el destinatario
+  original. En ese caso Noesis rechaza el mensaje; nunca intenta deducir el negocio
+  por remitente, asunto o nombre de archivo. Un catch-all también recibe spam y
+  errores tipográficos, por lo que debe aislarse del soporte humano.
+- **Diagnóstico y rollback:** estados/contadores de `inbound_email_messages`, eventos
+  `inbound_email_processed` y CLI `python -m noesis.documents.inbound_email` sin
+  secretos. Apagar `NOESIS_INBOUND_EMAIL_ENABLED` detiene la entrada sin retirar
+  Documentos ni clientes; revertir el commit y bajar 52 elimina solo rutas, huellas y
+  propuestas nuevas.
+- **Estado de publicación:** candidato local validado; pendiente de commit, CI,
+  humo PostgreSQL y prueba Hostinger.
+
 ## 2026-08-26 — controla la rentabilidad operativa por cuenta
 
 - **Autor/agente:** Codex.

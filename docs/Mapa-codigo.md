@@ -6,7 +6,7 @@
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría. La recuperación de acceso consume token, cambia credencial y revoca
   sesiones en una sola transacción; pedir otro enlace invalida los anteriores.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 51;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 52;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -32,7 +32,9 @@
   verificado de la decisión explícita de conectarlo más adelante. La 50 permite
   suspender una identidad concreta sin bloquear el negocio entero. La 51 separa la
   recuperación de contraseña de gestoría de los usuarios de empresa, con tokens
-  hasheados, caducables y de un solo uso.
+  hasheados, caducables y de un solo uso. La 52 añade rutas opacas de correo por
+  negocio, deduplicación de mensajes sin contenido y propuestas confirmables de
+  cliente para documentos.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -57,6 +59,10 @@
 - `src/noesis/documents/ocr.py` + `pdf_ocr.py`: lectura local de imágenes y PDF
   escaneado; detecta modelos Tesseract instalados, prioriza `cat+spa+eng`, prepara
   la imagen y limita páginas, píxeles, tiempo y texto antes de clasificar.
+- `src/noesis/documents/inbound_email.py`: consumidor IMAP/catch-all apagado por
+  defecto. Resuelve una única ruta opaca, no conserva cuerpo/remitente/asunto,
+  deduplica el mensaje y entrega cada adjunto al servicio documental común. Incluye
+  CLI de configuración, prueba `.eml` y sondeo de red sin mostrar credenciales.
 - `src/noesis/verifactu.py`: huellas de alta y anulación, QR y XML nativos validados
   contra los XSD AEAT.
 - `src/noesis/verifactu_client.py`: SOAP/mTLS directo, endpoints oficiales para

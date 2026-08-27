@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-08-26",
+  "state_date": "2026-08-27",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 51,
-  "verified_test_count": 544,
+  "schema_version": 52,
+  "verified_test_count": 550,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar el esquema 51 y validar con un buzon real la recuperacion profesional de gestoria: respuesta no enumerativa, enlace de un solo uso, caducidad, sesiones anteriores cerradas y MFA conservado. Validar tambien el control de acceso por persona: suspender corta sesiones abiertas, el suspendido no vuelve a entrar por contrasena ni por Google, la restauracion devuelve el acceso y las tres protecciones impiden dejar una cuenta sin nadie. Recorrer con la suscripcion sandbox activa los flujos del portal Stripe gestionado por Noesis: gestion general, cambio de tarjeta, upgrade mensual y anual al plan exacto y cancelacion confirmada sin segundo Checkout; comprobar tambien que todos los price_id comparten tax_behavior compatible y no unspecified, y que cada webhook actualiza Noesis; repetir la prueba publicada de gestorias cuando Google renueve su cache de robots y solicitar indexacion; solicitar tambien indexacion de autonomos y precios y esperar datos reales de Search Console; recorrer en escritorio y movil el alta recuperable: configuracion completa de factura, resumen final, WhatsApp conectado o pospuesto sin falso positivo, retorno al paso exacto tras login y CTA al primer cliente despues de Stripe; verificar tambien el editor documental con el distintivo real del founder, Documentos y las correcciones autorizadas del centro de soporte; activar una vez NOESIS"
+    "pending_after_deploy": "Desplegar el esquema 52 y validar primero el catch-all de Hostinger con una empresa demo: destinatario original conservado, aislamiento, duplicado, rechazo ambiguo, OCR y confirmacion de cliente. Mantenerlo apagado hasta superar esa prueba. Recorrer tambien recuperacion real de gestoria y titular, suspension/restauracion por persona, portal Stripe sandbox completo, Google OAuth, Meta, SEO, alta recuperable en escritorio y movil y correcciones autorizadas de soporte segun Tareas-vivas.md."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -75,6 +75,7 @@
     "document_pdf_local_reading": "bounded_pypdf_text_extraction_for_digital_pdfs_then_private_pypdfium2_rasterization_and_tesseract_ocr_for_image_only_pdfs_with_page_pixel_time_and_text_limits_cat_spa_eng_runtime_detection_preprocessing_and_no_external_api",
     "voice_language_selection": "groq_and_private_whisper_auto_detect_language_by_default_with_optional_explicit_iso_639_1_hint_instead_of_forcing_spanish",
     "document_context": "web_and_whatsapp_validate_client_project_and_invoice_inside_the_same_business_caption_or_invoice_customer_only_links_on_unambiguous_match",
+    "inbound_document_email": "schema_52_disabled_by_default_single_hostinger_catch_all_with_one_128_bit_opaque_route_per_business_fail_closed_recipient_resolution_content_free_message_deduplication_shared_document_validation_ocr_and_classification_exact_existing_customer_match_or_editable_owner_confirmed_new_customer_never_accounting_from_email",
     "owner_document_archive": "same_effective_date_period_and_grouping_rules_as_gestoria_year_quarter_income_expense_ticket_pending_other_horizontal_quick_upload_mobile_responsive_folder_navigation_search_status_and_private_bounded_preview_opened_on_demand",
     "gestoria_portfolio": "schema_41_professional_multi_business_workspace_with_explicit_fiscal_profile_and_five_separate_task_views_summary_documents_taxes_periods_requests_quarter_and_year_context_safe_inline_first_page_preview_explainable_tax_drafts_and_versioned_packages_without_filing_or_money_authority_read_only_forms_return_to_the_same_human_workspace_instead_of_raw_json",
     "gestoria_mfa": "schema_47_optional_totp_second_factor_derived_without_reversible_database_seed_atomic_counter_anti_replay_eight_single_use_80_bit_recovery_codes_stored_only_as_hash_password_plus_shared_rate_limit_for_enrolment_regeneration_and_disable_codes_render_once_without_session_cookie_persistence",
@@ -108,6 +109,7 @@
     "anthropic_fallback"
   ],
   "external_validation_pending": [
+    "hostinger_catch_all_preserves_original_recipient_and_real_imap_pilot",
     "rotate_any_secret_exposed_in_shared_material",
     "professional_legal_review",
     "meta_whatsapp_central_and_business_numbers_real",

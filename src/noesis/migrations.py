@@ -3805,6 +3805,82 @@ def _downgrade_gestoria_password_recovery(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS gestoria_password_resets")
 
 
+def _upgrade_inbound_email_documents(conn) -> None:
+    """Buzón catch-all aislado y propuestas de cliente para documentos.
+
+    El identificador de correo enruta, pero nunca autoriza efectos contables. Los
+    mensajes solo conservan huellas y contadores; asunto, cuerpo y remitente no se
+    guardan. Un cliente leído en una factura queda como propuesta hasta que el
+    titular lo confirme.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS inbound_email_routes (
+    business_id {t["ref"]} PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
+    route_token TEXT NOT NULL,
+    active {t["boolean"]} NOT NULL DEFAULT TRUE,
+    created_at {t["timestamp"]} NOT NULL,
+    rotated_at {t["timestamp"]}
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inbound_email_route_token
+    ON inbound_email_routes(route_token);
+
+CREATE TABLE IF NOT EXISTS inbound_email_messages (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    message_fingerprint TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'processing' CHECK (
+        status IN ('processing', 'processed', 'partial', 'rejected', 'failed')
+    ),
+    attempts INTEGER NOT NULL DEFAULT 1,
+    attachment_count INTEGER NOT NULL DEFAULT 0,
+    document_count INTEGER NOT NULL DEFAULT 0,
+    error_code TEXT,
+    received_at {t["timestamp"]} NOT NULL,
+    updated_at {t["timestamp"]} NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inbound_email_message
+    ON inbound_email_messages(business_id, message_fingerprint);
+CREATE INDEX IF NOT EXISTS idx_inbound_email_message_status
+    ON inbound_email_messages(business_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS document_client_candidates (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    document_id {t["ref"]} NOT NULL,
+    proposed_name TEXT NOT NULL,
+    proposed_nif TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (
+        status IN ('pending', 'confirmed', 'rejected')
+    ),
+    matched_client_id {t["ref"]},
+    created_at {t["timestamp"]} NOT NULL,
+    resolved_at {t["timestamp"]},
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id, matched_client_id)
+        REFERENCES clients(business_id, id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_document_client_candidate
+    ON document_client_candidates(business_id, document_id);
+CREATE INDEX IF NOT EXISTS idx_document_client_candidate_status
+    ON document_client_candidates(business_id, status, created_at);
+"""
+    )
+
+
+def _downgrade_inbound_email_documents(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_document_client_candidate_status")
+    conn.execute("DROP INDEX IF EXISTS uq_document_client_candidate")
+    conn.execute("DROP TABLE IF EXISTS document_client_candidates")
+    conn.execute("DROP INDEX IF EXISTS idx_inbound_email_message_status")
+    conn.execute("DROP INDEX IF EXISTS uq_inbound_email_message")
+    conn.execute("DROP TABLE IF EXISTS inbound_email_messages")
+    conn.execute("DROP INDEX IF EXISTS uq_inbound_email_route_token")
+    conn.execute("DROP TABLE IF EXISTS inbound_email_routes")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3877,6 +3953,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (51, "recuperacion_contrasena_gestoria",
      _upgrade_gestoria_password_recovery,
      _downgrade_gestoria_password_recovery),
+    (52, "documentos_por_correo",
+     _upgrade_inbound_email_documents,
+     _downgrade_inbound_email_documents),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

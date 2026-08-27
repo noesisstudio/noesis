@@ -1,5 +1,31 @@
 # Registro de QA
 
+## 2026-08-27 — catch-all documental e identidad segura de clientes
+
+- **Alcance:** migración 52, consumidor IMAP apagado por defecto, dirección opaca
+  de 128 bits por negocio, deduplicación durable sin contenido, scheduler acotado y
+  entrada por el mismo servicio que Web/WhatsApp. La pantalla Documentos solo muestra
+  la dirección cuando la integración está habilitada y completa.
+- **Aislamiento y privacidad:** mensajes sin ruta, con ruta desconocida o con dos
+  rutas fallan cerrados. No se persisten remitente, asunto, cuerpo ni correo original;
+  el export RGPD omite token y huella, y el borrado de negocio cubre las tablas nuevas.
+- **Clientes:** una factura emitida reutiliza una coincidencia exacta por NIF o nombre;
+  una identidad nueva queda pendiente. El titular puede corregir nombre/NIF antes de
+  confirmar el alta y el enlace al documento dentro de una transacción. La creación
+  explícita de facturas también prioriza NIF para no duplicar un cliente habitual.
+- **Fallo seguro:** validación, límites, malware, OCR y clasificación son compartidos.
+  Si ClamAV es obligatorio y no responde, el correo queda para reintento; no se marca
+  como leído ni se archiva sin escaneo.
+- **Regresiones:** 7/7 contratos nuevos cubren aislamiento entre dos empresas,
+  destinatario ambiguo, duplicado, caída transitoria del escáner, NIF conocido,
+  alta pendiente/corregible y reutilización explícita. Suite completa anterior más
+  esos contratos y repetición final completa **550/550** en 477,3 s; ciclo de
+  migración focalizado, Ruff, compilación, verdad documental y `git diff --check`
+  verdes.
+- **Límite externo:** todavía no se ha activado Hostinger. Falta demostrar en un
+  buzón real que el catch-all conserva `Delivered-To`/destinatario original, recorrer
+  PDF y foto y comprobar la experiencia móvil antes de dejarlo encendido.
+
 ## 2026-08-26 — rentabilidad operativa por cuenta
 
 - **Alcance:** nueva lectura interna mensual por cuenta en el centro de mando y en

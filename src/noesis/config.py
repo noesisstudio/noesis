@@ -396,6 +396,36 @@ SMTP_FROM = os.getenv("SMTP_FROM", "Noesis <no-reply@bynoesis.com>")
 EMAIL_RETRY_BASE_SECONDS = int(os.getenv("EMAIL_RETRY_BASE_SECONDS", "30"))
 EMAIL_RETRY_MAX_SECONDS = int(os.getenv("EMAIL_RETRY_MAX_SECONDS", "3600"))
 
+# Entrada documental por un único buzón catch-all. Permanece apagada hasta que
+# Hostinger preserve el destinatario original y el recorrido se valide con una
+# cuenta de prueba. IMAP solo recibe; no usa estas credenciales para enviar.
+INBOUND_EMAIL_ENABLED = env_bool("NOESIS_INBOUND_EMAIL_ENABLED", False)
+INBOUND_EMAIL_HOST = os.getenv(
+    "NOESIS_INBOUND_EMAIL_HOST", "imap.hostinger.com"
+).strip()
+INBOUND_EMAIL_PORT = max(
+    1, min(65_535, int(os.getenv("NOESIS_INBOUND_EMAIL_PORT", "993")))
+)
+INBOUND_EMAIL_USER = os.getenv("NOESIS_INBOUND_EMAIL_USER", "").strip()
+INBOUND_EMAIL_PASSWORD = os.getenv("NOESIS_INBOUND_EMAIL_PASSWORD", "")
+INBOUND_EMAIL_MAILBOX = os.getenv("NOESIS_INBOUND_EMAIL_MAILBOX", "INBOX").strip()
+INBOUND_EMAIL_DOMAIN = os.getenv(
+    "NOESIS_INBOUND_EMAIL_DOMAIN", CANONICAL_PUBLIC_HOST or "bynoesis.com"
+).strip().lower()
+INBOUND_EMAIL_PREFIX = os.getenv(
+    "NOESIS_INBOUND_EMAIL_PREFIX", "docs"
+).strip().lower()
+INBOUND_EMAIL_MAX_MESSAGES = max(
+    1, min(100, int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_MESSAGES", "20")))
+)
+INBOUND_EMAIL_MAX_ATTACHMENTS = max(
+    1, min(20, int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_ATTACHMENTS", "8")))
+)
+INBOUND_EMAIL_MAX_BYTES = max(
+    1_048_576,
+    int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_BYTES", str(20 * 1024 * 1024))),
+)
+
 # Cobro de la suscripción (Stripe). Si no hay clave, el alta entra en prueba manual.
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")

@@ -110,6 +110,15 @@
   de `xavier@bynoesis.com` con el remitente «Noesis». Queda comprobar que no cae en
   spam en Gmail y Outlook, y recorrer factura al cliente final, invitación de
   gestoría y reintento de la outbox.
+- [ ] Entrada documental Hostinger: activar el catch-all hacia un único buzón de
+  prueba, cargar las variables `NOESIS_INBOUND_EMAIL_*` con la función todavía
+  apagada y crear una ruta para una empresa ficticia. Enviar a esa dirección un PDF,
+  una foto, un duplicado, un correo sin adjunto y uno con dos destinatarios opacos.
+  Solo si Hostinger conserva el destinatario original y cada caso falla o entra en
+  el negocio correcto, activar `NOESIS_INBOUND_EMAIL_ENABLED=true`. Comprobar después
+  en móvil que una factura de cliente conocido se relaciona por NIF y una nueva no
+  aparece en Clientes hasta confirmarla. No usar todavía el catch-all para correos
+  humanos o soporte: también recibirá errores tipográficos y spam del dominio.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El

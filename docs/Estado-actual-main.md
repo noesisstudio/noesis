@@ -6,6 +6,14 @@
 
 ## Producto construido
 
+- El candidato del esquema 52 prepara una entrada documental por correo sin comprar
+  buzones ni gastar uno de los alias de Hostinger por cliente. Un único catch-all
+  entrega a direcciones privadas distintas por negocio; Noesis falla cerrado si no
+  puede demostrar el destinatario, deduplica, valida y clasifica con el mismo motor
+  de Web/WhatsApp y no conserva remitente, asunto, cuerpo ni el correo original. Las
+  facturas emitidas reutilizan clientes por NIF exacto o dejan un alta editable por
+  confirmar. La función permanece apagada hasta superar la prueba real de Hostinger.
+
 - Dirección ya puede entender la rentabilidad operativa de Noesis **cuenta por
   cuenta** sin abrir los datos del negocio del cliente. El centro interno combina
   el precio mensual comprometido, consumo de IA, plantillas y entregas de WhatsApp,

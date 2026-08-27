@@ -73,6 +73,12 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   escanear, y la migración 38 impone una huella única por negocio. La búsqueda de
   históricos se limita al mismo `business_id` y tamaño para evitar comparación o
   filtración entre clientes; una colisión concurrente elimina el fichero sobrante.
+- `documents/inbound_email.py` + migración 52 — entrada IMAP desde un único
+  catch-all. Una dirección opaca resuelve exactamente un `business_id`; mensajes
+  sin ruta, con dos rutas o con ruta revocada no entran. Solo se guardan huella,
+  estado y contadores, y los adjuntos recorren el servicio documental existente.
+  Un cliente extraído se relaciona por NIF/nombre exacto o queda pendiente de una
+  confirmación editable; el correo jamás autoriza un asiento ni un alta silenciosa.
 - `security_center.py` + `security_events` — parte CISO de solo lectura sobre una
   bitácora append-only y encadenada, sin contenido operativo ni datos de contacto.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
@@ -97,6 +103,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   `FOR UPDATE` en Postgres) para impedir que dos cobros superen el total.
 - Una foto de ticket crea primero un documento y un borrador. Solo la confirmación
   explícita crea el gasto y enlaza `documents.expense_id` dentro de la transacción.
+- Un correo entrante se reclama por `business_id + SHA-256` para que dos réplicas o
+  dos reenvíos no dupliquen archivos. El scheduler solo marca como leído un resultado
+  definitivo; los fallos transitorios permanecen disponibles para reintento.
 - En modo Veri*Factu, la misma transacción añade un registro de alta append-only,
   encadenado por NIF emisor. Las rectificaciones crean una nueva factura R1-R5 y
   conservan el original.

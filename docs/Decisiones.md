@@ -2,6 +2,22 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Un catch-all enruta documentos; nunca decide su contabilidad (2026-08-27)
+
+Noesis puede recibir las facturas de todos los negocios en un único buzón de
+Hostinger sin consumir un alias por cliente. Cada empresa obtiene una dirección
+virtual opaca `docs.<token>@bynoesis.com`; el destinatario original se resuelve antes
+de abrir los adjuntos y, si falta, es desconocido o aparecen dos rutas, el mensaje
+falla cerrado. El token es revocable y no se exporta en una descarga RGPD.
+
+Todos los adjuntos pasan por la validación, malware, deduplicación, OCR y
+clasificación comunes. Asunto, cuerpo, remitente y mensaje original no se
+persisten. El correo solo deja documentos pendientes: no crea gastos, facturas ni
+clientes. En una factura emitida, un NIF exacto puede relacionar un cliente ya
+conocido; una identidad nueva queda como propuesta editable hasta que el titular
+la confirma. Durante el piloto, los documentos no fiscales no se relacionan por el
+texto libre del correo. Equivocarse menos vale más que archivar unos segundos antes.
+
 ## Verificar producción desde fuera y sin credenciales (2026-08-26)
 
 Un CI verde demuestra el repositorio, no que Railway haya terminado la migración ni

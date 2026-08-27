@@ -126,7 +126,7 @@ documenta Cloud API, permisos, tokens, WABA, números y webhooks.
    no sustituye los controles ni la confirmación humana.
 5. **Backups:** elige un proveedor S3-compatible, crea un bucket privado y un
    usuario limitado solo a ese bucket; copia endpoint, bucket, región y par de
-   credenciales a las variables de la sección 7.
+   credenciales a las variables de la sección 9.
 6. **AEAT:** no busques una API key. Hace falta un certificado admitido y su clave
    privada, montados como archivos, más los datos reales del productor.
 
@@ -488,7 +488,62 @@ Prueba de aceptación:
 - Repetir el mismo flujo por WhatsApp y comprobar que cliente/proyecto solo se
   vinculan ante una coincidencia inequívoca.
 
-## 8. Backups externos S3-compatible
+## 8. Entrada documental por catch-all de Hostinger
+
+No necesita un alias por empresa. Hostinger dirige las direcciones inexistentes a
+un buzón real y Noesis genera para cada negocio una dirección opaca, por ejemplo
+`docs.<token>@bynoesis.com`. El token enruta; no concede permisos ni confirma datos.
+
+1. En hPanel abre **Emails**, entra en el plan de `bynoesis.com`, ve a
+   **Mailboxes**, abre `⋮` en el buzón que recibirá los documentos y elige
+   **Create Catch-All**. Selecciona preferiblemente un buzón dedicado; si el plan no
+   permite otro, se puede probar con uno existente sin crear un alias nuevo.
+2. No uses ese buzón para soporte ni respuestas humanas durante la prueba: el
+   catch-all también recoge direcciones mal escritas y puede atraer spam.
+3. En Railway guarda estas variables, primero con la función apagada:
+
+```dotenv
+NOESIS_INBOUND_EMAIL_ENABLED=false
+NOESIS_INBOUND_EMAIL_HOST=imap.hostinger.com
+NOESIS_INBOUND_EMAIL_PORT=993
+NOESIS_INBOUND_EMAIL_USER=<buzón completo que recibe el catch-all>
+NOESIS_INBOUND_EMAIL_PASSWORD=<contraseña propia del buzón>
+NOESIS_INBOUND_EMAIL_MAILBOX=INBOX
+NOESIS_INBOUND_EMAIL_DOMAIN=bynoesis.com
+NOESIS_INBOUND_EMAIL_PREFIX=docs
+```
+
+4. Tras desplegar el esquema vigente, crea la ruta del negocio ficticio desde el
+   servicio `web`; la orden imprime la dirección, nunca la contraseña:
+
+```powershell
+railway ssh env PYTHONPATH=src python -m noesis.documents.inbound_email --business-id <ID_DEMO> --create-route
+```
+
+5. Envía un PDF y una foto a esa dirección. Activa temporalmente la lectura y
+   ejecuta un sondeo acotado:
+
+```powershell
+railway ssh env PYTHONPATH=src python -m noesis.documents.inbound_email
+railway ssh env PYTHONPATH=src python -m noesis.documents.inbound_email --network --limit 3
+```
+
+6. Verifica en Documentos que solo aparece en la empresa demo, pendiente de
+   revisión. Reenvía el mismo correo: no debe duplicar el archivo. Prueba además un
+   destinatario inexistente y un mensaje con dos direcciones opacas: ambos deben
+   rechazarse sin mezclar empresas.
+7. Solo entonces deja `NOESIS_INBOUND_EMAIL_ENABLED=true`. La página Documentos
+   mostrará al titular su dirección privada. Si se comparte o recibe spam, rota la
+   ruta con `--rotate-route`; la anterior deja de ser válida.
+
+Hostinger documenta el catch-all dentro de las
+[opciones del buzón](https://support.hostinger.com/en/articles/1583217-how-to-create-and-manage-mailboxes-for-hostinger-email)
+y publica [IMAP SSL](https://support.hostinger.com/en/articles/1575756-how-to-get-email-account-configuration-details-for-hostinger-email)
+en `imap.hostinger.com:993`. Noesis no borra el mensaje del servidor y no guarda
+remitente, asunto, cuerpo ni el original; conserva únicamente huella, estado y
+contadores para idempotencia y diagnóstico.
+
+## 9. Backups externos S3-compatible
 
 Crear un bucket privado con usuario limitado a ese bucket y, si el proveedor lo
 permite, versionado, cifrado y política de retención. Para el piloto encaja
@@ -509,7 +564,7 @@ NOESIS_BACKUP_S3_PREFIX=production
 Una subida correcta no basta: restaurar base y documentos en un entorno aislado,
 comprobar hashes y registrar RPO/RTO y tiempo real de recuperación.
 
-## 9. AEAT Veri*Factu
+## 10. AEAT Veri*Factu
 
 No usa una API key. Usa SOAP con autenticación mTLS mediante certificado y clave PEM.
 Primero se valida contra el portal de pruebas de la AEAT y con asesoría fiscal.
@@ -546,7 +601,7 @@ cancelada no puede detener una remisión fiscal ya encolada.
 
 Referencia: [esquemas y WSDL oficiales de la AEAT](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/esquemas.html).
 
-## 10. Servicios que no forman parte de la arquitectura
+## 11. Servicios que no forman parte de la arquitectura
 
 Noesis **no se conecta a Holded ni delega la facturación**. Numeración, emisión, PDF,
 registro Veri*Factu, cola y remisión AEAT son desarrollo propio. Holded puede seguir
@@ -565,7 +620,7 @@ Tampoco existe todavía un adaptador conectable para:
 No crear credenciales ni pagar proveedores para estos puntos hasta que exista una
 tarea aprobada, adaptador, pruebas y política de permisos.
 
-## 11. Orden recomendado de conexión
+## 12. Orden recomendado de conexión
 
 1. Desplegar `main`, migrar, `/ready` y `noesis-doctor --strict`.
 2. Correo por API HTTPS y Google OAuth: rápidos, visibles y de bajo riesgo operativo.

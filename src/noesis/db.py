@@ -3205,10 +3205,337 @@ def list_clients(business_id) -> list[dict]:
 
 
 def get_or_create_client(name, business_id, **kw) -> dict:
+    nif = kw.get("nif")
     return (
+        resolve_client_identity(business_id, name=name, nif=nif)
+        or
         resolve_client_reference(name, business_id)
         or add_client(name, business_id=business_id, **kw)
     )
+
+
+def _normalise_nif(value: str | None) -> str:
+    return re.sub(r"[^A-Z0-9]", "", str(value or "").upper())
+
+
+def resolve_client_identity(
+    business_id: int, *, name: str | None = None, nif: str | None = None
+) -> dict | None:
+    """Resuelve una identidad documental sin búsquedas difusas peligrosas.
+
+    El NIF exacto tiene prioridad. Sin NIF solo se acepta el nombre completo
+    normalizado y único; una factura leída nunca convierte ``Marta`` en una
+    persona concreta por aproximación.
+    """
+    clients = list_clients(business_id)
+    wanted_nif = _normalise_nif(nif)
+    if wanted_nif:
+        matches = [
+            client for client in clients
+            if _normalise_nif(client.get("nif")) == wanted_nif
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                "Hay más de un cliente con ese NIF. Revísalo antes de relacionar."
+            )
+    folded = _fold_client_reference(name)
+    if not folded:
+        return None
+    matches = [
+        client for client in clients
+        if _fold_client_reference(client.get("name")) == folded
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise ValueError(
+            "Hay más de un cliente con ese nombre. Indica el NIF antes de relacionar."
+        )
+    return None
+
+
+def propose_document_client(
+    business_id: int,
+    document_id: int,
+    *,
+    name: str | None,
+    nif: str | None = None,
+) -> dict | None:
+    """Relaciona un cliente conocido o deja un alta nueva pendiente del titular."""
+    proposed_name = str(name or "").strip()[:200]
+    proposed_nif = str(nif or "").strip().upper()[:20] or None
+    if not proposed_name:
+        return None
+    with get_conn() as conn:
+        document = conn.execute(
+            "SELECT id FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+    if not document:
+        return None
+    existing = resolve_client_identity(
+        business_id, name=proposed_name, nif=proposed_nif
+    )
+    now = _now()
+    with get_conn() as conn:
+        if existing:
+            conn.execute(
+                "UPDATE documents SET client_id=? WHERE id=? AND business_id=?",
+                (existing["id"], document_id, business_id),
+            )
+        conn.execute(
+            "INSERT INTO document_client_candidates "
+            "(business_id, document_id, proposed_name, proposed_nif, status, "
+            "matched_client_id, created_at, resolved_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, document_id) DO UPDATE SET "
+            "proposed_name=excluded.proposed_name, "
+            "proposed_nif=excluded.proposed_nif, "
+            "status=excluded.status, matched_client_id=excluded.matched_client_id, "
+            "resolved_at=excluded.resolved_at "
+            "WHERE document_client_candidates.status='pending'",
+            (
+                business_id, document_id, proposed_name, proposed_nif,
+                "confirmed" if existing else "pending",
+                existing["id"] if existing else None,
+                now, now if existing else None,
+            ),
+        )
+        row = conn.execute(
+            "SELECT * FROM document_client_candidates "
+            "WHERE business_id=? AND document_id=?",
+            (business_id, document_id),
+        ).fetchone()
+    result = dict(row) if row else None
+    if result:
+        matched_id = result.get("matched_client_id")
+        result["matched_client"] = (
+            get_client(matched_id, business_id) if matched_id else None
+        )
+    return result
+
+
+def get_document_client_candidate(
+    document_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT dc.*, c.name AS matched_client_name "
+            "FROM document_client_candidates dc "
+            "LEFT JOIN clients c ON c.id=dc.matched_client_id "
+            "AND c.business_id=dc.business_id "
+            "WHERE dc.document_id=? AND dc.business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def confirm_document_client_candidate(
+    document_id: int,
+    business_id: int,
+    *,
+    name: str | None = None,
+    nif: str | None = None,
+) -> dict:
+    """Confirma en una transacción el cliente propuesto y enlaza el documento.
+
+    El bloqueo del negocio serializa dos confirmaciones simultáneas para evitar
+    dos altas del mismo NIF dentro de la misma cuenta.
+    """
+    now = _now()
+    with get_conn() as conn:
+        suffix = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        business = conn.execute(
+            f"SELECT id FROM businesses WHERE id=?{suffix}", (business_id,)
+        ).fetchone()
+        if not business:
+            raise ValueError("El negocio no existe.")
+        candidate = conn.execute(
+            f"SELECT * FROM document_client_candidates "
+            f"WHERE document_id=? AND business_id=?{suffix}",
+            (document_id, business_id),
+        ).fetchone()
+        if not candidate:
+            raise ValueError("No hay ningún cliente propuesto para este documento.")
+        if candidate["status"] == "confirmed" and candidate["matched_client_id"]:
+            row = conn.execute(
+                "SELECT * FROM clients WHERE id=? AND business_id=?",
+                (candidate["matched_client_id"], business_id),
+            ).fetchone()
+            if row:
+                return dict(row)
+        if candidate["status"] != "pending":
+            raise ValueError("La propuesta ya no está pendiente.")
+
+        proposed_name = str(name or candidate["proposed_name"] or "").strip()[:200]
+        proposed_nif = str(
+            nif if nif is not None else candidate["proposed_nif"] or ""
+        ).strip().upper()[:20] or None
+        if not proposed_name:
+            raise ValueError("Revisa el nombre del cliente antes de confirmarlo.")
+        conn.execute(
+            "UPDATE document_client_candidates SET proposed_name=?, proposed_nif=? "
+            "WHERE document_id=? AND business_id=?",
+            (proposed_name, proposed_nif, document_id, business_id),
+        )
+
+        clients = [dict(row) for row in conn.execute(
+            "SELECT * FROM clients WHERE business_id=? ORDER BY id",
+            (business_id,),
+        ).fetchall()]
+        wanted_nif = _normalise_nif(proposed_nif)
+        matches = (
+            [client for client in clients
+             if _normalise_nif(client.get("nif")) == wanted_nif]
+            if wanted_nif else []
+        )
+        if not matches:
+            folded = _fold_client_reference(proposed_name)
+            matches = [
+                client for client in clients
+                if _fold_client_reference(client.get("name")) == folded
+            ]
+        if len(matches) > 1:
+            raise ValueError(
+                "Hay varios clientes que encajan. Corrige el nombre o el NIF."
+            )
+        if matches:
+            client_id = matches[0]["id"]
+        else:
+            created = conn.execute(
+                "INSERT INTO clients (business_id, name, nif, created_at) "
+                "VALUES (?, ?, ?, ?) RETURNING id",
+                (
+                    business_id, proposed_name, proposed_nif, now,
+                ),
+            ).fetchone()
+            client_id = created["id"]
+        updated = conn.execute(
+            "UPDATE documents SET client_id=? WHERE id=? AND business_id=? "
+            "RETURNING id",
+            (client_id, document_id, business_id),
+        ).fetchone()
+        if not updated:
+            raise ValueError("El documento ya no existe.")
+        conn.execute(
+            "UPDATE document_client_candidates SET status='confirmed', "
+            "matched_client_id=?, resolved_at=? "
+            "WHERE document_id=? AND business_id=?",
+            (client_id, now, document_id, business_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM clients WHERE id=? AND business_id=?",
+            (client_id, business_id),
+        ).fetchone()
+    return dict(row)
+
+
+def ensure_inbound_email_route(business_id: int) -> dict:
+    """Crea una dirección opaca por negocio; no es una credencial de acceso."""
+    if not get_business(business_id):
+        raise ValueError("El negocio no existe.")
+    for _ in range(3):
+        token = secrets.token_hex(16)
+        now = _now()
+        with get_conn() as conn:
+            row = conn.execute(
+                "INSERT INTO inbound_email_routes "
+                "(business_id, route_token, active, created_at) "
+                "VALUES (?, ?, TRUE, ?) ON CONFLICT (business_id) DO NOTHING "
+                "RETURNING *",
+                (business_id, token, now),
+            ).fetchone()
+            if not row:
+                row = conn.execute(
+                    "SELECT * FROM inbound_email_routes WHERE business_id=?",
+                    (business_id,),
+                ).fetchone()
+        if row:
+            return dict(row)
+    raise RuntimeError("No se pudo crear la ruta de correo.")
+
+
+def rotate_inbound_email_route(business_id: int) -> dict:
+    token = secrets.token_hex(16)
+    now = _now()
+    with get_conn() as conn:
+        row = conn.execute(
+            "UPDATE inbound_email_routes SET route_token=?, active=TRUE, "
+            "rotated_at=? WHERE business_id=? RETURNING *",
+            (token, now, business_id),
+        ).fetchone()
+    if row:
+        return dict(row)
+    return ensure_inbound_email_route(business_id)
+
+
+def resolve_inbound_email_route(route_token: str) -> dict | None:
+    """Resolución de plataforma previa a entrar en el perímetro de un negocio."""
+    token = str(route_token or "").strip().lower()
+    if not re.fullmatch(r"[a-f0-9]{32}", token):
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM inbound_email_routes "
+            "WHERE route_token=? AND active=TRUE",
+            (token,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def claim_inbound_email_message(
+    business_id: int, message_fingerprint: str
+) -> dict | None:
+    """Reclama un mensaje sin duplicarlo entre réplicas del scheduler."""
+    now = _now()
+    stale = (datetime.now() - timedelta(minutes=5)).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO inbound_email_messages "
+            "(business_id, message_fingerprint, status, attempts, received_at, updated_at) "
+            "VALUES (?, ?, 'processing', 1, ?, ?) "
+            "ON CONFLICT (business_id, message_fingerprint) DO NOTHING RETURNING *",
+            (business_id, message_fingerprint, now, now),
+        ).fetchone()
+        if row:
+            return dict(row)
+        row = conn.execute(
+            "UPDATE inbound_email_messages SET status='processing', "
+            "attempts=attempts+1, updated_at=? "
+            "WHERE business_id=? AND message_fingerprint=? AND "
+            "((status='failed' AND attempts<3) OR "
+            "(status='processing' AND updated_at<?)) RETURNING *",
+            (now, business_id, message_fingerprint, stale),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def finish_inbound_email_message(
+    message_id: int,
+    business_id: int,
+    *,
+    status: str,
+    attachment_count: int,
+    document_count: int,
+    error_code: str | None = None,
+) -> dict | None:
+    if status not in {"processed", "partial", "rejected", "failed"}:
+        raise ValueError("Estado de correo entrante no válido.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "UPDATE inbound_email_messages SET status=?, attachment_count=?, "
+            "document_count=?, error_code=?, updated_at=? "
+            "WHERE id=? AND business_id=? RETURNING *",
+            (
+                status, max(0, int(attachment_count)),
+                max(0, int(document_count)),
+                str(error_code or "")[:60] or None, _now(),
+                message_id, business_id,
+            ),
+        ).fetchone()
+    return dict(row) if row else None
 
 
 def update_client(client_id, business_id, name=None, phone=None, address=None,
@@ -12668,6 +12995,18 @@ def export_business_data(business_id) -> dict:
         "document_classifications": [dict(r) for r in _rows(
             "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
             business_id)],
+        "document_client_candidates": [dict(r) for r in _rows(
+            "SELECT * FROM document_client_candidates WHERE business_id=? ORDER BY id",
+            business_id)],
+        "inbound_email_routes": [dict(r) for r in _rows(
+            "SELECT business_id, active, created_at, rotated_at "
+            "FROM inbound_email_routes WHERE business_id=?",
+            business_id)],
+        "inbound_email_messages": [dict(r) for r in _rows(
+            "SELECT id, business_id, status, attempts, attachment_count, "
+            "document_count, error_code, received_at, updated_at "
+            "FROM inbound_email_messages WHERE business_id=? ORDER BY id",
+            business_id)],
         "copilot_recommendations": [dict(r) for r in _rows(
             "SELECT * FROM copilot_recommendations WHERE business_id=? ORDER BY id",
             business_id)],
@@ -12853,6 +13192,7 @@ def delete_business_cascade(business_id) -> bool:
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
             "email_outbox",
+            "inbound_email_messages", "inbound_email_routes",
             "verifactu_cancellation_outbox", "verifactu_outbox",
             "document_sequences",
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
@@ -12861,7 +13201,8 @@ def delete_business_cascade(business_id) -> bool:
             "product_events", "assistant_messages", "business_memories",
             "assistant_actions", "automation_permissions",
             "integration_settings",
-            "document_classifications", "copilot_recommendations",
+            "document_client_candidates", "document_classifications",
+            "copilot_recommendations",
             "gestoria_deliveries", "gestoria_requests",
             "job_updates", "job_completions", "job_materials",
             "client_preferences",
