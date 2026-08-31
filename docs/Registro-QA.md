@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-08-31 — paquete de marca y exportaciones sociales
+
+- **Alcance:** se conserva la geometría de `noesis-mark.svg` y se formalizan símbolo,
+  wordmark, lockups primario/inverso/monocromo, versiones transparentes, composiciones
+  con fondo, avatares, portadas y fondos editables para contenido.
+- **Exportación:** el generador produjo 49 PNG y originales SVG con Fraunces
+  autoalojada. `manifest.json` registra dimensiones, presencia de alfa, finalidad y
+  SHA-256 de cada PNG.
+- **Pruebas técnicas:** todos los PNG se abrieron con Sharp y coincidieron con sus
+  dimensiones declaradas; todos los SVG se parsearon como XML; los archivos sociales
+  quedan por debajo de 3 MB y la regeneración completa terminó sin error.
+- **Revisión visual:** tablero general a 1800 × 1200, lámina de paleta a 1600 × 1000,
+  avatar a 1080 × 1080 y portada LinkedIn a 4200 × 700 revisados sin recortes, texto
+  perdido, fondo accidental ni deformación del símbolo. El avatar mantiene margen
+  suficiente para máscara circular.
+- **Límite:** no se ha subido nada a redes ni se ha observado el recorte real de cada
+  plataforma. Esa comprobación se hace al crear los perfiles; si una interfaz cambia,
+  se ajusta la composición social, no el logo maestro.
+
 ## 2026-08-27 — catch-all documental e identidad segura de clientes
 
 - **Alcance:** migración 52, consumidor IMAP apagado por defecto, dirección opaca

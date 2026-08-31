@@ -105,6 +105,20 @@
 - `scripts/check_project_truth.py`: compara esa fuente con migraciones y catálogo;
   en CI exige actualizar estado y QA cuando cambia el producto.
 
+## Marca y materiales públicos
+
+- `branding/BRAND_GUIDE.md`: nombre, posicionamiento visual, variantes del logo,
+  zona de seguridad, tamaños mínimos, paleta, tipografía, fotografía, voz y uso en redes.
+- `branding/sources/`: símbolo maestro y lockups SVG con la Fraunces ya autoalojada
+  por Noesis; son los originales para impresión, edición o exportación futura.
+- `branding/logos/png/` y `branding/social/`: exportaciones transparentes, con fondo,
+  avatares y portadas listas para cada superficie.
+- `branding/templates/`: fondos SVG editables y PNG para cuadrado, vertical de feed
+  y story/reel, en crema y verde bosque.
+- `branding/scripts/build_brand_assets.mjs`: generador determinista con Sharp; crea
+  exportaciones y `manifest.json` con dimensiones, uso y SHA-256. Su dependencia
+  queda aislada en `branding/package.json` y no entra en el runtime de Noesis.
+
 ## Web y acompañante
 
 - `src/noesis/web/routers/pages.py`: además de las páginas públicas sirve

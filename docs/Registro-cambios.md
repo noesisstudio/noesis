@@ -7,6 +7,32 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — convierte el símbolo existente en un sistema de marca exportable
+
+- **Autor/agente:** Codex.
+- **Objetivo:** dar a Noesis un paquete de branding profesional y reproducible para
+  web, documentos y creación de LinkedIn, Instagram, Facebook y otros perfiles sin
+  inventar una identidad paralela ni deformar el símbolo ya reconocido por el producto.
+- **Áreas y archivos:** nueva raíz `branding/` con guía de marca, licencias,
+  paleta JSON/CSS, originales SVG, 49 PNG transparentes/con fondo, avatares,
+  portadas, plantillas, manifiesto con hashes y generador determinista; documentación
+  viva de marca, mapa, estado, tareas y QA. No cambia runtime, base de datos ni web.
+- **Pruebas ejecutadas:** regeneración completa con Sharp; 49/49 PNG decodificables,
+  dimensiones y alfa contrastados contra `manifest.json`, hashes repetibles, SVG
+  parseables, ningún activo social por encima de 3 MB, `git diff --check` y revisión
+  visual de tablero, avatar, portada y paleta.
+- **Dependencias o validaciones externas:** la portada de LinkedIn sigue su
+  especificación oficial vigente de 4200 × 700 y el logo 400 × 400. Crear las cuentas,
+  comprobar sus recortes reales y añadir sus URL a `sameAs` corresponde al founder.
+- **Riesgo/punto probable de fallo:** una plataforma puede cambiar el recorte sin
+  aviso. Por eso el avatar concentra el símbolo en el centro y las portadas evitan
+  detalles esenciales en los bordes.
+- **Diagnóstico y rollback:** `branding/manifest.json` identifica dimensiones,
+  finalidad y SHA-256. Reejecutar `branding/scripts/build_brand_assets.mjs` reconstruye
+  los PNG; revertir este commit elimina solo el paquete y no modifica la identidad
+  que ya usa la aplicación.
+- **Estado de publicación:** paquete local listo para uso; no requiere despliegue.
+
 ## 2026-08-27 — prepara facturas por catch-all sin mezclar empresas ni crear clientes a ciegas
 
 - **Autor/agente:** Codex.

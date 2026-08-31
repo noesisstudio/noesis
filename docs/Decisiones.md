@@ -805,9 +805,20 @@ confirmación actuales. Ver [[Seguridad-operativa]].
 La idea inicial era integrar un proveedor homologado. Queda anulada por la decisión
 de 2026-07-20: la facturación y Veri*Factu son desarrollo propio de Noesis.
 
-## Marca
-Paleta del logo: verde bosque #14463b + teal #2e8b74 + crema #f4f1e8. Dominio
-previsto: bynoesis.com. Ver [[Producto]].
+## Noesis es la marca; ByNoesis identifica el dominio y los usuarios (2026-08-31)
+
+La estrella existente se conserva: ya forma parte del producto y expresa dirección
+sin depender de una moda de IA. La identidad principal se escribe **Noesis**. El
+dominio `bynoesis.com` y el usuario preferente `@bynoesis` resuelven disponibilidad,
+pero no crean una segunda marca ni sustituyen el nombre en titulares, ventas o
+producto.
+
+El sistema visual usa verde bosque `#14463b`, teal `#2e8b74` y crema `#f4f1e8`;
+Fraunces representa la voz y los titulares e Inter organiza cuerpo y datos. Las
+variantes, tamaños, fondos, redes y prohibiciones viven en `branding/`. Motivo:
+reconocer a Noesis en todos los puntos de contacto requiere consistencia y archivos
+correctos, no un logo distinto para cada canal. Ver [[Producto]] y
+`design/PRODUCT_PRINCIPLES.md`.
 
 ## Stripe confirma; Checkout no autoriza (2026-08-10)
 
