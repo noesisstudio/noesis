@@ -767,7 +767,10 @@ def _handle(
             rate = float(business.get("default_vat") or 21)
             args["base"] = round(float(args["base"]) / (1 + rate / 100), 2)
             args["iva"] = rate
-        result = json.loads(run_tool(tool, args, business_id))
+        ledger_channel = "whatsapp" if channel == "whatsapp" else "web"
+        result = json.loads(
+            run_tool(tool, args, business_id, channel=ledger_channel)
+        )
         return {"reply": nlu.format_reply(tool, result), "source": "local"}
 
     # Marco común para el segundo nivel, sea privado o externo.

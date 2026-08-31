@@ -6,6 +6,18 @@
 
 ## Producto construido
 
+- El candidato del esquema 53 incorpora la base de datos de retención sin cambiar
+  el comportamiento del producto: un Registro Interno de Valor multiempresa,
+  idempotente y fail-open observa trabajos creados/cerrados, facturas emitidas,
+  recordatorios enviados, documentos confirmados y presupuestos preparados/enviados.
+  Separa acciones de resultados —cobro, aceptación y trabajo facturado— y solo
+  atribuye ayuda cuando existe evidencia enlazada. Calcula WUB móvil y semanal,
+  profundidad, consistencia y aceptación de propuestas de forma determinista. La
+  auditoría interna está detrás de un flag apagado; no se muestra Confidence,
+  Insight, Progress ni se concede autonomía. Exportación y baja RGPD incluyen el
+  ledger, y el rollback 53→52 no toca datos operativos. El candidato aún no está
+  desplegado ni validado con negocios reales.
+
 - La identidad existente ya tiene un paquete profesional versionado en `branding/`:
   originales SVG, logo horizontal, símbolo y wordmark en versiones primaria,
   inversa y monocroma; 49 PNG transparentes y con fondo; avatares/portadas para

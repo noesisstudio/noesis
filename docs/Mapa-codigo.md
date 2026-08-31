@@ -6,7 +6,7 @@
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría. La recuperación de acceso consume token, cambia credencial y revoca
   sesiones en una sola transacción; pedir otro enlace invalida los anteriores.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 52;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 53;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -34,7 +34,13 @@
   recuperación de contraseña de gestoría de los usuarios de empresa, con tokens
   hasheados, caducables y de un solo uso. La 52 añade rutas opacas de correo por
   negocio, deduplicación de mensajes sin contenido y propuestas confirmables de
-  cliente para documentos.
+  cliente para documentos. La 53 añade un registro observacional de acciones y
+  resultados útiles, relaciones multiempresa protegidas, zona horaria y metadatos
+  opcionales de correlación de propuestas sin modificar permisos ni flujos.
+- `src/noesis/value_ledger.py`: taxonomía central v1, escritores fail-open,
+  idempotencia, ciclo corregido/revertido, outcomes muchos-a-muchos, WUB móvil y
+  semanal, profundidad, consistencia, aceptación por familia, activación y estado
+  conservador de control. No ejecuta acciones ni usa IA para calcular métricas.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera

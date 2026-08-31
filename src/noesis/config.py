@@ -426,6 +426,14 @@ INBOUND_EMAIL_MAX_BYTES = max(
     int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_BYTES", str(20 * 1024 * 1024))),
 )
 
+# Observabilidad de valor: registrar no cambia decisiones ni permisos y falla
+# abierto para el flujo principal. El segundo flag controla exclusivamente la
+# superficie administrativa nueva, que permanece oculta hasta validar el piloto.
+VALUE_LEDGER_ENABLED = env_bool("NOESIS_VALUE_LEDGER_ENABLED", True)
+VALUE_LEDGER_ADMIN_ENABLED = env_bool(
+    "NOESIS_VALUE_LEDGER_ADMIN_ENABLED", False
+)
+
 # Cobro de la suscripción (Stripe). Si no hay clave, el alta entra en prueba manual.
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")

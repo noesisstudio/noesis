@@ -12,6 +12,8 @@ usa la vista de grafo para navegar.
 - [[Producto]] — qué es Noesis, para quién y la propuesta de valor.
 - [[Propuesta-sistema-retencion-habito-valor]] — propuesta para socios que integra
   Habit, Trust, Value, WUB y las fases posteriores de Insight, Progress y Confidence.
+- [[Registro-interno-valor]] — contrato técnico del esquema 53: taxonomía,
+  idempotencia, WUB, outcomes, privacidad, flags, auditoría y rollback.
 - [[Competencia]] — Forjia y el resto del mercado.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.

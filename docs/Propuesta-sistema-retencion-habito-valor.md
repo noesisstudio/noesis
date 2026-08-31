@@ -1,6 +1,9 @@
 # Noesis — propuesta integral de hábito, confianza, valor y retención
 
-> **Estado:** propuesta para revisión y aprobación de socios.  
+> **Estado:** estrategia aprobada para su base de datos; el candidato del esquema 53
+> implementa únicamente el Registro Interno de Valor, WUB y medición de confianza.
+> Las experiencias de Habit/Trust/Value siguen pendientes de piloto y
+> Confidence/Insight/Progress continúan aplazadas.
 > **Fecha:** 31 de agosto de 2026.  
 > **Alcance:** estrategia de producto, medición e implantación. Este documento no
 > implica que las funcionalidades descritas estén ya activas en producción.
@@ -897,4 +900,3 @@ La decisión recomendada a los socios es:
   promesa de reducir ruido mental.
 - `src/noesis/db.py`: eventos, acciones del asistente y permisos existentes.
 - `src/noesis/web/scheduler.py`: resúmenes y automatizaciones periódicas actuales.
-

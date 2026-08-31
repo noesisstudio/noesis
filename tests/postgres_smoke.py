@@ -7,7 +7,7 @@ import traceback
 
 from starlette.testclient import TestClient
 
-from noesis import config, db, demo
+from noesis import config, db, demo, value_ledger
 from noesis.documents import repo as document_repo
 from noesis.web import backups, server
 
@@ -307,6 +307,44 @@ def _check_backup_roundtrip() -> None:
         )
 
 
+def _check_value_ledger(business_id: int) -> None:
+    """Contrato mínimo del esquema 53 sobre tipos, FK e idempotencia Postgres."""
+    action = value_ledger.record_useful_action(
+        business_id,
+        "job_created",
+        entity_type="postgres_smoke",
+        entity_id="schema-53",
+        idempotency_key="postgres-smoke:value-ledger:action",
+        channel="system",
+        trigger_source="authorized_rule",
+        completion_mode="system_observed",
+    )
+    repeated = value_ledger.record_useful_action(
+        business_id,
+        "job_created",
+        entity_type="postgres_smoke",
+        entity_id="schema-53",
+        idempotency_key="postgres-smoke:value-ledger:action",
+        channel="system",
+        trigger_source="authorized_rule",
+        completion_mode="system_observed",
+    )
+    if action["id"] != repeated["id"]:
+        raise RuntimeError("El ledger Postgres no deduplicó la acción de humo.")
+    outcome = value_ledger.record_useful_outcome(
+        business_id,
+        "job_invoiced",
+        attribution_type="assisted",
+        attribution_method="postgres_smoke_v1",
+        entity_type="postgres_smoke",
+        entity_id="schema-53",
+        idempotency_key="postgres-smoke:value-ledger:outcome",
+        useful_action_ids=[action["id"]],
+    )
+    if not outcome or outcome["business_id"] != business_id:
+        raise RuntimeError("El ledger Postgres no conservó el alcance del negocio.")
+
+
 def main() -> int:
     try:
         _ensure_postgres()
@@ -314,6 +352,7 @@ def main() -> int:
         business = _seed_if_empty()
         _check_security_audit(int(business["id"]))
         _check_document_deduplication(int(business["id"]))
+        _check_value_ledger(int(business["id"]))
         with TestClient(server.app) as client:
             _login(client)
             failures = _check_gets(client, int(business["id"]))

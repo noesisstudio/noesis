@@ -3881,6 +3881,181 @@ def _downgrade_inbound_email_documents(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS inbound_email_routes")
 
 
+def _upgrade_value_ledger(conn) -> None:
+    """Registro aditivo de valor sin cambiar los flujos que observa.
+
+    Las acciones y outcomes conservan una clave idempotente por negocio. La
+    confianza reutiliza ``assistant_actions`` añadiendo solo metadatos de
+    correlación. No hay agregados: WUB se calcula sobre los registros canónicos.
+    """
+    t = _types(conn.dialect)
+    business_columns = _column_names(conn, "businesses")
+    if "timezone" not in business_columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN timezone TEXT "
+            "NOT NULL DEFAULT 'Europe/Madrid'"
+        )
+    if "value_metrics_eligible" not in business_columns:
+        conn.execute(
+            f"ALTER TABLE businesses ADD COLUMN value_metrics_eligible "
+            f"{t['boolean']} NOT NULL DEFAULT TRUE"
+        )
+
+    assistant_columns = _column_names(conn, "assistant_actions")
+    for column, definition in (
+        ("process_key", "TEXT"),
+        ("action_family", "TEXT"),
+        ("correlation_key", "TEXT"),
+        ("trigger_source", "TEXT"),
+    ):
+        if column not in assistant_columns:
+            conn.execute(
+                f"ALTER TABLE assistant_actions ADD COLUMN {column} {definition}"
+            )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_assistant_actions_value_decision "
+        "ON assistant_actions(business_id, process_key, action_family, "
+        "correlation_key, created_at)"
+    )
+
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS useful_actions (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    taxonomy_version INTEGER NOT NULL,
+    action_family TEXT NOT NULL,
+    process_key TEXT NOT NULL,
+    counts_for_wub {t["boolean"]} NOT NULL DEFAULT FALSE,
+    trigger_source TEXT NOT NULL CHECK (
+        trigger_source IN (
+            'user_initiated', 'noesis_proposed', 'authorized_rule',
+            'external_integration'
+        )
+    ),
+    channel TEXT NOT NULL CHECK (
+        channel IN ('whatsapp', 'web', 'email', 'system')
+    ),
+    completion_mode TEXT NOT NULL CHECK (
+        completion_mode IN (
+            'user_confirmed', 'authorized_rule', 'system_observed',
+            'external_confirmed'
+        )
+    ),
+    status TEXT NOT NULL DEFAULT 'completed' CHECK (
+        status IN ('completed', 'corrected', 'reverted', 'invalidated')
+    ),
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    source_event_type TEXT,
+    source_event_id TEXT,
+    metadata_json TEXT,
+    completed_at {t["timestamp"]} NOT NULL,
+    updated_at {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, idempotency_key)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_useful_actions_business_id
+    ON useful_actions(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_useful_actions_wub
+    ON useful_actions(business_id, completed_at, counts_for_wub, status);
+CREATE INDEX IF NOT EXISTS idx_useful_actions_process
+    ON useful_actions(business_id, process_key, action_family, completed_at);
+CREATE INDEX IF NOT EXISTS idx_useful_actions_entity
+    ON useful_actions(business_id, entity_type, entity_id, completed_at);
+
+CREATE TABLE IF NOT EXISTS useful_action_events (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL,
+    useful_action_id {t["ref"]} NOT NULL,
+    event_kind TEXT NOT NULL CHECK (
+        event_kind IN ('completed', 'corrected', 'reverted', 'invalidated')
+    ),
+    actor_type TEXT NOT NULL DEFAULT 'system' CHECK (
+        actor_type IN ('owner', 'worker', 'noesis', 'system', 'integration')
+    ),
+    reason_code TEXT,
+    occurred_at {t["timestamp"]} NOT NULL,
+    FOREIGN KEY (business_id, useful_action_id)
+        REFERENCES useful_actions(business_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_useful_action_events_action
+    ON useful_action_events(business_id, useful_action_id, occurred_at, id);
+
+CREATE TABLE IF NOT EXISTS useful_outcomes (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    taxonomy_version INTEGER NOT NULL,
+    attribution_version INTEGER NOT NULL,
+    outcome_family TEXT NOT NULL,
+    attribution_type TEXT NOT NULL CHECK (
+        attribution_type IN ('direct', 'assisted', 'observed')
+    ),
+    attribution_method TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    amount NUMERIC(14, 2),
+    currency TEXT,
+    idempotency_key TEXT NOT NULL,
+    metadata_json TEXT,
+    occurred_at {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, idempotency_key)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_useful_outcomes_business_id
+    ON useful_outcomes(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_useful_outcomes_family
+    ON useful_outcomes(business_id, outcome_family, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_useful_outcomes_entity
+    ON useful_outcomes(business_id, entity_type, entity_id, occurred_at);
+
+CREATE TABLE IF NOT EXISTS useful_action_outcomes (
+    business_id {t["ref"]} NOT NULL,
+    useful_action_id {t["ref"]} NOT NULL,
+    useful_outcome_id {t["ref"]} NOT NULL,
+    linked_at {t["timestamp"]} NOT NULL,
+    PRIMARY KEY (business_id, useful_action_id, useful_outcome_id),
+    FOREIGN KEY (business_id, useful_action_id)
+        REFERENCES useful_actions(business_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id, useful_outcome_id)
+        REFERENCES useful_outcomes(business_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_useful_action_outcomes_outcome
+    ON useful_action_outcomes(business_id, useful_outcome_id, useful_action_id);
+"""
+    )
+
+
+def _downgrade_value_ledger(conn) -> None:
+    """Rollback de la capa observacional; nunca toca operaciones de negocio."""
+    conn.execute("DROP INDEX IF EXISTS idx_useful_action_outcomes_outcome")
+    conn.execute("DROP TABLE IF EXISTS useful_action_outcomes")
+    conn.execute("DROP INDEX IF EXISTS idx_useful_outcomes_entity")
+    conn.execute("DROP INDEX IF EXISTS idx_useful_outcomes_family")
+    conn.execute("DROP INDEX IF EXISTS uq_useful_outcomes_business_id")
+    conn.execute("DROP TABLE IF EXISTS useful_outcomes")
+    conn.execute("DROP INDEX IF EXISTS idx_useful_action_events_action")
+    conn.execute("DROP TABLE IF EXISTS useful_action_events")
+    conn.execute("DROP INDEX IF EXISTS idx_useful_actions_entity")
+    conn.execute("DROP INDEX IF EXISTS idx_useful_actions_process")
+    conn.execute("DROP INDEX IF EXISTS idx_useful_actions_wub")
+    conn.execute("DROP INDEX IF EXISTS uq_useful_actions_business_id")
+    conn.execute("DROP TABLE IF EXISTS useful_actions")
+    conn.execute("DROP INDEX IF EXISTS idx_assistant_actions_value_decision")
+    if conn.dialect != "sqlite":
+        for column in (
+            "trigger_source", "correlation_key", "action_family", "process_key"
+        ):
+            conn.execute(
+                f"ALTER TABLE assistant_actions DROP COLUMN IF EXISTS {column}"
+            )
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS value_metrics_eligible"
+        )
+        conn.execute("ALTER TABLE businesses DROP COLUMN IF EXISTS timezone")
+    # SQLite conserva columnas aditivas al volver a 52, pero las ignora. Evita
+    # reconstruir tablas de cuentas y permisos durante un rollback de emergencia.
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3956,6 +4131,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (52, "documentos_por_correo",
      _upgrade_inbound_email_documents,
      _downgrade_inbound_email_documents),
+    (53, "registro_valor_util",
+     _upgrade_value_ledger,
+     _downgrade_value_ledger),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

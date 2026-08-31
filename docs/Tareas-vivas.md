@@ -5,6 +5,14 @@
 
 ## P0 — publicar y pilotar con seguridad
 
+- [ ] Desplegar el esquema 53 primero en un entorno PostgreSQL no productivo y
+  ejecutar migración 52→53, humo completo y rollback 53→52→53. Mantener
+  `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`; comprobar que una caída simulada del
+  ledger no cambia factura, cobro, agenda, documento, presupuesto ni WhatsApp.
+  Después, en 3-5 negocios piloto, reconciliar manualmente acciones/outcomes,
+  zonas horarias, WUB semanal, profundidad y aceptación antes de enseñar ninguna
+  métrica o fijar objetivos. No activar Confidence, Insight ni Progress.
+
 - [ ] Recorrer en escritorio y móvil el alta recuperable del esquema 49 ya
   desplegada en el release `8730826a79ab`:
   salir y volver en cada paso, revisar la identidad visual de factura, comprobar que

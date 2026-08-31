@@ -171,6 +171,20 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                 )
                 continue
             db.mark_reminder_sent(invoice["id"], business["id"])
+            from .. import value_ledger
+            with value_ledger.observation_context(
+                channel="system",
+                trigger_source="authorized_rule",
+                completion_mode="authorized_rule",
+            ):
+                value_ledger.observe_useful_action(
+                    business["id"],
+                    "payment_reminder_sent",
+                    entity_type="invoice",
+                    entity_id=invoice["id"],
+                    idempotency_key=idempotency_key,
+                    metadata={"cadence_step": step},
+                )
             db.record_product_event(
                 business["id"],
                 "payment_reminder_queued",
@@ -184,7 +198,7 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                     separators=(",", ":"),
                 ),
             )
-            db.record_assistant_action(
+            value_ledger.observe_trust_decision(
                 business["id"],
                 "payment_reminders",
                 f"Encolé el aviso de cobro de la factura "
@@ -199,6 +213,10 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                 },
                 requested_by="system",
                 approved_by="regla de cobros",
+                process_key="collections",
+                action_family="payment_reminder_sent",
+                correlation_key=idempotency_key,
+                trigger_source="authorized_rule",
             )
             queued += 1
     return queued
@@ -401,9 +419,16 @@ def send_collection_proposals(now: datetime | None = None) -> int:
             "con su enlace de pago? Responde SÍ o NO."
         )
         # La propuesta caduca en 12 h; si el dueño responde SÍ se ejecuta.
+        correlation_key = (
+            f"collection_proposal:{business['id']}:{top['id']}:{day}"
+        )
         db.set_pending_action(
             business["id"], phone, "reclamar",
-            {"invoice_id": top["id"]}, ttl_minutes=720,
+            {
+                "invoice_id": top["id"],
+                "value_correlation_key": correlation_key,
+            },
+            ttl_minutes=720,
         )
         if _deliver_template(
             business,
@@ -412,6 +437,20 @@ def send_collection_proposals(now: datetime | None = None) -> int:
             config.WHATSAPP_TEMPLATE_PAYMENT_ALERT,
             idempotency_key,
         ):
+            from .. import value_ledger
+            value_ledger.observe_trust_decision(
+                business["id"],
+                "payment_reminders",
+                f"Propuse reclamar la factura {number}; espero confirmación.",
+                status="proposed",
+                target_type="invoice",
+                target_id=top["id"],
+                requested_by="noesis",
+                process_key="collections",
+                action_family="payment_reminder_sent",
+                correlation_key=correlation_key,
+                trigger_source="noesis_proposed",
+            )
             queued += 1
     return queued
 

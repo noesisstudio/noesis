@@ -2510,11 +2510,18 @@ def record_assistant_action(
     requested_by: str = "noesis",
     approved_by: str | None = None,
     error: str | None = None,
+    process_key: str | None = None,
+    action_family: str | None = None,
+    correlation_key: str | None = None,
+    trigger_source: str | None = None,
 ) -> dict:
     policy = AUTOMATION_BY_KEY.get(str(action_key or "").strip())
     if not policy:
         raise ValueError("La acción de Noesis no existe.")
-    if status not in {"proposed", "approved", "executed", "failed", "cancelled"}:
+    if status not in {
+        "proposed", "approved", "executed", "failed", "cancelled",
+        "rejected", "corrected", "reverted",
+    }:
         raise ValueError("El estado de la acción no es válido.")
     summary = str(summary or "").strip()
     if not summary:
@@ -2529,12 +2536,29 @@ def record_assistant_action(
         payload_text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         if len(payload_text) > 12_000:
             raise ValueError("El detalle de la acción es demasiado grande.")
+    process_key = str(process_key or "").strip()[:50] or None
+    action_family = str(action_family or "").strip()[:80] or None
+    correlation_key = str(correlation_key or "").strip()[:240] or None
+    trigger_source = str(trigger_source or "").strip().lower()[:40] or None
+    if trigger_source and trigger_source not in {
+        "user_initiated", "noesis_proposed", "authorized_rule",
+        "external_integration",
+    }:
+        raise ValueError("El origen de la acción no es válido.")
+    if any((process_key, action_family, correlation_key)) and not all(
+        (process_key, action_family, correlation_key)
+    ):
+        raise ValueError(
+            "El proceso, la familia y la correlación deben registrarse juntos."
+        )
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO assistant_actions "
             "(business_id, action_key, risk_level, status, summary, target_type, "
             "target_id, payload, requested_by, approved_by, created_at, approved_at, "
-            "executed_at, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "executed_at, error, process_key, action_family, correlation_key, "
+            "trigger_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "?, ?, ?, ?) "
             "RETURNING id",
             (
                 business_id, action_key, policy["risk"], status, summary[:500],
@@ -2542,6 +2566,7 @@ def record_assistant_action(
                 str(requested_by or "noesis")[:30],
                 (approved_by or "").strip()[:80] or None,
                 now, approved_at, executed_at, (error or "").strip()[:1000] or None,
+                process_key, action_family, correlation_key, trigger_source,
             ),
         ).fetchone()
         saved = conn.execute(
@@ -3865,7 +3890,20 @@ def add_job(client_id, description, scheduled_for=None, zone=None,
         new_id = row["id"]
     if project_id and worker_id:
         _ensure_project_member(project_id, worker_id, business_id)
-    return get_job(new_id, business_id)
+    saved = get_job(new_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "job_created",
+        entity_type="job",
+        entity_id=new_id,
+        metadata={
+            "scheduled": bool(scheduled_for),
+            "has_project": bool(project_id),
+            "has_worker": bool(worker_id),
+        },
+    )
+    return saved
 
 
 def get_job(job_id, business_id) -> dict | None:
@@ -4233,7 +4271,16 @@ def complete_job(
     record_product_event(business_id, "job_completed")
     if job.get("price_estimate") and float(job["price_estimate"]) > 0:
         prepare_job_invoice_draft(job_id, business_id)
-    return get_job_completion(job_id, business_id) or {"id": row["id"]}
+    saved = get_job_completion(job_id, business_id) or {"id": row["id"]}
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "job_completed",
+        entity_type="job",
+        entity_id=job_id,
+        metadata={"confirmation_status": status},
+    )
+    return saved
 
 
 def confirm_job_completion(
@@ -6516,7 +6563,20 @@ def issue_invoice(
                 conn, business_id, "emision", invoice_id=invoice_id,
                 details=f"numero={number}", created_at=issued_at,
             )
-    return get_invoice(invoice_id, business_id)
+    saved = get_invoice(invoice_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "invoice_issued",
+        entity_type="invoice",
+        entity_id=invoice_id,
+        completed_at=issued_at,
+        metadata={"invoice_type": invoice_type},
+    )
+    value_ledger.observe_job_invoiced_from_invoice(
+        business_id, invoice_id=invoice_id, occurred_at=issued_at
+    )
+    return saved
 
 
 def _payment_text(value, label: str, max_length: int) -> str | None:
@@ -6647,7 +6707,16 @@ def add_invoice_payment(
             "WHERE id=? AND business_id=? AND invoice_id=?",
             (payment_id, business_id, invoice_id),
         ).fetchone()
-    return dict(payment)
+    saved = dict(payment)
+    from . import value_ledger
+    value_ledger.observe_payment_received(
+        business_id,
+        invoice_id=invoice_id,
+        payment_id=payment_id,
+        amount=amount_decimal,
+        occurred_at=paid_at,
+    )
+    return saved
 
 
 def list_invoice_payments(invoice_id, business_id) -> list[dict]:
@@ -6683,6 +6752,7 @@ def invoice_paid_amount(invoice_id, business_id) -> float | None:
 def mark_invoice_paid(invoice_id, business_id) -> dict | None:
     """Registra el importe restante; repetir la operación no duplica el cobro."""
     payment_time = _now()
+    payment_id = None
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         invoice, already_paid = _locked_invoice_with_paid(
@@ -6695,7 +6765,7 @@ def mark_invoice_paid(invoice_id, business_id) -> dict | None:
         if total <= 0:
             return None
         if remaining > 0:
-            _insert_invoice_payment(
+            payment_id = _insert_invoice_payment(
                 conn, invoice, remaining, None, payment_time,
                 "Cobro completo registrado",
             )
@@ -6705,7 +6775,17 @@ def mark_invoice_paid(invoice_id, business_id) -> dict | None:
                 details=f"importe={float(remaining):.2f};metodo=no indicado",
                 created_at=payment_time,
             )
-    return get_invoice(invoice_id, business_id)
+    saved = get_invoice(invoice_id, business_id)
+    if payment_id is not None:
+        from . import value_ledger
+        value_ledger.observe_payment_received(
+            business_id,
+            invoice_id=invoice_id,
+            payment_id=payment_id,
+            amount=remaining,
+            occurred_at=payment_time,
+        )
+    return saved
 
 
 def delete_invoice(invoice_id, business_id) -> bool:
@@ -9617,7 +9697,15 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
              irpf_rate or 0, irpf_amount, total, valid_until, notes or None, _now()),
         ).fetchone()
         new_id = row["id"]
-    return get_quote(new_id, business_id)
+    saved = get_quote(new_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "quote_prepared",
+        entity_type="quote",
+        entity_id=new_id,
+    )
+    return saved
 
 
 def get_quote(quote_id, business_id) -> dict | None:
@@ -9670,7 +9758,15 @@ def mark_quote_sent(quote_id, business_id) -> dict | None:
         conn.execute("UPDATE quotes SET status='enviado', number=? "
                      "WHERE id=? AND business_id=? AND status='borrador'",
                      (number, quote_id, business_id))
-    return get_quote(quote_id, business_id)
+    saved = get_quote(quote_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "quote_sent",
+        entity_type="quote",
+        entity_id=quote_id,
+    )
+    return saved
 
 
 def reject_quote(quote_id, business_id, *, decision_source="owner",
@@ -9748,10 +9844,13 @@ def accept_quote(quote_id, business_id, *, decision_source="owner",
              decision_ip_hash, str(decision_user_agent or "")[:300] or None,
              quote_id, business_id),
         )
-    return {
+    result = {
         "quote": get_quote(quote_id, business_id),
         "invoice": get_invoice(invoice_id, business_id),
     }
+    from . import value_ledger
+    value_ledger.observe_quote_accepted(business_id, quote_id=quote_id)
+    return result
 
 
 def delete_quote(quote_id, business_id) -> bool:
@@ -12992,6 +13091,19 @@ def export_business_data(business_id) -> dict:
         "assistant_actions": [dict(r) for r in _rows(
             "SELECT * FROM assistant_actions WHERE business_id=? ORDER BY id",
             business_id)],
+        "useful_actions": [dict(r) for r in _rows(
+            "SELECT * FROM useful_actions WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_action_events": [dict(r) for r in _rows(
+            "SELECT * FROM useful_action_events WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_outcomes": [dict(r) for r in _rows(
+            "SELECT * FROM useful_outcomes WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_action_outcomes": [dict(r) for r in _rows(
+            "SELECT * FROM useful_action_outcomes WHERE business_id=? "
+            "ORDER BY useful_action_id, useful_outcome_id",
+            business_id)],
         "document_classifications": [dict(r) for r in _rows(
             "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
             business_id)],
@@ -13199,6 +13311,8 @@ def delete_business_cascade(business_id) -> bool:
             "invoice_events", "invoice_cancellation_records", "invoice_records",
             "portal_tokens",
             "product_events", "assistant_messages", "business_memories",
+            "useful_action_outcomes", "useful_action_events",
+            "useful_outcomes", "useful_actions",
             "assistant_actions", "automation_permissions",
             "integration_settings",
             "document_client_candidates", "document_classifications",

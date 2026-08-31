@@ -1,5 +1,38 @@
 # Registro de QA
 
+## 2026-08-31 — registro de valor, WUB y confianza observada
+
+- **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **567
+  pruebas** y terminó `OK`. Incluye los 13 contratos generativos de seguridad con
+  Hypothesis, invariantes fiscales, Stripe, WhatsApp, documentos, permisos,
+  backups, SEO, onboarding, facturación y multiempresa. Los mensajes de error del
+  log corresponden a fallos simulados que sus propias pruebas esperan.
+- **Cobertura nueva:** 17 pruebas específicas comprueban taxonomía y binario WUB,
+  idempotencia por negocio, aislamiento, canal/origen/confirmación separados,
+  tres acciones y dos procesos, límite lunes-lunes con zona horaria, profundidad,
+  consistencia y racha, elegibilidad, lifecycle/reversión, outcomes muchos-a-muchos,
+  deduplicación de dinero, atribución conservadora, confianza por correlación,
+  feature flag, fail-open, flujos maduros, permisos admin, índice de consulta,
+  exportación/borrado RGPD y rollback 53→52→53.
+- **Compatibilidad de flujos:** el test integrado recorre creación/cierre de trabajo,
+  factura, emisión, cobro, presupuesto, envío y aceptación. El resultado operativo
+  se conserva aunque el escritor de métricas lance una excepción.
+- **Base de datos:** esquema SQLite limpio alcanza 53; downgrade y reupgrade pasan.
+  Los contratos de DDL PostgreSQL —índice único antes de FK compuesta y parámetros—
+  pasan en la suite. `tests/postgres_smoke.py` incorpora además idempotencia,
+  relación action/outcome y alcance por negocio para ejecutarlos en el entorno
+  PostgreSQL no productivo antes del despliegue.
+- **Privacidad y seguridad:** el ledger no contiene el texto del trabajo probado;
+  la auditoría devuelve 403 a usuario normal, 404 con el flag apagado y solo datos
+  internos al administrador con el flag activo. El acceso queda en la bitácora de
+  seguridad. Las cuatro tablas forman parte de portabilidad y baja RGPD.
+- **Calidad estática:** `py -m ruff check src/noesis tests/test_value_ledger.py`,
+  `py -m py_compile` de archivos afectados, `git diff --check`, JSON válido y
+  `py scripts/check_project_truth.py` pasan.
+- **Límite externo:** no se ha ejecutado el humo contra PostgreSQL real porque el
+  único entorno accesible es producción. El candidato no se ha desplegado; esa
+  prueba y el rollback son puerta obligatoria en un entorno no productivo.
+
 ## 2026-08-31 — manual editorial y guiones de contenido
 
 - **Cobertura:** 38 páginas con estrategia, audiencia, canales, mapa de 24 piezas,

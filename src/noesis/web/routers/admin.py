@@ -7,7 +7,10 @@ import secrets
 from datetime import date
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import (
+    FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response,
+)
 
 from ... import config, db, readiness, security_center
 from ...adapters import billing as billing_adapter
@@ -58,6 +61,30 @@ def admin_panel(request: Request):
         "invite": request.session.pop("last_invite", None),
         "admin_error": request.session.pop("admin_error", None),
     })
+
+
+@router.get("/admin/value-ledger", response_class=JSONResponse)
+def admin_value_ledger(request: Request, business_id: int | None = None):
+    """Auditoría interna mínima, oculta por defecto y siempre de solo lectura."""
+    if not _is_admin(request):
+        return Response("No autorizado.", status_code=403)
+    if not config.VALUE_LEDGER_ADMIN_ENABLED:
+        return Response("No encontrado.", status_code=404)
+    from ... import value_ledger
+    user = auth.current_user(request)
+    try:
+        snapshot = value_ledger.admin_snapshot(business_id)
+    except ValueError as exc:
+        return Response(str(exc), status_code=404)
+    db.record_security_event(
+        "admin.value_ledger_viewed",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=business_id or user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"mode": "read_only", "scope": "business" if business_id else "weekly"},
+    )
+    return JSONResponse(jsonable_encoder(snapshot))
 
 
 @router.get("/admin/cuentas/{business_id}", response_class=HTMLResponse)

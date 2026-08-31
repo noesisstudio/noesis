@@ -7,6 +7,37 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — base observacional de valor, WUB y confianza
+
+- **Autor/agente:** Codex.
+- **Objetivo:** implementar la base de Useful Actions, Useful Outcomes y WUB como
+  capa aditiva, backward-compatible y auditable, sin gobernar ni alterar los
+  flujos que observa.
+- **Áreas y archivos:** esquema 53 en `migrations.py`; taxonomía, writers fail-open,
+  outcomes, WUB y trust en `value_ledger.py`; hooks terminales en datos,
+  documentos, herramientas, scheduler y WhatsApp; auditoría admin oculta; RGPD;
+  smoke PostgreSQL; 17 pruebas; documentación de arquitectura, estado, pendientes,
+  decisiones y QA.
+- **Cambios de datos/migración:** cuatro tablas aisladas por `business_id`, zona
+  horaria y elegibilidad en negocio y cuatro campos opcionales de correlación en
+  `assistant_actions`. No se cambia ninguna tabla fiscal ni estado operativo. El
+  rollback 53→52 elimina el ledger; SQLite conserva inertes las columnas aditivas.
+- **Pruebas ejecutadas:** 567/567 pruebas, 17 contratos específicos, seguridad
+  generativa, migración 53→52→53, lint Ruff, compilación, DDL PostgreSQL simulado,
+  índice WUB, JSON, verdad documental y diff limpio. Evidencia en
+  `Registro-QA.md`.
+- **Dependencias o validaciones externas:** humo y rollback contra PostgreSQL real
+  deben ejecutarse en un entorno no productivo. Después se reconcilia con 3-5
+  negocios antes de mostrar métricas o fijar objetivos.
+- **Riesgo/punto probable de fallo:** volumen de escritura o una taxonomía prematura.
+  Las claves idempotentes e índices acotan duplicados/consultas; los errores se
+  registran pero nunca bloquean la operación principal. No se copia contenido.
+- **Diagnóstico y rollback:** poner `NOESIS_VALUE_LEDGER_ENABLED=false` detiene las
+  escrituras; `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false` oculta auditoría. Revisar el
+  log `noesis.value_ledger`. Si hace falta, bajar a 52 o revertir los hooks sin tocar
+  facturas, cobros, clientes, agenda, documentos, presupuestos, WhatsApp o permisos.
+- **Estado de publicación:** candidato completo y probado localmente; no desplegado.
+
 ## 2026-08-31 — propuesta integral de hábito, confianza, valor y retención
 
 - **Autor/agente:** Codex.
