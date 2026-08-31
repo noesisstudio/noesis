@@ -48,4 +48,3 @@ COMPROBACION ANTES DE PUBLICAR
 - Acceso administrativo para los dos socios.
 - Mismo usuario, nombre, enlace y avatar que en Facebook y LinkedIn.
 - Primeras tres publicaciones preparadas antes de anunciar el perfil.
-

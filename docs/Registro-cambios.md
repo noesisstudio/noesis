@@ -19,7 +19,8 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Cambios de datos/migración:** ninguno. No cambia aplicación, runtime ni base de datos.
 - **Pruebas ejecutadas:** dimensiones y hashes de los PNG contrastados con los activos
   maestros; DOCX abierto estructuralmente, renderizado a PDF y revisado página por
-  página; textos sin marcadores, verdad del proyecto y `git diff --check`.
+  página; textos sin marcadores, finales de archivo normalizados, verdad del proyecto
+  y `git diff --check`.
 - **Dependencias o validaciones externas:** crear las cuentas, confirmar que
   `@bynoesis` está disponible y observar el recorte real requiere acceso de los
   fundadores a cada plataforma. Las especificaciones de LinkedIn y los controles de

@@ -30,4 +30,3 @@ Expresión corta: **Haz tu trabajo; Noesis te ordena el negocio**.
 
 Los cobros, las facturas y el margen se utilizan como pruebas concretas. La marca
 general habla de tiempo, menos papeleo, claridad y control.
-
