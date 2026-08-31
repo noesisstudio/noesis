@@ -128,9 +128,9 @@ function socialAvatar(size = 1080) {
   const iconStart = Math.round((size - icon) / 2);
   const outlinedMark = `<g>
     <polygon points="32,3 38,26 61,32 38,38 32,61 26,38 3,32 26,26" fill="${C.teal}" stroke="${C.ink}" stroke-width="2.1" stroke-linejoin="round"/>
-    <polygon points="32,13 36,28 51,32 36,36 32,51 28,36 13,32 28,28" fill="${C.teal}" stroke="${C.ink}" stroke-width="1.55" stroke-linejoin="round"/>
-    <circle cx="32" cy="32" r="6.5" fill="${C.teal}" stroke="${C.ink}" stroke-width="1.55"/>
-    <circle cx="32" cy="32" r="3.4" fill="${C.cream}" stroke="${C.ink}" stroke-width="1.1"/>
+    <polygon points="32,13 36,28 51,32 36,36 32,51 28,36 13,32 28,28" fill="${C.forest}"/>
+    <circle cx="32" cy="32" r="6.5" fill="${C.forest}"/>
+    <circle cx="32" cy="32" r="3.4" fill="${C.cream}"/>
   </g>`;
   return svgDoc(size, size, `
     <rect width="${size}" height="${size}" fill="${C.teal}"/>
@@ -300,7 +300,7 @@ async function main() {
   assets.sort((a, b) => a.path.localeCompare(b.path));
   fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({
     brand: "Noesis",
-    version: "1.2.0",
+    version: "1.2.1",
     generated_at: "2026-08-31",
     source_mark: "sources/noesis-mark-master.svg",
     assets,

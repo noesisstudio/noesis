@@ -308,7 +308,7 @@ def build():
     set_run(p.add_run("Noesis lleva la oficina mientras tú haces el trabajo."), size=14, color=FOREST, bold=True)
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    set_run(p.add_run("Versión 1.1 · 31 de agosto de 2026"), size=9.5, color=MUTED)
+    set_run(p.add_run("Versión 1.1.1 · 31 de agosto de 2026"), size=9.5, color=MUTED)
 
     add_page_break(doc)
     add_title(doc, "Instagram", "Identificación, educación, humor de oficio y demostraciones breves")

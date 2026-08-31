@@ -23,8 +23,9 @@ disponible, no improvisar otro nombre sin comprobar antes las tres plataformas.
 - `Guia-perfiles-sociales-Noesis.docx`: manual conjunto, visual y listo para Word.
 
 El avatar común muestra la estrella ampliada directamente sobre el fondo verde, sin
-recuadro blanco y con contorno oscuro. No sustituye el símbolo maestro transparente:
-es una adaptación específica para que los perfiles se reconozcan a tamaños pequeños.
+recuadro blanco. Conserva el interior original del símbolo y aplica el contorno oscuro
+solo a la silueta exterior. No sustituye el símbolo maestro transparente: es una
+adaptación específica para que los perfiles se reconozcan a tamaños pequeños.
 
 ## Regla de marca
 

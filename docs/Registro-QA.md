@@ -1,5 +1,19 @@
 # Registro de QA
 
+## 2026-08-31 — contorno exclusivamente exterior
+
+- **Referencia:** el interior coincide con `sources/noesis-mark-master.svg`: polígono
+  exterior teal `#2e8b74`, polígono interior y círculo bosque `#14463b`, y punto
+  crema `#f4f1e8`.
+- **Diferencia social:** el fondo es teal y solo el polígono exterior incorpora
+  `stroke="#15211c"`; el polígono interior y los dos círculos no contienen trazo.
+- **Integridad:** manifiesto 1.2.1 con 49/49 PNG válidos; las cinco copias operativas
+  coinciden por SHA-256 con Instagram, Facebook, LinkedIn y YouTube.
+- **Revisión visual:** comprobadas las exportaciones 1080 × 1080 y 400 × 400. La
+  estrella queda centrada, sin placa blanca, con el interior reconocible y sin líneas
+  internas añadidas. La guía Word conserva ocho páginas limpias tras render completo.
+- **Límite:** la máscara de cada red se comprueba finalmente al crear los perfiles.
+
 ## 2026-08-31 — avatar social sin placa blanca
 
 - **Geometría:** estrella centrada al 64 % del lienzo, frente al 29,8 % aproximado

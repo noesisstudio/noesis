@@ -7,6 +7,30 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — conserva el interior original del símbolo en el avatar
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir la interpretación del contorno social: mantener exactamente
+  el interior del símbolo oficial y aplicar el trazo oscuro únicamente al perímetro
+  de la estrella exterior.
+- **Áreas y archivos:** revisión 1.2.1 del generador, manifiesto y avatares de
+  `branding/`; copias listas para subir, guía Word y documentación viva. Portadas,
+  símbolo maestro, lockups e iconos de aplicación siguen sin cambios.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** regeneración determinista de 49 PNG; comparación de colores
+  y geometría con `noesis-mark-master.svg`; verificación de que solo el polígono
+  exterior contiene `stroke`; revisión visual a 1080 y 400 px; copias idénticas por
+  SHA-256; guía de ocho páginas renderizada y revisada; `npm audit`, verdad del
+  proyecto y `git diff --check`.
+- **Dependencias o validaciones externas:** queda pendiente el recorte real al subir
+  la imagen a cada plataforma.
+- **Riesgo/punto probable de fallo:** volver a introducir trazos en el polígono
+  interior o en los círculos alteraría el símbolo. La prueba estructural lo impide.
+- **Diagnóstico y rollback:** el manifiesto 1.2.1 identifica los nuevos hashes y
+  `npm run build` los reproduce. Revertir el commit devuelve la interpretación con
+  líneas interiores sin tocar el logo maestro.
+- **Estado de publicación:** activos corregidos en repositorio; perfiles aún no creados.
+
 ## 2026-08-31 — simplifica y amplía el avatar social
 
 - **Autor/agente:** Codex.

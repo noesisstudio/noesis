@@ -18,8 +18,9 @@
   paquete operativo: imagen de perfil, portada cuando existe, descripción y lista de
   comprobación para Instagram, Facebook y LinkedIn; también deja YouTube y TikTok
   preparados solo para reservar el usuario sin dispersar el lanzamiento. El avatar
-  social 1.2 prescinde de la placa blanca: estrella teal ampliada sobre el mismo fondo
-  teal y contorno tinta, sin alterar el símbolo maestro ni los iconos de la aplicación.
+  social 1.2.1 prescinde de la placa blanca: estrella ampliada sobre fondo teal,
+  interior original teal/bosque/crema y contorno tinta únicamente en la silueta
+  exterior, sin alterar el símbolo maestro ni los iconos de la aplicación.
 
 - El candidato del esquema 52 prepara una entrada documental por correo sin comprar
   buzones ni gastar uno de los alias de Hostinger por cliente. Un único catch-all
