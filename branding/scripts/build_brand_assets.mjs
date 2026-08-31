@@ -133,9 +133,9 @@ function socialAvatar(size = 1080) {
     <circle cx="32" cy="32" r="3.4" fill="${C.cream}"/>
   </g>`;
   return svgDoc(size, size, `
-    <rect width="${size}" height="${size}" fill="${C.teal}"/>
+    <rect width="${size}" height="${size}" fill="${C.forest}"/>
     <g transform="translate(${iconStart} ${iconStart}) scale(${icon / 64})">${outlinedMark}</g>
-  `, "Avatar social de Noesis: estrella verde con contorno oscuro");
+  `, "Avatar social de Noesis: estrella original sobre verde bosque y contorno exterior oscuro");
 }
 
 function coverSvg(width, height, platform) {
@@ -300,7 +300,7 @@ async function main() {
   assets.sort((a, b) => a.path.localeCompare(b.path));
   fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({
     brand: "Noesis",
-    version: "1.2.1",
+    version: "1.2.2",
     generated_at: "2026-08-31",
     source_mark: "sources/noesis-mark-master.svg",
     assets,

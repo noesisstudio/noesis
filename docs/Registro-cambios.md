@@ -7,6 +7,27 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — fondo verde bosque para los avatares sociales
+
+- **Autor/agente:** Codex.
+- **Objetivo:** sustituir el fondo teal suave del avatar por el verde bosque fuerte
+  de Noesis, manteniendo sin cambios la estrella original y su contorno exterior.
+- **Áreas y archivos:** revisión 1.2.2 del generador, manifiesto y avatares de
+  `branding/`; copias listas para subir, guía Word y documentación viva. Portadas,
+  símbolo maestro, lockups e iconos de aplicación siguen sin cambios.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** regeneración determinista de 49 PNG; comprobación exacta
+  del fondo `#14463b`; revisión visual a 1080 y 400 px; copias idénticas por SHA-256;
+  guía de ocho páginas renderizada y revisada; `npm audit`, verdad del proyecto y
+  `git diff --check`.
+- **Dependencias o validaciones externas:** queda pendiente el recorte real al subir
+  la imagen a cada plataforma.
+- **Riesgo/punto probable de fallo:** confundir el fondo oscuro con un cambio del
+  símbolo. La prueba limita el cambio al rectángulo de fondo del avatar.
+- **Diagnóstico y rollback:** el manifiesto 1.2.2 identifica los nuevos hashes y
+  `npm run build` los reproduce. Revertir el commit devuelve el fondo teal anterior.
+- **Estado de publicación:** activos corregidos en repositorio; perfiles aún no creados.
+
 ## 2026-08-31 — conserva el interior original del símbolo en el avatar
 
 - **Autor/agente:** Codex.

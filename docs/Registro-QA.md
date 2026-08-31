@@ -1,5 +1,18 @@
 # Registro de QA
 
+## 2026-08-31 — avatar social sobre verde bosque
+
+- **Alcance:** solo cambia el fondo de los avatares sociales de teal `#2e8b74` a
+  verde bosque `#14463b`; símbolo, geometría, contorno exclusivamente exterior,
+  portadas, logo maestro e iconos de aplicación permanecen intactos.
+- **Integridad:** manifiesto 1.2.2 con 49/49 PNG válidos; las cinco copias operativas
+  coinciden por SHA-256 con sus exportaciones de Instagram, Facebook, LinkedIn y
+  YouTube.
+- **Revisión visual:** comprobadas las exportaciones 1080 × 1080 y 400 × 400 y las
+  ocho páginas de la guía Word. El fondo es inequívocamente verde bosque y la estrella
+  conserva el interior oficial sin trazos internos.
+- **Límite:** la máscara de cada red se comprueba finalmente al crear los perfiles.
+
 ## 2026-08-31 — contorno exclusivamente exterior
 
 - **Referencia:** el interior coincide con `sources/noesis-mark-master.svg`: polígono

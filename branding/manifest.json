@@ -1,6 +1,6 @@
 {
   "brand": "Noesis",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "generated_at": "2026-08-31",
   "source_mark": "sources/noesis-mark-master.svg",
   "assets": [
@@ -306,7 +306,7 @@
       "height": 1080,
       "alpha": true,
       "purpose": "Avatar Facebook preparado para recorte circular",
-      "sha256": "d2429c951512c385115a133de5f15e91d41038d218bf610ee61bfea7da91cd04"
+      "sha256": "8fd6ce08bbebe84cb634349ea00e177485d2764232968546d799d433ba0f0777"
     },
     {
       "path": "social/instagram-profile-1080.png",
@@ -314,7 +314,7 @@
       "height": 1080,
       "alpha": true,
       "purpose": "Avatar Instagram preparado para recorte circular",
-      "sha256": "d2429c951512c385115a133de5f15e91d41038d218bf610ee61bfea7da91cd04"
+      "sha256": "8fd6ce08bbebe84cb634349ea00e177485d2764232968546d799d433ba0f0777"
     },
     {
       "path": "social/linkedin-cover-4200x700.png",
@@ -330,7 +330,7 @@
       "height": 400,
       "alpha": true,
       "purpose": "Logo de página LinkedIn",
-      "sha256": "535d51f66bbab2c6a98d1c4963255ad1e7d13c93db3744cfdbca69bfafe2546e"
+      "sha256": "6e7a8c2c8cc594d1ed00bfeba60dd70f4f0277efe628ef374d6ecc25fb12e4b9"
     },
     {
       "path": "social/open-graph-1200x630.png",
@@ -346,7 +346,7 @@
       "height": 800,
       "alpha": true,
       "purpose": "Avatar YouTube",
-      "sha256": "a3c0c1803e7c77bb52ae81b97cb6a8cc4616d6d6039bdc4aa02ba6ebff529951"
+      "sha256": "31d0f71c52353e803bc3116373dadf239d2ad2b44c26ecd0570539d4ce00753e"
     },
     {
       "path": "templates/png/noesis-portrait-cream.png",

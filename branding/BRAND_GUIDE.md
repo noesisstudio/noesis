@@ -1,6 +1,6 @@
 # Noesis — guía esencial de marca
 
-Versión 1.2.1 · 31 de agosto de 2026
+Versión 1.2.2 · 31 de agosto de 2026
 
 ## 1. Idea de marca
 
@@ -119,7 +119,7 @@ Incorrecto: «Revoluciona tu gestión empresarial mediante agentes de IA».
 ## 8. Uso en redes
 
 - El avatar oficial es `social/*-profile-*`, no el SVG transparente sin fondo.
-- El avatar social elimina cualquier placa blanca: usa fondo teal, conserva intactos
+- El avatar social elimina cualquier placa blanca: usa fondo verde bosque, conserva intactos
   los colores interiores del símbolo y añade contorno tinta solo a su silueta exterior.
 - Las portadas mantienen texto y logo en la zona central segura.
 - Las plantillas son fondos de trabajo: añadir una sola idea por pieza, respetar
