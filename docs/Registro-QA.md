@@ -1,5 +1,21 @@
 # Registro de QA
 
+## 2026-08-31 — avatar social sin placa blanca
+
+- **Geometría:** estrella centrada al 64 % del lienzo, frente al 29,8 % aproximado
+  del avatar anterior; fondo y relleno teal `#2e8b74`, contorno tinta `#15211c` y
+  punto crema central. El contenido queda dentro de la zona segura circular.
+- **Alcance:** cambian Instagram, Facebook, LinkedIn y YouTube, además de las copias
+  listas para subir y la reserva de TikTok. No cambian portadas, SVG maestro,
+  lockups ni iconos PWA/app.
+- **Integridad:** el generador conserva 49 PNG, manifiesto 1.2, tamaños y alfa; cada
+  copia de `redes-sociales/` coincide por SHA-256 con su activo de origen.
+- **Revisión visual:** avatar de 1080 × 1080 y versión de 400 × 400 revisados sin
+  recortes, placa residual, deformación ni pérdida del contorno en tamaño menor. La
+  guía Word actualizada conserva ocho páginas limpias tras el render completo.
+- **Límite:** el recorte final dentro de Instagram, Facebook y LinkedIn se comprueba
+  al subirlo; la revisión local valida el archivo, no la interfaz futura de la red.
+
 ## 2026-08-31 — perfiles sociales listos para configurar
 
 - **Alcance:** Instagram, Facebook y LinkedIn tienen carpeta propia con imagen de

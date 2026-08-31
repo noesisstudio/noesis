@@ -7,6 +7,31 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — simplifica y amplía el avatar social
+
+- **Autor/agente:** Codex.
+- **Objetivo:** aplicar la revisión del fundador al identificador de los perfiles:
+  eliminar el recuadro blanco, aumentar la estrella y sostener su lectura con un
+  contorno oscuro sobre un fondo del mismo verde.
+- **Áreas y archivos:** generador y manifiesto 1.2 de `branding/`; cuatro avatares
+  sociales; cinco copias operativas de `branding/redes-sociales/`; guía de marca,
+  guía Word y documentación viva. El símbolo maestro, las portadas y los iconos de
+  la aplicación permanecen intactos.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** 49 PNG regenerados; dimensiones, hashes y alfa contrastados;
+  avatar 1080 × 1080 y logo 400 × 400 revisados visualmente; copias operativas
+  idénticas; DOCX renderizado en ocho páginas y revisado; `npm audit`, verdad del
+  proyecto y `git diff --check`.
+- **Dependencias o validaciones externas:** sigue pendiente observar el recorte real
+  en cada plataforma una vez se creen los perfiles.
+- **Riesgo/punto probable de fallo:** un contorno demasiado fino desaparecería en
+  miniatura y uno excesivo deformaría el símbolo. La exportación usa tinta Noesis y
+  conserva un margen amplio para la máscara circular.
+- **Diagnóstico y rollback:** `manifest.json` registra la versión 1.2 y los hashes;
+  `npm run build` reproduce los activos. Revertir el commit devuelve el avatar con
+  placa crema sin tocar el resto del sistema visual.
+- **Estado de publicación:** archivos listos en el repositorio; subida a redes pendiente.
+
 ## 2026-08-31 — prepara los perfiles oficiales para publicar
 
 - **Autor/agente:** Codex.

@@ -112,7 +112,9 @@
 - `branding/sources/`: símbolo maestro y lockups SVG con la Fraunces ya autoalojada
   por Noesis; son los originales para impresión, edición o exportación futura.
 - `branding/logos/png/` y `branding/social/`: exportaciones transparentes, con fondo,
-  avatares y portadas listas para cada superficie.
+  avatares y portadas listas para cada superficie. El avatar de redes es una adaptación
+  específica —estrella ampliada con contorno sobre teal— y no reemplaza el símbolo
+  maestro ni el icono de la app.
 - `branding/templates/`: fondos SVG editables y PNG para cuadrado, vertical de feed
   y story/reel, en crema y verde bosque.
 - `branding/redes-sociales/`: paquete operativo por canal con los PNG que se deben

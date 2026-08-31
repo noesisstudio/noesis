@@ -22,6 +22,10 @@ disponible, no improvisar otro nombre sin comprobar antes las tres plataformas.
 - `reservas/`: canales que conviene reservar, pero no trabajar todavía.
 - `Guia-perfiles-sociales-Noesis.docx`: manual conjunto, visual y listo para Word.
 
+El avatar común muestra la estrella ampliada directamente sobre el fondo verde, sin
+recuadro blanco y con contorno oscuro. No sustituye el símbolo maestro transparente:
+es una adaptación específica para que los perfiles se reconozcan a tamaños pequeños.
+
 ## Regla de marca
 
 Promesa: **Noesis lleva la oficina mientras tú haces el trabajo**.

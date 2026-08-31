@@ -123,6 +123,21 @@ function socialProfile(size = 1080) {
   `, "Avatar social de Noesis");
 }
 
+function socialAvatar(size = 1080) {
+  const icon = Math.round(size * 0.64);
+  const iconStart = Math.round((size - icon) / 2);
+  const outlinedMark = `<g>
+    <polygon points="32,3 38,26 61,32 38,38 32,61 26,38 3,32 26,26" fill="${C.teal}" stroke="${C.ink}" stroke-width="2.1" stroke-linejoin="round"/>
+    <polygon points="32,13 36,28 51,32 36,36 32,51 28,36 13,32 28,28" fill="${C.teal}" stroke="${C.ink}" stroke-width="1.55" stroke-linejoin="round"/>
+    <circle cx="32" cy="32" r="6.5" fill="${C.teal}" stroke="${C.ink}" stroke-width="1.55"/>
+    <circle cx="32" cy="32" r="3.4" fill="${C.cream}" stroke="${C.ink}" stroke-width="1.1"/>
+  </g>`;
+  return svgDoc(size, size, `
+    <rect width="${size}" height="${size}" fill="${C.teal}"/>
+    <g transform="translate(${iconStart} ${iconStart}) scale(${icon / 64})">${outlinedMark}</g>
+  `, "Avatar social de Noesis: estrella verde con contorno oscuro");
+}
+
 function coverSvg(width, height, platform) {
   const compact = height < 800;
   const markSize = Math.round(height * (compact ? 0.32 : 0.22));
@@ -252,7 +267,7 @@ async function main() {
   await render("logos/png/background/noesis-logo-on-white-1600x600.png", logoPlate(1600, 600, "#FFFFFF"), 1600, 600, "Logo centrado sobre blanco");
   await render("logos/png/background/noesis-logo-on-forest-1600x600.png", logoPlate(1600, 600, C.forest, true), 1600, 600, "Logo inverso centrado sobre verde bosque");
 
-  const profile = socialProfile();
+  const profile = socialAvatar();
   await render("social/instagram-profile-1080.png", profile, 1080, 1080, "Avatar Instagram preparado para recorte circular");
   await render("social/facebook-profile-1080.png", profile, 1080, 1080, "Avatar Facebook preparado para recorte circular");
   await render("social/linkedin-logo-400.png", profile, 400, 400, "Logo de página LinkedIn");
@@ -285,7 +300,7 @@ async function main() {
   assets.sort((a, b) => a.path.localeCompare(b.path));
   fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({
     brand: "Noesis",
-    version: "1.1.0",
+    version: "1.2.0",
     generated_at: "2026-08-31",
     source_mark: "sources/noesis-mark-master.svg",
     assets,
