@@ -10,6 +10,8 @@ usa la vista de grafo para navegar.
   riesgos y pista para diagnosticar o revertir una regresión.
 - [[Plan-maestro-Noesis]] — visión, principios, arquitectura objetivo y criterios.
 - [[Producto]] — qué es Noesis, para quién y la propuesta de valor.
+- [[Propuesta-sistema-retencion-habito-valor]] — propuesta para socios que integra
+  Habit, Trust, Value, WUB y las fases posteriores de Insight, Progress y Confidence.
 - [[Competencia]] — Forjia y el resto del mercado.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.

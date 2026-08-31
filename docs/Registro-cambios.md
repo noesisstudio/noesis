@@ -7,6 +7,32 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — propuesta integral de hábito, confianza, valor y retención
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir las dos propuestas de retención y el acuerdo sobre WUB en
+  un documento único, revisable por los socios y suficientemente preciso para
+  separar decisiones de producto, instrumentación, experiencia y fases futuras.
+- **Áreas y archivos:** `docs/Propuesta-sistema-retencion-habito-valor.md` y enlace
+  desde `docs/Inicio.md`. Integra Registro Interno de Valor, Habit Engine, Trust
+  Engine, Value Engine, WUB, Insight Engine, Progress Engine, Confidence aplazado,
+  matriz de acciones, métricas, plan por fases, pruebas y puertas del piloto.
+- **Cambios de datos/migración:** ninguno. Es una propuesta de dirección; no cambia
+  producto, runtime, esquema, permisos ni automatizaciones.
+- **Pruebas ejecutadas:** revisión estructural y de enlaces relativos;
+  `git diff --check`; comprobación de verdad documental del proyecto.
+- **Dependencias o validaciones externas:** los umbrales WUB, tiempos recuperados,
+  atribución económica y relación con retención deben validarse con 3-5 negocios
+  reales antes de convertirse en objetivos o mensajes comerciales.
+- **Riesgo/punto probable de fallo:** interpretar la propuesta como funcionalidad ya
+  publicada o intentar construir simultáneamente los cinco motores. El documento
+  marca como primera secuencia Registro de Valor, Habit, Trust, Value y piloto.
+- **Diagnóstico y rollback:** el encabezado identifica expresamente el estado de
+  propuesta. Revertir este cambio retira solo documentación y no afecta datos ni
+  producción.
+- **Estado de publicación:** documento preparado para revisión y aprobación de
+  socios; implementación todavía no autorizada.
+
 ## 2026-08-31 — convierte la estrategia de contenido en un manual de producción
 
 - **Autor/agente:** Codex.
