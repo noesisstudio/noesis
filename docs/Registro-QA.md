@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-08-31 — perfiles sociales listos para configurar
+
+- **Alcance:** Instagram, Facebook y LinkedIn tienen carpeta propia con imagen de
+  perfil, portada donde la plataforma la utiliza, descripción exacta y controles de
+  publicación. YouTube y TikTok quedan únicamente como reserva de marca.
+- **Integridad:** las copias PNG coinciden por SHA-256 con los activos deterministas
+  del kit principal; se verifican tamaños 1080 × 1080, 1640 × 856, 400 × 400,
+  4200 × 700 y 800 × 800 según su destino.
+- **Documento:** la guía Word se abre como OOXML válido, contiene ocho páginas tras
+  renderizado y todas fueron revisadas: no hay solapes, cortes, desbordamientos,
+  imágenes deformadas ni páginas accidentales en blanco.
+- **Contenido:** los textos usan Noesis como marca y `@bynoesis` como usuario; el eje
+  es tiempo, orden y control. No reaparece el posicionamiento centrado únicamente en
+  cobros ni quedan marcadores por rellenar.
+- **Límite:** no se afirma que los perfiles estén creados ni que el usuario esté
+  disponible. El recorte final, botón, URL, doble factor y segundo administrador se
+  validan dentro de cada plataforma por los fundadores.
+
 ## 2026-08-31 — corrección del posicionamiento de marca
 
 - **Fuente de verdad usada:** `Plan-maestro-Noesis.md` fija «Noesis lleva la oficina

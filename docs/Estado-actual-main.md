@@ -14,7 +14,10 @@
   `@bynoesis` son dominio/usuario, no una segunda marca. Su territorio verbal es
   tiempo, orden, calma y control: «Haz tu trabajo; Noesis te ordena el negocio».
   Facturación, cobros y margen son pruebas del valor, no el posicionamiento completo.
-  La aplicación no cambia.
+  La aplicación no cambia. `branding/redes-sociales/` convierte esa identidad en un
+  paquete operativo: imagen de perfil, portada cuando existe, descripción y lista de
+  comprobación para Instagram, Facebook y LinkedIn; también deja YouTube y TikTok
+  preparados solo para reservar el usuario sin dispersar el lanzamiento.
 
 - El candidato del esquema 52 prepara una entrada documental por correo sin comprar
   buzones ni gastar uno de los alias de Hostinger por cliente. Un único catch-all

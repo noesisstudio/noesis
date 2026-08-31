@@ -1,0 +1,62 @@
+NOESIS - CONFIGURACION DE LA PAGINA DE LINKEDIN
+Actualizado: 31 de agosto de 2026
+
+ARCHIVOS QUE DEBES SUBIR
+Logotipo de página: SUBIR-logo-linkedin-400.png
+Imagen de portada: SUBIR-portada-linkedin-4200x700.png
+
+IDENTIDAD
+Nombre de la página: Noesis
+URL pública preferente: linkedin.com/company/bynoesis
+Sitio web: https://bynoesis.com
+Sector sugerido: Desarrollo de software
+Tamaño: 2-10 empleados, solo si refleja el equipo real.
+Tipo: Empresa privada, solo si refleja la forma jurídica real.
+Ubicación: España. Añadir la ciudad real de la empresa al crear la página.
+
+LEMA DE LINKEDIN - COPIAR Y PEGAR
+Noesis lleva la oficina mientras tú haces el trabajo.
+
+DESCRIPCION DE EMPRESA - COPIAR Y PEGAR
+Noesis es el copiloto operativo para autónomos y pequeños negocios de servicios.
+Conecta agenda, clientes, trabajos, proyectos, facturas, documentos, costes y
+gestoría para quitar ruido mental y devolver tiempo y control.
+
+No es otro programa de facturación ni un chatbot genérico. Noesis entiende qué está
+pasando en el negocio, prepara el trabajo administrativo, explica lo importante y
+propone la siguiente acción. El profesional conserva el control y confirma las
+decisiones sensibles.
+
+Nacemos para ayudar a fontaneros, electricistas, instaladores, reformas,
+climatización, limpieza, mantenimiento, jardinería y otros profesionales que tienen
+más trabajo que tiempo para gestionar la oficina.
+
+Haz tu trabajo; Noesis te ordena el negocio.
+
+ESPECIALIDADES
+Gestión para autónomos
+Software para empresas de servicios
+Organización del negocio
+Agenda y clientes
+Facturación y documentos
+Proyectos, costes y márgenes
+Automatización con control humano
+Experiencia web y WhatsApp
+
+BOTON RECOMENDADO
+Visitar sitio web -> https://bynoesis.com
+
+CONTENIDO DEL CANAL
+LinkedIn debe aportar credibilidad: por qué se creó Noesis, aprendizajes reales,
+decisiones de producto, seguridad, colaboración con gestorías, avances del piloto y
+casos medibles con permiso. Hablar como fundadores, no como una marca corporativa
+impersonal.
+
+COMPROBACION ANTES DE PUBLICAR
+- Página de empresa con URL, sector, descripción, logotipo y portada completos.
+- Dos superadministradores como mínimo.
+- Autenticación en dos pasos en las cuentas administradoras.
+- Los dos fundadores vinculan su experiencia profesional a Noesis.
+- Revisar recorte de portada en ordenador y móvil.
+- Verificar que el botón abre bynoesis.com.
+

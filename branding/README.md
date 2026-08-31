@@ -16,6 +16,9 @@ en cada plataforma.
 - Símbolo transparente: `logos/png/mark/noesis-mark-primary-512.png`.
 - Presentaciones o documentos: originales de `sources/`.
 - Plantillas de contenido: `templates/png/` y sus SVG editables equivalentes.
+- Perfiles sociales listos para publicar: `redes-sociales/` reúne los archivos de
+  Instagram, Facebook y LinkedIn, los textos exactos de configuración, la guía en
+  Word y la recomendación de reserva para YouTube y TikTok.
 
 ## Principio
 

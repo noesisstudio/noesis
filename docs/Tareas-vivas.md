@@ -162,10 +162,11 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   fondos, tamaños sociales, portadas, paleta, tipografía, plantillas, reglas de uso,
   licencias, manifiesto y revisión visual. Vive en `branding/` y no altera el runtime.
 - [ ] Crear o reclamar `@bynoesis` en LinkedIn, Instagram y Facebook con doble factor
-  y al menos dos administradores; subir los activos de `branding/social/`, comprobar
-  el recorte real en escritorio/móvil y, cuando las URL sean definitivas, añadirlas
-  como `sameAs` al `Organization` de la portada. Reservar YouTube/TikTok sin abrir un
-  calendario adicional hasta sostener el canal principal.
+  y al menos dos administradores; seguir los textos y listas de
+  `branding/redes-sociales/`, subir los activos preparados, comprobar el recorte real
+  en escritorio/móvil y, cuando las URL sean definitivas, añadirlas como `sameAs` al
+  `Organization` de la portada. Reservar YouTube/TikTok sin abrir un calendario
+  adicional hasta sostener el canal principal.
 
 - [ ] SEO operativo: publicado y verificado el candidato del 13-ago, volver a inspeccionar
   `/autonomos`, `/gestorias` y `/precios` en Search Console, solicitar indexación y

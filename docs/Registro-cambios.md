@@ -7,6 +7,32 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — prepara los perfiles oficiales para publicar
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir el sistema de marca existente en una entrega operativa para
+  crear Instagram, Facebook y LinkedIn sin improvisar imágenes, descripciones,
+  botones, propiedad ni seguridad de las cuentas.
+- **Áreas y archivos:** nuevo `branding/redes-sociales/` con carpetas por plataforma,
+  PNG listos para subir, textos UTF-8, guía Word de ocho páginas, fuentes oficiales y
+  reserva acotada de YouTube/TikTok; índice de branding y documentación viva.
+- **Cambios de datos/migración:** ninguno. No cambia aplicación, runtime ni base de datos.
+- **Pruebas ejecutadas:** dimensiones y hashes de los PNG contrastados con los activos
+  maestros; DOCX abierto estructuralmente, renderizado a PDF y revisado página por
+  página; textos sin marcadores, verdad del proyecto y `git diff --check`.
+- **Dependencias o validaciones externas:** crear las cuentas, confirmar que
+  `@bynoesis` está disponible y observar el recorte real requiere acceso de los
+  fundadores a cada plataforma. Las especificaciones de LinkedIn y los controles de
+  Facebook se contrastaron con sus ayudas oficiales.
+- **Riesgo/punto probable de fallo:** una red puede modificar campos o recortes. El
+  paquete mantiene el contenido esencial centrado y obliga a probar móvil y escritorio
+  antes de publicar.
+- **Diagnóstico y rollback:** cada carpeta contiene el nombre exacto del archivo que
+  se debe subir y una lista de comprobación. Revertir el commit elimina solo el paquete
+  operativo; no afecta al branding maestro ni al producto.
+- **Estado de publicación:** materiales locales listos; perfiles pendientes de alta y
+  validación real por los fundadores.
+
 ## 2026-08-31 — alinea la marca con tiempo, orden y control
 
 - **Autor/agente:** Codex.

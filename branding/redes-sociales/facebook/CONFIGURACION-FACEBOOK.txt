@@ -1,0 +1,52 @@
+NOESIS - CONFIGURACION DE LA PAGINA DE FACEBOOK
+Actualizado: 31 de agosto de 2026
+
+ARCHIVOS QUE DEBES SUBIR
+Foto de perfil: SUBIR-imagen-perfil-facebook-1080.png
+Imagen de portada: SUBIR-portada-facebook-1640x856.png
+
+IDENTIDAD
+Nombre de la página: Noesis
+Usuario preferente: @bynoesis
+Categoría principal: Empresa de software
+Categoría secundaria: Servicio empresarial
+Sitio web: https://bynoesis.com
+Correo público: info@bynoesis.com
+Ubicación: España. Añadir domicilio solo si es una dirección empresarial pública.
+
+PRESENTACION CORTA - COPIAR Y PEGAR
+Noesis lleva la oficina mientras tú haces el trabajo: agenda, clientes, facturas,
+documentos y control del negocio para autónomos de servicios.
+
+DESCRIPCION COMPLETA - COPIAR Y PEGAR
+Noesis es la mano derecha del autónomo de servicios. Ayuda a mantener la agenda,
+los clientes, los trabajos, las facturas, los documentos, los costes y las tareas
+del negocio en orden, sin obligarte a aprender un ERP ni pasar el domingo haciendo
+papeleo.
+
+Noesis entiende qué está pasando, prepara lo administrativo y te enseña qué toca
+hacer. Tú mantienes el control y confirmas las acciones importantes.
+
+Está pensado para autónomos y pequeños negocios de fontanería, electricidad,
+reformas, climatización, limpieza, mantenimiento, jardinería y otros servicios.
+
+Más información y acceso: https://bynoesis.com
+
+BOTON DE ACCION
+Mientras el acceso sea controlado: Más información -> https://bynoesis.com
+Cuando el alta pública esté abierta: Registrarte -> URL real de alta.
+
+TONO Y USO
+Facebook sirve para confianza, comunidad y distribución. Reutilizar contenido de
+Instagram cuando sea útil, participar con criterio en grupos de autónomos y gremios,
+y publicar casos reales solo con autorización. No automatizar respuestas que parezcan
+soporte humano si no existe ese servicio.
+
+COMPROBACION ANTES DE PUBLICAR
+- Página de empresa, no perfil personal.
+- Autenticación en dos pasos para los administradores.
+- Al menos dos administradores con cuentas distintas.
+- Avatar y nombre coherentes con Instagram y LinkedIn.
+- Revisar la portada en ordenador y móvil antes de anunciarla.
+- Activar el botón de acción y comprobar que abre bynoesis.com.
+

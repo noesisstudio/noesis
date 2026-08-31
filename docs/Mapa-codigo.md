@@ -115,6 +115,9 @@
   avatares y portadas listas para cada superficie.
 - `branding/templates/`: fondos SVG editables y PNG para cuadrado, vertical de feed
   y story/reel, en crema y verde bosque.
+- `branding/redes-sociales/`: paquete operativo por canal con los PNG que se deben
+  subir, textos listos para copiar, controles de seguridad, guía Word renderizada y
+  archivos de reserva para YouTube/TikTok. No se carga en el runtime de la aplicación.
 - `branding/scripts/build_brand_assets.mjs`: generador determinista con Sharp; crea
   exportaciones y `manifest.json` con dimensiones, uso y SHA-256. Su dependencia
   queda aislada en `branding/package.json` y no entra en el runtime de Noesis.
