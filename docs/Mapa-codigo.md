@@ -120,6 +120,10 @@
 - `branding/redes-sociales/`: paquete operativo por canal con los PNG que se deben
   subir, textos listos para copiar, controles de seguridad, guía Word renderizada y
   archivos de reserva para YouTube/TikTok. No se carga en el runtime de la aplicación.
+- `branding/contenido/Plan-editorial-y-guiones-Noesis.docx`: manual operativo de
+  contenido con 24 fichas, campañas, calendario, producción, medición y límites.
+- `branding/contenido/scripts/build_content_playbook.py`: fuente reproducible del
+  manual editorial; usa la identidad existente y no forma parte del runtime.
 - `branding/scripts/build_brand_assets.mjs`: generador determinista con Sharp; crea
   exportaciones y `manifest.json` con dimensiones, uso y SHA-256. Su dependencia
   queda aislada en `branding/package.json` y no entra en el runtime de Noesis.

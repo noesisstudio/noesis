@@ -22,6 +22,14 @@
   interior original teal/bosque/crema y contorno tinta únicamente en la silueta
   exterior, sin alterar el símbolo maestro ni los iconos de la aplicación.
 
+  `branding/contenido/` añade un manual editorial reproducible de 38 páginas para
+  Instagram, Facebook, LinkedIn y campañas. Convierte el posicionamiento en 24
+  fichas listas para producir —formato, público, objetivo, gancho, guion, rodaje,
+  copy, CTA, métrica y guardarraíl—, cinco campañas, un calendario mensual y un
+  sistema de producción y aprendizaje. Las demos, cifras, testimonios e
+  integraciones no validadas quedan explícitamente limitadas para no confundir
+  producto construido con evidencia comercial.
+
 - El candidato del esquema 52 prepara una entrada documental por correo sin comprar
   buzones ni gastar uno de los alias de Hostinger por cliente. Un único catch-all
   entrega a direcciones privadas distintas por negocio; Noesis falla cerrado si no

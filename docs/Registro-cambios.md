@@ -7,6 +7,30 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — convierte la estrategia de contenido en un manual de producción
+
+- **Autor/agente:** Codex.
+- **Objetivo:** entregar un sistema editorial ejecutable para que el equipo pueda
+  producir contenido que primero identifique y ayude al autónomo, después demuestre
+  el producto y solo entonces pida una prueba.
+- **Áreas y archivos:** `branding/contenido/Plan-editorial-y-guiones-Noesis.docx`,
+  su generador reproducible en `branding/contenido/scripts/` y documentación viva.
+  El manual reúne 24 fichas de contenido, cinco campañas, un mes editorial, método
+  de producción, métricas, checklist y límites de comunicación.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** generación reproducible; DOCX válido; 38 páginas
+  renderizadas y revisadas; auditoría de títulos, secciones, imagen y accesibilidad;
+  logotipo con texto alternativo; `git diff --check` y verdad del proyecto.
+- **Dependencias o validaciones externas:** la cadencia, los ganchos y las campañas
+  deben aprender de publicación real; casos, testimonios y cifras requieren permiso
+  y evidencia antes de publicarse.
+- **Riesgo/punto probable de fallo:** tratar el calendario como una parrilla rígida
+  o presentar como real una demo, una integración o un resultado aún no validado.
+- **Diagnóstico y rollback:** cada ficha incluye métrica y guardarraíl; el generador
+  reconstruye el documento. Revertir este commit retira solo material editorial.
+- **Estado de publicación:** manual listo para seleccionar el primer bloque de rodaje;
+  todavía no implica que se hayan publicado o validado las piezas.
+
 ## 2026-08-31 — fondo verde bosque para los avatares sociales
 
 - **Autor/agente:** Codex.

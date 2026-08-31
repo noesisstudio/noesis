@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-08-31 — manual editorial y guiones de contenido
+
+- **Cobertura:** 38 páginas con estrategia, audiencia, canales, mapa de 24 piezas,
+  guion orientativo, rodaje, texto en pantalla, copy, CTA, métrica y límite para
+  cada contenido; añade cinco campañas, calendario mensual, producción y medición.
+- **Integridad:** DOCX abre como paquete OOXML válido, con 549 párrafos, 124 tablas,
+  una imagen y una sección; el generador conserva una fuente reproducible junto al
+  entregable.
+- **Revisión visual:** las 38 páginas se renderizaron a PNG y se revisaron sin texto
+  cortado, desbordamiento, títulos truncados ni saltos accidentales. Las páginas de
+  continuación de mapa, campañas y calendario son intencionadas.
+- **Accesibilidad:** cero incidencias altas tras añadir título y descripción al
+  logotipo; 39 tablas de datos repiten encabezado. Las 85 advertencias medias son
+  fichas de dos columnas y bloques visuales sin fila de encabezado semántica.
+- **Verdad comercial:** demos, WhatsApp/Meta, pilotos, testimonios y cifras quedan
+  rotulados o bloqueados hasta disponer de validación y permiso. El manual no promete
+  automatización fiscal ni resultados comerciales no medidos.
+
 ## 2026-08-31 — avatar social sobre verde bosque
 
 - **Alcance:** solo cambia el fondo de los avatares sociales de teal `#2e8b74` a
