@@ -11,7 +11,10 @@
   inversa y monocroma; 49 PNG transparentes y con fondo; avatares/portadas para
   redes, plantillas editables, paleta JSON/CSS, guía de uso, licencias y manifiesto
   verificable. El nombre público queda unificado como **Noesis**; `bynoesis.com` y
-  `@bynoesis` son dominio/usuario, no una segunda marca. La aplicación no cambia.
+  `@bynoesis` son dominio/usuario, no una segunda marca. Su territorio verbal es
+  tiempo, orden, calma y control: «Haz tu trabajo; Noesis te ordena el negocio».
+  Facturación, cobros y margen son pruebas del valor, no el posicionamiento completo.
+  La aplicación no cambia.
 
 - El candidato del esquema 52 prepara una entrada documental por correo sin comprar
   buzones ni gastar uno de los alias de Hostinger por cliente. Un único catch-all

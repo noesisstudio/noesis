@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-08-31 — corrección del posicionamiento de marca
+
+- **Fuente de verdad usada:** `Plan-maestro-Noesis.md` fija «Noesis lleva la oficina
+  mientras tú haces el trabajo» y `design/PRODUCT_PRINCIPLES.md` fija «Haz tu
+  trabajo; Noesis te ordena el negocio». Cobros, facturación y margen quedan como
+  pruebas concretas, no como territorio único de marca.
+- **Exportaciones:** portada LinkedIn 4200 × 700, Facebook 1640 × 856, Open Graph
+  1200 × 630 y tablero 1800 × 1200 regenerados con el nuevo eje de tiempo, menos
+  papeleo y control. La geometría y los colores del logo no cambian.
+- **Integridad:** 49/49 PNG se abren, coinciden con ancho, alto, alfa y SHA-256 del
+  manifiesto; 14/14 SVG parsean; dos ejecuciones producen el mismo manifiesto.
+- **Revisión visual:** tablero y portada de LinkedIn no presentan recortes,
+  deformación, solapes ni pérdida de legibilidad. El PDF de estrategia conserva 13
+  páginas limpias tras sustituir la tesis y la jerarquía de mensajes.
+- **Dependencias:** `sharp` 0.35.4 en el paquete aislado de construcción; `npm audit`
+  informa cero vulnerabilidades. No se añade ninguna dependencia al producto.
+- **Límite:** el lenguaje maestro está alineado; ejemplos, campañas y contenido
+  futuro deberán aportar evidencia real de tiempo, tareas, facturas, documentos,
+  margen o dinero sin confundir una prueba con toda la promesa.
+
 ## 2026-08-31 — paquete de marca y exportaciones sociales
 
 - **Alcance:** se conserva la geometría de `noesis-mark.svg` y se formalizan símbolo,

@@ -1,14 +1,29 @@
 # Noesis — guía esencial de marca
 
-Versión 1.0 · 31 de agosto de 2026
+Versión 1.1 · 31 de agosto de 2026
 
 ## 1. Idea de marca
 
-Noesis es la mano derecha del autónomo de servicios. La marca transmite calma,
-control y capacidad: **haz tu trabajo; Noesis te ordena el negocio**.
+Noesis es la mano derecha del autónomo de servicios. Su promesa estratégica es:
+**Noesis lleva la oficina mientras tú haces el trabajo**. La expresión pública y
+memorable de esa promesa es: **Haz tu trabajo; Noesis te ordena el negocio**.
 
-La tecnología no ocupa el centro del discurso. El resultado sí: del trabajo
-terminado al dinero cobrado, sin convertir al profesional en administrativo.
+La tecnología no ocupa el centro del discurso. Noesis devuelve tiempo, reduce el
+papeleo y permite entender qué pasa y qué toca hacer sin perder el control. Facturar
+antes, cobrar mejor o conocer el margen son pruebas concretas de ese valor, pero no
+son por sí solas la identidad de la marca.
+
+### Jerarquía del mensaje
+
+1. **Territorio de marca:** tiempo, calma y control del negocio.
+2. **Promesa:** Noesis lleva la oficina mientras el profesional ejerce su oficio.
+3. **Pruebas:** agenda ordenada, facturas preparadas, documentos clasificados,
+   clientes atendidos, costes visibles y tareas recordadas.
+4. **Resultado económico:** menos olvidos, mejor margen y cobros más ordenados.
+
+No usar un lema centrado únicamente en el cobro: convierte una parte del producto
+en toda la empresa. Puede hablarse de cobros en una pieza de producto o en un caso
+real, siempre como evidencia y no como posicionamiento maestro.
 
 ## 2. Nombre
 
@@ -22,8 +37,10 @@ terminado al dinero cobrado, sin convertir al profesional en administrativo.
 
 ### Símbolo
 
-La estrella de cuatro puntas representa una lectura clara del negocio: Noesis
-detecta lo que importa y devuelve dirección. Se conserva su geometría original.
+La estrella de cuatro puntas funciona como brújula y punto de claridad: Noesis
+detecta lo que importa, ordena el ruido y devuelve dirección. Su centro estable
+representa al profesional, que mantiene el control. Se conserva la geometría
+original para proteger el reconocimiento ya construido.
 
 ### Versiones
 
@@ -95,7 +112,7 @@ Noesis habla de tú, con frases cortas y una conclusión primero. Es cercana, di
 y tranquila. Puede usar humor cotidiano, pero no banaliza dinero, fiscalidad,
 seguridad ni errores.
 
-Correcto: «Has terminado el trabajo. ¿Ya lo has facturado?»
+Correcto: «Ya he ordenado lo de hoy. Te quedan dos cosas por confirmar.»
 
 Incorrecto: «Revoluciona tu gestión empresarial mediante agentes de IA».
 

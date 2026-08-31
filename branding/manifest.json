@@ -1,6 +1,6 @@
 {
   "brand": "Noesis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "generated_at": "2026-08-31",
   "source_mark": "sources/noesis-mark-master.svg",
   "assets": [
@@ -290,7 +290,7 @@
       "height": 1200,
       "alpha": true,
       "purpose": "Vista general para control de marca",
-      "sha256": "8e376c2e186b432b2d634f216969322a468326e8c7fb17937467464da8e9982e"
+      "sha256": "75f6f11befe5a266c45f0a80f29f267b4f1322f5fece670a46f2e11a01bbad23"
     },
     {
       "path": "social/facebook-cover-1640x856.png",
@@ -298,7 +298,7 @@
       "height": 856,
       "alpha": true,
       "purpose": "Portada Facebook 2x",
-      "sha256": "9061cd4b92c9ac816e3487d34caa65749479cf2d2553aea4c5e48f47eb3a12e0"
+      "sha256": "56e5f18e62225648fa614aae773aa117c34a46b5173f9c1722912c3363389d9d"
     },
     {
       "path": "social/facebook-profile-1080.png",
@@ -322,7 +322,7 @@
       "height": 700,
       "alpha": true,
       "purpose": "Portada de página LinkedIn",
-      "sha256": "d7d99db0e79c484013eeff49d226e16dc40cfe1e63b740d97f1173bc27ce75f0"
+      "sha256": "872c97f982c7ac0fe8677fc40956e1fedd836c2590d9bc1e2d3618ebf385561c"
     },
     {
       "path": "social/linkedin-logo-400.png",
@@ -338,7 +338,7 @@
       "height": 630,
       "alpha": true,
       "purpose": "Imagen para enlaces compartidos",
-      "sha256": "4a4c5d9e1eba33bbac029766812bccc30f57983d47cc23dd90c9d8c82cc6acbd"
+      "sha256": "5dadef49feb3117a0c0371468c923f1d89b9234f6967d62bbcfe98d2f0e5fedf"
     },
     {
       "path": "social/youtube-profile-800.png",

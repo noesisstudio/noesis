@@ -7,6 +7,32 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-08-31 — alinea la marca con tiempo, orden y control
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el enfoque excesivamente centrado en cobros del primer kit
+  y devolver la marca a la misión aprobada: Noesis lleva la oficina, quita ruido
+  mental y permite al autónomo centrarse en su oficio sin perder el control.
+- **Áreas y archivos:** guía, generador, manifiesto, tablero y portadas de `branding/`;
+  introducción pública del `README`; mensaje rector y pruebas de
+  `docs/Estrategia-Marketing.html` y su PDF sincronizado; decisión y estado vivos.
+  Se conserva sin alteraciones la geometría del símbolo y el sistema visual.
+- **Pruebas ejecutadas:** 49/49 PNG reconstruidos y verificados contra dimensiones,
+  alfa y SHA-256 del manifiesto; regeneración determinista; SVG parseables; revisión
+  visual del tablero y portada; las 13 páginas del PDF se renderizaron y revisaron;
+  búsqueda negativa del lema retirado; `npm audit` sin vulnerabilidades, verdad del
+  proyecto y `git diff --check`.
+- **Dependencias o validaciones externas:** ninguna credencial. Sharp se actualiza a
+  0.35.4 solo dentro del generador aislado de branding; no entra en el runtime web.
+- **Riesgo/punto probable de fallo:** convertir «tiempo y control» en una promesa
+  genérica si las piezas no enseñan pruebas. La guía obliga a sostenerla con tareas,
+  documentos, facturas, agenda y resultados reales de cada cliente.
+- **Diagnóstico y rollback:** `branding/manifest.json` identifica cada exportación;
+  `npm run build` la reconstruye. Revertir este cambio recupera solo el copy y los
+  activos sociales anteriores; no afecta datos, aplicación ni despliegue.
+- **Estado de publicación:** kit corregido localmente; las redes siguen pendientes
+  de creación y validación de recorte real.
+
 ## 2026-08-31 — convierte el símbolo existente en un sistema de marca exportable
 
 - **Autor/agente:** Codex.

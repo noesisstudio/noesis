@@ -137,9 +137,9 @@ function coverSvg(width, height, platform) {
     <circle cx="${width * 0.86}" cy="${height * 0.18}" r="${height * 0.46}" fill="none" stroke="${C.lightTeal}" stroke-opacity=".2" stroke-width="2"/>
     <rect x="${left}" y="${top}" width="${markSize}" height="${markSize}" rx="${markSize * 0.22}" fill="${C.cream}"/>
     <g transform="translate(${left + markSize * 0.19} ${top + markSize * 0.19}) scale(${markSize * 0.62 / 64})">${mark()}</g>
-    <text x="${textX}" y="${height * 0.47}" fill="${C.cream}" font-family="NoesisFraunces, Georgia, serif" font-size="${titleSize}" font-weight="540" letter-spacing="-${Math.max(1, titleSize * 0.025)}">Del trabajo terminado</text>
-    <text x="${textX}" y="${height * 0.47 + titleSize * 1.02}" fill="${C.cream}" font-family="NoesisFraunces, Georgia, serif" font-size="${titleSize}" font-weight="540" letter-spacing="-${Math.max(1, titleSize * 0.025)}">al dinero cobrado.</text>
-    <text x="${textX}" y="${height * 0.82}" fill="${C.lightTeal}" font-family="Arial, sans-serif" font-size="${subSize}" font-weight="600" letter-spacing="${subSize * 0.05}">NOESIS · BYNOESIS.COM</text>
+    <text x="${textX}" y="${height * 0.47}" fill="${C.cream}" font-family="NoesisFraunces, Georgia, serif" font-size="${titleSize}" font-weight="540" letter-spacing="-${Math.max(1, titleSize * 0.025)}">Haz tu trabajo.</text>
+    <text x="${textX}" y="${height * 0.47 + titleSize * 1.02}" fill="${C.cream}" font-family="NoesisFraunces, Georgia, serif" font-size="${titleSize}" font-weight="540" letter-spacing="-${Math.max(1, titleSize * 0.025)}">Noesis ordena el negocio.</text>
+    <text x="${textX}" y="${height * 0.82}" fill="${C.lightTeal}" font-family="Arial, sans-serif" font-size="${subSize}" font-weight="600" letter-spacing="${subSize * 0.05}">MÁS TIEMPO · MENOS PAPELEO · TODO BAJO CONTROL</text>
   `, `Portada ${platform} de Noesis`);
 }
 
@@ -193,8 +193,8 @@ function brandBoard() {
     <text x="265" y="158" fill="${C.cream}" font-family="NoesisFraunces, Georgia, serif" font-size="98" font-weight="560" letter-spacing="-3">Noesis</text>
     <text x="1120" y="143" fill="${C.lightTeal}" font-family="Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="3">SISTEMA DE MARCA · 2026</text>
 
-    <text x="85" y="340" fill="${C.forest}" font-family="NoesisFraunces, Georgia, serif" font-size="48">Del trabajo terminado al dinero cobrado.</text>
-    <text x="85" y="390" fill="${C.muted}" font-family="Arial, sans-serif" font-size="24">Una identidad cálida, clara y profesional para la mano derecha del autónomo.</text>
+    <text x="85" y="340" fill="${C.forest}" font-family="NoesisFraunces, Georgia, serif" font-size="48">Haz tu trabajo. Noesis te ordena el negocio.</text>
+    <text x="85" y="390" fill="${C.muted}" font-family="Arial, sans-serif" font-size="24">Tiempo, claridad y control para el autónomo de servicios.</text>
 
     <rect x="85" y="465" width="520" height="250" rx="24" fill="#FFFFFF"/>
     <g transform="translate(125 505) scale(2.45)">${mark()}</g>
@@ -209,8 +209,8 @@ function brandBoard() {
     <g transform="translate(1397 542) scale(1.82)">${mark({ outer: C.lightTeal, inner: C.cream, center: C.cream, dot: C.forest })}</g>
 
     ${[[C.forest,"#14463B"],[C.teal,"#2E8B74"],[C.cream,"#F4F1E8"],[C.ink,"#15211C"],[C.sage,"#E4EFE9"]].map(([color, label], i) => `<rect x="${85 + i * 325}" y="800" width="280" height="150" rx="20" fill="${color}"/><text x="${105 + i * 325}" y="990" fill="${C.ink}" font-family="Arial, sans-serif" font-size="22">${label}</text>`).join("")}
-    <text x="85" y="1095" fill="${C.forest}" font-family="NoesisFraunces, Georgia, serif" font-size="46">Noesis te enseña lo importante.</text>
-    <text x="85" y="1140" fill="${C.muted}" font-family="Arial, sans-serif" font-size="23">Prepara el trabajo. Tú decides cuando importa.</text>
+    <text x="85" y="1095" fill="${C.forest}" font-family="NoesisFraunces, Georgia, serif" font-size="46">Noesis lleva la oficina.</text>
+    <text x="85" y="1140" fill="${C.muted}" font-family="Arial, sans-serif" font-size="23">Tú haces tu trabajo y mantienes el control.</text>
   `, "Sistema de marca Noesis");
 }
 
@@ -285,7 +285,7 @@ async function main() {
   assets.sort((a, b) => a.path.localeCompare(b.path));
   fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({
     brand: "Noesis",
-    version: "1.0.0",
+    version: "1.1.0",
     generated_at: "2026-08-31",
     source_mark: "sources/noesis-mark-master.svg",
     assets,

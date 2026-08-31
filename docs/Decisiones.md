@@ -820,6 +820,15 @@ reconocer a Noesis en todos los puntos de contacto requiere consistencia y archi
 correctos, no un logo distinto para cada canal. Ver [[Producto]] y
 `design/PRODUCT_PRINCIPLES.md`.
 
+La promesa estratégica es **«Noesis lleva la oficina mientras tú haces el trabajo»**
+y su expresión corta es **«Haz tu trabajo; Noesis te ordena el negocio»**. La marca
+compite por devolver tiempo, quitar ruido mental y dar control del ciclo completo.
+Facturas preparadas, documentos ordenados, tareas resueltas, margen visible y cobros
+mejor gestionados demuestran esa promesa, pero ninguna de esas funciones se convierte
+por sí sola en el lema general. Motivo: centrar la identidad en cobrar reduciría la
+suite a una parte del ciclo y contradiría el principio «primero la feina, después la
+factura».
+
 ## Stripe confirma; Checkout no autoriza (2026-08-10)
 
 `checkout.session.completed` vincula cliente y suscripción, pero no activa ni
