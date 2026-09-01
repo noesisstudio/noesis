@@ -94,6 +94,29 @@ class HistoricalInvoiceMigrationTestCase(unittest.TestCase):
             config.DATABASE_URL = old_url
             tempdir.cleanup()
 
+    def test_schema_46_adds_stripe_event_order_without_changing_access(self):
+        tempdir = tempfile.TemporaryDirectory()
+        old_path = config.DB_PATH
+        old_url = config.DATABASE_URL
+        config.DATABASE_URL = ""
+        config.DB_PATH = Path(tempdir.name) / "migration-45.db"
+        try:
+            migrations.upgrade(45)
+            business = db.create_business("Suscripcion historica", "old@example.com")
+            db.set_subscription(business["id"], "active", plan="pro")
+
+            self.assertEqual(migrations.upgrade(46), 46)
+            migrated = db.get_business(business["id"])
+            self.assertEqual(migrated["subscription_status"], "active")
+            self.assertEqual(migrated["plan"], "pro")
+            self.assertEqual(migrated["stripe_event_created_at"], 0)
+            self.assertEqual(migrated["stripe_event_priority"], 0)
+            self.assertIsNone(migrated["stripe_event_id"])
+        finally:
+            config.DB_PATH = old_path
+            config.DATABASE_URL = old_url
+            tempdir.cleanup()
+
 
 class BackendTestCase(unittest.TestCase):
     def setUp(self):
@@ -428,6 +451,66 @@ class BackendTestCase(unittest.TestCase):
         rectifying = db.issue_invoice(rectifying["id"], business["id"])
         self.assertEqual(rectifying["number"], f"R{date.today().year}/0001")
 
+    def test_rectifying_draft_is_unique_editable_and_cause_matches_original(self):
+        business, client = self.make_business("Rectificativa Segura")
+        original = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Instalación original", 200,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        draft = db.create_rectifying_invoice(
+            original["id"], business["id"], concept="Corrección inicial",
+            base=-20, invoice_type="R1", reason="Importe duplicado",
+        )
+        with self.assertRaisesRegex(ValueError, "Ya existe"):
+            db.create_rectifying_invoice(
+                original["id"], business["id"], concept="Otra corrección",
+                base=-10, invoice_type="R1", reason="Segundo borrador",
+            )
+        with self.assertRaisesRegex(ValueError, "sustitución"):
+            db.update_rectifying_invoice_draft(
+                draft["id"], business["id"], concept="Corrección",
+                base=-25, invoice_type="R1", rectification_type="S",
+                reason="Cambio de modalidad",
+            )
+        with self.assertRaisesRegex(ValueError, "R5"):
+            db.update_rectifying_invoice_draft(
+                draft["id"], business["id"], concept="Corrección",
+                base=-25, invoice_type="R5", reason="Causa incompatible",
+            )
+        edited = db.update_rectifying_invoice_draft(
+            draft["id"], business["id"], concept="Corrección final",
+            base=-25, vat_rate=21, invoice_type="R1",
+            reason="Importe duplicado confirmado",
+        )
+        self.assertEqual(edited["base"], -25)
+        self.assertEqual(edited["rectification_reason"], "Importe duplicado confirmado")
+        listed = {item["id"]: item for item in db.list_invoices(business["id"])}
+        self.assertEqual(listed[draft["id"]]["rectified_number"], original["number"])
+        self.assertEqual(
+            listed[original["id"]]["pending_rectification_id"], draft["id"]
+        )
+
+        simplified = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Servicio menor", 100, invoice_type="F2",
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+        )
+        with self.assertRaisesRegex(ValueError, "R5"):
+            db.create_rectifying_invoice(
+                simplified["id"], business["id"], concept="Corrección",
+                base=-10, invoice_type="R1", reason="Error simplificado",
+            )
+        simplified_draft = db.create_rectifying_invoice(
+            simplified["id"], business["id"], concept="Corrección",
+            base=-10, invoice_type="R5", reason="Error simplificado",
+        )
+        self.assertEqual(simplified_draft["invoice_type"], "R5")
+
     def test_recurring_invoices_prepare_once_and_require_opt_in_to_issue(self):
         business, client = self.make_business("Facturas Programadas")
         db.set_trial(business["id"], days=14)
@@ -555,6 +638,44 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(len(exported["invoice_payments"]), 1)
         self.assertEqual(len(client_export["invoice_payments"]), 1)
 
+    def test_month_billing_separates_cash_flow_from_invoice_cohort(self):
+        business, client = self.make_business("Cohortes de cobro")
+        this_month = date.today().strftime("%Y-%m")
+        previous_month = (date.today().replace(day=1) - timedelta(days=1)).strftime(
+            "%Y-%m"
+        )
+        old_invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Trabajo anterior", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+            _issued_at_override=f"{previous_month}-15T10:00:00",
+        )
+        current_invoice = db.issue_invoice(
+            db.add_invoice(
+                client["id"], "Trabajo actual", 100,
+                business_id=business["id"],
+            )["id"],
+            business["id"],
+            _issued_at_override=f"{this_month}-02T10:00:00",
+        )
+        db.add_invoice_payment(
+            old_invoice["id"], 121, business_id=business["id"],
+            paid_at=f"{this_month}-03T10:00:00",
+        )
+        db.add_invoice_payment(
+            current_invoice["id"], 40, business_id=business["id"],
+            paid_at=f"{this_month}-04T10:00:00",
+        )
+
+        month = db.month_billing(this_month, business_id=business["id"])
+
+        self.assertEqual(month["invoiced"], 121)
+        self.assertEqual(month["collected"], 161)
+        self.assertEqual(month["invoiced_collected"], 40)
+        self.assertEqual(month["pending"], 81)
+
     def test_quote_acceptance_is_idempotent(self):
         business, client = self.make_business()
         quote = db.add_quote(
@@ -633,8 +754,8 @@ class BackendTestCase(unittest.TestCase):
             ),
             patch.object(
                 db,
-                "set_subscription",
-                side_effect=[RuntimeError("fallo transitorio"), None],
+                "apply_stripe_subscription_event",
+                side_effect=[RuntimeError("fallo transitorio"), {"applied": True}],
             ) as update,
             TestClient(server.app) as client,
         ):
@@ -649,6 +770,281 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(
             db.webhook_event("stripe", event["id"])["status"], "done"
         )
+
+    def test_stripe_checkout_never_activates_without_paid_evidence(self):
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe pendiente")
+        db.set_subscription(business["id"], "canceled", plan="autonomo")
+        webhooks._apply_stripe_event({
+            "id": "evt_checkout_pending",
+            "created": 100,
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                "metadata": {
+                    "business_id": str(business["id"]),
+                    "plan": "autonomo",
+                },
+                "customer": "cus_pending",
+                "subscription": "sub_pending",
+                "payment_status": "paid",
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "pending")
+        self.assertEqual(updated["stripe_customer_id"], "cus_pending")
+        self.assertEqual(updated["stripe_subscription_id"], "sub_pending")
+        self.assertFalse(db.subscription_allows_access(updated))
+
+    def test_stripe_checkout_never_grants_an_upgrade_before_confirmation(self):
+        from noesis.adapters import billing
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe upgrade pendiente")
+        db.set_subscription(business["id"], "active", plan="autonomo")
+        webhooks._apply_stripe_event({
+            "id": "evt_checkout_upgrade",
+            "created": 120,
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                "metadata": {
+                    "business_id": str(business["id"]),
+                    "plan": "premium",
+                },
+                "customer": "cus_upgrade",
+                "subscription": "sub_upgrade",
+                "payment_status": "paid",
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["plan"], "autonomo")
+        self.assertFalse(
+            billing.has_entitlement(updated, billing.ENTITLEMENT_PROJECTS)
+        )
+
+    def test_stripe_subscription_price_governs_portal_plan_changes(self):
+        from noesis.adapters import billing
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe cambio portal")
+        db.set_subscription(business["id"], "active", plan="premium")
+        with (
+            patch.object(billing.config, "STRIPE_PRICE_AUTONOMO", "price_auto"),
+            patch.object(billing.config, "STRIPE_PRICE_PREMIUM", "price_premium"),
+        ):
+            webhooks._apply_stripe_event({
+                "id": "evt_portal_downgrade",
+                "created": 140,
+                "type": "customer.subscription.updated",
+                "data": {"object": {
+                    "id": "sub_portal",
+                    "customer": "cus_portal",
+                    "status": "active",
+                    # La metadata de Stripe puede conservar el plan original;
+                    # el precio vigente es la evidencia comercial autoritativa.
+                    "metadata": {
+                        "business_id": str(business["id"]),
+                        "plan": "premium",
+                    },
+                    "items": {"data": [{"price": {"id": "price_auto"}}]},
+                }},
+            })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["plan"], "autonomo")
+        self.assertFalse(
+            billing.has_entitlement(updated, billing.ENTITLEMENT_PROJECTS)
+        )
+
+    def test_stripe_unknown_incomplete_and_paused_never_become_trial(self):
+        from noesis.web.routers import webhooks
+
+        for offset, stripe_status in enumerate(("incomplete", "paused", "new_state")):
+            with self.subTest(status=stripe_status):
+                business, _ = self.make_business(f"Stripe {stripe_status}")
+                db.set_subscription(business["id"], "canceled", plan="autonomo")
+                webhooks._apply_stripe_event({
+                    "id": f"evt_status_{offset}",
+                    "created": 200 + offset,
+                    "type": "customer.subscription.updated",
+                    "data": {"object": {
+                        "id": f"sub_status_{offset}",
+                        "customer": f"cus_status_{offset}",
+                        "status": stripe_status,
+                        "metadata": {
+                            "business_id": str(business["id"]),
+                            "plan": "autonomo",
+                        },
+                    }},
+                })
+                expected = stripe_status if stripe_status != "new_state" else "unknown"
+                updated = db.get_business(business["id"])
+                self.assertEqual(updated["subscription_status"], expected)
+                self.assertFalse(db.subscription_allows_access(updated))
+
+    def test_stripe_out_of_order_events_cannot_undo_a_newer_payment(self):
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe desordenado")
+        db.set_subscription(business["id"], "canceled", plan="pro")
+        subscription = {
+            "subscription": "sub_ordered",
+            "customer": "cus_ordered",
+            "metadata": {"business_id": str(business["id"]), "plan": "pro"},
+        }
+        webhooks._apply_stripe_event({
+            "id": "evt_paid_new",
+            "created": 500,
+            "type": "invoice.paid",
+            "data": {"object": subscription},
+        })
+        webhooks._apply_stripe_event({
+            "id": "evt_failed_old",
+            "created": 400,
+            "type": "invoice.payment_failed",
+            "data": {"object": subscription},
+        })
+        webhooks._apply_stripe_event({
+            "id": "evt_checkout_old",
+            "created": 300,
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                **subscription, "client_reference_id": str(business["id"])
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["stripe_event_id"], "evt_paid_new")
+
+    def test_stripe_checkout_cannot_downgrade_concurrent_active_subscription(self):
+        business, _ = self.make_business("Stripe concurrente")
+        db.apply_stripe_subscription_event(
+            business["id"], status="active", event_created_at=100,
+            event_priority=40, event_id="evt_subscription_active",
+            plan="autonomo", customer_id="cus_concurrent",
+            subscription_id="sub_concurrent", allow_subscription_change=True,
+        )
+
+        result = db.apply_stripe_subscription_event(
+            business["id"], status="pending", event_created_at=101,
+            event_priority=10, event_id="evt_checkout_later",
+            customer_id="cus_concurrent", subscription_id="sub_concurrent",
+            allow_subscription_change=True,
+        )
+
+        self.assertTrue(result["applied"])
+        self.assertEqual(result["business"]["subscription_status"], "active")
+        self.assertEqual(db.get_business(business["id"])["plan"], "autonomo")
+
+    def test_stripe_one_time_invoice_and_old_subscription_are_ignored(self):
+        from noesis.web.routers import webhooks
+
+        business, _ = self.make_business("Stripe aislado")
+        db.apply_stripe_subscription_event(
+            business["id"], status="active", event_created_at=100,
+            event_priority=60, event_id="evt_current", plan="pro",
+            customer_id="cus_isolated", subscription_id="sub_current",
+            allow_subscription_change=True,
+        )
+        webhooks._apply_stripe_event({
+            "id": "evt_one_time",
+            "created": 200,
+            "type": "invoice.payment_failed",
+            "data": {"object": {"customer": "cus_isolated"}},
+        })
+        webhooks._apply_stripe_event({
+            "id": "evt_old_subscription",
+            "created": 300,
+            "type": "invoice.payment_failed",
+            "data": {"object": {
+                "customer": "cus_isolated", "subscription": "sub_old"
+            }},
+        })
+
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["stripe_event_id"], "evt_current")
+
+    def test_paid_plan_entitlements_are_enforced_in_server_and_brain(self):
+        from starlette.testclient import TestClient
+        from noesis import tools
+        from noesis.web import server
+
+        business, _ = self.make_business("Plan autonomo")
+        db.create_user(
+            "plan-autonomo@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(business["id"], "active", plan="autonomo")
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "plan-autonomo@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                basic = client.get(f"/api/{business['id']}/clients")
+                projects = client.get(f"/api/{business['id']}/projects")
+                workers = client.get(f"/api/{business['id']}/workers")
+                analysis = client.get(f"/api/{business['id']}/analysis")
+                project_page = client.get(
+                    f"/b/{business['id']}/proyectos", follow_redirects=False
+                )
+                home = client.get(f"/b/{business['id']}/resumen")
+
+        self.assertEqual(basic.status_code, 200)
+        for response in (projects, workers, analysis):
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.json()["code"], "plan_upgrade_required")
+            self.assertEqual(response.json()["required_plan"], "pro")
+        self.assertEqual(project_page.status_code, 303)
+        self.assertIn("status=upgrade", project_page.headers["location"])
+        self.assertNotIn("> Proyectos</a>", home.text)
+        self.assertNotIn("> Equipo</a>", home.text)
+        self.assertNotIn(">Análisis</a>", home.text)
+
+        blocked_tool = json.loads(
+            tools.run_tool("crear_proyecto", {
+                "nombre": "No crear", "presupuesto": 1000,
+            }, business["id"])
+        )
+        self.assertEqual(blocked_tool["code"], "plan_upgrade_required")
+        self.assertEqual(db.list_projects(business["id"]), [])
+
+    def test_business_plan_and_trial_keep_the_complete_sold_workflow(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        for suffix, status, plan in (
+            ("pro", "active", "pro"),
+            ("trial", "trial", "trial"),
+        ):
+            with self.subTest(account=suffix):
+                business, _ = self.make_business(f"Plan {suffix}")
+                email = f"plan-{suffix}@example.com"
+                db.create_user(email, auth.hash_password(TEST_PASSWORD), business["id"])
+                db.set_subscription(business["id"], status, plan=plan)
+                with patch.object(server, "start_scheduler", lambda: None):
+                    with TestClient(server.app) as client:
+                        client.post("/login", data={
+                            "email": email, "password": TEST_PASSWORD,
+                        })
+                        self.assertEqual(
+                            client.get(f"/api/{business['id']}/projects").status_code,
+                            200,
+                        )
+                        self.assertEqual(
+                            client.get(f"/api/{business['id']}/workers").status_code,
+                            200,
+                        )
+                        self.assertEqual(
+                            client.get(f"/api/{business['id']}/analysis").status_code,
+                            200,
+                        )
 
     def test_account_delete_cleans_dependencies_before_files(self):
         from noesis.documents import repo, service, storage
@@ -933,6 +1329,23 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(
             nlu.parse("factura a Juan por reparación 95 euros")[0], "crear_factura"
         )
+
+        # Dictada por voz, la frase natural lleva un conector entre el nombre y
+        # el importe. Si se cuela en el nombre, Noesis crea un cliente nuevo mal
+        # escrito en vez de reconocer al que ya existe.
+        for frase, cliente, base in (
+            ("factura para Juan Perez de 250 euros por reparar una bajante",
+             "Juan Perez", 250.0),
+            ("hazme una factura para Los Olivos de 1200 euros por la reforma",
+             "Los Olivos", 1200.0),
+            ("factura a Maria Garcia 80 euros", "Maria Garcia", 80.0),
+            ("factura a Juan 95 euros por cambiar el termo", "Juan", 95.0),
+        ):
+            with self.subTest(frase=frase):
+                herramienta, datos = nlu.parse(frase)
+                self.assertEqual(herramienta, "crear_factura")
+                self.assertEqual(datos["cliente"], cliente)
+                self.assertEqual(datos["base"], base)
 
         business, _ = self.make_business()
         chat.handle(business["id"], "factura a Juan por reparación 100 euros")
@@ -1455,19 +1868,162 @@ class BackendTestCase(unittest.TestCase):
 
     def test_branding_validation_and_portal_exposure(self):
         business, client = self.make_business()
-        db.update_branding(business["id"], template="editorial", brand_color="#7a1f4b")
+        db.update_branding(
+            business["id"], template="editorial", brand_color="#7a1f4b",
+            document_footer="Gracias por confiar en nosotros.",
+            quote_terms="Materiales incluidos según descripción.",
+            default_quote_validity_days=45,
+        )
         biz = db.get_business(business["id"])
         self.assertEqual(biz["invoice_template"], "editorial")
         self.assertEqual(db.business_brand_color(biz), "#7a1f4b")
+        self.assertEqual(biz["default_quote_validity_days"], 45)
         with self.assertRaises(ValueError):
             db.update_branding(business["id"], template="rara")
         with self.assertRaises(ValueError):
             db.update_branding(business["id"], brand_color="rojo")
+        with self.assertRaises(ValueError):
+            db.update_branding(business["id"], default_quote_validity_days=13)
         self.assertEqual(db.business_initials("Reformas Garcia"), "RG")
         # El portal expone color e iniciales del negocio que atiende, aislado.
         view = db.client_portal_view(business["id"], client["id"])
         self.assertEqual(view["business"]["brand_color"], "#7a1f4b")
+        self.assertIn("Materiales incluidos", view["business"]["quote_terms"])
         self.assertTrue(view["business"]["initials"])
+
+        quote = db.add_quote(
+            client["id"], "Instalación completa", 1200,
+            notes="Incluye montaje y puesta en marcha.", business_id=business["id"],
+        )
+        self.assertEqual(quote["valid_until"], (date.today() + timedelta(days=45)).isoformat())
+        from noesis.web.invoice_pdf import build_quote_pdf
+        pdf = build_quote_pdf(quote["id"], business["id"])
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertGreater(len(pdf), 2_000)
+
+    def test_footer_image_is_versioned_and_frozen_when_invoice_is_issued(self):
+        import base64
+
+        business, client = self.make_business("Marca congelada")
+        footer = base64.b64encode(TINY_PNG).decode("ascii")
+        db.update_branding(
+            business["id"], template="editorial", brand_color="#7a1f4b",
+            footer_image_data=footer, footer_image_mime="image/png",
+            footer_image_width=75, footer_image_alignment="right",
+            footer_image_scope="all",
+        )
+        draft = db.add_invoice(
+            client["id"], "Trabajo con distintivo", 100,
+            business_id=business["id"],
+        )
+        issued = db.issue_invoice(draft["id"], business["id"])
+        frozen = db.get_invoice_document_profile(issued["id"], business["id"])
+        self.assertIsNotNone(frozen)
+        self.assertEqual(frozen["brand_color"], "#7a1f4b")
+        self.assertEqual(frozen["footer_image_data"], footer)
+        self.assertEqual(frozen["footer_image_width"], 75)
+        self.assertEqual(frozen["footer_image_alignment"], "right")
+
+        db.update_branding(
+            business["id"], brand_color="#14463b", clear_footer_image=True,
+            footer_image_width=25, footer_image_alignment="left",
+            footer_image_scope="invoices",
+        )
+        current = db.get_business(business["id"])
+        still_frozen = db.get_invoice_document_profile(issued["id"], business["id"])
+        self.assertIsNone(current["footer_image_data"])
+        self.assertEqual(current["brand_color"], "#14463b")
+        self.assertEqual(still_frozen["brand_color"], "#7a1f4b")
+        self.assertEqual(still_frozen["footer_image_data"], footer)
+
+        from noesis.web.invoice_pdf import build_invoice_pdf
+        pdf = build_invoice_pdf(issued["id"], business["id"])
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertGreater(len(pdf), 2_000)
+
+    def test_document_profile_reference_is_tenant_scoped(self):
+        business_a, client_a = self.make_business("Perfil A")
+        business_b, _ = self.make_business("Perfil B")
+        db.update_branding(business_b["id"], brand_color="#7a1f4b")
+        with db.get_conn() as conn:
+            foreign_profile = conn.execute(
+                "SELECT id FROM document_profiles WHERE business_id=?",
+                (business_b["id"],),
+            ).fetchone()["id"]
+        invoice = db.add_invoice(
+            client_a["id"], "Aislamiento visual", 80,
+            business_id=business_a["id"],
+        )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE invoices SET document_profile_id=? "
+                    "WHERE id=? AND business_id=?",
+                    (foreign_profile, invoice["id"], business_a["id"]),
+                )
+
+    def test_branding_http_sanitizes_images_and_exposes_pdf_preview(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Vista de marca")
+        user = db.create_user(
+            "marca@example.com", auth.hash_password(TEST_PASSWORD), business["id"]
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": user["email"], "password": TEST_PASSWORD,
+                })
+                response = client.post(
+                    f"/b/{business['id']}/branding",
+                    data={
+                        "template": "minimal", "brand_color": "#2e8b74",
+                        "document_footer": "Proyecto financiado.",
+                        "quote_terms": "Condiciones de ejemplo.",
+                        "default_quote_validity_days": "30",
+                        "footer_image_width": "50",
+                        "footer_image_alignment": "center",
+                        "footer_image_scope": "all",
+                    },
+                    files={
+                        "logo": ("logo.png", TINY_PNG, "image/png"),
+                        "footer_image": ("ayuda.png", TINY_PNG, "image/png"),
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertIn("ok=marca", response.headers["location"])
+                saved = db.get_business(business["id"])
+                self.assertEqual(saved["logo_mime"], "image/png")
+                self.assertEqual(saved["footer_image_mime"], "image/png")
+                self.assertEqual(saved["footer_image_width"], 50)
+                self.assertEqual(saved["footer_image_scope"], "all")
+                page = client.get(f"/b/{business['id']}/ajustes")
+                self.assertIn("Las emitidas no cambian", page.text)
+                self.assertIn("Imagen o distintivo", page.text)
+                preview = client.get(
+                    f"/api/{business['id']}/branding/preview.pdf"
+                )
+                self.assertEqual(preview.status_code, 200)
+                self.assertTrue(preview.content.startswith(b"%PDF"))
+
+                rejected = client.post(
+                    f"/b/{business['id']}/branding",
+                    data={
+                        "template": "minimal", "brand_color": "#2e8b74",
+                        "default_quote_validity_days": "30",
+                        "footer_image_width": "50",
+                        "footer_image_alignment": "center",
+                        "footer_image_scope": "all",
+                    },
+                    files={
+                        "footer_image": ("falsa.png", b"no-es-imagen", "image/png"),
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(rejected.status_code, 303)
+                self.assertIn("error=marca", rejected.headers["location"])
 
     def test_portal_token_never_crosses_clients(self):
         business_a, client_a = self.make_business("Negocio A")
@@ -1950,6 +2506,494 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
             payload["subscription_data[metadata][billing_period]"], "annual"
         )
 
+    def test_stripe_portal_uses_scoped_flows_for_billing_actions(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        business = {
+            "id": 42,
+            "stripe_customer_id": "cus_current",
+            "stripe_subscription_id": "sub_current",
+        }
+        snapshot = {
+            "id": "sub_current",
+            "items": {"data": [{"id": "si_current", "price": {"id": "old"}}]},
+        }
+        with (
+            patch.object(config, "STRIPE_PRICE_PRO_ANNUAL", "price_pro_annual"),
+            patch.object(provider, "subscription_snapshot", return_value=snapshot),
+            patch.object(
+                provider, "_managed_portal_configuration",
+                return_value="bpc_noesis",
+            ),
+            patch.object(
+                provider, "_post", return_value={"url": "https://billing.example/flow"},
+            ) as post,
+        ):
+            payment_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="payment_method",
+            )
+            payment_payload = post.call_args.args[1]
+            cancel_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="cancel",
+            )
+            cancel_payload = post.call_args.args[1]
+            change_url = provider.portal_url(
+                business, "https://noesis.test/subscription", action="change",
+                plan="pro", billing_period="annual",
+            )
+            change_payload = post.call_args.args[1]
+
+        self.assertEqual(payment_url, "https://billing.example/flow")
+        self.assertEqual(cancel_url, "https://billing.example/flow")
+        self.assertEqual(change_url, "https://billing.example/flow")
+        self.assertEqual(payment_payload["flow_data[type]"], "payment_method_update")
+        self.assertEqual(cancel_payload["flow_data[type]"], "subscription_cancel")
+        self.assertEqual(
+            cancel_payload["flow_data[subscription_cancel][subscription]"],
+            "sub_current",
+        )
+        self.assertEqual(
+            change_payload["flow_data[type]"], "subscription_update_confirm",
+        )
+        self.assertEqual(
+            change_payload[
+                "flow_data[subscription_update_confirm][items][0][price]"
+            ],
+            "price_pro_annual",
+        )
+        self.assertEqual(
+            change_payload[
+                "flow_data[subscription_update_confirm][items][0][id]"
+            ],
+            "si_current",
+        )
+        self.assertEqual(
+            change_payload["flow_data[after_completion][type]"], "redirect",
+        )
+        self.assertEqual(payment_payload["configuration"], "bpc_noesis")
+        self.assertEqual(cancel_payload["configuration"], "bpc_noesis")
+        self.assertEqual(change_payload["configuration"], "bpc_noesis")
+
+    def test_stripe_builds_managed_portal_with_every_configured_price(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        prices = {
+            "price_autonomo_month": "prod_autonomo",
+            "price_pro_month": "prod_pro",
+            "price_premium_month": "prod_premium",
+            "price_autonomo_year": "prod_autonomo",
+            "price_pro_year": "prod_pro",
+            "price_premium_year": "prod_premium",
+        }
+
+        def stripe_get(path):
+            if path.startswith("billing_portal/configurations?"):
+                return {"data": []}
+            price_id = path.rsplit("/", 1)[-1]
+            return {"id": price_id, "product": prices[price_id]}
+
+        with (
+            patch.multiple(
+                config,
+                STRIPE_PRICE_AUTONOMO="price_autonomo_month",
+                STRIPE_PRICE_PRO="price_pro_month",
+                STRIPE_PRICE_PREMIUM="price_premium_month",
+                STRIPE_PRICE_AUTONOMO_ANNUAL="price_autonomo_year",
+                STRIPE_PRICE_PRO_ANNUAL="price_pro_year",
+                STRIPE_PRICE_PREMIUM_ANNUAL="price_premium_year",
+            ),
+            patch.object(provider, "_get", side_effect=stripe_get),
+            patch.object(
+                provider, "_post", return_value={"id": "bpc_noesis"},
+            ) as post,
+        ):
+            configuration_id = provider._managed_portal_configuration(
+                "https://noesis.test/b/42/suscripcion"
+            )
+
+        self.assertEqual(configuration_id, "bpc_noesis")
+        post.assert_called_once()
+        path, payload = post.call_args.args
+        self.assertEqual(path, "billing_portal/configurations")
+        self.assertEqual(payload["features[payment_method_update][enabled]"], "true")
+        self.assertEqual(payload["features[subscription_cancel][mode]"], "at_period_end")
+        self.assertEqual(payload["features[subscription_update][enabled]"], "true")
+        self.assertEqual(
+            payload["features[subscription_update][products][0][prices][]"],
+            ["price_autonomo_month", "price_autonomo_year"],
+        )
+        self.assertEqual(
+            payload["features[subscription_update][products][2][prices][]"],
+            ["price_premium_month", "price_premium_year"],
+        )
+        self.assertEqual(payload["metadata[noesis_portal]"], "noesis-v1")
+
+    def test_stripe_reuses_the_active_managed_portal_configuration(self):
+        from noesis.adapters import billing
+
+        provider = billing.StripeBillingProvider("sk_test_example")
+        with (
+            patch.multiple(
+                config,
+                STRIPE_PRICE_AUTONOMO="price_autonomo",
+                STRIPE_PRICE_PRO="price_pro",
+                STRIPE_PRICE_PREMIUM="price_premium",
+                STRIPE_PRICE_AUTONOMO_ANNUAL="price_autonomo_year",
+                STRIPE_PRICE_PRO_ANNUAL="price_pro_year",
+                STRIPE_PRICE_PREMIUM_ANNUAL="price_premium_year",
+            ),
+            patch.object(provider, "_get", return_value={"data": [{
+                "id": "bpc_existing",
+                "active": True,
+                "metadata": {"noesis_portal": "noesis-v1"},
+                "features": {
+                    "payment_method_update": {"enabled": True},
+                    "subscription_cancel": {"enabled": True},
+                    "subscription_update": {
+                        "enabled": True,
+                        "products": [{"prices": [
+                            "price_autonomo", "price_pro", "price_premium",
+                            "price_autonomo_year", "price_pro_year",
+                            "price_premium_year",
+                        ]}],
+                    },
+                },
+            }]}),
+            patch.object(provider, "_post") as post,
+        ):
+            configuration_id = provider._managed_portal_configuration(
+                "https://noesis.test/b/42/suscripcion"
+            )
+
+        self.assertEqual(configuration_id, "bpc_existing")
+        post.assert_not_called()
+
+    def test_checkout_return_reconciles_authoritative_active_subscription(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe reconciliado")
+        db.create_user(
+            "reconcile@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "pending", plan="trial",
+            customer_id="cus_reconcile", subscription_id="sub_reconcile",
+        )
+        snapshot = {
+            "id": "sub_reconcile",
+            "customer": "cus_reconcile",
+            "status": "active",
+            "metadata": {"business_id": str(business["id"])},
+            "items": {"data": [{"price": {"id": "price_autonomo"}}]},
+        }
+        provider = MagicMock()
+        provider.subscription_snapshot.return_value = snapshot
+        wrong_business = {
+            **snapshot,
+            "metadata": {"business_id": str(business["id"] + 1)},
+        }
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "STRIPE_PRICE_AUTONOMO", "price_autonomo"),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider
+            ),
+            TestClient(server.app) as client,
+        ):
+            self.assertIsNone(
+                server.billing_adapter.subscription_evidence(
+                    business, wrong_business,
+                )
+            )
+            client.post("/login", data={
+                "email": "reconcile@example.com", "password": TEST_PASSWORD,
+            })
+            page = client.get(
+                f"/b/{business['id']}/suscripcion?status=checkout_return"
+            )
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("subscription-success", page.text)
+        updated = db.get_business(business["id"])
+        self.assertEqual(updated["subscription_status"], "active")
+        self.assertEqual(updated["plan"], "autonomo")
+        self.assertIn('class="plan selected-plan"', page.text)
+        provider.subscription_snapshot.assert_called_once()
+
+    def test_subscription_page_shows_human_dates_and_a_finished_trial(self):
+        """La cabecera no puede ensenar una marca ISO ni decir "En prueba" a
+        quien ya esta en modo consulta: el estado sigue siendo 'trial' hasta que
+        alguien contrata, y la caducidad solo se ve comparando la fecha."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Prueba caducada")
+        db.create_user(
+            "prueba-caducada@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "prueba-caducada@example.com",
+                "password": TEST_PASSWORD,
+            })
+            db.set_trial(business["id"], days=20)
+            vigente = client.get(f"/b/{business['id']}/suscripcion")
+            db.set_trial(business["id"], days=-30)
+            caducada = client.get(f"/b/{business['id']}/suscripcion")
+
+        self.assertEqual(vigente.status_code, 200)
+        self.assertEqual(caducada.status_code, 200)
+        # Ninguna de las dos ensena la marca ISO interna.
+        self.assertNotIn("T00:00:00", vigente.text)
+        self.assertNotIn("T00:00:00", caducada.text)
+        # Prueba vigente: se anuncia como tal y con fecha legible.
+        futura = (date.today() + timedelta(days=20)).strftime("%d/%m/%Y")
+        self.assertIn("En prueba", vigente.text)
+        self.assertIn(futura, vigente.text)
+        # Prueba vencida: deja de decir "En prueba" y se marca en rojo.
+        pasada = (date.today() - timedelta(days=30)).strftime("%d/%m/%Y")
+        self.assertIn("Prueba terminada", caducada.text)
+        self.assertIn(pasada, caducada.text)
+        self.assertNotIn("En prueba", caducada.text)
+        self.assertIn("sub-state trial expired", caducada.text)
+        # Y el producto coincide: sin acceso de escritura.
+        self.assertFalse(
+            db.subscription_allows_access(db.get_business(business["id"]))
+        )
+
+    def test_active_subscription_is_managed_without_a_second_checkout(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe plan actual")
+        db.create_user(
+            "current-plan@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_current", subscription_id="sub_current",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = "https://billing.example/current"
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "current-plan@example.com",
+                "password": TEST_PASSWORD,
+            })
+            page = client.get(f"/b/{business['id']}/suscripcion")
+            db.set_subscription(
+                business["id"], "active", plan="premium",
+                customer_id="cus_current", subscription_id="sub_current",
+            )
+            premium_page = client.get(f"/b/{business['id']}/suscripcion")
+            change = client.post(
+                f"/b/{business['id']}/suscripcion/checkout",
+                data={"plan": "pro", "billing_period": "annual"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Plan actual", page.text)
+        self.assertIn("Gestionar plan", page.text)
+        self.assertIn("Mejorar a Negocio", page.text)
+        self.assertIn("Mejorar a Premium", page.text)
+        self.assertIn("Cambiar tarjeta", page.text)
+        self.assertIn("Cancelar suscripción", page.text)
+        self.assertEqual(page.text.count("data-stripe-portal-form"), 6)
+        self.assertIn('name="action" value="change"', page.text)
+        self.assertNotIn("Activar plan Aut", page.text)
+        self.assertNotIn("/suscripcion/checkout", page.text)
+        self.assertEqual(premium_page.text.count("Incluido en tu plan"), 2)
+        self.assertNotIn("Mejorar a ", premium_page.text)
+        self.assertEqual(change.status_code, 303)
+        self.assertEqual(change.headers["location"], "https://billing.example/current")
+        provider.portal_url.assert_called_once_with(
+            db.get_business(business["id"]),
+            f"{config.BASE_URL}/b/{business['id']}/suscripcion",
+            action="change", plan="pro", billing_period="annual",
+        )
+        provider.checkout_url.assert_not_called()
+
+    def test_subscription_portal_routes_only_supported_actions(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe acciones portal")
+        db.create_user(
+            "portal-actions@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="pro",
+            customer_id="cus_actions", subscription_id="sub_actions",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = "https://billing.example/cancel"
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-actions@example.com",
+                "password": TEST_PASSWORD,
+            })
+            cancel = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "cancel"}, follow_redirects=False,
+            )
+            invalid = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "delete_everything"}, follow_redirects=False,
+            )
+
+        self.assertEqual(cancel.status_code, 303)
+        self.assertEqual(cancel.headers["location"], "https://billing.example/cancel")
+        self.assertEqual(invalid.status_code, 303)
+        self.assertTrue(invalid.headers["location"].endswith("status=invalid"))
+        provider.portal_url.assert_called_once_with(
+            db.get_business(business["id"]),
+            f"{config.BASE_URL}/b/{business['id']}/suscripcion",
+            action="cancel", plan="", billing_period="monthly",
+        )
+
+    def test_every_subscription_button_opens_one_scoped_portal_flow(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe recorrido completo")
+        db.create_user(
+            "portal-e2e@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_e2e", subscription_id="sub_e2e",
+        )
+        provider = MagicMock()
+        provider.portal_url.side_effect = lambda *_args, **kwargs: (
+            f"https://billing.example/{kwargs['action']}"
+        )
+        # Los seis formularios que ve Autonomo: gestión superior, tarjeta,
+        # gestión desde su tarjeta actual, dos mejoras y cancelación.
+        actions = (
+            ({"action": "manage"}, "manage"),
+            ({"action": "payment_method"}, "payment_method"),
+            ({"action": "manage"}, "manage"),
+            ({
+                "action": "change", "plan": "pro",
+                "billing_period": "monthly",
+            }, "change"),
+            ({
+                "action": "change", "plan": "premium",
+                "billing_period": "annual",
+            }, "change"),
+            ({"action": "cancel"}, "cancel"),
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-e2e@example.com",
+                "password": TEST_PASSWORD,
+            })
+            responses = [
+                client.post(
+                    f"/b/{business['id']}/suscripcion/portal",
+                    data=data,
+                    headers={"sec-fetch-site": "same-origin"},
+                    follow_redirects=False,
+                )
+                for data, _action in actions
+            ]
+
+        self.assertEqual([response.status_code for response in responses], [303] * 6)
+        self.assertEqual(
+            [response.headers["location"] for response in responses],
+            [f"https://billing.example/{action}" for _data, action in actions],
+        )
+        self.assertEqual(provider.portal_url.call_count, 6)
+        monthly_change = provider.portal_url.call_args_list[3]
+        annual_change = provider.portal_url.call_args_list[4]
+        self.assertEqual(monthly_change.kwargs, {
+            "action": "change", "plan": "pro", "billing_period": "monthly",
+        })
+        self.assertEqual(annual_change.kwargs, {
+            "action": "change", "plan": "premium", "billing_period": "annual",
+        })
+
+    def test_subscription_portal_failure_returns_to_a_visible_error(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Stripe portal caido")
+        db.create_user(
+            "portal-failure@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.set_subscription(
+            business["id"], "active", plan="autonomo",
+            customer_id="cus_failure", subscription_id="sub_failure",
+        )
+        provider = MagicMock()
+        provider.portal_url.return_value = None
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(
+                server.billing_adapter, "get_provider", return_value=provider,
+            ),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "portal-failure@example.com",
+                "password": TEST_PASSWORD,
+            })
+            response = client.post(
+                f"/b/{business['id']}/suscripcion/portal",
+                data={"action": "manage"}, follow_redirects=False,
+            )
+            page = client.get(response.headers["location"])
+
+        self.assertEqual(response.status_code, 303)
+        self.assertTrue(response.headers["location"].endswith(
+            "?status=noportal#gestion-suscripcion"
+        ))
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('id="gestion-suscripcion"', page.text)
+        self.assertIn("No he podido abrir", page.text)
+        self.assertEqual(
+            db.count_product_events(
+                business["id"], "subscription_portal_failed",
+            ),
+            1,
+        )
+
     def test_public_and_account_pricing_share_the_current_catalog(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -2190,7 +3234,29 @@ class GoogleOAuthHttpTestCase(BackendTestCase):
                         follow_redirects=False,
                     )
                 self.assertEqual(signed_in.status_code, 303)
-                self.assertEqual(signed_in.headers["location"], f"/b/{user['business_id']}/resumen")
+                self.assertEqual(
+                    signed_in.headers["location"],
+                    f"/onboarding/setup/{user['business_id']}",
+                )
+
+
+class VisualContractTestCase(unittest.TestCase):
+    """Fija los detalles móviles que hacen que el piloto parezca terminado."""
+
+    def test_demo_badge_and_assistant_mobile_controls_are_readable(self):
+        web = Path(__file__).parents[1] / "src" / "noesis" / "web"
+        base = (web / "templates" / "base.html").read_text(encoding="utf-8")
+        assistant = (web / "templates" / "asistente.html").read_text(
+            encoding="utf-8"
+        )
+        css = (web / "static" / "app.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="bn-create locked demo"', base)
+        self.assertIn('aria-hidden="true">Demo</span>', base)
+        self.assertNotIn("â€“", base)
+        self.assertIn(".replace(/_(.+?)_/g,'<em>$1</em>')", assistant)
+        self.assertIn(".chat-wrap > .chips { flex-wrap:wrap;", css)
+        self.assertIn("flex:1 1 145px; white-space:normal;", css)
 
 
 class PortalHttpTestCase(BackendTestCase):
@@ -2236,11 +3302,22 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertIn("aceptado", ok.headers["location"])
                 accepted = db.get_quote(quote_a["id"], business_a["id"])
                 self.assertEqual(accepted["status"], "aceptado")
+                self.assertEqual(accepted["decision_source"], "client_portal")
+                self.assertEqual(len(accepted["decision_ip_hash"]), 64)
                 self.assertTrue(accepted["invoice_id"])
                 self.assertEqual(
                     db.get_invoice(accepted["invoice_id"], business_a["id"])["status"],
                     "borrador",
                 )
+                pdf = client.get(
+                    f"/p/{token_a}/quotes/{quote_a['id']}/pdf"
+                )
+                self.assertEqual(pdf.status_code, 200)
+                self.assertTrue(pdf.content.startswith(b"%PDF"))
+                blocked_pdf = client.get(
+                    f"/p/{token_a}/quotes/{quote_b['id']}/pdf"
+                )
+                self.assertEqual(blocked_pdf.status_code, 404)
 
     def test_portal_stays_visible_but_cannot_mutate_in_read_only_mode(self):
         from starlette.testclient import TestClient
@@ -2259,11 +3336,35 @@ class PortalHttpTestCase(BackendTestCase):
                     follow_redirects=False,
                 )
 
-        self.assertEqual(blocked.status_code, 402)
-        self.assertEqual(blocked.json()["code"], "subscription_required")
+        self.assertEqual(blocked.status_code, 303)
+        self.assertIn("ok=readonly", blocked.headers["location"])
         self.assertEqual(
             db.get_quote(quote["id"], business["id"])["status"], "enviado"
         )
+
+    def test_portal_formats_internal_dates_for_people(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        from noesis.web.deps import _human_date
+
+        business, client_ref = self.make_business("Portal fechas")
+        quote = self._quote(business["id"], client_ref["id"])
+        draft = db.add_invoice(
+            client_ref["id"], "Revisión anual", 100,
+            business_id=business["id"],
+        )
+        invoice = db.issue_invoice(draft["id"], business["id"])
+        token = db.get_or_create_portal_token(business["id"], client_ref["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                page = client.get(f"/p/{token}")
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(f"Válido hasta el {_human_date(quote['valid_until'])}", page.text)
+        self.assertIn(f"Vence el {_human_date(invoice['due_date'])}", page.text)
+        self.assertNotIn("T00:00:00", page.text)
+        self.assertEqual(_human_date("2026-09-06T00:00:00"), "06/09/2026")
 
     def test_payment_api_is_isolated_and_portal_shows_remaining_amount(self):
         from starlette.testclient import TestClient
@@ -2525,6 +3626,18 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertEqual(signup.status_code, 303)
                 user = db.get_user_by_email("completo@example.com")
                 business_id = user["business_id"]
+                started = db.get_business(business_id)
+                self.assertTrue(started["onboarding_started"])
+                self.assertFalse(started["onboarding_done"])
+                self.assertEqual(started["onboarding_stage"], 2)
+                self.assertEqual(started["onboarding_plan"], "pro")
+                self.assertEqual(started["onboarding_billing"], "annual")
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/setup/{business_id}",
+                )
+                with self.assertRaises(ValueError):
+                    db.finish_onboarding(business_id, whatsapp_choice="later")
                 setup_page = client.get(signup.headers["location"])
                 self.assertIn(
                     'value="Instalación de placas solares"', setup_page.text
@@ -2547,6 +3660,13 @@ class PortalHttpTestCase(BackendTestCase):
                     profile.headers["location"],
                     f"/onboarding/preferences/{business_id}",
                 )
+                self.assertEqual(
+                    db.get_business(business_id)["onboarding_stage"], 3
+                )
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/preferences/{business_id}",
+                )
 
                 preferences_page = client.get(profile.headers["location"])
                 self.assertEqual(preferences_page.status_code, 200)
@@ -2560,6 +3680,12 @@ class PortalHttpTestCase(BackendTestCase):
                         "default_irpf": "15",
                         "default_payment_term_days": "30",
                         "invoice_template": "editorial",
+                        "brand_color": "#2e8b74",
+                        "document_footer": "Programa financiado por la ayuda piloto.",
+                        "quote_terms": "Validez de 30 dias.",
+                        "footer_image_width": "75",
+                        "footer_image_alignment": "right",
+                        "footer_image_scope": "all",
                         "payment_iban": TEST_IBAN,
                         "payment_bizum": "600111222",
                         "payment_note": "Indica el numero de factura.",
@@ -2573,6 +3699,10 @@ class PortalHttpTestCase(BackendTestCase):
                         "gestoria_name": "Gestoria Piloto",
                         "gestoria_email": "gestoria@example.com",
                         "gestoria_cadence": "mensual",
+                    },
+                    files={
+                        "logo": ("logo.png", TINY_PNG, "image/png"),
+                        "footer_image": ("ayuda.png", TINY_PNG, "image/png"),
                     },
                     follow_redirects=False,
                 )
@@ -2588,8 +3718,20 @@ class PortalHttpTestCase(BackendTestCase):
                 )
                 self.assertEqual(configured["default_payment_term_days"], 30)
                 self.assertEqual(configured["invoice_template"], "editorial")
+                self.assertEqual(configured["brand_color"], "#2e8b74")
+                self.assertEqual(configured["footer_image_width"], 75)
+                self.assertEqual(configured["footer_image_alignment"], "right")
+                self.assertEqual(configured["footer_image_scope"], "all")
+                self.assertTrue(configured["logo_data"])
+                self.assertTrue(configured["footer_image_data"])
                 self.assertEqual(configured["payment_reminder_days"], "3,10")
                 self.assertEqual(configured["gestoria_cadence"], "mensual")
+                self.assertEqual(configured["onboarding_stage"], 4)
+                self.assertFalse(configured["onboarding_done"])
+                self.assertEqual(
+                    db.onboarding_destination(business_id),
+                    f"/onboarding/whatsapp/{business_id}",
+                )
                 reports = db.resolve_whatsapp_reports(
                     configured["whatsapp_reports"]
                 )
@@ -2612,9 +3754,18 @@ class PortalHttpTestCase(BackendTestCase):
 
                 whatsapp_step = client.get(preferences.headers["location"])
                 self.assertEqual(whatsapp_step.status_code, 200)
-                self.assertIn("Continuar y revisar el pago", whatsapp_step.text)
+                self.assertIn("Así queda Negocio Completo", whatsapp_step.text)
+                self.assertIn("Negocio · Anual", whatsapp_step.text)
+                pending = client.post(
+                    f"/onboarding/whatsapp/{business_id}/connect",
+                    data={"action": "check"},
+                    follow_redirects=False,
+                )
+                self.assertIn("status=pending", pending.headers["location"])
+                self.assertFalse(db.get_business(business_id)["onboarding_done"])
                 finished = client.post(
                     f"/onboarding/whatsapp/{business_id}/connect",
+                    data={"action": "later"},
                     follow_redirects=False,
                 )
                 self.assertEqual(finished.status_code, 303)
@@ -2622,6 +3773,12 @@ class PortalHttpTestCase(BackendTestCase):
                 self.assertIn("status=ready", finished.headers["location"])
                 self.assertIn("plan=pro", finished.headers["location"])
                 self.assertIn("billing=annual", finished.headers["location"])
+                completed = db.get_business(business_id)
+                self.assertTrue(completed["onboarding_done"])
+                self.assertEqual(completed["onboarding_stage"], 5)
+                self.assertEqual(
+                    completed["whatsapp_onboarding_choice"], "later"
+                )
                 payment_page = client.get(finished.headers["location"])
                 self.assertEqual(payment_page.status_code, 200)
                 self.assertIn("subscription-ready", payment_page.text)
@@ -3313,6 +4470,33 @@ class ProfessionalInvoicingHttpTestCase(unittest.TestCase):
                     json={},
                 )
                 self.assertEqual(issued.status_code, 200, issued.text)
+                rectified = client.post(
+                    f"/api/{business['id']}/invoices/{invoice['id']}/rectify",
+                    json={
+                        "invoice_type": "R1", "rectification_type": "I",
+                        "reason": "Importe de material incorrecto",
+                        "concept": "Corrección de material", "base": -10,
+                        "vat_rate": 21, "irpf_rate": 0,
+                    },
+                )
+                self.assertEqual(rectified.status_code, 200, rectified.text)
+                correction = rectified.json()
+                revised = client.patch(
+                    f"/api/{business['id']}/invoices/{correction['id']}/rectification",
+                    json={
+                        "invoice_type": "R1", "rectification_type": "I",
+                        "reason": "Importe de material revisado",
+                        "concept": "Corrección final de material", "base": -12,
+                        "vat_rate": 21, "irpf_rate": 0,
+                    },
+                )
+                self.assertEqual(revised.status_code, 200, revised.text)
+                self.assertEqual(revised.json()["base"], -12)
+                invoices = client.get(f"/api/{business['id']}/invoices").json()
+                original_row = next(row for row in invoices if row["id"] == invoice["id"])
+                self.assertEqual(
+                    original_row["pending_rectification_id"], correction["id"]
+                )
                 delivered = client.post(
                     f"/api/{business['id']}/invoices/{invoice['id']}/deliver",
                     json={"channel": "auto"},
@@ -4655,6 +5839,113 @@ class GestoriaTestCase(unittest.TestCase):
             account["id"], first["id"]
         ))
 
+    def test_fiscal_profile_is_explicit_and_isolated_per_business(self):
+        first, _ = self.make_business("Perfil fiscal propio")
+        foreign, _ = self.make_business("Perfil fiscal ajeno")
+        account = db.create_gestoria_account(
+            "fiscal@gestoria.com", auth.hash_password(TEST_PASSWORD),
+            "Gestoría Fiscal",
+        )
+        invitation = db.create_gestoria_invitation(
+            first["id"], account["email"], auth.hash_token("fiscal-profile"),
+            (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+        )
+        db.accept_gestoria_invitation(invitation["id"], account["id"])
+        self.assertEqual(
+            db.get_gestoria_fiscal_profile(first["id"])["taxpayer_type"],
+            "sin_configurar",
+        )
+        saved = db.update_gestoria_fiscal_profile(
+            first["id"], account["id"], taxpayer_type="autonomo",
+            income_tax_regime="estimacion_directa", vat_regime="general",
+            filing_cadence="trimestral", obligations=["303", "130", "347"],
+            notes="Estimación directa simplificada.",
+        )
+        self.assertEqual(saved["obligations"], ["130", "303", "347"])
+        with self.assertRaises(ValueError):
+            db.update_gestoria_fiscal_profile(
+                foreign["id"], account["id"], taxpayer_type="sociedad",
+                income_tax_regime="sociedades", vat_regime="general",
+                filing_cadence="trimestral", obligations=["200"],
+            )
+
+    def test_workspace_includes_received_invoice_in_tax_preview(self):
+        from noesis import gestoria_workspace
+
+        business, client = self.make_business("Fiscal completo")
+        invoice = db.add_invoice(
+            client["id"], "Servicio", 100, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+        supplier = db.add_supplier(
+            "Proveedor Fiscal", nif="B12345678", business_id=business["id"]
+        )
+        today = date.today()
+        db.add_received_invoice(
+            121, supplier_id=supplier["id"], base=100, vat_rate=21,
+            vat_amount=21, issued_on=today.isoformat(),
+            business_id=business["id"],
+        )
+        quarter = (today.month - 1) // 3 + 1
+        data = gestoria_workspace.workspace(
+            business["id"], year=today.year, quarter=quarter
+        )
+        self.assertEqual(data["period"]["output_vat"], 21.0)
+        self.assertEqual(data["period"]["input_vat"], 21.0)
+        self.assertEqual(data["period"]["vat_result"], 0.0)
+        fiscal = db.tax_quarter(today.year, quarter, business["id"])
+        self.assertEqual(fiscal["n_facturas_recibidas"], 1)
+        self.assertEqual(fiscal["iva_soportado"], 21.0)
+
+    def test_owner_document_archive_reuses_periods_and_private_preview(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import service as docservice
+        from noesis.web import server
+
+        business, _ = self.make_business("Archivo titular")
+        foreign, _ = self.make_business("Archivo ajeno")
+        own_doc = docservice.upload(
+            business["id"], "ticket-propio.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        foreign_doc = docservice.upload(
+            foreign["id"], "ticket-ajeno.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        db.create_user(
+            "archivo@example.com", auth.hash_password(TEST_PASSWORD), business["id"]
+        )
+        today = date.today()
+        quarter = (today.month - 1) // 3 + 1
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                login = client.post(
+                    "/login",
+                    data={"email": "archivo@example.com", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(login.status_code, 303)
+                page = client.get(f"/b/{business['id']}/documentos")
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("Documentos por período", page.text)
+                archive = client.get(
+                    f"/api/{business['id']}/document-archive"
+                    f"?year={today.year}&quarter={quarter}&view=tickets"
+                )
+                self.assertEqual(archive.status_code, 200, archive.text)
+                payload = archive.json()
+                self.assertEqual(payload["document_counts"]["tickets"], 1)
+                self.assertEqual(payload["documents"][0]["id"], own_doc["id"])
+                preview = client.get(
+                    f"/api/{business['id']}/documents/{own_doc['id']}/preview"
+                )
+                self.assertEqual(preview.status_code, 200)
+                self.assertIn("no-store", preview.headers["cache-control"])
+                blocked = client.get(
+                    f"/api/{foreign['id']}/documents/{foreign_doc['id']}/preview"
+                )
+                self.assertEqual(blocked.status_code, 403)
+
     def test_professional_portfolio_accepts_two_clients_without_mixing_them(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -4686,6 +5977,80 @@ class GestoriaTestCase(unittest.TestCase):
                 self.assertEqual(portfolio.status_code, 200)
                 self.assertIn("Cartera Web Uno", portfolio.text)
                 self.assertIn("Cartera Web Dos", portfolio.text)
+
+    def test_professional_client_workspace_previews_only_own_documents(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import service as docservice
+        from noesis.web import server
+
+        business, _ = self.make_business("Gestoría documentos")
+        foreign, _ = self.make_business("Gestoría documento ajeno")
+        own_doc = docservice.upload(
+            business["id"], "ticket-propio.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        foreign_doc = docservice.upload(
+            foreign["id"], "ticket-ajeno.jpg", TINY_JPEG,
+            kind="ticket", run_ocr=False,
+        )
+        raw = "gestoria-doc-preview"
+        db.create_gestoria_invitation(
+            business["id"], "docs@gestoria.com", auth.hash_token(raw),
+            (datetime.now() + timedelta(days=1)).isoformat(timespec="seconds"),
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                accepted = client.post(
+                    f"/gestoria/accept/{raw}",
+                    data={"firm_name": "Gestoría Docs", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(accepted.status_code, 303)
+                page = client.get(
+                    f"/gestoria/cliente/{business['id']}?section=documentos"
+                    f"&view=tickets&doc={own_doc['id']}"
+                )
+                self.assertEqual(page.status_code, 200)
+                self.assertIn("ticket-propio.jpg", page.text)
+                self.assertIn("Documentos y movimientos", page.text)
+                self.assertNotIn("Primera lectura fiscal", page.text)
+                fiscal_page = client.get(
+                    f"/gestoria/cliente/{business['id']}?section=impuestos"
+                )
+                self.assertEqual(fiscal_page.status_code, 200)
+                self.assertIn("Primera lectura fiscal", fiscal_page.text)
+                self.assertNotIn("Documentos y movimientos", fiscal_page.text)
+                saved_profile = client.post(
+                    f"/gestoria/cliente/{business['id']}/perfil-fiscal",
+                    data={"year": "2026", "quarter": "2"},
+                    follow_redirects=False,
+                )
+                self.assertEqual(saved_profile.status_code, 303)
+                self.assertIn(
+                    "section=impuestos&year=2026&quarter=2",
+                    saved_profile.headers["location"],
+                )
+                requested = client.post(
+                    f"/gestoria/cliente/{business['id']}/solicitud",
+                    data={
+                        "message": "Falta el justificante.",
+                        "year": "2026", "quarter": "2",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(requested.status_code, 303)
+                self.assertIn(
+                    "section=solicitudes&year=2026&quarter=2",
+                    requested.headers["location"],
+                )
+                preview = client.get(
+                    f"/gestoria/cliente/{business['id']}/documento/{own_doc['id']}/preview"
+                )
+                self.assertEqual(preview.status_code, 200)
+                denied = client.get(
+                    f"/gestoria/cliente/{foreign['id']}/documento/{foreign_doc['id']}/preview"
+                )
+                self.assertEqual(denied.status_code, 403)
 
     def test_document_context_never_accepts_foreign_client_or_project(self):
         from noesis.documents import repo as docrepo, service as docservice
@@ -4973,6 +6338,1219 @@ class AdminCommandCenterTestCase(unittest.TestCase):
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
 
+    def test_admin_requeues_only_failed_email_inside_the_same_business(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección Noesis")
+        target, _ = self.make_business("Cuenta con correo bloqueado")
+        other, _ = self.make_business("Otra cuenta")
+        admin = db.create_user(
+            "delivery-admin@example.com",
+            auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        message = db.enqueue_email_message(
+            business_id=target["id"],
+            to_email="destino-privado@example.com",
+            subject="Contenido que no debe ver administración",
+            text_body="Texto privado del cliente",
+            idempotency_key="admin-retry-test",
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE email_outbox SET status='failed', attempts=max_attempts, "
+                "last_error='proveedor temporalmente bloqueado' WHERE id=?",
+                (message["id"],),
+            )
+
+        with (
+            patch.object(config, "ADMIN_EMAIL", "delivery-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "delivery-admin@example.com",
+                "password": TEST_PASSWORD,
+            })
+            page = client.get(f"/admin/cuentas/{target['id']}")
+            wrong_tenant = client.post(
+                f"/admin/cuentas/{other['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+            retried = client.post(
+                f"/admin/cuentas/{target['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+            duplicate = client.post(
+                f"/admin/cuentas/{target['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+
+        self.assertIn("Reintentar correo", page.text)
+        self.assertNotIn("destino-privado@example.com", page.text)
+        self.assertNotIn("Contenido que no debe ver", page.text)
+        self.assertNotIn("Texto privado del cliente", page.text)
+        self.assertEqual(wrong_tenant.status_code, 303)
+        self.assertEqual(retried.headers["location"], f"/admin/cuentas/{target['id']}#entregas")
+        self.assertEqual(duplicate.status_code, 303)
+        queued = db.get_email_message(message["id"])
+        self.assertEqual(queued["status"], "queued")
+        self.assertEqual(queued["attempts"], 0)
+        events = [
+            item for item in db.list_security_events()
+            if item["event_type"] == "admin.email_delivery_requeued"
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["actor_user_id"], admin["id"])
+        self.assertEqual(events[0]["subject_business_id"], target["id"])
+        self.assertEqual(events[0]["metadata"]["outbox_id"], message["id"])
+
+    def test_admin_records_observed_cost_without_overwriting_history(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Dirección CFO")
+        admin = db.create_user(
+            "cfo-admin@example.com", auth.hash_password(TEST_PASSWORD), business["id"]
+        )
+        period = date.today().strftime("%Y-%m")
+        with (
+            patch.object(config, "ADMIN_EMAIL", "cfo-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "cfo-admin@example.com", "password": TEST_PASSWORD,
+                })
+                saved = client.post(
+                    "/admin/costes",
+                    data={
+                        "period": period, "category": "hosting",
+                        "amount_eur": "24.50", "source": "actual",
+                        "note": "Factura Railway agosto",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(saved.status_code, 303)
+                page = client.get("/admin")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Factura Railway agosto", page.text)
+                self.assertIn("Margen observado", page.text)
+                self.assertIn("Rentabilidad operativa por cuenta", page.text)
+        ledger = db.platform_cost_summary(period)
+        self.assertEqual(ledger["observed_total"], 24.5)
+        event = next(
+            item for item in db.list_security_events()
+            if item["event_type"] == "admin.platform_cost_recorded"
+        )
+        self.assertEqual(event["actor_user_id"], admin["id"])
+
+    def test_owner_opens_and_revokes_scoped_support_window(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Cuenta con soporte")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("support-owner@example.com", business["id"]),
+            )
+        owner = db.create_user(
+            "support-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "support-owner@example.com", "password": TEST_PASSWORD,
+                })
+                response = client.post(
+                    f"/b/{business['id']}/support-access",
+                    data={
+                        "purpose": "Revisar la configuración de documentos",
+                        "scopes": ["configuration", "document_metadata"],
+                        "duration_hours": "1", "consent": "yes",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                grant = db.active_support_grant(business["id"])
+                self.assertEqual(
+                    grant["scopes"], ["configuration", "document_metadata"]
+                )
+                revoked = client.post(
+                    f"/b/{business['id']}/support-access/revoke",
+                    follow_redirects=False,
+                )
+                self.assertEqual(revoked.status_code, 303)
+        self.assertIsNone(db.active_support_grant(business["id"]))
+        events = [event["event_type"] for event in db.list_security_events()]
+        self.assertIn("support.access_granted", events)
+        self.assertIn("support.access_revoked", events)
+        self.assertEqual(owner["business_id"], business["id"])
+
+    def test_support_shows_why_a_delivery_is_stuck_without_leaking_content(self):
+        """Cuando un cliente avisa de que algo no le ha llegado, el recuento
+        agregado dice que falla pero no que hacer. El motivo del proveedor separa
+        un problema de configuracion nuestro de una direccion mal escrita suya."""
+        business, _ = self.make_business("Cuenta con entrega atascada")
+        message = db.enqueue_email_message(
+            business_id=business["id"], to_email="cliente-final@example.com",
+            subject="Factura F-2026-014", text_body="Adjunto su factura.",
+        )
+        # Recorre el camino real: la cola reclama el mensaje antes de fallar.
+        # Sin esto `mark_email_retry` no aplica, porque solo toca 'processing'.
+        # Una marca posterior a la del encolado, para no depender del reloj real.
+        claimed = db.claim_next_email_message(
+            now="2099-01-01T00:00:00", stale_before="2098-12-31T23:55:00",
+        )
+        self.assertEqual(claimed["id"], message["id"])
+        db.mark_email_retry(
+            message["id"], error="SMTP 550 buzon inexistente",
+            next_attempt_at="2026-08-20T10:00:00",
+            updated_at="2026-08-19T10:00:00",
+        )
+
+        fallos = db.admin_support_delivery_failures(business["id"])
+
+        self.assertEqual(len(fallos), 1)
+        fallo = fallos[0]
+        self.assertEqual(fallo["channel"], "email")
+        self.assertEqual(fallo["status"], "retrying")
+        self.assertIn("550", fallo["reason"])
+        self.assertGreaterEqual(fallo["attempts"], 1)
+        self.assertFalse(fallo["exhausted"])
+        # El diagnostico no puede filtrar contenido del cliente.
+        serializado = json.dumps(fallos, default=str)
+        self.assertNotIn("cliente-final@example.com", serializado)
+        self.assertNotIn("Factura F-2026-014", serializado)
+        self.assertNotIn("Adjunto su factura", serializado)
+        # Una cuenta sana no inventa incidencias.
+        limpia, _ = self.make_business("Cuenta sin incidencias")
+        self.assertEqual(db.admin_support_delivery_failures(limpia["id"]), [])
+
+    def test_template_params_never_carry_what_meta_refuses(self):
+        """Meta rechaza un parametro con salto de linea, tabulador o mas de cuatro
+        espacios seguidos, y el planificador compone resumenes multilinea que pasa
+        como un unico parametro. Sin saneado, los cinco proactivos —resumen diario,
+        semanal, cierre, aviso fiscal y aviso de cobros— agotarian sus reintentos
+        contra el numero real sin que ninguna prueba lo viera, porque todas simulan
+        la respuesta de Meta."""
+        from noesis.web import whatsapp
+
+        prohibido = "\r\n\t\v\f\u2028\u2029"
+        parte = (
+            "Tu parte de hoy en Noesis:\n"
+            "\n"
+            "Trabajos:\n"
+            "\u2022 #12 \u00b7 09:00 \u00b7 Comunidad Los Olivos: reparar bajante\n"
+            "\n"
+            "\u27a1\ufe0f Manana lo primero: reclamar a Garcia (240,00 \u20ac)."
+        )
+
+        business, _ = self.make_business("Cuenta con proactivos")
+        mensaje = whatsapp.queue_template(
+            "34600000000", "noesis_resumen_diario", [parte],
+            business_id=business["id"],
+        )
+
+        guardado = json.loads(
+            db.get_whatsapp_message(mensaje["id"], business["id"])["template_params"]
+        )
+        self.assertEqual(len(guardado), 1)
+        enviado = guardado[0]
+
+        # 1. Nada de lo que Meta rechaza sobrevive.
+        for caracter in prohibido:
+            self.assertNotIn(
+                caracter, enviado,
+                f"un {caracter!r} en un parametro hace que Meta rechace el envio",
+            )
+        self.assertNotIn("    ", enviado, "mas de cuatro espacios seguidos")
+
+        # 2. Y el contenido sigue siendo legible: no se pierde ni se pega todo.
+        self.assertIn("Comunidad Los Olivos", enviado)
+        self.assertIn("240,00", enviado)
+        self.assertIn("\u00b7", enviado, "los saltos dejan un separador visible")
+        self.assertNotIn("Noesis:Trabajos", enviado, "las lineas no pueden pegarse")
+
+        # 3. Lo guardado es exactamente lo que saldra, para que un reintento no
+        #    cambie el texto ni el diagnostico enseñe otra cosa.
+        payload = whatsapp._meta_payload(
+            db.get_whatsapp_message(mensaje["id"], business["id"])
+        )
+        parametro = payload["template"]["components"][0]["parameters"][0]["text"]
+        self.assertEqual(parametro, enviado)
+
+    def test_every_proactive_summary_survives_the_meta_rules(self):
+        """Los cinco proactivos del planificador, con su texto real de varias
+        lineas, tienen que salir validos. Es la comprobacion que faltaba: cada uno
+        se compone en un sitio distinto y basta que uno se olvide para que ese
+        aviso no llegue nunca."""
+        from noesis.web import whatsapp
+
+        business, _ = self.make_business("Cuenta con los cinco avisos")
+        textos = {
+            "noesis_resumen_diario": "Hoy:\n\u2022 2 trabajos\n\u2022 1 cobro",
+            "noesis_resumen_semanal": "Semana:\n\nFacturado 1.200 \u20ac\nPendiente 340 \u20ac",
+            "noesis_cierre_dia": "Cierre:\n\u2022 3 trabajos cerrados\n\n\u27a1\ufe0f Manana: reclamar",
+            "noesis_aviso_fiscal": "Cierre del 2T:\nIVA 303: 420,00 \u20ac\nIRPF 130: 180,00 \u20ac",
+            "noesis_aviso_cobros": "Garcia te debe 240,00 \u20ac\n(factura 12, 9 dias)",
+        }
+        prohibido = "\r\n\t\v\f"
+
+        for plantilla, texto in textos.items():
+            with self.subTest(plantilla=plantilla):
+                mensaje = whatsapp.queue_template(
+                    "34600000001", plantilla, [texto],
+                    business_id=business["id"],
+                    idempotency_key=f"prueba:{plantilla}",
+                )
+                guardado = json.loads(
+                    db.get_whatsapp_message(
+                        mensaje["id"], business["id"]
+                    )["template_params"]
+                )[0]
+                for caracter in prohibido:
+                    self.assertNotIn(caracter, guardado)
+                self.assertNotIn("    ", guardado)
+                self.assertTrue(guardado, "el aviso no puede quedarse vacio")
+
+    def test_the_google_button_carries_its_official_mark(self):
+        """El boton de Google llevaba solo texto: sin la marca, la gente no lo
+        reconoce como el acceso de Google y desconfia justo en el paso mas
+        delicado. La marca va en SVG dentro del HTML porque el proyecto prohibe
+        CDNs en runtime: un icono servido de fuera se cae cuando ese tercero se
+        cae, y encima cuenta a quien visita la pagina de acceso."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        from noesis import config
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", "x.apps.googleusercontent.com"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "secreto"),
+            TestClient(server.app) as client,
+        ):
+            login = client.get("/login")
+
+        self.assertEqual(login.status_code, 200)
+        self.assertIn("auth-google-btn", login.text)
+        self.assertIn("g-logo", login.text)
+        # Los cuatro colores de la marca: si falta uno, el logo sale roto.
+        for color in ("#4285F4", "#34A853", "#FBBC05", "#EA4335"):
+            self.assertIn(color, login.text, f"falta el color {color} de la marca")
+        # Y no puede llegar de fuera.
+        inicio = login.text.find("auth-google-btn")
+        boton = login.text[inicio:inicio + 1500]
+        self.assertNotIn("http://", boton)
+        self.assertNotIn("https://", boton)
+
+    def test_each_identity_lands_where_it_works(self):
+        """Administracion no lleva un negocio con Noesis: gestiona los de los demas.
+
+        Aterrizar en un panel con Trabajos, Clientes y Facturas la obliga a buscar
+        la puerta de su propio trabajo. Un cliente, al reves, no debe acabar nunca
+        en el panel interno."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Noesis Studio")
+        cliente, _ = self.make_business("Fontaneria cliente")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+        db.create_user(
+            "cliente@example.com", auth.hash_password(TEST_PASSWORD), cliente["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            entrada_admin = client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+            panel_admin = client.get("/admin")
+            client.post("/logout")
+            entrada_cliente = client.post("/login", data={
+                "email": "cliente@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+
+        # Administracion entra directa a su trabajo.
+        self.assertEqual(
+            entrada_admin.headers.get("location", ""), "/admin",
+            "administracion deberia aterrizar en el panel interno",
+        )
+        # Pero no queda encerrada: puede volver a su propio negocio.
+        self.assertIn(f"/b/{admin_business['id']}/resumen", panel_admin.text)
+
+        # El cliente entra a su negocio, nunca al panel interno.
+        destino_cliente = entrada_cliente.headers.get("location", "")
+        self.assertIn(f"/b/{cliente['id']}", destino_cliente)
+        self.assertNotIn("/admin", destino_cliente)
+
+    def test_admin_dashboard_manages_accounts_without_opening_each_file(self):
+        """El propietario tiene que poder gestionar desde el cuadro de mando.
+
+        Antes, la unica via era entrar cuenta por cuenta a traves de un boton al
+        final de una tabla ancha, y el founder no lo encontro. Se comprueba que el
+        panel lista las cuentas, que sus acciones cambian el estado de verdad, que
+        devuelven al cuadro de mando, y que la ficha sigue devolviendo a la ficha."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Noesis Studio")
+        cliente, _ = self.make_business("Fontaneria de prueba")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+        db.set_trial(cliente["id"], days=-10)
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            })
+            panel = client.get("/admin")
+            # Activar sin entrar en la ficha.
+            activar = client.post(
+                f"/admin/cuentas/{cliente['id']}/suscripcion",
+                data={"action": "activar", "plan": "premium", "volver": "admin"},
+                follow_redirects=False,
+            )
+            activada = db.get_business(cliente["id"])
+            # Retirar el uso sin entrar en la ficha.
+            consulta = client.post(
+                f"/admin/cuentas/{cliente['id']}/suscripcion",
+                data={"action": "desactivar", "volver": "admin"},
+                follow_redirects=False,
+            )
+            apagada = db.get_business(cliente["id"])
+            # La misma accion desde la ficha debe volver a la ficha.
+            desde_ficha = client.post(
+                f"/admin/cuentas/{cliente['id']}/suscripcion",
+                data={"action": "ampliar_prueba", "trial_days": "14"},
+                follow_redirects=False,
+            )
+            # Y el panel del negocio ofrece la entrada a administracion.
+            propio = client.get(f"/b/{admin_business['id']}/resumen")
+
+        # El panel de gestion existe y lista las cuentas.
+        self.assertEqual(panel.status_code, 200)
+        self.assertIn('id="gestion"', panel.text)
+        self.assertIn("Fontaneria de prueba", panel.text)
+
+        # Las acciones cambian el estado de verdad.
+        self.assertEqual(activada["subscription_status"], "active")
+        self.assertEqual(activada["plan"], "premium")
+        self.assertTrue(db.subscription_allows_access(activada))
+        self.assertEqual(apagada["subscription_status"], "canceled")
+        self.assertFalse(db.subscription_allows_access(apagada))
+
+        # Y cada una devuelve a donde estabas.
+        self.assertIn("/admin#gestion", activar.headers.get("location", ""))
+        self.assertIn("/admin#gestion", consulta.headers.get("location", ""))
+        self.assertIn(
+            f"/admin/cuentas/{cliente['id']}",
+            desde_ficha.headers.get("location", ""),
+        )
+
+        # El enlace a administracion solo se pinta para quien lo es.
+        self.assertIn('href="/admin"', propio.text)
+
+    def test_the_admin_entrance_is_not_offered_to_a_normal_account(self):
+        """El enlace a administracion no puede aparecer en el panel de un cliente."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Cliente normal")
+        db.create_user(
+            "normal@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "normal@example.com", "password": TEST_PASSWORD,
+            })
+            panel = client.get(f"/b/{business['id']}/resumen")
+            intento = client.get("/admin", follow_redirects=False)
+
+        self.assertEqual(panel.status_code, 200)
+        self.assertNotIn('href="/admin"', panel.text)
+        self.assertEqual(intento.status_code, 303)
+        self.assertIn("/login", intento.headers.get("location", ""))
+
+    def test_suspended_user_loses_access_immediately_and_can_be_restored(self):
+        """Retirar el acceso de una persona tiene que ser efectivo en la peticion
+        siguiente, no cuando caduque una cookie, y no puede tocar los datos del
+        negocio ni el acceso de sus companeros."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Reformas con equipo")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("titular@example.com", business["id"]),
+            )
+        titular = db.create_user(
+            "titular@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        empleado = db.create_user(
+            "empleado@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        clientes_antes = len(db.list_clients(business["id"]))
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            # El empleado entra y trabaja con normalidad.
+            client.post("/login", data={
+                "email": "empleado@example.com", "password": TEST_PASSWORD,
+            })
+            antes = client.get(f"/b/{business['id']}/resumen")
+
+            # Se le retira el acceso mientras tiene la sesion abierta.
+            db.set_user_access(
+                empleado["id"], active=False, actor_user_id=titular["id"],
+                note="Ya no trabaja en la empresa",
+            )
+
+            # La sesion viva muere en la peticion siguiente.
+            despues = client.get(
+                f"/b/{business['id']}/resumen", follow_redirects=False,
+            )
+            # Y tampoco puede volver a entrar con su contrasena correcta.
+            reintento = client.post("/login", data={
+                "email": "empleado@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+
+        self.assertEqual(antes.status_code, 200)
+        self.assertEqual(despues.status_code, 307)
+        self.assertIn("/login", despues.headers.get("location", ""))
+        self.assertIn("suspended", reintento.headers.get("location", ""))
+
+        # No se ha borrado nada del negocio.
+        self.assertEqual(len(db.list_clients(business["id"])), clientes_antes)
+        suspendido = db.get_user(empleado["id"])
+        self.assertFalse(suspendido["is_active"])
+        self.assertEqual(suspendido["access_note"], "Ya no trabaja en la empresa")
+        self.assertIsNotNone(suspendido["suspended_at"])
+
+        # El titular conserva su acceso intacto.
+        self.assertTrue(db.get_user(titular["id"])["is_active"])
+
+        # Y la restauracion devuelve el acceso.
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            db.set_user_access(
+                empleado["id"], active=True, actor_user_id=titular["id"],
+            )
+            vuelta = client.post("/login", data={
+                "email": "empleado@example.com", "password": TEST_PASSWORD,
+            }, follow_redirects=False)
+            panel = client.get(f"/b/{business['id']}/resumen")
+
+        self.assertNotIn("suspended", vuelta.headers.get("location", ""))
+        self.assertEqual(panel.status_code, 200)
+        restaurado = db.get_user(empleado["id"])
+        self.assertTrue(restaurado["is_active"])
+        self.assertIsNone(restaurado["suspended_at"])
+
+    def test_an_inactive_user_is_refused_even_if_the_session_still_matches(self):
+        """Segunda barrera, aislada a proposito.
+
+        `set_user_access` sube `session_version`, asi que en el uso normal la
+        sesion muere por ahi. Esta prueba desactiva la cuenta **sin** tocar la
+        version, que es lo que pasaria si alguien editara la base a mano o si un
+        camino futuro se olvidara de subirla. Sin la comprobacion en
+        `current_user`, la sesion sobreviviria."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Cuenta con sesion viva")
+        db.create_user(
+            "sesion@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        db.create_user(
+            "companero@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "sesion@example.com", "password": TEST_PASSWORD,
+            })
+            antes = client.get(f"/b/{business['id']}/resumen")
+            # Desactivar sin subir session_version: solo queda la barrera de
+            # `current_user`.
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE users SET is_active=FALSE WHERE email=?",
+                    ("sesion@example.com",),
+                )
+            despues = client.get(
+                f"/b/{business['id']}/resumen", follow_redirects=False,
+            )
+
+        self.assertEqual(antes.status_code, 200)
+        self.assertEqual(
+            despues.status_code, 307,
+            "una cuenta desactivada no puede seguir navegando con su sesion",
+        )
+        self.assertIn("/login", despues.headers.get("location", ""))
+
+    def test_access_control_refuses_to_leave_an_account_locked_out(self):
+        """Las tres protecciones que impiden dejar una cuenta sin dueno. Cada una
+        se comprueba por separado: un fallo aqui deja a un cliente fuera de su
+        propio negocio y solo se arregla desde la base de datos."""
+        business, _ = self.make_business("Cuenta de una sola persona")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("solo@example.com", business["id"]),
+            )
+        solo = db.create_user(
+            "solo@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        otro = db.create_user(
+            "otro@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+
+        # 1. Nadie se suspende a si mismo.
+        with self.assertRaises(db.AccessControlError) as caso:
+            db.set_user_access(otro["id"], active=False, actor_user_id=otro["id"])
+        self.assertIn("a ti mismo", str(caso.exception))
+
+        # 2. El titular del negocio no se puede suspender.
+        with self.assertRaises(db.AccessControlError) as caso:
+            db.set_user_access(solo["id"], active=False, actor_user_id=otro["id"])
+        self.assertIn("titular", str(caso.exception))
+
+        # 3. No se puede dejar la cuenta sin nadie que entre.
+        db.set_user_access(otro["id"], active=False, actor_user_id=solo["id"])
+        solitario, _ = self.make_business("Cuenta con un unico usuario")
+        unico = db.create_user(
+            "unico@example.com", auth.hash_password(TEST_PASSWORD), solitario["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("nadie@example.com", solitario["id"]),
+            )
+        with self.assertRaises(db.AccessControlError) as caso:
+            db.set_user_access(unico["id"], active=False, actor_user_id=solo["id"])
+        self.assertIn("ultima persona", str(caso.exception))
+        self.assertTrue(db.get_user(unico["id"])["is_active"])
+
+    def test_admin_manages_access_per_person_and_leaves_a_signed_trail(self):
+        """El recorrido de administracion completo: suspender, ver el motivo y
+        restaurar, con cada paso firmado en la bitacora encadenada."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Panel del propietario")
+        target, _ = self.make_business("Cliente con dos personas")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("jefe@example.com", target["id"]),
+            )
+        db.create_user(
+            "jefe@example.com", auth.hash_password(TEST_PASSWORD), target["id"],
+        )
+        empleado = db.create_user(
+            "curro@example.com", auth.hash_password(TEST_PASSWORD), target["id"],
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            })
+            ficha = client.get(f"/admin/cuentas/{target['id']}")
+            client.post(
+                f"/admin/cuentas/{target['id']}/usuarios/{empleado['id']}/acceso",
+                data={"action": "suspender", "note": "Baja voluntaria"},
+                follow_redirects=False,
+            )
+            tras_suspender = db.get_user(empleado["id"])
+            # El titular esta protegido tambien por HTTP, no solo en la capa de datos.
+            jefe = db.get_user_by_email("jefe@example.com")
+            client.post(
+                f"/admin/cuentas/{target['id']}/usuarios/{jefe['id']}/acceso",
+                data={"action": "suspender", "note": "prueba"},
+                follow_redirects=False,
+            )
+            jefe_despues = db.get_user(jefe["id"])
+            client.post(
+                f"/admin/cuentas/{target['id']}/usuarios/{empleado['id']}/acceso",
+                data={"action": "restaurar"}, follow_redirects=False,
+            )
+            tras_restaurar = db.get_user(empleado["id"])
+
+        # La ficha enseña a las dos personas y la frontera de privacidad.
+        self.assertEqual(ficha.status_code, 200)
+        self.assertIn("curro@example.com", ficha.text)
+        self.assertIn("jefe@example.com", ficha.text)
+        self.assertIn("no qué hay dentro", ficha.text)
+
+        self.assertFalse(tras_suspender["is_active"])
+        self.assertEqual(tras_suspender["access_note"], "Baja voluntaria")
+        self.assertTrue(jefe_despues["is_active"], "el titular no debe poder suspenderse")
+        self.assertTrue(tras_restaurar["is_active"])
+
+        eventos = [
+            e["event_type"] for e in db.list_security_events(limit=80)
+            if e["subject_business_id"] == target["id"]
+        ]
+        self.assertIn("admin.user_access_suspended", eventos)
+        self.assertIn("admin.user_access_restored", eventos)
+
+    def test_owner_manages_account_permissions_without_entering_the_account(self):
+        """El propietario gobierna el plan y el estado de cualquier cuenta, que es
+        lo que decide sus permisos. Administracion sigue sin poder abrir el panel
+        del cliente: gestionar no es entrar."""
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        from noesis.adapters import billing as billing_adapter
+
+        admin_business, _ = self.make_business("Panel del propietario")
+        target, _ = self.make_business("Cuenta de un piloto")
+        admin = db.create_user(
+            "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+        db.set_trial(target["id"], days=-5)
+        self.assertFalse(
+            db.subscription_allows_access(db.get_business(target["id"])),
+            "la prueba vencida deberia dejar la cuenta en modo consulta",
+        )
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "duenyo@example.com", "password": TEST_PASSWORD,
+            })
+            client.post(
+                f"/admin/cuentas/{target['id']}/suscripcion",
+                data={"action": "activar", "plan": "autonomo"},
+                follow_redirects=False,
+            )
+            autonomo = db.get_business(target["id"])
+            client.post(
+                f"/admin/cuentas/{target['id']}/suscripcion",
+                data={"action": "activar", "plan": "pro"},
+                follow_redirects=False,
+            )
+            negocio = db.get_business(target["id"])
+            client.post(
+                f"/admin/cuentas/{target['id']}/suscripcion",
+                data={"action": "desactivar"},
+                follow_redirects=False,
+            )
+            apagada = db.get_business(target["id"])
+            # Gestionar no es entrar: el panel ajeno sigue cerrado.
+            ajeno = client.get(
+                f"/b/{target['id']}/resumen", follow_redirects=False,
+            )
+
+        # El plan decide los permisos efectivos.
+        self.assertEqual(autonomo["plan"], "autonomo")
+        self.assertEqual(billing_adapter.entitlements_for(autonomo), frozenset())
+        self.assertEqual(negocio["plan"], "pro")
+        self.assertIn(
+            billing_adapter.ENTITLEMENT_PROJECTS,
+            billing_adapter.entitlements_for(negocio),
+        )
+        self.assertTrue(db.subscription_allows_access(negocio))
+        # Y se puede devolver a modo consulta.
+        self.assertEqual(apagada["subscription_status"], "canceled")
+        self.assertFalse(db.subscription_allows_access(apagada))
+        # Administracion nunca abre la cuenta: sigue el aislamiento de siempre.
+        self.assertEqual(ajeno.status_code, 307)
+        self.assertNotIn(f"/b/{target['id']}", ajeno.headers.get("location", ""))
+        # Cada cambio de permisos queda en la bitacora encadenada.
+        eventos = [
+            e for e in db.list_security_events(limit=80)
+            if e["event_type"] == "admin.subscription_changed"
+        ]
+        self.assertGreaterEqual(len(eventos), 3)
+        self.assertTrue(
+            all(e["subject_business_id"] == target["id"] for e in eventos)
+        )
+
+    def test_support_snapshot_is_admin_only_private_and_audited(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección Noesis")
+        target, _ = self.make_business("Cuenta diagnosticada")
+        db.add_client(
+            "CLIENTE-SECRETO-NO-MOSTRAR", phone="699999999",
+            business_id=target["id"],
+        )
+        admin = db.create_user(
+            "founder-support@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        owner = db.create_user(
+            "ordinary@example.com", auth.hash_password(TEST_PASSWORD), target["id"]
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                ("ordinary@example.com", target["id"]),
+            )
+        grant = db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar una integración bloqueada",
+            scopes=["integrations"], duration_hours=4,
+        )
+        self.assertEqual(grant["scopes"], ["integrations"])
+        with (
+            patch.object(config, "ADMIN_EMAIL", "founder-support@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "founder-support@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Cuenta diagnosticada", page.text)
+                self.assertIn("Ventana temporal abierta", page.text)
+                self.assertIn("Diagnóstico de integraciones", page.text)
+                self.assertIn("Consumo y rentabilidad de Noesis", page.text)
+                self.assertNotIn("CLIENTE-SECRETO-NO-MOSTRAR", page.text)
+                client.post("/logout")
+                client.post("/login", data={
+                    "email": "ordinary@example.com", "password": TEST_PASSWORD,
+                })
+                blocked = client.get(
+                    f"/admin/cuentas/{target['id']}", follow_redirects=False
+                )
+        self.assertEqual(blocked.status_code, 303)
+        self.assertEqual(blocked.headers["location"], "/login")
+        event = next(
+            item for item in db.list_security_events()
+            if item["event_type"] == "admin.support_snapshot_viewed"
+        )
+        self.assertEqual(event["actor_user_id"], admin["id"])
+        self.assertEqual(event["subject_business_id"], target["id"])
+        self.assertEqual(event["metadata"], {"mode": "read_only"})
+        self.assertTrue(db.revoke_support_grant(target["id"], owner["id"]))
+        self.assertIsNone(db.active_support_grant(target["id"]))
+        with self.assertRaises(ValueError):
+            db.create_support_grant(
+                admin_business["id"], owner["id"], purpose="Intento fuera de cuenta",
+                scopes=["configuration"], duration_hours=1,
+            )
+        same_business_non_owner = db.create_user(
+            "employee@example.com", auth.hash_password(TEST_PASSWORD), target["id"]
+        )
+        with self.assertRaises(ValueError):
+            db.create_support_grant(
+                target["id"], same_business_non_owner["id"],
+                purpose="Intento sin permiso del titular",
+                scopes=["configuration"], duration_hours=1,
+            )
+
+    def test_admin_corrects_only_authorized_document_metadata_and_audits_it(self):
+        from starlette.testclient import TestClient
+        from noesis.documents import repo as document_repo
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección de soporte")
+        target, original_client = self.make_business("Cuenta con documento")
+        admin = db.create_user(
+            "support-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        owner = db.create_user(
+            "document-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                (owner["email"], target["id"]),
+            )
+        corrected_client = db.add_client(
+            "Cliente correcto", business_id=target["id"]
+        )
+        project = db.add_project(
+            "Proyecto correcto", 1200, client_id=corrected_client["id"],
+            business_id=target["id"],
+        )
+        document = document_repo.add(
+            target["id"], filename="archivo-a-revisar.pdf",
+            stored_name="support-document.pdf", mime="application/pdf", size=10,
+            kind="documento", client_id=original_client["id"],
+            doc_status="pendiente_revisar",
+        )
+        document_repo.set_review(
+            document["id"], target["id"], review_note="Nota original"
+        )
+        grant = db.create_support_grant(
+            target["id"], owner["id"],
+            purpose="Corregir la organización de este documento",
+            scopes=["document_metadata"], duration_hours=1,
+        )
+
+        with (
+            patch.object(config, "ADMIN_EMAIL", "support-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "support-admin@example.com", "password": TEST_PASSWORD,
+                })
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("archivo-a-revisar.pdf", page.text)
+                response = client.post(
+                    f"/admin/cuentas/{target['id']}/documentos/{document['id']}/metadatos",
+                    data={
+                        "kind": "ticket", "doc_status": "revisado",
+                        "client_id": "", "project_id": str(project["id"]),
+                        "review_note": "Clasificación confirmada por el titular",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertEqual(
+                    response.headers["location"],
+                    f"/admin/cuentas/{target['id']}#document-metadata",
+                )
+
+        saved = document_repo.get(document["id"], target["id"])
+        self.assertEqual(saved["kind"], "ticket")
+        self.assertEqual(saved["doc_status"], "revisado")
+        self.assertEqual(saved["client_id"], corrected_client["id"])
+        self.assertEqual(saved["project_id"], project["id"])
+        event = next(
+            item for item in reversed(db.list_security_events())
+            if item["event_type"] == "admin.support_document_metadata_updated"
+        )
+        self.assertEqual(event["actor_user_id"], admin["id"])
+        self.assertEqual(event["subject_business_id"], target["id"])
+        self.assertEqual(event["metadata"]["grant_id"], grant["id"])
+        self.assertEqual(event["metadata"]["before_kind"], "documento")
+        self.assertEqual(event["metadata"]["after_kind"], "ticket")
+        self.assertNotIn("Clasificación confirmada", json.dumps(event["metadata"]))
+
+    def test_support_document_correction_fails_closed_without_scope_or_for_issued_invoice(self):
+        from noesis.documents import repo as document_repo
+
+        admin_business, _ = self.make_business("Administración segura")
+        target, target_client = self.make_business("Cuenta protegida")
+        other_business, other_client = self.make_business("Otra cuenta")
+        admin = db.create_user(
+            "closed-support@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        owner = db.create_user(
+            "protected-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                (owner["email"], target["id"]),
+            )
+        document = document_repo.add(
+            target["id"], filename="privado.pdf", stored_name="private.pdf",
+            mime="application/pdf", size=10, kind="documento",
+        )
+        with self.assertRaises(PermissionError):
+            db.admin_update_document_metadata(
+                target["id"], document["id"], actor_user_id=admin["id"],
+                kind="ticket", doc_status="revisado", client_id=None,
+                project_id=None, review_note=None,
+            )
+
+        db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar documento protegido",
+            scopes=["document_metadata"], duration_hours=1,
+        )
+        with self.assertRaisesRegex(ValueError, "no pertenece"):
+            db.admin_update_document_metadata(
+                target["id"], document["id"], actor_user_id=admin["id"],
+                kind="ticket", doc_status="revisado",
+                client_id=other_client["id"], project_id=None, review_note=None,
+            )
+
+        invoice = db.add_invoice(
+            target_client["id"], "Trabajo emitido", 100,
+            business_id=target["id"],
+        )
+        issued = db.issue_invoice(invoice["id"], target["id"])
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE documents SET invoice_id=? WHERE id=? AND business_id=?",
+                (issued["id"], document["id"], target["id"]),
+            )
+        with self.assertRaisesRegex(ValueError, "factura emitida"):
+            db.admin_update_document_metadata(
+                target["id"], document["id"], actor_user_id=admin["id"],
+                kind="ticket", doc_status="revisado", client_id=None,
+                project_id=None, review_note=None,
+            )
+        unchanged = document_repo.get(document["id"], target["id"])
+        self.assertEqual(unchanged["kind"], "documento")
+        self.assertIsNotNone(other_business)
+
+    def test_admin_corrects_only_safe_configuration_with_owner_scope(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Administración de configuración")
+        target, target_client = self.make_business("Nombre anterior")
+        admin = db.create_user(
+            "config-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        owner = db.create_user(
+            "config-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin["id"],))
+            conn.execute(
+                "UPDATE businesses SET owner_email=?, payment_iban=?, plan=?, "
+                "subscription_status=? WHERE id=?",
+                (
+                    owner["email"], TEST_IBAN, "premium", "active", target["id"],
+                ),
+            )
+        original = db.get_business(target["id"])
+        issued = db.issue_invoice(
+            db.add_invoice(
+                target_client["id"], "Trabajo anterior", 100,
+                business_id=target["id"],
+            )["id"],
+            target["id"],
+        )
+        grant = db.create_support_grant(
+            target["id"], owner["id"],
+            purpose="Corregir idioma y apariencia documental",
+            scopes=["configuration"], duration_hours=1,
+        )
+
+        with (
+            patch.object(config, "ADMIN_EMAIL", "config-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "config-admin@example.com", "password": TEST_PASSWORD,
+                })
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Corregir perfil y apariencia", page.text)
+                self.assertNotIn("payment_iban", page.text)
+                response = client.post(
+                    f"/admin/cuentas/{target['id']}/configuracion-segura",
+                    data={
+                        "name": "Taller corregido", "sector": "Climatización",
+                        "team_size": "2-5", "province": "Tarragona",
+                        "primary_goal": "control", "language": "ca",
+                        "explanation_level": "detallado",
+                        "invoice_template": "editorial", "brand_color": "#2e8b74",
+                        "document_footer": "Pie privado del titular",
+                        "quote_terms": "Condiciones privadas del presupuesto",
+                        "default_quote_validity_days": "45",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertEqual(
+                    response.headers["location"],
+                    f"/admin/cuentas/{target['id']}#safe-configuration",
+                )
+
+        saved = db.get_business(target["id"])
+        self.assertEqual(saved["name"], "Taller corregido")
+        self.assertEqual(saved["language"], "ca")
+        self.assertEqual(saved["invoice_template"], "editorial")
+        self.assertEqual(saved["default_quote_validity_days"], 45)
+        frozen_invoice = db.get_invoice(issued["id"], target["id"])
+        self.assertEqual(frozen_invoice["issuer_name"], "Nombre anterior")
+        for protected in (
+            "owner_email", "nif", "address", "default_vat", "default_irpf",
+            "payment_iban", "plan", "subscription_status",
+        ):
+            self.assertEqual(saved[protected], original[protected], protected)
+        event = next(
+            item for item in reversed(db.list_security_events())
+            if item["event_type"] == "admin.support_configuration_updated"
+        )
+        serialized = json.dumps(event["metadata"], ensure_ascii=False)
+        self.assertEqual(event["actor_user_id"], admin["id"])
+        self.assertEqual(event["metadata"]["grant_id"], grant["id"])
+        self.assertIn("language", event["metadata"]["changed_fields"])
+        self.assertNotIn("Taller corregido", serialized)
+        self.assertNotIn("Pie privado", serialized)
+        self.assertNotIn(TEST_IBAN, serialized)
+
+    def test_support_configuration_fails_closed_for_wrong_scope_expiry_and_non_admin(self):
+        target, _ = self.make_business("Configuración cerrada")
+        owner = db.create_user(
+            "closed-config-owner@example.com", auth.hash_password(TEST_PASSWORD),
+            target["id"],
+        )
+        outsider = db.create_user(
+            "not-admin@example.com", auth.hash_password(TEST_PASSWORD), target["id"]
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET owner_email=? WHERE id=?",
+                (owner["email"], target["id"]),
+            )
+
+        def update(actor_user_id: int):
+            return db.admin_update_safe_business_configuration(
+                target["id"], actor_user_id=actor_user_id,
+                name="Configuración nueva", sector="Servicios", team_size="solo",
+                province="Barcelona", primary_goal="control", language="es",
+                explanation_level="claro", invoice_template="clasica",
+                brand_color="#14463b", document_footer="", quote_terms="",
+                default_quote_validity_days=30,
+            )
+
+        db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar solo documentos",
+            scopes=["document_metadata"], duration_hours=1,
+        )
+        with self.assertRaises(PermissionError):
+            update(outsider["id"])
+
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (outsider["id"],))
+        with self.assertRaises(PermissionError):
+            update(outsider["id"])
+
+        grant = db.create_support_grant(
+            target["id"], owner["id"], purpose="Revisar configuración temporal",
+            scopes=["configuration"], duration_hours=1,
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE support_access_grants SET expires_at=? WHERE id=?",
+                ((datetime.now() - timedelta(minutes=1)).isoformat(timespec="seconds"),
+                 grant["id"]),
+            )
+        with self.assertRaises(PermissionError):
+            update(outsider["id"])
+        self.assertEqual(db.get_business(target["id"])["name"], "Configuración cerrada")
+        self.assertIsNone(db.active_support_grant(target["id"]))
+
+    def test_admin_registers_and_activates_business_whatsapp_without_secrets(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección multicanal")
+        target, _ = self.make_business("Cuenta con WhatsApp comercial")
+        admin = db.create_user(
+            "whatsapp-admin@example.com", auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        with (
+            patch.object(config, "ADMIN_EMAIL", "whatsapp-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+        ):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "whatsapp-admin@example.com",
+                    "password": TEST_PASSWORD,
+                })
+                created = client.post(
+                    f"/admin/cuentas/{target['id']}/whatsapp-business",
+                    data={
+                        "waba_id": "123 456",
+                        "phone_number_id": "654 321",
+                        "display_phone": "+34 600 123 456",
+                        "verified_name": "Taller Exemple",
+                        "access_token": "no-debe-aceptarse",
+                    },
+                    follow_redirects=False,
+                )
+                self.assertEqual(created.status_code, 303)
+                connection = db.list_whatsapp_connections(target["id"])[0]
+                self.assertEqual(connection["status"], "pending")
+                self.assertFalse(connection["receptionist_enabled"])
+                self.assertEqual(connection["waba_id"], "123456")
+                self.assertNotIn("token", connection)
+
+                activated = client.post(
+                    f"/admin/cuentas/{target['id']}/whatsapp-business/"
+                    f"{connection['id']}",
+                    data={"status": "active", "receptionist_enabled": "1"},
+                    follow_redirects=False,
+                )
+                self.assertEqual(activated.status_code, 303)
+                connection = db.get_whatsapp_connection(
+                    connection["id"], target["id"]
+                )
+                self.assertEqual(connection["status"], "active")
+                self.assertTrue(connection["receptionist_enabled"])
+
+                page = client.get(f"/admin/cuentas/{target['id']}")
+                self.assertEqual(page.status_code, 200, page.text)
+                self.assertIn("Taller Exemple", page.text)
+                self.assertNotIn("no-debe-aceptarse", page.text)
+
+        events = {
+            item["event_type"]: item for item in db.list_security_events()
+        }
+        self.assertEqual(
+            events["admin.whatsapp_connection_registered"]["actor_user_id"],
+            admin["id"],
+        )
+        self.assertEqual(
+            events["admin.whatsapp_connection_updated"]["subject_business_id"],
+            target["id"],
+        )
+
     def test_missing_required_google_blocks_admin_not_the_whole_service(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -5076,6 +7654,17 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 "plan='premium' WHERE id=?",
                 (business["id"],),
             )
+        period = date.today().strftime("%Y-%m")
+        db.add_platform_cost(
+            period, "hosting", 20, source="actual", note="Factura hosting"
+        )
+        db.add_platform_cost(
+            period, "hosting", -2, source="adjustment",
+            note="Abono aplicado a la factura",
+        )
+        db.add_platform_cost(
+            period, "support", 100, source="forecast", note="Previsión soporte"
+        )
         data = db.admin_overview()
         self.assertIn("marketing", data["dept_reports"])
         charts = data["charts"]
@@ -5084,6 +7673,93 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertEqual(charts["funnel"][labels.index("Checkout")], 1)
         self.assertEqual(charts["funnel"][labels.index("De pago")], 1)
         self.assertEqual(data["mrr"], 99)
+        self.assertEqual(data["finanzas"]["observed_costs"], 18)
+        self.assertEqual(data["finanzas"]["observed_contribution"], 81)
+        self.assertEqual(data["finanzas"]["observed_margin_pct"], 81.8)
+        self.assertEqual(data["finanzas"]["observed_cost_per_active_account"], 18)
+        self.assertEqual(data["finanzas"]["cost_ledger"]["forecast_total"], 100)
+        with self.assertRaises(ValueError):
+            db.add_platform_cost(
+                "agosto", "hosting", 20, source="actual"
+            )
+        with self.assertRaises(ValueError):
+            db.add_platform_cost(
+                period, "hosting", -20, source="actual", note="Coste imposible"
+            )
+        with self.assertRaises(db.IntegrityError):
+            with db.get_conn() as conn:
+                conn.execute(
+                    "UPDATE platform_cost_entries SET amount_eur=999 WHERE period=?",
+                    (period,),
+                )
+
+    def test_cost_control_reconciles_real_costs_and_flags_account_risk(self):
+        from noesis.adapters import email as email_adapter
+
+        autonomo, _ = self.make_business("Cuenta Autónoma")
+        negocio, _ = self.make_business("Cuenta Negocio")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET subscription_status='active', plan='autonomo' "
+                "WHERE id=?", (autonomo["id"],),
+            )
+            conn.execute(
+                "UPDATE businesses SET subscription_status='active', plan='pro' "
+                "WHERE id=?", (negocio["id"],),
+            )
+        db.record_product_event(
+            autonomo["id"], "ai_usage",
+            json.dumps({"in": 1000, "out": 100, "estimated_cost_usd": 1}),
+        )
+        db.record_product_event(
+            negocio["id"], "ai_usage",
+            json.dumps({"in": 500, "out": 50, "estimated_cost_usd": 0.5}),
+        )
+        for _ in range(60):
+            db.record_product_event(autonomo["id"], "ai_credit_used", "{}")
+        whatsapp.queue_template(
+            "34600111222", "recordatorio", ["Cliente"],
+            business_id=autonomo["id"], idempotency_key="cost-wa",
+        )
+        email_adapter.queue_email(
+            "cliente@example.com", "Aviso", "Contenido",
+            business_id=negocio["id"], idempotency_key="cost-email",
+        )
+        period = date.today().strftime("%Y-%m")
+        for category, amount in (
+            ("ai", 30), ("whatsapp", 12), ("email", 8),
+            ("hosting", 20), ("payments", 10),
+        ):
+            db.add_platform_cost(
+                period, category, amount, source="actual",
+                note=f"Factura real {category}",
+            )
+
+        control = db.account_cost_control(period)
+        self.assertEqual(control["observed_cost_eur"], 80)
+        self.assertEqual(control["allocated_cost_eur"], 80)
+        self.assertEqual(control["unallocated_cost_eur"], 0)
+        self.assertEqual(control["cost_coverage_pct"], 100)
+        self.assertEqual(control["revenue_eur"], 78)
+        first = next(row for row in control["rows"] if row["id"] == autonomo["id"])
+        second = next(row for row in control["rows"] if row["id"] == negocio["id"])
+        self.assertEqual(first["ai_credits_pct"], 80)
+        self.assertEqual(first["whatsapp_templates"], 1)
+        self.assertAlmostEqual(first["allocated_observed_cost_eur"], 45.72)
+        self.assertEqual(first["risk"], "critical")
+        self.assertAlmostEqual(second["allocated_observed_cost_eur"], 34.28)
+        self.assertEqual(second["email_out"], 1)
+
+    def test_local_document_extractions_do_not_invent_provider_cost(self):
+        business, _ = self.make_business("OCR Local")
+        db.record_product_event(
+            business["id"], "media_ingested",
+            json.dumps({"type": "image", "extracted": True}),
+        )
+        overview = db.admin_overview()
+        self.assertEqual(overview["ai_usage"]["total"]["extractions"], 1)
+        self.assertEqual(overview["finanzas"]["ai_cost_eur"], 0)
+        self.assertIn("cost_control", overview)
 
     def test_alerts_flag_failed_whatsapp_and_broken_backup(self):
         business, _ = self.make_business("Admin Alarmas")

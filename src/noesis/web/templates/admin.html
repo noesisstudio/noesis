@@ -16,7 +16,10 @@
       <p>Cada departamento te informa con sus cifras y su parte diario.
          Solo metadatos de cuenta y agregados — sin datos operativos de cada autónomo.</p>
     </div>
-    <div class="page-actions"><form method="post" action="/logout"><button class="btn" type="submit">Salir</button></form></div>
+    <div class="page-actions">
+      {% if data.businesses %}<a class="btn" href="/b/{{ mi_negocio }}/resumen">Mi panel de negocio</a>{% endif %}
+      <form method="post" action="/logout"><button class="btn" type="submit">Salir</button></form>
+    </div>
   </div>
 
   <div class="admin-grid">
@@ -27,6 +30,71 @@
     <div class="stat"><div class="lbl">En riesgo</div><div class="val {{ 'red' if data.en_riesgo }}">{{ data.en_riesgo }}</div><div class="delta flat">activados sin uso 14+ días</div></div>
     <div class="stat"><div class="lbl">Alarmas</div><div class="val {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="delta flat">ahora mismo</div></div>
   </div>
+
+  <section class="admin-card gestion-panel" id="gestion">
+    <div class="admin-card-head">
+      <div>
+        <div class="kicker">Gestión</div>
+        <h2>Cuentas de Noesis</h2>
+      </div>
+      <span class="meta">Cada cambio queda registrado en la bitácora</span>
+    </div>
+    <p class="meta gestion-intro">Lo que más vas a hacer, sin entrar en ninguna ficha.
+      Aquí se decide qué puede usar cada cuenta; el contenido de sus negocios no se
+      abre desde aquí ni desde ningún otro sitio.</p>
+
+    <div class="gestion-list">
+      {% for b in data.businesses %}
+      <div class="gestion-row">
+        <div class="gestion-id">
+          <b>{{ b.name }}</b>
+          <span class="meta">{{ b.owner_email or 'sin titular' }}</span>
+        </div>
+
+        <div class="gestion-state">
+          {% if b.subscription_status == 'active' %}
+            <span class="badge b-green">activa · {{ b.plan }}</span>
+          {% elif b.subscription_status == 'trial' %}
+            {% if b.trial_ends_at and b.trial_ends_at < hoy %}
+              <span class="badge b-red">prueba vencida</span>
+              <span class="meta">el {{ b.trial_ends_at | date_es }}</span>
+            {% else %}
+              <span class="badge b-amber">en prueba</span>
+              <span class="meta">hasta el {{ b.trial_ends_at | date_es }}</span>
+            {% endif %}
+          {% else %}
+            <span class="badge b-red">{{ b.subscription_status or 'sin estado' }}</span>
+          {% endif %}
+        </div>
+
+        <div class="gestion-actions">
+          <form method="post" action="/admin/cuentas/{{ b.id }}/suscripcion">
+            <input type="hidden" name="volver" value="admin">
+            <select name="plan" aria-label="Plan para {{ b.name }}">
+              <option value="autonomo">Autónomo</option>
+              <option value="pro" selected>Negocio</option>
+              <option value="premium">Premium</option>
+            </select>
+            <button class="btn sm primary" type="submit" name="action" value="activar">Activar</button>
+          </form>
+
+          <form method="post" action="/admin/cuentas/{{ b.id }}/suscripcion">
+            <input type="hidden" name="volver" value="admin">
+            <input type="hidden" name="trial_days" value="14">
+            <button class="btn sm" type="submit" name="action" value="ampliar_prueba">+14 días</button>
+            {% if b.subscription_status == 'active' %}
+            <button class="btn sm danger" type="submit" name="action" value="desactivar">Modo consulta</button>
+            {% endif %}
+          </form>
+
+          <a class="btn sm" href="/admin/cuentas/{{ b.id }}#acceso">Personas y acceso →</a>
+        </div>
+      </div>
+      {% else %}
+      <p class="meta">Todavía no hay ninguna cuenta.</p>
+      {% endfor %}
+    </div>
+  </section>
 
   <!-- ================= 📈 Visitas de la web ================= -->
   <div class="dept-head" id="visitas">
@@ -153,7 +221,7 @@
   </div>
 
   <!-- ================= 💰 Finanzas ================= -->
-  <div class="dept-head">
+  <div class="dept-head" id="finanzas">
     <span class="dept-ic">💰</span>
     <div>
       <h2>Finanzas</h2>
@@ -164,10 +232,54 @@
     <div class="stat"><div class="lbl">MRR</div><div class="val">{{ data.finanzas.mrr }} €</div><div class="delta flat">ingreso recurrente mensual</div></div>
     <div class="stat"><div class="lbl">Run-rate anual</div><div class="val">{{ data.finanzas.run_rate }} €</div><div class="delta flat">MRR × 12</div></div>
     <div class="stat"><div class="lbl">Coste IA (mes)</div><div class="val amber">{{ '%.2f'|format(data.finanzas.ai_cost_eur) }} €</div><div class="delta flat">estimado por tokens</div></div>
-    <div class="stat"><div class="lbl">Margen bruto</div>
+    <div class="stat"><div class="lbl">Margen IA estimado</div>
       <div class="val {{ 'green' if data.finanzas.margen_pct and data.finanzas.margen_pct >= 70 }}">{{ data.finanzas.margen_pct ~ '%' if data.finanzas.margen_pct is not none else '—' }}</div>
-      <div class="delta flat">MRR menos coste IA</div></div>
+      <div class="delta flat">hipótesis técnica, no margen contable</div></div>
   </div>
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Margen observado · {{ data.finanzas.cost_ledger.period }}</h2>
+        {% if data.finanzas.cost_ledger.has_observed_data %}<span class="badge b-green">con costes registrados</span>
+        {% else %}<span class="badge b-amber">faltan costes reales</span>{% endif %}</div>
+      <div class="card-b">
+        <div class="lrow"><span>MRR comprometido</span><b>{{ data.finanzas.mrr }} €</b></div>
+        <div class="lrow"><span>Costes reales + ajustes</span><b>{{ '%.2f'|format(data.finanzas.observed_costs) }} €</b></div>
+        <div class="lrow"><span>Contribución observada</span><b>{{ ('%.2f €'|format(data.finanzas.observed_contribution)) if data.finanzas.observed_contribution is not none else 'Sin datos suficientes' }}</b></div>
+        <div class="lrow"><span>Margen observado</span><b>{{ (data.finanzas.observed_margin_pct ~ '%') if data.finanzas.observed_margin_pct is not none else '—' }}</b></div>
+        <div class="lrow"><span>Coste por cuenta de pago</span><b>{{ ('%.2f €'|format(data.finanzas.observed_cost_per_active_account)) if data.finanzas.observed_cost_per_active_account is not none else '—' }}</b></div>
+        <p class="meta">Solo usa entradas marcadas como reales y ajustes. Las previsiones se conservan separadas y el MRR no equivale a caja cobrada.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Registrar coste</h2><span class="hint">factura o dato verificable</span></div>
+      <div class="card-b">
+        <form method="post" action="/admin/costes">
+          <div class="grid g2">
+            <div><label class="fld">Período</label><input class="input" type="month" name="period" value="{{ data.finanzas.cost_ledger.period }}" required></div>
+            <div><label class="fld">Importe (€)</label><input class="input" type="number" step="0.01" name="amount_eur" required></div>
+            <div><label class="fld">Categoría</label><select class="input" name="category">{% for key, label in data.finanzas.cost_ledger.category_labels.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
+            <div><label class="fld">Origen</label><select class="input" name="source"><option value="actual">Real</option><option value="forecast">Previsión</option><option value="adjustment">Ajuste trazable</option></select></div>
+          </div>
+          <label class="fld" style="margin-top:10px">Nota o fuente</label>
+          <input class="input" name="note" maxlength="500" placeholder="Ej. Factura Railway de agosto">
+          <button class="btn primary" style="margin-top:12px">Registrar sin sobrescribir históricos</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% if data.finanzas.cost_ledger.entries %}
+  <div class="card">
+    <div class="card-h"><h2>Entradas del período</h2><span class="hint">registro append-only</span></div>
+    <div class="card-b table-pad"><div class="table-wrap"><table>
+      <thead><tr><th>Origen</th><th>Categoría</th><th>Nota</th><th class="t-right">Importe</th></tr></thead>
+      <tbody>{% for entry in data.finanzas.cost_ledger.entries %}<tr>
+        <td><span class="badge b-gray">{{ entry.source }}</span></td>
+        <td>{{ data.finanzas.cost_ledger.category_labels.get(entry.category, entry.category) }}</td>
+        <td class="meta">{{ entry.note or 'Sin nota' }}</td><td class="t-right num">{{ '%.2f'|format(entry.amount_eur) }} €</td>
+      </tr>{% endfor %}</tbody>
+    </table></div></div>
+  </div>
+  {% endif %}
   <div class="grid g2 admin-charts">
     <div class="card">
       <div class="card-h"><h2>Facturado vs. cobrado</h2><span class="hint">top cuentas por volumen</span></div>
@@ -194,6 +306,99 @@
       </p>
     </div>
   </div>
+
+  <section class="card unit-economics" id="rentabilidad-cuentas">
+    <div class="card-h">
+      <div>
+        <div class="kicker">Control mensual · {{ data.cost_control.month }}</div>
+        <h2>Rentabilidad operativa por cuenta</h2>
+      </div>
+      {% if data.cost_control.has_observed_data %}
+        <span class="badge {{ 'b-amber' if data.cost_control.unallocated_cost_eur else 'b-green' }}">
+          {{ data.cost_control.cost_coverage_pct or 0 }} % del coste asignado
+        </span>
+      {% else %}
+        <span class="badge b-amber">faltan facturas de proveedores</span>
+      {% endif %}
+    </div>
+    <div class="card-b">
+      <p class="meta unit-economics-intro">
+        Ingreso recurrente comprometido, consumo técnico y costes reales del libro
+        CFO. El reparto es una lectura de gestión reconciliada, no contabilidad
+        analítica: si falta un driver, el coste queda visible sin asignar.
+      </p>
+      <div class="admin-grid unit-economics-summary">
+        <div class="stat"><div class="lbl">Cuentas de pago</div><div class="val">{{ data.cost_control.paying_accounts }}</div><div class="delta flat">sin demos</div></div>
+        <div class="stat"><div class="lbl">Ingreso comprometido</div><div class="val">{{ '%.2f'|format(data.cost_control.revenue_eur) }} €</div><div class="delta flat">mensual, no caja</div></div>
+        <div class="stat"><div class="lbl">Coste observado</div><div class="val">{{ ('%.2f €'|format(data.cost_control.observed_cost_eur)) if data.cost_control.has_observed_data else '—' }}</div><div class="delta flat">facturas y ajustes</div></div>
+        <div class="stat"><div class="lbl">Sin asignar</div><div class="val {{ 'amber' if data.cost_control.unallocated_cost_eur }}">{{ ('%.2f €'|format(data.cost_control.unallocated_cost_eur)) if data.cost_control.has_observed_data else '—' }}</div><div class="delta flat">no se oculta ni se inventa</div></div>
+        <div class="stat"><div class="lbl">Contribución observada</div><div class="val">{{ ('%.2f €'|format(data.cost_control.observed_contribution_eur)) if data.cost_control.observed_contribution_eur is not none else '—' }}</div><div class="delta flat">antes de impuestos</div></div>
+        <div class="stat"><div class="lbl">A revisar</div><div class="val {{ 'red' if data.cost_control.accounts_to_review }}">{{ data.cost_control.accounts_to_review }}</div><div class="delta flat">consumo, entrega o margen</div></div>
+      </div>
+
+      <div class="table-wrap unit-economics-table"><table>
+        <thead><tr>
+          <th>Cuenta</th><th>Plan e ingreso</th><th>IA avanzada</th>
+          <th>Canales del mes</th><th>Coste asignado</th><th>Lectura</th>
+        </tr></thead>
+        <tbody>
+        {% for row in data.cost_control.rows %}
+          <tr>
+            <td><b>{{ row.name }}</b><small class="meta">{{ row.subscription_status }}</small></td>
+            <td><b>{{ row.plan }}</b><small class="meta">{{ '%.2f'|format(row.revenue_eur) }} €/mes comprometidos</small></td>
+            <td>
+              <b>{{ row.ai_credits_used }} / {{ row.ai_credits_limit }}</b>
+              <small class="meta">{{ row.ai_credits_pct }} % · {{ row.ai_calls }} llamadas · {{ row.ai_tokens }} tokens</small>
+              <small class="meta">coste medido ~{{ '%.4f'|format(row.ai_estimated_cost_eur) }} €</small>
+            </td>
+            <td>
+              <b>WA {{ row.whatsapp_in }}↓ / {{ row.whatsapp_out }}↑</b>
+              <small class="meta">{{ row.whatsapp_templates }} plantilla(s) · {{ row.email_out }} correo(s) · {{ row.extractions }} extracción(es)</small>
+              {% if row.whatsapp_failed or row.email_failed %}<small class="red">{{ row.whatsapp_failed + row.email_failed }} entrega(s) fallida(s)</small>{% endif %}
+            </td>
+            <td>
+              {% if data.cost_control.has_observed_data %}
+                <b>{{ '%.2f'|format(row.allocated_observed_cost_eur) }} €</b>
+                <small class="meta">reparto reconciliado</small>
+              {% else %}
+                <b>—</b><small class="meta">faltan costes reales</small>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge {{ 'b-red' if row.risk == 'critical' else 'b-amber' if row.risk == 'review' else 'b-gray' if row.risk == 'demo' else 'b-green' }}">
+                {{ 'revisar ahora' if row.risk == 'critical' else 'vigilar' if row.risk == 'review' else 'demo' if row.risk == 'demo' else 'en orden' }}
+              </span>
+              {% if row.contribution_eur is not none and row.revenue_eur %}
+                <small class="meta">{{ '%.2f'|format(row.contribution_eur) }} € · {{ row.margin_pct }} %</small>
+              {% endif %}
+              {% for reason in row.risk_reasons %}<small class="meta">{{ reason }}</small>{% endfor %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">Todavía no hay cuentas que medir.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+
+      {% if data.cost_control.unallocated_by_category %}
+      <div class="unit-economics-gap">
+        <b>Costes sin driver suficiente</b>
+        <span class="meta">Quedan fuera del margen individual hasta disponer de uso medible:</span>
+        {% for category, amount in data.cost_control.unallocated_by_category.items() %}
+          <span class="badge b-amber">{{ data.finanzas.cost_ledger.category_labels.get(category, category) }} · {{ '%.2f'|format(amount) }} €</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <details class="unit-economics-method">
+        <summary>Cómo se reparte cada coste</summary>
+        <div class="mini-list">
+          {% for category, method in data.cost_control.allocation_method.items() %}
+          <div class="lrow"><span>{{ data.finanzas.cost_ledger.category_labels.get(category, category) }}</span><b>{{ method }}</b></div>
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+  </section>
 
   <!-- ================= 📈 Crecimiento ================= -->
   <div class="dept-head">
@@ -412,7 +617,7 @@
   </div>
 
   <!-- ================= 👥 Clientes ================= -->
-  <div class="dept-head">
+  <div class="dept-head" id="cuentas">
     <span class="dept-ic">👥</span>
     <div>
       <h2>Clientes</h2>
@@ -428,7 +633,7 @@
             <th class="t-right">Activación</th><th class="t-right">Última actividad</th>
             <th class="t-right">Clientes</th><th class="t-right">Facturas</th>
             <th class="t-right">Facturado</th><th class="t-right">Cobrado</th>
-            <th class="t-right">IA (in/out)</th></tr></thead>
+            <th class="t-right">IA (in/out)</th><th></th></tr></thead>
           <tbody>
           {% for b in data.businesses %}
             <tr>
@@ -459,6 +664,7 @@
                   {% if b.ai.extractions %} +{{ b.ai.extractions }}📷{% endif %}
                 {% else %}—{% endif %}
               </td>
+              <td class="t-right"><a class="btn sm primary" href="/admin/cuentas/{{ b.id }}">Gestionar</a></td>
             </tr>
           {% endfor %}
           </tbody>
@@ -508,7 +714,7 @@ new Chart(document.getElementById('ch-funnel'), {
 });
 
 const PLAN_LABELS = { trial: 'Prueba', autonomo: 'Autónomo (29 €)', pro: 'Negocio (49 €)',
-                      premium: 'Sin Límites (99 €)' };
+                      premium: 'Premium (99 €)' };
 const planKeys = Object.keys(C.planes);
 new Chart(document.getElementById('ch-planes'), {
   type: 'doughnut',

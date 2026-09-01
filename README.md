@@ -2,11 +2,11 @@
 
 [![CI](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml/badge.svg)](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml)
 
-**Del trabajo terminado al dinero cobrado.** Noesis es el copiloto de negocio por
-WhatsApp para autónomos y pequeños negocios de servicios (fontaneros, electricistas,
-reformas, limpieza, jardinería…). Hablas con él por texto o audio y se ocupa de tu
-agenda, clientes, presupuestos, facturas y cobros — para que tú solo tengas que
-hacer tu trabajo.
+**Haz tu trabajo; Noesis te ordena el negocio.** Noesis es el copiloto de negocio
+por WhatsApp para autónomos y pequeños negocios de servicios (fontaneros,
+electricistas, reformas, limpieza, jardinería…). Hablas con él por texto o audio y
+lleva la oficina —agenda, clientes, presupuestos, facturas, documentos y cobros—
+para devolverte tiempo, claridad y control.
 
 > Estado actual: **SaaS multi-empresa en producción** en
 > [bynoesis.com](https://bynoesis.com) (Railway + Postgres, auto-deploy
@@ -56,7 +56,8 @@ pip install -e .
 noesis-web        # → http://127.0.0.1:8000
 ```
 
-- Login de demo: **demo@bynoesis.com / demo1234**.
+- Demo comercial dentro del producto: autónomo y gestoría con datos ficticios
+  conectados, más portal de cliente. Ver [`docs/Demo-comercial.md`](docs/Demo-comercial.md).
 - CLI de prueba (chat tipo WhatsApp): `py -m noesis`.
 - La IA es opcional: sin `ANTHROPIC_API_KEY` en `.env`, el chat funciona con el
   cerebro local. Sin `DATABASE_URL` usa SQLite local.

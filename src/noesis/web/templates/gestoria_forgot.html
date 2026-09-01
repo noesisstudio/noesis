@@ -1,0 +1,23 @@
+{% extends "gestoria_base.html" %}
+{% block title %}Recuperar acceso de gestoría{% endblock %}
+{% block content %}
+<div class="gestoria-auth-wrap compact">
+  <section class="gestoria-auth-intro">
+    <a class="gestoria-back" href="/gestoria/login">← Volver a entrar</a>
+    <span class="eyebrow">Acceso profesional</span>
+    <h1>Recupera tu cartera sin perder el control.</h1>
+    <p>Te enviaremos un enlace de un solo uso. Al cambiar la contraseña se cerrarán las sesiones anteriores, pero tu segundo factor seguirá activo.</p>
+  </section>
+  <section class="gestoria-auth-card">
+    <h2>Crear una contraseña nueva</h2>
+    <p class="muted">Indica el correo profesional con el que accedes a Noesis.</p>
+    {% if sent %}<div class="banner good">Si ese correo tiene una cuenta, recibirás el enlace en unos minutos. Revisa también el spam.</div>{% endif %}
+    <form method="post" action="/gestoria/recuperar">
+      <label class="fld">Correo profesional</label>
+      <input class="input" type="email" name="email" autocomplete="username" required>
+      <button class="btn primary gestoria-full">Enviar enlace seguro</button>
+    </form>
+    <p class="gestoria-help">El enlace caduca al cabo de una hora y deja de servir cuando se utiliza.</p>
+  </section>
+</div>
+{% endblock %}

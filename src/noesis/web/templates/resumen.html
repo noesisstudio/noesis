@@ -32,7 +32,7 @@
   </section>
 
   {% if activation.progress < 100 %}
-  <section class="home-setup" aria-label="Puesta en marcha">
+  <section class="home-setup" id="puesta-en-marcha" aria-label="Puesta en marcha">
     <div><span>Puesta en marcha</span><strong>{{ activation.completed }} de {{ activation.total }} pasos listos</strong></div>
     <div class="home-setup-track" aria-label="{{ activation.progress }}% completado"><i style="width:{{ activation.progress }}%"></i></div>
     {% if activation.next_step %}<a href="{{ activation.next_step.href }}">Siguiente: {{ activation.next_step.label }}</a>{% endif %}
@@ -92,7 +92,7 @@ async function loadHome(){
   el('s-today-d').textContent = s.jobs_today ? 'en tu agenda' : 'día despejado';
   el('s-inv').textContent = eur(s.invoiced || 0);
   el('s-collected').textContent = eur(s.collected || 0);
-  const rate = s.invoiced ? Math.round((s.collected || 0) / s.invoiced * 100) : 0;
+  const rate = s.invoiced ? Math.round((s.invoiced_collected || 0) / s.invoiced * 100) : 0;
   el('money-reading').textContent = s.invoiced
     ? `${rate}% de lo facturado este mes ya está cobrado.`
     : 'Cuando factures, aquí verás en una frase cómo avanza el mes.';

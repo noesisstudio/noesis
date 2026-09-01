@@ -134,17 +134,22 @@ class TradeTemplatesTestCase(unittest.TestCase):
             with self.subTest(plantilla=spec.name):
                 self.assertEqual(spec.problems(), [])
                 self.assertEqual(spec.category, "utility")
+        # Y lo que el código envía encaja con lo que hay aprobado en Meta.
+        self.assertEqual(whatsapp_templates.mismatches(), [])
 
     def test_los_saltos_de_linea_nunca_viajan_dentro_de_un_hueco(self):
-        """Meta rechaza el mensaje entero si un parámetro trae un salto de línea."""
+        """Meta rechaza el mensaje entero si un parámetro trae un salto de línea.
+
+        El saneado los convierte en un separador visible en vez de borrarlos: un
+        resumen del día sin marcas entre sus puntos se lee como un párrafo
+        confuso. Y corta en 1024, que es el tope del parámetro en Meta.
+        """
         self.assertEqual(
-            whatsapp.template_param("Obras\ny Reformas\tSur"),
-            "Obras y Reformas Sur",
+            whatsapp.sanitize_template_param("Obras\ny Reformas Sur"),
+            "Obras · y Reformas Sur",
         )
-        self.assertEqual(whatsapp.template_param("Juan" + " " * 6 + "Pérez"),
-                         "Juan Pérez")
-        self.assertEqual(whatsapp.template_param(None), "")
-        self.assertEqual(len(whatsapp.template_param("x" * 2000)), 1024)
+        self.assertEqual(whatsapp.sanitize_template_param(None), "")
+        self.assertEqual(len(whatsapp.sanitize_template_param("x" * 2000)), 1024)
 
     def test_al_encolar_una_plantilla_los_valores_ya_van_saneados(self):
         message = whatsapp.queue_template(
@@ -153,5 +158,5 @@ class TradeTemplatesTestCase(unittest.TestCase):
             ["Ana\nGarcía", "Fontanería Ruiz", "F-2026-1", "121,00 €", "https://x/y"],
             business_id=self.business["id"],
         )
-        self.assertIn("Ana García", message["template_params"])
+        self.assertIn("Ana · García", message["template_params"])
         self.assertNotIn("\\n", message["template_params"])

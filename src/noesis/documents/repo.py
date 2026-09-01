@@ -233,12 +233,17 @@ def list_for_business(
     *,
     search: str | None = None,
 ) -> list[dict]:
-    q = ("SELECT d.*, c.name AS client_name, p.name AS project_name "
+    q = ("SELECT d.*, c.name AS client_name, p.name AS project_name, "
+         "dc.proposed_name AS proposed_client_name, "
+         "dc.proposed_nif AS proposed_client_nif, "
+         "dc.status AS proposed_client_status "
          "FROM documents d "
          "LEFT JOIN clients c ON c.id = d.client_id "
          "AND c.business_id=d.business_id "
          "LEFT JOIN projects p ON p.id=d.project_id "
-         "AND p.business_id=d.business_id WHERE d.business_id=?")
+         "AND p.business_id=d.business_id "
+         "LEFT JOIN document_client_candidates dc ON dc.document_id=d.id "
+         "AND dc.business_id=d.business_id WHERE d.business_id=?")
     params: list = [business_id]
     if client_id is not None:
         q += " AND d.client_id=?"

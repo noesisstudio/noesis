@@ -47,12 +47,12 @@
       {% set g_ventas = ['clientes', 'crm', 'productos', 'oficios'] %}
       <a class="nav-item {{ 'active' if active=='resumen' }}" href="/b/{{ b }}/resumen"><span class="ic">{{ ic('resumen') }}</span> Inicio</a>
       <a class="nav-item {{ 'active' if active=='agenda' }}" href="/b/{{ b }}/agenda"><span class="ic">{{ ic('agenda') }}</span> Trabajos</a>
-      <a class="nav-item {{ 'active' if active=='proyectos' }}" href="/b/{{ b }}/proyectos"><span class="ic">{{ ic('proyectos') }}</span> Proyectos</a>
+      {% if 'projects' in entitlements %}<a class="nav-item {{ 'active' if active=='proyectos' }}" href="/b/{{ b }}/proyectos"><span class="ic">{{ ic('proyectos') }}</span> Proyectos</a>{% endif %}
       <a class="nav-item {{ 'active' if active in g_ventas }}" href="/b/{{ b }}/clientes"><span class="ic">{{ ic('clientes') }}</span> Clientes</a>
       <div class="section-label">Gestión</div>
       <a class="nav-item {{ 'active' if active in g_tesoreria }}" href="/b/{{ b }}/tesoreria"><span class="ic">{{ ic('tesoreria') }}</span> Dinero</a>
       <a class="nav-item {{ 'active' if active in g_facturacion }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturas</a>
-      <a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>
+      {% if 'team' in entitlements %}<a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>{% endif %}
       <a class="nav-item {{ 'active' if active=='documentos' }}" href="/b/{{ b }}/documentos"><span class="ic">{{ ic('documentos') }}</span> Documentos</a>
       <div class="section-label">Noesis</div>
       <a class="nav-item {{ 'active' if active=='asistente' }}" href="/b/{{ b }}/asistente"><span class="ic">{{ ic('asistente') }}</span> Asistente</a>
@@ -91,7 +91,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
           <span class="search-hint">Buscar</span><kbd>Ctrl K</kbd>
         </button>
-        {% if subscription_read_only %}
+        {% if business.is_demo %}
+        <span class="wa-pill">Demo · solo lectura</span>
+        {% elif subscription_read_only %}
         <a class="btn primary sm subscription-activate" href="/b/{{ business.id }}/suscripcion">Activar Noesis</a>
         {% else %}
         <div class="quick-create">
@@ -105,7 +107,7 @@
             <a role="menuitem" href="/b/{{ business.id }}/presupuestos?nuevo=1">Presupuesto</a>
             <a role="menuitem" href="/b/{{ business.id }}/clientes?nuevo=1">Cliente</a>
             <a role="menuitem" href="/b/{{ business.id }}/costes?nuevo=1">Gasto</a>
-            <a role="menuitem" href="/b/{{ business.id }}/equipo?nuevo=1">Persona del equipo</a>
+            {% if 'team' in entitlements %}<a role="menuitem" href="/b/{{ business.id }}/equipo?nuevo=1">Persona del equipo</a>{% endif %}
             <a role="menuitem" href="/b/{{ business.id }}/asistente">Trabajo (por chat)</a>
           </div>
         </div>
@@ -115,13 +117,16 @@
         {% else %}
           <a href="/b/{{ business.id }}/ajustes" class="wa-pill wa-off"><span class="dot"></span> Conectar WhatsApp</a>
         {% endif %}
+        {% if request.state.is_admin %}
+        <a class="integration-link admin-link" href="/admin">Administración</a>
+        {% endif %}
         <a class="integration-link" href="/b/{{ business.id }}/ajustes#integraciones">Integraciones</a>
       </div>
     </div>
     {% if active in g_tesoreria %}
     <div class="subnav" role="tablist" aria-label="Secciones de Dinero">
       <a class="{{ 'active' if active=='tesoreria' }}" href="/b/{{ b }}/tesoreria">Caja</a>
-      <a class="{{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis">Análisis</a>
+      {% if 'advanced_analysis' in entitlements %}<a class="{{ 'active' if active=='analisis' }}" href="/b/{{ b }}/analisis">Análisis</a>{% endif %}
       <a class="{{ 'active' if active=='ingresos' }}" href="/b/{{ b }}/ingresos">Ingresos</a>
       <a class="{{ 'active' if active=='costes' }}" href="/b/{{ b }}/costes">Costes</a>
     </div>
@@ -140,7 +145,11 @@
       <a class="{{ 'active' if active=='oficios' }}" href="/b/{{ b }}/oficios">Plantillas por oficio</a>
     </div>
     {% endif %}
-    {% if subscription_read_only %}
+    {% if business.is_demo %}
+    <div class="readonly-banner" role="status">
+      <div><b>Datos de demostración</b><span>Puedes recorrer todo Noesis con información ficticia. Las acciones que enviarían o cambiarían datos están bloqueadas.</span></div>
+    </div>
+    {% elif subscription_read_only %}
     <div class="readonly-banner" role="status">
       <div><b>Modo consulta</b><span>Puedes revisar todo tu negocio. Para crear, cambiar o enviar, activa tu plan.</span></div>
       <a class="btn primary sm" href="/b/{{ business.id }}/suscripcion">Ver planes</a>
@@ -180,7 +189,11 @@
     <span class="ic">{{ ic('resumen') }}</span>Inicio</a>
   <a class="bn-item {{ 'active' if active=='agenda' }}" href="/b/{{ business.id }}/agenda">
     <span class="ic">{{ ic('agenda') }}</span>Trabajos</a>
-  {% if subscription_read_only %}
+  {% if business.is_demo %}
+  <span class="bn-create locked demo" aria-label="Demo de solo lectura">
+    <span aria-hidden="true">Demo</span>
+  </span>
+  {% elif subscription_read_only %}
   <a class="bn-create locked" aria-label="Activar Noesis" href="/b/{{ business.id }}/suscripcion">
     <span aria-hidden="true">€</span>
   </a>
@@ -238,7 +251,9 @@
   {% endif %}
   {% endif %}
   <div class="companion-log" id="companion-log" aria-live="polite"></div>
-  {% if subscription_read_only %}
+  {% if business.is_demo %}
+  <p class="companion-subscribe">Demo de solo lectura: Noesis te enseña el contexto sin ejecutar acciones.</p>
+  {% elif subscription_read_only %}
   <a class="companion-subscribe" href="/b/{{ business.id }}/suscripcion">
     Activa Noesis para conversar y actuar</a>
   {% else %}

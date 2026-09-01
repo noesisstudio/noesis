@@ -47,6 +47,8 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
 3. El `preDeployCommand` ejecuta `python -m noesis.migrations upgrade`; si falla,
    Railway no debe iniciar el nuevo despliegue.
 4. Comprobar `/health`, `/ready`, alta/login y aislamiento con dos negocios.
+   La parte pública repetible se ejecuta con `noesis-production-check`; comprueba
+   además esquema, release, sitemap, páginas, SEO legal y cabeceras de seguridad.
 5. Mantener SQLite únicamente para local o recuperación histórica; no ejecutar dos
    bases operativas en paralelo.
 
@@ -60,6 +62,8 @@ se aplican con `python -m noesis.migrations upgrade`; se pueden revertir con
 - [ ] Backup manual bloqueado del volumen SQLite anterior.
 - [ ] Postgres limpio enlazado mediante `DATABASE_URL`.
 - [ ] Migración pre-deploy en versión actual y `/ready` en 200.
+- [ ] `noesis-production-check` verde después de publicar; el workflow programado
+      detecta regresiones posteriores, pero no sustituye un monitor 24/7 externo.
 - [ ] Volumen mantenido para `NOESIS_DOCS_PATH` y otros ficheros.
 - [ ] `NOESIS_BACKUP_DIR` apunta al volumen persistente.
 - [ ] Si WhatsApp está activo, `WHATSAPP_APP_SECRET` está configurado.
@@ -75,11 +79,11 @@ Solo falta la configuración en stripe.com:
 1. **Cuenta**: dashboard.stripe.com → activar la cuenta (datos fiscales de la empresa
    e IBAN donde recibir los pagos).
 2. **Productos**: Catálogo → añadir los tres productos y dos precios recurrentes en
-   EUR para cada uno. Mensual: Autónomo 29 €, Negocio 49 €, Sin Límites 99 €.
+   EUR para cada uno. Mensual: Autónomo 29 €, Negocio 49 €, Premium 99 €.
    Anual: 319 €, 539 € y 1.089 € respectivamente (12 meses por el precio de 11).
-   Todos se comunican + IVA. Copiar los seis `price_...`. **Antes de live:** el
-   Checkout actual no activa `automatic_tax`; resolver y probar el tratamiento de
-   IVA según [[Conectar-APIs]].
+   Todos se comunican + IVA. Copiar los seis `price_...`. Checkout ya solicita
+   dirección, NIF y `automatic_tax`; **antes de live** hay que probar en Stripe test
+   el resultado fiscal de los seis precios según [[Conectar-APIs]].
 3. **Variables en Railway** (servicio web → Variables):
    - `STRIPE_SECRET_KEY` → clave secreta de producción (`sk_live_...`).
    - `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` → precios mensuales.

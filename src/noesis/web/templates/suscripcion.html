@@ -9,10 +9,13 @@
   </div>
   <div class="page-actions">
     {% set st = business.subscription_status or 'trial' %}
-    <span class="sub-state {{ st }}">
-      {% if st == 'active' %}Suscripción activa
-      {% elif st == 'trial' %}En prueba{% if business.trial_ends_at %} · hasta {{ business.trial_ends_at }}{% endif %}
-      {% elif st == 'past_due' %}Pago pendiente
+    <span class="sub-state {{ st }}{% if st == 'trial' and trial_expired %} expired{% endif %}">
+      {% if st in ('active', 'trialing') %}Suscripción activa
+      {% elif st == 'trial' and trial_expired %}Prueba terminada{% if business.trial_ends_at %} · el {{ business.trial_ends_at | date_es }}{% endif %}
+      {% elif st == 'trial' %}En prueba{% if business.trial_ends_at %} · hasta el {{ business.trial_ends_at | date_es }}{% endif %}
+      {% elif st in ('pending', 'incomplete') %}Confirmando el pago
+      {% elif st in ('past_due', 'unpaid') %}Pago pendiente
+      {% elif st == 'paused' %}Suscripción pausada
       {% else %}Cancelada{% endif %}
     </span>
   </div>
@@ -20,11 +23,17 @@
 
 {% if status == 'checkout_return' %}
 <div class="subscription-notice subscription-success" style="margin-bottom:16px">
-  {% if business.subscription_status == 'active' %}
-  <b>Suscripción activada.</b><span>Tu configuración y tus datos siguen exactamente donde los dejaste.</span>
+  {% if business.subscription_status in ('active', 'trialing') %}
+  <div><b>Suscripción activada.</b><span>Tu configuración y tus datos siguen exactamente donde los dejaste.</span></div>
+  <a class="btn primary" href="/b/{{ business.id }}/resumen?welcome=1#puesta-en-marcha">Empezar con mi primer cliente</a>
   {% else %}
   <b>Pago completado. Estamos confirmando la activación.</b><span>Normalmente tarda unos segundos; puedes recargar esta página.</span>
   {% endif %}
+</div>
+{% elif status == 'upgrade' %}
+<div class="subscription-notice" style="margin-bottom:16px">
+  <b>{{ upgrade_feature_label or 'Esta función' }} forma parte del plan Negocio.</b>
+  <span>Tu información no cambia: al ampliar el plan se habilita en el mismo panel.</span>
 </div>
 {% elif status == 'ready' %}
 <div class="subscription-ready" style="margin-bottom:18px">
@@ -42,11 +51,38 @@
 <div class="subscription-notice" style="margin-bottom:16px"><b>Hemos guardado tu elección.</b>
   <span>Nuestro equipo terminará la activación contigo sin que tengas que repetir la configuración.</span></div>
 {% elif status == 'noportal' %}
-<div class="insight" style="margin-bottom:16px">El portal de gestión estará disponible cuando tengas una suscripción activa.</div>
+<div class="subscription-notice" id="gestion-suscripcion" tabindex="-1" style="margin-bottom:16px"><b>No he podido abrir la gestión segura de Stripe.</b>
+  <span>No se ha hecho ningún cambio ni ningún cargo. Ya he registrado el fallo para soporte; vuelve a intentarlo una vez y, si persiste, escríbenos.</span></div>
+{% elif status == 'portal_return' %}
+<div class="subscription-notice subscription-success" style="margin-bottom:16px"><div><b>Stripe ha recibido el cambio.</b>
+  <span>Noesis actualizará el plan, el pago o la cancelación en cuanto llegue la confirmación firmada.</span></div></div>
+{% endif %}
+
+{% if is_active_subscription %}
+<section class="current-subscription-card" aria-label="Plan actual">
+  <div>
+    <span class="eyebrow">Plan actual</span>
+    <h2>{{ current_plan_label }}</h2>
+    <p>Tu suscripción está activa. Los cambios se aplican sobre este mismo plan, sin crear otra suscripción.</p>
+  </div>
+  <div class="current-subscription-actions">
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="manage">
+      <button class="btn primary" type="submit">Gestionar suscripción</button>
+    </form>
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="payment_method">
+      <button class="btn" type="submit">Cambiar tarjeta</button>
+    </form>
+  </div>
+</section>
 {% endif %}
 
 <div class="account-billing-choice">
-  <div><b>Elige cómo pagar</b><span>Con el anual pagas 11 meses y tienes 12.</span></div>
+  <div>
+    <b>{{ 'Compara tus opciones' if is_active_subscription else 'Elige cómo pagar' }}</b>
+    <span>{% if is_active_subscription %}Para cambiar de nivel o pasar al anual, usa el portal seguro. Con el anual pagas 11 meses y tienes 12.{% else %}Con el anual pagas 11 meses y tienes 12.{% endif %}</span>
+  </div>
   <div class="billing-toggle" role="group" aria-label="Periodicidad de la suscripción" data-initial-billing="{{ preferred_billing }}">
     <button type="button" aria-pressed="true" data-billing-toggle="monthly">Mensual</button>
     <button type="button" aria-pressed="false" data-billing-toggle="annual">Anual <span>1 mes gratis</span></button>
@@ -55,7 +91,7 @@
 
 <div class="plan-grid">
   <div class="plan {{ 'selected-plan' if preferred_plan == 'autonomo' }}" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
-    {% if preferred_plan == 'autonomo' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
+    {% if current_plan == 'autonomo' %}<span class="plan-choice-badge">Plan actual</span>{% elif not is_active_subscription and preferred_plan == 'autonomo' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
     <h3>Autónomo</h3>
     <p class="price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
     <small class="annual-price-note" data-annual-note hidden></small>
@@ -68,14 +104,30 @@
       <li>Impuestos trimestrales (303/130)</li>
       <li>~75 acciones de IA al mes</li>
     </ul>
+    {% if current_plan == 'autonomo' %}
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="manage">
+      <button class="btn full current-plan-button" type="submit">Gestionar plan</button>
+    </form>
+    {% elif is_active_subscription and current_plan_rank > plan_ranks.autonomo %}
+    <button class="btn full plan-included-button" type="button" disabled>Incluido en tu plan</button>
+    {% elif is_active_subscription %}
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="change">
+      <input type="hidden" name="plan" value="autonomo">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
+      <button class="btn primary full" type="submit">Mejorar a Autónomo</button>
+    </form>
+    {% else %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="autonomo">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Activar plan Autónomo</button>
     </form>
+    {% endif %}
   </div>
   <div class="plan featured {{ 'selected-plan' if preferred_plan == 'pro' }}" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
-    {% if preferred_plan == 'pro' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
+    {% if current_plan == 'pro' %}<span class="plan-choice-badge">Plan actual</span>{% elif not is_active_subscription and preferred_plan == 'pro' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
     <h3>Negocio</h3>
     <p class="price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
     <small class="annual-price-note" data-annual-note hidden></small>
@@ -88,15 +140,31 @@
       <li>~300 acciones de IA al mes</li>
       <li>Soporte prioritario</li>
     </ul>
+    {% if current_plan == 'pro' %}
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="manage">
+      <button class="btn full current-plan-button" type="submit">Gestionar plan</button>
+    </form>
+    {% elif is_active_subscription and current_plan_rank > plan_ranks.pro %}
+    <button class="btn full plan-included-button" type="button" disabled>Incluido en tu plan</button>
+    {% elif is_active_subscription %}
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="change">
+      <input type="hidden" name="plan" value="pro">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
+      <button class="btn primary full" type="submit">Mejorar a Negocio</button>
+    </form>
+    {% else %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="pro">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
       <button class="btn primary full" type="submit">Activar plan Negocio</button>
     </form>
+    {% endif %}
   </div>
   <div class="plan {{ 'selected-plan' if preferred_plan == 'premium' }}" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
-    {% if preferred_plan == 'premium' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
-    <h3>Sin Límites</h3>
+    {% if current_plan == 'premium' %}<span class="plan-choice-badge">Plan actual</span>{% elif not is_active_subscription and preferred_plan == 'premium' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
+    <h3>Premium</h3>
     <p class="price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
     <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
@@ -106,22 +174,36 @@
       <li>Puesta en marcha acompañada</li>
       <li>Línea directa con el equipo por WhatsApp</li>
     </ul>
+    {% if current_plan == 'premium' %}
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="manage">
+      <button class="btn full current-plan-button" type="submit">Gestionar plan</button>
+    </form>
+    {% elif is_active_subscription %}
+    <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+      <input type="hidden" name="action" value="change">
+      <input type="hidden" name="plan" value="premium">
+      <input type="hidden" name="billing_period" value="monthly" data-billing-field>
+      <button class="btn primary full" type="submit">Mejorar a Premium</button>
+    </form>
+    {% else %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="premium">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Activar plan Sin Límites</button>
+      <button class="btn primary full" type="submit">Activar plan Premium</button>
     </form>
+    {% endif %}
   </div>
 </div>
 
-{% if business.subscription_status == 'active' %}
-<div class="card" style="margin-top:16px"><div class="card-b">
-  <b>Gestionar mi suscripción</b>
-  <p class="hint" style="margin:6px 0 12px">Cambia de plan, actualiza la tarjeta o cancela cuando quieras.</p>
-  <form method="post" action="/b/{{ business.id }}/suscripcion/portal">
-    <button class="btn" type="submit">Abrir portal de pago</button>
+{% if is_active_subscription %}
+<section class="subscription-cancel-card" aria-label="Cancelación de la suscripción">
+  <div><b>¿Necesitas dejar Noesis?</b><span>Stripe te pedirá confirmación. Noesis no cancelará nada sin tu aprobación.</span></div>
+  <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
+    <input type="hidden" name="action" value="cancel">
+    <button class="btn danger" type="submit">Cancelar suscripción</button>
   </form>
-</div></div>
+</section>
 {% endif %}
 
 <p class="subscription-payment-note">Pago seguro · Cancela cuando quieras · Tus datos siempre son exportables.</p>

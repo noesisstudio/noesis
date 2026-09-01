@@ -1,46 +1,172 @@
 {% extends "gestoria_base.html" %}
 {% block title %}{{ business.name }}{% endblock %}
 {% block content %}
-<a class="gestoria-back" href="/gestoria">← Volver a la cartera</a>
-<div class="gestoria-page-head client">
-  <div><span class="eyebrow">Cliente de la cartera</span><h1>{{ business.name }}</h1><p>{{ business.nif or 'NIF pendiente' }}{% if business.sector %} · {{ business.sector }}{% endif %}</p></div>
-  <span class="badge {{ 'b-green' if business.subscription_status in ['active','trialing'] else 'b-gray' }}">{{ business.subscription_status or 'consulta' }}</span>
+<a class="gestoria-back" href="/gestoria?year={{ selected_year }}&quarter={{ selected_quarter }}">← Volver a la cartera</a>
+<div class="gestoria-page-head client gestoria-client-head">
+  <div>
+    <span class="eyebrow">Expediente de cliente</span>
+    <h1>{{ business.name }}</h1>
+    <p>{{ business.nif or 'NIF pendiente' }}{% if business.sector %} · {{ business.sector }}{% endif %}</p>
+  </div>
+  <div class="gestoria-client-status">
+    <span class="badge {{ 'b-green' if business.subscription_status in ['active','trialing'] else 'b-gray' }}">{{ 'Conectada' if business.subscription_status in ['active','trialing'] else 'Solo consulta' }}</span>
+    <small>{% if workspace.profile.updated_at %}Perfil fiscal revisado {{ workspace.profile.updated_at[:10] }}{% else %}Perfil fiscal pendiente{% endif %}</small>
+  </div>
 </div>
-{% if request.query_params.get('ok') %}<div class="banner ok">Cambio guardado. La empresa lo verá también en su Noesis.</div>{% endif %}
+{% if request.query_params.get('notice') == 'readonly' %}
+<div class="banner warn">Esta empresa está en modo consulta. Puedes revisar su expediente, pero el titular debe reactivar Noesis antes de guardar cambios.</div>
+{% elif request.query_params.get('notice') == 'invalid' %}
+<div class="banner warn">No se pudo guardar el cambio. Revisa los datos del formulario y vuelve a intentarlo.</div>
+{% elif request.query_params.get('notice') == 'missing' %}
+<div class="banner warn">El documento ya no está disponible o ha cambiado de período. Actualiza el expediente antes de continuar.</div>
+{% elif request.query_params.get('ok') %}
+<div class="banner ok">Cambio guardado. Queda trazado en el expediente de esta empresa.</div>
+{% elif gestoria_read_only %}
+<div class="banner info">Modo consulta: el expediente y los originales siguen disponibles, pero los cambios están pausados.</div>
+{% endif %}
 
-<div class="gestoria-client-grid">
-  <section class="card gestoria-primary-card">
-    <div class="card-h"><div><span class="eyebrow">Primero</span><h2>Documentos por revisar</h2></div><span class="badge b-amber">{{ pending_documents|length }}</span></div>
-    <div class="card-b">
-      {% if not pending_documents %}<div class="gestoria-empty small"><b>No hay documentos pendientes.</b><p>Todo lo recibido está revisado o validado.</p></div>{% endif %}
-      {% for doc in pending_documents %}
-      <details class="gestoria-document">
-        <summary><div><b>{{ doc.filename }}</b><small>{{ doc.kind|replace('_',' ') }} · {{ doc.created_at[:10] }}{% if doc.client_name %} · {{ doc.client_name }}{% endif %}{% if doc.project_name %} · {{ doc.project_name }}{% endif %}</small></div><span>Revisar</span></summary>
-        <div class="gestoria-document-body">
-          <a class="btn sm" target="_blank" rel="noopener" href="/gestoria/cliente/{{ business.id }}/documento/{{ doc.id }}">Ver original</a>
-          <form method="post" action="/gestoria/cliente/{{ business.id }}/documento/{{ doc.id }}/revisar">
-            <div class="grid g2"><div><label class="fld">Tipo</label><select class="input" name="kind"><option value="documento">Documento</option><option value="ticket">Ticket</option><option value="factura_recibida">Factura recibida</option><option value="factura_emitida">Factura emitida</option><option value="contrato">Contrato</option><option value="albaran">Albarán</option><option value="presupuesto">Presupuesto</option></select></div>
-            <div><label class="fld">Cliente</label><select class="input" name="client_id"><option value="">Sin asignar</option>{% for client in clients %}<option value="{{ client.id }}" {{ 'selected' if doc.client_id == client.id }}>{{ client.name }}</option>{% endfor %}</select></div></div>
-            <label class="fld">Proyecto</label><select class="input" name="project_id"><option value="">Sin proyecto</option>{% for project in projects %}<option value="{{ project.id }}" {{ 'selected' if doc.project_id == project.id }}>{{ project.name }}</option>{% endfor %}</select>
-            <label class="fld">Nota de revisión</label><input class="input" name="review_note" maxlength="500" value="{{ doc.review_note or '' }}">
-            <button class="btn primary">Validar documento</button>
-          </form>
-        </div>
-      </details>
+<nav class="gestoria-client-nav" aria-label="Secciones del expediente">
+  {% for key,label,help in [('resumen','Resumen','Situación del trimestre'),('documentos','Documentos','Archivo y revisión'),('impuestos','Impuestos','Borradores fiscales'),('periodos','Períodos','Comparativa anual'),('solicitudes','Solicitudes','Conversación con el cliente')] %}
+  <a class="{{ 'active' if active_section == key }}" href="?year={{ selected_year }}&quarter={{ selected_quarter }}&section={{ key }}" {% if active_section == key %}aria-current="page"{% endif %}><span>{{ label }}</span><small>{{ help }}</small></a>
+  {% endfor %}
+</nav>
+
+<section class="gestoria-client-toolbar" aria-label="Período que estás revisando">
+  <div><span>Período de trabajo</span><b>{{ workspace.period.label }}</b><small>{{ workspace.period.start }} — {{ workspace.period.end }}</small></div>
+  <form class="gestoria-period-picker compact" method="get">
+    <input type="hidden" name="section" value="{{ active_section }}">
+    <input type="hidden" name="view" value="{{ workspace.document_view }}">
+    <label>Año<select class="input" name="year">{% for value in years %}<option value="{{ value }}" {{ 'selected' if value == selected_year }}>{{ value }}</option>{% endfor %}</select></label>
+    <label>Trimestre<select class="input" name="quarter">{% for value in [1,2,3,4] %}<option value="{{ value }}" {{ 'selected' if value == selected_quarter }}>T{{ value }}</option>{% endfor %}</select></label>
+    <button class="btn">Aplicar</button>
+  </form>
+</section>
+
+{% if active_section == 'resumen' %}
+<section class="gestoria-view-panel" aria-labelledby="gestoria-summary-title">
+  <div class="gestoria-view-heading"><div><span class="eyebrow">Resumen del período</span><h2 id="gestoria-summary-title">Qué necesita atención ahora</h2></div><p>Una lectura clara antes de entrar en documentos o impuestos.</p></div>
+<section class="gestoria-client-brief {{ 'is-ready' if workspace.period.readiness_pct == 100 and not workspace.pending_documents else '' }}">
+  <div>
+    <span class="eyebrow">Lectura de Noesis</span>
+    {% if workspace.pending_documents or workspace.period.missing_receipts or workspace.period.missing_received_originals %}
+    <h2>Antes de cerrar {{ workspace.period.label }}, revisa {{ workspace.pending_documents|length + workspace.period.missing_receipts + workspace.period.missing_received_originals }} punto(s).</h2>
+    <p>{{ workspace.pending_documents|length }} documento(s) sin validar, {{ workspace.period.missing_receipts }} gasto(s) sin justificante y {{ workspace.period.missing_received_originals }} factura(s) recibida(s) sin original.</p>
+    {% else %}
+    <h2>La documentación conocida del {{ workspace.period.label }} está cubierta.</h2>
+    <p>Puedes revisar los borradores fiscales y descargar el paquete; la presentación sigue siendo decisión de la gestoría.</p>
+    {% endif %}
+  </div>
+  <div class="gestoria-readiness-score"><strong>{{ workspace.period.readiness_pct }}%</strong><span>cobertura documental</span></div>
+</section>
+
+<div class="gestoria-financial-strip" aria-label="Resumen fiscal previo">
+  <div><span>Ingresos sin IVA</span><b>{{ '%.2f'|format(workspace.period.output_base) }} €</b><small>{{ workspace.period.invoices|length }} factura(s) emitida(s)</small></div>
+  <div><span>Compras y gastos conocidos</span><b>{{ '%.2f'|format(workspace.period.input_base) }} €</b><small>{{ workspace.period.expenses|length + workspace.period.received|length }} registro(s)</small></div>
+  <div><span>IVA cobrado</span><b>{{ '%.2f'|format(workspace.period.output_vat) }} €</b><small>según facturas emitidas</small></div>
+  <div><span>IVA previo</span><b class="{{ 'negative' if workspace.period.vat_result < 0 }}">{{ '%.2f'|format(workspace.period.vat_result) }} €</b><small>cobrado menos pagado conocido</small></div>
+</div>
+</section>
+{% endif %}
+
+{% if active_section == 'documentos' %}
+<section class="gestoria-workspace-section" id="documentos">
+  <div class="gestoria-section-title">
+    <div><span class="eyebrow">Archivo del período</span><h2>Documentos y movimientos</h2><p>Filtra, abre y valida cada original sin salir del expediente.</p></div>
+    <span>{{ workspace.document_counts.todos }} documento(s)</span>
+  </div>
+  <div class="gestoria-document-tabs" role="navigation" aria-label="Filtrar documentos">
+    {% for key,label in [('todos','Todos'),('ingresos','Ingresos'),('gastos','Gastos'),('tickets','Tickets'),('pendientes','Por revisar'),('otros','Otros')] %}
+    <a class="{{ 'active' if workspace.document_view == key }}" href="?year={{ selected_year }}&quarter={{ selected_quarter }}&section=documentos&view={{ key }}">{{ label }} <span>{{ workspace.document_counts[key] }}</span></a>
+    {% endfor %}
+  </div>
+
+  <div class="gestoria-document-workspace {{ 'has-preview' if preview_document }}">
+    <div class="gestoria-document-list">
+      {% if not documents %}<div class="gestoria-empty small"><b>No hay documentos en este filtro.</b><p>Prueba otro tipo o cambia de trimestre.</p></div>{% endif %}
+      {% for item in documents %}
+      <a class="gestoria-file-row {{ 'selected' if preview_document and preview_document.id == item.id }}" href="?year={{ selected_year }}&quarter={{ selected_quarter }}&section=documentos&view={{ workspace.document_view }}&doc={{ item.id }}">
+        <span class="gestoria-file-kind">{{ 'PDF' if item.mime == 'application/pdf' else 'IMG' if item.mime and item.mime.startswith('image/') else 'DOC' }}</span>
+        <span class="gestoria-file-main"><b>{{ item.filename }}</b><small>{{ item.kind|replace('_',' ') }}{% if item.client_name %} · {{ item.client_name }}{% endif %}{% if item.project_name %} · {{ item.project_name }}{% endif %}</small></span>
+        <span class="gestoria-file-date">{{ item.effective_on }}</span>
+        <span class="badge {{ 'b-amber' if item.doc_status == 'pendiente_revisar' else 'b-green' }}">{{ 'Revisar' if item.doc_status == 'pendiente_revisar' else 'Validado' if item.doc_status == 'validado' else item.doc_status|replace('_',' ') }}</span>
+      </a>
       {% endfor %}
     </div>
-  </section>
 
-  <aside class="card gestoria-request-card">
-    <div class="card-h"><h2>Pedir documentación</h2></div><div class="card-b"><p class="muted">La petición aparecerá en Documentos dentro del panel del autónomo.</p>
-    <form method="post" action="/gestoria/cliente/{{ business.id }}/solicitud"><textarea class="input" name="message" rows="4" maxlength="2000" required placeholder="Ej. Falta la factura de la furgoneta de julio."></textarea><button class="btn primary gestoria-full">Enviar solicitud</button></form></div>
-  </aside>
-</div>
+    {% if preview_document %}
+    <aside class="gestoria-preview-panel" aria-label="Vista previa de {{ preview_document.filename }}">
+      <div class="gestoria-preview-head"><div><span class="eyebrow">Vista previa</span><h3>{{ preview_document.filename }}</h3></div><a href="?year={{ selected_year }}&quarter={{ selected_quarter }}&section=documentos&view={{ workspace.document_view }}" aria-label="Cerrar vista previa">Cerrar</a></div>
+      {% if preview_document.previewable %}
+      <div class="gestoria-preview-canvas"><img src="/gestoria/cliente/{{ business.id }}/documento/{{ preview_document.id }}/preview" alt="Primera página de {{ preview_document.filename }}"></div>
+      {% else %}<div class="gestoria-empty small"><b>Sin vista previa para este formato.</b><p>Puedes abrir el archivo original de forma segura.</p></div>{% endif %}
+      <div class="gestoria-preview-meta"><span>Fecha <b>{{ preview_document.effective_on }}</b></span><span>Tipo <b>{{ preview_document.kind|replace('_',' ') }}</b></span>{% if preview_document.ocr_amount is not none %}<span>Importe leído <b>{{ '%.2f'|format(preview_document.ocr_amount) }} €</b></span>{% endif %}</div>
+      <a class="btn gestoria-full" target="_blank" rel="noopener" href="/gestoria/cliente/{{ business.id }}/documento/{{ preview_document.id }}">Abrir original</a>
+      {% if preview_document.doc_status == 'pendiente_revisar' %}
+      <form class="gestoria-review-form" method="post" action="/gestoria/cliente/{{ business.id }}/documento/{{ preview_document.id }}/revisar">
+        <input type="hidden" name="year" value="{{ selected_year }}"><input type="hidden" name="quarter" value="{{ selected_quarter }}"><input type="hidden" name="view" value="{{ workspace.document_view }}">
+        <div class="grid g2"><div><label class="fld">Tipo</label><select class="input" name="kind">{% for key,label in [('documento','Documento'),('ticket','Ticket'),('factura_recibida','Factura recibida'),('factura_emitida','Factura emitida'),('contrato','Contrato'),('albaran','Albarán'),('presupuesto','Presupuesto')] %}<option value="{{ key }}" {{ 'selected' if preview_document.kind == key }}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label class="fld">Cliente</label><select class="input" name="client_id"><option value="">Sin asignar</option>{% for client in clients %}<option value="{{ client.id }}" {{ 'selected' if preview_document.client_id == client.id }}>{{ client.name }}</option>{% endfor %}</select></div></div>
+        <label class="fld">Proyecto</label><select class="input" name="project_id"><option value="">Sin proyecto</option>{% for project in projects %}<option value="{{ project.id }}" {{ 'selected' if preview_document.project_id == project.id }}>{{ project.name }}</option>{% endfor %}</select>
+        <label class="fld">Nota de revisión</label><input class="input" name="review_note" maxlength="500" value="{{ preview_document.review_note or '' }}">
+        <button class="btn primary gestoria-full" {% if gestoria_read_only %}disabled aria-disabled="true" title="Empresa en modo consulta"{% endif %}>Validar documento</button>
+      </form>
+      {% endif %}
+    </aside>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
 
-<section class="card gestoria-periods-card"><div class="card-h"><div><span class="eyebrow">Archivo ordenado</span><h2>Períodos preparados</h2></div></div><div class="card-b">
-  {% if not periods %}<p class="muted">Todavía no hay períodos cerrados con actividad.</p>{% endif %}
-  {% for period in periods %}<div class="gestoria-period-row"><div><b>{{ period.label }}</b><small>{{ period.invoices }} factura(s) · {{ period.expenses }} gasto(s)</small></div><a class="btn sm" href="/gestoria/cliente/{{ business.id }}/paquete/{{ period.label }}">Descargar ZIP</a></div>{% endfor %}
-</div></section>
+{% if active_section == 'impuestos' %}
+<section class="gestoria-workspace-section" id="impuestos">
+  <div class="gestoria-section-title"><div><span class="eyebrow">Borradores trazables</span><h2>Primera lectura fiscal</h2><p>Primero los modelos que aplican; después, el criterio y los desgloses.</p></div><span>No se ha presentado nada</span></div>
+  <div class="gestoria-tax-layout">
+    <div class="gestoria-model-grid">
+      {% for model in workspace.models %}
+      <article class="gestoria-model-card {{ 'active' if model.active }}">
+        <div><span>Modelo {{ model.code }}</span><span class="badge {{ 'b-green' if model.status == 'preparado' else 'b-amber' if model.status in ['revisar','configurar'] else 'b-gray' }}">{{ model.status|replace('_',' ') }}</span></div>
+        <h3>{{ model.name }}</h3>
+        {% if model.amount is not none %}<b>{{ '%.2f'|format(model.amount) }} €</b>{% endif %}
+        <p>{{ model.detail }}</p>
+      </article>
+      {% endfor %}
+    </div>
+    <aside class="card gestoria-fiscal-profile">
+      <div class="card-h"><div><span class="eyebrow">Criterio del despacho</span><h2>Perfil fiscal</h2></div></div>
+      <div class="card-b">
+        <form method="post" action="/gestoria/cliente/{{ business.id }}/perfil-fiscal">
+          <input type="hidden" name="year" value="{{ selected_year }}"><input type="hidden" name="quarter" value="{{ selected_quarter }}">
+          <label class="fld">Tipo de contribuyente<select class="input" name="taxpayer_type"><option value="sin_configurar">Por confirmar</option><option value="autonomo" {{ 'selected' if workspace.profile.taxpayer_type == 'autonomo' }}>Autónomo / persona física</option><option value="sociedad" {{ 'selected' if workspace.profile.taxpayer_type == 'sociedad' }}>Sociedad</option><option value="otro" {{ 'selected' if workspace.profile.taxpayer_type == 'otro' }}>Otro</option></select></label>
+          <label class="fld">Régimen de renta<select class="input" name="income_tax_regime"><option value="sin_configurar">Por confirmar</option><option value="estimacion_directa" {{ 'selected' if workspace.profile.income_tax_regime == 'estimacion_directa' }}>Estimación directa</option><option value="estimacion_objetiva" {{ 'selected' if workspace.profile.income_tax_regime == 'estimacion_objetiva' }}>Estimación objetiva</option><option value="sociedades" {{ 'selected' if workspace.profile.income_tax_regime == 'sociedades' }}>Impuesto sobre Sociedades</option></select></label>
+          <label class="fld">Régimen de IVA<select class="input" name="vat_regime"><option value="sin_configurar">Por confirmar</option><option value="general" {{ 'selected' if workspace.profile.vat_regime == 'general' }}>General</option><option value="simplificado" {{ 'selected' if workspace.profile.vat_regime == 'simplificado' }}>Simplificado</option><option value="recargo" {{ 'selected' if workspace.profile.vat_regime == 'recargo' }}>Recargo de equivalencia</option><option value="exento" {{ 'selected' if workspace.profile.vat_regime == 'exento' }}>Actividad exenta</option></select></label>
+          <label class="fld">Periodicidad<select class="input" name="filing_cadence"><option value="trimestral" {{ 'selected' if workspace.profile.filing_cadence == 'trimestral' }}>Trimestral</option><option value="mensual" {{ 'selected' if workspace.profile.filing_cadence == 'mensual' }}>Mensual</option></select></label>
+          <fieldset class="gestoria-obligations"><legend>Modelos que aplican</legend>{% for code in ['303','390','130','131','111','115','347','349','200','202'] %}<label><input type="checkbox" name="obligations" value="{{ code }}" {{ 'checked' if code in workspace.profile.obligations }}> {{ code }}</label>{% endfor %}</fieldset>
+          <label class="fld">Notas del criterio fiscal<textarea class="input" name="notes" rows="3" maxlength="1000" placeholder="Excepciones, prorrata, actividad exenta…">{{ workspace.profile.notes or '' }}</textarea></label>
+          <button class="btn primary gestoria-full" {% if gestoria_read_only %}disabled aria-disabled="true" title="Empresa en modo consulta"{% endif %}>Guardar perfil</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+  {% if workspace.period.tax_groups %}<details class="gestoria-tax-detail"><summary>Ver desglose del IVA por tipo</summary><div class="gestoria-tax-table"><span>Tipo</span><span>Base ventas</span><span>IVA cobrado</span><span>Base compras</span><span>IVA pagado</span>{% for row in workspace.period.tax_groups %}<b>{{ '%.0f'|format(row.rate) }}%</b><span>{{ '%.2f'|format(row.output_base) }} €</span><span>{{ '%.2f'|format(row.output_vat) }} €</span><span>{{ '%.2f'|format(row.input_base) }} €</span><span>{{ '%.2f'|format(row.input_vat) }} €</span>{% endfor %}</div></details>{% endif %}
+  {% if workspace.model_347_candidates %}<details class="gestoria-tax-detail"><summary>Ver candidatos del modelo 347</summary>{% for item in workspace.model_347_candidates %}<div class="gestoria-period-row"><div><b>{{ item.name }}</b><small>{{ item.nif }}</small></div><strong>{{ '%.2f'|format(item.total) }} €</strong></div>{% endfor %}</details>{% endif %}
+</section>
+{% endif %}
 
-{% if requests %}<section class="card gestoria-periods-card"><div class="card-h"><h2>Seguimiento</h2></div><div class="card-b">{% for item in requests %}<div class="gestoria-period-row"><div><b>{{ item.message }}</b><small>{{ item.created_at[:10] }} · {{ item.status }} · {{ 'gestoría' if item.requested_by == 'gestoria' else 'cliente' }}</small></div></div>{% endfor %}</div></section>{% endif %}
+{% if active_section == 'periodos' %}
+<section class="gestoria-workspace-section" id="periodos">
+  <div class="gestoria-section-title"><div><span class="eyebrow">Vista anual</span><h2>{{ selected_year }} por trimestres</h2><p>Compara la preparación y entra solo en el trimestre que quieras revisar.</p></div><span>comparación documental y fiscal</span></div>
+  <div class="gestoria-quarter-table"><div class="head"><span>Período</span><span>Ingresos</span><span>Gastos y compras</span><span>IVA previo</span><span>Cobertura</span><span></span></div>{% for item in workspace.quarters %}<div><b>T{{ item.quarter }}</b><span>{{ '%.2f'|format(item.output_base) }} €</span><span>{{ '%.2f'|format(item.input_base) }} €</span><span>{{ '%.2f'|format(item.vat_result) }} €</span><span>{{ item.readiness_pct }}%</span><a href="?year={{ selected_year }}&quarter={{ item.quarter }}&section=resumen">Abrir</a></div>{% endfor %}</div>
+  <div class="gestoria-period-actions"><div><b>Paquetes preparados</b><small>PDF, CSV, originales y trazabilidad del período.</small></div><div>{% for period in periods[:4] %}{% if gestoria_read_only and not business.is_demo %}<span class="btn sm" aria-disabled="true" title="Empresa en modo consulta">{{ period.label }} · ZIP</span>{% else %}<a class="btn sm" href="/gestoria/cliente/{{ business.id }}/paquete/{{ period.label }}">{{ period.label }} · ZIP</a>{% endif %}{% endfor %}</div></div>
+</section>
+{% endif %}
+
+{% if active_section == 'solicitudes' %}
+<section class="gestoria-workspace-section" id="solicitudes">
+  <div class="gestoria-section-title"><div><span class="eyebrow">Seguimiento</span><h2>Solicitudes al cliente</h2><p>Centraliza lo que falta y deja constancia de cada petición.</p></div><span>{{ requests|length }} en el historial</span></div>
+  <div class="gestoria-request-layout">
+    <div class="card"><div class="card-h"><h2>Seguimiento con el cliente</h2></div><div class="card-b">{% if not requests %}<p class="muted">Todavía no hay solicitudes.</p>{% endif %}{% for item in requests %}<div class="gestoria-period-row"><div><b>{{ item.message }}</b><small>{{ item.created_at[:10] }} · {{ item.status }} · {{ 'gestoría' if item.requested_by == 'gestoria' else 'cliente' }}{% if item.reply %} · Respondida{% endif %}</small></div></div>{% endfor %}</div></div>
+    <aside class="card gestoria-request-card"><div class="card-h"><h2>Pedir documentación</h2></div><div class="card-b"><p class="muted">La petición aparecerá en Documentos dentro del panel del autónomo.</p><form method="post" action="/gestoria/cliente/{{ business.id }}/solicitud"><input type="hidden" name="year" value="{{ selected_year }}"><input type="hidden" name="quarter" value="{{ selected_quarter }}"><textarea class="input" name="message" rows="4" maxlength="2000" required placeholder="Ej. Falta la factura de la furgoneta de julio."></textarea><button class="btn primary gestoria-full" {% if gestoria_read_only %}disabled aria-disabled="true" title="Empresa en modo consulta"{% endif %}>Enviar solicitud</button></form></div></aside>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

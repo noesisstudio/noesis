@@ -270,7 +270,7 @@ LEGAL_NIF = os.getenv("NOESIS_LEGAL_NIF", "").strip().upper()
 LEGAL_ADDRESS = os.getenv("NOESIS_LEGAL_ADDRESS", "").strip()
 LEGAL_EMAIL = os.getenv("NOESIS_LEGAL_EMAIL", "").strip().lower()
 LEGAL_REGISTRY = os.getenv("NOESIS_LEGAL_REGISTRY", "").strip()
-LEGAL_DOCUMENT_VERSION = "2026-07-27"
+LEGAL_DOCUMENT_VERSION = "2026-08-08"
 # Buzón que se enseña en la web. El de respaldo es el del dominio propio, no una
 # cuenta personal: aparece en el pie, en la política de cookies y en contacto, y
 # tres direcciones distintas en un mismo sitio restan credibilidad.
@@ -396,6 +396,36 @@ SMTP_FROM = os.getenv("SMTP_FROM", "Noesis <no-reply@bynoesis.com>")
 EMAIL_RETRY_BASE_SECONDS = int(os.getenv("EMAIL_RETRY_BASE_SECONDS", "30"))
 EMAIL_RETRY_MAX_SECONDS = int(os.getenv("EMAIL_RETRY_MAX_SECONDS", "3600"))
 
+# Entrada documental por un único buzón catch-all. Permanece apagada hasta que
+# Hostinger preserve el destinatario original y el recorrido se valide con una
+# cuenta de prueba. IMAP solo recibe; no usa estas credenciales para enviar.
+INBOUND_EMAIL_ENABLED = env_bool("NOESIS_INBOUND_EMAIL_ENABLED", False)
+INBOUND_EMAIL_HOST = os.getenv(
+    "NOESIS_INBOUND_EMAIL_HOST", "imap.hostinger.com"
+).strip()
+INBOUND_EMAIL_PORT = max(
+    1, min(65_535, int(os.getenv("NOESIS_INBOUND_EMAIL_PORT", "993")))
+)
+INBOUND_EMAIL_USER = os.getenv("NOESIS_INBOUND_EMAIL_USER", "").strip()
+INBOUND_EMAIL_PASSWORD = os.getenv("NOESIS_INBOUND_EMAIL_PASSWORD", "")
+INBOUND_EMAIL_MAILBOX = os.getenv("NOESIS_INBOUND_EMAIL_MAILBOX", "INBOX").strip()
+INBOUND_EMAIL_DOMAIN = os.getenv(
+    "NOESIS_INBOUND_EMAIL_DOMAIN", CANONICAL_PUBLIC_HOST or "bynoesis.com"
+).strip().lower()
+INBOUND_EMAIL_PREFIX = os.getenv(
+    "NOESIS_INBOUND_EMAIL_PREFIX", "docs"
+).strip().lower()
+INBOUND_EMAIL_MAX_MESSAGES = max(
+    1, min(100, int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_MESSAGES", "20")))
+)
+INBOUND_EMAIL_MAX_ATTACHMENTS = max(
+    1, min(20, int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_ATTACHMENTS", "8")))
+)
+INBOUND_EMAIL_MAX_BYTES = max(
+    1_048_576,
+    int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_BYTES", str(20 * 1024 * 1024))),
+)
+
 # Cobro de la suscripción (Stripe). Si no hay clave, el alta entra en prueba manual.
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -454,6 +484,9 @@ WHATSAPP_TEMPLATE_TAX_NOTICE = os.getenv(
 # Transcripción de voz vía API (Groq/Whisper). Si falta, se intenta whisper local.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_WHISPER_MODEL = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
+# Vacío = detección automática. Solo se usa como pista ISO-639-1 cuando el
+# despliegue sabe que todo el audio será de un idioma concreto (es/ca/en).
+WHISPER_LANGUAGE = os.getenv("NOESIS_WHISPER_LANGUAGE", "").strip().lower()
 # Tope diario de extracciones con IA por negocio (fotos/PDFs): protege el margen.
 MAX_DAILY_EXTRACTIONS = int(os.getenv("NOESIS_MAX_DAILY_EXTRACTIONS", "30"))
 MAX_JSON_BYTES = int(os.getenv("NOESIS_MAX_JSON_BYTES", "262144"))

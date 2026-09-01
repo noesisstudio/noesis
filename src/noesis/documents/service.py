@@ -13,11 +13,15 @@ import re
 import unicodedata
 
 from .. import config
-from . import malware, ocr, pdf_text, repo, storage, validation
+from . import malware, ocr, pdf_ocr, pdf_text, repo, storage, validation
 
 
 class UploadError(Exception):
     """Error de validación al subir un documento (mensaje apto para el usuario)."""
+
+
+class TransientUploadError(UploadError):
+    """El archivo es válido, pero una defensa obligatoria no está disponible."""
 
 
 class DuplicateDocument(UploadError):
@@ -82,7 +86,7 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
                 subject_business_id=business_id,
                 metadata={"required": True},
             )
-            raise UploadError(
+            raise TransientUploadError(
                 "No puedo comprobar la seguridad del archivo ahora. Intentalo de nuevo."
             ) from exc
         scan = malware.ScanResult("unavailable")
@@ -150,6 +154,12 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
                 ocr_amount = result.get("amount")
         elif storage.ext_of(filename) == ".pdf":
             ocr_text = pdf_text.extract(data)
+            # Un PDF escaneado suele no tener capa de texto. Solo entonces se
+            # rasteriza localmente; no duplicamos trabajo en documentos digitales.
+            if not ocr_text or len(ocr_text.strip()) < 24:
+                scanned_text = pdf_ocr.extract(data)
+                if scanned_text:
+                    ocr_text = scanned_text
             ocr_amount = ocr.detect_amount(ocr_text)
 
     stored_name = storage.save(business_id, filename, data)
@@ -347,7 +357,55 @@ def invoice_draft(business_id: int, doc_id: int) -> dict | None:
         known = db.find_supplier(business_id, nif=draft.get("supplier_nif"),
                                  name=draft.get("supplier"))
         draft["supplier_id"] = known["id"] if known else None
+    if draft["direction"] == "emitida" and draft.get("customer"):
+        try:
+            candidate = db.propose_document_client(
+                business_id,
+                doc_id,
+                name=draft.get("customer"),
+                nif=draft.get("customer_nif"),
+            )
+        except ValueError as exc:
+            candidate = None
+            draft["client_resolution"] = {
+                "status": "ambiguous",
+                "message": str(exc),
+            }
+        else:
+            if candidate:
+                matched = candidate.get("matched_client") or {}
+                draft["client_resolution"] = {
+                    "status": candidate.get("status"),
+                    "candidate_name": candidate.get("proposed_name"),
+                    "candidate_nif": candidate.get("proposed_nif"),
+                    "client_id": candidate.get("matched_client_id"),
+                    "client_name": matched.get("name"),
+                }
     return draft
+
+
+def confirm_client_candidate(
+    business_id: int,
+    doc_id: int,
+    *,
+    name: str | None = None,
+    nif: str | None = None,
+) -> dict:
+    """Alta o reutilización confirmada del cliente leído en una factura emitida."""
+    from .. import db
+
+    client = db.confirm_document_client_candidate(
+        doc_id, business_id, name=name, nif=nif
+    )
+    db.record_product_event(
+        business_id,
+        "document_client_confirmed",
+        json.dumps(
+            {"document_id": int(doc_id), "client_id": int(client["id"])},
+            separators=(",", ":"),
+        ),
+    )
+    return client
 
 
 def confirm_received_invoice(business_id: int, doc_id: int, *, total,

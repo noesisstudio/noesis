@@ -32,7 +32,6 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .. import config, db
 from ..adapters import billing as billing_adapter  # noqa: F401 -- compatibilidad de tests/integraciones
-from . import auth
 from .deps import HERE, TEMPLATES, auth_guard
 from .routers import (
     account,
@@ -49,6 +48,7 @@ from .routers import (
     projects,
     team,
     webhooks,
+    whatsapp_business,
 )
 from .scheduler import start_scheduler
 
@@ -253,6 +253,17 @@ async def security_headers(request: Request, call_next):
         if request.url.path.startswith("/t/")
         else "camera=(), geolocation=(), payment=()"
     )
+    # robots.txt evita malgastar rastreo en datos y portales, pero no garantiza por
+    # sí solo que una URL conocida desaparezca del índice. Toda ruta que no forma
+    # parte del sitio público recibe además una orden HTTP explícita de no indexar.
+    # Los estáticos quedan fuera: Google debe poder usar el logo y la imagen social.
+    path = request.url.path
+    if (
+        path not in pages.INDEXABLE_PATHS
+        and not path.startswith("/static/")
+        and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml"}
+    ):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
     # El calendario de reservas es el único contenido externo que se incrusta, y
     # solo en su propia página: el resto del sitio mantiene frame-src 'none'.
     frame_src = (
@@ -322,6 +333,13 @@ def _startup() -> None:
         raise RuntimeError(
             "STRIPE_WEBHOOK_SECRET es obligatorio al activar Stripe en producción."
         )
+    if config.INBOUND_EMAIL_ENABLED:
+        from ..documents import inbound_email
+        if not inbound_email.configured():
+            log.error(
+                "El buzón documental permanece apagado: se activó la prueba, "
+                "pero faltan las credenciales IMAP. El resto del SaaS puede arrancar."
+            )
     if config.RESET_DB:
         if config.DATABASE_URL:
             raise RuntimeError("NOESIS_RESET_DB no se admite con Postgres.")
@@ -342,14 +360,11 @@ def _startup() -> None:
         db.init_db()
     # Datos demo solo si se piden explícitamente (producción arranca limpia y real).
     if config.SEED_DEMO:
-        demo_user = db.get_user_by_email("demo@bynoesis.com")
-        if not demo_user:
-            from .. import demo
-            demo_business_id = demo.seed(reset=False)
-            db.create_user(
-                "demo@bynoesis.com", auth.hash_password("demo1234"),
-                demo_business_id,
-            )
+        from .. import demo
+        try:
+            demo.seed_showcase(force=True)
+        except Exception:  # noqa: BLE001 - una demo nunca tumba el SaaS real.
+            log.exception("No se pudo preparar la demo comercial.")
     start_scheduler()
 
 
@@ -372,6 +387,7 @@ app.include_router(team.router)
 app.include_router(clients.router)
 app.include_router(invoicing.router)
 app.include_router(projects.router)
+app.include_router(whatsapp_business.router)
 
 
 app.include_router(assistant.router)

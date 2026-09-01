@@ -611,6 +611,29 @@ def get_business_by_phone(phone: str) -> dict | None:
         return dict(row) if row else None
 
 
+def central_whatsapp_identity(phone: str) -> dict:
+    """Resuelve un teléfono central sin elegir nunca entre identidades ambiguas."""
+    target = normalize_phone(phone)
+    if len(target) != 9:
+        return {"business": None, "worker": None, "ambiguous": False}
+    with get_conn() as conn:
+        businesses = conn.execute(
+            "SELECT * FROM businesses WHERE whatsapp_phone_norm=?",
+            (target,),
+        ).fetchall()
+        workers = conn.execute(
+            "SELECT *, CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END AS has_pin "
+            "FROM workers WHERE phone_norm=? AND active=TRUE ORDER BY id",
+            (target,),
+        ).fetchall()
+    total = len(businesses) + len(workers)
+    return {
+        "business": dict(businesses[0]) if total == 1 and businesses else None,
+        "worker": dict(workers[0]) if total == 1 and workers else None,
+        "ambiguous": total > 1,
+    }
+
+
 def list_businesses() -> list[dict]:
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(
@@ -625,6 +648,14 @@ def set_whatsapp_status(business_id, status, phone=None) -> dict:
             norm = normalize_phone(phone)
             if status == "conectado" and len(norm) != 9:
                 raise ValueError("El teléfono debe tener 9 dígitos.")
+            if status == "conectado" and conn.execute(
+                "SELECT 1 AS found FROM workers WHERE phone_norm=? AND active=TRUE",
+                (norm,),
+            ).fetchone():
+                raise ValueError(
+                    "Ese teléfono ya identifica a un trabajador en Noesis. "
+                    "Cada número central debe tener una sola identidad."
+                )
             conn.execute("UPDATE businesses SET whatsapp_status=?, whatsapp_phone=? "
                          ", whatsapp_phone_norm=? WHERE id=?",
                          (status, phone, norm or None, business_id))
@@ -657,9 +688,88 @@ def disconnect_whatsapp(business_id: int) -> dict | None:
     return get_business(business_id)
 
 
-def finish_onboarding(business_id) -> dict:
+def start_onboarding(
+    business_id: int, *, plan: str = "autonomo", billing: str = "monthly",
+    intent: str = "trial",
+) -> dict:
+    """Activa el recorrido recuperable solo para altas que deben completarlo."""
+    if plan not in {"autonomo", "pro", "premium"}:
+        raise ValueError("El plan del alta no es válido.")
+    if billing not in {"monthly", "annual"}:
+        raise ValueError("La periodicidad del alta no es válida.")
+    if intent not in {"trial", "subscribe"}:
+        raise ValueError("La intención del alta no es válida.")
     with get_conn() as conn:
-        conn.execute("UPDATE businesses SET onboarding_done=TRUE WHERE id=?", (business_id,))
+        conn.execute(
+            "UPDATE businesses SET onboarding_started=TRUE, onboarding_done=FALSE, "
+            "onboarding_stage=2, onboarding_plan=?, onboarding_billing=?, "
+            "onboarding_intent=? WHERE id=?",
+            (plan, billing, intent, business_id),
+        )
+    return get_business(business_id)
+
+
+def _onboarding_readiness(business: dict) -> tuple[bool, bool]:
+    profile_done = bool(
+        business.get("onboarding_profile_completed")
+        or (
+            business.get("sector") and business.get("team_size")
+            and business.get("primary_goal")
+        )
+    )
+    preferences_done = bool(
+        business.get("onboarding_preferences_completed")
+        or (business.get("nif") and business.get("address"))
+    )
+    return profile_done, preferences_done
+
+
+def onboarding_destination(business_id: int) -> str | None:
+    """Ruta exacta donde debe continuar un alta iniciada e incompleta."""
+    business = get_business(business_id)
+    if not business or not business.get("onboarding_started"):
+        return None
+    if business.get("onboarding_done"):
+        return f"/b/{business_id}/resumen"
+    profile_done, preferences_done = _onboarding_readiness(business)
+    if not profile_done:
+        return f"/onboarding/setup/{business_id}"
+    if not preferences_done:
+        return f"/onboarding/preferences/{business_id}"
+    return f"/onboarding/whatsapp/{business_id}"
+
+
+def finish_onboarding(business_id: int, whatsapp_choice: str | None = None) -> dict:
+    """Cierra el alta solo tras guardar perfil y operativa obligatorios."""
+    choice = (whatsapp_choice or "").strip().lower()
+    if choice and choice not in {"connected", "later"}:
+        raise ValueError("La decisión de WhatsApp no es válida.")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        business = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not business:
+            raise ValueError("Negocio no encontrado.")
+        profile_done, preferences_done = _onboarding_readiness(dict(business))
+        if not profile_done or not preferences_done:
+            raise ValueError(
+                "Completa el negocio y la operativa antes de terminar el alta."
+            )
+        actual_choice = (
+            "connected" if business.get("whatsapp_status") == "conectado"
+            else choice
+        )
+        if actual_choice not in {"connected", "later"}:
+            raise ValueError("Confirma WhatsApp o elige conectarlo más adelante.")
+        conn.execute(
+            "UPDATE businesses SET onboarding_started=TRUE, onboarding_done=TRUE, "
+            "onboarding_profile_completed=TRUE, "
+            "onboarding_preferences_completed=TRUE, onboarding_stage=5, "
+            "whatsapp_onboarding_choice=? WHERE id=?",
+            (actual_choice, business_id),
+        )
     return get_business(business_id)
 
 
@@ -831,6 +941,169 @@ def mark_gestoria_login(account_id: int) -> None:
         )
 
 
+def create_gestoria_password_reset(
+    account_id: int, token_hash: str, ttl_minutes: int = 60
+) -> None:
+    """Crea el único enlace vigente de recuperación para una gestoría."""
+    expires = (
+        datetime.now() + timedelta(minutes=max(1, min(int(ttl_minutes), 1440)))
+    ).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        account = conn.execute(
+            "SELECT id FROM gestoria_accounts WHERE id=? AND is_active=TRUE",
+            (account_id,),
+        ).fetchone()
+        if not account:
+            raise ValueError("Cuenta de gestoría no encontrada.")
+        # Pedir un enlace nuevo invalida los anteriores y evita que un correo
+        # antiguo siga abriendo la cuenta después de recuperar el acceso.
+        conn.execute(
+            "UPDATE gestoria_password_resets SET used=TRUE "
+            "WHERE gestoria_account_id=? AND used=FALSE",
+            (account_id,),
+        )
+        conn.execute(
+            "INSERT INTO gestoria_password_resets "
+            "(gestoria_account_id, token_hash, expires_at, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (account_id, token_hash, expires, _now()),
+        )
+
+
+def reset_gestoria_password(token_hash: str, password_hash: str) -> dict | None:
+    """Consume el token y cambia la clave en una sola transacción.
+
+    Incrementar ``session_version`` expulsa cualquier sesión abierta. El MFA se
+    conserva: recuperar la contraseña nunca rebaja el segundo factor.
+    """
+    now = datetime.now().isoformat(timespec="seconds")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT r.id, r.gestoria_account_id "
+            "FROM gestoria_password_resets r "
+            "JOIN gestoria_accounts a ON a.id=r.gestoria_account_id "
+            "WHERE r.token_hash=? AND r.used=FALSE AND r.expires_at>? "
+            "AND a.is_active=TRUE" + lock,
+            (token_hash, now),
+        ).fetchone()
+        if not row:
+            return None
+        consumed = conn.execute(
+            "UPDATE gestoria_password_resets SET used=TRUE "
+            "WHERE id=? AND used=FALSE",
+            (row["id"],),
+        )
+        if consumed.rowcount != 1:
+            return None
+        conn.execute(
+            "UPDATE gestoria_accounts SET password_hash=?, "
+            "session_version=session_version+1 WHERE id=? AND is_active=TRUE",
+            (password_hash, row["gestoria_account_id"]),
+        )
+        account = conn.execute(
+            "SELECT * FROM gestoria_accounts WHERE id=?",
+            (row["gestoria_account_id"],),
+        ).fetchone()
+        return dict(account) if account else None
+
+
+def enable_gestoria_mfa(account_id: int, recovery_hashes: list[str],
+                        last_counter: int) -> dict | None:
+    hashes = [
+        value for value in recovery_hashes
+        if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+    ]
+    if len(hashes) != len(recovery_hashes) or not hashes:
+        raise ValueError("Los códigos de recuperación no son válidos.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_enabled=TRUE, "
+            "mfa_recovery_hashes=?, mfa_last_counter=?, mfa_enrolled_at=?, "
+            "session_version=session_version+1 WHERE id=? AND is_active=TRUE",
+            (json.dumps(hashes), int(last_counter), _now(), account_id),
+        )
+    return get_gestoria_account(account_id)
+
+
+def disable_gestoria_mfa(account_id: int) -> dict | None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_enabled=FALSE, "
+            "mfa_recovery_hashes='[]', mfa_last_counter=-1, "
+            "mfa_enrolled_at=NULL, session_version=session_version+1 "
+            "WHERE id=?",
+            (account_id,),
+        )
+    return get_gestoria_account(account_id)
+
+
+def replace_gestoria_recovery_hashes(account_id: int,
+                                     recovery_hashes: list[str]) -> None:
+    if not recovery_hashes or any(
+        not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
+        for value in recovery_hashes
+    ):
+        raise ValueError("Los códigos de recuperación no son válidos.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_recovery_hashes=? "
+            "WHERE id=? AND mfa_enabled=TRUE",
+            (json.dumps(recovery_hashes), account_id),
+        )
+
+
+def consume_gestoria_mfa_counter(account_id: int, counter: int) -> bool:
+    """Evita reutilizar el mismo TOTP incluso con dos peticiones concurrentes."""
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "UPDATE gestoria_accounts SET mfa_last_counter=? "
+            "WHERE id=? AND mfa_enabled=TRUE AND mfa_last_counter<?",
+            (int(counter), account_id, int(counter)),
+        )
+        return cursor.rowcount == 1
+
+
+def consume_gestoria_recovery_hash(account_id: int, code_hash: str) -> bool:
+    """Consume un código de emergencia una sola vez bajo bloqueo de cuenta."""
+    if not re.fullmatch(r"[0-9a-f]{64}", code_hash or ""):
+        return False
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT mfa_enabled, mfa_recovery_hashes FROM gestoria_accounts "
+            "WHERE id=?" + lock,
+            (account_id,),
+        ).fetchone()
+        if not row or not row["mfa_enabled"]:
+            return False
+        try:
+            hashes = json.loads(row["mfa_recovery_hashes"] or "[]")
+        except (TypeError, json.JSONDecodeError):
+            return False
+        if code_hash not in hashes:
+            return False
+        hashes.remove(code_hash)
+        conn.execute(
+            "UPDATE gestoria_accounts SET mfa_recovery_hashes=? WHERE id=?",
+            (json.dumps(hashes), account_id),
+        )
+        return True
+
+
+def gestoria_recovery_codes_remaining(account: dict | None) -> int:
+    if not account:
+        return 0
+    try:
+        values = json.loads(account.get("mfa_recovery_hashes") or "[]")
+    except (TypeError, json.JSONDecodeError):
+        return 0
+    return len(values) if isinstance(values, list) else 0
+
+
 def create_gestoria_invitation(business_id: int, email: str,
                                token_hash: str, expires_at: str) -> dict:
     """Emite una invitación revocable y anula las anteriores del mismo destino."""
@@ -979,6 +1252,99 @@ def revoke_gestoria_access(business_id: int, account_id: int) -> bool:
             (_now(), business_id, account_id),
         )
     return cur.rowcount == 1
+
+
+GESTORIA_TAXPAYER_TYPES = {"sin_configurar", "autonomo", "sociedad", "otro"}
+GESTORIA_INCOME_TAX_REGIMES = {
+    "sin_configurar", "estimacion_directa", "estimacion_objetiva", "sociedades",
+}
+GESTORIA_VAT_REGIMES = {
+    "sin_configurar", "general", "simplificado", "recargo", "exento",
+}
+GESTORIA_FILING_CADENCES = {"mensual", "trimestral"}
+GESTORIA_TAX_OBLIGATIONS = {
+    "303", "390", "130", "131", "111", "115", "347", "349", "200", "202",
+}
+
+
+def get_gestoria_fiscal_profile(business_id: int) -> dict:
+    """Perfil de obligaciones; la ausencia siempre se muestra como no configurada."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM gestoria_fiscal_profiles WHERE business_id=?",
+            (business_id,),
+        ).fetchone()
+    if not row:
+        return {
+            "business_id": business_id,
+            "taxpayer_type": "sin_configurar",
+            "income_tax_regime": "sin_configurar",
+            "vat_regime": "sin_configurar",
+            "filing_cadence": "trimestral",
+            "obligations": [],
+            "notes": None,
+            "updated_at": None,
+        }
+    profile = dict(row)
+    try:
+        obligations = json.loads(profile.get("obligations") or "[]")
+    except (TypeError, json.JSONDecodeError):
+        obligations = []
+    profile["obligations"] = [
+        str(item) for item in obligations
+        if str(item) in GESTORIA_TAX_OBLIGATIONS
+    ]
+    return profile
+
+
+def update_gestoria_fiscal_profile(
+    business_id: int,
+    gestoria_account_id: int,
+    *,
+    taxpayer_type: str,
+    income_tax_regime: str,
+    vat_regime: str,
+    filing_cadence: str,
+    obligations,
+    notes: str | None = None,
+) -> dict:
+    """Guarda criterio del despacho sin presentar ni confirmar ningún impuesto."""
+    if not gestoria_account_can_access(gestoria_account_id, business_id):
+        raise ValueError("La gestoría no tiene acceso a esta empresa.")
+    taxpayer_type = (taxpayer_type or "").strip()
+    income_tax_regime = (income_tax_regime or "").strip()
+    vat_regime = (vat_regime or "").strip()
+    filing_cadence = (filing_cadence or "").strip()
+    if taxpayer_type not in GESTORIA_TAXPAYER_TYPES:
+        raise ValueError("El tipo de contribuyente no es válido.")
+    if income_tax_regime not in GESTORIA_INCOME_TAX_REGIMES:
+        raise ValueError("El régimen de renta no es válido.")
+    if vat_regime not in GESTORIA_VAT_REGIMES:
+        raise ValueError("El régimen de IVA no es válido.")
+    if filing_cadence not in GESTORIA_FILING_CADENCES:
+        raise ValueError("La periodicidad fiscal no es válida.")
+    normalized = sorted({
+        str(item).strip() for item in (obligations or [])
+        if str(item).strip() in GESTORIA_TAX_OBLIGATIONS
+    }, key=lambda item: (len(item), item))
+    notes = (notes or "").strip()[:1000] or None
+    now = _now()
+    payload = json.dumps(normalized, separators=(",", ":"))
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO gestoria_fiscal_profiles "
+            "(business_id, taxpayer_type, income_tax_regime, vat_regime, "
+            "filing_cadence, obligations, notes, updated_by_gestoria_id, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(business_id) DO UPDATE SET taxpayer_type=excluded.taxpayer_type, "
+            "income_tax_regime=excluded.income_tax_regime, vat_regime=excluded.vat_regime, "
+            "filing_cadence=excluded.filing_cadence, obligations=excluded.obligations, "
+            "notes=excluded.notes, updated_by_gestoria_id=excluded.updated_by_gestoria_id, "
+            "updated_at=excluded.updated_at",
+            (business_id, taxpayer_type, income_tax_regime, vat_regime,
+             filing_cadence, payload, notes, gestoria_account_id, now),
+        )
+    return get_gestoria_fiscal_profile(business_id)
 
 
 def gestoria_period_range(label: str) -> tuple[str, str]:
@@ -1341,6 +1707,24 @@ def update_onboarding_preferences(
                 json.dumps(reports, ensure_ascii=False, separators=(",", ":")),
                 business_id,
             ),
+        )
+    return get_business(business_id)
+
+
+def complete_onboarding_step(business_id: int, step: str) -> dict:
+    """Avanza el alta solo después de guardar todas las piezas de ese paso."""
+    if step == "profile":
+        field, stage = "onboarding_profile_completed", 3
+    elif step == "preferences":
+        field, stage = "onboarding_preferences_completed", 4
+    else:
+        raise ValueError("El paso de alta no es válido.")
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE businesses SET {field}=TRUE, onboarding_started=TRUE, "
+            "onboarding_stage=CASE WHEN onboarding_stage<? THEN ? "
+            "ELSE onboarding_stage END WHERE id=?",
+            (stage, stage, business_id),
         )
     return get_business(business_id)
 
@@ -2271,6 +2655,13 @@ BRAND_COLOR_DEFAULT = "#14463b"
 INVOICE_TEMPLATES = {"clasica", "minimal", "editorial"}
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_LOGO_B64 = 400_000  # ~300 KB de imagen
+MAX_FOOTER_IMAGE_B64 = 1_200_000  # ~900 KB tras sanear y recomprimir
+MAX_DOCUMENT_FOOTER = 800
+MAX_QUOTE_TERMS = 1_500
+QUOTE_VALIDITY_DAYS = {7, 15, 30, 45, 60, 90}
+FOOTER_IMAGE_WIDTHS = {25, 50, 75, 100}
+FOOTER_IMAGE_ALIGNMENTS = {"left", "center", "right"}
+FOOTER_IMAGE_SCOPES = {"invoices", "all"}
 
 
 def business_initials(name: str | None) -> str:
@@ -2346,9 +2737,71 @@ def update_panel_layout(business_id, order, hidden) -> dict:
     return get_business(business_id)
 
 
+_DOCUMENT_PROFILE_FIELDS = (
+    "invoice_template", "brand_color", "logo_data", "logo_mime",
+    "document_footer", "footer_image_data", "footer_image_mime",
+    "footer_image_width", "footer_image_alignment", "footer_image_scope",
+)
+
+
+def _ensure_current_document_profile(conn, business: dict) -> dict:
+    """Devuelve la versión visual vigente o crea una nueva si cambió la marca."""
+    latest = conn.execute(
+        "SELECT * FROM document_profiles WHERE business_id=? "
+        "ORDER BY version DESC LIMIT 1", (business["id"],),
+    ).fetchone()
+    current = {
+        "invoice_template": business.get("invoice_template") or "clasica",
+        "brand_color": business.get("brand_color"),
+        "logo_data": business.get("logo_data"),
+        "logo_mime": business.get("logo_mime"),
+        "document_footer": business.get("document_footer"),
+        "footer_image_data": business.get("footer_image_data"),
+        "footer_image_mime": business.get("footer_image_mime"),
+        "footer_image_width": int(business.get("footer_image_width") or 100),
+        "footer_image_alignment": business.get("footer_image_alignment") or "center",
+        "footer_image_scope": business.get("footer_image_scope") or "invoices",
+    }
+    if latest and all(latest.get(key) == value for key, value in current.items()):
+        return dict(latest)
+    version = int(latest["version"] if latest else 0) + 1
+    row = conn.execute(
+        "INSERT INTO document_profiles (business_id, version, invoice_template, "
+        "brand_color, logo_data, logo_mime, document_footer, footer_image_data, "
+        "footer_image_mime, footer_image_width, footer_image_alignment, "
+        "footer_image_scope, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "RETURNING *",
+        (
+            business["id"], version, current["invoice_template"],
+            current["brand_color"], current["logo_data"], current["logo_mime"],
+            current["document_footer"], current["footer_image_data"],
+            current["footer_image_mime"], current["footer_image_width"],
+            current["footer_image_alignment"], current["footer_image_scope"], _now(),
+        ),
+    ).fetchone()
+    return dict(row)
+
+
+def get_invoice_document_profile(invoice_id: int, business_id: int) -> dict | None:
+    """Perfil visual congelado de una factura, siempre aislado por negocio."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT p.* FROM invoices i JOIN document_profiles p "
+            "ON p.id=i.document_profile_id AND p.business_id=i.business_id "
+            "WHERE i.id=? AND i.business_id=?",
+            (invoice_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def update_branding(business_id, *, template=None, brand_color=None,
-                    logo_data=None, logo_mime=None, clear_logo=False) -> dict | None:
-    """Guarda la personalización de documentos: plantilla, color y logo/monograma."""
+                    logo_data=None, logo_mime=None, clear_logo=False,
+                    document_footer=None, quote_terms=None,
+                    default_quote_validity_days=None,
+                    footer_image_data=None, footer_image_mime=None,
+                    clear_footer_image=False, footer_image_width=None,
+                    footer_image_alignment=None, footer_image_scope=None) -> dict | None:
+    """Guarda una configuración documental segura y común a todo el negocio."""
     fields: list[str] = []
     params: list = []
     if template is not None:
@@ -2370,11 +2823,78 @@ def update_branding(business_id, *, template=None, brand_color=None,
             raise ValueError("El logo es demasiado grande (máximo ~300 KB).")
         fields += ["logo_data=?", "logo_mime=?"]
         params += [logo_data, logo_mime]
+    if clear_footer_image:
+        fields += ["footer_image_data=?", "footer_image_mime=?"]
+        params += [None, None]
+    elif footer_image_data is not None:
+        if len(footer_image_data) > MAX_FOOTER_IMAGE_B64:
+            raise ValueError("La imagen del pie es demasiado grande (máximo ~900 KB).")
+        if footer_image_mime != "image/png":
+            raise ValueError("La imagen del pie debe estar saneada en formato PNG.")
+        fields += ["footer_image_data=?", "footer_image_mime=?"]
+        params += [footer_image_data, footer_image_mime]
+    if footer_image_width is not None:
+        try:
+            width = int(footer_image_width)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("El ancho de la imagen del pie no es válido.") from exc
+        if width not in FOOTER_IMAGE_WIDTHS:
+            raise ValueError("El ancho del pie debe ser 25, 50, 75 o 100%.")
+        fields.append("footer_image_width=?")
+        params.append(width)
+    if footer_image_alignment is not None:
+        alignment = str(footer_image_alignment or "").strip().lower()
+        if alignment not in FOOTER_IMAGE_ALIGNMENTS:
+            raise ValueError("La alineación de la imagen del pie no es válida.")
+        fields.append("footer_image_alignment=?")
+        params.append(alignment)
+    if footer_image_scope is not None:
+        scope = str(footer_image_scope or "").strip().lower()
+        if scope not in FOOTER_IMAGE_SCOPES:
+            raise ValueError("El uso de la imagen del pie no es válido.")
+        fields.append("footer_image_scope=?")
+        params.append(scope)
+    if document_footer is not None:
+        footer = str(document_footer or "").strip()
+        if len(footer) > MAX_DOCUMENT_FOOTER:
+            raise ValueError(
+                f"El pie del documento no puede superar {MAX_DOCUMENT_FOOTER} caracteres."
+            )
+        fields.append("document_footer=?")
+        params.append(footer or None)
+    if quote_terms is not None:
+        terms = str(quote_terms or "").strip()
+        if len(terms) > MAX_QUOTE_TERMS:
+            raise ValueError(
+                f"Las condiciones no pueden superar {MAX_QUOTE_TERMS} caracteres."
+            )
+        fields.append("quote_terms=?")
+        params.append(terms or None)
+    if default_quote_validity_days is not None:
+        try:
+            validity = int(default_quote_validity_days)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("La validez predeterminada no es válida.") from exc
+        if validity not in QUOTE_VALIDITY_DAYS:
+            raise ValueError("La validez debe ser de 7, 15, 30, 45, 60 o 90 días.")
+        fields.append("default_quote_validity_days=?")
+        params.append(validity)
     if not fields:
         return get_business(business_id)
-    params.append(business_id)
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        existing = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not existing:
+            return None
+        params.append(business_id)
         conn.execute(f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params)
+        updated = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        _ensure_current_document_profile(conn, dict(updated))
     return get_business(business_id)
 
 
@@ -2685,10 +3205,337 @@ def list_clients(business_id) -> list[dict]:
 
 
 def get_or_create_client(name, business_id, **kw) -> dict:
+    nif = kw.get("nif")
     return (
+        resolve_client_identity(business_id, name=name, nif=nif)
+        or
         resolve_client_reference(name, business_id)
         or add_client(name, business_id=business_id, **kw)
     )
+
+
+def _normalise_nif(value: str | None) -> str:
+    return re.sub(r"[^A-Z0-9]", "", str(value or "").upper())
+
+
+def resolve_client_identity(
+    business_id: int, *, name: str | None = None, nif: str | None = None
+) -> dict | None:
+    """Resuelve una identidad documental sin búsquedas difusas peligrosas.
+
+    El NIF exacto tiene prioridad. Sin NIF solo se acepta el nombre completo
+    normalizado y único; una factura leída nunca convierte ``Marta`` en una
+    persona concreta por aproximación.
+    """
+    clients = list_clients(business_id)
+    wanted_nif = _normalise_nif(nif)
+    if wanted_nif:
+        matches = [
+            client for client in clients
+            if _normalise_nif(client.get("nif")) == wanted_nif
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                "Hay más de un cliente con ese NIF. Revísalo antes de relacionar."
+            )
+    folded = _fold_client_reference(name)
+    if not folded:
+        return None
+    matches = [
+        client for client in clients
+        if _fold_client_reference(client.get("name")) == folded
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise ValueError(
+            "Hay más de un cliente con ese nombre. Indica el NIF antes de relacionar."
+        )
+    return None
+
+
+def propose_document_client(
+    business_id: int,
+    document_id: int,
+    *,
+    name: str | None,
+    nif: str | None = None,
+) -> dict | None:
+    """Relaciona un cliente conocido o deja un alta nueva pendiente del titular."""
+    proposed_name = str(name or "").strip()[:200]
+    proposed_nif = str(nif or "").strip().upper()[:20] or None
+    if not proposed_name:
+        return None
+    with get_conn() as conn:
+        document = conn.execute(
+            "SELECT id FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+    if not document:
+        return None
+    existing = resolve_client_identity(
+        business_id, name=proposed_name, nif=proposed_nif
+    )
+    now = _now()
+    with get_conn() as conn:
+        if existing:
+            conn.execute(
+                "UPDATE documents SET client_id=? WHERE id=? AND business_id=?",
+                (existing["id"], document_id, business_id),
+            )
+        conn.execute(
+            "INSERT INTO document_client_candidates "
+            "(business_id, document_id, proposed_name, proposed_nif, status, "
+            "matched_client_id, created_at, resolved_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, document_id) DO UPDATE SET "
+            "proposed_name=excluded.proposed_name, "
+            "proposed_nif=excluded.proposed_nif, "
+            "status=excluded.status, matched_client_id=excluded.matched_client_id, "
+            "resolved_at=excluded.resolved_at "
+            "WHERE document_client_candidates.status='pending'",
+            (
+                business_id, document_id, proposed_name, proposed_nif,
+                "confirmed" if existing else "pending",
+                existing["id"] if existing else None,
+                now, now if existing else None,
+            ),
+        )
+        row = conn.execute(
+            "SELECT * FROM document_client_candidates "
+            "WHERE business_id=? AND document_id=?",
+            (business_id, document_id),
+        ).fetchone()
+    result = dict(row) if row else None
+    if result:
+        matched_id = result.get("matched_client_id")
+        result["matched_client"] = (
+            get_client(matched_id, business_id) if matched_id else None
+        )
+    return result
+
+
+def get_document_client_candidate(
+    document_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT dc.*, c.name AS matched_client_name "
+            "FROM document_client_candidates dc "
+            "LEFT JOIN clients c ON c.id=dc.matched_client_id "
+            "AND c.business_id=dc.business_id "
+            "WHERE dc.document_id=? AND dc.business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def confirm_document_client_candidate(
+    document_id: int,
+    business_id: int,
+    *,
+    name: str | None = None,
+    nif: str | None = None,
+) -> dict:
+    """Confirma en una transacción el cliente propuesto y enlaza el documento.
+
+    El bloqueo del negocio serializa dos confirmaciones simultáneas para evitar
+    dos altas del mismo NIF dentro de la misma cuenta.
+    """
+    now = _now()
+    with get_conn() as conn:
+        suffix = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        business = conn.execute(
+            f"SELECT id FROM businesses WHERE id=?{suffix}", (business_id,)
+        ).fetchone()
+        if not business:
+            raise ValueError("El negocio no existe.")
+        candidate = conn.execute(
+            f"SELECT * FROM document_client_candidates "
+            f"WHERE document_id=? AND business_id=?{suffix}",
+            (document_id, business_id),
+        ).fetchone()
+        if not candidate:
+            raise ValueError("No hay ningún cliente propuesto para este documento.")
+        if candidate["status"] == "confirmed" and candidate["matched_client_id"]:
+            row = conn.execute(
+                "SELECT * FROM clients WHERE id=? AND business_id=?",
+                (candidate["matched_client_id"], business_id),
+            ).fetchone()
+            if row:
+                return dict(row)
+        if candidate["status"] != "pending":
+            raise ValueError("La propuesta ya no está pendiente.")
+
+        proposed_name = str(name or candidate["proposed_name"] or "").strip()[:200]
+        proposed_nif = str(
+            nif if nif is not None else candidate["proposed_nif"] or ""
+        ).strip().upper()[:20] or None
+        if not proposed_name:
+            raise ValueError("Revisa el nombre del cliente antes de confirmarlo.")
+        conn.execute(
+            "UPDATE document_client_candidates SET proposed_name=?, proposed_nif=? "
+            "WHERE document_id=? AND business_id=?",
+            (proposed_name, proposed_nif, document_id, business_id),
+        )
+
+        clients = [dict(row) for row in conn.execute(
+            "SELECT * FROM clients WHERE business_id=? ORDER BY id",
+            (business_id,),
+        ).fetchall()]
+        wanted_nif = _normalise_nif(proposed_nif)
+        matches = (
+            [client for client in clients
+             if _normalise_nif(client.get("nif")) == wanted_nif]
+            if wanted_nif else []
+        )
+        if not matches:
+            folded = _fold_client_reference(proposed_name)
+            matches = [
+                client for client in clients
+                if _fold_client_reference(client.get("name")) == folded
+            ]
+        if len(matches) > 1:
+            raise ValueError(
+                "Hay varios clientes que encajan. Corrige el nombre o el NIF."
+            )
+        if matches:
+            client_id = matches[0]["id"]
+        else:
+            created = conn.execute(
+                "INSERT INTO clients (business_id, name, nif, created_at) "
+                "VALUES (?, ?, ?, ?) RETURNING id",
+                (
+                    business_id, proposed_name, proposed_nif, now,
+                ),
+            ).fetchone()
+            client_id = created["id"]
+        updated = conn.execute(
+            "UPDATE documents SET client_id=? WHERE id=? AND business_id=? "
+            "RETURNING id",
+            (client_id, document_id, business_id),
+        ).fetchone()
+        if not updated:
+            raise ValueError("El documento ya no existe.")
+        conn.execute(
+            "UPDATE document_client_candidates SET status='confirmed', "
+            "matched_client_id=?, resolved_at=? "
+            "WHERE document_id=? AND business_id=?",
+            (client_id, now, document_id, business_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM clients WHERE id=? AND business_id=?",
+            (client_id, business_id),
+        ).fetchone()
+    return dict(row)
+
+
+def ensure_inbound_email_route(business_id: int) -> dict:
+    """Crea una dirección opaca por negocio; no es una credencial de acceso."""
+    if not get_business(business_id):
+        raise ValueError("El negocio no existe.")
+    for _ in range(3):
+        token = secrets.token_hex(16)
+        now = _now()
+        with get_conn() as conn:
+            row = conn.execute(
+                "INSERT INTO inbound_email_routes "
+                "(business_id, route_token, active, created_at) "
+                "VALUES (?, ?, TRUE, ?) ON CONFLICT (business_id) DO NOTHING "
+                "RETURNING *",
+                (business_id, token, now),
+            ).fetchone()
+            if not row:
+                row = conn.execute(
+                    "SELECT * FROM inbound_email_routes WHERE business_id=?",
+                    (business_id,),
+                ).fetchone()
+        if row:
+            return dict(row)
+    raise RuntimeError("No se pudo crear la ruta de correo.")
+
+
+def rotate_inbound_email_route(business_id: int) -> dict:
+    token = secrets.token_hex(16)
+    now = _now()
+    with get_conn() as conn:
+        row = conn.execute(
+            "UPDATE inbound_email_routes SET route_token=?, active=TRUE, "
+            "rotated_at=? WHERE business_id=? RETURNING *",
+            (token, now, business_id),
+        ).fetchone()
+    if row:
+        return dict(row)
+    return ensure_inbound_email_route(business_id)
+
+
+def resolve_inbound_email_route(route_token: str) -> dict | None:
+    """Resolución de plataforma previa a entrar en el perímetro de un negocio."""
+    token = str(route_token or "").strip().lower()
+    if not re.fullmatch(r"[a-f0-9]{32}", token):
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM inbound_email_routes "
+            "WHERE route_token=? AND active=TRUE",
+            (token,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def claim_inbound_email_message(
+    business_id: int, message_fingerprint: str
+) -> dict | None:
+    """Reclama un mensaje sin duplicarlo entre réplicas del scheduler."""
+    now = _now()
+    stale = (datetime.now() - timedelta(minutes=5)).isoformat(timespec="seconds")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO inbound_email_messages "
+            "(business_id, message_fingerprint, status, attempts, received_at, updated_at) "
+            "VALUES (?, ?, 'processing', 1, ?, ?) "
+            "ON CONFLICT (business_id, message_fingerprint) DO NOTHING RETURNING *",
+            (business_id, message_fingerprint, now, now),
+        ).fetchone()
+        if row:
+            return dict(row)
+        row = conn.execute(
+            "UPDATE inbound_email_messages SET status='processing', "
+            "attempts=attempts+1, updated_at=? "
+            "WHERE business_id=? AND message_fingerprint=? AND "
+            "((status='failed' AND attempts<3) OR "
+            "(status='processing' AND updated_at<?)) RETURNING *",
+            (now, business_id, message_fingerprint, stale),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def finish_inbound_email_message(
+    message_id: int,
+    business_id: int,
+    *,
+    status: str,
+    attachment_count: int,
+    document_count: int,
+    error_code: str | None = None,
+) -> dict | None:
+    if status not in {"processed", "partial", "rejected", "failed"}:
+        raise ValueError("Estado de correo entrante no válido.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "UPDATE inbound_email_messages SET status=?, attachment_count=?, "
+            "document_count=?, error_code=?, updated_at=? "
+            "WHERE id=? AND business_id=? RETURNING *",
+            (
+                status, max(0, int(attachment_count)),
+                max(0, int(document_count)),
+                str(error_code or "")[:60] or None, _now(),
+                message_id, business_id,
+            ),
+        ).fetchone()
+    return dict(row) if row else None
 
 
 def update_client(client_id, business_id, name=None, phone=None, address=None,
@@ -2751,14 +3598,18 @@ def _worker_phone_in_use(
     if not phone_norm:
         return False
     extra = " AND id<>?" if exclude_id is not None else ""
-    params: list[Any] = [business_id, phone_norm]
+    params: list[Any] = [phone_norm]
     if exclude_id is not None:
         params.append(exclude_id)
-    return bool(conn.execute(
-        "SELECT 1 AS found FROM workers "
-        "WHERE business_id=? AND phone_norm=?" + extra,
+    worker = conn.execute(
+        "SELECT 1 AS found FROM workers WHERE phone_norm=?" + extra,
         tuple(params),
-    ).fetchone())
+    ).fetchone()
+    owner = conn.execute(
+        "SELECT 1 AS found FROM businesses WHERE whatsapp_phone_norm=?",
+        (phone_norm,),
+    ).fetchone()
+    return bool(worker or owner)
 
 
 def list_workers(business_id: int, *, include_inactive: bool = True) -> list[dict]:
@@ -2766,7 +3617,8 @@ def list_workers(business_id: int, *, include_inactive: bool = True) -> list[dic
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT id, business_id, name, phone, phone_norm, color, access_code, "
-            "active, created_at, CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END "
+            "role, can_submit_costs, can_view_assigned_budget, active, created_at, "
+            "CASE WHEN pin_hash IS NULL THEN FALSE ELSE TRUE END "
             "AS has_pin FROM workers WHERE business_id=?" + where
             + " ORDER BY active DESC, name",
             (business_id,),
@@ -2803,6 +3655,9 @@ def create_worker(
     phone: str | None = None,
     color: str | None = None,
     pin: str | None = None,
+    role: str = "campo",
+    can_submit_costs: bool = True,
+    can_view_assigned_budget: bool = False,
 ) -> dict:
     name = (name or "").strip()
     if not name:
@@ -2812,17 +3667,24 @@ def create_worker(
     phone, phone_norm = _worker_phone(phone)
     color = _worker_color(color)
     pin_hash = _worker_pin_hash(pin)
+    role = str(role or "campo").strip().lower()
+    if role not in {"campo", "responsable", "oficina"}:
+        raise ValueError("El rol del equipo no es válido.")
     with get_conn() as conn:
         if _worker_phone_in_use(conn, business_id, phone_norm):
-            raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+            raise ValueError(
+                "Ese teléfono ya tiene otra identidad en el WhatsApp central."
+            )
         access_code = _new_worker_access_code(conn, business_id)
         row = conn.execute(
             "INSERT INTO workers "
             "(business_id, name, phone, phone_norm, color, access_code, pin_hash, "
-            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "role, can_submit_costs, can_view_assigned_budget, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (
                 business_id, name[:120], phone, phone_norm, color,
-                access_code, pin_hash, _now(),
+                access_code, pin_hash, role, bool(can_submit_costs),
+                bool(can_view_assigned_budget), _now(),
             ),
         ).fetchone()
         worker_id = row["id"]
@@ -2836,6 +3698,9 @@ def update_worker(
     name: str | None = None,
     phone: str | None = None,
     color: str | None = None,
+    role: str | None = None,
+    can_submit_costs: bool | None = None,
+    can_view_assigned_budget: bool | None = None,
 ) -> dict | None:
     if not get_worker(worker_id, business_id):
         return None
@@ -2854,6 +3719,18 @@ def update_worker(
     if color is not None:
         fields.append("color=?")
         params.append(_worker_color(color))
+    if role is not None:
+        clean_role = str(role).strip().lower()
+        if clean_role not in {"campo", "responsable", "oficina"}:
+            raise ValueError("El rol del equipo no es válido.")
+        fields.append("role=?")
+        params.append(clean_role)
+    if can_submit_costs is not None:
+        fields.append("can_submit_costs=?")
+        params.append(bool(can_submit_costs))
+    if can_view_assigned_budget is not None:
+        fields.append("can_view_assigned_budget=?")
+        params.append(bool(can_view_assigned_budget))
     if fields:
         params.extend((worker_id, business_id))
         with get_conn() as conn:
@@ -2863,7 +3740,9 @@ def update_worker(
                     conn, business_id, phone_norm, exclude_id=worker_id
                 )
             ):
-                raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+                raise ValueError(
+                    "Ese teléfono ya tiene otra identidad en el WhatsApp central."
+                )
             conn.execute(
                 f"UPDATE workers SET {', '.join(fields)} "
                 "WHERE id=? AND business_id=?",
@@ -2920,13 +3799,12 @@ def bind_worker_phone(
         ).fetchone()
         if not worker:
             return None
-        duplicate = conn.execute(
-            "SELECT id FROM workers WHERE business_id=? AND phone_norm=? "
-            "AND id<>? AND active=TRUE",
-            (business_id, phone_norm, worker["id"]),
-        ).fetchone()
-        if duplicate:
-            raise ValueError("Ese teléfono ya pertenece a otro trabajador.")
+        if _worker_phone_in_use(
+            conn, business_id, phone_norm, exclude_id=worker["id"]
+        ):
+            raise ValueError(
+                "Ese teléfono ya tiene otra identidad en el WhatsApp central."
+            )
         conn.execute(
             "UPDATE workers SET phone=?, phone_norm=? "
             "WHERE id=? AND business_id=?",
@@ -3165,6 +4043,11 @@ def _worker_can_access_job(job: dict, worker_id: int, business_id: int) -> bool:
             (business_id, job["project_id"], worker_id),
         ).fetchone()
     return bool(member)
+
+
+def worker_can_access_job(job_id: int, worker_id: int, business_id: int) -> bool:
+    job = get_job(job_id, business_id)
+    return bool(job and _worker_can_access_job(job, worker_id, business_id))
 
 
 def _field_worker(job: dict, worker_id, business_id: int) -> int | None:
@@ -4457,11 +5340,12 @@ def create_rectifying_invoice(
     vat_rate=config.DEFAULT_VAT_RATE,
     irpf_rate=0,
     invoice_type: str = "R1",
+    rectification_type: str = "I",
     reason: str,
     lines=None,
     series_id: int | None = None,
 ) -> dict:
-    """Crea una rectificativa incremental; el original nunca se modifica."""
+    """Crea una rectificativa por diferencias; el original nunca se modifica."""
     original = get_invoice(original_invoice_id, business_id)
     if not original or original.get("status") not in {
         "enviada", "parcial", "cobrada"
@@ -4474,6 +5358,16 @@ def create_rectifying_invoice(
     invoice_type = (invoice_type or "").strip().upper()
     if invoice_type not in {"R1", "R2", "R3", "R4", "R5"}:
         raise ValueError("El tipo de factura rectificativa no es válido.")
+    if invoice_type == "R5" and original.get("invoice_type") != "F2":
+        raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
+    if invoice_type != "R5" and original.get("invoice_type") == "F2":
+        raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
+    rectification_type = (rectification_type or "").strip().upper()
+    if rectification_type != "I":
+        raise ValueError(
+            "Noesis solo prepara rectificativas por diferencias. "
+            "La rectificación por sustitución requiere revisión fiscal."
+        )
     concept = (concept or "").strip()
     reason = (reason or "").strip()
     if not concept or len(concept) > 500:
@@ -4495,6 +5389,39 @@ def create_rectifying_invoice(
         concept = f"{concept} y {len(normalized) - 1} línea(s) más"
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        current_original = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
+            (original_invoice_id, business_id),
+        ).fetchone()
+        if not current_original or current_original["status"] not in {
+            "enviada", "parcial", "cobrada"
+        }:
+            raise ValueError("Solo se puede rectificar una factura ya emitida.")
+        cancelled = conn.execute(
+            "SELECT 1 FROM invoice_cancellation_records "
+            "WHERE invoice_id=? AND business_id=? LIMIT 1",
+            (original_invoice_id, business_id),
+        ).fetchone()
+        if cancelled:
+            raise ValueError(
+                "El registro fiscal de esta factura está anulado; no puede rectificarse."
+            )
+        pending = conn.execute(
+            "SELECT id FROM invoices WHERE business_id=? "
+            "AND rectifies_invoice_id=? AND status='borrador' LIMIT 1",
+            (business_id, original_invoice_id),
+        ).fetchone()
+        if pending:
+            raise ValueError(
+                "Ya existe una rectificativa en borrador para esta factura. "
+                "Revísala antes de crear otra."
+            )
+        original = dict(current_original)
+        if invoice_type == "R5" and original.get("invoice_type") != "F2":
+            raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
+        if invoice_type != "R5" and original.get("invoice_type") == "F2":
+            raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
         if series_id is None:
             series = _ensure_default_invoice_series(
                 conn, business_id, "rectifying"
@@ -4513,12 +5440,12 @@ def create_rectifying_invoice(
             "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
             "rectifies_invoice_id, rectification_type, rectification_reason, "
             "series_id, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
-            "'borrador', ?, ?, 'I', ?, ?, 'EUR', ?) RETURNING id",
+            "'borrador', ?, ?, ?, ?, ?, 'EUR', ?) RETURNING id",
             (
                 business_id, original["client_id"], concept, totals["base"],
                 totals["vat_rate"], totals["vat_amount"], totals["irpf_rate"],
                 totals["irpf_amount"], totals["total"], invoice_type,
-                original_invoice_id, reason, series_id, _now(),
+                original_invoice_id, rectification_type, reason, series_id, _now(),
             ),
         ).fetchone()
         new_id = row["id"]
@@ -4537,6 +5464,129 @@ def create_rectifying_invoice(
                 ),
             )
     return get_invoice(new_id, business_id)
+
+
+def update_rectifying_invoice_draft(
+    invoice_id: int,
+    business_id: int,
+    *,
+    concept: str,
+    base,
+    vat_rate=config.DEFAULT_VAT_RATE,
+    irpf_rate=0,
+    invoice_type: str = "R1",
+    rectification_type: str = "I",
+    reason: str,
+    lines=None,
+    series_id: int | None = None,
+) -> dict:
+    """Revisa un borrador rectificativo sin alterar la factura original."""
+    invoice_type = (invoice_type or "").strip().upper()
+    if invoice_type not in {"R1", "R2", "R3", "R4", "R5"}:
+        raise ValueError("El tipo de factura rectificativa no es válido.")
+    rectification_type = (rectification_type or "").strip().upper()
+    if rectification_type != "I":
+        raise ValueError(
+            "Noesis solo prepara rectificativas por diferencias. "
+            "La rectificación por sustitución requiere revisión fiscal."
+        )
+    concept = (concept or "").strip()
+    reason = (reason or "").strip()
+    if not concept or len(concept) > 500:
+        raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
+    if len(reason) < 3 or len(reason) > 1000:
+        raise ValueError("El motivo de rectificación es obligatorio.")
+    normalized = _normalize_invoice_lines(
+        lines,
+        fallback_concept=concept,
+        fallback_base=base,
+        fallback_vat=vat_rate,
+        allow_negative=True,
+    )
+    totals = _invoice_totals(normalized, irpf_rate)
+    if totals["base"] == 0:
+        raise ValueError("La base rectificada debe ser distinta de cero.")
+    concept = normalized[0]["description"]
+    if len(normalized) > 1:
+        concept = f"{concept} y {len(normalized) - 1} línea(s) más"
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        current = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
+            (invoice_id, business_id),
+        ).fetchone()
+        if not current:
+            raise ValueError("Factura rectificativa no encontrada.")
+        if (
+            current["status"] != "borrador"
+            or current.get("number")
+            or not current.get("rectifies_invoice_id")
+            or not str(current.get("invoice_type") or "").startswith("R")
+        ):
+            raise ValueError("Solo puede editarse un borrador rectificativo.")
+        original = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND business_id=?",
+            (current["rectifies_invoice_id"], business_id),
+        ).fetchone()
+        if not original or original["status"] not in {"enviada", "parcial", "cobrada"}:
+            raise ValueError("La factura original ya no puede rectificarse.")
+        if invoice_type == "R5" and original.get("invoice_type") != "F2":
+            raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
+        if invoice_type != "R5" and original.get("invoice_type") == "F2":
+            raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
+        cancelled = conn.execute(
+            "SELECT 1 FROM invoice_cancellation_records "
+            "WHERE invoice_id=? AND business_id=? LIMIT 1",
+            (original["id"], business_id),
+        ).fetchone()
+        if cancelled:
+            raise ValueError(
+                "El registro fiscal de la factura original está anulado."
+            )
+        if series_id is None:
+            series = _ensure_default_invoice_series(conn, business_id, "rectifying")
+            series_id = series["id"]
+        else:
+            series = conn.execute(
+                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
+                "AND document_type='rectifying' AND active=TRUE",
+                (series_id, business_id),
+            ).fetchone()
+            if not series:
+                raise ValueError("La serie rectificativa no es válida.")
+        conn.execute(
+            "UPDATE invoices SET concept=?, base=?, vat_rate=?, vat_amount=?, "
+            "irpf_rate=?, irpf_amount=?, total=?, invoice_type=?, "
+            "rectification_type=?, rectification_reason=?, series_id=? "
+            "WHERE id=? AND business_id=? AND status='borrador'",
+            (
+                concept, totals["base"], totals["vat_rate"], totals["vat_amount"],
+                totals["irpf_rate"], totals["irpf_amount"], totals["total"],
+                invoice_type, rectification_type, reason, series_id,
+                invoice_id, business_id,
+            ),
+        )
+        conn.execute(
+            "DELETE FROM invoice_lines WHERE invoice_id=? AND business_id=?",
+            (invoice_id, business_id),
+        )
+        created_at = _now()
+        for line in normalized:
+            conn.execute(
+                "INSERT INTO invoice_lines "
+                "(business_id, invoice_id, position, description, quantity, "
+                "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    business_id, invoice_id, line["position"], line["description"],
+                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["vat_rate"], line["base"], line["vat_amount"],
+                    line["total"], created_at,
+                ),
+            )
+    return get_invoice(invoice_id, business_id)
 
 
 def _invoice_payment_state(invoice: dict) -> dict:
@@ -4718,6 +5768,12 @@ def list_invoices(business_id, status=None) -> list[dict]:
         "THEN TRUE ELSE FALSE END AS verifactu_registered, "
         "vo.status AS verifactu_status, vo.aeat_csv AS verifactu_csv, "
         "vo.aeat_error_description AS verifactu_error, s.name AS series_name, "
+        "original.number AS rectified_number, "
+        "original.issued_at AS rectified_issued_at, "
+        "(SELECT pending.id FROM invoices pending WHERE "
+        "pending.business_id=i.business_id AND pending.rectifies_invoice_id=i.id "
+        "AND pending.status='borrador' ORDER BY pending.id DESC LIMIT 1) "
+        "AS pending_rectification_id, "
         "(SELECT co.status FROM verifactu_cancellation_outbox co WHERE "
         "co.business_id=i.business_id AND co.invoice_id=i.id "
         "ORDER BY co.id DESC LIMIT 1) AS cancellation_status, "
@@ -4729,6 +5785,8 @@ def list_invoices(business_id, status=None) -> list[dict]:
         "AND vo.business_id=i.business_id "
         "LEFT JOIN invoice_series s ON s.id=i.series_id "
         "AND s.business_id=i.business_id "
+        "LEFT JOIN invoices original ON original.id=i.rectifies_invoice_id "
+        "AND original.business_id=i.business_id "
         "WHERE i.business_id=?"
     )
     params: list = [business_id]
@@ -5544,15 +6602,16 @@ def issue_invoice(
         due_date = (
             issued_day + timedelta(days=max(0, min(payment_term_days, 365)))
         ).isoformat()
+        document_profile = _ensure_current_document_profile(conn, dict(biz))
         conn.execute(
             "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=?, "
             "issuer_name=?, issuer_nif=?, issuer_address=?, recipient_name=?, "
-            "recipient_nif=?, recipient_address=? "
+            "recipient_nif=?, recipient_address=?, document_profile_id=? "
             "WHERE id=? AND business_id=? AND status='borrador'",
             (
                 number, issued_at, due_date, biz["name"], biz["nif"], biz["address"],
-                client["name"], client.get("nif"), client.get("address"), invoice_id,
-                business_id,
+                client["name"], client.get("nif"), client.get("address"),
+                document_profile["id"], invoice_id, business_id,
             ),
         )
         if biz.get("verifactu_enabled"):
@@ -6874,6 +7933,44 @@ def mark_email_retry(
     return get_email_message(message_id)
 
 
+def requeue_failed_email_message(business_id: int, message_id: int) -> dict | None:
+    """Devuelve un correo agotado a la cola sin duplicarlo ni enviarlo aquí.
+
+    Solo administración llama a esta frontera. El filtro por negocio impide que
+    un identificador manipulado actúe sobre otra cuenta y el estado ``failed``
+    evita reencolar un mensaje que ya esté en curso o enviado.
+    """
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT id, status, attempts, max_attempts FROM email_outbox "
+            "WHERE id=? AND business_id=?" + lock,
+            (message_id, business_id),
+        ).fetchone()
+        if not row:
+            return None
+        if row["status"] != "failed":
+            raise ValueError(
+                "Solo se puede reintentar un correo que haya agotado sus intentos."
+            )
+        changed = conn.execute(
+            "UPDATE email_outbox SET status='queued', attempts=0, "
+            "next_attempt_at=?, locked_at=NULL, updated_at=? "
+            "WHERE id=? AND business_id=? AND status='failed'",
+            (now, now, message_id, business_id),
+        )
+        if changed.rowcount != 1:
+            raise ValueError("El estado del correo ha cambiado. Actualiza la ficha.")
+    return {
+        "id": int(row["id"]),
+        "previous_status": str(row["status"]),
+        "previous_attempts": int(row["attempts"] or 0),
+        "max_attempts": int(row["max_attempts"] or 0),
+    }
+
+
 def global_search(business_id, query: str, limit: int = 6) -> dict:
     """Buscador global del negocio: clientes, facturas, presupuestos y trabajos
     por nombre, número, concepto o teléfono. Siempre aislado por business_id."""
@@ -7714,7 +8811,8 @@ def get_received_invoice(received_id, business_id) -> dict | None:
 
 
 def list_received_invoices(business_id, status=None) -> list[dict]:
-    q = ("SELECT r.*, s.name AS supplier_name FROM received_invoices r "
+    q = ("SELECT r.*, s.name AS supplier_name, s.nif AS supplier_nif "
+         "FROM received_invoices r "
          "LEFT JOIN suppliers s ON s.id=r.supplier_id "
          "AND s.business_id=r.business_id WHERE r.business_id=?")
     params: list = [business_id]
@@ -7994,6 +9092,11 @@ def convert_lead_to_client(lead_id, *, business_id: int) -> dict:
             "UPDATE leads SET status='ganado', client_id=?, updated_at=? "
             "WHERE id=? AND business_id=?",
             (client["id"], _now(), lead_id, business_id))
+        conn.execute(
+            "UPDATE whatsapp_contacts SET client_id=?, lead_id=NULL, updated_at=? "
+            "WHERE business_id=? AND lead_id=?",
+            (client["id"], _now(), business_id, lead_id),
+        )
     return {"lead": get_lead(lead_id, business_id), "client": client}
 
 
@@ -8191,6 +9294,7 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
             ).fetchall()
         ]
     invoiced = sum(item["total"] for item in invoices)
+    invoiced_collected = sum(item["paid_amount"] for item in invoices)
     revenue_base = sum(item["base"] for item in invoices)
     pending = sum(item["remaining_amount"] for item in invoices)
     vat_output = sum(item["vat_amount"] for item in invoices)
@@ -8206,6 +9310,10 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         "invoiced": round(invoiced, 2),
         "revenue_base": round(revenue_base, 2),
         "collected": round(collected_rows, 2),
+        # Cohorte homogénea para responder "qué parte de lo emitido este mes
+        # ya está cobrada". `collected` conserva su significado de caja que ha
+        # entrado durante el mes, aunque corresponda a facturas anteriores.
+        "invoiced_collected": round(invoiced_collected, 2),
         "pending": round(pending, 2),
         "vat_output": round(vat_output, 2),
         "vat_input": round(vat_input, 2),
@@ -8575,7 +9683,7 @@ def monthly_series(business_id, months: int = 6) -> list[dict]:
 
 # ----------------------------------------------------------- Presupuestos ---
 def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
-              irpf_rate=0, valid_days=30, *, business_id: int) -> dict:
+              irpf_rate=0, valid_days=None, notes=None, *, business_id: int) -> dict:
     """Crea un presupuesto (mismo cálculo que una factura, pero sin valor fiscal
     hasta que se acepta y se convierte en factura)."""
     if not get_client(client_id, business_id):
@@ -8586,6 +9694,20 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     base = _positive_money(base, "La base")
     vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
     irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
+    business = get_business(business_id) or {}
+    try:
+        valid_days = int(
+            valid_days
+            if valid_days not in (None, "")
+            else business.get("default_quote_validity_days") or 30
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La validez del presupuesto no es válida.") from exc
+    if valid_days not in QUOTE_VALIDITY_DAYS:
+        raise ValueError("La validez debe ser de 7, 15, 30, 45, 60 o 90 días.")
+    notes = str(notes or "").strip()
+    if len(notes) > 2_000:
+        raise ValueError("Las notas no pueden superar 2.000 caracteres.")
     vat_amount = _tax_amount(base, vat_rate)
     irpf_amount = _tax_amount(base, irpf_rate)
     total = float(
@@ -8599,10 +9721,11 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO quotes (business_id, client_id, concept, base, vat_rate, "
-            "vat_amount, irpf_rate, irpf_amount, total, status, valid_until, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?) RETURNING id",
+            "vat_amount, irpf_rate, irpf_amount, total, status, valid_until, notes, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', ?, ?, ?) "
+            "RETURNING id",
             (business_id, client_id, concept, base, vat_rate, vat_amount,
-             irpf_rate or 0, irpf_amount, total, valid_until, _now()),
+             irpf_rate or 0, irpf_amount, total, valid_until, notes or None, _now()),
         ).fetchone()
         new_id = row["id"]
     return get_quote(new_id, business_id)
@@ -8661,15 +9784,32 @@ def mark_quote_sent(quote_id, business_id) -> dict | None:
     return get_quote(quote_id, business_id)
 
 
-def reject_quote(quote_id, business_id) -> dict | None:
+def reject_quote(quote_id, business_id, *, decision_source="owner",
+                 decision_ip_hash=None, decision_user_agent=None) -> dict | None:
     with get_conn() as conn:
-        cur = conn.execute("UPDATE quotes SET status='rechazado' "
-                           "WHERE id=? AND business_id=?", (quote_id, business_id))
+        row = conn.execute(
+            "SELECT status FROM quotes WHERE id=? AND business_id=?",
+            (quote_id, business_id),
+        ).fetchone()
+        if not row:
+            return None
+        if row["status"] == "rechazado":
+            return get_quote(quote_id, business_id)
+        if row["status"] != "enviado":
+            raise ValueError("Solo se puede rechazar un presupuesto enviado.")
+        cur = conn.execute(
+            "UPDATE quotes SET status='rechazado', rejected_at=?, decision_source=?, "
+            "decision_ip_hash=?, decision_user_agent=? "
+            "WHERE id=? AND business_id=? AND status='enviado'",
+            (_now(), str(decision_source or "owner")[:30], decision_ip_hash,
+             str(decision_user_agent or "")[:300] or None, quote_id, business_id),
+        )
         ok = cur.rowcount > 0
     return get_quote(quote_id, business_id) if ok else None
 
 
-def accept_quote(quote_id, business_id) -> dict | None:
+def accept_quote(quote_id, business_id, *, decision_source="owner",
+                 decision_ip_hash=None, decision_user_agent=None) -> dict | None:
     """Acepta un presupuesto y crea la factura borrador equivalente. Aislado por
     negocio: si el presupuesto no es de ese negocio, no hace nada."""
     with get_conn() as conn:
@@ -8692,12 +9832,12 @@ def accept_quote(quote_id, business_id) -> dict | None:
         invoice_row = conn.execute(
             "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
             "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
-            "series_id, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
-            "'borrador', 'F1', ?, 'EUR', ?) RETURNING id",
+            "series_id, currency, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "'borrador', 'F1', ?, 'EUR', ?, ?) RETURNING id",
             (
                 business_id, q["client_id"], q["concept"], q["base"], q["vat_rate"],
                 q["vat_amount"], q["irpf_rate"], q["irpf_amount"], q["total"],
-                series["id"], _now(),
+                series["id"], q["notes"], _now(),
             ),
         ).fetchone()
         invoice_id = invoice_row["id"]
@@ -8712,9 +9852,12 @@ def accept_quote(quote_id, business_id) -> dict | None:
             ),
         )
         conn.execute(
-            "UPDATE quotes SET status='aceptado', accepted_at=?, invoice_id=? "
+            "UPDATE quotes SET status='aceptado', accepted_at=?, invoice_id=?, "
+            "decision_source=?, decision_ip_hash=?, decision_user_agent=? "
             "WHERE id=? AND business_id=? AND status='enviado'",
-            (_now(), invoice_id, quote_id, business_id),
+            (_now(), invoice_id, str(decision_source or "owner")[:30],
+             decision_ip_hash, str(decision_user_agent or "")[:300] or None,
+             quote_id, business_id),
         )
     return {
         "quote": get_quote(quote_id, business_id),
@@ -8753,6 +9896,7 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
         if i.get("status") in ("enviada", "parcial", "cobrada")
     ]
     all_expenses = list_expenses(business_id)
+    all_received = list_received_invoices(business_id)
     invoices = [
         i for i in all_invoices
         if _in_range(i.get("issued_at") or i.get("created_at"), year_start)
@@ -8769,20 +9913,38 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
         e for e in all_expenses
         if _in_range(e.get("spent_on") or e.get("created_at"), quarter_start)
     ]
+    received = [
+        item for item in all_received
+        if _in_range(item.get("issued_on") or item.get("created_at"), year_start)
+    ]
+    quarter_received = [
+        item for item in all_received
+        if _in_range(item.get("issued_on") or item.get("created_at"), quarter_start)
+    ]
 
     ingresos = round(sum(i["base"] for i in invoices), 2)
     iva_repercutido = round(
         sum(i.get("vat_amount") or 0 for i in quarter_invoices), 2
     )
     irpf_retenido = round(sum(i.get("irpf_amount") or 0 for i in invoices), 2)
-    gastos = round(sum(e["amount"] for e in expenses), 2)
+    gastos = round(
+        sum(e["amount"] for e in expenses)
+        + sum(item["total"] for item in received), 2
+    )
     # IVA soportado solo de gastos que registran su tipo (no se inventa).
     iva_soportado = round(sum(
         (e["amount"] - e["amount"] / (1 + (e["vat_rate"] or 0) / 100)) if e.get("vat_rate") else 0
         for e in quarter_expenses), 2)
+    iva_soportado = round(iva_soportado + sum(
+        item.get("vat_amount") or 0 for item in quarter_received
+    ), 2)
     base_gastos = round(sum(
         (e["amount"] / (1 + (e["vat_rate"] or 0) / 100)) if e.get("vat_rate") else e["amount"]
         for e in expenses), 2)
+    base_gastos = round(base_gastos + sum(
+        item.get("base") if item.get("base") is not None else item["total"]
+        for item in received
+    ), 2)
 
     iva_resultado = round(iva_repercutido - iva_soportado, 2)          # modelo 303
     rendimiento = round(ingresos - base_gastos, 2)
@@ -8803,6 +9965,11 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
         "rendimiento": rendimiento, "irpf_acumulado": irpf_acumulado,
         "pagos_previos_estimados": pagos_previos, "irpf_pago": irpf_pago,
         "n_facturas": len(quarter_invoices), "n_gastos": len(quarter_expenses),
+        "n_facturas_recibidas": len(quarter_received),
+        "datos_incompletos": sum(
+            item.get("base") is None or item.get("vat_amount") is None
+            for item in quarter_received
+        ) + sum(item.get("vat_rate") is None for item in quarter_expenses),
     }
 
 
@@ -8830,6 +9997,96 @@ def mark_reminder_sent(invoice_id, business_id) -> None:
 
 
 # ------------------------------------------------- Reset de contraseña ---
+class AccessControlError(ValueError):
+    """Una retirada de acceso que dejaria la cuenta sin dueno o sin sentido."""
+
+
+def list_business_users(business_id: int) -> list[dict]:
+    """Personas con acceso a un negocio, sin devolver nunca su contrasena."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT u.id, u.email, u.is_active, u.suspended_at, u.access_note, "
+            "u.is_admin, u.created_at, b.owner_email "
+            "FROM users u JOIN businesses b ON b.id=u.business_id "
+            "WHERE u.business_id=? ORDER BY u.id",
+            (business_id,),
+        ).fetchall()
+    out = []
+    for raw in rows:
+        item = dict(raw)
+        owner_email = str(item.pop("owner_email", "") or "").strip().lower()
+        item["is_owner"] = str(item["email"] or "").strip().lower() == owner_email
+        item["is_active"] = bool(item["is_active"])
+        out.append(item)
+    return out
+
+
+def set_user_access(
+    user_id: int,
+    *,
+    active: bool,
+    actor_user_id: int,
+    note: str = "",
+) -> dict:
+    """Suspende o restaura a una persona y corta sus sesiones al instante.
+
+    No borra nada: los datos siguen siendo del negocio. Subir
+    ``session_version`` invalida las sesiones abiertas, asi que la retirada es
+    efectiva en la peticion siguiente y no cuando caduque una cookie.
+
+    Se protegen tres casos que dejarian el sistema peor de lo que estaba:
+    nadie se suspende a si mismo, no se suspende al titular del negocio, y no
+    se suspende a la ultima persona con acceso.
+    """
+    note = " ".join(str(note or "").split())[:300]
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT u.*, b.owner_email FROM users u "
+            "JOIN businesses b ON b.id=u.business_id WHERE u.id=?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            raise AccessControlError("Esa persona no existe.")
+        user = dict(row)
+        owner_email = str(user.pop("owner_email", "") or "").strip().lower()
+        if not active:
+            if int(actor_user_id) == int(user_id):
+                raise AccessControlError(
+                    "No puedes retirarte el acceso a ti mismo."
+                )
+            if str(user["email"] or "").strip().lower() == owner_email:
+                raise AccessControlError(
+                    "No se puede suspender al titular de la cuenta. Para cerrarla "
+                    "entera, cambia su suscripcion a modo consulta."
+                )
+            restantes = conn.execute(
+                "SELECT COUNT(*) AS total FROM users "
+                "WHERE business_id=? AND is_active=TRUE AND id<>?",
+                (user["business_id"], user_id),
+            ).fetchone()
+            if int(restantes["total"] or 0) == 0:
+                raise AccessControlError(
+                    "Es la ultima persona con acceso: la cuenta quedaria sin "
+                    "nadie que pueda entrar."
+                )
+        if bool(user["is_active"]) == bool(active):
+            return get_user(user_id)
+        conn.execute(
+            "UPDATE users SET is_active=?, suspended_at=?, access_note=?, "
+            "session_version=session_version+1 WHERE id=?",
+            (bool(active), None if active else _now(), note or None, user_id),
+        )
+    return get_user(user_id)
+
+
+def user_can_sign_in(user: dict | None) -> bool:
+    """Una cuenta suspendida no inicia sesion por ninguna via."""
+    if not user:
+        return False
+    return bool(user.get("is_active", True))
+
+
 def set_password(user_id, password_hash) -> None:
     with get_conn() as conn:
         conn.execute("UPDATE users SET password_hash=?, "
@@ -8840,26 +10097,46 @@ def set_password(user_id, password_hash) -> None:
 def create_password_reset(user_id, token_hash, ttl_minutes: int = 60) -> None:
     expires = (datetime.now() + timedelta(minutes=ttl_minutes)).isoformat(timespec="seconds")
     with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "UPDATE password_resets SET used=TRUE "
+            "WHERE user_id=? AND used=FALSE",
+            (user_id,),
+        )
         conn.execute(
             "INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) "
             "VALUES (?, ?, ?, ?)", (user_id, token_hash, expires, _now()))
 
 
-def use_password_reset(token_hash) -> dict | None:
-    """Devuelve el reset válido (no usado, no caducado) y lo marca usado."""
+def reset_user_password(token_hash: str, password_hash: str) -> dict | None:
+    """Consume el enlace y cambia la clave del titular de forma atómica."""
+    now = datetime.now().isoformat(timespec="seconds")
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         row = conn.execute(
-            "SELECT * FROM password_resets "
-            "WHERE token_hash=? AND used=FALSE" + lock,
-            (token_hash,)).fetchone()
+            "SELECT r.id, r.user_id, u.business_id FROM password_resets r "
+            "JOIN users u ON u.id=r.user_id "
+            "WHERE r.token_hash=? AND r.used=FALSE AND r.expires_at>?" + lock,
+            (token_hash, now),
+        ).fetchone()
         if not row:
             return None
-        if row["expires_at"] < datetime.now().isoformat(timespec="seconds"):
+        consumed = conn.execute(
+            "UPDATE password_resets SET used=TRUE WHERE id=? AND used=FALSE",
+            (row["id"],),
+        )
+        if consumed.rowcount != 1:
             return None
-        conn.execute("UPDATE password_resets SET used=TRUE WHERE id=?", (row["id"],))
-        return dict(row)
+        conn.execute(
+            "UPDATE users SET password_hash=?, session_version=session_version+1 "
+            "WHERE id=?",
+            (password_hash, row["user_id"]),
+        )
+        return {
+            "user_id": int(row["user_id"]),
+            "business_id": int(row["business_id"]),
+        }
 
 
 # --------------------------------------------------- Visitas del sitio ---
@@ -9032,6 +10309,172 @@ def set_subscription(business_id, status, plan=None, customer_id=None,
     return get_business(business_id)
 
 
+STRIPE_SUBSCRIPTION_STATUSES = {
+    "trial", "pending", "trialing", "active", "incomplete", "past_due", "unpaid",
+    "paused", "canceled", "unknown",
+}
+
+
+def apply_stripe_subscription_event(
+    business_id: int,
+    *,
+    status: str,
+    event_created_at: int,
+    event_priority: int,
+    event_id: str,
+    plan: str | None = None,
+    customer_id: str | None = None,
+    subscription_id: str | None = None,
+    allow_subscription_change: bool = False,
+) -> dict:
+    """Aplica un estado de Stripe solo si el evento sigue siendo vigente.
+
+    Los webhooks pueden repetirse y llegar desordenados. La comparacion se hace
+    bajo bloqueo de fila y usa fecha, prioridad semantica e id como desempate
+    determinista. Un evento de una suscripcion antigua nunca puede modificar la
+    suscripcion actual salvo que el propio alta/checkout autorice el reemplazo.
+    """
+    if status not in STRIPE_SUBSCRIPTION_STATUSES:
+        raise ValueError("Estado de suscripcion Stripe no valido.")
+    if not event_id:
+        raise ValueError("El evento de Stripe necesita identificador.")
+    try:
+        created_at = max(0, int(event_created_at))
+        priority = max(0, int(event_priority))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Orden de evento Stripe no valido.") from exc
+    if plan is not None:
+        from .adapters.billing import PLANS
+
+        if plan not in PLANS:
+            raise ValueError("Plan de Stripe no reconocido.")
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not row:
+            return {"applied": False, "reason": "business_not_found", "business": None}
+
+        existing_customer = str(row.get("stripe_customer_id") or "")
+        incoming_customer = str(customer_id or "")
+        if existing_customer and incoming_customer and existing_customer != incoming_customer:
+            raise ValueError("El cliente de Stripe no coincide con la cuenta.")
+
+        existing_subscription = str(row.get("stripe_subscription_id") or "")
+        incoming_subscription = str(subscription_id or "")
+        if (
+            existing_subscription
+            and incoming_subscription
+            and existing_subscription != incoming_subscription
+            and not allow_subscription_change
+        ):
+            return {
+                "applied": False,
+                "reason": "subscription_mismatch",
+                "business": dict(row),
+            }
+
+        current_order = (
+            int(row.get("stripe_event_created_at") or 0),
+            int(row.get("stripe_event_priority") or 0),
+            str(row.get("stripe_event_id") or ""),
+        )
+        incoming_order = (created_at, priority, event_id)
+        if incoming_order <= current_order:
+            return {
+                "applied": False,
+                "reason": "stale_event",
+                "business": dict(row),
+            }
+
+        # Checkout solo enlaza identificadores. Si llega en paralelo o unos
+        # segundos despues de la evidencia de pago, nunca puede degradar una
+        # suscripcion que ya quedo activa. La decision se toma bajo el mismo
+        # bloqueo de fila para no depender de una lectura previa obsoleta.
+        current_status = str(row.get("subscription_status") or "")
+        if priority == 10 and status == "pending" and current_status in {
+            "active", "trialing",
+        }:
+            status = current_status
+
+        fields = [
+            "subscription_status=?",
+            "stripe_event_created_at=?",
+            "stripe_event_priority=?",
+            "stripe_event_id=?",
+        ]
+        params: list = [status, created_at, priority, event_id]
+        for column, value in (
+            ("plan", plan),
+            ("stripe_customer_id", customer_id),
+            ("stripe_subscription_id", subscription_id),
+        ):
+            if value is not None:
+                fields.append(f"{column}=?")
+                params.append(value)
+        params.append(business_id)
+        conn.execute(
+            f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", params
+        )
+        updated = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        return {"applied": True, "reason": "applied", "business": dict(updated)}
+
+
+def reconcile_stripe_subscription(
+    business_id: int,
+    *,
+    status: str,
+    plan: str,
+    customer_id: str,
+    subscription_id: str,
+) -> dict | None:
+    """Recupera un estado activo desde una consulta autenticada a Stripe.
+
+    No sustituye los webhooks: solo repara su entrega concurrente o perdida y
+    exige que cliente y suscripcion coincidan con los ya enlazados a la cuenta.
+    """
+    if status not in {"active", "trialing"}:
+        raise ValueError("La reconciliacion solo acepta suscripciones activas.")
+    from .adapters.billing import PLANS
+
+    if plan not in PLANS or not customer_id or not subscription_id:
+        raise ValueError("Evidencia Stripe incompleta.")
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        row = conn.execute(
+            "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
+        ).fetchone()
+        if not row:
+            return None
+        if str(row.get("stripe_customer_id") or "") != customer_id:
+            raise ValueError("El cliente de Stripe no coincide con la cuenta.")
+        if str(row.get("stripe_subscription_id") or "") != subscription_id:
+            raise ValueError("La suscripcion de Stripe no coincide con la cuenta.")
+        conn.execute(
+            "UPDATE businesses SET subscription_status=?, plan=? WHERE id=?",
+            (status, plan, business_id),
+        )
+        updated = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        return dict(updated)
+
+
+def mark_business_as_demo(business_id: int) -> dict | None:
+    """Convierte una empresa ficticia en escaparate persistente de solo lectura."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE businesses SET is_demo=TRUE WHERE id=?", (business_id,)
+        )
+    return get_business(business_id)
+
+
 def get_business_by_stripe_customer(customer_id) -> dict | None:
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM businesses WHERE stripe_customer_id=?",
@@ -9047,8 +10490,10 @@ def subscription_allows_access(business: dict | None) -> bool:
     """
     if not business:
         return False
+    if business.get("is_demo"):
+        return False
     status = business.get("subscription_status") or "trial"
-    if status == "active":
+    if status in {"active", "trialing"}:
         return True
     if status != "trial":
         return False
@@ -9129,9 +10574,549 @@ def fail_webhook_event(source: str, event_id: str, error: str) -> None:
         )
 
 
+# ------------------------------------- WhatsApp multicanal y recepción ---
+def _wa_id(value: str | None) -> str:
+    digits = "".join(char for char in str(value or "") if char.isdigit())
+    return digits[2:] if digits.startswith("00") else digits
+
+
+def create_whatsapp_connection(
+    business_id: int,
+    *,
+    waba_id: str,
+    phone_number_id: str,
+    display_phone: str | None = None,
+    verified_name: str | None = None,
+    status: str = "pending",
+    receptionist_enabled: bool = False,
+) -> dict:
+    """Registra un número empresarial sin almacenar credenciales del proveedor."""
+    if not get_business(business_id):
+        raise ValueError("El negocio no existe.")
+    waba_id = _wa_id(waba_id)
+    phone_number_id = _wa_id(phone_number_id)
+    if not waba_id or not phone_number_id:
+        raise ValueError("Faltan los identificadores de la cuenta de WhatsApp.")
+    if status not in {"pending", "active", "paused", "error", "revoked"}:
+        raise ValueError("El estado de la conexión no es válido.")
+    now = _now()
+    with get_conn() as conn:
+        try:
+            row = conn.execute(
+                "INSERT INTO whatsapp_connections "
+                "(business_id, mode, waba_id, phone_number_id, display_phone, "
+                "verified_name, status, receptionist_enabled, created_at, updated_at) "
+                "VALUES (?, 'business', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                (
+                    business_id, waba_id, phone_number_id,
+                    str(display_phone or "").strip() or None,
+                    str(verified_name or "").strip()[:160] or None,
+                    status, bool(receptionist_enabled), now, now,
+                ),
+            ).fetchone()
+        except IntegrityError as exc:
+            raise ValueError("Ese número de WhatsApp ya está conectado.") from exc
+        connection_id = row["id"]
+    return get_whatsapp_connection(connection_id, business_id)
+
+
+def get_whatsapp_connection(connection_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_connections WHERE id=? AND business_id=?",
+            (connection_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_whatsapp_connection_by_phone_number_id(phone_number_id: str) -> dict | None:
+    target = _wa_id(phone_number_id)
+    if not target:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_connections WHERE phone_number_id=? "
+            "AND status='active' AND inbound_enabled=TRUE",
+            (target,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_whatsapp_connections(business_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM whatsapp_connections WHERE business_id=? "
+            "ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, id",
+            (business_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_whatsapp_connection(
+    connection_id: int,
+    business_id: int,
+    *,
+    status: str | None = None,
+    receptionist_enabled: bool | None = None,
+    inbound_enabled: bool | None = None,
+    outbound_enabled: bool | None = None,
+) -> dict | None:
+    if not get_whatsapp_connection(connection_id, business_id):
+        return None
+    fields = ["updated_at=?"]
+    params: list[Any] = [_now()]
+    if status is not None:
+        if status not in {"pending", "active", "paused", "error", "revoked"}:
+            raise ValueError("El estado de la conexión no es válido.")
+        fields.append("status=?")
+        params.append(status)
+    for key, value in (
+        ("receptionist_enabled", receptionist_enabled),
+        ("inbound_enabled", inbound_enabled),
+        ("outbound_enabled", outbound_enabled),
+    ):
+        if value is not None:
+            fields.append(f"{key}=?")
+            params.append(bool(value))
+    params.extend((connection_id, business_id))
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE whatsapp_connections SET {', '.join(fields)} "
+            "WHERE id=? AND business_id=?",
+            tuple(params),
+        )
+    return get_whatsapp_connection(connection_id, business_id)
+
+
+def _clients_by_phone(conn, business_id: int, phone: str) -> list[dict]:
+    target = normalize_phone(phone)
+    if len(target) != 9:
+        return []
+    rows = conn.execute(
+        "SELECT * FROM clients WHERE business_id=? AND phone IS NOT NULL ORDER BY id",
+        (business_id,),
+    ).fetchall()
+    return [dict(row) for row in rows if normalize_phone(row["phone"]) == target]
+
+
+def _leads_by_phone(conn, business_id: int, phone: str) -> list[dict]:
+    target = normalize_phone(phone)
+    if len(target) != 9:
+        return []
+    rows = conn.execute(
+        "SELECT * FROM leads WHERE business_id=? AND phone IS NOT NULL "
+        "AND status NOT IN ('ganado','perdido') ORDER BY id",
+        (business_id,),
+    ).fetchall()
+    return [dict(row) for row in rows if normalize_phone(row["phone"]) == target]
+
+
+def ensure_whatsapp_customer_contact(
+    connection_id: int,
+    business_id: int,
+    sender_phone: str,
+    display_name: str | None = None,
+) -> dict:
+    """Crea una identidad externa acotada al número empresarial receptor."""
+    connection = get_whatsapp_connection(connection_id, business_id)
+    if not connection or connection.get("status") != "active":
+        raise ValueError("La conexión de WhatsApp no está activa.")
+    wa_id = _wa_id(sender_phone)
+    phone_norm = normalize_phone(sender_phone)
+    if not wa_id or len(phone_norm) != 9:
+        raise ValueError("El remitente de WhatsApp no es válido.")
+    clean_name = str(display_name or "").strip()[:160]
+    with get_conn() as conn:
+        current = conn.execute(
+            "SELECT * FROM whatsapp_contacts WHERE connection_id=? AND wa_id=?",
+            (connection_id, wa_id),
+        ).fetchone()
+        if current:
+            if clean_name and clean_name != current.get("display_name"):
+                conn.execute(
+                    "UPDATE whatsapp_contacts SET display_name=?, updated_at=? "
+                    "WHERE id=? AND business_id=?",
+                    (clean_name, _now(), current["id"], business_id),
+                )
+            saved = conn.execute(
+                "SELECT * FROM whatsapp_contacts WHERE id=? AND business_id=?",
+                (current["id"], business_id),
+            ).fetchone()
+            return dict(saved)
+
+        clients = _clients_by_phone(conn, business_id, sender_phone)
+        client_id = clients[0]["id"] if len(clients) == 1 else None
+        leads = _leads_by_phone(conn, business_id, sender_phone)
+        lead_id = leads[0]["id"] if len(leads) == 1 else None
+        if client_id is None and lead_id is None:
+            lead_name = clean_name or f"Contacto WhatsApp · {phone_norm[-4:]}"
+            lead = conn.execute(
+                "INSERT INTO leads (business_id, name, phone, source, status, note, "
+                "created_at) VALUES (?, ?, ?, 'WhatsApp del negocio', 'nuevo', ?, ?) "
+                "RETURNING id",
+                (
+                    business_id, lead_name, sender_phone,
+                    "Entrada creada por Noesis; pendiente de revisar y convertir.",
+                    _now(),
+                ),
+            ).fetchone()
+            lead_id = lead["id"]
+        row = conn.execute(
+            "INSERT INTO whatsapp_contacts "
+            "(business_id, connection_id, wa_id, phone_norm, display_name, client_id, "
+            "lead_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "RETURNING id",
+            (
+                business_id, connection_id, wa_id, phone_norm, clean_name or None,
+                client_id, lead_id, _now(), _now(),
+            ),
+        ).fetchone()
+        saved = conn.execute(
+            "SELECT * FROM whatsapp_contacts WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def get_or_create_whatsapp_conversation(
+    connection_id: int, contact_id: int, business_id: int
+) -> dict:
+    now = _now()
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_conversations WHERE connection_id=? "
+            "AND contact_id=? AND business_id=?",
+            (connection_id, contact_id, business_id),
+        ).fetchone()
+        if not row:
+            inserted = conn.execute(
+                "INSERT INTO whatsapp_conversations "
+                "(business_id, connection_id, contact_id, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?) RETURNING id",
+                (business_id, connection_id, contact_id, now, now),
+            ).fetchone()
+            row = conn.execute(
+                "SELECT * FROM whatsapp_conversations WHERE id=? AND business_id=?",
+                (inserted["id"], business_id),
+            ).fetchone()
+    return dict(row)
+
+
+def set_whatsapp_contact_consent(
+    contact_id: int, business_id: int, consent_status: str
+) -> dict | None:
+    if consent_status not in {"active", "opted_out", "blocked"}:
+        raise ValueError("El estado de consentimiento no es válido.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE whatsapp_contacts SET consent_status=?, updated_at=? "
+            "WHERE id=? AND business_id=?",
+            (consent_status, _now(), contact_id, business_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM whatsapp_contacts WHERE id=? AND business_id=?",
+            (contact_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def update_whatsapp_conversation(
+    conversation_id: int,
+    business_id: int,
+    *,
+    status: str | None = None,
+    human_handoff: bool | None = None,
+    summary: str | None = None,
+) -> dict | None:
+    if status is not None and status not in {
+        "open", "waiting_owner", "resolved", "archived"
+    }:
+        raise ValueError("El estado de conversación no es válido.")
+    fields = ["updated_at=?"]
+    params: list[Any] = [_now()]
+    if status is not None:
+        fields.append("status=?")
+        params.append(status)
+    if human_handoff is not None:
+        fields.append("human_handoff=?")
+        params.append(bool(human_handoff))
+    if summary is not None:
+        fields.append("summary=?")
+        params.append(str(summary).strip()[:1000] or None)
+    params.extend((conversation_id, business_id))
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE whatsapp_conversations SET {', '.join(fields)} "
+            "WHERE id=? AND business_id=?",
+            tuple(params),
+        )
+        row = conn.execute(
+            "SELECT * FROM whatsapp_conversations WHERE id=? AND business_id=?",
+            (conversation_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_whatsapp_conversation(
+    conversation_id: int, business_id: int
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT v.*, c.wa_id, c.phone_norm, c.display_name, c.consent_status "
+            "FROM whatsapp_conversations v JOIN whatsapp_contacts c "
+            "ON c.id=v.contact_id AND c.business_id=v.business_id "
+            "WHERE v.id=? AND v.business_id=?",
+            (conversation_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def record_whatsapp_inbox(
+    *,
+    business_id: int,
+    connection_id: int,
+    conversation_id: int,
+    contact_id: int,
+    meta_message_id: str,
+    sender_phone: str,
+    message_type: str,
+    text_body: str | None = None,
+) -> dict:
+    if message_type not in {"text", "audio", "image", "document", "interactive", "unknown"}:
+        message_type = "unknown"
+    now = _now()
+    try:
+        with get_conn() as conn:
+            row = conn.execute(
+                "INSERT INTO whatsapp_inbox "
+                "(business_id, connection_id, conversation_id, contact_id, "
+                "meta_message_id, sender_phone, actor_role, message_type, text_body, "
+                "received_at) VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, ?, ?) "
+                "RETURNING id",
+                (
+                    business_id, connection_id, conversation_id, contact_id,
+                    str(meta_message_id)[:200], sender_phone, message_type,
+                    str(text_body or "")[:4000] or None, now,
+                ),
+            ).fetchone()
+            conn.execute(
+                "UPDATE whatsapp_conversations SET last_inbound_at=?, updated_at=? "
+                "WHERE id=? AND business_id=?",
+                (now, now, conversation_id, business_id),
+            )
+            inbox_id = row["id"]
+    except IntegrityError:
+        with get_conn() as conn:
+            existing = conn.execute(
+                "SELECT * FROM whatsapp_inbox WHERE meta_message_id=?",
+                (str(meta_message_id)[:200],),
+            ).fetchone()
+        if not existing or existing.get("business_id") != business_id:
+            raise
+        return dict(existing)
+    return get_whatsapp_inbox(inbox_id, business_id)
+
+
+def get_whatsapp_inbox(inbox_id: int, business_id: int) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM whatsapp_inbox WHERE id=? AND business_id=?",
+            (inbox_id, business_id),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def finish_whatsapp_inbox(
+    inbox_id: int,
+    business_id: int,
+    *,
+    status: str = "processed",
+    document_id: int | None = None,
+    job_id: int | None = None,
+    error: str | None = None,
+) -> dict | None:
+    if status not in {"processed", "failed", "ignored"}:
+        raise ValueError("El estado de entrada no es válido.")
+    if document_id is not None:
+        from .documents import repo as document_repo
+        if not document_repo.get(document_id, business_id):
+            raise ValueError("El documento no pertenece a este negocio.")
+    if job_id is not None and not get_job(job_id, business_id):
+        raise ValueError("El trabajo no pertenece a este negocio.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE whatsapp_inbox SET processing_status=?, document_id=?, job_id=?, error=?, "
+            "processed_at=? WHERE id=? AND business_id=?",
+            (
+                status, document_id, job_id, str(error or "")[:1000] or None,
+                _now(), inbox_id, business_id,
+            ),
+        )
+    return get_whatsapp_inbox(inbox_id, business_id)
+
+
+def list_whatsapp_inbox(business_id: int, *, limit: int = 100) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT i.*, c.display_name, c.client_id, c.lead_id, "
+            "v.status AS conversation_status, v.human_handoff "
+            "FROM whatsapp_inbox i "
+            "JOIN whatsapp_contacts c ON c.id=i.contact_id AND c.business_id=i.business_id "
+            "JOIN whatsapp_conversations v ON v.id=i.conversation_id "
+            "AND v.business_id=i.business_id WHERE i.business_id=? "
+            "ORDER BY i.received_at DESC, i.id DESC LIMIT ?",
+            (business_id, max(1, min(int(limit), 500))),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def create_worker_submission(
+    business_id: int,
+    worker_id: int,
+    *,
+    kind: str,
+    description: str,
+    job_id: int | None = None,
+    document_id: int | None = None,
+    amount: float | None = None,
+) -> dict:
+    """Registra una aportación de campo sin convertirla en coste definitivo."""
+    worker = get_worker(worker_id, business_id)
+    if not worker or not worker.get("active"):
+        raise ValueError("El trabajador no está disponible.")
+    if kind not in {"cost", "document", "question", "blocker", "note"}:
+        raise ValueError("El tipo de aportación no es válido.")
+    description = str(description or "").strip()
+    if not description or len(description) > 2000:
+        raise ValueError("La aportación necesita una descripción válida.")
+    job = None
+    project_id = None
+    if job_id is not None:
+        job = get_job(int(job_id), business_id)
+        if not job or not _worker_can_access_job(job, worker_id, business_id):
+            raise ValueError("Ese trabajo no está asignado a esta persona.")
+        job_id = job["id"]
+        project_id = job.get("project_id")
+    if document_id is not None:
+        from .documents import repo as document_repo
+        if not document_repo.get(int(document_id), business_id):
+            raise ValueError("El documento no pertenece a este negocio.")
+        document_id = int(document_id)
+    if amount is not None:
+        amount = round(float(amount), 2)
+        if amount < 0:
+            raise ValueError("El importe no puede ser negativo.")
+    if kind == "cost":
+        if not worker.get("can_submit_costs"):
+            raise ValueError("No tienes permiso para enviar costes.")
+        if job is None:
+            raise ValueError("Indica el trabajo al que corresponde el coste.")
+        if amount is None:
+            raise ValueError("Indica el importe del coste.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO worker_submissions "
+            "(business_id, worker_id, job_id, project_id, document_id, kind, "
+            "description, amount, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "RETURNING id",
+            (
+                business_id, worker_id, job_id, project_id, document_id, kind,
+                description, amount, _now(),
+            ),
+        ).fetchone()
+        saved = conn.execute(
+            "SELECT * FROM worker_submissions WHERE id=? AND business_id=?",
+            (row["id"], business_id),
+        ).fetchone()
+    return dict(saved)
+
+
+def list_worker_submissions(
+    business_id: int, *, status: str | None = None, limit: int = 100
+) -> list[dict]:
+    params: list[Any] = [business_id]
+    where = ""
+    if status:
+        if status not in {"pending", "accepted", "rejected", "resolved"}:
+            raise ValueError("El estado de aportación no es válido.")
+        where = " AND s.status=?"
+        params.append(status)
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT s.*, w.name AS worker_name, j.description AS job_description, "
+            "p.name AS project_name FROM worker_submissions s "
+            "JOIN workers w ON w.id=s.worker_id AND w.business_id=s.business_id "
+            "LEFT JOIN jobs j ON j.id=s.job_id AND j.business_id=s.business_id "
+            "LEFT JOIN projects p ON p.id=s.project_id AND p.business_id=s.business_id "
+            "WHERE s.business_id=?" + where
+            + " ORDER BY CASE s.status WHEN 'pending' THEN 0 ELSE 1 END, "
+            "s.created_at DESC, s.id DESC LIMIT ?",
+            tuple(params),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def resolve_worker_submission(
+    submission_id: int,
+    business_id: int,
+    *,
+    decision: str,
+    resolution_note: str | None = None,
+) -> dict | None:
+    """Acepta o descarta una aportación; un coste solo se aplica una vez."""
+    if decision not in {"accepted", "rejected", "resolved"}:
+        raise ValueError("La decisión no es válida.")
+    material_added = False
+    with get_conn() as conn:
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        if conn.dialect == "sqlite":
+            conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT * FROM worker_submissions WHERE id=? AND business_id=?" + lock,
+            (submission_id, business_id),
+        ).fetchone()
+        if not row:
+            return None
+        submission = dict(row)
+        if submission["status"] != "pending":
+            return submission
+        material_id = submission.get("applied_material_id")
+        if decision == "accepted" and submission["kind"] == "cost":
+            material = conn.execute(
+                "INSERT INTO job_materials (business_id, job_id, worker_id, "
+                "description, quantity, unit_cost, total, created_at) "
+                "VALUES (?, ?, ?, ?, 1, ?, ?, ?) RETURNING id",
+                (
+                    business_id, submission["job_id"], submission["worker_id"],
+                    submission["description"], submission["amount"],
+                    submission["amount"], _now(),
+                ),
+            ).fetchone()
+            material_id = material["id"]
+            material_added = True
+        conn.execute(
+            "UPDATE worker_submissions SET status=?, resolution_note=?, "
+            "applied_material_id=?, resolved_at=? WHERE id=? AND business_id=? "
+            "AND status='pending'",
+            (
+                decision, str(resolution_note or "").strip()[:1000] or None,
+                material_id, _now(), submission_id, business_id,
+            ),
+        )
+        saved = conn.execute(
+            "SELECT * FROM worker_submissions WHERE id=? AND business_id=?",
+            (submission_id, business_id),
+        ).fetchone()
+    if material_added:
+        record_product_event(business_id, "job_material_added")
+    return dict(saved)
+
+
 def enqueue_whatsapp_message(
     *,
     business_id: int | None,
+    connection_id: int | None = None,
     to_phone: str,
     message_type: str,
     text_body: str | None = None,
@@ -9151,18 +11136,21 @@ def enqueue_whatsapp_message(
         raise ValueError("Un mensaje de plantilla necesita nombre.")
     if not to_phone:
         raise ValueError("Falta el teléfono de destino.")
+    if connection_id is not None:
+        if business_id is None or not get_whatsapp_connection(connection_id, business_id):
+            raise ValueError("La conexión de WhatsApp no pertenece al negocio.")
     created_at = now or _now()
     try:
         with get_conn() as conn:
             row = conn.execute(
                 "INSERT INTO whatsapp_outbox "
-                "(business_id, to_phone, message_type, text_body, template_name, "
+                "(business_id, connection_id, to_phone, message_type, text_body, template_name, "
                 "template_language, template_params, idempotency_key, status, "
                 "attempts, max_attempts, next_attempt_at, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?) "
                 "RETURNING id",
                 (
-                    business_id, to_phone, message_type, text_body, template_name,
+                    business_id, connection_id, to_phone, message_type, text_body, template_name,
                     template_language, template_params, idempotency_key,
                     max_attempts, created_at, created_at, created_at,
                 ),
@@ -9181,6 +11169,10 @@ def enqueue_whatsapp_message(
             if existing.get("business_id") != business_id:
                 raise ValueError(
                     "La clave idempotente pertenece a otro negocio."
+                )
+            if existing.get("connection_id") != connection_id:
+                raise ValueError(
+                    "La clave idempotente pertenece a otro canal de WhatsApp."
                 )
             return dict(existing)
     return _get_whatsapp_message_internal(message_id)
@@ -9595,7 +11587,8 @@ def client_portal_view(business_id: int, client_id: int) -> dict | None:
                      "initials": business_initials(biz.get("name")),
                      "payment_iban": biz.get("payment_iban"),
                      "payment_bizum": biz.get("payment_bizum"),
-                     "payment_note": biz.get("payment_note")},
+                     "payment_note": biz.get("payment_note"),
+                     "quote_terms": biz.get("quote_terms")},
         "client": {"id": client["id"], "name": client.get("name")},
         "quotes": quotes,
         "invoices": invoices,
@@ -9844,6 +11837,338 @@ def admin_alerts() -> list[dict]:
     return alerts
 
 
+PLATFORM_COST_CATEGORIES = {
+    "hosting": "Infraestructura y hosting",
+    "ai": "IA y extracción",
+    "whatsapp": "WhatsApp",
+    "email": "Correo",
+    "payments": "Pagos y comisiones",
+    "security_storage": "Seguridad y copias",
+    "support": "Soporte y onboarding",
+    "legal_admin": "Legal y administración",
+    "marketing": "Marketing y ventas",
+    "other": "Otros",
+}
+PLATFORM_COST_SOURCES = {"actual", "forecast", "adjustment"}
+
+
+def add_platform_cost(period: str, category: str, amount_eur, *, source: str,
+                      note: str = "", created_by_user_id: int | None = None) -> dict:
+    period = str(period or "").strip()
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", period):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    if category not in PLATFORM_COST_CATEGORIES:
+        raise ValueError("La categoría de coste no es válida.")
+    if source not in PLATFORM_COST_SOURCES:
+        raise ValueError("El origen del coste no es válido.")
+    try:
+        amount = Decimal(str(amount_eur)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError("El importe no es válido.") from exc
+    if amount == 0 or abs(amount) > Decimal("1000000"):
+        raise ValueError("El coste debe ser distinto de cero y razonable.")
+    if source != "adjustment" and amount < 0:
+        raise ValueError("Solo los ajustes pueden tener importe negativo.")
+    note = " ".join(str(note or "").split())[:500]
+    if source == "adjustment" and len(note) < 10:
+        raise ValueError("Un ajuste necesita explicar qué corrige.")
+    with get_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO platform_cost_entries "
+            "(period, category, amount_eur, source, note, created_by_user_id, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (period, category, float(amount), source, note or None,
+             created_by_user_id, _now()),
+        ).fetchone()
+        entry = conn.execute(
+            "SELECT * FROM platform_cost_entries WHERE id=?", (row["id"],)
+        ).fetchone()
+    return dict(entry)
+
+
+def platform_cost_summary(period: str) -> dict:
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", str(period or "")):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    with get_conn() as conn:
+        entries = [dict(row) for row in conn.execute(
+            "SELECT * FROM platform_cost_entries WHERE period=? ORDER BY id DESC",
+            (period,),
+        ).fetchall()]
+    totals = {source: 0.0 for source in PLATFORM_COST_SOURCES}
+    by_category: dict[str, float] = {}
+    for entry in entries:
+        amount = float(entry["amount_eur"] or 0)
+        totals[entry["source"]] = round(totals.get(entry["source"], 0) + amount, 2)
+        if entry["source"] in {"actual", "adjustment"}:
+            by_category[entry["category"]] = round(
+                by_category.get(entry["category"], 0) + amount, 2
+            )
+    return {
+        "period": period, "entries": entries, "totals": totals,
+        "observed_total": round(totals["actual"] + totals["adjustment"], 2),
+        "forecast_total": totals["forecast"],
+        "by_category": by_category,
+        "category_labels": PLATFORM_COST_CATEGORIES,
+        "has_observed_data": any(
+            entry["source"] in {"actual", "adjustment"} for entry in entries
+        ),
+    }
+
+
+def account_cost_control(month: str | None = None) -> dict:
+    """Control operativo por cuenta sin confundir estimaciones con contabilidad.
+
+    Los costes observados proceden exclusivamente del libro CFO. Se reparten con
+    drivers explícitos y reconciliables (uso de IA, plantillas de WhatsApp, correos,
+    ingreso comprometido o reparto uniforme). Si una categoría no tiene un driver
+    medible, permanece sin asignar en vez de inventar rentabilidad por cliente.
+    """
+    from .adapters.billing import PLANS, PLAN_PRICES
+
+    month = month or date.today().strftime("%Y-%m")
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", month):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    prefix = f"{month}%"
+    usage = ai_usage_summary(month)
+    ledger = platform_cost_summary(month)
+
+    with get_conn() as conn:
+        businesses = [dict(row) for row in conn.execute(
+            "SELECT id, name, plan, subscription_status, is_demo "
+            "FROM businesses ORDER BY name, id"
+        ).fetchall()]
+        credit_rows = conn.execute(
+            "SELECT business_id, COUNT(*) AS total FROM product_events "
+            "WHERE event_name='ai_credit_used' "
+            "AND CAST(created_at AS TEXT) LIKE ? GROUP BY business_id",
+            (prefix,),
+        ).fetchall()
+        wa_out_rows = conn.execute(
+            "SELECT business_id, status, message_type, COUNT(*) AS total "
+            "FROM whatsapp_outbox WHERE business_id IS NOT NULL "
+            "AND CAST(created_at AS TEXT) LIKE ? "
+            "GROUP BY business_id, status, message_type",
+            (prefix,),
+        ).fetchall()
+        wa_in_rows = conn.execute(
+            "SELECT business_id, processing_status, COUNT(*) AS total "
+            "FROM whatsapp_inbox WHERE CAST(received_at AS TEXT) LIKE ? "
+            "GROUP BY business_id, processing_status",
+            (prefix,),
+        ).fetchall()
+        email_rows = conn.execute(
+            "SELECT business_id, status, COUNT(*) AS total FROM email_outbox "
+            "WHERE business_id IS NOT NULL AND CAST(created_at AS TEXT) LIKE ? "
+            "GROUP BY business_id, status",
+            (prefix,),
+        ).fetchall()
+
+    credits = {int(row["business_id"]): int(row["total"] or 0)
+               for row in credit_rows}
+    wa_out: dict[int, dict[str, int]] = {}
+    for row in wa_out_rows:
+        bucket = wa_out.setdefault(int(row["business_id"]), {
+            "total": 0, "templates": 0, "failed": 0, "retrying": 0,
+        })
+        count = int(row["total"] or 0)
+        bucket["total"] += count
+        if row["message_type"] == "template":
+            bucket["templates"] += count
+        if row["status"] == "failed":
+            bucket["failed"] += count
+        if row["status"] == "retrying":
+            bucket["retrying"] += count
+    wa_in: dict[int, dict[str, int]] = {}
+    for row in wa_in_rows:
+        bucket = wa_in.setdefault(int(row["business_id"]), {
+            "total": 0, "failed": 0,
+        })
+        count = int(row["total"] or 0)
+        bucket["total"] += count
+        if row["processing_status"] == "failed":
+            bucket["failed"] += count
+    emails: dict[int, dict[str, int]] = {}
+    for row in email_rows:
+        bucket = emails.setdefault(int(row["business_id"]), {
+            "total": 0, "failed": 0, "retrying": 0,
+        })
+        count = int(row["total"] or 0)
+        bucket["total"] += count
+        if row["status"] == "failed":
+            bucket["failed"] += count
+        if row["status"] == "retrying":
+            bucket["retrying"] += count
+
+    rows: list[dict] = []
+    for business in businesses:
+        business_id = int(business["id"])
+        plan = business.get("plan") or "autonomo"
+        plan_data = PLANS.get(plan, PLANS["autonomo"])
+        revenue = (
+            float(PLAN_PRICES.get(plan, 0))
+            if business.get("subscription_status") == "active"
+            and not business.get("is_demo") else 0.0
+        )
+        ai = usage["per_business"].get(business_id, {
+            "calls": 0, "input": 0, "output": 0, "extractions": 0,
+            "estimated_cost_usd": 0.0, "providers": {},
+        })
+        credit_limit = int(plan_data.get("credits") or 0)
+        credit_used = credits.get(business_id, 0)
+        row = {
+            **business,
+            "revenue_eur": round(revenue, 2),
+            "ai_calls": int(ai.get("calls") or 0),
+            "ai_tokens": int(ai.get("input") or 0) + int(ai.get("output") or 0),
+            "ai_estimated_cost_eur": round(
+                float(ai.get("estimated_cost_usd") or 0) * 0.92, 4
+            ),
+            "ai_credits_used": credit_used,
+            "ai_credits_limit": credit_limit,
+            "ai_credits_pct": round(credit_used / credit_limit * 100)
+            if credit_limit else 0,
+            "extractions": int(ai.get("extractions") or 0),
+            "whatsapp_in": wa_in.get(business_id, {}).get("total", 0),
+            "whatsapp_out": wa_out.get(business_id, {}).get("total", 0),
+            "whatsapp_templates": wa_out.get(business_id, {}).get("templates", 0),
+            "whatsapp_failed": (
+                wa_out.get(business_id, {}).get("failed", 0)
+                + wa_in.get(business_id, {}).get("failed", 0)
+            ),
+            "whatsapp_retrying": wa_out.get(business_id, {}).get("retrying", 0),
+            "email_out": emails.get(business_id, {}).get("total", 0),
+            "email_failed": emails.get(business_id, {}).get("failed", 0),
+            "email_retrying": emails.get(business_id, {}).get("retrying", 0),
+            "allocated_observed_cost_eur": 0.0,
+        }
+        rows.append(row)
+
+    eligible = [row for row in rows if not row.get("is_demo")]
+    category_drivers = {
+        "ai": "ai_estimated_cost_eur",
+        "whatsapp": "whatsapp_templates",
+        "email": "email_out",
+        "payments": "revenue_eur",
+    }
+    unallocated_by_category: dict[str, float] = {}
+    allocation_method: dict[str, str] = {}
+    for category, amount in ledger["by_category"].items():
+        amount = round(float(amount or 0), 2)
+        if not amount:
+            continue
+        driver = category_drivers.get(category)
+        if driver:
+            weighted = [row for row in eligible if float(row.get(driver) or 0) > 0]
+            driver_total = sum(float(row[driver]) for row in weighted)
+        else:
+            weighted = eligible
+            driver_total = float(len(weighted))
+        if not weighted or not driver_total:
+            unallocated_by_category[category] = amount
+            allocation_method[category] = "sin driver medible"
+            continue
+        allocated = 0.0
+        for index, row in enumerate(weighted):
+            weight = float(row.get(driver) or 0) if driver else 1.0
+            share = (
+                round(amount - allocated, 2)
+                if index == len(weighted) - 1
+                else round(amount * weight / driver_total, 2)
+            )
+            row["allocated_observed_cost_eur"] = round(
+                row["allocated_observed_cost_eur"] + share, 2
+            )
+            allocated = round(allocated + share, 2)
+        allocation_method[category] = (
+            {
+                "ai": "uso medido de IA",
+                "whatsapp": "plantillas salientes",
+                "email": "correos generados",
+                "payments": "ingreso recurrente comprometido",
+            }.get(category, "reparto uniforme entre cuentas no demo")
+        )
+
+    for row in rows:
+        reasons: list[str] = []
+        severity = "ok"
+        if row["whatsapp_failed"] or row["email_failed"]:
+            severity = "critical"
+            reasons.append("hay entregas fallidas")
+        if row["ai_credits_pct"] >= 100:
+            severity = "critical"
+            reasons.append("ha agotado las acciones avanzadas")
+        elif row["ai_credits_pct"] >= 80:
+            if severity == "ok":
+                severity = "review"
+            reasons.append("se acerca al límite de IA")
+        if ledger["has_observed_data"]:
+            row["contribution_eur"] = round(
+                row["revenue_eur"] - row["allocated_observed_cost_eur"], 2
+            )
+            row["margin_pct"] = (
+                round(row["contribution_eur"] / row["revenue_eur"] * 100, 1)
+                if row["revenue_eur"] else None
+            )
+            if row["revenue_eur"] and row["contribution_eur"] < 0:
+                severity = "critical"
+                reasons.append("coste asignado superior al ingreso")
+            elif row["margin_pct"] is not None and row["margin_pct"] < 60:
+                if severity == "ok":
+                    severity = "review"
+                reasons.append("margen operativo por debajo del 60 %")
+        else:
+            row["contribution_eur"] = None
+            row["margin_pct"] = None
+        if row.get("is_demo"):
+            severity = "demo"
+            reasons = ["cuenta de demostración excluida del reparto"]
+        row["risk"] = severity
+        row["risk_reasons"] = reasons
+
+    risk_order = {"critical": 0, "review": 1, "ok": 2, "demo": 3}
+    rows.sort(key=lambda row: (
+        risk_order.get(row["risk"], 9), -row["revenue_eur"], row["name"]
+    ))
+    observed_total = float(ledger["observed_total"] or 0)
+    unallocated_total = round(sum(unallocated_by_category.values()), 2)
+    allocated_total = round(
+        sum(float(row["allocated_observed_cost_eur"]) for row in rows), 2
+    )
+    revenue_total = round(sum(float(row["revenue_eur"]) for row in rows), 2)
+    return {
+        "month": month,
+        "rows": rows,
+        "revenue_eur": revenue_total,
+        "estimated_ai_cost_eur": round(
+            sum(float(row["ai_estimated_cost_eur"]) for row in rows), 4
+        ),
+        "observed_cost_eur": round(observed_total, 2),
+        "allocated_cost_eur": allocated_total,
+        "unallocated_cost_eur": unallocated_total,
+        "unallocated_by_category": unallocated_by_category,
+        "allocation_method": allocation_method,
+        "observed_contribution_eur": (
+            round(revenue_total - observed_total, 2)
+            if ledger["has_observed_data"] else None
+        ),
+        "observed_margin_pct": (
+            round((revenue_total - observed_total) / revenue_total * 100, 1)
+            if ledger["has_observed_data"] and revenue_total else None
+        ),
+        "cost_coverage_pct": (
+            round(allocated_total / observed_total * 100)
+            if ledger["has_observed_data"] and observed_total > 0 else None
+        ),
+        "paying_accounts": sum(1 for row in rows if row["revenue_eur"] > 0),
+        "accounts_to_review": sum(
+            1 for row in rows if row["risk"] in {"critical", "review"}
+        ),
+        "has_observed_data": ledger["has_observed_data"],
+    }
+
+
 def admin_overview() -> dict:
     """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
     operativos de cada autónomo, solo metadatos de cuenta y agregados."""
@@ -9944,11 +12269,9 @@ def admin_overview() -> dict:
     ai_total = usage["total"]
     # El chat ya registra el coste por modelo/proveedor. La conversión USD→EUR es
     # solo una aproximación operativa; la factura del proveedor sigue mandando.
-    ai_cost_eur = round(
-        ai_total["estimated_cost_usd"] * 0.92
-        + ai_total["extractions"] * 0.014,
-        2,
-    )
+    # Una extracción local no recibe un coste ficticio: si el proveedor no devuelve
+    # uso medible, la factura real se registra en el libro CFO.
+    ai_cost_eur = round(ai_total["estimated_cost_usd"] * 0.92, 2)
     margen_pct = round((mrr - ai_cost_eur) / mrr * 100) if mrr else None
     altas_mes = altas_by_month.get(today.strftime("%Y-%m"), 0)
     en_riesgo = len([
@@ -9961,11 +12284,45 @@ def admin_overview() -> dict:
         "ok": "última copia verificada OK",
         "error": "la última copia FALLÓ",
     }.get((backup or {}).get("status"), "sin copias todavía")
+    cost_ledger = platform_cost_summary(today.strftime("%Y-%m"))
+    cost_control = account_cost_control(today.strftime("%Y-%m"))
+    if cost_control["accounts_to_review"]:
+        alerts.append({
+            "level": "ambar", "area": "Rentabilidad",
+            "text": (
+                f"{cost_control['accounts_to_review']} cuenta(s) requieren revisar "
+                "consumo, entregas o margen."
+            ),
+        })
+    if cost_control["unallocated_cost_eur"]:
+        alerts.append({
+            "level": "ambar", "area": "Control de costes",
+            "text": (
+                f"{cost_control['unallocated_cost_eur']:.2f} € de costes reales "
+                "siguen sin driver medible para asignarlos por cuenta."
+            ),
+        })
+    observed_costs = cost_ledger["observed_total"]
+    observed_margin = (
+        round((mrr - observed_costs) / mrr * 100, 1)
+        if mrr and cost_ledger["has_observed_data"] else None
+    )
     finanzas = {
         "mrr": mrr,
         "run_rate": mrr * 12,
         "ai_cost_eur": ai_cost_eur,
         "margen_pct": margen_pct,
+        "cost_ledger": cost_ledger,
+        "observed_costs": observed_costs,
+        "observed_margin_pct": observed_margin,
+        "observed_contribution": (
+            round(mrr - observed_costs, 2)
+            if cost_ledger["has_observed_data"] else None
+        ),
+        "observed_cost_per_active_account": (
+            round(observed_costs / len(activos), 2)
+            if activos and cost_ledger["has_observed_data"] else None
+        ),
     }
     dept_reports = {
         "finanzas": (
@@ -10015,8 +12372,642 @@ def admin_overview() -> dict:
         "mrr": mrr, "businesses": biz, "backup": backup,
         "verifactu_queue": vq,
         "ai_usage": usage,
+        "cost_control": cost_control,
         "alerts": alerts,
     }
+
+
+SUPPORT_CONSENT_VERSION = "support-access-v1"
+SUPPORT_SCOPES = {
+    "configuration": "Configuración de la cuenta",
+    "document_metadata": "Organización de documentos",
+    "draft_records": "Borradores no emitidos",
+    "integrations": "Diagnóstico de integraciones",
+}
+
+
+def _support_grant_dict(row) -> dict | None:
+    if not row:
+        return None
+    grant = dict(row)
+    try:
+        scopes = json.loads(grant.pop("scopes_json") or "[]")
+    except (TypeError, ValueError):
+        scopes = []
+    grant["scopes"] = [scope for scope in scopes if scope in SUPPORT_SCOPES]
+    grant["scope_labels"] = [SUPPORT_SCOPES[scope] for scope in grant["scopes"]]
+    return grant
+
+
+def _support_admin_actor(actor_user_id: int) -> dict:
+    actor = get_user(actor_user_id)
+    if not actor or not (
+        bool(actor.get("is_admin")) or config.is_admin_email(actor.get("email"))
+    ):
+        raise PermissionError("Solo administración puede aplicar esta corrección.")
+    return actor
+
+
+def _support_grant_with_scope(conn, business_id: int, scope: str, now: str) -> dict:
+    """Revalida permiso dentro de la transacción que realizará el cambio."""
+    conn.execute(
+        "UPDATE support_access_grants SET status='expired' "
+        "WHERE business_id=? AND status='active' AND expires_at<=?",
+        (business_id, now),
+    )
+    row = conn.execute(
+        "SELECT * FROM support_access_grants WHERE business_id=? "
+        "AND status='active' AND expires_at>? ORDER BY id DESC LIMIT 1",
+        (business_id, now),
+    ).fetchone()
+    grant = _support_grant_dict(row)
+    if not grant or scope not in grant["scopes"]:
+        raise PermissionError(
+            "El titular no ha autorizado esta corrección o el acceso ha caducado."
+        )
+    return grant
+
+
+def active_support_grant(business_id: int) -> dict | None:
+    """Autorización vigente del titular; caduca aunque nadie abra el panel admin."""
+    now = _now()
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE support_access_grants SET status='expired' "
+            "WHERE business_id=? AND status='active' AND expires_at<=?",
+            (business_id, now),
+        )
+        row = conn.execute(
+            "SELECT * FROM support_access_grants WHERE business_id=? "
+            "AND status='active' AND expires_at>? ORDER BY id DESC LIMIT 1",
+            (business_id, now),
+        ).fetchone()
+    return _support_grant_dict(row)
+
+
+def create_support_grant(business_id: int, user_id: int, *, purpose: str,
+                         scopes: list[str], duration_hours: int) -> dict:
+    """El titular abre una ventana acotada; nunca la puede crear administración."""
+    user = get_user(user_id)
+    business = get_business(business_id)
+    is_owner = bool(
+        user and business
+        and int(user.get("business_id") or 0) == int(business_id)
+        and str(user.get("email") or "").strip().lower()
+        == str(business.get("owner_email") or "").strip().lower()
+    )
+    if not is_owner:
+        raise ValueError("Solo el titular de la cuenta puede autorizar soporte.")
+    purpose = " ".join(str(purpose or "").split())
+    if len(purpose) < 10 or len(purpose) > 500:
+        raise ValueError("Explica el motivo del soporte (entre 10 y 500 caracteres).")
+    clean_scopes = sorted({str(scope) for scope in scopes if scope in SUPPORT_SCOPES})
+    if not clean_scopes:
+        raise ValueError("Selecciona al menos un permiso para soporte.")
+    try:
+        duration_hours = int(duration_hours)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La duración del acceso no es válida.") from exc
+    if duration_hours not in {1, 4, 24, 72}:
+        raise ValueError("La duración debe ser de 1, 4, 24 o 72 horas.")
+    now = _now()
+    expires_at = (datetime.now() + timedelta(hours=duration_hours)).isoformat(
+        timespec="seconds"
+    )
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "UPDATE support_access_grants SET status='revoked', revoked_at=? "
+            "WHERE business_id=? AND status='active'",
+            (now, business_id),
+        )
+        row = conn.execute(
+            "INSERT INTO support_access_grants "
+            "(business_id, created_by_user_id, purpose, scopes_json, consent_version, "
+            "status, expires_at, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?, ?) "
+            "RETURNING id",
+            (business_id, user_id, purpose, json.dumps(clean_scopes),
+             SUPPORT_CONSENT_VERSION, expires_at, now),
+        ).fetchone()
+        grant_id = row["id"]
+    record_security_event(
+        "support.access_granted", area="support", actor_user_id=user_id,
+        subject_business_id=business_id,
+        metadata={"grant_id": grant_id, "scopes": clean_scopes,
+                  "duration_hours": duration_hours},
+    )
+    return active_support_grant(business_id)
+
+
+def revoke_support_grant(business_id: int, user_id: int) -> bool:
+    user = get_user(user_id)
+    business = get_business(business_id)
+    is_owner = bool(
+        user and business
+        and int(user.get("business_id") or 0) == int(business_id)
+        and str(user.get("email") or "").strip().lower()
+        == str(business.get("owner_email") or "").strip().lower()
+    )
+    if not is_owner:
+        raise ValueError("Solo el titular de la cuenta puede revocar soporte.")
+    now = _now()
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE support_access_grants SET status='revoked', revoked_at=? "
+            "WHERE business_id=? AND status='active'",
+            (now, business_id),
+        )
+    if cur.rowcount:
+        record_security_event(
+            "support.access_revoked", area="support", actor_user_id=user_id,
+            subject_business_id=business_id,
+        )
+    return bool(cur.rowcount)
+
+
+def admin_support_delivery_failures(business_id: int, limit: int = 12) -> list[dict]:
+    """Entregas atascadas de una cuenta, con el motivo tecnico y sin contenido.
+
+    Cuando un cliente avisa de que "la factura no le ha llegado", el recuento
+    agregado dice que algo falla pero no que hacer. El motivo distingue un
+    problema de configuracion nuestro de una direccion mal escrita suya, que son
+    dos respuestas opuestas. Devuelve metadatos y el error del proveedor: nunca
+    el destinatario, el asunto ni el cuerpo del mensaje.
+    """
+    limit = max(1, min(int(limit), 50))
+    stuck = ("retrying", "failed", "blocked")
+    marks = ",".join("?" for _ in stuck)
+    out: list[dict] = []
+    with get_conn() as conn:
+        for channel, table in (("email", "email_outbox"),
+                               ("whatsapp", "whatsapp_outbox")):
+            rows = conn.execute(
+                f"SELECT id, status, attempts, max_attempts, last_error, "
+                f"updated_at, created_at FROM {table} "
+                f"WHERE business_id=? AND status IN ({marks}) "
+                "ORDER BY updated_at DESC LIMIT ?",
+                (business_id, *stuck, limit),
+            ).fetchall()
+            for row in rows:
+                item = dict(row)
+                error = " ".join(str(item.get("last_error") or "").split())
+                out.append({
+                    "channel": channel,
+                    "id": item["id"],
+                    "status": item["status"],
+                    "attempts": int(item["attempts"] or 0),
+                    "max_attempts": int(item["max_attempts"] or 0),
+                    "exhausted": int(item["attempts"] or 0)
+                    >= int(item["max_attempts"] or 0),
+                    # El error del proveedor es diagnostico, no contenido del
+                    # cliente. Se acota por si alguna traza viniera larga.
+                    "reason": error[:300] or "sin detalle del proveedor",
+                    "updated_at": item["updated_at"],
+                    "created_at": item["created_at"],
+                })
+    out.sort(key=lambda item: str(item["updated_at"] or ""), reverse=True)
+    return out[:limit]
+
+
+def admin_support_snapshot(business_id: int) -> dict | None:
+    """Diagnóstico técnico por cuenta sin exponer contenido operativo.
+
+    Devuelve estados y recuentos. No devuelve nombres de clientes, conceptos,
+    mensajes, documentos, importes de facturas ni credenciales.
+    """
+    business = get_business(business_id)
+    if not business:
+        return None
+
+    def _grouped(conn, table: str, column: str) -> dict[str, int]:
+        rows = conn.execute(
+            f"SELECT {column} AS value, COUNT(*) AS total FROM {table} "
+            f"WHERE business_id=? GROUP BY {column}",
+            (business_id,),
+        ).fetchall()
+        return {str(row["value"] or "sin_estado"): int(row["total"]) for row in rows}
+
+    with get_conn() as conn:
+        counts = conn.execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM users WHERE business_id=?) AS users, "
+            "(SELECT COUNT(*) FROM clients WHERE business_id=?) AS clients, "
+            "(SELECT COUNT(*) FROM jobs WHERE business_id=?) AS jobs, "
+            "(SELECT COUNT(*) FROM projects WHERE business_id=?) AS projects, "
+            "(SELECT COUNT(*) FROM workers WHERE business_id=?) AS workers, "
+            "(SELECT COUNT(*) FROM invoices WHERE business_id=?) AS invoices, "
+            "(SELECT COUNT(*) FROM expenses WHERE business_id=?) AS expenses, "
+            "(SELECT COUNT(*) FROM received_invoices WHERE business_id=?) "
+            "AS received_invoices, "
+            "(SELECT COUNT(*) FROM documents WHERE business_id=?) AS documents, "
+            "(SELECT COUNT(*) FROM documents WHERE business_id=? "
+            "AND doc_status='pendiente_revisar') AS documents_pending, "
+            "(SELECT COUNT(*) FROM gestoria_business_access WHERE business_id=? "
+            "AND revoked_at IS NULL) AS gestoria_accesses",
+            (business_id,) * 11,
+        ).fetchone()
+        queues = {
+            "whatsapp": _grouped(conn, "whatsapp_outbox", "status"),
+            "email": _grouped(conn, "email_outbox", "status"),
+            "verifactu": _grouped(conn, "verifactu_outbox", "status"),
+        }
+        invoice_states = _grouped(conn, "invoices", "status")
+        document_states = _grouped(conn, "documents", "doc_status")
+        last_event = conn.execute(
+            "SELECT event_name, created_at FROM product_events "
+            "WHERE business_id=? ORDER BY id DESC LIMIT 1",
+            (business_id,),
+        ).fetchone()
+    activation = activation_snapshot(business_id)
+    return {
+        "business": {
+            "id": business["id"],
+            "name": business["name"],
+            "owner_email": business.get("owner_email"),
+            "sector": business.get("sector"),
+            "plan": business.get("plan"),
+            "subscription_status": business.get("subscription_status"),
+            "trial_ends_at": business.get("trial_ends_at"),
+            "whatsapp_status": business.get("whatsapp_status"),
+            "fiscal_profile_complete": bool(
+                business.get("nif") and business.get("address")
+            ),
+            "created_at": business.get("created_at"),
+        },
+        "counts": dict(counts),
+        "queues": queues,
+        "invoice_states": invoice_states,
+        "document_states": document_states,
+        "activation": activation,
+        "last_event": dict(last_event) if last_event else None,
+        "support_grant": active_support_grant(business_id),
+    }
+
+
+def admin_support_document_metadata(business_id: int, *, limit: int = 100) -> dict | None:
+    """Metadatos documentales visibles solo durante una autorización explícita.
+
+    No devuelve OCR, importes, binarios, credenciales ni contenido de facturas. La
+    lista está acotada para que el centro de soporte no se convierta en una copia
+    alternativa del archivo del cliente.
+    """
+    grant = active_support_grant(business_id)
+    if not grant or "document_metadata" not in grant["scopes"]:
+        return None
+    limit = max(1, min(int(limit), 200))
+    with get_conn() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) AS total FROM documents WHERE business_id=?",
+            (business_id,),
+        ).fetchone()["total"]
+        documents = conn.execute(
+            "SELECT d.id, d.filename, d.kind, d.doc_status, d.client_id, "
+            "d.project_id, d.review_note, d.reviewed_at, d.invoice_id, "
+            "d.received_invoice_id, d.created_at, c.name AS client_name, "
+            "p.name AS project_name FROM documents d "
+            "LEFT JOIN clients c ON c.id=d.client_id AND c.business_id=d.business_id "
+            "LEFT JOIN projects p ON p.id=d.project_id AND p.business_id=d.business_id "
+            "WHERE d.business_id=? ORDER BY d.created_at DESC, d.id DESC LIMIT ?",
+            (business_id, limit),
+        ).fetchall()
+        clients = conn.execute(
+            "SELECT id, name FROM clients WHERE business_id=? ORDER BY name LIMIT 250",
+            (business_id,),
+        ).fetchall()
+        projects = conn.execute(
+            "SELECT id, name, client_id FROM projects WHERE business_id=? "
+            "ORDER BY name LIMIT 250",
+            (business_id,),
+        ).fetchall()
+    return {
+        "grant_id": grant["id"],
+        "documents": [dict(row) for row in documents],
+        "clients": [dict(row) for row in clients],
+        "projects": [dict(row) for row in projects],
+        "total": int(total or 0),
+        "limit": limit,
+    }
+
+
+def admin_support_configuration(business_id: int) -> dict | None:
+    """Configuración reversible visible solo con autorización del titular."""
+    grant = active_support_grant(business_id)
+    if not grant or "configuration" not in grant["scopes"]:
+        return None
+    business = get_business(business_id)
+    if not business:
+        return None
+    allowed = (
+        "name", "sector", "team_size", "province", "primary_goal", "language",
+        "explanation_level", "invoice_template", "brand_color", "document_footer",
+        "quote_terms", "default_quote_validity_days",
+    )
+    return {
+        "grant_id": grant["id"],
+        "values": {field: business.get(field) for field in allowed},
+    }
+
+
+def _support_value_hash(value: str | None) -> str | None:
+    clean = str(value or "").strip()
+    if not clean:
+        return None
+    return hashlib.sha256(clean.encode("utf-8")).hexdigest()[:16]
+
+
+def _support_configuration_audit_state(values: dict) -> tuple[str, str, str]:
+    """Antes/después seudonimizado y acotado para la bitácora de seguridad."""
+    profile = json.dumps({
+        "name": _support_value_hash(values.get("name")),
+        "sector": _support_value_hash(values.get("sector")),
+        "team": values.get("team_size"),
+        "province": _support_value_hash(values.get("province")),
+        "goal": values.get("primary_goal"),
+    }, sort_keys=True, separators=(",", ":"))
+    experience = json.dumps({
+        "language": values.get("language"),
+        "level": values.get("explanation_level"),
+    }, sort_keys=True, separators=(",", ":"))
+    branding = json.dumps({
+        "template": values.get("invoice_template"),
+        "color": values.get("brand_color"),
+        "footer": _support_value_hash(values.get("document_footer")),
+        "terms": _support_value_hash(values.get("quote_terms")),
+        "validity": values.get("default_quote_validity_days"),
+    }, sort_keys=True, separators=(",", ":"))
+    return profile, experience, branding
+
+
+def admin_update_safe_business_configuration(
+    business_id: int,
+    *,
+    actor_user_id: int,
+    name: str,
+    sector: str,
+    team_size: str,
+    province: str | None,
+    primary_goal: str,
+    language: str,
+    explanation_level: str,
+    invoice_template: str,
+    brand_color: str | None,
+    document_footer: str | None,
+    quote_terms: str | None,
+    default_quote_validity_days: int,
+    request_id: str | None = None,
+) -> dict:
+    """Corrige solo perfil y apariencia; excluye fiscalidad, pagos e integraciones."""
+    _support_admin_actor(actor_user_id)
+    name = " ".join(str(name or "").split())
+    sector = " ".join(str(sector or "").split())
+    province = " ".join(str(province or "").split()) or None
+    if not name or len(name) > 160:
+        raise ValueError("El nombre del negocio es obligatorio (máx. 160 caracteres).")
+    if not sector or len(sector) > 80:
+        raise ValueError("El sector es obligatorio (máx. 80 caracteres).")
+    if province and len(province) > 80:
+        raise ValueError("La provincia no puede superar 80 caracteres.")
+    if team_size not in {"solo", "2-5", "6-10", "11+"}:
+        raise ValueError("El tamaño del equipo no es válido.")
+    if primary_goal not in {"facturar", "agenda", "cobros", "control"}:
+        raise ValueError("El objetivo principal no es válido.")
+    if language not in LANGUAGES:
+        raise ValueError("Idioma no disponible.")
+    if explanation_level not in EXPLANATION_LEVELS:
+        raise ValueError("El nivel de explicación no es válido.")
+    if invoice_template not in INVOICE_TEMPLATES:
+        raise ValueError("La plantilla seleccionada no es válida.")
+    brand_color = str(brand_color or "").strip() or None
+    if brand_color and not _HEX_RE.match(brand_color):
+        raise ValueError("El color de marca debe ser un hexadecimal tipo #14463b.")
+    document_footer = str(document_footer or "").strip() or None
+    quote_terms = str(quote_terms or "").strip() or None
+    if document_footer and len(document_footer) > MAX_DOCUMENT_FOOTER:
+        raise ValueError(
+            f"El pie del documento no puede superar {MAX_DOCUMENT_FOOTER} caracteres."
+        )
+    if quote_terms and len(quote_terms) > MAX_QUOTE_TERMS:
+        raise ValueError(
+            f"Las condiciones no pueden superar {MAX_QUOTE_TERMS} caracteres."
+        )
+    try:
+        default_quote_validity_days = int(default_quote_validity_days)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("La validez predeterminada no es válida.") from exc
+    if default_quote_validity_days not in QUOTE_VALIDITY_DAYS:
+        raise ValueError("La validez debe ser de 7, 15, 30, 45, 60 o 90 días.")
+
+    allowed = (
+        "name", "sector", "team_size", "province", "primary_goal", "language",
+        "explanation_level", "invoice_template", "brand_color", "document_footer",
+        "quote_terms", "default_quote_validity_days",
+    )
+    after = {
+        "name": name,
+        "sector": sector,
+        "team_size": team_size,
+        "province": province,
+        "primary_goal": primary_goal,
+        "language": language,
+        "explanation_level": explanation_level,
+        "invoice_template": invoice_template,
+        "brand_color": brand_color,
+        "document_footer": document_footer,
+        "quote_terms": quote_terms,
+        "default_quote_validity_days": default_quote_validity_days,
+    }
+    now = _now()
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        grant = _support_grant_with_scope(conn, business_id, "configuration", now)
+        current_row = conn.execute(
+            "SELECT * FROM businesses WHERE id=?", (business_id,)
+        ).fetchone()
+        if not current_row:
+            raise ValueError("Negocio no encontrado.")
+        current = dict(current_row)
+        before = {field: current.get(field) for field in allowed}
+        changed_fields = [field for field in allowed if before[field] != after[field]]
+        if changed_fields:
+            conn.execute(
+                "UPDATE businesses SET name=?, sector=?, team_size=?, province=?, "
+                "primary_goal=?, language=?, explanation_level=?, invoice_template=?, "
+                "brand_color=?, document_footer=?, quote_terms=?, "
+                "default_quote_validity_days=? WHERE id=?",
+                (
+                    name, sector, team_size, province, primary_goal, language,
+                    explanation_level, invoice_template, brand_color,
+                    document_footer, quote_terms, default_quote_validity_days,
+                    business_id,
+                ),
+            )
+
+    if changed_fields:
+        before_profile, before_experience, before_branding = (
+            _support_configuration_audit_state(before)
+        )
+        after_profile, after_experience, after_branding = (
+            _support_configuration_audit_state(after)
+        )
+        record_security_event(
+            "admin.support_configuration_updated",
+            severity="warning",
+            area="support",
+            actor_user_id=actor_user_id,
+            subject_business_id=business_id,
+            request_id=request_id,
+            metadata={
+                "grant_id": grant["id"],
+                "changed_fields": ",".join(changed_fields),
+                "before_profile": before_profile,
+                "after_profile": after_profile,
+                "before_experience": before_experience,
+                "after_experience": after_experience,
+                "before_branding": before_branding,
+                "after_branding": after_branding,
+            },
+        )
+    return {"business": get_business(business_id), "changed_fields": changed_fields}
+
+
+def admin_update_document_metadata(
+    business_id: int,
+    document_id: int,
+    *,
+    actor_user_id: int,
+    kind: str,
+    doc_status: str,
+    client_id: int | None,
+    project_id: int | None,
+    review_note: str | None,
+    request_id: str | None = None,
+) -> dict:
+    """Corrección acotada de soporte, autorizada y con antes/después auditado.
+
+    La autorización se vuelve a comprobar dentro de la misma transacción que la
+    escritura. No permite tocar archivos, OCR, importes ni documentos vinculados a
+    una factura emitida. Tampoco concede al administrador una sesión del cliente.
+    """
+    from .documents import repo as document_repo
+
+    _support_admin_actor(actor_user_id)
+    if kind not in document_repo.KINDS:
+        raise ValueError("Tipo de documento desconocido.")
+    if doc_status not in document_repo.DOC_STATUSES:
+        raise ValueError("Estado de documento desconocido.")
+    client_id = int(client_id) if client_id not in (None, "") else None
+    project_id = int(project_id) if project_id not in (None, "") else None
+    review_note = str(review_note or "").strip()[:500] or None
+    now = _now()
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        grant = _support_grant_with_scope(
+            conn, business_id, "document_metadata", now
+        )
+
+        current_row = conn.execute(
+            "SELECT * FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+        if not current_row:
+            raise ValueError("Documento no encontrado.")
+        current = dict(current_row)
+        if current.get("invoice_id"):
+            invoice = conn.execute(
+                "SELECT status, number FROM invoices WHERE id=? AND business_id=?",
+                (current["invoice_id"], business_id),
+            ).fetchone()
+            if invoice and (invoice["status"] != "borrador" or invoice["number"]):
+                raise ValueError(
+                    "Este documento está vinculado a una factura emitida. Debe corregirse mediante el flujo fiscal correspondiente."
+                )
+
+        project = None
+        if project_id is not None:
+            project = conn.execute(
+                "SELECT id, client_id FROM projects WHERE id=? AND business_id=?",
+                (project_id, business_id),
+            ).fetchone()
+            if not project:
+                raise ValueError("El proyecto no pertenece a este negocio.")
+            project_client_id = project["client_id"]
+            if client_id is None and project_client_id:
+                client_id = int(project_client_id)
+            elif (
+                client_id is not None
+                and project_client_id is not None
+                and int(project_client_id) != client_id
+            ):
+                raise ValueError("El cliente no coincide con el proyecto.")
+        if client_id is not None:
+            client = conn.execute(
+                "SELECT id FROM clients WHERE id=? AND business_id=?",
+                (client_id, business_id),
+            ).fetchone()
+            if not client:
+                raise ValueError("El cliente no pertenece a este negocio.")
+
+        before = {
+            "kind": current.get("kind"),
+            "status": current.get("doc_status"),
+            "client_id": current.get("client_id"),
+            "project_id": current.get("project_id"),
+            "note": current.get("review_note"),
+        }
+        after = {
+            "kind": kind,
+            "status": doc_status,
+            "client_id": client_id,
+            "project_id": project_id,
+            "note": review_note,
+        }
+        changed_fields = [name for name in before if before[name] != after[name]]
+        if changed_fields:
+            conn.execute(
+                "UPDATE documents SET kind=?, doc_status=?, client_id=?, project_id=?, "
+                "review_note=?, reviewed_at=? WHERE id=? AND business_id=?",
+                (
+                    kind, doc_status, client_id, project_id, review_note, now,
+                    document_id, business_id,
+                ),
+            )
+
+    if changed_fields:
+        def _note_hash(value: str | None) -> str | None:
+            if not value:
+                return None
+            return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+        record_security_event(
+            "admin.support_document_metadata_updated",
+            severity="warning",
+            area="support",
+            actor_user_id=actor_user_id,
+            subject_business_id=business_id,
+            request_id=request_id,
+            metadata={
+                "item_id": document_id,
+                "grant_id": grant["id"],
+                "changed_fields": ",".join(changed_fields),
+                "before_kind": before["kind"],
+                "after_kind": after["kind"],
+                "before_status": before["status"],
+                "after_status": after["status"],
+                "before_client_id": before["client_id"],
+                "after_client_id": after["client_id"],
+                "before_project_id": before["project_id"],
+                "after_project_id": after["project_id"],
+                "before_note_hash": _note_hash(before["note"]),
+                "after_note_hash": _note_hash(after["note"]),
+            },
+        )
+    with get_conn() as conn:
+        saved = conn.execute(
+            "SELECT * FROM documents WHERE id=? AND business_id=?",
+            (document_id, business_id),
+        ).fetchone()
+    return {"document": dict(saved), "changed_fields": changed_fields}
 
 
 # ----------------------------------------------------------- RGPD (export/borrado) ---
@@ -10114,6 +13105,18 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "document_classifications": [dict(r) for r in _rows(
             "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
+            business_id)],
+        "document_client_candidates": [dict(r) for r in _rows(
+            "SELECT * FROM document_client_candidates WHERE business_id=? ORDER BY id",
+            business_id)],
+        "inbound_email_routes": [dict(r) for r in _rows(
+            "SELECT business_id, active, created_at, rotated_at "
+            "FROM inbound_email_routes WHERE business_id=?",
+            business_id)],
+        "inbound_email_messages": [dict(r) for r in _rows(
+            "SELECT id, business_id, status, attempts, attachment_count, "
+            "document_count, error_code, received_at, updated_at "
+            "FROM inbound_email_messages WHERE business_id=? ORDER BY id",
             business_id)],
         "copilot_recommendations": [dict(r) for r in _rows(
             "SELECT * FROM copilot_recommendations WHERE business_id=? ORDER BY id",
@@ -10300,6 +13303,7 @@ def delete_business_cascade(business_id) -> bool:
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
             "email_outbox",
+            "inbound_email_messages", "inbound_email_routes",
             "verifactu_cancellation_outbox", "verifactu_outbox",
             "document_sequences",
             "worker_tokens", "worker_clockin_corrections", "worker_clockins",
@@ -10308,7 +13312,8 @@ def delete_business_cascade(business_id) -> bool:
             "product_events", "assistant_messages", "business_memories",
             "assistant_actions", "automation_permissions",
             "integration_settings",
-            "document_classifications", "copilot_recommendations",
+            "document_client_candidates", "document_classifications",
+            "copilot_recommendations",
             "gestoria_deliveries", "gestoria_requests",
             "job_updates", "job_completions", "job_materials",
             "client_preferences",

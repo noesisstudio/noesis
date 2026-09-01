@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico técnico · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Manual de diagnóstico técnico</p>
+    <h1>Dónde vive cada cosa</h1>
+    <p class="standfirst">La misma guía de diagnóstico, con el archivo, la función y la tabla concreta al lado de cada explicación. Para señalar un fallo con precisión, o para dárselo a quien vaya a tocar el código.</p>
+    <p class="crumbs">Verificado sobre <code>main</code>, esquema 50. La versión sin jerga es <code>Diagnostico.pdf</code>.</p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <h2>1. Levantar el proyecto desde cero</h2>
+      <p class="sec-intro">Lo mínimo para tener Noesis corriendo en una máquina limpia.</p>
+    </div>
+
+    <pre>git clone https://github.com/noesisstudio/noesis
+cd noesis
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1        <span class="c"># Windows</span>
+pip install -e .
+noesis-web                          <span class="c"># http://127.0.0.1:8000</span></pre>
+
+    <p>Extras opcionales, según lo que vayas a tocar:</p>
+    <pre>pip install -e ".[test]"       <span class="c"># pytest y hypothesis</span>
+pip install -e ".[analysis]"   <span class="c"># regenerar el modelo económico</span>
+pip install -e ".[security]"   <span class="c"># ruff, bandit, detect-secrets</span>
+pip install -e ".[audio]"      <span class="c"># transcripción local con faster-whisper</span></pre>
+
+    <div class="note">Sin <code>DATABASE_URL</code> usa SQLite en un archivo local, y el esquema se aplica solo al arrancar. Con ella, PostgreSQL. Para trabajar sin tocar tus datos, apunta <code>NOESIS_DB_PATH</code> a otro archivo.</div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Comando</th><th>Para qué</th></tr></thead>
+        <tbody>
+          <tr><td><code>noesis-web</code></td><td>Levanta el servidor</td></tr>
+          <tr><td><code>noesis</code></td><td>El asistente por consola, sin navegador</td></tr>
+          <tr><td><code>noesis-doctor --strict</code></td><td>Diagnóstico de preparación: qué falta para producción</td></tr>
+          <tr><td><code>noesis-restore-check</code></td><td>Comprueba que una copia se puede restaurar</td></tr>
+          <tr><td><code>python -m pytest -q</code></td><td>La suite: 531 pruebas</td></tr>
+          <tr><td><code>python scripts/check_project_truth.py</code></td><td>Verifica que la documentación no miente sobre el código</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>2. El recorrido de una petición</h2>
+      <p class="sec-intro">Cuatro puertas, en este orden. Saber en cuál cae el rechazo es el diagnóstico.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Puerta</th><th>Dónde vive</th><th>Qué hace si rechaza</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="hi">Identidad</td>
+            <td><code>web/auth.py</code> → <code>current_user</code></td>
+            <td>Limpia la sesión y redirige a <code>/login</code>. Comprueba <code>session_version</code> y que la cuenta esté activa</td>
+          </tr>
+          <tr>
+            <td class="hi">Aislamiento</td>
+            <td><code>web/deps.py</code> → <code>auth_guard</code></td>
+            <td>Compara el negocio del usuario con el de la URL. Redirige a su panel, o 403 en <code>/api/</code></td>
+          </tr>
+          <tr>
+            <td>Permisos del plan</td>
+            <td><code>adapters/billing.py</code> → <code>entitlements_for</code></td>
+            <td>Redirige a suscripción con <code>status=upgrade</code></td>
+          </tr>
+          <tr>
+            <td>Estado de la suscripción</td>
+            <td><code>db.py</code> → <code>subscription_allows_access</code></td>
+            <td>Deja leer, bloquea escribir. Es el modo consulta</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-warn">
+      <h3>El punto que no se puede tocar a la ligera</h3>
+      <p><code>auth_guard</code> es el <strong>único</strong> sitio que autoriza <code>/b/</code> y <code>/api/</code> en todo Noesis. Es la garantía de aislamiento entre negocios: un cambio ahí afecta a todos los clientes a la vez.</p>
+      <p>Antes hay tres middlewares más, en este orden inverso al de declaración: <code>security_headers</code>, <code>canonical_public_host</code> y <code>request_observability</code>. Un 403 raro con origen correcto suele venir de la comprobación CSRF por cabeceras, en <code>csrf_response</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>3. El mapa del código</h2>
+      <p class="sec-intro">Qué hay en cada sitio, para no buscar a ciegas.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Ruta</th><th>Qué contiene</th></tr></thead>
+        <tbody>
+          <tr><td><code>db.py</code></td><td>Acceso único a datos. <strong>Toda</strong> consulta filtra por <code>business_id</code></td></tr>
+          <tr><td><code>migrations.py</code></td><td>Esquema versionado. Hoy, 50. Sube y baja</td></tr>
+          <tr><td><code>nlu.py</code></td><td>Entiende las frases: «factura a Juan 95 euros»</td></tr>
+          <tr><td><code>internal_brain.py</code></td><td>Redacta sin IA externa: cobros, presupuestos, citas</td></tr>
+          <tr><td><code>tools.py</code></td><td>Las acciones que el asistente puede ejecutar</td></tr>
+          <tr><td><code>readiness.py</code></td><td>El <code>noesis-doctor</code></td></tr>
+          <tr><td><code>web/deps.py</code></td><td>Guardián, plantillas, filtros como <code>date_es</code></td></tr>
+          <tr><td><code>web/whatsapp.py</code></td><td>Entrada, salida, firma, plantillas y cola</td></tr>
+          <tr><td><code>web/scheduler.py</code></td><td>Los trabajos de fondo</td></tr>
+          <tr><td><code>web/routers/</code></td><td>15 routers por dominio: cuentas, facturas, documentos, equipo, gestoría, admin…</td></tr>
+          <tr><td><code>adapters/</code></td><td>Lo externo y reemplazable: <code>ai</code>, <code>billing</code>, <code>email</code>, <code>extraction</code>, <code>invoicing</code>, <code>transcription</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>Por qué importa la carpeta <code>adapters/</code>:</strong> todo lo que depende de un tercero está detrás de uno. Si algo externo falla, el fallo está ahí y no repartido por el producto. Es el primer sitio donde mirar cuando el síntoma involucra a un proveedor.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>4. Las colas</h2>
+      <p class="sec-intro">Nada se envía en caliente. Todo pasa por una cola durable, y ahí es donde se ve qué falló.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Cola</th><th>Tabla</th><th>Estados</th></tr></thead>
+        <tbody>
+          <tr><td>Correo</td><td><code>email_outbox</code></td><td><code>queued</code> → <code>processing</code> → <code>sent</code> / <code>retrying</code> / <code>failed</code></td></tr>
+          <tr><td>WhatsApp</td><td><code>whatsapp_outbox</code></td><td>Igual, más <code>delivered</code> y <code>read</code> desde Meta</td></tr>
+          <tr><td>Veri*Factu</td><td>Cola propia con reintentos</td><td>Aceptada, rechazada, con errores</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Reintento con espera creciente de 30 s a 1 h, seis intentos. La <code>idempotency_key</code> impide que el mismo aviso salga dos veces. En WhatsApp la cola guarda además <code>connection_id</code>, así que un reintento sale por el mismo número que recibió el mensaje.</p>
+
+    <div class="note"><strong>Para diagnosticar:</strong> <code>db.admin_support_delivery_failures(business_id)</code> devuelve canal, estado, intentos y el error del proveedor, sin exponer destinatario, asunto ni cuerpo. Es lo que pinta «Entregas atascadas» en la ficha de la cuenta.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>5. Los trabajos de fondo</h2>
+      <p class="sec-intro">Lo que ocurre sin que nadie pulse nada. Si un aviso no llega, empieza por comprobar que su hora pasó.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Trabajo</th><th>Cuándo</th></tr></thead>
+        <tbody>
+          <tr><td>Resumen diario</td><td>Cada día a las 8:00</td></tr>
+          <tr><td>Recordatorios de cobro</td><td>Cada día a las 9:00</td></tr>
+          <tr><td>Propuestas de cobro</td><td>Cada día a las 10:00</td></tr>
+          <tr><td>Cierre del día</td><td>Por la tarde</td></tr>
+          <tr><td>Resumen semanal</td><td>Domingos a las 18:00</td></tr>
+          <tr><td>Informe al fundador</td><td>Lunes a las 9:00</td></tr>
+          <tr><td>Aviso fiscal</td><td>Al cerrar cada trimestre</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Cada ejecución se reserva con <code>claim_scheduled_run</code>, así que dos servidores no mandan el mismo aviso dos veces. Y solo alcanzan a negocios con WhatsApp conectado y suscripción que permita acceso.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>6. De síntoma a archivo</h2>
+      <p class="sec-intro">La tabla que convierte una queja en un sitio concreto donde mirar.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Síntoma</th><th>Causa habitual</th><th>Dónde</th></tr></thead>
+        <tbody>
+          <tr><td>No deja crear</td><td>Modo consulta</td><td><code>db.subscription_allows_access</code></td></tr>
+          <tr><td>Redirige al login</td><td>Sesión inválida o cuenta suspendida</td><td><code>auth.current_user</code>, <code>users.is_active</code></td></tr>
+          <tr><td>Redirige a su panel</td><td>Pidió otro negocio</td><td><code>auth_guard</code> — es correcto, no un fallo</td></tr>
+          <tr><td>403 en una API</td><td>Aislamiento, o CSRF por cabeceras</td><td><code>auth_guard</code>, <code>csrf_response</code></td></tr>
+          <tr><td>Falta una sección</td><td>Plan sin ese permiso</td><td><code>billing.PLAN_ENTITLEMENTS</code></td></tr>
+          <tr><td>Correo sin llegar</td><td>Sin <code>BREVO_API_KEY</code>, o rebote</td><td><code>adapters/email.py</code>, <code>email_outbox.last_error</code></td></tr>
+          <tr><td>Voz sin transcribir</td><td><code>get_transcriber()</code> devuelve <code>None</code></td><td><code>adapters/transcription.py</code></td></tr>
+          <tr><td>WhatsApp entra pero no sale</td><td>Token sin el activo, o sin método de pago</td><td><code>whatsapp_outbox.last_error</code></td></tr>
+          <tr><td>Plantilla rechazada</td><td>Nº de variables distinto al aprobado</td><td><code>config.WHATSAPP_TEMPLATE_*</code>, <code>tools.py</code></td></tr>
+          <tr><td>Mensaje ignorado sin más</td><td>Receptor desconocido o WABA discordante</td><td><code>whatsapp._handle_inbound</code> — deliberado</td></tr>
+          <tr><td>Pagó y sigue bloqueado</td><td>Webhook de Stripe perdido o desordenado</td><td><code>reconcile_stripe_subscription</code></td></tr>
+          <tr><td>Fecha rara como <code>2026-07-20T00:00:00</code></td><td>Falta el filtro <code>date_es</code></td><td>La plantilla que la pinta</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>7. Comprobaciones rápidas</h2>
+    </div>
+    <pre>curl https://bynoesis.com/health   <span class="c"># vivo + release desplegado</span>
+curl https://bynoesis.com/ready    <span class="c"># + esquema aplicado</span></pre>
+    <p>Si <code>/ready</code> devuelve un esquema distinto al de <code>project-state.json</code>, hay un despliegue a medias: ese es el fallo y no lo que te esté contando el cliente.</p>
+    <pre>python -m pytest tests/ -k "whatsapp"   <span class="c"># acotar por área</span>
+python -m ruff check src/               <span class="c"># errores reales, no estilo</span></pre>
+    <div class="note"><strong>En Windows fallan tres o cuatro pruebas</strong> con <code>PermissionError [WinError 32]</code> al borrar el temporal: SQLite mantiene el archivo abierto. El cuerpo de la prueba pasó; falla la limpieza. En el CI, que corre en Linux, no ocurre. No lo persigas.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>8. Invariantes que no se rompen</h2>
+      <p class="sec-intro">Si alguna vez ves lo contrario, no es un caso raro: es un fallo grave.</p>
+    </div>
+    <ul>
+      <li><strong>Toda consulta filtra por <code>business_id</code>.</strong> Sin excepción.</li>
+      <li><strong>Una factura emitida no se modifica.</strong> Se corrige con una rectificativa.</li>
+      <li><strong>Nada que mueva dinero se ejecuta sin confirmación</strong> del titular.</li>
+      <li><strong>La bitácora de seguridad es encadenada</strong>: cada entrada firma la anterior.</li>
+      <li><strong>Administración no abre el negocio de un cliente.</strong> Gestiona acceso, no contenido.</li>
+      <li><strong>El cerebro local sigue disponible</strong> aunque toda IA externa falle.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>main</code>: <code>web/server.py</code>, <code>web/deps.py</code>, <code>web/auth.py</code>, <code>web/scheduler.py</code>, <code>db.py</code>, <code>migrations.py</code>, <code>adapters/</code> y <code>pyproject.toml</code>.</span>
+    <span>Los números que cambian —esquema, recuento de pruebas— viven en <code>project-state.json</code>. Si este documento y el JSON no coinciden, manda el JSON.</span>
+  </footer>
+
+</div>
+
+</body>
+</html>

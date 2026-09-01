@@ -15,7 +15,7 @@
 
 <div class="grid g4">
   <div class="stat"><div class="lbl">Facturado (mes)</div><div class="val" id="i-invoiced">—</div><div class="delta flat">total emitido este mes</div></div>
-  <div class="stat"><div class="lbl">Cobrado</div><div class="val green" id="i-collected">—</div><div class="delta up" id="i-collected-pct"></div></div>
+  <div class="stat"><div class="lbl">Ha entrado este mes</div><div class="val green" id="i-collected">—</div><div class="delta up" id="i-collected-pct"></div></div>
   <div class="stat"><div class="lbl">Pendiente de cobro</div><div class="val amber" id="i-pending">—</div><div class="delta flat">tuyo, pero sin llegar</div></div>
   <div class="stat"><div class="lbl">Ticket medio</div><div class="val" id="i-avg">—</div><div class="delta flat">importe medio por factura</div></div>
 </div>
@@ -43,7 +43,7 @@ async function load() {
   const s = await api('/summary');
   el('i-invoiced').textContent = eur(s.invoiced);
   el('i-collected').textContent = eur(s.collected);
-  el('i-collected-pct').textContent = s.invoiced ? pct(s.collected/s.invoiced*100)+' cobrado' : '';
+  el('i-collected-pct').textContent = s.invoiced ? pct((s.invoiced_collected||0)/s.invoiced*100)+' de lo emitido ya cobrado' : '';
   el('i-pending').textContent = eur(s.pending_total);
 
   const inv = await api('/invoices');

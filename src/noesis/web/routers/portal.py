@@ -10,6 +10,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from ... import db
+from ...adapters import billing as billing_adapter
 from .. import auth
 from ..deps import TEMPLATES, _read_json
 
@@ -28,6 +29,21 @@ def _subscription_required(business: dict | None) -> JSONResponse | None:
             "code": "subscription_required",
         },
         status_code=402,
+    )
+
+
+def _entitlement_required(
+    business: dict | None, entitlement: str
+) -> JSONResponse | None:
+    if billing_adapter.has_entitlement(business, entitlement):
+        return None
+    return JSONResponse(
+        {
+            "error": "Esta función no está incluida en el plan actual de la empresa.",
+            "code": "plan_upgrade_required",
+            "required_plan": billing_adapter.minimum_plan_for(entitlement),
+        },
+        status_code=403,
     )
 
 
@@ -66,7 +82,17 @@ def portal_home(request: Request, token: str, ok: str = ""):
             request, "portal.html", {"token": token, "data": None, "ok": ""},
             status_code=404)
     return TEMPLATES.TemplateResponse(
-        request, "portal.html", {"token": token, "data": data, "ok": ok})
+        request,
+        "portal.html",
+        {
+            "token": token,
+            "data": data,
+            "ok": ok,
+            "subscription_read_only": not db.subscription_allows_access(
+                db.get_business(ref["business_id"])
+            ),
+        },
+    )
 
 
 @router.post("/p/{token}/quotes/{quote_id}/accept")
@@ -76,12 +102,18 @@ def portal_accept_quote(request: Request, token: str, quote_id: int):
         return RedirectResponse(f"/p/{token}", status_code=303)
     blocked = _subscription_required(db.get_business(ref["business_id"]))
     if blocked:
-        return blocked
+        return RedirectResponse(f"/p/{token}?ok=readonly", status_code=303)
     q = db.get_quote(quote_id, ref["business_id"])
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
     try:
-        db.accept_quote(quote_id, ref["business_id"])
+        db.accept_quote(
+            quote_id,
+            ref["business_id"],
+            decision_source="client_portal",
+            decision_ip_hash=_signer_ip_hash(request, token),
+            decision_user_agent=request.headers.get("user-agent"),
+        )
     except ValueError:
         return RedirectResponse(f"/p/{token}?ok=error", status_code=303)
     return RedirectResponse(f"/p/{token}?ok=aceptado", status_code=303)
@@ -94,12 +126,51 @@ def portal_reject_quote(request: Request, token: str, quote_id: int):
         return RedirectResponse(f"/p/{token}", status_code=303)
     blocked = _subscription_required(db.get_business(ref["business_id"]))
     if blocked:
-        return blocked
+        return RedirectResponse(f"/p/{token}?ok=readonly", status_code=303)
     q = db.get_quote(quote_id, ref["business_id"])
     if not q or q.get("client_id") != ref["client_id"]:
         return RedirectResponse(f"/p/{token}?ok=nojusto", status_code=303)
-    db.reject_quote(quote_id, ref["business_id"])
+    try:
+        db.reject_quote(
+            quote_id,
+            ref["business_id"],
+            decision_source="client_portal",
+            decision_ip_hash=_signer_ip_hash(request, token),
+            decision_user_agent=request.headers.get("user-agent"),
+        )
+    except ValueError:
+        return RedirectResponse(f"/p/{token}?ok=error", status_code=303)
     return RedirectResponse(f"/p/{token}?ok=rechazado", status_code=303)
+
+
+@router.get("/p/{token}/quotes/{quote_id}/pdf")
+def portal_quote_pdf(request: Request, token: str, quote_id: int):
+    if _token_scan_blocked(request, "portal"):
+        return Response("Demasiados intentos. Espera unos minutos.", status_code=429)
+    ref = db.resolve_portal_token(token)
+    if not ref:
+        _record_token_miss(request, "portal")
+        return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    quote = db.get_quote(quote_id, ref["business_id"])
+    if (
+        not quote
+        or quote.get("client_id") != ref["client_id"]
+        or quote.get("status") not in {"enviado", "aceptado", "rechazado"}
+    ):
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    from ..invoice_pdf import build_quote_pdf
+    data = build_quote_pdf(quote_id, ref["business_id"])
+    if data is None:
+        return JSONResponse({"error": "Presupuesto no encontrado."}, status_code=404)
+    name = f"presupuesto_{quote.get('number') or quote_id}.pdf"
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{name}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.post("/p/{token}/jobs/{job_id}/completion")
@@ -147,12 +218,14 @@ def portal_invoice_pdf(request: Request, token: str, invoice_id: int):
     data = build_invoice_pdf(invoice_id, ref["business_id"])
     if data is None:
         return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
-    db.record_invoice_communication(
-        invoice_id,
-        ref["business_id"],
-        "visualizacion",
-        details="descarga_portal_cliente",
-    )
+    business = db.get_business(ref["business_id"])
+    if not (business and business.get("is_demo")):
+        db.record_invoice_communication(
+            invoice_id,
+            ref["business_id"],
+            "visualizacion",
+            details="descarga_portal_cliente",
+        )
     name = f"factura_{inv.get('number') or invoice_id}.pdf"
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{name}"'})
@@ -255,6 +328,10 @@ def _worker_portal_context(request: Request, token: str) -> dict:
         return {"token": token, "data": None}
     worker = ref["worker"]
     business = ref["business"]
+    if not billing_adapter.has_entitlement(
+        business, billing_adapter.ENTITLEMENT_TEAM
+    ):
+        return {"token": token, "data": None}
     pin_required = bool(worker.get("pin_hash"))
     unlocked = not pin_required or _worker_token_verified(request, token)
     safe_worker = {
@@ -338,6 +415,9 @@ async def worker_portal_pin(request: Request, token: str):
     ref = db.resolve_worker_token(token)
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
+    if blocked:
+        return blocked
     worker = ref["worker"]
     if not worker.get("pin_hash"):
         request.session["worker_token_hash"] = hashlib.sha256(token.encode()).hexdigest()
@@ -365,6 +445,9 @@ async def worker_portal_clock(request: Request, token: str):
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
     blocked = _subscription_required(ref["business"])
+    if blocked:
+        return blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
     if blocked:
         return blocked
     worker = ref["worker"]
@@ -400,6 +483,9 @@ def worker_portal_ack(request: Request, token: str):
     blocked = _subscription_required(ref["business"])
     if blocked:
         return blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
+    if blocked:
+        return blocked
     worker = ref["worker"]
     if worker.get("pin_hash") and not _worker_token_verified(request, token):
         return JSONResponse({"error": "Introduce tu PIN primero."}, status_code=403)
@@ -424,6 +510,9 @@ async def worker_portal_task(
     if not ref:
         return JSONResponse({"error": "Enlace no válido o caducado."}, status_code=404)
     blocked = _subscription_required(ref["business"])
+    if blocked:
+        return blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
     if blocked:
         return blocked
     worker = ref["worker"]
@@ -451,6 +540,9 @@ def _worker_ref(request: Request, token: str):
             {"error": "Enlace no válido o caducado."}, status_code=404
         )
     blocked = _subscription_required(ref["business"])
+    if blocked:
+        return None, blocked
+    blocked = _entitlement_required(ref["business"], billing_adapter.ENTITLEMENT_TEAM)
     if blocked:
         return None, blocked
     if ref["worker"].get("pin_hash") and not _worker_token_verified(request, token):

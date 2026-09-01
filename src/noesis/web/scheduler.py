@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from .. import config, db
+from ..adapters import billing as billing_adapter
 from ..agent import daily_summary_text
 from . import backups
 
@@ -467,6 +468,10 @@ def send_gestoria_packages(now: datetime | None = None) -> int:
     for business in db.list_businesses():
         if not db.subscription_allows_access(business):
             continue
+        if not billing_adapter.has_entitlement(
+            business, billing_adapter.ENTITLEMENT_GESTORIA
+        ):
+            continue
         cadence = business.get("gestoria_cadence") or "off"
         if cadence == "off" or not business.get("gestoria_email"):
             continue
@@ -574,6 +579,26 @@ def process_email_outbox(limit: int = 25) -> int:
             )
         processed += 1
     return processed
+
+
+def process_inbound_email() -> None:
+    """Lee el catch-all solo cuando el piloto se ha activado explícitamente."""
+    if not config.INBOUND_EMAIL_ENABLED:
+        return
+    from ..documents import inbound_email
+
+    try:
+        result = inbound_email.poll_mailbox()
+    except inbound_email.InboundEmailError:
+        # No adjuntar la excepción: algunos servidores IMAP incluyen el usuario
+        # del buzón en sus errores. El diagnóstico se hace con el CLI seguro.
+        log.warning("No se pudo procesar el buzón documental entrante.")
+        return
+    if result.get("failed"):
+        log.warning(
+            "El buzón documental dejó %s mensaje(s) para reintento.",
+            result["failed"],
+        )
 
 
 def process_verifactu_outbox(limit: int = 25) -> int:
@@ -844,6 +869,14 @@ def start_scheduler() -> BackgroundScheduler:
         "interval",
         seconds=15,
         id="email-outbox",
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        process_inbound_email,
+        "interval",
+        seconds=60,
+        id="inbound-email",
         max_instances=1,
         coalesce=True,
     )

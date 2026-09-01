@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date
+from xml.sax.saxutils import escape
 
 from fastapi import APIRouter, Request
 from fastapi.responses import (
@@ -15,6 +17,7 @@ from .. import whatsapp
 from ..deps import HERE, TEMPLATES
 
 router = APIRouter()
+log = logging.getLogger("noesis.billing")
 
 _PAGES = {
     "resumen": "Inicio", "tesoreria": "Tesorería", "analisis": "Análisis",
@@ -65,14 +68,32 @@ def home(request: Request):
 
 @router.get("/app")
 def app_entry(request: Request):
-    """Punto de entrada de la app instalada (PWA): directo al panel o al login."""
+    """Punto de entrada de la app instalada: panel activo o selector de acceso."""
     bid = request.session.get("bid")
-    target = f"/b/{bid}/resumen" if bid else "/login"
+    if bid:
+        target = f"/b/{bid}/resumen"
+    elif request.session.get("gid"):
+        target = "/gestoria"
+    else:
+        target = "/acceso"
     return RedirectResponse(target, status_code=303)
+
+
+@router.get("/acceso", response_class=HTMLResponse)
+def access_entry(request: Request):
+    """Puerta común que explica cada espacio sin mezclar identidades ni permisos."""
+    bid = request.session.get("bid")
+    if bid:
+        return RedirectResponse(f"/b/{bid}/resumen", status_code=303)
+    if request.session.get("gid"):
+        return RedirectResponse("/gestoria", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "access_entry.html", {})
 
 
 # Apartados del sitio publico: cada seccion es su propia pagina.
 _SITE_PAGES = {
+    "autonomos": "site_autonomos.html",
+    "gestorias": "site_gestorias.html",
     "precios": "site_precios.html",
     "equipo": "site_equipo.html",
     "preguntas": "site_preguntas.html",
@@ -84,19 +105,22 @@ _SITE_PAGES = {
 # privados quedan fuera a propósito: no aportan nada en una búsqueda y no
 # queremos que se indexen enlaces con datos de clientes.
 _INDEXABLES = (
-    ("/", "1.0"),
-    ("/precios", "0.9"),
-    ("/solicitar-acceso", "0.9"),
-    ("/contacto", "0.8"),
-    ("/preguntas", "0.7"),
-    ("/equipo", "0.6"),
-    ("/cumplimiento", "0.5"),
-    ("/privacidad", "0.3"),
-    ("/terminos", "0.3"),
-    ("/aviso-legal", "0.3"),
-    ("/cookies", "0.3"),
-    ("/encargado-tratamiento", "0.3"),
+    "/",
+    "/autonomos",
+    "/gestorias",
+    "/precios",
+    "/solicitar-acceso",
+    "/contacto",
+    "/preguntas",
+    "/equipo",
+    "/cumplimiento",
+    "/privacidad",
+    "/terminos",
+    "/aviso-legal",
+    "/cookies",
+    "/encargado-tratamiento",
 )
+INDEXABLE_PATHS = frozenset(_INDEXABLES)
 
 
 @router.get("/favicon.ico", include_in_schema=False)
@@ -119,10 +143,14 @@ def robots():
         "Disallow: /p/",
         "Disallow: /g/",
         "Disallow: /t/",
-        "Disallow: /login",
-        "Disallow: /onboarding",
-        "Disallow: /recuperar",
-        "Disallow: /restablecer",
+        # El fin de línea evita que la zona privada /gestoria bloquee por prefijo
+        # la página pública /gestorias. Login se deja rastrear para que lea noindex.
+        "Disallow: /gestoria$",
+        "Allow: /gestoria/login$",
+        "Disallow: /gestoria/",
+        "Disallow: /webhook/",
+        "Disallow: /health",
+        "Disallow: /ready",
         "",
         f"Sitemap: {config.BASE_URL}/sitemap.xml",
         "",
@@ -133,11 +161,9 @@ def robots():
 @router.get("/sitemap.xml", include_in_schema=False)
 def sitemap():
     """Mapa del sitio con las páginas públicas que sí queremos indexadas."""
-    hoy = date.today().isoformat()
     urls = "".join(
-        f"<url><loc>{config.BASE_URL}{ruta}</loc>"
-        f"<lastmod>{hoy}</lastmod><priority>{prioridad}</priority></url>"
-        for ruta, prioridad in _INDEXABLES
+        f"<url><loc>{escape(config.BASE_URL + ruta)}</loc></url>"
+        for ruta in _INDEXABLES
     )
     cuerpo = (
         '<?xml version="1.0" encoding="UTF-8"?>'
@@ -159,7 +185,34 @@ def demo_redirect():
     return RedirectResponse("/contacto", status_code=301)
 
 
+@router.get("/demo/cliente", include_in_schema=False)
+def showcase_client_redirect():
+    """Entrada estable al portal ficticio de la demostración comercial."""
+    from ... import demo
+
+    owner = db.get_user_by_email(demo.SHOWCASE_OWNER_EMAIL)
+    business = db.get_business(owner["business_id"]) if owner else None
+    if not business or not business.get("is_demo"):
+        return RedirectResponse("/contacto", status_code=303)
+    clients = db.list_clients(business["id"])
+    portal_client = next(
+        (
+            client for client in clients
+            if client["name"] == demo.SHOWCASE_PORTAL_CLIENT
+        ),
+        clients[0] if clients else None,
+    )
+    if not portal_client:
+        return RedirectResponse("/contacto", status_code=303)
+    token = db.get_or_create_portal_token(
+        business["id"], portal_client["id"], ttl_days=3650
+    )
+    return RedirectResponse(f"/p/{token}", status_code=303)
+
+
 @router.get("/precios", response_class=HTMLResponse)
+@router.get("/autonomos", response_class=HTMLResponse)
+@router.get("/gestorias", response_class=HTMLResponse)
 @router.get("/equipo", response_class=HTMLResponse)
 @router.get("/preguntas", response_class=HTMLResponse)
 @router.get("/contacto", response_class=HTMLResponse)
@@ -216,12 +269,47 @@ def cumplimiento(request: Request):
 @router.get("/b/{business_id}/suscripcion", response_class=HTMLResponse)
 def subscription_page(
     request: Request, business_id: int, status: str = "", plan: str = "",
-    billing: str = "",
+    billing: str = "", feature: str = "",
 ):
     # Definida antes de la ruta generica /b/{id}/{page} para que no la capture esta.
     biz = db.get_business(business_id)
+    if (
+        biz
+        and status in {"checkout_return", "portal_return"}
+        and biz.get("subscription_status") in {
+            "pending", "incomplete", "active", "trialing",
+        }
+    ):
+        provider = billing_adapter.get_provider()
+        snapshot = provider.subscription_snapshot(biz)
+        evidence = billing_adapter.subscription_evidence(biz, snapshot)
+        if evidence:
+            try:
+                biz = db.reconcile_stripe_subscription(
+                    business_id, **evidence,
+                )
+                db.record_product_event(
+                    business_id, "subscription_reconciled_after_checkout"
+                )
+            except ValueError as exc:
+                log.warning(
+                    "Stripe no pudo reconciliar la cuenta %s: %s",
+                    business_id, exc,
+                )
+    active_plan = str((biz or {}).get("plan") or "")
+    is_active_subscription = (biz or {}).get("subscription_status") in {
+        "active", "trialing",
+    }
+    # El estado se queda en "trial" al vencer la prueba: la caducidad se deduce
+    # de la fecha, igual que en db.subscription_allows_access. Sin esto la
+    # pagina anuncia "En prueba" a una cuenta que ya esta en modo consulta.
+    trial_ends = str((biz or {}).get("trial_ends_at") or "")
+    trial_expired = bool(trial_ends) and trial_ends < date.today().isoformat()
     preferred_plan = (
-        plan if plan in billing_adapter.PLAN_PRICES
+        active_plan
+        if is_active_subscription
+        and active_plan in billing_adapter.PLAN_PRICES
+        else plan if plan in billing_adapter.PLAN_PRICES
         else str(request.session.get("signup_plan") or "pro")
     )
     preferred_billing = (
@@ -236,6 +324,18 @@ def subscription_page(
         "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
         "preferred_plan": preferred_plan,
         "preferred_billing": preferred_billing,
+        "is_active_subscription": is_active_subscription,
+        "trial_expired": trial_expired,
+        "current_plan": active_plan if is_active_subscription else "",
+        "current_plan_label": {
+            "autonomo": "Autónomo", "pro": "Negocio", "premium": "Premium",
+        }.get(active_plan, "Plan activo"),
+        "current_plan_rank": {
+            "autonomo": 0, "pro": 1, "premium": 2,
+        }.get(active_plan, -1),
+        "plan_ranks": {"autonomo": 0, "pro": 1, "premium": 2},
+        "upgrade_feature_label": billing_adapter.ENTITLEMENT_LABELS.get(feature, ""),
+        "entitlements": billing_adapter.entitlements_for(biz),
         "subscription_read_only": not db.subscription_allows_access(biz),
     })
 
@@ -254,6 +354,7 @@ def page(request: Request, business_id: int, page: str):
         "active": page,
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
+        "entitlements": billing_adapter.entitlements_for(biz),
         # El parte de sección: la figura de Noesis en cada pantalla — lectura,
         # cifras clave y puerta al acompañante (None en el Home, que tiene el suyo).
         "page_brief": chat.page_brief(business_id, page),
@@ -282,6 +383,10 @@ def page(request: Request, business_id: int, page: str):
     ):
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
+        context["support_grant"] = db.active_support_grant(business_id)
+        context["support_scopes"] = db.SUPPORT_SCOPES
+        context["support_notice"] = request.session.pop("support_notice", "")
+        context["support_error"] = request.session.pop("support_error", "")
         ai_setting = db.integration_setting(business_id, "ai_external") or {}
         context["ai_external_preference"] = (
             ai_setting.get("mode") != "disabled"
@@ -324,6 +429,13 @@ def page(request: Request, business_id: int, page: str):
         }
     if page == "facturas":
         context["concept_suggestions"] = db.invoice_concept_suggestions(biz)
+    if page == "documentos" and config.INBOUND_EMAIL_ENABLED:
+        from ...documents import inbound_email
+
+        if inbound_email.configured():
+            context["inbound_email_address"] = inbound_email.ensure_route(
+                business_id
+            )["address"]
     if page == "proyectos":
         context["clients"] = db.list_clients(business_id)
         context["workers"] = db.list_workers(business_id, include_inactive=False)
@@ -336,4 +448,5 @@ def page(request: Request, business_id: int, page: str):
         from ...adapters import transcription
 
         context["voice_on"] = transcription.available()
+        context["assistant_prompts"] = chat.assistant_prompts(biz)
     return TEMPLATES.TemplateResponse(request, f"{page}.html", context)

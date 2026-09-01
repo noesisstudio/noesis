@@ -1,5 +1,404 @@
 # Registro de QA
 
+## 2026-09-01 — fusión de 112 commits y comprobación de que no rompe nada
+
+### Qué se probó y con qué resultado
+
+- **Conflictos:** los siete resueltos a mano. Ningún marcador quedó en el árbol,
+  comprobado con búsqueda sobre `.py`, `.md`, `.json` y `.html`.
+- **Migraciones:** numeración correlativa y sin duplicados, 53 migraciones,
+  `LATEST_VERSION = 53`. La local se renumeró de la 40 a la 53 porque el remoto
+  ya ocupaba la 40 con `demo_comercial`.
+- **Saneado de plantillas:** un salto de línea se convierte en « · » y un valor
+  de 2000 caracteres se corta en 1024, que es el tope de Meta. El tope lo aporta
+  la rama local; el separador visible, el remoto.
+- **Contrato de plantillas:** los nueve cuerpos declarados coinciden con el
+  runbook y con el número de valores que envía el código.
+  `python -m noesis.whatsapp_templates` responde «todos los envíos encajan».
+- **Plantillas por oficio:** las ocho pruebas siguen verdes sobre el código
+  fusionado, incluidas la página y su API.
+- **Suite completa:** 577 pasan, 132 subtests. Ruff verde. Fuente de verdad verde.
+
+### Qué no se ha probado
+
+- **Los 5 fallos que persisten son anteriores a esta fusión.** Se reprodujeron en
+  un árbol de trabajo limpio sobre `origin/main`, sin nada local: cuatro de
+  facturación por mes, que dependen de la fecha del sistema, y uno de
+  rasterización de PDF escaneado, que necesita dependencias de OCR ausentes en
+  este equipo. No se han corregido porque no son de este trabajo, pero conviene
+  mirarlos: si son de fecha, volverán a aparecer solos.
+- **Nada contra Meta, Stripe ni la AEAT reales.** Sigue todo sin credenciales.
+- **La migración 53 no se ha aplicado a PostgreSQL**, solo a SQLite en pruebas.
+
+## 2026-08-31 — manual editorial y guiones de contenido
+
+- **Cobertura:** 38 páginas con estrategia, audiencia, canales, mapa de 24 piezas,
+  guion orientativo, rodaje, texto en pantalla, copy, CTA, métrica y límite para
+  cada contenido; añade cinco campañas, calendario mensual, producción y medición.
+- **Integridad:** DOCX abre como paquete OOXML válido, con 549 párrafos, 124 tablas,
+  una imagen y una sección; el generador conserva una fuente reproducible junto al
+  entregable.
+- **Revisión visual:** las 38 páginas se renderizaron a PNG y se revisaron sin texto
+  cortado, desbordamiento, títulos truncados ni saltos accidentales. Las páginas de
+  continuación de mapa, campañas y calendario son intencionadas.
+- **Accesibilidad:** cero incidencias altas tras añadir título y descripción al
+  logotipo; 39 tablas de datos repiten encabezado. Las 85 advertencias medias son
+  fichas de dos columnas y bloques visuales sin fila de encabezado semántica.
+- **Verdad comercial:** demos, WhatsApp/Meta, pilotos, testimonios y cifras quedan
+  rotulados o bloqueados hasta disponer de validación y permiso. El manual no promete
+  automatización fiscal ni resultados comerciales no medidos.
+
+## 2026-08-31 — avatar social sobre verde bosque
+
+- **Alcance:** solo cambia el fondo de los avatares sociales de teal `#2e8b74` a
+  verde bosque `#14463b`; símbolo, geometría, contorno exclusivamente exterior,
+  portadas, logo maestro e iconos de aplicación permanecen intactos.
+- **Integridad:** manifiesto 1.2.2 con 49/49 PNG válidos; las cinco copias operativas
+  coinciden por SHA-256 con sus exportaciones de Instagram, Facebook, LinkedIn y
+  YouTube.
+- **Revisión visual:** comprobadas las exportaciones 1080 × 1080 y 400 × 400 y las
+  ocho páginas de la guía Word. El fondo es inequívocamente verde bosque y la estrella
+  conserva el interior oficial sin trazos internos.
+- **Límite:** la máscara de cada red se comprueba finalmente al crear los perfiles.
+
+## 2026-08-31 — contorno exclusivamente exterior
+
+- **Referencia:** el interior coincide con `sources/noesis-mark-master.svg`: polígono
+  exterior teal `#2e8b74`, polígono interior y círculo bosque `#14463b`, y punto
+  crema `#f4f1e8`.
+- **Diferencia social:** el fondo es teal y solo el polígono exterior incorpora
+  `stroke="#15211c"`; el polígono interior y los dos círculos no contienen trazo.
+- **Integridad:** manifiesto 1.2.1 con 49/49 PNG válidos; las cinco copias operativas
+  coinciden por SHA-256 con Instagram, Facebook, LinkedIn y YouTube.
+- **Revisión visual:** comprobadas las exportaciones 1080 × 1080 y 400 × 400. La
+  estrella queda centrada, sin placa blanca, con el interior reconocible y sin líneas
+  internas añadidas. La guía Word conserva ocho páginas limpias tras render completo.
+- **Límite:** la máscara de cada red se comprueba finalmente al crear los perfiles.
+
+## 2026-08-31 — avatar social sin placa blanca
+
+- **Geometría:** estrella centrada al 64 % del lienzo, frente al 29,8 % aproximado
+  del avatar anterior; fondo y relleno teal `#2e8b74`, contorno tinta `#15211c` y
+  punto crema central. El contenido queda dentro de la zona segura circular.
+- **Alcance:** cambian Instagram, Facebook, LinkedIn y YouTube, además de las copias
+  listas para subir y la reserva de TikTok. No cambian portadas, SVG maestro,
+  lockups ni iconos PWA/app.
+- **Integridad:** el generador conserva 49 PNG, manifiesto 1.2, tamaños y alfa; cada
+  copia de `redes-sociales/` coincide por SHA-256 con su activo de origen.
+- **Revisión visual:** avatar de 1080 × 1080 y versión de 400 × 400 revisados sin
+  recortes, placa residual, deformación ni pérdida del contorno en tamaño menor. La
+  guía Word actualizada conserva ocho páginas limpias tras el render completo.
+- **Límite:** el recorte final dentro de Instagram, Facebook y LinkedIn se comprueba
+  al subirlo; la revisión local valida el archivo, no la interfaz futura de la red.
+
+## 2026-08-31 — perfiles sociales listos para configurar
+
+- **Alcance:** Instagram, Facebook y LinkedIn tienen carpeta propia con imagen de
+  perfil, portada donde la plataforma la utiliza, descripción exacta y controles de
+  publicación. YouTube y TikTok quedan únicamente como reserva de marca.
+- **Integridad:** las copias PNG coinciden por SHA-256 con los activos deterministas
+  del kit principal; se verifican tamaños 1080 × 1080, 1640 × 856, 400 × 400,
+  4200 × 700 y 800 × 800 según su destino.
+- **Documento:** la guía Word se abre como OOXML válido, contiene ocho páginas tras
+  renderizado y todas fueron revisadas: no hay solapes, cortes, desbordamientos,
+  imágenes deformadas ni páginas accidentales en blanco.
+- **Contenido:** los textos usan Noesis como marca y `@bynoesis` como usuario; el eje
+  es tiempo, orden y control. No reaparece el posicionamiento centrado únicamente en
+  cobros ni quedan marcadores por rellenar.
+- **Límite:** no se afirma que los perfiles estén creados ni que el usuario esté
+  disponible. El recorte final, botón, URL, doble factor y segundo administrador se
+  validan dentro de cada plataforma por los fundadores.
+
+## 2026-08-31 — corrección del posicionamiento de marca
+
+- **Fuente de verdad usada:** `Plan-maestro-Noesis.md` fija «Noesis lleva la oficina
+  mientras tú haces el trabajo» y `design/PRODUCT_PRINCIPLES.md` fija «Haz tu
+  trabajo; Noesis te ordena el negocio». Cobros, facturación y margen quedan como
+  pruebas concretas, no como territorio único de marca.
+- **Exportaciones:** portada LinkedIn 4200 × 700, Facebook 1640 × 856, Open Graph
+  1200 × 630 y tablero 1800 × 1200 regenerados con el nuevo eje de tiempo, menos
+  papeleo y control. La geometría y los colores del logo no cambian.
+- **Integridad:** 49/49 PNG se abren, coinciden con ancho, alto, alfa y SHA-256 del
+  manifiesto; 14/14 SVG parsean; dos ejecuciones producen el mismo manifiesto.
+- **Revisión visual:** tablero y portada de LinkedIn no presentan recortes,
+  deformación, solapes ni pérdida de legibilidad. El PDF de estrategia conserva 13
+  páginas limpias tras sustituir la tesis y la jerarquía de mensajes.
+- **Dependencias:** `sharp` 0.35.4 en el paquete aislado de construcción; `npm audit`
+  informa cero vulnerabilidades. No se añade ninguna dependencia al producto.
+- **Límite:** el lenguaje maestro está alineado; ejemplos, campañas y contenido
+  futuro deberán aportar evidencia real de tiempo, tareas, facturas, documentos,
+  margen o dinero sin confundir una prueba con toda la promesa.
+
+## 2026-08-31 — paquete de marca y exportaciones sociales
+
+- **Alcance:** se conserva la geometría de `noesis-mark.svg` y se formalizan símbolo,
+  wordmark, lockups primario/inverso/monocromo, versiones transparentes, composiciones
+  con fondo, avatares, portadas y fondos editables para contenido.
+- **Exportación:** el generador produjo 49 PNG y originales SVG con Fraunces
+  autoalojada. `manifest.json` registra dimensiones, presencia de alfa, finalidad y
+  SHA-256 de cada PNG.
+- **Pruebas técnicas:** todos los PNG se abrieron con Sharp y coincidieron con sus
+  dimensiones declaradas; todos los SVG se parsearon como XML; los archivos sociales
+  quedan por debajo de 3 MB y la regeneración completa terminó sin error.
+- **Revisión visual:** tablero general a 1800 × 1200, lámina de paleta a 1600 × 1000,
+  avatar a 1080 × 1080 y portada LinkedIn a 4200 × 700 revisados sin recortes, texto
+  perdido, fondo accidental ni deformación del símbolo. El avatar mantiene margen
+  suficiente para máscara circular.
+- **Límite:** no se ha subido nada a redes ni se ha observado el recorte real de cada
+  plataforma. Esa comprobación se hace al crear los perfiles; si una interfaz cambia,
+  se ajusta la composición social, no el logo maestro.
+
+## 2026-08-27 — catch-all documental e identidad segura de clientes
+
+- **Alcance:** migración 52, consumidor IMAP apagado por defecto, dirección opaca
+  de 128 bits por negocio, deduplicación durable sin contenido, scheduler acotado y
+  entrada por el mismo servicio que Web/WhatsApp. La pantalla Documentos solo muestra
+  la dirección cuando la integración está habilitada y completa.
+- **Aislamiento y privacidad:** mensajes sin ruta, con ruta desconocida o con dos
+  rutas fallan cerrados. No se persisten remitente, asunto, cuerpo ni correo original;
+  el export RGPD omite token y huella, y el borrado de negocio cubre las tablas nuevas.
+- **Clientes:** una factura emitida reutiliza una coincidencia exacta por NIF o nombre;
+  una identidad nueva queda pendiente. El titular puede corregir nombre/NIF antes de
+  confirmar el alta y el enlace al documento dentro de una transacción. La creación
+  explícita de facturas también prioriza NIF para no duplicar un cliente habitual.
+- **Fallo seguro:** validación, límites, malware, OCR y clasificación son compartidos.
+  Si ClamAV es obligatorio y no responde, el correo queda para reintento; no se marca
+  como leído ni se archiva sin escaneo.
+- **Regresiones:** 7/7 contratos nuevos cubren aislamiento entre dos empresas,
+  destinatario ambiguo, duplicado, caída transitoria del escáner, NIF conocido,
+  alta pendiente/corregible y reutilización explícita. Suite completa anterior más
+  esos contratos y repetición final completa **550/550** en 477,3 s; ciclo de
+  migración focalizado, Ruff, compilación, verdad documental y `git diff --check`
+  verdes.
+- **Límite externo:** todavía no se ha activado Hostinger. Falta demostrar en un
+  buzón real que el catch-all conserva `Delivered-To`/destinatario original, recorrer
+  PDF y foto y comprobar la experiencia móvil antes de dejarlo encendido.
+
+## 2026-08-26 — rentabilidad operativa por cuenta
+
+- **Alcance:** nueva lectura interna mensual por cuenta en el centro de mando y en
+  su ficha privada. Usa únicamente plan/estado, metadatos de consumo y entregas y
+  costes reales append-only; no abre clientes, mensajes, facturas ni documentos.
+- **Criterio financiero:** IA se distribuye por coste medido, Meta por plantillas,
+  correo por volumen, pagos por ingreso comprometido y costes compartidos por cuenta
+  no demo. Una categoría sin driver permanece sin asignar y la cobertura lo revela.
+- **Alertas:** entrega fallida, acciones avanzadas agotadas, consumo al 80 %, coste
+  superior al ingreso o margen inferior al 60 %. Demos quedan separadas.
+- **Corrección adicional:** una extracción OCR local ya no suma 0,014 € ficticios;
+  solo se reconoce coste de proveedor medido o factura real del libro CFO.
+- **Regresiones y validación:** reparto de 80 € entre dos cuentas reconcilia al 100 %,
+  alerta de margen/consumo y OCR local sin coste inventado; 4/4 contratos centrados,
+  suite completa **543/543**, Ruff y `git diff --check` verdes.
+- **Límite:** la exactitud económica depende de cargar costes reales y de validar
+  drivers/umbrales con el piloto. Falta medir latencia y correcciones por
+  tipo de acción antes de fijar SLA o automatizar decisiones comerciales.
+
+## 2026-08-26 — restauración PostgreSQL con facturas inmutables
+
+- **Hallazgo en producción:** `noesis-restore-check` falló de forma segura. La última
+  copia marcada como recuperable era del 27-jul y declaraba esquema 31/51; las copias
+  diarias recientes existían, pero su verificación terminaba en error porque el
+  trigger de líneas inmutables rechazaba reconstruir una factura ya emitida.
+- **Corrección:** la restauración deshabilita temporalmente `TRIGGER USER` por tabla
+  únicamente en el esquema/transacción descartables. Las FK y restricciones internas
+  siguen activas; tras insertar y alinear secuencias se reactivan los triggers antes
+  de comparar esquema, tablas y recuentos. Un error revierte la transacción y el
+  esquema se elimina siempre.
+- **Regresión real:** el humo PostgreSQL ahora crea una copia después de emitir una
+  factura con líneas, exige que quede marcada `ok` y vuelve a ejecutar el simulacro
+  independiente. Así el fallo que producción escondía no puede volver con CI verde.
+- **Validación:** 5/5 pruebas de backup SQLite/adaptadores, Ruff y compilación
+  verdes. El humo PostgreSQL de GitHub creó y restauró un conjunto con facturas
+  emitidas. Producción en `d55be0ae6673` generó después
+  `noesis-20260826-101725-080641.dump.gz`, lo marcó `ok` sin error y el simulacro
+  independiente terminó `ok` en 3,22 s. No se abrió ni descargó contenido.
+- **Límite restante:** el artefacto continúa en el volumen del mismo proveedor; falta
+  S3 privado y una restauración desde otra infraestructura para demostrar RPO/RTO
+  ante pérdida total de Railway.
+
+## 2026-08-26 — recuperación atómica del titular
+
+- **Alcance:** endurecimiento del flujo existente `/recuperar` y `/restablecer`, sin
+  cambiar la pantalla ni el correo que conoce el cliente.
+- **Garantías:** enlace nuevo invalida anteriores; token, contraseña y
+  `session_version` cambian en una transacción; el token es de un solo uso; la
+  respuesta de solicitud no enumera cuentas; los eventos no contienen identidad ni
+  secreto.
+- **Regresiones:** dos contratos HTTP cubren doble solicitud, enlace antiguo, uso
+  único, nueva contraseña, revocación de una sesión abierta y trazabilidad. Verdes.
+- **Validación local:** 2/2 contratos centrados y suite estándar completa **541/541**
+  verdes; controles estáticos, secretos y Bandit se ejecutan como barrera final.
+  Quedan CI y PostgreSQL después del `push`.
+
+## 2026-08-26 — reintento manual y privado de correo fallido
+
+- **Alcance:** una acción POST de administración devuelve a la outbox un correo que
+  ya agotó sus intentos; el scheduler sigue siendo el único emisor.
+- **Aislamiento y privacidad:** la actualización exige `id + business_id + failed`
+  bajo bloqueo; otro negocio, un segundo clic, un envío activo o uno ya enviado no
+  se pueden reencolar. La pantalla y el evento omiten destinatario, asunto y cuerpo.
+- **Regresión:** el contrato HTTP comprueba botón, aislamiento, no exposición,
+  reinicio de intentos, idempotencia práctica y un solo evento encadenado. Verde.
+- **Validación local:** regresión específica y suite estándar completa **539/539**
+  verdes. Ruff, compilación, fuente de verdad, secretos, Bandit y `diff --check` se
+  ejecutan como barrera final; CI/PostgreSQL quedan para después del `push`.
+
+## 2026-08-26 — recuperación segura de contraseña para gestorías
+
+- **Alcance:** rutas y pantallas propias de recuperación profesional, migración 51,
+  persistencia separada de usuarios de negocio y envío mediante la outbox durable.
+- **Contratos de seguridad:** correo existente e inexistente reciben la misma
+  respuesta; solo una cuenta activa encola correo; el token nunca vuelve al HTML ni
+  se guarda en claro; pedir uno nuevo invalida el anterior; consumo y cambio de clave
+  ocurren en una transacción; caducados y reutilizados fallan cerrados; todas las
+  sesiones anteriores se invalidan y el MFA permanece activo.
+- **Pruebas:** 3 regresiones específicas y las 4 de MFA profesional están verdes.
+  Suite estándar completa **538/538**, Ruff, compilación, fuente de verdad y
+  `git diff --check` verdes. Detector de secretos, Bandit y humo PostgreSQL quedan
+  pendientes antes de publicar.
+- **Límite externo:** falta comprobar llegada y entregabilidad con un buzón real y
+  recorrer el segundo factor con un autenticador físico después del despliegue.
+
+## 2026-08-26 — puerta externa automática de producción
+
+- **Alcance:** nueva comprobación sin credenciales para `/health`, `/ready`, release,
+  esquema, cabeceras de seguridad, sitemap, 14 páginas públicas, H1, canonical,
+  indexabilidad y marcadores legales. No abre sesiones, no usa datos de clientes y no
+  ejecuta acciones de negocio.
+- **Regresiones automatizadas:** cinco contratos cubren release completo, release
+  atrasado respecto de `main`, esquema a medias, marcador legal y pérdida de HSTS.
+  La suite completa queda en **535/535**;
+  Ruff, detector de secretos, fuente de verdad y `git diff --check` están verdes. El
+  workflow programado usa el esquema de `project-state.json`, por lo que una
+  migración futura no deja un número duplicado.
+- **Producción real:** `noesis-production-check --json` respondió verde contra
+  `https://bynoesis.com`: release `6d0e0feba7d6`, esquema 50, 14 páginas públicas y
+  las ocho familias de cabeceras/CSP exigidas.
+- **Límite:** un workflow cada seis horas detecta una regresión, pero no garantiza un
+  SLA ni una llamada de guardia; falta monitor externo 24/7 y procedimiento de
+  incidente antes de abrir de forma masiva.
+
+## 2026-08-26 — auditoría de la semana y reparación del lockfile
+
+- **Punto de partida:** `main` local estaba limpio en `5ae1541`; después de
+  `git fetch` se detectaron 20 commits ya publicados hasta `550262a` y se aplicó
+  un avance rápido, sin crear un merge ni duplicar commits.
+- **Incidencia encontrada:** los runs de CI de los commits nuevos fallaban en
+  `uv sync --locked --extra security --extra test`. El cambio que hizo portable
+  `analysis/build_modelo_economico.py` añadió el extra `analysis` con `openpyxl` a
+  `pyproject.toml`, pero no regeneró `uv.lock`.
+- **Corrección:** lock regenerado con `py -m uv lock`; añade `openpyxl 3.1.5` y su
+  dependencia `et-xmlfile 2.0.0`, además de reflejar el extra `analysis` del
+  proyecto. No se ha cambiado ninguna dependencia de runtime de Noesis.
+- **Segunda barrera revelada por CI:** una vez reparado el lock, `pip-audit` alcanzó
+  su paso y rechazó `pip 26.1.2` por `PYSEC-2026-3721`; la versión corregida indicada
+  por el auditor es 26.2. El extra `security` fija `pip>=26.2,<27` para que la propia
+  cadena de auditoría no vuelva a resolver una versión vulnerable.
+- **Tercera barrera revelada por CI:** al superar la auditoría, `detect-secrets`
+  alcanzó por primera vez una credencial ficticia de backup añadida a una prueba el
+  17 de agosto. Es un valor local y no funcional. Se marca únicamente esa línea con
+  `pragma: allowlist secret`, la mitigación indicada por el propio hook; no se amplía
+  la baseline, no se excluye el archivo y no se reduce la detección del repositorio.
+- **Validación local:** instalación estricta desde el lock correcta; Ruff y
+  `scripts/check_project_truth.py` verdes; suite estándar de `unittest` completa,
+  **530/530** en 809,6 s. Los logs de caídas de IA, Stripe, WhatsApp, correo,
+  Veri*Factu y backups son escenarios simulados esperados por las pruebas.
+- **Modelo económico:** el generador portable produce 17 hojas y coincide con el
+  libro publicado salvo `Calculadora!B6:B8`: el artefacto conserva los valores de
+  ejemplo 1/5/2 que introdujo el founder, mientras que una regeneración parte de
+  0/0/0. Es la diferencia intencionada ya registrada el 19 de agosto, no una fórmula
+  rota ni una regresión.
+- **Límit:** `project-state.json` conserva el recompte verificat de 531 perquè el CI
+  afegeix comprovacions de migració i PostgreSQL fora de la descoberta estàndard.
+  La validació externa definitiva és el run de GitHub Actions després del `push`.
+
+## 2026-08-20 — corregido el fallo de parametros multilinea de WhatsApp
+
+- **El fallo:** Meta rechaza un parametro de plantilla con salto de linea, tabulador o
+  mas de cuatro espacios seguidos. `web/scheduler.py` compone el resumen diario, el
+  semanal, el cierre, el aviso fiscal y el aviso de cobros como texto de varias lineas
+  y lo pasa como **un unico parametro**. Contra el numero real, esos cinco proactivos
+  habrian agotado sus seis reintentos en silencio. Ninguna prueba lo veia porque todas
+  simulan la respuesta de Meta.
+- **La correccion:** `sanitize_template_param` en `web/whatsapp.py`, aplicada al
+  encolar en `queue_template`. Los saltos se convierten en un separador visible
+  « · » en vez de desaparecer —un resumen sin marcas entre sus puntos se lee como un
+  parrafo confuso—, los tabuladores tambien, y las tiradas de mas de cuatro espacios
+  se acortan. Se limpia al encolar y no al enviar, para que lo guardado coincida con
+  lo que sale: asi un reintento no cambia el texto y el diagnostico no enseña otra cosa.
+- **Pruebas:** `test_template_params_never_carry_what_meta_refuses` comprueba que no
+  sobrevive ningun caracter prohibido, que el contenido sigue siendo legible y que
+  `_meta_payload` envia exactamente lo guardado.
+  `test_every_proactive_summary_survives_the_meta_rules` recorre los cinco avisos con
+  su texto real, uno por subtest: cada uno se compone en un sitio distinto y basta que
+  uno se olvide para que ese aviso no llegue nunca.
+- **Verificadas por reversion:** desactivando el saneado, **fallan seis** —la primera
+  prueba y los cinco subtests, uno por proactivo—.
+- **Alcance:** 64 pruebas de WhatsApp, plantillas y planificador en verde; `ruff`
+  limpio. Documentos `WhatsApp-Puesta-en-marcha` y `WhatsApp-Como-funciona`
+  actualizados: ya no anuncian un fallo abierto.
+
+## 2026-08-20 — primer correo real entregado desde produccion
+
+- **Que se probo:** con `BREVO_API_KEY` y `SMTP_FROM` ya cargadas en Railway, se
+  disparo una recuperacion de contraseña contra `https://bynoesis.com/recuperar`
+  para una direccion del propio founder.
+- **Resultado:** HTTP 303 a `?sent=1` —respuesta identica exista o no la cuenta, por
+  diseño— y **el correo llego** al buzon de `xavier@bynoesis.com` con el asunto
+  "Restablecer tu contraseña de Noesis" y el remitente «Noesis».
+- **Que queda demostrado:** la clave de Brevo es valida, la via HTTPS funciona desde
+  Railway —que bloquea SMTP—, `SMTP_FROM` produce el remitente correcto y la cola
+  entrega. El adaptador ya se habia verificado interceptando la peticion; ahora se
+  confirma extremo a extremo contra el proveedor real.
+- **Que NO queda demostrado, y por eso `smtp_real` sigue pendiente:** entregabilidad
+  en Gmail y Outlook sin caer en spam, que depende de la autenticacion del dominio en
+  el DNS; entrega de factura al cliente final con su PDF; invitacion de gestoria; y
+  reintento de la outbox tras un fallo temporal sin duplicar el mensaje.
+- **Google OAuth:** validado en el mismo periodo. El founder inicia sesion con Google
+  y alcanza `/admin`, que en produccion lo exige.
+
+## 2026-08-20 — cada identidad aterriza donde trabaja
+
+- **Por que:** el founder lo dijo: administracion "no hace falta que utilice
+  software... unicamente es para manejar y hacer de admin". Al entrar aterrizaba en
+  un panel de negocio con Trabajos, Clientes y Facturas, y tenia que encontrar la
+  puerta de su propio trabajo. De ahi venia la confusion con "Clientes".
+- **Que cambia:** `_account_destination` recibe el usuario; si es administracion
+  devuelve `/admin`. Un cliente sigue entrando a su negocio. La regla se aplica igual
+  por contrasena y por las dos vias de Google.
+- **No se encierra a nadie:** el cuadro de mando ofrece "Mi panel de negocio".
+- **Auditoria previa con la aplicacion levantada:** las cinco rutas de administracion
+  responden 200 y el log del servidor no registra ni un error. El unico 404 es
+  `/admin/backups/latest` sin copias, que es correcto.
+- **Prueba:** `test_each_identity_lands_where_it_works` cubre las dos direcciones —
+  administracion a `/admin` con vuelta disponible, y un cliente a su negocio sin
+  acabar nunca en el panel interno.
+- **Correo verificado sin contratar nada:** interceptando la llamada HTTPS se
+  comprueba que el adaptador construye la peticion correcta a
+  `https://api.brevo.com/v3/smtp/email`, con la cabecera de clave, el remitente
+  derivado de `SMTP_FROM` y el destinatario. **El codigo esta bien; falta la clave.**
+- **Alcance:** 98 pruebas de administracion, login, sesion, onboarding y Google en
+  verde; `ruff` limpio.
+
+## 2026-08-20 — panel de gestion en el cuadro de mando
+
+- **Por que:** el founder entro en `/admin` y no encontro nada. La unica via a las
+  acciones era un boton al final de una tabla de doce columnas, y desde su propio
+  panel no habia forma de llegar a `/admin`.
+- **Que se anade:** una seccion `#gestion` al principio de `/admin` con cada cuenta,
+  su estado real —distingue prueba vigente de vencida— y acciones en linea: activar
+  con plan, pasar a modo consulta y ampliar la prueba. Ademas, un enlace a
+  administracion en la barra del panel de negocio, visible solo para administracion.
+- **Comprobado con la aplicacion levantada**, no solo con pruebas: escenario de un
+  propietario y dos clientes, uno con la prueba vencida y otro activo. Se verifico el
+  enlace, el listado, y que activar y desactivar cambian el estado y devuelven a
+  `/admin#gestion`, mientras la misma accion desde la ficha devuelve a la ficha.
+- **Pruebas:** `test_admin_dashboard_manages_accounts_without_opening_each_file` y
+  `test_the_admin_entrance_is_not_offered_to_a_normal_account`, que cubre lo
+  contrario: una cuenta normal no ve el enlace y `/admin` la rechaza.
+- **Alcance:** 95 pruebas de administracion, soporte, seguridad, sesion y login en
+  verde; `ruff` limpio.
+
 ## 2026-08-20 — canal de Meta revisado y plantillas por oficio con pantalla
 
 ### Qué se probó y con qué resultado
@@ -33,6 +432,802 @@
   si hay que contestar 200 antes de procesar. Requiere número real.
 - **Los cinco proactivos al titular** siguen mandando el mensaje entero en un hueco.
   Está detectado, documentado y con cuerpo alternativo escrito, pero no corregido.
+## 2026-08-19 — control de acceso por persona (esquema 50)
+
+- **Que se anade:** `users.is_active`, `suspended_at` y `access_note`; suspension y
+  restauracion desde administracion; revocacion del acceso de una gestoria.
+- **Donde se aplica el bloqueo:** cuatro puntos. `set_user_access` sube
+  `session_version` (mata sesiones), `auth.current_user` rechaza al inactivo (segunda
+  barrera), y el login por contrasena y las dos vias de Google lo comprueban antes de
+  abrir sesion.
+- **Pruebas:** cuatro nuevas y **las cuatro verificadas por reversion**, cada una
+  contra la barrera que dice cubrir:
+  1. `test_suspended_user_loses_access_immediately_and_can_be_restored` — falla si se
+     quita la comprobacion del login.
+  2. `test_an_inactive_user_is_refused_even_if_the_session_still_matches` — desactiva
+     la cuenta **sin** subir `session_version`, para aislar la barrera de
+     `current_user`; falla si se quita. **Se escribio despues de descubrir que la
+     primera prueba pasaba igual con esa barrera desactivada**, es decir, que no
+     cubria lo que decia cubrir.
+  3. `test_access_control_refuses_to_leave_an_account_locked_out` — las tres
+     protecciones por separado; falla si se quitan.
+  4. `test_admin_manages_access_per_person_and_leaves_a_signed_trail` — recorrido HTTP
+     completo y eventos en la bitacora.
+- **Migracion 50:** probada arriba, abajo y repetida (idempotente). Comprobado ademas
+  que un usuario creado en el esquema 49 **conserva el acceso** tras migrar.
+- **Alcance:** 185 pruebas de administracion, seguridad, sesion, login, gestoria,
+  aislamiento y suscripcion en verde; `ruff` limpio.
+- **Pendiente:** suite completa cortada al 31% sin fallos por reinicio de sesion; el
+  CI en Linux es el juez.
+
+## 2026-08-19 — recorrido real de administracion: dos flujos y tres correcciones
+
+- **Como se probo:** servidor levantado en local con base aparte y un escenario real
+  —propietario y un cliente con la prueba vencida hace 12 dias— recorriendo los dos
+  flujos de verdad, no solo pruebas unitarias.
+- **Flujo 1, activar a un cliente a mano:** funciona extremo a extremo. Desde
+  `/admin/cuentas/<id>` la cuenta pasa a `active`/`pro`, y desde la sesion del cliente
+  desaparece el aviso de modo consulta, la cabecera dice "Suscripcion activa" y el
+  boton de crear se desbloquea.
+- **Flujo 2, un cliente avisa de un bug:** el diagnostico decia "email retrying 1" y
+  nada mas. El motivo estaba en la base (`last_error`) pero no se mostraba, que es
+  justo lo que separa un fallo de configuracion nuestro de una direccion mal escrita
+  del cliente.
+- **Correcciones:** (1) `admin_support_delivery_failures` expone canal, estado,
+  intentos, si se agotaron y el error del proveedor; (2) la etiqueta de fin de prueba
+  ya no dice "vencida" en una cuenta activa, dice "ya no aplica"; (3) los permisos
+  avisan de que la cuenta esta en modo consulta, porque una prueba vencida devuelve
+  entitlements de premium y los cuatro salian como "incluido" en una cuenta bloqueada.
+- **Prueba:** `test_support_shows_why_a_delivery_is_stuck_without_leaking_content`
+  recorre el camino real de la cola (reclamar y fallar) y comprueba el motivo, los
+  intentos y que **no** aparecen destinatario, asunto ni cuerpo. **Verificada por
+  reversion:** introduciendo una fuga del destinatario, la prueba falla.
+- **Alcance:** 109 pruebas de admin, soporte, aislamiento, seguridad y suscripcion en
+  verde; `ruff` limpio.
+
+## 2026-08-19 — el propietario gestiona permisos de cualquier cuenta
+
+- **Que se anade:** administracion activa con plan, pasa a modo consulta o amplia la
+  prueba de cualquier cuenta, y ve que funciones desbloquea el plan vigente.
+- **Que NO se anade:** acceso al panel del cliente. Se construyo y se retiro a peticion
+  del propietario. `auth_guard` queda identico al original.
+- **Prueba:** `test_owner_manages_account_permissions_without_entering_the_account`
+  recorre autonomo -> negocio -> desactivada comprobando el plan, los entitlements
+  efectivos (`frozenset()` en Autonomo, Proyectos incluido en Negocio),
+  `subscription_allows_access` en cada paso, que el panel ajeno sigue redirigiendo
+  fuera y que los tres cambios estan en la bitacora encadenada con el negocio correcto.
+- **Alcance:** 108 pruebas de admin, soporte, aislamiento, seguridad y suscripcion en
+  verde; `ruff` limpio.
+
+## 2026-08-19 — la pagina de suscripcion ensenaba una marca ISO y un estado falso
+
+- **Que fallaba:** con la prueba ya vencida, la cabecera de `/b/<id>/suscripcion`
+  mostraba `En prueba · hasta 2026-07-20T00:00:00`. Dos defectos a la vez: la marca
+  ISO interna en lugar de una fecha legible, y la etiqueta "En prueba" en una cuenta
+  que el propio panel ya trataba como modo consulta. El estado en base de datos sigue
+  siendo `trial` hasta que alguien contrata; la caducidad solo se deduce comparando
+  `trial_ends_at` con hoy, como hace `db.subscription_allows_access`.
+- **Correccion:** `pages.py` calcula `trial_expired` con la misma regla y lo pasa a la
+  plantilla; `suscripcion.html` aplica el filtro `date_es` —que ya existia en
+  `deps.py` con el comentario "evita que los portales ensenen marcas ISO internas" y
+  que esta pagina no usaba— y distingue "Prueba terminada" de "En prueba"; `app.css`
+  pinta en rojo el estado vencido.
+- **Prueba:** `test_subscription_page_shows_human_dates_and_a_finished_trial` cubre
+  prueba vigente y vencida, comprueba que no aparece `T00:00:00`, que la fecha sale en
+  `dd/mm/aaaa`, que el rotulo cambia y que coincide con `subscription_allows_access`.
+  Verificada por reversion: sin la correccion, falla.
+- **Alcance:** 97 pruebas de suscripcion, planes y prueba gratuita en verde; `ruff`
+  limpio. Solo afecta a la presentacion del estado: no cambia permisos, cobros ni la
+  maquina de estados de Stripe.
+
+## 2026-08-17 — dependencia OCR real de Railway
+
+- La comprobación por SSH demostró que Tesseract 5.3.0 y `cat/eng/osd/spa` sí estaban
+  instalados, pero el entorno Python no contenía `pytesseract` ni `pypdfium2` porque
+  Railpack construye desde `requirements.txt`, no desde las dependencias de
+  `pyproject.toml`.
+- Se sincronizan `pypdf`, `pypdfium2`, `pytesseract` y la versión mínima de Pillow;
+  una prueba de empaquetado impide retirar otra vez el runtime OCR de Railway.
+- La primera lectura externa confirmó Stripe completamente correcto. Brevo respondió
+  403; Google, Groq y S3 siguen sin configurar. Ninguna comprobación envió, cobró ni
+  transcribió contenido.
+- Prueba focalizada de empaquetado: **11/11**. Suite completa: **517/517** en
+  381,7 s; Ruff, verdad documental y `git diff --check` verdes. Esquema 49 sin
+  cambios.
+- Producción responde con `b3c184251374`. El comprobador remoto deja OCR en `OK`
+  para foto, PDF y `cat/spa/eng`; Stripe también queda `OK`. Brevo responde 403 y
+  Google, Groq y S3 todavía no están configurados.
+
+## 2026-08-17 — comprobador seguro de integraciones y voz multilingüe
+
+- Se añade un comprobador offline por defecto que nunca muestra secretos. Con
+  `--network` solo hace peticiones `GET`: cuenta y remitentes de Brevo, discovery
+  OpenID de Google, seis precios de Stripe y catálogo de modelos Groq. No envía
+  correos, no inicia OAuth, no transcribe y no crea cargos.
+- Stripe valida seis identificadores distintos, mismo entorno test/live, actividad,
+  EUR, importes 29/49/99 mensuales y 319/539/1089 anuales, recurrencia mensual/anual
+  e IVA `exclusive`. Brevo exige que `SMTP_FROM` corresponda a un remitente activo.
+- OCR exige foto, PDFium y los tres paquetes `cat/spa/eng`. Voz Groq y
+  `faster-whisper` dejan de forzar `es` y usan detección automática salvo
+  `NOESIS_WHISPER_LANGUAGE` explícito.
+- Pruebas focalizadas: **36/36**. Suite completa: **516/516** en 435,7 s.
+  Ruff, compilación y `git diff --check` verdes. No se usaron credenciales reales ni
+  se llamó a proveedores durante la suite; la aceptación externa sigue pendiente.
+- Tras el push, `https://bynoesis.com/health` responde con `808a96004b7b`; el nuevo
+  código está publicado sin necesidad de abrir el navegador integrado.
+
+## 2026-08-14 — auditoría visual local y contratos Stripe
+
+- La portada, el panel real de la demo, Documentos, el asistente, la cartera de
+  gestoría y el portal del cliente se recorrieron con capturas reales. La jerarquía
+  y la separación por tareas son coherentes con el parte de Noesis; Documentos
+  mantiene 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 elementos en Otros.
+- En móvil se reprodujo un mojibake en el centro de la barra inferior y una fila de
+  sugerencias parcialmente oculta. El centro muestra ahora `DEMO` y todas las
+  sugerencias se distribuyen en dos columnas legibles sin scroll horizontal oculto.
+- La respuesta del asistente escapaba HTML pero dejaba `_Por qué:_` sin formato;
+  ahora mantiene el escape y representa el énfasis como `<em>`. El DOM real confirma
+  cuatro razones accesibles como énfasis, sin guiones bajos visibles.
+- El portal mostraba fechas internas ISO. Presupuestos y facturas usan un filtro
+  común tolerante y presentan `dd/mm/aaaa`; la captura móvil y la regresión HTTP
+  verifican `11/09/2026`, `29/04/2026` y ausencia de `T00:00:00`.
+- Stripe: 7/7 contratos focalizados verdes para portal general, tarjeta,
+  cancelación, upgrade mensual/anual al precio exacto, reutilización de configuración
+  y bloqueo de un segundo Checkout. Falta el recorrido externo autenticado porque
+  esta sesión de Codex no dispone de la extensión de Chrome ni de su sesión Stripe.
+- Suite completa: **506 pruebas** recorridas en 489,5 s. Una limpieza de base SQLite
+  temporal quedó bloqueada por Windows al cerrar; la misma prueba pasó aislada
+  inmediatamente (1/1), por lo que no se atribuye al cambio. `git diff --check`,
+  Ruff, compilación y verdad documental quedaron verdes antes del push.
+- Producción responde con `aed36de59e30`, `/ready` confirma esquema 49 y el CI
+  completo, el humo PostgreSQL y el ciclo de migraciones están verdes. En el release
+  real se recorrieron a 375 px el asistente demo, el portal de cliente y la cartera
+  de gestoría; el portal no contiene fechas ISO y la barra muestra `DEMO` legible.
+
+## 2026-08-14 — fiabilidad de demo, portales y lectura de caja
+
+- La demo comercial responde ahora preguntas locales de agenda, cobros, clientes,
+  proyectos y resumen sin persistir conversación, consumir IA ni abrir herramientas
+  de escritura. Una orden de factura o agenda explica el límite y no modifica datos;
+  el resto de POST de demostración continúa bloqueado en el servidor.
+- Los formularios de presupuestos del portal de cliente y los de revisión, perfil
+  fiscal, solicitudes y paquetes de gestoría vuelven mediante 303 a la misma vista
+  con un aviso de modo consulta. Los controles aparecen desactivados de antemano y
+  ya no exponen un JSON técnico a una persona.
+- `month_billing` separa `collected` (caja recibida durante el mes) de
+  `invoiced_collected` (cobrado sobre facturas emitidas ese mes). La regresión crea
+  una factura anterior cobrada ahora y demuestra 161 € de caja, 121 € emitidos y
+  solo 40 € cobrados de la cohorte actual, sin el falso 133%.
+- Los ejemplos del asistente cambian según limpieza, electricidad, jardinería,
+  construcción/fontanería o servicio neutro y mantienen las consultas comunes.
+- Pruebas focalizadas: 3/3 verdes. Suite completa: **504/504** en 438,0 s. Ruff,
+  `git diff --check` y el render HTTP de las tres experiencias comerciales verdes.
+  Permanece el aviso conocido Starlette/httpx del cliente de pruebas; no afecta al
+  runtime. Un job del scheduler llegó a una base temporal ya cerrada durante la
+  suite, sin fallo de producto ni de prueba.
+- CI remoto completo y humo PostgreSQL verdes. Producción responde con
+  `ea1f5f3e628f`, `/ready` verde y esquema 49. Queda el recorrido visual autenticado
+  de las tres experiencias; no se usaron credenciales ni servicios reales en este
+  bloque.
+
+## 2026-08-14 — portal Stripe gestionado y todos los botones verificables
+
+- Se reproducía el fallo funcional: los botones dependían de que el Customer Portal
+  estuviera configurado manualmente en Stripe y un rechazo volvía a la misma página
+  fuera del área visible, por lo que parecía que el clic no hacía nada.
+- El adaptador crea o reutiliza solo una configuración versionada de Noesis con
+  actualización de tarjeta, cancelación al final del período, historial y cambios
+  entre los seis `price_id`. Cada sesión conserva esa configuración también en el
+  fallback general; una configuración externa no se reutiliza por error.
+- La regresión HTTP envía los seis formularios visibles de una cuenta Autonomo y
+  comprueba los flujos `manage`, `payment_method`, `cancel`, mejora mensual y anual.
+  La ruta de error vuelve a `#gestion-suscripcion`, presenta el mensaje enfocable y
+  registra `subscription_portal_failed`.
+- Pruebas focalizadas: **7/7**. Suite completa: **499/499** en 464,4 s dentro del
+  entorno 3.12 del proyecto. Ruff sobre `src`/`tests`, `compileall`, comprobación
+  JavaScript y `git diff --check` verdes.
+- Validación externa pendiente: abrir los flujos con la subscripción sandbox.
+  Stripe exige además que los precios intercambiables tengan tratamiento
+  fiscal compatible y no `unspecified`; es configuración externa, no se inventa.
+- Producción: `/ready` confirmó `52c61f9e6277` y esquema 49. La carga del JavaScript
+  publicado se comprobó por HTTP; queda la interacción autenticada con Stripe.
+
+## 2026-08-14 — gestión completa de una suscripción Stripe activa
+
+- Adaptador probado con payloads separados de Customer Portal para actualizar el
+  método de pago, cancelar una suscripción concreta y confirmar un cambio al
+  `price_id` anual exacto sobre su único `subscription_item`.
+- La pantalla activa ofrece gestión, tarjeta, mejoras y cancelación sin ningún
+  segundo Checkout; un fallo externo se explica y garantiza que no hubo cambio ni
+  cargo.
+- Pruebas focalizadas: 4/4 verdes; suite completa **495/495** en 352,1 s;
+  `compileall`, verdad documental y `git diff --check` verdes. Aviso conocido de
+  deprecación Starlette/httpx, sin fallo funcional.
+- Validación real pendiente: portal sandbox, sus seis precios, prorrateo, tarjeta,
+  cancelación y webhooks de retorno.
+- Producción: `/ready` confirmó `31d0c95abcf0`, esquema 49. Esto valida despliegue e
+  identidad del código, no sustituye el recorrido autenticado del portal sandbox.
+
+## 2026-08-13 — plan actual y bloqueo de recompra Stripe
+
+- Una cuenta activa de Autónomo muestra resumen de plan actual, `Gestionar plan` y
+  mejoras a Negocio/Premium; no renderiza ningún formulario ni texto de activación
+  de Checkout. Una cuenta Premium muestra dos niveles incluidos y ninguna mejora.
+- La regresión envía además un POST directo de upgrade anual a la antigua ruta de
+  Checkout. El servidor abre el portal de la suscripción existente y demuestra que
+  `checkout_url` no se invoca.
+- Pruebas focalizadas: **3/3**. Suite completa: **493/493** en 351,9 s. Ruff,
+  `py_compile` y `git diff --check` verdes. Los avisos de proveedores corresponden
+  a pruebas deliberadas de fallo cerrado.
+- Producción responde con el release `3c7bd034828a`, `/ready` verde y esquema 49.
+  Pendiente externo: comprobar en Stripe sandbox que el portal permite cambiar
+  entre los seis precios mensual/anual configurados, además de tarjeta y cancelación.
+
+## 2026-08-13 — activación Stripe resistente a concurrencia y recuperable
+
+- Evidencia sandbox real: Checkout de Autónomo mensual, suscripción `active`,
+  metadatos `business_id=1`, `plan=autonomo`, `billing_period=monthly` y entregas
+  `checkout.session.completed`, `invoice.paid` y
+  `customer.subscription.created` aceptadas por Noesis con HTTP 200.
+- La regresión reproduce que un Checkout posterior podía degradar `active` a
+  `pending`; ahora la decisión se toma bajo el bloqueo de la misma fila y conserva
+  `active`/`trialing`.
+- La vuelta del Checkout consulta Stripe con la clave del servidor y solo repara
+  si coinciden negocio, cliente, suscripción, estado activo y un único precio del
+  catálogo. También se verifica que el plan comprado sea el marcado en pantalla.
+- Pruebas focalizadas Stripe: **4/4**. Suite completa: **492/492** en 390,9 s.
+  `py_compile` y Ruff focalizado verdes. Los mensajes de proveedores caídos de la
+  suite son escenarios deliberados de fallo cerrado y reintento.
+- Producción responde con el release `9f3dc48d9d4a`, `/ready` verde y esquema 49.
+  Pendiente humano: recargar la URL de retorno del pago ya hecho y confirmar que el
+  panel abandona el modo consulta sin repetir el cobro.
+
+## 2026-08-13 — regresión de robots entre gestoría privada y página pública
+
+- La prueba reproduce la semántica de prefijo de `robots.txt` y exige que ninguna
+  regla `Disallow` atrape `/gestorias`.
+- La zona profesional conserva dos límites explícitos: `/gestoria$` para la raíz y
+  `/gestoria/` para el árbol privado. `/gestoria/login$` se permite rastrear para
+  que el buscador reciba su cabecera HTTP `noindex, nofollow`.
+- `tests.test_seo`: **11/11** verde. La regresión comprueba reglas exactas y simula
+  coincidencia de prefijo contra `/gestorias`; Ruff focalizado, verdad documental,
+  JSON de estado y `git diff --check` también están verdes.
+- Producción responde con release `18104f0b6806`, esquema 49 y `/gestorias` en 200
+  para Googlebot, sin `X-Robots-Tag`, con canonical e `index, follow`. El robots real
+  contiene `/gestoria$` y `/gestoria/`, no el prefijo ambiguo. CI 31681161643 dejó
+  verdes secretos, Bandit, Ruff, verdad documental, 487 pruebas, ciclo completo de
+  migraciones y humo PostgreSQL. Falta que Search Console renueve su caché y acepte
+  la solicitud externa.
+
+## 2026-08-13 — SEO técnico y páginas por audiencia
+
+- Las 14 URLs públicas del sitemap tienen título y descripción únicos, canonical,
+  Open Graph/Twitter, una orden explícita de indexación y exactamente un H1.
+  `/autonomos` y `/gestorias` explican dos recorridos reales sin inventar clientes,
+  valoraciones, declaraciones fiscales automáticas ni comisiones.
+- `Organization` y `WebSite` se declaran una sola vez en la portada mediante JSON-LD
+  válido. El sitemap deja de publicar una fecha diaria falsa y campos de prioridad
+  ignorados por Google. El SVG de marca incorpora tamaño intrínseco.
+- Login, acceso, onboarding, paneles, portales y respuestas inexistentes envían
+  `X-Robots-Tag: noindex, nofollow`; `robots.txt` mantiene fuera las zonas de datos
+  y permite rastrear los accesos públicos para que el buscador lea el `noindex`.
+- `tests.test_seo`: **11/11** verde. Suite completa: **487/487** verde en 439 s;
+  Ruff sobre `src`/`tests`, verdad documental y `git diff --check` también verdes.
+  Los avisos de caídas de proveedores corresponden a pruebas deliberadas de
+  degradación, reintento y fallo cerrado.
+- Validación externa: propiedad de dominio verificada, sitemap enviado y usuarios
+  añadidos en Search Console por el founder. Falta esperar el recrawl y revisar
+  indexación, consultas, impresiones, clics y Core Web Vitals con datos reales.
+- Producción responde con release `e5d1ac57742f`, esquema 49 y 200 en `/health`,
+  `/ready`, las 14 URLs y el sitemap; cada página tiene un H1 y canonical. Login,
+  acceso, gestoría y 404 devuelven el `noindex` esperado. El humo PostgreSQL del CI
+  quedó verde. El guardián general se detuvo antes de Ruff/tests porque el baseline
+  apuntaba a la línea 51 de `project-state.json`, ahora 52; los hashes y el conjunto
+  de coincidencias permanecen idénticos y se versiona esa actualización mecánica.
+
+## 2026-08-12 — alta recuperable y revisión operativa
+
+- El esquema 49 conserva inicio, pasos completados, plan, periodicidad, intención y
+  decisión de WhatsApp sin forzar a cuentas históricas a repetir el recorrido.
+- Las pruebas HTTP cubren alta anual de Negocio, perfil, configuración fiscal,
+  cobros, gestoría, logotipo y distintivo saneados, resumen final, comprobación de
+  WhatsApp todavía pendiente, posposición explícita y continuación al pago. También
+  se verifica que no se puede terminar antes de los datos obligatorios y que Google
+  vuelve al paso exacto.
+- Suite completa: **485/485** verde, repartida en 339 pruebas del núcleo y 146 de
+  plataforma/seguridad/SEO/documentos. `tests.test_seo` mantiene 9/9 en verde y la
+  inspección viva de las 12 URLs del sitemap confirmó 200, canonical, descripción,
+  un H1 e imágenes con atributo `alt`.
+- CI [31616995507](https://github.com/noesisstudio/noesis/actions/runs/31616995507)
+  completamente verde: dependencias, secretos, Bandit, Ruff, verdad documental,
+  485 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve release
+  `8730826a79ab`, esquema 49 y HTTP 200 en `/health` y `/ready`.
+- Pendiente externo: recorrido visual real, webhook de Meta y retorno de Stripe.
+
+## 2026-08-12 — identidad documental y pie gráfico versionado
+
+- 3 pruebas nuevas cubren carga HTTP real de logo y distintivo, saneado a PNG,
+  tamaño/alineación/alcance, render de Ajustes, PDF de muestra y rechazo de bytes
+  falsos; también congelación del perfil al emitir y aislamiento de referencias
+  entre negocios en la base de datos.
+- 485 pruebas completas están verdes después de detectar y corregir que el índice
+  único compuesto de `document_profiles` debía materializarse antes de la FK en
+  PostgreSQL. También están verdes Ruff, Bandit, detección de secretos,
+  `git diff --check` y el ciclo local 0 → 48 → 0 → 48.
+- CI completo y humo PostgreSQL verdes. Producción confirmó release `c30321c4d8e9`
+  y esquema 48 en `/health` y `/ready`; queda pendiente la revisión visual con el
+  distintivo real del founder en escritorio y móvil.
+
+## 2026-08-11 — configuración segura desde soporte
+
+- 2 pruebas nuevas cubren autorización real por el titular, render del formulario,
+  actualización HTTP y auditoría; también administrador falso, alcance documental
+  insuficiente, permiso caducado y ausencia total de escritura ante cada rechazo.
+- La lista blanca solo incluye perfil comercial, idioma/nivel y apariencia de
+  documentos futuros. Las pruebas fijan que correo titular, NIF, dirección, IVA,
+  IRPF, IBAN, plan y estado de suscripción permanecen idénticos. Una factura emitida
+  antes del cambio conserva el nombre original del emisor.
+- Los textos libres no aparecen en claro en la bitácora: perfil y apariencia se
+  registran como estados seudonimizados, junto a autorización y campos modificados.
+- 22 pruebas del centro administrativo y 4 focalizadas de ambas correcciones están
+  verdes. Suite completa **473/473** verde en 384 segundos; Ruff y verdad documental
+  también están verdes.
+- El CI [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
+  quedó completamente verde: dependencias, secretos, Bandit, Ruff, verdad del
+  proyecto, 473 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve
+  release `6a879b2b1153`, esquema 47 y HTTP 200 en `/health` y `/ready`.
+
+## 2026-08-11 — corrección documental acotada desde soporte
+
+- 2 pruebas nuevas cubren el recorrido autenticado completo y el fallo cerrado:
+  editor invisible sin alcance, autorización creada por el titular, asociación
+  proyecto→cliente, actualización por el administrador, redirección, aislamiento
+  frente a IDs de otro negocio y rechazo de un documento ligado a factura emitida.
+- La bitácora conserva administrador, negocio, autorización, campos cambiados y
+  valores anteriores/posteriores. La nota solo deja una huella SHA-256 truncada;
+  su texto no aparece en eventos de seguridad.
+- 25 pruebas focalizadas del centro de administración y medición pública están
+  verdes. Suite completa **471/471** verde en 340 segundos; la revisión visual debe
+  hacerse después con una autorización temporal real.
+- El CI [31475120052](https://github.com/noesisstudio/noesis/actions/runs/31475120052)
+  quedó completamente verde: dependencias, secretos, Bandit, Ruff, verdad del
+  proyecto, 471 pruebas, ciclo de migraciones y humo PostgreSQL. Producción devuelve
+  release `bf2df0d7afe5`, esquema 47 y HTTP 200 en `/health` y `/ready`.
+
+## 2026-08-11 — clasificación demo y archivo documental responsive
+
+- 23 pruebas focalizadas verdes con `unittest`: sembrado repetido sin duplicados,
+  seis tipos documentales esperados, OCR de PDF escaneado, clasificación local
+  conservadora, facturas recibidas, deduplicación por negocio, búsqueda aislada,
+  paquete de gestoría y las tres experiencias demo navegables.
+- La prueba de escaparate verifica explícitamente las carpetas del trimestre:
+  6 documentos, 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 en Otros. El HTML
+  autenticado contiene la entrada horizontal, navegación por carpetas y cámara.
+- Suite completa **469/469** verde en 344 s. Ruff, verdad documental y
+  `git diff --check` están verdes. Falta recorrido visual manual en
+  escritorio/móvil; no se abrió navegador gráfico porque el founder ha observado
+  cierres de Codex al utilizarlo.
+- El CI 31469598848 pasó dependencias, secretos, Bandit, Ruff, verdad documental y
+  humo PostgreSQL. La suite seguía progresando sin fallo cuando GitHub canceló el
+  job exactamente por `timeout-minutes: 15`; el límite del job principal pasa a 25
+  minutos para dejar terminar suite y ciclo de migraciones conservando un corte.
+- El segundo CI 31470757084 volvió a dejar verde PostgreSQL y dependencias, pero el
+  guardián de secretos detectó que las tres referencias permitidas dentro de
+  `ci.yml` se habían desplazado dos líneas al documentar el nuevo límite. Se actualiza
+  solo su número de línea; tipos y hashes permanecen idénticos.
+- El CI final 31470941717 quedó completamente verde: secretos, dependencias, Bandit,
+  Ruff, verdad documental, 469 pruebas, ciclo completo de migraciones y humo
+  PostgreSQL. Producción devuelve release `5bb715a68217`, esquema 47 y HTTP 200 en
+  `/health`, `/ready` y portada.
+- No se cambió la regla segura de producción: una factura sin emisor inequívoco no
+  se contabiliza ni se fuerza a ingreso/gasto. OCR/IA propone y el titular confirma.
+
+## 2026-08-10 — MFA de gestoría sin semilla reversible
+
+- El primer CI de `main`
+  [31410800904](https://github.com/noesisstudio/noesis/actions/runs/31410800904)
+  validó el ciclo de migraciones y el humo PostgreSQL con esquema 47. La suite se
+  detuvo antes de ejecutarse porque `detect-secrets` clasificó como posibles
+  secretos dos contraseñas literales exclusivas del test MFA. Se añadieron
+  permisos inline exactamente sobre esos fixtures: no se cambió `.secrets.baseline`,
+  no se excluyó el archivo y no se debilitó el control. El hook sobre todos los
+  archivos versionados, Ruff, `git diff --check` y las 4 pruebas MFA pasan después
+  de la corrección.
+- La repetición completa
+  [31411139501](https://github.com/noesisstudio/noesis/actions/runs/31411139501)
+  quedó verde: 469 pruebas, auditoría de dependencias, secretos, patrones de
+  seguridad, estática, verdad del proyecto, ciclo de migraciones y humo PostgreSQL.
+  Producción respondió `/health` con release `40d564555c07`, `/ready` con esquema
+  47 y HTTP 200 en `/`, `/acceso` y `/gestoria/login`.
+- Suite completa: **469/469** en 335 segundos. Después de retirar los códigos en
+  claro de la cookie de sesión, las cuatro pruebas focalizadas volvieron a pasar;
+  Ruff y `git diff --check` están verdes. Permanece el aviso conocido de
+  deprecación Starlette/httpx.
+- Esquema 47 probado desde 46: las cuentas profesionales existentes conservan
+  identidad y accesos, empiezan con MFA desactivado y reciben contador anti-replay,
+  hashes de recuperación y fecha de alta sin datos ficticios.
+- La contraseña correcta no abre cartera cuando MFA está activo. El código TOTP
+  vigente abre una vez; repetirlo falla. Un código de recuperación abre una vez y se
+  elimina atómicamente. El reto expira a los cinco minutos y comparte límites por IP
+  y cuenta seudonimizados.
+- Activar MFA exige la contraseña actual y un TOTP generado desde el QR/clave. Una
+  sesión robada sin contraseña no puede bloquear al titular. Regenerar o desactivar
+  también exige doble verificación; los ocho códigos aleatorios se almacenan solo
+  como SHA-256 y su texto aparece únicamente en la respuesta inmediata.
+- La primera suite completa tras subir el esquema encontró una prueba histórica que
+  usaba “última versión” para verificar 45→46. Se corrigió para apuntar a 46 y evitar
+  que futuras migraciones rompan evidencias históricas; la repetición final quedó
+  469/469. CI, PostgreSQL y despliegue ya están verificados; faltan prueba visual,
+  autenticador/cuenta profesional reales y validación externa.
+
+## 2026-08-10 — suscripciones ordenadas y permisos comerciales efectivos
+
+- CI de `main` [31407830116](https://github.com/noesisstudio/noesis/actions/runs/31407830116)
+  verde: dependencias, secretos, seguridad, estática, verdad del proyecto, suite,
+  ciclo completo de migraciones y humo PostgreSQL. Producción respondió `/health`
+  con release `c63bf0e13d0d`, `/ready` con esquema 46 y la portada con HTTP 200.
+- Suite completa final: **465/465** en 338 segundos. Ruff, `git diff --check` y las
+  pruebas focalizadas de Stripe, migración y permisos están verdes. Las trazas de
+  IA, Meta, correo, backup, AEAT y el primer intento del webhook Stripe son fallos
+  adversos simulados y esperados por sus pruebas; permanece el aviso conocido de
+  deprecación Starlette/httpx.
+- Esquema 46 probado desde una base en 45: añade orden de evento, prioridad e id
+  Stripe sin cambiar plan ni acceso existentes. La migración limpia y el salto
+  histórico terminan en 46.
+- Checkout pagado no activa una cuenta cancelada: queda pendiente y conserva
+  customer/subscription. Solo `invoice.paid` o una suscripción `active`/`trialing`
+  habilitan escritura. `incomplete`, `paused` y un estado desconocido no se
+  convierten en prueba gratuita. Un Checkout Premium iniciado por una cuenta
+  Autónoma activa tampoco cambia el plan ni concede módulos antes de confirmarse.
+  Un cambio desde el portal usa el `price_id` actual incluso si la metadata conserva
+  el plan anterior; un precio ajeno al catálogo falla cerrado.
+- Se reprodujeron entregas fuera de orden: un fallo de pago antiguo y un Checkout
+  todavía más antiguo no deshacen una factura pagada posterior. Una factura sin
+  suscripción y una factura de una suscripción reemplazada tampoco cambian el
+  estado vigente.
+- Una cuenta activa Autónoma conserva Clientes y el núcleo, pero recibe 403
+  `plan_upgrade_required` para Proyectos, Equipo y Análisis avanzado; la pantalla
+  directa redirige a la ampliación y el cerebro rechaza crear el proyecto. Negocio
+  y la prueba mantienen las mismas rutas operativas. La navegación no anuncia
+  módulos no contratados.
+- El control también quedó aplicado a WhatsApp y portal de trabajadores, cartera y
+  paquetes de gestoría, herramientas internas y scheduler. No se usaron
+  credenciales Stripe ni se hizo prueba visual con navegador: Stripe test,
+  Stripe test con credenciales y QA visual siguen siendo validaciones externas
+  pendientes; PostgreSQL, despliegue y esquema 46 ya quedaron verificados.
+- Una ejecución previa completó las comprobaciones funcionales pero Windows retuvo
+  un SQLite temporal al limpiar una prueba de WhatsApp. La prueba aislada pasó y la
+  repetición completa terminó 465/465; queda registrado como incidencia ambiental
+  intermitente, no como resultado verde omitido.
+
+## 2026-08-10 — WhatsApp multicanal y equipo sin ruido
+
+- CI de `main` [31377826100](https://github.com/noesisstudio/noesis/actions/runs/31377826100)
+  verde: dependencias, secretos, seguridad, estática, verdad del proyecto, suite,
+  ciclo de migraciones y humo PostgreSQL. Producción respondió `/health` y `/ready`
+  con release `a803da4343e6`, estado `ready` y esquema 45.
+- Esquema 45 creado desde cero en SQLite. La primera suite completa detectó que
+  PostgreSQL exige índices únicos explícitos antes de tres claves foráneas compuestas
+  nuevas; se añadieron antes de las tablas dependientes y la guardia de orden DDL
+  quedó verde.
+- Suite completa final: **432/432** en 326 segundos. Ruff, `compileall`,
+  `git diff --check`, migración 45 y 41 pruebas focalizadas de WhatsApp/equipo/admin
+  verdes. Las trazas de Meta, Stripe, correo, IA, backup y AEAT son fallos adversos
+  simulados ya cubiertos por la suite; queda el aviso conocido Starlette/httpx y un
+  job del scheduler que alcanza una base temporal ya eliminada después de terminar
+  las pruebas, sin fallo de test.
+- Las pruebas nuevas demuestran que un mismo remitente queda separado por número
+  receptor y negocio; un destinatario o WABA desconocido no crea datos ni recibe
+  respuesta; la outbox usa el `phone_number_id` de la conexión correcta; y un coste
+  de trabajador no crea material hasta aceptación del titular y solo se aplica una
+  vez aunque se repita la decisión.
+- El canal central rechaza vincular un teléfono como titular y trabajador, o como
+  dos trabajadores distintos. Si encuentra una ambigüedad histórica, no elige un
+  negocio por aproximación: responde con el bloqueo de seguridad y no ejecuta nada.
+- Verificación funcional sin credenciales: permisos de rol, privacidad de márgenes,
+  bandeja de aportaciones, resumen al titular, contactos/conversaciones por negocio,
+  opt-out, documentos de cliente sin efecto contable, respuesta desde panel y
+  bloqueo de texto libre fuera de 24 horas.
+- Humo HTTP autenticado con base temporal: login 303; Ajustes, Clientes y Equipo
+  200; API del canal comercial y aportaciones 200. Las tres plantillas nuevas se
+  renderizan sin excepción. No sustituye la revisión visual de escritorio/móvil.
+- El centro administrador registra WABA y `phone_number_id` como pendientes, los
+  activa de forma explícita y audita actor y negocio. La prueba HTTP confirma que
+  un campo de token inesperado se ignora, el secreto no se almacena ni se renderiza
+  y la recepción solo puede habilitarse para una conexión activa.
+- No se validó Meta real, Embedded Signup, plantillas aprobadas, entrega de audio o
+  medios ni dos WABA reales. Tampoco se realizó QA visual con navegador por el cierre
+  recurrente indicado por el founder. Esos extremos permanecen en `Tareas-vivas.md`.
+
+## 2026-08-08 — soporte consentido, CFO observado y términos operativos
+
+- CI de `main` [31269731863](https://github.com/noesisstudio/noesis/actions/runs/31269731863)
+  verde: suite/migraciones, dependencias, secretos, análisis estático y humo
+  PostgreSQL. Producción respondió `/health` con release `f472d08d85cb` y `/ready`
+  con esquema 44; publicación técnica verificada sin navegador.
+- Migraciones 43-44 verificadas en subida y bajada: autorización de soporte y libro
+  de costes. Solo el correo titular abre/revoca una ventana por motivo, alcance y
+  duración; un usuario de otra empresa o un usuario secundario de la misma empresa
+  no puede concederla y administración solo la visualiza. El libro rechaza cambios
+  y borrados en la propia base de datos.
+- Eventos `support.access_granted`, `support.access_revoked` y
+  `admin.platform_cost_recorded` identifican actor y ámbito sin guardar contenido
+  del cliente. No hay suplantación ni mutación genérica.
+- CFO probado con coste real, previsión y abono: solo real+ajuste alimentan 18 € de
+  coste observado, 81 € de contribución y 81,8% sobre 99 € de MRR; la previsión de
+  100 € permanece separada.
+- Términos ampliados y versión legal 2026-08-08. Es cobertura funcional y de copy,
+  no validación jurídica; identidad y revisión profesional siguen bloqueando alta.
+- Suite completa: **426/426** en 256 segundos. Ruff y migraciones focalizadas verdes.
+  Las trazas de proveedores y backups son fallos adversos simulados.
+
+## 2026-08-08 — perfil documental, presupuesto trazable y OCR trilingüe
+
+- Migración 42 compatible con SQLite/Postgres: pie documental, condiciones y
+  validez predeterminada por negocio; notas y evidencia de decisión en presupuestos.
+  Subir/bajar el esquema y el histórico de cobros parciales pasan sus pruebas.
+- PDF de presupuesto verificado desde negocio y portal. El token de un cliente no
+  puede descargar el presupuesto de otro; aceptar registra `client_portal` y una
+  huella SHA-256, y crea una única factura borrador conservando las notas.
+- OCR privado con detección `cat/spa/eng`, orientación, escala y contraste; importes
+  probados con «Import total», «Importe total» y «Amount due». Railpack solicita el
+  paquete catalán y el estado del servidor expone si están los tres idiomas.
+- Suite completa: **424/424** en 260 segundos. Ruff y pruebas focalizadas verdes.
+  Las trazas de Stripe, Meta, correo, backup e IA son caídas adversas simuladas.
+- Pendiente externo: desplegar esquema 42 y validar precisión/latencia con un corpus
+  real representativo; una suite sintética no mide calidad OCR de fotos deficientes.
+
+## 2026-08-08 — diagnóstico técnico privado por cuenta
+
+- El administrador abre una cuenta desde el centro de mando y recibe únicamente
+  activación, estados de integración, recuentos y distribución de colas/documentos/
+  facturas. La consulta no recupera nombres de clientes, importes, conceptos,
+  mensajes, archivos ni credenciales.
+- La ruta reutiliza la autenticación reforzada del admin —Google OAuth obligatorio
+  en producción— y cada apertura registra actor, negocio afectado, `request_id` y
+  modo `read_only` en la bitácora append-only encadenada.
+- Prueba específica verde: administrador autorizado obtiene 200, el contenido
+  sensible sembrado no aparece, un usuario ordinario recibe redirección y el evento
+  auditado identifica actor y negocio. Suite completa: **423/423**; Ruff,
+  `compileall`, verdad del proyecto y diff verdes.
+- La primera pasada completa encontró únicamente un `WinError 32` de Windows al
+  limpiar la base temporal de una prueba OCR después de ejecutarla. La prueba
+  afectada pasó al repetirla aislada y la segunda suite completa terminó 423/423;
+  no hubo fallo funcional ni se modificó el producto para ocultar la incidencia.
+- Falta recorrido visual autenticado tras desplegar. No se habilita mutación ni
+  suplantación: requiere diseñar primero consentimiento temporal y permisos finos.
+- CI remoto verde: 423 pruebas, migraciones, auditoría de dependencias y humo
+  PostgreSQL. Producción respondió `/health` y `/ready` con release `8e9f9c412880`
+  y esquema 41; queda pendiente únicamente el recorrido visual autenticado.
+
+## 2026-08-08 — archivo documental común para titular y gestoría
+
+- El titular navega por año, trimestre, ingresos, gastos, tickets, pendientes y
+  otros con los mismos cálculos de fecha efectiva que el expediente profesional.
+  Búsqueda y estado se aplican sobre el período seleccionado; no crean carpetas ni
+  copias físicas divergentes.
+- PDF e imágenes ofrecen una primera página acotada en un endpoint autenticado con
+  `no-store`; abrir el original sigue disponible. Una sesión de otro negocio recibe
+  403 incluso con identificadores válidos.
+- 37/37 pruebas focalizadas de gestoría, documentos, PDF/OCR, backups y seguridad;
+  suite completa **422/422** en 246 segundos. `ruff`, `compileall` y el aislamiento
+  del endpoint están verdes.
+- El primer commit rectificativo confirmó el humo PostgreSQL, pero Ruff detectó un
+  `return invoice` residual. El commit posterior lo eliminó y el CI completo —suite,
+  migraciones y humo PostgreSQL— terminó verde.
+- Falta recorrido visual real de escritorio/móvil; no se usa navegador automatizado
+  por el cierre recurrente de la aplicación indicado por el founder.
+
+## 2026-08-08 — rectificación segura y revisable de facturas emitidas
+
+- La pantalla muestra la factura original, importe, causa, dirección del ajuste,
+  diferencia de base, impuestos, serie y efecto total antes de crear nada. Si el
+  período ya cambió, advierte que debe confirmarse el criterio con la gestoría.
+- La operación crea un borrador por diferencias (`I`), nunca edita el original y
+  exige una confirmación explícita. El borrador usa un editor propio y se puede
+  revisar; la pantalla genérica F1/F2 ya no intenta abrirlo.
+- La base de datos vuelve a validar original, estado, anulación y serie dentro de
+  la transacción; impide dos borradores pendientes para el mismo original. R5 solo
+  rectifica F2 y una F2 solo admite R5. La modalidad por sustitución se rechaza.
+- Pruebas focalizadas: 5/5 verdes sobre series, API, revisión, PDF y Veri*Factu.
+  Suite completa: **421/421** en 277 segundos. `compileall` y `git diff --check`
+  verdes. Los logs de caídas externas son escenarios adversos simulados.
+- El humo PostgreSQL quedó verde. Ruff detectó un retorno residual en el endpoint
+  nuevo; el commit documental posterior lo corrigió y repitió el CI completo en
+  verde. Falta recorrido visual real tras desplegar.
+
+## 2026-08-08 — actualización de seguridad de pypdf
+
+- El CI detectó CVE-2026-71852 y CVE-2026-71870 en `pypdf 6.14.2` antes de
+  ejecutar la suite. Se elevó el mínimo y el lock a `6.15.0`, versión corregida
+  indicada por `pip-audit`; no se añadió ninguna excepción ni se ocultó el aviso.
+- `uv run pip-audit`: ninguna vulnerabilidad conocida en dependencias publicadas;
+  el paquete local `noesis` se omite porque no existe en PyPI.
+- 40/40 pruebas focalizadas de lectura/OCR de PDF, facturas recibidas, copias y
+  endurecimiento verdes con el lock nuevo. El humo PostgreSQL del primer commit ya
+  había terminado verde; el CI completo se repetirá con la corrección.
+
+## 2026-08-08 — puerta de acceso por tipo de relación
+
+### Qué se probó y con qué resultado
+
+- La cabecera pública lleva a `/acceso`, que presenta únicamente
+  «Autónomo o empresa» y «Gestoría» y deriva a los dos logins ya existentes; el
+  cliente final se explica como acceso por enlace privado, no como otra cuenta.
+- `/app` sin sesión conduce al selector. Las sesiones titular y profesional siguen
+  usando claves diferentes y no se ha unido ni relajado ninguna autorización.
+- La solicitud de gestoría pide despacho y tamaño aproximado de cartera, se guarda
+  como interés profesional y no crea `gestoria_account` ni acceso a ningún negocio.
+- Pruebas focalizadas de SEO/rutas, solicitudes y endurecimiento: **35/35** verdes
+  mediante `unittest`. El entorno local no incluye `pytest`; no se instaló una
+  dependencia solo para ejecutar pruebas que ya funcionan con la biblioteca base.
+- Suite completa: **417/417** pruebas verdes en 269 segundos; los logs de caídas de
+  IA, Stripe, Meta, correo, backup y Veri*Factu son escenarios adversos simulados
+  por las propias pruebas. `compileall`, `check_project_truth.py` y
+  `git diff --check` también verdes.
+
+### Límite visual y de publicación
+
+- No se abrió navegador automatizado por el cierre recurrente de Codex indicado por
+  el founder. Falta captura real de escritorio/móvil después del despliegue.
+- Producción quedó verificada con release `b4f502bdb831` y esquema 41. `/acceso`,
+  `/gestoria/login` y `/solicitar-acceso?perfil=gestoria` responden y contienen las
+  decisiones/copy esperados. El CI completo y el humo PostgreSQL están verdes.
+
+## 2026-08-07 — jerarquía y navegación del expediente de gestoría
+
+### Qué se probó y con qué resultado
+
+- **Evidencia de partida:** ocho capturas reales del founder mostraban una cartera
+  correcta, pero el expediente reunía resumen, archivo, diez modelos, perfil,
+  comparativa, ZIP y solicitudes en una sola página. La navegación sticky llegaba a
+  superponerse al contenido y todas las secciones tenían un peso parecido.
+- **Separación real:** el servidor solo admite `resumen`, `documentos`, `impuestos`,
+  `periodos` o `solicitudes`; cualquier otro valor vuelve a Resumen. Cada vista
+  renderiza su tarea y no deja debajo el resto del expediente.
+- **Contexto preservado:** cambiar el período, guardar el perfil fiscal, validar un
+  documento o enviar una solicitud conserva la pestaña, el año, el trimestre y el
+  filtro documental aplicable. Los valores se vuelven a validar en el servidor.
+- **Regresión:** 14/14 pruebas de `GestoriaTestCase` y suite completa **415/415**;
+  Ruff verde en router y prueba modificada. Se verificó además que Documentos no
+  renderiza Impuestos y viceversa, sin romper la previsualización aislada.
+- **CI y despliegue:** los commits `9db728c` y el reintento vacío `4fd5f15`
+  completaron en verde tests/migraciones y humo PostgreSQL. Railway marcó ambos
+  despliegues como fallidos antes de sustituir la release; producción siguió sana
+  con `0341986290f2` y esquema 41. No se confunde `main` verde con publicado.
+
+### Límite visual
+
+- Las ocho capturas aportadas se inspeccionaron como evidencia del estado anterior.
+  No se abrió el navegador automatizado porque el founder ya identificó que esa
+  acción cierra Codex. El QA visual posterior queda bloqueado hasta disponer de
+  capturas del candidato desplegado en escritorio y móvil.
+
+## 2026-08-07 — cartera fiscal y documental para gestorías
+
+### Qué se probó y con qué resultado
+
+- **Auditoría de partida:** las cuatro capturas reales del founder confirman login,
+  cartera, ficha, períodos y solicitudes en Chrome. La estructura era legible y
+  coherente con la marca, pero demasiado vacía, mensual y sin una tarea fiscal
+  completa; el nuevo flujo conserva el sistema real y no crea una demo paralela.
+- **Aislamiento:** el perfil fiscal solo puede actualizarlo una cuenta con acceso
+  activo al negocio. La previsualización vuelve a validar cuenta, relación y
+  `business_id`; pedir el documento de otra empresa devuelve 403.
+- **Vista previa segura:** imágenes se sirven con caché privada desactivada; un PDF
+  se rasteriza en servidor a JPEG, solo primera página, sin iframe/plugin y con
+  techo de 2,5 millones de píxeles. El original conserva descarga separada.
+- **Cálculo:** una factura emitida de base 100/IVA 21 y una recibida de base 100/IVA
+  21 producen IVA previo cero. La factura recibida entra tanto en IVA soportado como
+  en costes; si faltan base o cuota, el borrador declara el dato incompleto.
+- **Flujo profesional:** render real de cartera, ficha, filtros de documentos,
+  borradores fiscales, perfil y vista anual mediante FastAPI/TestClient. El portal
+  sigue siendo de lectura/validación: no presenta impuestos ni mueve dinero.
+- **Pruebas:** Ruff verde; 281/281 backend y 134/134 del resto de módulos, total
+  **415/415**; 14/14 de `GestoriaTestCase`, incluidas tres regresiones nuevas;
+  ciclo SQLite 0 → 41 → 0 → 41, `compileall` y `check_project_truth.py` verdes.
+- **Publicación:** GitHub Actions completó en verde el candidato `2d14e2b`.
+  Producción respondió 200 en `/health` con release `2d14e2b6f3b8` y en
+  `/ready` con el mismo release, estado `ready` y esquema 41.
+
+### Qué no se ha probado
+
+- No se abrió un navegador automatizado porque las sesiones anteriores de la app se
+  cerraban al usarlo. Las capturas aportadas son evidencia del flujo anterior, no
+  QA visual del rediseño ya desplegado; hay que revisar escritorio y
+  móvil con la demo real.
+- Los modelos son una primera lectura, no una confección oficial. Faltan validación
+  con despacho, prorrata, regímenes especiales, operaciones intracomunitarias,
+  ajustes de Sociedades y pagos efectivamente presentados en períodos anteriores.
+
+## 2026-08-07 — login de gestoría detrás del proxy de Railway
+
+### Qué se probó y con qué resultado
+
+- **Regresión reproducida:** un `POST /gestoria/login` podía recibir
+  `{"error":"origen no autorizado"}` porque el navegador enviaba el origen público
+  y Railway podía entregar al contenedor un `Host` privado o con puerto. La
+  comparación anterior era textual y no entendía esa frontera de proxy.
+- **Segunda evidencia real:** aunque el cliente HTTP sintético entró correctamente,
+  Chrome volvió a mostrar `origen no autorizado` sobre el release `2a7c59a5cfbc`.
+  Por tanto, la primera validación no se consideró suficiente ni el incidente
+  cerrado. La corrección posterior prioriza `Sec-Fetch-Site: same-origin`, cabecera
+  controlada por el navegador, antes de interpretar el `Host` interno del proxy.
+- **Caso legítimo:** `Origin: https://bynoesis.com` con un `Host` privado de Railway
+  autorizado atraviesa la guardia y llega al flujo normal de credenciales.
+- **Casos hostiles:** `https://evil.example`, un puerto HTTPS no estándar, un origen
+  mal formado y `Sec-Fetch-Site: cross-site` continúan en 403. No se confía en
+  `X-Forwarded-Host` ni se habilitan comodines.
+- **Cobertura de producto:** 28/28 pruebas focalizadas verdes: perímetro de
+  seguridad, demo completa y `GestoriaTestCase` para cuentas profesionales reales,
+  dos empresas invitadas sin mezcla, revocación, paquetes, correo y portal.
+- **Pruebas:** 13/13 del módulo de seguridad; 61/61 de demo, plataforma, accesos,
+  operaciones y readiness; 60/60 de web/documentos/correos/backups; 278/278 de
+  backend. Total **412/412** ejecutadas por módulos. Ruff verde. La ejecución
+  monolítica alcanzó el límite local de diez minutos sin registrar fallos; la misma
+  batería separada por módulos terminó íntegramente en verde.
+- **Producción después del cambio:** `/health` y `/ready` devuelven 200 con el
+  release `53d7f83da282` y esquema 40. Un `POST` real con origen propio llega al
+  flujo normal y responde 303; el mismo `POST` con `https://evil.example` responde
+  403. El login con la cuenta demo devuelve 303 a `/gestoria`, la cartera responde
+  200 con dos empresas y el logout vuelve en 303 a `/gestoria/login`. El CI general
+  y el humo PostgreSQL del commit están verdes.
+
+### Qué no se ha probado
+
+- La segunda corrección todavía no se ha desplegado ni repetido desde Chrome. La
+  sesión HTTP real confirmó autenticación, cartera de dos empresas y cierre, pero
+  esa evidencia ya no se usa como sustituto de la prueba del navegador.
+
+## 2026-08-06 — dos cuentas demo reales y OCR privado de PDF escaneado
+
+### Qué se probó y con qué resultado
+
+- **Datos conectados:** la siembra crea/reutiliza el acceso real del autónomo,
+  una cuenta real de gestoría, dos empresas en su cartera y el portal del cliente
+  correcto. Repetirla no duplica negocios, clientes ni facturas.
+- **Contenido útil:** la cuenta principal tiene al menos siete clientes, facturas y
+  gastos en seis meses activos, catálogo, proveedores, CRM, trabajos, dos
+  trabajadores, proyecto con presupuesto/costes/horas/tareas, documentos PDF/JPEG
+  válidos y solicitudes de gestoría. El portal de cliente tiene factura y
+  presupuesto; la gestoría tiene dos empresas y puede descargar un paquete ficticio.
+- **Navegación real:** login del autónomo y render de todas las secciones del panel
+  —Inicio, Trabajos, Proyectos, Clientes, Dinero, Análisis, Ingresos, Costes,
+  Presupuestos, Facturas, Cobros, Impuestos, Equipo, CRM, Productos, Documentos,
+  Asistente y Ajustes—; login/cartera/ficha/paquete de gestoría y portal/PDF del
+  cliente. No se usó una aplicación o plantilla alternativa.
+- **Solo lectura:** una mutación de API del autónomo queda en 403, aceptar un
+  presupuesto desde el portal queda en 402 y descargar el PDF o paquete de demo no
+  registra eventos ni entregas ficticias. Automatizaciones y envíos reutilizan el
+  mismo bloqueo de suscripción del servidor.
+- **PDF escaneado:** un PDF compuesto únicamente por una imagen se rasteriza realmente
+  con PDFium y pasa cada imagen por el adaptador OCR local; el resultado alimenta
+  importe y clasificación. Una página de dimensiones absurdas se rechaza antes de
+  renderizar. Los límites son cuatro páginas, cinco millones de píxeles por página,
+  ocho segundos de Tesseract por página y 24.000 caracteres por documento.
+- **Pruebas:** 4 pruebas focalizadas, Ruff, `compileall`, Bandit alto, detección de
+  secretos y `pip-audit` verdes; suite completa final **409/409** y ciclo SQLite
+  0 → 40 → 0 → 40 verdes. `check_project_truth.py` confirma estado/esquema/precios.
+- **CI tras publicar:** el primer run identificó correctamente la contraseña pública
+  de la demo como `Secret Keyword`. Se marcó con la excepción inline oficial y una
+  explicación de alcance. La reejecución mostró que la antigua clave de demo local,
+  ya registrada en la baseline, había cambiado de línea: también quedó exceptuada
+  inline y se retiró solo esa huella histórica de la baseline. No se relajó el
+  detector. Los primeros humos PostgreSQL no llegaron a descargar las Actions por
+  un `Service Unavailable` de GitHub, sin ejecutar código de Noesis.
+
+### Qué no se ha probado
+
+- El Windows local no tiene instalado el binario de Tesseract: se verificaron las
+  dependencias Python, la rasterización real y el contrato del adaptador con un OCR
+  controlado. `railpack.json` instala Tesseract `spa/eng` en Railway, pero todavía
+  hay que verificar ese binario y medir precisión/latencia con tickets y PDFs reales
+  en castellano/catalán después del despliegue.
+- No se enviaron WhatsApps, correos, cobros ni registros fiscales y no se hizo QA
+  visual en navegador. La demo los bloquea deliberadamente; el render y los enlaces
+  principales sí se recorrieron mediante la aplicación FastAPI real.
+- El candidato aún no se considera publicado: falta commit, despliegue, esquema 40,
+  activación temporal de `NOESIS_SEED_DEMO` y prueba autenticada en producción.
 
 ## 2026-08-06 — cartera multiempresa y PDF contextual desde WhatsApp
 

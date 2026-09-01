@@ -16,6 +16,7 @@ from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 from . import config, db
+from .adapters import billing as billing_adapter
 from .adapters import invoicing
 
 _provider = invoicing.get_provider()
@@ -113,6 +114,8 @@ TOOLS: list[dict] = [
                 "base": {"type": "number", "description": "Importe SIN IVA."},
                 "iva": {"type": "number"},
                 "irpf": {"type": "number"},
+                "validez_dias": {"type": "integer"},
+                "notas": {"type": "string"},
             },
             "required": ["cliente", "concepto", "base"],
         },
@@ -338,12 +341,14 @@ def _preparar_factura_trabajo(business_id, trabajo_id):
     return {"ok": True, "factura": invoice}
 
 
-def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None):
+def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None,
+                       validez_dias=None, notas=None):
     biz = db.get_business(business_id) or {}
     c = db.get_or_create_client(cliente, business_id=business_id)
     rate = biz.get("default_vat", 21) if iva is None else iva
     irpf_rate = biz.get("default_irpf", 0) if irpf is None else irpf
     q = db.add_quote(c["id"], concepto, base, vat_rate=rate, irpf_rate=irpf_rate,
+                     valid_days=validez_dias, notes=notas,
                      business_id=business_id)
     return {"ok": True, "presupuesto": q}
 
@@ -591,12 +596,35 @@ _DISPATCH = {
     "ver_control_noesis": _ver_control_noesis,
 }
 
+_TOOL_ENTITLEMENTS = {
+    "ver_proyectos": billing_adapter.ENTITLEMENT_PROJECTS,
+    "ver_proyecto": billing_adapter.ENTITLEMENT_PROJECTS,
+    "crear_proyecto": billing_adapter.ENTITLEMENT_PROJECTS,
+    "crear_tarea_proyecto": billing_adapter.ENTITLEMENT_PROJECTS,
+    "ver_equipo": billing_adapter.ENTITLEMENT_TEAM,
+    "ver_solicitudes_gestoria": billing_adapter.ENTITLEMENT_GESTORIA,
+}
+
 
 def run_tool(name: str, tool_input: dict, business_id: int) -> str:
     """Ejecuta una herramienta para un negocio y devuelve JSON (para Claude/NLU)."""
     fn = _DISPATCH.get(name)
     if fn is None:
         return json.dumps({"error": f"Herramienta desconocida: {name}"})
+    entitlement = _TOOL_ENTITLEMENTS.get(name)
+    business = db.get_business(business_id)
+    if entitlement and not billing_adapter.has_entitlement(business, entitlement):
+        return json.dumps(
+            {
+                "error": (
+                    f"{billing_adapter.ENTITLEMENT_LABELS[entitlement]} forma parte "
+                    "del plan Negocio. Puedes activarlo desde Suscripción."
+                ),
+                "code": "plan_upgrade_required",
+                "required_plan": billing_adapter.minimum_plan_for(entitlement),
+            },
+            ensure_ascii=False,
+        )
     try:
         result = fn(business_id=business_id, **tool_input)
     except (TypeError, ValueError) as e:

@@ -1,6 +1,6 @@
 # Recepcionista de llamadas 24/7
 
-> Estado: **diseño aprobado, pendiente de construir** (beta privada con el plan Sin Límites).
+> Estado: **diseño aprobado, pendiente de construir** (beta privada con el plan Premium).
 > Decisión de negocio: se vende ya en la página de precios como "beta · acceso preferente"
 > para medir demanda antes de construir. No se cobra hasta que funcione.
 
@@ -36,7 +36,7 @@ interna. Es lo mismo que ya hacemos con Meta para WhatsApp: ellos el transporte,
 el cerebro.
 
 - Coste variable aproximado: 0,07–0,10 €/min todo incluido (voz + LLM + telefonía).
-- 100 min/mes incluidos en Sin Límites → coste máx. ~8-10 €/mes, cubierto por el margen
+- 100 min/mes incluidos en Premium → coste máx. ~8-10 €/mes, cubierto por el margen
   del plan (~50 % en uso máximo).
 - Minuto extra: 0,15 € (se factura como add-on en Stripe, metered price).
 
@@ -50,7 +50,7 @@ de audio. Solo compensa a partir de ~5.000 min/mes agregados.
 |---|---|
 | Autónomo (29 €) | No incluido |
 | Negocio (49 €) | Add-on opcional: +15 €/mes con 100 min (cuando salga de beta) |
-| Sin Límites (99 €) | Incluido, 100 min/mes, minuto extra 0,15 € |
+| Premium (99 €) | Incluido, 100 min/mes, minuto extra 0,15 € |
 
 ## Cumplimiento (antes de la beta)
 
@@ -66,5 +66,5 @@ de audio. Solo compensa a partir de ~5.000 min/mes agregados.
 2. Funciones de agenda/cliente expuestas al agente de voz reutilizando los handlers del
    asistente (2-3 días).
 3. Resumen post-llamada por WhatsApp con la plantilla de aviso existente (1 día).
-4. Beta con 3 clientes del plan Sin Límites, 1 mes, midiendo: llamadas atendidas, citas
+4. Beta con 3 clientes del plan Premium, 1 mes, midiendo: llamadas atendidas, citas
    cerradas, falsos positivos.

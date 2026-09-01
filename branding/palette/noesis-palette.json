@@ -1,0 +1,16 @@
+{
+  "brand": {
+    "forest": { "hex": "#14463B", "rgb": "20, 70, 59", "usage": "Marca, acciones y fondos principales" },
+    "teal": { "hex": "#2E8B74", "rgb": "46, 139, 116", "usage": "Acento, gráficos y detalle del símbolo" },
+    "cream": { "hex": "#F4F1E8", "rgb": "244, 241, 232", "usage": "Lienzo cálido y contraste de marca" },
+    "ink": { "hex": "#15211C", "rgb": "21, 33, 28", "usage": "Texto principal" },
+    "sage": { "hex": "#E4EFE9", "rgb": "228, 239, 233", "usage": "Fondos suaves y destacados" },
+    "warm_white": { "hex": "#FAF8F3", "rgb": "250, 248, 243", "usage": "Superficies secundarias" }
+  },
+  "support": {
+    "deep_forest": { "hex": "#102820", "rgb": "16, 40, 32", "usage": "Fondos oscuros editoriales" },
+    "amber": { "hex": "#B7831F", "rgb": "183, 131, 31", "usage": "Avisos sin alarmismo" },
+    "red": { "hex": "#C0533F", "rgb": "192, 83, 63", "usage": "Errores y acciones destructivas" },
+    "muted": { "hex": "#5D6B66", "rgb": "93, 107, 102", "usage": "Texto secundario" }
+  }
+}

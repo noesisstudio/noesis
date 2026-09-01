@@ -2271,16 +2271,25 @@ _IMMUTABLE_INVOICE_FIELDS = (
     "recipient_nif", "recipient_address", "invoice_type",
     "rectifies_invoice_id", "rectification_type", "rectification_reason",
     "source", "external_number", "operation_date", "series_id", "notes",
-    "payment_method", "legal_mention", "currency", "created_at",
+    "payment_method", "legal_mention", "currency", "document_profile_id",
+    "created_at",
 )
 
 
 def _install_issued_invoice_integrity(conn) -> None:
     """Protege en BD la numeración y el contenido de una factura emitida."""
+    # Las instalaciones nuevas recorren migraciones antiguas antes de que existan
+    # campos añadidos después; el guardián se amplía al reinstalarse en cada salto.
+    existing = _column_names(conn, "invoices")
+    immutable_fields = tuple(
+        field for field in _IMMUTABLE_INVOICE_FIELDS if field in existing
+    )
     if conn.dialect == "sqlite":
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_update")
+        conn.execute("DROP TRIGGER IF EXISTS invoices_issued_immutable_delete")
         changed = " OR ".join(
             f"OLD.{field} IS NOT NEW.{field}"
-            for field in _IMMUTABLE_INVOICE_FIELDS
+            for field in immutable_fields
         )
         conn.executescript(
             f"""
@@ -2302,7 +2311,7 @@ END;
 
     changed = " OR ".join(
         f"OLD.{field} IS DISTINCT FROM NEW.{field}"
-        for field in _IMMUTABLE_INVOICE_FIELDS
+        for field in immutable_fields
     )
     conn.execute(
         f"""
@@ -3102,6 +3111,796 @@ def _downgrade_line_kind(conn) -> None:
         conn.execute("ALTER TABLE invoice_lines DROP COLUMN IF EXISTS kind")
 
 
+def _upgrade_showcase_demo(conn) -> None:
+    """Marca persistente para demos comerciales aisladas y de solo lectura."""
+    if "is_demo" not in _column_names(conn, "businesses"):
+        boolean = _types(conn.dialect)["boolean"]
+        conn.execute(
+            f"ALTER TABLE businesses ADD COLUMN is_demo {boolean} "
+            "NOT NULL DEFAULT FALSE"
+        )
+
+
+def _downgrade_showcase_demo(conn) -> None:
+    if "is_demo" in _column_names(conn, "businesses"):
+        conn.execute("ALTER TABLE businesses DROP COLUMN is_demo")
+
+
+def _upgrade_gestoria_fiscal_workspace(conn) -> None:
+    """Perfil fiscal mínimo y explícito para la cartera profesional.
+
+    No guarda declaraciones ni autoriza presentaciones: solo permite que el
+    despacho indique qué obligaciones debe preparar Noesis para cada negocio.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_fiscal_profiles ("
+        f"business_id {t['ref']} PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE, "
+        "taxpayer_type TEXT NOT NULL DEFAULT 'sin_configurar', "
+        "income_tax_regime TEXT NOT NULL DEFAULT 'sin_configurar', "
+        "vat_regime TEXT NOT NULL DEFAULT 'sin_configurar', "
+        "filing_cadence TEXT NOT NULL DEFAULT 'trimestral', "
+        "obligations TEXT NOT NULL DEFAULT '[]', "
+        "notes TEXT, "
+        f"updated_by_gestoria_id {t['ref']} REFERENCES gestoria_accounts(id) ON DELETE SET NULL, "
+        f"updated_at {t['timestamp']} NOT NULL)"
+    )
+
+
+def _downgrade_gestoria_fiscal_workspace(conn) -> None:
+    conn.execute("DROP TABLE IF EXISTS gestoria_fiscal_profiles")
+
+
+def _upgrade_professional_document_profiles(conn) -> None:
+    """Preferencias documentales y evidencia de la decisión de presupuestos.
+
+    Son datos del documento, no un segundo motor de facturación. Las facturas
+    emitidas no se tocan y siguen protegidas por sus disparadores de integridad.
+    """
+    timestamp = _types(conn.dialect)["timestamp"]
+    business_columns = {
+        "document_footer": "TEXT",
+        "quote_terms": "TEXT",
+        "default_quote_validity_days": "INTEGER NOT NULL DEFAULT 30",
+    }
+    quote_columns = {
+        "notes": "TEXT",
+        "decision_source": "TEXT",
+        "decision_ip_hash": "TEXT",
+        "decision_user_agent": "TEXT",
+        "rejected_at": timestamp,
+    }
+    existing_business = _column_names(conn, "businesses")
+    existing_quotes = _column_names(conn, "quotes")
+    for column, ddl in business_columns.items():
+        if column not in existing_business:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {column} {ddl}")
+    for column, ddl in quote_columns.items():
+        if column not in existing_quotes:
+            conn.execute(f"ALTER TABLE quotes ADD COLUMN {column} {ddl}")
+
+
+def _downgrade_professional_document_profiles(conn) -> None:
+    quote_columns = _column_names(conn, "quotes")
+    for column in (
+        "rejected_at", "decision_user_agent", "decision_ip_hash",
+        "decision_source", "notes",
+    ):
+        if column in quote_columns:
+            suffix = "" if conn.dialect == "sqlite" else " IF EXISTS"
+            conn.execute(f"ALTER TABLE quotes DROP COLUMN{suffix} {column}")
+    business_columns = _column_names(conn, "businesses")
+    for column in (
+        "default_quote_validity_days", "quote_terms", "document_footer",
+    ):
+        if column in business_columns:
+            suffix = "" if conn.dialect == "sqlite" else " IF EXISTS"
+            conn.execute(f"ALTER TABLE businesses DROP COLUMN{suffix} {column}")
+
+
+def _upgrade_scoped_support_access(conn) -> None:
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS support_access_grants ("
+        f"id {t['id']}, "
+        f"business_id {t['ref']} NOT NULL REFERENCES businesses(id), "
+        f"created_by_user_id {t['ref']} NOT NULL REFERENCES users(id), "
+        "purpose TEXT NOT NULL, scopes_json TEXT NOT NULL, "
+        "consent_version TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', "
+        f"expires_at {t['timestamp']} NOT NULL, "
+        f"created_at {t['timestamp']} NOT NULL, "
+        f"revoked_at {t['timestamp']}, "
+        "UNIQUE (business_id, id))"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_support_grants_business_status "
+        "ON support_access_grants(business_id, status, expires_at)"
+    )
+
+
+def _downgrade_scoped_support_access(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_support_grants_business_status")
+    conn.execute("DROP TABLE IF EXISTS support_access_grants")
+
+
+def _upgrade_platform_cost_ledger(conn) -> None:
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS platform_cost_entries ("
+        f"id {t['id']}, period TEXT NOT NULL, category TEXT NOT NULL, "
+        f"amount_eur {t['real']} NOT NULL, source TEXT NOT NULL, note TEXT, "
+        f"created_by_user_id {t['ref']} REFERENCES users(id), "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_platform_cost_entries_period "
+        "ON platform_cost_entries(period, category, id)"
+    )
+    if conn.dialect == "sqlite":
+        conn.executescript(
+            """
+CREATE TRIGGER IF NOT EXISTS platform_cost_entries_append_only_update
+BEFORE UPDATE ON platform_cost_entries
+BEGIN
+    SELECT RAISE(ABORT, 'el libro de costes es inalterable');
+END;
+CREATE TRIGGER IF NOT EXISTS platform_cost_entries_append_only_delete
+BEFORE DELETE ON platform_cost_entries
+BEGIN
+    SELECT RAISE(ABORT, 'el libro de costes es inalterable');
+END;
+"""
+        )
+    else:
+        conn.execute(
+            """
+CREATE OR REPLACE FUNCTION noesis_platform_costs_append_only()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'el libro de costes es inalterable'
+        USING ERRCODE = '23514';
+END;
+$$ LANGUAGE plpgsql
+"""
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only "
+            "ON platform_cost_entries"
+        )
+        conn.execute(
+            "CREATE TRIGGER platform_cost_entries_append_only "
+            "BEFORE UPDATE OR DELETE ON platform_cost_entries "
+            "FOR EACH ROW EXECUTE FUNCTION noesis_platform_costs_append_only()"
+        )
+
+
+def _downgrade_platform_cost_ledger(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only_update"
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only_delete"
+        )
+    else:
+        conn.execute(
+            "DROP TRIGGER IF EXISTS platform_cost_entries_append_only "
+            "ON platform_cost_entries"
+        )
+        conn.execute(
+            "DROP FUNCTION IF EXISTS noesis_platform_costs_append_only()"
+        )
+    conn.execute("DROP INDEX IF EXISTS idx_platform_cost_entries_period")
+    conn.execute("DROP TABLE IF EXISTS platform_cost_entries")
+
+
+def _upgrade_whatsapp_multichannel(conn) -> None:
+    """Separa el canal privado de Noesis del WhatsApp comercial de cada negocio.
+
+    Los números empresariales se resuelven por ``phone_number_id`` antes de mirar al
+    remitente. Las tablas conservan el negocio en todas las relaciones para que una
+    referencia equivocada no pueda cruzar clientes, documentos o trabajadores.
+    """
+    t = _types(conn.dialect)
+    if "role" not in _column_names(conn, "workers"):
+        conn.execute("ALTER TABLE workers ADD COLUMN role TEXT NOT NULL DEFAULT 'campo'")
+    if "can_submit_costs" not in _column_names(conn, "workers"):
+        conn.execute(
+            f"ALTER TABLE workers ADD COLUMN can_submit_costs {t['boolean']} "
+            "NOT NULL DEFAULT TRUE"
+        )
+    if "can_view_assigned_budget" not in _column_names(conn, "workers"):
+        conn.execute(
+            f"ALTER TABLE workers ADD COLUMN can_view_assigned_budget {t['boolean']} "
+            "NOT NULL DEFAULT FALSE"
+        )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_job_materials_business_id "
+        "ON job_materials(business_id, id)"
+    )
+
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS whatsapp_connections (
+    id                     {t["id"]},
+    business_id            {t["ref"]} NOT NULL REFERENCES businesses(id),
+    mode                   TEXT NOT NULL DEFAULT 'business',
+    waba_id                TEXT NOT NULL,
+    phone_number_id        TEXT NOT NULL,
+    display_phone          TEXT,
+    verified_name          TEXT,
+    status                 TEXT NOT NULL DEFAULT 'pending',
+    receptionist_enabled   {t["boolean"]} NOT NULL DEFAULT FALSE,
+    inbound_enabled        {t["boolean"]} NOT NULL DEFAULT TRUE,
+    outbound_enabled       {t["boolean"]} NOT NULL DEFAULT TRUE,
+    created_at             {t["timestamp"]} NOT NULL,
+    updated_at             {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (phone_number_id),
+    CHECK (mode IN ('business')),
+    CHECK (status IN ('pending', 'active', 'paused', 'error', 'revoked'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_connections_business
+    ON whatsapp_connections(business_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_connections_business_id
+    ON whatsapp_connections(business_id, id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+    id              {t["id"]},
+    business_id     {t["ref"]} NOT NULL REFERENCES businesses(id),
+    connection_id   {t["ref"]} NOT NULL,
+    wa_id            TEXT NOT NULL,
+    phone_norm       TEXT NOT NULL,
+    display_name     TEXT,
+    client_id        {t["ref"]},
+    lead_id          {t["ref"]},
+    consent_status   TEXT NOT NULL DEFAULT 'active',
+    created_at       {t["timestamp"]} NOT NULL,
+    updated_at       {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (connection_id, wa_id),
+    FOREIGN KEY (business_id, connection_id)
+        REFERENCES whatsapp_connections(business_id, id),
+    FOREIGN KEY (business_id, client_id)
+        REFERENCES clients(business_id, id),
+    CHECK (consent_status IN ('active', 'opted_out', 'blocked'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_contacts_business
+    ON whatsapp_contacts(business_id, phone_norm);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_contacts_business_id
+    ON whatsapp_contacts(business_id, id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+    id                  {t["id"]},
+    business_id         {t["ref"]} NOT NULL REFERENCES businesses(id),
+    connection_id       {t["ref"]} NOT NULL,
+    contact_id          {t["ref"]} NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'open',
+    human_handoff       {t["boolean"]} NOT NULL DEFAULT FALSE,
+    summary             TEXT,
+    last_inbound_at     {t["timestamp"]},
+    last_outbound_at    {t["timestamp"]},
+    created_at          {t["timestamp"]} NOT NULL,
+    updated_at          {t["timestamp"]} NOT NULL,
+    UNIQUE (business_id, id),
+    UNIQUE (connection_id, contact_id),
+    FOREIGN KEY (business_id, connection_id)
+        REFERENCES whatsapp_connections(business_id, id),
+    FOREIGN KEY (business_id, contact_id)
+        REFERENCES whatsapp_contacts(business_id, id),
+    CHECK (status IN ('open', 'waiting_owner', 'resolved', 'archived'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_conversations_business
+    ON whatsapp_conversations(business_id, status, updated_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_conversations_business_id
+    ON whatsapp_conversations(business_id, id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_inbox (
+    id                  {t["id"]},
+    business_id         {t["ref"]} NOT NULL REFERENCES businesses(id),
+    connection_id       {t["ref"]} NOT NULL,
+    conversation_id     {t["ref"]} NOT NULL,
+    contact_id          {t["ref"]} NOT NULL,
+    meta_message_id     TEXT NOT NULL UNIQUE,
+    sender_phone        TEXT NOT NULL,
+    actor_role          TEXT NOT NULL DEFAULT 'customer',
+    message_type        TEXT NOT NULL,
+    text_body           TEXT,
+    document_id         {t["ref"]},
+    job_id              {t["ref"]},
+    processing_status   TEXT NOT NULL DEFAULT 'received',
+    error               TEXT,
+    received_at         {t["timestamp"]} NOT NULL,
+    processed_at        {t["timestamp"]},
+    FOREIGN KEY (business_id, connection_id)
+        REFERENCES whatsapp_connections(business_id, id),
+    FOREIGN KEY (business_id, conversation_id)
+        REFERENCES whatsapp_conversations(business_id, id),
+    FOREIGN KEY (business_id, contact_id)
+        REFERENCES whatsapp_contacts(business_id, id),
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id),
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    CHECK (actor_role IN ('customer', 'owner', 'worker', 'unknown')),
+    CHECK (message_type IN ('text', 'audio', 'image', 'document', 'interactive', 'unknown')),
+    CHECK (processing_status IN ('received', 'processed', 'failed', 'ignored'))
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_inbox_business
+    ON whatsapp_inbox(business_id, received_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_inbox_conversation
+    ON whatsapp_inbox(conversation_id, received_at);
+
+CREATE TABLE IF NOT EXISTS worker_submissions (
+    id              {t["id"]},
+    business_id     {t["ref"]} NOT NULL REFERENCES businesses(id),
+    worker_id       {t["ref"]} NOT NULL,
+    job_id          {t["ref"]},
+    project_id      {t["ref"]},
+    document_id     {t["ref"]},
+    applied_material_id {t["ref"]},
+    kind            TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    amount          {t["real"]},
+    status          TEXT NOT NULL DEFAULT 'pending',
+    resolution_note TEXT,
+    created_at      {t["timestamp"]} NOT NULL,
+    resolved_at     {t["timestamp"]},
+    UNIQUE (business_id, id),
+    FOREIGN KEY (business_id, worker_id)
+        REFERENCES workers(business_id, id),
+    FOREIGN KEY (business_id, job_id)
+        REFERENCES jobs(business_id, id),
+    FOREIGN KEY (business_id, project_id)
+        REFERENCES projects(business_id, id),
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id),
+    FOREIGN KEY (business_id, applied_material_id)
+        REFERENCES job_materials(business_id, id),
+    CHECK (kind IN ('cost', 'document', 'question', 'blocker', 'note')),
+    CHECK (status IN ('pending', 'accepted', 'rejected', 'resolved'))
+);
+CREATE INDEX IF NOT EXISTS idx_worker_submissions_business
+    ON worker_submissions(business_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_worker_submissions_worker
+    ON worker_submissions(business_id, worker_id, created_at);
+"""
+    )
+    if "connection_id" not in _column_names(conn, "whatsapp_outbox"):
+        conn.execute(f"ALTER TABLE whatsapp_outbox ADD COLUMN connection_id {t['ref']}")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_whatsapp_outbox_connection "
+        "ON whatsapp_outbox(connection_id, created_at)"
+    )
+
+
+def _downgrade_whatsapp_multichannel(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_whatsapp_outbox_connection")
+    if conn.dialect != "sqlite" and "connection_id" in _column_names(conn, "whatsapp_outbox"):
+        conn.execute("ALTER TABLE whatsapp_outbox DROP COLUMN IF EXISTS connection_id")
+    for table in (
+        "worker_submissions", "whatsapp_inbox", "whatsapp_conversations",
+        "whatsapp_contacts", "whatsapp_connections",
+    ):
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+    conn.execute("DROP INDEX IF EXISTS uq_job_materials_business_id")
+    if conn.dialect != "sqlite":
+        conn.execute("ALTER TABLE workers DROP COLUMN IF EXISTS can_view_assigned_budget")
+        conn.execute("ALTER TABLE workers DROP COLUMN IF EXISTS can_submit_costs")
+        conn.execute("ALTER TABLE workers DROP COLUMN IF EXISTS role")
+
+
+def _upgrade_stripe_subscription_ordering(conn) -> None:
+    """Conserva el orden de los webhooks que gobiernan una suscripcion.
+
+    Stripe no garantiza el orden de entrega. Estas columnas permiten ignorar un
+    evento antiguo que llegue despues de otro mas reciente y evitan que un
+    ``checkout.session.completed`` tardio reactive una cuenta impagada o cancelada.
+    """
+    columns = _column_names(conn, "businesses")
+    if "stripe_event_created_at" not in columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN stripe_event_created_at "
+            "INTEGER NOT NULL DEFAULT 0"
+        )
+    if "stripe_event_priority" not in columns:
+        conn.execute(
+            "ALTER TABLE businesses ADD COLUMN stripe_event_priority "
+            "INTEGER NOT NULL DEFAULT 0"
+        )
+    if "stripe_event_id" not in columns:
+        conn.execute("ALTER TABLE businesses ADD COLUMN stripe_event_id TEXT")
+
+
+def _downgrade_stripe_subscription_ordering(conn) -> None:
+    # SQLite no permite retirar columnas de forma segura en todas las versiones
+    # soportadas. Se dejan inertes y la subida posterior las reutiliza.
+    if conn.dialect != "sqlite":
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS stripe_event_id"
+        )
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS stripe_event_priority"
+        )
+        conn.execute(
+            "ALTER TABLE businesses DROP COLUMN IF EXISTS stripe_event_created_at"
+        )
+
+
+def _upgrade_gestoria_mfa(conn) -> None:
+    """Añade MFA profesional sin modificar accesos ni sesiones existentes."""
+    columns = _column_names(conn, "gestoria_accounts")
+    types = _types(conn.dialect)
+    boolean = types["boolean"]
+    if "mfa_enabled" not in columns:
+        conn.execute(
+            f"ALTER TABLE gestoria_accounts ADD COLUMN mfa_enabled {boolean} "
+            "NOT NULL DEFAULT FALSE"
+        )
+    if "mfa_recovery_hashes" not in columns:
+        conn.execute(
+            "ALTER TABLE gestoria_accounts ADD COLUMN mfa_recovery_hashes "
+            "TEXT NOT NULL DEFAULT '[]'"
+        )
+    if "mfa_last_counter" not in columns:
+        conn.execute(
+            "ALTER TABLE gestoria_accounts ADD COLUMN mfa_last_counter "
+            "INTEGER NOT NULL DEFAULT -1"
+        )
+    if "mfa_enrolled_at" not in columns:
+        conn.execute(
+            f"ALTER TABLE gestoria_accounts ADD COLUMN mfa_enrolled_at "
+            f"{types['timestamp']}"
+        )
+
+
+def _downgrade_gestoria_mfa(conn) -> None:
+    if conn.dialect != "sqlite":
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_enrolled_at"
+        )
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_last_counter"
+        )
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_recovery_hashes"
+        )
+        conn.execute(
+            "ALTER TABLE gestoria_accounts DROP COLUMN IF EXISTS mfa_enabled"
+        )
+
+
+def _upgrade_invoice_visual_profiles(conn) -> None:
+    """Añade pies gráficos y congela la identidad visual al emitir.
+
+    La imagen se guarda una sola vez por versión del perfil, no dentro de cada
+    factura. De este modo cientos de facturas pueden apuntar al mismo diseño sin
+    multiplicar el peso de logos o distintivos de subvenciones.
+    """
+    t = _types(conn.dialect)
+    business_columns = {
+        "footer_image_data": "TEXT",
+        "footer_image_mime": "TEXT",
+        "footer_image_width": "INTEGER NOT NULL DEFAULT 100",
+        "footer_image_alignment": "TEXT NOT NULL DEFAULT 'center'",
+        "footer_image_scope": "TEXT NOT NULL DEFAULT 'invoices'",
+    }
+    existing_business = _column_names(conn, "businesses")
+    for column, ddl in business_columns.items():
+        if column not in existing_business:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {column} {ddl}")
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS document_profiles ("
+        f"id {t['id']}, "
+        f"business_id {t['ref']} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE, "
+        "version INTEGER NOT NULL, invoice_template TEXT NOT NULL, "
+        "brand_color TEXT, logo_data TEXT, logo_mime TEXT, document_footer TEXT, "
+        "footer_image_data TEXT, footer_image_mime TEXT, "
+        "footer_image_width INTEGER NOT NULL DEFAULT 100, "
+        "footer_image_alignment TEXT NOT NULL DEFAULT 'center', "
+        "footer_image_scope TEXT NOT NULL DEFAULT 'invoices', "
+        f"created_at {t['timestamp']} NOT NULL, "
+        "UNIQUE (business_id, version), UNIQUE (business_id, id))"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_document_profiles_business_version "
+        "ON document_profiles(business_id, version)"
+    )
+    # Postgres exige una clave única ya materializada antes de aceptar la FK
+    # compuesta de invoices. Se declara de forma explícita (aunque la tabla ya
+    # incluya UNIQUE) para que el orden sea inequívoco también en instalaciones
+    # heredadas y en el guardián DDL de CI.
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_document_profiles_business_id "
+        "ON document_profiles(business_id, id)"
+    )
+    if "document_profile_id" not in _column_names(conn, "invoices"):
+        conn.execute(
+            f"ALTER TABLE invoices ADD COLUMN document_profile_id {t['ref']}"
+        )
+
+    # Una foto coherente para el histórico: reproduce el aspecto que tenía el
+    # negocio justo antes de instalar esta versión y queda inmutable desde aquí.
+    now = datetime.now().isoformat(timespec="seconds")
+    businesses = conn.execute("SELECT * FROM businesses ORDER BY id").fetchall()
+    for business in businesses:
+        profile = conn.execute(
+            "INSERT INTO document_profiles (business_id, version, invoice_template, "
+            "brand_color, logo_data, logo_mime, document_footer, footer_image_data, "
+            "footer_image_mime, footer_image_width, footer_image_alignment, "
+            "footer_image_scope, created_at) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (business_id, version) DO NOTHING RETURNING id",
+            (
+                business["id"], business.get("invoice_template") or "clasica",
+                business.get("brand_color"), business.get("logo_data"),
+                business.get("logo_mime"), business.get("document_footer"),
+                business.get("footer_image_data"), business.get("footer_image_mime"),
+                business.get("footer_image_width") or 100,
+                business.get("footer_image_alignment") or "center",
+                business.get("footer_image_scope") or "invoices", now,
+            ),
+        ).fetchone()
+        if not profile:
+            profile = conn.execute(
+                "SELECT id FROM document_profiles WHERE business_id=? AND version=1",
+                (business["id"],),
+            ).fetchone()
+        conn.execute(
+            "UPDATE invoices SET document_profile_id=? WHERE business_id=? "
+            "AND status<>'borrador' AND document_profile_id IS NULL",
+            (profile["id"], business["id"]),
+        )
+
+    if conn.dialect == "sqlite":
+        for event in ("INSERT", "UPDATE"):
+            conn.executescript(
+                _sqlite_tenant_trigger(
+                    "invoices", "document_profile_id", "document_profiles", event
+                )
+            )
+    else:
+        conn.execute(
+            "ALTER TABLE invoices DROP CONSTRAINT IF EXISTS "
+            "invoices_document_profile_same_business"
+        )
+        conn.execute(
+            "ALTER TABLE invoices ADD CONSTRAINT invoices_document_profile_same_business "
+            "FOREIGN KEY (business_id, document_profile_id) "
+            "REFERENCES document_profiles(business_id, id)"
+        )
+    # Reinstala el guardián incluyendo document_profile_id.
+    _install_issued_invoice_integrity(conn)
+
+
+def _downgrade_invoice_visual_profiles(conn) -> None:
+    if conn.dialect == "sqlite":
+        conn.execute(
+            "DROP TRIGGER IF EXISTS invoices_document_profile_id_same_business_insert"
+        )
+        conn.execute(
+            "DROP TRIGGER IF EXISTS invoices_document_profile_id_same_business_update"
+        )
+        # SQLite conserva columnas y perfiles: quitarlos exigiría reconstruir dos
+        # tablas y podría destruir la reproducción histórica de PDFs.
+        return
+    conn.execute(
+        "ALTER TABLE invoices DROP CONSTRAINT IF EXISTS "
+        "invoices_document_profile_same_business"
+    )
+    _drop_issued_invoice_integrity(conn)
+    conn.execute("ALTER TABLE invoices DROP COLUMN IF EXISTS document_profile_id")
+    _install_issued_invoice_integrity(conn)
+    conn.execute("DROP INDEX IF EXISTS idx_document_profiles_business_version")
+    conn.execute("DROP INDEX IF EXISTS idx_document_profiles_business_id")
+    conn.execute("DROP TABLE IF EXISTS document_profiles")
+    for column in (
+        "footer_image_scope", "footer_image_alignment", "footer_image_width",
+        "footer_image_mime", "footer_image_data",
+    ):
+        conn.execute(f"ALTER TABLE businesses DROP COLUMN IF EXISTS {column}")
+
+
+def _upgrade_recoverable_onboarding(conn) -> None:
+    """Hace el alta reanudable y separa WhatsApp conectado de pospuesto."""
+    t = _types(conn.dialect)
+    columns = {
+        "onboarding_started": f"{t['boolean']} NOT NULL DEFAULT FALSE",
+        "onboarding_profile_completed": f"{t['boolean']} NOT NULL DEFAULT FALSE",
+        "onboarding_preferences_completed": f"{t['boolean']} NOT NULL DEFAULT FALSE",
+        "onboarding_stage": "INTEGER NOT NULL DEFAULT 2",
+        "onboarding_plan": "TEXT NOT NULL DEFAULT 'autonomo'",
+        "onboarding_billing": "TEXT NOT NULL DEFAULT 'monthly'",
+        "onboarding_intent": "TEXT NOT NULL DEFAULT 'trial'",
+        "whatsapp_onboarding_choice": "TEXT NOT NULL DEFAULT 'pending'",
+    }
+    existing = _column_names(conn, "businesses")
+    for column, ddl in columns.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE businesses ADD COLUMN {column} {ddl}")
+
+    # No forzamos al onboarding a cuentas históricas. Solo reconstruimos el
+    # estado de las que ya lo habían terminado para que la nueva lógica sea
+    # compatible con demos, invitaciones y cuentas creadas antes de este salto.
+    conn.execute(
+        "UPDATE businesses SET onboarding_profile_completed=TRUE "
+        "WHERE sector IS NOT NULL AND TRIM(sector)<>'' "
+        "AND team_size IS NOT NULL AND TRIM(team_size)<>'' "
+        "AND primary_goal IS NOT NULL AND TRIM(primary_goal)<>''"
+    )
+    conn.execute(
+        "UPDATE businesses SET onboarding_preferences_completed=TRUE "
+        "WHERE nif IS NOT NULL AND TRIM(nif)<>'' "
+        "AND address IS NOT NULL AND TRIM(address)<>''"
+    )
+    conn.execute(
+        "UPDATE businesses SET onboarding_stage=5, "
+        "whatsapp_onboarding_choice=CASE WHEN whatsapp_status='conectado' "
+        "THEN 'connected' ELSE 'later' END WHERE onboarding_done=TRUE"
+    )
+
+
+def _downgrade_recoverable_onboarding(conn) -> None:
+    if conn.dialect == "sqlite":
+        # Preservar estas columnas evita perder el punto de reanudación si se
+        # revierte código de emergencia en una instalación local.
+        return
+    for column in (
+        "whatsapp_onboarding_choice", "onboarding_intent", "onboarding_billing",
+        "onboarding_plan", "onboarding_stage",
+        "onboarding_preferences_completed", "onboarding_profile_completed",
+        "onboarding_started",
+    ):
+        conn.execute(f"ALTER TABLE businesses DROP COLUMN IF EXISTS {column}")
+
+
+def _upgrade_user_access_control(conn) -> None:
+    """Permite retirar el acceso de una persona sin tocar el resto de la cuenta.
+
+    Hasta ahora la unica palanca era desactivar el negocio entero, que castiga a
+    todo el equipo por un solo usuario. La suspension es reversible y no borra
+    nada: los datos siguen siendo del negocio, solo deja de poder entrar quien
+    ya no debe. ``suspended_at`` y ``access_note`` documentan el porque, que es
+    lo que exige poder justificar una retirada de acceso ante el cliente.
+    """
+    columns = _column_names(conn, "users")
+    types = _types(conn.dialect)
+    if "is_active" not in columns:
+        conn.execute(
+            f"ALTER TABLE users ADD COLUMN is_active {types['boolean']} "
+            "NOT NULL DEFAULT TRUE"
+        )
+    if "suspended_at" not in columns:
+        conn.execute(
+            f"ALTER TABLE users ADD COLUMN suspended_at {types['timestamp']}"
+        )
+    if "access_note" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN access_note TEXT")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_users_business_active "
+        "ON users(business_id, is_active)"
+    )
+
+
+def _downgrade_user_access_control(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_users_business_active")
+    if conn.dialect != "sqlite":
+        conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS access_note")
+        conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS suspended_at")
+        conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS is_active")
+
+
+def _upgrade_gestoria_password_recovery(conn) -> None:
+    """Tokens propios para recuperar una gestoría sin cruzar identidades.
+
+    Una cuenta de gestoría puede acceder a varias empresas y no pertenece a
+    ninguna de ellas. Por eso sus tokens no se guardan en ``password_resets``
+    (que referencia usuarios de un negocio) ni arrastran un ``business_id``.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_password_resets ("
+        f"id {t['id']}, "
+        f"gestoria_account_id {t['ref']} NOT NULL REFERENCES "
+        "gestoria_accounts(id) ON DELETE CASCADE, "
+        "token_hash TEXT NOT NULL, "
+        f"expires_at {t['timestamp']} NOT NULL, "
+        f"used {t['boolean']} NOT NULL DEFAULT FALSE, "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS "
+        "uq_gestoria_password_reset_token "
+        "ON gestoria_password_resets(token_hash)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gestoria_password_reset_account "
+        "ON gestoria_password_resets(gestoria_account_id, used, expires_at)"
+    )
+
+
+def _downgrade_gestoria_password_recovery(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_gestoria_password_reset_account")
+    conn.execute("DROP INDEX IF EXISTS uq_gestoria_password_reset_token")
+    conn.execute("DROP TABLE IF EXISTS gestoria_password_resets")
+
+
+def _upgrade_inbound_email_documents(conn) -> None:
+    """Buzón catch-all aislado y propuestas de cliente para documentos.
+
+    El identificador de correo enruta, pero nunca autoriza efectos contables. Los
+    mensajes solo conservan huellas y contadores; asunto, cuerpo y remitente no se
+    guardan. Un cliente leído en una factura queda como propuesta hasta que el
+    titular lo confirme.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS inbound_email_routes (
+    business_id {t["ref"]} PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
+    route_token TEXT NOT NULL,
+    active {t["boolean"]} NOT NULL DEFAULT TRUE,
+    created_at {t["timestamp"]} NOT NULL,
+    rotated_at {t["timestamp"]}
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inbound_email_route_token
+    ON inbound_email_routes(route_token);
+
+CREATE TABLE IF NOT EXISTS inbound_email_messages (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    message_fingerprint TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'processing' CHECK (
+        status IN ('processing', 'processed', 'partial', 'rejected', 'failed')
+    ),
+    attempts INTEGER NOT NULL DEFAULT 1,
+    attachment_count INTEGER NOT NULL DEFAULT 0,
+    document_count INTEGER NOT NULL DEFAULT 0,
+    error_code TEXT,
+    received_at {t["timestamp"]} NOT NULL,
+    updated_at {t["timestamp"]} NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inbound_email_message
+    ON inbound_email_messages(business_id, message_fingerprint);
+CREATE INDEX IF NOT EXISTS idx_inbound_email_message_status
+    ON inbound_email_messages(business_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS document_client_candidates (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    document_id {t["ref"]} NOT NULL,
+    proposed_name TEXT NOT NULL,
+    proposed_nif TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (
+        status IN ('pending', 'confirmed', 'rejected')
+    ),
+    matched_client_id {t["ref"]},
+    created_at {t["timestamp"]} NOT NULL,
+    resolved_at {t["timestamp"]},
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id, matched_client_id)
+        REFERENCES clients(business_id, id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_document_client_candidate
+    ON document_client_candidates(business_id, document_id);
+CREATE INDEX IF NOT EXISTS idx_document_client_candidate_status
+    ON document_client_candidates(business_id, status, created_at);
+"""
+    )
+
+
+def _downgrade_inbound_email_documents(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_document_client_candidate_status")
+    conn.execute("DROP INDEX IF EXISTS uq_document_client_candidate")
+    conn.execute("DROP TABLE IF EXISTS document_client_candidates")
+    conn.execute("DROP INDEX IF EXISTS idx_inbound_email_message_status")
+    conn.execute("DROP INDEX IF EXISTS uq_inbound_email_message")
+    conn.execute("DROP TABLE IF EXISTS inbound_email_messages")
+    conn.execute("DROP INDEX IF EXISTS uq_inbound_email_route_token")
+    conn.execute("DROP TABLE IF EXISTS inbound_email_routes")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3149,7 +3948,35 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_document_fingerprints),
     (39, "cuentas_gestoria", _upgrade_gestoria_accounts,
      _downgrade_gestoria_accounts),
-    (40, "material_o_mano_de_obra", _upgrade_line_kind,
+    (40, "demo_comercial", _upgrade_showcase_demo,
+     _downgrade_showcase_demo),
+    (41, "espacio_fiscal_gestoria", _upgrade_gestoria_fiscal_workspace,
+     _downgrade_gestoria_fiscal_workspace),
+    (42, "perfiles_documentales_profesionales",
+     _upgrade_professional_document_profiles,
+     _downgrade_professional_document_profiles),
+    (43, "acceso_soporte_acotado", _upgrade_scoped_support_access,
+     _downgrade_scoped_support_access),
+    (44, "costes_reales_plataforma", _upgrade_platform_cost_ledger,
+     _downgrade_platform_cost_ledger),
+    (45, "whatsapp_multicanal", _upgrade_whatsapp_multichannel,
+     _downgrade_whatsapp_multichannel),
+    (46, "orden_suscripcion_stripe", _upgrade_stripe_subscription_ordering,
+     _downgrade_stripe_subscription_ordering),
+    (47, "mfa_gestoria", _upgrade_gestoria_mfa, _downgrade_gestoria_mfa),
+    (48, "perfiles_visuales_factura", _upgrade_invoice_visual_profiles,
+     _downgrade_invoice_visual_profiles),
+    (49, "onboarding_recuperable", _upgrade_recoverable_onboarding,
+     _downgrade_recoverable_onboarding),
+    (50, "control_acceso_usuarios", _upgrade_user_access_control,
+     _downgrade_user_access_control),
+    (51, "recuperacion_contrasena_gestoria",
+     _upgrade_gestoria_password_recovery,
+     _downgrade_gestoria_password_recovery),
+    (52, "documentos_por_correo",
+     _upgrade_inbound_email_documents,
+     _downgrade_inbound_email_documents),
+    (53, "material_o_mano_de_obra", _upgrade_line_kind,
      _downgrade_line_kind),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]

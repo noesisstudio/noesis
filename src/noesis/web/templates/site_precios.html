@@ -1,6 +1,6 @@
 {% extends "site_base.html" %}
-{% block page_title %}Precios{% endblock %}
-{% block meta_description %}Planes de Noesis: Autónomo 29 €, Negocio 49 € y Sin Límites 99 € al mes más IVA. {% if public_signup_available %}Prueba 14 días sin tarjeta.{% else %}Acceso piloto acompañado.{% endif %}{% endblock %}
+{% block page_title %}Precios del software para autónomos{% endblock %}
+{% block meta_description %}Planes de Noesis: Autónomo 29 €, Negocio 49 € y Premium 99 € al mes más IVA. {% if public_signup_available %}Prueba 14 días sin tarjeta.{% else %}Acceso piloto acompañado.{% endif %}{% endblock %}
 {% block content %}
   <section class="public-page-hero pricing-page-hero">
     <div><span class="eyebrow">Precios</span><h1>Empieza con lo que necesitas. Crece sin cambiar de sistema.</h1></div>
@@ -67,7 +67,7 @@
       </article>
 
       <article class="public-price-card" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
-        <div class="plan-label">Sin Límites</div>
+        <div class="plan-label">Premium</div>
         <p class="public-price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="annual-price-note" data-annual-note hidden></small>
         <p>Para negocios que quieren más automatización, uso intensivo y una puesta en marcha acompañada.</p>

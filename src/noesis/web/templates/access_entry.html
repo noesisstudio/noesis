@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Noesis · Elige tu acceso</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body class="public-auth-body access-entry-page">
+  <header class="auth-topbar">
+    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a>
+    <a href="/">Volver a la web</a>
+  </header>
+  <main class="access-entry" aria-labelledby="access-title">
+    <div class="access-entry-head">
+      <span class="eyebrow">Acceso seguro</span>
+      <h1 id="access-title">¿Cómo trabajas con Noesis?</h1>
+      <p>Elige tu espacio. Tus datos, permisos y herramientas permanecen separados.</p>
+    </div>
+    <div class="access-entry-grid">
+      <article class="access-role-card primary-role">
+        <div class="access-role-mark" aria-hidden="true">01</div>
+        <span class="eyebrow">Mi negocio</span>
+        <h2>Autónomo o empresa</h2>
+        <p>Entra al parte del día para ordenar trabajos, clientes, documentos, facturas y cobros.</p>
+        <ul>
+          <li>Tu actividad y tu equipo</li>
+          <li>WhatsApp y Noesis</li>
+          <li>Facturación y documentos</li>
+        </ul>
+        <div class="access-role-actions">
+          <a class="btn primary full" href="/login">Entrar a mi negocio</a>
+          {% if public_signup_available %}
+          <a href="/onboarding?intent=trial">Crear una cuenta</a>
+          {% else %}
+          <a href="/solicitar-acceso">Solicitar acceso</a>
+          {% endif %}
+        </div>
+      </article>
+      <article class="access-role-card professional-role">
+        <div class="access-role-mark" aria-hidden="true">02</div>
+        <span class="eyebrow">Cartera profesional</span>
+        <h2>Gestoría</h2>
+        <p>Revisa varias empresas sin mezclar información, prepara períodos y pide lo que falta.</p>
+        <ul>
+          <li>Cartera multiempresa</li>
+          <li>Vista fiscal por períodos</li>
+          <li>Accesos explícitos y revocables</li>
+        </ul>
+        <div class="access-role-actions">
+          <a class="btn full" href="/gestoria/login">Entrar como gestoría</a>
+          <a href="/solicitar-acceso?perfil=gestoria">Solicitar espacio profesional</a>
+        </div>
+      </article>
+    </div>
+    <p class="access-entry-note">¿Eres cliente de un negocio? Entra desde el enlace privado que te ha enviado ese profesional.</p>
+  </main>
+</body>
+</html>

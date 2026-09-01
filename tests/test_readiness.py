@@ -184,7 +184,7 @@ class ReadinessTestCase(unittest.TestCase):
         by_area = {item["area"]: item for item in report["checks"]}
         for area in (
             "copias", "whatsapp", "correo", "stripe", "audio",
-            "lectura de imágenes", "seguridad documental",
+            "ocr privado", "seguridad documental",
         ):
             self.assertEqual(by_area[area]["status"], "blocker", area)
 

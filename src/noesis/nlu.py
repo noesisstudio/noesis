@@ -85,6 +85,22 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 HELP = "__help__"
 
 
+# Conectores que el hablante pone entre el nombre y el importe. El patron los
+# arrastra al capturar hasta el numero, asi que "factura para Juan Perez de 250
+# euros" dejaba un cliente llamado "Juan Perez de". Al dictar una factura por voz
+# esa frase es la natural, y el nombre sucio crea un cliente nuevo mal escrito en
+# vez de reconocer al que ya existe.
+_CONECTORES_FINALES = ("de", "del", "por", "per", "para", "a", "en", "d")
+
+
+def _limpiar_cliente(nombre: str) -> str:
+    """Quita los conectores que se cuelan al final de un nombre dictado."""
+    partes = str(nombre or "").strip().split()
+    while partes and partes[-1].lower().strip(",.") in _CONECTORES_FINALES:
+        partes.pop()
+    return " ".join(partes).strip(" ,.")
+
+
 def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
     """Parser flexible para facturas y presupuestos. Acepta varios órdenes naturales:
       - "factura a Juan por reparación de grifo 95 euros"  (concepto antes de importe)
@@ -95,20 +111,20 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+(?:por|de|per)\s+(.+?)[,]?\s*"
                   r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?$", text, re.I)
     if m:
-        return {"cliente": m.group(1).strip(), "concepto": m.group(2).strip(),
+        return {"cliente": _limpiar_cliente(m.group(1)), "concepto": m.group(2).strip(),
                 "base": float(m.group(3).replace(",", "."))}
     # Orden 2: verbo a CLIENTE IMPORTE por CONCEPTO
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
                   r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)\s+"
                   r"(?:por|de|per)\s+(.+)", text, re.I)
     if m:
-        return {"cliente": m.group(1).strip(), "concepto": m.group(3).strip(),
+        return {"cliente": _limpiar_cliente(m.group(1)), "concepto": m.group(3).strip(),
                 "base": float(m.group(2).replace(",", "."))}
     # Orden 3: verbo a CLIENTE IMPORTE (sin concepto, "Servicio" por defecto)
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
                   r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)", text, re.I)
     if m:
-        return {"cliente": m.group(1).strip(), "concepto": "Servicio",
+        return {"cliente": _limpiar_cliente(m.group(1)), "concepto": "Servicio",
                 "base": float(m.group(2).replace(",", "."))}
     return None
 

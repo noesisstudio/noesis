@@ -81,7 +81,7 @@
   </div>
 
   <div class="card card-action" id="whatsapp-conexion">
-    <div class="card-h"><h2>WhatsApp</h2>
+    <div class="card-h"><h2>WhatsApp privado con Noesis</h2>
       {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>
       {% else %}<span class="badge b-amber">no conectado</span>{% endif %}</div>
     <div class="card-b">
@@ -92,7 +92,7 @@
           Desconectar este número
         </button>
         <div id="whatsapp-preference-msg" class="meta" role="status"></div>
-      {% else %}
+      {% elif wa is defined %}
         <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.</p>
         <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener">
           Abrir WhatsApp y vincular mi número
@@ -100,11 +100,42 @@
         <p class="meta" style="margin:10px 0 0;text-align:center">
           Envía el mensaje preparado. Código temporal: <b>{{ wa.code }}</b>
         </p>
+      {% else %}
+        <p style="margin-top:0">
+          WhatsApp no está conectado en esta demostración. La vista es de solo lectura
+          y no enviará mensajes reales.
+        </p>
       {% endif %}
       <div class="insight" style="margin-top:14px">
         Funciona con la API oficial de Meta (WhatsApp Cloud API). Cuando esté el número
         de empresa activo, podrás dar órdenes —y enviar notas de voz— y recibir tus
         avisos de cobro y resúmenes por aquí.
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-action" id="whatsapp-negocio">
+    <div class="card-h">
+      <h2>WhatsApp para tus clientes</h2>
+      <span class="badge b-gray" id="wb-status">Consultando…</span>
+    </div>
+    <div class="card-b">
+      <p style="margin-top:0">
+        Conecta un número comercial propio para que Noesis reciba solicitudes,
+        documentos y consultas de tus clientes sin mezclarlos con tus órdenes internas.
+      </p>
+      <div class="grid g3" style="margin-top:14px">
+        <div class="soft-card"><b>Clientes</b><p class="meta">Escriben al número de tu negocio. Cada remitente queda dentro de tu expediente.</p></div>
+        <div class="soft-card"><b>Equipo</b><p class="meta">Escribe al número central de Noesis. Costes y dudas esperan tu revisión.</p></div>
+        <div class="soft-card"><b>Tú decides</b><p class="meta">Noesis ordena y resume; no confirma importes ni compromisos por ti.</p></div>
+      </div>
+      <div id="wb-connections" style="margin-top:14px">
+        <div class="empty">Comprobando tu canal comercial…</div>
+      </div>
+      <div class="insight" style="margin-top:14px">
+        Un mensaje siempre se asigna primero por el número que lo recibe y después por
+        el remitente. Así dos empresas pueden tener un “Juan” con el mismo teléfono sin
+        compartir conversaciones, clientes ni documentos.
       </div>
     </div>
   </div>
@@ -202,6 +233,7 @@
     </div>
   </div>
 
+  {% if 'gestoria' in entitlements %}
   <div class="card" id="gestoria">
     <div class="card-h"><h2>Tu gestoría</h2>
       {% if business.gestoria_cadence and business.gestoria_cadence != 'off' %}
@@ -307,6 +339,15 @@
       {% endif %}
     </div>
   </div>
+  {% else %}
+  <div class="card" id="gestoria">
+    <div class="card-h"><h2>Tu gestoría</h2><span class="badge b-gray">plan Negocio</span></div>
+    <div class="card-b">
+      <p class="muted">Con el plan Negocio conectas el despacho, preparas los períodos y compartes documentos sin perseguir correos.</p>
+      <a class="btn primary" href="/b/{{ business.id }}/suscripcion?plan=pro&status=upgrade&feature=gestoria">Ver plan Negocio</a>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="card" id="verifactu" style="margin-top:16px">
@@ -366,49 +407,224 @@
   </div>
 </div>
 
-<div class="card" style="margin-top:16px">
-  <div class="card-h"><h2>Marca y plantillas</h2><span class="hint">en tus facturas y en el portal del cliente</span></div>
+<section class="card document-brand-card" id="marca-documental">
+  <div class="card-h">
+    <div><div class="kicker">Tu identidad</div><h2>Diseña tus facturas</h2></div>
+    <a class="btn sm" href="/api/{{ business.id }}/branding/preview.pdf"
+       target="_blank" rel="noopener">Ver PDF de ejemplo</a>
+  </div>
   <div class="card-b">
-    <form method="post" action="/b/{{ business.id }}/branding" enctype="multipart/form-data">
-      <label class="fld">Plantilla del documento</label>
-      <div class="choice-grid" style="grid-template-columns:repeat(3,1fr)">
-        {% for key, name in [('clasica','Clásica'), ('minimal','Minimal'), ('editorial','Editorial')] %}
-        <label class="choice-card">
-          <input type="radio" name="template" value="{{ key }}"
-            {{ 'checked' if (business.invoice_template or 'clasica') == key }}>
-          <span>{{ name }}</span>
-        </label>
-        {% endfor %}
+    {% if request.query_params.get('ok') == 'marca' %}
+    <div class="banner ok document-brand-notice">Hecho. Las facturas futuras usarán este diseño.</div>
+    {% elif request.query_params.get('error') == 'marca' %}
+    <div class="banner warn document-brand-notice">No he podido guardar una imagen o una opción. Usa PNG, JPG o WebP de hasta 3 MB.</div>
+    {% endif %}
+    <div class="document-brand-intro">
+      <div>
+        <h3>Que la factura parezca tuya</h3>
+        <p>Elige una composición, tu color, el logotipo y el pie que necesites. Puedes
+          añadir un distintivo de una ayuda pública, certificación o asociación.</p>
       </div>
-      <div class="grid g2" style="margin-top:12px">
-        <div><label class="fld">Color de marca</label>
-          <input class="input" type="color" name="brand_color"
-            value="{{ business.brand_color or '#14463b' }}" style="height:42px;padding:4px"></div>
-        <div><label class="fld">Logo (PNG o JPG, opcional)</label>
-          <input class="input" type="file" name="logo" accept="image/png,image/jpeg"></div>
-      </div>
-      {% if business.logo_data %}
-      <div class="lrow" style="margin-top:12px">
-        <span style="display:flex;align-items:center;gap:10px">
-          <img src="data:{{ business.logo_mime }};base64,{{ business.logo_data }}" alt="Logo actual"
-            style="width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
-          Logo actual</span>
-        <label style="font-size:13px;display:flex;align-items:center;gap:7px">
-          <input type="checkbox" name="remove_logo" value="1"> Quitar logo</label>
-      </div>
-      {% else %}
-      <p class="hint" style="margin-top:12px">Si no subes logo, usamos un <b>monograma</b>
-        automático con tus iniciales (<b>{{ business.name[:2] | upper }}</b>) sobre tu color de marca.</p>
-      {% endif %}
-      <button class="btn primary" style="margin-top:14px">Guardar marca</button>
-    </form>
-    <div class="insight" style="margin-top:14px">
-      Elige cómo se ven tus presupuestos y facturas. Tu cliente verá el mismo logo y
-      color en el portal donde aprueba presupuestos y descarga facturas.
+      <p class="document-brand-lock"><b>Las emitidas no cambian.</b> Cada factura conserva
+        la versión visual con la que salió.</p>
     </div>
+    <form id="document-brand-form" method="post" action="/b/{{ business.id }}/branding"
+          enctype="multipart/form-data">
+      <div class="document-brand-layout">
+        <div class="document-brand-controls">
+          <fieldset class="brand-fieldset">
+            <legend><span>1</span> Estilo del documento</legend>
+            <div class="invoice-template-grid">
+              {% for key, name, detail in [
+                ('clasica','Clásica','Ordenada y reconocible'),
+                ('minimal','Minimal','Más aire y líneas limpias'),
+                ('editorial','Editorial','Más carácter y presencia')
+              ] %}
+              <label class="invoice-template-choice">
+                <input type="radio" name="template" value="{{ key }}"
+                  {{ 'checked' if (business.invoice_template or 'clasica') == key }}>
+                <span class="template-sheet template-{{ key }}" aria-hidden="true">
+                  <i></i><b></b><em></em><small></small>
+                </span>
+                <strong>{{ name }}</strong><small>{{ detail }}</small>
+              </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+
+          <fieldset class="brand-fieldset">
+            <legend><span>2</span> Cabecera y marca</legend>
+            <div class="brand-header-fields">
+              <div>
+                <label class="fld" for="brand-color">Color principal</label>
+                <div class="brand-color-control">
+                  <input type="color" id="brand-color" name="brand_color"
+                    value="{{ business.brand_color or '#14463b' }}">
+                  <output id="brand-color-value">{{ business.brand_color or '#14463b' }}</output>
+                </div>
+              </div>
+              <div>
+                <label class="fld" for="brand-logo">Logotipo</label>
+                <input class="input" id="brand-logo" type="file" name="logo"
+                  accept="image/png,image/jpeg,image/webp">
+                <p class="hint">PNG, JPG o WebP · máximo 3 MB.</p>
+              </div>
+            </div>
+            {% if business.logo_data %}
+            <div class="brand-current-file">
+              <img src="data:{{ business.logo_mime }};base64,{{ business.logo_data }}"
+                   alt="Logotipo actual">
+              <span><b>Logotipo actual</b><small>Se mantendrá si no subes otro.</small></span>
+              <label><input type="checkbox" name="remove_logo" value="1"> Quitar</label>
+            </div>
+            {% else %}
+            <p class="hint brand-monogram-note">Sin logotipo, Noesis usa automáticamente
+              las iniciales de {{ business.name }}.</p>
+            {% endif %}
+          </fieldset>
+
+          <fieldset class="brand-fieldset">
+            <legend><span>3</span> Pie de factura</legend>
+            <label class="fld" for="document-footer">Texto habitual</label>
+            <textarea class="input" id="document-footer" name="document_footer" rows="3"
+              maxlength="800" placeholder="Ej. Gracias por confiar en nuestro equipo.">{{ business.document_footer or '' }}</textarea>
+            <label class="fld brand-footer-upload-label" for="footer-image">Imagen o distintivo</label>
+            <input class="input" id="footer-image" type="file" name="footer_image"
+              accept="image/png,image/jpeg,image/webp">
+            <p class="hint">Ideal para logotipos de subvenciones, fondos europeos,
+              certificaciones o asociaciones. No tapa importes ni datos fiscales.</p>
+            {% if business.footer_image_data %}
+            <div class="brand-current-footer">
+              <img src="data:{{ business.footer_image_mime }};base64,{{ business.footer_image_data }}"
+                   alt="Imagen actual del pie de factura">
+              <label><input type="checkbox" name="remove_footer_image" value="1"> Quitar imagen</label>
+            </div>
+            {% endif %}
+            <div class="brand-footer-options">
+              <div><label class="fld" for="footer-width">Tamaño</label>
+                <select class="input" id="footer-width" name="footer_image_width">
+                  {% for width, label in [(25,'Pequeño'),(50,'Mediano'),(75,'Grande'),(100,'Ancho completo')] %}
+                  <option value="{{ width }}" {{ 'selected' if (business.footer_image_width or 100) == width }}>{{ label }}</option>
+                  {% endfor %}
+                </select></div>
+              <div><label class="fld" for="footer-alignment">Alineación</label>
+                <select class="input" id="footer-alignment" name="footer_image_alignment">
+                  {% for value, label in [('left','Izquierda'),('center','Centro'),('right','Derecha')] %}
+                  <option value="{{ value }}" {{ 'selected' if (business.footer_image_alignment or 'center') == value }}>{{ label }}</option>
+                  {% endfor %}
+                </select></div>
+              <div><label class="fld" for="footer-scope">Dónde aparece</label>
+                <select class="input" id="footer-scope" name="footer_image_scope">
+                  <option value="invoices" {{ 'selected' if (business.footer_image_scope or 'invoices') == 'invoices' }}>Solo facturas</option>
+                  <option value="all" {{ 'selected' if business.footer_image_scope == 'all' }}>Facturas y presupuestos</option>
+                </select></div>
+            </div>
+          </fieldset>
+
+          <details class="brand-advanced">
+            <summary>Opciones de presupuestos</summary>
+            <div class="brand-advanced-body">
+              <label class="fld" for="quote-terms">Condiciones habituales</label>
+              <textarea class="input" id="quote-terms" name="quote_terms" rows="4"
+                maxlength="1500" placeholder="Ej. Incluye los materiales descritos. 50% al aceptar y 50% al finalizar.">{{ business.quote_terms or '' }}</textarea>
+              <label class="fld" for="quote-validity">Validez predeterminada</label>
+              <select class="input" id="quote-validity" name="default_quote_validity_days">
+                {% for days in [7, 15, 30, 45, 60, 90] %}
+                <option value="{{ days }}" {{ 'selected' if (business.default_quote_validity_days or 30) == days }}>{{ days }} días</option>
+                {% endfor %}
+              </select>
+            </div>
+          </details>
+
+          <div class="document-brand-actions">
+            <button class="btn primary">Guardar diseño</button>
+            <span>Se aplicará a borradores y documentos nuevos.</span>
+          </div>
+        </div>
+
+        <aside class="invoice-live-preview" aria-label="Vista previa aproximada de la factura">
+          <div class="preview-caption"><span>Vista previa</span><small>El PDF exacto se abre arriba</small></div>
+          <div class="preview-paper" id="brand-preview-paper">
+            <div class="preview-invoice-head">
+              <div class="preview-business">
+                <span class="preview-logo" id="brand-preview-logo">
+                  {% if business.logo_data %}<img src="data:{{ business.logo_mime }};base64,{{ business.logo_data }}" alt="">
+                  {% else %}{{ business.name[:2] | upper }}{% endif %}
+                </span>
+                <div><b>{{ business.name }}</b><small>Tu información fiscal</small></div>
+              </div>
+              <div class="preview-invoice-title"><b>FACTURA</b><small>Nº 2026-001</small></div>
+            </div>
+            <div class="preview-client"><small>FACTURAR A</small><b>Cliente de ejemplo</b></div>
+            <div class="preview-lines"><span>Trabajo realizado</span><b>1.000,00</b></div>
+            <div class="preview-lines muted"><span>IVA (21%)</span><b>210,00</b></div>
+            <div class="preview-total"><span>Total</span><b>1.210,00 EUR</b></div>
+            <p class="preview-footer-text" id="brand-preview-footer">{{ business.document_footer or 'Tu pie habitual aparecerá aquí.' }}</p>
+            <div class="preview-footer-image-wrap align-{{ business.footer_image_alignment or 'center' }}"
+                 id="brand-preview-footer-wrap">
+              {% if business.footer_image_data %}<img id="brand-preview-footer-image"
+                style="width:{{ business.footer_image_width or 100 }}%"
+                src="data:{{ business.footer_image_mime }};base64,{{ business.footer_image_data }}" alt="">
+              {% else %}<div class="preview-footer-placeholder" id="brand-preview-footer-placeholder">Tu distintivo o imagen del pie</div>{% endif %}
+            </div>
+          </div>
+          <p class="preview-note">Esta muestra no contiene una numeración real ni emite nada.</p>
+        </aside>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div class="card" id="soporte" style="margin-top:16px">
+  <div class="card-h">
+    <div><div class="kicker">Privacidad y soporte</div><h2>Acceso temporal de soporte</h2></div>
+    {% if support_grant %}<span class="badge b-amber">activo hasta {{ support_grant.expires_at|string|truncate(16, True, '') }}</span>
+    {% else %}<span class="badge b-green">cerrado</span>{% endif %}
+  </div>
+  <div class="card-b">
+    {% if support_notice %}<p class="notice success">{{ support_notice }}</p>{% endif %}
+    {% if support_error %}<p class="notice error">{{ support_error }}</p>{% endif %}
+    {% if support_grant %}
+      <p>Has autorizado a soporte para: <b>{{ support_grant.scope_labels|join(' · ') }}</b>.</p>
+      <div class="insight"><b>Motivo registrado:</b> {{ support_grant.purpose }}<br>
+        Caduca automáticamente el {{ support_grant.expires_at }}. Puedes cerrarlo ahora sin esperar.</div>
+      <form method="post" action="/b/{{ business.id }}/support-access/revoke" style="margin-top:14px">
+        <button class="btn">Revocar acceso ahora</button>
+      </form>
+    {% else %}
+      <p>Soporte solo ve el diagnóstico técnico agregado. Si necesitas que revise o
+        corrija algo contigo, abre una ventana limitada. No comparte contraseñas y
+        nunca autoriza pagos, emisiones, impuestos ni cambios en facturas emitidas.</p>
+      <form method="post" action="/b/{{ business.id }}/support-access">
+        <label class="fld" for="support-purpose">Motivo concreto</label>
+        <textarea class="input" id="support-purpose" name="purpose" rows="3" maxlength="500"
+          required placeholder="Ej. El ticket de julio quedó en la carpeta incorrecta y necesito ayuda para revisarlo."></textarea>
+        <fieldset style="border:0;padding:0;margin:14px 0">
+          <legend class="fld">Qué puede revisar soporte</legend>
+          <div class="choice-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          {% for key, label in support_scopes.items() %}
+            <label class="choice-card"><input type="checkbox" name="scopes" value="{{ key }}"><span>{{ label }}</span></label>
+          {% endfor %}
+          </div>
+        </fieldset>
+        <div style="max-width:280px">
+          <label class="fld" for="support-duration">Duración máxima</label>
+          <select class="input" id="support-duration" name="duration_hours">
+            <option value="1">1 hora</option><option value="4" selected>4 horas</option>
+            <option value="24">24 horas</option><option value="72">72 horas</option>
+          </select>
+        </div>
+        <label style="display:flex;gap:9px;align-items:flex-start;margin-top:14px">
+          <input type="checkbox" name="consent" value="yes" required>
+          <span>Autorizo expresamente este acceso temporal para el motivo y los permisos seleccionados. Sé que puedo revocarlo en cualquier momento.</span>
+        </label>
+        <button class="btn primary" style="margin-top:14px">Autorizar acceso temporal</button>
+      </form>
+    {% endif %}
   </div>
 </div>
 
+{% if 'team' in entitlements %}
 <div class="card" style="margin-top:16px">
   <div class="card-h">
     <h2>Política de registro de jornada</h2>
@@ -427,6 +643,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <div class="card autonomy-card" id="control-noesis" style="margin-top:16px">
   <div class="card-h">
@@ -710,5 +927,102 @@ async function forgetMemory(memoryId) {
     el('memory-list').innerHTML = '<div class="memory-empty">No guardo ninguna preferencia permanente.</div>';
   }
 }
+async function loadBusinessWhatsApp() {
+  const host = el('wb-connections'), badge = el('wb-status');
+  try {
+    const data = await api('/whatsapp-business');
+    const connections = data.connections || [];
+    const active = connections.filter(item => item.status === 'active');
+    badge.className = `badge ${active.length ? 'b-green' : 'b-gray'}`;
+    badge.textContent = active.length ? 'activo' : 'listo para conectar';
+    if (!connections.length) {
+      host.innerHTML = `<div class="empty"><strong>Tu canal comercial aún no está vinculado.</strong><br>
+        Al activar tu número, tus clientes podrán escribirle directamente y cada entrada
+        aparecerá separada por cliente, conversación y documento.</div>`;
+      return;
+    }
+    host.innerHTML = connections.map(item => `
+      <div class="lrow" style="align-items:center">
+        <span><b>${esc(item.verified_name || 'WhatsApp del negocio')}</b>
+          <small class="muted" style="display:block;margin-top:4px">${esc(item.display_phone || 'Número validado por Meta')} · ${esc(item.status)}</small></span>
+        <label style="display:flex;gap:8px;align-items:center">
+          <span class="meta">Recepción automática</span>
+          <input type="checkbox" ${item.receptionist_enabled ? 'checked' : ''}
+            ${item.status === 'active' ? '' : 'disabled'}
+            onchange="toggleBusinessReception(${item.id}, this)">
+        </label>
+      </div>`).join('');
+  } catch (error) {
+    badge.textContent = 'no disponible';
+    host.innerHTML = `<div class="empty">${esc(error.message)}</div>`;
+  }
+}
+async function toggleBusinessReception(connectionId, input) {
+  const previous = !input.checked;
+  input.disabled = true;
+  try {
+    await apiPost(`/whatsapp-business/${connectionId}/receptionist`, {
+      enabled: input.checked
+    });
+  } catch (error) {
+    input.checked = previous;
+    alert(error.message);
+  } finally { input.disabled = false; }
+}
+
+function setupDocumentBrandPreview() {
+  const form = el('document-brand-form');
+  const paper = el('brand-preview-paper');
+  if (!form || !paper) return;
+  const color = el('brand-color');
+  const colorValue = el('brand-color-value');
+  const footerText = el('document-footer');
+  const footerWrap = el('brand-preview-footer-wrap');
+  const width = el('footer-width');
+  const alignment = el('footer-alignment');
+  const update = () => {
+    paper.style.setProperty('--preview-brand', color.value);
+    colorValue.textContent = color.value.toUpperCase();
+    el('brand-preview-footer').textContent = footerText.value.trim()
+      || 'Tu pie habitual aparecerá aquí.';
+    const image = el('brand-preview-footer-image');
+    if (image) image.style.width = `${width.value}%`;
+    footerWrap.className = `preview-footer-image-wrap align-${alignment.value}`;
+    const selected = form.querySelector('input[name="template"]:checked');
+    paper.classList.remove('style-clasica', 'style-minimal', 'style-editorial');
+    paper.classList.add(`style-${selected ? selected.value : 'clasica'}`);
+    const title = paper.querySelector('.preview-invoice-title b');
+    title.textContent = selected && selected.value !== 'clasica' ? 'Factura' : 'FACTURA';
+  };
+  [color, footerText, width, alignment].forEach(input => {
+    input.addEventListener('input', update);
+    input.addEventListener('change', update);
+  });
+  form.querySelectorAll('input[name="template"]').forEach(input => {
+    input.addEventListener('change', update);
+  });
+  const previewUpload = (input, targetId, wrapId) => {
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      let target = el(targetId);
+      if (!target) {
+        target = document.createElement('img');
+        target.id = targetId;
+        el(wrapId).innerHTML = '';
+        el(wrapId).appendChild(target);
+      }
+      target.onload = () => URL.revokeObjectURL(url);
+      target.src = url;
+      target.style.width = targetId.includes('footer') ? `${width.value}%` : '';
+    });
+  };
+  previewUpload(el('brand-logo'), 'brand-preview-logo-image', 'brand-preview-logo');
+  previewUpload(el('footer-image'), 'brand-preview-footer-image', 'brand-preview-footer-wrap');
+  update();
+}
+setupDocumentBrandPreview();
+loadBusinessWhatsApp();
 </script>
 {% endblock %}

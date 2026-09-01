@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puesta en marcha de WhatsApp · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Runbook de producción</p>
+    <h1>Poner WhatsApp en marcha</h1>
+    <p class="standfirst">Todo lo que falta para que el canal funcione con clientes reales, en orden de dependencia. El motor multicanal ya está construido y desplegado: lo que queda es trabajo con Meta, salvo un punto que es código.</p>
+    <p class="crumbs">Variables y criterios de aceptación en <code>Conectar-APIs.md</code> §4. Cómo funciona el modelo por dentro, en <code>WhatsApp-Como-funciona.pdf</code>. Pendientes vivos en <code>Tareas-vivas.md</code>; foto verificable en <code>project-state.json</code>.</p>
+  </header>
+
+  <div class="status">
+    <div class="status-cell is-ok">
+      <span class="status-label">Código</span>
+      <span class="status-value">Desplegado</span>
+      <span class="status-note">Motor multicanal desplegado y pruebas en verde. Versión exacta en <code>project-state.json</code>.</span>
+    </div>
+    <div class="status-cell is-stop">
+      <span class="status-label">Número central</span>
+      <span class="status-value">De prueba</span>
+      <span class="status-note">Si empieza por <code>1555…</code>, es el que presta Meta.</span>
+    </div>
+    <div class="status-cell is-stop">
+      <span class="status-label">Token</span>
+      <span class="status-value">Temporal</span>
+      <span class="status-note">El del panel caduca a las 24 h y no cubre los WABA de clientes.</span>
+    </div>
+    <div class="status-cell is-warn">
+      <span class="status-label">Números comerciales</span>
+      <span class="status-value">Ninguno</span>
+      <span class="status-note">Hacen falta dos, de negocios distintos, para validar.</span>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Lo primero: ahora hay dos clases de número</h2>
+      <p class="sec-intro">Es el cambio que hace que este documento no se parezca a lo que dice el asistente de Meta. Un número es de Noesis. Los otros son de cada cliente.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>&nbsp;</th><th>Número central de Noesis</th><th>Número comercial de cada negocio</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Quién escribe</strong></td><td>Titular y trabajadores</td><td>Los clientes finales de ese autónomo</td></tr>
+          <tr><td><strong>Cuántos</strong></td><td>Uno, compartido</td><td>Uno por negocio</td></tr>
+          <tr><td><strong>Se configura en</strong></td><td>Variables de Railway</td><td>Administración, en la ficha de la cuenta</td></tr>
+          <tr><td><strong>Guarda token propio</strong></td><td>Sí, el permanente</td><td><strong>No.</strong> Usa el mismo token de sistema</td></tr>
+          <tr><td><strong>Hace falta para el piloto</strong></td><td>Sí, desde el primer día</td><td>Dos, para probar que no se cruzan</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>Un número comercial no añade variables de entorno.</strong> Meta concede el activo al usuario del sistema de Noesis, y el WABA y el <code>phone_number_id</code> se registran desde Administración. El formulario solo admite identificadores públicos: nunca tokens ni secretos.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>El mapa: qué depende de qué</h2>
+      <p class="sec-intro">Cuatro vías en paralelo que confluyen en una sola prueba. Las dos de arriba son las lentas y no dependen de ti, así que se arrancan el primer día.</p>
+    </div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 900 330" role="img" aria-label="Cuatro vías en paralelo: entidad legal hacia verificación de empresa; las nueve plantillas; número central, token y variables; y la corrección del código. Todas confluyen en la prueba con dos negocios reales.">
+        <defs>
+          <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/>
+          </marker>
+        </defs>
+
+        <text class="lbl" x="4" y="16">Lo lento · empieza hoy</text>
+        <text class="lbl" x="4" y="152">Lo que depende de ti</text>
+        <text class="lbl" x="4" y="262">Código</text>
+
+        <rect class="node" x="4" y="28" width="146" height="46" rx="9"/>
+        <text class="t" x="18" y="50">Entidad legal</text>
+        <text class="s" x="18" y="65">ya completada</text>
+        <path class="wire" d="M150,51 H178" marker-end="url(#a)"/>
+        <rect class="node node-warn" x="184" y="28" width="196" height="46" rx="9"/>
+        <text class="t" x="198" y="50">Verificación de empresa</text>
+        <text class="s" x="198" y="65">de horas a una semana</text>
+        <path class="wire" d="M380,51 H690"/>
+
+        <rect class="node" x="4" y="96" width="196" height="46" rx="9"/>
+        <text class="t" x="18" y="118">Nueve plantillas</text>
+        <text class="s" x="18" y="133">aprobación: 1–2 días</text>
+        <path class="wire" d="M200,119 H690"/>
+
+        <rect class="node node-stop" x="4" y="164" width="120" height="46" rx="9"/>
+        <text class="t" x="18" y="186">Central</text>
+        <text class="s" x="18" y="201">SIM nueva</text>
+        <path class="wire" d="M124,187 H150" marker-end="url(#a)"/>
+        <rect class="node node-stop" x="156" y="164" width="168" height="46" rx="9"/>
+        <text class="t" x="170" y="186">Token de sistema</text>
+        <text class="s" x="170" y="201">con todos los activos</text>
+        <path class="wire" d="M324,187 H350" marker-end="url(#a)"/>
+        <rect class="node node-warn" x="356" y="164" width="196" height="46" rx="9"/>
+        <text class="t" x="370" y="186">Dos números comerciales</text>
+        <text class="s" x="370" y="201">alta desde Administración</text>
+        <path class="wire" d="M552,187 H690"/>
+
+        <rect class="node" x="4" y="232" width="290" height="46" rx="9"/>
+        <text class="t" x="18" y="254">Corregir plantillas multilínea</text>
+        <text class="s" x="18" y="269">único punto de código</text>
+        <path class="wire" d="M294,255 H690"/>
+
+        <path class="wire" d="M690,51 V255"/>
+        <path class="wire" d="M690,153 H716" marker-end="url(#a)"/>
+        <rect class="node node-ok" x="722" y="130" width="174" height="46" rx="9"/>
+        <text class="t" x="736" y="152">Prueba con dos negocios</text>
+        <text class="s" x="736" y="167">y dos números distintos</text>
+      </svg>
+      <figcaption>La prueba final ya no es «funciona». Es «funciona con dos empresas y sus mensajes no se cruzan», que es lo único que demuestra que el aislamiento es real.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Antes de nada: un fallo que sigue vivo</h2>
+      <p class="sec-intro">Verificado hoy contra <code>main</code>, no heredado de una versión anterior. Es el único punto de esta página que es código y no gestión con Meta.</p>
+    </div>
+
+    <div class="callout" style="background:var(--ok-soft);border-color:var(--ok)">
+      <h3 style="color:var(--ok)">Corregido el 20-ago: los cinco avisos automáticos ya salen</h3>
+      <p>Meta rechaza los parámetros de plantilla que contienen saltos de línea, tabuladores o más de cuatro espacios seguidos. El planificador construye el resumen diario, el semanal, el cierre del día, el aviso fiscal y el aviso de cobros como texto multilínea y lo mete en <strong>un solo parámetro</strong>: <code>web/scheduler.py</code> pasa <code>"\n".join(lines)</code> y <code>_meta_payload()</code> en <code>web/whatsapp.py</code> sigue sin sanearlo.</p>
+      <p>Las respuestas dentro de la ventana de 24 horas funcionarán con normalidad. Los cinco proactivos, no: agotarán sus reintentos en silencio. Las pruebas no lo detectan porque simulan la respuesta de Meta.</p>
+      <p><strong>Ya está corregido.</strong> Al encolar, cada parámetro pasa por un saneado que convierte los saltos de línea en un separador visible «·», de modo que el aviso sigue leyéndose y Meta lo acepta. Se limpia al encolar y no al enviar, para que lo guardado coincida con lo que sale y un reintento no cambie el texto.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Fase A · El número central</h2>
+      <p class="sec-intro">Seis pasos en orden de dependencia. El 4 y el 6 no aparecen en el asistente de Meta y son donde se atasca casi todo el mundo.</p>
+    </div>
+
+    <ol class="steps">
+
+      <li class="step first-step">
+        <span class="step-n">01</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Elegir el número</h3>
+            <span class="chip chip-warn">Decisión, no trámite</span>
+          </div>
+          <p>Este es el número al que escriben <strong>titular y trabajadores de todos los negocios</strong>. No lo ve ningún cliente final: ellos escriben al número de su proveedor.</p>
+          <ul>
+            <li>Debe ser real y poder recibir SMS o llamada. Un fijo también sirve.</li>
+            <li><strong>No puede estar dado de alta en la app de WhatsApp ni en WhatsApp Business.</strong> Si lo está, elimina esa cuenta desde la app primero. Una vez en Cloud API, el número ya no vuelve al móvil.</li>
+            <li>Los números virtuales y VoIP baratos suelen ser rechazados.</li>
+          </ul>
+          <div class="note"><strong>Recomendación:</strong> una SIM prepago o eSIM española nueva y dedicada. Si usas tu móvil personal, pierdes WhatsApp en ese teléfono.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">02</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Registrarlo</h3>
+            <span class="chip chip-flat">Sale en el asistente</span>
+          </div>
+          <ol>
+            <li>Añade el número y elige nombre para mostrar: <strong>Noesis</strong>. Pasa una revisión y debe encajar con la marca y el dominio.</li>
+            <li>Verifica por SMS o llamada.</li>
+            <li>Fija el <strong>PIN de seis dígitos</strong> y guárdalo en el gestor de contraseñas: sin él no se puede migrar ni recuperar el número.</li>
+            <li>Copia el <strong>Phone number ID</strong> —no el número— a <code>WHATSAPP_PHONE_ID</code>.</li>
+          </ol>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">03</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Añadir método de pago</h3>
+            <span class="chip chip-flat">Sale en el asistente</span>
+          </div>
+          <p>Sin tarjeta solo puedes escribir a cinco destinatarios de prueba. Meta cobra por plantilla enviada; las respuestas dentro de la ventana de 24 horas no se cobran.</p>
+          <p>Consulta la tabla de precios vigente para España antes de estimar coste y fija un <strong>límite de gasto</strong> desde el primer día.</p>
+        </div>
+      </li>
+
+      <li class="step hidden-step">
+        <span class="step-n">04</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Generar el token permanente</h3>
+            <span class="chip chip-stop">No sale en el asistente</span>
+          </div>
+          <p>El token del panel caduca en 24 horas. Necesitas uno de usuario del sistema, en <em>business.facebook.com</em>:</p>
+          <ol>
+            <li>Configuración del negocio → <strong>Usuarios → Usuarios del sistema</strong>, crear uno con rol <strong>Administrador</strong>.</li>
+            <li><strong>Agregar activos:</strong> la app, la WABA central y —según vayan llegando— <strong>la WABA y los números de cada cliente</strong>. Este punto es nuevo y es el que hace posible el multicanal.</li>
+            <li><strong>Generar token:</strong> elige la app, caducidad <strong>Nunca</strong>, permisos <code>whatsapp_business_messaging</code> y <code>whatsapp_business_management</code>.</li>
+            <li>Cópialo —solo se muestra una vez— a <code>WHATSAPP_TOKEN</code>.</li>
+          </ol>
+          <div class="note"><strong>Un solo token para todo.</strong> No se guarda una credencial por cliente: el mismo token envía por cada número, y solo funciona si Meta le ha concedido ese activo. Si un cliente revoca el permiso, ese número deja de enviar y los demás siguen.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">05</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Confirmar el webhook</h3>
+            <span class="chip chip-warn">Verde no significa correcto</span>
+          </div>
+          <ul>
+            <li>Callback: <code>https://bynoesis.com/webhook/whatsapp</code>. Es <strong>el mismo para todos los números</strong>, centrales y comerciales: Noesis distingue por el receptor.</li>
+            <li>Verify token: el mismo valor que <code>WHATSAPP_VERIFY_TOKEN</code> en Railway.</li>
+            <li>Suscribe el campo <code>messages</code> <strong>en cada WABA</strong>, no solo en la app. Sin esa suscripción no entra nada aunque el webhook esté verificado.</li>
+            <li>Copia el <strong>App Secret</strong> a <code>WHATSAPP_APP_SECRET</code>. En producción la firma es obligatoria: sin el secreto, todo entra como 401.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="step hidden-step">
+        <span class="step-n">06</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Verificación de la empresa</h3>
+            <span class="chip chip-stop">De horas a una semana</span>
+          </div>
+          <p>Centro de cuentas de empresa → Centro de seguridad → <strong>Verificación de empresa</strong>. Arráncalo el primer día: es lo que más tarda y limita cuántos números puedes tener.</p>
+          <p>La identidad legal de Noesis ya está completada y publicada, así que el dato que declares en Meta debe ser exactamente ese.</p>
+
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Forma jurídica</th><th>Documentos</th></tr></thead>
+              <tbody>
+                <tr><td>Autónomo</td><td>Modelo 036/037 o certificado de situación censal de la AEAT, con nombre y NIF, más el DNI.</td></tr>
+                <tr><td>S.L.</td><td>Escritura de constitución, tarjeta CIF y nota simple del Registro Mercantil.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>Para la dirección: factura de suministro o extracto bancario de los últimos tres meses a nombre de la misma entidad.</p>
+          <div class="note"><strong>Ahí se concentran casi todos los rechazos.</strong> Nombre y dirección deben coincidir literalmente en todos los documentos, abreviaturas incluidas: «C/» frente a «Calle» basta para que lo tumben.</div>
+          <p>Ayuda a que aprueben el nombre para mostrar verificar el dominio <strong>bynoesis.com</strong> en el portfolio, con registro TXT en DNS o meta-tag.</p>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Fase B · El número comercial de cada cliente</h2>
+      <p class="sec-intro">Esta fase no existía antes. Se repite entera por cada negocio del piloto, y nunca toca Railway.</p>
+    </div>
+
+    <ol class="steps">
+      <li class="step first-step">
+        <span class="step-n">B1</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>El cliente concede el activo</h3>
+            <span class="chip chip-warn">Lo hace él, no tú</span>
+          </div>
+          <p>El negocio da a su WABA y a su número acceso al usuario del sistema de Noesis desde su propio Business Manager. Hasta que Meta registre esa concesión, el token no puede enviar por ese número aunque lo des de alta.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">B2</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Darlo de alta en Administración</h3>
+            <span class="chip chip-flat">Admin → cuenta → Números de WhatsApp</span>
+          </div>
+          <p>Se introducen el <strong>WABA ID</strong> y el <strong>Phone Number ID</strong>. Son identificadores públicos: el formulario no acepta tokens ni secretos, y cada cambio queda auditado.</p>
+          <div class="note">La conexión nace <strong>pendiente</strong>. En ese estado no atiende a nadie: si llega un mensaje, se descarta con el motivo anotado. Es deliberado, para que un alta a medias no deje a un cliente hablando solo.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">B3</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Probar y solo después activar</h3>
+            <span class="chip chip-ok">El orden importa</span>
+          </div>
+          <p>Comprueba el webhook y haz un envío real por ese número. Solo entonces se marca como <strong>activo</strong>, y solo con la conexión activa se puede encender la recepción de mensajes de clientes.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">B4</span>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Nunca aceptar identificadores dictados por el cliente</h3>
+            <span class="chip chip-stop">Regla fija</span>
+          </div>
+          <p>Los IDs se leen del panel de Meta, no de un correo o un WhatsApp del cliente. Un identificador equivocado enviaría mensajes de una empresa por el número de otra.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout callout-warn">
+      <h3>Embedded Signup todavía no existe</h3>
+      <p>Hoy cada número comercial lo da de alta un administrador a mano. Automatizarlo para que el cliente conecte el suyo sin intervención es un paso posterior, y no conviene abordarlo antes de haber validado el flujo manual con dos negocios reales.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Fase C · Las nueve plantillas</h2>
+      <p class="sec-intro">Créalas en paralelo con la verificación: tardan uno o dos días en aprobarse y no dependen de ella. Administrador de WhatsApp → Plantillas de mensajes, categoría <strong>Utilidad</strong>, idioma <strong>Español</strong>.</p>
+    </div>
+
+    <div class="note"><strong>El número y el orden de las variables están fijados en el código.</strong> Cambiarlos en Meta sin cambiar el código rompe el envío, y Meta no avisa: simplemente lo rechaza.</div>
+
+    <h4>Una variable · el cuerpo lo genera Noesis entero</h4>
+    <div class="tpl-grid">
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_resumen_diario</span><span class="arity">1 variable</span></div>
+        <div class="tpl-body">Tu parte de hoy en Noesis:<br><span class="v"><b>1</b><i>el parte entero</i></span></div>
+        <p class="tpl-use">El parte de la mañana.</p>
+      </div>
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_resumen_semanal</span><span class="arity">1 variable</span></div>
+        <div class="tpl-body">Tu semana en Noesis:<br><span class="v"><b>1</b><i>el repaso entero</i></span></div>
+        <p class="tpl-use">El repaso de la semana.</p>
+      </div>
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_cierre_dia</span><span class="arity">1 variable</span></div>
+        <div class="tpl-body">Cierre del día:<br><span class="v"><b>1</b><i>el cierre entero</i></span></div>
+        <p class="tpl-use">El cierre del día.</p>
+      </div>
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_aviso_fiscal</span><span class="arity">1 variable</span></div>
+        <div class="tpl-body">Aviso fiscal de Noesis:<br><span class="v"><b>1</b><i>el aviso entero</i></span></div>
+        <p class="tpl-use">Aviso trimestral de los modelos 303 y 130.</p>
+      </div>
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_aviso_cobros</span><span class="arity">1 variable</span></div>
+        <div class="tpl-body">Tienes un cobro pendiente:<br><span class="v"><b>1</b><i>el aviso entero</i></span></div>
+        <p class="tpl-use">Propuesta de reclamar una factura vencida, que espera un SÍ.</p>
+      </div>
+    </div>
+
+    <div class="note">Meta suele rechazar una plantilla cuyo cuerpo sea <em>solo</em> una variable, por eso las cinco llevan encabezado fijo. El prefijo es texto fijo: la variable sigue siendo una.</div>
+
+    <h4>Cinco variables · cliente, negocio, documento, importe, enlace</h4>
+    <div class="tpl-grid">
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_recordatorio_cobro</span><span class="arity">5 variables</span></div>
+        <div class="tpl-body">Hola <span class="v"><b>1</b><i>cliente</i></span>, te escribe <span class="v"><b>2</b><i>negocio</i></span>. Tienes pendiente la factura <span class="v"><b>3</b><i>número</i></span> por un importe de <span class="v"><b>4</b><i>importe</i></span>. Puedes verla y pagarla aquí: <span class="v"><b>5</b><i>enlace</i></span></div>
+        <p class="tpl-use">Recordatorio de cobro al cliente del autónomo.</p>
+      </div>
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_factura_lista</span><span class="arity">5 variables</span></div>
+        <div class="tpl-body">Hola <span class="v"><b>1</b><i>cliente</i></span>, te escribe <span class="v"><b>2</b><i>negocio</i></span>. Ya tienes lista la factura <span class="v"><b>3</b><i>número</i></span> por <span class="v"><b>4</b><i>importe</i></span>. La puedes descargar aquí: <span class="v"><b>5</b><i>enlace</i></span></div>
+        <p class="tpl-use">Entrega de la factura emitida. Sin esta plantilla no hay entrega por WhatsApp.</p>
+      </div>
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_seguimiento_presupuesto</span><span class="arity">5 variables</span></div>
+        <div class="tpl-body">Hola <span class="v"><b>1</b><i>cliente</i></span>, te escribe <span class="v"><b>2</b><i>negocio</i></span>. ¿Has podido revisar el presupuesto <span class="v"><b>3</b><i>número</i></span> por <span class="v"><b>4</b><i>importe</i></span>? Lo tienes aquí: <span class="v"><b>5</b><i>enlace</i></span></div>
+        <p class="tpl-use">Seguimiento de un presupuesto que lleva días abierto.</p>
+      </div>
+    </div>
+
+    <h4>Cuatro variables · cliente, negocio, cuándo, descripción</h4>
+    <div class="tpl-grid">
+      <div class="tpl">
+        <div class="tpl-top"><span class="tpl-name">noesis_recordatorio_cita</span><span class="arity">4 variables</span></div>
+        <div class="tpl-body">Hola <span class="v"><b>1</b><i>cliente</i></span>, te escribe <span class="v"><b>2</b><i>negocio</i></span>. Te recordamos la cita del <span class="v"><b>3</b><i>cuándo</i></span> para <span class="v"><b>4</b><i>descripción</i></span>. Si necesitas cambiarla, responde a este mensaje.</div>
+        <p class="tpl-use">Confirmación de cita. Ojo: aquí no hay enlace, son cuatro variables y no cinco.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Fase D · Variables en Railway</h2>
+      <p class="sec-intro">Solo las del canal central. Los números comerciales no añaden ninguna.</p>
+    </div>
+
+    <pre>NOESIS_WHATSAPP_NUMBER=34XXXXXXXXX     <span class="c"># central, sin «+», con prefijo 34</span>
+WHATSAPP_PHONE_ID=<span class="c">&lt;Phone number ID del paso 02&gt;</span>
+WHATSAPP_TOKEN=<span class="c">&lt;token de sistema del paso 04&gt;</span>
+WHATSAPP_VERIFY_TOKEN=<span class="c">&lt;el mismo valor que en Meta&gt;</span>
+WHATSAPP_APP_SECRET=<span class="c">&lt;app secret de la app Meta&gt;</span>
+META_GRAPH_VERSION=<span class="c">&lt;versión soportada validada&gt;</span></pre>
+
+    <div class="callout">
+      <h3>Rota lo que ya se ha visto</h3>
+      <p>Cualquier token o secreto que haya aparecido en una captura, un PDF o una conversación se considera expuesto: se genera otro y se revoca el anterior. Sigue siendo un P0 abierto en <code>Tareas-vivas.md</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Fase E · Prueba de aceptación</h2>
+      <p class="sec-intro">Dos bloques. El primero es el de siempre. El segundo es el que demuestra que el multicanal aísla de verdad, y sin él no se puede pilotar.</p>
+    </div>
+
+    <h4>Canal central · titular y equipo</h4>
+    <ol class="checks">
+      <li>Verificación GET del webhook; una firma falsa debe devolver 401.</li>
+      <li>Ajustes → Conectar WhatsApp da un código; enviar <code>NOESIS &lt;código&gt;</code> debe responder «WhatsApp conectado a…».</li>
+      <li>Consulta de agenda en texto libre, resuelta por el cerebro local.</li>
+      <li>Nota de voz transcrita.</li>
+      <li>Foto de ticket: propone el gasto y espera SÍ o NO.</li>
+      <li>Un trabajador manda un coste: queda pendiente y <strong>no</strong> toca el proyecto hasta que el titular lo acepta.</li>
+      <li>Un teléfono vinculado dos veces: la orden se bloquea con aviso de ambigüedad.</li>
+      <li><code>emitir factura &lt;n&gt;</code> con confirmación: número definitivo, PDF y entrega.</li>
+      <li>Estados <code>sent</code>, <code>delivered</code>, <code>read</code> y un fallo con reintento sin duplicar.</li>
+      <li>Una plantilla proactiva real. Aquí aflora el fallo del principio si no se ha corregido.</li>
+      <li>Cuenta en modo consulta: no ejecuta acciones ni automatizaciones.</li>
+    </ol>
+
+    <h4>Canal comercial · dos negocios, dos números</h4>
+    <ol class="checks">
+      <li><strong>El mismo remitente escribe a los dos números.</strong> Deben salir dos contactos y dos conversaciones aisladas, una en cada negocio.</li>
+      <li>Responder desde el panel de cada negocio y confirmar en Meta que cada salida usó su número receptor.</li>
+      <li>Mensaje a un número no registrado: se descarta, sin caer al canal central.</li>
+      <li>WABA discordante con el número: se descarta con el motivo anotado.</li>
+      <li>Conexión pendiente o con recepción apagada: no atiende.</li>
+      <li>Número revocado en Meta: deja de enviar sin afectar a los demás.</li>
+      <li>Opt-out de un contacto: el panel impide responderle.</li>
+      <li>Respuesta dentro y fuera de las 24 horas; fuera exige plantilla aprobada.</li>
+      <li>Un PDF por cada negocio: queda vinculado a su conversación y pendiente de revisión.</li>
+    </ol>
+
+    <p>Al terminar, <code>noesis-doctor --strict</code> en producción y resolver todo bloqueo.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Fase F · Lo que falta fuera de este canal</h2>
+      <p class="sec-intro">Actualizado a la foto de hoy: la identidad legal ya está hecha y el motor multicanal ya está desplegado.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">#</th><th>Qué</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Rotar los secretos expuestos</td><td>P0 abierto. Cualquier credencial vista en una captura o un chat.</td></tr>
+          <tr><td class="num">2</td><td>Correo real</td><td>Construido con dos vías: API HTTPS y SMTP. Falta credencial, dominio autenticado y entregabilidad.</td></tr>
+          <tr><td class="num">3</td><td>Voz y OCR</td><td>OCR trilingüe ya integrado. Falta medir precisión y tiempo con corpus real.</td></tr>
+          <tr><td class="num">4</td><td>Google OAuth</td><td>Botón oculto hasta que existan las dos credenciales.</td></tr>
+          <tr><td class="num">5</td><td>Stripe</td><td>Máquina de estados y permisos por plan ya desplegados. Falta validar el ciclo completo en test.</td></tr>
+          <tr><td class="num">6</td><td>Copia externa</td><td>Restauración en infraestructura distinta, con RPO/RTO documentados.</td></tr>
+          <tr><td class="num">7</td><td>Revisión jurídica y fiscal</td><td>Profesional, sobre los textos ya publicados.</td></tr>
+          <tr><td class="num">8</td><td>AEAT Veri*Factu</td><td>Solo entorno de pruebas hasta auditoría.</td></tr>
+          <tr><td class="num">9</td><td><code>NOESIS_PUBLIC_SIGNUP_ENABLED</code></td><td>El último interruptor, no el primero.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Orden recomendado</h2>
+    </div>
+    <ol class="steps">
+      <li class="step first-step">
+        <span class="step-n">Hoy</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Arrancar lo que tarda</h3></div>
+          <p>Abrir la verificación de empresa con la identidad legal ya publicada y crear las nueve plantillas. Ninguna de las dos depende de nada más y ambas tardan días.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-n">Luego</span>
+        <div class="step-body">
+          <div class="step-head"><h3>El central y el token</h3></div>
+          <p>SIM, registro del número, token de sistema con todos los activos y las seis variables de Railway.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-n">En<br>paralelo</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Buscar dos negocios piloto</h3></div>
+          <p>Hacen falta dos con número propio para poder probar el aislamiento. Es lo que más depende de terceros, así que conviene empezar a hablarlo pronto.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-n">Antes<br>de probar</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Corregir el código</h3></div>
+          <p>Sanear los parámetros de plantilla multilínea. Después, la prueba de aceptación completa y su registro.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>main</code> el 10-ago-2026 (esquema 47 entonces): <code>web/whatsapp.py</code>, <code>web/routers/whatsapp_business.py</code>, <code>web/scheduler.py</code>, <code>db.py</code>, <code>migrations.py</code>, <code>Conectar-APIs.md</code> y <code>project-state.json</code>.</span>
+    <span>Se abre en cualquier navegador y se imprime a PDF sin perder el diseño.</span>
+  </footer>
+
+</div>
+</body>
+</html>

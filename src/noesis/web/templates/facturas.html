@@ -344,6 +344,7 @@ function render(f) {
       <div class="fx-main"><b>${esc(i.client_name||'—')}</b>
         ${i.number ? `<span class="meta">· ${esc(i.number)}</span>` : ''}</div>
       <div class="meta">${esc(i.concept)}</div>
+      ${i.rectified_number ? `<div class="meta rectification-ref">Rectifica ${esc(i.rectified_number)}</div>` : ''}
     </td>
     <td class="t-right num" title="Base ${eur(i.base)} + IVA ${eur(i.vat_amount)}${i.irpf_amount ? ' − IRPF '+eur(i.irpf_amount) : ''}">
       <b>${eur(i.total)}</b>
@@ -355,10 +356,12 @@ function render(f) {
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
       ${['F1','F2'].includes(i.invoice_type)?`<button class="btn sm" onclick="duplicateInvoice(${i.id})">Duplicar</button>`:''}
       ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Emitir</button>`:''}
-      ${i.status==='borrador'?`<button class="btn sm" onclick="newInvoice(${i.id})">Editar</button>`:''}
+      ${i.status==='borrador'&&String(i.invoice_type||'').startsWith('R')?`<button class="btn sm" onclick="editRectifyingDraft(${i.id})">Revisar ajuste</button>`:''}
+      ${i.status==='borrador'&&!String(i.invoice_type||'').startsWith('R')?`<button class="btn sm" onclick="newInvoice(${i.id})">Editar</button>`:''}
       ${['enviada','parcial'].includes(i.status)?`<button class="btn sm" onclick="pay(${i.id})">Cobrar</button>`:''}
       ${i.status!=='borrador'?`<button class="btn sm" onclick="deliver(${i.id})">Enviar</button>`:''}
-      ${i.status!=='borrador'&&!i.cancellation_status?`<button class="btn sm" onclick="rectify(${i.id})">Rectificar</button>`:''}
+      ${i.pending_rectification_id?`<button class="btn sm" onclick="editRectifyingDraft(${i.pending_rectification_id})">Rectificativa pendiente</button>`:''}
+      ${i.status!=='borrador'&&['F1','F2'].includes(i.invoice_type)&&!i.cancellation_status&&!i.pending_rectification_id?`<button class="btn sm" onclick="rectify(${i.id})">Rectificar</button>`:''}
       ${['aceptado','aceptado_con_errores'].includes(i.verifactu_status)&&!i.cancellation_status?`<button class="btn sm danger" onclick="cancelVerifactu(${i.id})">Anular registro</button>`:''}
       ${i.status!=='borrador'?`<button class="btn sm" onclick="showInvoiceHistory(${i.id})">Historial</button>`:''}
       ${i.status==='borrador'?`<button class="iconbtn" title="Borrar borrador" onclick="del(${i.id})">${TRASH}</button>`:''}
@@ -443,29 +446,116 @@ function cancelVerifactu(id){
   });
 }
 async function del(id){ if(confirm('¿Borrar esta factura?')){ await apiDelete('/invoices/'+id); load(); } }
-function rectify(id) {
-  formModal({
-    title: 'Crear factura rectificativa',
-    submitLabel: 'Crear borrador rectificativo',
-    fields: [
-      {name:'invoice_type', label:'Causa reglamentaria', options:[
-        {value:'R1', label:'R1 · Error fundado / art. 80.1 y 80.2'},
-        {value:'R2', label:'R2 · Artículo 80.3'},
-        {value:'R3', label:'R3 · Artículo 80.4'},
-        {value:'R4', label:'R4 · Resto de causas'},
-        {value:'R5', label:'R5 · Factura simplificada'}
-      ]},
-      {name:'reason', label:'Motivo', placeholder:'Explica la rectificación'},
-      {name:'concept', label:'Concepto', placeholder:'Corrección de la factura original'},
-      {name:'base', label:'Diferencia de base (€)', type:'number', placeholder:'-100.00'},
-      {name:'vat_rate', label:'IVA (%)', type:'number', value:'21'},
-      {name:'irpf_rate', label:'IRPF (%)', type:'number', value:'0'}
-    ],
-    onSubmit: async values => {
-      await apiPost(`/invoices/${id}/rectify`, values);
-      await load();
-    }
+async function editRectifyingDraft(draftId) {
+  try {
+    const draft = await api(`/invoices/${draftId}`);
+    const original = ALL.find(item => item.id === draft.rectifies_invoice_id)
+      || await api(`/invoices/${draft.rectifies_invoice_id}`);
+    await rectificationModal(original, draft);
+  } catch(e) { alert('No se pudo abrir la rectificativa: ' + e.message); }
+}
+async function rectify(id) {
+  const original = ALL.find(item => item.id === id) || await api(`/invoices/${id}`);
+  await rectificationModal(original);
+}
+async function rectificationModal(original, draft=null) {
+  if (!original || !['F1','F2'].includes(original.invoice_type)) {
+    alert('Solo se pueden rectificar facturas completas o simplificadas emitidas.');
+    return;
+  }
+  closeModal();
+  const ov=document.createElement('div'); ov.className='modal-overlay';
+  const issued = original.issued_at ? new Date(original.issued_at) : null;
+  const now = new Date();
+  const oldQuarter = issued && (issued.getFullYear() !== now.getFullYear()
+    || Math.floor(issued.getMonth()/3) !== Math.floor(now.getMonth()/3));
+  const draftBase = Number(draft?.base || 0);
+  const direction = draftBase > 0 ? 'increase' : 'reduce';
+  const causeOptions = original.invoice_type === 'F2'
+    ? `<option value="R5">R5 · Corrección de factura simplificada</option>`
+    : `<option value="R1">R1 · Error en importe, datos o servicio</option>
+       <option value="R2">R2 · Concurso del cliente</option>
+       <option value="R3">R3 · Crédito incobrable</option>
+       <option value="R4">R4 · Otra causa legal</option>`;
+  const rectSeries = SERIES.filter(s=>s.document_type==='rectifying'&&s.active);
+  ov.innerHTML=`<div class="modal invoice-modal rectification-modal" role="dialog" aria-modal="true" aria-label="Rectificar factura">
+    <div class="modal-h"><div><div class="kicker">Corrección trazable</div><h2>${draft?'Revisar rectificativa':'Rectificar factura'}</h2></div>
+      <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
+    <div class="modal-b">
+      <div class="rectification-original">
+        <div><span class="meta">Factura original</span><b>${esc(original.number||'Sin número')}</b>
+          <small>${esc(original.client_name||'Cliente')} · ${issued?issued.toLocaleDateString('es-ES'):'fecha no disponible'}</small></div>
+        <div class="t-right"><span class="meta">Total emitido</span><b>${eur(original.total)}</b><small>Base ${eur(original.base)}</small></div>
+      </div>
+      <div class="notice safe-notice"><b>La factura original no se modifica.</b>
+        <span>Noesis preparará una factura rectificativa por diferencias, en borrador y con su propia numeración. Tú decides cuándo emitirla.</span></div>
+      ${oldQuarter?`<div class="notice warning-notice"><b>Esta corrección afecta a un período anterior.</b>
+        <span>Antes de emitirla, confirma con tu gestoría en qué autoliquidación debe reflejarse.</span></div>`:''}
+      <div class="nf-row rectification-grid">
+        <div><label class="fld">Causa</label><select class="input" id="rf-cause">${causeOptions}</select></div>
+        <div><label class="fld">Qué debe hacer</label><select class="input" id="rf-direction">
+          <option value="reduce">Reducir el importe facturado</option><option value="increase">Aumentar el importe facturado</option>
+        </select></div>
+        <div><label class="fld">Diferencia de base</label><div class="input-with-suffix"><input class="input" id="rf-amount" type="number" min="0.01" step="0.01" value="${draft?Math.abs(draftBase).toFixed(2):''}" placeholder="100,00"><span>€</span></div></div>
+      </div>
+      <button class="btn sm rectification-full" type="button" id="rf-full">Usar toda la base original (${eur(original.base)})</button>
+      <label class="fld" style="margin-top:14px">Motivo concreto</label>
+      <textarea class="input" id="rf-reason" rows="3" maxlength="1000" placeholder="Explica qué estaba mal y por qué se corrige">${esc(draft?.rectification_reason||'')}</textarea>
+      <label class="fld" style="margin-top:12px">Concepto visible en la rectificativa</label>
+      <input class="input" id="rf-concept" maxlength="500" value="${esc(draft?.concept||`Corrección de ${original.number||'la factura original'}`)}">
+      <div class="nf-row" style="margin-top:12px">
+        <div><label class="fld">IVA</label><select class="input" id="rf-vat">${[21,10,4,0].map(v=>`<option value="${v}">${v}%</option>`).join('')}</select></div>
+        <div><label class="fld">IRPF</label><select class="input" id="rf-irpf">${[0,7,15].map(v=>`<option value="${v}">${v}%</option>`).join('')}</select></div>
+        <div><label class="fld">Serie</label><select class="input" id="rf-series">${rectSeries.map(s=>`<option value="${s.id}">${esc(s.name)} · ${esc(s.prefix_template)}</option>`).join('')}</select></div>
+      </div>
+      <div class="rectification-preview" id="rf-preview">Indica la diferencia para ver el resultado.</div>
+      <label class="confirm-check"><input type="checkbox" id="rf-confirm">
+        <span>He revisado el motivo y entiendo que se creará un borrador; la factura original seguirá intacta.</span></label>
+      <div class="clock-message" id="rf-msg" role="alert"></div>
+    </div>
+    <div class="modal-f"><button class="btn modal-cancel">Cancelar</button>
+      <button class="btn primary" id="rf-save">${draft?'Guardar revisión':'Crear borrador rectificativo'}</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove(); ov.querySelector('.modal-x').onclick=close;
+  ov.querySelector('.modal-cancel').onclick=close;
+  ov.addEventListener('click',e=>{if(e.target===ov)close();});
+  el('rf-direction').value=direction;
+  el('rf-cause').value=draft?.invoice_type||(original.invoice_type==='F2'?'R5':'R1');
+  el('rf-vat').value=String(Math.round(Number(draft?.vat_rate ?? original.vat_rate ?? DEFAULT_VAT)));
+  el('rf-irpf').value=String(Math.round(Number(draft?.irpf_rate ?? original.irpf_rate ?? DEFAULT_IRPF)));
+  if(draft?.series_id) el('rf-series').value=String(draft.series_id);
+  const recalc=()=>{
+    const amount=Math.abs(Number(el('rf-amount').value)||0);
+    const sign=el('rf-direction').value==='reduce'?-1:1;
+    const vat=Number(el('rf-vat').value)||0, irpf=Number(el('rf-irpf').value)||0;
+    const delta=sign*amount*(1+vat/100-irpf/100);
+    el('rf-preview').innerHTML=amount
+      ? `<span>${sign<0?'Reducirá':'Aumentará'} el total en</span><b>${eur(Math.abs(delta))}</b><small>Nuevo saldo documental orientativo: ${eur(Number(original.total)+delta)}</small>`
+      : 'Indica la diferencia para ver el resultado.';
+  };
+  ['rf-amount','rf-direction','rf-vat','rf-irpf'].forEach(id=>{
+    el(id).oninput=recalc; el(id).onchange=recalc;
   });
+  el('rf-full').onclick=()=>{el('rf-amount').value=Math.abs(Number(original.base)).toFixed(2);recalc();};
+  recalc();
+  el('rf-save').onclick=async()=>{
+    const msg=el('rf-msg'), amount=Math.abs(Number(el('rf-amount').value)||0);
+    msg.style.display='none'; msg.textContent='';
+    if(!amount){msg.textContent='Indica una diferencia de base superior a cero.';msg.style.display='block';return;}
+    if(!el('rf-reason').value.trim()){msg.textContent='Explica el motivo concreto de la corrección.';msg.style.display='block';return;}
+    if(!el('rf-confirm').checked){msg.textContent='Confirma que has revisado la corrección.';msg.style.display='block';return;}
+    const body={invoice_type:el('rf-cause').value,rectification_type:'I',
+      reason:el('rf-reason').value.trim(),concept:el('rf-concept').value.trim(),
+      base:(el('rf-direction').value==='reduce'?-amount:amount),vat_rate:el('rf-vat').value,
+      irpf_rate:el('rf-irpf').value,series_id:el('rf-series').value||null};
+    el('rf-save').disabled=true;
+    try{
+      if(draft) await apiPatch(`/invoices/${draft.id}/rectification`,body);
+      else await apiPost(`/invoices/${original.id}/rectify`,body);
+      close(); await load();
+    }catch(e){msg.textContent=e.message;msg.style.display='block';el('rf-save').disabled=false;}
+  };
+  el('rf-reason').focus();
 }
 document.getElementById('filters').addEventListener('click', e => {
   if (e.target.dataset.f) {

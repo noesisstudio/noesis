@@ -238,9 +238,34 @@
     setBillingPeriod(parent?.dataset.initialBilling === 'annual' ? 'annual' : 'monthly');
   }
 
+  function initStripePortalForms() {
+    document.querySelectorAll('[data-stripe-portal-form]').forEach(form => {
+      form.addEventListener('submit', () => {
+        const button = form.querySelector('button[type="submit"]');
+        if (!button || button.disabled) return;
+        button.dataset.originalLabel = button.textContent;
+        button.textContent = 'Abriendo Stripe…';
+        button.disabled = true;
+        form.setAttribute('aria-busy', 'true');
+        // Si una caída de red aborta la navegación, permite reintentar sin que
+        // un doble clic cree varias sesiones simultáneas.
+        window.setTimeout(() => {
+          button.textContent = button.dataset.originalLabel || 'Volver a intentar';
+          button.disabled = false;
+          form.removeAttribute('aria-busy');
+        }, 15000);
+      });
+    });
+    const portalError = document.getElementById('gestion-suscripcion');
+    if (portalError && window.location.hash === '#gestion-suscripcion') {
+      portalError.focus({ preventScroll: true });
+    }
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
     initProductDemo();
     initDemoChart();
     initBillingToggle();
+    initStripePortalForms();
   });
 }());

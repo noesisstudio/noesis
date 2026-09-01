@@ -1,23 +1,21 @@
-"""Las plantillas que hay que aprobar en Meta, escritas una sola vez.
+"""Espejo comprobable de las plantillas aprobadas en Meta.
 
-Hasta ahora los nombres vivían en `config.py` y los textos no vivían en ningún
-sitio: se decidían al escribir el mensaje en `scheduler.py` o en
-`internal_brain.py`. Así no se puede dar de alta una plantilla en WhatsApp
-Manager sin adivinar, ni comprobar que lo que enviamos encaja con lo aprobado.
+La fuente de verdad es el runbook `WhatsApp-Puesta-en-marcha`: ahí están los
+cuerpos que se pegan en WhatsApp Manager. Este módulo los repite en código con
+una sola finalidad: que una máquina pueda avisar si un envío deja de encajar
+con lo aprobado. Meta no avisa —simplemente rechaza el mensaje— y las pruebas
+no lo ven porque simulan su respuesta.
 
-Aquí está el contrato completo de cada plantilla: nombre, categoría, cuerpo
-exacto para pegar en Meta y qué va en cada hueco. Dos reglas de Meta mandan
-sobre este archivo:
+Dos reglas de Meta explican por qué los cuerpos son como son:
 
-1. **El cuerpo no puede ser solo variables.** Una plantilla cuyo texto es
-   `{{1}}` se rechaza en la revisión. El texto fijo va en el cuerpo; en los
-   huecos solo van valores.
+1. **El cuerpo no puede ser solo una variable.** Por eso los cinco avisos al
+   titular llevan un encabezado fijo delante del hueco, aunque el texto lo
+   componga Noesis entero.
 2. **Un hueco no admite saltos de línea, tabuladores ni cuatro espacios
-   seguidos.** Los saltos de línea los pone el cuerpo aprobado, nunca el
-   parámetro. `whatsapp.template_param` lo garantiza al encolar.
+   seguidos.** De eso se encarga `whatsapp.sanitize_template_param`, que los
+   convierte en un separador visible al encolar.
 
-Ejecuta ``python -m noesis.whatsapp_templates`` para imprimir lo que hay que
-pegar en WhatsApp Manager y ver qué envíos no cuadran todavía.
+Ejecuta ``python -m noesis.whatsapp_templates`` para ver qué no cuadra.
 """
 
 from __future__ import annotations
@@ -75,43 +73,10 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_resumen_diario",
         category="utility",
         audience="titular",
-        purpose="El parte de la mañana: qué hay hoy y por dónde empezar.",
-        body=(
-            "Buenos días, {{1}}. Este es tu parte de hoy:\n"
-            "\n"
-            "🗓️ Trabajos: {{2}}\n"
-            "💶 Por cobrar: {{3}}\n"
-            "➡️ Lo primero: {{4}}\n"
-            "\n"
-            "Responde a este mensaje y lo vemos."
-        ),
+        purpose="El parte de la mañana.",
+        body="Tu parte de hoy en Noesis: {{1}}",
         params=(
-            "nombre del negocio",
-            "trabajos de hoy, en una línea",
-            "importe pendiente de cobro",
-            "la primera acción del día",
-        ),
-    ),
-    TemplateSpec(
-        setting="WHATSAPP_TEMPLATE_DAILY_CLOSING",
-        default_name="noesis_cierre_dia",
-        category="utility",
-        audience="titular",
-        purpose="Cierre del día: qué ha entrado y qué queda para mañana.",
-        body=(
-            "{{1}}, cierre del día:\n"
-            "\n"
-            "🧾 Facturado hoy: {{2}}\n"
-            "💶 Cobrado hoy: {{3}}\n"
-            "➡️ Mañana lo primero: {{4}}\n"
-            "\n"
-            "Si algo no cuadra, dímelo por aquí."
-        ),
-        params=(
-            "nombre del negocio",
-            "importe facturado hoy",
-            "importe cobrado hoy",
-            "la primera acción de mañana",
+            "el parte entero",
         ),
     ),
     TemplateSpec(
@@ -119,23 +84,21 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_resumen_semanal",
         category="utility",
         audience="titular",
-        purpose="Resumen de la semana y la acción que más mueve la aguja.",
-        body=(
-            "{{1}}, así ha ido tu semana:\n"
-            "\n"
-            "🧾 Facturado: {{2}}\n"
-            "💶 Cobrado: {{3}}\n"
-            "⚠️ Pendiente de cobro: {{4}}\n"
-            "➡️ Acción de la semana: {{5}}\n"
-            "\n"
-            "Tienes el detalle en tu panel."
-        ),
+        purpose="El repaso de la semana.",
+        body="Tu semana en Noesis: {{1}}",
         params=(
-            "nombre del negocio",
-            "importe facturado en la semana",
-            "importe cobrado en la semana",
-            "importe pendiente de cobro",
-            "la acción recomendada de la semana",
+            "el repaso entero",
+        ),
+    ),
+    TemplateSpec(
+        setting="WHATSAPP_TEMPLATE_DAILY_CLOSING",
+        default_name="noesis_cierre_dia",
+        category="utility",
+        audience="titular",
+        purpose="El cierre del día.",
+        body="Cierre del día: {{1}}",
+        params=(
+            "el cierre entero",
         ),
     ),
     TemplateSpec(
@@ -143,23 +106,10 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_aviso_fiscal",
         category="utility",
         audience="titular",
-        purpose="Aviso al cerrar el trimestre, con estimaciones y plazo.",
-        body=(
-            "🧾 Cierre fiscal del {{1}} en {{2}}.\n"
-            "\n"
-            "IVA (modelo 303): {{3}}\n"
-            "IRPF (modelo 130): {{4}}\n"
-            "Plazo de presentación: hasta el {{5}}.\n"
-            "\n"
-            "Son estimaciones a partir de lo registrado. Confírmalas con tu "
-            "asesoría antes de presentar."
-        ),
+        purpose="Aviso trimestral de los modelos 303 y 130.",
+        body="Aviso fiscal de Noesis: {{1}}",
         params=(
-            "trimestre, por ejemplo «2T 2026»",
-            "nombre del negocio",
-            "resultado estimado del modelo 303",
-            "pago estimado del modelo 130",
-            "fecha límite, por ejemplo «20 de julio»",
+            "el aviso entero",
         ),
     ),
     TemplateSpec(
@@ -167,18 +117,10 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_aviso_cobros",
         category="utility",
         audience="titular",
-        purpose="Propuesta de reclamar una factura vencida; espera un SÍ.",
-        body=(
-            "💶 {{1}} te debe {{2}} de la factura {{3}}, y ya van {{4}} días.\n"
-            "\n"
-            "¿Le mando el recordatorio con su enlace de pago? "
-            "Responde SÍ o NO."
-        ),
+        purpose="Propuesta de reclamar una factura vencida, que espera un SÍ.",
+        body="Tienes un cobro pendiente: {{1}}",
         params=(
-            "nombre del cliente",
-            "importe pendiente",
-            "número de factura",
-            "días de retraso",
+            "el aviso entero",
         ),
     ),
     TemplateSpec(
@@ -186,21 +128,14 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_recordatorio_cobro",
         category="utility",
         audience="cliente",
-        purpose="Recordatorio de pago al cliente, con su enlace privado.",
-        body=(
-            "Hola {{1}}. Te escribe {{2}}.\n"
-            "\n"
-            "Te recordamos que la factura {{3}}, por {{4}}, sigue pendiente de "
-            "pago. Puedes consultarla y pagarla aquí: {{5}}\n"
-            "\n"
-            "Si ya la has pagado, avísanos y la damos por cerrada."
-        ),
+        purpose="Recordatorio de cobro al cliente del autónomo.",
+        body="Hola {{1}}, te escribe {{2}}. Tienes pendiente la factura {{3}} por un importe de {{4}}. Puedes verla y pagarla aquí: {{5}}",
         params=(
             "nombre del cliente",
-            "nombre del negocio que cobra",
-            "número de factura",
-            "importe pendiente",
-            "enlace privado del portal del cliente",
+            "nombre del negocio",
+            "número del documento",
+            "importe",
+            "enlace privado",
         ),
     ),
     TemplateSpec(
@@ -208,21 +143,14 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_factura_lista",
         category="utility",
         audience="cliente",
-        purpose="Entrega de una factura ya emitida, con enlace de descarga.",
-        body=(
-            "Hola {{1}}. Te escribe {{2}}.\n"
-            "\n"
-            "Ya tienes lista la factura {{3}}, por {{4}}. Puedes consultarla y "
-            "descargarla aquí: {{5}}\n"
-            "\n"
-            "Cualquier duda, responde a este mensaje."
-        ),
+        purpose="Entrega de la factura emitida. Sin ella no hay entrega por WhatsApp.",
+        body="Hola {{1}}, te escribe {{2}}. Ya tienes lista la factura {{3}} por {{4}}. La puedes descargar aquí: {{5}}",
         params=(
             "nombre del cliente",
-            "nombre del negocio que emite",
-            "número de factura",
-            "importe total",
-            "enlace privado del PDF",
+            "nombre del negocio",
+            "número del documento",
+            "importe",
+            "enlace privado",
         ),
     ),
     TemplateSpec(
@@ -230,21 +158,14 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_seguimiento_presupuesto",
         category="utility",
         audience="cliente",
-        purpose="Seguimiento de un presupuesto enviado y sin respuesta.",
-        body=(
-            "Hola {{1}}. Te escribe {{2}}.\n"
-            "\n"
-            "¿Has podido revisar el presupuesto {{3}}, por {{4}}? Lo tienes "
-            "aquí: {{5}}\n"
-            "\n"
-            "Si quieres ajustar algún punto, dímelo y lo revisamos."
-        ),
+        purpose="Seguimiento de un presupuesto que lleva días abierto.",
+        body="Hola {{1}}, te escribe {{2}}. ¿Has podido revisar el presupuesto {{3}} por {{4}}? Lo tienes aquí: {{5}}",
         params=(
             "nombre del cliente",
-            "nombre del negocio que presupuesta",
-            "número de presupuesto",
-            "importe del presupuesto",
-            "enlace privado del portal del cliente",
+            "nombre del negocio",
+            "número del documento",
+            "importe",
+            "enlace privado",
         ),
     ),
     TemplateSpec(
@@ -252,22 +173,16 @@ SPECS: tuple[TemplateSpec, ...] = (
         default_name="noesis_recordatorio_cita",
         category="utility",
         audience="cliente",
-        purpose="Confirmación de una cita concertada con el cliente.",
-        body=(
-            "Hola {{1}}. Te escribe {{2}}.\n"
-            "\n"
-            "Te confirmamos la cita del {{3}} para {{4}}.\n"
-            "Si necesitas cambiar la hora, responde a este mensaje."
-        ),
+        purpose="Confirmación de cita. Aquí no hay enlace: son cuatro huecos, no cinco.",
+        body="Hola {{1}}, te escribe {{2}}. Te recordamos la cita del {{3}} para {{4}}. Si necesitas cambiarla, responde a este mensaje.",
         params=(
             "nombre del cliente",
             "nombre del negocio",
-            "cuándo es la cita, en una línea",
+            "cuándo es la cita",
             "qué trabajo se va a hacer",
         ),
     ),
 )
-
 
 BY_SETTING = {spec.setting: spec for spec in SPECS}
 

@@ -114,6 +114,12 @@ def current_user(request) -> dict | None:
         return None
     if request.session.get("sv", 0) != user.get("session_version", 0):
         return None
+    # Una suspension corta las sesiones abiertas aqui mismo, no cuando caduque
+    # la cookie. `set_user_access` sube ademas `session_version`, asi que esto
+    # es el segundo cierre y no el unico.
+    if not db.user_can_sign_in(user):
+        request.session.clear()
+        return None
     from .. import config
     now = int(time.time())
     last_seen = int(request.session.get("seen") or now)

@@ -2,6 +2,195 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Un catch-all enruta documentos; nunca decide su contabilidad (2026-08-27)
+
+Noesis puede recibir las facturas de todos los negocios en un único buzón de
+Hostinger sin consumir un alias por cliente. Cada empresa obtiene una dirección
+virtual opaca `docs.<token>@bynoesis.com`; el destinatario original se resuelve antes
+de abrir los adjuntos y, si falta, es desconocido o aparecen dos rutas, el mensaje
+falla cerrado. El token es revocable y no se exporta en una descarga RGPD.
+
+Todos los adjuntos pasan por la validación, malware, deduplicación, OCR y
+clasificación comunes. Asunto, cuerpo, remitente y mensaje original no se
+persisten. El correo solo deja documentos pendientes: no crea gastos, facturas ni
+clientes. En una factura emitida, un NIF exacto puede relacionar un cliente ya
+conocido; una identidad nueva queda como propuesta editable hasta que el titular
+la confirma. Durante el piloto, los documentos no fiscales no se relacionan por el
+texto libre del correo. Equivocarse menos vale más que archivar unos segundos antes.
+
+## Verificar producción desde fuera y sin credenciales (2026-08-26)
+
+Un CI verde demuestra el repositorio, no que Railway haya terminado la migración ni
+que el dominio esté sirviendo ese mismo release. La comprobación pública posterior al
+despliegue se convierte en un contrato ejecutable: `/health` y `/ready` deben coincidir
+en release, el publicado debe corresponder al `main` actual tras un margen acotado de
+despliegue, el esquema debe ser el declarado, las protecciones HTTP deben seguir
+presentes y todo lo que el sitemap promete debe responder, ser indexable y conservar
+su estructura y sus textos legales completos.
+
+La prueba no inicia sesión ni usa secretos; por eso puede ejecutarse periódicamente
+desde GitHub y bajo demanda sin ampliar superficie de ataque. Agrega fallos para no
+ocultar una segunda regresión detrás de la primera. La frecuencia de seis horas es un
+control de publicación de bajo coste, no un SLA: antes de abrir masivamente se añade
+un monitor externo 24/7, aviso multicanal y responsable de guardia.
+
+## Retirar acceso a una persona, no apagar la empresa (2026-08-19)
+
+Administracion puede suspender y restaurar el acceso de un usuario concreto, con el
+motivo escrito. Hasta ahora la unica palanca era desactivar el negocio entero, que
+castiga a todo el equipo por una sola persona: cuando un empleado se marcha, lo que
+hay que cortar es su entrada, no la del taller.
+
+La suspension **no borra nada**. Los datos siguen siendo del negocio y su titular los
+conserva integros; lo unico que cambia es quien puede entrar. Es reversible, y al
+restaurar el acceso vuelve tal cual estaba.
+
+Tres protecciones impiden dejar una cuenta inaccesible: nadie se suspende a si mismo,
+no se suspende al titular de un negocio y no se suspende a la ultima persona con
+acceso. Cada una tiene su prueba, porque un fallo aqui deja a un cliente fuera de su
+propio negocio y solo se arregla entrando en la base de datos.
+
+Motivo: la palanca proporcionada al problema. Y la frontera se mantiene intacta:
+esto decide **quien entra**, nunca **que hay dentro**. Administracion sigue sin poder
+abrir el panel de un cliente ni leer sus datos.
+
+## El propietario gestiona permisos, no entra en las cuentas (2026-08-19)
+
+Administración puede activar cualquier cuenta con un plan, devolverla a modo consulta
+o ampliar su prueba, y ver qué funciones desbloquea ese plan. Es el mando comercial
+que el propietario necesitaba: dar de alta a un piloto sin depender de que Stripe esté
+configurado, o retirar el acceso.
+
+**No incluye abrir el panel del cliente.** Se evaluó y se descartó a petición del
+propietario: gestionar el acceso de una cuenta no exige ver sus datos. El guardián
+que aísla los negocios (`auth_guard`) queda exactamente como estaba, y para intervenir
+sobre datos sigue haciendo falta la ventana que abre el titular, con motivo, alcance y
+caducidad.
+
+Motivo: separar *administrar el contrato* de *acceder al contenido*. Lo primero es una
+función normal de cualquier SaaS y no toca información de terceros. Lo segundo cambia
+la relación de confianza y obligaría a revisar el contrato de encargo. Mantenerlos
+separados deja el mando comercial completo sin ampliar la superficie de riesgo.
+
+## Stripe confirma cada cambio irreversible en un flujo acotado (2026-08-14)
+
+Noesis no modifica directamente la suscripción desde un botón. Gestión general,
+tarjeta, cambio de precio/período y cancelación generan sesiones efímeras distintas
+del Customer Portal; para una mejora se envían el `subscription_item` y el
+`price_id` exactos y Stripe presenta importe, prorrateo y autenticación antes de
+confirmar. La cancelación también se confirma en Stripe y su webhook gobierna el
+estado final. Si un deep link no está habilitado, se abre el portal general; nunca
+se crea un segundo Checkout ni se concede acceso por la URL de retorno.
+
+## Una suscripción activa se modifica; nunca se vuelve a comprar (2026-08-13)
+
+Checkout se reserva al alta de una cuenta sin suscripción. Cuando Stripe ya marca
+una cuenta como `active` o `trialing`, Noesis presenta el plan vigente y centraliza
+nivel, periodicidad, tarjeta y cancelación en el portal seguro sobre la misma
+suscripción. Los planes superiores son mejoras y los inferiores aparecen incluidos.
+
+La regla no es solo visual: cualquier POST al Checkout desde un formulario antiguo
+o manipulado se redirige al portal y no invoca la creación de una nueva sesión de
+compra. Así se reduce el riesgo de doble cobro y se mantiene una única fuente para
+historial, métodos de pago y cambios de plan.
+
+## El pie gráfico es una zona segura y la identidad se congela al emitir (2026-08-12)
+
+La prohibición de un maquetador libre se mantiene: ninguna imagen puede entrar en
+la cabecera fiscal, la tabla de conceptos, los impuestos, los totales, el QR o la
+numeración. Sí se admite una única imagen inferior, separada del contenido fiscal,
+porque subvenciones, fondos, certificaciones y asociaciones exigen a menudo mostrar
+un distintivo oficial. El titular elige entre tamaños y alineaciones acotados y si
+se aplica solo a facturas o también a presupuestos.
+
+El servidor no confía en nombre ni MIME: valida los bytes, limita tamaño y píxeles,
+elimina metadatos y guarda un PNG saneado. Cada cambio crea una versión reutilizable
+por negocio; al emitir, la factura enlaza esa versión y el guardián impide cambiarla.
+Así no se duplica una imagen por cada factura y regenerar un PDF histórico conserva
+el aspecto con el que fue emitido.
+
+## WhatsApp separa operación interna y recepción comercial (2026-08-10)
+
+Titular y trabajadores escriben al número central de Noesis. El equipo no escribe
+al teléfono personal del titular: fichajes, costes, documentos, dudas y bloqueos
+entran en una bandeja y el titular recibe un resumen. Ningún coste cambia un proyecto
+sin aceptación, y los márgenes permanecen privados salvo permiso explícito y proyecto
+asignado. Cada teléfono central solo puede representar una identidad; la ambigüedad
+se bloquea en vez de intentar adivinar el negocio.
+
+Los clientes finales escriben al número comercial de su proveedor. El receptor
+(`phone_number_id` y WABA) determina primero el negocio y el remitente se resuelve
+después dentro de ese ámbito. Un receptor desconocido nunca cae al canal central.
+Ese número pertenece al negocio: puede conectar su WhatsApp Business actual o, si
+quiere separar atención y vida personal, contratar por su cuenta uno dedicado a
+citas y clientes. Noesis no compra ni impone un número nuevo por cada suscripción.
+Los documentos quedan trazados y pendientes, las respuestas salen por la misma
+conexión y fuera de 24 horas se exige una plantilla aprobada. Noesis prepara y
+clasifica; no crea contabilidad ni compromisos irreversibles por un mensaje entrante.
+
+## Soporte se autoriza por alcance; el CFO distingue observado de supuesto (2026-08-08)
+
+Administración conserva por defecto solo el diagnóstico agregado. Si el cliente
+necesita intervención, el correo identificado como titular abre una ventana con
+motivo, permisos y caducidad;
+puede revocarla y el administrador no puede concedérsela. Esta puerta no habilita
+suplantación: cada corrección futura deberá comprobar un permiso concreto y auditar
+el antes/después. Facturas emitidas, dinero e impuestos quedan fuera siempre.
+
+Dirección tampoco llamará «margen real» a MRR menos tokens estimados. El libro CFO
+conserva entradas reales, previsiones y ajustes por separado. Solo si existen costes
+observados calcula contribución, margen y coste por cuenta; la factura del proveedor
+y la caja cobrada siguen mandando sobre cualquier supuesto.
+
+## La personalización no puede convertir la factura en un lienzo libre (2026-08-08)
+
+El titular puede elegir una de tres composiciones probadas, color, logotipo, pie y
+textos comerciales. No se permiten imágenes ni maquetación libre dentro del cuerpo
+fiscal: dificultaría garantizar legibilidad, tamaño, conservación y datos
+obligatorios. La excepción posterior es una zona gráfica inferior saneada y
+acotada, descrita en la decisión del 2026-08-12. Los detalles variables pertenecen
+a las líneas y notas; las condiciones generales se guardan una sola vez en el perfil.
+
+El presupuesto comparte identidad visual con la factura, pero se identifica como
+oferta y su aceptación solo genera un borrador. El portal guarda fecha, canal y una
+huella seudónima para investigar discrepancias sin almacenar la IP en claro. Esa
+evidencia ayuda, pero no sustituye una firma electrónica cualificada ni permite a
+Noesis emitir por el titular.
+
+## La gestoría recibe borradores explicables, no impuestos «hechos» (2026-08-07)
+
+El espacio profesional puede sumar IVA, ordenar documentos y anticipar qué modelos
+merecen revisión, pero no debe deducir por un NIF qué obligaciones tiene el cliente
+ni presentar una cifra como definitiva. Cada empresa guarda un perfil fiscal
+explícito, corregible y trazado por la gestoría. Cuando faltan base, cuota, régimen,
+prorrata o una característica de la operación, la interfaz pide criterio en lugar
+de rellenar el hueco.
+
+Noesis tampoco fija todavía una comisión para el canal de gestorías. La cartera
+puede medir clientes conectados y demostrar el ahorro operativo, pero descuento,
+porcentaje, duración, devoluciones y liquidación son condiciones comerciales que
+debe aprobar el founder antes de prometer dinero a un despacho o a su cliente.
+
+## La demo son cuentas reales dentro de Noesis, no otro producto (2026-08-06)
+
+Para enseñar Noesis no se mantendrá una segunda interfaz ni un conjunto de pantallas
+inventadas. El acceso de autónomo, la cuenta profesional de gestoría y el portal del
+cliente recorren el mismo código y los mismos datos relacionados que usaría un
+cliente real. Así una reunión también prueba el producto y no una promesa separada.
+
+Las empresas ficticias llevan una marca persistente y el servidor las trata como
+solo lectura. Se permiten lecturas y descargas útiles, pero no altas, cambios,
+aceptaciones, envíos, automatizaciones, cobros ni acciones fiscales. La contraseña
+puede ser conocida porque nunca abre datos reales ni autoridad operativa.
+
+## Los PDF escaneados se leen primero dentro de nuestra infraestructura (2026-08-06)
+
+Un PDF sin capa de texto no debe obligar a enviar una factura o ticket a una API de
+visión. PDFium rasteriza localmente y el mismo Tesseract de las fotos aplica OCR con
+límites estrictos. Si no puede leerlo con suficiente evidencia, el documento pasa a
+revisión; Noesis no inventa una clasificación. La extracción externa autorizada
+queda como respaldo explícito, no como requisito del recorrido normal.
+
 ## El alias público llega al servidor, pero nunca sirve una segunda web (2026-08-06)
 
 `www.bynoesis.com` debe estar permitido por el guardián de Host para que el servidor
@@ -22,6 +211,25 @@ reaparece un candidato del mismo tamaño.
 No se hace deduplicación global. Confirmar que otra empresa ya posee una huella
 crearía un canal lateral entre clientes y mezclaría sus ciclos de conservación. El
 pequeño ahorro adicional de almacenamiento no compensa ese riesgo de privacidad.
+
+## El SEO describe producto y audiencia; no fabrica autoridad (2026-08-13)
+
+Noesis separa las intenciones públicas de autónomos y gestorías en páginas propias,
+pero mantiene una única identidad de empresa en la portada. El marcado estructurado
+solo declara `Organization` y `WebSite`: no se publican estrellas, reseñas, volumen
+de usuarios ni un resultado enriquecido de software hasta que existan evidencias
+reales y requisitos completos.
+
+El sitemap enumera únicamente rutas públicas y no asigna una fecha de modificación
+diaria ni prioridades artificiales. Las rutas privadas se excluyen del rastreo cuando
+contienen datos y, además, toda URL que no pertenezca al sitio público responde con
+`noindex`. Esta doble barrera evita que un enlace conocido termine indexando un login,
+un portal o un error, sin impedir que Google lea el `noindex` de los accesos públicos.
+
+Search Console sirve para observar indexación, consultas, clics y experiencia real;
+no sustituye una estrategia de contenido ni justifica instalar analítica de terceros.
+La medición propia sin cookies se mantiene hasta que una decisión posterior, con
+necesidad y coste de privacidad claros, diga lo contrario.
 
 ## Publicado significa release y esquema verificables (2026-08-06)
 
@@ -284,6 +492,12 @@ inalterables. Corregir se hace con rectificativa; anular ante la AEAT crea un re
 nuevo, encadenado e inmutable, y exige confirmación escrita del titular. Motivo:
 combinar la facilidad de Noesis con la trazabilidad profesional observada en Holded,
 sin copiar su arquitectura de ERP ni permitir atajos legalmente inseguros.
+
+La rectificativa operativa usa por defecto diferencias (`I`): conserva el original,
+solo permite un borrador pendiente y reserva R5 para rectificar F2. La sustitución
+(`S`) queda bloqueada hasta que una asesoría valide los importes rectificados y el
+registro AEAT completo. Noesis no ofrece una opción fiscal que todavía no puede
+explicar ni exportar correctamente.
 
 ## La obligación fiscal sobrevive al estado de la suscripción (2026-07-20)
 
@@ -564,6 +778,15 @@ simulacro semanal independiente vuelve a verificar el último juego. Pentest, MF
 la cuenta Google, restauración desde otro proveedor, RGPD y red siguen siendo
 responsabilidades externas verificables.
 
+## Soporte sin suplantación silenciosa (2026-08-08)
+
+El administrador puede diagnosticar una cuenta con metadatos, estados y recuentos,
+pero no abrir su contenido operativo ni modificarlo por defecto. Cada consulta queda
+auditada. Cualquier intervención futura exigirá consentimiento explícito y temporal
+del titular, motivo, alcance por acciones y registro antes/después; nunca permitirá
+alterar una factura emitida. Motivo: resolver incidencias no justifica una puerta
+trasera permanente ni romper la confianza o el aislamiento entre negocios.
+
 ## Seguridad por capas y sin dependencia obligatoria de Redis (2026-07-21)
 
 Los límites de autenticación se comparten mediante la misma base de datos y guardan
@@ -582,6 +805,77 @@ confirmación actuales. Ver [[Seguridad-operativa]].
 La idea inicial era integrar un proveedor homologado. Queda anulada por la decisión
 de 2026-07-20: la facturación y Veri*Factu son desarrollo propio de Noesis.
 
-## Marca
-Paleta del logo: verde bosque #14463b + teal #2e8b74 + crema #f4f1e8. Dominio
-previsto: bynoesis.com. Ver [[Producto]].
+## Noesis es la marca; ByNoesis identifica el dominio y los usuarios (2026-08-31)
+
+La estrella existente se conserva: ya forma parte del producto y expresa dirección
+sin depender de una moda de IA. La identidad principal se escribe **Noesis**. El
+dominio `bynoesis.com` y el usuario preferente `@bynoesis` resuelven disponibilidad,
+pero no crean una segunda marca ni sustituyen el nombre en titulares, ventas o
+producto.
+
+El sistema visual usa verde bosque `#14463b`, teal `#2e8b74` y crema `#f4f1e8`;
+Fraunces representa la voz y los titulares e Inter organiza cuerpo y datos. Las
+variantes, tamaños, fondos, redes y prohibiciones viven en `branding/`. Motivo:
+reconocer a Noesis en todos los puntos de contacto requiere consistencia y archivos
+correctos, no un logo distinto para cada canal. Ver [[Producto]] y
+`design/PRODUCT_PRINCIPLES.md`.
+
+La promesa estratégica es **«Noesis lleva la oficina mientras tú haces el trabajo»**
+y su expresión corta es **«Haz tu trabajo; Noesis te ordena el negocio»**. La marca
+compite por devolver tiempo, quitar ruido mental y dar control del ciclo completo.
+Facturas preparadas, documentos ordenados, tareas resueltas, margen visible y cobros
+mejor gestionados demuestran esa promesa, pero ninguna de esas funciones se convierte
+por sí sola en el lema general. Motivo: centrar la identidad en cobrar reduciría la
+suite a una parte del ciclo y contradiría el principio «primero la feina, después la
+factura».
+
+## Stripe confirma; Checkout no autoriza (2026-08-10)
+
+`checkout.session.completed` vincula cliente y suscripción, pero no activa ni
+concede el plan solicitado por sí solo. Noesis solo cambia acceso y plan cuando
+Stripe acredita una factura pagada o una suscripción `active`/`trialing`; en cambios
+desde su portal manda el `price_id` vigente del catálogo, no metadata histórica.
+Los eventos se ordenan por negocio y una factura aislada, un evento antiguo, una
+suscripción reemplazada o un precio ajeno no pueden cambiar el acceso actual.
+Motivo: Stripe entrega webhooks al menos una vez y sin orden garantizado; preparar
+el pago no equivale a cobrarlo.
+
+## Los planes se hacen cumplir en servidor (2026-08-10)
+
+Autónomo incluye el núcleo operativo. Negocio y Premium añaden Proyectos, Equipo,
+Gestoría y Análisis avanzado. La prueba y la demostración enseñan el producto
+completo. La regla se aplica a web, API, herramientas del cerebro, WhatsApp,
+portales y tareas programadas; ocultar botones nunca es el control principal. Una
+cuenta activa con un plan heredado o desconocido cae al núcleo de Autónomo, no a
+acceso total. Motivo: que precio, coste y producto sean coherentes antes de cobrar.
+
+El plan de 99 € pasa de “Sin Límites” a **Premium**. Conserva más uso y atención,
+pero no promete infinito cuando existen límites explícitos de IA, soporte y futura
+voz.
+
+## La gestoría puede activar TOTP sin crear otra identidad (2026-08-10)
+
+El segundo factor vive sobre la cuenta profesional existente y nunca concede acceso
+a empresas. La semilla TOTP se deriva de la clave maestra y no se guarda reversible;
+el último contador se consume atómicamente para impedir replay. Se entregan ocho
+códigos de recuperación de 80 bits, de un solo uso y almacenados solo como hash. Los
+códigos en claro se muestran una vez en la respuesta y no pasan por la cookie de
+sesión. Activar, regenerar y desactivar requieren contraseña, factor válido y límites
+de intentos compartidos. Motivo: una cartera multiempresa necesita más protección
+que una contraseña, pero no justifica introducir otro proveedor o una puerta trasera.
+
+Rotar `NOESIS_SECRET` invalida las semillas TOTP derivadas; los códigos de
+recuperación permiten entrar y regenerar después de una rotación planificada. Antes
+de abrir a terceros siguen pendientes recuperación de contraseña por correo,
+passkeys opcionales, roles finos y revisión externa del flujo.
+
+## El alta termina con hechos comprobados, no con clics (2026-08-12)
+
+Una cuenta nueva conserva en servidor el plan, la periodicidad, la intención y cada
+paso realmente completado. Iniciar sesión la devuelve al primer paso pendiente. El
+perfil y la operativa solo avanzan después de guardar todos sus componentes, y
+WhatsApp solo se considera conectado si el webhook ha verificado el número; de otro
+modo el titular debe elegir expresamente conectarlo más adelante. El último paso es
+una revisión de negocio, factura, cobros y acompañamiento. Tras el pago, el siguiente
+objetivo es crear el primer cliente y completar el ciclo operativo. Motivo: visitar
+una pantalla o pulsar “comprobar” no equivale a haber preparado el negocio.

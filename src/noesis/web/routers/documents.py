@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import date
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
@@ -22,11 +23,39 @@ def api_documents(business_id: int, client_id: int = 0, q: str = ""):
     )
 
 
+@router.get("/api/{business_id}/document-archive")
+def api_document_archive(
+    business_id: int,
+    year: int | None = None,
+    quarter: int | None = None,
+    view: str = "todos",
+):
+    """Misma organización temporal y documental para titular y gestoría."""
+    from ... import gestoria_workspace
+
+    today = date.today()
+    selected_year = year if year and 2000 <= year <= today.year + 1 else today.year
+    selected_quarter = (
+        quarter if quarter in {1, 2, 3, 4} else (today.month - 1) // 3 + 1
+    )
+    return gestoria_workspace.document_archive(
+        business_id,
+        year=selected_year,
+        quarter=selected_quarter,
+        document_view=view,
+    )
+
+
 @router.get("/api/{business_id}/documents/ocr-status")
 def api_ocr_status(business_id: int):
     """Indica si la lectura de fotos (OCR) está activa en este servidor."""
     from ...documents import ocr
-    return {"ocr": ocr.available()}
+    languages = ocr.installed_languages()
+    return {
+        "ocr": ocr.available(),
+        "languages": list(languages),
+        "trilingual_ready": all(code in languages for code in ("cat", "spa", "eng")),
+    }
 
 
 @router.post("/api/{business_id}/documents")
@@ -95,7 +124,33 @@ def api_document_file(business_id: int, doc_id: int):
     return Response(
         content=data,
         media_type=mime,
-        headers={"Content-Disposition": f'{disposition}; filename="{safe_name}"'},
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{safe_name}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@router.get("/api/{business_id}/documents/{doc_id}/preview")
+def api_document_preview(business_id: int, doc_id: int):
+    """Primera página/imagen acotada para revisar sin descargar el original."""
+    from ... import gestoria_workspace
+    from ...documents import service as docservice
+
+    got = docservice.file_bytes(business_id, doc_id)
+    if got is None:
+        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+    data, mime, _filename = got
+    preview = gestoria_workspace.preview_image(data, mime)
+    if not preview:
+        return JSONResponse(
+            {"error": "Este formato no admite vista previa."}, status_code=415
+        )
+    image, image_mime = preview
+    return Response(
+        image,
+        media_type=image_mime,
+        headers={"Cache-Control": "private, no-store"},
     )
 
 
@@ -150,6 +205,29 @@ def api_document_draft(business_id: int, doc_id: int):
              "pending": True},
             status_code=200)
     return draft
+
+
+@router.post("/api/{business_id}/documents/{doc_id}/client-candidate/confirm")
+async def api_document_client_candidate_confirm(
+    request: Request, business_id: int, doc_id: int
+):
+    """El titular confirma el alta o vínculo propuesto por una factura emitida."""
+    from ...documents import service as docservice
+
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        client = docservice.confirm_client_candidate(
+            business_id,
+            doc_id,
+            name=body.get("name"),
+            nif=body.get("nif"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "client": client}
 
 
 @router.post("/api/{business_id}/documents/{doc_id}/review")

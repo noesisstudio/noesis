@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noesis · Diagnóstico de {{ snapshot.business.name }}</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+</head>
+<body style="background:var(--bg)">
+<main class="admin-wrap support-console">
+  <a class="back" href="/admin#cuentas">← Volver al centro de mando</a>
+
+  <header class="page-head support-head">
+    <div class="page-title">
+      <div class="kicker">Gestión de la cuenta · Permisos, acceso y diagnóstico</div>
+      <h1>{{ snapshot.business.name }}</h1>
+      <p>{{ snapshot.business.owner_email or 'Sin correo titular' }} · {{ snapshot.business.sector or 'Sector sin completar' }}</p>
+    </div>
+    <div class="support-status">
+      <span class="badge {{ 'b-green' if snapshot.business.subscription_status == 'active' else 'b-amber' }}">{{ snapshot.business.subscription_status or 'sin estado' }}</span>
+      <span class="badge b-gray">Plan {{ snapshot.business.plan or 'sin asignar' }}</span>
+    </div>
+  </header>
+
+  {% if admin_error %}<div class="admin-note error">{{ admin_error }}</div>{% endif %}
+  {% if admin_success %}<div class="admin-note success">{{ admin_success }}</div>{% endif %}
+
+  <section class="support-boundary" aria-label="Límite de privacidad">
+    <div>
+      <div class="kicker">Límite de privacidad</div>
+      <h2>Se gestiona el acceso, no se abre el negocio</h2>
+      <p>Aquí se decide qué puede usar esta cuenta y quién puede entrar en ella. Del contenido, esta vista solo enseña estados técnicos y recuentos: nunca clientes, importes, archivos ni facturas. Una ventana abierta por el titular puede habilitar además una corrección concreta y auditada.</p>
+    </div>
+    <span class="badge b-green">Acceso auditado</span>
+  </section>
+
+  <section class="support-section">
+    <div class="support-section-head">
+      <div><div class="kicker">Estado general</div><h2>Cuenta y activación</h2></div>
+      <span class="meta">Alta {{ snapshot.business.created_at|string|truncate(10, True, '') }}</span>
+    </div>
+    <div class="admin-grid">
+      <div class="stat"><div class="lbl">Activación</div><div class="val">{{ snapshot.activation.progress }}%</div><div class="delta flat">{{ 'activada' if snapshot.activation.activated else 'en configuración' }}</div></div>
+      <div class="stat"><div class="lbl">WhatsApp</div><div class="val support-value">{{ snapshot.business.whatsapp_status or 'sin configurar' }}</div><div class="delta flat">estado de integración</div></div>
+      <div class="stat"><div class="lbl">Perfil fiscal</div><div class="val support-value {{ 'green' if snapshot.business.fiscal_profile_complete }}">{{ 'completo' if snapshot.business.fiscal_profile_complete else 'incompleto' }}</div><div class="delta flat">sin mostrar datos fiscales</div></div>
+      <div class="stat"><div class="lbl">Última señal</div><div class="val support-value">{{ snapshot.last_event.created_at|string|truncate(10, True, '') if snapshot.last_event else 'sin actividad' }}</div><div class="delta flat">{{ snapshot.last_event.event_name if snapshot.last_event else 'ningún evento' }}</div></div>
+    </div>
+  </section>
+
+  {% if account_cost %}
+  <section class="support-section" id="rentabilidad">
+    <div class="support-section-head">
+      <div><div class="kicker">Control interno · {{ cost_control.month }}</div><h2>Consumo y rentabilidad de Noesis</h2></div>
+      <span class="badge {{ 'b-red' if account_cost.risk == 'critical' else 'b-amber' if account_cost.risk == 'review' else 'b-gray' if account_cost.risk == 'demo' else 'b-green' }}">
+        {{ 'revisar ahora' if account_cost.risk == 'critical' else 'vigilar' if account_cost.risk == 'review' else 'demo' if account_cost.risk == 'demo' else 'en orden' }}
+      </span>
+    </div>
+    <p class="meta" style="margin:0 0 14px">Solo combina el precio de la suscripción,
+      metadatos técnicos de uso y el libro CFO de Noesis. No abre facturas, clientes,
+      mensajes, archivos ni importes del negocio.</p>
+    <div class="admin-grid">
+      <div class="stat"><div class="lbl">Ingreso comprometido</div><div class="val support-value">{{ '%.2f'|format(account_cost.revenue_eur) }} €</div><div class="delta flat">mensual, no caja</div></div>
+      <div class="stat"><div class="lbl">Acciones avanzadas</div><div class="val support-value">{{ account_cost.ai_credits_used }} / {{ account_cost.ai_credits_limit }}</div><div class="delta flat">{{ account_cost.ai_credits_pct }} % del plan</div></div>
+      <div class="stat"><div class="lbl">Coste IA medido</div><div class="val support-value">{{ '%.4f'|format(account_cost.ai_estimated_cost_eur) }} €</div><div class="delta flat">tokens con tarifa configurada</div></div>
+      <div class="stat"><div class="lbl">Coste real asignado</div><div class="val support-value">{{ ('%.2f €'|format(account_cost.allocated_observed_cost_eur)) if cost_control.has_observed_data else '—' }}</div><div class="delta flat">{{ 'reparto reconciliado' if cost_control.has_observed_data else 'faltan facturas de proveedores' }}</div></div>
+      <div class="stat"><div class="lbl">Contribución</div><div class="val support-value">{{ ('%.2f €'|format(account_cost.contribution_eur)) if account_cost.contribution_eur is not none else '—' }}</div><div class="delta flat">{{ (account_cost.margin_pct|string ~ ' %') if account_cost.margin_pct is not none else 'aún no calculable' }}</div></div>
+      <div class="stat"><div class="lbl">Canales</div><div class="val support-value">{{ account_cost.whatsapp_in }}↓ · {{ account_cost.whatsapp_out }}↑</div><div class="delta flat">WhatsApp · {{ account_cost.email_out }} correos</div></div>
+    </div>
+    {% if account_cost.risk_reasons %}
+    <div class="support-list">
+      {% for reason in account_cost.risk_reasons %}<div><span>{{ reason }}</span><b>revisar</b></div>{% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="support-section" id="suscripcion">
+    <div class="support-section-head">
+      <div><div class="kicker">Control del propietario</div><h2>Permisos de la cuenta</h2></div>
+      <span class="meta">Cada cambio queda registrado</span>
+    </div>
+    <p class="meta" style="margin:0 0 14px">El plan decide qué puede usar esta cuenta.
+      Aquí se cambian sus permisos y su estado; no se accede a sus datos.</p>
+    <div class="admin-grid">
+      <div class="stat">
+        <div class="lbl">Estado</div>
+        <div class="val support-value">{{ snapshot.business.subscription_status or 'trial' }}</div>
+        <div class="delta flat">plan {{ snapshot.business.plan or 'sin plan' }}</div>
+      </div>
+      <div class="stat">
+        <div class="lbl">Fin de prueba</div>
+        <div class="val support-value">{{ snapshot.business.trial_ends_at | date_es or 'sin fecha' }}</div>
+        <div class="delta flat">
+          {%- if snapshot.business.subscription_status not in ('trial', none) %}ya no aplica
+          {%- elif trial_expired %}vencida{% else %}vigente{% endif %}</div>
+      </div>
+    </div>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/suscripcion" class="support-form">
+      <label>Activar con el plan
+        <select name="plan">
+          <option value="autonomo">Autónomo</option>
+          <option value="pro" selected>Negocio</option>
+          <option value="premium">Premium</option>
+        </select>
+      </label>
+      <button class="btn primary" type="submit" name="action" value="activar">Activar cuenta</button>
+    </form>
+    <div class="support-subtitle">Qué desbloquea el plan actual</div>
+    {% if subscription_blocked %}
+    <p class="meta" style="margin:0 0 8px">La cuenta está en <b>modo consulta</b>: puede
+      ver estas secciones, pero no crear, cambiar ni enviar nada hasta activarla.</p>
+    {% endif %}
+    <div class="support-list">
+      {% for key, label in entitlement_labels.items() %}
+      <div>
+        <span>{{ label }}</span>
+        <span class="{{ 'green' if key in current_entitlements else '' }}">
+          {{ 'incluido' if key in current_entitlements else 'bloqueado' }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/suscripcion" class="support-form">
+      <label>Ampliar la prueba
+        <input type="number" name="trial_days" value="14" min="1" max="365">
+      </label>
+      <button class="btn" type="submit" name="action" value="ampliar_prueba">Ampliar días</button>
+      <button class="btn danger" type="submit" name="action" value="desactivar">Pasar a modo consulta</button>
+    </form>
+  </section>
+
+  <section class="support-section">
+    <div class="support-section-head"><div><div class="kicker">Volumen</div><h2>Elementos de la cuenta</h2></div><span class="meta">Solo cantidades</span></div>
+    <div class="support-counts">
+      {% for label, key in [('Usuarios','users'),('Clientes','clients'),('Trabajos','jobs'),('Proyectos','projects'),('Equipo','workers'),('Facturas','invoices'),('Gastos','expenses'),('Facturas recibidas','received_invoices'),('Documentos','documents'),('Por revisar','documents_pending'),('Gestorías','gestoria_accesses')] %}
+      <div><span>{{ label }}</span><strong>{{ snapshot.counts[key] }}</strong></div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="support-columns">
+    <section class="support-section">
+      <div class="support-section-head"><div><div class="kicker">Datos</div><h2>Estados internos</h2></div></div>
+      <h3 class="support-subtitle">Facturas</h3>
+      <div class="support-list">
+        {% for state, total in snapshot.invoice_states.items() %}<div><span>{{ state|replace('_',' ') }}</span><b>{{ total }}</b></div>{% else %}<p class="meta">Sin facturas.</p>{% endfor %}
+      </div>
+      <h3 class="support-subtitle">Documentos</h3>
+      <div class="support-list">
+        {% for state, total in snapshot.document_states.items() %}<div><span>{{ state|replace('_',' ') }}</span><b>{{ total }}</b></div>{% else %}<p class="meta">Sin documentos.</p>{% endfor %}
+      </div>
+    </section>
+
+    <section class="support-section">
+      <div class="support-section-head"><div><div class="kicker">Entregas</div><h2>Colas de integraciones</h2></div></div>
+      {% for channel, states in snapshot.queues.items() %}
+      <h3 class="support-subtitle">{{ channel|capitalize }}</h3>
+      <div class="support-list">
+        {% for state, total in states.items() %}<div><span>{{ state|replace('_',' ') }}</span><b>{{ total }}</b></div>{% else %}<p class="meta">Sin elementos en cola.</p>{% endfor %}
+      </div>
+      {% endfor %}
+    </section>
+  </div>
+
+  <section class="support-section" id="acceso">
+    <div class="support-section-head">
+      <div><div class="kicker">Control de acceso</div><h2>Quién puede entrar</h2></div>
+      <span class="meta">Suspender no borra nada y es reversible</span>
+    </div>
+
+    <div class="support-subtitle">Personas de la cuenta</div>
+    <div class="support-list">
+      {% for persona in business_users %}
+      <div style="flex-direction:column;align-items:flex-start;gap:6px;text-transform:none">
+        <span>
+          <b>{{ persona.email }}</b>
+          {% if persona.is_owner %}<span class="chip chip-flat">titular</span>{% endif %}
+          {% if persona.is_admin %}<span class="chip chip-warn">administración</span>{% endif %}
+          {% if persona.is_active %}
+            <span class="green">acceso activo</span>
+          {% else %}
+            <span class="red">suspendido {{ persona.suspended_at | date_es }}</span>
+          {% endif %}
+        </span>
+        {% if persona.access_note %}
+        <span class="meta">Motivo: {{ persona.access_note }}</span>
+        {% endif %}
+        {% if persona.is_owner %}
+        <span class="meta">El titular no se puede suspender. Para cerrar la cuenta
+          entera, cámbiala a modo consulta arriba.</span>
+        {% else %}
+        <form method="post"
+              action="/admin/cuentas/{{ snapshot.business.id }}/usuarios/{{ persona.id }}/acceso"
+              class="support-form">
+          {% if persona.is_active %}
+          <label>Motivo de la suspensión
+            <input type="text" name="note" maxlength="300"
+                   placeholder="Ej.: ya no trabaja en la empresa">
+          </label>
+          <button class="btn danger" type="submit" name="action" value="suspender">
+            Suspender acceso</button>
+          {% else %}
+          <button class="btn" type="submit" name="action" value="restaurar">
+            Restaurar acceso</button>
+          {% endif %}
+        </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="meta">Esta cuenta no tiene ninguna persona registrada.</p>
+      {% endfor %}
+    </div>
+
+    <div class="support-subtitle">Gestorías con acceso a estos datos</div>
+    <div class="support-list">
+      {% for acceso in gestoria_access %}
+      <div style="flex-direction:column;align-items:flex-start;gap:6px;text-transform:none">
+        <span>
+          <b>{{ acceso.firm_name or acceso.email }}</b>
+          {% if acceso.status == 'revoked' %}
+            <span class="red">revocado</span>
+          {% else %}
+            <span class="green">acceso activo</span>
+          {% endif %}
+        </span>
+        <span class="meta">Último acceso: {{ acceso.last_login_at | date_es or 'nunca' }}</span>
+        {% if acceso.status != 'revoked' %}
+        <form method="post"
+              action="/admin/cuentas/{{ snapshot.business.id }}/gestoria/{{ acceso.gestoria_account_id }}/revocar"
+              class="support-form">
+          <button class="btn danger" type="submit">Revocar acceso</button>
+          <span class="meta">Medida de seguridad. Lo normal es que lo revoque el
+            titular desde su panel: la relación con su gestoría es suya.</span>
+        </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="meta">Ninguna gestoría tiene acceso a los datos de esta cuenta.</p>
+      {% endfor %}
+    </div>
+
+    <div class="support-locked" style="margin-top:22px">
+      <div>
+        <div class="kicker">Privacidad</div>
+        <h2>Qué permite esto y qué no</h2>
+        <p>Aquí se decide <b>quién puede entrar</b> en una cuenta, no qué hay dentro.
+          Suspender a una persona corta sus sesiones en el acto y no toca ni un dato:
+          la información sigue siendo del negocio y su titular la conserva íntegra.
+          Administración no ve clientes, facturas ni documentos desde esta pantalla.
+          Cada suspensión, restauración y revocación queda firmada en la bitácora
+          encadenada, con quién, cuándo y por qué.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="support-section" id="entregas">
+    <div class="support-section-head">
+      <div><div class="kicker">Diagnóstico</div><h2>Entregas atascadas</h2></div>
+      <span class="meta">Motivo técnico, sin contenido del cliente</span>
+    </div>
+    {% if delivery_failures %}
+    <p class="meta" style="margin:0 0 12px">Esto es lo que responder cuando el cliente
+      dice que algo no ha llegado.</p>
+    <div class="support-list">
+      {% for item in delivery_failures %}
+      <div style="flex-direction:column;align-items:flex-start;gap:4px;text-transform:none">
+        <span><b>{{ item.channel|capitalize }}</b> · {{ item.status|replace('_',' ') }}
+          · intento {{ item.attempts }} de {{ item.max_attempts }}
+          {%- if item.exhausted %} · <b>sin más reintentos</b>{% endif %}</span>
+        <span class="meta">{{ item.reason }}</span>
+        <span class="meta">Último intento: {{ item.updated_at | date_es }}</span>
+        {% if item.channel == 'email' and item.status == 'failed' %}
+        <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/correos/{{ item.id }}/reintentar" style="margin-top:6px">
+          <button class="btn sm">Reintentar correo</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="meta">Ninguna entrega atascada. Si el cliente dice que no ha recibido algo,
+      el problema no está en la cola de salida.</p>
+    {% endif %}
+  </section>
+
+  <section class="support-section" id="whatsapp">
+    <div class="support-section-head">
+      <div><div class="kicker">Canal comercial</div><h2>Números de WhatsApp del negocio</h2></div>
+      <span class="meta">Alta técnica auditada</span>
+    </div>
+    <p class="meta">Registra únicamente activos que el usuario de sistema de Noesis ya pueda administrar en Meta. La conexión nace pendiente; actívala después de probar webhook y envío. Los tokens siguen exclusivamente en Railway.</p>
+    <div class="support-list" style="margin:16px 0">
+      {% for connection in whatsapp_connections %}
+      <div style="align-items:flex-start;gap:16px">
+        <span><b>{{ connection.verified_name or 'WhatsApp del negocio' }}</b><br>
+          <small>{{ connection.display_phone or 'Sin número visible' }} · WABA {{ connection.waba_id }} · Phone ID {{ connection.phone_number_id }}</small></span>
+        <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/whatsapp-business/{{ connection.id }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="input" name="status" style="width:auto">
+            {% for value in ['pending','active','paused','error','revoked'] %}<option value="{{ value }}" {{ 'selected' if connection.status == value }}>{{ value }}</option>{% endfor %}
+          </select>
+          <label class="meta"><input type="checkbox" name="receptionist_enabled" value="1" {{ 'checked' if connection.receptionist_enabled }}> Recepción</label>
+          <button class="btn sm">Guardar</button>
+        </form>
+      </div>
+      {% else %}<p class="meta">No hay números comerciales registrados.</p>{% endfor %}
+    </div>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/whatsapp-business" class="grid g2">
+      <label><span class="fld">WABA ID</span><input class="input" name="waba_id" inputmode="numeric" required></label>
+      <label><span class="fld">Phone Number ID</span><input class="input" name="phone_number_id" inputmode="numeric" required></label>
+      <label><span class="fld">Número visible</span><input class="input" name="display_phone" placeholder="+34 600 000 000"></label>
+      <label><span class="fld">Nombre verificado</span><input class="input" name="verified_name" maxlength="160"></label>
+      <div><button class="btn primary">Registrar como pendiente</button></div>
+    </form>
+  </section>
+
+  <section class="support-locked">
+    {% if snapshot.support_grant %}
+    <div><div class="kicker">Intervención autorizada</div><h2>Ventana temporal abierta por el titular</h2>
+      <p><b>Motivo:</b> {{ snapshot.support_grant.purpose }}<br>
+        <b>Alcance:</b> {{ snapshot.support_grant.scope_labels|join(' · ') }}<br>
+        <b>Caduca:</b> {{ snapshot.support_grant.expires_at }}. La autorización no permite emitir facturas, mover dinero, presentar impuestos ni ver credenciales.</p></div>
+    <span class="badge b-amber">Autorizado hasta {{ snapshot.support_grant.expires_at|string|truncate(16, True, '') }}</span>
+    {% else %}
+    <div><div class="kicker">Intervención</div><h2>Modificar datos no está habilitado</h2><p>El titular debe abrir desde Ajustes una autorización temporal, indicar motivo y seleccionar cada alcance. Sin ella, esta cuenta permanece exclusivamente en diagnóstico. Las facturas emitidas siguen siendo inmutables.</p></div>
+    <span class="badge b-gray">Sin autorización</span>
+    {% endif %}
+  </section>
+
+  {% if configuration_support %}
+  {% set config = configuration_support.values %}
+  <section class="support-section support-editor" id="safe-configuration">
+    <div class="support-section-head">
+      <div>
+        <div class="kicker">Corrección autorizada · Configuración</div>
+        <h2>Corregir perfil y apariencia sin tocar datos protegidos</h2>
+      </div>
+      <span class="badge b-amber">Permiso temporal</span>
+    </div>
+    <p class="meta support-editor-intro">Estos cambios son reversibles y afectan a cómo se presenta el negocio y cómo Noesis se explica. No permiten cambiar titular, acceso, NIF, dirección fiscal, impuestos, cuenta de cobro, suscripción, integraciones, automatizaciones ni documentos ya emitidos.</p>
+    <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/configuracion-segura" class="support-config-form">
+      <label><span class="fld">Nombre del negocio</span><input class="input" name="name" value="{{ config.name or '' }}" maxlength="160" required><small>Se aplicará a documentos futuros; nunca reescribe facturas emitidas.</small></label>
+      <label><span class="fld">Sector</span><input class="input" name="sector" value="{{ config.sector or '' }}" maxlength="80" required></label>
+      <label><span class="fld">Provincia</span><input class="input" name="province" value="{{ config.province or '' }}" maxlength="80"></label>
+      <label><span class="fld">Tamaño del equipo</span>
+        <select class="input" name="team_size" required>
+          <option value="" disabled {{ 'selected' if not config.team_size }}>Selecciona una opción</option>
+          {% for value, label in [('solo','Trabajo solo'),('2-5','2–5 personas'),('6-10','6–10 personas'),('11+','11 o más')] %}<option value="{{ value }}" {{ 'selected' if config.team_size == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Objetivo principal</span>
+        <select class="input" name="primary_goal" required>
+          <option value="" disabled {{ 'selected' if not config.primary_goal }}>Selecciona una opción</option>
+          {% for value, label in [('facturar','Facturar sin retrasos'),('agenda','Ordenar la agenda'),('cobros','Cobrar antes'),('control','Entender y controlar el negocio')] %}<option value="{{ value }}" {{ 'selected' if config.primary_goal == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Idioma</span>
+        <select class="input" name="language" required>
+          {% for value, label in [('es','Español'),('ca','Català'),('en','English')] %}<option value="{{ value }}" {{ 'selected' if (config.language or 'es') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Cómo explica Noesis</span>
+        <select class="input" name="explanation_level" required>
+          {% for value, label in [('claro','Claro y acompañado'),('directo','Breve y directo'),('detallado','Con más detalle')] %}<option value="{{ value }}" {{ 'selected' if (config.explanation_level or 'claro') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Diseño documental</span>
+        <select class="input" name="invoice_template" required>
+          {% for value, label in [('clasica','Clásica'),('minimal','Minimal'),('editorial','Editorial')] %}<option value="{{ value }}" {{ 'selected' if (config.invoice_template or 'clasica') == value }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label><span class="fld">Color de marca</span><input class="input" name="brand_color" value="{{ config.brand_color or '' }}" maxlength="7" pattern="#[0-9A-Fa-f]{6}" placeholder="#14463b"></label>
+      <label><span class="fld">Validez de presupuestos</span>
+        <select class="input" name="default_quote_validity_days" required>
+          {% for value in [7,15,30,45,60,90] %}<option value="{{ value }}" {{ 'selected' if (config.default_quote_validity_days or 30) == value }}>{{ value }} días</option>{% endfor %}
+        </select>
+      </label>
+      <label class="support-config-wide"><span class="fld">Pie de facturas y presupuestos</span><textarea class="input" name="document_footer" maxlength="800" rows="3">{{ config.document_footer or '' }}</textarea></label>
+      <label class="support-config-wide"><span class="fld">Condiciones predeterminadas del presupuesto</span><textarea class="input" name="quote_terms" maxlength="1500" rows="4">{{ config.quote_terms or '' }}</textarea></label>
+      <div class="support-config-protected">
+        <div><b>Fuera de este permiso</b><p>NIF, fiscalidad, cobros, plan, usuarios, WhatsApp, Stripe, gestoría, tokens y automatizaciones permanecen bloqueados.</p></div>
+        <button class="btn primary">Guardar configuración auditada</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if document_support %}
+  <section class="support-section support-editor" id="document-metadata">
+    <div class="support-section-head">
+      <div>
+        <div class="kicker">Corrección autorizada · Documentos</div>
+        <h2>Ordenar metadatos sin abrir ni alterar el archivo</h2>
+      </div>
+      <span class="badge b-amber">{{ document_support.total }} documento(s)</span>
+    </div>
+    <p class="meta support-editor-intro">El titular ha autorizado este alcance temporalmente. Solo puedes corregir tipo, estado, cliente, proyecto y nota de revisión. Cada cambio conserva el antes y el después en la bitácora; los archivos, el OCR y las facturas emitidas quedan fuera.</p>
+    {% if document_support.total > document_support.limit %}
+    <div class="admin-note error">Se muestran los {{ document_support.limit }} documentos más recientes. Usa el identificador y el contexto del caso de soporte para localizar el correcto.</div>
+    {% endif %}
+
+    <div class="support-document-list">
+      {% for document in document_support.documents %}
+      <details class="support-document">
+        <summary>
+          <span class="support-document-name"><b>{{ document.filename }}</b><small>#{{ document.id }} · {{ document.created_at|string|truncate(10, True, '') }}</small></span>
+          <span class="support-document-state"><span class="badge b-gray">{{ document.kind|replace('_', ' ') }}</span><span class="badge {{ 'b-amber' if document.doc_status == 'pendiente_revisar' else 'b-green' }}">{{ document.doc_status|replace('_', ' ') }}</span></span>
+        </summary>
+        <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/documentos/{{ document.id }}/metadatos" class="support-document-form">
+          <label><span class="fld">Tipo</span>
+            <select class="input" name="kind" required>
+              {% for value, label in [('documento','Otro documento'),('ticket','Ticket'),('contrato','Contrato'),('proveedor','Proveedor'),('albaran','Albarán'),('factura_emitida','Factura emitida'),('factura_recibida','Factura recibida'),('presupuesto','Presupuesto')] %}
+              <option value="{{ value }}" {{ 'selected' if document.kind == value }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Estado</span>
+            <select class="input" name="doc_status" required>
+              {% for value, label in [('pendiente_revisar','Pendiente de revisar'),('revisado','Revisado'),('enviado_gestoria','Enviado a gestoría'),('validado','Validado'),('rechazado','Rechazado'),('duplicado','Duplicado')] %}
+              <option value="{{ value }}" {{ 'selected' if document.doc_status == value }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Cliente</span>
+            <select class="input" name="client_id">
+              <option value="">Sin cliente</option>
+              {% for client in document_support.clients %}<option value="{{ client.id }}" {{ 'selected' if document.client_id == client.id }}>{{ client.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label><span class="fld">Proyecto</span>
+            <select class="input" name="project_id">
+              <option value="">Sin proyecto</option>
+              {% for project in document_support.projects %}<option value="{{ project.id }}" {{ 'selected' if document.project_id == project.id }}>{{ project.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="support-document-note"><span class="fld">Nota de revisión</span><input class="input" name="review_note" value="{{ document.review_note or '' }}" maxlength="500" placeholder="Motivo o contexto de la corrección"></label>
+          <div class="support-document-action">
+            {% if document.invoice_id %}<span class="meta">Vinculado a factura: si ya está emitida, el sistema rechazará cualquier cambio.</span>{% else %}<span class="meta">No cambia importes ni contenido.</span>{% endif %}
+            <button class="btn primary">Guardar corrección auditada</button>
+          </div>
+        </form>
+      </details>
+      {% else %}
+      <div class="empty"><b>No hay documentos que organizar.</b><p>Esta autorización puede revocarse desde la cuenta del titular.</p></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</main>
+</body>
+</html>

@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cómo funciona el WhatsApp de Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  /* Idea central */
+  .thesis {
+    background: var(--brand-soft);
+    border: 1px solid var(--brand-2);
+    border-radius: var(--radius);
+    padding: 26px 28px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .thesis p { font-family: var(--serif); font-size: clamp(18px, 2.6vw, 22px); line-height: 1.45; color: var(--brand); max-width: 56ch; }
+  .thesis .sub { font-family: var(--sans); font-size: 15px; color: var(--muted); }
+
+  /* Diagramas */
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; }
+  .fig-wide svg { min-width: 760px; }
+  .fig-flow svg { min-width: 640px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  /* Tarjetas de regla */
+  .rules { display: flex; flex-direction: column; gap: 14px; }
+  .rule {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--brand-2); border-radius: var(--radius);
+    padding: 20px 22px 21px 19px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 11px;
+  }
+  .rule-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+  .rule-why { font-size: 14.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 16px; }
+  .rule-why strong { color: var(--ink); }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+
+  .callout { background: var(--warn-soft); border: 1px solid var(--warn); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--warn); }
+  .callout p { max-width: 64ch; }
+  .callout-stop { background: var(--stop-soft); border-color: var(--stop); }
+  .callout-stop h3 { color: var(--stop); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 520px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .part { color: var(--warn); font-weight: 650; }
+
+  .state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .state-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .state-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .st-ok { --dot: var(--ok); } .st-warn { --dot: var(--warn); }
+  .state-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .state-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .state-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) { .page { padding: 40px 18px 90px; gap: 44px; } }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .rule, .fig, .scroll, .callout, .note, .thesis, .state-grid { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig-wide svg, .fig-flow svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Cómo funciona</p>
+    <h1>Los dos WhatsApp de Noesis</h1>
+    <p class="standfirst">Qué se ha construido con el canal multicanal, explicado desde el negocio y no desde el código. Verificado leyendo <code>main</code>, no resumiendo lo que dice el commit.</p>
+    <p class="crumbs">Decisión original en <code>Decisiones.md</code> (2026-08-10) · diagrama de identidades en <code>Arquitectura.md</code> · pasos externos pendientes en el runbook <code>WhatsApp-Puesta-en-marcha.pdf</code>.</p>
+  </header>
+
+  <div class="thesis">
+    <p>Antes había un número. Ahora hay dos tipos de número, y el mensaje se clasifica por <em>a quién se lo mandaron</em>, no por quién lo manda.</p>
+    <p class="sub">Ese giro es el que hace posible que cada autónomo tenga su propio WhatsApp de empresa sin que los clientes de uno puedan acabar hablando con otro.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>1. Los dos canales</h2>
+      <p class="sec-intro">Un número es el de Noesis, para trabajar por dentro. El otro es el del autónomo, para que le escriban sus clientes. Nunca se mezclan.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>&nbsp;</th><th>Número central de Noesis</th><th>Número comercial del negocio</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Quién escribe</strong></td><td>El titular y sus trabajadores</td><td>Los clientes finales de ese autónomo</td></tr>
+          <tr><td><strong>Para qué</strong></td><td>Órdenes, parte del día, fichaje, costes de obra, fotos de albarán, dudas y bloqueos</td><td>Pedir presupuesto, preguntar, mandar una foto, confirmar una cita</td></tr>
+          <tr><td><strong>Cuántos hay</strong></td><td>Uno solo, compartido por todos los negocios</td><td>Uno por negocio, el suyo propio</td></tr>
+          <tr><td><strong>Quién lo paga y lo da de alta</strong></td><td>Noesis</td><td>El negocio, registrado desde Administración</td></tr>
+          <tr><td><strong>Cómo se identifica al que escribe</strong></td><td>Por su teléfono, que debe estar vinculado</td><td>Por su teléfono, pero solo dentro de ese negocio</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>2. La regla que lo sostiene todo</h2>
+      <p class="sec-intro">Meta manda todos los mensajes al mismo sitio: una única dirección de tu servidor. Lo primero que hace Noesis es preguntarse a qué número escribieron, y solo después mira quién escribió.</p>
+    </div>
+
+    <figure class="fig fig-wide">
+      <svg viewBox="0 0 900 330" role="img" aria-label="Un mensaje entrante llega al webhook único; se comprueba primero el número que lo recibió, y según sea el central, uno comercial conocido o uno desconocido, se trata como operación interna, como cliente de ese negocio, o se ignora.">
+        <defs>
+          <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/>
+          </marker>
+        </defs>
+
+        <rect class="node" x="4" y="140" width="132" height="48" rx="9"/>
+        <text class="t" x="18" y="163">Mensaje</text>
+        <text class="s" x="18" y="178">de quien sea</text>
+        <path class="wire" d="M136,164 H166" marker-end="url(#ar)"/>
+
+        <rect class="node node-brand" x="172" y="140" width="176" height="48" rx="9"/>
+        <text class="t" x="186" y="163">Una sola puerta</text>
+        <text class="s" x="186" y="178">/webhook/whatsapp</text>
+        <path class="wire" d="M348,164 H378" marker-end="url(#ar)"/>
+
+        <rect class="node node-warn" x="384" y="132" width="178" height="64" rx="9"/>
+        <text class="t" x="398" y="158">¿Qué número</text>
+        <text class="t" x="398" y="175">lo recibió?</text>
+        <text class="s" x="398" y="189">se mira antes que el remitente</text>
+
+        <text class="lbl" x="596" y="26">Tres salidas, sin atajos</text>
+
+        <path class="wire" d="M562,164 H584 V56 H620" marker-end="url(#ar)"/>
+        <rect class="node node-ok" x="626" y="32" width="270" height="52" rx="9"/>
+        <text class="t" x="640" y="55">El central de Noesis</text>
+        <text class="s" x="640" y="71">operación interna: titular o trabajador</text>
+
+        <path class="wire" d="M584,164 H620" marker-end="url(#ar)"/>
+        <rect class="node node-ok" x="626" y="138" width="270" height="52" rx="9"/>
+        <text class="t" x="640" y="161">Un comercial dado de alta</text>
+        <text class="s" x="640" y="177">cliente de ESE negocio, y de ninguno más</text>
+
+        <path class="wire" d="M584,164 V276 H620" marker-end="url(#ar)"/>
+        <rect class="node node-stop" x="626" y="250" width="270" height="52" rx="9"/>
+        <text class="t" x="640" y="273">Cualquier otro</text>
+        <text class="s" x="640" y="289">se ignora: no hay número de repuesto</text>
+      </svg>
+      <figcaption>La tercera salida es la importante. Si llega un mensaje a un número que no está registrado, Noesis no intenta adivinar de quién es: lo descarta. Responder con la identidad equivocada sería enseñarle a un cliente el nombre de otra empresa.</figcaption>
+    </figure>
+
+    <div class="note">Hay dos comprobaciones más en la misma puerta: que la cuenta de WhatsApp Business coincida con la del número registrado, y que la recepción esté activada para esa conexión. Si algo no cuadra, el mensaje se descarta con el motivo anotado, en vez de seguir adelante «por si acaso».</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>3. Cuatro decisiones que parecen técnicas y son de negocio</h2>
+      <p class="sec-intro">Son las que te va a preguntar un cliente del piloto, y las que explican por qué el sistema a veces dice que no.</p>
+    </div>
+
+    <div class="rules">
+
+      <div class="rule">
+        <div class="rule-head">
+          <h3>Un teléfono, una identidad</h3>
+          <span class="chip chip-stop">Si hay duda, se para</span>
+        </div>
+        <p>En el número central, tu teléfono puede ser el del titular de un negocio o el de un trabajador, pero no las dos cosas, ni de dos empresas a la vez. Si un mismo número aparece vinculado dos veces, Noesis <strong>no ejecuta nada</strong>: avisa de que hay ambigüedad y pide que el titular lo arregle.</p>
+        <div class="rule-why"><strong>Por qué importa:</strong> un autónomo que además trabaja de peón para otra empresa mandaría «entrada» sin que nadie sepa a qué obra. Es preferible bloquear y que alguien lo aclare que fichar en la empresa equivocada. Es una decisión deliberada para el piloto; más adelante se puede añadir un selector de contexto explícito, pero no antes de ver cómo se comporta de verdad.</div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-head">
+          <h3>Un coste que manda un trabajador no es un apunte contable</h3>
+          <span class="chip chip-warn">Espera al titular</span>
+        </div>
+        <p>Cuando un trabajador manda «he comprado 40 € de material», eso entra como una <strong>aportación pendiente</strong>. No toca el proyecto, ni el margen, ni la contabilidad. Solo cuando el titular la acepta se convierte en una línea de material del trabajo.</p>
+        <div class="rule-why"><strong>Por qué importa:</strong> mantiene intacto el principio de Noesis —prepara, pero el autónomo confirma el dinero— ahora que hay más manos escribiendo. La aceptación se aplica una sola vez aunque se pulse dos veces, así que un doble clic no duplica el coste.</div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-head">
+          <h3>Los trabajadores no ven lo que ganas</h3>
+          <span class="chip chip-flat">Cerrado por defecto</span>
+        </div>
+        <p>Hay tres papeles —campo, responsable y oficina— y dos permisos separados: si puede mandar costes (activado de serie) y si puede ver cifras del presupuesto (<strong>desactivado</strong> de serie). Ver datos económicos exige, además, que el proyecto le esté asignado.</p>
+        <div class="rule-why"><strong>Por qué importa:</strong> el margen de una obra es información sensible con el propio equipo. Que el permiso venga cerrado significa que nadie lo ve por descuido: hay que abrirlo a mano, persona a persona.</div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-head">
+          <h3>El equipo deja de escribirle al jefe</h3>
+          <span class="chip chip-ok">El cambio que se nota</span>
+        </div>
+        <p>Antes, un trabajador con una duda llamaba o escribía al móvil personal del titular. Ahora escribe a Noesis: los costes, documentos, dudas y bloqueos van a una bandeja dentro de Equipo, y el titular recibe un resumen en lugar de veinte interrupciones.</p>
+        <div class="rule-why"><strong>Por qué importa:</strong> es la promesa del producto —quitar ruido mental— aplicada al ruido que genera el propio equipo, que suele ser el peor.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>4. El recorrido de un coste de obra</h2>
+      <p class="sec-intro">Cuatro pasos, y solo el tercero mueve dinero.</p>
+    </div>
+
+    <figure class="fig fig-flow">
+      <svg viewBox="0 0 860 150" role="img" aria-label="El trabajador manda un gasto con foto; queda como aportación pendiente; el titular acepta o descarta; si acepta se crea la línea de material en el trabajo.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/>
+          </marker>
+        </defs>
+
+        <rect class="node" x="4" y="44" width="176" height="56" rx="9"/>
+        <text class="t" x="18" y="68">1 · El trabajador</text>
+        <text class="s" x="18" y="84">manda el gasto y la foto</text>
+        <path class="wire" d="M180,72 H208" marker-end="url(#ar2)"/>
+
+        <rect class="node node-warn" x="214" y="44" width="186" height="56" rx="9"/>
+        <text class="t" x="228" y="68">2 · Queda pendiente</text>
+        <text class="s" x="228" y="84">no toca el proyecto</text>
+        <path class="wire" d="M400,72 H428" marker-end="url(#ar2)"/>
+
+        <rect class="node node-brand" x="434" y="44" width="176" height="56" rx="9"/>
+        <text class="t" x="448" y="68">3 · El titular decide</text>
+        <text class="s" x="448" y="84">acepta o descarta</text>
+        <path class="wire" d="M610,72 H638" marker-end="url(#ar2)"/>
+
+        <rect class="node node-ok" x="644" y="44" width="212" height="56" rx="9"/>
+        <text class="t" x="658" y="68">4 · Entra en el trabajo</text>
+        <text class="s" x="658" y="84">línea de material, una sola vez</text>
+
+        <text class="lbl" x="448" y="128">Si descarta, no pasa nada: el documento se guarda, el dinero no se mueve</text>
+      </svg>
+      <figcaption>El paso 2 es el que no existía antes. Es lo que permite que el equipo aporte información sin que nadie pueda alterar las cuentas de la empresa desde un WhatsApp.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>5. Quién ve qué</h2>
+      <p class="sec-intro">La tabla que te van a pedir en cuanto expliques esto a un autónomo con dos empleados.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>&nbsp;</th><th>Titular</th><th>Responsable</th><th>Campo</th><th>Cliente final</th></tr></thead>
+        <tbody>
+          <tr><td>Su parte del día</td><td class="yes">Sí</td><td class="yes">Sí</td><td class="yes">Sí</td><td class="no">No</td></tr>
+          <tr><td>Fichar</td><td class="yes">Sí</td><td class="yes">Sí</td><td class="yes">Sí</td><td class="no">No</td></tr>
+          <tr><td>Mandar un coste</td><td class="yes">Sí</td><td class="yes">Sí</td><td class="part">Si se le permite</td><td class="no">No</td></tr>
+          <tr><td>Aceptar un coste</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Ver cifras de un proyecto</td><td class="yes">Sí</td><td class="part">Si se le permite y lo tiene asignado</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Ver márgenes globales</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Emitir o enviar factura</td><td class="yes">Sí</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Escribir al número comercial</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Sí</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>6. Lo que sigue sin hacer, a propósito</h2>
+      <p class="sec-intro">Conviene tenerlo claro para no prometerlo en una demo.</p>
+    </div>
+
+    <ul>
+      <li><strong>Un mensaje entrante no crea contabilidad.</strong> Fotos y PDF quedan vinculados a su negocio, conversación y cliente, pero siempre pendientes de revisión.</li>
+      <li><strong>No se responde fuera de la ventana de 24 horas.</strong> Pasado ese plazo hay que usar una plantilla aprobada por Meta; el panel lo impide y lo explica.</li>
+      <li><strong>Se respeta el opt-out.</strong> Si un contacto pide no recibir mensajes, el panel no deja responderle.</li>
+      <li><strong>La respuesta sale por el mismo número que recibió el mensaje.</strong> Incluso si hubo que reintentar el envío: la cola recuerda por qué conexión entró.</li>
+      <li><strong>Ningún token ni secreto se guarda ni se enseña en el panel.</strong> El alta de un número queda auditada, pero las credenciales viven en el entorno.</li>
+      <li><strong>Todavía no hay Embedded Signup.</strong> Hoy cada número comercial lo da de alta un administrador a mano. Automatizarlo para que el cliente conecte su número solo es un paso posterior.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>7. Dónde está esto ahora mismo</h2>
+      <p class="sec-intro">Construido, en <code>main</code> y desplegado son tres cosas distintas, y ahora mismo no coinciden. Lo que te contó tu socio era exacto cuando lo escribió; desde entonces han entrado dos cosas más.</p>
+    </div>
+
+    <div class="state-grid">
+      <div class="state-cell st-ok">
+        <span class="state-label">WhatsApp multicanal</span>
+        <span class="state-value">Desplegado</span>
+        <span class="state-note">Esquema 45, release <code>0bd57e4</code>. Es lo que te describió tu socio.</span>
+      </div>
+      <div class="state-cell st-ok">
+        <span class="state-label">En producción</span>
+        <span class="state-value">Esquema 46</span>
+        <span class="state-note">Incluye además el blindaje de suscripciones y permisos por plan.</span>
+      </div>
+      <div class="state-cell st-ok">
+        <span class="state-label">Última entrega</span>
+        <span class="state-value">Al día</span>
+        <span class="state-note">Segundo factor para la gestoría, ya desplegado. La versión y el recuento de pruebas vigentes viven en <code>project-state.json</code>.</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <h3>Dos matices sobre las cifras</h3>
+      <p>Las 432 pruebas y el esquema 45 que te dijo tu socio corresponden al momento del despliegue multicanal. Desde entonces han entrado varias entregas más y <code>main</code> va bastante por delante, ya desplegado. Lo que queda no es publicar código, sino validar con cuentas reales lo que ya está publicado.</p>
+      <p>Conviene mirar siempre <code>project-state.json</code> antes de dar una versión por buena: ahí está la foto verificable, y cambia cada pocos días.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>8. Qué toca hacer, y quién</h2>
+      <p class="sec-intro">Todo lo que queda es trabajo con Meta, no con el código.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Tarea</th><th>Qué significa en la práctica</th></tr></thead>
+        <tbody>
+          <tr><td>Dar acceso al usuario del sistema</td><td>El usuario del sistema de Meta debe tener asignados los WABA y los números; sin eso el token no puede enviar por ellos.</td></tr>
+          <tr><td>Configurar el entorno</td><td>Token, App Secret y webhook central en Railway. Son los mismos valores del runbook.</td></tr>
+          <tr><td>Registrar cada número comercial</td><td>Desde Administración, entra como <em>pendiente</em>. No atiende a nadie todavía.</td></tr>
+          <tr><td>Probar antes de activar</td><td>Webhook y un envío real. Solo entonces se marca como <em>activo</em>, y solo entonces puede activarse la recepción.</td></tr>
+          <tr><td>Aprobar las plantillas</td><td>Factura, cobro, presupuesto y cita. Están en el runbook con su cuerpo exacto.</td></tr>
+          <tr><td>Validar con dos negocios reales</td><td>Dos números distintos. Es la única forma de comprobar de verdad que no se cruzan.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-stop">
+      <h3>Corregido: los avisos automáticos ya salen</h3>
+      <p>Meta rechaza los parámetros de plantilla con saltos de línea, y el planificador manda el resumen diario, el semanal, el cierre, el aviso fiscal y el aviso de cobros como un único parámetro multilínea. Verificado hoy sobre <code>main</code>: sigue sin sanearse.</p>
+      <p>Desde el 20-ago, cada parámetro se sanea al encolar: los saltos de línea se convierten en un separador visible, así que el aviso se lee igual y Meta lo acepta. Cinco pruebas, una por aviso, lo comprueban.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>origin/main</code>: <code>web/whatsapp.py</code>, <code>web/routers/whatsapp_business.py</code>, <code>db.py</code>, <code>migrations.py</code> (migración 45), <code>docs/Decisiones.md</code> y <code>docs/project-state.json</code>.</span>
+    <span>Si una cifra de este documento y <code>project-state.json</code> no coinciden, manda el JSON.</span>
+  </footer>
+
+</div>
+</body>
+</html>

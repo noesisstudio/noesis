@@ -1,0 +1,75 @@
+{% extends "site_base.html" %}
+{% block page_title %}Software de gestión para autónomos de servicios{% endblock %}
+{% block meta_description %}Noesis es el software de gestión por WhatsApp para autónomos de servicios: ordena trabajos, clientes, tickets, facturas y cobros sin añadir más oficina.{% endblock %}
+{% block content %}
+  <section class="public-page-hero product-page-hero">
+    <div>
+      <span class="eyebrow">Noesis para autónomos</span>
+      <h1>Haz el oficio. Noesis se queda con la oficina.</h1>
+      <p>Un software de gestión pensado para fontaneros, electricistas, instaladores,
+        reformistas y otros profesionales que trabajan lejos de un escritorio.</p>
+      <div class="public-hero-actions">
+        {% if public_signup_available %}
+        <a class="btn primary" href="/onboarding?intent=trial">Probar 14 días</a>
+        {% else %}
+        <a class="btn primary" href="/solicitar-acceso">Solicitar acceso</a>
+        {% endif %}
+        <a class="text-link" href="/precios">Ver precios <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+    <div class="product-thread" aria-label="Qué ordena Noesis">
+      <div><small>01</small><b>Trabajo</b><span>Cliente, visita, materiales, horas y siguiente paso.</span></div>
+      <div><small>02</small><b>Documento</b><span>Foto, PDF o ticket guardado en la empresa y el período correctos.</span></div>
+      <div><small>03</small><b>Factura</b><span>Borrador preparado con tus datos para que lo revises antes de emitir.</span></div>
+      <div><small>04</small><b>Cobro</b><span>Lo pendiente vuelve a aparecer cuando merece tu atención.</span></div>
+    </div>
+  </section>
+
+  <section class="public-section" aria-labelledby="autonomos-flow-title">
+    <div class="section-heading">
+      <span class="eyebrow">Del mensaje al cobro</span>
+      <h2 id="autonomos-flow-title">Una sola historia para cada trabajo.</h2>
+      <p>Noesis conecta lo que normalmente queda repartido entre conversaciones,
+        notas, carpetas y memoria. Cada dato conserva su origen.</p>
+    </div>
+    <div class="process-rows">
+      <article><b>01</b><div><span>Mientras trabajas</span><h3>Habla por WhatsApp.</h3></div><p>Envía una instrucción, un coste, una foto o un PDF. Noesis identifica tu cuenta antes de guardar nada y pregunta cuando falta contexto.</p></article>
+      <article><b>02</b><div><span>Al cerrar el servicio</span><h3>Revisa lo que ha quedado preparado.</h3></div><p>Cliente, trabajo, justificantes, horas y conceptos llegan conectados. Los efectos contables o fiscales no se confirman solos.</p></article>
+      <article><b>03</b><div><span>Al facturar</span><h3>Emite con tu imagen y tus reglas.</h3></div><p>Series, líneas, IVA, IRPF, vencimiento, logotipo y pie documental quedan listos; tú decides cuándo emitir y enviar.</p></article>
+      <article><b>04</b><div><span>Hasta cobrar</span><h3>No pierdas la factura después de enviarla.</h3></div><p>Noesis mantiene el seguimiento, prepara recordatorios y deja el cobro enlazado con el mismo trabajo cuando lo confirmas.</p></article>
+    </div>
+  </section>
+
+  <section class="companion-section" aria-labelledby="autonomos-companion-title">
+    <div class="companion-copy">
+      <span class="eyebrow light-eyebrow">Tu mano derecha</span>
+      <h2 id="autonomos-companion-title">No necesitas aprender contabilidad para entender tu negocio.</h2>
+      <p>Noesis empieza por la conclusión y conserva el detalle para cuando lo necesites.</p>
+      <ul>
+        <li>Te dice qué requiere atención hoy.</li>
+        <li>Explica de dónde sale cada cifra.</li>
+        <li>Reconoce cuándo falta información.</li>
+        <li>Pide confirmación antes de una acción sensible.</li>
+      </ul>
+    </div>
+    <div class="companion-demo">
+      <small>Parte de Noesis</small>
+      <blockquote>“Hoy lo primero es cerrar el trabajo de Marta. Tengo las horas y el material; me falta confirmar el desplazamiento antes de preparar la factura.”</blockquote>
+      <div><span>Ver trabajo</span><span>Añadir desplazamiento</span><span>Preguntar por qué</span></div>
+    </div>
+  </section>
+
+  <section class="public-section" aria-labelledby="autonomos-control-title">
+    <div class="section-heading">
+      <span class="eyebrow">Control sin ruido</span>
+      <h2 id="autonomos-control-title">Automatizar no significa perder el mando.</h2>
+    </div>
+    <div class="team-responsibilities">
+      <article><span>Dinero</span><h3>Nada se cobra ni se mueve por ti.</h3><p>Noesis puede cuadrar, avisar y preparar. El titular confirma pagos, emisiones y decisiones irreversibles.</p></article>
+      <article><span>Documentos</span><h3>El original no desaparece.</h3><p>Los archivos se clasifican por negocio y período, con revisión cuando la lectura o el tipo no son inequívocos.</p></article>
+      <article><span>Gestoría</span><h3>Compartes solo con permiso.</h3><p>Tu despacho accede a una cartera separada y revocable. Tú sigues siendo quien autoriza la relación.</p></article>
+    </div>
+  </section>
+{% endblock %}
+{% block cta_title %}Prueba Noesis con un trabajo real.{% endblock %}
+{% block cta_text %}Empieza por el caso que más oficina te esté quitando esta semana.{% endblock %}

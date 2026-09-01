@@ -18,6 +18,21 @@
   <div class="card-b"><div id="cl-plan">…</div></div>
 </div>
 
+<div class="card" style="margin-top:16px" id="whatsapp-inbox-card">
+  <div class="card-h">
+    <div><div class="kicker">Recepción comercial</div><h2>Entradas por WhatsApp</h2></div>
+    <span class="hint" id="wa-inbox-count">Cargando…</span>
+  </div>
+  <div class="card-b table-pad">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Contacto</th><th>Mensaje o documento</th><th>Estado</th><th class="t-right">Acción</th></tr></thead>
+        <tbody id="wa-inbox-body"><tr><td colspan="4"><div class="empty">Cargando entradas…</div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div class="grid g3" style="margin-top:16px">
   <div class="card col-2">
     <div class="card-h"><h2>Tus clientes</h2><span class="hint" id="cl-hint">ordenados por facturación</span></div>
@@ -117,6 +132,46 @@ async function load() {
     badge.textContent = 'sana'; badge.className = 'priority low';
     el('cl-plan').innerHTML = `<b>Cartera repartida.</b><p class="muted" style="margin:6px 0 12px">Mantén teléfonos y zonas actualizados para que agenda, cobros y facturas no se ensucien.</p>`;
   }
+}
+async function loadWhatsAppInbox() {
+  try {
+    const data = await api('/whatsapp-business/inbox?limit=20');
+    const items = data.items || [];
+    el('wa-inbox-count').textContent = `${items.length} entrada(s) recientes`;
+    el('wa-inbox-body').innerHTML = items.length ? items.map(item => `
+      <tr>
+        <td><strong>${esc(item.display_name || item.sender_phone)}</strong><br>
+          <span class="meta">${item.client_id ? 'Cliente identificado' : item.lead_id ? 'Nuevo contacto' : 'Por identificar'}</span></td>
+        <td>${item.document_id ? `<b>Documento recibido</b><br>` : ''}${esc(item.text_body || item.message_type)}</td>
+        <td><span class="badge ${item.processing_status === 'failed' ? 'b-amber' : 'b-green'}">${esc(item.processing_status)}</span>
+          ${item.human_handoff ? '<br><span class="priority high">requiere respuesta</span>' : ''}</td>
+        <td class="t-right table-actions">
+          ${item.document_id ? `<a class="btn sm" href="/api/${BIZ}/documents/${item.document_id}/preview" target="_blank">Previsualizar</a>` : ''}
+          <button class="btn sm primary" onclick='replyWhatsApp(${item.conversation_id}, ${JSON.stringify(item.display_name || item.sender_phone)})'>Responder</button>
+          <button class="btn sm" onclick="resolveWhatsApp(${item.conversation_id})">Cerrar</button>
+        </td>
+      </tr>`).join('')
+      : `<tr><td colspan="4">${emptyState('Sin entradas comerciales', 'Cuando un cliente escriba al número de tu negocio, aparecerá aquí sin mezclarse con tus órdenes a Noesis.', '', '')}</td></tr>`;
+  } catch (error) {
+    el('wa-inbox-body').innerHTML = `<tr><td colspan="4"><div class="empty">${esc(error.message)}</div></td></tr>`;
+  }
+}
+function replyWhatsApp(conversationId, name) {
+  formModal({
+    title:`Responder a ${name}`,
+    submitLabel:'Enviar respuesta',
+    fields:[{name:'text', label:'Mensaje', type:'textarea', rows:4,
+      placeholder:'Escribe una respuesta clara y profesional'}],
+    onSubmit: async values => {
+      await apiPost(`/whatsapp-business/conversations/${conversationId}/reply`, values);
+      await loadWhatsAppInbox();
+    }
+  });
+}
+async function resolveWhatsApp(conversationId) {
+  if (!confirm('¿Marcar esta conversación como resuelta?')) return;
+  await apiPost(`/whatsapp-business/conversations/${conversationId}/resolve`, {});
+  await loadWhatsAppInbox();
 }
 function edit(id, name, phone, zone, nif, address, email){
   formModal({
@@ -238,5 +293,6 @@ async function erase(id){
 }
 window.QUICK_NEW = addClient;
 load();
+loadWhatsAppInbox();
 </script>
 {% endblock %}

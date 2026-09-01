@@ -3,6 +3,7 @@
 {% block content %}
 <div class="gestoria-auth-wrap">
   <section class="gestoria-auth-intro">
+    <a class="gestoria-back" href="/acceso">← Elegir otro acceso</a>
     <span class="eyebrow">Cartera profesional</span>
     <h1>Tus clientes, ordenados en un solo lugar.</h1>
     <p>Revisa documentación, pide lo que falta y descarga cada período sin mezclar empresas.</p>
@@ -10,7 +11,10 @@
   <section class="gestoria-auth-card">
     <h2>Entrar a la cartera</h2>
     <p class="muted">Usa el correo al que tu cliente envió la invitación.</p>
-    {% if error %}<div class="banner warn">
+    {% if error == 'reset_ok' %}<div class="banner good">
+      Contraseña actualizada. Ya puedes entrar con la nueva.
+    </div>
+    {% elif error %}<div class="banner warn">
       {% if error == 'throttle' %}Demasiados intentos. Espera unos minutos.
       {% else %}El correo o la contraseña no coinciden.{% endif %}
     </div>{% endif %}
@@ -21,7 +25,8 @@
       <input class="input" type="password" name="password" autocomplete="current-password" required>
       <button class="btn primary gestoria-full">Entrar</button>
     </form>
-    <p class="gestoria-help">¿Aún no tienes cuenta? Tu primer cliente debe invitarte desde Ajustes.</p>
+    <p class="gestoria-help"><a href="/gestoria/recuperar">¿Has olvidado tu contraseña?</a></p>
+    <p class="gestoria-help">¿Aún no tienes cuenta? <a href="/solicitar-acceso?perfil=gestoria">Solicita tu espacio profesional</a> o pide a tu primer cliente que te invite desde Ajustes.</p>
   </section>
 </div>
 {% endblock %}

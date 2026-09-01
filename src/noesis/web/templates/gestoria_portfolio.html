@@ -1,39 +1,81 @@
 {% extends "gestoria_base.html" %}
 {% block title %}Cartera{% endblock %}
 {% block content %}
-<div class="gestoria-page-head">
-  <div><span class="eyebrow">Parte de cartera</span><h1>Buenos días, {{ account.firm_name }}.</h1>
-  <p>Primero, lo que necesita atención. Después, cada cliente por separado.</p></div>
-  <form class="gestoria-search" method="get"><input class="input" name="q" value="{{ q }}" placeholder="Buscar empresa o NIF"><button class="btn">Buscar</button></form>
+<div class="gestoria-page-head gestoria-portfolio-head">
+  <div>
+    <span class="eyebrow">Parte de cartera</span>
+    <h1>Buenos días, {{ account.firm_name }}.</h1>
+    <p>He ordenado el trimestre para que empieces por las empresas que necesitan criterio.</p>
+  </div>
+  <form class="gestoria-period-picker" method="get" aria-label="Cambiar período de cartera">
+    <input type="hidden" name="q" value="{{ q }}">
+    <label>Año<select class="input" name="year">{% for value in years %}<option value="{{ value }}" {{ 'selected' if value == selected_year }}>{{ value }}</option>{% endfor %}</select></label>
+    <label>Período<select class="input" name="quarter">{% for value in [1,2,3,4] %}<option value="{{ value }}" {{ 'selected' if value == selected_quarter }}>T{{ value }}</option>{% endfor %}</select></label>
+    <button class="btn" type="submit">Ver período</button>
+  </form>
 </div>
 
-<section class="gestoria-brief">
+<section class="gestoria-portfolio-block gestoria-overview-block" aria-labelledby="portfolio-overview-title">
+<div class="gestoria-block-heading"><div><span class="eyebrow">Situación del período</span><h2 id="portfolio-overview-title">Lo primero del T{{ selected_quarter }}</h2></div><span>{{ selected_year }}</span></div>
+<div class="gestoria-brief">
   {% if pending_total or requests_total %}
-  <span class="badge b-amber">POR REVISAR</span>
-  <div><b>{{ pending_total }} documento(s) pendientes y {{ requests_total }} solicitud(es) abierta(s).</b>
-  <small>Entra en cada empresa para revisar sin mezclar información.</small></div>
+  <span class="badge b-amber">REQUIERE ATENCIÓN</span>
+  <div><b>{{ pending_total }} documento(s) por revisar y {{ requests_total }} solicitud(es) abierta(s).</b>
+  <small>La información sigue separada por empresa; entra en una para revisar el origen de cada cifra.</small></div>
   {% else %}
   <span class="badge b-green">TODO EN ORDEN</span>
-  <div><b>No hay nada urgente ahora mismo.</b><small>La cartera se actualizará cuando llegue nueva documentación.</small></div>
+  <div><b>No hay entradas urgentes en la cartera.</b><small>Comprueba igualmente la preparación fiscal antes de cerrar el período.</small></div>
   {% endif %}
+</div>
+
+<div class="gestoria-summary-strip" aria-label="Resumen de cartera">
+  <div><span>Empresas conectadas</span><b>{{ businesses|length }}</b><small>acceso explícito y revocable</small></div>
+  <div><span>Preparadas para cierre</span><b>{{ ready_total }}</b><small>documentación cubierta</small></div>
+  <div><span>Documentos del período</span><b>{{ period_documents }}</b><small>T{{ selected_quarter }} de {{ selected_year }}</small></div>
+  <div><span>Solicitudes abiertas</span><b>{{ requests_total }}</b><small>pendientes de respuesta</small></div>
+</div>
 </section>
 
-<div class="gestoria-section-title"><div><span class="eyebrow">Empresas</span><h2>Tu cartera</h2></div><span>{{ businesses|length }} cliente(s)</span></div>
+<section class="gestoria-portfolio-block gestoria-companies-block" aria-labelledby="portfolio-companies-title">
+<div class="gestoria-section-title gestoria-list-heading">
+  <div><span class="eyebrow">Empresas</span><h2 id="portfolio-companies-title">Trabajo del T{{ selected_quarter }}</h2><p>Abre un expediente para revisar su documentación, impuestos o seguimiento.</p></div>
+  <form class="gestoria-search" method="get">
+    <input type="hidden" name="year" value="{{ selected_year }}"><input type="hidden" name="quarter" value="{{ selected_quarter }}">
+    <input class="input" name="q" value="{{ q }}" placeholder="Buscar empresa o NIF" aria-label="Buscar empresa o NIF">
+    <button class="btn">Buscar</button>
+  </form>
+</div>
+
 {% if businesses %}
-<div class="gestoria-company-list">
+<div class="gestoria-company-list professional">
+  <div class="gestoria-company-columns" aria-hidden="true"><span>Empresa</span><span>Preparación del período</span><span>Situación</span><span></span></div>
   {% for item in businesses %}
-  <a class="gestoria-company-row" href="/gestoria/cliente/{{ item.id }}">
-    <div class="gestoria-company-main"><span class="gestoria-avatar">{{ (item.name or 'N')[:1] }}</span><div><b>{{ item.name }}</b><small>{{ item.nif or 'NIF pendiente' }}{% if item.sector %} · {{ item.sector }}{% endif %}</small></div></div>
-    <div class="gestoria-company-state">
-      {% if item.pending_documents %}<span class="badge b-amber">{{ item.pending_documents }} por revisar</span>{% endif %}
-      {% if item.open_requests %}<span class="badge b-blue">{{ item.open_requests }} solicitud(es)</span>{% endif %}
-      {% if not item.pending_documents and not item.open_requests %}<span class="badge b-green">al día</span>{% endif %}
+  <a class="gestoria-company-row professional" href="/gestoria/cliente/{{ item.id }}?year={{ selected_year }}&quarter={{ selected_quarter }}&section=resumen">
+    <div class="gestoria-company-main">
+      <span class="gestoria-avatar">{{ (item.name or 'N')[:1] }}</span>
+      <div><b>{{ item.name }}</b><small>{{ item.nif or 'NIF pendiente' }}{% if item.sector %} · {{ item.sector }}{% endif %}</small></div>
     </div>
-    <span class="gestoria-open">Abrir →</span>
+    <div class="gestoria-readiness">
+      <div><b>{{ item.workspace.readiness_pct }}%</b><span>{{ item.workspace.documents }} documentos</span></div>
+      <div class="gestoria-progress" role="progressbar" aria-valuenow="{{ item.workspace.readiness_pct }}" aria-valuemin="0" aria-valuemax="100"><span style="width:{{ item.workspace.readiness_pct }}%"></span></div>
+      <small>{% if item.workspace.profile_ready %}Perfil fiscal configurado{% else %}Falta confirmar el perfil fiscal{% endif %}</small>
+    </div>
+    <div class="gestoria-company-state">
+      {% if item.workspace.attention %}<span class="badge b-amber">{{ item.workspace.attention }} punto(s) a revisar</span>{% else %}<span class="badge b-green">Preparada</span>{% endif %}
+      {% if item.open_requests %}<small>{{ item.open_requests }} solicitud(es) abierta(s)</small>{% endif %}
+      <small>IVA previo: {{ '%.2f'|format(item.workspace.vat_result) }} €</small>
+    </div>
+    <span class="gestoria-open">Abrir expediente →</span>
   </a>
   {% endfor %}
 </div>
 {% else %}
 <div class="gestoria-empty"><h2>Aún no hay empresas en tu cartera</h2><p>Un autónomo debe guardar tu correo en Noesis y enviarte una invitación desde Ajustes.</p></div>
 {% endif %}
+</section>
+
+<section class="gestoria-partner-note">
+  <div><span class="eyebrow">Noesis para gestorías</span><h2>Menos perseguir documentos. Más tiempo para asesorar.</h2></div>
+  <p>La cartera comparte datos en tiempo real con cada cliente de Noesis. El programa de colaboración podrá atribuir altas y recompensas cuando sus condiciones comerciales estén aprobadas; esta pantalla no promete importes todavía.</p>
+</section>
 {% endblock %}

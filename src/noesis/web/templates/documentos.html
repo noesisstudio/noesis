@@ -12,61 +12,99 @@
   </div>
 </div>
 
+{% if inbound_email_address %}
+<section class="card" style="margin-top:16px">
+  <div class="card-b" style="display:flex; gap:18px; align-items:center; justify-content:space-between; flex-wrap:wrap">
+    <div>
+      <div class="kicker">Entrada por correo</div>
+      <h2 style="margin:4px 0 6px">Reenvía aquí tus facturas</h2>
+      <p style="margin:0">Es una dirección privada de este negocio. Noesis guardará los adjuntos y te pedirá confirmar cualquier alta o dato fiscal.</p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+      <code id="inbound-email-address" style="overflow-wrap:anywhere; max-width:100%">{{ inbound_email_address }}</code>
+      <button class="btn" type="button" onclick="copyInboundEmail()">Copiar dirección</button>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <div class="card" id="gestoria-card" style="margin-top:16px; display:none">
   <div class="card-h"><h2>Tu gestoría te pide</h2><span class="hint">solicitudes abiertas</span></div>
   <div class="card-b" id="g-requests"></div>
 </div>
 
-<div class="grid g3" style="margin-top:16px">
-  <div class="card" id="subir">
-    <div class="card-h"><h2>Subir un documento</h2></div>
-    <div class="card-b">
-      <label class="fld">Archivo (PDF o foto)</label>
-      <input class="input" id="d-file" type="file"
-             accept=".pdf,.jpg,.jpeg,.png,.webp,.heic">
-      <button class="btn full" style="margin-top:8px" onclick="el('d-camera').click()">
-        📷 Hacer foto ahora</button>
+<section class="card document-upload-strip" id="subir" style="margin-top:16px">
+  <div class="document-upload-main">
+    <div class="document-upload-intro">
+      <div class="kicker">Entrada rápida</div>
+      <h2>Sube un PDF o haz una foto</h2>
+      <p>Noesis lo lee, propone una carpeta y te pide confirmación si hay dudas.</p>
+    </div>
+    <div class="document-upload-actions">
+      <label class="document-file-picker" for="d-file">
+        <span id="d-file-name">Seleccionar PDF o foto</span>
+        <input id="d-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+               onchange="updateFileSelection(this.files)">
+      </label>
+      <button class="btn" type="button" onclick="el('d-camera').click()">Usar cámara</button>
       <input id="d-camera" type="file" accept="image/*" capture="environment"
-             style="display:none" onchange="el('d-file').files=this.files; el('d-msg').textContent='Foto lista para subir.'">
-      <label class="fld" style="margin-top:10px">Cliente (opcional)</label>
-      <select id="d-client"><option value="">— Sin cliente —</option></select>
-      <label class="fld" style="margin-top:10px">Proyecto (opcional)</label>
-      <select id="d-project"><option value="">— Archivo general —</option></select>
-      <label class="fld" style="margin-top:10px">Nota (opcional)</label>
-      <input class="input" id="d-note" placeholder="Ej. Garantía de la caldera">
-      <button class="btn primary full" style="margin-top:14px" onclick="uploadDoc()">Subir</button>
-      <div id="d-msg" class="meta" style="margin-top:10px"></div>
-      <div id="d-ocr" class="meta" style="margin-top:6px"></div>
+             hidden onchange="useCameraFile(this.files)">
+      <button class="btn primary" type="button" onclick="uploadDoc()">Guardar documento</button>
     </div>
   </div>
+  <details class="document-upload-options">
+    <summary>Añadir cliente, proyecto o nota</summary>
+    <div class="document-upload-fields">
+      <label><span>Cliente</span><select id="d-client"><option value="">Sin cliente</option></select></label>
+      <label><span>Proyecto</span><select id="d-project"><option value="">Archivo general</option></select></label>
+      <label><span>Nota</span><input class="input" id="d-note" placeholder="Ej. Garantía de la caldera"></label>
+    </div>
+  </details>
+  <div class="document-upload-feedback">
+    <span id="d-msg" aria-live="polite"></span>
+    <span id="d-ocr"></span>
+  </div>
+</section>
 
-  <div class="card col-2">
-    <div class="card-h"><h2>Tus documentos <span class="hint" id="d-hint"></span></h2>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-        <input class="input" id="d-search" type="search"
-               placeholder="Buscar archivo, cliente o contenido"
-               aria-label="Buscar documentos" oninput="scheduleDocumentSearch()"
-               style="max-width:300px">
-        <select id="d-filter" onchange="renderList()" style="max-width:220px">
-          <option value="">Todos</option>
-          <option value="pendiente_revisar">Pendientes de revisar</option>
-          <option value="revisado">Revisados</option>
-          <option value="enviado_gestoria">Enviados a gestoría</option>
-          <option value="validado">Validados</option>
-        </select>
+<div class="document-library-layout">
+  <section class="card document-archive-card">
+    <div class="card-h document-archive-head">
+      <div><div class="kicker">Archivo del negocio</div><h2>Documentos por período</h2>
+        <span class="hint" id="d-hint">Todo localizado sin mover carpetas.</span></div>
+      <div class="document-period-picker">
+        <label><span>Año</span><select id="d-year" onchange="renderList()"></select></label>
+        <label><span>Trimestre</span><select id="d-quarter" onchange="renderList()">
+          <option value="1">T1</option><option value="2">T2</option>
+          <option value="3">T3</option><option value="4">T4</option>
+        </select></label>
       </div>
     </div>
-    <div class="card-b table-pad" style="padding-top:6px">
-      <div class="table-wrap">
-        <table class="fx-table">
-          <thead><tr><th>Documento</th><th>Estado</th>
-            <th class="t-right">Importe</th><th></th></tr></thead>
-          <tbody id="d-body"></tbody>
-        </table>
+    <div class="card-b document-archive-body">
+      <div class="document-folder-grid" id="d-kind-tabs" aria-label="Carpetas del archivo"></div>
+      <div class="document-toolbar">
+        <div class="document-toolbar-copy">
+          <b>Contenido de la carpeta</b>
+          <span>Abre un archivo para verlo sin perder el contexto.</span>
+        </div>
+        <div class="document-search-tools">
+          <input class="input" id="d-search" type="search"
+                 placeholder="Buscar archivo, cliente o contenido"
+                 aria-label="Buscar documentos" oninput="scheduleDocumentSearch()">
+          <select id="d-filter" onchange="paintDocuments()" aria-label="Filtrar por estado">
+            <option value="">Cualquier estado</option>
+            <option value="pendiente_revisar">Pendientes de revisar</option>
+            <option value="revisado">Revisados</option>
+            <option value="enviado_gestoria">Enviados a gestoría</option>
+            <option value="validado">Validados</option>
+          </select>
+        </div>
+      </div>
+      <div class="document-workspace" id="d-workspace">
+        <div class="document-file-list" id="d-body"></div>
       </div>
       <div id="d-empty"></div>
     </div>
-  </div>
+  </section>
 </div>
 
 <!-- Revisión del borrador leído por IA: el usuario corrige y confirma. -->
@@ -74,9 +112,9 @@
   <div class="card-h"><h2>Revisar lectura</h2><span class="hint" id="r-confidence"></span></div>
   <div class="card-b">
     <div class="grid g4">
-      <div><label class="fld">Proveedor</label>
+      <div><label class="fld" id="r-party-label">Proveedor</label>
         <input class="input" id="r-supplier"></div>
-      <div><label class="fld">NIF proveedor</label>
+      <div><label class="fld" id="r-party-nif-label">NIF proveedor</label>
         <input class="input" id="r-supplier-nif"></div>
       <div><label class="fld">Nº factura</label>
         <input class="input" id="r-number"></div>
@@ -94,8 +132,9 @@
         <input class="input" id="r-total" type="number" step="0.01"></div>
     </div>
     <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
-      <button class="btn primary" onclick="confirmReceived()">Confirmar como factura recibida</button>
-      <button class="btn" onclick="markKind('factura_emitida')">Es una factura mía (emitida)</button>
+      <button class="btn primary" id="r-confirm-received" onclick="confirmReceived()">Confirmar como factura recibida</button>
+      <button class="btn primary" id="r-confirm-client" style="display:none" onclick="confirmClientCandidate()">Crear cliente y relacionar</button>
+      <button class="btn" id="r-mark-issued" onclick="markKind('factura_emitida')">Es una factura mía (emitida)</button>
       <button class="btn" onclick="hideReview()">Cancelar</button>
     </div>
     <div id="r-msg" class="meta" style="margin-top:10px"></div>
@@ -120,8 +159,37 @@ const STATUS = { pendiente_revisar:['Pendiente','b-amber'], revisado:['Revisado'
   rechazado:['Rechazado','b-red'], duplicado:['Duplicado','b-gray'] };
 let reviewDocId = null;
 let documentSearchTimer = null;
+let DOCUMENT_ARCHIVE = {documents:[], document_counts:{}};
+let DOCUMENT_VIEW = 'todos';
+let selectedDocumentId = null;
+let selectedUploadFile = null;
+let reviewClientResolution = null;
+const DOCUMENT_VIEWS = [
+  {key:'todos', label:'Todo el archivo', caption:'Vista completa'},
+  {key:'ingresos', label:'Ingresos', caption:'Facturas emitidas'},
+  {key:'gastos', label:'Gastos', caption:'Facturas recibidas'},
+  {key:'tickets', label:'Tickets', caption:'Compras simplificadas'},
+  {key:'pendientes', label:'Por revisar', caption:'Necesitan confirmación'},
+  {key:'otros', label:'Otros', caption:'Contratos y albaranes'}
+];
+
+function updateFileSelection(files) {
+  const file = files && files[0];
+  selectedUploadFile = file || null;
+  el('d-file-name').textContent = file ? file.name : 'Seleccionar PDF o foto';
+  if (file) el('d-msg').textContent = 'Archivo listo para guardar.';
+}
+
+function useCameraFile(files) {
+  if (!files || !files.length) return;
+  updateFileSelection(files);
+}
 
 async function load() {
+  const now = new Date();
+  el('d-year').innerHTML = Array.from({length:6}, (_,i)=>now.getFullYear()-i)
+    .map(year=>`<option value="${year}">${year}</option>`).join('');
+  el('d-quarter').value=String(Math.floor(now.getMonth()/3)+1);
   try {
     const clients = await api('/clients');
     el('d-client').innerHTML = '<option value="">— Sin cliente —</option>' +
@@ -170,18 +238,48 @@ async function replyRequest(id) {
 
 function scheduleDocumentSearch() {
   clearTimeout(documentSearchTimer);
-  documentSearchTimer = setTimeout(renderList, 180);
+  documentSearchTimer = setTimeout(paintDocuments, 180);
 }
 
 async function renderList() {
+  const year=el('d-year').value, quarter=el('d-quarter').value;
+  DOCUMENT_ARCHIVE = await api(`/document-archive?year=${encodeURIComponent(year)}&quarter=${encodeURIComponent(quarter)}&view=${encodeURIComponent(DOCUMENT_VIEW)}`);
+  if (!DOCUMENT_ARCHIVE.documents.some(item=>item.id===selectedDocumentId)) {
+    selectedDocumentId = null;
+  }
+  paintDocuments();
+}
+
+function selectDocumentView(view) {
+  DOCUMENT_VIEW = DOCUMENT_VIEWS.some(item=>item.key===view) ? view : 'todos';
+  selectedDocumentId = null;
+  renderList();
+}
+
+function showPreview(id) {
+  selectedDocumentId = id;
+  paintDocuments();
+  const document = DOCUMENT_ARCHIVE.documents.find(item=>item.id===id);
+  if (document) openDocumentPreview(document);
+}
+
+function paintDocuments() {
   const query = el('d-search').value.trim();
-  const docs = await api('/documents' + (query ? `?q=${encodeURIComponent(query)}` : ''));
+  const normalized=query.toLocaleLowerCase('es');
+  const docs = DOCUMENT_ARCHIVE.documents.filter(item=>!normalized || [
+    item.filename,item.note,item.review_note,item.ocr_text,item.client_name,
+    item.project_name,KINDS[item.kind],item.kind
+  ].some(value=>String(value||'').toLocaleLowerCase('es').includes(normalized)));
   const filter = el('d-filter').value;
   const shown = filter ? docs.filter(d => d.doc_status === filter) : docs;
-
-  const pending = docs.filter(d => d.doc_status === 'pendiente_revisar').length;
-  el('d-hint').textContent = docs.length
-    ? `· ${docs.length} ${query ? 'encontrado(s)' : 'guardado(s)'}${pending ? ` · ${pending} por revisar` : ''}` : '';
+  const counts=DOCUMENT_ARCHIVE.document_counts||{};
+  el('d-kind-tabs').innerHTML=DOCUMENT_VIEWS.map(({key,label,caption})=>
+    `<button class="document-folder ${DOCUMENT_VIEW===key?'active':''}" type="button" onclick="selectDocumentView('${key}')" aria-pressed="${DOCUMENT_VIEW===key}">
+      <span><b>${label}</b><small>${caption}</small></span><strong>${counts[key]||0}</strong>
+    </button>`
+  ).join('');
+  const period=DOCUMENT_ARCHIVE.period?.label||'';
+  el('d-hint').textContent = `${period} · ${counts.todos||0} documento(s)${(counts.pendientes||0)?` · ${counts.pendientes} por revisar`:''}`;
 
   el('d-body').innerHTML = shown.map(d => {
     const st = STATUS[d.doc_status] || STATUS.revisado;
@@ -191,43 +289,76 @@ async function renderList() {
       actions.push(`<button class="btn sm" onclick="confirmKind(${d.id}, '${esc(d.kind)}')">Confirmar tipo</button>`);
     }
     if (!d.received_invoice_id && !d.expense_id) {
-      actions.push(`<button class="iconbtn" title="Volver a clasificar" onclick="classifyDoc(${d.id})">↻</button>`);
+      actions.push(`<button class="btn sm" title="Volver a clasificar" onclick="classifyDoc(${d.id})">Reclasificar</button>`);
       if (['documento','factura_recibida','factura_emitida','proveedor'].includes(d.kind)) {
         actions.push(`<button class="btn sm" title="Extraer datos de factura" onclick="readDoc(${d.id})">Extraer datos</button>`);
       }
     }
     if (d.kind === 'ticket' && !d.expense_id) {
-      actions.push(`<button class="iconbtn" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">€→</button>`);
+      actions.push(`<button class="btn sm" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">Crear gasto</button>`);
     }
     if (d.doc_status !== 'enviado_gestoria' && d.doc_status !== 'validado') {
-      actions.push(`<button class="iconbtn" title="Marcar como enviado a gestoría" onclick="setStatus(${d.id},'enviado_gestoria')">📤</button>`);
+      actions.push(`<button class="btn sm" title="Marcar como enviado a gestoría" onclick="setStatus(${d.id},'enviado_gestoria')">Enviar a gestoría</button>`);
     }
     actions.push(`<button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button>`);
-    return `<tr>
-      <td>
-        <div class="fx-main">
-          <a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener"><b>${esc(d.filename)}</b></a>
-          <span class="badge b-gray">${esc(KINDS[d.kind] || d.kind)}</span>
-        </div>
-        <div class="meta">${dateIso(d.created_at)}${d.project_name ? ` · Proyecto ${esc(d.project_name)}` : ''}</div>
-        ${d.review_note ? `<div class="meta">${esc(d.review_note)}</div>` : ''}
-      </td>
-      <td><span class="badge ${st[1]}">${st[0]}</span>${d.confidence ? `<div class="meta">${Math.round(d.confidence)}% seguro</div>` : ''}</td>
-      <td class="t-right num">${importe}</td>
-      <td class="t-right table-actions">${actions.join(' ')}</td>
-    </tr>`;
+    const proposed=d.proposed_client_status==='pending'&&d.proposed_client_name
+      ?`Cliente por confirmar: ${d.proposed_client_name}`:'';
+    const context=[d.client_name,d.project_name,proposed].filter(Boolean).map(esc).join(' · ');
+    return `<article class="document-file-row ${selectedDocumentId===d.id?'selected':''}">
+      <button class="document-file-open" onclick="showPreview(${d.id})" aria-label="Previsualizar ${esc(d.filename)}">
+        <span class="document-file-kind">${d.mime==='application/pdf'?'PDF':String(d.mime||'').startsWith('image/')?'IMG':'DOC'}</span>
+        <span class="document-file-main"><b>${esc(d.filename)}</b><small>${esc(KINDS[d.kind]||d.kind)}${context?` · ${context}`:''}</small></span>
+      </button>
+      <div class="document-file-facts"><span>${esc(d.effective_on||dateIso(d.created_at))}</span><b>${importe}</b></div>
+      <div class="document-file-state"><span class="badge ${st[1]}">${st[0]}</span>${d.doc_status==='pendiente_revisar'&&d.confidence?`<small>Lectura ${Math.round(d.confidence)}% · por confirmar</small>`:''}</div>
+      <div class="document-file-actions">${actions.join(' ')}</div>
+    </article>`;
   }).join('');
   el('d-empty').innerHTML = shown.length ? '' :
     emptyState('Nada por aquí', query ? 'No encuentro documentos con esas palabras.' : filter ? 'No hay documentos en este estado.' :
       'Sube un PDF o haz una foto de un ticket para empezar.', '#subir', 'Subir documento');
+  el('d-workspace').style.display=shown.length?'grid':'none';
+  if (!shown.some(item=>item.id===selectedDocumentId)) selectedDocumentId=null;
+}
+
+function documentPreviewMarkup(d) {
+  const st=STATUS[d.doc_status]||STATUS.revisado;
+  const context=[d.client_name&&`Cliente: ${d.client_name}`,d.project_name&&`Proyecto: ${d.project_name}`].filter(Boolean);
+  return `<div class="document-preview-head">
+      <div><div class="kicker">Vista previa</div><h3>${esc(d.filename)}</h3></div>
+      <a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener">Abrir original ↗</a>
+    </div>
+    ${d.previewable?`<div class="document-preview-canvas"><img src="/api/${BIZ}/documents/${d.id}/preview" alt="Primera página de ${esc(d.filename)}" onerror="this.parentElement.innerHTML='<span>No se pudo generar la vista previa.</span>'"></div>`:
+      '<div class="document-preview-canvas unavailable"><span>Este formato se abre desde el original.</span></div>'}
+    <div class="document-preview-meta"><span>Tipo<b>${esc(KINDS[d.kind]||d.kind)}</b></span><span>Fecha<b>${esc(d.effective_on||dateIso(d.created_at))}</b></span><span>Estado<b>${st[0]}</b></span>${d.ocr_amount?`<span>Importe leído<b>${eur(d.ocr_amount)}</b></span>`:''}</div>
+    ${context.length?`<div class="document-preview-context">${context.map(value=>`<span>${esc(value)}</span>`).join('')}</div>`:''}
+    ${d.review_note?`<p class="meta">${esc(d.review_note)}</p>`:''}`;
+}
+
+function openDocumentPreview(d) {
+  document.querySelector('.document-preview-overlay')?.remove();
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay document-preview-overlay';
+  overlay.innerHTML=`<div class="modal document-preview-modal" role="dialog" aria-modal="true" aria-label="Vista previa de ${esc(d.filename)}">
+    <button class="iconbtn document-preview-close" aria-label="Cerrar">×</button>
+    <div class="document-preview">${documentPreviewMarkup(d)}</div>
+  </div>`;
+  const onKey=event=>{if(event.key==='Escape') close();};
+  const close=()=>{document.removeEventListener('keydown',onKey);overlay.remove();};
+  overlay.querySelector('.document-preview-close').onclick=close;
+  overlay.onclick=event=>{if(event.target===overlay) close();};
+  document.body.appendChild(overlay);
+  document.addEventListener('keydown',onKey);
+  overlay.querySelector('.document-preview-close').focus();
 }
 
 async function uploadDoc() {
   const input = el('d-file');
   const msg = el('d-msg');
-  if (!input.files || !input.files.length) { msg.textContent = 'Elige un archivo o haz una foto primero.'; return; }
+  const file = selectedUploadFile || (input.files && input.files[0]);
+  if (!file) { msg.textContent = 'Elige un archivo o haz una foto primero.'; return; }
   const fd = new FormData();
-  fd.append('file', input.files[0]);
+  fd.append('file', file);
   fd.append('kind', 'documento');
   fd.append('client_id', el('d-client').value);
   fd.append('project_id', el('d-project').value);
@@ -236,7 +367,8 @@ async function uploadDoc() {
   const r = await fetch(`/api/${BIZ}/documents`, { method: 'POST', body: fd });
   const data = await r.json();
   if (!r.ok) { msg.textContent = data.error || 'No se pudo subir.'; return; }
-  input.value = ''; el('d-note').value = '';
+  input.value = ''; selectedUploadFile = null; el('d-note').value = '';
+  el('d-file-name').textContent = 'Seleccionar PDF o foto';
   const proposal = data.classification || {};
   const proposedKind = proposal.kind || data.kind;
   msg.textContent = proposedKind === 'documento'
@@ -290,8 +422,13 @@ async function readDoc(id) {
     return;
   }
   reviewDocId = id;
-  el('r-supplier').value = draft.supplier || '';
-  el('r-supplier-nif').value = draft.supplier_nif || '';
+  const emitted=draft.direction==='emitida';
+  reviewClientResolution=draft.client_resolution||null;
+  el('r-msg').textContent='';
+  el('r-party-label').textContent=emitted?'Cliente detectado':'Proveedor';
+  el('r-party-nif-label').textContent=emitted?'NIF del cliente':'NIF proveedor';
+  el('r-supplier').value = emitted ? (draft.customer || '') : (draft.supplier || '');
+  el('r-supplier-nif').value = emitted ? (draft.customer_nif || '') : (draft.supplier_nif || '');
   el('r-number').value = draft.number || '';
   el('r-issued').value = draft.issued_on || '';
   el('r-base').value = draft.base ?? '';
@@ -300,12 +437,54 @@ async function readDoc(id) {
   el('r-total').value = draft.total ?? '';
   el('r-confidence').textContent = (draft.confidence ? `la IA está un ${draft.confidence}% segura` : 'revisa los datos')
     + (draft.direction === 'emitida' ? ' · parece EMITIDA por ti' : draft.direction === 'recibida' ? ' · parece RECIBIDA' : '');
+  el('r-confirm-received').style.display=emitted?'none':'';
+  el('r-mark-issued').style.display=emitted?'none':'';
+  el('r-confirm-client').style.display=(emitted&&reviewClientResolution?.status==='pending')?'':'none';
+  if(emitted&&reviewClientResolution?.status==='confirmed') {
+    el('r-msg').textContent=`Cliente relacionado: ${reviewClientResolution.client_name||draft.customer}.`;
+  } else if(emitted&&reviewClientResolution?.status==='ambiguous') {
+    el('r-msg').textContent=reviewClientResolution.message;
+  } else if(emitted&&reviewClientResolution?.status==='pending') {
+    el('r-msg').textContent='He encontrado un cliente nuevo. No lo crearé hasta que lo confirmes.';
+  }
   el('review-card').style.display = '';
   el('review-card').scrollIntoView({ behavior: 'smooth' });
   renderList();
 }
 
-function hideReview() { el('review-card').style.display = 'none'; reviewDocId = null; }
+function hideReview() {
+  el('review-card').style.display='none';
+  el('r-msg').textContent='';
+  reviewDocId=null;
+  reviewClientResolution=null;
+}
+
+async function copyInboundEmail() {
+  const node=el('inbound-email-address');
+  if(!node) return;
+  try {
+    await navigator.clipboard.writeText(node.textContent.trim());
+    el('d-msg').textContent='Dirección de correo copiada.';
+  } catch(_e) {
+    window.prompt('Copia esta dirección:', node.textContent.trim());
+  }
+}
+
+async function confirmClientCandidate() {
+  if(!reviewDocId) return;
+  const name=el('r-supplier').value.trim();
+  if(!confirm(`¿Crear o relacionar a ${name} como cliente de este negocio?`)) return;
+  try {
+    const result=await apiPost(`/documents/${reviewDocId}/client-candidate/confirm`,{
+      name,
+      nif:el('r-supplier-nif').value.trim()
+    });
+    el('r-msg').textContent=`Hecho. ${result.client.name} ya está en Clientes y relacionado con el documento.`;
+    el('r-confirm-client').style.display='none';
+    reviewClientResolution={status:'confirmed',client_id:result.client.id,client_name:result.client.name};
+    renderList();
+  } catch(e) { el('r-msg').textContent=e.message; }
+}
 
 async function confirmReceived() {
   if (!reviewDocId) return;

@@ -1,14 +1,18 @@
 {% extends "site_base.html" %}
-{% block page_title %}Solicitar acceso{% endblock %}
-{% block meta_description %}Deja tus datos y te damos acceso a Noesis con acompañamiento. Abrimos con pocos negocios para configurarlo contigo desde el primer trabajo.{% endblock %}
+{% block page_title %}{% if selected_profile == 'gestoria' %}Noesis para gestorías{% else %}Solicitar acceso{% endif %}{% endblock %}
+{% block meta_description %}{% if selected_profile == 'gestoria' %}Solicita un espacio profesional para gestionar tu cartera de clientes con Noesis.{% else %}Deja tus datos y te damos acceso a Noesis con acompañamiento. Abrimos con pocos negocios para configurarlo contigo desde el primer trabajo.{% endif %}{% endblock %}
 {% block content %}
   <section class="public-page-hero">
     <div>
-      <span class="eyebrow">Acceso acompañado</span>
-      <h1>No queremos que empieces solo.</h1>
+      <span class="eyebrow">{% if selected_profile == 'gestoria' %}Canal profesional{% else %}Acceso acompañado{% endif %}</span>
+      <h1>{% if selected_profile == 'gestoria' %}Tu cartera, preparada para asesorar.{% else %}No queremos que empieces solo.{% endif %}</h1>
     </div>
+    {% if selected_profile == 'gestoria' %}
+    <p>Cuéntanos cómo trabaja tu despacho. Configuraremos un espacio separado y seguro para revisar varias empresas sin mezclar información.</p>
+    {% else %}
     <p>Abrimos con pocos negocios a la vez para poder configurar Noesis contigo,
       comprobar que encaja con tu oficio y acompañarte en el primer trabajo completo.</p>
+    {% endif %}
   </section>
 
   {% if sent %}
@@ -39,11 +43,11 @@
   <section class="public-section request-section" aria-labelledby="form-title">
     <div class="request-layout">
       <div class="request-aside">
-        <h2 id="form-title">Cómo funciona</h2>
+      <h2 id="form-title">{% if selected_profile == 'gestoria' %}Cómo activamos la cartera{% else %}Cómo funciona{% endif %}</h2>
         <ol class="request-steps">
-          <li><b>1</b><div><h3>Nos cuentas tu caso</h3><p>Cuatro datos y a qué te dedicas. Nada más.</p></div></li>
+          <li><b>1</b><div><h3>{% if selected_profile == 'gestoria' %}Conocemos el despacho{% else %}Nos cuentas tu caso{% endif %}</h3><p>{% if selected_profile == 'gestoria' %}Cartera, equipo y forma de trabajo.{% else %}Cuatro datos y a qué te dedicas. Nada más.{% endif %}</p></div></li>
           <li><b>2</b><div><h3>Te respondemos</h3><p>En menos de 24 horas laborables, una persona del equipo.</p></div></li>
-          <li><b>3</b><div><h3>Lo montamos contigo</h3><p>Preparamos tu cuenta y recorremos un trabajo real juntos.</p></div></li>
+          <li><b>3</b><div><h3>Lo montamos contigo</h3><p>{% if selected_profile == 'gestoria' %}Activamos tu espacio y conectamos la primera empresa con permiso explícito.{% else %}Preparamos tu cuenta y recorremos un trabajo real juntos.{% endif %}</p></div></li>
         </ol>
         <div class="request-notes">
           <p><b>14 días de prueba</b> que empiezan el día que activamos tu cuenta, no hoy.</p>
@@ -57,6 +61,7 @@
         <form method="post" action="/solicitar-acceso" class="request-form">
           {# El plan viaja desde la página de precios sin estorbar en el formulario. #}
           <input type="hidden" name="plan" value="{{ selected_plan }}">
+          <input type="hidden" name="perfil" value="{{ selected_profile }}">
 
           <label>Tu nombre *
             <input class="input" name="name" required maxlength="120" autocomplete="name" placeholder="Ej. Marta Vidal">
@@ -67,12 +72,21 @@
           <label>Teléfono
             <input class="input" name="phone" type="tel" maxlength="40" autocomplete="tel" placeholder="Para avisarte por WhatsApp">
           </label>
+          {% if selected_profile == 'gestoria' %}
+          <label>Nombre de la gestoría o despacho *
+            <input class="input" name="business_name" required maxlength="160" autocomplete="organization" placeholder="Ej. Gestoría Mirall">
+          </label>
+          <label>¿Cuántas empresas lleváis aproximadamente?
+            <input class="input" name="message" maxlength="2000" placeholder="Ej. 45 autónomos y 12 sociedades">
+          </label>
+          {% else %}
           <label>¿A qué te dedicas? *
             <input class="input" name="sector" required maxlength="80" autocomplete="organization-title" placeholder="Ej. Fontanería y calefacción">
           </label>
           <label>¿Qué es lo que más te ocupa ahora? <span class="opt">opcional</span>
             <textarea class="input" name="message" rows="3" maxlength="2000" placeholder="Ej. Facturo tarde y persigo cobros por teléfono"></textarea>
           </label>
+          {% endif %}
 
           {# Señuelo antispam. El nombre no puede parecerse a ningún campo real
              (web, empresa, dirección…) o el autorrelleno del navegador lo

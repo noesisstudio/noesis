@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conectar Google · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Noesis · Runbook de producción</p>
+    <h1>Conectar el acceso con Google</h1>
+    <p class="standfirst">Media hora en la consola de Google y dos variables en Railway. Es la integración más rápida de todas las pendientes, y ahora mismo bloquea tu panel de administración.</p>
+    <p class="crumbs">Variables y criterios de aceptación en <code>Conectar-APIs.md</code> §2. Estado verificable en <code>project-state.json</code>.</p>
+  </header>
+
+  <div class="callout">
+    <h3>Empieza por aquí: tu panel de administración está cerrado</h3>
+    <p>En producción, <code>NOESIS_ADMIN_REQUIRE_GOOGLE_OAUTH</code> vale <strong>true</strong> por defecto. Sin credenciales de Google, <code>_is_admin()</code> rechaza cualquier sesión: <strong>no puedes entrar en <code>/admin</code> aunque tu correo sea el del fundador y hayas iniciado sesión con contraseña</strong>.</p>
+    <p>Eso significa que la gestión de permisos que acabamos de construir —activar un cliente, ampliarle la prueba, ver por qué una entrega falla— existe en el código pero es inalcanzable en producción hasta terminar esta guía.</p>
+    <p>El resto de Noesis funciona con normalidad: el arranque solo deja un error en el log y mantiene el servicio en pie, para que una credencial pendiente no tumbe a los autónomos.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Qué hace Google aquí, y qué no</h2>
+      <p class="sec-intro">Conviene tenerlo claro para no pedir permisos de más, que es lo que dispara una revisión de seguridad de semanas.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Sí hace</th><th>No hace</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Confirmar quién eres, con un correo que Google da por verificado</td>
+            <td>No lee tu Gmail ni tus contactos</td>
+          </tr>
+          <tr>
+            <td>Permitir el alta y el acceso sin recordar otra contraseña</td>
+            <td>No entra en tu Calendar ni en tu Drive</td>
+          </tr>
+          <tr>
+            <td>Abrir el panel de administración, que lo exige en producción</td>
+            <td>No guarda ningún token de Google después del acceso</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><strong>Noesis pide exactamente tres permisos: <code>openid</code>, <code>email</code> y <code>profile</code>.</strong> Google los clasifica como no sensibles, así que <strong>no hacen falta ni verificación de la app ni revisión de seguridad</strong>. Por eso esta integración se cierra en una tarde y Meta tarda una semana.</div>
+
+    <p>El código además es estricto con lo que acepta: si Google no devuelve <code>email_verified</code> en verdadero, o falta el identificador estable del usuario, el acceso se rechaza. Un correo sin verificar no entra.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>El dato que hay que clavar</h2>
+      <p class="sec-intro">Casi todos los fallos de esta integración son el mismo, y es este.</p>
+    </div>
+
+    <div class="callout callout-warn">
+      <h3>La URI de redirección coincide carácter a carácter, o no funciona</h3>
+      <pre>https://bynoesis.com/auth/google/callback</pre>
+      <p>Google compara el texto exacto. Fallan por igual <code>http</code> en vez de <code>https</code>, poner <code>www.</code> delante, o una barra final de más. El error que verás es <code>redirect_uri_mismatch</code>.</p>
+      <p>Noesis la construye a partir de <code>NOESIS_BASE_URL</code>, así que <strong>esa variable y lo que registres en Google tienen que ser el mismo dominio</strong>. Si algún día cambias de dominio, se cambian las dos a la vez.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Paso a paso en la consola</h2>
+      <p class="sec-intro">Todo ocurre en <em>Google Auth Platform</em>, dentro de Google Cloud. No hace falta tarjeta ni activar facturación.</p>
+    </div>
+
+    <ol class="steps">
+
+      <li class="step first-step">
+        <span class="step-n">01</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Crear el proyecto</h3><span class="chip chip-flat">2 minutos</span></div>
+          <p>Entra en <code>console.cloud.google.com</code> <strong>con la cuenta de Google de la empresa</strong>, no con una personal. Si mañana esa cuenta personal se pierde, el acceso de todos tus clientes se va con ella.</p>
+          <p>Crea un proyecto llamado <strong>Noesis</strong>, o reutiliza uno que ya tengas.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">02</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Configurar la marca</h3><span class="chip chip-warn">Lo ve tu cliente</span></div>
+          <p>En <strong>Branding</strong>, rellena:</p>
+          <ul>
+            <li><strong>Nombre de la aplicación:</strong> <code>Noesis</code>. Es literalmente lo que leerá el autónomo: «Noesis quiere acceder a tu cuenta de Google».</li>
+            <li><strong>Correo de asistencia:</strong> uno del dominio propio.</li>
+            <li><strong>Dominio autorizado:</strong> <code>bynoesis.com</code>.</li>
+            <li><strong>Enlaces</strong> a privacidad y términos, que ya están publicados.</li>
+          </ul>
+          <div class="note">Si aquí queda un nombre descuidado o un correo de Gmail, es lo que verá el cliente en el momento en que decide si se fía. Merece los dos minutos.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">03</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Elegir el público</h3><span class="chip chip-warn">Decisión</span></div>
+          <p>En <strong>Audience</strong>, tipo de usuario <strong>Externo</strong>: tus clientes no pertenecen a tu organización de Google.</p>
+          <p>Quedas en estado <strong>Testing</strong>, donde <strong>solo entran los correos que añadas como usuarios de prueba</strong>, hasta cien. Para un piloto de tres a cinco autónomos sobra.</p>
+          <div class="note"><strong>Añádete a ti y a tu socio como usuarios de prueba antes que nada</strong>, o no podrás entrar ni en tu propio panel de administración. Cuando abras el alta pública, pulsa «Publicar»: como los permisos no son sensibles, el cambio es inmediato y no dispara ninguna revisión.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">04</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Crear el cliente OAuth</h3><span class="chip chip-stop">El paso que importa</span></div>
+          <p>En <strong>Clients → Crear cliente</strong>, tipo <strong>Aplicación web</strong>, nombre <code>Noesis web</code>.</p>
+          <p><strong>Orígenes autorizados de JavaScript:</strong></p>
+          <pre>https://bynoesis.com</pre>
+          <p><strong>URIs de redirección autorizados:</strong></p>
+          <pre>https://bynoesis.com/auth/google/callback</pre>
+          <div class="note">Si además quieres probarlo en tu portátil, añade <code>http://localhost:8000/auth/google/callback</code>. Google admite <code>http</code> únicamente para <code>localhost</code>.</div>
+          <p>Al guardar te da dos valores. <strong>El secreto se muestra entero una sola vez</strong>: cópialo en ese momento.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">05</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Cargar las dos variables</h3><span class="chip chip-flat">En Railway</span></div>
+          <pre>GOOGLE_OAUTH_CLIENT_ID=<span class="c">&lt;termina en .apps.googleusercontent.com&gt;</span>
+GOOGLE_OAUTH_CLIENT_SECRET=<span class="c">&lt;empieza por GOCSPX-&gt;</span></pre>
+          <p>Hacen falta <strong>las dos</strong>. Con una sola, el botón de Google no aparece y el panel de administración sigue cerrado. Es deliberado: mejor ocultar el botón que ofrecer un acceso que va a fallar.</p>
+          <p>Railway redespliega solo al guardar.</p>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Comprobar que funciona</h2>
+      <p class="sec-intro">Cinco pruebas. Las dos últimas son las que se salta todo el mundo y luego duelen.</p>
+    </div>
+
+    <ol class="checks">
+      <li>El botón de Google <strong>aparece</strong> en <code>/login</code>. Si no aparece, falta una de las dos variables.</li>
+      <li>Entras con tu cuenta y llegas a tu panel.</li>
+      <li>Entras en <code>/admin</code>. <strong>Este es el desbloqueo real</strong> de la gestión de permisos.</li>
+      <li>Un correo que ya tenía cuenta con contraseña entra con Google <strong>a la misma cuenta</strong>, sin duplicarla.</li>
+      <li>Cancelas en la pantalla de Google: vuelves a Noesis sin sesión y sin un error feo.</li>
+    </ol>
+
+    <div class="note">Al terminar, <code>noesis-doctor --strict</code> debe dejar de marcar Google como bloqueo, y el resultado se anota en <code>Registro-QA.md</code>. Una integración no está conectada porque existan sus variables, sino porque su prueba está registrada.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Si algo falla</h2>
+      <p class="sec-intro">Los cuatro errores reales, y qué significan de verdad.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Lo que ves</th><th>Qué pasa en realidad</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>redirect_uri_mismatch</code></td>
+            <td>La URI registrada no es idéntica a la que envía Noesis. Compara <code>NOESIS_BASE_URL</code> con lo que pusiste en Google, carácter a carácter.</td>
+          </tr>
+          <tr>
+            <td>«Acceso bloqueado: no has completado el proceso de verificación»</td>
+            <td>Sigues en Testing y ese correo no está en la lista de usuarios de prueba. Añádelo, o publica la aplicación.</td>
+          </tr>
+          <tr>
+            <td>Vuelves al login sin explicación</td>
+            <td>Noesis rechazó el perfil: Google no marcó el correo como verificado, o el <code>state</code> no coincidió. Lo segundo suele ser una cookie de sesión perdida entre dominios.</td>
+          </tr>
+          <tr>
+            <td>El botón no aparece</td>
+            <td>Falta el identificador o el secreto en Railway. No es un fallo: es la protección para no prometer un acceso que no existe.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Tres cosas antes de empezar</h2>
+    </div>
+    <ul>
+      <li><strong>Cuenta de empresa, no personal.</strong> Es la decisión que más cuesta deshacer después.</li>
+      <li><strong>El secreto va a Railway y a ningún otro sitio.</strong> Ni a un chat, ni a un documento, ni a una captura. Si aparece en algún lado se rota desde la consola, que permite tener dos activos mientras haces el cambio.</li>
+      <li><strong>Añádete como usuario de prueba antes de nada</strong>, o te quedas fuera de tu propio panel.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Verificado sobre <code>main</code>: <code>web/routers/account.py</code> (flujo OAuth, permisos y validación del perfil), <code>config.py</code> (<code>google_oauth_available</code> y <code>ADMIN_REQUIRE_GOOGLE_OAUTH</code>), <code>web/routers/admin.py</code> (<code>_is_admin</code>), <code>web/server.py</code> y <code>readiness.py</code>.</span>
+    <span>Se abre en cualquier navegador y se imprime a PDF sin perder el diseño.</span>
+  </footer>
+
+</div>
+
+</body>
+</html>

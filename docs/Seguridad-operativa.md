@@ -48,6 +48,16 @@ en servidor y base de datos.
 | Dependencia vulnerable o cadena de suministro | Lock reproducible, acciones fijadas por SHA, Dependabot, `pip-audit`, Bandit, Ruff y detector de secretos en CI | Revisar alertas antes de fusionar; no actualizar a ciegas |
 | Doble ejecución o carrera | Transacciones, claves idempotentes, bloqueo de fila y outboxes durables | Smoke PostgreSQL obligatorio |
 | Pérdida o cifrado de datos | Backups verificados, copia externa HTTPS, cifrado S3 solicitado y simulacro semanal independiente | Falta restaurar una descarga del bucket en otra infraestructura y medir RPO/RTO |
+
+### Decisión de infraestructura para el piloto
+
+Railway con PostgreSQL, volumen, copia externa y restauración verificada es una base
+razonable para el piloto; migrar ahora añadiría riesgo operativo sin demostrar que el
+proveedor sea el cuello de botella. La independencia no se consigue cambiando de
+marca, sino probando una recuperación fuera del mismo fallo: descargar base y ZIP
+desde el bucket, restaurarlos en otro PostgreSQL/host, cronometrar RPO y RTO y dejar
+responsable y evidencia. Hasta completar esa prueba, una copia «OK» dentro de
+Railway no demuestra recuperación ante pérdida total del proveedor.
 | Abuso administrativo | Sesión admin corta, Google OAuth obligatorio en producción y acciones sensibles en bitácora append-only encadenada | El MFA real depende de la política del Workspace/cuenta Google; passkeys para gestoría siguen pendientes |
 | Manipulación de evidencia | Triggers impiden UPDATE/DELETE y cada evento enlaza la huella anterior | Un superusuario de BD sigue siendo una frontera de confianza; exportar evidencia a un SIEM/WORM al escalar |
 

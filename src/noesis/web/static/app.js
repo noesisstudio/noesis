@@ -138,9 +138,12 @@ function formModal(opts) {
   const fields = (opts.fields || []).map(f => {
     const control = f.options
       ? `<select class="input" data-name="${f.name}">${f.options.map(o =>
-          `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}</select>`
-      : `<input class="input" data-name="${f.name}" type="${f.type || 'text'}"
-          value="${esc(f.value ?? '')}" placeholder="${esc(f.placeholder || '')}">`;
+          `<option value="${esc(o.value)}" ${String(o.value) === String(f.value ?? '') ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>`
+      : f.type === 'textarea'
+        ? `<textarea class="input" data-name="${f.name}" rows="${f.rows || 4}"
+            maxlength="${f.maxlength || 2000}" placeholder="${esc(f.placeholder || '')}">${esc(f.value ?? '')}</textarea>`
+        : `<input class="input" data-name="${f.name}" type="${f.type || 'text'}"
+            value="${esc(f.value ?? '')}" placeholder="${esc(f.placeholder || '')}">`;
     return `<label class="fld" style="margin-top:10px">${esc(f.label)}</label>${control}`;
   }).join('');
   ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">

@@ -12,7 +12,9 @@ el hueco de [[Producto|Noesis]].
 - **Javadex / OptimusCall / AI Hispania** — agentes de voz que contestan el teléfono
   para gremios. Sin la parte administrativa.
 - **Holded / Quipu / Billin** — ERP/contabilidad completos, ya homologados Verifactu.
-  Nadie los abre desde el móvil; los usamos vía API (ver [[Arquitectura]] y [[Fiscalidad]]).
+  Son referencias de cobertura y credibilidad, no proveedores: Noesis construye la
+  facturación y el registro fiscal de forma nativa y no los conecta por API (ver
+  [[Arquitectura]], [[Fiscalidad]] y [[Decisiones]]).
 
 ## Lección estratégica
 Ver [[Decisiones]]: no copiar código (es propietario), estudiar **ideas/UX** y construir

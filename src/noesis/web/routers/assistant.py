@@ -89,6 +89,14 @@ async def api_chat(business_id: int, request: Request):
             {"error": "El mensaje está vacío o es demasiado largo."}, status_code=400
         )
     page = str(body.get("page") or "").strip() or None
+    business = db.get_business(business_id) or {}
+    if (
+        getattr(request.state, "subscription_read_only", False)
+        and business.get("is_demo")
+    ):
+        return await run_in_threadpool(
+            chat.handle_read_only, business_id, message, page
+        )
     return await run_in_threadpool(chat.handle, business_id, message, page)
 
 

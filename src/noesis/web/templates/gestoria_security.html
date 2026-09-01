@@ -1,0 +1,80 @@
+{% extends "gestoria_base.html" %}
+{% block title %}Seguridad de la cuenta{% endblock %}
+{% block content %}
+<a class="gestoria-back" href="/gestoria">← Volver a la cartera</a>
+<div class="gestoria-page-head security-head">
+  <div><span class="eyebrow">Cuenta profesional</span><h1>Seguridad de acceso</h1>
+    <p>Protege toda la cartera aunque alguien averigüe tu contraseña.</p></div>
+  <span class="badge {{ 'b-green' if account.mfa_enabled else 'b-amber' }}">
+    {{ 'Segundo factor activo' if account.mfa_enabled else 'Pendiente de activar' }}
+  </span>
+</div>
+
+{% if status %}<div class="banner good security-banner">
+  {% if status == 'enabled' %}Segundo factor activado. Guarda ahora los códigos de recuperación.
+  {% elif status == 'regenerated' %}Códigos nuevos creados. Los anteriores ya no funcionan.
+  {% else %}Segundo factor desactivado.{% endif %}
+</div>{% endif %}
+{% if error %}<div class="banner warn security-banner">
+  {% if error == 'throttle' %}Demasiados intentos. Espera unos minutos.
+  {% else %}La contraseña o el segundo factor no coinciden.{% endif %}
+</div>{% endif %}
+
+{% if recovery_codes %}
+<section class="gestoria-security-card recovery-card">
+  <span class="eyebrow">Guardar una sola vez</span>
+  <h2>Tus códigos de recuperación</h2>
+  <p>Descárgalos o guárdalos fuera de Noesis. Cada uno sirve una vez; al salir de esta página no volverán a mostrarse.</p>
+  <div class="recovery-grid">
+    {% for code in recovery_codes %}<code>{{ code }}</code>{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if not account.mfa_enabled %}
+<section class="gestoria-security-card setup-card">
+  <div class="setup-copy">
+    <span class="eyebrow">Paso 1</span><h2>Añádelo a tu aplicación</h2>
+    <p>Escanea el QR con Google Authenticator, Microsoft Authenticator, 1Password u otra aplicación TOTP.</p>
+    {% if mfa_qr %}<img class="mfa-qr" src="{{ mfa_qr }}" alt="Código QR para activar el segundo factor">{% endif %}
+    <p class="muted">Si no puedes escanear, escribe esta clave:</p>
+    <code class="mfa-secret">{{ mfa_secret }}</code>
+  </div>
+  <form method="post" action="/gestoria/seguridad/activar" class="security-form">
+    <span class="eyebrow">Paso 2</span><h2>Comprueba el código</h2>
+    <label class="fld" for="setup-password">Contraseña actual</label>
+    <input class="input" id="setup-password" type="password" name="password"
+           autocomplete="current-password" required>
+    <label class="fld" for="setup-code">Código actual de 6 cifras</label>
+    <input class="input mfa-code-input" id="setup-code" name="code"
+           inputmode="numeric" autocomplete="one-time-code" required>
+    <button class="btn primary gestoria-full">Activar segundo factor</button>
+  </form>
+</section>
+{% else %}
+<div class="gestoria-security-grid">
+  <section class="gestoria-security-card">
+    <span class="eyebrow">Emergencia</span><h2>Códigos de recuperación</h2>
+    <p>Te quedan <b>{{ recovery_remaining }}</b>. Regenerarlos invalida todos los anteriores.</p>
+    <form method="post" action="/gestoria/seguridad/regenerar" class="security-form">
+      <label class="fld">Contraseña actual</label>
+      <input class="input" type="password" name="password" autocomplete="current-password" required>
+      <label class="fld">Código actual o de recuperación</label>
+      <input class="input" name="code" autocomplete="one-time-code" required>
+      <button class="btn gestoria-full">Crear códigos nuevos</button>
+    </form>
+  </section>
+  <section class="gestoria-security-card danger-zone">
+    <span class="eyebrow">Reducir protección</span><h2>Desactivar segundo factor</h2>
+    <p>La cartera volverá a depender solo de la contraseña. Hazlo únicamente si vas a configurarlo de nuevo.</p>
+    <form method="post" action="/gestoria/seguridad/desactivar" class="security-form">
+      <label class="fld">Contraseña actual</label>
+      <input class="input" type="password" name="password" autocomplete="current-password" required>
+      <label class="fld">Código actual o de recuperación</label>
+      <input class="input" name="code" autocomplete="one-time-code" required>
+      <button class="btn danger gestoria-full">Desactivar</button>
+    </form>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

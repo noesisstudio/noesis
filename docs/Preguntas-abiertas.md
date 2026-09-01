@@ -2,7 +2,7 @@
 
 > Solo contiene decisiones reales del founder. Los trabajos de conexión y QA viven
 > en [[Tareas-vivas]] y [[Conectar-APIs]]. Cuando una pregunta se responde, se mueve
-> a [[Decisiones]] con el porqué. Última revisión: **2026-07-20**.
+> a [[Decisiones]] con el porqué. Última revisión: **2026-08-10**.
 
 ## Decisiones que no bloquean la conexión inmediata
 
@@ -12,20 +12,11 @@
    defecto: calidad con herramientas y estabilidad antes que el precio teórico;
    presupuesto y consentimiento por negocio obligatorios.
 
-2. **IVA en Stripe.** Los precios aprobados son 29/49/99 EUR **más IVA**. El Checkout
-   actual no habilita `automatic_tax` ni añade una tasa. Antes de cobrar en live hay
-   que decidir entre activar Stripe Tax —propuesta recomendada— o cobrar precios con
-   IVA incluido y cambiar el copy comercial. Esta decisión sí bloquea Stripe live.
-
-3. **Idioma completo de la interfaz.** El asistente ya conserva ES/CA/EN, pero la UI
+2. **Idioma completo de la interfaz.** El asistente ya conserva ES/CA/EN, pero la UI
    no está internacionalizada entera. Propuesta: mantener la interfaz española en el
    piloto y adelantar i18n solo si un cliente real lo exige para usar o comprar.
 
-4. **Portal de gestoría con cuentas multiempresa.** El enlace privado, carpetas por
-   periodo y solicitudes ya cubren el piloto. Propuesta: probarlo con 2-3 gestorías
-   antes de añadir cuentas, MFA y permisos multiempresa.
-
-5. **Voz en el plan Sin Límites.** El recepcionista telefónico está diseñado pero no
+3. **Voz en el plan Premium.** El recepcionista telefónico está diseñado pero no
    construido. Antes de prometer minutos incluidos hay que validar coste, demanda y
    margen con llamadas reales. Propuesta: beta cerrada o add-on hasta tener datos.
 
@@ -50,3 +41,9 @@
 - Google OAuth, SMTP, Stripe, Meta y AEAT no se consideran disponibles por tener
   código: necesitan credenciales y prueba externa completa.
 - Holded no se conecta: la facturación y Veri*Factu son desarrollo propio.
+- Stripe mantiene el catálogo 29/49/99 EUR más IVA y Checkout solicita dirección,
+  NIF y `automatic_tax`; falta validar el resultado real en Stripe test/live, no una
+  decisión de producto ni código por diseñar.
+- La gestoría ya dispone de cuenta profesional multiempresa, permisos explícitos,
+  cartera, expedientes, documentos, fiscalidad y solicitudes. MFA y la validación
+  con 2-3 despachos siguen siendo tareas de piloto, no preguntas de arquitectura.

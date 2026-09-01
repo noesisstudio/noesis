@@ -3,26 +3,66 @@
 from __future__ import annotations
 
 import hmac
+import base64
 import json
 import logging
 import secrets
 import time
 from datetime import datetime
+from io import BytesIO
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from ... import config, db
 from ...adapters import billing as billing_adapter
 from ...adapters import email as email_adapter
+from ...documents import validation as document_validation
 from .. import auth, whatsapp
 from ..deps import TEMPLATES, _read_json
 
 router = APIRouter()
 log = logging.getLogger("uvicorn.error")
+
+_BRAND_UPLOAD_BYTES = 3_000_000
+
+
+async def _sanitized_brand_image(
+    upload: UploadFile | None, *, footer: bool = False,
+) -> tuple[str | None, str | None]:
+    """Valida bytes reales, elimina metadatos y limita dimensiones antes de guardar."""
+    if upload is None or not upload.filename:
+        return None, None
+    mime_to_ext = {
+        "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
+    }
+    ext = mime_to_ext.get(upload.content_type or "")
+    if not ext:
+        raise ValueError("Usa una imagen PNG, JPG o WebP.")
+    raw = await upload.read(_BRAND_UPLOAD_BYTES + 1)
+    if not raw or len(raw) > _BRAND_UPLOAD_BYTES:
+        raise ValueError("La imagen no puede superar 3 MB.")
+    document_validation.validate(f"marca{ext}", raw)
+    try:
+        with Image.open(BytesIO(raw)) as source:
+            image = ImageOps.exif_transpose(source)
+            image.thumbnail((1800, 600) if footer else (600, 600))
+            has_alpha = image.mode in {"RGBA", "LA"} or "transparency" in image.info
+            clean = image.convert("RGBA" if has_alpha else "RGB")
+            output = BytesIO()
+            clean.save(output, format="PNG", optimize=True)
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise ValueError("No se ha podido preparar esa imagen.") from exc
+    encoded = base64.b64encode(output.getvalue()).decode("ascii")
+    limit = db.MAX_FOOTER_IMAGE_B64 if footer else db.MAX_LOGO_B64
+    if len(encoded) > limit:
+        label = "pie" if footer else "logo"
+        raise ValueError(f"La imagen del {label} sigue siendo demasiado grande.")
+    return encoded, "image/png"
 
 _GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -107,6 +147,21 @@ def _google_profile(code: str) -> dict:
     }
 
 # ================================================================ AUTH ====== #
+def _account_destination(business_id: int, user: dict | None = None) -> str:
+    """Cada identidad entra por donde trabaja.
+
+    Administracion no usa Noesis para llevar un negocio: entra a gestionar los de
+    los demas. Aterrizar en un panel con Trabajos, Clientes y Facturas la obliga a
+    buscar la puerta de su propio trabajo, y a completar un alta que no le sirve.
+    Su panel de negocio sigue existiendo y accesible desde el propio /admin.
+    """
+    if user and (
+        bool(user.get("is_admin")) or config.is_admin_email(user.get("email"))
+    ):
+        return "/admin"
+    return db.onboarding_destination(business_id) or f"/b/{business_id}/resumen"
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str = ""):
     return TEMPLATES.TemplateResponse(request, "login.html", {
@@ -131,8 +186,14 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
         return RedirectResponse("/login?error=1", status_code=303)
     for key in keys:
         auth.clear_attempts(key)
+    if not db.user_can_sign_in(user):
+        # Se avisa despues de comprobar la contrasena: asi el mensaje no revela
+        # que una cuenta existe a quien solo esta probando correos.
+        return RedirectResponse("/login?error=suspended", status_code=303)
     _start_session(request, user)
-    return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
+    return RedirectResponse(
+        _account_destination(user["business_id"], user), status_code=303
+    )
 
 
 @router.post("/logout")
@@ -208,8 +269,12 @@ def google_callback(request: Request, code: str = "", state: str = "",
     auth.clear_attempts(f"google-oauth:{auth.client_ip(request)}")
     user = db.get_user_by_email(profile["email"])
     if user:
+        if not db.user_can_sign_in(user):
+            return RedirectResponse("/login?error=suspended", status_code=303)
         _start_session(request, user, auth_provider="google")
-        return RedirectResponse(f"/b/{user['business_id']}/resumen", status_code=303)
+        return RedirectResponse(
+        _account_destination(user["business_id"], user), status_code=303
+    )
     request.session["google_signup"] = profile
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
@@ -283,6 +348,7 @@ _REQUEST_ERRORS = {
     "consent": "Necesitamos tu permiso para guardar tus datos y responderte.",
     "throttle": "Ya hemos recibido tu solicitud. Te escribimos en menos de 24 horas.",
     "sector": "Cuéntanos a qué se dedica tu negocio.",
+    "business_name": "Dinos el nombre de la gestoría o despacho.",
     "error": "No hemos podido registrar la solicitud. Inténtalo de nuevo.",
 }
 
@@ -290,7 +356,7 @@ _REQUEST_ERRORS = {
 @router.get("/solicitar-acceso", response_class=HTMLResponse)
 def access_request_form(
     request: Request, error: str = "", enviado: str = "", plan: str = "",
-    repetida: str = "",
+    repetida: str = "", perfil: str = "",
 ):
     """Formulario público: el alta la aprueba el equipo, no el visitante."""
     return TEMPLATES.TemplateResponse(request, "solicitar_acceso.html", {
@@ -300,6 +366,7 @@ def access_request_form(
         "repeated": bool(repetida),
         "plan_catalog": billing_adapter.PLANS,
         "selected_plan": plan if plan in billing_adapter.PLAN_PRICES else "",
+        "selected_profile": "gestoria" if perfil == "gestoria" else "negocio",
     })
 
 
@@ -313,6 +380,7 @@ def access_request_submit(
     phone: str = Form(""),
     message: str = Form(""),
     plan: str = Form(""),
+    perfil: str = Form(""),
     acepto: str = Form(""),
     # Campo señuelo: invisible para personas, irresistible para robots de spam.
     # No puede llamarse como un campo real o el autorrelleno del navegador lo
@@ -320,6 +388,11 @@ def access_request_submit(
     nsx_check: str = Form(""),
 ):
     name, email = (name or "").strip(), (email or "").strip().lower()
+    is_gestoria = perfil == "gestoria"
+    request_kind = "gestoría" if is_gestoria else "acceso"
+    profile_query = "&perfil=gestoria" if is_gestoria else ""
+    if is_gestoria:
+        sector = "Gestoría y asesoría"
     if nsx_check.strip():
         # Un robot lo ha rellenado: se responde como si todo hubiera ido bien para
         # no enseñarle qué le delató. Se deja rastro porque un falso positivo aquí
@@ -328,25 +401,44 @@ def access_request_submit(
             "Solicitud descartada por el señuelo antispam (ip=%s).",
             auth.client_ip(request),
         )
-        return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?enviado=1{profile_query}", status_code=303
+        )
     if not name:
-        return RedirectResponse("/solicitar-acceso?error=name", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=name{profile_query}", status_code=303
+        )
     if not auth.valid_email(email):
-        return RedirectResponse("/solicitar-acceso?error=email", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=email{profile_query}", status_code=303
+        )
+    if is_gestoria and not (business_name or "").strip():
+        return RedirectResponse(
+            f"/solicitar-acceso?error=business_name{profile_query}", status_code=303
+        )
     if not (sector or "").strip():
-        return RedirectResponse("/solicitar-acceso?error=sector", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=sector{profile_query}", status_code=303
+        )
     if not acepto:
-        return RedirectResponse("/solicitar-acceso?error=consent", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=consent{profile_query}", status_code=303
+        )
 
     # Un mismo correo repitiendo el envío suele ser una persona impaciente, no un
     # ataque: se le agradece y se le dice que ya la tenemos, sin pintarlo de error.
     today = datetime.now().strftime("%Y-%m-%d")
     if db.count_access_requests_since(email, today) >= 3:
-        return RedirectResponse("/solicitar-acceso?enviado=1&repetida=1", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?enviado=1&repetida=1{profile_query}",
+            status_code=303,
+        )
     # El corte por IP sí frena envíos masivos desde el mismo sitio.
     ip_key = f"access-request:{auth.client_ip(request)}"
     if auth.is_rate_limited(ip_key):
-        return RedirectResponse("/solicitar-acceso?error=throttle", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=throttle{profile_query}", status_code=303
+        )
 
     try:
         created = db.create_access_request(
@@ -355,7 +447,9 @@ def access_request_submit(
             plan_interest=plan if plan in billing_adapter.PLAN_PRICES else "",
         )
     except (ValueError, *db.IntegrityError):
-        return RedirectResponse("/solicitar-acceso?error=error", status_code=303)
+        return RedirectResponse(
+            f"/solicitar-acceso?error=error{profile_query}", status_code=303
+        )
     auth.record_failed_attempt(ip_key)
 
     # Los correos se encolan, no se envían aquí: hablar con SMTP durante la
@@ -370,7 +464,7 @@ def access_request_submit(
         try:
             email_adapter.queue_email(
                 inbox,
-                f"Nueva solicitud de acceso: {created['name']}",
+                f"Nueva solicitud de {request_kind}: {created['name']}",
                 "\n".join([
                     f"Nombre: {created['name']}",
                     f"Correo: {created['email']}",
@@ -408,7 +502,9 @@ def access_request_submit(
         )
     except Exception:  # noqa: BLE001
         log.exception("No se pudo confirmar la solicitud %s.", created["id"])
-    return RedirectResponse("/solicitar-acceso?enviado=1", status_code=303)
+    return RedirectResponse(
+        f"/solicitar-acceso?enviado=1{profile_query}", status_code=303
+    )
 
 
 # =========================================================== ONBOARDING ===== #
@@ -481,6 +577,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding?error=email{onboarding_query}", status_code=303)
     auth.clear_attempts(key)
     _start_session(request, user)
+    db.start_onboarding(biz["id"], plan=plan, billing=billing, intent=intent)
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
     request.session["signup_intent"] = intent
@@ -554,8 +651,12 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
         return RedirectResponse(f"/onboarding/google{error_query}consent", status_code=303)
     existing = db.get_user_by_email(email)
     if existing:
+        if not db.user_can_sign_in(existing):
+            return RedirectResponse("/login?error=suspended", status_code=303)
         _start_session(request, existing, auth_provider="google")
-        return RedirectResponse(f"/b/{existing['business_id']}/resumen", status_code=303)
+        return RedirectResponse(
+            _account_destination(existing["business_id"], existing), status_code=303
+        )
     try:
         biz, user = db.create_account(
             (name or "").strip(), email, auth.hash_password(secrets.token_urlsafe(48)),
@@ -564,6 +665,7 @@ def onboarding_google_submit(request: Request, name: str = Form(...),
     except (ValueError, *db.IntegrityError):
         return RedirectResponse(f"/onboarding/google{error_query}email", status_code=303)
     _start_session(request, user, auth_provider="google")
+    db.start_onboarding(biz["id"], plan=plan, billing=billing, intent=intent)
     request.session.pop("google_signup", None)
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
@@ -597,7 +699,7 @@ def onboarding_setup(request: Request, business_id: int, error: str = ""):
             "business": biz,
             "error": error,
             "ai_credits": db.ai_credit_status(business_id),
-            "signup_intent": request.session.get("signup_intent", "trial"),
+            "signup_intent": biz.get("onboarding_intent") or "trial",
         }
     )
 
@@ -650,6 +752,7 @@ def onboarding_setup_submit(
             "local_first": True,
         }, separators=(",", ":")),
     )
+    db.complete_onboarding_step(business_id, "profile")
     return RedirectResponse(
         f"/onboarding/preferences/{business_id}", status_code=303
     )
@@ -670,13 +773,13 @@ def onboarding_preferences(request: Request, business_id: int, error: str = ""):
             "wa_reports": db.resolve_whatsapp_reports(
                 business.get("whatsapp_reports")
             ),
-            "signup_intent": request.session.get("signup_intent", "trial"),
+            "signup_intent": business.get("onboarding_intent") or "trial",
         },
     )
 
 
 @router.post("/onboarding/preferences/{business_id}")
-def onboarding_preferences_submit(
+async def onboarding_preferences_submit(
     request: Request,
     business_id: int,
     nif: str = Form(""),
@@ -685,6 +788,12 @@ def onboarding_preferences_submit(
     default_irpf: float = Form(0),
     default_payment_term_days: int = Form(15),
     invoice_template: str = Form("clasica"),
+    brand_color: str = Form("#14463b"),
+    document_footer: str = Form(""),
+    quote_terms: str = Form(""),
+    footer_image_width: int = Form(100),
+    footer_image_alignment: str = Form("center"),
+    footer_image_scope: str = Form("invoices"),
     payment_iban: str = Form(""),
     payment_bizum: str = Form(""),
     payment_note: str = Form(""),
@@ -698,6 +807,8 @@ def onboarding_preferences_submit(
     gestoria_name: str = Form(""),
     gestoria_email: str = Form(""),
     gestoria_cadence: str = Form("off"),
+    logo: UploadFile = File(None),
+    footer_image: UploadFile = File(None),
 ):
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
@@ -708,6 +819,10 @@ def onboarding_preferences_submit(
         )
     on = {"1", "true", "on", "si", "sí"}
     try:
+        logo_data, logo_mime = await _sanitized_brand_image(logo)
+        footer_data, footer_mime = await _sanitized_brand_image(
+            footer_image, footer=True
+        )
         if gestoria_cadence not in db.GESTORIA_CADENCES:
             raise ValueError("La cadencia de gestoría no es válida.")
         if gestoria_cadence != "off" and not auth.valid_email(
@@ -741,11 +856,26 @@ def onboarding_preferences_submit(
             email=gestoria_email,
             cadence=gestoria_cadence,
         )
+        db.update_branding(
+            business_id,
+            template=invoice_template,
+            brand_color=brand_color,
+            logo_data=logo_data,
+            logo_mime=logo_mime,
+            document_footer=document_footer,
+            quote_terms=quote_terms,
+            footer_image_data=footer_data,
+            footer_image_mime=footer_mime,
+            footer_image_width=footer_image_width,
+            footer_image_alignment=footer_image_alignment,
+            footer_image_scope=footer_image_scope,
+        )
     except ValueError:
         return RedirectResponse(
             f"/onboarding/preferences/{business_id}?error=preferences",
             status_code=303,
         )
+    db.complete_onboarding_step(business_id, "preferences")
     db.record_product_event(
         business_id, "operational_preferences_completed",
         json.dumps({
@@ -760,7 +890,9 @@ def onboarding_preferences_submit(
 
 
 @router.get("/onboarding/whatsapp/{business_id}", response_class=HTMLResponse)
-def onboarding_whatsapp(request: Request, business_id: int):
+def onboarding_whatsapp(
+    request: Request, business_id: int, status: str = "",
+):
     # Aislamiento: solo el dueño de ESTE negocio puede ver su onboarding.
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
@@ -771,14 +903,21 @@ def onboarding_whatsapp(request: Request, business_id: int):
             f"/b/{business_id}/suscripcion?status=readonly", status_code=303
         )
     link = whatsapp.start_link(business_id)
-    return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html",
-                                      {
-                                          "business": biz,
-                                          "wa": link,
-                                          "signup_intent": request.session.get(
-                                              "signup_intent", "trial"
-                                          ),
-                                      })
+    plan, billing_period, intent = _signup_selection(
+        str(biz.get("onboarding_plan") or "autonomo"),
+        str(biz.get("onboarding_billing") or "monthly"),
+        str(biz.get("onboarding_intent") or "trial"),
+    )
+    return TEMPLATES.TemplateResponse(request, "whatsapp_connect.html", {
+        "business": biz,
+        "wa": link,
+        "status": status,
+        "signup_intent": intent,
+        "selected_plan": plan,
+        "selected_plan_label": billing_adapter.PLANS[plan]["name"],
+        "selected_billing": billing_period,
+        "wa_reports": db.resolve_whatsapp_reports(biz.get("whatsapp_reports")),
+    })
 
 
 @router.post("/b/{business_id}/fiscal")
@@ -932,33 +1071,102 @@ def update_verifactu_mode(
 @router.post("/b/{business_id}/branding")
 async def update_branding(business_id: int, template: str = Form("clasica"),
                           brand_color: str = Form(""), remove_logo: str = Form(""),
-                          logo: UploadFile = File(None)):
-    """Personalización de documentos: plantilla, color de marca y logo (o monograma
-    automático si no se sube ninguno). El logo se guarda en base64 en la BD."""
-    import base64
-    logo_data = logo_mime = None
-    clear = bool(remove_logo)
-    if not clear and logo is not None and logo.filename:
-        if logo.content_type not in ("image/png", "image/jpeg"):
-            return RedirectResponse(
-                f"/b/{business_id}/ajustes?error=logo", status_code=303)
-        raw = await logo.read(db.MAX_LOGO_B64)  # límite de lectura defensivo
-        if not raw or len(raw) >= db.MAX_LOGO_B64:
-            return RedirectResponse(
-                f"/b/{business_id}/ajustes?error=logo", status_code=303)
-        logo_data = base64.b64encode(raw).decode()
-        logo_mime = logo.content_type
+                          document_footer: str = Form(""),
+                          quote_terms: str = Form(""),
+                          default_quote_validity_days: int = Form(30),
+                          footer_image_width: int = Form(100),
+                          footer_image_alignment: str = Form("center"),
+                          footer_image_scope: str = Form("invoices"),
+                          remove_footer_image: str = Form(""),
+                          logo: UploadFile = File(None),
+                          footer_image: UploadFile = File(None)):
+    """Identidad documental saneada y versionada para facturas futuras."""
+    clear_logo = bool(remove_logo)
+    clear_footer = bool(remove_footer_image)
     try:
+        logo_data, logo_mime = (
+            (None, None) if clear_logo else await _sanitized_brand_image(logo)
+        )
+        footer_data, footer_mime = (
+            (None, None) if clear_footer
+            else await _sanitized_brand_image(footer_image, footer=True)
+        )
         db.update_branding(business_id, template=template, brand_color=brand_color,
-                           logo_data=logo_data, logo_mime=logo_mime, clear_logo=clear)
+                           logo_data=logo_data, logo_mime=logo_mime,
+                           clear_logo=clear_logo,
+                           document_footer=document_footer, quote_terms=quote_terms,
+                           default_quote_validity_days=default_quote_validity_days,
+                           footer_image_data=footer_data,
+                           footer_image_mime=footer_mime,
+                           clear_footer_image=clear_footer,
+                           footer_image_width=footer_image_width,
+                           footer_image_alignment=footer_image_alignment,
+                           footer_image_scope=footer_image_scope)
     except ValueError:
         return RedirectResponse(
-            f"/b/{business_id}/ajustes?error=marca", status_code=303)
-    return RedirectResponse(f"/b/{business_id}/ajustes", status_code=303)
+            f"/b/{business_id}/ajustes?error=marca#marca-documental", status_code=303)
+    db.record_product_event(business_id, "document_branding_updated")
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes?ok=marca#marca-documental", status_code=303
+    )
+
+
+@router.get("/api/{business_id}/branding/preview.pdf")
+def branding_preview_pdf(business_id: int):
+    """Vista previa explícita; no crea, numera ni emite una factura."""
+    from ..invoice_pdf import build_brand_preview_pdf
+
+    data = build_brand_preview_pdf(business_id)
+    if data is None:
+        return JSONResponse({"error": "Negocio no encontrado."}, status_code=404)
+    return Response(
+        data, media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="vista_previa_factura.pdf"'},
+    )
+
+
+@router.post("/b/{business_id}/support-access")
+def create_support_access(
+    request: Request,
+    business_id: int,
+    purpose: str = Form(""),
+    scopes: list[str] = Form([]),
+    duration_hours: int = Form(4),
+    consent: str = Form(""),
+):
+    user = auth.current_user(request)
+    if not user or user.get("business_id") != business_id:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        if consent != "yes":
+            raise ValueError("Debes confirmar expresamente el acceso temporal.")
+        db.create_support_grant(
+            business_id, user["id"], purpose=purpose, scopes=scopes,
+            duration_hours=duration_hours,
+        )
+        request.session["support_notice"] = "Acceso temporal autorizado."
+    except ValueError as exc:
+        request.session["support_error"] = str(exc)
+    return RedirectResponse(f"/b/{business_id}/ajustes#soporte", status_code=303)
+
+
+@router.post("/b/{business_id}/support-access/revoke")
+def revoke_support_access(request: Request, business_id: int):
+    user = auth.current_user(request)
+    if not user or user.get("business_id") != business_id:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        db.revoke_support_grant(business_id, user["id"])
+        request.session["support_notice"] = "Acceso de soporte revocado."
+    except ValueError as exc:
+        request.session["support_error"] = str(exc)
+    return RedirectResponse(f"/b/{business_id}/ajustes#soporte", status_code=303)
 
 
 @router.post("/onboarding/whatsapp/{business_id}/connect")
-def onboarding_whatsapp_connect(request: Request, business_id: int):
+def onboarding_whatsapp_connect(
+    request: Request, business_id: int, action: str = Form("later"),
+):
     # La vinculación real solo ocurre al recibir el código desde ese WhatsApp.
     user = auth.current_user(request)
     if not user or user["business_id"] != business_id:
@@ -968,18 +1176,34 @@ def onboarding_whatsapp_connect(request: Request, business_id: int):
         return RedirectResponse(
             f"/b/{business_id}/suscripcion?status=readonly", status_code=303
         )
-    if not business or business.get("whatsapp_status") != "conectado":
-        db.set_whatsapp_status(business_id, "no_conectado")
-    db.finish_onboarding(business_id)
+    connected = bool(business and business.get("whatsapp_status") == "conectado")
+    if action == "check" and not connected:
+        return RedirectResponse(
+            f"/onboarding/whatsapp/{business_id}?status=pending", status_code=303
+        )
+    if action not in {"check", "later"}:
+        return RedirectResponse(
+            f"/onboarding/whatsapp/{business_id}?status=invalid", status_code=303
+        )
+    choice = "connected" if connected else "later"
+    try:
+        db.finish_onboarding(business_id, whatsapp_choice=choice)
+    except ValueError:
+        return RedirectResponse(
+            db.onboarding_destination(business_id)
+            or f"/onboarding/setup/{business_id}",
+            status_code=303,
+        )
+    business = db.get_business(business_id)
     db.record_product_event(
         business_id,
         "onboarding_completed",
-        f"whatsapp={business.get('whatsapp_status') if business else 'unknown'}",
+        f"whatsapp={choice}",
     )
     plan, billing_period, intent = _signup_selection(
-        str(request.session.get("signup_plan") or "autonomo"),
-        str(request.session.get("signup_billing") or "monthly"),
-        str(request.session.get("signup_intent") or "trial"),
+        str(business.get("onboarding_plan") or "autonomo"),
+        str(business.get("onboarding_billing") or "monthly"),
+        str(business.get("onboarding_intent") or "trial"),
     )
     if intent == "subscribe":
         query = urlparse.urlencode({
@@ -988,7 +1212,9 @@ def onboarding_whatsapp_connect(request: Request, business_id: int):
         return RedirectResponse(
             f"/b/{business_id}/suscripcion?{query}", status_code=303
         )
-    return RedirectResponse(f"/b/{business_id}/resumen", status_code=303)
+    return RedirectResponse(
+        f"/b/{business_id}/resumen?welcome=1#puesta-en-marcha", status_code=303
+    )
 
 
 
@@ -1007,6 +1233,29 @@ def subscription_checkout(request: Request, business_id: int,
             f"/b/{business_id}/suscripcion?status=invalid", status_code=303
         )
     biz = db.get_business(business_id)
+    if biz and biz.get("subscription_status") in {"active", "trialing"}:
+        # Una cuenta suscrita nunca abre un segundo Checkout. Los cambios de
+        # nivel, periodicidad, tarjeta o cancelacion se hacen sobre la misma
+        # suscripcion en el portal de Stripe.
+        db.record_product_event(
+            business_id, "subscription_change_requested",
+            f"plan={plan};billing_period={billing_period}",
+        )
+        url = billing_adapter.get_provider().portal_url(
+            biz, f"{config.BASE_URL}/b/{business_id}/suscripcion",
+            action="change", plan=plan, billing_period=billing_period,
+        )
+        if not url:
+            db.record_product_event(
+                business_id, "subscription_portal_failed",
+                f"action=change;plan={plan};billing_period={billing_period}",
+            )
+            return RedirectResponse(
+                f"/b/{business_id}/suscripcion?status=noportal"
+                "#gestion-suscripcion",
+                status_code=303,
+            )
+        return RedirectResponse(url, status_code=303)
     db.record_product_event(
         business_id, "checkout_started",
         f"plan={plan};billing_period={billing_period}",
@@ -1034,13 +1283,44 @@ def subscription_checkout(request: Request, business_id: int,
 
 
 @router.post("/b/{business_id}/suscripcion/portal")
-def subscription_portal(request: Request, business_id: int):
+def subscription_portal(
+    request: Request, business_id: int, action: str = Form("manage"),
+    plan: str = Form(""), billing_period: str = Form("monthly"),
+):
+    if action not in {"manage", "payment_method", "change", "cancel"}:
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=invalid", status_code=303,
+        )
+    if action == "change" and (
+        plan not in billing_adapter.PLAN_PRICES
+        or billing_period not in {"monthly", "annual"}
+    ):
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=invalid", status_code=303,
+        )
     biz = db.get_business(business_id)
+    if not biz or biz.get("subscription_status") not in {"active", "trialing"}:
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=noportal", status_code=303,
+        )
+    db.record_product_event(
+        business_id, "subscription_portal_requested",
+        f"action={action};plan={plan or '-'};billing_period={billing_period}",
+    )
     url = billing_adapter.get_provider().portal_url(
-        biz, f"{config.BASE_URL}/b/{business_id}/suscripcion")
+        biz, f"{config.BASE_URL}/b/{business_id}/suscripcion",
+        action=action, plan=plan, billing_period=billing_period,
+    )
     if not url:
-        return RedirectResponse(f"/b/{business_id}/suscripcion?status=noportal",
-                                status_code=303)
+        db.record_product_event(
+            business_id, "subscription_portal_failed",
+            f"action={action};plan={plan or '-'};billing_period={billing_period}",
+        )
+        return RedirectResponse(
+            f"/b/{business_id}/suscripcion?status=noportal"
+            "#gestion-suscripcion",
+            status_code=303,
+        )
     return RedirectResponse(url, status_code=303)
 
 
@@ -1070,14 +1350,22 @@ def forgot_submit(request: Request, email: str = Form(...)):
     user = db.get_user_by_email(email)
     if user:  # Si no existe, no lo revelamos (respuesta idéntica).
         token = secrets.token_urlsafe(32)
-        db.create_password_reset(user["id"], auth.hash_token(token), ttl_minutes=60)
+        token_hash = auth.hash_token(token)
+        db.create_password_reset(user["id"], token_hash, ttl_minutes=60)
         link = f"{config.BASE_URL}/restablecer?token={token}"
         email_adapter.queue_email(
             email, "Restablecer tu contraseña de Noesis",
             f"Hola,\n\nPara crear una contraseña nueva, abre este enlace (válido 1 hora):\n"
             f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Noesis",
             business_id=user["business_id"],
-            idempotency_key=f"password-reset:{user['id']}:{auth.hash_token(token)[:20]}",
+            idempotency_key=f"password-reset:{user['id']}:{token_hash[:20]}",
+        )
+        db.record_security_event(
+            "account.password_reset_requested",
+            area="authentication",
+            subject_business_id=user["business_id"],
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"user_id": user["id"]},
         )
     return RedirectResponse("/recuperar?sent=1", status_code=303)
 
@@ -1093,8 +1381,17 @@ def reset_submit(request: Request, token: str = Form(...), password: str = Form(
     if len(password) < 12 or len(password) > 1024:
         return RedirectResponse(f"/restablecer?token={token}&error=password",
                                 status_code=303)
-    row = db.use_password_reset(auth.hash_token(token))
-    if not row:
+    result = db.reset_user_password(
+        auth.hash_token(token), auth.hash_password(password)
+    )
+    if not result:
         return RedirectResponse("/restablecer?error=token", status_code=303)
-    db.set_password(row["user_id"], auth.hash_password(password))
+    request.session.clear()
+    db.record_security_event(
+        "account.password_reset_completed",
+        area="authentication",
+        subject_business_id=result["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"user_id": result["user_id"]},
+    )
     return RedirectResponse("/login?error=reset_ok", status_code=303)

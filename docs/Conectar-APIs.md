@@ -39,7 +39,7 @@ cada nombre y valor. Haz primero todas las pruebas con Stripe y Meta en modo tes
    temporalmente la `sk_test_...` estándar y sustitúyela antes de producción.
 3. Copia la clave privada en Railway como `STRIPE_SECRET_KEY`. Noesis no necesita
    una `pk_...` porque crea Checkout desde el servidor.
-4. En **Product catalog**, crea Autónomo, Negocio y Sin Límites. Dentro de cada
+4. En **Product catalog**, crea Autónomo, Negocio y Premium. Dentro de cada
    producto crea un precio mensual y otro anual con los importes de la sección 3.
    Copia los seis identificadores `price_...` a sus seis variables exactas.
 5. En [Stripe Webhooks](https://dashboard.stripe.com/test/webhooks), crea un
@@ -83,6 +83,24 @@ y [webhooks](https://docs.stripe.com/webhooks).
    entrega, añade el número real, verifica la empresa si Meta lo exige y repite la
    prueba con una cuenta piloto.
 
+El número configurado en `WHATSAPP_PHONE_ID` es el **canal central privado** al que
+escriben titular y trabajadores. Los números comerciales de los clientes de Noesis
+no se añaden como nuevas variables de Railway ni guardan tokens propios: cada WABA
+y `phone_number_id` se registra en `whatsapp_connections` después de que Meta haya
+concedido el activo al usuario de sistema de Noesis. El mismo token permanente solo
+puede usarse si tiene permiso real sobre todos esos activos.
+
+Para validar el modo multicanal del esquema 45, usa dos negocios y dos números de
+prueba/reales distintos: envía desde el mismo remitente a ambos, verifica dos
+contactos y conversaciones aisladas, responde desde el panel y confirma en Meta que
+cada salida usa el número receptor original. Prueba también WABA discordante,
+número revocado, opt-out, respuesta dentro y fuera de 24 horas y un PDF por negocio.
+Hasta construir/validar Embedded Signup, el alta técnica de WABA y número debe hacerla
+administración desde **Admin → cuenta → Números de WhatsApp del negocio**. La
+conexión nace `pending`; solo se marca `active` y con recepción después de probar el
+webhook. Ese formulario admite identificadores públicos, nunca tokens o secretos, y
+cada cambio queda auditado. Nunca se aceptan IDs técnicos escritos por un cliente.
+
 La [colección oficial de Meta](https://www.postman.com/meta/whatsapp-business-platform/overview)
 documenta Cloud API, permisos, tokens, WABA, números y webhooks.
 
@@ -108,7 +126,7 @@ documenta Cloud API, permisos, tokens, WABA, números y webhooks.
    no sustituye los controles ni la confirmación humana.
 5. **Backups:** elige un proveedor S3-compatible, crea un bucket privado y un
    usuario limitado solo a ese bucket; copia endpoint, bucket, región y par de
-   credenciales a las variables de la sección 7.
+   credenciales a las variables de la sección 9.
 6. **AEAT:** no busques una API key. Hace falta un certificado admitido y su clave
    privada, montados como archivos, más los datos reales del productor.
 
@@ -139,12 +157,43 @@ NOESIS_RESET_DB=false
 ```
 
 Railway inyecta `PORT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_PUBLIC_DOMAIN` y el SHA del
-commit. Tras el
-despliegue hay que aplicar la versión de esquema indicada en
+commit. Tras el despliegue hay que aplicar la versión de esquema indicada en
 [`project-state.json`](project-state.json), comprobar `GET /health`, `GET /ready`
 y verificar que ambos responden con el release esperado y que `/ready` muestra la
-migración vigente. Después se ejecuta `noesis-doctor --strict`. Nunca activar
-`NOESIS_RESET_DB` con datos.
+migración vigente. Después se ejecutan:
+
+```powershell
+noesis-doctor --strict
+noesis-integrations-check --network --strict
+```
+
+El primer comando comprueba coherencia local y bloqueos de apertura. El segundo
+solo hace lecturas: revisa el runtime OCR y consulta por `GET` la cuenta/remitente
+de Brevo, el proveedor OpenID de Google, los seis precios de Stripe y el modelo de
+Groq. No envía correos, no transcribe audios, no crea cargos y nunca muestra
+secretos. Sin `--network` no sale del servidor. Nunca activar `NOESIS_RESET_DB`
+con datos.
+
+Railpack ejecuta la aplicación directamente desde `src` y no instala los entry
+points del paquete. Por eso `noesis-doctor` escrito directamente dentro del
+contenedor devuelve `command not found`. Desde PowerShell, con el proyecto y el
+servicio `web` ya enlazados, estas son las formas canónicas verificadas:
+
+```powershell
+railway ssh env PYTHONPATH=src python -m noesis.readiness --strict
+railway ssh env PYTHONPATH=src python -m noesis.integration_check --network --strict
+railway ssh env PYTHONPATH=src python -c "from noesis.web.backups import restore_check_main; raise SystemExit(restore_check_main())"
+```
+
+La tercera orden crea un esquema desechable, restaura la última copia verificada,
+compara esquema/recuentos y verifica el manifiesto documental; no sustituye ni
+modifica la base activa.
+
+Para crear las dos cuentas comerciales dentro del producto, activar
+`NOESIS_SEED_DEMO=true` durante un despliegue y seguir
+[`Demo-comercial.md`](Demo-comercial.md). No es una credencial ni una base aparte;
+la migración 40 marca esas empresas como solo lectura. Después puede volver a
+`false` sin borrar los registros.
 
 Si una contraseña, token o `NOESIS_SECRET` ha aparecido en una captura, PDF o chat,
 se considera expuesto: se genera otro valor en el gestor del proveedor, se revoca
@@ -246,7 +295,7 @@ Tres productos y dos precios recurrentes EUR por producto:
 |---|---:|---:|
 | Autónomo | 29 EUR | 319 EUR |
 | Negocio | 49 EUR | 539 EUR |
-| Sin Límites | 99 EUR | 1.089 EUR |
+| Premium | 99 EUR | 1.089 EUR |
 
 ```dotenv
 STRIPE_SECRET_KEY=sk_test_...
@@ -269,8 +318,12 @@ Crear el webhook `https://bynoesis.com/webhook/stripe` con:
 - `invoice.paid`
 - `invoice.payment_failed`
 
-Activar también el Customer Portal en Stripe. No reutilizar secretos de test en
-live ni confundir la clave secreta con la publicable.
+Activar también el Customer Portal en Stripe y habilitar **actualizar método de
+pago**, **cambiar plan** con los seis precios mensuales/anuales y **cancelar al final
+del período**. Noesis abre flujos separados para cada acción y Stripe debe mostrar
+la confirmación antes de aplicar el cambio. Estas opciones se configuran por separado
+en sandbox y live. No reutilizar secretos de test en live ni confundir la clave
+secreta con la publicable.
 
 ### Prueba de aceptación
 
@@ -424,6 +477,8 @@ Si Railway no tiene memoria suficiente para `faster-whisper`, conectar Groq:
 ```dotenv
 GROQ_API_KEY=<secreto>
 GROQ_WHISPER_MODEL=whisper-large-v3-turbo
+# Vacío para detectar automáticamente catalán, castellano o inglés.
+NOESIS_WHISPER_LANGUAGE=
 ```
 
 Probar audio corto/largo, catalán/castellano, silencio, formato no admitido y límite
@@ -431,24 +486,101 @@ de tamaño. Si se usa local, instalar el extra `audio`, persistir el modelo en
 `NOESIS_WHISPER_DIR` y no hace falta una API. Referencia:
 [Speech to Text de Groq](https://console.groq.com/docs/speech-to-text).
 
-## 7. Backups externos S3-compatible
+## 7. OCR privado de imágenes y PDF escaneado
+
+No necesita API ni credenciales. `pytesseract` y `pypdfium2` son dependencias del
+producto y `railpack.json` instala en Railway `tesseract-ocr` y los idiomas
+`cat/spa/eng`. Los PDF digitales se leen primero sin rasterizar; solo los que no tienen
+texto útil pasan por OCR local.
+
+Prueba de aceptación:
+
+- Subir una foto de ticket y un PDF escaneado de una o varias páginas.
+- Confirmar que el texto y el total se extraen sin llamada a un proveedor externo.
+- Probar castellano y catalán, giro, baja calidad, PDF corrupto y PDF cifrado.
+- Confirmar que un PDF de más de cuatro páginas o una página desmesurada queda
+  acotado y que un fallo de Tesseract lleva a revisión manual, no a una clasificación
+  inventada.
+- Repetir el mismo flujo por WhatsApp y comprobar que cliente/proyecto solo se
+  vinculan ante una coincidencia inequívoca.
+
+## 8. Entrada documental por catch-all de Hostinger
+
+No necesita un alias por empresa. Hostinger dirige las direcciones inexistentes a
+un buzón real y Noesis genera para cada negocio una dirección opaca, por ejemplo
+`docs.<token>@bynoesis.com`. El token enruta; no concede permisos ni confirma datos.
+
+1. En hPanel abre **Emails**, entra en el plan de `bynoesis.com`, ve a
+   **Mailboxes**, abre `⋮` en el buzón que recibirá los documentos y elige
+   **Create Catch-All**. Selecciona preferiblemente un buzón dedicado; si el plan no
+   permite otro, se puede probar con uno existente sin crear un alias nuevo.
+2. No uses ese buzón para soporte ni respuestas humanas durante la prueba: el
+   catch-all también recoge direcciones mal escritas y puede atraer spam.
+3. En Railway guarda estas variables, primero con la función apagada:
+
+```dotenv
+NOESIS_INBOUND_EMAIL_ENABLED=false
+NOESIS_INBOUND_EMAIL_HOST=imap.hostinger.com
+NOESIS_INBOUND_EMAIL_PORT=993
+NOESIS_INBOUND_EMAIL_USER=<buzón completo que recibe el catch-all>
+NOESIS_INBOUND_EMAIL_PASSWORD=<contraseña propia del buzón>
+NOESIS_INBOUND_EMAIL_MAILBOX=INBOX
+NOESIS_INBOUND_EMAIL_DOMAIN=bynoesis.com
+NOESIS_INBOUND_EMAIL_PREFIX=docs
+```
+
+4. Tras desplegar el esquema vigente, crea la ruta del negocio ficticio desde el
+   servicio `web`; la orden imprime la dirección, nunca la contraseña:
+
+```powershell
+railway ssh env PYTHONPATH=src python -m noesis.documents.inbound_email --business-id <ID_DEMO> --create-route
+```
+
+5. Envía un PDF y una foto a esa dirección. Activa temporalmente la lectura y
+   ejecuta un sondeo acotado:
+
+```powershell
+railway ssh env PYTHONPATH=src python -m noesis.documents.inbound_email
+railway ssh env PYTHONPATH=src python -m noesis.documents.inbound_email --network --limit 3
+```
+
+6. Verifica en Documentos que solo aparece en la empresa demo, pendiente de
+   revisión. Reenvía el mismo correo: no debe duplicar el archivo. Prueba además un
+   destinatario inexistente y un mensaje con dos direcciones opacas: ambos deben
+   rechazarse sin mezclar empresas.
+7. Solo entonces deja `NOESIS_INBOUND_EMAIL_ENABLED=true`. La página Documentos
+   mostrará al titular su dirección privada. Si se comparte o recibe spam, rota la
+   ruta con `--rotate-route`; la anterior deja de ser válida.
+
+Hostinger documenta el catch-all dentro de las
+[opciones del buzón](https://support.hostinger.com/en/articles/1583217-how-to-create-and-manage-mailboxes-for-hostinger-email)
+y publica [IMAP SSL](https://support.hostinger.com/en/articles/1575756-how-to-get-email-account-configuration-details-for-hostinger-email)
+en `imap.hostinger.com:993`. Noesis no borra el mensaje del servidor y no guarda
+remitente, asunto, cuerpo ni el original; conserva únicamente huella, estado y
+contadores para idempotencia y diagnóstico.
+
+## 9. Backups externos S3-compatible
 
 Crear un bucket privado con usuario limitado a ese bucket y, si el proveedor lo
-permite, versionado, cifrado y política de retención.
+permite, versionado, cifrado y política de retención. Para el piloto encaja
+Cloudflare R2 Standard: debe vivir fuera del proyecto de Railway para que una caída,
+un borrado o un bloqueo del proveedor principal no afecte a las dos copias a la vez.
+Los backups nativos de Railway son una capa adicional útil, no la copia externa
+independiente.
 
 ```dotenv
 NOESIS_BACKUP_S3_ENDPOINT=https://<endpoint>
 NOESIS_BACKUP_S3_BUCKET=<bucket>
 NOESIS_BACKUP_S3_ACCESS_KEY=<access key>
 NOESIS_BACKUP_S3_SECRET_KEY=<secret key>
-NOESIS_BACKUP_S3_REGION=<región>
-NOESIS_BACKUP_S3_PREFIX=noesis
+NOESIS_BACKUP_S3_REGION=auto
+NOESIS_BACKUP_S3_PREFIX=production
 ```
 
 Una subida correcta no basta: restaurar base y documentos en un entorno aislado,
 comprobar hashes y registrar RPO/RTO y tiempo real de recuperación.
 
-## 8. AEAT Veri*Factu
+## 10. AEAT Veri*Factu
 
 No usa una API key. Usa SOAP con autenticación mTLS mediante certificado y clave PEM.
 Primero se valida contra el portal de pruebas de la AEAT y con asesoría fiscal.
@@ -485,7 +617,7 @@ cancelada no puede detener una remisión fiscal ya encolada.
 
 Referencia: [esquemas y WSDL oficiales de la AEAT](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/esquemas.html).
 
-## 9. Servicios que no forman parte de la arquitectura
+## 11. Servicios que no forman parte de la arquitectura
 
 Noesis **no se conecta a Holded ni delega la facturación**. Numeración, emisión, PDF,
 registro Veri*Factu, cola y remisión AEAT son desarrollo propio. Holded puede seguir
@@ -504,7 +636,7 @@ Tampoco existe todavía un adaptador conectable para:
 No crear credenciales ni pagar proveedores para estos puntos hasta que exista una
 tarea aprobada, adaptador, pruebas y política de permisos.
 
-## 10. Orden recomendado de conexión
+## 12. Orden recomendado de conexión
 
 1. Desplegar `main`, migrar, `/ready` y `noesis-doctor --strict`.
 2. Correo por API HTTPS y Google OAuth: rápidos, visibles y de bajo riesgo operativo.

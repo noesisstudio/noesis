@@ -100,8 +100,10 @@ def _safe_filename(value: str) -> str:
     return clean.strip(" .")[:140] or "documento"
 
 
-def build_package(business_id: int, label: str) -> tuple[bytes, dict] | None:
-    """Crea un paquete ordenado, versionado y comprobable para la gestoría."""
+def build_package(
+    business_id: int, label: str, *, record_delivery: bool = True,
+) -> tuple[bytes, dict] | None:
+    """Crea un paquete ordenado y comprobable; puede omitir el registro en demos."""
     from ..documents import repo as docrepo, service as docservice
     from .invoice_pdf import build_invoice_pdf
 
@@ -268,14 +270,16 @@ def build_package(business_id: int, label: str) -> tuple[bytes, dict] | None:
 
     data = buffer.getvalue()
     artifact_hash = hashlib.sha256(data).hexdigest()
-    delivery = db.record_gestoria_delivery(
-        business_id,
-        label,
-        source_hash=source_hash,
-        artifact_hash=artifact_hash,
-        file_size=len(data),
-        manifest=manifest,
-    )
+    delivery = None
+    if record_delivery:
+        delivery = db.record_gestoria_delivery(
+            business_id,
+            label,
+            source_hash=source_hash,
+            artifact_hash=artifact_hash,
+            file_size=len(data),
+            manifest=manifest,
+        )
     meta = {
         "label": label,
         "invoices": len(invoices),
@@ -283,7 +287,7 @@ def build_package(business_id: int, label: str) -> tuple[bytes, dict] | None:
         "received_invoices": len(received),
         "source_hash": source_hash,
         "artifact_hash": artifact_hash,
-        "version": delivery["version"],
+        "version": delivery["version"] if delivery else 0,
         "manifest": manifest,
     }
     return data, meta

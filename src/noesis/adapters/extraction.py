@@ -282,10 +282,10 @@ def _heuristic_classification(filename: str, text_hint: str | None = None) -> di
     """Fallback local conservador: clasifica lo inequívoco y explicita la duda."""
     haystack = f"{filename or ''} {text_hint or ''}".lower()
     rules = (
-        ("contrato", ("contrato", "contract"), 88),
-        ("presupuesto", ("presupuesto", "oferta", "quote"), 86),
-        ("albaran", ("albaran", "albarán", "delivery note"), 86),
-        ("ticket", ("ticket", "recibo", "simplificada"), 82),
+        ("contrato", ("contrato", "contracte", "contract"), 88),
+        ("presupuesto", ("presupuesto", "pressupost", "oferta", "quote"), 86),
+        ("albaran", ("albaran", "albarán", "albarà", "delivery note"), 86),
+        ("ticket", ("ticket", "recibo", "rebut", "simplificada"), 82),
     )
     for kind, words, confidence in rules:
         if any(word in haystack for word in words):

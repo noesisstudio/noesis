@@ -17,6 +17,7 @@
     {% if account %}
     <div class="gestoria-account">
       <span>{{ account.firm_name }}</span>
+      <a class="gestoria-security-link" href="/gestoria/seguridad">Seguridad</a>
       <form method="post" action="/gestoria/logout"><button class="btn sm">Salir</button></form>
     </div>
     {% endif %}

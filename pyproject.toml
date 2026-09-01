@@ -26,29 +26,39 @@ dependencies = [
     # Generador QR puro Python; Pillow ya es dependencia transitiva de fpdf2.
     "qrcode>=8.0,<9",
     # Lectura local y acotada de texto en PDFs digitales; no sustituye OCR.
-    "pypdf>=6.13.0,<7",
+    "pypdf>=6.15.0,<7",
+    # OCR privado en producción: PDFium rasteriza PDFs escaneados y Tesseract
+    # lee las imágenes. El binario se instala en Railway mediante railpack.json.
+    "pypdfium2>=5.6.0,<6",
+    "pytesseract>=0.3.13,<1",
 ]
 
 [project.optional-dependencies]
 # Transcripción de voz local (notas de voz -> factura/agenda). Pesa y pide RAM,
 # por eso es opcional: pip install -e ".[audio]"
 audio = ["faster-whisper>=1.0.0,<2"]
-# OCR local de tickets. Además de este extra, el servidor necesita el binario
-# tesseract y los idiomas spa/eng. Sin él, se usa extracción autorizada o revisión.
-ocr = ["pytesseract>=0.3.13,<1"]
 security = [
     "bandit>=1.8.0,<2",
     "detect-secrets>=1.5.0,<2",
+    # pip-audit usa pip como librería; se fija un suelo seguro para que la propia
+    # herramienta de auditoría no introduzca una versión con vulnerabilidades.
+    "pip>=26.2,<27",
     "pip-audit>=2.9.0,<3",
     "ruff>=0.16.0,<1",
 ]
 test = ["hypothesis>=6.130.0,<7"]
+# Reconstruye el modelo economico editable de docs/. Solo lo necesita quien
+# regenera el libro: pip install -e ".[analysis]"
+analysis = ["openpyxl>=3.1.0,<4"]
 
 [project.scripts]
 noesis = "noesis.cli:main"
 noesis-web = "noesis.web.server:main"
 noesis-doctor = "noesis.readiness:main"
+noesis-integrations-check = "noesis.integration_check:main"
 noesis-restore-check = "noesis.web.backups:restore_check_main"
+noesis-production-check = "noesis.production_check:main"
+noesis-inbound-email-check = "noesis.documents.inbound_email:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
