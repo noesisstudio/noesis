@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import json
 import tempfile
 import time
 import unittest
@@ -10,8 +11,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from noesis import config, db, migrations, value_ledger
+from noesis import config, db, migrations, tools, value_ledger
 from noesis.web import auth
+from noesis.web import scheduler, whatsapp
 
 
 class ValueLedgerTestCase(unittest.TestCase):
@@ -47,15 +49,31 @@ class ValueLedgerTestCase(unittest.TestCase):
                 gc.collect()
                 time.sleep(0.05 * (attempt + 1))
 
-    def _action(self, family, entity_id, *, business_id=None, at=None, key=None):
-        return value_ledger.record_useful_action(
-            business_id or self.business["id"],
-            family,
-            entity_type="test",
-            entity_id=entity_id,
-            idempotency_key=key,
-            completed_at=at,
-        )
+    def _action(
+        self,
+        family,
+        entity_id,
+        *,
+        business_id=None,
+        at=None,
+        key=None,
+        channel="web",
+        trigger_source="user_initiated",
+        completion_mode="user_confirmed",
+    ):
+        with value_ledger.observation_context(
+            channel=channel,
+            trigger_source=trigger_source,
+            completion_mode=completion_mode,
+        ):
+            return value_ledger.record_useful_action(
+                business_id or self.business["id"],
+                family,
+                entity_type="test",
+                entity_id=entity_id,
+                idempotency_key=key,
+                completed_at=at,
+            )
 
     def _eligible(self, business_id, created_at="2026-01-01T09:00:00"):
         with db.get_conn() as conn:
@@ -89,16 +107,82 @@ class ValueLedgerTestCase(unittest.TestCase):
         self.assertEqual(len(value_ledger.list_useful_actions(self.other["id"])), 1)
 
     def test_origin_channel_and_completion_are_independent(self):
-        with value_ledger.observation_context(
+        action = self._action(
+            "payment_reminder_sent",
+            20,
             channel="whatsapp",
             trigger_source="noesis_proposed",
             completion_mode="user_confirmed",
-        ):
-            action = self._action("payment_reminder_sent", 20)
+        )
 
         self.assertEqual(action["channel"], "whatsapp")
         self.assertEqual(action["trigger_source"], "noesis_proposed")
         self.assertEqual(action["completion_mode"], "user_confirmed")
+        self.assertTrue(action["qualifies_for_wub"])
+
+    def test_wub_excludes_manual_forms_and_accepts_delegation_contexts(self):
+        client = db.add_client("Cliente", business_id=self.business["id"])
+        start = datetime.now(timezone.utc) - timedelta(minutes=1)
+
+        manual = db.add_job(
+            client["id"], "Trabajo manual", business_id=self.business["id"]
+        )
+        manual_action = value_ledger.list_useful_actions(
+            self.business["id"], entity_type="job", entity_id=manual["id"]
+        )[0]
+        self.assertEqual(manual_action["trigger_source"], "manual_form")
+        self.assertFalse(manual_action["qualifies_for_wub"])
+        manual_snapshot = value_ledger.wub_snapshot(
+            self.business["id"],
+            start=start,
+            end=datetime.now(timezone.utc) + timedelta(minutes=1),
+        )
+        self.assertEqual(manual_snapshot["core_actions"], 0)
+
+        assistant_result = json.loads(tools.run_tool(
+            "agendar_trabajo",
+            {
+                "cliente": "Cliente asistente",
+                "descripcion": "Trabajo delegado",
+                "fecha_hora": "2026-09-02T10:00:00",
+            },
+            self.business["id"],
+            channel="web",
+        ))
+        self.assertTrue(assistant_result["ok"])
+
+        rule = self._action(
+            "payment_reminder_sent",
+            "rule-1",
+            channel="system",
+            trigger_source="authorized_rule",
+            completion_mode="authorized_rule",
+        )
+        proposal = self._action(
+            "payment_reminder_sent",
+            "proposal-1",
+            channel="whatsapp",
+            trigger_source="noesis_proposed",
+            completion_mode="user_confirmed",
+        )
+        automation = self._action(
+            "document_classification_confirmed",
+            "automation-1",
+            channel="system",
+            trigger_source="automation",
+            completion_mode="system_observed",
+        )
+        self.assertTrue(rule["qualifies_for_wub"])
+        self.assertTrue(proposal["qualifies_for_wub"])
+        self.assertTrue(automation["qualifies_for_wub"])
+
+        delegated_snapshot = value_ledger.wub_snapshot(
+            self.business["id"],
+            start=start,
+            end=datetime.now(timezone.utc) + timedelta(minutes=1),
+        )
+        self.assertEqual(delegated_snapshot["core_actions"], 4)
+        self.assertTrue(delegated_snapshot["is_wub"])
 
     def test_wub_requires_three_core_actions_and_two_processes(self):
         start = datetime(2026, 8, 24, tzinfo=timezone.utc)
@@ -194,6 +278,7 @@ class ValueLedgerTestCase(unittest.TestCase):
             plan = conn.execute(
                 "EXPLAIN QUERY PLAN SELECT id FROM useful_actions "
                 "WHERE business_id=? AND counts_for_wub=TRUE "
+                "AND qualifies_for_wub=TRUE "
                 "AND status IN ('completed','corrected') "
                 "AND completed_at>=? AND completed_at<?",
                 (self.business["id"], "2026-08-01", "2026-09-01"),
@@ -292,6 +377,83 @@ class ValueLedgerTestCase(unittest.TestCase):
         self.assertIsNotNone(second)
         self.assertIsNotNone(db.get_job(second["id"], self.business["id"]))
 
+    def test_disabled_flag_preserves_the_preexisting_assistant_audit(self):
+        config.VALUE_LEDGER_ENABLED = False
+        saved = value_ledger.observe_trust_decision(
+            self.business["id"],
+            "payment_reminders",
+            "Encolé un aviso según la regla existente.",
+            status="executed",
+            target_type="invoice",
+            target_id=42,
+            requested_by="system",
+            approved_by="regla de cobros",
+            process_key="collections",
+            action_family="payment_reminder_sent",
+            correlation_key="legacy-audit:42",
+            trigger_source="authorized_rule",
+            preserve_legacy_audit=True,
+        )
+
+        self.assertIsNotNone(saved)
+        rows = db.list_assistant_actions(self.business["id"])
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["status"], "executed")
+        self.assertEqual(rows[0]["target_id"], 42)
+        self.assertIsNone(rows[0]["process_key"])
+        self.assertIsNone(rows[0]["action_family"])
+        self.assertIsNone(rows[0]["correlation_key"])
+        self.assertIsNone(rows[0]["trigger_source"])
+
+        new_only = value_ledger.observe_trust_decision(
+            self.business["id"],
+            "payment_reminders",
+            "Propuesta nueva que debe quedar apagada.",
+            status="proposed",
+            process_key="collections",
+            action_family="payment_reminder_sent",
+            correlation_key="new-only:42",
+            trigger_source="noesis_proposed",
+        )
+        self.assertIsNone(new_only)
+        self.assertEqual(len(db.list_assistant_actions(self.business["id"])), 1)
+
+    def test_scheduler_keeps_legacy_audit_when_value_ledger_is_disabled(self):
+        config.VALUE_LEDGER_ENABLED = False
+        db.update_fiscal(
+            self.business["id"], nif="A12345678", address="Calle Principal 1"
+        )
+        client = db.add_client(
+            "Cliente aviso",
+            nif="B12345678",
+            address="Calle Cliente 2",
+            phone="600111222",
+            business_id=self.business["id"],
+        )
+        invoice = db.add_invoice(
+            client["id"], "Servicio pendiente", 100,
+            business_id=self.business["id"],
+        )
+        invoice = db.issue_invoice(invoice["id"], self.business["id"])
+        db.update_payment_reminder_settings(
+            self.business["id"], enabled=True, days="3,7,15"
+        )
+        due = datetime.fromisoformat(invoice["due_date"][:10])
+        point = due + timedelta(days=3, hours=9)
+
+        with (
+            patch.object(whatsapp, "_TOKEN", "token"),
+            patch.object(whatsapp, "_PHONE_ID", "phone-id"),
+        ):
+            self.assertEqual(scheduler.send_payment_reminders(now=point), 1)
+
+        audits = db.list_assistant_actions(self.business["id"])
+        self.assertEqual(len(audits), 1)
+        self.assertEqual(audits[0]["action_key"], "payment_reminders")
+        self.assertEqual(audits[0]["status"], "executed")
+        self.assertIsNone(audits[0]["process_key"])
+        self.assertEqual(value_ledger.list_useful_actions(self.business["id"]), [])
+
     def test_mature_business_flows_are_observed_after_success(self):
         db.update_fiscal(
             self.business["id"],
@@ -325,6 +487,11 @@ class ValueLedgerTestCase(unittest.TestCase):
         self.assertTrue(
             {"job_invoiced", "payment_received"}
             <= {item["outcome_family"] for item in outcomes}
+        )
+        self.assertEqual(
+            next(item for item in outcomes if item["outcome_family"] == "job_invoiced")
+            ["attribution_type"],
+            "observed",
         )
         self.assertEqual(
             next(item for item in outcomes if item["outcome_family"] == "payment_received")

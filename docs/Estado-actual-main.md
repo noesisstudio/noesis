@@ -12,11 +12,16 @@
   recordatorios enviados, documentos confirmados y presupuestos preparados/enviados.
   Separa acciones de resultados —cobro, aceptación y trabajo facturado— y solo
   atribuye ayuda cuando existe evidencia enlazada. Calcula WUB móvil y semanal,
-  profundidad, consistencia y aceptación de propuestas de forma determinista. La
-  auditoría interna está detrás de un flag apagado; no se muestra Confidence,
+  profundidad, consistencia y aceptación de propuestas de forma determinista. Cada
+  instancia distingue delegación útil de formulario manual mediante
+  `qualifies_for_wub`; la actividad manual puede auditarse, pero no suma WUB. El
+  ledger y su auditoría interna parten apagados; la auditoría histórica de acciones
+  del asistente se conserva incluso con el ledger desactivado. No se muestra Confidence,
   Insight, Progress ni se concede autonomía. Exportación y baja RGPD incluyen el
-  ledger, y el rollback 53→52 no toca datos operativos. El candidato aún no está
-  desplegado ni validado con negocios reales.
+  ledger. El rollback exige apagar, restaurar primero código anterior sobre esquema
+  53 y bajar después la BD; nunca código 53 sobre esquema 52. El lifecycle admite
+  corrección/reversión, pero sus hooks por proceso siguen pendientes. El candidato
+  aún no está desplegado ni validado con negocios reales.
 
 - La identidad existente ya tiene un paquete profesional versionado en `branding/`:
   originales SVG, logo horizontal, símbolo y wordmark en versiones primaria,

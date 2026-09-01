@@ -217,6 +217,7 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                 action_family="payment_reminder_sent",
                 correlation_key=idempotency_key,
                 trigger_source="authorized_rule",
+                preserve_legacy_audit=True,
             )
             queued += 1
     return queued

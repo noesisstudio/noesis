@@ -19,7 +19,8 @@ ninguna IA decide qué cuenta, calcula WUB o atribuye un resultado.
 El esquema 53 añade, siempre filtrado por `business_id`:
 
 - `useful_actions`: acción terminal, proceso, origen, canal, modalidad de
-  confirmación, estado, entidad e idempotencia.
+  confirmación, estado, entidad, idempotencia y el booleano auditable
+  `qualifies_for_wub` de esa instancia.
 - `useful_action_events`: historial append-only de completar, corregir, revertir o
   invalidar una acción.
 - `useful_outcomes`: resultado posterior y su atribución `direct`, `assisted` u
@@ -36,7 +37,7 @@ y el borrado de una cuenta las elimina en orden referencial.
 
 ## Taxonomía v1
 
-| Familia | Proceso | Cuenta para WUB | Momento observado |
+| Familia | Proceso | Puede contar para WUB | Momento observado |
 |---|---|---:|---|
 | `job_created` | agenda | sí | trabajo creado |
 | `job_completed` | agenda | sí | cierre guardado |
@@ -52,12 +53,26 @@ cobro sin recordatorio previo es `observed`, nunca se presenta como causado por
 Noesis. Un borrador o una visita no cuenta. Las acciones revertidas o invalidadas
 quedan auditadas pero salen del numerador WUB.
 
+La columna de taxonomía `counts_for_wub` solo indica que la familia es candidata.
+Cada instancia calcula además `qualifies_for_wub` sin puntos ni pesos. Solo vale
+`true` si la acción es candidata y procede de un contexto material de delegación:
+
+- petición del usuario ejecutada por el asistente web o WhatsApp;
+- propuesta proactiva de Noesis confirmada por el usuario;
+- regla previamente autorizada;
+- automatización identificada explícitamente.
+
+Una operación realizada mediante un formulario ordinario queda como
+`trigger_source=manual_form` y `qualifies_for_wub=false`. También quedan fuera por
+defecto las integraciones que solo notifican un hecho externo. Se conserva esa
+telemetría para auditoría, pero nunca incrementa WUB.
+
 ## Origen, canal y confirmación
 
 Son dimensiones distintas:
 
-- `trigger_source`: `user_initiated`, `noesis_proposed`, `authorized_rule` o
-  `external_integration`.
+- `trigger_source`: `manual_form`, `user_initiated`, `noesis_proposed`,
+  `authorized_rule`, `automation` o `external_integration`.
 - `channel`: `whatsapp`, `web`, `email` o `system`.
 - `completion_mode`: `user_confirmed`, `authorized_rule`, `system_observed` o
   `external_confirmed`.
@@ -70,12 +85,19 @@ previamente autorizada que ejecuta el scheduler.
 - **WUB actual:** ventana móvil de siete días, útil para operación.
 - **WUB oficial:** última semana cerrada, lunes 00:00 a lunes 00:00 en la zona del
   negocio.
-- **Negocio WUB:** tres o más acciones núcleo en dos o más procesos.
+- **Negocio WUB:** tres o más acciones núcleo con `qualifies_for_wub=true` en dos o
+  más procesos.
 - **WUB Rate:** negocios WUB / negocios elegibles.
 - **Profundidad:** distribución de 0, 1, 2, 3 o 4+ procesos.
 - **Consistencia:** semanas WUB de las últimas cuatro y racha consecutiva.
-- **Trust:** propuestas ofrecidas, aceptadas, rechazadas, pendientes, corregidas y
-  revertidas, más tiempo hasta confirmación, por proceso y familia.
+- **Trust:** propuestas ofrecidas, aceptadas, rechazadas y pendientes, más tiempo
+  hasta confirmación, por proceso y familia. El modelo admite estados corregidos y
+  revertidos, pero todavía no existen hooks de lifecycle conectados por proceso.
+
+`transition_useful_action()` y los estados `corrected`, `reverted` e `invalidated`
+son infraestructura disponible. La instrumentación de reversión por proceso queda
+pendiente: en esta fase ningún flujo operativo llama todavía a esa transición y no
+se declara cobertura real de correcciones o reversiones.
 
 La elegibilidad excluye demos, altas posteriores al inicio de la ventana,
 onboarding incompleto, acceso no vigente y exclusión explícita. En esta primera
@@ -92,8 +114,10 @@ pendientes, `attention`. No se muestra aún al cliente.
 
 ## Operación, privacidad y acceso
 
-- `NOESIS_VALUE_LEDGER_ENABLED=true` activa la observación. Puede ponerse a `false`
-  sin alterar ninguna operación ni borrar evidencia previa.
+- `NOESIS_VALUE_LEDGER_ENABLED=false` es el valor por defecto y mantiene apagadas
+  Useful Actions, Useful Outcomes y las métricas nuevas. La auditoría histórica en
+  `assistant_actions` continúa escribiéndose; solo omite los cuatro campos de Trust
+  añadidos por el esquema 53. Activarlo no cambia permisos ni flujos.
 - `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false` mantiene oculto el endpoint interno
   `/admin/value-ledger`; al activarlo sigue exigiendo administrador y registra el
   acceso en la bitácora de seguridad.
@@ -104,14 +128,26 @@ pendientes, `attention`. No se muestra aún al cliente.
 
 ## Rollback
 
-1. Poner `NOESIS_VALUE_LEDGER_ENABLED=false` detiene escrituras nuevas de forma
-   inmediata sin despliegue funcional adicional.
-2. La migración puede bajar de 53 a 52: elimina índices y tablas observacionales.
-3. PostgreSQL elimina también columnas aditivas. SQLite las conserva inertes para
-   no reconstruir tablas críticas; al volver a 53 se reutilizan.
-4. Revertir los hooks no exige modificar datos de facturación, clientes, cobros,
-   agenda, documentos, presupuestos, WhatsApp ni permisos.
+La combinación `código 53 + esquema 52` **no está soportada**: el código 53 conoce
+columnas nuevas de `assistant_actions` que PostgreSQL elimina al bajar a 52. La
+secuencia segura es obligatoria:
 
-Antes de desplegar se exige suite completa, migración 52→53→52→53, humo PostgreSQL
-en un entorno no productivo y revisión de consultas con índices. Después, el piloto
-debe comparar el ledger con casos reales antes de mostrar métricas al cliente.
+1. Poner `NOESIS_VALUE_LEDGER_ENABLED=false` y comprobar que cesan las escrituras
+   nuevas del ledger sin perder la auditoría preexistente.
+2. Volver al código anterior manteniendo inicialmente la base en esquema 53.
+3. Validar con ese código los flujos principales de facturación, clientes, cobros,
+   agenda, documentos, presupuestos, WhatsApp y auditoría.
+4. Solo después, si se necesita rollback completo, ejecutar el downgrade 53→52.
+
+Nunca se baja la base a 52 mientras código 53 pueda seguir sirviendo tráfico.
+PostgreSQL elimina las columnas aditivas únicamente en el paso 4. SQLite conserva
+columnas inertes para no reconstruir tablas críticas. La prueba local ejecutada con
+el código base `294ce375` sobre esquema 53 cubre negocio, cliente, trabajo, cierre,
+factura, cobro, presupuesto y `assistant_actions`.
+
+El primer despliegue es opt-in: preparar `NOESIS_VALUE_LEDGER_ENABLED=false` y
+`NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`, migrar 52→53 en un entorno PostgreSQL no
+productivo, ejecutar smoke, comprobar el producto, activar después el ledger y
+reconciliar los datos piloto. Solo entonces se considera una activación gradual.
+Antes se exige suite completa, rollback seguro y revisión de índices. Ninguna
+métrica se muestra al cliente durante esta fase.

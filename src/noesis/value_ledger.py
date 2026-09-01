@@ -27,8 +27,8 @@ DEFAULT_TIMEZONE = "Europe/Madrid"
 
 CHANNELS = frozenset({"whatsapp", "web", "email", "system"})
 TRIGGER_SOURCES = frozenset({
-    "user_initiated", "noesis_proposed", "authorized_rule",
-    "external_integration",
+    "manual_form", "user_initiated", "noesis_proposed", "authorized_rule",
+    "automation", "external_integration",
 })
 COMPLETION_MODES = frozenset({
     "user_confirmed", "authorized_rule", "system_observed",
@@ -75,7 +75,7 @@ OUTCOME_TAXONOMY = frozenset({
 @dataclass(frozen=True)
 class ObservationContext:
     channel: str = "web"
-    trigger_source: str = "user_initiated"
+    trigger_source: str = "manual_form"
     completion_mode: str = "user_confirmed"
     source_event_type: str | None = None
     source_event_id: str | None = None
@@ -178,6 +178,43 @@ def _business_exists(conn, business_id: int) -> bool:
     ).fetchone())
 
 
+def _qualifies_for_wub(
+    definition: ActionDefinition,
+    *,
+    channel: str,
+    trigger_source: str,
+    completion_mode: str,
+) -> bool:
+    """Decide de forma binaria si esta instancia representa delegación útil.
+
+    La taxonomía marca qué familias son candidatas. La procedencia concreta debe
+    demostrar además que Noesis intervino materialmente. Un formulario ordinario
+    o una integración meramente observada pueden conservar telemetría, pero nunca
+    cuentan para WUB por defecto.
+    """
+    if not definition.counts_for_wub:
+        return False
+    return (
+        (
+            trigger_source == "user_initiated"
+            and channel in {"web", "whatsapp"}
+            and completion_mode == "user_confirmed"
+        )
+        or (
+            trigger_source == "noesis_proposed"
+            and completion_mode == "user_confirmed"
+        )
+        or (
+            trigger_source == "authorized_rule"
+            and completion_mode == "authorized_rule"
+        )
+        or (
+            trigger_source == "automation"
+            and completion_mode == "system_observed"
+        )
+    )
+
+
 def record_useful_action(
     business_id: int,
     action_family: str,
@@ -210,6 +247,12 @@ def record_useful_action(
         COMPLETION_MODES,
         "forma de finalización",
     )
+    qualifies_for_wub = _qualifies_for_wub(
+        definition,
+        channel=channel,
+        trigger_source=trigger_source,
+        completion_mode=completion_mode,
+    )
     key = _short(
         idempotency_key
         or f"v{TAXONOMY_VERSION}:{action_family}:{entity_type}:{entity_id}",
@@ -227,15 +270,16 @@ def record_useful_action(
         inserted = conn.execute(
             "INSERT INTO useful_actions "
             "(business_id, taxonomy_version, action_family, process_key, "
-            "counts_for_wub, trigger_source, channel, completion_mode, status, "
+            "counts_for_wub, qualifies_for_wub, trigger_source, channel, "
+            "completion_mode, status, "
             "entity_type, entity_id, idempotency_key, source_event_type, "
             "source_event_id, metadata_json, completed_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT (business_id, idempotency_key) DO NOTHING RETURNING id",
             (
                 int(business_id), TAXONOMY_VERSION, action_family,
-                definition.process, definition.counts_for_wub, trigger_source,
-                channel, completion_mode, entity_type, entity_id, key,
+                definition.process, definition.counts_for_wub, qualifies_for_wub,
+                trigger_source, channel, completion_mode, entity_type, entity_id, key,
                 event_type, event_id, metadata_json, when, when,
             ),
         ).fetchone()
@@ -407,15 +451,24 @@ def observe_useful_outcome(*args, **kwargs) -> dict | None:
         return None
 
 
-def observe_trust_decision(*args, **kwargs) -> dict | None:
-    """Amplía el ledger de asistente sin convertir la métrica en dependencia."""
+def observe_trust_decision(
+    *args, preserve_legacy_audit: bool = False, **kwargs
+) -> dict | None:
+    """Preserva la auditoría histórica y añade correlación solo con el flag activo.
+
+    ``assistant_actions`` existía antes del esquema 53. Por eso esta operación no
+    es fail-open ni desaparece al apagar el ledger: con el flag desactivado elimina
+    únicamente los cuatro campos nuevos y ejecuta exactamente la escritura previa.
+    """
+    if not config.VALUE_LEDGER_ENABLED and not preserve_legacy_audit:
+        return None
     if not config.VALUE_LEDGER_ENABLED:
-        return None
-    try:
-        return db.record_assistant_action(*args, **kwargs)
-    except Exception:  # noqa: BLE001
-        log.exception("No se pudo observar una decisión sobre una propuesta.")
-        return None
+        kwargs = dict(kwargs)
+        for field in (
+            "process_key", "action_family", "correlation_key", "trigger_source"
+        ):
+            kwargs.pop(field, None)
+    return db.record_assistant_action(*args, **kwargs)
 
 
 def list_useful_actions(
@@ -481,6 +534,7 @@ def observe_payment_received(
             until=when,
             limit=1,
         )
+        reminders = [row for row in reminders if row["qualifies_for_wub"]]
         action_ids = [reminders[0]["id"]] if reminders else []
         return record_useful_outcome(
             business_id,
@@ -520,6 +574,7 @@ def observe_quote_accepted(
                 entity_id=quote_id,
                 limit=1,
             )
+            actions = [row for row in actions if row["qualifies_for_wub"]]
             if actions:
                 break
         action_ids = [actions[0]["id"]] if actions else []
@@ -565,6 +620,7 @@ def observe_job_invoiced(
                 entity_id=entity_id,
                 limit=1,
             )
+            rows = [row for row in rows if row["qualifies_for_wub"]]
             if rows:
                 actions.append(rows[0]["id"])
         return record_useful_outcome(
@@ -666,6 +722,7 @@ def wub_snapshot(
         rows = conn.execute(
             "SELECT id, action_family, process_key, completed_at "
             "FROM useful_actions WHERE business_id=? AND counts_for_wub=TRUE "
+            "AND qualifies_for_wub=TRUE "
             "AND status IN ('completed', 'corrected') "
             "AND completed_at>=? AND completed_at<? "
             "ORDER BY completed_at, id",

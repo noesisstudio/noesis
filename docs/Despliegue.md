@@ -36,6 +36,9 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
    - Facturación legal nativa: variables `NOESIS_VERIFACTU_*` y certificado/clave
      indicados en [[Conectar-APIs]]. Noesis no delega la facturación en otro SaaS.
    - `PORT` lo inyecta Railway automáticamente.
+   - Primer release del esquema 53: `NOESIS_VALUE_LEDGER_ENABLED=false` y
+     `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. No activar la observación hasta
+     completar el smoke posterior a la migración.
 5. **Volumen persistente**: se mantiene montado en `/data` para documentos, modelos
    y la copia histórica de SQLite. La base operativa vive en Postgres.
 6. **Dominio**: Settings → Networking → Custom Domain → `bynoesis.com`, y apuntar el
@@ -56,12 +59,29 @@ Para desarrollo y tests, si `DATABASE_URL` está vacía se usa SQLite. Sus migra
 se aplican con `python -m noesis.migrations upgrade`; se pueden revertir con
 `python -m noesis.migrations downgrade <versión>`.
 
+### Despliegue y rollback seguro del esquema 53
+
+1. Configurar ambos flags del registro de valor en `false` antes del release.
+2. Migrar 52→53 primero en PostgreSQL no productivo y ejecutar el smoke completo.
+3. Publicar código 53 todavía con el ledger apagado y validar los flujos principales.
+4. Activar `NOESIS_VALUE_LEDGER_ENABLED=true` solo para el piloto; mantener siempre
+   `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false` durante esta fase.
+5. Reconciliar acciones, outcomes y WUB antes de ampliar la activación.
+
+Si hay que volver atrás, no ejecutar el downgrade con código 53 sirviendo tráfico.
+Primero se apaga el ledger, después se restaura el código anterior conservando el
+esquema 53 y se validan los flujos. Solo entonces puede bajarse PostgreSQL 53→52.
+El código base `294ce375` se ha probado localmente sobre esquema 53; la misma
+secuencia debe repetirse en el entorno PostgreSQL no productivo.
+
 ## Checklist antes de exponer
 - [ ] `NOESIS_SECRET` puesta y aleatoria (nunca la de por defecto).
 - [ ] `NOESIS_BASE_URL` usa el dominio HTTPS definitivo.
 - [ ] Backup manual bloqueado del volumen SQLite anterior.
 - [ ] Postgres limpio enlazado mediante `DATABASE_URL`.
 - [ ] Migración pre-deploy en versión actual y `/ready` en 200.
+- [ ] En esquema 53, ambos flags del registro de valor siguen apagados durante el
+      primer smoke y existe un rollback código-anterior-sobre-esquema-53 verificado.
 - [ ] `noesis-production-check` verde después de publicar; el workflow programado
       detecta regresiones posteriores, pero no sustituye un monitor 24/7 externo.
 - [ ] Volumen mantenido para `NOESIS_DOCS_PATH` y otros ficheros.

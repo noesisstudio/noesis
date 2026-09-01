@@ -38,9 +38,11 @@
   resultados útiles, relaciones multiempresa protegidas, zona horaria y metadatos
   opcionales de correlación de propuestas sin modificar permisos ni flujos.
 - `src/noesis/value_ledger.py`: taxonomía central v1, escritores fail-open,
-  idempotencia, ciclo corregido/revertido, outcomes muchos-a-muchos, WUB móvil y
-  semanal, profundidad, consistencia, aceptación por familia, activación y estado
-  conservador de control. No ejecuta acciones ni usa IA para calcular métricas.
+  idempotencia, calificación binaria por contexto de delegación, infraestructura de
+  ciclo corregido/revertido todavía sin hooks operativos, outcomes muchos-a-muchos,
+  WUB móvil y semanal, profundidad, consistencia, aceptación por familia, activación
+  y estado conservador de control. No ejecuta acciones ni usa IA para calcular
+  métricas.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera

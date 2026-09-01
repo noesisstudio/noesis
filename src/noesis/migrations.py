@@ -3927,10 +3927,11 @@ CREATE TABLE IF NOT EXISTS useful_actions (
     action_family TEXT NOT NULL,
     process_key TEXT NOT NULL,
     counts_for_wub {t["boolean"]} NOT NULL DEFAULT FALSE,
+    qualifies_for_wub {t["boolean"]} NOT NULL DEFAULT FALSE,
     trigger_source TEXT NOT NULL CHECK (
         trigger_source IN (
-            'user_initiated', 'noesis_proposed', 'authorized_rule',
-            'external_integration'
+            'manual_form', 'user_initiated', 'noesis_proposed',
+            'authorized_rule', 'automation', 'external_integration'
         )
     ),
     channel TEXT NOT NULL CHECK (
@@ -3958,7 +3959,9 @@ CREATE TABLE IF NOT EXISTS useful_actions (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_useful_actions_business_id
     ON useful_actions(business_id, id);
 CREATE INDEX IF NOT EXISTS idx_useful_actions_wub
-    ON useful_actions(business_id, completed_at, counts_for_wub, status);
+    ON useful_actions(
+        business_id, completed_at, counts_for_wub, qualifies_for_wub, status
+    );
 CREATE INDEX IF NOT EXISTS idx_useful_actions_process
     ON useful_actions(business_id, process_key, action_family, completed_at);
 CREATE INDEX IF NOT EXISTS idx_useful_actions_entity

@@ -1,5 +1,38 @@
 # Registro de QA
 
+## 2026-09-01 — correcciones de revisión externa del registro de valor
+
+- **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **570
+  pruebas** y terminó `OK`. El primer intento detectó cuatro ejecuciones heredadas
+  del mismo test que fijaba el día 2 del mes y fallaba cuando el calendario real era
+  día 1; se sustituyó solo esa suposición temporal por la fecha actual y las cuatro
+  reproducciones más la suite completa quedaron verdes. No se relajó la protección
+  que rechaza fechas de emisión futuras.
+- **Delegación WUB:** 20 pruebas específicas del ledger verifican ahora el booleano
+  `qualifies_for_wub`. Crear un trabajo mediante DB/formulario conserva telemetría
+  `manual_form` pero aporta cero acciones WUB; crearlo mediante `run_tool` del
+  asistente sí califica. También califican una regla autorizada, una propuesta
+  confirmada y una automatización explícita. La consulta WUB exige simultáneamente
+  familia candidata e instancia delegada.
+- **Atribución conservadora:** outcomes enlazan como evidencia de Noesis únicamente
+  acciones con contexto delegado. Los resultados posteriores a operaciones
+  manuales siguen registrados, pero con atribución `observed`.
+- **Flag y auditoría anterior:** con `VALUE_LEDGER_ENABLED=false`, la prueba real de
+  `send_payment_reminders` encola el WhatsApp y conserva exactamente una fila
+  histórica de `assistant_actions`, sin campos nuevos ni Useful Actions. Las
+  propuestas/decisiones de Trust añadidas por esquema 53 permanecen apagadas.
+- **Rollback seguro:** se creó localmente una base limpia en esquema 53 y se ejecutó
+  contra ella el código base `294ce375`. Negocio, cliente, trabajo, cierre, factura,
+  cobro, presupuesto y auditoría terminaron con
+  `LEGACY_CODE_ON_SCHEMA_53_OK`. Esto valida volver primero al código anterior y
+  solo después bajar la BD. No se considera soportado código 53 sobre esquema 52.
+- **Lifecycle:** la transición aislada continúa cubierta, pero no hay hooks reales
+  conectados por proceso. La documentación ya la presenta como infraestructura
+  disponible con instrumentación pendiente, no como cobertura operativa.
+- **Límites externos:** no se ha consultado ni modificado producción y no se ha
+  ejecutado Railway. PostgreSQL no productivo sigue siendo puerta obligatoria para
+  migración, smoke, activación opt-in y ensayo de rollback antes de cualquier merge.
+
 ## 2026-08-31 — registro de valor, WUB y confianza observada
 
 - **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **567

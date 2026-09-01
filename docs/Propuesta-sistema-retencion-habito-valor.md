@@ -479,6 +479,8 @@ Un negocio será WUB cuando, durante una ventana de siete días:
 - Complete al menos tres Useful Actions.
 - Esas acciones pertenezcan al menos a dos procesos diferentes.
 - Todas sean acciones terminales, reales y no duplicadas.
+- Cada instancia tenga `qualifies_for_wub=true`: familia candidata y contexto
+  explícito de delegación. Los formularios manuales ordinarios quedan fuera.
 - La cuenta no sea demo, interna o de pruebas.
 
 Habrá dos lecturas:

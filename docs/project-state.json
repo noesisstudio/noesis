@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-08-31",
+  "state_date": "2026-09-01",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 53,
-  "verified_test_count": 567,
+  "verified_test_count": 570,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Desplegar primero el esquema 53 en PostgreSQL no productivo, ejecutar humo y rollback 53-52-53 y mantener la auditoria del registro de valor apagada. Validar despues WUB y outcomes con 3-5 negocios sin mostrar Confidence, Insight ni Progress. Validar tambien el catch-all de Hostinger con una empresa demo y recorrer recuperacion, control de acceso, Stripe sandbox, Google OAuth, Meta, SEO, alta recuperable y soporte segun Tareas-vivas.md."
+    "pending_after_deploy": "Configurar ambos flags del registro de valor en false, migrar primero el esquema 53 en PostgreSQL no productivo y ejecutar humo. Validar el rollback restaurando codigo anterior sobre esquema 53 antes de bajar a 52. Activar despues solo el ledger para reconciliar WUB y outcomes con 3-5 negocios, sin mostrar Confidence, Insight ni Progress. Validar tambien catch-all, recuperacion, control de acceso, Stripe sandbox, Google OAuth, Meta, SEO, alta recuperable y soporte segun Tareas-vivas.md."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -56,7 +56,7 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
-    "useful_value_ledger": "schema_53_additive_fail_open_observer_with_versioned_deterministic_taxonomy_tenant_scoped_idempotent_actions_lifecycle_many_to_many_outcomes_trigger_source_separate_from_channel_rolling_and_closed_week_wub_depth_consistency_activation_and_trust_metrics_no_customer_ui_no_confidence_or_autonomy_changes_admin_audit_flag_off_by_default_rgpd_export_delete_and_52_rollback_plan",
+    "useful_value_ledger": "schema_53_opt_in_additive_fail_open_observer_with_versioned_taxonomy_and_per_instance_qualifies_for_wub_manual_forms_excluded_delegated_contexts_explicit_tenant_scoped_idempotent_actions_lifecycle_infrastructure_without_process_hooks_many_to_many_outcomes_conservative_attribution_preexisting_assistant_audit_preserved_when_disabled_rolling_and_closed_week_wub_depth_consistency_activation_and_trust_metrics_no_customer_ui_no_confidence_or_autonomy_changes_admin_off_rgpd_export_delete_and_safe_code_first_rollback_plan",
     "commercial_onboarding": "schema_49_resumable_exact_step_trial_or_subscribe_then_business_complete_invoice_identity_collection_messages_truthful_whatsapp_review_checkout_and_first_customer_activation",
     "onboarding_sector_capture": "free_text_up_to_80_characters",
     "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",

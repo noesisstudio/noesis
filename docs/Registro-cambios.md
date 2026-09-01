@@ -7,6 +7,36 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-01 — WUB solo mide delegación y el rollback respeta auditoría previa
+
+- **Autor/agente:** Codex, tras revisión externa del commit `35ef41f`.
+- **Objetivo:** corregir cinco observaciones sin rediseñar ni ampliar el Registro
+  Interno de Valor: excluir formularios manuales de WUB, conservar auditoría previa
+  con el flag apagado, hacer seguro el rollback, desplegar opt-in y declarar el
+  lifecycle real.
+- **Áreas y archivos:** `value_ledger.py`, esquema 53, validación de metadatos en
+  `db.py`, flag en `config.py`, auditoría del scheduler, smoke PostgreSQL, pruebas
+  del ledger y fecha estable del test de cohortes; documentación de despliegue,
+  estado, decisión, arquitectura, propuesta, QA y operación.
+- **Cambios de datos/migración:** `useful_actions` incorpora
+  `qualifies_for_wub`, separado de la candidatura de taxonomía. `manual_form` y
+  `automation` quedan como orígenes explícitos. El esquema sigue siendo 53 porque
+  el candidato no se ha desplegado.
+- **Pruebas ejecutadas:** 570/570; 20 contratos del ledger; cuatro reproducciones
+  del test de cohortes; código `294ce375` sobre esquema 53; Ruff, compilación, JSON,
+  verdad documental y diff check. Evidencia detallada en `Registro-QA.md`.
+- **Dependencias o validaciones externas:** migración/smoke/rollback PostgreSQL en
+  entorno no productivo y reconciliación con 3-5 negocios. Nada se ha ejecutado en
+  Railway ni producción.
+- **Riesgo/punto probable de fallo:** contexto incorrecto en un hook o downgrade de
+  BD antes de retirar código 53. La decisión binaria central y la secuencia
+  código-anterior-sobre-esquema-53 impiden ambos atajos.
+- **Diagnóstico y rollback:** mantener ambos flags en `false`; para volver atrás,
+  apagar ledger, restaurar código anterior con esquema 53, validar y solo entonces
+  bajar 53→52. Nunca servir código 53 sobre esquema 52.
+- **Estado de publicación:** candidato en rama de revisión; no fusionado ni
+  desplegado.
+
 ## 2026-08-31 — base observacional de valor, WUB y confianza
 
 - **Autor/agente:** Codex.

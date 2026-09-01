@@ -2541,8 +2541,8 @@ def record_assistant_action(
     correlation_key = str(correlation_key or "").strip()[:240] or None
     trigger_source = str(trigger_source or "").strip().lower()[:40] or None
     if trigger_source and trigger_source not in {
-        "user_initiated", "noesis_proposed", "authorized_rule",
-        "external_integration",
+        "manual_form", "user_initiated", "noesis_proposed", "authorized_rule",
+        "automation", "external_integration",
     }:
         raise ValueError("El origen de la acción no es válido.")
     if any((process_key, action_family, correlation_key)) and not all(

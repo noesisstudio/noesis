@@ -317,7 +317,7 @@ def _check_value_ledger(business_id: int) -> None:
         idempotency_key="postgres-smoke:value-ledger:action",
         channel="system",
         trigger_source="authorized_rule",
-        completion_mode="system_observed",
+        completion_mode="authorized_rule",
     )
     repeated = value_ledger.record_useful_action(
         business_id,
@@ -327,10 +327,12 @@ def _check_value_ledger(business_id: int) -> None:
         idempotency_key="postgres-smoke:value-ledger:action",
         channel="system",
         trigger_source="authorized_rule",
-        completion_mode="system_observed",
+        completion_mode="authorized_rule",
     )
     if action["id"] != repeated["id"]:
         raise RuntimeError("El ledger Postgres no deduplicó la acción de humo.")
+    if not action["qualifies_for_wub"]:
+        raise RuntimeError("La regla autorizada no calificó como delegación útil.")
     outcome = value_ledger.record_useful_outcome(
         business_id,
         "job_invoiced",

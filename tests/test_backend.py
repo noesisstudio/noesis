@@ -641,6 +641,7 @@ class BackendTestCase(unittest.TestCase):
     def test_month_billing_separates_cash_flow_from_invoice_cohort(self):
         business, client = self.make_business("Cohortes de cobro")
         this_month = date.today().strftime("%Y-%m")
+        today = date.today().isoformat()
         previous_month = (date.today().replace(day=1) - timedelta(days=1)).strftime(
             "%Y-%m"
         )
@@ -658,15 +659,15 @@ class BackendTestCase(unittest.TestCase):
                 business_id=business["id"],
             )["id"],
             business["id"],
-            _issued_at_override=f"{this_month}-02T10:00:00",
+            _issued_at_override=f"{today}T08:00:00",
         )
         db.add_invoice_payment(
             old_invoice["id"], 121, business_id=business["id"],
-            paid_at=f"{this_month}-03T10:00:00",
+            paid_at=f"{today}T10:00:00",
         )
         db.add_invoice_payment(
             current_invoice["id"], 40, business_id=business["id"],
-            paid_at=f"{this_month}-04T10:00:00",
+            paid_at=f"{today}T11:00:00",
         )
 
         month = db.month_billing(this_month, business_id=business["id"])

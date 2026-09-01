@@ -17,9 +17,18 @@ zona horaria, profundidad y consistencia como contexto. Confidence, Insight,
 Progress y cualquier aumento automático de autonomía quedan fuera hasta tener
 aceptaciones, correcciones y reversiones reales del piloto.
 
-La auditoría nueva está oculta por feature flag, conserva aislamiento por negocio y
-forma parte de exportación/borrado RGPD. «Todo bajo control» solo puede afirmarse
-dentro de procesos conectados y sin fallos o pendientes conocidos.
+La taxonomía solo marca familias candidatas. Cada instancia debe demostrar un
+contexto válido de delegación y guarda `qualifies_for_wub=true/false`: asistente web
+o WhatsApp, propuesta confirmada, regla autorizada o automatización explícita. Un
+formulario manual se observa, pero no cuenta. No existen puntos ni pesos.
+
+La auditoría nueva está oculta por feature flag y el ledger parte apagado. Apagarlo
+no elimina la escritura histórica de `assistant_actions`: solo retira sus campos
+nuevos de correlación. Conserva aislamiento por negocio y forma parte de
+exportación/borrado RGPD. «Todo bajo control» solo puede afirmarse dentro de
+procesos conectados y sin fallos o pendientes conocidos. La infraestructura de
+lifecycle existe, pero los hooks de corrección/reversión por proceso siguen fuera
+de esta fase.
 
 ## Un catch-all enruta documentos; nunca decide su contabilidad (2026-08-27)
 
