@@ -7,6 +7,34 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-01 — plan de contenido de 60 días para redes
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dar al founder un calendario y unos guiones listos para grabar que
+  conviertan la estrategia comercial en publicaciones concretas, alternando
+  contenido informativo del sector con contenido de producto.
+- **Áreas y archivos:** documentación de marketing;
+  `docs/Marketing-Calendario-60-dias.xlsx` y `docs/Marketing-Guiones-60-dias.docx`
+  (ambos nuevos). Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental). Los dos
+  ficheros se han vuelto a abrir con `openpyxl` y `python-docx` para comprobar
+  hojas, número de filas, tablas y codificación.
+- **Dependencias o validaciones externas:** los guiones marcados con aviso contienen
+  afirmaciones fiscales y legales (IVA reducido en obra, retención de IRPF, Ley de
+  morosidad, Verifactu) que **deben verificarse en la AEAT o con un asesor el mismo
+  día de grabar**. El vídeo 26 no puede publicarse sin cifras reales del piloto y
+  permiso escrito del cliente. El vídeo 32 debe apoyarse en un fallo real de este
+  registro.
+- **Riesgo/punto probable de fallo:** publicar una fecha normativa o una cifra de
+  resultados sin verificar; sería el único error capaz de tirar la credibilidad de
+  los otros 33 vídeos.
+- **Diagnóstico y rollback:** los dos ficheros son autónomos; borrarlos no afecta a
+  nada del producto. El generador que los produjo no se ha añadido al repositorio
+  para no introducir `openpyxl` ni `python-docx` como dependencias.
+- **Estado de publicación:** documentos entregados, sin publicar todavía en ninguna
+  plataforma. La primera publicación prevista es el 7 de septiembre de 2026.
+
 ## 2026-08-17 — sincroniza el OCR con el build real de Railway
 
 - **Autor/agente:** Codex.
