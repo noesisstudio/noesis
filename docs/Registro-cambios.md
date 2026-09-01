@@ -441,6 +441,39 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-09-01 12:00 — manuales de ruta legal, marketing y plan de 60 días
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dejar por escrito lo que falta para poder cobrar legalmente, consolidar
+  todo el marketing en un solo manual y ponerle fecha a ambas cosas.
+- **Áreas y archivos:** `docs/Ruta-legal.html/pdf`, `docs/Marketing-Noesis.html/pdf`,
+  `docs/Publicar-en-redes.html/pdf`, `docs/Plan-60-dias.html/pdf`,
+  `docs/Estado-Noesis.xlsx`, `scripts/build_estado_xlsx.py`, `docs/Inicio.md`.
+- **Cambios de datos/migración:** ninguno. Solo documentación.
+- **Pruebas ejecutadas:** ninguna nueva; no se toca código. La suite quedó en 577 con
+  el merge anterior.
+- **Hallazgos que cambian la planificación:**
+  - La obligación de Veri*Factu **del productor** está viva desde el 29-jul-2025; el
+    RDL 15/2025 solo aplazó la del usuario a 2027. `Fiscalidad.md` no separaba los dos
+    papeles.
+  - Remitir en nombre de clientes exige **convenio de colaboración social tipo 017** y
+    un modelo de representación **firmado por cada cliente**: aceptar las condiciones
+    del servicio no vale. Es una funcionalidad de onboarding que no existe.
+  - La **subsanación** de registros rechazados no está construida y sin ella no se
+    puede declarar conformidad completa del SIF.
+  - El **App Review** de Meta sí hace falta para los números comerciales, al contrario
+    de lo que dice la tabla del Camino A en `Meta-Verificacion`.
+  - El artículo 50 del Reglamento europeo de IA es aplicable desde el 2-ago-2026 y el
+    asistente no se identifica como máquina.
+  - Los oficios de la estrategia comercial y los catálogos del producto no coinciden.
+- **Dependencias o validaciones externas:** los apartados fiscales y de protección de
+  datos requieren revisión profesional antes de actuar sobre ellos.
+- **Riesgo/punto probable de fallo:** ninguno técnico. El riesgo es documental: si
+  `Marketing-Noesis` y `Estrategia-Marketing` conviven mucho tiempo, divergirán. El
+  maestro declara en su pie a cuál sustituye.
+- **Diagnóstico y rollback:** son documentos; se borran sin efecto sobre el producto.
+- **Estado de publicación:** local, pendiente de subir.
+
 ## 2026-09-01 — fusión de la rama local con main tras 112 commits de divergencia
 
 - **Autor/agente:** Claude.

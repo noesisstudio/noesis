@@ -53,6 +53,21 @@ usa la vista de grafo para navegar.
 - [`Estrategia-Marketing.pdf`](Estrategia-Marketing.pdf) — a quién vendemos, con qué
   mensaje, por qué canales, cuánto podemos pagar por un cliente, dónde entra la IA
   y las vías de escape con sus criterios de parada.
+- [`Marketing-Noesis.pdf`](Marketing-Noesis.pdf) — **manual maestro de marketing**:
+  consolida la estrategia, la marca, las 24 piezas de contenido con su gancho, copy,
+  CTA y métrica, la producción, la publicación en Instagram y Facebook, la medición
+  y los criterios de parada. Sustituye a `Estrategia-Marketing` y `Publicar-en-redes`.
+- [`Publicar-en-redes.pdf`](Publicar-en-redes.pdf) — manual operativo de publicación
+  en Instagram y Facebook. Su contenido está incorporado al manual maestro.
+- [`Ruta-legal.pdf`](Ruta-legal.pdf) — qué falta para poder cobrar el primer euro:
+  Veri*Factu como productor, App Review de Meta, AI Act y protección de datos; tres
+  rutas completas con su coste y el material para encargar las revisiones.
+- [`Plan-60-dias.pdf`](Plan-60-dias.pdf) — el plan de ejecución que pone fecha a todo
+  lo anterior: cuatro frentes en paralelo, nueve semanas y una puerta de salida por
+  semana.
+- [`Estado-Noesis.xlsx`](Estado-Noesis.xlsx) — estado de cada pieza en hoja de cálculo:
+  canal de Meta, plantillas y catálogos por oficio. Se regenera con
+  `python scripts/build_estado_xlsx.py`.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
 - [[Analisis-unit-economics.ipynb]] — modelo reproducible completo por plan.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.
