@@ -7,6 +7,27 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-03 — lista de acciones de protección de datos
+
+- **Autor/agente:** Claude.
+- **Objetivo:** convertir las dos auditorías anteriores (textos/código y residencia de
+  datos) en una única lista ejecutable, para que el founder sepa qué hacer hoy, qué
+  antes de cobrar, qué encargar fuera y cómo comprobar que está cerrado.
+- **Áreas y archivos:** documentación legal; `docs/RGPD-QUE-HACER.md` (nuevo) y enlace
+  en `docs/Inicio.md`. Sin cambios en `src/`. No duplica pendientes: las tareas siguen
+  en `docs/Tareas-vivas.md` y el porqué en los dos documentos de origen.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental).
+- **Dependencias o validaciones externas:** el bloque 2 entero depende de un abogado
+  de protección de datos, y el encargo 2.4 (tabla de plazos de conservación) bloquea
+  dos tareas de producto. El bloque 0 no depende de nadie.
+- **Riesgo/punto probable de fallo:** aplazar el punto 0.3 (mover la región de
+  Railway). Es la única tarea de la lista que se encarece sola: migrar un volumen
+  montado causa parada, y hoy el volumen está vacío.
+- **Diagnóstico y rollback:** documento autónomo; borrarlo no afecta al producto.
+- **Estado de publicación:** entregado. Ninguna de las acciones se ha ejecutado: el
+  documento es la lista, no el trabajo hecho.
+
 ## 2026-09-03 — residencia de datos y verificación del proveedor de alojamiento
 
 - **Autor/agente:** Claude.
