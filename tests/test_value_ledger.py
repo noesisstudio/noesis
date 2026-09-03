@@ -572,7 +572,7 @@ class ValueLedgerTestCase(unittest.TestCase):
                 self.assertEqual(response.json()["business_id"], self.business["id"])
 
     def test_migration_has_safe_rollback_and_can_be_reapplied(self):
-        self.assertEqual(migrations.current_version(), 54)
+        self.assertEqual(migrations.current_version(), 55)
         self._action("job_created", 1)
         self.assertEqual(migrations.downgrade(53), 53)
         with db.get_conn() as conn:
@@ -581,7 +581,7 @@ class ValueLedgerTestCase(unittest.TestCase):
                 "WHERE type='table' AND name='useful_actions'"
             ).fetchone()
         self.assertIsNone(table)
-        self.assertEqual(migrations.upgrade(54), 54)
+        self.assertEqual(migrations.upgrade(55), 55)
         self.assertEqual(value_ledger.list_useful_actions(self.business["id"]), [])
 
     def test_rgpd_export_and_account_deletion_include_the_value_ledger(self):

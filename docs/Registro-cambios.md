@@ -7,6 +7,40 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-03 — salida operativa RGPD, proveedores y baja trazable
+
+- **Autor/agente:** Codex, a petición del founder tras la auditoría RGPD compartida.
+- **Objetivo:** corregir afirmaciones públicas falsas y cerrar el callejón sin salida
+  de una baja con conservación, sin inventar plazos ni ejecutar una purga automática.
+- **Áreas y archivos:** esquema 55, operaciones RGPD en `db.py`, baja de cuenta,
+  bandeja interna, Ajustes, contacto/CSP, privacidad, cookies, contrato de encargado,
+  cumplimiento, configuración y diagnóstico de backups, pruebas y documentación
+  interna de ROPA, proveedores, derechos y brechas.
+- **Cambios de datos/migración:** nueva tabla multiempresa `privacy_requests` con
+  tipo, estado, retención, referencia abierta idempotente, solicitante y fechas. No
+  modifica tablas fiscales ni borra datos al cambiar el estado. El rollback 55→54
+  elimina únicamente esta bandeja.
+- **Comportamiento:** una cuenta sin registros protegidos conserva el borrado directo.
+  Con facturas emitidas o jornada, se registra la solicitud, se devuelve referencia,
+  se encolan avisos y se audita. Cal.com deja de cargarse en iframe; `frame-src`
+  queda en `none`. La copia externa falla cerrada sin región, proveedor y residencia.
+- **Pruebas ejecutadas:** 615 pruebas de regresión completas `OK`; después se
+  añadieron y ejecutaron tres pruebas específicas del seguimiento desde
+  administración, rollback 55→54→55 y concurrencia, también `OK` (618 verificadas
+  en total). Ruff, compilación, JSON, verdad documental
+  y `git diff --check` en verde.
+- **Dependencias o validaciones externas:** DPA y regiones reales de Railway,
+  contratos de proveedores, tabla de conservación, migración PostgreSQL 54→55→54,
+  correo real, restauración S3, solicitud completa y simulacro de brecha.
+- **Riesgo/punto probable de fallo:** tratar `completed` como borrado efectivo o
+  activar S3/Groq sin contrato. La UI recuerda que el estado no borra; el destino S3
+  falla cerrado y la purga sigue sin programarse.
+- **Diagnóstico y rollback:** consultar `privacy_requests`, outbox y eventos
+  `privacy.*`; ante regresión, volver al código anterior manteniendo esquema 55,
+  validar flujos y solo después bajar 55→54. No borrar expedientes antes de exportar.
+- **Estado de publicación:** cambio local; no se ha hecho push ni despliegue y no se
+  ha ejecutado nada contra Railway o producción.
+
 ## 2026-09-01 — WUB solo mide delegación y el rollback respeta auditoría previa
 
 - **Autor/agente:** Codex, tras revisión externa del commit `35ef41f`.

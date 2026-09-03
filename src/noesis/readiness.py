@@ -104,6 +104,20 @@ def collect_readiness(*, check_database: bool = True) -> dict:
             "NOESIS_LEGAL_ADDRESS y NOESIS_LEGAL_EMAIL; revisión profesional pendiente."
         ) if not legal_ok else "",
     ))
+    provider_legal_ok = config.legal_provider_context_ready()
+    checks.append(ReadinessCheck(
+        "proveedores legales",
+        "ok" if provider_legal_ok else (
+            "blocker" if config.IS_PRODUCTION else "warning"
+        ),
+        "Proveedores activos identificados para los textos públicos."
+        if provider_legal_ok else
+        "Hay un proveedor activo sin nombre, región o residencia documentada.",
+        (
+            "Completa los metadatos legales de SMTP, IA compatible y/o S3 "
+            "antes de abrir el alta."
+        ) if not provider_legal_ok else "",
+    ))
     signup_ok = config.public_signup_available()
     checks.append(ReadinessCheck(
         "alta pública",
@@ -144,6 +158,8 @@ def collect_readiness(*, check_database: bool = True) -> dict:
     backup_names = (
         "NOESIS_BACKUP_S3_ENDPOINT", "NOESIS_BACKUP_S3_BUCKET",
         "NOESIS_BACKUP_S3_ACCESS_KEY", "NOESIS_BACKUP_S3_SECRET_KEY",
+        "NOESIS_BACKUP_S3_REGION", "NOESIS_BACKUP_S3_PROVIDER_NAME",
+        "NOESIS_BACKUP_S3_DATA_REGION",
     )
     backup_present, backup_missing = _env_ready(backup_names)
     backup_ok = not backup_missing

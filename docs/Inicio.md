@@ -22,6 +22,14 @@ usa la vista de grafo para navegar.
   puede hacer cada una, cómo se da y se quita acceso, y cómo cumple el RGPD.
 - [[Seguridad-operativa]] — amenazas, controles, secretos, incidentes y puerta de
   salida segura al piloto.
+- [[RGPD-Registro-actividades]] — inventario vivo de tratamientos como responsable
+  y como encargado, con categorías, bases, destinatarios y controles.
+- [[RGPD-Matriz-proveedores]] — rol, datos, activación y evidencia contractual que
+  se exige a cada proveedor antes de recibir datos reales.
+- [[RGPD-Procedimiento-derechos-y-bajas]] — recepción, verificación, conservación,
+  resolución y prueba de las solicitudes de derechos y baja.
+- [[RGPD-Procedimiento-brechas]] — contención, evaluación, comunicaciones y cierre
+  de incidentes con datos personales.
 - [`Diagnostico.pdf`](Diagnostico.pdf) — cuando algo falla, dónde mirar: las siete
   piezas, las cuatro puertas de una petición, síntomas y causas, y qué preguntar.
 - [`Diagnostico-tecnico.pdf`](Diagnostico-tecnico.pdf) — lo mismo con el archivo, la

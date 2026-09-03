@@ -39,6 +39,9 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
    - Primer release del esquema 54: `NOESIS_VALUE_LEDGER_ENABLED=false` y
      `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. No activar la observación hasta
      completar el smoke posterior a la migración.
+   - Copia S3 externa: además de credenciales, configurar explícitamente
+     `NOESIS_BACKUP_S3_REGION`, `NOESIS_BACKUP_S3_PROVIDER_NAME` y
+     `NOESIS_BACKUP_S3_DATA_REGION`. Sin esos tres datos Noesis no sube la copia.
 5. **Volumen persistente**: se mantiene montado en `/data` para documentos, modelos
    y la copia histórica de SQLite. La base operativa vive en Postgres.
 6. **Dominio**: Settings → Networking → Custom Domain → `bynoesis.com`, y apuntar el
@@ -50,7 +53,7 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
 3. El `preDeployCommand` ejecuta `python -m noesis.migrations upgrade`; si falla,
    Railway no debe iniciar el nuevo despliegue.
 4. Comprobar `/health`, `/ready`, alta/login y aislamiento con dos negocios.
-   La parte pública repetible se ejecuta con `noesis-production-check`; comprueba
+La parte pública repetible se ejecuta con `noesis-production-check`; comprueba
    además esquema, release, sitemap, páginas, SEO legal y cabeceras de seguridad.
 5. Mantener SQLite únicamente para local o recuperación histórica; no ejecutar dos
    bases operativas en paralelo.
@@ -73,6 +76,19 @@ Primero se apaga el ledger, después se restaura el código anterior conservando
 esquema 54 y se validan los flujos. Solo entonces puede bajarse PostgreSQL 54→53.
 El código anterior al ledger debe probarse localmente sobre esquema 54; la misma
 secuencia debe repetirse en el entorno PostgreSQL no productivo.
+
+### Despliegue y rollback seguro del esquema 55
+
+1. Migrar 54→55 en PostgreSQL no productivo. No requiere feature flag porque la
+   tabla nueva está inerte hasta que una persona solicita una baja.
+2. Probar una baja directa sin facturas y otra con factura o jornada. La segunda
+   debe conservar la cuenta, crear una sola solicitud, encolar avisos y aparecer en
+   administración.
+3. Cambiar el estado desde administración y confirmar que no se elimina ninguna
+   fila del negocio: el estado solo documenta seguimiento.
+4. Exportar la cuenta y comprobar que incluye la solicitud sin notas internas.
+5. Ensayar 55→54 en el entorno aislado. El rollback elimina solo la bandeja de
+   solicitudes; no toca facturas, clientes, documentos ni el ledger de valor.
 
 ## Checklist antes de exponer
 - [ ] `NOESIS_SECRET` puesta y aleatoria (nunca la de por defecto).

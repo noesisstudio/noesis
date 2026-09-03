@@ -321,7 +321,7 @@ def api_erase_client(business_id: int, client_id: int):
 @router.post("/b/{business_id}/account/delete")
 def delete_account(request: Request, business_id: int, confirm: str = Form(""),
                    password: str = Form("")):
-    """Baja total de la cuenta del autónomo (RGPD). Pide escribir BORRAR."""
+    """Borra si es posible o registra una baja sujeta a conservación legal."""
     if confirm.strip().upper() != "BORRAR":
         return RedirectResponse(f"/b/{business_id}/ajustes?error=confirma", status_code=303)
     user = auth.current_user(request)
@@ -332,9 +332,94 @@ def delete_account(request: Request, business_id: int, confirm: str = Form(""),
     try:
         db.delete_business_cascade(business_id)
     except ValueError:
-        return RedirectResponse(
-            f"/b/{business_id}/ajustes?error=conservacion_fiscal", status_code=303
+        privacy_request = db.create_privacy_request(
+            business_id,
+            requester_user_id=user["id"],
+            request_type="account_closure",
+            retention_required=True,
         )
+        try:
+            db.record_security_event(
+                "privacy.account_closure_requested",
+                severity="warning",
+                area="privacy",
+                actor_user_id=user["id"],
+                subject_business_id=business_id,
+                request_id=getattr(request.state, "request_id", None),
+                metadata={
+                    "privacy_request_id": privacy_request["id"],
+                    "retention_required": True,
+                },
+            )
+        except db.DatabaseError:
+            log.exception(
+                "No se pudo auditar la solicitud de privacidad %s.",
+                privacy_request["id"],
+            )
+        business = db.get_business(business_id) or {}
+        inbox = config.LEGAL_EMAIL or config.ADMIN_EMAIL
+        if inbox:
+            try:
+                email_adapter.queue_email(
+                    inbox,
+                    f"Solicitud de baja RGPD #{privacy_request['id']}",
+                    "\n".join([
+                        "Se ha registrado una solicitud de baja con conservación legal.",
+                        f"Solicitud: #{privacy_request['id']}",
+                        f"Negocio: {business.get('name') or business_id}",
+                        f"Cuenta interna: {business_id}",
+                        "",
+                        "Revísala en el panel interno. Registrar la solicitud no borra",
+                        "documentos ni resuelve por sí solo los plazos de conservación.",
+                    ]),
+                    business_id=business_id,
+                    idempotency_key=(
+                        f"privacy-request-admin:{privacy_request['id']}"
+                    ),
+                )
+            except (ValueError, *db.DatabaseError):
+                log.exception(
+                    "No se pudo encolar el aviso interno de privacidad %s.",
+                    privacy_request["id"],
+                )
+        try:
+            email_adapter.queue_email(
+                user["email"],
+                "Hemos registrado tu solicitud de baja · Noesis",
+                "\n".join([
+                    "Hemos registrado tu solicitud de baja.",
+                    f"Referencia: #{privacy_request['id']}",
+                    "",
+                    "Tu cuenta seguirá accesible mientras separamos la información que",
+                    "puede borrarse de la que debemos conservar por una obligación legal.",
+                    "Te comunicaremos la resolución por correo.",
+                    "",
+                    f"Contacto de privacidad: {config.LEGAL_EMAIL or config.PUBLIC_CONTACT_EMAIL}",
+                ]),
+                business_id=business_id,
+                idempotency_key=f"privacy-request-user:{privacy_request['id']}",
+            )
+        except (ValueError, *db.DatabaseError):
+            log.exception(
+                "No se pudo encolar la confirmación de privacidad %s.",
+                privacy_request["id"],
+            )
+        return RedirectResponse(
+            f"/b/{business_id}/ajustes?ok=baja-solicitada#baja-cuenta",
+            status_code=303,
+        )
+    try:
+        db.record_security_event(
+            "privacy.account_deleted",
+            severity="warning",
+            area="privacy",
+            actor_user_id=user["id"],
+            subject_business_id=business_id,
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"retention_required": False},
+        )
+    except db.DatabaseError:
+        log.exception("La cuenta se borró, pero no se pudo auditar la baja.")
     request.session.clear()
     return RedirectResponse("/?bye=1", status_code=303)
 

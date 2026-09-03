@@ -1,5 +1,33 @@
 # Registro de QA
 
+## 2026-09-03 — RGPD operativo, transparencia y conservación
+
+- **Regresión:** `python -m unittest discover -s tests -q` ejecutó 615 pruebas en
+  529,386 s y terminó `OK`. Después se añadieron las pruebas de la bandeja
+  administrativa, del rollback 55→54→55 y de concurrencia, y se ejecutaron
+  aisladamente en verde; el conjunto verificado suma 618. Los logs de Meta, AEAT,
+  SMTP, backup y ledger son fallos simulados esperados por sus pruebas.
+- **Baja y derechos:** se comprobó que una factura emitida impide el borrado directo,
+  pero ya no devuelve error: crea una única solicitud, mantiene la cuenta, muestra
+  referencia, encola aviso y registra `privacy.account_closure_requested`. El reenvío
+  no duplica expediente ni correo. Una nota vacía no permite cerrar la solicitud.
+- **Separación de control y ejecución:** el panel admin lista el expediente y permite
+  documentar `legal_hold`; la prueba confirma que el negocio sigue existiendo y que
+  se añade `privacy.request_status_updated`. Cambiar estado nunca ejecuta supresión.
+- **Transparencia web:** `/contacto` no contiene iframe, conserva el enlace externo y
+  responde con `frame-src 'none'`; privacidad nombra Stripe, Google, Brevo, Groq y
+  Cal.com cuando corresponden; encargado explica el reparto y `/cumplimiento` ya no
+  contiene «sistema homologado».
+- **Backups:** una configuración S3 con credenciales pero sin región de firma,
+  proveedor o residencia devuelve fallo antes de conectar. Integración, centro de
+  seguridad y readiness aplican el mismo contrato.
+- **Calidad estática:** `python -m ruff check ...`, `py_compile`, JSON,
+  `scripts/check_project_truth.py`, `git diff --check` y pruebas específicas de
+  backup, seguridad, integración, producción y plataforma quedaron en verde.
+- **Límites:** no se usaron credenciales, PostgreSQL externo, Railway ni producción.
+  Faltan migración/rollback real, DPA/regiones, validación jurídica de conservación,
+  solicitud humana extremo a extremo y simulacro de brecha.
+
 ## 2026-09-01 — correcciones de revisión externa del registro de valor
 
 - **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **570

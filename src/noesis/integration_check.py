@@ -295,6 +295,16 @@ def _check_backups() -> IntegrationCheck:
             "copias", "blocker", "La configuración S3 está incompleta.",
             "Completa endpoint, bucket, access key y secret key.",
         )
+    if not all((
+        config.BACKUP_S3_REGION,
+        config.BACKUP_S3_PROVIDER_NAME,
+        config.BACKUP_S3_DATA_REGION,
+    )):
+        return IntegrationCheck(
+            "copias", "blocker",
+            "Falta identificar la región de firma, el proveedor o la residencia de datos.",
+            "Configura NOESIS_BACKUP_S3_REGION, _PROVIDER_NAME y _DATA_REGION.",
+        )
     endpoint = urlsplit(config.BACKUP_S3_ENDPOINT)
     if endpoint.scheme != "https" or not endpoint.hostname:
         return IntegrationCheck(
@@ -302,7 +312,9 @@ def _check_backups() -> IntegrationCheck:
             "Usa el endpoint S3 regional, no la URL pública del panel.",
         )
     return IntegrationCheck(
-        "copias", "warning", "Configuración S3 completa; restauración no demostrada.",
+        "copias", "warning",
+        f"S3 configurado en {config.BACKUP_S3_PROVIDER_NAME} "
+        f"({config.BACKUP_S3_DATA_REGION}); restauración no demostrada.",
         "Ejecuta un backup y después noesis-restore-check en un entorno aislado.",
     )
 

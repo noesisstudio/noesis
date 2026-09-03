@@ -4079,6 +4079,49 @@ def _downgrade_value_ledger(conn) -> None:
     # reconstruir tablas de cuentas y permisos durante un rollback de emergencia.
 
 
+def _upgrade_privacy_requests(conn) -> None:
+    """Bandeja trazable para derechos RGPD y bajas con conservación legal.
+
+    Registrar una solicitud no elimina ni altera documentos. Separa la recepción
+    de la decisión jurídica y evita que una cuenta con facturas quede atrapada en
+    un mensaje de error sin seguimiento operativo.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS privacy_requests ("
+        f"id {t['id']}, "
+        f"business_id {t['ref']} NOT NULL REFERENCES businesses(id) "
+        "ON DELETE CASCADE, "
+        f"requester_user_id {t['ref']} REFERENCES users(id) ON DELETE SET NULL, "
+        "request_type TEXT NOT NULL CHECK (request_type IN ("
+        "'access','rectification','erasure','restriction','portability',"
+        "'objection','account_closure')), "
+        "status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ("
+        "'received','in_review','waiting_requester','legal_hold',"
+        "'completed','rejected','cancelled')), "
+        f"retention_required {t['boolean']} NOT NULL DEFAULT FALSE, "
+        "active_key TEXT UNIQUE, "
+        "resolution_note TEXT, "
+        f"requested_at {t['timestamp']} NOT NULL, "
+        f"updated_at {t['timestamp']} NOT NULL, "
+        f"resolved_at {t['timestamp']})"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_privacy_requests_business "
+        "ON privacy_requests(business_id, requested_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_privacy_requests_status "
+        "ON privacy_requests(status, requested_at)"
+    )
+
+
+def _downgrade_privacy_requests(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_privacy_requests_status")
+    conn.execute("DROP INDEX IF EXISTS idx_privacy_requests_business")
+    conn.execute("DROP TABLE IF EXISTS privacy_requests")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4159,6 +4202,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (54, "registro_valor_util",
      _upgrade_value_ledger,
      _downgrade_value_ledger),
+    (55, "solicitudes_privacidad",
+     _upgrade_privacy_requests,
+     _downgrade_privacy_requests),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

@@ -574,6 +574,8 @@ NOESIS_BACKUP_S3_BUCKET=<bucket>
 NOESIS_BACKUP_S3_ACCESS_KEY=<access key>
 NOESIS_BACKUP_S3_SECRET_KEY=<secret key>
 NOESIS_BACKUP_S3_REGION=auto
+NOESIS_BACKUP_S3_PROVIDER_NAME=<razón social del proveedor>
+NOESIS_BACKUP_S3_DATA_REGION=<región contractual real, por ejemplo UE-Fráncfort>
 NOESIS_BACKUP_S3_PREFIX=production
 ```
 

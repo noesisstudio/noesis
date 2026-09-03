@@ -826,18 +826,31 @@
   </div>
 </div>
 
-<div class="danger-zone">
+<div class="danger-zone" id="baja-cuenta">
   <h3>Dar de baja la cuenta</h3>
-  <p class="muted" style="margin:0 0 12px">Esto borra <b>de forma permanente</b> tu cuenta y
-    todos tus datos (clientes, agenda, presupuestos, facturas y gastos). No se puede deshacer.
-    Antes, te recomendamos <a href="/api/{{ business.id }}/export">descargar una copia</a>.</p>
+  {% if privacy_request %}
+  <div class="insight" style="margin-bottom:12px">
+    <b>Solicitud #{{ privacy_request.id }} recibida.</b> Tu cuenta sigue accesible mientras
+    revisamos qué información puede suprimirse y cuál debe conservarse bloqueada por una
+    obligación fiscal o laboral. Te comunicaremos la resolución por correo.
+  </div>
+  <p class="muted" style="margin:0">Estado actual: {{ privacy_request.status }} · solicitada
+    el {{ privacy_request.requested_at }}. Para aportar información o retirar la solicitud,
+    escribe a <a href="mailto:{{ legal_email }}">{{ legal_email }}</a> indicando la referencia.</p>
+  {% else %}
+  <p class="muted" style="margin:0 0 12px">Si la cuenta no contiene registros sujetos a
+    conservación, se borrará de forma permanente. Si hay facturas emitidas o registros de
+    jornada, registraremos una solicitud y separaremos los datos que puedan eliminarse de
+    los que debamos conservar bloqueados. Antes, te recomendamos
+    <a href="/api/{{ business.id }}/export">descargar una copia</a>.</p>
   <form method="post" action="/b/{{ business.id }}/account/delete"
-        onsubmit="return confirm('¿Seguro? Se borrará TODO de forma permanente.');"
+        onsubmit="return confirm('¿Seguro que quieres solicitar la baja y el borrado de los datos que legalmente puedan suprimirse?');"
         style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
     <input class="input" name="confirm" placeholder="Escribe BORRAR" style="max-width:200px" required>
     <input class="input" name="password" type="password" placeholder="Contraseña actual" style="max-width:240px" required>
-    <button class="btn" style="background:var(--red);border-color:var(--red);color:#fff">Eliminar mi cuenta</button>
+    <button class="btn" style="background:var(--red);border-color:var(--red);color:#fff">Solicitar baja y borrado</button>
   </form>
+  {% endif %}
 </div>
 {% endblock %}
 

@@ -13109,7 +13109,162 @@ def admin_update_document_metadata(
     return {"document": dict(saved), "changed_fields": changed_fields}
 
 
-# ----------------------------------------------------------- RGPD (export/borrado) ---
+# ----------------------------------------------------------- RGPD (derechos/export/borrado) ---
+PRIVACY_REQUEST_STATUSES = (
+    "received", "in_review", "waiting_requester", "legal_hold",
+    "completed", "rejected", "cancelled",
+)
+PRIVACY_REQUEST_OPEN_STATUSES = (
+    "received", "in_review", "waiting_requester", "legal_hold",
+)
+PRIVACY_REQUEST_TYPES = (
+    "access", "rectification", "erasure", "restriction", "portability",
+    "objection", "account_closure",
+)
+
+
+def create_privacy_request(
+    business_id: int,
+    *,
+    requester_user_id: int,
+    request_type: str = "account_closure",
+    retention_required: bool = False,
+) -> dict:
+    """Registra una solicitud o devuelve la abierta, sin ejecutar el borrado.
+
+    ``active_key`` hace la operación idempotente incluso si el formulario se
+    reenvía. La resolución y la supresión material son pasos separados.
+    """
+    business_id = int(business_id)
+    requester_user_id = int(requester_user_id)
+    request_type = str(request_type or "").strip().lower()
+    if request_type not in PRIVACY_REQUEST_TYPES:
+        raise ValueError("Tipo de solicitud de privacidad no válido.")
+    active_key = f"{business_id}:{request_type}"
+    now = _now()
+    try:
+        with get_conn() as conn:
+            owner = conn.execute(
+                "SELECT id FROM users WHERE id=? AND business_id=?",
+                (requester_user_id, business_id),
+            ).fetchone()
+            if not owner:
+                raise ValueError("El solicitante no pertenece a esta cuenta.")
+            existing = conn.execute(
+                "SELECT * FROM privacy_requests WHERE active_key=?",
+                (active_key,),
+            ).fetchone()
+            if existing:
+                return dict(existing)
+            row = conn.execute(
+                "INSERT INTO privacy_requests "
+                "(business_id, requester_user_id, request_type, status, "
+                "retention_required, active_key, requested_at, updated_at) "
+                "VALUES (?, ?, ?, 'received', ?, ?, ?, ?) RETURNING *",
+                (
+                    business_id, requester_user_id, request_type,
+                    bool(retention_required), active_key, now, now,
+                ),
+            ).fetchone()
+    except IntegrityError:
+        # Dos clics simultáneos compiten por la misma clave. El que pierde
+        # devuelve el expediente que ya ganó, en vez de responder con error.
+        with get_conn() as conn:
+            existing = conn.execute(
+                "SELECT * FROM privacy_requests WHERE active_key=?",
+                (active_key,),
+            ).fetchone()
+        if not existing:
+            raise
+        return dict(existing)
+    return dict(row)
+
+
+def get_open_privacy_request(
+    business_id: int, request_type: str = "account_closure",
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM privacy_requests WHERE business_id=? "
+            "AND request_type=? AND status IN (?,?,?,?) "
+            "ORDER BY requested_at DESC, id DESC LIMIT 1",
+            (
+                int(business_id), request_type,
+                *PRIVACY_REQUEST_OPEN_STATUSES,
+            ),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_privacy_requests(
+    *, status: str | None = None, business_id: int | None = None,
+    limit: int = 200,
+) -> list[dict]:
+    """Bandeja interna con el mínimo contexto para poder atender la solicitud."""
+    where, params = [], []
+    if status:
+        if status not in PRIVACY_REQUEST_STATUSES:
+            raise ValueError("Estado de privacidad no válido.")
+        where.append("pr.status=?")
+        params.append(status)
+    if business_id is not None:
+        where.append("pr.business_id=?")
+        params.append(int(business_id))
+    query = (
+        "SELECT pr.*, b.name AS business_name, u.email AS requester_email "
+        "FROM privacy_requests pr "
+        "JOIN businesses b ON b.id=pr.business_id "
+        "LEFT JOIN users u ON u.id=pr.requester_user_id"
+    )
+    if where:
+        query += " WHERE " + " AND ".join(where)
+    query += (
+        " ORDER BY CASE pr.status WHEN 'received' THEN 0 "
+        "WHEN 'in_review' THEN 1 WHEN 'waiting_requester' THEN 2 "
+        "WHEN 'legal_hold' THEN 3 ELSE 4 END, "
+        "pr.requested_at ASC, pr.id ASC LIMIT ?"
+    )
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        return [dict(row) for row in conn.execute(query, params).fetchall()]
+
+
+def update_privacy_request(
+    request_id: int, *, status: str, resolution_note: str,
+) -> dict | None:
+    """Actualiza el seguimiento; nunca borra datos como efecto lateral."""
+    status = str(status or "").strip().lower()
+    note = str(resolution_note or "").strip()[:2000]
+    if status not in PRIVACY_REQUEST_STATUSES:
+        raise ValueError("Estado de privacidad no válido.")
+    if not note:
+        raise ValueError("Documenta el motivo o la actuación realizada.")
+    now = _now()
+    terminal = status in {"completed", "rejected", "cancelled"}
+    with get_conn() as conn:
+        current = conn.execute(
+            "SELECT * FROM privacy_requests WHERE id=?", (int(request_id),)
+        ).fetchone()
+        if not current:
+            return None
+        active_key = None if terminal else (
+            current["active_key"]
+            or f"{current['business_id']}:{current['request_type']}"
+        )
+        conn.execute(
+            "UPDATE privacy_requests SET status=?, resolution_note=?, "
+            "active_key=?, updated_at=?, resolved_at=? WHERE id=?",
+            (
+                status, note, active_key,
+                now, now if terminal else None, int(request_id),
+            ),
+        )
+        row = conn.execute(
+            "SELECT * FROM privacy_requests WHERE id=?", (int(request_id),)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def export_business_data(business_id) -> dict:
     """Vuelca TODOS los datos de un negocio (derecho de portabilidad RGPD)."""
     return {
@@ -13143,6 +13298,10 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "bank_transactions": list_bank_transactions(business_id, limit=500),
         "email_outbox": list_email_messages(business_id, limit=500),
+        "privacy_requests": [dict(r) for r in _rows(
+            "SELECT id, business_id, request_type, status, retention_required, "
+            "requested_at, updated_at, resolved_at FROM privacy_requests "
+            "WHERE business_id=? ORDER BY requested_at, id", business_id)],
         "invoice_records": list_invoice_records(business_id),
         "invoice_events": list_invoice_events(business_id),
         "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
@@ -13414,7 +13573,7 @@ def delete_business_cascade(business_id) -> bool:
         for table in (
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
-            "email_outbox",
+            "email_outbox", "privacy_requests",
             "inbound_email_messages", "inbound_email_routes",
             "verifactu_cancellation_outbox", "verifactu_outbox",
             "document_sequences",

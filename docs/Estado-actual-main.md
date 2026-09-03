@@ -6,6 +6,20 @@
 
 ## Producto construido
 
+- El candidato del esquema 55 convierte la baja con conservación en un proceso
+  real y trazable. Si no hay facturas emitidas ni jornada, la cuenta se borra como
+  antes; si los hay, se crea una única solicitud abierta por negocio, se devuelve
+  una referencia, se encolan avisos y se audita la acción. Dirección ve la bandeja
+  y debe documentar cada cambio de estado; marcarla no borra nada como efecto
+  lateral. Se han añadido borradores operativos de ROPA, matriz de proveedores,
+  derechos/bajas y brechas. Cal.com ya no se incrusta, la CSP prohíbe frames en
+  todo el sitio, los textos nombran proveedores activos y describen los roles, y
+  `/cumplimiento` deja de atribuir a Noesis una integración inexistente con un
+  sistema homologado. La copia S3 falla cerrada si no constan región de firma,
+  proveedor y residencia contractual. La purga automática sigue deliberadamente
+  pendiente hasta que un profesional valide la tabla de conservación. Este
+  candidato no está desplegado y no se ha ejecutado nada contra Railway.
+
 - El candidato del esquema 54 incorpora la base de datos de retención sin cambiar
   el comportamiento del producto: un Registro Interno de Valor multiempresa,
   idempotente y fail-open observa trabajos creados/cerrados, facturas emitidas,

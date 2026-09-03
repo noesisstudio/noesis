@@ -270,7 +270,7 @@ LEGAL_NIF = os.getenv("NOESIS_LEGAL_NIF", "").strip().upper()
 LEGAL_ADDRESS = os.getenv("NOESIS_LEGAL_ADDRESS", "").strip()
 LEGAL_EMAIL = os.getenv("NOESIS_LEGAL_EMAIL", "").strip().lower()
 LEGAL_REGISTRY = os.getenv("NOESIS_LEGAL_REGISTRY", "").strip()
-LEGAL_DOCUMENT_VERSION = "2026-08-08"
+LEGAL_DOCUMENT_VERSION = "2026-09-03"
 # Buzón que se enseña en la web. El de respaldo es el del dominio propio, no una
 # cuenta personal: aparece en el pie, en la política de cookies y en contacto, y
 # tres direcciones distintas en un mismo sitio restan credibilidad.
@@ -303,9 +303,32 @@ def legal_identity_ready() -> bool:
     return all((LEGAL_NAME, LEGAL_NIF, LEGAL_ADDRESS, LEGAL_EMAIL))
 
 
+def legal_provider_context_ready() -> bool:
+    """Evita publicar o cobrar con un proveedor activo pero no identificado."""
+    smtp_named = not SMTP_HOST or bool(SMTP_PROVIDER_NAME and SMTP_PROVIDER_REGION)
+    compat_named = not COMPAT_AI_BASE_URL or bool(
+        COMPAT_AI_LEGAL_NAME and COMPAT_AI_REGION
+    )
+    backup_values = (
+        BACKUP_S3_ENDPOINT, BACKUP_S3_BUCKET,
+        BACKUP_S3_ACCESS_KEY, BACKUP_S3_SECRET_KEY,
+    )
+    backup_named = not any(backup_values) or bool(
+        all(backup_values)
+        and BACKUP_S3_REGION
+        and BACKUP_S3_PROVIDER_NAME
+        and BACKUP_S3_DATA_REGION
+    )
+    return smtp_named and compat_named and backup_named
+
+
+def legal_publication_ready() -> bool:
+    return legal_identity_ready() and legal_provider_context_ready()
+
+
 def public_signup_available() -> bool:
     """Impide aceptar términos o pagos con textos legales incompletos."""
-    return PUBLIC_SIGNUP_ENABLED and (legal_identity_ready() or not IS_PRODUCTION)
+    return PUBLIC_SIGNUP_ENABLED and (legal_publication_ready() or not IS_PRODUCTION)
 
 # Límites defensivos de documentos. Son independientes del tamaño en MB: una
 # imagen comprimida pequeña puede intentar reservar cientos de megapíxeles.
@@ -511,7 +534,15 @@ BACKUP_S3_ENDPOINT = os.getenv("NOESIS_BACKUP_S3_ENDPOINT", "").strip()
 BACKUP_S3_BUCKET = os.getenv("NOESIS_BACKUP_S3_BUCKET", "").strip()
 BACKUP_S3_ACCESS_KEY = os.getenv("NOESIS_BACKUP_S3_ACCESS_KEY", "").strip()
 BACKUP_S3_SECRET_KEY = os.getenv("NOESIS_BACKUP_S3_SECRET_KEY", "").strip()
-BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "us-east-1").strip()
+# No se adivina región: la región de firma y la residencia contractual deben
+# configurarse y documentarse antes de enviar una copia fuera del servidor.
+BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "").strip()
+BACKUP_S3_PROVIDER_NAME = os.getenv(
+    "NOESIS_BACKUP_S3_PROVIDER_NAME", ""
+).strip()
+BACKUP_S3_DATA_REGION = os.getenv(
+    "NOESIS_BACKUP_S3_DATA_REGION", ""
+).strip()
 BACKUP_S3_PREFIX = os.getenv("NOESIS_BACKUP_S3_PREFIX", "noesis").strip()
 BACKUP_S3_SSE = os.getenv("NOESIS_BACKUP_S3_SSE", "AES256").strip()
 BACKUP_S3_TIMEOUT_SECONDS = int(

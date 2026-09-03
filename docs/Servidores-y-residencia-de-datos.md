@@ -82,19 +82,20 @@ contra el esquema y, si funciona, dejar la región **fijada en el repositorio** 
 de en un panel que nadie vuelve a mirar. Si no, al menos anótala en [[Despliegue]] y
 en la puerta de salida de [[Seguridad-operativa]].
 
-### P3 · La copia de seguridad apunta a Virginia por defecto
+### P3 · Corregido: la copia ya no adivina una región
 
 Este es el peor de los tres, y estaba escondido en el código:
 
 ```python
-# src/noesis/config.py:476
-BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "us-east-1").strip()
+# configuración vigente
+BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "").strip()
 ```
 
-**El destino por defecto de la copia externa es `us-east-1`: Virginia.** Si se activa
-la copia a S3 sin poner esa variable, la base de datos completa —todos los clientes de
-todos los negocios— se replica a Estados Unidos, a un proveedor que probablemente no
-está en tu lista de subencargados, sin base de transferencia documentada.
+El hallazgo original era un valor por defecto `us-east-1`. El candidato actual lo
+elimina: si se activa S3 sin región de firma, nombre del proveedor y residencia
+contractual declarada, la subida falla cerrada antes de abrir una conexión. Esto
+evita inferir residencia a partir de un endpoint, pero todavía exige configurar y
+probar un destino real.
 
 Y las copias son la peor categoría de dato para equivocarse: son la copia que **más
 tiempo vive**, la que nadie vuelve a mirar, y la que sobrevive a los borrados. Un
@@ -105,11 +106,11 @@ Además, `NOESIS_BACKUP_DIR` apunta por defecto a una carpeta **junto a la propi
 de datos**. Una copia en el mismo volumen que el original no es una copia de
 seguridad: es un archivo más que se pierde con él.
 
-**Arreglo:**
-- Cambiar el valor por defecto en el código a una región europea, para que el
-  descuido no pueda ocurrir.
+**Arreglo restante:**
 - Fijar `NOESIS_BACKUP_S3_REGION` explícitamente en producción a `eu-west-1`,
   `eu-central-1` o el equivalente del proveedor que uses.
+- Fijar `NOESIS_BACKUP_S3_PROVIDER_NAME` y `NOESIS_BACKUP_S3_DATA_REGION` con lo
+  que diga el contrato, no con una suposición técnica.
 - Declarar ese proveedor de copias en la lista de subencargados, que ya está
   incompleta por otros motivos (ver A1 de [[RGPD-estado-y-plan]]).
 - Confirmar que `NOESIS_BACKUP_DIR` apunta al volumen persistente y que la copia
@@ -166,8 +167,8 @@ abogado:
 2. **Comprobar la región** de los dos servicios en el panel. Cinco minutos.
 3. **Mover a `europe-west4-drams3a`** si están fuera, **ahora que el volumen está
    vacío**. Es la única de las cuatro que tiene ventana: se encarece con cada cliente.
-4. **Corregir el valor por defecto de `BACKUP_S3_REGION`** a una región europea, y
-   fijarlo explícitamente en producción.
+4. **Configurar explícitamente** región de firma, proveedor y residencia, y probar
+   una restauración. El código ya no aplica una región estadounidense por defecto.
 
 Después, cuando toque el bloque de RGPD: añadir el proveedor de copias a la lista de
 subencargados, anotar la cadena Railway → Google Cloud → Cloudflare en el registro de
