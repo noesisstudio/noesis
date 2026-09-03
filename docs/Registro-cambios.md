@@ -7,6 +7,31 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-03 — forma jurídica, requisitos legales y camino al primer euro
+
+- **Autor/agente:** Claude.
+- **Objetivo:** responder a tres preguntas del founder en un solo documento: si
+  conviene S.L. o autónomo de cara a los permisos de Meta, qué hace falta legalmente
+  desde la constitución, y cuál es el camino crítico real hasta el primer cobro.
+- **Áreas y archivos:** documentación de negocio; `docs/Constitucion-y-primer-euro.md`
+  (nuevo), enlace en `docs/Inicio.md` y tres preguntas nuevas en
+  `docs/Preguntas-abiertas.md`. Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental).
+- **Dependencias o validaciones externas:** **todo el contenido fiscal, mercantil y
+  de protección de datos debe confirmarse con una gestoría y un abogado antes de
+  firmar o publicar nada.** Importes, plazos, epígrafes de IAE y requisitos de
+  verificación de Meta son orientativos y cambian. El documento señala además una
+  obligación no recogida hasta ahora: Noesis es *productor* de un sistema informático
+  de facturación y como tal le aplica el RD 1007/2023 antes que a sus clientes.
+- **Riesgo/punto probable de fallo:** tomar los importes o los plazos del documento
+  como definitivos, o iniciar la verificación de empresa en Meta con un nombre que no
+  coincida carácter a carácter con la escritura; un rechazo reinicia el reloj.
+- **Diagnóstico y rollback:** el documento es autónomo; borrarlo no afecta a nada del
+  producto ni de las pruebas.
+- **Estado de publicación:** documento entregado. Ninguna decisión tomada todavía:
+  las tres que bloquean el plan están en `docs/Preguntas-abiertas.md`.
+
 ## 2026-09-01 — plan de contenido de 60 días para redes
 
 - **Autor/agente:** Claude.

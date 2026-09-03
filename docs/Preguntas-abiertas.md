@@ -2,7 +2,7 @@
 
 > Solo contiene decisiones reales del founder. Los trabajos de conexión y QA viven
 > en [[Tareas-vivas]] y [[Conectar-APIs]]. Cuando una pregunta se responde, se mueve
-> a [[Decisiones]] con el porqué. Última revisión: **2026-08-10**.
+> a [[Decisiones]] con el porqué. Última revisión: **2026-09-03**.
 
 ## Decisiones que no bloquean la conexión inmediata
 
@@ -19,6 +19,26 @@
 3. **Voz en el plan Premium.** El recepcionista telefónico está diseñado pero no
    construido. Antes de prometer minutos incluidos hay que validar coste, demanda y
    margen con llamadas reales. Propuesta: beta cerrada o add-on hasta tener datos.
+
+## Decisiones que bloquean la constitución y el primer cobro
+
+Contexto y consecuencias de cada una en [[Constitucion-y-primer-euro]].
+
+4. **Forma jurídica y empresa de eventos.** ¿La empresa de eventos que ya tienes es
+   S.L. o eres autónomo? Si es S.L., ampliar su objeto social evita constituir y
+   verifica mejor en Meta, a cambio de facturar con esa razón social y compartir
+   responsabilidad patrimonial. Propuesta por defecto: S.L. nueva antes de pedir la
+   verificación de empresa en Meta.
+
+5. **Entidad con la que se verifica Meta.** Determina si la verificación arranca al
+   tener NIF definitivo o puede pedirse ya con la sociedad existente. Cambiar de
+   entidad después obliga a rehacer la verificación y a reconceder los WABA.
+
+6. **Alcance Veri\*Factu durante el piloto.** Noesis es productor de un sistema
+   informático de facturación y la remisión a la AEAT está construida pero no
+   validada externamente. Dos caminos: completar la validación técnica y publicar la
+   declaración responsable, o declarar explícitamente que el módulo no se ofrece como
+   sistema Veri\*Factu durante el piloto. Requiere criterio de asesoría fiscal.
 
 ## Decisiones aplazadas por evidencia
 
