@@ -59,6 +59,9 @@ usa la vista de grafo para navegar.
 - [[RGPD-estado-y-plan]] — auditoría del código y de los textos publicados: qué
   cumple ya, los seis agujeros que bloquean el primer cliente de pago y los siete
   encargos concretos para la revisión profesional.
+- [[Servidores-y-residencia-de-datos]] — no existe la «licencia RGPD»: qué exige de
+  verdad un proveedor, qué cumple Railway, dónde están hoy los datos y por qué mover
+  la región es más barato antes del primer cliente.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
 - [[Analisis-unit-economics.ipynb]] — modelo reproducible completo por plan.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.

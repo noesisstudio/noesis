@@ -7,6 +7,35 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-03 — residencia de datos y verificación del proveedor de alojamiento
+
+- **Autor/agente:** Claude.
+- **Objetivo:** responder a la duda del founder sobre si Railway «sirve para RGPD» y
+  separar el mito (no existe ninguna licencia RGPD) del problema real, que es dónde
+  están alojados hoy los datos y las copias.
+- **Áreas y archivos:** documentación de despliegue y legal;
+  `docs/Servidores-y-residencia-de-datos.md` (nuevo), enlace en `docs/Inicio.md` y
+  una tarea P0 nueva en `docs/Tareas-vivas.md`. Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental). Se verificó
+  la documentación pública de Railway (compliance, DPA, privacidad, regiones y config
+  as code) y se leyeron `railway.json` y `src/noesis/config.py`.
+- **Dependencias o validaciones externas:** **la región de los servicios no se puede
+  verificar desde el repositorio**: vive en el panel de Railway y `railway.json` no
+  fija ninguna. El founder debe comprobarla. Hallazgo de código: `BACKUP_S3_REGION`
+  toma `us-east-1` por defecto en `config.py:476`.
+- **Riesgo/punto probable de fallo:** activar la copia externa a S3 sin fijar la
+  región europea replicaría la base completa a Virginia; y aplazar el cambio de
+  región hasta después del piloto convierte una operación indolora en una parada
+  negociada, porque migrar un volumen montado causa downtime.
+- **Diagnóstico y rollback:** el documento es autónomo. No se ha cambiado el valor por
+  defecto de `BACKUP_S3_REGION` en el código: es una decisión de despliegue del
+  founder y se ha dejado anotada, no aplicada.
+- **Estado de publicación:** entregado como análisis. Conclusión: Railway es apto para
+  RGPD —DPA autoservicio, certificación en el Marco de Privacidad de Datos UE-EE. UU.,
+  SOC 2 Tipo II y región en Ámsterdam—, y lo que falta son cuatro acciones del
+  founder, no un cambio de proveedor.
+
 ## 2026-09-03 — auditoría RGPD del código y de los textos publicados
 
 - **Autor/agente:** Claude.

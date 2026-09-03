@@ -36,6 +36,15 @@
   ya está publicado: CI completo/PostgreSQL verdes, `/health` y `/ready` coherentes
   y portada, `/acceso` y `/gestoria/login` en 200. Falta activar y recorrer TOTP,
   anti-replay y recuperación con una cuenta profesional y un autenticador reales.
+- [ ] Residencia de datos, según [[Servidores-y-residencia-de-datos]]: firmar el DPA
+  autoservicio de Railway y archivarlo; comprobar en el panel la región de los
+  servicios web y Postgres, porque `railway.json` no fija ninguna y el valor por
+  defecto de la cuenta es estadounidense; si están fuera de la UE, moverlos a
+  `europe-west4-drams3a` **mientras el volumen siga vacío**, ya que la migración de
+  volumen causa parada y se encarece con cada cliente real; y corregir
+  `BACKUP_S3_REGION`, que en `config.py` toma `us-east-1` por defecto y replicaría la
+  base entera a Virginia sin base de transferencia declarada. Ninguna de las cuatro
+  depende del abogado ni de la constitución.
 - [ ] Cerrar los seis bloqueos de RGPD detallados en [[RGPD-estado-y-plan]] antes
   del primer cliente de pago. Tres son afirmaciones publicadas que hoy no son
   ciertas: la tabla de subencargados omite Stripe, Google y Cal.com y solo pinta el
