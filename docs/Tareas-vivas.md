@@ -36,6 +36,20 @@
   ya está publicado: CI completo/PostgreSQL verdes, `/health` y `/ready` coherentes
   y portada, `/acceso` y `/gestoria/login` en 200. Falta activar y recorrer TOTP,
   anti-replay y recuperación con una cuenta profesional y un autenticador reales.
+- [ ] Cerrar los seis bloqueos de RGPD detallados en [[RGPD-estado-y-plan]] antes
+  del primer cliente de pago. Tres son afirmaciones publicadas que hoy no son
+  ciertas: la tabla de subencargados omite Stripe, Google y Cal.com y solo pinta el
+  proveedor de correo si la variable está configurada; `site_contacto.html` incrusta
+  un iframe de Cal.com mientras `cookies.html` afirma que no intervienen empresas
+  ajenas y que no hace falta banner; y `/cumplimiento` dice que Noesis se integra con
+  un sistema homologado de un tercero cuando Veri\*Factu es desarrollo propio. Los
+  otros tres son carencias: `delete_business_cascade` remite a una «baja con
+  conservación fiscal» que no existe, nada purga una cuenta cancelada pese a que la
+  política promete conservar solo mientras esté activa, y falta el registro de
+  actividades del art. 30. Quitar el iframe, completar la tabla de subencargados con
+  su comprobación en `readiness.py` y escribir el procedimiento de baja no dependen
+  del abogado y se pueden hacer ya; la purga automática necesita antes la tabla de
+  plazos de conservación.
 - [ ] La identidad legal ya está completada y publicada. Revisar aviso legal,
   privacidad, términos, DPA y fiscalidad con profesionales. Mantener
   `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.

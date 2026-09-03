@@ -7,6 +7,36 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-03 — auditoría RGPD del código y de los textos publicados
+
+- **Autor/agente:** Claude.
+- **Objetivo:** separar lo que Noesis ya cumple en materia de protección de datos de
+  lo que está publicado y no es cierto, para que la revisión profesional pendiente
+  llegue con la lista hecha y no descubra los problemas cobrando por horas.
+- **Áreas y archivos:** documentación legal; `docs/RGPD-estado-y-plan.md` (nuevo),
+  enlaces en `docs/Inicio.md` y `docs/Constitucion-y-primer-euro.md`, y una tarea P0
+  nueva en `docs/Tareas-vivas.md`. Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental). Los
+  hallazgos se verificaron leyendo `src/noesis/web/templates/` (privacidad,
+  encargado-tratamiento, cookies, cumplimiento, site_contacto),
+  `src/noesis/web/routers/account.py`, `src/noesis/db.py`,
+  `src/noesis/documents/storage.py` y `src/noesis/config.py`.
+- **Dependencias o validaciones externas:** el documento **no sustituye la revisión
+  RGPD profesional**, que sigue pendiente en `docs/Tareas-vivas.md`. Los plazos de
+  conservación y la procedencia de una evaluación de impacto los tiene que fijar un
+  abogado; sin ellos no se puede programar la purga automática.
+- **Riesgo/punto probable de fallo:** tratar la auditoría como suficiente y abrir el
+  cobro sin revisión externa. Tres afirmaciones publicadas son hoy incorrectas y
+  corregirlas es previo a cualquier cliente de pago.
+- **Diagnóstico y rollback:** el documento es autónomo; borrarlo no afecta al
+  producto. Ningún archivo de `src/` se ha modificado, así que los hallazgos siguen
+  presentes en el código hasta que se decida corregirlos.
+- **Estado de publicación:** entregado como análisis. **No se ha tocado ningún texto
+  legal publicado:** cambiar la política de cookies, la lista de subencargados o
+  `/cumplimiento` es una decisión del founder, y `/cumplimiento` además depende de la
+  decisión abierta sobre el alcance Veri\*Factu.
+
 ## 2026-09-03 — forma jurídica, requisitos legales y camino al primer euro
 
 - **Autor/agente:** Claude.

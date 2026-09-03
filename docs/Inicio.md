@@ -56,6 +56,9 @@ usa la vista de grafo para navegar.
 - [[Constitucion-y-primer-euro]] — forma jurídica (SL o autónomo) decidida por lo
   que Meta verifica de verdad, todo lo legal ordenado por dependencias y el camino
   crítico de seis semanas hasta el primer cobro real.
+- [[RGPD-estado-y-plan]] — auditoría del código y de los textos publicados: qué
+  cumple ya, los seis agujeros que bloquean el primer cliente de pago y los siete
+  encargos concretos para la revisión profesional.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
 - [[Analisis-unit-economics.ipynb]] — modelo reproducible completo por plan.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.

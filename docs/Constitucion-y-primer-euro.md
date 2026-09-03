@@ -174,6 +174,9 @@ opcional:
 300-800 € de revisión por un abogado de protección de datos antes del primer cliente
 de pago. Casi todo lo demás se puede hacer barato; esto no.
 
+La auditoría detallada de qué cumple ya el código, qué está publicado y no es cierto,
+y qué encargarle exactamente al abogado está en [[RGPD-estado-y-plan]].
+
 ### Bloque D · Poder vender un programa de facturación
 
 Aquí hay una obligación que no aparece en ninguna guía de «cómo montar una empresa»
