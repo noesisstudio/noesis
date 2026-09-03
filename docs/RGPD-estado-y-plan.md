@@ -76,10 +76,16 @@ Mientras tanto, `cookies.html` afirma literalmente que no hay seguimiento de
 terceros, que *no intervienen empresas ajenas* y que por eso no hace falta banner. Y
 `privacidad.html` no menciona Cal.com en ninguna parte.
 
-**Arreglo recomendado: quitar el iframe.** Justo debajo ya hay enlaces a
-`cal.com/bynoesis`. Es un cambio de cinco minutos que elimina un subencargado, una
-transferencia internacional y un banner de consentimiento entero. La alternativa
-—carga bajo clic más banner— cuesta bastante más y no mejora nada.
+No es un resto muerto que la CSP bloquee: `server.py` abre `frame-src` a
+`cal.com` y `app.cal.com` **solo en `/contacto`, deliberadamente**, con un comentario
+que reconoce que es «el único contenido externo que se incrusta». El código sabe que
+incrusta un tercero; la página de cookies dice que no.
+
+**Arreglo recomendado: quitar el iframe y, con él, la excepción de la CSP.** Justo
+debajo ya hay enlaces a `cal.com/bynoesis`. Es un cambio de cinco minutos que elimina
+un subencargado, una transferencia internacional y un banner de consentimiento
+entero. La alternativa —carga bajo clic más banner— cuesta bastante más y no mejora
+nada.
 
 ### A3 · `/cumplimiento` publica una afirmación que no es cierta
 

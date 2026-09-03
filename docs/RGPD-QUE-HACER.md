@@ -97,10 +97,16 @@ y eso es peor que una carencia. Detalle en [[RGPD-estado-y-plan]].
 
 - [ ] Eliminar el `<iframe>` de `site_contacto.html` y dejar los enlaces a
       `cal.com/bynoesis` que ya están justo debajo.
+- [ ] Quitar también la excepción de la CSP en `server.py`, que hoy abre
+      `frame-src` a `cal.com` y `app.cal.com` solo en `/contacto`. Si se borra el
+      iframe pero se deja la excepción, queda un permiso abierto sin motivo.
 
 **Problema:** el iframe manda la IP de cada visitante a un tercero antes de cualquier
 consentimiento, mientras `cookies.html` afirma que *no intervienen empresas ajenas* y
-que por eso no hace falta banner.
+que por eso no hace falta banner. No es un descuido que la CSP frene: `server.py`
+abre `frame-src` a cal.com **a propósito** en esa ruta, con un comentario que dice
+que es «el único contenido externo que se incrusta». El código lo sabe; el texto
+legal dice lo contrario.
 
 **Por qué así:** quitarlo elimina de golpe un subencargado, una transferencia
 internacional y un banner de consentimiento entero. La alternativa —carga bajo clic
