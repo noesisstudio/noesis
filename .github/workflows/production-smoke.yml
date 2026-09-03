@@ -1,0 +1,41 @@
+name: Producció publicada
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-smoke
+  cancel-in-progress: true
+
+jobs:
+  public-release:
+    name: Porta externa de producció
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descarregar el repositori
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configurar Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Instal·lar Noesis des del lock
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      - name: Verificar el release des de fora
+        run: >-
+          uv run noesis-production-check
+          --expected-release "${{ github.sha }}"
+          --attempts 15
+          --delay 20

@@ -2,6 +2,38 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Un catch-all enruta documentos; nunca decide su contabilidad (2026-08-27)
+
+Noesis puede recibir las facturas de todos los negocios en un único buzón de
+Hostinger sin consumir un alias por cliente. Cada empresa obtiene una dirección
+virtual opaca `docs.<token>@bynoesis.com`; el destinatario original se resuelve antes
+de abrir los adjuntos y, si falta, es desconocido o aparecen dos rutas, el mensaje
+falla cerrado. El token es revocable y no se exporta en una descarga RGPD.
+
+Todos los adjuntos pasan por la validación, malware, deduplicación, OCR y
+clasificación comunes. Asunto, cuerpo, remitente y mensaje original no se
+persisten. El correo solo deja documentos pendientes: no crea gastos, facturas ni
+clientes. En una factura emitida, un NIF exacto puede relacionar un cliente ya
+conocido; una identidad nueva queda como propuesta editable hasta que el titular
+la confirma. Durante el piloto, los documentos no fiscales no se relacionan por el
+texto libre del correo. Equivocarse menos vale más que archivar unos segundos antes.
+
+## Verificar producción desde fuera y sin credenciales (2026-08-26)
+
+Un CI verde demuestra el repositorio, no que Railway haya terminado la migración ni
+que el dominio esté sirviendo ese mismo release. La comprobación pública posterior al
+despliegue se convierte en un contrato ejecutable: `/health` y `/ready` deben coincidir
+en release, el publicado debe corresponder al `main` actual tras un margen acotado de
+despliegue, el esquema debe ser el declarado, las protecciones HTTP deben seguir
+presentes y todo lo que el sitemap promete debe responder, ser indexable y conservar
+su estructura y sus textos legales completos.
+
+La prueba no inicia sesión ni usa secretos; por eso puede ejecutarse periódicamente
+desde GitHub y bajo demanda sin ampliar superficie de ataque. Agrega fallos para no
+ocultar una segunda regresión detrás de la primera. La frecuencia de seis horas es un
+control de publicación de bajo coste, no un SLA: antes de abrir masivamente se añade
+un monitor externo 24/7, aviso multicanal y responsable de guardia.
+
 ## Retirar acceso a una persona, no apagar la empresa (2026-08-19)
 
 Administracion puede suspender y restaurar el acceso de un usuario concreto, con el
@@ -773,9 +805,29 @@ confirmación actuales. Ver [[Seguridad-operativa]].
 La idea inicial era integrar un proveedor homologado. Queda anulada por la decisión
 de 2026-07-20: la facturación y Veri*Factu son desarrollo propio de Noesis.
 
-## Marca
-Paleta del logo: verde bosque #14463b + teal #2e8b74 + crema #f4f1e8. Dominio
-previsto: bynoesis.com. Ver [[Producto]].
+## Noesis es la marca; ByNoesis identifica el dominio y los usuarios (2026-08-31)
+
+La estrella existente se conserva: ya forma parte del producto y expresa dirección
+sin depender de una moda de IA. La identidad principal se escribe **Noesis**. El
+dominio `bynoesis.com` y el usuario preferente `@bynoesis` resuelven disponibilidad,
+pero no crean una segunda marca ni sustituyen el nombre en titulares, ventas o
+producto.
+
+El sistema visual usa verde bosque `#14463b`, teal `#2e8b74` y crema `#f4f1e8`;
+Fraunces representa la voz y los titulares e Inter organiza cuerpo y datos. Las
+variantes, tamaños, fondos, redes y prohibiciones viven en `branding/`. Motivo:
+reconocer a Noesis en todos los puntos de contacto requiere consistencia y archivos
+correctos, no un logo distinto para cada canal. Ver [[Producto]] y
+`design/PRODUCT_PRINCIPLES.md`.
+
+La promesa estratégica es **«Noesis lleva la oficina mientras tú haces el trabajo»**
+y su expresión corta es **«Haz tu trabajo; Noesis te ordena el negocio»**. La marca
+compite por devolver tiempo, quitar ruido mental y dar control del ciclo completo.
+Facturas preparadas, documentos ordenados, tareas resueltas, margen visible y cobros
+mejor gestionados demuestran esa promesa, pero ninguna de esas funciones se convierte
+por sí sola en el lema general. Motivo: centrar la identidad en cobrar reduciría la
+suite a una parte del ciclo y contradiría el principio «primero la feina, después la
+factura».
 
 ## Stripe confirma; Checkout no autoriza (2026-08-10)
 

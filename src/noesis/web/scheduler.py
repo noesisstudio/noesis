@@ -581,6 +581,26 @@ def process_email_outbox(limit: int = 25) -> int:
     return processed
 
 
+def process_inbound_email() -> None:
+    """Lee el catch-all solo cuando el piloto se ha activado explícitamente."""
+    if not config.INBOUND_EMAIL_ENABLED:
+        return
+    from ..documents import inbound_email
+
+    try:
+        result = inbound_email.poll_mailbox()
+    except inbound_email.InboundEmailError:
+        # No adjuntar la excepción: algunos servidores IMAP incluyen el usuario
+        # del buzón en sus errores. El diagnóstico se hace con el CLI seguro.
+        log.warning("No se pudo procesar el buzón documental entrante.")
+        return
+    if result.get("failed"):
+        log.warning(
+            "El buzón documental dejó %s mensaje(s) para reintento.",
+            result["failed"],
+        )
+
+
 def process_verifactu_outbox(limit: int = 25) -> int:
     """Remite registros vencidos respetando backoff y control de flujo AEAT."""
     from .. import verifactu_client
@@ -849,6 +869,14 @@ def start_scheduler() -> BackgroundScheduler:
         "interval",
         seconds=15,
         id="email-outbox",
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        process_inbound_email,
+        "interval",
+        seconds=60,
+        id="inbound-email",
         max_instances=1,
         coalesce=True,
     )

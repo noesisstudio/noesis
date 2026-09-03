@@ -307,6 +307,99 @@
     </div>
   </div>
 
+  <section class="card unit-economics" id="rentabilidad-cuentas">
+    <div class="card-h">
+      <div>
+        <div class="kicker">Control mensual · {{ data.cost_control.month }}</div>
+        <h2>Rentabilidad operativa por cuenta</h2>
+      </div>
+      {% if data.cost_control.has_observed_data %}
+        <span class="badge {{ 'b-amber' if data.cost_control.unallocated_cost_eur else 'b-green' }}">
+          {{ data.cost_control.cost_coverage_pct or 0 }} % del coste asignado
+        </span>
+      {% else %}
+        <span class="badge b-amber">faltan facturas de proveedores</span>
+      {% endif %}
+    </div>
+    <div class="card-b">
+      <p class="meta unit-economics-intro">
+        Ingreso recurrente comprometido, consumo técnico y costes reales del libro
+        CFO. El reparto es una lectura de gestión reconciliada, no contabilidad
+        analítica: si falta un driver, el coste queda visible sin asignar.
+      </p>
+      <div class="admin-grid unit-economics-summary">
+        <div class="stat"><div class="lbl">Cuentas de pago</div><div class="val">{{ data.cost_control.paying_accounts }}</div><div class="delta flat">sin demos</div></div>
+        <div class="stat"><div class="lbl">Ingreso comprometido</div><div class="val">{{ '%.2f'|format(data.cost_control.revenue_eur) }} €</div><div class="delta flat">mensual, no caja</div></div>
+        <div class="stat"><div class="lbl">Coste observado</div><div class="val">{{ ('%.2f €'|format(data.cost_control.observed_cost_eur)) if data.cost_control.has_observed_data else '—' }}</div><div class="delta flat">facturas y ajustes</div></div>
+        <div class="stat"><div class="lbl">Sin asignar</div><div class="val {{ 'amber' if data.cost_control.unallocated_cost_eur }}">{{ ('%.2f €'|format(data.cost_control.unallocated_cost_eur)) if data.cost_control.has_observed_data else '—' }}</div><div class="delta flat">no se oculta ni se inventa</div></div>
+        <div class="stat"><div class="lbl">Contribución observada</div><div class="val">{{ ('%.2f €'|format(data.cost_control.observed_contribution_eur)) if data.cost_control.observed_contribution_eur is not none else '—' }}</div><div class="delta flat">antes de impuestos</div></div>
+        <div class="stat"><div class="lbl">A revisar</div><div class="val {{ 'red' if data.cost_control.accounts_to_review }}">{{ data.cost_control.accounts_to_review }}</div><div class="delta flat">consumo, entrega o margen</div></div>
+      </div>
+
+      <div class="table-wrap unit-economics-table"><table>
+        <thead><tr>
+          <th>Cuenta</th><th>Plan e ingreso</th><th>IA avanzada</th>
+          <th>Canales del mes</th><th>Coste asignado</th><th>Lectura</th>
+        </tr></thead>
+        <tbody>
+        {% for row in data.cost_control.rows %}
+          <tr>
+            <td><b>{{ row.name }}</b><small class="meta">{{ row.subscription_status }}</small></td>
+            <td><b>{{ row.plan }}</b><small class="meta">{{ '%.2f'|format(row.revenue_eur) }} €/mes comprometidos</small></td>
+            <td>
+              <b>{{ row.ai_credits_used }} / {{ row.ai_credits_limit }}</b>
+              <small class="meta">{{ row.ai_credits_pct }} % · {{ row.ai_calls }} llamadas · {{ row.ai_tokens }} tokens</small>
+              <small class="meta">coste medido ~{{ '%.4f'|format(row.ai_estimated_cost_eur) }} €</small>
+            </td>
+            <td>
+              <b>WA {{ row.whatsapp_in }}↓ / {{ row.whatsapp_out }}↑</b>
+              <small class="meta">{{ row.whatsapp_templates }} plantilla(s) · {{ row.email_out }} correo(s) · {{ row.extractions }} extracción(es)</small>
+              {% if row.whatsapp_failed or row.email_failed %}<small class="red">{{ row.whatsapp_failed + row.email_failed }} entrega(s) fallida(s)</small>{% endif %}
+            </td>
+            <td>
+              {% if data.cost_control.has_observed_data %}
+                <b>{{ '%.2f'|format(row.allocated_observed_cost_eur) }} €</b>
+                <small class="meta">reparto reconciliado</small>
+              {% else %}
+                <b>—</b><small class="meta">faltan costes reales</small>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge {{ 'b-red' if row.risk == 'critical' else 'b-amber' if row.risk == 'review' else 'b-gray' if row.risk == 'demo' else 'b-green' }}">
+                {{ 'revisar ahora' if row.risk == 'critical' else 'vigilar' if row.risk == 'review' else 'demo' if row.risk == 'demo' else 'en orden' }}
+              </span>
+              {% if row.contribution_eur is not none and row.revenue_eur %}
+                <small class="meta">{{ '%.2f'|format(row.contribution_eur) }} € · {{ row.margin_pct }} %</small>
+              {% endif %}
+              {% for reason in row.risk_reasons %}<small class="meta">{{ reason }}</small>{% endfor %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">Todavía no hay cuentas que medir.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+
+      {% if data.cost_control.unallocated_by_category %}
+      <div class="unit-economics-gap">
+        <b>Costes sin driver suficiente</b>
+        <span class="meta">Quedan fuera del margen individual hasta disponer de uso medible:</span>
+        {% for category, amount in data.cost_control.unallocated_by_category.items() %}
+          <span class="badge b-amber">{{ data.finanzas.cost_ledger.category_labels.get(category, category) }} · {{ '%.2f'|format(amount) }} €</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <details class="unit-economics-method">
+        <summary>Cómo se reparte cada coste</summary>
+        <div class="mini-list">
+          {% for category, method in data.cost_control.allocation_method.items() %}
+          <div class="lrow"><span>{{ data.finanzas.cost_ledger.category_labels.get(category, category) }}</span><b>{{ method }}</b></div>
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+  </section>
+
   <!-- ================= 📈 Crecimiento ================= -->
   <div class="dept-head">
     <span class="dept-ic">📈</span>

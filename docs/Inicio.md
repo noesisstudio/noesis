@@ -53,18 +53,32 @@ usa la vista de grafo para navegar.
 - [`Estrategia-Marketing.pdf`](Estrategia-Marketing.pdf) — a quién vendemos, con qué
   mensaje, por qué canales, cuánto podemos pagar por un cliente, dónde entra la IA
   y las vías de escape con sus criterios de parada.
-- [[Constitucion-y-primer-euro]] — forma jurídica (SL o autónomo) decidida por lo
-  que Meta verifica de verdad, todo lo legal ordenado por dependencias y el camino
-  crítico de seis semanas hasta el primer cobro real.
-- [[RGPD-estado-y-plan]] — auditoría del código y de los textos publicados: qué
-  cumple ya, los seis agujeros que bloquean el primer cliente de pago y los siete
-  encargos concretos para la revisión profesional.
-- [[RGPD-QUE-HACER]] — la lista de acciones que sale de las dos auditorías: qué hacer
-  hoy, qué antes de cobrar, qué encargar al abogado y diez criterios verificables
-  para saber que está cerrado.
+- [`Marketing-Noesis.pdf`](Marketing-Noesis.pdf) — **manual maestro de marketing**:
+  consolida la estrategia, la marca, las 24 piezas de contenido con su gancho, copy,
+  CTA y métrica, la producción, la publicación en Instagram y Facebook, la medición
+  y los criterios de parada. Sustituye a `Estrategia-Marketing` y `Publicar-en-redes`.
+- [`Publicar-en-redes.pdf`](Publicar-en-redes.pdf) — manual operativo de publicación
+  en Instagram y Facebook. Su contenido está incorporado al manual maestro.
+- [`Ruta-legal.pdf`](Ruta-legal.pdf) — qué falta para poder cobrar el primer euro:
+  Veri*Factu como productor, App Review de Meta, AI Act y protección de datos; tres
+  rutas completas con su coste y el material para encargar las revisiones.
+- [`Plan-60-dias.pdf`](Plan-60-dias.pdf) — el plan de ejecución que pone fecha a todo
+  lo anterior: cuatro frentes en paralelo, nueve semanas y una puerta de salida por
+  semana.
+- [`Estado-Noesis.xlsx`](Estado-Noesis.xlsx) — estado de cada pieza en hoja de cálculo:
+  canal de Meta, plantillas y catálogos por oficio. Se regenera con
+  `python scripts/build_estado_xlsx.py`.
+- [[Constitucion-y-primer-euro]] — la pieza que `Ruta-legal` no cubre: S.L. o
+  autónomo decidido por lo que Meta verifica de verdad, los trámites de constitución
+  en orden de dependencia y el presupuesto del arranque.
+- [[RGPD-estado-y-plan]] — auditoría de protección de datos contra el código y los
+  textos publicados, complementaria a la parte 5 de `Ruta-legal`: qué cumple ya y los
+  hallazgos concretos que quedaban fuera.
 - [[Servidores-y-residencia-de-datos]] — no existe la «licencia RGPD»: qué exige de
   verdad un proveedor, qué cumple Railway, dónde están hoy los datos y por qué mover
   la región es más barato antes del primer cliente.
+- [[RGPD-QUE-HACER]] — la lista ejecutable que sale de los dos anteriores: qué hacer
+  hoy, qué antes de cobrar, qué encargar fuera y diez criterios verificables.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
 - [[Analisis-unit-economics.ipynb]] — modelo reproducible completo por plan.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.

@@ -2,7 +2,9 @@
 
 > **AVISO.** No es asesoramiento jurídico. Es la lista de acciones que salen de las
 > dos auditorías: [[RGPD-estado-y-plan]] (código y textos publicados) y
-> [[Servidores-y-residencia-de-datos]] (dónde viven los datos). Aquí no se explica el
+> [[Servidores-y-residencia-de-datos]] (dónde viven los datos). Para las obligaciones
+> y las tres rutas completas, [`Ruta-legal.pdf`](Ruta-legal.pdf); para el calendario,
+> [`Plan-60-dias.pdf`](Plan-60-dias.pdf). Aquí no se explica el
 > porqué: se explica **qué hacer, quién lo hace y cómo saber que está cerrado**.
 > Fecha: **3 de septiembre de 2026**.
 
@@ -22,7 +24,7 @@ donde se diga expresamente.
 | Bloque | Cuántas cosas | Quién | Cuándo | ¿Bloquea? |
 |---|---|---|---|---|
 | **0 · HOY** | 4 | Tú, en el panel de Railway | Hoy, 1 hora | Una de ellas se encarece cada día |
-| **1 · ANTES DE COBRAR** | 6 | Producto (Claude/Codex) + tú | Semanas 2-4 | **Sí: bloquea el primer euro** |
+| **1 · ANTES DE COBRAR** | 7 | Producto (Claude/Codex) + tú | Semanas 2-4 | **Sí: bloquea el primer euro** |
 | **2 · ENCARGO EXTERNO** | 7 | Abogado de protección de datos | Al tener NIF | Sí, dos de ellos |
 | **3 · ANTES DE ESCALAR** | 8 | Mixto | Tras el piloto | No |
 
@@ -90,8 +92,28 @@ de supresión, lo borras bien de la base… y sigue entero en un bucket estadoun
 
 # BLOQUE 1 · ANTES DEL PRIMER CLIENTE DE PAGO
 
-Seis cosas. Las tres primeras son **afirmaciones publicadas que hoy no son ciertas**,
-y eso es peor que una carencia. Detalle en [[RGPD-estado-y-plan]].
+Siete cosas. La 1.0 es la única que puede convertirse en incumplimiento sin que
+nadie toque un texto. Las tres siguientes son **afirmaciones publicadas que hoy no
+son ciertas**, y eso es peor que una carencia. Detalle en [[RGPD-estado-y-plan]].
+
+## 1.0 · DECIDIR QUÉ PASA CON GROQ — LA MÁS URGENTE DEL BLOQUE
+
+- [ ] Elegir una de las dos salidas: **declararlo** añadiendo la fila al contrato por
+      variable, como ya se hace con el proveedor de correo, y notificar el cambio de
+      subencargado con la antelación que el propio contrato exige; **o retirarlo** y
+      dejar la transcripción solo en local con `faster-whisper`.
+- [ ] Mientras no esté decidido, **no configurar `GROQ_API_KEY` en producción**.
+
+**Problema:** `adapters/transcription.py` envía audio a `api.groq.com`, en Estados
+Unidos, y Groq no aparece en la lista de subencargados. Basta con que alguien ponga
+la variable para estar mandando las notas de voz de los clientes de tus clientes a un
+subencargado no declarado, sin base contractual y sin notificación.
+
+**Por qué va antes que las demás:** las otras cinco son textos que hay que corregir.
+Esta se convierte en un incumplimiento real en el segundo en que alguien active una
+variable de entorno. Hallazgo de [`Ruta-legal.pdf`](Ruta-legal.pdf).
+
+**Quién: tú decides, producto ejecuta. Tiempo: la decisión, minutos.**
 
 ## 1.1 · QUITAR EL IFRAME DE CAL.COM
 
@@ -252,6 +274,7 @@ línea explícita en los términos.
 | Tarea | Tú | Producto | Abogado |
 |---|---|---|---|
 | 0.1 - 0.4 (servidores) | **Todo** | Solo 0.4 si cambias el código | — |
+| 1.0 Groq | **Decides** | Ejecuta | — |
 | 1.1 iframe Cal.com | — | **Sí** | — |
 | 1.2 subencargados | — | **Sí** | Valida en 2.1 |
 | 1.3 `/cumplimiento` | **Decides Veri\*Factu** | Escribe | Valida en 2.1 |
@@ -267,6 +290,8 @@ línea explícita en los términos.
 No vale «lo hemos revisado». Estos son los criterios verificables:
 
 1. El **PDF del contrato de Railway** está firmado y archivado.
+1. Groq está **declarado en el contrato o retirado del código**; no hay una tercera
+   opción con la variable configurada.
 2. Los **dos servicios** de Railway dicen `europe-west4-drams3a`, y `/ready` responde.
 3. `NOESIS_BACKUP_S3_REGION` está fijada a una región europea **en producción**.
 4. La página de contacto **no carga ningún dominio externo**. Compruébalo abriendo la

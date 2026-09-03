@@ -1,0 +1,400 @@
+{
+  "brand": "Noesis",
+  "version": "1.2.2",
+  "generated_at": "2026-08-31",
+  "source_mark": "sources/noesis-mark-master.svg",
+  "assets": [
+    {
+      "path": "logos/png/background/noesis-logo-on-cream-1600x600.png",
+      "width": 1600,
+      "height": 600,
+      "alpha": true,
+      "purpose": "Logo centrado sobre crema",
+      "sha256": "f5d078ef28f45a54ec940505730303ba8f711387320cae071fc81003fd972ad6"
+    },
+    {
+      "path": "logos/png/background/noesis-logo-on-forest-1600x600.png",
+      "width": 1600,
+      "height": 600,
+      "alpha": true,
+      "purpose": "Logo inverso centrado sobre verde bosque",
+      "sha256": "a96f9bdf2b9a5be853f2c023b72762b4343e9b84dbe67c8f73a4e517f0779eb2"
+    },
+    {
+      "path": "logos/png/background/noesis-logo-on-white-1600x600.png",
+      "width": 1600,
+      "height": 600,
+      "alpha": true,
+      "purpose": "Logo centrado sobre blanco",
+      "sha256": "8822a8ac6474e60877e8d5cb45bbcff58752dd05c24d28ea3c4d8f94def3f044"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-monochrome-1024.png",
+      "width": 1024,
+      "height": 288,
+      "alpha": true,
+      "purpose": "Logo horizontal monocromo transparente",
+      "sha256": "fc1863a779fc9f4327a7a3bcb859cbf67a0324ee16c80a471a3b4753337c513e"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-monochrome-2048.png",
+      "width": 2048,
+      "height": 576,
+      "alpha": true,
+      "purpose": "Logo horizontal monocromo transparente",
+      "sha256": "3051a3a51282bc67384377af0779319f493b05d2295f71e7a607c86869748c74"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-monochrome-512.png",
+      "width": 512,
+      "height": 144,
+      "alpha": true,
+      "purpose": "Logo horizontal monocromo transparente",
+      "sha256": "048767372f51407183d15d449acf8e041dbdc1e9d93adf7d8128e0ff163d5131"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-primary-1024.png",
+      "width": 1024,
+      "height": 288,
+      "alpha": true,
+      "purpose": "Logo horizontal primario transparente",
+      "sha256": "0de800f4fc29d5180f3d877d0ebb6ba158e4c1a86ff187380a091d534fa28d4b"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-primary-2048.png",
+      "width": 2048,
+      "height": 576,
+      "alpha": true,
+      "purpose": "Logo horizontal primario transparente",
+      "sha256": "b0407e385fb064a7d497709cfb8e258033a7c799f71c6c433dc45d550acf9b97"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-primary-512.png",
+      "width": 512,
+      "height": 144,
+      "alpha": true,
+      "purpose": "Logo horizontal primario transparente",
+      "sha256": "500fc0da0d30712189e0bf7d11dc5c9ba3ac12330c7c55ee746e30b9a2ac0201"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-reverse-1024.png",
+      "width": 1024,
+      "height": 288,
+      "alpha": true,
+      "purpose": "Logo horizontal inverso transparente",
+      "sha256": "02b25b79f6777232b153147715251b9cb4c638c8ec788ff38819ebd9a9e78bfd"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-reverse-2048.png",
+      "width": 2048,
+      "height": 576,
+      "alpha": true,
+      "purpose": "Logo horizontal inverso transparente",
+      "sha256": "ea87e6bf051451c7f81ed2c1f3248824c46432d596210ef6e619d733fd9938c2"
+    },
+    {
+      "path": "logos/png/lockup/noesis-logo-reverse-512.png",
+      "width": 512,
+      "height": 144,
+      "alpha": true,
+      "purpose": "Logo horizontal inverso transparente",
+      "sha256": "507f88dffe4ed38cc787ba8dc7a9a33a8204bb53e89ae8874461307f8c747706"
+    },
+    {
+      "path": "logos/png/mark/app-icon-192.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true,
+      "purpose": "Icono app-icon",
+      "sha256": "72cd9e61cbc69de58a396a8c83d55729f6a4195980f644904cf7cbb9524d8977"
+    },
+    {
+      "path": "logos/png/mark/app-icon-512.png",
+      "width": 512,
+      "height": 512,
+      "alpha": true,
+      "purpose": "Icono app-icon",
+      "sha256": "9170aa923098213ab507b8f64a6ba4f6138add9a1dff8ebd8f75562061c405a4"
+    },
+    {
+      "path": "logos/png/mark/apple-touch-icon-180.png",
+      "width": 180,
+      "height": 180,
+      "alpha": true,
+      "purpose": "Icono apple-touch-icon",
+      "sha256": "fa0ab24e0987d060515a257aa4fde282130d1778c2f61f28bd7403bcfdc9a27b"
+    },
+    {
+      "path": "logos/png/mark/maskable-icon-512.png",
+      "width": 512,
+      "height": 512,
+      "alpha": true,
+      "purpose": "Icono maskable-icon",
+      "sha256": "9170aa923098213ab507b8f64a6ba4f6138add9a1dff8ebd8f75562061c405a4"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-forest-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "purpose": "Símbolo monocromo bosque transparente",
+      "sha256": "c44de1e5cbdd45166e69910b27d3e27356a374883acae42b76172821e4bde9bb"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-forest-128.png",
+      "width": 128,
+      "height": 128,
+      "alpha": true,
+      "purpose": "Símbolo monocromo bosque transparente",
+      "sha256": "ee1c276bac32508d76b9525359999ba04a9ceee3a2321712c7b4fe1002fe05a6"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-forest-256.png",
+      "width": 256,
+      "height": 256,
+      "alpha": true,
+      "purpose": "Símbolo monocromo bosque transparente",
+      "sha256": "dc2137fe68999dc1ce1b8c24285fef4cf32dba78a76891ab7bf78d42aa1edb26"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-forest-512.png",
+      "width": 512,
+      "height": 512,
+      "alpha": true,
+      "purpose": "Símbolo monocromo bosque transparente",
+      "sha256": "f6872178702a44c7d457d3b44d51542f936d975b82ae1753c3626efc693b23d4"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-primary-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "purpose": "Símbolo primario transparente",
+      "sha256": "de9699fe4c0a6589fdbe08c3b0c3b2ca5001b6dca01778a055d64fa183400b19"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-primary-128.png",
+      "width": 128,
+      "height": 128,
+      "alpha": true,
+      "purpose": "Símbolo primario transparente",
+      "sha256": "530166f3724469883656dbcee78bb96747ed712671da4b37c367be0c428e9779"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-primary-256.png",
+      "width": 256,
+      "height": 256,
+      "alpha": true,
+      "purpose": "Símbolo primario transparente",
+      "sha256": "c4d2318b6961b456c5bb07dbda09d71184aaf06af44350149a86175ee5d15aa5"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-primary-32.png",
+      "width": 32,
+      "height": 32,
+      "alpha": true,
+      "purpose": "Símbolo primario transparente",
+      "sha256": "63a6a08cfe96fb435c03e5d80ff47a3174ce7ae808ee6f62d384ce12cceba76d"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-primary-512.png",
+      "width": 512,
+      "height": 512,
+      "alpha": true,
+      "purpose": "Símbolo primario transparente",
+      "sha256": "c19491fe06ee15d2dc632c110a2b6ddc0f0790d52009979f6ba1328b5d276cc9"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-primary-64.png",
+      "width": 64,
+      "height": 64,
+      "alpha": true,
+      "purpose": "Símbolo primario transparente",
+      "sha256": "6813ce3c8c790217bd434a0f3eaca7a23cb09bf82c2404c6ca152654b0ab85eb"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-white-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "purpose": "Símbolo inverso transparente",
+      "sha256": "3ed918e7597a1048b77710575e5edbcf6078c607ad11a4d67195e0404ec27c5c"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-white-128.png",
+      "width": 128,
+      "height": 128,
+      "alpha": true,
+      "purpose": "Símbolo inverso transparente",
+      "sha256": "7b0d965159a5543ae1c90a9a67f16f8a04d019492db664c50988b263e740b39d"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-white-256.png",
+      "width": 256,
+      "height": 256,
+      "alpha": true,
+      "purpose": "Símbolo inverso transparente",
+      "sha256": "47fecdf6d87a0764a3445309901fc4cdd80c6a4b2050c221ca482194745d37e8"
+    },
+    {
+      "path": "logos/png/mark/noesis-mark-white-512.png",
+      "width": 512,
+      "height": 512,
+      "alpha": true,
+      "purpose": "Símbolo inverso transparente",
+      "sha256": "c939a1ca6c00a1a538eda1fa56ebd56376576c70f778525f0339568073595f5d"
+    },
+    {
+      "path": "logos/png/wordmark/noesis-wordmark-primary-1024.png",
+      "width": 1024,
+      "height": 288,
+      "alpha": true,
+      "purpose": "Wordmark primario transparente",
+      "sha256": "290965e8e12695ccc97a172bc83373f1f6960195cff28e3dec106d0269251301"
+    },
+    {
+      "path": "logos/png/wordmark/noesis-wordmark-primary-512.png",
+      "width": 512,
+      "height": 144,
+      "alpha": true,
+      "purpose": "Wordmark primario transparente",
+      "sha256": "9d72957e88653a726439e6fb13f80cbc14b87b055407692883d81f6ffd20d181"
+    },
+    {
+      "path": "logos/png/wordmark/noesis-wordmark-reverse-1024.png",
+      "width": 1024,
+      "height": 288,
+      "alpha": true,
+      "purpose": "Wordmark inverso transparente",
+      "sha256": "2fbc6da9d8043118258a86ea8414d7c4532d8a5c693812f8f367c85924f55bc2"
+    },
+    {
+      "path": "logos/png/wordmark/noesis-wordmark-reverse-512.png",
+      "width": 512,
+      "height": 144,
+      "alpha": true,
+      "purpose": "Wordmark inverso transparente",
+      "sha256": "496089c66a864a04274a220f8e72ce65035c3e9fd6bffeda3694c7bd55f24a55"
+    },
+    {
+      "path": "palette/noesis-palette-board.png",
+      "width": 1600,
+      "height": 1000,
+      "alpha": true,
+      "purpose": "Lámina visual de paleta y tipografía",
+      "sha256": "0526e669c4fdcd5b1537f42484dcadeffd253cadbc41570df97d5a837202e928"
+    },
+    {
+      "path": "previews/noesis-brand-board.png",
+      "width": 1800,
+      "height": 1200,
+      "alpha": true,
+      "purpose": "Vista general para control de marca",
+      "sha256": "75f6f11befe5a266c45f0a80f29f267b4f1322f5fece670a46f2e11a01bbad23"
+    },
+    {
+      "path": "social/facebook-cover-1640x856.png",
+      "width": 1640,
+      "height": 856,
+      "alpha": true,
+      "purpose": "Portada Facebook 2x",
+      "sha256": "56e5f18e62225648fa614aae773aa117c34a46b5173f9c1722912c3363389d9d"
+    },
+    {
+      "path": "social/facebook-profile-1080.png",
+      "width": 1080,
+      "height": 1080,
+      "alpha": true,
+      "purpose": "Avatar Facebook preparado para recorte circular",
+      "sha256": "8fd6ce08bbebe84cb634349ea00e177485d2764232968546d799d433ba0f0777"
+    },
+    {
+      "path": "social/instagram-profile-1080.png",
+      "width": 1080,
+      "height": 1080,
+      "alpha": true,
+      "purpose": "Avatar Instagram preparado para recorte circular",
+      "sha256": "8fd6ce08bbebe84cb634349ea00e177485d2764232968546d799d433ba0f0777"
+    },
+    {
+      "path": "social/linkedin-cover-4200x700.png",
+      "width": 4200,
+      "height": 700,
+      "alpha": true,
+      "purpose": "Portada de página LinkedIn",
+      "sha256": "872c97f982c7ac0fe8677fc40956e1fedd836c2590d9bc1e2d3618ebf385561c"
+    },
+    {
+      "path": "social/linkedin-logo-400.png",
+      "width": 400,
+      "height": 400,
+      "alpha": true,
+      "purpose": "Logo de página LinkedIn",
+      "sha256": "6e7a8c2c8cc594d1ed00bfeba60dd70f4f0277efe628ef374d6ecc25fb12e4b9"
+    },
+    {
+      "path": "social/open-graph-1200x630.png",
+      "width": 1200,
+      "height": 630,
+      "alpha": true,
+      "purpose": "Imagen para enlaces compartidos",
+      "sha256": "5dadef49feb3117a0c0371468c923f1d89b9234f6967d62bbcfe98d2f0e5fedf"
+    },
+    {
+      "path": "social/youtube-profile-800.png",
+      "width": 800,
+      "height": 800,
+      "alpha": true,
+      "purpose": "Avatar YouTube",
+      "sha256": "31d0f71c52353e803bc3116373dadf239d2ad2b44c26ecd0570539d4ce00753e"
+    },
+    {
+      "path": "templates/png/noesis-portrait-cream.png",
+      "width": 1080,
+      "height": 1350,
+      "alpha": true,
+      "purpose": "Fondo portrait cream para contenido",
+      "sha256": "46792b831209b825e43ac735d960efd3ef97e6db079edb47e387ffed5b1f7b50"
+    },
+    {
+      "path": "templates/png/noesis-portrait-forest.png",
+      "width": 1080,
+      "height": 1350,
+      "alpha": true,
+      "purpose": "Fondo portrait forest para contenido",
+      "sha256": "de436201a7ae04949c45f64d1aa08bc666a189bf8b66a944e3e569d5f5803d53"
+    },
+    {
+      "path": "templates/png/noesis-square-cream.png",
+      "width": 1080,
+      "height": 1080,
+      "alpha": true,
+      "purpose": "Fondo square cream para contenido",
+      "sha256": "dd8668975f1c94da75113c329ff4023d381afa4c7c882761aa704ed70309c5f2"
+    },
+    {
+      "path": "templates/png/noesis-square-forest.png",
+      "width": 1080,
+      "height": 1080,
+      "alpha": true,
+      "purpose": "Fondo square forest para contenido",
+      "sha256": "90b3870939a9b0213fb0a4c1ef2fcb8c9b1ca5a6c0bc20e15dfd3ed233a6f5b6"
+    },
+    {
+      "path": "templates/png/noesis-story-cream.png",
+      "width": 1080,
+      "height": 1920,
+      "alpha": true,
+      "purpose": "Fondo story cream para contenido",
+      "sha256": "7da9302e61dc06aeadf6125ba59c6a66f5667296164727ba1667bbbcdc34d11f"
+    },
+    {
+      "path": "templates/png/noesis-story-forest.png",
+      "width": 1080,
+      "height": 1920,
+      "alpha": true,
+      "purpose": "Fondo story forest para contenido",
+      "sha256": "e59d766c5ec9384f5a75901172980205c5fed2aae7bd7e1ca0c76e39754bbb7e"
+    }
+  ]
+}

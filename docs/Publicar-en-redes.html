@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publicar en redes · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .part { color: var(--warn); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Noesis · Manual de operación</p>
+  <h1>Cómo se publica en Instagram y Facebook</h1>
+  <p class="standfirst">El plan editorial ya existe y tiene 24 piezas escritas. Lo que faltaba es la capa de encima: cómo se graba, cómo se cuelga, con qué ritmo, y cómo se sabe si funciona. Esto es eso.</p>
+  <p class="crumbs">Complementa <code>branding/contenido/Plan-editorial-y-guiones-Noesis.docx</code> · Perfiles en <code>branding/redes-sociales/</code> · Estrategia en <code>docs/Estrategia-Marketing.pdf</code></p>
+</header>
+
+<div class="status">
+  <div class="status-cell is-ok">
+    <span class="status-label">Plan editorial</span>
+    <span class="status-value">24 piezas escritas</span>
+    <span class="status-note">Con guion, planos, rótulo, copy, CTA, KPI y guardarraíl.</span>
+  </div>
+  <div class="status-cell is-ok">
+    <span class="status-label">Marca y perfiles</span>
+    <span class="status-value">Listos para subir</span>
+    <span class="status-note">Avatares, portadas, bios y plantillas en los tres formatos.</span>
+  </div>
+  <div class="status-cell is-warn">
+    <span class="status-label">Destino del tráfico</span>
+    <span class="status-value">Sin decidir</span>
+    <span class="status-note">El alta pública está cerrada. Hay que elegir a dónde manda el CTA.</span>
+  </div>
+  <div class="status-cell is-stop">
+    <span class="status-label">Publicación</span>
+    <span class="status-value">Sin empezar</span>
+    <span class="status-note">Ninguna pieza colgada todavía. Esto es lo que arranca.</span>
+  </div>
+</div>
+
+<section>
+  <div class="sec-head">
+    <h2>0. Lo que ya tienes, y dónde está</h2>
+    <p class="sec-intro">Antes de producir nada conviene saber esto, porque es fácil escribir de nuevo lo que ya está escrito.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Qué</th><th>Dónde</th><th>Qué contiene</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Plan editorial y guiones</strong></td><td><code>branding/contenido/</code></td><td>24 piezas con código, pilar, formato, canal, público, objetivo, fase del embudo, gancho, guion plano a plano, dirección de rodaje, rótulo, copy, CTA, métrica y guardarraíl</td></tr>
+        <tr><td><strong>Perfiles sociales</strong></td><td><code>branding/redes-sociales/</code></td><td>Avatares y portadas listos, bios para copiar y pegar, categorías, botón de acción y comprobaciones previas para Instagram, Facebook y LinkedIn</td></tr>
+        <tr><td><strong>Plantillas gráficas</strong></td><td><code>branding/templates/</code></td><td>Cuadrado, vertical e historia, en crema y verde bosque, editables en SVG y exportadas en PNG</td></tr>
+        <tr><td><strong>Manual de marca</strong></td><td><code>branding/BRAND_GUIDE.md</code></td><td>Paleta, logotipos, usos correctos e incorrectos</td></tr>
+        <tr><td><strong>Estrategia comercial</strong></td><td><code>docs/Estrategia-Marketing.pdf</code></td><td>A quién, con qué mensaje, por qué canales, CAC máximo por plan y criterios de parada</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Las 24 piezas, por si no las has visto</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Serie</th><th>Qué hace</th><th>Piezas</th><th>Fase</th></tr></thead>
+      <tbody>
+        <tr><td><strong>E01-E06</strong></td><td>Identificación emocional: que el autónomo se reconozca</td><td>La segunda jornada · Cosita rápida · El ticket desaparecido · La factura fantasma · Día 29 · Facturar no es ganar</td><td>Descubrimiento</td></tr>
+        <tr><td><strong>R01-R06</strong></td><td>Valor práctico: enseñar algo útil sin vender</td><td>¿Fue rentable? · Cinco datos del presupuesto · Reclamar sin sonar agresivo · Facturado no es cobrado · Rutina de tickets · Cuánto ganas por hora</td><td>Consideración</td></tr>
+        <tr><td><strong>P01-P05</strong></td><td>Demostración de producto: enseñar Noesis funcionando</td><td>De WhatsApp a documento · Cliente detectado · Facturar hablando · Recordatorio preparado · El parte del día</td><td>Consideración y decisión</td></tr>
+        <tr><td><strong>T01-T04</strong></td><td>Confianza y marca: por qué existimos y por qué así</td><td>Por qué construimos Noesis · Por qué no un ERP · Por qué pedimos confirmación · Cómo aislamos negocios</td><td>Confianza</td></tr>
+        <tr><td><strong>G01-G03</strong></td><td>Comunidad, gestorías y prueba</td><td>Entrevista · El paquete de la gestoría · Caso piloto medible</td><td>Prueba y conversión</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Traducción práctica:</strong> no tienes que inventar contenido durante los dos primeros meses. Tienes que <em>grabarlo y colgarlo</em>. Todo lo que sigue en este manual va de eso.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>1. Tres decisiones antes de colgar el primer vídeo</h2>
+    <p class="sec-intro">Si estas tres no están tomadas, el contenido trabaja en el vacío. Son media hora de conversación entre los dos socios.</p>
+  </div>
+
+  <div class="steps">
+    <div class="step first-step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <div class="step-head"><h3>¿A dónde mandas a quien te hace caso?</h3><span class="chip chip-stop">sin resolver</span></div>
+        <p>El alta pública está cerrada, así que «Empieza con Noesis» no existe todavía. Y las páginas por oficio que la estrategia da por hechas <strong>no están construidas</strong>: la web tiene autónomos, gestorías, precios, equipo, preguntas y contacto.</p>
+        <p>Hoy el único destino real es <strong>bynoesis.com y el formulario de solicitar acceso</strong>. Eso está bien y es coherente —vendes escasez honesta, no un botón de compra que no funciona— pero hay que decirlo así en el CTA. «Solicita acceso» es verdad; «Regístrate» sería mentira.</p>
+        <p><strong>Decisión a tomar:</strong> todos los CTA apuntan a solicitar acceso hasta que el piloto esté en marcha. Y el formulario tiene que estar probado antes de la primera publicación, no después.</p>
+      </div>
+    </div>
+
+    <div class="step first-step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <div class="step-head"><h3>¿Qué no vas a prometer?</h3><span class="chip chip-warn">protege la marca</span></div>
+        <p>Es la decisión que más caro sale saltarse, porque vendéis a un gremio donde todos se conocen. El plan editorial ya trae un guardarraíl por pieza; esta es la versión corta que se aplica a todo:</p>
+        <ul>
+          <li>Nada de cifras de ahorro sin un cliente que las firme.</li>
+          <li>Nada de testimonios ni casos inventados.</li>
+          <li>Lo que está en piloto se enseña como piloto, no como función disponible.</li>
+          <li>Ninguna promesa de presentación fiscal automática: Noesis prepara, el autónomo confirma.</li>
+          <li>Ningún dato real en pantalla: ni clientes, ni matrículas, ni documentos.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <div class="step-head"><h3>¿Quién publica y quién revisa?</h3></div>
+        <p>Con dos socios, lo que funciona es separar: uno graba y monta, el otro pasa el checklist antes de publicar. Nunca la misma persona las dos cosas, porque quien ha montado la pieza ya no la ve.</p>
+        <p>El checklist ya existe, al final del plan editorial: trece preguntas. Las tres que más piezas paran son «¿intenta hacer una sola cosa?», «¿cada cifra puede demostrarse?» y «¿hay un único siguiente paso?».</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>2. Cómo tiene que salir el vídeo</h2>
+    <p class="sec-intro">Especificaciones que no cambian con la moda. Las duraciones máximas de cada red sí cambian, así que confírmalas en la aplicación; lo que importa es lo de abajo.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Parámetro</th><th>Cómo</th><th>Por qué</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Formato</strong></td><td>Vertical 9:16 · 1080 × 1920</td><td>Es el único que ocupa la pantalla entera en Reels. Un vídeo cuadrado en Reels pierde la mitad del impacto</td></tr>
+        <tr><td><strong>Duración</strong></td><td>20-45 segundos</td><td>Es lo que fija vuestro plan editorial pieza a pieza. Por debajo de 20 no da tiempo a entender; por encima de 45 la retención se cae</td></tr>
+        <tr><td><strong>Primer segundo</strong></td><td>Cara, objeto o problema reconocible</td><td>Es la regla que ya tenéis escrita y la que más decide. Nada de logotipo ni intro</td></tr>
+        <tr><td><strong>Subtítulos</strong></td><td>Siempre, quemados en el vídeo</td><td>La mayoría lo ve sin sonido. Y vuestro público lo ve en la furgoneta o en una obra con ruido</td></tr>
+        <tr><td><strong>Zona segura</strong></td><td>Nada importante en el 15 % superior ni en el 35 % inferior</td><td>Ahí van el usuario, el texto del pie, los botones y la música. Un rótulo ahí queda tapado</td></tr>
+        <tr><td><strong>Portada</strong></td><td>Un fotograma con cara o con el rótulo legible</td><td>Es lo que se ve en la cuadrícula del perfil. Elegirla a mano, nunca dejar la que salga</td></tr>
+        <tr><td><strong>Audio</strong></td><td>Voz propia limpia; música solo de fondo</td><td>Si la voz no se entiende, no hay pieza. La música de tendencia da alcance pero no convierte</td></tr>
+        <tr><td><strong>Sin marca de agua</strong></td><td>Exportar el original limpio</td><td>Un vídeo con la marca de agua de otra red se distribuye peor. El plan ya reserva una versión limpia</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Con qué grabar:</strong> el móvil. Vuestras piezas son furgoneta, manos, taller, pantalla y cara. Un móvil reciente con luz natural y un micro de solapa de veinte euros da mejor resultado que una cámara buena con mal sonido. La regla de oro del vídeo vertical: <span class="hi">el sonido importa más que la imagen</span>.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>3. Instagram y Facebook no son la misma red</h2>
+    <p class="sec-intro">El plan editorial manda 11 piezas a las dos, y está bien. Pero colgarlas igual en ambas desperdicia Facebook.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th></th><th>Instagram</th><th>Facebook</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Para qué sirve</strong></td><td>Descubrimiento. Que gente que no te conoce te encuentre</td><td>Confianza y comunidad. Que quien ya te conoce te siga y te recomiende</td></tr>
+        <tr><td><strong>Quién está ahí</strong></td><td>Autónomo más joven, consume Reels</td><td>Autónomo de 35 a 60, grupos de gremio, recomendación local</td></tr>
+        <tr><td><strong>Cadencia</strong></td><td>3 Reels + 1 carrusel por semana · Stories 4-5 días</td><td>2-3 vídeos + 1 post práctico por semana</td></tr>
+        <tr><td><strong>El copy</strong></td><td>Corto. El vídeo hace el trabajo</td><td>Más largo y contextual. Aquí sí se lee texto</td></tr>
+        <tr><td><strong>Lo que no hay que hacer</strong></td><td>Llenar el perfil de capturas de software</td><td>Publicar exactamente el mismo texto que en Instagram</td></tr>
+        <tr><td><strong>Lo que casi nadie usa</strong></td><td>Los destacados como índice del perfil</td><td>Los grupos de autónomos y gremios</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Los grupos de Facebook, que es donde está el dinero</h3>
+  <p>Vuestro propio README lo dice: Facebook sirve para «grupos profesionales y distribución». Es el canal más barato que tenéis después de las gestorías, y el que nadie trabaja porque da pereza.</p>
+  <p>La regla que lo hace funcionar y no quemar: <strong>en un grupo se responde, no se publica</strong>. Alguien pregunta cómo reclamar una factura vencida y tú contestas de verdad, sin enlace. La marca aparece en tu perfil, no en tu respuesta. Un enlace en un grupo es publicidad; una respuesta útil es reputación, y en un gremio la reputación viaja sola.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>4. Cómo se cuelga, paso a paso</h2>
+    <p class="sec-intro">La parte mecánica. Se hace una vez a la semana, en un rato.</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Publicar desde Meta Business Suite, no desde el móvil</h3></div>
+        <p>La suite gestiona la página de Facebook y la cuenta de Instagram a la vez, permite programar y guarda un borrador. Publicar a mano desde el móvil funciona, pero no deja programar ni revisar en frío.</p>
+        <p>Excepción: las Stories. Esas van desde el móvil, son del día y no se programan.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Publicar en Instagram y adaptar en Facebook</h3><span class="chip chip-warn">no replicar</span></div>
+        <p>La suite ofrece publicar en las dos a la vez. Úsalo para el vídeo, pero <strong>cambia el texto</strong>: en Instagram va corto, en Facebook va contextual. Es un minuto de trabajo y es la diferencia entre tener dos canales o tener uno duplicado.</p>
+        <p>Lo que sí conviene replicar tal cual: el vídeo, la portada y los subtítulos.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">03</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Rellenar lo que casi nadie rellena</h3></div>
+        <ul>
+          <li><strong>Texto alternativo:</strong> describe la imagen. Ayuda a quien no ve y ayuda a que te encuentren.</li>
+          <li><strong>Ubicación:</strong> vuestra provincia. La estrategia dice concentrar por zona para que el boca a boca se note; la ubicación es gratis y ayuda.</li>
+          <li><strong>Portada elegida a mano</strong>, no la que salga.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">04</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Etiquetas: pocas y de oficio</h3></div>
+        <p>Entre cinco y diez, y del gremio, no de marketing. <code>#fontaneria</code>, <code>#electricistas</code>, <code>#reformas</code>, <code>#autonomos</code>, <code>#autonomosespaña</code>, y las de vuestra provincia. Nada de <code>#emprendimiento</code> ni <code>#productividad</code>: atraen a gente que no os va a comprar nunca.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">05</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Estar la primera hora</h3><span class="chip chip-ok">lo que más rinde</span></div>
+        <p>Responder todos los comentarios de la primera hora. No por el algoritmo: porque el plan editorial pide comentarios del tipo «me pasa», y cada uno de esos es una conversación que puede acabar en piloto. Un comentario respondido a los tres días no sirve para nada.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>5. Información y venta: la proporción</h2>
+    <p class="sec-intro">Es la pregunta de tu encargo y tiene una respuesta concreta. Vuestro plan ya la implica; conviene hacerla explícita.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Tipo</th><th>Serie</th><th>De cada 10 piezas</th><th>Qué hace</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Identificación</strong></td><td>E</td><td class="num">4</td><td>Que se reconozca. No menciona el producto hasta el último segundo, o no lo menciona</td></tr>
+        <tr><td><strong>Valor práctico</strong></td><td>R</td><td class="num">3</td><td>Enseña algo útil que sirve aunque no te contrate. Genera guardados</td></tr>
+        <tr><td><strong>Producto</strong></td><td>P</td><td class="num">2</td><td>Enseña Noesis funcionando. Es la venta</td></tr>
+        <tr><td><strong>Confianza</strong></td><td>T y G</td><td class="num">1</td><td>Quiénes sois, por qué así, y con quién</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout-warn callout">
+    <h3>La regla que protege todo lo demás</h3>
+    <p>Ocho de cada diez piezas no venden. Eso no es generosidad, es aritmética: en Instagram y Facebook nadie te sigue para que le vendas, y una cuenta que vende en cada publicación deja de tener alcance en tres semanas.</p>
+    <p>La venta funciona porque llega después de siete piezas que no vendieron. El día que inviertas la proporción, dejarás de tener a quién vender.</p>
+  </div>
+
+  <h3>Cómo se ve una pieza de venta que no molesta</h3>
+  <p>Coge <strong>P01 · De WhatsApp a documento ordenado</strong>, que ya está escrita. No empieza diciendo «Noesis hace esto». Empieza con el problema —una foto de un albarán perdida en un chat— y el producto aparece resolviéndolo. El espectador ve la solución antes de oír la marca.</p>
+  <p>Esa es la estructura de todas las piezas P: <span class="hi">problema reconocible → gesto real en pantalla → resultado → un solo siguiente paso</span>. Nunca lista de funciones.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>6. El ritmo semanal</h2>
+    <p class="sec-intro">Con dos socios y un producto que construir, esto tiene que caber en unas pocas horas. El plan ya propone grabar por bloques; esto es cómo se reparte la semana.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Cuándo</th><th>Qué</th><th>Cuánto</th><th>Quién</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cada 15 días</strong></td><td>Bloque de grabación: 6 piezas de una tirada, con props y guiones preparados</td><td>Media mañana</td><td>Los dos</td></tr>
+        <tr><td><strong>Lunes</strong></td><td>Montar y subtitular las tres piezas de la semana. Programarlas en la suite</td><td>2 horas</td><td>Quien monta</td></tr>
+        <tr><td><strong>Lunes</strong></td><td>Pasar el checklist de trece preguntas a las tres</td><td>15 minutos</td><td>El otro socio</td></tr>
+        <tr><td><strong>Mar · Jue · Sáb</strong></td><td>Se publica lo programado. Primera hora: responder comentarios</td><td>20 minutos/día</td><td>Quien publicó</td></tr>
+        <tr><td><strong>Cualquier día</strong></td><td>Stories: lo que pase de verdad. Sin producción</td><td>5 minutos</td><td>Cualquiera</td></tr>
+        <tr><td><strong>Viernes</strong></td><td>Mirar los números de la semana y decidir qué se repite</td><td>20 minutos</td><td>Los dos</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Total: unas <strong>cinco horas por semana</strong>, más media mañana cada quince días. Si no cabe, se baja a dos piezas semanales antes que bajar la calidad. Publicar poco y bien sostiene; publicar mucho y mal quema la cuenta y a vosotros.</p>
+
+  <div class="note">
+    <strong>Una idea, siete salidas.</strong> Está en vuestro plan y es lo que hace que esto sea sostenible: cada grabación da un Reel de Instagram, el mismo con copy distinto en Facebook, un carrusel con la explicación, un post de founder en LinkedIn, una Story con encuesta, y un clip limpio reservado para el día que abráis otra red. Grabáis una vez, publicáis seis.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>7. Qué mirar el viernes</h2>
+    <p class="sec-intro">Pocas métricas, y cada una decide algo. Si un número no cambia una decisión, no se mira.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Tipo de pieza</th><th>Qué mide su éxito</th><th>Qué decides con eso</th></tr></thead>
+      <tbody>
+        <tr><td>Identificación (E)</td><td>Compartidos y retención al 75 %</td><td>Si se comparte, repetir la misma situación con otro oficio</td></tr>
+        <tr><td>Valor práctico (R)</td><td>Guardados y visitas al perfil</td><td>Si se guarda, profundizar en esa duda con una segunda pieza</td></tr>
+        <tr><td>Producto (P)</td><td>Comentarios y mensajes cualificados</td><td>Si preguntan por un flujo concreto, hacer la demo de ese flujo</td></tr>
+        <tr><td>Confianza (T, G)</td><td>Conversaciones con autónomos o partners</td><td>Si aparece una objeción, convertirla en la siguiente pieza</td></tr>
+        <tr><td><strong>Todas</strong></td><td><strong>Solicitudes de acceso</strong></td><td>Es la única métrica que importa de verdad. Lo demás son indicios</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <h3>Cuándo parar, que también hay que decidirlo</h3>
+    <p>Vuestra estrategia lo dice claro y conviene respetarlo: <strong>la publicidad de pago no toca hasta tener un caso medible del piloto</strong>. Todo lo de este manual es orgánico, y el orgánico tarda meses.</p>
+    <p>Así que fijad la expectativa ahora: los tres primeros meses no van a traer clientes. Van a traer conversaciones, aprendizaje sobre qué duele de verdad y las palabras exactas que usa un fontanero, que es lo que después hará que las páginas por oficio y los anuncios funcionen.</p>
+    <p>Si al tercer mes no hay <em>ninguna</em> conversación cualificada, el problema no es la cadencia: es el mensaje. Ahí se para y se revisa, no se publica más fuerte.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>8. Archivo y nomenclatura</h2>
+    <p class="sec-intro">Aburrido y necesario. Dentro de seis meses querréis reeditar una pieza que funcionó y no la vais a encontrar.</p>
+  </div>
+  <pre>branding/contenido/publicado/
+  2026-09-02_E01_segunda-jornada/
+    original.mp4          <span class="c">← el máster sin subtítulos ni marca de agua</span>
+    ig-reel.mp4           <span class="c">← versión publicada en Instagram</span>
+    fb-reel.mp4           <span class="c">← versión publicada en Facebook</span>
+    portada.jpg
+    copy-ig.txt
+    copy-fb.txt
+    resultados.txt        <span class="c">← se rellena a los 7 días</span></pre>
+  <p>El código de pieza (<code>E01</code>, <code>P03</code>…) es el del plan editorial, así que el archivo y el plan hablan el mismo idioma. Y <code>resultados.txt</code> con cuatro líneas basta: alcance, retención, guardados y si hubo alguna conversación.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>9. Los errores que van a costar caro</h2>
+  </div>
+  <ol class="checks">
+    <li><strong>Publicar antes de que el formulario de acceso funcione.</strong> Mandas tráfico a una puerta cerrada y no vuelve.</li>
+    <li><strong>Copiar el mismo texto en Instagram y Facebook.</strong> Un minuto de trabajo convierte un canal duplicado en dos canales.</li>
+    <li><strong>Vender en más de dos de cada diez piezas.</strong> Se nota, y el alcance se cae antes que las ventas suban.</li>
+    <li><strong>Enseñar datos reales en una demo.</strong> Usad la cuenta demo, que existe y está bloqueada en solo lectura precisamente para esto.</li>
+    <li><strong>Prometer lo que está en piloto como si estuviera disponible.</strong> Es el error que no se perdona en un gremio.</li>
+    <li><strong>Publicar y desaparecer.</strong> La primera hora de comentarios vale más que la pieza siguiente.</li>
+    <li><strong>Cambiar de rumbo a las tres semanas.</strong> El orgánico tarda meses; tres semanas no son datos, son ruido.</li>
+    <li><strong>Poner enlaces en los grupos de Facebook.</strong> Te expulsan y quemas el canal más barato que tienes.</li>
+  </ol>
+</section>
+
+<footer>
+  <p>Este manual cubre la publicación. El <strong>qué</strong> se publica está en <code>branding/contenido/Plan-editorial-y-guiones-Noesis.docx</code>, con las 24 piezas escritas. La configuración de los perfiles está en <code>branding/redes-sociales/</code>, lista para copiar y pegar. La estrategia comercial y los límites de gasto, en <code>docs/Estrategia-Marketing.pdf</code>.</p>
+  <p>Las duraciones máximas y las herramientas de las plataformas cambian varias veces al año. Las proporciones, el ritmo, la zona segura y las reglas de contenido de este manual no dependen de eso.</p>
+  <p>Redactado el 1-sep-2026. El <code>.html</code> es la fuente: se edita ahí y se reimprime el PDF.</p>
+</footer>
+
+</div>
+
+</body>
+</html>

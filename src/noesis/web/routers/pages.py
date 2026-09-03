@@ -25,6 +25,7 @@ _PAGES = {
     "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
     "agenda": "Trabajos", "proyectos": "Proyectos", "equipo": "Equipo", "clientes": "Clientes",
     "crm": "CRM", "productos": "Productos y servicios",
+    "oficios": "Plantillas por oficio",
     "documentos": "Documentos",
     "asistente": "Asistente", "ajustes": "Ajustes",
 }
@@ -428,6 +429,13 @@ def page(request: Request, business_id: int, page: str):
         }
     if page == "facturas":
         context["concept_suggestions"] = db.invoice_concept_suggestions(biz)
+    if page == "documentos" and config.INBOUND_EMAIL_ENABLED:
+        from ...documents import inbound_email
+
+        if inbound_email.configured():
+            context["inbound_email_address"] = inbound_email.ensure_route(
+                business_id
+            )["address"]
     if page == "proyectos":
         context["clients"] = db.list_clients(business_id)
         context["workers"] = db.list_workers(business_id, include_inactive=False)

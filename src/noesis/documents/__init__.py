@@ -9,6 +9,7 @@ falla sea fácil de localizar:
   - repo.py     -> acceso a la tabla (CRUD + export/borrado RGPD), aislado por negocio.
   - ocr.py      -> leer el texto/importe de una foto (OCR), opcional y degradable.
   - service.py  -> orquestación de alto nivel (subir, extraer datos, pasar a gasto).
+  - inbound_email.py -> entrada IMAP/catch-all opcional y apagada por defecto.
 
 Punto de entrada que usa el servidor web: `service`. El resto del módulo solo se
 relaciona con la base de datos a través de `db.get_conn()` (import perezoso) para no

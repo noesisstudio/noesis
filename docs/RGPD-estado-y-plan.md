@@ -5,6 +5,11 @@
 > en [[Tareas-vivas]] cueste menos y encuentre menos. Revisión: **3 de septiembre de
 > 2026**.
 >
+> **Complementa la parte 5 de [`Ruta-legal.pdf`](Ruta-legal.pdf), no la sustituye.**
+> Aquel documento fija las obligaciones y las rutas; este recorre el código y los
+> textos publicados buscando dónde no se cumplen. Coinciden en dos hallazgos —la
+> página `/cumplimiento` y el registro del art. 30— y se señala cuando así es.
+>
 > Contexto de por qué esto bloquea el primer cobro: [[Constitucion-y-primer-euro]],
 > bloque C.
 
@@ -55,7 +60,12 @@ tratan datos personales:**
   encargado de manual y no aparece en ningún sitio.
 - **Google** — si se activa el acceso con Google, trata el email de tus usuarios.
 - **Cal.com** — ver A2.
-- **El almacenamiento de objetos (S3)**, si acaba usándose para documentos.
+- **El almacenamiento de objetos (S3)** usado para las copias de seguridad.
+- **Groq** — hallazgo de [`Ruta-legal.pdf`](Ruta-legal.pdf), no mío:
+  `adapters/transcription.py` envía audio a `api.groq.com`, en Estados Unidos, y basta
+  con configurar `GROQ_API_KEY` para estar mandando las notas de voz de los clientes
+  de tus clientes a un subencargado no declarado. Es el más grave de la lista, porque
+  incumple tu propio contrato en el momento en que alguien activa la variable.
 
 Hay además un defecto de plantilla: el proveedor de correo **solo se pinta si
 `NOESIS_SMTP_PROVIDER_NAME` está configurado**. Si la variable falta, la tabla no

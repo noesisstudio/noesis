@@ -353,11 +353,13 @@ def format_reply(tool: str, result: dict) -> str:
         if f.get("irpf_amount"):
             desglose += f" − IRPF {_eur(f['irpf_amount'])}"
         label = "Ticket de venta" if f.get("invoice_type") == "F2" else "Factura"
+        aviso = result.get("aviso_fiscal")
         return (f"🧾 {label} #{f['id']} preparado para {f['client_name']}: "
                 f"**{_eur(f['total'])}** ({desglose}). Lo dejo en borrador para "
                 f"que lo revises. Cuando esté correcto, escribe «emitir factura "
                 f"{f['id']}»; para entregarlo también, «emitir y enviar factura "
-                f"{f['id']}».")
+                f"{f['id']}»."
+                + (f"\n\n⚠️ {aviso}" if aviso else ""))
     if tool == "enviar_factura":
         f = result["factura"]
         quien = f.get("client_name") or f.get("recipient_name") or "tu cliente"

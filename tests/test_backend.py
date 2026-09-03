@@ -1374,6 +1374,156 @@ class BackendTestCase(unittest.TestCase):
             db.get_invoice(invoice["id"], business["id"])["status"], "borrador"
         )
 
+    def test_missing_client_data_offers_the_simplified_invoice_when_it_fits(self):
+        # Sin NIF del cliente no se puede emitir una factura completa, pero si
+        # el importe cabe en una simplificada el autónomo tiene salida legal.
+        business, _ = self.make_business()
+        chat.handle(business["id"], "factura a Vecino por reparación 150 euros")
+        small = db.list_invoices(business["id"])[0]
+        reply = chat.handle(business["id"], f"emitir factura {small['id']}")["reply"]
+        self.assertIn("factura simplificada", reply)
+        self.assertIn("400", reply)
+
+        # Por encima del límite no se ofrece, porque no sería legal.
+        chat.handle(business["id"], "factura a Vecino por reforma 900 euros")
+        big = [
+            invoice for invoice in db.list_invoices(business["id"])
+            if invoice["total"] > 400
+        ][0]
+        reply = chat.handle(business["id"], f"emitir factura {big['id']}")["reply"]
+        self.assertNotIn("simplificada", reply)
+
+    def test_simplified_invoice_issues_without_client_tax_data(self):
+        business, _ = self.make_business()
+        chat.handle(
+            business["id"], "ticket de venta a Particular por grifo 150 euros"
+        )
+        ticket = db.list_invoices(business["id"])[0]
+        self.assertEqual(ticket["invoice_type"], "F2")
+
+        chat.handle(business["id"], f"emitir factura {ticket['id']}")
+        issued = db.get_invoice(ticket["id"], business["id"])
+        self.assertEqual(issued["status"], "enviada")
+        self.assertTrue(issued["number"])
+        # El destinatario no necesita datos fiscales en una simplificada.
+        self.assertFalse(
+            (db.get_client(issued["client_id"], business["id"]) or {}).get("nif")
+        )
+
+    def test_series_can_continue_a_numbering_brought_from_another_program(self):
+        # Quien llega desde otro programa ya lleva facturas emitidas del año. Si
+        # Noesis empezara en el 1, repetiría números dentro del mismo ejercicio.
+        business, client = self.make_business()
+        first = db.add_invoice(
+            client["id"], "Primera", 100, business_id=business["id"]
+        )
+        db.issue_invoice(first["id"], business["id"])
+        self.assertTrue(
+            db.get_invoice(first["id"], business["id"])["number"].endswith("0001")
+        )
+
+        series = [
+            item for item in db.list_invoice_series(business["id"])
+            if item["document_type"] == "invoice"
+        ][0]
+        result = db.set_series_next_number(business["id"], series["id"], 88)
+        self.assertEqual(result["next_number"], 88)
+
+        following = db.add_invoice(
+            client["id"], "Siguiente", 200, business_id=business["id"]
+        )
+        db.issue_invoice(following["id"], business["id"])
+        self.assertTrue(
+            db.get_invoice(following["id"], business["id"])["number"].endswith("0088")
+        )
+
+    def test_series_numbering_can_never_go_back_over_issued_invoices(self):
+        business, client = self.make_business()
+        issued = db.add_invoice(
+            client["id"], "Emitida", 100, business_id=business["id"]
+        )
+        db.issue_invoice(issued["id"], business["id"])
+        series = [
+            item for item in db.list_invoice_series(business["id"])
+            if item["document_type"] == "invoice"
+        ][0]
+
+        # Retroceder crearía el duplicado que la ley no permite.
+        with self.assertRaises(ValueError):
+            db.set_series_next_number(business["id"], series["id"], 1)
+        # Y una serie de otro negocio nunca es accesible.
+        otro, _ = self.make_business("Negocio Ajeno")
+        with self.assertRaises(ValueError):
+            db.set_series_next_number(otro["id"], series["id"], 500)
+
+    def test_trade_catalog_loads_once_and_marks_material(self):
+        from noesis import trades
+
+        business, _ = self.make_business()
+        result = trades.load_catalog(business["id"], "fontaneria")
+        self.assertGreater(result["created"], 0)
+
+        products = db.list_products(business["id"])
+        kinds = {product["kind"] for product in products}
+        self.assertEqual(kinds, {"servicio", "producto"})
+
+        # Volver a cargarlo no duplica el catálogo del autónomo.
+        again = trades.load_catalog(business["id"], "fontaneria")
+        self.assertEqual(again["created"], 0)
+        self.assertEqual(len(db.list_products(business["id"])), len(products))
+
+        with self.assertRaises(ValueError):
+            trades.load_catalog(business["id"], "astronauta")
+
+    def test_reduced_rate_warns_only_when_material_breaks_the_limit(self):
+        from noesis import trades
+
+        business, client = self.make_business()
+
+        # Material por debajo del 40%: el 10% se sostiene y no se molesta.
+        ok = db.add_invoice(
+            client["id"], "Reforma baño", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 2000, "vat_rate": 10},
+                {"description": "Azulejo", "kind": "producto",
+                 "quantity": 1, "unit_price": 800, "vat_rate": 21},
+            ],
+        )
+        lines_ok = db.get_invoice_lines(ok["id"], business["id"])
+        self.assertIsNone(trades.reduced_rate_warning(lines_ok))
+
+        # Material por encima del 40%: el tipo reducido decae y hay que avisar.
+        risky = db.add_invoice(
+            client["id"], "Reforma cocina", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 1000, "vat_rate": 10},
+                {"description": "Muebles", "kind": "producto",
+                 "quantity": 1, "unit_price": 1500, "vat_rate": 21},
+            ],
+        )
+        lines_risky = db.get_invoice_lines(risky["id"], business["id"])
+        aviso = trades.reduced_rate_warning(lines_risky)
+        self.assertIsNotNone(aviso)
+        self.assertIn("21%", aviso)
+        # Avisa, pero no toca la factura: los tipos siguen como los puso el titular.
+        self.assertEqual({line["vat_rate"] for line in lines_risky}, {10.0, 21.0})
+
+        # Sin ninguna línea al tipo reducido, la regla no aplica.
+        plain = db.add_invoice(
+            client["id"], "Local comercial", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 500, "vat_rate": 21},
+                {"description": "Material", "kind": "producto",
+                 "quantity": 1, "unit_price": 900, "vat_rate": 21},
+            ],
+        )
+        self.assertIsNone(trades.reduced_rate_warning(
+            db.get_invoice_lines(plain["id"], business["id"])
+        ))
+
     def test_nlu_extended_synonyms_stay_local(self):
         # Más formas naturales que el cerebro local resuelve gratis (sin IA).
         self.assertEqual(nlu.parse("compré 30 de tornillos")[0], "registrar_gasto")
@@ -6188,6 +6338,75 @@ class AdminCommandCenterTestCase(unittest.TestCase):
     tearDown = BackendTestCase.tearDown
     make_business = BackendTestCase.make_business
 
+    def test_admin_requeues_only_failed_email_inside_the_same_business(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        admin_business, _ = self.make_business("Dirección Noesis")
+        target, _ = self.make_business("Cuenta con correo bloqueado")
+        other, _ = self.make_business("Otra cuenta")
+        admin = db.create_user(
+            "delivery-admin@example.com",
+            auth.hash_password(TEST_PASSWORD),
+            admin_business["id"],
+        )
+        message = db.enqueue_email_message(
+            business_id=target["id"],
+            to_email="destino-privado@example.com",
+            subject="Contenido que no debe ver administración",
+            text_body="Texto privado del cliente",
+            idempotency_key="admin-retry-test",
+        )
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE email_outbox SET status='failed', attempts=max_attempts, "
+                "last_error='proveedor temporalmente bloqueado' WHERE id=?",
+                (message["id"],),
+            )
+
+        with (
+            patch.object(config, "ADMIN_EMAIL", "delivery-admin@example.com"),
+            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+            patch.object(server, "start_scheduler", lambda: None),
+            TestClient(server.app) as client,
+        ):
+            client.post("/login", data={
+                "email": "delivery-admin@example.com",
+                "password": TEST_PASSWORD,
+            })
+            page = client.get(f"/admin/cuentas/{target['id']}")
+            wrong_tenant = client.post(
+                f"/admin/cuentas/{other['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+            retried = client.post(
+                f"/admin/cuentas/{target['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+            duplicate = client.post(
+                f"/admin/cuentas/{target['id']}/correos/{message['id']}/reintentar",
+                follow_redirects=False,
+            )
+
+        self.assertIn("Reintentar correo", page.text)
+        self.assertNotIn("destino-privado@example.com", page.text)
+        self.assertNotIn("Contenido que no debe ver", page.text)
+        self.assertNotIn("Texto privado del cliente", page.text)
+        self.assertEqual(wrong_tenant.status_code, 303)
+        self.assertEqual(retried.headers["location"], f"/admin/cuentas/{target['id']}#entregas")
+        self.assertEqual(duplicate.status_code, 303)
+        queued = db.get_email_message(message["id"])
+        self.assertEqual(queued["status"], "queued")
+        self.assertEqual(queued["attempts"], 0)
+        events = [
+            item for item in db.list_security_events()
+            if item["event_type"] == "admin.email_delivery_requeued"
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["actor_user_id"], admin["id"])
+        self.assertEqual(events[0]["subject_business_id"], target["id"])
+        self.assertEqual(events[0]["metadata"]["outbox_id"], message["id"])
+
     def test_admin_records_observed_cost_without_overwriting_history(self):
         from starlette.testclient import TestClient
         from noesis.web import server
@@ -6220,6 +6439,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 self.assertEqual(page.status_code, 200, page.text)
                 self.assertIn("Factura Railway agosto", page.text)
                 self.assertIn("Margen observado", page.text)
+                self.assertIn("Rentabilidad operativa por cuenta", page.text)
         ledger = db.platform_cost_summary(period)
         self.assertEqual(ledger["observed_total"], 24.5)
         event = next(
@@ -6934,6 +7154,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 self.assertIn("Cuenta diagnosticada", page.text)
                 self.assertIn("Ventana temporal abierta", page.text)
                 self.assertIn("Diagnóstico de integraciones", page.text)
+                self.assertIn("Consumo y rentabilidad de Noesis", page.text)
                 self.assertNotIn("CLIENTE-SECRETO-NO-MOSTRAR", page.text)
                 client.post("/logout")
                 client.post("/login", data={
@@ -7471,6 +7692,74 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                     "UPDATE platform_cost_entries SET amount_eur=999 WHERE period=?",
                     (period,),
                 )
+
+    def test_cost_control_reconciles_real_costs_and_flags_account_risk(self):
+        from noesis.adapters import email as email_adapter
+
+        autonomo, _ = self.make_business("Cuenta Autónoma")
+        negocio, _ = self.make_business("Cuenta Negocio")
+        with db.get_conn() as conn:
+            conn.execute(
+                "UPDATE businesses SET subscription_status='active', plan='autonomo' "
+                "WHERE id=?", (autonomo["id"],),
+            )
+            conn.execute(
+                "UPDATE businesses SET subscription_status='active', plan='pro' "
+                "WHERE id=?", (negocio["id"],),
+            )
+        db.record_product_event(
+            autonomo["id"], "ai_usage",
+            json.dumps({"in": 1000, "out": 100, "estimated_cost_usd": 1}),
+        )
+        db.record_product_event(
+            negocio["id"], "ai_usage",
+            json.dumps({"in": 500, "out": 50, "estimated_cost_usd": 0.5}),
+        )
+        for _ in range(60):
+            db.record_product_event(autonomo["id"], "ai_credit_used", "{}")
+        whatsapp.queue_template(
+            "34600111222", "recordatorio", ["Cliente"],
+            business_id=autonomo["id"], idempotency_key="cost-wa",
+        )
+        email_adapter.queue_email(
+            "cliente@example.com", "Aviso", "Contenido",
+            business_id=negocio["id"], idempotency_key="cost-email",
+        )
+        period = date.today().strftime("%Y-%m")
+        for category, amount in (
+            ("ai", 30), ("whatsapp", 12), ("email", 8),
+            ("hosting", 20), ("payments", 10),
+        ):
+            db.add_platform_cost(
+                period, category, amount, source="actual",
+                note=f"Factura real {category}",
+            )
+
+        control = db.account_cost_control(period)
+        self.assertEqual(control["observed_cost_eur"], 80)
+        self.assertEqual(control["allocated_cost_eur"], 80)
+        self.assertEqual(control["unallocated_cost_eur"], 0)
+        self.assertEqual(control["cost_coverage_pct"], 100)
+        self.assertEqual(control["revenue_eur"], 78)
+        first = next(row for row in control["rows"] if row["id"] == autonomo["id"])
+        second = next(row for row in control["rows"] if row["id"] == negocio["id"])
+        self.assertEqual(first["ai_credits_pct"], 80)
+        self.assertEqual(first["whatsapp_templates"], 1)
+        self.assertAlmostEqual(first["allocated_observed_cost_eur"], 45.72)
+        self.assertEqual(first["risk"], "critical")
+        self.assertAlmostEqual(second["allocated_observed_cost_eur"], 34.28)
+        self.assertEqual(second["email_out"], 1)
+
+    def test_local_document_extractions_do_not_invent_provider_cost(self):
+        business, _ = self.make_business("OCR Local")
+        db.record_product_event(
+            business["id"], "media_ingested",
+            json.dumps({"type": "image", "extracted": True}),
+        )
+        overview = db.admin_overview()
+        self.assertEqual(overview["ai_usage"]["total"]["extractions"], 1)
+        self.assertEqual(overview["finanzas"]["ai_cost_eur"], 0)
+        self.assertIn("cost_control", overview)
 
     def test_alerts_flag_failed_whatsapp_and_broken_backup(self):
         business, _ = self.make_business("Admin Alarmas")

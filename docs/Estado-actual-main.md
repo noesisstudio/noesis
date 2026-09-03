@@ -6,6 +6,81 @@
 
 ## Producto construido
 
+- La identidad existente ya tiene un paquete profesional versionado en `branding/`:
+  originales SVG, logo horizontal, símbolo y wordmark en versiones primaria,
+  inversa y monocroma; 49 PNG transparentes y con fondo; avatares/portadas para
+  redes, plantillas editables, paleta JSON/CSS, guía de uso, licencias y manifiesto
+  verificable. El nombre público queda unificado como **Noesis**; `bynoesis.com` y
+  `@bynoesis` son dominio/usuario, no una segunda marca. Su territorio verbal es
+  tiempo, orden, calma y control: «Haz tu trabajo; Noesis te ordena el negocio».
+  Facturación, cobros y margen son pruebas del valor, no el posicionamiento completo.
+  La aplicación no cambia. `branding/redes-sociales/` convierte esa identidad en un
+  paquete operativo: imagen de perfil, portada cuando existe, descripción y lista de
+  comprobación para Instagram, Facebook y LinkedIn; también deja YouTube y TikTok
+  preparados solo para reservar el usuario sin dispersar el lanzamiento. El avatar
+  social 1.2.2 prescinde de la placa blanca: estrella ampliada sobre fondo verde bosque,
+  interior original teal/bosque/crema y contorno tinta únicamente en la silueta
+  exterior, sin alterar el símbolo maestro ni los iconos de la aplicación.
+
+  `branding/contenido/` añade un manual editorial reproducible de 38 páginas para
+  Instagram, Facebook, LinkedIn y campañas. Convierte el posicionamiento en 24
+  fichas listas para producir —formato, público, objetivo, gancho, guion, rodaje,
+  copy, CTA, métrica y guardarraíl—, cinco campañas, un calendario mensual y un
+  sistema de producción y aprendizaje. Las demos, cifras, testimonios e
+  integraciones no validadas quedan explícitamente limitadas para no confundir
+  producto construido con evidencia comercial.
+
+- El candidato del esquema 52 prepara una entrada documental por correo sin comprar
+  buzones ni gastar uno de los alias de Hostinger por cliente. Un único catch-all
+  entrega a direcciones privadas distintas por negocio; Noesis falla cerrado si no
+  puede demostrar el destinatario, deduplica, valida y clasifica con el mismo motor
+  de Web/WhatsApp y no conserva remitente, asunto, cuerpo ni el correo original. Las
+  facturas emitidas reutilizan clientes por NIF exacto o dejan un alta editable por
+  confirmar. La función permanece apagada hasta superar la prueba real de Hostinger.
+
+- Dirección ya puede entender la rentabilidad operativa de Noesis **cuenta por
+  cuenta** sin abrir los datos del negocio del cliente. El centro interno combina
+  el precio mensual comprometido, consumo de IA, plantillas y entregas de WhatsApp,
+  correo y extracciones con los costes reales del libro CFO. Cada coste se reparte
+  con un criterio visible y el total asignado reconcilia con el libro; si falta un
+  driver, queda explícitamente sin asignar. Las demos no contaminan el margen y las
+  alertas priorizan entregas fallidas, límites de IA y cuentas con margen inferior
+  al 60 %. También se ha retirado el falso coste fijo que penalizaba cada OCR local
+  sin factura de proveedor. La ficha de soporte muestra la misma lectura solo con
+  metadatos, nunca clientes, mensajes, documentos ni importes del negocio.
+
+- La recuperación del titular ahora tiene las mismas garantías transaccionales que
+  la nueva recuperación de gestoría. Pedir un enlace invalida los anteriores y el
+  consumo del token, el cambio de contraseña y el incremento que revoca sesiones se
+  confirman juntos o no se confirma nada. La respuesta sigue sin revelar si existe
+  una cuenta y solicitud/finalización quedan trazadas sin correo, token ni contenido.
+
+- El centro de soporte ya no se limita a diagnosticar un correo agotado:
+  administración puede devolver **un único correo fallido** a la cola desde la ficha
+  de la misma empresa. La acción no envía durante la petición, no puede cruzar
+  `business_id`, no duplica un correo ya en curso o enviado, reinicia los intentos y
+  queda registrada en la bitácora encadenada. Destinatario, asunto y cuerpo siguen
+  ocultos para soporte.
+
+- La gestoría ya puede recuperar su acceso sin intervención técnica y sin cruzar su
+  identidad con ningún autónomo. El esquema 51 guarda tokens propios, hasheados,
+  caducables y de un solo uso; pedir uno nuevo invalida los anteriores. La respuesta
+  pública nunca revela si el correo existe, el envío pasa por la outbox durable y el
+  cambio de clave es atómico: cierra todas las sesiones previas y conserva el MFA.
+  Tres regresiones cubren no enumeración, caducidad, consumo único, nueva clave,
+  revocación de sesiones y segundo factor. Falta el recorrido con buzón y autenticador
+  reales después de publicar.
+
+- La publicación ya no depende solo de una comprobación manual. El comando
+  `noesis-production-check` observa Noesis desde fuera, sin sesiones ni secretos, y
+  rechaza que producción siga detrás de `main`, una migración a medias o releases distintos entre `/health` y `/ready`,
+  pérdida de protecciones HTTP, páginas públicas caídas o no indexables, canonical/H1
+  rotos y marcadores legales reaparecidos. Un workflow independiente lo ejecuta cada
+  seis horas y permite lanzarlo bajo demanda. La comprobación real del 26 de agosto
+  confirma esquema 50, release coherente, 14 páginas públicas y todas las barreras
+  verificadas. Esto aporta detección periódica; la apertura masiva sigue necesitando
+  monitor 24/7 externo y procedimiento humano de respuesta.
+
 - La primera ejecución del comprobador dentro del contenedor detectó una diferencia
   real entre desarrollo y despliegue: Railpack instala `requirements.txt`, donde no
   constaban `pypdf`, `pypdfium2` ni `pytesseract`, aunque sí estaban declarados en
@@ -293,7 +368,16 @@
   esa intervención requerirá consentimiento temporal, motivo y alcance explícitos.
 - Cada backup se restaura al crearlo y, además, un simulacro semanal independiente
   vuelve a restaurar la última base y verifica el ZIP documental en un entorno
-  descartable. La entrada documental admite ClamAV privado por streaming y puede
+  descartable. La comprobación real del 26 de agosto descubrió que las copias nuevas
+  fallaban al reconstruir líneas de facturas emitidas: la propia inmutabilidad las
+  confundía con una modificación posterior. El release `d55be0ae6673` suspende únicamente los
+  triggers de negocio dentro de la transacción de restauración, conserva claves
+  foráneas y restricciones, los reactiva antes de validar y añade el recorrido al
+  humo PostgreSQL. El CI restauró correctamente un conjunto con facturas emitidas y
+  en producción se creó después una copia nueva de esquema 51; el simulacro
+  independiente terminó `ok` en 3,22 s. Ya existe recuperación local actual, pero
+  aún falta copiarla a infraestructura externa y ensayar la pérdida total del
+  proveedor. La entrada documental admite ClamAV privado por streaming y puede
   fallar cerrado sin enviar archivos a una API externa.
 - El alta comercial distingue con claridad entre **probar 14 días** y **contratar
   ahora**. Antes de entrar al panel recoge negocio, nivel de explicación, fiscalidad,
@@ -341,6 +425,18 @@
   asigna serie y línea a facturas ya emitidas dentro de la transacción de migración
   y reinstala inmediatamente la inmutabilidad. El CI reproduce este salto con una
   factura emitida tanto en SQLite como en PostgreSQL.
+
+- Cada oficio tiene su plantilla de catálogo con el IVA ya puesto en cada partida y
+  la marca de si es material o mano de obra. El autónomo la ve entera antes de
+  cargarla en `/b/{id}/oficios`, con su oficio el primero cuando se deduce de lo que
+  escribió al darse de alta; cargarla dos veces no duplica nada. Ese marcado es lo
+  que permite avisar del 40% de material que hace decaer el tipo reducido en obras
+  de vivienda: Noesis avisa y nunca cambia el tipo.
+- El canal de Meta está construido y revisado —firma, idempotencia, medios acotados
+  y cola durable—, pero **los cinco avisos proactivos al titular no son aprobables
+  todavía**: mandan el mensaje entero en un único hueco de plantilla. Las cuatro
+  plantillas al cliente sí encajan. Los cuerpos de las nueve viven en
+  `noesis/whatsapp_templates.py`. Revisión completa en [[Revision-Meta]].
 
 ## Política comercial en el código actual
 

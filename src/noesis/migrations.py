@@ -3090,6 +3090,26 @@ def _downgrade_gestoria_accounts(conn) -> None:
     conn.execute("DROP INDEX IF EXISTS uq_gestoria_accounts_email")
     conn.execute("DROP TABLE IF EXISTS gestoria_accounts")
 
+def _upgrade_line_kind(conn) -> None:
+    """Distingue mano de obra de material en cada línea de factura.
+
+    El tipo reducido del 10% en obras de renovación de vivienda decae si el
+    material que aporta quien ejecuta supera el 40% de la base (art. 91.Uno.2.10º
+    LIVA). Sin saber qué línea es material no se puede avisar de ese límite, y es
+    la equivocación más fácil de cometer en fontanería y reformas. Las líneas ya
+    emitidas quedan como 'servicio': no se reinterpreta una factura cerrada.
+    """
+    if "kind" not in _column_names(conn, "invoice_lines"):
+        conn.execute(
+            "ALTER TABLE invoice_lines ADD COLUMN kind TEXT NOT NULL "
+            "DEFAULT 'servicio'"
+        )
+
+
+def _downgrade_line_kind(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute("ALTER TABLE invoice_lines DROP COLUMN IF EXISTS kind")
+
 
 def _upgrade_showcase_demo(conn) -> None:
     """Marca persistente para demos comerciales aisladas y de solo lectura."""
@@ -3770,6 +3790,117 @@ def _downgrade_user_access_control(conn) -> None:
         conn.execute("ALTER TABLE users DROP COLUMN IF EXISTS is_active")
 
 
+def _upgrade_gestoria_password_recovery(conn) -> None:
+    """Tokens propios para recuperar una gestoría sin cruzar identidades.
+
+    Una cuenta de gestoría puede acceder a varias empresas y no pertenece a
+    ninguna de ellas. Por eso sus tokens no se guardan en ``password_resets``
+    (que referencia usuarios de un negocio) ni arrastran un ``business_id``.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gestoria_password_resets ("
+        f"id {t['id']}, "
+        f"gestoria_account_id {t['ref']} NOT NULL REFERENCES "
+        "gestoria_accounts(id) ON DELETE CASCADE, "
+        "token_hash TEXT NOT NULL, "
+        f"expires_at {t['timestamp']} NOT NULL, "
+        f"used {t['boolean']} NOT NULL DEFAULT FALSE, "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS "
+        "uq_gestoria_password_reset_token "
+        "ON gestoria_password_resets(token_hash)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gestoria_password_reset_account "
+        "ON gestoria_password_resets(gestoria_account_id, used, expires_at)"
+    )
+
+
+def _downgrade_gestoria_password_recovery(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_gestoria_password_reset_account")
+    conn.execute("DROP INDEX IF EXISTS uq_gestoria_password_reset_token")
+    conn.execute("DROP TABLE IF EXISTS gestoria_password_resets")
+
+
+def _upgrade_inbound_email_documents(conn) -> None:
+    """Buzón catch-all aislado y propuestas de cliente para documentos.
+
+    El identificador de correo enruta, pero nunca autoriza efectos contables. Los
+    mensajes solo conservan huellas y contadores; asunto, cuerpo y remitente no se
+    guardan. Un cliente leído en una factura queda como propuesta hasta que el
+    titular lo confirme.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS inbound_email_routes (
+    business_id {t["ref"]} PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
+    route_token TEXT NOT NULL,
+    active {t["boolean"]} NOT NULL DEFAULT TRUE,
+    created_at {t["timestamp"]} NOT NULL,
+    rotated_at {t["timestamp"]}
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inbound_email_route_token
+    ON inbound_email_routes(route_token);
+
+CREATE TABLE IF NOT EXISTS inbound_email_messages (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    message_fingerprint TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'processing' CHECK (
+        status IN ('processing', 'processed', 'partial', 'rejected', 'failed')
+    ),
+    attempts INTEGER NOT NULL DEFAULT 1,
+    attachment_count INTEGER NOT NULL DEFAULT 0,
+    document_count INTEGER NOT NULL DEFAULT 0,
+    error_code TEXT,
+    received_at {t["timestamp"]} NOT NULL,
+    updated_at {t["timestamp"]} NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inbound_email_message
+    ON inbound_email_messages(business_id, message_fingerprint);
+CREATE INDEX IF NOT EXISTS idx_inbound_email_message_status
+    ON inbound_email_messages(business_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS document_client_candidates (
+    id {t["id"]},
+    business_id {t["ref"]} NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    document_id {t["ref"]} NOT NULL,
+    proposed_name TEXT NOT NULL,
+    proposed_nif TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (
+        status IN ('pending', 'confirmed', 'rejected')
+    ),
+    matched_client_id {t["ref"]},
+    created_at {t["timestamp"]} NOT NULL,
+    resolved_at {t["timestamp"]},
+    FOREIGN KEY (business_id, document_id)
+        REFERENCES documents(business_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id, matched_client_id)
+        REFERENCES clients(business_id, id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_document_client_candidate
+    ON document_client_candidates(business_id, document_id);
+CREATE INDEX IF NOT EXISTS idx_document_client_candidate_status
+    ON document_client_candidates(business_id, status, created_at);
+"""
+    )
+
+
+def _downgrade_inbound_email_documents(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_document_client_candidate_status")
+    conn.execute("DROP INDEX IF EXISTS uq_document_client_candidate")
+    conn.execute("DROP TABLE IF EXISTS document_client_candidates")
+    conn.execute("DROP INDEX IF EXISTS idx_inbound_email_message_status")
+    conn.execute("DROP INDEX IF EXISTS uq_inbound_email_message")
+    conn.execute("DROP TABLE IF EXISTS inbound_email_messages")
+    conn.execute("DROP INDEX IF EXISTS uq_inbound_email_route_token")
+    conn.execute("DROP TABLE IF EXISTS inbound_email_routes")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -3839,6 +3970,14 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_recoverable_onboarding),
     (50, "control_acceso_usuarios", _upgrade_user_access_control,
      _downgrade_user_access_control),
+    (51, "recuperacion_contrasena_gestoria",
+     _upgrade_gestoria_password_recovery,
+     _downgrade_gestoria_password_recovery),
+    (52, "documentos_por_correo",
+     _upgrade_inbound_email_documents,
+     _downgrade_inbound_email_documents),
+    (53, "material_o_mano_de_obra", _upgrade_line_kind,
+     _downgrade_line_kind),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

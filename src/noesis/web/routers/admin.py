@@ -101,6 +101,10 @@ def admin_account_support(request: Request, business_id: int):
             metadata={"grant_id": configuration_support["grant_id"]},
         )
     trial_ends = str((snapshot.get("business") or {}).get("trial_ends_at") or "")
+    cost_control = db.account_cost_control()
+    account_cost = next(
+        (row for row in cost_control["rows"] if row["id"] == business_id), None
+    )
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
         "trial_expired": bool(trial_ends) and trial_ends < date.today().isoformat(),
@@ -117,6 +121,8 @@ def admin_account_support(request: Request, business_id: int):
         "whatsapp_connections": db.list_whatsapp_connections(business_id),
         "document_support": document_support,
         "configuration_support": configuration_support,
+        "cost_control": cost_control,
+        "account_cost": account_cost,
         "admin_error": request.session.pop("admin_error", None),
         "admin_success": request.session.pop("admin_success", None),
     })
@@ -213,6 +219,40 @@ def admin_correct_document_metadata(
         request.session["admin_error"] = str(exc)
     return RedirectResponse(
         f"/admin/cuentas/{business_id}#document-metadata", status_code=303
+    )
+
+
+@router.post("/admin/cuentas/{business_id}/correos/{message_id}/reintentar")
+def admin_retry_failed_email(
+    request: Request, business_id: int, message_id: int
+):
+    """Reabre un único correo agotado; el scheduler conserva el envío durable."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        result = db.requeue_failed_email_message(business_id, message_id)
+        if not result:
+            raise ValueError("Ese correo no pertenece a esta cuenta.")
+        db.record_security_event(
+            "admin.email_delivery_requeued",
+            area="support",
+            actor_user_id=user["id"],
+            subject_business_id=business_id,
+            request_id=getattr(request.state, "request_id", None),
+            metadata={
+                "outbox_id": result["id"],
+                "previous_attempts": result["previous_attempts"],
+            },
+        )
+        request.session["admin_success"] = (
+            "Correo devuelto a la cola. El sistema volverá a intentarlo sin "
+            "duplicar el envío."
+        )
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+    return RedirectResponse(
+        f"/admin/cuentas/{business_id}#entregas", status_code=303
     )
 
 

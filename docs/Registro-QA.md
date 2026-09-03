@@ -1,5 +1,317 @@
 # Registro de QA
 
+## 2026-09-01 — fusión de 112 commits y comprobación de que no rompe nada
+
+### Qué se probó y con qué resultado
+
+- **Conflictos:** los siete resueltos a mano. Ningún marcador quedó en el árbol,
+  comprobado con búsqueda sobre `.py`, `.md`, `.json` y `.html`.
+- **Migraciones:** numeración correlativa y sin duplicados, 53 migraciones,
+  `LATEST_VERSION = 53`. La local se renumeró de la 40 a la 53 porque el remoto
+  ya ocupaba la 40 con `demo_comercial`.
+- **Saneado de plantillas:** un salto de línea se convierte en « · » y un valor
+  de 2000 caracteres se corta en 1024, que es el tope de Meta. El tope lo aporta
+  la rama local; el separador visible, el remoto.
+- **Contrato de plantillas:** los nueve cuerpos declarados coinciden con el
+  runbook y con el número de valores que envía el código.
+  `python -m noesis.whatsapp_templates` responde «todos los envíos encajan».
+- **Plantillas por oficio:** las ocho pruebas siguen verdes sobre el código
+  fusionado, incluidas la página y su API.
+- **Suite completa:** 577 pasan, 132 subtests. Ruff verde. Fuente de verdad verde.
+
+### Qué no se ha probado
+
+- **Los 5 fallos que persisten son anteriores a esta fusión.** Se reprodujeron en
+  un árbol de trabajo limpio sobre `origin/main`, sin nada local: cuatro de
+  facturación por mes, que dependen de la fecha del sistema, y uno de
+  rasterización de PDF escaneado, que necesita dependencias de OCR ausentes en
+  este equipo. No se han corregido porque no son de este trabajo, pero conviene
+  mirarlos: si son de fecha, volverán a aparecer solos.
+- **Nada contra Meta, Stripe ni la AEAT reales.** Sigue todo sin credenciales.
+- **La migración 53 no se ha aplicado a PostgreSQL**, solo a SQLite en pruebas.
+
+## 2026-08-31 — manual editorial y guiones de contenido
+
+- **Cobertura:** 38 páginas con estrategia, audiencia, canales, mapa de 24 piezas,
+  guion orientativo, rodaje, texto en pantalla, copy, CTA, métrica y límite para
+  cada contenido; añade cinco campañas, calendario mensual, producción y medición.
+- **Integridad:** DOCX abre como paquete OOXML válido, con 549 párrafos, 124 tablas,
+  una imagen y una sección; el generador conserva una fuente reproducible junto al
+  entregable.
+- **Revisión visual:** las 38 páginas se renderizaron a PNG y se revisaron sin texto
+  cortado, desbordamiento, títulos truncados ni saltos accidentales. Las páginas de
+  continuación de mapa, campañas y calendario son intencionadas.
+- **Accesibilidad:** cero incidencias altas tras añadir título y descripción al
+  logotipo; 39 tablas de datos repiten encabezado. Las 85 advertencias medias son
+  fichas de dos columnas y bloques visuales sin fila de encabezado semántica.
+- **Verdad comercial:** demos, WhatsApp/Meta, pilotos, testimonios y cifras quedan
+  rotulados o bloqueados hasta disponer de validación y permiso. El manual no promete
+  automatización fiscal ni resultados comerciales no medidos.
+
+## 2026-08-31 — avatar social sobre verde bosque
+
+- **Alcance:** solo cambia el fondo de los avatares sociales de teal `#2e8b74` a
+  verde bosque `#14463b`; símbolo, geometría, contorno exclusivamente exterior,
+  portadas, logo maestro e iconos de aplicación permanecen intactos.
+- **Integridad:** manifiesto 1.2.2 con 49/49 PNG válidos; las cinco copias operativas
+  coinciden por SHA-256 con sus exportaciones de Instagram, Facebook, LinkedIn y
+  YouTube.
+- **Revisión visual:** comprobadas las exportaciones 1080 × 1080 y 400 × 400 y las
+  ocho páginas de la guía Word. El fondo es inequívocamente verde bosque y la estrella
+  conserva el interior oficial sin trazos internos.
+- **Límite:** la máscara de cada red se comprueba finalmente al crear los perfiles.
+
+## 2026-08-31 — contorno exclusivamente exterior
+
+- **Referencia:** el interior coincide con `sources/noesis-mark-master.svg`: polígono
+  exterior teal `#2e8b74`, polígono interior y círculo bosque `#14463b`, y punto
+  crema `#f4f1e8`.
+- **Diferencia social:** el fondo es teal y solo el polígono exterior incorpora
+  `stroke="#15211c"`; el polígono interior y los dos círculos no contienen trazo.
+- **Integridad:** manifiesto 1.2.1 con 49/49 PNG válidos; las cinco copias operativas
+  coinciden por SHA-256 con Instagram, Facebook, LinkedIn y YouTube.
+- **Revisión visual:** comprobadas las exportaciones 1080 × 1080 y 400 × 400. La
+  estrella queda centrada, sin placa blanca, con el interior reconocible y sin líneas
+  internas añadidas. La guía Word conserva ocho páginas limpias tras render completo.
+- **Límite:** la máscara de cada red se comprueba finalmente al crear los perfiles.
+
+## 2026-08-31 — avatar social sin placa blanca
+
+- **Geometría:** estrella centrada al 64 % del lienzo, frente al 29,8 % aproximado
+  del avatar anterior; fondo y relleno teal `#2e8b74`, contorno tinta `#15211c` y
+  punto crema central. El contenido queda dentro de la zona segura circular.
+- **Alcance:** cambian Instagram, Facebook, LinkedIn y YouTube, además de las copias
+  listas para subir y la reserva de TikTok. No cambian portadas, SVG maestro,
+  lockups ni iconos PWA/app.
+- **Integridad:** el generador conserva 49 PNG, manifiesto 1.2, tamaños y alfa; cada
+  copia de `redes-sociales/` coincide por SHA-256 con su activo de origen.
+- **Revisión visual:** avatar de 1080 × 1080 y versión de 400 × 400 revisados sin
+  recortes, placa residual, deformación ni pérdida del contorno en tamaño menor. La
+  guía Word actualizada conserva ocho páginas limpias tras el render completo.
+- **Límite:** el recorte final dentro de Instagram, Facebook y LinkedIn se comprueba
+  al subirlo; la revisión local valida el archivo, no la interfaz futura de la red.
+
+## 2026-08-31 — perfiles sociales listos para configurar
+
+- **Alcance:** Instagram, Facebook y LinkedIn tienen carpeta propia con imagen de
+  perfil, portada donde la plataforma la utiliza, descripción exacta y controles de
+  publicación. YouTube y TikTok quedan únicamente como reserva de marca.
+- **Integridad:** las copias PNG coinciden por SHA-256 con los activos deterministas
+  del kit principal; se verifican tamaños 1080 × 1080, 1640 × 856, 400 × 400,
+  4200 × 700 y 800 × 800 según su destino.
+- **Documento:** la guía Word se abre como OOXML válido, contiene ocho páginas tras
+  renderizado y todas fueron revisadas: no hay solapes, cortes, desbordamientos,
+  imágenes deformadas ni páginas accidentales en blanco.
+- **Contenido:** los textos usan Noesis como marca y `@bynoesis` como usuario; el eje
+  es tiempo, orden y control. No reaparece el posicionamiento centrado únicamente en
+  cobros ni quedan marcadores por rellenar.
+- **Límite:** no se afirma que los perfiles estén creados ni que el usuario esté
+  disponible. El recorte final, botón, URL, doble factor y segundo administrador se
+  validan dentro de cada plataforma por los fundadores.
+
+## 2026-08-31 — corrección del posicionamiento de marca
+
+- **Fuente de verdad usada:** `Plan-maestro-Noesis.md` fija «Noesis lleva la oficina
+  mientras tú haces el trabajo» y `design/PRODUCT_PRINCIPLES.md` fija «Haz tu
+  trabajo; Noesis te ordena el negocio». Cobros, facturación y margen quedan como
+  pruebas concretas, no como territorio único de marca.
+- **Exportaciones:** portada LinkedIn 4200 × 700, Facebook 1640 × 856, Open Graph
+  1200 × 630 y tablero 1800 × 1200 regenerados con el nuevo eje de tiempo, menos
+  papeleo y control. La geometría y los colores del logo no cambian.
+- **Integridad:** 49/49 PNG se abren, coinciden con ancho, alto, alfa y SHA-256 del
+  manifiesto; 14/14 SVG parsean; dos ejecuciones producen el mismo manifiesto.
+- **Revisión visual:** tablero y portada de LinkedIn no presentan recortes,
+  deformación, solapes ni pérdida de legibilidad. El PDF de estrategia conserva 13
+  páginas limpias tras sustituir la tesis y la jerarquía de mensajes.
+- **Dependencias:** `sharp` 0.35.4 en el paquete aislado de construcción; `npm audit`
+  informa cero vulnerabilidades. No se añade ninguna dependencia al producto.
+- **Límite:** el lenguaje maestro está alineado; ejemplos, campañas y contenido
+  futuro deberán aportar evidencia real de tiempo, tareas, facturas, documentos,
+  margen o dinero sin confundir una prueba con toda la promesa.
+
+## 2026-08-31 — paquete de marca y exportaciones sociales
+
+- **Alcance:** se conserva la geometría de `noesis-mark.svg` y se formalizan símbolo,
+  wordmark, lockups primario/inverso/monocromo, versiones transparentes, composiciones
+  con fondo, avatares, portadas y fondos editables para contenido.
+- **Exportación:** el generador produjo 49 PNG y originales SVG con Fraunces
+  autoalojada. `manifest.json` registra dimensiones, presencia de alfa, finalidad y
+  SHA-256 de cada PNG.
+- **Pruebas técnicas:** todos los PNG se abrieron con Sharp y coincidieron con sus
+  dimensiones declaradas; todos los SVG se parsearon como XML; los archivos sociales
+  quedan por debajo de 3 MB y la regeneración completa terminó sin error.
+- **Revisión visual:** tablero general a 1800 × 1200, lámina de paleta a 1600 × 1000,
+  avatar a 1080 × 1080 y portada LinkedIn a 4200 × 700 revisados sin recortes, texto
+  perdido, fondo accidental ni deformación del símbolo. El avatar mantiene margen
+  suficiente para máscara circular.
+- **Límite:** no se ha subido nada a redes ni se ha observado el recorte real de cada
+  plataforma. Esa comprobación se hace al crear los perfiles; si una interfaz cambia,
+  se ajusta la composición social, no el logo maestro.
+
+## 2026-08-27 — catch-all documental e identidad segura de clientes
+
+- **Alcance:** migración 52, consumidor IMAP apagado por defecto, dirección opaca
+  de 128 bits por negocio, deduplicación durable sin contenido, scheduler acotado y
+  entrada por el mismo servicio que Web/WhatsApp. La pantalla Documentos solo muestra
+  la dirección cuando la integración está habilitada y completa.
+- **Aislamiento y privacidad:** mensajes sin ruta, con ruta desconocida o con dos
+  rutas fallan cerrados. No se persisten remitente, asunto, cuerpo ni correo original;
+  el export RGPD omite token y huella, y el borrado de negocio cubre las tablas nuevas.
+- **Clientes:** una factura emitida reutiliza una coincidencia exacta por NIF o nombre;
+  una identidad nueva queda pendiente. El titular puede corregir nombre/NIF antes de
+  confirmar el alta y el enlace al documento dentro de una transacción. La creación
+  explícita de facturas también prioriza NIF para no duplicar un cliente habitual.
+- **Fallo seguro:** validación, límites, malware, OCR y clasificación son compartidos.
+  Si ClamAV es obligatorio y no responde, el correo queda para reintento; no se marca
+  como leído ni se archiva sin escaneo.
+- **Regresiones:** 7/7 contratos nuevos cubren aislamiento entre dos empresas,
+  destinatario ambiguo, duplicado, caída transitoria del escáner, NIF conocido,
+  alta pendiente/corregible y reutilización explícita. Suite completa anterior más
+  esos contratos y repetición final completa **550/550** en 477,3 s; ciclo de
+  migración focalizado, Ruff, compilación, verdad documental y `git diff --check`
+  verdes.
+- **Límite externo:** todavía no se ha activado Hostinger. Falta demostrar en un
+  buzón real que el catch-all conserva `Delivered-To`/destinatario original, recorrer
+  PDF y foto y comprobar la experiencia móvil antes de dejarlo encendido.
+
+## 2026-08-26 — rentabilidad operativa por cuenta
+
+- **Alcance:** nueva lectura interna mensual por cuenta en el centro de mando y en
+  su ficha privada. Usa únicamente plan/estado, metadatos de consumo y entregas y
+  costes reales append-only; no abre clientes, mensajes, facturas ni documentos.
+- **Criterio financiero:** IA se distribuye por coste medido, Meta por plantillas,
+  correo por volumen, pagos por ingreso comprometido y costes compartidos por cuenta
+  no demo. Una categoría sin driver permanece sin asignar y la cobertura lo revela.
+- **Alertas:** entrega fallida, acciones avanzadas agotadas, consumo al 80 %, coste
+  superior al ingreso o margen inferior al 60 %. Demos quedan separadas.
+- **Corrección adicional:** una extracción OCR local ya no suma 0,014 € ficticios;
+  solo se reconoce coste de proveedor medido o factura real del libro CFO.
+- **Regresiones y validación:** reparto de 80 € entre dos cuentas reconcilia al 100 %,
+  alerta de margen/consumo y OCR local sin coste inventado; 4/4 contratos centrados,
+  suite completa **543/543**, Ruff y `git diff --check` verdes.
+- **Límite:** la exactitud económica depende de cargar costes reales y de validar
+  drivers/umbrales con el piloto. Falta medir latencia y correcciones por
+  tipo de acción antes de fijar SLA o automatizar decisiones comerciales.
+
+## 2026-08-26 — restauración PostgreSQL con facturas inmutables
+
+- **Hallazgo en producción:** `noesis-restore-check` falló de forma segura. La última
+  copia marcada como recuperable era del 27-jul y declaraba esquema 31/51; las copias
+  diarias recientes existían, pero su verificación terminaba en error porque el
+  trigger de líneas inmutables rechazaba reconstruir una factura ya emitida.
+- **Corrección:** la restauración deshabilita temporalmente `TRIGGER USER` por tabla
+  únicamente en el esquema/transacción descartables. Las FK y restricciones internas
+  siguen activas; tras insertar y alinear secuencias se reactivan los triggers antes
+  de comparar esquema, tablas y recuentos. Un error revierte la transacción y el
+  esquema se elimina siempre.
+- **Regresión real:** el humo PostgreSQL ahora crea una copia después de emitir una
+  factura con líneas, exige que quede marcada `ok` y vuelve a ejecutar el simulacro
+  independiente. Así el fallo que producción escondía no puede volver con CI verde.
+- **Validación:** 5/5 pruebas de backup SQLite/adaptadores, Ruff y compilación
+  verdes. El humo PostgreSQL de GitHub creó y restauró un conjunto con facturas
+  emitidas. Producción en `d55be0ae6673` generó después
+  `noesis-20260826-101725-080641.dump.gz`, lo marcó `ok` sin error y el simulacro
+  independiente terminó `ok` en 3,22 s. No se abrió ni descargó contenido.
+- **Límite restante:** el artefacto continúa en el volumen del mismo proveedor; falta
+  S3 privado y una restauración desde otra infraestructura para demostrar RPO/RTO
+  ante pérdida total de Railway.
+
+## 2026-08-26 — recuperación atómica del titular
+
+- **Alcance:** endurecimiento del flujo existente `/recuperar` y `/restablecer`, sin
+  cambiar la pantalla ni el correo que conoce el cliente.
+- **Garantías:** enlace nuevo invalida anteriores; token, contraseña y
+  `session_version` cambian en una transacción; el token es de un solo uso; la
+  respuesta de solicitud no enumera cuentas; los eventos no contienen identidad ni
+  secreto.
+- **Regresiones:** dos contratos HTTP cubren doble solicitud, enlace antiguo, uso
+  único, nueva contraseña, revocación de una sesión abierta y trazabilidad. Verdes.
+- **Validación local:** 2/2 contratos centrados y suite estándar completa **541/541**
+  verdes; controles estáticos, secretos y Bandit se ejecutan como barrera final.
+  Quedan CI y PostgreSQL después del `push`.
+
+## 2026-08-26 — reintento manual y privado de correo fallido
+
+- **Alcance:** una acción POST de administración devuelve a la outbox un correo que
+  ya agotó sus intentos; el scheduler sigue siendo el único emisor.
+- **Aislamiento y privacidad:** la actualización exige `id + business_id + failed`
+  bajo bloqueo; otro negocio, un segundo clic, un envío activo o uno ya enviado no
+  se pueden reencolar. La pantalla y el evento omiten destinatario, asunto y cuerpo.
+- **Regresión:** el contrato HTTP comprueba botón, aislamiento, no exposición,
+  reinicio de intentos, idempotencia práctica y un solo evento encadenado. Verde.
+- **Validación local:** regresión específica y suite estándar completa **539/539**
+  verdes. Ruff, compilación, fuente de verdad, secretos, Bandit y `diff --check` se
+  ejecutan como barrera final; CI/PostgreSQL quedan para después del `push`.
+
+## 2026-08-26 — recuperación segura de contraseña para gestorías
+
+- **Alcance:** rutas y pantallas propias de recuperación profesional, migración 51,
+  persistencia separada de usuarios de negocio y envío mediante la outbox durable.
+- **Contratos de seguridad:** correo existente e inexistente reciben la misma
+  respuesta; solo una cuenta activa encola correo; el token nunca vuelve al HTML ni
+  se guarda en claro; pedir uno nuevo invalida el anterior; consumo y cambio de clave
+  ocurren en una transacción; caducados y reutilizados fallan cerrados; todas las
+  sesiones anteriores se invalidan y el MFA permanece activo.
+- **Pruebas:** 3 regresiones específicas y las 4 de MFA profesional están verdes.
+  Suite estándar completa **538/538**, Ruff, compilación, fuente de verdad y
+  `git diff --check` verdes. Detector de secretos, Bandit y humo PostgreSQL quedan
+  pendientes antes de publicar.
+- **Límite externo:** falta comprobar llegada y entregabilidad con un buzón real y
+  recorrer el segundo factor con un autenticador físico después del despliegue.
+
+## 2026-08-26 — puerta externa automática de producción
+
+- **Alcance:** nueva comprobación sin credenciales para `/health`, `/ready`, release,
+  esquema, cabeceras de seguridad, sitemap, 14 páginas públicas, H1, canonical,
+  indexabilidad y marcadores legales. No abre sesiones, no usa datos de clientes y no
+  ejecuta acciones de negocio.
+- **Regresiones automatizadas:** cinco contratos cubren release completo, release
+  atrasado respecto de `main`, esquema a medias, marcador legal y pérdida de HSTS.
+  La suite completa queda en **535/535**;
+  Ruff, detector de secretos, fuente de verdad y `git diff --check` están verdes. El
+  workflow programado usa el esquema de `project-state.json`, por lo que una
+  migración futura no deja un número duplicado.
+- **Producción real:** `noesis-production-check --json` respondió verde contra
+  `https://bynoesis.com`: release `6d0e0feba7d6`, esquema 50, 14 páginas públicas y
+  las ocho familias de cabeceras/CSP exigidas.
+- **Límite:** un workflow cada seis horas detecta una regresión, pero no garantiza un
+  SLA ni una llamada de guardia; falta monitor externo 24/7 y procedimiento de
+  incidente antes de abrir de forma masiva.
+
+## 2026-08-26 — auditoría de la semana y reparación del lockfile
+
+- **Punto de partida:** `main` local estaba limpio en `5ae1541`; después de
+  `git fetch` se detectaron 20 commits ya publicados hasta `550262a` y se aplicó
+  un avance rápido, sin crear un merge ni duplicar commits.
+- **Incidencia encontrada:** los runs de CI de los commits nuevos fallaban en
+  `uv sync --locked --extra security --extra test`. El cambio que hizo portable
+  `analysis/build_modelo_economico.py` añadió el extra `analysis` con `openpyxl` a
+  `pyproject.toml`, pero no regeneró `uv.lock`.
+- **Corrección:** lock regenerado con `py -m uv lock`; añade `openpyxl 3.1.5` y su
+  dependencia `et-xmlfile 2.0.0`, además de reflejar el extra `analysis` del
+  proyecto. No se ha cambiado ninguna dependencia de runtime de Noesis.
+- **Segunda barrera revelada por CI:** una vez reparado el lock, `pip-audit` alcanzó
+  su paso y rechazó `pip 26.1.2` por `PYSEC-2026-3721`; la versión corregida indicada
+  por el auditor es 26.2. El extra `security` fija `pip>=26.2,<27` para que la propia
+  cadena de auditoría no vuelva a resolver una versión vulnerable.
+- **Tercera barrera revelada por CI:** al superar la auditoría, `detect-secrets`
+  alcanzó por primera vez una credencial ficticia de backup añadida a una prueba el
+  17 de agosto. Es un valor local y no funcional. Se marca únicamente esa línea con
+  `pragma: allowlist secret`, la mitigación indicada por el propio hook; no se amplía
+  la baseline, no se excluye el archivo y no se reduce la detección del repositorio.
+- **Validación local:** instalación estricta desde el lock correcta; Ruff y
+  `scripts/check_project_truth.py` verdes; suite estándar de `unittest` completa,
+  **530/530** en 809,6 s. Los logs de caídas de IA, Stripe, WhatsApp, correo,
+  Veri*Factu y backups son escenarios simulados esperados por las pruebas.
+- **Modelo económico:** el generador portable produce 17 hojas y coincide con el
+  libro publicado salvo `Calculadora!B6:B8`: el artefacto conserva los valores de
+  ejemplo 1/5/2 que introdujo el founder, mientras que una regeneración parte de
+  0/0/0. Es la diferencia intencionada ya registrada el 19 de agosto, no una fórmula
+  rota ni una regresión.
+- **Límit:** `project-state.json` conserva el recompte verificat de 531 perquè el CI
+  afegeix comprovacions de migració i PostgreSQL fora de la descoberta estàndard.
+  La validació externa definitiva és el run de GitHub Actions després del `push`.
+
 ## 2026-08-20 — corregido el fallo de parametros multilinea de WhatsApp
 
 - **El fallo:** Meta rechaza un parametro de plantilla con salto de linea, tabulador o
@@ -87,6 +399,39 @@
 - **Alcance:** 95 pruebas de administracion, soporte, seguridad, sesion y login en
   verde; `ruff` limpio.
 
+## 2026-08-20 — canal de Meta revisado y plantillas por oficio con pantalla
+
+### Qué se probó y con qué resultado
+
+- **Plantillas por oficio:** el sector es texto libre, así que se comprobó que
+  «Fontanero autónomo», «REFORMAS INTEGRALES» y «lampistería» caen en el oficio
+  correcto y que «consultoría de marca» no cae en ninguno. Cada partida conserva su
+  IVA y si es material o mano de obra; el reparto por tipo cuadra con el total.
+- **No duplicar:** cargar el catálogo de fontanería dos veces crea las partidas la
+  primera vez y ninguna la segunda; el número de productos no se mueve.
+- **Aislamiento:** cargar el catálogo en un negocio no marca ni una partida como
+  «ya la tienes» en otro.
+- **Pantalla y API:** con sesión iniciada, `/b/{id}/oficios` responde 200,
+  `/api/{id}/oficios/plantillas` devuelve los cinco oficios y el sugerido, y la
+  carga desde la propia página deja las partidas en el catálogo real.
+- **Contrato de las plantillas de Meta:** ninguna de las nueve declaradas tiene el
+  cuerpo formado solo por variables ni huecos descolocados, y todas son *utility*.
+- **Saneado de valores:** un salto de línea, un tabulador o seis espacios seguidos
+  dentro de un valor se aplanan antes de encolar, y un valor larguísimo se corta en
+  1024 caracteres. Al encolar `noesis_factura_lista` con «Ana\nGarcía», el outbox
+  guarda «Ana García».
+- **Pruebas:** suite completa **437 pasan, 85 subtests, 0 fallos**. Ruff verde.
+  Fuente de verdad del proyecto verde.
+
+### Qué no se ha probado
+
+- **Nada contra Meta real**: sigue sin credenciales, así que no hay entrega,
+  aprobación de plantilla ni estado de lectura verificados. Todo lo anterior es
+  comportamiento propio con la API simulada.
+- **Cuánto tarda el webhook** con una foto real de ticket: es la medida que decide
+  si hay que contestar 200 antes de procesar. Requiere número real.
+- **Los cinco proactivos al titular** siguen mandando el mensaje entero en un hueco.
+  Está detectado, documentado y con cuerpo alternativo escrito, pero no corregido.
 ## 2026-08-19 — control de acceso por persona (esquema 50)
 
 - **Que se anade:** `users.is_active`, `suspended_at` y `access_note`; suspension y
@@ -1007,6 +1352,74 @@
 - Railway todavía debe desplegar el candidato y demostrar la huella por HTTP.
 - No se han usado credenciales de Brevo ni Stripe; entregabilidad e IVA real se
   validarán en la fase externa.
+## 2026-08-02 (3) — catálogos por oficio y aviso del tipo reducido en obras de vivienda
+
+### Qué se probó y con qué resultado
+
+- **Migración 38**: `invoice_lines` gana `kind` ('servicio' o 'producto'). Sin ese dato
+  no se puede saber qué parte de una factura es material, que es lo que decide si se
+  sostiene el 10%. Las líneas ya emitidas quedan como 'servicio': **no se reinterpreta
+  una factura cerrada**. Verificado el ciclo completo de migración y el roundtrip de
+  bajada y subida, que al principio fallaba por intentar añadir la columna dos veces.
+- **Catálogos por oficio** (`trades.py`): fontanería 10, electricidad 9, reformas 9,
+  limpieza 5 y jardinería 6 conceptos, cada uno con su tipo y su IVA habitual. Cargar
+  dos veces el mismo oficio **no duplica** nada y un oficio inexistente da error claro.
+  Probado por API: `POST /api/{id}/oficios/reformas/cargar` creó los 9.
+- **Aviso del 40%** (art. 91.Uno.2.10º LIVA), probado en tres casos reales:
+  material al 28,6% → no avisa; material al 60% → avisa; factura entera al 21% → no
+  avisa, porque la regla no aplica y no hay que molestar.
+- **El aviso no decide**: comprobado que tras avisar los tipos siguen como los puso el
+  titular (10% y 21%) y **la factura se emite igualmente** (`2026/0002`). Noesis no
+  puede conocer las otras condiciones del reducido —vivienda de particular, terminada
+  hace más de dos años—, así que la elección es del autónomo.
+- El aviso viaja al detalle de la factura (`aviso_fiscal`) y al chat al crear el
+  borrador.
+- **Suite completa: 408 pasan, 71 subtests, ningún fallo.**
+
+### Qué no se ha probado ni validado
+
+- **La regla del 40% no la ha revisado un asesor fiscal.** Está implementada como
+  advertencia informativa según el tipo general; hay supuestos particulares. Debe
+  validarse antes de presentarla como garantía de cumplimiento.
+- Los precios de los catálogos son orientativos y no se han contrastado con tarifas
+  reales de mercado; están para ajustarlos con el cliente en la puesta en marcha.
+- La migración 38 se probó en SQLite. **Falta ejecutarla en PostgreSQL** antes de
+  desplegar.
+
+## 2026-08-02 (2) — el error de emisión ofrece la salida legal, y prueba de concurrencia real
+
+### Qué se probó y con qué resultado
+
+- **«No puedo emitir» sin decir qué alternativa hay.** Al emitir una factura completa sin
+  NIF ni domicilio del cliente, el mensaje enumeraba lo que falta y ahí terminaba. Si el
+  cliente es un particular y el importe cabe en el límite general de 400 € del
+  RD 1619/2012, la factura simplificada es una salida legal y el producto ya la soporta.
+  Ahora el aviso la ofrece **solo cuando procede**: comprobado que con 150 € la sugiere y
+  con 900 € no, porque ahí no sería legal.
+- **El límite de 400 € estaba escrito dos veces** (`db.issue_invoice` y `tools`). Unificado
+  en `_fits_simplified_invoice` para que aviso y validación no puedan contradecirse.
+- **Ciclo completo de simplificada**, verificado con servidor real: «ticket de venta a
+  Particular por grifo 150 €» crea F2 con el IVA calculado hacia atrás (base 123,97 +
+  IVA 26,03), se emite **sin datos fiscales del destinatario** y recibe número de su
+  serie separada `T2026/0001`. Por encima de 400 € se rechaza al crearlo.
+- **Concurrencia de tres actores a la vez**, que era una duda abierta del fundador:
+  36 peticiones simultáneas mezclando al titular creando facturas, la gestoría abriendo
+  su portal y el trabajador su portal de fichaje. **Todas 200, ningún bloqueo de base de
+  datos, ninguna traza de error.**
+- **Numeración bajo emisión concurrente**, que es donde un fallo sería grave: 12 facturas
+  emitidas en paralelo mientras la gestoría descargaba. Resultado: `2026/0001` a
+  `2026/0013` **sin duplicados ni huecos**. La asignación de número es segura en
+  transacción.
+- **Portal del trabajador revisado**: `/t/{token}` con PIN, fichaje, trabajos del día,
+  tareas de proyecto, parte de trabajo, historial de 30 días y el aviso legal del
+  registro de jornada (art. 34.9 ET, conservación cuatro años). Responde 200.
+- **Suite completa: 400 pasan, 71 subtests, ningún fallo.**
+
+### Qué no se ha probado
+
+- La concurrencia se midió sobre SQLite con WAL. En producción con PostgreSQL el
+  comportamiento debería ser mejor, pero **no está medido en el entorno real**.
+- Sigue sin probarse nada que dependa de credenciales externas.
 
 ## 2026-08-02 — el chat web emite el borrador que él mismo te dice que emitas
 

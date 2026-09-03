@@ -2,11 +2,11 @@
 
 [![CI](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml/badge.svg)](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml)
 
-**Del trabajo terminado al dinero cobrado.** Noesis es el copiloto de negocio por
-WhatsApp para autónomos y pequeños negocios de servicios (fontaneros, electricistas,
-reformas, limpieza, jardinería…). Hablas con él por texto o audio y se ocupa de tu
-agenda, clientes, presupuestos, facturas y cobros — para que tú solo tengas que
-hacer tu trabajo.
+**Haz tu trabajo; Noesis te ordena el negocio.** Noesis es el copiloto de negocio
+por WhatsApp para autónomos y pequeños negocios de servicios (fontaneros,
+electricistas, reformas, limpieza, jardinería…). Hablas con él por texto o audio y
+lleva la oficina —agenda, clientes, presupuestos, facturas, documentos y cobros—
+para devolverte tiempo, claridad y control.
 
 > Estado actual: **SaaS multi-empresa en producción** en
 > [bynoesis.com](https://bynoesis.com) (Railway + Postgres, auto-deploy

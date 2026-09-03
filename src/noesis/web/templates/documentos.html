@@ -12,6 +12,22 @@
   </div>
 </div>
 
+{% if inbound_email_address %}
+<section class="card" style="margin-top:16px">
+  <div class="card-b" style="display:flex; gap:18px; align-items:center; justify-content:space-between; flex-wrap:wrap">
+    <div>
+      <div class="kicker">Entrada por correo</div>
+      <h2 style="margin:4px 0 6px">Reenvía aquí tus facturas</h2>
+      <p style="margin:0">Es una dirección privada de este negocio. Noesis guardará los adjuntos y te pedirá confirmar cualquier alta o dato fiscal.</p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+      <code id="inbound-email-address" style="overflow-wrap:anywhere; max-width:100%">{{ inbound_email_address }}</code>
+      <button class="btn" type="button" onclick="copyInboundEmail()">Copiar dirección</button>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <div class="card" id="gestoria-card" style="margin-top:16px; display:none">
   <div class="card-h"><h2>Tu gestoría te pide</h2><span class="hint">solicitudes abiertas</span></div>
   <div class="card-b" id="g-requests"></div>
@@ -96,9 +112,9 @@
   <div class="card-h"><h2>Revisar lectura</h2><span class="hint" id="r-confidence"></span></div>
   <div class="card-b">
     <div class="grid g4">
-      <div><label class="fld">Proveedor</label>
+      <div><label class="fld" id="r-party-label">Proveedor</label>
         <input class="input" id="r-supplier"></div>
-      <div><label class="fld">NIF proveedor</label>
+      <div><label class="fld" id="r-party-nif-label">NIF proveedor</label>
         <input class="input" id="r-supplier-nif"></div>
       <div><label class="fld">Nº factura</label>
         <input class="input" id="r-number"></div>
@@ -116,8 +132,9 @@
         <input class="input" id="r-total" type="number" step="0.01"></div>
     </div>
     <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
-      <button class="btn primary" onclick="confirmReceived()">Confirmar como factura recibida</button>
-      <button class="btn" onclick="markKind('factura_emitida')">Es una factura mía (emitida)</button>
+      <button class="btn primary" id="r-confirm-received" onclick="confirmReceived()">Confirmar como factura recibida</button>
+      <button class="btn primary" id="r-confirm-client" style="display:none" onclick="confirmClientCandidate()">Crear cliente y relacionar</button>
+      <button class="btn" id="r-mark-issued" onclick="markKind('factura_emitida')">Es una factura mía (emitida)</button>
       <button class="btn" onclick="hideReview()">Cancelar</button>
     </div>
     <div id="r-msg" class="meta" style="margin-top:10px"></div>
@@ -146,6 +163,7 @@ let DOCUMENT_ARCHIVE = {documents:[], document_counts:{}};
 let DOCUMENT_VIEW = 'todos';
 let selectedDocumentId = null;
 let selectedUploadFile = null;
+let reviewClientResolution = null;
 const DOCUMENT_VIEWS = [
   {key:'todos', label:'Todo el archivo', caption:'Vista completa'},
   {key:'ingresos', label:'Ingresos', caption:'Facturas emitidas'},
@@ -283,7 +301,9 @@ function paintDocuments() {
       actions.push(`<button class="btn sm" title="Marcar como enviado a gestoría" onclick="setStatus(${d.id},'enviado_gestoria')">Enviar a gestoría</button>`);
     }
     actions.push(`<button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button>`);
-    const context=[d.client_name,d.project_name].filter(Boolean).map(esc).join(' · ');
+    const proposed=d.proposed_client_status==='pending'&&d.proposed_client_name
+      ?`Cliente por confirmar: ${d.proposed_client_name}`:'';
+    const context=[d.client_name,d.project_name,proposed].filter(Boolean).map(esc).join(' · ');
     return `<article class="document-file-row ${selectedDocumentId===d.id?'selected':''}">
       <button class="document-file-open" onclick="showPreview(${d.id})" aria-label="Previsualizar ${esc(d.filename)}">
         <span class="document-file-kind">${d.mime==='application/pdf'?'PDF':String(d.mime||'').startsWith('image/')?'IMG':'DOC'}</span>
@@ -402,8 +422,13 @@ async function readDoc(id) {
     return;
   }
   reviewDocId = id;
-  el('r-supplier').value = draft.supplier || '';
-  el('r-supplier-nif').value = draft.supplier_nif || '';
+  const emitted=draft.direction==='emitida';
+  reviewClientResolution=draft.client_resolution||null;
+  el('r-msg').textContent='';
+  el('r-party-label').textContent=emitted?'Cliente detectado':'Proveedor';
+  el('r-party-nif-label').textContent=emitted?'NIF del cliente':'NIF proveedor';
+  el('r-supplier').value = emitted ? (draft.customer || '') : (draft.supplier || '');
+  el('r-supplier-nif').value = emitted ? (draft.customer_nif || '') : (draft.supplier_nif || '');
   el('r-number').value = draft.number || '';
   el('r-issued').value = draft.issued_on || '';
   el('r-base').value = draft.base ?? '';
@@ -412,12 +437,54 @@ async function readDoc(id) {
   el('r-total').value = draft.total ?? '';
   el('r-confidence').textContent = (draft.confidence ? `la IA está un ${draft.confidence}% segura` : 'revisa los datos')
     + (draft.direction === 'emitida' ? ' · parece EMITIDA por ti' : draft.direction === 'recibida' ? ' · parece RECIBIDA' : '');
+  el('r-confirm-received').style.display=emitted?'none':'';
+  el('r-mark-issued').style.display=emitted?'none':'';
+  el('r-confirm-client').style.display=(emitted&&reviewClientResolution?.status==='pending')?'':'none';
+  if(emitted&&reviewClientResolution?.status==='confirmed') {
+    el('r-msg').textContent=`Cliente relacionado: ${reviewClientResolution.client_name||draft.customer}.`;
+  } else if(emitted&&reviewClientResolution?.status==='ambiguous') {
+    el('r-msg').textContent=reviewClientResolution.message;
+  } else if(emitted&&reviewClientResolution?.status==='pending') {
+    el('r-msg').textContent='He encontrado un cliente nuevo. No lo crearé hasta que lo confirmes.';
+  }
   el('review-card').style.display = '';
   el('review-card').scrollIntoView({ behavior: 'smooth' });
   renderList();
 }
 
-function hideReview() { el('review-card').style.display = 'none'; reviewDocId = null; }
+function hideReview() {
+  el('review-card').style.display='none';
+  el('r-msg').textContent='';
+  reviewDocId=null;
+  reviewClientResolution=null;
+}
+
+async function copyInboundEmail() {
+  const node=el('inbound-email-address');
+  if(!node) return;
+  try {
+    await navigator.clipboard.writeText(node.textContent.trim());
+    el('d-msg').textContent='Dirección de correo copiada.';
+  } catch(_e) {
+    window.prompt('Copia esta dirección:', node.textContent.trim());
+  }
+}
+
+async function confirmClientCandidate() {
+  if(!reviewDocId) return;
+  const name=el('r-supplier').value.trim();
+  if(!confirm(`¿Crear o relacionar a ${name} como cliente de este negocio?`)) return;
+  try {
+    const result=await apiPost(`/documents/${reviewDocId}/client-candidate/confirm`,{
+      name,
+      nif:el('r-supplier-nif').value.trim()
+    });
+    el('r-msg').textContent=`Hecho. ${result.client.name} ya está en Clientes y relacionado con el documento.`;
+    el('r-confirm-client').style.display='none';
+    reviewClientResolution={status:'confirmed',client_id:result.client.id,client_name:result.client.name};
+    renderList();
+  } catch(e) { el('r-msg').textContent=e.message; }
+}
 
 async function confirmReceived() {
   if (!reviewDocId) return;

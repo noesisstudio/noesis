@@ -45,14 +45,17 @@
   `BACKUP_S3_REGION`, que en `config.py` toma `us-east-1` por defecto y replicaría la
   base entera a Virginia sin base de transferencia declarada. Ninguna de las cuatro
   depende del abogado ni de la constitución.
-- [ ] Cerrar los seis bloqueos de RGPD detallados en [[RGPD-estado-y-plan]] antes
+- [ ] Cerrar los siete bloqueos de RGPD detallados en [[RGPD-estado-y-plan]] antes
   del primer cliente de pago. Tres son afirmaciones publicadas que hoy no son
   ciertas: la tabla de subencargados omite Stripe, Google y Cal.com y solo pinta el
   proveedor de correo si la variable está configurada; `site_contacto.html` incrusta
   un iframe de Cal.com mientras `cookies.html` afirma que no intervienen empresas
   ajenas y que no hace falta banner; y `/cumplimiento` dice que Noesis se integra con
   un sistema homologado de un tercero cuando Veri\*Factu es desarrollo propio. Los
-  otros tres son carencias: `delete_business_cascade` remite a una «baja con
+  Antes que todos ellos va Groq: `adapters/transcription.py` envía audio a
+  `api.groq.com` sin estar declarado como subencargado, así que basta configurar
+  `GROQ_API_KEY` para incumplir el propio contrato; hay que declararlo o retirarlo.
+  Los otros tres son carencias: `delete_business_cascade` remite a una «baja con
   conservación fiscal» que no existe, nada purga una cuenta cancelada pese a que la
   política promete conservar solo mientras esté activa, y falta el registro de
   actividades del art. 30. Quitar el iframe, completar la tabla de subencargados con
@@ -100,6 +103,19 @@
   El motor multicanal, la bandeja y el alta manual auditada desde administración ya
   están construidos; falta Embedded Signup para autoservicio y la prueba extremo a
   extremo con números reales.
+- [ ] **App Review de Meta para `whatsapp_business_management` en Advanced access.**
+  Sin él, la API no puede operar sobre la WABA de un cliente aunque la comparta a
+  mano: devuelve error 200. Afecta solo al canal comercial; el número central
+  funciona con Standard access. `Meta-Verificacion` dice hoy que la revisión no
+  hace falta y hay que corregirlo. Confirmar con soporte de Meta y, si se alarga,
+  el plan B es un BSP para los números de cliente. Detalle en [[Ruta-legal]].
+- [ ] Medir cuánto tarda el webhook de WhatsApp con una foto real: hoy responde
+  cuando ha terminado descarga, OCR, extracción y respuesta. Si se pasa del tiempo
+  que Meta espera, contestar 200 al instante y procesar el medio aparte.
+- [ ] Confirmar la versión vigente de la Graph API (`META_GRAPH_VERSION`, hoy v23.0)
+  y rehacer el margen por mensaje con la tarifa actual: el cálculo de
+  [[Unit-economics-y-cerebro-interno]] usa el modelo de conversación de 24 h, que
+  Meta sustituyó por cobro por mensaje de plantilla.
 - [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
   con corpus real en castellano/catalán/inglés. La ruta privada de OCR ya incorpora
   Tesseract/pytesseract para imágenes y PDFium para PDF escaneado, y Railpack instala
@@ -133,6 +149,15 @@
   de `xavier@bynoesis.com` con el remitente «Noesis». Queda comprobar que no cae en
   spam en Gmail y Outlook, y recorrer factura al cliente final, invitación de
   gestoría y reintento de la outbox.
+- [ ] Entrada documental Hostinger: activar el catch-all hacia un único buzón de
+  prueba, cargar las variables `NOESIS_INBOUND_EMAIL_*` con la función todavía
+  apagada y crear una ruta para una empresa ficticia. Enviar a esa dirección un PDF,
+  una foto, un duplicado, un correo sin adjunto y uno con dos destinatarios opacos.
+  Solo si Hostinger conserva el destinatario original y cada caso falla o entra en
+  el negocio correcto, activar `NOESIS_INBOUND_EMAIL_ENABLED=true`. Comprobar después
+  en móvil que una factura de cliente conocido se relaciona por NIF y una nueva no
+  aparece en Clientes hasta confirmarla. No usar todavía el catch-all para correos
+  humanos o soporte: también recibirá errores tipográficos y spam del dominio.
 - [ ] Crear el cliente OAuth web de Google, registrar exactamente
   `https://bynoesis.com/auth/google/callback`, cargar `GOOGLE_OAUTH_CLIENT_ID`
   y `GOOGLE_OAUTH_CLIENT_SECRET` en producción y probar alta y acceso reales. El
@@ -145,11 +170,22 @@
 - [ ] Ejecutar `noesis-doctor --strict` y
   `noesis-integrations-check --network --strict` en producción; resolver cada
   bloqueo y guardar la evidencia sin copiar secretos.
+- [x] Automatizar una puerta externa sin credenciales sobre producción: el comando
+  `noesis-production-check` contrasta release, esquema, sitemap, las 14 páginas,
+  H1/canonical, marcadores legales y cabeceras de seguridad. GitHub la ejecuta cada
+  seis horas y bajo demanda. Falta contratar o configurar monitor 24/7 independiente,
+  alerta multicanal y guardia de incidentes antes de una apertura masiva.
 - [ ] Desplegar ClamAV en red privada, fijar `NOESIS_CLAMAV_REQUIRED=true` y probar
   archivo limpio, EICAR, caída y timeout sin almacenar el payload rechazado.
-- [ ] Ejecutar `noesis-restore-check` y comprobar el simulacro semanal. Después,
-  descargar una copia del bucket y restaurarla en infraestructura distinta,
-  documentando RPO/RTO; la prueba local no demuestra recuperación ante caída total.
+- [ ] La ejecución real del 26-ago reveló que las copias diarias posteriores al
+  esquema 31 no quedaban verificadas: al restaurar, el trigger de inmutabilidad
+  rechazaba las líneas históricas de facturas ya emitidas. El candidato suspende
+  solo triggers de negocio durante la transacción descartable y el humo PostgreSQL
+  crea y restaura una copia con facturas emitidas. Ya desplegado, producción creó una
+  copia nueva de esquema 51 y `noesis-restore-check` terminó `ok` en 3,22 s. Queda
+  configurar el bucket externo, descargar una copia y restaurarla en infraestructura
+  distinta, documentando RPO/RTO; el mismo servidor no demuestra recuperación ante
+  caída total.
 - [ ] Ejecutar un pentest autenticado externo y una revisión de privacidad/RGPD,
   fiscalidad y procedimiento de incidentes. El modelo interno y la puerta de salida
   están en [[Seguridad-operativa]]; una revisión propia no sustituye esta validación.
@@ -160,6 +196,16 @@
 Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]].
 
 ## P1 — profundidad después del primer piloto
+
+- [x] Crear un paquete de branding reproducible: símbolo y lockups, transparentes y
+  fondos, tamaños sociales, portadas, paleta, tipografía, plantillas, reglas de uso,
+  licencias, manifiesto y revisión visual. Vive en `branding/` y no altera el runtime.
+- [ ] Crear o reclamar `@bynoesis` en LinkedIn, Instagram y Facebook con doble factor
+  y al menos dos administradores; seguir los textos y listas de
+  `branding/redes-sociales/`, subir los activos preparados, comprobar el recorte real
+  en escritorio/móvil y, cuando las URL sean definitivas, añadirlas como `sameAs` al
+  `Organization` de la portada. Reservar YouTube/TikTok sin abrir un calendario
+  adicional hasta sostener el canal principal.
 
 - [ ] SEO operativo: publicado y verificado el candidato del 13-ago, volver a inspeccionar
   `/autonomos`, `/gestorias` y `/precios` en Search Console, solicitar indexación y
@@ -207,8 +253,9 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   si el piloto necesita sincronización bidireccional OAuth y recurrentes.
 - [ ] Conciliación: validar CSV de bancos reales; dejar PSD2/API bancaria y cobro por
   enlace para después del piloto. Ningún movimiento se confirma automáticamente.
-- [ ] Correo: panel interno de detalle/reejecución manual si los avisos agregados de
-  la outbox resultan insuficientes durante el piloto.
+- [x] Correo: el centro interno muestra fallos sin destinatario/asunto/cuerpo y
+  permite reencolar de forma atómica y auditada solo correos agotados de la misma
+  cuenta; el scheduler conserva la entrega y evita duplicados.
 - [ ] Equipo: validar con varios trabajadores reales el canal central, offline,
   ausencias, permisos por rol y el resumen al titular. Costes, justificantes, dudas,
   bloqueos, revisión previa y presupuesto limitado al proyecto asignado ya están
@@ -225,10 +272,16 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 - [x] Gestoría: MFA TOTP opcional, reto tras contraseña, anti-replay, ocho códigos de
   recuperación de un solo uso y reconfiguración protegida sin semillas reversibles
   ni códigos en la cookie de sesión.
-- [ ] Gestoría: recuperación de contraseña por correo, passkeys, roles finos y
-  piloto real con un despacho antes de abrir el acceso a terceros.
-- [ ] Observabilidad por negocio para IA, extracción, colas, latencia, errores,
-  correcciones y coste.
+- [x] Gestoría: recuperación de contraseña por correo separada de los usuarios de
+  negocio, respuesta no enumerativa, token hasheado/caducable/de un solo uso,
+  sesiones anteriores revocadas y MFA preservado. Falta recorrer el correo real.
+- [ ] Gestoría: passkeys, roles finos y piloto real con un despacho antes de abrir
+  el acceso a terceros.
+- [x] Control mensual por negocio para consumo de IA, extracciones, WhatsApp,
+  correo, fallos de entrega y coste observado: reparto explícito y reconciliado,
+  demos excluidas, coste sin driver visible y alertas por límite o margen.
+- [ ] Completar la observabilidad por negocio con latencia y tasa de corrección por
+  tipo de extracción/acción; validar umbrales con el piloto antes de prometer SLA.
 - [x] Libro CFO interno por mes: costes reales, previsiones y ajustes append-only;
   contribución, margen observado y coste por cuenta de pago sin inventar gastos.
 - [ ] Cargar facturas reales de Railway, proveedores, seguridad, correo, Meta,

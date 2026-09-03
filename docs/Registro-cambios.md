@@ -7,6 +7,38 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-03 — refunde los documentos legales con `Ruta-legal` y corrige Meta
+
+- **Autor/agente:** Claude.
+- **Objetivo:** al fusionar con `origin/main` aparecieron 28 commits de otro agente,
+  entre ellos `Ruta-legal.pdf` (29-ago), que solapaba con los documentos legales
+  escritos hoy. Se refunden para que no queden dos rutas legales paralelas ni una
+  contradicción publicada.
+- **Áreas y archivos:** `docs/Constitucion-y-primer-euro.md` (recortado: los bloques
+  C y D pasan a punteros y la sección del plan cede el calendario a
+  `Plan-60-dias.pdf`), `docs/RGPD-estado-y-plan.md` y `docs/RGPD-QUE-HACER.md`
+  (incorporan el hallazgo de Groq y se declaran complementarios de `Ruta-legal`),
+  `docs/Inicio.md` y `docs/Tareas-vivas.md` (conflictos de fusión resueltos
+  conservando ambos lados). Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto. `scripts/check_project_truth.py` en
+  verde; enlaces `[[...]]` de los documentos nuevos verificados contra `docs/`.
+- **Dependencias o validaciones externas:** sigue pendiente la revisión RGPD
+  profesional. La decisión sobre Groq —declararlo o retirarlo— es del founder.
+- **Riesgo/punto probable de fallo:** **corrección de fondo.** Los documentos de hoy
+  afirmaban, siguiendo `Meta-Verificacion.pdf`, que la revisión de la aplicación de
+  Meta no hacía falta. `Ruta-legal.pdf` argumenta lo contrario con mejor base: el
+  `Standard access` solo alcanza activos propios, así que la WABA de un cliente exige
+  `Advanced access` y App Review. Se corrige en `Constitucion-y-primer-euro.md` y se
+  remite a `Ruta-legal`. `Meta-Verificacion.pdf` sigue diciendo lo antiguo y habría
+  que revisarlo.
+- **Diagnóstico y rollback:** todo es documentación; ningún archivo de `src/` se ha
+  tocado en ninguno de los commits de hoy.
+- **Estado de publicación:** los cuatro documentos de hoy quedan subordinados a
+  `Ruta-legal.pdf` como fuente principal de obligaciones y a `Plan-60-dias.pdf` como
+  calendario. Aportan lo que aquellos no cubren: forma jurídica y constitución,
+  auditoría del código, y residencia de datos.
+
 ## 2026-09-03 — lista de acciones de protección de datos
 
 - **Autor/agente:** Claude.
@@ -140,6 +172,357 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Estado de publicación:** documentos entregados, sin publicar todavía en ninguna
   plataforma. La primera publicación prevista es el 7 de septiembre de 2026.
 
+## 2026-08-31 — convierte la estrategia de contenido en un manual de producción
+
+- **Autor/agente:** Codex.
+- **Objetivo:** entregar un sistema editorial ejecutable para que el equipo pueda
+  producir contenido que primero identifique y ayude al autónomo, después demuestre
+  el producto y solo entonces pida una prueba.
+- **Áreas y archivos:** `branding/contenido/Plan-editorial-y-guiones-Noesis.docx`,
+  su generador reproducible en `branding/contenido/scripts/` y documentación viva.
+  El manual reúne 24 fichas de contenido, cinco campañas, un mes editorial, método
+  de producción, métricas, checklist y límites de comunicación.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** generación reproducible; DOCX válido; 38 páginas
+  renderizadas y revisadas; auditoría de títulos, secciones, imagen y accesibilidad;
+  logotipo con texto alternativo; `git diff --check` y verdad del proyecto.
+- **Dependencias o validaciones externas:** la cadencia, los ganchos y las campañas
+  deben aprender de publicación real; casos, testimonios y cifras requieren permiso
+  y evidencia antes de publicarse.
+- **Riesgo/punto probable de fallo:** tratar el calendario como una parrilla rígida
+  o presentar como real una demo, una integración o un resultado aún no validado.
+- **Diagnóstico y rollback:** cada ficha incluye métrica y guardarraíl; el generador
+  reconstruye el documento. Revertir este commit retira solo material editorial.
+- **Estado de publicación:** manual listo para seleccionar el primer bloque de rodaje;
+  todavía no implica que se hayan publicado o validado las piezas.
+
+## 2026-08-31 — fondo verde bosque para los avatares sociales
+
+- **Autor/agente:** Codex.
+- **Objetivo:** sustituir el fondo teal suave del avatar por el verde bosque fuerte
+  de Noesis, manteniendo sin cambios la estrella original y su contorno exterior.
+- **Áreas y archivos:** revisión 1.2.2 del generador, manifiesto y avatares de
+  `branding/`; copias listas para subir, guía Word y documentación viva. Portadas,
+  símbolo maestro, lockups e iconos de aplicación siguen sin cambios.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** regeneración determinista de 49 PNG; comprobación exacta
+  del fondo `#14463b`; revisión visual a 1080 y 400 px; copias idénticas por SHA-256;
+  guía de ocho páginas renderizada y revisada; `npm audit`, verdad del proyecto y
+  `git diff --check`.
+- **Dependencias o validaciones externas:** queda pendiente el recorte real al subir
+  la imagen a cada plataforma.
+- **Riesgo/punto probable de fallo:** confundir el fondo oscuro con un cambio del
+  símbolo. La prueba limita el cambio al rectángulo de fondo del avatar.
+- **Diagnóstico y rollback:** el manifiesto 1.2.2 identifica los nuevos hashes y
+  `npm run build` los reproduce. Revertir el commit devuelve el fondo teal anterior.
+- **Estado de publicación:** activos corregidos en repositorio; perfiles aún no creados.
+
+## 2026-08-31 — conserva el interior original del símbolo en el avatar
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir la interpretación del contorno social: mantener exactamente
+  el interior del símbolo oficial y aplicar el trazo oscuro únicamente al perímetro
+  de la estrella exterior.
+- **Áreas y archivos:** revisión 1.2.1 del generador, manifiesto y avatares de
+  `branding/`; copias listas para subir, guía Word y documentación viva. Portadas,
+  símbolo maestro, lockups e iconos de aplicación siguen sin cambios.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** regeneración determinista de 49 PNG; comparación de colores
+  y geometría con `noesis-mark-master.svg`; verificación de que solo el polígono
+  exterior contiene `stroke`; revisión visual a 1080 y 400 px; copias idénticas por
+  SHA-256; guía de ocho páginas renderizada y revisada; `npm audit`, verdad del
+  proyecto y `git diff --check`.
+- **Dependencias o validaciones externas:** queda pendiente el recorte real al subir
+  la imagen a cada plataforma.
+- **Riesgo/punto probable de fallo:** volver a introducir trazos en el polígono
+  interior o en los círculos alteraría el símbolo. La prueba estructural lo impide.
+- **Diagnóstico y rollback:** el manifiesto 1.2.1 identifica los nuevos hashes y
+  `npm run build` los reproduce. Revertir el commit devuelve la interpretación con
+  líneas interiores sin tocar el logo maestro.
+- **Estado de publicación:** activos corregidos en repositorio; perfiles aún no creados.
+
+## 2026-08-31 — simplifica y amplía el avatar social
+
+- **Autor/agente:** Codex.
+- **Objetivo:** aplicar la revisión del fundador al identificador de los perfiles:
+  eliminar el recuadro blanco, aumentar la estrella y sostener su lectura con un
+  contorno oscuro sobre un fondo del mismo verde.
+- **Áreas y archivos:** generador y manifiesto 1.2 de `branding/`; cuatro avatares
+  sociales; cinco copias operativas de `branding/redes-sociales/`; guía de marca,
+  guía Word y documentación viva. El símbolo maestro, las portadas y los iconos de
+  la aplicación permanecen intactos.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** 49 PNG regenerados; dimensiones, hashes y alfa contrastados;
+  avatar 1080 × 1080 y logo 400 × 400 revisados visualmente; copias operativas
+  idénticas; DOCX renderizado en ocho páginas y revisado; `npm audit`, verdad del
+  proyecto y `git diff --check`.
+- **Dependencias o validaciones externas:** sigue pendiente observar el recorte real
+  en cada plataforma una vez se creen los perfiles.
+- **Riesgo/punto probable de fallo:** un contorno demasiado fino desaparecería en
+  miniatura y uno excesivo deformaría el símbolo. La exportación usa tinta Noesis y
+  conserva un margen amplio para la máscara circular.
+- **Diagnóstico y rollback:** `manifest.json` registra la versión 1.2 y los hashes;
+  `npm run build` reproduce los activos. Revertir el commit devuelve el avatar con
+  placa crema sin tocar el resto del sistema visual.
+- **Estado de publicación:** archivos listos en el repositorio; subida a redes pendiente.
+
+## 2026-08-31 — prepara los perfiles oficiales para publicar
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir el sistema de marca existente en una entrega operativa para
+  crear Instagram, Facebook y LinkedIn sin improvisar imágenes, descripciones,
+  botones, propiedad ni seguridad de las cuentas.
+- **Áreas y archivos:** nuevo `branding/redes-sociales/` con carpetas por plataforma,
+  PNG listos para subir, textos UTF-8, guía Word de ocho páginas, fuentes oficiales y
+  reserva acotada de YouTube/TikTok; índice de branding y documentación viva.
+- **Cambios de datos/migración:** ninguno. No cambia aplicación, runtime ni base de datos.
+- **Pruebas ejecutadas:** dimensiones y hashes de los PNG contrastados con los activos
+  maestros; DOCX abierto estructuralmente, renderizado a PDF y revisado página por
+  página; textos sin marcadores, finales de archivo normalizados, verdad del proyecto
+  y `git diff --check`.
+- **Dependencias o validaciones externas:** crear las cuentas, confirmar que
+  `@bynoesis` está disponible y observar el recorte real requiere acceso de los
+  fundadores a cada plataforma. Las especificaciones de LinkedIn y los controles de
+  Facebook se contrastaron con sus ayudas oficiales.
+- **Riesgo/punto probable de fallo:** una red puede modificar campos o recortes. El
+  paquete mantiene el contenido esencial centrado y obliga a probar móvil y escritorio
+  antes de publicar.
+- **Diagnóstico y rollback:** cada carpeta contiene el nombre exacto del archivo que
+  se debe subir y una lista de comprobación. Revertir el commit elimina solo el paquete
+  operativo; no afecta al branding maestro ni al producto.
+- **Estado de publicación:** materiales locales listos; perfiles pendientes de alta y
+  validación real por los fundadores.
+
+## 2026-08-31 — alinea la marca con tiempo, orden y control
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir el enfoque excesivamente centrado en cobros del primer kit
+  y devolver la marca a la misión aprobada: Noesis lleva la oficina, quita ruido
+  mental y permite al autónomo centrarse en su oficio sin perder el control.
+- **Áreas y archivos:** guía, generador, manifiesto, tablero y portadas de `branding/`;
+  introducción pública del `README`; mensaje rector y pruebas de
+  `docs/Estrategia-Marketing.html` y su PDF sincronizado; decisión y estado vivos.
+  Se conserva sin alteraciones la geometría del símbolo y el sistema visual.
+- **Pruebas ejecutadas:** 49/49 PNG reconstruidos y verificados contra dimensiones,
+  alfa y SHA-256 del manifiesto; regeneración determinista; SVG parseables; revisión
+  visual del tablero y portada; las 13 páginas del PDF se renderizaron y revisaron;
+  búsqueda negativa del lema retirado; `npm audit` sin vulnerabilidades, verdad del
+  proyecto y `git diff --check`.
+- **Dependencias o validaciones externas:** ninguna credencial. Sharp se actualiza a
+  0.35.4 solo dentro del generador aislado de branding; no entra en el runtime web.
+- **Riesgo/punto probable de fallo:** convertir «tiempo y control» en una promesa
+  genérica si las piezas no enseñan pruebas. La guía obliga a sostenerla con tareas,
+  documentos, facturas, agenda y resultados reales de cada cliente.
+- **Diagnóstico y rollback:** `branding/manifest.json` identifica cada exportación;
+  `npm run build` la reconstruye. Revertir este cambio recupera solo el copy y los
+  activos sociales anteriores; no afecta datos, aplicación ni despliegue.
+- **Estado de publicación:** kit corregido localmente; las redes siguen pendientes
+  de creación y validación de recorte real.
+
+## 2026-08-31 — convierte el símbolo existente en un sistema de marca exportable
+
+- **Autor/agente:** Codex.
+- **Objetivo:** dar a Noesis un paquete de branding profesional y reproducible para
+  web, documentos y creación de LinkedIn, Instagram, Facebook y otros perfiles sin
+  inventar una identidad paralela ni deformar el símbolo ya reconocido por el producto.
+- **Áreas y archivos:** nueva raíz `branding/` con guía de marca, licencias,
+  paleta JSON/CSS, originales SVG, 49 PNG transparentes/con fondo, avatares,
+  portadas, plantillas, manifiesto con hashes y generador determinista; documentación
+  viva de marca, mapa, estado, tareas y QA. No cambia runtime, base de datos ni web.
+- **Pruebas ejecutadas:** regeneración completa con Sharp; 49/49 PNG decodificables,
+  dimensiones y alfa contrastados contra `manifest.json`, hashes repetibles, SVG
+  parseables, ningún activo social por encima de 3 MB, `git diff --check` y revisión
+  visual de tablero, avatar, portada y paleta.
+- **Dependencias o validaciones externas:** la portada de LinkedIn sigue su
+  especificación oficial vigente de 4200 × 700 y el logo 400 × 400. Crear las cuentas,
+  comprobar sus recortes reales y añadir sus URL a `sameAs` corresponde al founder.
+- **Riesgo/punto probable de fallo:** una plataforma puede cambiar el recorte sin
+  aviso. Por eso el avatar concentra el símbolo en el centro y las portadas evitan
+  detalles esenciales en los bordes.
+- **Diagnóstico y rollback:** `branding/manifest.json` identifica dimensiones,
+  finalidad y SHA-256. Reejecutar `branding/scripts/build_brand_assets.mjs` reconstruye
+  los PNG; revertir este commit elimina solo el paquete y no modifica la identidad
+  que ya usa la aplicación.
+- **Estado de publicación:** paquete local listo para uso; no requiere despliegue.
+
+## 2026-08-27 — prepara facturas por catch-all sin mezclar empresas ni crear clientes a ciegas
+
+- **Autor/agente:** Codex.
+- **Objetivo:** recibir adjuntos de todos los clientes en un único buzón Hostinger,
+  ahorrar alias y convertir una factura con cliente recurrente o nuevo en un flujo
+  sencillo sin aceptar un error de identidad como dato contable.
+- **Áreas y archivos:** migración 52; configuración; frontera de datos; servicio,
+  repositorio y nuevo consumidor documental IMAP; scheduler; página Documentos;
+  CLI; siete regresiones y documentación operativa/arquitectónica.
+- **Pruebas ejecutadas:** 7/7 contratos nuevos y suite completa **550/550** en
+  477,3 s; migración focalizada, página documental autenticada, Ruff, compilación,
+  fuente de verdad y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** usa IMAP SSL de Hostinger, pero permanece
+  apagado por defecto. Falta probar el catch-all real y la conservación del
+  destinatario antes de activar el scheduler en producción.
+- **Riesgo/punto probable de fallo:** que Hostinger reescriba o pierda el destinatario
+  original. En ese caso Noesis rechaza el mensaje; nunca intenta deducir el negocio
+  por remitente, asunto o nombre de archivo. Un catch-all también recibe spam y
+  errores tipográficos, por lo que debe aislarse del soporte humano.
+- **Diagnóstico y rollback:** estados/contadores de `inbound_email_messages`, eventos
+  `inbound_email_processed` y CLI `python -m noesis.documents.inbound_email` sin
+  secretos. Apagar `NOESIS_INBOUND_EMAIL_ENABLED` detiene la entrada sin retirar
+  Documentos ni clientes; revertir el commit y bajar 52 elimina solo rutas, huellas y
+  propuestas nuevas.
+- **Estado de publicación:** candidato local validado; pendiente de commit, CI,
+  humo PostgreSQL y prueba Hostinger.
+
+## 2026-08-26 — controla la rentabilidad operativa por cuenta
+
+- **Autor/agente:** Codex.
+- **Objetivo:** saber qué cuentas generan o destruyen margen y dónde crece el coste
+  sin abrir el contenido privado del negocio ni confundir estimación con gasto real.
+- **Áreas y archivos:** agregación CFO en `db.py`, centro de mando y ficha privada
+  de cuenta, estilos, dos regresiones nuevas y documentación viva. Sin migración.
+- **Pruebas ejecutadas:** 4/4 contratos centrados, suite estándar completa
+  **543/543**, Ruff y `git diff --check` verdes; fuente de verdad y barreras de
+  seguridad se ejecutan antes de publicar.
+- **Dependencias o validaciones externas:** ninguna nueva. Para que el margen sea
+  representativo hay que cargar facturas reales de proveedores en el libro CFO.
+- **Riesgo/punto probable de fallo:** un coste sin volumen medible queda sin asignar;
+  esto reduce cobertura, pero evita inventar rentabilidad. El ingreso mostrado es
+  MRR comprometido por plan, no caja cobrada ni contabilidad analítica.
+- **Diagnóstico y rollback:** revisar `platform_cost_entries`, la sección
+  `rentabilidad-cuentas` y `account_cost_control`; revertir elimina la lectura y las
+  alertas sin tocar clientes, facturas, suscripciones ni el libro append-only.
+- **Estado de publicación:** candidato local validado; pendiente de `push`, CI,
+  humo PostgreSQL y despliegue automático.
+
+## 2026-08-26 — repara la restauración de facturas emitidas en PostgreSQL
+
+- **Autor/agente:** Codex.
+- **Objetivo:** recuperar copias actuales sin relajar la inmutabilidad que protege
+  una factura emitida durante el funcionamiento normal.
+- **Áreas y archivos:** restaurador PostgreSQL, humo real de CI, documentación viva
+  y órdenes Railway verificadas para diagnóstico/integraciones/restauración. Sin
+  migración ni cambio de datos de producción.
+- **Pruebas ejecutadas:** diagnóstico y simulacro reales por SSH; 5/5 pruebas locales
+  de backup, Ruff y compilación. Humo PostgreSQL ampliado pendiente del `push`.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial; la
+  copia fuera del servidor continúa necesitando un bucket S3-compatible.
+- **Riesgo/punto probable de fallo:** permisos PostgreSQL para `ALTER TABLE ...
+  DISABLE TRIGGER USER`; el CI usa PostgreSQL real y debe rechazar el candidato si
+  el rol no puede hacerlo o si una restricción deja de cumplirse.
+- **Diagnóstico y rollback:** `backup_runs`, evento `backup.restore_drill_*` y
+  `noesis-restore-check`; revertir devuelve el fallo conocido y no toca la base real.
+- **Estado de publicación:** release `d55be0ae6673` desplegado. El humo PostgreSQL,
+  una copia nueva de esquema 51 en producción y el simulacro independiente están
+  verdes. Queda únicamente la salida y restauración fuera de Railway.
+
+## 2026-08-26 — hace atómica la recuperación del titular
+
+- **Autor/agente:** Codex.
+- **Objetivo:** que una caída entre consumir el enlace y guardar la clave no deje un
+  acceso a medias, y que un correo antiguo no siga siendo válido.
+- **Áreas y archivos:** tokens y credenciales en `db.py`, router de cuenta, dos
+  regresiones HTTP, documentación y retirada de una detección obsoleta de
+  `.secrets.baseline`. Sin migración ni cambio visual.
+- **Pruebas ejecutadas:** 2/2 contratos específicos y suite estándar completa
+  **541/541** verdes; controles estáticos y de seguridad antes del commit.
+- **Dependencias o validaciones externas:** ninguna nueva; llegada del enlace sigue
+  dependiendo del correo ya configurado.
+- **Riesgo/punto probable de fallo:** entregabilidad externa, no consistencia local;
+  el estado queda íntegro aunque la petición falle antes del commit.
+- **Diagnóstico y rollback:** eventos `account.password_reset_*` y outbox; revertir
+  devuelve el consumo en dos pasos, sin tocar claves ya establecidas.
+- **Estado de publicación:** código publicado en `main`; el primer CI pasó PostgreSQL
+  y señaló que la línea eliminada seguía inventariada en el baseline. La corrección
+  de esa metainformación queda en este mismo bloque antes de repetir el CI completo.
+
+## 2026-08-26 — permite reintentar un correo agotado sin abrir su contenido
+
+- **Autor/agente:** Codex.
+- **Objetivo:** resolver desde soporte un fallo de entrega definitivo sin acceder al
+  correo del cliente ni provocar envíos duplicados.
+- **Áreas y archivos:** frontera de outbox en `db.py`, ruta y ficha de soporte,
+  regresión HTTP y documentación viva. Sin migración.
+- **Pruebas ejecutadas:** contrato específico y suite estándar completa **539/539**
+  verdes; controles estáticos y de seguridad se ejecutan antes del commit.
+- **Dependencias o validaciones externas:** ninguna nueva; una entrega real sigue
+  dependiendo del proveedor configurado y la controla el scheduler.
+- **Riesgo/punto probable de fallo:** proveedor aún caído o dirección inválida; el
+  correo volverá a `retrying/failed` con su motivo técnico visible, sin bucle manual.
+- **Diagnóstico y rollback:** evento `admin.email_delivery_requeued`, estado de
+  `email_outbox` y sección Entregas; revertir restaura el diagnóstico de solo lectura.
+- **Estado de publicación:** local verificado de forma centrada; no publicado.
+
+## 2026-08-26 — recupera el acceso profesional de gestoría
+
+- **Autor/agente:** Codex.
+- **Objetivo:** que un despacho pueda recuperar su cuenta sin soporte manual y sin
+  reducir la seguridad de todas las empresas de su cartera.
+- **Áreas y archivos:** migración 51, frontera de datos de gestoría, router y dos
+  pantallas de acceso, estilos acotados, tres pruebas y documentación de estado.
+- **Pruebas ejecutadas:** 7/7 contratos centrados de recuperación y MFA, suite
+  estándar completa **538/538**, Ruff, compilación, fuente de verdad y
+  `git diff --check` verdes. Quedan las barreras de seguridad y CI/PostgreSQL.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial; reutiliza
+  el correo durable existente. La llegada a Gmail/Outlook requiere prueba real.
+- **Riesgo/punto probable de fallo:** configuración o entregabilidad del proveedor de
+  correo; el flujo responde igual y conserva la cuenta aunque el envío se retrase.
+- **Diagnóstico y rollback:** revisar solo metadatos de `email_outbox` y los eventos
+  `gestoria.password_reset_*`; revertir el bloque elimina rutas/tabla sin modificar
+  accesos, cartera, MFA ni contraseñas existentes.
+- **Estado de publicación:** local en validación; no publicado todavía.
+
+## 2026-08-26 — automatiza la puerta externa del release publicado
+
+- **Autor/agente:** Codex.
+- **Objetivo:** detectar automáticamente despliegues incompletos y regresiones de la
+  superficie pública antes de que las reporte un cliente.
+- **Áreas y archivos:** `production_check.py`, su entrypoint, cinco pruebas, workflow
+  programado de GitHub y documentación operativa/estado. Sin cambios de datos.
+- **Pruebas ejecutadas:** Ruff completo, detector de secretos, fuente de verdad,
+  `git diff --check`, cinco contratos específicos, comprobación real contra
+  producción y suite completa **535/535**. CI queda pendiente del `push`.
+- **Dependencias o validaciones externas:** no requiere credenciales. Producción real
+  respondió con release coherente, esquema 50, 14 páginas públicas, estructura SEO,
+  textos legales y cabeceras correctas.
+- **Riesgo/punto probable de fallo:** un cambio deliberado de sitemap, cabeceras o
+  esquema obliga a actualizar el contrato; de no hacerlo, el workflow fallará de
+  forma segura sin afectar tráfico ni datos.
+- **Diagnóstico y rollback:** ejecutar `noesis-production-check --json`; cada fallo
+  identifica URL o protección. Revertir el bloque elimina el monitor, pero no cambia
+  producción ni esquema.
+- **Estado de publicación:** local verificado; pendiente de suite, commit, push y CI.
+
+## 2026-08-26 — recupera el CI tras sincronizar el generador económico
+
+- **Autor/agente:** Codex, revisando los cambios publicados por Claude y el socio.
+- **Objetivo:** sincronizar el repositorio tras una semana de trabajo y corregir el
+  bloqueo que impedía que GitHub Actions validara cualquier commit de `main`.
+- **Áreas y archivos:** `pyproject.toml`, `uv.lock`, una anotación de falso positivo
+  en `tests/test_integration_check.py` y bitácoras de cambios/QA. No cambia código
+  de producto ni el libro económico publicado.
+- **Cambios de datos/migración:** ninguno; esquema 50 sin cambios.
+- **Pruebas ejecutadas:** `uv sync --locked --extra security --extra test`, Ruff,
+  `check_project_truth.py`, `git diff --check` y suite completa local de **530
+  pruebas**, todas verdes. El generador económico se ejecutó con el extra `analysis`
+  y salida temporal: sus 17 hojas y todas las fórmulas coinciden; solo difieren las
+  tres entradas 1/5/2 que el founder escribió deliberadamente en el libro publicado
+  y que una regeneración limpia devuelve a cero, como ya documentaba su cambio.
+- **Dependencias o validaciones externas:** el primer run confirmó el humo
+  PostgreSQL 16 y reveló una vulnerabilidad en `pip 26.1.2` (`PYSEC-2026-3721`) que
+  antes quedaba oculta detrás del lock roto. El extra de seguridad exige ahora
+  `pip>=26.2,<27`. El segundo run confirmó auditoría y PostgreSQL, y alcanzó un
+  falso positivo histórico del detector de secretos en una credencial ficticia de
+  backup usada por una prueba; se anota en esa línea sin excluir el archivo ni
+  debilitar el detector. Queda confirmar el siguiente run completo.
+- **Riesgo/punto probable de fallo:** `pyproject.toml` declaraba `openpyxl`, pero
+  `uv.lock` no contenía `openpyxl` ni `et-xmlfile`; `uv sync --locked` fallaba antes
+  de ejecutar una sola prueba. Después, `pip-audit` detectó el `pip` vulnerable que
+  usa transitivamente. El lock regenerado incorpora el extra y el suelo seguro.
+- **Diagnóstico y rollback:** si vuelve a aparecer «lockfile needs to be updated»,
+  comparar `pyproject.toml` con `uv.lock` y ejecutar `py -m uv lock`. Revertir este
+  commit devolvería el CI al bloqueo y no afecta a datos ni producción.
+- **Estado de publicación:** corrección local verificada; pendiente de commit,
+  `push` y confirmación del CI al escribir esta entrada.
+
 ## 2026-08-17 — sincroniza el OCR con el build real de Railway
 
 - **Autor/agente:** Codex.
@@ -222,6 +605,87 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Diagnóstico y rollback:
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
+
+## 2026-09-01 12:00 — manuales de ruta legal, marketing y plan de 60 días
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dejar por escrito lo que falta para poder cobrar legalmente, consolidar
+  todo el marketing en un solo manual y ponerle fecha a ambas cosas.
+- **Áreas y archivos:** `docs/Ruta-legal.html/pdf`, `docs/Marketing-Noesis.html/pdf`,
+  `docs/Publicar-en-redes.html/pdf`, `docs/Plan-60-dias.html/pdf`,
+  `docs/Estado-Noesis.xlsx`, `scripts/build_estado_xlsx.py`, `docs/Inicio.md`.
+- **Cambios de datos/migración:** ninguno. Solo documentación.
+- **Pruebas ejecutadas:** ninguna nueva; no se toca código. La suite quedó en 577 con
+  el merge anterior.
+- **Hallazgos que cambian la planificación:**
+  - La obligación de Veri*Factu **del productor** está viva desde el 29-jul-2025; el
+    RDL 15/2025 solo aplazó la del usuario a 2027. `Fiscalidad.md` no separaba los dos
+    papeles.
+  - Remitir en nombre de clientes exige **convenio de colaboración social tipo 017** y
+    un modelo de representación **firmado por cada cliente**: aceptar las condiciones
+    del servicio no vale. Es una funcionalidad de onboarding que no existe.
+  - La **subsanación** de registros rechazados no está construida y sin ella no se
+    puede declarar conformidad completa del SIF.
+  - El **App Review** de Meta sí hace falta para los números comerciales, al contrario
+    de lo que dice la tabla del Camino A en `Meta-Verificacion`.
+  - El artículo 50 del Reglamento europeo de IA es aplicable desde el 2-ago-2026 y el
+    asistente no se identifica como máquina.
+  - Los oficios de la estrategia comercial y los catálogos del producto no coinciden.
+- **Dependencias o validaciones externas:** los apartados fiscales y de protección de
+  datos requieren revisión profesional antes de actuar sobre ellos.
+- **Riesgo/punto probable de fallo:** ninguno técnico. El riesgo es documental: si
+  `Marketing-Noesis` y `Estrategia-Marketing` conviven mucho tiempo, divergirán. El
+  maestro declara en su pie a cuál sustituye.
+- **Diagnóstico y rollback:** son documentos; se borran sin efecto sobre el producto.
+- **Estado de publicación:** local, pendiente de subir.
+
+## 2026-09-01 — fusión de la rama local con main tras 112 commits de divergencia
+
+- **Autor/agente:** Claude.
+- **Objetivo:** cerrar un `git merge origin/main` que había quedado a medias con
+  siete conflictos, e incorporar tres commits locales que llevaban un mes sin
+  subir: factura simplificada, catálogos por oficio y numeración heredada.
+- **Áreas y archivos:** `src/noesis/migrations.py`, `src/noesis/web/whatsapp.py`,
+  `src/noesis/whatsapp_templates.py`, `tests/test_trade_templates.py`,
+  `docs/project-state.json`, `docs/Mapa-codigo.md`, `docs/Tareas-vivas.md`,
+  `docs/Registro-cambios.md`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** **esquema 53**. La migración local
+  `material_o_mano_de_obra` chocaba en el número 40 con `demo_comercial` del
+  remoto; se renumera a **53**, detrás de `documentos_por_correo`. Sin esa
+  renumeración la columna `kind` no se habría creado nunca sobre una base ya en 52.
+- **Cómo se resolvió cada conflicto:**
+  - `migrations.py`: se conservan las 40-52 del remoto y la local pasa a 53.
+  - `whatsapp.py`: gana `sanitize_template_param` del remoto, que convierte los
+    saltos en un separador visible en vez de aplastarlos. Se retira el
+    `template_param` local por duplicado, pero se le aporta lo único que no
+    tenía: el tope de 1024 caracteres del parámetro de Meta. Se conservan
+    `MetaRejected` y la retirada de `send_payment_reminder`.
+  - `whatsapp_templates.py`: reescrito como **espejo** del runbook
+    `WhatsApp-Puesta-en-marcha` en lugar de proponer cuerpos distintos. Tener dos
+    fuentes de verdad sobre qué pegar en WhatsApp Manager era peor que no tener
+    ninguna. Ahora `python -m noesis.whatsapp_templates` confirma que los nueve
+    envíos encajan.
+  - `project-state.json`: base del remoto más las seis capacidades locales; dos
+    reescritas porque afirmaban que los cinco proactivos seguían rotos y el
+    remoto ya los arregló el 20-ago.
+  - Las dos bitácoras: entradas fusionadas por fecha, no concatenadas. 51+2 y
+    52+1, sin perder ninguna.
+  - `Tareas-vivas.md`: base del remoto más tres tareas nuevas; se descartan las
+    locales que el remoto ya resolvió.
+- **Pruebas ejecutadas:** suite completa **577 pasan, 132 subtests**. Ruff verde.
+  Fuente de verdad verde. Quedan **5 fallos que ya existían en `origin/main`
+  limpio**, comprobado en un árbol de trabajo aparte: cuatro de
+  `test_month_billing_separates_cash_flow_from_invoice_cohort`, que dependen de la
+  fecha del sistema, y uno de rasterización de PDF, que necesita dependencias de
+  OCR no instaladas en este equipo. **La fusión no introduce ninguna regresión.**
+- **Dependencias o validaciones externas:** ninguna nueva.
+- **Riesgo/punto probable de fallo:** la renumeración de la migración. Una base
+  que ya estuviera en 53 por otra vía quedaría descuadrada; producción está en 52,
+  así que aplicará la 53 al desplegar. Verificar `/ready` después.
+- **Diagnóstico y rollback:** la rama `respaldo-pre-merge` conserva el estado
+  anterior a la fusión. `python -m noesis.whatsapp_templates` y
+  `pytest tests/test_trade_templates.py` cubren lo tocado.
+- **Estado de publicación:** local, pendiente de subir.
 
 ## 2026-08-22 — dos manuales de diagnostico
 
@@ -495,6 +959,41 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnostico y rollback:** cambio de texto; revertir el commit restaura las
   etiquetas anteriores.
 - **Estado de publicacion:** local / commit en `main`.
+
+## 2026-08-20 — revisión del canal de Meta y espacio para las plantillas por oficio
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dos encargos del founder. Revisar entero el canal de Meta antes de
+  encenderlo, y dar pantalla propia a los catálogos por oficio, que existían en
+  código y en dos endpoints pero no se veían por ningún sitio.
+- **Áreas y archivos:** `src/noesis/whatsapp_templates.py` (nuevo),
+  `src/noesis/web/whatsapp.py` (`template_param`, `MetaRejected`, retirada de
+  `send_payment_reminder`), `src/noesis/trades.py` (`suggest_trade`,
+  `catalog_overview`), `src/noesis/web/routers/invoicing.py` (endpoint del detalle),
+  `src/noesis/web/routers/pages.py` y `templates/base.html` (alta de la página),
+  `templates/oficios.html` (nueva), `tests/test_trade_templates.py` (nuevo),
+  `scripts/build_estado_xlsx.py` (nuevo), `docs/Revision-Meta.md` (nuevo),
+  `docs/Estado-Noesis.xlsx` (nuevo), `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno. Los catálogos siguen en código.
+- **Pruebas ejecutadas:** suite completa **437 pasan, 85 subtests, 0 fallos**. Ruff
+  verde. Ocho pruebas nuevas cubren la adivinación del oficio, el IVA por partida,
+  la no duplicación al cargar dos veces, el aislamiento entre negocios, la página y
+  su API, y el contrato de las nueve plantillas de Meta.
+- **Dependencias o validaciones externas:** el bloqueo de los cinco proactivos al
+  titular **no se ha arreglado**: repartir el texto en huecos cambia la redacción
+  que recibe el founder cada mañana y esa decisión es suya. Los cuerpos aprobables
+  ya están escritos y `python -m noesis.whatsapp_templates` señala qué falta.
+- **Riesgo/punto probable de fallo:** `template_param` aplana saltos de línea, así
+  que un proactivo que hoy manda el mensaje entero en un hueco llegará como un
+  párrafo corrido en lugar de fallar. Es un mal menor y transitorio: esas cinco
+  plantillas no son aprobables todavía, de modo que nada empeora en producción.
+- **Diagnóstico y rollback:** `pytest tests/test_trade_templates.py`. La página se
+  desactiva quitando `oficios` de `_PAGES`; el saneado, retirando la llamada en
+  `queue_template`. Nada de esto toca datos.
+- **Aparte:** `Registro-cambios.md` y `Registro-QA.md` tenían marcadores de conflicto
+  de Git **commiteados** desde `d32ff10`. Resueltos conservando ambos lados en orden
+  cronológico; no se ha perdido ninguna entrada.
+- **Estado de publicación:** local sobre `main`, pendiente de subir.
 
 ## 2026-08-19 — control de acceso por persona y guia de permisos
 
@@ -863,6 +1362,35 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   verde. Baseline corregido para repetir el guardián completo; recrawl de Google
   pendiente.
 
+## 2026-08-12 12:00 — editor documental con pie gráfico versionado
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir que cada negocio adapte sus facturas e incluya distintivos
+  obligatorios de ayudas o certificaciones sin convertir el documento fiscal en un
+  lienzo libre ni alterar facturas ya emitidas.
+- **Áreas y archivos:** migración 48, perfiles visuales y emisión en `db.py`, carga
+  saneada en cuenta, PDF de factura/presupuesto/muestra, Ajustes responsive, pruebas
+  y documentación viva.
+- **Cambios de datos/migración:** añade pie gráfico y opciones a `businesses`, tabla
+  `document_profiles` por versión y referencia multiempresa inmutable desde
+  `invoices`; el histórico recibe una versión común por negocio sin duplicar imagen
+  en cada fila.
+- **Pruebas ejecutadas:** 3 nuevas, 485 completas y ciclo 0 → 48 → 0 → 48 verdes;
+  Ruff, Bandit, detección de secretos y diff verdes. El primer pase completo detectó
+  el orden ambiguo del índice compuesto PostgreSQL; se corrigió y el segundo pasó.
+  Humo PostgreSQL real pendiente de CI.
+- **Dependencias o validaciones externas:** ninguna API. Falta probar en escritorio
+  y móvil con el distintivo real del founder.
+- **Riesgo/punto probable de fallo:** imágenes desproporcionadas o antiguas; se
+  validan bytes/píxeles, se recomprimen sin metadatos y el PDF limita altura, salta
+  de página y degrada sin romper si un perfil histórico estuviera dañado.
+- **Diagnóstico y rollback:** revisar `document_branding_updated`, última versión en
+  `document_profiles`, `invoices.document_profile_id` y el PDF de muestra. Revertir
+  la interfaz conserva perfiles; no retirar imágenes referenciadas por emitidas.
+- **Estado de publicación:** commit `c30321c` en `main`, CI completo y humo
+  PostgreSQL verdes; producción confirma el release y el esquema 48. Pendiente solo
+  recorrido visual con el distintivo real del founder.
+
 ## 2026-08-12 — alta recuperable y preparada para el primer resultado
 
 - **Autor/agente:** Codex.
@@ -887,6 +1415,90 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Estado de publicación:** `main`, CI completo y humo PostgreSQL verdes;
   producción confirma release `8730826a79ab` y esquema 49. Recorrido visual y
   proveedores reales pendientes.
+
+## 2026-08-11 12:00 — configuración reversible con permiso de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** resolver errores de configuración durante onboarding/soporte sin
+  abrir acceso a fiscalidad, dinero, suscripción, integraciones o identidad.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración; reutiliza columnas y autorización
+  temporal existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 22 del centro administrativo, 4
+  focalizadas y suite completa **473/473** verde en 384 s; Ruff y verdad documental
+  verdes.
+- **Dependencias o validaciones externas:** CI
+  [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
+  completo; producción verificada en release `6a879b2b1153`, esquema 47 y HTTP 200
+  en `/health` y `/ready`. Falta recorrido visual con una cuenta y autorización
+  reales.
+- **Riesgo/punto probable de fallo:** un formulario parcial no debe inventar valores;
+  equipo y objetivo son obligatorios y muestran un estado sin seleccionar si faltan.
+  Permiso, administrador y caducidad se comprueban en la transacción.
+- **Diagnóstico y rollback:** buscar `admin.support_configuration_updated`,
+  `grant_id`, `changed_fields` y estados before/after seudonimizados. Revertir el
+  bloque devuelve ese alcance a solo lectura sin afectar otras funciones.
+- **Estado de publicación:** commit `6a879b2b1153` en `main`, CI verde y desplegado
+  y verificado en producción.
+
+## 2026-08-11 11:25 — primera corrección segura del centro de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir resolver errores de organización documental sin acceder
+  como el cliente ni crear un editor administrativo universal.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración. Reutiliza la autorización temporal
+  del esquema 43 y las columnas documentales existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 25 pruebas focalizadas y suite completa
+  **471/471** verde en 340 s; Ruff, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** ninguna credencial ni proveedor. Falta
+  recorrido visual con un titular que abra el alcance documental y un caso real.
+- **Riesgo/punto probable de fallo:** formularios con carteras muy grandes y
+  caducidad/revocación durante una intervención. La escritura revalida alcance e
+  IDs en su misma transacción y falla cerrada.
+- **Diagnóstico y rollback:** buscar
+  `admin.support_document_metadata_updated`, `grant_id`, `item_id` y
+  `changed_fields` en la bitácora. Revertir el bloque devuelve el centro a solo
+  lectura sin deshacer documentos ya corregidos.
+- **Estado de publicación:** `bf2df0d` en `main`; CI 31475120052 completo y humo
+  PostgreSQL verdes. Producción responde release `bf2df0d7afe5`, esquema 47 y
+  `/health`/`/ready` 200. Falta recorrido visual real.
+
+## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir la falsa agrupación de la demo y convertir Documentos en
+  un archivo comprensible y cómodo desde móvil sin duplicar el motor existente.
+- **Áreas y archivos:** sembrado comercial, pantalla/CSS de Documentos, prueba de
+  demo/OCR, CI y documentación compartida de producto y WhatsApp.
+- **Cambios de datos/migración:** sin migración. Al ejecutar la siembra explícita,
+  seis archivos ficticios se crean o reparan por nombre de forma idempotente y se
+  distribuyen en ingresos, gastos, tickets, pendientes y otros.
+- **Pruebas ejecutadas:** 23 pruebas focalizadas verdes de demo, OCR, archivo,
+  facturas recibidas, deduplicación, aislamiento y navegación; suite completa
+  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes. El primer CI
+  pasó dependencias, secretos, seguridad, estática, verdad y humo PostgreSQL, pero
+  canceló la suite sana al alcanzar el límite histórico de 15 minutos. Se amplía a
+  25 para cubrir pruebas y ciclo de migraciones sin esconder un bloqueo ilimitado.
+  El segundo CI pidió actualizar únicamente las tres líneas desplazadas de secretos
+  de prueba ya conocidos en `.secrets.baseline`; no apareció hash ni hallazgo nuevo.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
+  reparación de la demo publicada exige una ejecución explícita con
+  `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
+  el navegador gráfico provoca cierres de la aplicación; se verificó la captura
+  aportada y la estructura renderizada mediante TestClient.
+- **Riesgo/punto probable de fallo:** CSS responsive, selector de cámara y modal de
+  vista previa son los puntos a recorrer en un teléfono real. Las facturas ambiguas
+  continúan pendientes por diseño y no se fuerzan a ingreso o gasto.
+- **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
+  petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
+  altera documentos; revertir la reparación conserva los tipos ya corregidos.
+- **Estado de publicación:** funcionalidad `065f8bb`, límite CI `633dcf6` y baseline
+  `5bb715a` en `main`. CI 31470941717 completo y PostgreSQL verdes; producción
+  responde release `5bb715a68217`, esquema 47 y `/health`/`/ready` 200. Falta
+  revisión visual real y ejecutar una vez la reparación de la demo persistida.
 
 ## 2026-08-11 — calculadora por numero de clientes
 
@@ -1019,153 +1631,6 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `python analysis/build_modelo_economico.py`. Cambio solo documental.
 - **Estado de publicacion:** local / commit en `main`.
 
-## 2026-08-10 — runbook y explicación de WhatsApp, actualizados al modelo multicanal
-
-- **Autor/agente:** Claude.
-- **Objetivo:** el founder pidió entender el canal multicanal que construyó el socio y
-  dejar la documentación al día. Los dos documentos se escribieron primero sobre una
-  rama con 46 commits de retraso; se rehacen contra `main` y se trasladan aquí.
-- **Áreas y archivos:** solo documentación, ningún cambio en `src/`.
-  - `docs/WhatsApp-Como-funciona.html` + `.pdf` (nuevos): los dos canales, el enrutado
-    por receptor con sus tres salidas, las cuatro reglas de negocio (identidad única,
-    aportación pendiente, permisos cerrados por defecto, bandeja de equipo), el
-    recorrido de un coste, la matriz de quién ve qué y los límites deliberados.
-  - `docs/WhatsApp-Puesta-en-marcha.html` + `.pdf` (nuevos): runbook rehecho. Sustituye
-    la premisa antigua de «un único número para todos los negocios» por las dos clases
-    de número, añade la fase de alta de un número comercial desde administración
-    (`pending` -> probar -> `active`), la exigencia de que el usuario de sistema tenga
-    concedidos los activos de cada cliente, y una prueba de aceptación en dos bloques
-    con el aislamiento entre dos negocios.
-  - `docs/Inicio.md`: ambos entran en el mapa de contenido.
-- **Cambios de datos/migración:** ninguno.
-- **Pruebas ejecutadas:** ninguna ejecutable. Modelo verificado contra
-  `web/whatsapp.py` (`_handle_inbound`), `web/routers/whatsapp_business.py`, `db.py`
-  (`central_whatsapp_identity`, `resolve_worker_submission`) y la migración 45. HTML
-  comprobado sin etiquetas sin cerrar antes de imprimir cada PDF.
-- **Dependencias o validaciones externas:** las tareas de Meta siguen abiertas; los
-  documentos las ordenan, no las cierran.
-- **Riesgo/punto probable de fallo:** **hallazgo abierto y verificado hoy sobre
-  `main`.** Meta rechaza los parámetros de plantilla con saltos de línea, tabuladores
-  o más de cuatro espacios seguidos. `web/scheduler.py` sigue pasando
-  `"
-".join(lines)` como parámetro único en resumen diario, semanal, cierre, aviso
-  fiscal y aviso de cobros, y `_meta_payload()` no lo sanea. Los cinco proactivos
-  agotarán reintentos contra un número real; las pruebas no lo ven porque simulan Meta.
-- **Diagnóstico y rollback:** cambio solo documental.
-- **Estado de publicación:** local / commit en `main`.
-## 2026-08-12 12:00 — editor documental con pie gráfico versionado
-
-- **Autor/agente:** Codex.
-- **Objetivo:** permitir que cada negocio adapte sus facturas e incluya distintivos
-  obligatorios de ayudas o certificaciones sin convertir el documento fiscal en un
-  lienzo libre ni alterar facturas ya emitidas.
-- **Áreas y archivos:** migración 48, perfiles visuales y emisión en `db.py`, carga
-  saneada en cuenta, PDF de factura/presupuesto/muestra, Ajustes responsive, pruebas
-  y documentación viva.
-- **Cambios de datos/migración:** añade pie gráfico y opciones a `businesses`, tabla
-  `document_profiles` por versión y referencia multiempresa inmutable desde
-  `invoices`; el histórico recibe una versión común por negocio sin duplicar imagen
-  en cada fila.
-- **Pruebas ejecutadas:** 3 nuevas, 485 completas y ciclo 0 → 48 → 0 → 48 verdes;
-  Ruff, Bandit, detección de secretos y diff verdes. El primer pase completo detectó
-  el orden ambiguo del índice compuesto PostgreSQL; se corrigió y el segundo pasó.
-  Humo PostgreSQL real pendiente de CI.
-- **Dependencias o validaciones externas:** ninguna API. Falta probar en escritorio
-  y móvil con el distintivo real del founder.
-- **Riesgo/punto probable de fallo:** imágenes desproporcionadas o antiguas; se
-  validan bytes/píxeles, se recomprimen sin metadatos y el PDF limita altura, salta
-  de página y degrada sin romper si un perfil histórico estuviera dañado.
-- **Diagnóstico y rollback:** revisar `document_branding_updated`, última versión en
-  `document_profiles`, `invoices.document_profile_id` y el PDF de muestra. Revertir
-  la interfaz conserva perfiles; no retirar imágenes referenciadas por emitidas.
-- **Estado de publicación:** commit `c30321c` en `main`, CI completo y humo
-  PostgreSQL verdes; producción confirma el release y el esquema 48. Pendiente solo
-  recorrido visual con el distintivo real del founder.
-
-## 2026-08-11 12:00 — configuración reversible con permiso de soporte
-
-- **Autor/agente:** Codex.
-- **Objetivo:** resolver errores de configuración durante onboarding/soporte sin
-  abrir acceso a fiscalidad, dinero, suscripción, integraciones o identidad.
-- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
-  responsive, pruebas y documentación viva.
-- **Cambios de datos/migración:** sin migración; reutiliza columnas y autorización
-  temporal existentes.
-- **Pruebas ejecutadas:** 2 pruebas nuevas, 22 del centro administrativo, 4
-  focalizadas y suite completa **473/473** verde en 384 s; Ruff y verdad documental
-  verdes.
-- **Dependencias o validaciones externas:** CI
-  [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
-  completo; producción verificada en release `6a879b2b1153`, esquema 47 y HTTP 200
-  en `/health` y `/ready`. Falta recorrido visual con una cuenta y autorización
-  reales.
-- **Riesgo/punto probable de fallo:** un formulario parcial no debe inventar valores;
-  equipo y objetivo son obligatorios y muestran un estado sin seleccionar si faltan.
-  Permiso, administrador y caducidad se comprueban en la transacción.
-- **Diagnóstico y rollback:** buscar `admin.support_configuration_updated`,
-  `grant_id`, `changed_fields` y estados before/after seudonimizados. Revertir el
-  bloque devuelve ese alcance a solo lectura sin afectar otras funciones.
-- **Estado de publicación:** commit `6a879b2b1153` en `main`, CI verde y desplegado
-  y verificado en producción.
-
-## 2026-08-11 11:25 — primera corrección segura del centro de soporte
-
-- **Autor/agente:** Codex.
-- **Objetivo:** permitir resolver errores de organización documental sin acceder
-  como el cliente ni crear un editor administrativo universal.
-- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
-  responsive, pruebas y documentación viva.
-- **Cambios de datos/migración:** sin migración. Reutiliza la autorización temporal
-  del esquema 43 y las columnas documentales existentes.
-- **Pruebas ejecutadas:** 2 pruebas nuevas, 25 pruebas focalizadas y suite completa
-  **471/471** verde en 340 s; Ruff, verdad documental y `git diff --check` verdes.
-- **Dependencias o validaciones externas:** ninguna credencial ni proveedor. Falta
-  recorrido visual con un titular que abra el alcance documental y un caso real.
-- **Riesgo/punto probable de fallo:** formularios con carteras muy grandes y
-  caducidad/revocación durante una intervención. La escritura revalida alcance e
-  IDs en su misma transacción y falla cerrada.
-- **Diagnóstico y rollback:** buscar
-  `admin.support_document_metadata_updated`, `grant_id`, `item_id` y
-  `changed_fields` en la bitácora. Revertir el bloque devuelve el centro a solo
-  lectura sin deshacer documentos ya corregidos.
-- **Estado de publicación:** `bf2df0d` en `main`; CI 31475120052 completo y humo
-  PostgreSQL verdes. Producción responde release `bf2df0d7afe5`, esquema 47 y
-  `/health`/`/ready` 200. Falta recorrido visual real.
-
-## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
-
-- **Autor/agente:** Codex.
-- **Objetivo:** corregir la falsa agrupación de la demo y convertir Documentos en
-  un archivo comprensible y cómodo desde móvil sin duplicar el motor existente.
-- **Áreas y archivos:** sembrado comercial, pantalla/CSS de Documentos, prueba de
-  demo/OCR, CI y documentación compartida de producto y WhatsApp.
-- **Cambios de datos/migración:** sin migración. Al ejecutar la siembra explícita,
-  seis archivos ficticios se crean o reparan por nombre de forma idempotente y se
-  distribuyen en ingresos, gastos, tickets, pendientes y otros.
-- **Pruebas ejecutadas:** 23 pruebas focalizadas verdes de demo, OCR, archivo,
-  facturas recibidas, deduplicación, aislamiento y navegación; suite completa
-  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes. El primer CI
-  pasó dependencias, secretos, seguridad, estática, verdad y humo PostgreSQL, pero
-  canceló la suite sana al alcanzar el límite histórico de 15 minutos. Se amplía a
-  25 para cubrir pruebas y ciclo de migraciones sin esconder un bloqueo ilimitado.
-  El segundo CI pidió actualizar únicamente las tres líneas desplazadas de secretos
-  de prueba ya conocidos en `.secrets.baseline`; no apareció hash ni hallazgo nuevo.
-- **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
-  reparación de la demo publicada exige una ejecución explícita con
-  `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
-  el navegador gráfico provoca cierres de la aplicación; se verificó la captura
-  aportada y la estructura renderizada mediante TestClient.
-- **Riesgo/punto probable de fallo:** CSS responsive, selector de cámara y modal de
-  vista previa son los puntos a recorrer en un teléfono real. Las facturas ambiguas
-  continúan pendientes por diseño y no se fuerzan a ingreso o gasto.
-- **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
-  petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
-  altera documentos; revertir la reparación conserva los tipos ya corregidos.
-- **Estado de publicación:** funcionalidad `065f8bb`, límite CI `633dcf6` y baseline
-  `5bb715a` en `main`. CI 31470941717 completo y PostgreSQL verdes; producción
-  responde release `5bb715a68217`, esquema 47 y `/health`/`/ready` 200. Falta
-  revisión visual real y ejecutar una vez la reparación de la demo persistida.
-
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 
 - **Autor/agente:** Codex.
@@ -1260,6 +1725,40 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   y producción verificada con release `a803da4343e6`, `/ready` y esquema 45. La
   validación extremo a extremo con Meta real permanece pendiente.
 
+## 2026-08-10 — runbook y explicación de WhatsApp, actualizados al modelo multicanal
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidió entender el canal multicanal que construyó el socio y
+  dejar la documentación al día. Los dos documentos se escribieron primero sobre una
+  rama con 46 commits de retraso; se rehacen contra `main` y se trasladan aquí.
+- **Áreas y archivos:** solo documentación, ningún cambio en `src/`.
+  - `docs/WhatsApp-Como-funciona.html` + `.pdf` (nuevos): los dos canales, el enrutado
+    por receptor con sus tres salidas, las cuatro reglas de negocio (identidad única,
+    aportación pendiente, permisos cerrados por defecto, bandeja de equipo), el
+    recorrido de un coste, la matriz de quién ve qué y los límites deliberados.
+  - `docs/WhatsApp-Puesta-en-marcha.html` + `.pdf` (nuevos): runbook rehecho. Sustituye
+    la premisa antigua de «un único número para todos los negocios» por las dos clases
+    de número, añade la fase de alta de un número comercial desde administración
+    (`pending` -> probar -> `active`), la exigencia de que el usuario de sistema tenga
+    concedidos los activos de cada cliente, y una prueba de aceptación en dos bloques
+    con el aislamiento entre dos negocios.
+  - `docs/Inicio.md`: ambos entran en el mapa de contenido.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** ninguna ejecutable. Modelo verificado contra
+  `web/whatsapp.py` (`_handle_inbound`), `web/routers/whatsapp_business.py`, `db.py`
+  (`central_whatsapp_identity`, `resolve_worker_submission`) y la migración 45. HTML
+  comprobado sin etiquetas sin cerrar antes de imprimir cada PDF.
+- **Dependencias o validaciones externas:** las tareas de Meta siguen abiertas; los
+  documentos las ordenan, no las cierran.
+- **Riesgo/punto probable de fallo:** **hallazgo abierto y verificado hoy sobre
+  `main`.** Meta rechaza los parámetros de plantilla con saltos de línea, tabuladores
+  o más de cuatro espacios seguidos. `web/scheduler.py` sigue pasando
+  `"
+".join(lines)` como parámetro único en resumen diario, semanal, cierre, aviso
+  fiscal y aviso de cobros, y `_meta_payload()` no lo sanea. Los cinco proactivos
+  agotarán reintentos contra un número real; las pruebas no lo ven porque simulan Meta.
+- **Diagnóstico y rollback:** cambio solo documental.
+- **Estado de publicación:** local / commit en `main`.
 ## 2026-08-08 21:05 — soporte temporal, CFO real y términos reforzados
 
 - **Autor/agente:** Codex.
@@ -1520,6 +2019,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   autenticación, cartera y cierre de sesión; pendiente solo inspección visual. Las
   actualizaciones documentales quedan en los commits de verificación posteriores.
 
+## 2026-08-06 21:00 — continuar la numeración que el autónomo traía de otro programa
+
+- **Autor/agente:** Claude.
+- **Objetivo:** quien llega desde Holded, Quipu o una plantilla ya lleva facturas
+  emitidas del ejercicio. Noesis empezaba siempre en el 1 y habría repetido números
+  dentro del mismo año y la misma serie. Era un bloqueo de venta para el cliente que
+  más interesa: el que ya factura.
+- **Áreas y archivos:** `src/noesis/db.py` (`set_series_next_number` y `_series_prefix`),
+  `src/noesis/web/routers/invoicing.py` (ruta nueva), `tests/test_backend.py`,
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno nuevo. Este commit **renumera a 40** la
+  migración `material_o_mano_de_obra`, que en local era la 38 y chocaba con la 38
+  `huellas_documentales` ya desplegada.
+- **Pruebas ejecutadas:** suite completa **429 pasan, 76 subtests, 0 fallos**. Verificado
+  a mano: sin ajustar emite `2026/0001`; declarando 88 emite `2026/0088` y sigue en
+  `2026/0089`; retroceder por debajo de lo emitido se rechaza con el motivo.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** solo se permite avanzar. Si alguien informa de que
+  no puede fijar un número, será porque ya hay una factura emitida igual o superior en
+  ese prefijo; el mensaje lo dice.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k "series_can_continue or
+  never_go_back"`. Revertir es quitar la función y su ruta; no hay dato que migrar.
+- **Estado de publicación:** commit local, pendiente de subir.
 ## 2026-08-06 19:42 — excepción explícita para la clave pública de demo
 
 - **Autor/agente:** Codex.
@@ -1750,6 +2272,59 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   revisar `email.available()` y el payload de `checkout/sessions`. El cambio no altera
   tablas ni datos y puede revertirse por adaptador.
 - **Estado de publicación:** local sobre `main`, validado y pendiente de push.
+## 2026-08-02 21:30 — catálogos por oficio y aviso del 40% en obras de vivienda
+
+- **Autor/agente:** Claude.
+- **Objetivo:** que la puesta en marcha deje de teclear el catálogo cliente a cliente, y
+  avisar del error fiscal más fácil de cometer en reformas: el tipo reducido del 10%
+  decae si el material supera el 40% de la base (art. 91.Uno.2.10º LIVA) y entonces la
+  obra tributa entera al 21%.
+- **Áreas y archivos:** `src/noesis/migrations.py` (migración 38), `src/noesis/db.py`
+  (`kind` en líneas y sus cuatro inserciones), `src/noesis/trades.py` (nuevo: catálogos
+  y regla), `src/noesis/tools.py` y `src/noesis/nlu.py` (el aviso llega al chat),
+  `src/noesis/web/routers/invoicing.py` (dos rutas y `aviso_fiscal`),
+  `tests/test_backend.py`, `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** **esquema 38**. `invoice_lines` gana `kind` con valor
+  'servicio' por defecto; lo ya emitido no se reinterpreta.
+- **Pruebas ejecutadas:** suite completa **408 pasan, 71 subtests, 0 fallos**. Con
+  servidor real: carga de catálogo por API, aviso al 60% de material, silencio al 28,6%
+  y con factura al 21%, y emisión efectiva pese al aviso.
+- **Dependencias o validaciones externas:** **la regla del 40% necesita revisión de
+  asesoría fiscal** antes de venderse como garantía. Falta ejecutar la migración 38 en
+  PostgreSQL.
+- **Riesgo/punto probable de fallo:** el aviso depende de que las líneas estén marcadas
+  como material. Una factura escrita a mano sin marcar nada cuenta como mano de obra y
+  no avisará: es un falso negativo consciente, preferible a alarmar sin motivo.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k "trade_catalog or
+  reduced_rate"`. Para desactivar solo el aviso basta con que `reduced_rate_warning`
+  devuelva `None`; la migración puede quedarse sin efecto secundario.
+- **Estado de publicación:** commit local, pendiente de subir.
+
+## 2026-08-02 20:10 — el error de emisión ofrece la factura simplificada cuando es legal
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el fundador se topó con «Antes de emitir completa: NIF del cliente,
+  domicilio del cliente» y no sabía que existía una salida. Si el destinatario es un
+  particular y el total cabe en el límite general de 400 € (RD 1619/2012), la factura
+  simplificada es legal y el producto ya la soporta; solo faltaba decirlo.
+- **Áreas y archivos:** `src/noesis/db.py` (aviso condicionado y
+  `_fits_simplified_invoice` como fuente única del límite), `src/noesis/tools.py`
+  (usa el mismo ayudante), `tests/test_backend.py` (dos pruebas nuevas),
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** suite completa **400 pasan, 71 subtests, 0 fallos**. Además,
+  con servidor real: aviso con 150 € (sugiere) y con 900 € (no sugiere), ciclo completo
+  de simplificada emitida sin datos del destinatario con serie `T2026/0001`, y rechazo
+  al crear un ticket de 900 €.
+- **Dependencias o validaciones externas:** el límite de 400 € es el general; hay
+  supuestos sectoriales de 3.000 €. **Conviene confirmarlo con la asesoría fiscal**
+  antes de ofrecerlo a sectores con ese régimen.
+- **Riesgo/punto probable de fallo:** el aviso solo aparece si lo único que falta son
+  los datos del destinatario. Si alguien informa de que no lo ve, comprobar que no
+  falte además el NIF o el domicilio del propio negocio.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k simplified`. Revertir es
+  devolver el `raise ValueError` original en `issue_invoice`.
+- **Estado de publicación:** commit local, pendiente de subir.
 
 ## 2026-08-02 18:40 — el chat web emite el borrador, y la voz del plan Sin Límites deja de prometerse como activa
 

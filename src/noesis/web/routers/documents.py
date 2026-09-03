@@ -207,6 +207,29 @@ def api_document_draft(business_id: int, doc_id: int):
     return draft
 
 
+@router.post("/api/{business_id}/documents/{doc_id}/client-candidate/confirm")
+async def api_document_client_candidate_confirm(
+    request: Request, business_id: int, doc_id: int
+):
+    """El titular confirma el alta o vínculo propuesto por una factura emitida."""
+    from ...documents import service as docservice
+
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    try:
+        client = docservice.confirm_client_candidate(
+            business_id,
+            doc_id,
+            name=body.get("name"),
+            nif=body.get("nif"),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "client": client}
+
+
 @router.post("/api/{business_id}/documents/{doc_id}/review")
 async def api_document_review(business_id: int, doc_id: int, request: Request):
     """Corrección humana: tipo, estado y nota del documento. Queda trazado."""

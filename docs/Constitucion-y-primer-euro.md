@@ -5,9 +5,11 @@
 > Cada importe, plazo y epígrafe debe confirmarse con un profesional antes de firmar.
 > Fecha de redacción: **3 de septiembre de 2026**.
 
-Tres preguntas, una respuesta encadenada: la forma jurídica la decide Meta antes que
-Hacienda; lo legal se ordena por dependencias, no por importancia; y el primer euro
-llega antes de lo que parece porque **WhatsApp no está en el camino crítico**.
+Este documento cubre **lo que [`Ruta-legal.pdf`](Ruta-legal.pdf) no trata**: si
+constituir sociedad o darse de alta como autónomo, los trámites de constitución en
+orden de dependencia y cuánto cuesta arrancar. Las obligaciones del producto
+—Veri\*Factu, Meta, protección de datos, Reglamento de IA— y las tres rutas para
+resolverlas están allí, y el calendario en [`Plan-60-dias.pdf`](Plan-60-dias.pdf).
 
 ---
 
@@ -100,8 +102,10 @@ RETA**, así que ser administrador de la nueva S.L. no te añade una segunda cuo
 
 ## 2. Todo lo legal, ordenado por dependencias
 
-Cinco bloques. El orden importa: cada uno desbloquea el siguiente, y el bloque C es
-el que de verdad puede pararte antes del primer cliente de pago.
+Cinco bloques, en orden de dependencia: cada uno desbloquea el siguiente. Los
+bloques A y B se desarrollan aquí porque no están en ningún otro sitio; C y D
+remiten a los documentos que ya los tratan, para no mantener dos versiones de lo
+mismo.
 
 ### Bloque A · Existir (días 1-20)
 
@@ -144,63 +148,22 @@ el que de verdad puede pararte antes del primer cliente de pago.
   durante cuatro años. Noesis va a facturarse a sí mismo con las mismas reglas que
   exige a sus clientes.
 
-### Bloque C · Poder tratar datos de terceros — *aquí está el bloqueo real*
+### Bloque C · Protección de datos
 
-Noesis es **encargado del tratamiento** de los datos que el autónomo mete sobre sus
-clientes, y **responsable** de los datos del propio autónomo. Eso implica, y no es
-opcional:
+Lo cubren dos documentos, y no se duplica aquí: la parte 5 de
+[`Ruta-legal.pdf`](Ruta-legal.pdf) para las obligaciones, y [[RGPD-estado-y-plan]]
+para la auditoría contra el código. Las acciones concretas, en [[RGPD-QUE-HACER]].
 
-- **Contrato de encargado del tratamiento (art. 28 RGPD)** aceptado por cada cliente.
-  La plantilla ya existe (`encargado-tratamiento.html`) y está **pendiente de
-  revisión profesional**, según [[Tareas-vivas]].
-- **Registro de actividades de tratamiento** (art. 30), como responsable y como
-  encargado.
-- **Lista de subencargados** publicada y con derecho de objeción: Railway, Stripe,
-  Brevo, Google, Meta y el proveedor de IA que se elija.
-- **Transferencias internacionales**: cualquier proveedor fuera del EEE necesita base
-  legal —decisión de adecuación o cláusulas contractuales tipo— y constar en la
-  lista. Esto afecta directamente a la decisión pendiente de proveedor de IA en
-  [[Preguntas-abiertas]]: **la elección tiene consecuencia legal, no solo de coste**.
-- **Evaluación de impacto (art. 35)**: con datos fiscales y financieros de terceros a
-  escala, es muy probable que sea exigible. Pregúntalo explícitamente.
-- **Procedimiento de brecha de seguridad**: notificación en 72 h. Debe estar escrito
-  antes, no después.
-- **Aviso legal (LSSI)**, política de privacidad, términos y política de cookies con
-  la identidad legal real. El producto **ya falla cerrado** si faltan
-  `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`, `NOESIS_LEGAL_ADDRESS` y
-  `NOESIS_LEGAL_EMAIL`: la comprobación está en `readiness.py`.
+Lo único que hay que retener en este documento: **es la partida legal en la que no
+se ahorra**. Presupuesta 300-800 € de revisión por un abogado de protección de datos
+antes del primer cliente de pago, y encárgala el día que tengas NIF, porque es lo que
+más tarda por depender de otro.
 
-**Esta es la única partida legal en la que no recomiendo ahorrar.** Presupuesta
-300-800 € de revisión por un abogado de protección de datos antes del primer cliente
-de pago. Casi todo lo demás se puede hacer barato; esto no.
+### Bloque D · Veri\*Factu como productor
 
-La auditoría detallada de qué cumple ya el código, qué está publicado y no es cierto,
-y qué encargarle exactamente al abogado está en [[RGPD-estado-y-plan]].
-
-### Bloque D · Poder vender un programa de facturación
-
-Aquí hay una obligación que no aparece en ninguna guía de «cómo montar una empresa»
-y que te afecta a ti más que a tus clientes.
-
-[[Fiscalidad]] recoge bien los plazos de **los obligados tributarios**: 1 de enero de
-2027 para contribuyentes del Impuesto sobre Sociedades y 1 de julio de 2027 para el
-resto. Pero Noesis no es solo usuario: es **productor de un sistema informático de
-facturación**, y el productor tiene obligaciones propias y anteriores, entre ellas
-emitir una **declaración responsable** de que el sistema cumple el Real Decreto
-1007/2023.
-
-Consecuencia práctica, y es una decisión tuya: el registro Veri\*Factu está
-construido, pero la **remisión a la AEAT está construida y no validada externamente**
-—así consta en [[Fiscalidad]]—. Antes de cobrar al primer cliente hay que elegir una
-de dos:
-
-- **(a)** completar la validación técnica y publicar la declaración responsable; o
-- **(b)** declarar explícitamente, en los términos y dentro del producto, que durante
-  el piloto **el módulo de facturación no se ofrece como sistema Veri\*Factu**.
-
-Vender un programa de facturación sin resolver esto es el riesgo legal más específico
-y menos visible del proyecto. Llévalo a la gestoría con el número del Real Decreto en
-la mano.
+También en [`Ruta-legal.pdf`](Ruta-legal.pdf), que lo desarrolla mejor que este
+documento: la obligación del productor de un sistema informático de facturación está
+viva desde el 29-jul-2025, no en 2027, y falta la declaración responsable.
 
 ### Bloque E · Proteger (puede esperar al primer cliente, no más)
 
@@ -216,112 +179,54 @@ la mano.
 
 ---
 
-## 3. El plan del primer euro
+## 3. Dónde encaja esto en el calendario
 
-### El hallazgo que acorta seis semanas
+**El plan de ejecución con fechas es [`Plan-60-dias.pdf`](Plan-60-dias.pdf).** Aquí
+solo queda lo que ese plan da por hecho: la cadena de dependencias legales que decide
+cuándo se puede cobrar.
 
-**WhatsApp no está en el camino crítico, y la verificación de Meta tampoco.** Sin
-verificar tienes 250 conversaciones cada 24 h y dos números: sobra para tres a cinco
-autónomos. La verificación limita *cuándo puedes crecer*, no *cuándo puedes cobrar*.
+> **NIF → identidad legal publicada → Stripe live → alta de un cliente → cobro**
 
-El propio producto lo refuerza: el alta comercial es recuperable y **permite posponer
-WhatsApp voluntariamente** y seguir hasta el cobro. Así que Meta corre en paralelo, no
-por delante.
+Sin NIF no hay cuenta de Stripe a nombre de la sociedad. Sin `NOESIS_LEGAL_NAME`,
+`NOESIS_LEGAL_NIF`, `NOESIS_LEGAL_ADDRESS` y `NOESIS_LEGAL_EMAIL` publicadas, el
+servidor falla cerrado por diseño: la comprobación está en `readiness.py`. Y cobrar
+no exige abrir el registro público, porque el alta manual auditada desde
+Administración ya existe.
 
-Lo que sí está en el camino crítico es una cadena corta y dura:
+Por eso el **NIF provisional del modelo 036** es el hito que más desbloquea de todo
+el proceso: llega pocos días después de la escritura y abre a la vez Stripe, la
+identidad legal del producto y el encargo al abogado.
 
-> **NIF → identidad legal publicada → Stripe live → alta manual de un cliente → cobro**
+### Corrección sobre Meta
 
-Sin NIF no hay Stripe. Sin identidad legal el servidor falla cerrado. Sin cobro no hay
-euro. Todo lo demás es paralelo.
+Una versión anterior de este documento decía que la verificación de empresa y la
+revisión de la aplicación de Meta no estaban en el camino crítico, apoyándose en
+[`Meta-Verificacion.pdf`](Meta-Verificacion.pdf). **[`Ruta-legal.pdf`](Ruta-legal.pdf)
+sostiene lo contrario y su argumento es mejor:** el `Standard access` solo alcanza a
+los activos del propio negocio, así que la WABA de un cliente —aunque la conceda a
+mano— exige `Advanced access` y, con él, App Review.
 
-### Semana 1 (3-10 sep) · Existir
-
-- Decidir forma jurídica y resolver la rama de la empresa de eventos.
-- Contratar gestoría: pide precio cerrado de constitución **y** cuota mensual.
-- Pedir la denominación en el RMC. Cinco nombres.
-- Comprobar la marca «Noesis» en la OEPM. Diez minutos, hoy.
-- **En paralelo, producto:** empezar por la P0 que no depende de nadie: **rotar
-  `NOESIS_SECRET`, SMTP y toda credencial que haya aparecido en una captura, un PDF o
-  una conversación**. Esto no espera a la notaría.
-
-### Semana 2 (11-17 sep) · Firmar y desbloquear
-
-- Certificado bancario, escritura, titularidad real.
-- **Modelo 036 y NIF provisional.** Este es el hito que abre todo lo demás.
-- Encargar la revisión legal del bloque C. Es lo que más tarda por depender de otro:
-  lánzalo el día que tengas NIF, no cuando esté todo lo demás listo.
-- **En paralelo, producto:** completar el recorrido del alta recuperable en escritorio
-  y móvil, y la validación visual de `/acceso`. Ambas son P0 sin dependencia externa.
-
-### Semana 3 (18-24 sep) · Cobrar se vuelve posible
-
-- Inscripción en el Registro Mercantil, NIF definitivo, alta censal completa, RETA.
-- Publicar en Railway `NOESIS_LEGAL_NAME`, `NOESIS_LEGAL_NIF`, `NOESIS_LEGAL_ADDRESS`,
-  `NOESIS_LEGAL_EMAIL` y `NOESIS_LEGAL_REGISTRY`. Verificar que `/ready` deja de
-  señalar la identidad legal como pendiente.
-- Abrir la cuenta Stripe de la sociedad y superar la verificación de identidad.
-- **Arrancar la verificación de empresa en Meta**, con el nombre y el NIF copiados
-  **literalmente** de la escritura, carácter a carácter. En paralelo, enviar a aprobar
-  las nueve plantillas: no dependen de nada.
-
-### Semana 4 (25 sep - 1 oct) · La cadena del dinero
-
-- Crear en Stripe live los tres productos con sus seis precios, `automatic_tax` y un
-  `tax_behavior` válido en los seis.
-- Recorrer el Customer Portal autenticado de verdad: alta, cambio de tarjeta, cambio
-  de plan, anualidad, cancelación e impago. Está pendiente en [[Tareas-vivas]], y
-  siete contratos locales verdes **no** lo sustituyen.
-- **Compra real con tu propia tarjeta y reembolso.** Es el ensayo general: si el IVA,
-  la factura y el webhook no salen bien contigo, no van a salir bien con un cliente.
-- Cerrar la lista de tres a cinco autónomos de tu entorno. Nombres y teléfonos, no
-  perfiles.
-
-### Semanas 5-6 (2-15 oct) · El euro
-
-- Dar de alta a los tres primeros **manualmente desde Administración**, con
-  `NOESIS_PUBLIC_SIGNUP_ENABLED=false`. Cobrar no exige abrir el registro público:
-  exige poder facturar. Mantener el alta cerrada mientras dure la lista P0 es
-  exactamente lo que ya decidiste.
-- Demo de diez minutos, alta acompañada y **cobro el mismo día**.
-- **Primer euro cobrado.**
+Sigue siendo cierto que **se puede cobrar el primer euro sin WhatsApp**, porque el
+alta permite posponerlo. Ya no es cierto que los números de clientes funcionen sin
+App Review. Planifica según `Ruta-legal`.
 
 ### El precio del primer cliente: descuento, nunca gratis
 
-[[Estrategia-Marketing]] plantea «gratis o precio fundador». Elige precio fundador, y
-por una razón que no es el dinero: **gratis destruye la única señal que necesitas del
-piloto**. Un cliente que no paga no te dice si el producto vale; te dice que no le
-molesta tenerlo.
+Elige precio fundador sobre gratis, y por una razón que no es el dinero: **gratis
+destruye la única señal que necesitas del piloto**. Un cliente que no paga no te dice
+si el producto vale; te dice que no le molesta tenerlo.
 
 Cómo hacerlo sin ensuciar el catálogo: **no crees precios nuevos**. Usa el de 29 € y
-aplícale un cupón de Stripe —por ejemplo, 12 meses al 50 %— condicionado a dos cierres
-semanales acompañados y a permiso escrito para publicar sus cifras. Así el catálogo
-mantiene seis `price_id` limpios, que es justo lo que comprueban las pruebas del
-repositorio.
+aplícale un cupón de Stripe —por ejemplo, 12 meses al 50 %— condicionado a dos
+cierres semanales acompañados y a permiso escrito para publicar sus cifras. Así el
+catálogo mantiene seis `price_id` limpios, que es justo lo que comprueban las pruebas
+del repositorio.
 
-### Qué NO hace falta para el primer euro
+### Definición de «primer euro»
 
-Para que nadie se invente trabajo:
-
-- **La revisión de la aplicación en Meta.** Es del camino B (Embedded Signup).
-  Ignórala hasta que dar de alta a mano te ocupe más de media hora.
-- **Inicio de sesión con Facebook para empresas.** En blanco.
-- **La verificación de empresa de Meta.** Necesaria para crecer, no para cobrar.
-- **Abrir el registro público.** El alta manual auditada ya existe.
-- **Google OAuth, la voz, el recepcionista telefónico, la app móvil, i18n.**
-- **La marca registrada.** Comprobar que está libre, sí. Registrarla, después.
-
-### Definición de «primer euro» y criterio de parada
-
-**Primer euro = primer cargo en Stripe *live*, de una persona que no eres tú, con
-factura emitida y contrato de encargado del tratamiento aceptado.** Un cargo sin
-factura correcta no cuenta: sería empezar la empresa incumpliendo lo que vende.
-
-Y el criterio de parada, que es lo que casi nadie escribe antes de empezar: **si a 15
-de noviembre de 2026 ninguno de los tres pilotos ha pagado un segundo mes**, el
-problema no es el marketing ni el precio. Es que el producto todavía no ha demostrado
-el ahorro que promete, y toca volver a [[Tareas-vivas]] antes de gastar un euro en
-captación.
+**Primer cargo en Stripe *live*, de una persona que no eres tú, con factura emitida y
+contrato de encargado del tratamiento aceptado.** Un cargo sin factura correcta no
+cuenta: sería empezar la empresa incumpliendo lo que vende.
 
 ---
 
@@ -351,5 +256,6 @@ Tres respuestas cambian el plan de forma material. Van a [[Preguntas-abiertas]]:
    ampliar objeto social, y si hay o no una segunda cuota de RETA.
 2. **¿Verificas Meta con la sociedad nueva o con la existente?** Determina si la
    verificación arranca en la semana 3 o puede arrancar ya.
-3. **¿Camino (a) o (b) del bloque D en Veri\*Factu?** Completar la validación técnica,
-   o declarar el módulo fuera del alcance Veri\*Factu durante el piloto.
+3. **¿Qué ruta de las tres de [`Ruta-legal.pdf`](Ruta-legal.pdf) eliges?** Decide a
+   la vez el alcance Veri\*Factu del piloto, que es lo que bloquea reescribir la
+   página `/cumplimiento` (punto 1.3 de [[RGPD-QUE-HACER]]).

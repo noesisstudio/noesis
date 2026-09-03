@@ -1350,14 +1350,22 @@ def forgot_submit(request: Request, email: str = Form(...)):
     user = db.get_user_by_email(email)
     if user:  # Si no existe, no lo revelamos (respuesta idéntica).
         token = secrets.token_urlsafe(32)
-        db.create_password_reset(user["id"], auth.hash_token(token), ttl_minutes=60)
+        token_hash = auth.hash_token(token)
+        db.create_password_reset(user["id"], token_hash, ttl_minutes=60)
         link = f"{config.BASE_URL}/restablecer?token={token}"
         email_adapter.queue_email(
             email, "Restablecer tu contraseña de Noesis",
             f"Hola,\n\nPara crear una contraseña nueva, abre este enlace (válido 1 hora):\n"
             f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Noesis",
             business_id=user["business_id"],
-            idempotency_key=f"password-reset:{user['id']}:{auth.hash_token(token)[:20]}",
+            idempotency_key=f"password-reset:{user['id']}:{token_hash[:20]}",
+        )
+        db.record_security_event(
+            "account.password_reset_requested",
+            area="authentication",
+            subject_business_id=user["business_id"],
+            request_id=getattr(request.state, "request_id", None),
+            metadata={"user_id": user["id"]},
         )
     return RedirectResponse("/recuperar?sent=1", status_code=303)
 
@@ -1373,8 +1381,17 @@ def reset_submit(request: Request, token: str = Form(...), password: str = Form(
     if len(password) < 12 or len(password) > 1024:
         return RedirectResponse(f"/restablecer?token={token}&error=password",
                                 status_code=303)
-    row = db.use_password_reset(auth.hash_token(token))
-    if not row:
+    result = db.reset_user_password(
+        auth.hash_token(token), auth.hash_password(password)
+    )
+    if not result:
         return RedirectResponse("/restablecer?error=token", status_code=303)
-    db.set_password(row["user_id"], auth.hash_password(password))
+    request.session.clear()
+    db.record_security_event(
+        "account.password_reset_completed",
+        area="authentication",
+        subject_business_id=result["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"user_id": result["user_id"]},
+    )
     return RedirectResponse("/login?error=reset_ok", status_code=303)

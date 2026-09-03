@@ -47,6 +47,8 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
 3. El `preDeployCommand` ejecuta `python -m noesis.migrations upgrade`; si falla,
    Railway no debe iniciar el nuevo despliegue.
 4. Comprobar `/health`, `/ready`, alta/login y aislamiento con dos negocios.
+   La parte pública repetible se ejecuta con `noesis-production-check`; comprueba
+   además esquema, release, sitemap, páginas, SEO legal y cabeceras de seguridad.
 5. Mantener SQLite únicamente para local o recuperación histórica; no ejecutar dos
    bases operativas en paralelo.
 
@@ -60,6 +62,8 @@ se aplican con `python -m noesis.migrations upgrade`; se pueden revertir con
 - [ ] Backup manual bloqueado del volumen SQLite anterior.
 - [ ] Postgres limpio enlazado mediante `DATABASE_URL`.
 - [ ] Migración pre-deploy en versión actual y `/ready` en 200.
+- [ ] `noesis-production-check` verde después de publicar; el workflow programado
+      detecta regresiones posteriores, pero no sustituye un monitor 24/7 externo.
 - [ ] Volumen mantenido para `NOESIS_DOCS_PATH` y otros ficheros.
 - [ ] `NOESIS_BACKUP_DIR` apunta al volumen persistente.
 - [ ] Si WhatsApp está activo, `WHATSAPP_APP_SECRET` está configurado.

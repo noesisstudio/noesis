@@ -73,6 +73,12 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   escanear, y la migración 38 impone una huella única por negocio. La búsqueda de
   históricos se limita al mismo `business_id` y tamaño para evitar comparación o
   filtración entre clientes; una colisión concurrente elimina el fichero sobrante.
+- `documents/inbound_email.py` + migración 52 — entrada IMAP desde un único
+  catch-all. Una dirección opaca resuelve exactamente un `business_id`; mensajes
+  sin ruta, con dos rutas o con ruta revocada no entran. Solo se guardan huella,
+  estado y contadores, y los adjuntos recorren el servicio documental existente.
+  Un cliente extraído se relaciona por NIF/nombre exacto o queda pendiente de una
+  confirmación editable; el correo jamás autoriza un asiento ni un alta silenciosa.
 - `security_center.py` + `security_events` — parte CISO de solo lectura sobre una
   bitácora append-only y encadenada, sin contenido operativo ni datos de contacto.
 - `tests/test_backend.py` — regresiones de aislamiento, facturación, webhooks,
@@ -97,6 +103,9 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   `FOR UPDATE` en Postgres) para impedir que dos cobros superen el total.
 - Una foto de ticket crea primero un documento y un borrador. Solo la confirmación
   explícita crea el gasto y enlaza `documents.expense_id` dentro de la transacción.
+- Un correo entrante se reclama por `business_id + SHA-256` para que dos réplicas o
+  dos reenvíos no dupliquen archivos. El scheduler solo marca como leído un resultado
+  definitivo; los fallos transitorios permanecen disponibles para reintento.
 - En modo Veri*Factu, la misma transacción añade un registro de alta append-only,
   encadenado por NIF emisor. Las rectificaciones crean una nueva factura R1-R5 y
   conservan el original.
@@ -107,7 +116,10 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
 - Los webhooks de WhatsApp y Stripe verifican firma y deduplican IDs. La migración
   16 distingue eventos en proceso, completados y fallidos: un error devuelve 5xx y
   permite reintentar; solo un evento completado se descarta como duplicado.
-- Las sesiones se revocan al cambiar contraseña; las cuentas sin suscripción activa
+- Las sesiones se revocan al cambiar contraseña; la gestoría usa una tabla de tokens
+  separada porque su identidad puede abarcar varios negocios. Sus enlaces son
+  hasheados, caducables y de un solo uso, y recuperar la clave conserva el MFA. Las
+  cuentas sin suscripción activa
   solo conservan acceso a pago, exportación y baja.
 - En producción las sesiones usan cookie `__Host-`, caducan por inactividad y el
   administrador exige Google OAuth; si faltan sus credenciales el panel queda
@@ -126,6 +138,11 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   de estado técnico para el cliente.
 - `/health` comprueba que el proceso responde e identifica el release desplegado;
   `/ready` devuelve esa misma huella y la versión de esquema realmente aplicada.
+- `noesis-production-check` consume ambas rutas desde fuera y las cruza con el estado
+  versionado del repositorio. También recorre el sitemap y valida la superficie
+  pública y sus protecciones sin autenticar ni tocar datos. GitHub lo programa cada
+  seis horas; una caída queda registrada como workflow fallido, aunque una operación
+  masiva debe añadir alerta 24/7 y guardia externa independiente de GitHub/Railway.
 - Los backups incluyen una copia verificada de la base de datos y un ZIP separado,
   también verificado por hashes, con los archivos de `DOCS_PATH`. Un simulacro
   semanal independiente repite la restauración en un fichero/esquema descartable y

@@ -286,6 +286,22 @@ def _insert_postgres_rows(raw, table: str, columns: list[str], rows: list[list])
         cursor.executemany(statement, rows)
 
 
+def _set_postgres_user_triggers(raw, tables: list[str], *, enabled: bool) -> None:
+    """Suspende solo triggers de negocio durante una restauración íntegra.
+
+    Las claves foráneas y demás restricciones internas permanecen activas. Esto
+    permite reconstruir, por ejemplo, las líneas congeladas de una factura emitida
+    sin desproteger el esquema una vez finalizada la restauración.
+    """
+    action = sql.SQL("ENABLE" if enabled else "DISABLE")
+    for table in tables:
+        raw.execute(
+            sql.SQL("ALTER TABLE {} {} TRIGGER USER").format(
+                sql.Identifier(table), action
+            )
+        )
+
+
 def _reset_postgres_sequences(raw) -> None:
     """Alinea identidades para que una restauración pueda seguir escribiendo."""
     schema = raw.execute(
@@ -337,6 +353,10 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
         header = json.loads(source.readline())
         if header.get("format") != POSTGRES_DUMP_FORMAT:
             raise RuntimeError("El formato del backup Postgres no es compatible.")
+        expected_tables = [str(table) for table in header.get("tables", [])]
+        if not expected_tables:
+            raise RuntimeError("El backup Postgres no declara sus tablas.")
+        _set_postgres_user_triggers(raw, expected_tables, enabled=False)
         for line in source:
             record = json.loads(line)
             if record["type"] == "table":
@@ -354,6 +374,7 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
                     flush()
         flush()
     _reset_postgres_sequences(raw)
+    _set_postgres_user_triggers(raw, expected_tables, enabled=True)
     return header, tables
 
 

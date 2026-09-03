@@ -333,6 +333,13 @@ def _startup() -> None:
         raise RuntimeError(
             "STRIPE_WEBHOOK_SECRET es obligatorio al activar Stripe en producción."
         )
+    if config.INBOUND_EMAIL_ENABLED:
+        from ..documents import inbound_email
+        if not inbound_email.configured():
+            log.error(
+                "El buzón documental permanece apagado: se activó la prueba, "
+                "pero faltan las credenciales IMAP. El resto del SaaS puede arrancar."
+            )
     if config.RESET_DB:
         if config.DATABASE_URL:
             raise RuntimeError("NOESIS_RESET_DB no se admite con Postgres.")

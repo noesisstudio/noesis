@@ -317,7 +317,7 @@ def _crear_factura(
     inv = db.add_invoice(c["id"], concepto, base, vat_rate=rate,
                          irpf_rate=irpf_rate, business_id=business_id,
                          invoice_type=invoice_type, lines=lineas)
-    if invoice_type == "F2" and Decimal(str(inv["total"])) > Decimal("400"):
+    if invoice_type == "F2" and not db._fits_simplified_invoice(inv["total"]):
         db.delete_invoice(inv["id"], business_id)
         raise ValueError(
             "El ticket supera el límite general de 400 € IVA incluido. "
@@ -327,7 +327,13 @@ def _crear_factura(
            f"+ IVA {inv['vat_amount']:.2f}")
     if inv["irpf_amount"]:
         msg += f" − IRPF {inv['irpf_amount']:.2f}"
-    return {"ok": True, "factura": inv, "mensaje": msg + ")."}
+    from . import trades
+    return {
+        "ok": True, "factura": inv, "mensaje": msg + ").",
+        "aviso_fiscal": trades.reduced_rate_warning(
+            db.get_invoice_lines(inv["id"], business_id)
+        ),
+    }
 
 
 def _preparar_factura_trabajo(business_id, trabajo_id):
