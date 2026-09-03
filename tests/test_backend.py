@@ -1375,6 +1375,156 @@ class BackendTestCase(unittest.TestCase):
             db.get_invoice(invoice["id"], business["id"])["status"], "borrador"
         )
 
+    def test_missing_client_data_offers_the_simplified_invoice_when_it_fits(self):
+        # Sin NIF del cliente no se puede emitir una factura completa, pero si
+        # el importe cabe en una simplificada el autónomo tiene salida legal.
+        business, _ = self.make_business()
+        chat.handle(business["id"], "factura a Vecino por reparación 150 euros")
+        small = db.list_invoices(business["id"])[0]
+        reply = chat.handle(business["id"], f"emitir factura {small['id']}")["reply"]
+        self.assertIn("factura simplificada", reply)
+        self.assertIn("400", reply)
+
+        # Por encima del límite no se ofrece, porque no sería legal.
+        chat.handle(business["id"], "factura a Vecino por reforma 900 euros")
+        big = [
+            invoice for invoice in db.list_invoices(business["id"])
+            if invoice["total"] > 400
+        ][0]
+        reply = chat.handle(business["id"], f"emitir factura {big['id']}")["reply"]
+        self.assertNotIn("simplificada", reply)
+
+    def test_simplified_invoice_issues_without_client_tax_data(self):
+        business, _ = self.make_business()
+        chat.handle(
+            business["id"], "ticket de venta a Particular por grifo 150 euros"
+        )
+        ticket = db.list_invoices(business["id"])[0]
+        self.assertEqual(ticket["invoice_type"], "F2")
+
+        chat.handle(business["id"], f"emitir factura {ticket['id']}")
+        issued = db.get_invoice(ticket["id"], business["id"])
+        self.assertEqual(issued["status"], "enviada")
+        self.assertTrue(issued["number"])
+        # El destinatario no necesita datos fiscales en una simplificada.
+        self.assertFalse(
+            (db.get_client(issued["client_id"], business["id"]) or {}).get("nif")
+        )
+
+    def test_series_can_continue_a_numbering_brought_from_another_program(self):
+        # Quien llega desde otro programa ya lleva facturas emitidas del año. Si
+        # Noesis empezara en el 1, repetiría números dentro del mismo ejercicio.
+        business, client = self.make_business()
+        first = db.add_invoice(
+            client["id"], "Primera", 100, business_id=business["id"]
+        )
+        db.issue_invoice(first["id"], business["id"])
+        self.assertTrue(
+            db.get_invoice(first["id"], business["id"])["number"].endswith("0001")
+        )
+
+        series = [
+            item for item in db.list_invoice_series(business["id"])
+            if item["document_type"] == "invoice"
+        ][0]
+        result = db.set_series_next_number(business["id"], series["id"], 88)
+        self.assertEqual(result["next_number"], 88)
+
+        following = db.add_invoice(
+            client["id"], "Siguiente", 200, business_id=business["id"]
+        )
+        db.issue_invoice(following["id"], business["id"])
+        self.assertTrue(
+            db.get_invoice(following["id"], business["id"])["number"].endswith("0088")
+        )
+
+    def test_series_numbering_can_never_go_back_over_issued_invoices(self):
+        business, client = self.make_business()
+        issued = db.add_invoice(
+            client["id"], "Emitida", 100, business_id=business["id"]
+        )
+        db.issue_invoice(issued["id"], business["id"])
+        series = [
+            item for item in db.list_invoice_series(business["id"])
+            if item["document_type"] == "invoice"
+        ][0]
+
+        # Retroceder crearía el duplicado que la ley no permite.
+        with self.assertRaises(ValueError):
+            db.set_series_next_number(business["id"], series["id"], 1)
+        # Y una serie de otro negocio nunca es accesible.
+        otro, _ = self.make_business("Negocio Ajeno")
+        with self.assertRaises(ValueError):
+            db.set_series_next_number(otro["id"], series["id"], 500)
+
+    def test_trade_catalog_loads_once_and_marks_material(self):
+        from noesis import trades
+
+        business, _ = self.make_business()
+        result = trades.load_catalog(business["id"], "fontaneria")
+        self.assertGreater(result["created"], 0)
+
+        products = db.list_products(business["id"])
+        kinds = {product["kind"] for product in products}
+        self.assertEqual(kinds, {"servicio", "producto"})
+
+        # Volver a cargarlo no duplica el catálogo del autónomo.
+        again = trades.load_catalog(business["id"], "fontaneria")
+        self.assertEqual(again["created"], 0)
+        self.assertEqual(len(db.list_products(business["id"])), len(products))
+
+        with self.assertRaises(ValueError):
+            trades.load_catalog(business["id"], "astronauta")
+
+    def test_reduced_rate_warns_only_when_material_breaks_the_limit(self):
+        from noesis import trades
+
+        business, client = self.make_business()
+
+        # Material por debajo del 40%: el 10% se sostiene y no se molesta.
+        ok = db.add_invoice(
+            client["id"], "Reforma baño", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 2000, "vat_rate": 10},
+                {"description": "Azulejo", "kind": "producto",
+                 "quantity": 1, "unit_price": 800, "vat_rate": 21},
+            ],
+        )
+        lines_ok = db.get_invoice_lines(ok["id"], business["id"])
+        self.assertIsNone(trades.reduced_rate_warning(lines_ok))
+
+        # Material por encima del 40%: el tipo reducido decae y hay que avisar.
+        risky = db.add_invoice(
+            client["id"], "Reforma cocina", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 1000, "vat_rate": 10},
+                {"description": "Muebles", "kind": "producto",
+                 "quantity": 1, "unit_price": 1500, "vat_rate": 21},
+            ],
+        )
+        lines_risky = db.get_invoice_lines(risky["id"], business["id"])
+        aviso = trades.reduced_rate_warning(lines_risky)
+        self.assertIsNotNone(aviso)
+        self.assertIn("21%", aviso)
+        # Avisa, pero no toca la factura: los tipos siguen como los puso el titular.
+        self.assertEqual({line["vat_rate"] for line in lines_risky}, {10.0, 21.0})
+
+        # Sin ninguna línea al tipo reducido, la regla no aplica.
+        plain = db.add_invoice(
+            client["id"], "Local comercial", None, business_id=business["id"],
+            lines=[
+                {"description": "Mano de obra", "kind": "servicio",
+                 "quantity": 1, "unit_price": 500, "vat_rate": 21},
+                {"description": "Material", "kind": "producto",
+                 "quantity": 1, "unit_price": 900, "vat_rate": 21},
+            ],
+        )
+        self.assertIsNone(trades.reduced_rate_warning(
+            db.get_invoice_lines(plain["id"], business["id"])
+        ))
+
     def test_nlu_extended_synonyms_stay_local(self):
         # Más formas naturales que el cerebro local resuelve gratis (sin IA).
         self.assertEqual(nlu.parse("compré 30 de tornillos")[0], "registrar_gasto")

@@ -3090,6 +3090,26 @@ def _downgrade_gestoria_accounts(conn) -> None:
     conn.execute("DROP INDEX IF EXISTS uq_gestoria_accounts_email")
     conn.execute("DROP TABLE IF EXISTS gestoria_accounts")
 
+def _upgrade_line_kind(conn) -> None:
+    """Distingue mano de obra de material en cada línea de factura.
+
+    El tipo reducido del 10% en obras de renovación de vivienda decae si el
+    material que aporta quien ejecuta supera el 40% de la base (art. 91.Uno.2.10º
+    LIVA). Sin saber qué línea es material no se puede avisar de ese límite, y es
+    la equivocación más fácil de cometer en fontanería y reformas. Las líneas ya
+    emitidas quedan como 'servicio': no se reinterpreta una factura cerrada.
+    """
+    if "kind" not in _column_names(conn, "invoice_lines"):
+        conn.execute(
+            "ALTER TABLE invoice_lines ADD COLUMN kind TEXT NOT NULL "
+            "DEFAULT 'servicio'"
+        )
+
+
+def _downgrade_line_kind(conn) -> None:
+    if conn.dialect == "postgres":
+        conn.execute("ALTER TABLE invoice_lines DROP COLUMN IF EXISTS kind")
+
 
 def _upgrade_showcase_demo(conn) -> None:
     """Marca persistente para demos comerciales aisladas y de solo lectura."""
@@ -4134,7 +4154,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (52, "documentos_por_correo",
      _upgrade_inbound_email_documents,
      _downgrade_inbound_email_documents),
-    (53, "registro_valor_util",
+    (53, "material_o_mano_de_obra", _upgrade_line_kind,
+     _downgrade_line_kind),
+    (54, "registro_valor_util",
      _upgrade_value_ledger,
      _downgrade_value_ledger),
 )

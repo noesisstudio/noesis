@@ -25,6 +25,7 @@ _PAGES = {
     "facturas": "Facturas", "cobros": "Cobros", "impuestos": "Impuestos",
     "agenda": "Trabajos", "proyectos": "Proyectos", "equipo": "Equipo", "clientes": "Clientes",
     "crm": "CRM", "productos": "Productos y servicios",
+    "oficios": "Plantillas por oficio",
     "documentos": "Documentos",
     "asistente": "Asistente", "ajustes": "Ajustes",
 }

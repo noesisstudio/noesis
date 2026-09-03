@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan de 60 días · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .part { color: var(--warn); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Noesis · Plan de ejecución</p>
+  <h1>60 días: de producto desplegado a tres clientes pagando</h1>
+  <p class="standfirst">Cuatro frentes en paralelo, ocho semanas y media, con una puerta de salida por semana. No es una lista de deseos: cada semana tiene un criterio que se cumple o no se cumple, y si no se cumple hay escrito qué hacer.</p>
+  <p class="crumbs">Consolida <code>docs/Ruta-legal.pdf</code>, <code>docs/Marketing-Noesis.pdf</code> y la lista P0 de <code>docs/Tareas-vivas.md</code> · Arranque previsto: lunes 7-sep-2026</p>
+</header>
+
+<div class="status">
+  <div class="status-cell is-stop">
+    <span class="status-label">Frente 1 · Meta y legal</span>
+    <span class="status-value">Lo lento</span>
+    <span class="status-note">Verificación, App Review y dos encargos profesionales. Semanas, y no dependen de vosotros.</span>
+  </div>
+  <div class="status-cell is-warn">
+    <span class="status-label">Frente 2 · Producto</span>
+    <span class="status-value">Lo vuestro</span>
+    <span class="status-note">Deuda del repositorio, integraciones y las puertas de cumplimiento.</span>
+  </div>
+  <div class="status-cell is-ok">
+    <span class="status-label">Frente 3 · Mercado</span>
+    <span class="status-value">Lo que decide</span>
+    <span class="status-note">Tres a cinco autónomos usando Noesis desde la semana 3.</span>
+  </div>
+  <div class="status-cell is-ok">
+    <span class="status-label">Frente 4 · Contenido</span>
+    <span class="status-value">Ya escrito</span>
+    <span class="status-note">24 piezas listas. Solo hay que grabar y colgar.</span>
+  </div>
+</div>
+
+<section>
+  <div class="sec-head">
+    <h2>La regla que ordena los 60 días</h2>
+  </div>
+  <div class="note">
+    <strong>Lo que depende de terceros se abre el día 1, aunque no esté todo listo.</strong> La verificación de Meta, la revisión de la aplicación y los dos informes profesionales tardan semanas y no se aceleran con esfuerzo. Todo el trabajo propio se hace <em>durante</em> esa espera.<br><br>
+    Un plan que ponga el código primero y los trámites después añade tres semanas de calendario sin añadir ni una hora de trabajo. Es el error que este plan evita.
+  </div>
+  <p>De ahí salen los cuatro frentes. Los dos primeros corren solos una vez arrancados; los dos últimos son donde ponéis las horas.</p>
+
+  <h3>El tablero de las nueve semanas</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Sem.</th><th>Meta y legal</th><th>Producto</th><th>Mercado</th><th>Contenido</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>Abrir los 5 trámites</strong></td><td>Push del merge · deuda a cero</td><td><strong>Cerrar los pilotos</strong></td><td>Abrir perfiles</td></tr>
+        <tr><td class="num">2</td><td>Esperando</td><td>OAuth · Brevo · IA · Groq</td><td>Permisos escritos · provincia</td><td>1.er bloque de grabación</td></tr>
+        <tr><td class="num">3</td><td>Verificación · número central</td><td>Puertas de cumplimiento</td><td><strong>Arranca el piloto</strong></td><td>Semana 1 de publicación</td></tr>
+        <tr><td class="num">4</td><td>Token · método de pago · <strong>informe fiscal</strong></td><td>Stripe test · ClamAV</td><td>Acompañamiento</td><td>Semana 2</td></tr>
+        <tr><td class="num">5</td><td>Plantillas aprobadas · <strong>informe jurídico</strong></td><td>Fricciones del piloto</td><td>Primera medición</td><td>Semana 3 · primera demo</td></tr>
+        <tr><td class="num">6</td><td><strong>Advanced access</strong></td><td>Alta de 2 números comerciales</td><td>Prueba de aislamiento real</td><td>Semana 4</td></tr>
+        <tr><td class="num">7</td><td>Declaración lista para firma</td><td>Restauración · monitor</td><td>Primeras gestorías</td><td>2.º bloque de grabación</td></tr>
+        <tr><td class="num">8</td><td><strong>Declaración firmada</strong></td><td><code>doctor --strict</code> limpio</td><td><strong>Se abre el cobro</strong></td><td>Semana 5</td></tr>
+        <tr><td class="num">9</td><td>—</td><td>—</td><td><strong>Revisión y decisión</strong></td><td>Semana 6</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Semana 1 · Días 1 a 7 — Abrir los relojes largos</h2>
+    <p class="sec-intro">La semana más importante de las nueve, y la que menos se parece a trabajar. Casi todo son formularios y llamadas.</p>
+  </div>
+
+  <div class="steps">
+    <div class="step first-step">
+      <div class="step-n">D1</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Lunes · los cinco arranques</h3><span class="chip chip-stop">todo el mismo día</span></div>
+        <ul>
+          <li><strong>Verificación de empresa en Meta.</strong> Nombre y NIF exactamente como en la escritura, abreviaturas incluidas. Documentación preparada antes de empezar el formulario.</li>
+          <li><strong>App Review para Advanced access</strong> de <code>whatsapp_business_management</code>. Es lo que hoy no está en vuestro plan y lo que bloquea los números de cliente.</li>
+          <li><strong>Las nueve plantillas</strong> a aprobación, con los cuerpos del runbook.</li>
+          <li><strong>Encargo a la asesoría fiscal</strong>, con la pregunta del piloto gratuito incluida. Es la que decide si vais por la ruta rápida.</li>
+          <li><strong>Encargo al abogado TIC.</strong></li>
+        </ul>
+        <p>Los dos encargos están redactados en <code>Ruta-legal.pdf</code>, sección 19. Se copian y se envían.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">D2</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Martes · el repositorio a cero</h3></div>
+        <p>Push del merge ya verificado y comprobar <code>/health</code> y <code>/ready</code> con esquema 53 en producción. A partir de aquí, un solo escritor por tarea.</p>
+        <p>Después: rellenar <code>NOESIS_VERIFACTU_PRODUCER_NIF</code> y solicitar el certificado de la FNMT, que son 17 € y dos días.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">D3-4</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Miércoles y jueves · cerrar el piloto</h3><span class="chip chip-ok">lo que más decide</span></div>
+        <p>Tres a cinco autónomos <strong>con nombre y apellidos</strong>. Del entorno cercano: alguien que ya os conozca dice que sí mucho antes que un desconocido.</p>
+        <p>La conversación es corta y honesta: «está construido y desplegado, quiero que lo uses gratis durante unas semanas mientras terminamos los papeles, y a cambio quiero que me cuentes qué falla y poder contar tus cifras». No se promete facturación con registro fiscal todavía.</p>
+        <p><strong>El permiso para publicar sus cifras se pide ahora</strong>, no dentro de dos meses. Ahora es fácil; después es incómodo.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">D5</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Viernes · perfiles y decisiones</h3></div>
+        <ul>
+          <li>Abrir Instagram y Facebook con los archivos y textos de <code>branding/redes-sociales/</code>. Sin publicar todavía.</li>
+          <li>Elegir la <strong>provincia de concentración</strong>.</li>
+          <li>Decidir los <strong>cinco oficios de verdad</strong> y anotar si hay que alinear los catálogos del producto.</li>
+          <li>Probar el formulario de solicitar acceso de punta a punta.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h3>Puerta de la semana 1</h3>
+    <p>Ninguno de los cinco trámites está esperando a que vosotros hagáis algo: todos esperan a otro. Y hay entre tres y cinco autónomos comprometidos por su nombre, con permiso escrito.</p>
+    <p><strong>Si no hay pilotos cerrados, el plan se para aquí.</strong> No se sigue construyendo ni publicando: se dedican los días 6 a 10 a conseguirlos. Todo lo demás depende de esto.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Semana 2 · Días 8 a 14 — La casa en orden</h2>
+    <p class="sec-intro">Mientras Meta y los profesionales trabajan, se quita todo lo que impediría que un autónomo entre solo.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Tarea</th><th>Por qué ahora</th><th>Cuánto</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Google OAuth</strong></td><td>Hoy vuestro panel de administración está cerrado en producción. Sin esto no podéis gestionar cuentas</td><td>Media hora</td></tr>
+        <tr><td><strong>Brevo y autenticación del dominio</strong></td><td>Sin correo, un piloto que pierda la contraseña se queda fuera. Y el DNS tarda en propagar</td><td>Media hora + espera</td></tr>
+        <tr><td><strong>Divulgación de IA</strong></td><td>El artículo 50 es exigible desde agosto. Es una línea de texto</td><td>Minutos</td></tr>
+        <tr><td><strong>Resolver Groq</strong></td><td>O al contrato de encargado o fuera del código. No puede quedarse cableado</td><td>Horas</td></tr>
+        <tr><td><strong>Rotar secretos expuestos</strong></td><td>Es P0 vuestro desde julio</td><td>Horas</td></tr>
+        <tr><td><strong>Correcciones documentales</strong></td><td>Plazos de productor en <code>Fiscalidad.md</code> y la tabla del Camino A en <code>Meta-Verificacion.html</code></td><td>Minutos</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>En paralelo, frente de contenido:</strong> primer bloque de grabación. Media mañana, seis piezas de una tirada —E01, E02, R05, R01, T01 y una demo— más 15-20 clips de recurso. Guiones y props preparados el día antes.</p>
+
+  <div class="callout">
+    <h3>Puerta de la semana 2</h3>
+    <p>Un autónomo podría darse de alta, perder la contraseña y recuperarla <strong>sin que nadie intervenga</strong>. Y hay seis piezas grabadas en bruto.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Semana 3 · Días 15 a 21 — Arranca el piloto</h2>
+    <p class="sec-intro">La semana en que Noesis deja de ser un proyecto y pasa a tener usuarios. Todo lo anterior existía para llegar aquí.</p>
+  </div>
+
+  <h3>Condiciones de arranque: las tres, no dos</h3>
+  <ol class="checks">
+    <li>El número central de WhatsApp responde.</li>
+    <li>El correo sale y llega a la bandeja de entrada, no a spam. Probado con Gmail y Outlook.</li>
+    <li>El criterio escrito de la asesoría sobre el piloto gratuito está en vuestro poder.</li>
+  </ol>
+  <p>Si falta el tercero, el piloto arranca igual pero <strong>sin emitir facturas</strong>: agenda, clientes, presupuestos, gastos, documentos y WhatsApp. Es la mayor parte del producto y no toca la normativa.</p>
+
+  <h3>El alta de cada piloto, acompañada</h3>
+  <p>Una hora por cliente, presencial o por videollamada. No se le manda un enlace y se le desea suerte.</p>
+  <ul>
+    <li>Configurar su negocio y cargar el catálogo de su oficio.</li>
+    <li>Vincular su WhatsApp y hacer que mande su primer mensaje delante de vosotros.</li>
+    <li>Meter dos clientes suyos reales y un trabajo de esta semana.</li>
+    <li>Explicar en una frase qué está desactivado y por qué: «la facturación con registro fiscal se enciende en unas semanas».</li>
+    <li>Dejar claro cómo os avisa cuando algo falle, y que queréis que os avise.</li>
+  </ul>
+
+  <p><strong>Producto esta semana:</strong> las puertas automáticas de cumplimiento. Que <code>NOESIS_PUBLIC_SIGNUP_ENABLED</code> no se pueda activar si falta la declaración responsable, el NIF del productor, la divulgación de IA o hay un proveedor externo sin declarar.</p>
+
+  <p><strong>Contenido:</strong> primera semana de publicación. E01 el martes, R05 el jueves, E02 el sábado. Story con encuesta. Responder comentarios la primera hora.</p>
+
+  <div class="callout">
+    <h3>Puerta de la semana 3</h3>
+    <p>Tres cuentas usando Noesis <strong>a diario y solas</strong>, sin que nadie de vuestro equipo toque nada por ellas.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Semanas 4 y 5 · Días 22 a 35 — Aprender mientras se espera</h2>
+    <p class="sec-intro">Aquí está el valor de haber arrancado pronto: dos semanas de uso real mientras Meta y los profesionales terminan.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Frente</th><th>Semana 4</th><th>Semana 5</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Meta</strong></td><td>Token de sistema con caducidad «Nunca» y todos los activos · método de pago con límite de gasto</td><td>Las nueve plantillas aprobadas</td></tr>
+        <tr><td><strong>Profesionales</strong></td><td><strong>Llega el informe fiscal.</strong> Decide si vais por ruta nativa o delegáis la remisión</td><td><strong>Llega el informe jurídico.</strong> Correcciones a los textos</td></tr>
+        <tr><td><strong>Producto</strong></td><td>Stripe: seis precios, <code>tax_behavior</code> y ciclo completo en test · ClamAV en red privada</td><td>Resolver las fricciones que haya sacado el piloto</td></tr>
+        <tr><td><strong>Mercado</strong></td><td>Acompañamiento diario. Anotar cada fricción, sin filtrar</td><td>Primera medición: ¿qué usan de verdad y qué no abren nunca?</td></tr>
+        <tr><td><strong>Contenido</strong></td><td>R01, R03, E06 · caja de preguntas</td><td>P05, E03, R04 · <strong>primera demo</strong>, con la cuenta demo y nunca datos reales</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Lo que hay que recoger estas dos semanas</strong>, porque no se recupera después: las palabras exactas que usan. Cómo llaman a un presupuesto, a un albarán, a una factura pendiente. Ese vocabulario es lo que hará que las páginas por oficio y los anuncios funcionen en la Fase 2, y solo se consigue escuchando.
+  </div>
+
+  <div class="callout">
+    <h3>Puerta de la semana 5</h3>
+    <p>Las tres fricciones más repetidas están resueltas <strong>antes</strong> de empezar a cobrar por ellas. Y tenéis el informe fiscal, que es lo que desbloquea la firma.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Semana 6 · Días 36 a 42 — El canal comercial</h2>
+    <p class="sec-intro">La prueba que de verdad demuestra que el multicanal aísla. Sin esto no se puede pilotar en serio.</p>
+  </div>
+
+  <p>Con el <strong>Advanced access</strong> concedido, se dan de alta dos números comerciales de dos negocios distintos, siguiendo la Fase B del runbook: el cliente concede el activo desde su Business Manager, vosotros lo registráis en Administración, nace pendiente, se prueba, y <em>solo entonces</em> se activa.</p>
+
+  <h3>La prueba que lo cierra</h3>
+  <ol class="checks">
+    <li>El mismo remitente escribe a los dos números: deben salir dos conversaciones aisladas, cada una en su negocio.</li>
+    <li>Responder desde el panel de cada negocio y confirmar en Meta que cada salida usó su número receptor.</li>
+    <li>Un mensaje a un número no registrado: se descarta, sin caer al canal central.</li>
+    <li>Conexión pendiente o con recepción apagada: no atiende.</li>
+    <li>Respuesta dentro y fuera de las 24 horas; fuera exige plantilla aprobada.</li>
+  </ol>
+
+  <div class="callout-warn callout">
+    <h3>Si App Review no ha llegado</h3>
+    <p>No se para el plan. Se sigue con el canal central, que funciona con Standard access, y se activa el plan B: un BSP para los números de cliente. Su aplicación ya está aprobada, se decide en una tarde y cuesta margen por mensaje, no semanas.</p>
+    <p>Lo que no se hace es esperar sentados: el resto del plan continúa.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Semana 7 · Días 43 a 49 — Cerrar cabos</h2>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Frente</th><th>Qué</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Legal</strong></td><td>Declaración responsable lista para firma, con las correcciones del informe aplicadas. Registro de actividades de tratamiento archivado</td></tr>
+        <tr><td><strong>Producto</strong></td><td>Restauración externa cronometrada con RPO y RTO anotados. Monitor 24/7 independiente de GitHub y Railway</td></tr>
+        <tr><td><strong>Mercado</strong></td><td>Primer contacto con dos gestorías. Es el canal más barato que tenéis y necesita semanas de maduración: se siembra ahora</td></tr>
+        <tr><td><strong>Contenido</strong></td><td>Segundo bloque de grabación, ya con material del piloto: las situaciones reales que habéis visto estas cuatro semanas</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Semana 8 · Días 50 a 56 — Se enciende el cobro</h2>
+    <p class="sec-intro">El día que la declaración está firmada, todo lo demás ya está listo. Esta semana es apretar el interruptor.</p>
+  </div>
+
+  <ol class="checks">
+    <li>Declaración responsable <strong>firmada por el representante legal</strong>.</li>
+    <li>Publicada en <code>/declaracion-responsable</code>, accesible desde el menú del producto y descargable.</li>
+    <li>Correcciones del abogado aplicadas a los cinco textos legales y a la página de cumplimiento.</li>
+    <li><code>noesis-doctor --strict</code> y <code>noesis-integrations-check --network --strict</code> sin un solo bloqueo.</li>
+    <li>Las puertas automáticas de cumplimiento, todas en verde.</li>
+    <li>Se activa la remisión a la AEAT y se abre la suscripción.</li>
+  </ol>
+
+  <h3>La conversación de conversión</h3>
+  <p>Es la más fácil de todo el proyecto y conviene no complicarla. El autónomo lleva cinco semanas usándolo: sabe lo que hace y sabe lo que le ahorra. No estáis vendiendo una promesa, estáis poniendo precio a algo que ya usa.</p>
+  <p>Se le enseña su propia cifra —trabajos que estuvo a punto de no facturar, documentos ordenados, cobros reclamados— y se le dice el precio. Si el piloto ha funcionado, es un trámite. Si cuesta, el problema no es el precio: es que el producto no le ha ahorrado nada, y eso es información valiosísima.</p>
+
+  <div class="callout">
+    <h3>Puerta de la semana 8</h3>
+    <p><strong>Tres cuentas de pago activas</strong>, con suscripción cobrada y un mes de uso continuado detrás.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Días 57 a 60 — Revisión y decisión</h2>
+    <p class="sec-intro">Cuatro días para mirar los números en frío y decidir la Fase 1. No es una celebración: es una comprobación.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Pregunta</th><th>Si la respuesta es sí</th><th>Si es no</th></tr></thead>
+      <tbody>
+        <tr><td>¿Hay tres o más cuentas de pago?</td><td>Se pasa a Fase 1: gestorías y venta directa</td><td>Entrevistar a quien no convirtió antes de seguir</td></tr>
+        <tr><td>¿Tenéis una cifra propia que enseñar, con permiso escrito?</td><td>Es el material de toda la Fase 1</td><td>Cambiar la prueba, no la promesa: usar evidencia operativa del panel</td></tr>
+        <tr><td>¿Siguen usándolo a diario?</td><td>Empezar a medir retención a 60 días</td><td>Parar captación y arreglar producto. No meter más gente en algo que se abandona</td></tr>
+        <tr><td>¿El contenido ha traído alguna conversación cualificada?</td><td>Doblar la apuesta en el pilar que funcionó</td><td>Es normal al segundo mes. Se revisa a los tres, no ahora</td></tr>
+        <tr><td>¿Está todo lo legal cerrado?</td><td>Se puede empezar a pensar en abrir el alta pública</td><td>Es la única que bloquea todo lo demás. Prioridad absoluta</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Reparto y carga de trabajo</h2>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Quién</th><th>De qué responde</th><th>Carga estimada</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Founder</strong></td><td>Los cinco trámites, los proveedores, el cierre del piloto y las gestorías</td><td>Alta las semanas 1, 3 y 8</td></tr>
+        <tr><td><strong>Socio</strong></td><td>Acompañamiento del piloto, prueba de aislamiento y revisión del contenido</td><td>Constante, unas 8 h/semana</td></tr>
+        <tr><td><strong>Asesoría fiscal</strong></td><td>Conformidad del SIF, criterio del piloto y firma</td><td>Semanas 1 a 5</td></tr>
+        <tr><td><strong>Abogado TIC</strong></td><td>Textos, DPA, AI Act y registro de actividades</td><td>Semanas 1 a 5</td></tr>
+        <tr><td><strong>Claude / Fable</strong></td><td>Merge, integraciones, puertas de cumplimiento, Stripe, copias</td><td>Semanas 1, 2, 4 y 7</td></tr>
+        <tr><td><strong>Codex</strong></td><td>Divulgación de IA, página de la declaración, correcciones documentales</td><td>Semanas 2 y 8</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>Contenido:</strong> unas cinco horas semanales entre montaje, publicación y comentarios, más media mañana cada quince días de grabación. Si una semana no cabe, se baja a dos piezas antes que bajar la calidad.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>Qué hacer si algo se retrasa</h2>
+    <p class="sec-intro">Escrito ahora, en frío. En caliente se tiende a insistir en lo que no funciona.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Si se retrasa</th><th>Qué se para</th><th>Qué sigue</th></tr></thead>
+      <tbody>
+        <tr><td><strong>La verificación de Meta</strong></td><td>Nada</td><td>Con 250 conversaciones cada 24 h y dos números hay de sobra para 3-5 pilotos</td></tr>
+        <tr><td><strong>El App Review</strong></td><td>Los números comerciales</td><td>El canal central funciona. Plan B: un BSP, decidido en una tarde</td></tr>
+        <tr><td><strong>El informe fiscal</strong></td><td>El cobro</td><td>El piloto sigue gratis. No es urgente hasta la semana 8</td></tr>
+        <tr><td><strong>El informe jurídico</strong></td><td>Abrir el alta pública</td><td>El piloto no lo necesita</td></tr>
+        <tr><td><strong>El piloto no arranca</strong></td><td><strong>Todo</strong></td><td>Nada. Es la única dependencia sin alternativa: se dedican los días que hagan falta</td></tr>
+        <tr><td><strong>El contenido</strong></td><td>Nada</td><td>Se baja la cadencia. Publicar poco y bien sostiene; publicar mal quema la cuenta</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout-warn callout">
+    <h3>La única línea roja</h3>
+    <p>No se cobra a nadie antes de tener la declaración responsable firmada. Ni «solo a uno», ni «con una transferencia», ni «ya lo regularizamos». La exposición del fabricante es de hasta 150.000 € por producto y ejercicio, y es la única cifra de este plan que puede acabar con el proyecto.</p>
+  </div>
+</section>
+
+<footer>
+  <p>Este plan consolida y ordena en el tiempo lo que ya está decidido en <code>docs/Ruta-legal.pdf</code> (rutas, coste y material para los encargos), <code>docs/Marketing-Noesis.pdf</code> (estrategia, 24 piezas y operación de contenido) y la lista P0 de <code>docs/Tareas-vivas.md</code>. No añade decisiones nuevas: les pone fecha.</p>
+  <p>Las puertas semanales son lo importante. Un plan sin criterio de cierre es una lista de deseos, y a las tres semanas nadie sabe si va bien o mal.</p>
+  <p>Redactado el 1-sep-2026. El <code>.html</code> es la fuente: se edita ahí y se reimprime el PDF.</p>
+</footer>
+
+</div>
+
+</body>
+</html>

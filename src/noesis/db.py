@@ -5115,6 +5115,18 @@ def _series_document_type(invoice_type: str) -> str:
     return "invoice"
 
 
+# Límite general de la factura simplificada (RD 1619/2012, art. 4). Vive en un
+# solo sitio para que el aviso y la validación no puedan contradecirse.
+SIMPLIFIED_INVOICE_LIMIT = Decimal("400")
+
+
+def _fits_simplified_invoice(total) -> bool:
+    try:
+        return Decimal(str(total or 0)) <= SIMPLIFIED_INVOICE_LIMIT
+    except (InvalidOperation, TypeError, ValueError):
+        return False
+
+
 def _ensure_default_invoice_series(conn, business_id: int, document_type: str):
     if document_type not in _SERIES_DEFAULTS:
         raise ValueError("El tipo de serie no es válido.")
@@ -5244,9 +5256,13 @@ def _normalize_invoice_lines(
         vat = (base * Decimal(str(vat_rate)) / 100).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
+        kind = (raw.get("kind") or "servicio").strip().lower()
+        if kind not in PRODUCT_KINDS:
+            raise ValueError("El tipo de línea debe ser 'producto' o 'servicio'.")
         normalized.append({
             "position": position,
             "description": description,
+            "kind": kind,
             "quantity": float(quantity),
             "unit_price": float(unit_price.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)),
             "discount_rate": float(discount),
@@ -5349,12 +5365,12 @@ def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
         for line in normalized:
             conn.execute(
                 "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, quantity, "
+                "(business_id, invoice_id, position, description, kind, quantity, "
                 "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     business_id, new_id, line["position"], line["description"],
-                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
                     line["vat_rate"], line["base"], line["vat_amount"],
                     line["total"], created_at,
                 ),
@@ -5484,12 +5500,12 @@ def create_rectifying_invoice(
         for line in normalized:
             conn.execute(
                 "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, quantity, "
+                "(business_id, invoice_id, position, description, kind, quantity, "
                 "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     business_id, new_id, line["position"], line["description"],
-                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
                     line["vat_rate"], line["base"], line["vat_amount"],
                     line["total"], created_at,
                 ),
@@ -5775,12 +5791,12 @@ def update_invoice_draft(
         for line in normalized:
             conn.execute(
                 "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, quantity, "
+                "(business_id, invoice_id, position, description, kind, quantity, "
                 "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     business_id, invoice_id, line["position"], line["description"],
-                    line["quantity"], line["unit_price"], line["discount_rate"],
+                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
                     line["vat_rate"], line["base"], line["vat_amount"],
                     line["total"], created_at,
                 ),
@@ -6125,6 +6141,89 @@ def _next_invoice_series_number(conn, business_id: int, series_id: int) -> str:
     ).fetchone()
     number = int(row["last_number"])
     return f"{prefix}{number:0{int(series['padding'])}d}"
+
+
+def _series_prefix(series, year: int) -> str:
+    """Prefijo real de una serie en un ejercicio concreto."""
+    return str(series["prefix_template"]).replace("{YYYY}", str(year))
+
+
+def set_series_next_number(
+    business_id: int, series_id: int, next_number: int, year: int | None = None
+) -> dict:
+    """Fija el próximo número de una serie para continuar otra numeración.
+
+    Quien llega desde otro programa ya lleva emitidas facturas de este ejercicio.
+    Si Noesis empezara en el 1 repetiría números dentro del mismo año y la misma
+    serie, que es justo lo que la ley no permite. Por eso el titular puede decir
+    por dónde va, y por eso **solo se puede avanzar**: retroceder por debajo de lo
+    ya emitido aquí crearía el duplicado que se quiere evitar.
+    """
+    year = int(year or date.today().year)
+    try:
+        next_number = int(next_number)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("El número siguiente debe ser un entero.") from exc
+    if not 1 <= next_number <= 99_999_999:
+        raise ValueError("El número siguiente está fuera de rango.")
+
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        series = conn.execute(
+            "SELECT * FROM invoice_series WHERE id=? AND business_id=?",
+            (series_id, business_id),
+        ).fetchone()
+        if not series:
+            raise ValueError("Esa serie no pertenece a este negocio.")
+        prefix = _series_prefix(series, year)
+        # Se comprueba por prefijo, no por serie: el duplicado que importa es el
+        # número impreso en la factura, venga de la serie que venga.
+        issued = conn.execute(
+            "SELECT number FROM invoices WHERE business_id=? AND number LIKE ?",
+            (business_id, f"{prefix}%"),
+        ).fetchall()
+        used = []
+        for row in issued:
+            suffix = str(row["number"])[len(prefix):]
+            if suffix.isdigit():
+                used.append(int(suffix))
+        highest = max(used, default=0)
+        if next_number <= highest:
+            raise ValueError(
+                f"En esta serie ya has emitido hasta el {prefix}"
+                f"{highest:0{int(series['padding'])}d}. El siguiente número debe "
+                f"ser mayor que {highest} para no repetir ninguno."
+            )
+        sequence_kind = f"invoice_series:{series_id}"
+        conn.execute(
+            "INSERT INTO document_sequences (business_id, kind, year, last_number) "
+            "VALUES (?, ?, ?, ?) ON CONFLICT (business_id, kind, year) DO UPDATE "
+            "SET last_number=EXCLUDED.last_number",
+            (business_id, sequence_kind, year, next_number - 1),
+        )
+        # Queda traza de quién movió la numeración y a qué número: no es un
+        # evento fiscal de una factura concreta, pero sí debe poder explicarse.
+        conn.execute(
+            "INSERT INTO product_events "
+            "(business_id, event_name, event_data, created_at) VALUES (?, ?, ?, ?)",
+            (
+                business_id, "serie_renumerada",
+                json.dumps(
+                    {
+                        "series_id": series_id, "year": year,
+                        "next_number": next_number, "previous_highest": highest,
+                    },
+                    separators=(",", ":"),
+                ),
+                _now(),
+            ),
+        )
+    return {
+        "series_id": series_id,
+        "year": year,
+        "next_number": next_number,
+        "next_number_preview": f"{prefix}{next_number:0{int(series['padding'])}d}",
+    }
 
 
 def _record_invoice_event(
@@ -6472,9 +6571,21 @@ def issue_invoice(
             if not (value or "").strip():
                 missing.append(label)
         if missing:
-            raise ValueError(
-                "Antes de emitir completa: " + ", ".join(missing) + "."
+            aviso = "Antes de emitir completa: " + ", ".join(missing) + "."
+            # Si lo único que falta son los datos del destinatario y el importe
+            # cabe en una simplificada, el autónomo tiene salida legal sin
+            # perseguir al cliente: se la ofrecemos en vez de dejarle parado.
+            solo_falta_el_cliente = missing and all(
+                label in {"NIF del cliente", "domicilio del cliente"}
+                for label in missing
             )
+            if solo_falta_el_cliente and _fits_simplified_invoice(inv["total"]):
+                aviso += (
+                    " Si es un particular, puedes emitirla como factura"
+                    " simplificada: hasta 400 € no necesita NIF ni domicilio"
+                    " del cliente."
+                )
+            raise ValueError(aviso)
         lines = [dict(row) for row in conn.execute(
             "SELECT * FROM invoice_lines WHERE business_id=? AND invoice_id=? "
             "ORDER BY position, id",
@@ -6491,7 +6602,7 @@ def issue_invoice(
                     "Los totales del borrador no coinciden con sus líneas; "
                     "revísalo antes de emitir."
                 )
-        if invoice_type == "F2" and Decimal(str(inv["total"])) > Decimal("400"):
+        if invoice_type == "F2" and not _fits_simplified_invoice(inv["total"]):
             raise ValueError(
                 "La factura simplificada supera el límite general de 400 €. "
                 "Emítela como factura completa con los datos fiscales del cliente."
@@ -9828,9 +9939,9 @@ def accept_quote(quote_id, business_id, *, decision_source="owner",
         invoice_id = invoice_row["id"]
         conn.execute(
             "INSERT INTO invoice_lines "
-            "(business_id, invoice_id, position, description, quantity, unit_price, "
-            "discount_rate, vat_rate, base, vat_amount, total, created_at) "
-            "VALUES (?, ?, 1, ?, 1, ?, 0, ?, ?, ?, ?, ?)",
+            "(business_id, invoice_id, position, description, kind, quantity, "
+            "unit_price, discount_rate, vat_rate, base, vat_amount, total, created_at) "
+            "VALUES (?, ?, 1, ?, 'servicio', 1, ?, 0, ?, ?, ?, ?, ?)",
             (
                 business_id, invoice_id, q["concept"], q["base"], q["vat_rate"],
                 q["base"], q["vat_amount"], q["base"] + q["vat_amount"], _now(),

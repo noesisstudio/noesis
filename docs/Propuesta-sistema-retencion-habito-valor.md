@@ -1,6 +1,6 @@
 # Noesis — propuesta integral de hábito, confianza, valor y retención
 
-> **Estado:** estrategia aprobada para su base de datos; el candidato del esquema 53
+> **Estado:** estrategia aprobada para su base de datos; el candidato del esquema 54
 > implementa únicamente el Registro Interno de Valor, WUB y medición de confianza.
 > Las experiencias de Habit/Trust/Value siguen pendientes de piloto y
 > Confidence/Insight/Progress continúan aplazadas.

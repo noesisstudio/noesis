@@ -308,12 +308,12 @@ def _check_backup_roundtrip() -> None:
 
 
 def _check_value_ledger(business_id: int) -> None:
-    """Contrato mínimo del esquema 53 sobre tipos, FK e idempotencia Postgres."""
+    """Contrato mínimo del esquema 54 sobre tipos, FK e idempotencia Postgres."""
     action = value_ledger.record_useful_action(
         business_id,
         "job_created",
         entity_type="postgres_smoke",
-        entity_id="schema-53",
+        entity_id="schema-54",
         idempotency_key="postgres-smoke:value-ledger:action",
         channel="system",
         trigger_source="authorized_rule",
@@ -323,7 +323,7 @@ def _check_value_ledger(business_id: int) -> None:
         business_id,
         "job_created",
         entity_type="postgres_smoke",
-        entity_id="schema-53",
+        entity_id="schema-54",
         idempotency_key="postgres-smoke:value-ledger:action",
         channel="system",
         trigger_source="authorized_rule",
@@ -339,7 +339,7 @@ def _check_value_ledger(business_id: int) -> None:
         attribution_type="assisted",
         attribution_method="postgres_smoke_v1",
         entity_type="postgres_smoke",
-        entity_id="schema-53",
+        entity_id="schema-54",
         idempotency_key="postgres-smoke:value-ledger:outcome",
         useful_action_ids=[action["id"]],
     )

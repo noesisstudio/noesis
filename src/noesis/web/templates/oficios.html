@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div class="page-title">
+    <div class="kicker">Catálogo</div>
+    <h1>Plantillas por oficio</h1>
+    <p>Cada oficio factura casi siempre lo mismo. Aquí está la plantilla del tuyo,
+       con el IVA ya puesto en cada partida: cárgala una vez y facturar pasa a ser
+       elegir de una lista en vez de teclear precios y tipos cada mañana.</p>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="stat"><div class="lbl">Oficios con plantilla</div><div class="val" id="o-trades">—</div><div class="delta flat">listas para cargar</div></div>
+  <div class="stat"><div class="lbl">Partidas disponibles</div><div class="val" id="o-items">—</div><div class="delta flat" id="o-items-note">entre todos los oficios</div></div>
+  <div class="stat"><div class="lbl">Ya en tu catálogo</div><div class="val green" id="o-mine">—</div><div class="delta flat">no se duplican al cargar</div></div>
+  <div class="stat"><div class="lbl">Tu oficio</div><div class="val" id="o-suggested" style="font-size:18px">—</div><div class="delta flat" id="o-suggested-note">según tu alta</div></div>
+</div>
+
+<div id="o-list" style="margin-top:16px"></div>
+
+<div class="insight" style="margin-top:16px">
+  <b>Por qué el IVA viene puesto y aun así lo decides tú:</b> el tipo que ves es el
+  habitual del oficio, no una sentencia. En reformas de vivienda el 10% solo se
+  sostiene si el material que pones no pasa del 40% de la base; por eso cada partida
+  dice si es material o mano de obra, y por eso Noesis te avisa al facturar en vez de
+  cambiarte el tipo por su cuenta. Las condiciones que no constan aquí —vivienda de
+  particular, construcción terminada hace más de dos años— las sabes tú.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const VAT_TONE = { 21: 'b-gray', 10: 'b-amber', 4: 'b-green', 0: 'b-gray' };
+
+function vatChips(summary) {
+  return summary.map(v =>
+    `<span class="badge ${VAT_TONE[v.vat_rate] || 'b-gray'}">IVA ${v.vat_rate}% · ${v.items} partida(s)</span>`
+  ).join(' ');
+}
+
+function itemRow(item) {
+  const material = item.kind === 'producto';
+  return `<tr>
+    <td>${esc(item.name)}${item.in_catalog ? ' <span class="badge b-green">ya la tienes</span>' : ''}</td>
+    <td><span class="badge ${material ? 'b-amber' : 'b-gray'}">${material ? 'material' : 'mano de obra'}</span></td>
+    <td>${esc(item.unit)}</td>
+    <td class="t-right num">${item.price ? eur(item.price) : '<span class="muted">a convenir</span>'}</td>
+    <td class="t-right num"><b>${item.vat_rate}%</b></td>
+  </tr>`;
+}
+
+function tradeCard(trade, suggested) {
+  const mine = trade.key === suggested;
+  return `<div class="card" style="margin-bottom:16px" id="oficio-${trade.key}">
+    <div class="card-h">
+      <h2>${esc(trade.label)}${mine ? ' <span class="badge b-green">tu oficio</span>' : ''}</h2>
+      <span class="hint">${trade.count} partidas · ${trade.already} en tu catálogo</span>
+    </div>
+    <div class="card-b">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        ${vatChips(trade.vat_summary)}
+        ${trade.has_reduced_rate ? '<span class="badge b-amber">sujeto a la regla del 40% de material</span>' : ''}
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Partida</th><th>Qué es</th><th>Unidad</th><th class="t-right">Precio orientativo</th><th class="t-right">IVA</th></tr></thead>
+          <tbody>${trade.items.map(itemRow).join('')}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary" onclick="loadTrade('${trade.key}', this)"
+                ${trade.pending ? '' : 'disabled'}>
+          ${trade.pending ? `Cargar ${trade.pending} partida(s) en mi catálogo` : 'Ya la tienes entera'}
+        </button>
+        <span class="meta" id="msg-${trade.key}"></span>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function load() {
+  const data = await api('/oficios/plantillas');
+  const oficios = data.oficios || [];
+  const suggested = data.sugerido;
+  const total = oficios.reduce((a, t) => a + t.count, 0);
+  const mine = oficios.reduce((a, t) => a + t.already, 0);
+
+  el('o-trades').textContent = oficios.length;
+  el('o-items').textContent = total;
+  el('o-mine').textContent = mine;
+  const match = oficios.find(t => t.key === suggested);
+  el('o-suggested').textContent = match ? match.label : 'sin identificar';
+  el('o-suggested-note').textContent = match
+    ? 'la hemos puesto la primera'
+    : 'elige la que más se parezca';
+
+  // El oficio propio primero: es el único que la mayoría va a cargar.
+  const ordered = match
+    ? [match, ...oficios.filter(t => t.key !== suggested)]
+    : oficios;
+  el('o-list').innerHTML = ordered.map(t => tradeCard(t, suggested)).join('');
+}
+
+async function loadTrade(trade, button) {
+  const msg = el('msg-' + trade);
+  button.disabled = true;
+  msg.textContent = 'Cargando…';
+  try {
+    const result = await apiPost(`/oficios/${trade}/cargar`, {});
+    msg.textContent = result.created
+      ? `Añadidas ${result.created} partidas. Ya puedes usarlas al facturar.`
+      : 'No había nada nuevo que añadir.';
+  } catch (e) {
+    msg.textContent = e.message;
+    button.disabled = false;
+    return;
+  }
+  load();
+}
+
+load();
+</script>
+{% endblock %}

@@ -65,6 +65,35 @@
 - **Límite externo:** no se ha ejecutado el humo contra PostgreSQL real porque el
   único entorno accesible es producción. El candidato no se ha desplegado; esa
   prueba y el rollback son puerta obligatoria en un entorno no productivo.
+## 2026-09-01 — fusión de 112 commits y comprobación de que no rompe nada
+
+### Qué se probó y con qué resultado
+
+- **Conflictos:** los siete resueltos a mano. Ningún marcador quedó en el árbol,
+  comprobado con búsqueda sobre `.py`, `.md`, `.json` y `.html`.
+- **Migraciones:** numeración correlativa y sin duplicados, 53 migraciones,
+  `LATEST_VERSION = 53`. La local se renumeró de la 40 a la 53 porque el remoto
+  ya ocupaba la 40 con `demo_comercial`.
+- **Saneado de plantillas:** un salto de línea se convierte en « · » y un valor
+  de 2000 caracteres se corta en 1024, que es el tope de Meta. El tope lo aporta
+  la rama local; el separador visible, el remoto.
+- **Contrato de plantillas:** los nueve cuerpos declarados coinciden con el
+  runbook y con el número de valores que envía el código.
+  `python -m noesis.whatsapp_templates` responde «todos los envíos encajan».
+- **Plantillas por oficio:** las ocho pruebas siguen verdes sobre el código
+  fusionado, incluidas la página y su API.
+- **Suite completa:** 577 pasan, 132 subtests. Ruff verde. Fuente de verdad verde.
+
+### Qué no se ha probado
+
+- **Los 5 fallos que persisten son anteriores a esta fusión.** Se reprodujeron en
+  un árbol de trabajo limpio sobre `origin/main`, sin nada local: cuatro de
+  facturación por mes, que dependen de la fecha del sistema, y uno de
+  rasterización de PDF escaneado, que necesita dependencias de OCR ausentes en
+  este equipo. No se han corregido porque no son de este trabajo, pero conviene
+  mirarlos: si son de fecha, volverán a aparecer solos.
+- **Nada contra Meta, Stripe ni la AEAT reales.** Sigue todo sin credenciales.
+- **La migración 53 no se ha aplicado a PostgreSQL**, solo a SQLite en pruebas.
 
 ## 2026-08-31 — manual editorial y guiones de contenido
 
@@ -435,6 +464,39 @@
 - **Alcance:** 95 pruebas de administracion, soporte, seguridad, sesion y login en
   verde; `ruff` limpio.
 
+## 2026-08-20 — canal de Meta revisado y plantillas por oficio con pantalla
+
+### Qué se probó y con qué resultado
+
+- **Plantillas por oficio:** el sector es texto libre, así que se comprobó que
+  «Fontanero autónomo», «REFORMAS INTEGRALES» y «lampistería» caen en el oficio
+  correcto y que «consultoría de marca» no cae en ninguno. Cada partida conserva su
+  IVA y si es material o mano de obra; el reparto por tipo cuadra con el total.
+- **No duplicar:** cargar el catálogo de fontanería dos veces crea las partidas la
+  primera vez y ninguna la segunda; el número de productos no se mueve.
+- **Aislamiento:** cargar el catálogo en un negocio no marca ni una partida como
+  «ya la tienes» en otro.
+- **Pantalla y API:** con sesión iniciada, `/b/{id}/oficios` responde 200,
+  `/api/{id}/oficios/plantillas` devuelve los cinco oficios y el sugerido, y la
+  carga desde la propia página deja las partidas en el catálogo real.
+- **Contrato de las plantillas de Meta:** ninguna de las nueve declaradas tiene el
+  cuerpo formado solo por variables ni huecos descolocados, y todas son *utility*.
+- **Saneado de valores:** un salto de línea, un tabulador o seis espacios seguidos
+  dentro de un valor se aplanan antes de encolar, y un valor larguísimo se corta en
+  1024 caracteres. Al encolar `noesis_factura_lista` con «Ana\nGarcía», el outbox
+  guarda «Ana García».
+- **Pruebas:** suite completa **437 pasan, 85 subtests, 0 fallos**. Ruff verde.
+  Fuente de verdad del proyecto verde.
+
+### Qué no se ha probado
+
+- **Nada contra Meta real**: sigue sin credenciales, así que no hay entrega,
+  aprobación de plantilla ni estado de lectura verificados. Todo lo anterior es
+  comportamiento propio con la API simulada.
+- **Cuánto tarda el webhook** con una foto real de ticket: es la medida que decide
+  si hay que contestar 200 antes de procesar. Requiere número real.
+- **Los cinco proactivos al titular** siguen mandando el mensaje entero en un hueco.
+  Está detectado, documentado y con cuerpo alternativo escrito, pero no corregido.
 ## 2026-08-19 — control de acceso por persona (esquema 50)
 
 - **Que se anade:** `users.is_active`, `suspended_at` y `access_note`; suspension y
@@ -1355,6 +1417,74 @@
 - Railway todavía debe desplegar el candidato y demostrar la huella por HTTP.
 - No se han usado credenciales de Brevo ni Stripe; entregabilidad e IVA real se
   validarán en la fase externa.
+## 2026-08-02 (3) — catálogos por oficio y aviso del tipo reducido en obras de vivienda
+
+### Qué se probó y con qué resultado
+
+- **Migración 38**: `invoice_lines` gana `kind` ('servicio' o 'producto'). Sin ese dato
+  no se puede saber qué parte de una factura es material, que es lo que decide si se
+  sostiene el 10%. Las líneas ya emitidas quedan como 'servicio': **no se reinterpreta
+  una factura cerrada**. Verificado el ciclo completo de migración y el roundtrip de
+  bajada y subida, que al principio fallaba por intentar añadir la columna dos veces.
+- **Catálogos por oficio** (`trades.py`): fontanería 10, electricidad 9, reformas 9,
+  limpieza 5 y jardinería 6 conceptos, cada uno con su tipo y su IVA habitual. Cargar
+  dos veces el mismo oficio **no duplica** nada y un oficio inexistente da error claro.
+  Probado por API: `POST /api/{id}/oficios/reformas/cargar` creó los 9.
+- **Aviso del 40%** (art. 91.Uno.2.10º LIVA), probado en tres casos reales:
+  material al 28,6% → no avisa; material al 60% → avisa; factura entera al 21% → no
+  avisa, porque la regla no aplica y no hay que molestar.
+- **El aviso no decide**: comprobado que tras avisar los tipos siguen como los puso el
+  titular (10% y 21%) y **la factura se emite igualmente** (`2026/0002`). Noesis no
+  puede conocer las otras condiciones del reducido —vivienda de particular, terminada
+  hace más de dos años—, así que la elección es del autónomo.
+- El aviso viaja al detalle de la factura (`aviso_fiscal`) y al chat al crear el
+  borrador.
+- **Suite completa: 408 pasan, 71 subtests, ningún fallo.**
+
+### Qué no se ha probado ni validado
+
+- **La regla del 40% no la ha revisado un asesor fiscal.** Está implementada como
+  advertencia informativa según el tipo general; hay supuestos particulares. Debe
+  validarse antes de presentarla como garantía de cumplimiento.
+- Los precios de los catálogos son orientativos y no se han contrastado con tarifas
+  reales de mercado; están para ajustarlos con el cliente en la puesta en marcha.
+- La migración 38 se probó en SQLite. **Falta ejecutarla en PostgreSQL** antes de
+  desplegar.
+
+## 2026-08-02 (2) — el error de emisión ofrece la salida legal, y prueba de concurrencia real
+
+### Qué se probó y con qué resultado
+
+- **«No puedo emitir» sin decir qué alternativa hay.** Al emitir una factura completa sin
+  NIF ni domicilio del cliente, el mensaje enumeraba lo que falta y ahí terminaba. Si el
+  cliente es un particular y el importe cabe en el límite general de 400 € del
+  RD 1619/2012, la factura simplificada es una salida legal y el producto ya la soporta.
+  Ahora el aviso la ofrece **solo cuando procede**: comprobado que con 150 € la sugiere y
+  con 900 € no, porque ahí no sería legal.
+- **El límite de 400 € estaba escrito dos veces** (`db.issue_invoice` y `tools`). Unificado
+  en `_fits_simplified_invoice` para que aviso y validación no puedan contradecirse.
+- **Ciclo completo de simplificada**, verificado con servidor real: «ticket de venta a
+  Particular por grifo 150 €» crea F2 con el IVA calculado hacia atrás (base 123,97 +
+  IVA 26,03), se emite **sin datos fiscales del destinatario** y recibe número de su
+  serie separada `T2026/0001`. Por encima de 400 € se rechaza al crearlo.
+- **Concurrencia de tres actores a la vez**, que era una duda abierta del fundador:
+  36 peticiones simultáneas mezclando al titular creando facturas, la gestoría abriendo
+  su portal y el trabajador su portal de fichaje. **Todas 200, ningún bloqueo de base de
+  datos, ninguna traza de error.**
+- **Numeración bajo emisión concurrente**, que es donde un fallo sería grave: 12 facturas
+  emitidas en paralelo mientras la gestoría descargaba. Resultado: `2026/0001` a
+  `2026/0013` **sin duplicados ni huecos**. La asignación de número es segura en
+  transacción.
+- **Portal del trabajador revisado**: `/t/{token}` con PIN, fichaje, trabajos del día,
+  tareas de proyecto, parte de trabajo, historial de 30 días y el aviso legal del
+  registro de jornada (art. 34.9 ET, conservación cuatro años). Responde 200.
+- **Suite completa: 400 pasan, 71 subtests, ningún fallo.**
+
+### Qué no se ha probado
+
+- La concurrencia se midió sobre SQLite con WAL. En producción con PostgreSQL el
+  comportamiento debería ser mejor, pero **no está medido en el entorno real**.
+- Sigue sin probarse nada que dependa de credenciales externas.
 
 ## 2026-08-02 — el chat web emite el borrador que él mismo te dice que emitas
 

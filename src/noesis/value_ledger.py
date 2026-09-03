@@ -456,7 +456,7 @@ def observe_trust_decision(
 ) -> dict | None:
     """Preserva la auditoría histórica y añade correlación solo con el flag activo.
 
-    ``assistant_actions`` existía antes del esquema 53. Por eso esta operación no
+    ``assistant_actions`` existía antes del esquema 54. Por eso esta operación no
     es fail-open ni desaparece al apagar el ledger: con el flag desactivado elimina
     únicamente los cuatro campos nuevos y ejecuta exactamente la escritura previa.
     """

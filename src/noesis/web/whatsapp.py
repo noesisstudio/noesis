@@ -36,6 +36,15 @@ class WebhookInProgress(RuntimeError):
     """El mismo evento sigue en curso y debe reintentarse más tarde."""
 
 
+class MetaRejected(RuntimeError):
+    """Meta ha rechazado el mensaje: repetirlo daría exactamente lo mismo.
+
+    Una plantilla que no existe, un destinatario inválido o un número de huecos
+    que no cuadra no se arreglan esperando. Reintentarlos seis veces con espera
+    creciente solo retrasa una hora la noticia de que algo está mal configurado.
+    """
+
+
 def is_configured() -> bool:
     """La cola proactiva solo se alimenta cuando Meta puede procesarla."""
     return bool(_TOKEN and _PHONE_ID)
@@ -1741,7 +1750,11 @@ def _post_to_meta(payload: dict, phone_number_id: str | None = None) -> str:
         response = json.loads(urllib.request.urlopen(request, timeout=10).read())
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode(errors="replace")[:1000]
-        raise RuntimeError(f"Meta respondió {exc.code}: {detail}") from exc
+        message = f"Meta respondió {exc.code}: {detail}"
+        # 408 y 429 sí merecen otra oportunidad; el resto de los 4xx, no.
+        if 400 <= exc.code < 500 and exc.code not in (408, 429):
+            raise MetaRejected(message) from exc
+        raise RuntimeError(message) from exc
     messages = response.get("messages") or []
     if not messages or not messages[0].get("id"):
         raise RuntimeError("Meta no devolvió el identificador del mensaje.")
@@ -1799,6 +1812,17 @@ def process_outbox(
                 "id": message["id"],
                 "status": "sent",
                 "meta_message_id": meta_message_id,
+            })
+        except MetaRejected as exc:
+            db.mark_whatsapp_blocked(message["id"], str(exc), now_text)
+            log.warning(
+                "Meta rechazó el envío outbox=%s sin posibilidad de reintento: %s",
+                message["id"], exc,
+            )
+            processed.append({
+                "id": message["id"],
+                "status": "failed",
+                "error": str(exc),
             })
         except Exception as exc:  # noqa: BLE001
             delay = min(
@@ -1858,6 +1882,7 @@ def queue_text(
 _PARAM_ESPACIOS = re.compile(r" {4,}")
 _PARAM_SALTOS = re.compile("[\r\n\t\v\f  ]+")
 _PARAM_SEPARADOR = " · "
+_PARAM_MAX_CHARS = 1024
 
 
 def sanitize_template_param(value) -> str:
@@ -1875,7 +1900,9 @@ def sanitize_template_param(value) -> str:
     doble = _PARAM_SEPARADOR + " " + _PARAM_SEPARADOR.strip() + " "
     while doble in texto:
         texto = texto.replace(doble, _PARAM_SEPARADOR)
-    return texto.strip().strip("·").strip()
+    # Meta corta el parámetro en 1024 caracteres: mejor recortar aquí, donde se
+    # ve, que dejar que el mensaje salga truncado sin que nadie se entere.
+    return texto.strip().strip("·").strip()[:_PARAM_MAX_CHARS]
 
 
 def queue_template(
@@ -1949,25 +1976,6 @@ def send_template(
     )
     process_outbox(only_ids=[message["id"]], limit=1)
     return True
-
-
-def send_payment_reminder(
-    to: str,
-    client_name: str,
-    amount: str,
-    invoice_number: str,
-    *,
-    business_id: int,
-    idempotency_key: str | None = None,
-) -> bool:
-    """Envía el proactivo de cobro mediante plantilla aprobada por Meta."""
-    return send_template(
-        to,
-        config.WHATSAPP_TEMPLATE_PAYMENT_REMINDER,
-        [client_name, invoice_number, amount],
-        business_id=business_id,
-        idempotency_key=idempotency_key,
-    )
 
 
 def queue_payment_reminder(

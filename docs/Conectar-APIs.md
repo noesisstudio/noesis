@@ -378,6 +378,22 @@ WHATSAPP_TEMPLATE_TAX_NOTICE=noesis_aviso_fiscal
 La firma `X-Hub-Signature-256` es obligatoria en producción. El texto libre solo
 se usa dentro de la ventana de atención; fuera de ella se usan plantillas.
 
+### Qué escribir en cada plantilla
+
+No lo adivines. El cuerpo exacto y el significado de cada hueco están declarados en
+`src/noesis/whatsapp_templates.py`, y este comando los imprime listos para pegar en
+WhatsApp Manager:
+
+```bash
+python -m noesis.whatsapp_templates
+```
+
+Al final del informe salen las plantillas cuyo envío todavía no encaja con su
+cuerpo. Hoy son cinco —las de aviso al titular— y hasta que se ajusten no tiene
+sentido darlas de alta: Meta rechaza toda plantilla cuyo cuerpo sea solo una
+variable. Las cuatro que van al cliente se pueden crear ya. El porqué completo está
+en [[Revision-Meta]].
+
 ### Prueba de aceptación
 
 - Verificación GET del webhook y rechazo de firma falsa.

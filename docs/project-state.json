@@ -1,14 +1,14 @@
 {
   "state_date": "2026-09-01",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 53,
-  "verified_test_count": 570,
+  "schema_version": 54,
+  "verified_test_count": 577,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Configurar ambos flags del registro de valor en false, migrar primero el esquema 53 en PostgreSQL no productivo y ejecutar humo. Validar el rollback restaurando codigo anterior sobre esquema 53 antes de bajar a 52. Activar despues solo el ledger para reconciliar WUB y outcomes con 3-5 negocios, sin mostrar Confidence, Insight ni Progress. Validar tambien catch-all, recuperacion, control de acceso, Stripe sandbox, Google OAuth, Meta, SEO, alta recuperable y soporte segun Tareas-vivas.md."
+    "pending_after_deploy": "Configurar ambos flags del registro de valor en false, migrar primero el esquema 54 en PostgreSQL no productivo y ejecutar humo. Validar el rollback restaurando codigo anterior sobre esquema 54 antes de bajar a 53. Activar despues solo el ledger para reconciliar WUB y outcomes con 3-5 negocios, sin mostrar Confidence, Insight ni Progress. Validar tambien catch-all, recuperacion, control de acceso, Stripe sandbox, Google OAuth, Meta, SEO, alta recuperable y soporte segun Tareas-vivas.md."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -56,7 +56,7 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
-    "useful_value_ledger": "schema_53_opt_in_additive_fail_open_observer_with_versioned_taxonomy_and_per_instance_qualifies_for_wub_manual_forms_excluded_delegated_contexts_explicit_tenant_scoped_idempotent_actions_lifecycle_infrastructure_without_process_hooks_many_to_many_outcomes_conservative_attribution_preexisting_assistant_audit_preserved_when_disabled_rolling_and_closed_week_wub_depth_consistency_activation_and_trust_metrics_no_customer_ui_no_confidence_or_autonomy_changes_admin_off_rgpd_export_delete_and_safe_code_first_rollback_plan",
+    "useful_value_ledger": "schema_54_opt_in_additive_fail_open_observer_with_versioned_taxonomy_and_per_instance_qualifies_for_wub_manual_forms_excluded_delegated_contexts_explicit_tenant_scoped_idempotent_actions_lifecycle_infrastructure_without_process_hooks_many_to_many_outcomes_conservative_attribution_preexisting_assistant_audit_preserved_when_disabled_rolling_and_closed_week_wub_depth_consistency_activation_and_trust_metrics_no_customer_ui_no_confidence_or_autonomy_changes_admin_off_rgpd_export_delete_and_safe_code_first_rollback_plan",
     "commercial_onboarding": "schema_49_resumable_exact_step_trial_or_subscribe_then_business_complete_invoice_identity_collection_messages_truthful_whatsapp_review_checkout_and_first_customer_activation",
     "onboarding_sector_capture": "free_text_up_to_80_characters",
     "annual_offer_explained": "monthly_total_vs_annual_price_saving_and_monthly_equivalent",
@@ -100,7 +100,13 @@
     "premium_naming": "premium_replaces_sin_limites_because_the_plan_has_explicit_ai_and_future_voice_fair_use_limits",
     "owner_account_control": "administration_lands_on_the_admin_dashboard_after_signing_in_instead_of_a_business_panel_it_does_not_run_a_business_with_noesis_it_manages_other_peoples_the_dashboard_opens_with_a_management_panel_listing_every_account_with_inline_actions_activate_with_plan_switch_to_read_only_and_extend_trial_person_level_access_and_gestoria_revocation_stay_in_the_account_file_and_a_link_back_to_its_own_panel_remains",
     "support_delivery_diagnostics": "admin_sees_why_an_email_or_whatsapp_delivery_is_stuck_channel_status_attempts_and_the_provider_error_so_a_configuration_problem_of_ours_is_told_apart_from_a_wrong_address_of_theirs_recipient_subject_and_body_are_never_exposed_a_failed_email_can_be_atomically_requeued_once_from_the_scoped_account_file_attempts_restart_the_scheduler_remains_the_only_sender_and_the_action_is_hash_chain_audited",
-    "user_access_control": "admin_can_suspend_or_restore_one_person_of_an_account_with_a_written_reason_open_sessions_die_on_the_next_request_and_the_password_stops_working_three_guards_refuse_to_lock_an_account_out_self_owner_and_last_active_user_admin_can_also_revoke_a_gestoria_third_party_access_as_a_security_measure_nothing_is_deleted_and_every_change_is_appended_to_the_hash_chained_log"
+    "user_access_control": "admin_can_suspend_or_restore_one_person_of_an_account_with_a_written_reason_open_sessions_die_on_the_next_request_and_the_password_stops_working_three_guards_refuse_to_lock_an_account_out_self_owner_and_last_active_user_admin_can_also_revoke_a_gestoria_third_party_access_as_a_security_measure_nothing_is_deleted_and_every_change_is_appended_to_the_hash_chained_log",
+    "simplified_invoice_guidance": "when_only_the_recipient_tax_data_is_missing_and_the_total_fits_the_general_400_eur_limit_of_rd_1619_2012_the_issue_error_offers_the_simplified_invoice_as_a_legal_way_out_and_the_limit_now_lives_in_a_single_shared_helper",
+    "trade_catalogs_and_reduced_rate_guard": "schema_53_invoice_lines_record_whether_they_are_labour_or_material_so_the_installation_can_preload_a_catalog_per_trade_fontaneria_electricidad_reformas_limpieza_jardineria_and_the_product_can_warn_when_material_exceeds_the_forty_percent_that_the_reduced_ten_percent_rate_allows_in_dwelling_renovation_it_warns_and_never_changes_a_rate_or_blocks_issuing_because_the_remaining_conditions_are_only_known_by_the_owner",
+    "series_numbering_continuity": "the_owner_can_declare_the_next_number_of_a_series_so_someone_arriving_from_another_program_keeps_a_single_correlative_numbering_for_the_year_it_only_moves_forward_never_below_what_is_already_issued_and_every_change_is_recorded",
+    "trade_templates": "five_trade_catalogs_with_their_usual_vat_per_line_material_or_labour_marked_visible_and_loadable_from_their_own_page_suggested_trade_guessed_from_the_free_text_sector_and_loading_twice_never_duplicates_the_catalog",
+    "whatsapp_template_contract": "the_nine_meta_templates_are_declared_in_code_mirroring_the_runbook_with_name_category_audience_body_and_slot_count_so_a_console_report_flags_any_send_that_stops_matching_what_was_approved",
+    "whatsapp_outbound_hardening": "template_values_are_flattened_into_a_visible_separator_and_capped_at_the_1024_character_limit_before_queueing_and_a_permanent_4xx_from_meta_cancels_the_send_immediately_instead_of_retrying_six_times"
   },
   "ai_route": [
     "reglas_locales",
@@ -110,7 +116,7 @@
     "anthropic_fallback"
   ],
   "external_validation_pending": [
-    "schema_53_non_production_postgres_smoke_and_rollback_then_3_5_business_value_ledger_wub_outcome_reconciliation",
+    "schema_54_non_production_postgres_smoke_and_rollback_then_3_5_business_value_ledger_wub_outcome_reconciliation",
     "hostinger_catch_all_preserves_original_recipient_and_real_imap_pilot",
     "rotate_any_secret_exposed_in_shared_material",
     "professional_legal_review",

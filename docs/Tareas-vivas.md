@@ -5,12 +5,12 @@
 
 ## P0 — publicar y pilotar con seguridad
 
-- [ ] Desplegar el esquema 53 primero en un entorno PostgreSQL no productivo y
-  ejecutar migración 52→53 y humo completo con
+- [ ] Desplegar el esquema 54 primero en un entorno PostgreSQL no productivo y
+  ejecutar migración 53→54 y humo completo con
   `NOESIS_VALUE_LEDGER_ENABLED=false` y
   `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. Comprobar producto y rollback seguro:
-  apagar ledger, restaurar código anterior aún sobre esquema 53, validar flujos y
-  solo entonces ensayar 53→52. Nunca servir código 53 sobre esquema 52. Después,
+  apagar ledger, restaurar código anterior aún sobre esquema 54, validar flujos y
+  solo entonces ensayar 54→53. Nunca servir código 54 sobre esquema 53. Después,
   activar únicamente el ledger en 3-5 negocios piloto y reconciliar manualmente
   acciones/outcomes, contexto `qualifies_for_wub`, zonas horarias, WUB semanal,
   profundidad y aceptación. No enseñar métricas ni activar Confidence, Insight o
@@ -47,6 +47,32 @@
   ya está publicado: CI completo/PostgreSQL verdes, `/health` y `/ready` coherentes
   y portada, `/acceso` y `/gestoria/login` en 200. Falta activar y recorrer TOTP,
   anti-replay y recuperación con una cuenta profesional y un autenticador reales.
+- [ ] Residencia de datos, según [[Servidores-y-residencia-de-datos]]: firmar el DPA
+  autoservicio de Railway y archivarlo; comprobar en el panel la región de los
+  servicios web y Postgres, porque `railway.json` no fija ninguna y el valor por
+  defecto de la cuenta es estadounidense; si están fuera de la UE, moverlos a
+  `europe-west4-drams3a` **mientras el volumen siga vacío**, ya que la migración de
+  volumen causa parada y se encarece con cada cliente real; y corregir
+  `BACKUP_S3_REGION`, que en `config.py` toma `us-east-1` por defecto y replicaría la
+  base entera a Virginia sin base de transferencia declarada. Ninguna de las cuatro
+  depende del abogado ni de la constitución.
+- [ ] Cerrar los siete bloqueos de RGPD detallados en [[RGPD-estado-y-plan]] antes
+  del primer cliente de pago. Tres son afirmaciones publicadas que hoy no son
+  ciertas: la tabla de subencargados omite Stripe, Google y Cal.com y solo pinta el
+  proveedor de correo si la variable está configurada; `site_contacto.html` incrusta
+  un iframe de Cal.com mientras `cookies.html` afirma que no intervienen empresas
+  ajenas y que no hace falta banner; y `/cumplimiento` dice que Noesis se integra con
+  un sistema homologado de un tercero cuando Veri\*Factu es desarrollo propio. Los
+  Antes que todos ellos va Groq: `adapters/transcription.py` envía audio a
+  `api.groq.com` sin estar declarado como subencargado, así que basta configurar
+  `GROQ_API_KEY` para incumplir el propio contrato; hay que declararlo o retirarlo.
+  Los otros tres son carencias: `delete_business_cascade` remite a una «baja con
+  conservación fiscal» que no existe, nada purga una cuenta cancelada pese a que la
+  política promete conservar solo mientras esté activa, y falta el registro de
+  actividades del art. 30. Quitar el iframe, completar la tabla de subencargados con
+  su comprobación en `readiness.py` y escribir el procedimiento de baja no dependen
+  del abogado y se pueden hacer ya; la purga automática necesita antes la tabla de
+  plazos de conservación.
 - [ ] La identidad legal ya está completada y publicada. Revisar aviso legal,
   privacidad, términos, DPA y fiscalidad con profesionales. Mantener
   `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.
@@ -88,6 +114,19 @@
   El motor multicanal, la bandeja y el alta manual auditada desde administración ya
   están construidos; falta Embedded Signup para autoservicio y la prueba extremo a
   extremo con números reales.
+- [ ] **App Review de Meta para `whatsapp_business_management` en Advanced access.**
+  Sin él, la API no puede operar sobre la WABA de un cliente aunque la comparta a
+  mano: devuelve error 200. Afecta solo al canal comercial; el número central
+  funciona con Standard access. `Meta-Verificacion` dice hoy que la revisión no
+  hace falta y hay que corregirlo. Confirmar con soporte de Meta y, si se alarga,
+  el plan B es un BSP para los números de cliente. Detalle en [[Ruta-legal]].
+- [ ] Medir cuánto tarda el webhook de WhatsApp con una foto real: hoy responde
+  cuando ha terminado descarga, OCR, extracción y respuesta. Si se pasa del tiempo
+  que Meta espera, contestar 200 al instante y procesar el medio aparte.
+- [ ] Confirmar la versión vigente de la Graph API (`META_GRAPH_VERSION`, hoy v23.0)
+  y rehacer el margen por mensaje con la tarifa actual: el cálculo de
+  [[Unit-economics-y-cerebro-interno]] usa el modelo de conversación de 24 h, que
+  Meta sustituyó por cobro por mensaje de plantilla.
 - [ ] Activar y validar voz (Groq Whisper o faster-whisper local) y OCR
   con corpus real en castellano/catalán/inglés. La ruta privada de OCR ya incorpora
   Tesseract/pytesseract para imágenes y PDFium para PDF escaneado, y Railpack instala

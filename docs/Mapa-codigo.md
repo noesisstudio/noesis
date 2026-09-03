@@ -51,6 +51,13 @@
   gestoría—, una segunda empresa para la cartera y un portal de cliente. Rellena
   todos los módulos con datos ficticios conectados, repara de forma idempotente las
   carpetas documentales históricas y no reinicia producción.
+- `src/noesis/trades.py`: catálogos por oficio con su IVA por partida, adivinación
+  del oficio desde el sector en texto libre y el aviso del 40% de material que hace
+  decaer el tipo reducido en obras de vivienda. Avisa; nunca cambia un tipo.
+- `src/noesis/whatsapp_templates.py`: espejo comprobable de las nueve plantillas del
+  runbook `WhatsApp-Puesta-en-marcha`. Declara nombre, categoría, destinatario,
+  cuerpo y número de huecos; `python -m noesis.whatsapp_templates` avisa si un envío
+  deja de encajar con lo aprobado en Meta.
 - `src/noesis/security_center.py`: responsable CISO interno, determinista y de solo
   lectura; convierte controles, copias e intentos agregados en un parte accionable.
 - `src/noesis/db.py` + `routers/admin.py`: diagnóstico privado, autorización de
@@ -332,6 +339,12 @@
   activación de recepción solo tras conexión Meta activa, bandeja por negocio,
   respuesta dentro de la ventana permitida y cierre de conversaciones. Las altas
   técnicas de WABA/número no se aceptan desde un formulario de cliente.
+- `templates/oficios.html` + `routers/invoicing.py`: la pantalla de plantillas por
+  oficio. Muestra cada partida con su IVA, si es material o mano de obra y cuáles
+  tiene ya el negocio; carga la plantilla sin duplicar lo existente.
+- `scripts/build_estado_xlsx.py`: genera `docs/Estado-Noesis.xlsx` leyendo los
+  módulos reales, sin dependencias — un `.xlsx` es un zip de XML y se escribe a
+  mano. Vuelve a ejecutarlo cuando cambien las plantillas o los catálogos.
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el
   titular y calendario ICS privado/revocable.
 - `src/noesis/web/backups.py`: copia, restauración descartable, manifiesto documental,

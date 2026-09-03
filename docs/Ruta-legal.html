@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruta legal · Noesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .part { color: var(--warn); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Noesis · Documento de decisión</p>
+  <h1>Qué falta para poder cobrar el primer euro</h1>
+  <p class="standfirst">Todo lo que obliga a Noesis y a su producto, explicado desde cero. Tres rutas completas para resolverlo, desarrolladas fase a fase. El coste de cada una. Y el material listo para encargar el trabajo mañana por la mañana.</p>
+  <p class="crumbs">Verificado sobre <code>origin/main</code> el 29-ago-2026 · Complementa <a href="Meta-Verificacion.pdf">Meta-Verificacion.pdf</a> y <a href="WhatsApp-Puesta-en-marcha.pdf">WhatsApp-Puesta-en-marcha.pdf</a> · Pendientes vivos en <code>Tareas-vivas.md</code> · Foto verificable en <code>project-state.json</code></p>
+</header>
+
+<div class="status">
+  <div class="status-cell is-stop">
+    <span class="status-label">Veri*Factu · productor</span>
+    <span class="status-value">Obligación ya viva</span>
+    <span class="status-note">Desde el 29-jul-2025, no en 2027. Falta la declaración responsable.</span>
+  </div>
+  <div class="status-cell is-stop">
+    <span class="status-label">Meta · App Review</span>
+    <span class="status-value">No está en el plan</span>
+    <span class="status-note">Sin Advanced access, los números de cliente devuelven error.</span>
+  </div>
+  <div class="status-cell is-warn">
+    <span class="status-label">AI Act · art. 50</span>
+    <span class="status-value">Aplicable hace 27 días</span>
+    <span class="status-note">El asistente no dice que es una máquina. Se arregla en minutos.</span>
+  </div>
+  <div class="status-cell is-ok">
+    <span class="status-label">Textos legales</span>
+    <span class="status-value">Escritos y publicados</span>
+    <span class="status-note">Falta la firma profesional y dos correcciones concretas.</span>
+  </div>
+</div>
+
+<section>
+  <div class="sec-head">
+    <h2>Índice</h2>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Parte</th><th>Secciones</th><th>Para qué sirve</th></tr></thead>
+      <tbody>
+        <tr><td><strong>0</strong></td><td>Cómo leer esto</td><td>La idea que ordena todo el plan</td></tr>
+        <tr><td><strong>I · Qué os obliga</strong></td><td>1 Veri*Factu · 2 Por qué no se compra · 3 Meta · 4 AI Act · 5 Protección de datos · 6 Factura B2B · 7 Inventario completo</td><td>Entender cada obligación sin dar nada por sabido</td></tr>
+        <tr><td><strong>II · Cómo se resuelve</strong></td><td>8 Cómo elegir · 9 Ruta A · 10 Ruta B · 11 Ruta C · 12 Comparación · 13 Calendario · 14 Quién hace qué · 15 Riesgos</td><td>Tres planes completos, fase a fase</td></tr>
+        <tr><td><strong>III · Dinero</strong></td><td>16 Coste por ruta · 17 Si sale mal</td><td>Presupuestar y decidir</td></tr>
+        <tr><td><strong>IV · Material</strong></td><td>18 Borrador de la declaración · 19 Los dos encargos · 20 Criterios de aceptación · 21 Glosario · 22 Preguntas</td><td>Para usar tal cual, sin redactar nada</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>0. Cómo leer este documento</h2>
+    <p class="sec-intro">Hay dos relojes corriendo y conviene no confundirlos, porque el error de planificación más caro es tratarlos igual.</p>
+  </div>
+
+  <div class="note">
+    <strong>El reloj que llevan otros:</strong> la verificación de empresa en Meta, la revisión de la aplicación, la aprobación de las plantillas y las revisiones profesionales. Se piden y se espera. Pueden tardar semanas y no se aceleran con esfuerzo ni con dinero.<br><br>
+    <strong>El reloj que lleváis vosotros:</strong> el código, los documentos internos y las páginas del producto. Son horas o días de trabajo, y dependen solo de vosotros.
+  </div>
+
+  <p>La consecuencia práctica ordena todo lo demás: <span class="hi">lo que depende de terceros se arranca hoy aunque no esté todo listo</span>, y el trabajo propio se hace durante la espera. Un plan que ponga el código primero y los trámites después añade semanas de calendario sin añadir ni una hora de trabajo. Es el error que este documento intenta evitar.</p>
+
+  <p>Por eso las tres rutas de la Parte II se diferencian sobre todo en <strong>cómo solapan esos dos relojes</strong>, no en qué trabajo hacen. El trabajo es casi el mismo en las tres; lo que cambia es el orden y, con él, la fecha del primer usuario y la del primer cobro.</p>
+
+  <h3>Un aviso sobre el alcance</h3>
+  <p>Este documento explica, ordena y presupuesta. <strong>No es asesoramiento legal ni fiscal.</strong> Los apartados 1, 2, 4 y 5 describen obligaciones reales, pero quien tiene que aplicarlas a vuestro caso concreto y firmar es un profesional colegiado. La Parte IV está pensada precisamente para que ese profesional cobre por revisar, no por redactar desde cero, que es lo que abarata y acelera el encargo.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>1. Veri*Factu: sois dos cosas a la vez</h2>
+    <p class="sec-intro">Aquí está el malentendido que hay que deshacer antes de decidir nada. La normativa antifraude no os afecta una vez, sino dos, y con calendarios distintos.</p>
+  </div>
+
+  <h3>Qué es Veri*Factu, en dos frases</h3>
+  <p>El Real Decreto 1007/2023 obliga a que cada factura emitida quede registrada de forma <strong>inalterable y trazable</strong>: una huella criptográfica que encadena cada factura con la anterior, un código QR en el documento y, opcionalmente, el envío del registro a la Agencia Tributaria en el momento de emitir. El objetivo declarado es acabar con el software de doble contabilidad.</p>
+  <p>Un programa que cumple todo eso se llama <strong>SIF</strong>: Sistema Informático de Facturación. Noesis es un SIF, y eso no es opcional ni discutible: si un programa emite facturas, es un SIF.</p>
+
+  <h3>Los dos papeles, y por qué importa la diferencia</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Papel</th><th>Quién lo tiene</th><th>Qué obliga</th><th>Desde cuándo</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Obligado tributario</strong><br><span class="tpl-use">el usuario</span></td>
+          <td>El autónomo o la empresa que factura con el programa</td>
+          <td>Usar un SIF conforme</td>
+          <td><span class="part">1-ene-2027</span> si tributa por Sociedades<br><span class="part">1-jul-2027</span> el resto, autónomos incluidos</td>
+        </tr>
+        <tr>
+          <td><strong>Productor del SIF</strong><br><span class="tpl-use">vosotros</span></td>
+          <td>Quien fabrica y comercializa el programa</td>
+          <td>Solo ofrecer software ya adaptado, y emitir la declaración responsable</td>
+          <td><span class="no">29-jul-2025</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <h3>La corrección importante</h3>
+    <p>El Real Decreto-ley 15/2025, de 2 de diciembre, aplazó un año las fechas <strong>de los usuarios</strong>: de 2026 a 2027. Es el aplazamiento del que habla todo el mundo y el que recoge vuestro <code>Fiscalidad.md</code>.</p>
+    <p>Pero ese mismo RDL <strong>dejó intactas las obligaciones de productores y comercializadores</strong>. Desde el 29 de julio de 2025 —hace trece meses— solo se puede ofrecer software ya adaptado al Reglamento.</p>
+    <p>Vuestra documentación interna habla de 2027 sin separar los dos papeles. Es un error de documentación con exposición real detrás, y corregirlo está en la lista de tareas de la Parte II.</p>
+  </div>
+
+  <div class="note">
+    <strong>Antes de que cunda el pánico:</strong> la obligación del productor muerde al <em>comercializar</em>. Hoy no tenéis clientes de pago, el alta pública está cerrada y <code>NOESIS_PUBLIC_SIGNUP_ENABLED</code> vale <code>false</code>. No estáis incumpliendo nada. Lo que cambia es la planificación: esto deja de ser un pendiente lejano y pasa a ser <span class="hi">requisito para cobrar la primera cuota del piloto</span>. Sube de 2027 a «antes del primer euro».
+  </div>
+
+  <h3>La declaración responsable, explicada</h3>
+  <p>Es el documento con el que el fabricante <strong>certifica bajo su propia responsabilidad</strong> que su software cumple la normativa. Conviene entender bien cuatro cosas, porque casi todo el mercado las cuenta mal y eso genera un miedo desproporcionado:</p>
+
+  <ul>
+    <li><strong>No hay auditoría externa.</strong> Nadie viene a revisar vuestro código. Es autocertificación pura.</li>
+    <li><strong>No se presenta ni se registra ante la AEAT.</strong> No existe un trámite que aprobar ni una cola en la que esperar. Esto es lo que hace que sea cuestión de días y no de meses.</li>
+    <li><strong>No existe el «software homologado por Hacienda».</strong> Ese sello no lo emite nadie. Quien lo anuncia, o miente o se equivoca, y hay mucho de ambas cosas en el mercado.</li>
+    <li><strong>Es por versión.</strong> Cada versión del software necesita la suya, actualizaciones menores incluidas. Esto tiene consecuencias de ingeniería que se tratan en la sección 18.</li>
+  </ul>
+
+  <p>El contenido mínimo lo fija la <strong>Orden HAC/1177/2024</strong>: identificación del sistema (nombre comercial, código y versión), identificación del productor (NIF, razón social y domicilio), lugar y fecha, y la certificación expresa de cumplimiento del artículo 29.2.j) de la Ley General Tributaria y del Reglamento que lo desarrolla.</p>
+  <p>Además debe estar <strong>visible dentro del propio programa</strong>, accesible desde sus menús, y entregarse al cliente en el momento de la compra. No basta con tenerla en un cajón.</p>
+
+  <div class="callout-warn callout">
+    <h3>Las sanciones no son simétricas</h3>
+    <p>Al <strong>usuario</strong> que factura con software no conforme: hasta <strong>50.000 €</strong> por ejercicio.</p>
+    <p>Al <strong>fabricante</strong> que produce o comercializa software no conforme: hasta <strong>150.000 € por cada producto y ejercicio fiscal</strong>. Y si el software permitiera llevar doble contabilidad, la exposición es mayor.</p>
+    <p>Es la razón por la que este documento pone Veri*Factu antes que ninguna otra cosa, y por la que ninguna de las tres rutas contempla cobrar antes de tener la declaración firmada.</p>
+  </div>
+
+  <h3>Qué tenéis ya construido, que es mucho</h3>
+  <p>Conviene decirlo porque cambia el tamaño del problema. Según vuestra propia documentación técnica, verificada contra el código:</p>
+  <ul>
+    <li>Registro de alta y anulación inalterables, con huella SHA-256 encadenada según el documento técnico 0.1.2 de la AEAT.</li>
+    <li>Código QR conforme al documento técnico 0.5.0, de 35 mm y corrección M.</li>
+    <li>XML de altas F1 y F2, rectificativas R1 a R5 y anulación, <strong>validados el 20-jul-2026 contra los esquemas XSD oficiales</strong>.</li>
+    <li>Numeración única por negocio, series separadas y congelación de cabecera y líneas después de emitir.</li>
+    <li>Emisión transaccional e idempotente, con comprobación de la cadena antes de generar o remitir, y bloqueo ante relojes que retroceden o huellas manipuladas.</li>
+    <li>Cliente SOAP/mTLS con cola durable, reintentos e idempotencia ante duplicados.</li>
+  </ul>
+  <p>Lo único que vuestra documentación marca como <strong>«construido, no validado externamente»</strong> es la remisión real contra los servidores de la AEAT. Esa es la pieza que la Ruta C propone comprar en lugar de validar, y la única incógnita técnica de verdad que queda en el recorrido fiscal.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>2. Por qué no se puede comprar la certificación de otro</h2>
+    <p class="sec-intro">La pregunta era razonable: contratar Holded y usar su documentación. La respuesta es que no, y por dos motivos independientes que conviene separar porque llevan a conclusiones distintas.</p>
+  </div>
+
+  <h3>Motivo uno: la declaración nombra al sistema y a su fabricante</h3>
+  <p>Una declaración responsable dice, literalmente, «<em>Holded certifica que el producto Holded, versión X, cumple</em>». Incluye el NIF y la razón social de Holded y el código identificador de su sistema. No hay forma de que ese documento ampare a un programa distinto de otra empresa, igual que la ITV del coche del vecino no vale para el tuyo.</p>
+  <p>Presentar software propio bajo el amparo de la certificación de otro es exactamente el fraude que la prensa especializada lleva meses denunciando como «el falso software certificado por Hacienda». Además de ilegal, en vuestro sector sería suicida: vendéis a gremios donde todos se conocen.</p>
+
+  <h3>Motivo dos: ni siquiera una API traslada la obligación</h3>
+  <p>Esta parte sí es contraintuitiva, y es la que más gente confunde. Existe un mercado entero de <em>Veri*Factu como servicio</em> —Verifacti, Binovo, Alegra y otros— que vende la conexión con la AEAT como API. Podríais integrarla perfectamente. Pero:</p>
+
+  <div class="note">
+    «El único responsable ante la Agencia Tributaria es el productor del sistema informático final, es decir, el fabricante del software que firma la Declaración Responsable. <strong>La API es un componente más dentro del ecosistema, no un sustituto de las obligaciones del desarrollador.</strong>»
+  </div>
+
+  <p>Dicho de otro modo: la API os quitaría <span class="hi">trabajo técnico</span>; la firma y la responsabilidad, <span class="hi">no</span>. Eso no la hace inútil —la Ruta C se apoya precisamente en ella— pero elimina la idea de delegar el problema. No hay a quién delegárselo.</p>
+
+  <h3>Y por qué Holded en concreto sería mala elección</h3>
+  <ol>
+    <li><strong>Es vuestro competidor directo.</strong> Está en <code>Competencia.md</code>. Construir el núcleo fiscal sobre la infraestructura de la empresa a la que queréis quitarle clientes es una dependencia estratégica difícil de deshacer, y le regala información sobre vuestro volumen.</li>
+    <li><strong>Ya tenéis construida la parte difícil.</strong> Todo lo enumerado al final de la sección 1. Cambiar a Holded significa tirar trabajo hecho y probado para pagar por algo peor integrado.</li>
+    <li><strong>Contradice una decisión que ya tomasteis por escrito:</strong> «Noesis construye la facturación y el registro fiscal de forma nativa y no los conecta por API». Reabrir eso ahora, sin un motivo técnico nuevo, es coste de reflexión sin beneficio.</li>
+  </ol>
+
+  <h3>Lo que de verdad falta es más pequeño de lo que parece</h3>
+  <p>No es un desarrollo. Es un documento y una revisión. Y buena parte del trabajo ya está hecho sin que se haya notado: <code>config.py</code> ya contiene <code>VERIFACTU_PRODUCER_NAME</code>, <code>VERIFACTU_PRODUCER_NIF</code>, <code>VERIFACTU_SYSTEM_NAME</code>, <code>VERIFACTU_SYSTEM_ID</code> y <code>VERIFACTU_SYSTEM_VERSION</code>, que son <strong>exactamente los campos que exige la Orden HAC/1177/2024</strong>. Alguien los puso ahí pensando en esto.</p>
+  <p>Falta: que una asesoría fiscal revise la conformidad con los artículos 9, 10, 11 y 13 del RD 1007/2023, firmar el documento y publicarlo dentro del producto. En la sección 18 tenéis el borrador para que la asesoría revise en vez de redactar.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>3. Meta: el permiso que no está en el plan</h2>
+    <p class="sec-intro">Esto no es cumplimiento legal, pero es lo que más puede retrasar el piloto, así que va en la Parte I. Y contradice un documento vuestro verificado hace nueve días.</p>
+  </div>
+
+  <h3>Los dos niveles de acceso de una aplicación de Meta</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Nivel</th><th>A qué da acceso</th><th>Cómo se obtiene</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Standard access</strong></td>
+          <td>Solo a los activos que posee <em>vuestro propio</em> negocio</td>
+          <td><span class="yes">Automático</span>. Se concede al crear la aplicación</td>
+        </tr>
+        <tr>
+          <td><strong>Advanced access</strong></td>
+          <td>A datos y activos de <em>otros</em> negocios</td>
+          <td><span class="no">App Review</span> más verificación de empresa</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <h3>El problema</h3>
+    <p><code>Meta-Verificacion.pdf</code> dice, como primer consejo y en negrita, «no hagas la revisión de la aplicación», y en la tabla del Camino A responde «¿Revisión de la app? <strong>No hace falta</strong>».</p>
+    <p>Eso es correcto para el número central de Noesis, que es un activo vuestro. <strong>No lo es para los números comerciales de los clientes.</strong> La documentación de Meta dice:</p>
+    <p><em>«The partner's app must have <strong>Advanced access</strong> for the <code>whatsapp_business_management</code> permission to access your shared WABA via the API.»</em> Sin él, <em>«API calls return error code 200»</em>.</p>
+    <p>La WABA de vuestro cliente, aunque os la conceda a mano desde su Business Manager, sigue siendo de otro negocio. El razonamiento del runbook —que la revisión solo hace falta para Embedded Signup— confunde <em>cómo</em> se concede el activo con <em>de quién</em> es el activo. Lo que dispara el requisito es lo segundo.</p>
+  </div>
+
+  <p>La consecuencia se ve bien siguiendo vuestro propio runbook: haríais la verificación de empresa, el token de usuario del sistema, las nueve plantillas, la SIM dedicada, todo. Y al llegar a la <strong>Fase B</strong> —dar de alta dos números comerciales— cada llamada a la API devolvería error 200. Que es justo la prueba que vuestra documentación llama «la única que demuestra que el aislamiento es real».</p>
+
+  <p>No es un fallo del código. El motor multicanal está bien construido y desplegado. Es un permiso que falta y que tarda semanas en concederse.</p>
+
+  <div class="note">
+    <strong>Cautela honesta:</strong> esto contradice un documento que verificasteis el 20-ago. Antes de dar por cerrado el asunto conviene confirmarlo con soporte de Meta, o probarlo en cuanto tengáis una WABA de cliente compartida. Pero <strong>planificad como si fuera cierto</strong>: equivocarse por exceso cuesta un trámite en paralelo que no molesta a nadie; equivocarse por defecto cuesta el piloto entero y se descubre al final.
+  </div>
+
+  <h3>Directo, BSP o Tech Provider</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Vía</th><th>Quién paga a Meta</th><th>Coste</th><th>Encaje con Noesis</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cloud API directa</strong></td><td>Vosotros</td><td>Solo el mensaje, sin cuota</td><td>Es lo que ya tenéis montado y funcionando</td></tr>
+        <tr><td><strong>BSP / Solution Partner</strong><br><span class="tpl-use">Twilio, 360dialog, Infobip</span></td><td>El BSP, que os factura</td><td>Mensaje más margen</td><td>Su aplicación ya está aprobada: os quita App Review del camino crítico</td></tr>
+        <tr><td><strong>Tech Provider</strong></td><td>Cada cliente, directamente a Meta</td><td>Solo vuestro desarrollo</td><td>Es lo que Noesis <em>es</em>: software que otros usan con su propio número</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Recomendación:</strong> seguir directos y meter App Review en el camino crítico desde hoy, junto a la verificación de empresa. Un BSP solo tiene sentido como plan B si App Review se alarga más de lo tolerable: os ahorra la espera a cambio de margen por mensaje y de meter un intermediario entre vosotros y vuestros clientes. Ese plan B está desarrollado en la sección 15.</p>
+
+  <p>Un dato que quita presión: <strong>Embedded Signup no exige ser Tech Provider</strong>. El límite por defecto son 10 nuevos clientes cada 7 días, y sube a 200 al completar verificación de empresa, App Review y Access Verification. Para 3-5 pilotos sobra de largo, así que automatizar el alta puede esperar sin coste.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>4. El Reglamento europeo de IA ya os aplica</h2>
+    <p class="sec-intro">Entró en aplicación hace 27 días y se arregla en minutos, pero hay que saberlo y dejar constancia de la decisión.</p>
+  </div>
+
+  <p>El <strong>artículo 50 del Reglamento (UE) 2024/1689</strong> es aplicable desde el <strong>2 de agosto de 2026</strong>. Impone obligaciones de transparencia directas a quien pone en el mercado sistemas de IA que interactúan con personas. La principal, en una frase: <span class="hi">un chatbot tiene que identificarse como máquina</span>.</p>
+
+  <p>Revisando el producto: <code>asistente.html</code> se presenta como «Copiloto operativo» y «Habla normal; si puede resolverlo en local, lo hace», y en ningún punto —ni en la web, ni en el primer mensaje de WhatsApp tras vincular el número— se dice que se está hablando con un sistema de IA.</p>
+
+  <p>Se puede argumentar que aplica la excepción de «resulta evidente por el contexto». Es una interpretación defendible que debe confirmar el abogado, pero la alternativa es una línea de texto. La prórroga hasta el 2-dic-2026 cubre solo el marcado de contenido generado por IA, no esta obligación.</p>
+
+  <div class="note">
+    <strong>Arreglo propuesto:</strong> una frase en la cabecera del asistente y otra en el primer mensaje de WhatsApp tras vincular. Además, dejar la decisión escrita en <code>Decisiones.md</code> con su porqué, que es como trabajáis. Coste: minutos. Es de las mejores relaciones esfuerzo/riesgo de toda la lista.
+  </div>
+
+  <p>Hay un matiz que conviene que valore el abogado y que no he visto tratado en vuestra documentación: los mensajes que Noesis compone y envía a los <strong>clientes finales del autónomo</strong> salen con la identidad del autónomo, no con la de Noesis. Quién es ahí el «responsable del despliegue» a efectos del artículo 50, y si esa comunicación exige alguna divulgación, es una pregunta razonable para el encargo de la sección 19.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>5. Protección de datos: dos huecos concretos</h2>
+    <p class="sec-intro">El contrato de encargado del tratamiento está bien hecho —lista de subencargados con ubicación, cláusulas contractuales tipo, notificación de brechas, derechos y fin de contrato— y es mejor que el de mucha empresa ya facturando. Faltan dos cosas puntuales y hay una corrección.</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Groq no está declarado como subencargado</h3><span class="chip chip-stop">incumple vuestro propio contrato</span></div>
+        <p><code>adapters/transcription.py</code> contiene un <code>GroqWhisperProvider</code> que envía audio a <code>api.groq.com</code>, en Estados Unidos, y <code>Conectar-APIs.md</code> lo trata como integración P0/P1. La lista de subencargados del DPA incluye Railway, Anthropic, Meta y el proveedor SMTP, pero no Groq.</p>
+        <p>Basta con que alguien configure <code>GROQ_API_KEY</code> para estar enviando notas de voz de los clientes de vuestros clientes a un subencargado no declarado, sin base contractual y sin haberlo notificado.</p>
+        <p><strong>Dos salidas legítimas.</strong> La primera: añadir la fila al DPA mediante variable, como ya hacéis con el proveedor SMTP, y notificar el cambio de subencargado con la antelación que el propio contrato os exige. La segunda: decidir que la transcripción es solo local con <code>faster-whisper</code> y retirar el adaptador. Lo que no vale es dejarlo cableado y esperar que nadie lo active.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Falta el registro de actividades de tratamiento</h3><span class="chip chip-warn">art. 30 RGPD</span></div>
+        <p>Lo necesitáis por partida doble: como <strong>responsable</strong>, por los datos de vuestros propios clientes —altas, sesiones, facturación de la suscripción, solicitudes de acceso—, y como <strong>encargado</strong>, por los datos que ellos tratan a través de Noesis: sus clientes finales, sus trabajadores, sus documentos.</p>
+        <p>No se publica: es un documento interno. Pero es lo primero que pide la AEPD en una inspección, y su ausencia es por sí sola una infracción, con independencia de que todo lo demás esté bien.</p>
+        <p>La buena noticia: con el DPA ya escrito, buena parte del trabajo es estructurar lo que ya tenéis. Las categorías de datos, las finalidades, los plazos de conservación y los destinatarios están descritos por toda vuestra documentación.</p>
+      </div>
+    </div>
+    <div class="step hidden-step">
+      <div class="step-n">03</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Y una corrección en un texto público</h3><span class="chip chip-stop">inexacto hoy</span></div>
+        <p>La página de cumplimiento dice: «<em>Noesis se integra con un sistema homologado cuando lo conectas. Hasta entonces, los documentos que genera Noesis son de apoyo a la gestión.</em>»</p>
+        <p>Eso falla por partida triple. Contradice a <code>Fiscalidad.md</code>, que dice que el registro es nativo. Usa «homologado», que como ya hemos visto no existe. Y describe una arquitectura —integrarse con un tercero— que vuestra propia decisión escrita descarta.</p>
+        <p>Es un texto legal y público, dirigido a clientes, y ahora mismo es inexacto en las dos direcciones: promete menos de lo que hacéis y a la vez usa una palabra que induce a error. Entra en el encargo del abogado de la sección 19.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>6. Lo que viene: factura electrónica B2B</h2>
+    <p class="sec-intro">No es urgente, pero conviene que no se confunda con Veri*Factu en la hoja de ruta, porque son cosas distintas y mucha gente las mezcla.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th></th><th>Veri*Factu</th><th>Factura electrónica B2B</th></tr></thead>
+      <tbody>
+        <tr><td><strong>De qué va</strong></td><td>Del <em>registro</em>: huella, encadenamiento, QR y remisión</td><td>Del <em>formato</em>: XML estructurado entre empresas</td></tr>
+        <tr><td><strong>Norma</strong></td><td>RD 1007/2023 y Orden HAC/1177/2024</td><td>Ley 18/2022 «Crea y Crece» y RD 238/2026</td></tr>
+        <tr><td><strong>Estándar</strong></td><td>Esquemas propios de la AEAT</td><td>Norma europea EN 16931</td></tr>
+        <tr><td><strong>A quién obliga</strong></td><td>A todo el que factura con software</td><td>A empresas y profesionales en sus operaciones entre sí</td></tr>
+        <tr><td><strong>Fechas</strong></td><td>1-ene-2027 y 1-jul-2027 para usuarios; ya vigente para productores</td><td>Orden Ministerial en vigor el <strong>1-oct-2026</strong>; obligación efectiva apuntando a oct-2027, por fases según facturación, empezando por quien supera 8 M€</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Para vosotros esto no es cumplimiento: es <strong>producto</strong>. Un SaaS de facturación que no emita EN 16931 se queda fuera del mercado cuando la obligación entre, igual que Veri*Factu es hoy el gancho que os trae clientes desde Holded o Quipu. Va al roadmap con horizonte 2027, no a esta lista.</p>
+
+  <div class="note">
+    <strong>Oportunidad comercial, no solo obligación.</strong> Vuestra estrategia dice que Veri*Factu «obliga a cambiar de software: eso trae clientes». La factura B2B obligatoria es exactamente el mismo mecanismo una segunda vez, y con un año de aviso. Quien la tenga lista antes que sus competidores repite la jugada.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>7. El inventario completo</h2>
+    <p class="sec-intro">Todo lo que falta, en una sola tabla, sin separar lo legal de lo técnico: porque para empezar a cobrar hacen falta las dos cosas. La columna que importa es la última.</p>
+  </div>
+
+  <h4>Bloque legal y fiscal</h4>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>#</th><th>Qué</th><th>Quién</th><th>Esfuerzo</th><th>Bloquea</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Revisión fiscal del SIF y firma de la declaración responsable</td><td>Asesoría</td><td>2-3 semanas</td><td><span class="no">Cobrar</span></td></tr>
+        <tr><td class="num">2</td><td>Publicar la declaración dentro del producto y atarla a la versión</td><td>Código</td><td>1 día</td><td><span class="no">Cobrar</span></td></tr>
+        <tr><td class="num">3</td><td><code>NOESIS_VERIFACTU_PRODUCER_NIF</code>, hoy vacío</td><td>Vosotros</td><td>Minutos</td><td>Remisión a la AEAT</td></tr>
+        <tr><td class="num">4</td><td>Certificado electrónico de representante (FNMT)</td><td>Vosotros</td><td>1-2 días</td><td>Remisión a la AEAT</td></tr>
+        <tr><td class="num">5</td><td>Revisión jurídica de aviso legal, privacidad, términos, cookies y DPA</td><td>Abogado</td><td>2-3 semanas</td><td><span class="no">Abrir alta pública</span></td></tr>
+        <tr><td class="num">6</td><td>Corregir la página de cumplimiento («homologado»)</td><td>Abogado + código</td><td>Horas</td><td>Abrir alta pública</td></tr>
+        <tr><td class="num">7</td><td>Divulgación de IA en asistente y WhatsApp (art. 50)</td><td>Código</td><td>Minutos</td><td>Nada, pero ya es exigible</td></tr>
+        <tr><td class="num">8</td><td>Groq: al DPA o fuera del código</td><td>Decisión + código</td><td>Horas</td><td>Activar voz</td></tr>
+        <tr><td class="num">9</td><td>Registro de actividades de tratamiento</td><td>Abogado + vosotros</td><td>Días</td><td>Nada, pero es infracción</td></tr>
+        <tr><td class="num">10</td><td>Corregir los plazos de productor en <code>Fiscalidad.md</code></td><td>Vosotros</td><td>Minutos</td><td>Nada. Evita repetir el error</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Bloque Meta</h4>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>#</th><th>Qué</th><th>Quién</th><th>Esfuerzo</th><th>Bloquea</th></tr></thead>
+      <tbody>
+        <tr><td class="num">11</td><td>Verificación de empresa</td><td>Meta</td><td>Horas a 2 semanas</td><td>Pasar de 250 conversaciones y 2 números</td></tr>
+        <tr><td class="num">12</td><td><strong>App Review para Advanced access</strong></td><td>Meta</td><td>Semanas</td><td><span class="no">Números comerciales</span></td></tr>
+        <tr><td class="num">13</td><td>Las nueve plantillas a aprobación</td><td>Meta</td><td>1-2 días</td><td>Todo lo proactivo</td></tr>
+        <tr><td class="num">14</td><td>SIM dedicada y registro del número central</td><td>Vosotros</td><td>1 día</td><td><span class="no">Todo el canal</span></td></tr>
+        <tr><td class="num">15</td><td>Token de usuario del sistema, caducidad «Nunca»</td><td>Vosotros</td><td>1 hora</td><td><span class="no">Todo el canal</span></td></tr>
+        <tr><td class="num">16</td><td>Método de pago en Meta</td><td>Vosotros</td><td>Minutos</td><td>Escribir a más de 5 destinatarios</td></tr>
+        <tr><td class="num">17</td><td>Corregir la tabla del Camino A en <code>Meta-Verificacion.html</code></td><td>Vosotros</td><td>Minutos</td><td>Nada. Evita planificar mal</td></tr>
+        <tr><td class="num">18</td><td>Dos negocios piloto con número propio</td><td>Comercial</td><td>Semanas</td><td>Probar el aislamiento</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Bloque técnico y operativo</h4>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>#</th><th>Qué</th><th>Quién</th><th>Esfuerzo</th><th>Bloquea</th></tr></thead>
+      <tbody>
+        <tr><td class="num">19</td><td><strong>Deuda del repositorio</strong>: tres commits sin subir y colisión de migraciones</td><td>Código</td><td>Media mañana</td><td><span class="no">Todo el trabajo nuevo</span></td></tr>
+        <tr><td class="num">20</td><td>Google OAuth</td><td>Vosotros</td><td>Media hora</td><td><span class="no">El panel de administración</span></td></tr>
+        <tr><td class="num">21</td><td>Brevo y autenticación del dominio en DNS</td><td>Vosotros</td><td>Media hora más propagación</td><td><span class="no">Recuperar contraseña</span></td></tr>
+        <tr><td class="num">22</td><td>Stripe: seis precios, <code>tax_behavior</code> y ciclo completo en test</td><td>Vosotros</td><td>1-2 días</td><td><span class="no">Cobrar</span></td></tr>
+        <tr><td class="num">23</td><td>Rotar los secretos expuestos</td><td>Vosotros</td><td>Horas</td><td>Nada, pero es P0 desde julio</td></tr>
+        <tr><td class="num">24</td><td>ClamAV en red privada con <code>NOESIS_CLAMAV_REQUIRED=true</code></td><td>Código + infra</td><td>1 día</td><td>Subidas seguras</td></tr>
+        <tr><td class="num">25</td><td>Restauración externa cronometrada, con RPO y RTO</td><td>Vosotros</td><td>1 día</td><td>Nada, pero sin ella no hay recuperación demostrada</td></tr>
+        <tr><td class="num">26</td><td>Monitor 24/7 independiente de GitHub y Railway</td><td>Vosotros</td><td>1 hora</td><td>Apertura masiva</td></tr>
+        <tr><td class="num">27</td><td><code>noesis-doctor --strict</code> en producción, sin bloqueos</td><td>Vosotros</td><td>Horas</td><td><span class="no">Abrir alta pública</span></td></tr>
+        <tr><td class="num">28</td><td><strong>Puertas automáticas de cumplimiento</strong> (propuesta nueva)</td><td>Código</td><td>1 día</td><td>Nada. Evita reincidir</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout-warn callout">
+    <h3>La propuesta 28, que no está en ninguna lista vuestra</h3>
+    <p>Tenéis <code>readiness.py</code> comprobando la identidad legal y <code>check_project_truth.py</code> verificando que la documentación no miente sobre el código. Vuestra cultura ya es «la máquina comprueba que no mentimos». Pero esa comprobación cubre esquema, precios y release, y <strong>no cubre cumplimiento</strong>, que es donde las multas son de cinco y seis cifras.</p>
+    <p>La mejora: convertir estas obligaciones en comprobaciones bloqueantes. Que <code>NOESIS_PUBLIC_SIGNUP_ENABLED</code> no se pueda poner a <code>true</code> si la declaración responsable no está publicada, si el NIF del productor está vacío, si falta la divulgación de IA o si hay un proveedor externo configurado que no aparece en la lista de subencargados.</p>
+    <p>Cuesta un día y es lo que impide que dentro de seis meses, con más prisa y más gente, alguien vuelva a activar algo sin mirar.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>8. Cómo elegir entre las tres rutas</h2>
+    <p class="sec-intro">Las tres terminan en el mismo sitio: un piloto de tres a cinco autónomos pagando, con todo en regla. Hacen prácticamente el mismo trabajo. Se diferencian en cuándo entra el primer usuario y cuánto riesgo técnico asumís en la pata fiscal.</p>
+  </div>
+
+  <h3>Dos preguntas y ya está decidido</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <div class="step-head"><h3>¿Aceptaría la asesoría, por escrito, que un piloto gratuito no es comercializar?</h3></div>
+        <p><strong>Si la respuesta es no</strong>, o si preferís no preguntarlo siquiera: <span class="hi">Ruta A</span>. Todo cerrado antes de que entre el primer usuario. Es la que nadie puede criticar y la que menos conversaciones incómodas genera.</p>
+        <p><strong>Si la respuesta es sí</strong>, seguid a la pregunta 2.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <div class="step-head"><h3>¿Qué dice el informe fiscal sobre la remisión a la AEAT?</h3></div>
+        <p><strong>Si dice que está lista</strong> o que le falta poco: <span class="hi">Ruta B</span>. Validáis vosotros y no pagáis cuota a nadie.</p>
+        <p><strong>Si dice que falta trabajo real</strong> en el cliente SOAP/mTLS, o si no queréis gastar semanas peleando con certificados y entornos de prueba de la AEAT: <span class="hi">Ruta C</span>. Compráis el transporte y seguís firmando vuestra declaración.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    Fijaos en el orden: la segunda pregunta <strong>no se puede contestar hoy</strong>. Depende de un informe que aún no habéis pedido. Por eso la decisión real de esta semana es solo entre «A» y «B o C», y las tres rutas comparten idénticas las tres primeras semanas. No hace falta acertar ahora: hace falta arrancar.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>9. Ruta A · Certificar antes de vender</h2>
+    <p class="sec-intro">La ruta ordenada. Se completa todo y el piloto arranca ya cobrando. Es la que elegiríais si lo que más os preocupa es no tener que explicar nada a nadie.</p>
+  </div>
+
+  <h3>La idea</h3>
+  <p>Ningún usuario toca Noesis hasta que la declaración responsable está firmada, Meta ha concedido los permisos y los textos legales están revisados. El piloto empieza tarde pero empieza entero: alta, uso y cobro el mismo día.</p>
+
+  <h3>Cuándo es vuestra ruta</h3>
+  <ul>
+    <li>Si la asesoría no os da el criterio escrito sobre el piloto gratuito, o tarda en dárselo.</li>
+    <li>Si alguno de los dos socios no está cómodo operando con usuarios reales antes de tener todos los papeles.</li>
+    <li>Si preferís concentrar el esfuerzo comercial en una sola conversación por cliente —«esto es Noesis, cuesta esto, empezamos»— en vez de dos.</li>
+  </ul>
+
+  <div class="steps">
+
+    <div class="step first-step">
+      <div class="step-n">A0</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Día 1 · Arrancar los relojes largos</h3><span class="chip chip-stop">no se puede posponer</span></div>
+        <p><strong>Objetivo:</strong> que todo lo que depende de terceros esté ya corriendo antes de tocar una línea de código.</p>
+        <p><strong>Tareas:</strong> abrir la verificación de empresa en Meta (#11) con el nombre y el NIF exactamente como constan en la escritura. Solicitar App Review para Advanced access de <code>whatsapp_business_management</code> (#12). Enviar las nueve plantillas a aprobación (#13), con los cuerpos que ya están escritos en el runbook. Encargar la revisión fiscal (#1) y la jurídica (#5) usando los briefs de la sección 19.</p>
+        <p><strong>Entregable:</strong> cinco acuses de recibo y dos encargos aceptados con fecha de entrega comprometida.</p>
+        <p><strong>Criterio de cierre:</strong> ninguna de las cinco cosas está pendiente de que vosotros hagáis algo. Todas esperan a otro.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">A1</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 1 a 3 · La casa en orden</h3><span class="chip chip-flat">trabajo propio</span></div>
+        <p><strong>Objetivo:</strong> dejar el repositorio y el producto en un estado sobre el que se pueda construir sin sorpresas.</p>
+        <p><strong>Tareas, por orden:</strong></p>
+        <ul>
+          <li>Resolver la deuda del repositorio (#19): integrar los tres commits locales, renumerar la migración de la 40 a la 52 y verificar que <code>db.py</code> y <code>migrations.py</code> no se han auto-mezclado mal. <em>Va primero porque todo lo demás se construye encima.</em></li>
+          <li>Rellenar <code>NOESIS_VERIFACTU_PRODUCER_NIF</code> (#3) y solicitar el certificado de la FNMT (#4).</li>
+          <li>Añadir la divulgación de IA (#7) y dejar la decisión escrita en <code>Decisiones.md</code>.</li>
+          <li>Resolver Groq (#8): al DPA o fuera.</li>
+          <li>Corregir los plazos de productor en <code>Fiscalidad.md</code> (#10) y la tabla del Camino A en <code>Meta-Verificacion.html</code> (#17).</li>
+          <li>Rotar los secretos expuestos (#23).</li>
+          <li>Construir las puertas automáticas de cumplimiento (#28).</li>
+        </ul>
+        <p><strong>Entregable:</strong> un <code>main</code> limpio y desplegado, con las correcciones documentales hechas y <code>noesis-doctor</code> señalando exactamente lo que falta.</p>
+        <p><strong>Criterio de cierre:</strong> suite completa en verde, <code>/ready</code> confirmando el esquema nuevo y <code>check_project_truth.py</code> pasando.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">A2</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 2 a 4 · Las integraciones que no dependen de Meta</h3><span class="chip chip-flat">en paralelo</span></div>
+        <p><strong>Objetivo:</strong> que cuando lleguen los permisos de Meta no quede nada más pendiente.</p>
+        <p><strong>Tareas:</strong> Google OAuth (#20), que además os devuelve el panel de administración, hoy cerrado en producción. Brevo y la autenticación del dominio en el DNS (#21), que es lo que decide si vuestras facturas llegan a la bandeja o a spam. Stripe con los seis precios y el ciclo completo en test (#22). ClamAV en red privada (#24). La restauración externa cronometrada (#25) y el monitor 24/7 (#26).</p>
+        <p><strong>Entregable:</strong> las cuatro integraciones externas funcionando y una restauración con RPO y RTO medidos y anotados.</p>
+        <p><strong>Criterio de cierre:</strong> <code>noesis-integrations-check --network --strict</code> sin bloqueos.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">A3</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 4 a 8 · Llega Meta</h3><span class="chip chip-warn">depende de terceros</span></div>
+        <p><strong>Objetivo:</strong> el canal completo, central y comercial, probado de verdad.</p>
+        <p><strong>Tareas:</strong> con la verificación concedida, registrar el número central con SIM dedicada (#14), generar el token de usuario del sistema con caducidad «Nunca» y todos los activos asignados (#15) y añadir método de pago con límite de gasto (#16). Cuando llegue el Advanced access, dar de alta los dos números comerciales del piloto (#18) siguiendo la Fase B de vuestro runbook: el cliente concede el activo, vosotros lo registráis en Administración, nace pendiente, se prueba y solo entonces se activa.</p>
+        <p><strong>Entregable:</strong> la prueba de aceptación de los dos bloques del runbook, completa y registrada en <code>Registro-QA.md</code>.</p>
+        <p><strong>Criterio de cierre:</strong> el mismo remitente escribe a los dos números comerciales y salen dos conversaciones aisladas, cada una en su negocio. Sin eso, no hay piloto multicanal.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">A4</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 8 a 9 · La declaración y los papeles</h3><span class="chip chip-stop">puerta del dinero</span></div>
+        <p><strong>Objetivo:</strong> poder cobrar legalmente.</p>
+        <p><strong>Tareas:</strong> recibir el informe fiscal, corregir lo que señale, firmar la declaración responsable y publicarla dentro del producto (#2). Aplicar las correcciones del abogado a los textos y a la página de cumplimiento (#6). Cerrar el registro de actividades (#9). Ejecutar <code>noesis-doctor --strict</code> en producción y resolver cada bloqueo (#27).</p>
+        <p><strong>Entregable:</strong> declaración firmada, publicada y accesible desde el menú del producto; textos legales revisados; registro de actividades archivado.</p>
+        <p><strong>Criterio de cierre:</strong> las puertas automáticas de cumplimiento (#28) están todas en verde. Ese es el momento, y no antes, en que <code>NOESIS_PUBLIC_SIGNUP_ENABLED</code> puede cambiar.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">A5</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 9 a 10 · El piloto</h3><span class="chip chip-ok">primer euro</span></div>
+        <p><strong>Objetivo:</strong> tres a cinco autónomos usando y pagando.</p>
+        <p><strong>Tareas:</strong> alta acompañada de cada piloto, con su número comercial y su catálogo por oficio cargado. Dos cierres semanales, como dice vuestra estrategia. Medir retención a 60 días desde el primer día.</p>
+        <p><strong>Criterio de cierre:</strong> tres cuentas activas con suscripción cobrada y un mes de uso continuado.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Lo que produce esta ruta</h3>
+  <ul>
+    <li>Declaración responsable firmada y publicada.</li>
+    <li>Textos legales revisados por profesional y registro de actividades archivado.</li>
+    <li>Canal de WhatsApp completo, central y comercial, con aislamiento demostrado.</li>
+    <li>Las cuatro integraciones externas validadas y una restauración cronometrada.</li>
+    <li>Puertas automáticas que impiden reincidir.</li>
+  </ul>
+
+  <h3>Riesgos propios</h3>
+  <p>El principal es de calendario: si App Review se alarga, <strong>todo</strong> se retrasa, porque no hay nada corriendo en paralelo que amortigüe. El segundo es de aprendizaje: llegáis a la semana 9 sin haber visto a un autónomo usar el producto, así que cualquier sorpresa de usabilidad se descubre tarde y con el compromiso de cobro ya adquirido.</p>
+
+  <h3>Cómo sabéis que ha funcionado</h3>
+  <p>Tres cuentas de pago activas, retención medida a 60 días y <code>noesis-doctor --strict</code> limpio en producción.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>10. Ruta B · Piloto gratuito en paralelo</h2>
+    <p class="sec-intro">La recomendada. Hace exactamente el mismo trabajo que la A, pero no hace esperar al piloto: arranca gratis en cuanto el canal central funciona, y se convierte en cliente de pago el día que la declaración está firmada.</p>
+  </div>
+
+  <h3>La idea</h3>
+  <p>La obligación del productor se activa al <strong>comercializar</strong>. Un piloto sin contraprestación no es una venta. Eso compra cinco o seis semanas de uso real sin mover la exposición legal ni un milímetro, y esas semanas son el activo más valioso que vais a construir este año.</p>
+  <p>Durante ese tiempo la facturación puede quedarse en modo preparación, sin remisión a la AEAT: recordad que <strong>a los usuarios no les obliga nada hasta julio de 2027</strong>, así que un autónomo que use Noesis hoy para presupuestos, agenda, gastos, documentos y WhatsApp no incumple absolutamente nada.</p>
+
+  <h3>Cuándo es vuestra ruta</h3>
+  <ul>
+    <li>Si la asesoría os da el criterio escrito. Es la única condición.</li>
+    <li>Si os importa más aprender pronto que cobrar pronto. Con tres a cinco pilotos, cinco semanas de uso real valen mucho más que cinco semanas de cuota.</li>
+    <li>Si queréis que el primer cobro llegue con el producto ya ajustado a lo que los autónomos hacen de verdad, y no a lo que suponíais.</li>
+  </ul>
+
+  <div class="callout-warn callout">
+    <h3>La condición innegociable</h3>
+    <p>Que la asesoría fiscal confirme <strong>por escrito</strong> que un piloto sin contraprestación no constituye comercialización a efectos del RD 1007/2023, y que un usuario que factura antes de julio de 2027 con un SIF aún no certificado no incurre en infracción.</p>
+    <p>Es la única pieza de esta ruta que no controláis. Pedidlo en el mismo correo del encargo, por escrito y con respuesta razonada. Sin ese papel, la ruta se cae y hay que ir por la A: no es negociable ni «se entiende que sí».</p>
+  </div>
+
+  <div class="steps">
+
+    <div class="step first-step">
+      <div class="step-n">B0</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Día 1 · Idéntico a la Ruta A</h3><span class="chip chip-stop">no se puede posponer</span></div>
+        <p>Los mismos cinco arranques: verificación de empresa (#11), App Review (#12), plantillas (#13), encargo fiscal (#1) y encargo jurídico (#5). Con una línea añadida al encargo fiscal: <strong>la pregunta sobre el piloto gratuito</strong>, que es la que decide si seguís en esta ruta.</p>
+        <p><strong>Criterio de cierre:</strong> el mismo, más la pregunta formulada por escrito.</p>
+      </div>
+    </div>
+
+    <div class="step first-step">
+      <div class="step-n">B1</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 1 a 3 · La casa en orden</h3><span class="chip chip-flat">trabajo propio</span></div>
+        <p>Idéntica a la fase A1, con una prioridad distinta dentro de la lista: la deuda del repositorio (#19), Google OAuth (#20) y Brevo (#21) suben al principio, porque sin correo no se puede recuperar una contraseña y el piloto va a entrar antes.</p>
+        <p><strong>Criterio de cierre:</strong> además de lo de A1, un autónomo podría darse de alta, perder la contraseña y recuperarla sin que nadie intervenga.</p>
+      </div>
+    </div>
+
+    <div class="step first-step">
+      <div class="step-n">B2</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semana 3 o 4 · Arranca el piloto, gratis</h3><span class="chip chip-ok">aquí está la diferencia</span></div>
+        <p><strong>Objetivo:</strong> tener autónomos reales usando Noesis mientras Meta y los profesionales siguen a lo suyo.</p>
+        <p><strong>Condiciones de arranque —las tres, no dos:</strong> el número central responde; el correo sale y llega a la bandeja de entrada; y el criterio escrito de la asesoría está en vuestro poder.</p>
+        <p><strong>Qué usan los pilotos desde el día uno:</strong> agenda y trabajos, clientes y CRM, presupuestos, gastos y documentos por foto, fichaje del equipo, y todo el canal central de WhatsApp con su parte del día. Es la mayor parte del producto.</p>
+        <p><strong>Qué queda desactivado:</strong> la remisión a la AEAT y el cobro de la suscripción. La facturación funciona en modo preparación, que es exactamente lo que vuestra página de cumplimiento ya describe hoy.</p>
+        <p><strong>Qué se les dice, literalmente:</strong> que están en un piloto gratuito, que la facturación con registro fiscal se activa en unas semanas, y que el precio será el de la tarifa cuando llegue. Sin letra pequeña. Un autónomo que entiende que está ayudando a construir algo perdona un fallo; uno que se siente vendido, no.</p>
+        <p><strong>Entregable:</strong> tres a cinco cuentas activas usando el producto a diario.</p>
+        <p><strong>Criterio de cierre:</strong> cada piloto ha completado una semana entera de uso sin que nadie de Noesis toque nada por él.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">B3</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 4 a 8 · Aprender mientras se espera</h3><span class="chip chip-ok">el valor real de esta ruta</span></div>
+        <p><strong>Objetivo:</strong> convertir la espera en producto.</p>
+        <p><strong>Tareas:</strong> las que quedaban de A2 —Stripe, ClamAV, restauración, monitor— más lo que aparezca del uso real, que aparecerá. Cuando llegue el Advanced access, dar de alta los dos números comerciales (#18) y probar el aislamiento con clientes finales de verdad, que es infinitamente mejor prueba que dos teléfonos vuestros.</p>
+        <p><strong>Entregable:</strong> una lista de fricciones reales, priorizada, y la prueba de aislamiento hecha con negocios auténticos.</p>
+        <p><strong>Criterio de cierre:</strong> las tres fricciones más repetidas están resueltas antes de empezar a cobrar por ellas.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">B4</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semana 8 · Se enciende todo</h3><span class="chip chip-ok">primer euro</span></div>
+        <p><strong>Objetivo:</strong> pasar de piloto gratuito a cliente de pago sin fricción.</p>
+        <p><strong>Tareas:</strong> declaración firmada y publicada (#2), correcciones del abogado aplicadas (#6), registro de actividades cerrado (#9), <code>noesis-doctor --strict</code> limpio (#27). Se activa la remisión a la AEAT y se abre la suscripción.</p>
+        <p><strong>La conversación de conversión</strong> es la fácil de todo el proyecto: el autónomo lleva cinco semanas usándolo, sabe lo que hace y sabe lo que le ahorra. No estáis vendiendo una promesa, estáis poniendo precio a algo que ya usa.</p>
+        <p><strong>Criterio de cierre:</strong> el mismo que la Ruta A. Tres cuentas de pago activas.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Lo que produce esta ruta, además de lo de la A</h3>
+  <ul>
+    <li>Cinco o seis semanas de uso real antes del primer cobro.</li>
+    <li>Una lista de fricciones auténticas en vez de suposiciones.</li>
+    <li>La prueba de aislamiento multicanal hecha con negocios reales, no simulada.</li>
+    <li>Tres autónomos que ya saben lo que Noesis les ahorra cuando llega el momento de pedirles la tarjeta. Que es, según vuestra propia estrategia, «el activo de marketing más valioso del año».</li>
+  </ul>
+
+  <h3>Riesgos propios y cómo se controlan</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Riesgo</th><th>Probabilidad</th><th>Qué hacer</th></tr></thead>
+      <tbody>
+        <tr><td>La asesoría no da el criterio escrito</td><td>Media</td><td>Se cae a la Ruta A sin haber perdido nada: las tres primeras semanas son idénticas</td></tr>
+        <tr><td>Un piloto factura y espera registro fiscal</td><td>Baja</td><td>Decirlo antes y por escrito. No les obliga nada hasta jul-2027</td></tr>
+        <tr><td>Cuesta convertir de gratis a pago</td><td>Media</td><td>Fijar el precio desde el día uno y llamarlo «piloto gratuito hasta X», nunca «gratis»</td></tr>
+        <tr><td>El uso real revela un fallo grave</td><td>Media</td><td>Es la ruta que <em>quiere</em> que pase, y cinco semanas antes de cobrar</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>11. Ruta C · Núcleo nativo con la remisión delegada</h2>
+    <p class="sec-intro">Es la Ruta B más una decisión técnica: mantener nativo todo lo que ya funciona y comprar solo la conexión con la AEAT.</p>
+  </div>
+
+  <h3>La idea</h3>
+  <p>Vuestra documentación marca la remisión SOAP/mTLS como <strong>«construida, no validada externamente»</strong>. Es la única pieza del recorrido fiscal que no ha visto un servidor real de la AEAT. Validarla cuesta certificado, entorno de pruebas, y varias rondas de errores con un interlocutor que no responde rápido. Comprarla convierte semanas inciertas en una integración conocida.</p>
+  <p>Todo lo demás sigue siendo vuestro: la generación de la factura, la huella encadenada, el QR, el XML, la numeración, la congelación al emitir. Solo se delega el <strong>transporte</strong>.</p>
+
+  <h3>Lo que no cambia, y conviene repetirlo</h3>
+  <div class="note">
+    Seguís firmando <strong>vuestra</strong> declaración responsable. La API es un componente, no una exención. Esta ruta no delega la responsabilidad: delega unos kilómetros de cable.
+  </div>
+
+  <h3>Cuándo es vuestra ruta</h3>
+  <ul>
+    <li>Si el informe fiscal dice que la remisión necesita trabajo real antes de ser conforme.</li>
+    <li>Si preferís gastar 30 € al mes antes que tres semanas de un socio peleando con certificados.</li>
+    <li>Si queréis que el primer cobro no dependa de una integración que nunca ha visto producción.</li>
+  </ul>
+
+  <h3>Cómo se despliega</h3>
+  <p>Idéntica a la Ruta B en todas sus fases, con dos cambios:</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">C1</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semana 4 o 5 · Elegir proveedor</h3></div>
+        <p>Cuando llegue el informe fiscal y confirme que hace falta. Comparar dos o tres —Verifacti, Binovo, Alegra— mirando tres cosas: modelo de precio (por NIF activo o por volumen de facturas), si el contrato os deja salir sin penalización, y si su API cubre altas, rectificativas y <strong>anulaciones</strong>, que es donde muchos se quedan cortos.</p>
+        <p><strong>Criterio de cierre:</strong> contrato firmado con salida limpia y una factura de prueba aceptada por la AEAT en su entorno de pruebas.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">C2</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Semanas 5 a 7 · Integrar detrás del adaptador</h3></div>
+        <p>Vuestra arquitectura ya tiene la frontera puesta: <code>verifactu_client.py</code> aísla el transporte. Se sustituye la implementación SOAP por la del proveedor y la cola durable, los reintentos y la idempotencia se quedan como están.</p>
+        <p><strong>Criterio de cierre:</strong> alta, rectificativa y anulación aceptadas en pruebas, y el adaptador nativo conservado para poder volver.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h3>La condición para no arrepentirse</h3>
+    <p><strong>No borréis el cliente nativo.</strong> Dejadlo detrás del adaptador, seleccionable por variable de entorno. El día que queráis volver —porque el proveedor suba el precio, porque os incomode la dependencia, o simplemente porque ya tengáis tiempo— la vuelta es cambiar una variable, no reescribir.</p>
+    <p>Esta es la diferencia entre comprar una pieza y ceder el núcleo, y es lo que hace que esta ruta sea reversible y la de Holded no.</p>
+  </div>
+
+  <h3>Riesgos propios</h3>
+  <p>Una dependencia nueva en el camino del dinero: si el proveedor cae, vuestras facturas no se remiten. Se mitiga con la cola durable que ya tenéis —los registros no se pierden, se acumulan— y con el adaptador nativo conservado como salida. El segundo riesgo es de coste: si el modelo es por NIF activo, escala con vuestros clientes y hay que meterlo en el modelo económico antes de fijar precios.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>12. Las tres rutas, comparadas</h2>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th></th><th>A · Certificar antes</th><th>B · Piloto gratuito</th><th>C · Remisión delegada</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Primer usuario real</strong></td><td>Semana 9</td><td><span class="yes">Semana 3-4</span></td><td><span class="yes">Semana 3-4</span></td></tr>
+        <tr><td><strong>Primer cobro</strong></td><td>Semana 9-10</td><td>Semana 8</td><td><span class="yes">Semana 7-8</span></td></tr>
+        <tr><td><strong>Coste primer año</strong></td><td><span class="yes">4.619 €</span></td><td><span class="yes">4.619 €</span></td><td>5.015 €</td></tr>
+        <tr><td><strong>Riesgo técnico</strong></td><td>Medio: la remisión sin validar</td><td>Medio: la remisión sin validar</td><td><span class="yes">Bajo</span></td></tr>
+        <tr><td><strong>Riesgo de calendario</strong></td><td>Alto: nada amortigua a Meta</td><td><span class="yes">Bajo</span></td><td><span class="yes">Bajo</span></td></tr>
+        <tr><td><strong>Depende de</strong></td><td>Meta y dos profesionales</td><td>Lo anterior más un criterio escrito</td><td>Lo anterior más un proveedor</td></tr>
+        <tr><td><strong>Independencia</strong></td><td><span class="yes">Total</span></td><td><span class="yes">Total</span></td><td>Una dependencia reversible</td></tr>
+        <tr><td><strong>Aprendizaje antes de cobrar</strong></td><td>Ninguno</td><td><span class="yes">5-6 semanas</span></td><td><span class="yes">4-5 semanas</span></td></tr>
+        <tr><td><strong>Reversible</strong></td><td>—</td><td>Sí: cae a la A sin coste</td><td>Sí: adaptador nativo conservado</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Mi recomendación:</strong> la <strong>Ruta B</strong>, con la C guardada como decisión abierta hasta que llegue el informe fiscal. La B no cuesta más que la A, tiene menos riesgo de calendario, y os da cinco o seis semanas de uso real. Y si la asesoría no da el criterio, se cae sola a la A sin haber perdido un solo día: las tres primeras semanas son idénticas en las tres rutas.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>13. Calendario de la ruta recomendada</h2>
+    <p class="sec-intro">Ocho semanas, tres carriles en paralelo. El carril de Meta y el de los profesionales no dependen de vosotros; el de producto es donde ponéis las horas.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Semana</th><th>Meta</th><th>Profesionales</th><th>Producto</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Verificación, App Review y plantillas <strong>enviadas</strong></td><td>Dos encargos enviados con los briefs de la sección 19</td><td>Deuda del repositorio, Google OAuth, Brevo y DNS</td></tr>
+        <tr><td class="num">2</td><td>Esperando</td><td>Esperando</td><td>Divulgación de IA, Groq, correcciones documentales, rotación de secretos</td></tr>
+        <tr><td class="num">3</td><td>Verificación concedida · número central registrado</td><td>—</td><td>Puertas automáticas · <span class="hi">arranca el piloto gratuito</span></td></tr>
+        <tr><td class="num">4</td><td>Token de sistema y método de pago</td><td><strong>Informe fiscal</strong> con el criterio del piloto</td><td>Stripe en test, ClamAV</td></tr>
+        <tr><td class="num">5</td><td>Plantillas aprobadas</td><td><strong>Informe jurídico</strong></td><td>Fricciones reales del piloto</td></tr>
+        <tr><td class="num">6</td><td><strong>Advanced access concedido</strong></td><td>Correcciones aplicadas</td><td>Alta de los dos números comerciales</td></tr>
+        <tr><td class="num">7</td><td>Prueba de aislamiento con negocios reales</td><td>Declaración lista para firma</td><td>Restauración cronometrada, monitor 24/7</td></tr>
+        <tr><td class="num">8</td><td>Canal completo operativo</td><td><strong>Declaración firmada</strong></td><td>Publicarla, <code>doctor --strict</code> limpio, <span class="hi">abrir el cobro</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Las semanas 3 a 7 son las que la Ruta A desperdicia esperando y esta aprovecha con usuarios dentro. Esa es toda la diferencia entre las dos, y no cuesta dinero: cuesta una pregunta a la asesoría.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>14. Quién hace qué</h2>
+    <p class="sec-intro">Siguiendo el reparto que ya tenéis en <code>AGENTS.md</code>, para no inventar una forma de trabajar nueva.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Quién</th><th>De qué se encarga</th><th>Tareas del inventario</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Founder</strong></td><td>Todo lo que exige identidad, firma o tarjeta: Meta, FNMT, encargos profesionales, proveedores y la venta del piloto</td><td>3, 4, 11, 12, 13, 14, 15, 16, 18, 20, 21, 23, 26</td></tr>
+        <tr><td><strong>Socio</strong></td><td>Acompañamiento del piloto y la prueba de aceptación, que necesita dos personas y dos teléfonos</td><td>18, 25</td></tr>
+        <tr><td><strong>Asesoría fiscal</strong></td><td>Conformidad del SIF, criterio del piloto gratuito y firma de la declaración</td><td>1</td></tr>
+        <tr><td><strong>Abogado TIC</strong></td><td>Textos legales, DPA, AI Act y registro de actividades</td><td>5, 6, 9</td></tr>
+        <tr><td><strong>Claude / Fable</strong></td><td>Seguridad, fiscalidad, integraciones, arquitectura y despliegue</td><td>2, 8, 19, 22, 24, 27, 28</td></tr>
+        <tr><td><strong>Codex</strong></td><td>Frontend, vistas, copy, refactors acotados, CI y QA</td><td>7, 10, 17, y la página de la declaración</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    Ojo con una regla vuestra que aquí importa: con un único <code>main</code> solo puede haber <strong>un escritor activo</strong>. La tarea 19 —la deuda del repositorio— hay que hacerla antes de repartir nada, y con un solo agente trabajando. Si dos empiezan a la vez sobre un árbol divergente, se reproduce exactamente el problema que dejó marcadores de conflicto commiteados en la bitácora.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>15. Riesgos y planes B</h2>
+    <p class="sec-intro">Lo que puede salir mal, ordenado por lo que más duele, con la salida ya pensada para no improvisarla con prisa.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Riesgo</th><th>Impacto</th><th>Plan B</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>App Review se alarga o se deniega</strong></td>
+          <td>Alto. Sin Advanced access no hay números comerciales</td>
+          <td>Pasar a un <strong>BSP</strong> para los números de cliente: su aplicación ya está aprobada. Cuesta margen por mensaje, se decide en una tarde, y el canal central sigue siendo vuestro. Guardadlo como plan B explícito, no como sorpresa</td>
+        </tr>
+        <tr>
+          <td><strong>La verificación de empresa se rechaza</strong></td>
+          <td>Medio. Os quedáis en 250 conversaciones y 2 números</td>
+          <td>Con 3-5 pilotos eso sobra: se sigue adelante y se subsana. Los rechazos son casi siempre documentos ilegibles o nombres que no coinciden literalmente</td>
+        </tr>
+        <tr>
+          <td><strong>La asesoría no da el criterio del piloto</strong></td>
+          <td>Medio. Se pierde el arranque temprano</td>
+          <td>Caer a la Ruta A. No se ha perdido nada: las tres primeras semanas son idénticas</td>
+        </tr>
+        <tr>
+          <td><strong>El informe fiscal encuentra huecos en el SIF</strong></td>
+          <td>Alto. Retrasa el cobro</td>
+          <td>Es exactamente para lo que se pide. Si el hueco está en la remisión, Ruta C. Si está en el registro, es desarrollo y hay que priorizarlo por encima de todo lo demás</td>
+        </tr>
+        <tr>
+          <td><strong>Un piloto se va en la conversión</strong></td>
+          <td>Bajo. Pero duele en la moral</td>
+          <td>Con 3-5 se cuenta con perder uno. El precio se dice desde el día uno para que nadie se sienta engañado</td>
+        </tr>
+        <tr>
+          <td><strong>La deuda del repositorio se resuelve mal</strong></td>
+          <td>Muy alto. Una migración mal numerada rompe producción en silencio</td>
+          <td>Un solo escritor, renumerar de 40 a 52, revisar a mano <code>db.py</code> y <code>migrations.py</code> aunque auto-mezclen, y ciclo completo de migración arriba y abajo antes de desplegar</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>16. Cuánto cuesta</h2>
+    <p class="sec-intro">Estimaciones mías a partir de precios de mercado en España contrastados el 29-ago-2026. No son presupuestos cerrados: sirven para decidir y para no llevarse sustos. Los números finales salen de pedir dos o tres ofertas.</p>
+  </div>
+
+  <h3>Gasto de una sola vez</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Concepto</th><th>Qué incluye</th><th>Rango</th><th class="num">Referencia</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Revisión fiscal del SIF</strong></td><td>Conformidad con los arts. 9, 10, 11 y 13 del RD 1007/2023, criterio sobre el piloto y firma de la declaración responsable. Encargo puntual, no cuota</td><td>600 – 1.200 €</td><td class="num">900 €</td></tr>
+        <tr><td><strong>Revisión jurídica</strong></td><td>Aviso legal, privacidad, términos, cookies, contrato de encargado y exposición al AI Act. Abogado TIC</td><td>800 – 1.500 €</td><td class="num">1.150 €</td></tr>
+        <tr><td><strong>Registro de actividades</strong></td><td>El documento del art. 30 RGPD en sus dos papeles. Suele ir incluido en el paquete anterior</td><td>0 – 350 €</td><td class="num">200 €</td></tr>
+        <tr><td><strong>Certificado electrónico</strong></td><td>Representante de persona jurídica de la FNMT: 14 € más impuestos, válido 2 años</td><td>17 €</td><td class="num">17 €</td></tr>
+        <tr><td colspan="3"><strong>Subtotal</strong> · rango 1.417 – 3.067 €</td><td class="num"><strong>2.267 €</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Gasto recurrente, al mes</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Concepto</th><th>Nota</th><th>Rango</th><th class="num">Referencia</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Railway</strong></td><td>Aplicación, PostgreSQL, volumen y ClamAV en red privada</td><td>25 – 60 €</td><td class="num">40 €</td></tr>
+        <tr><td><strong>Brevo</strong></td><td>Plan gratuito: 300 correos al día, de sobra para el piloto</td><td>0 €</td><td class="num">0 €</td></tr>
+        <tr><td><strong>Monitor externo 24/7</strong></td><td>Independiente de GitHub y Railway, como pide vuestra propia decisión</td><td>0 – 20 €</td><td class="num">10 €</td></tr>
+        <tr><td><strong>Dominio</strong></td><td>Prorrateado</td><td>1 €</td><td class="num">1 €</td></tr>
+        <tr><td><strong>WhatsApp</strong></td><td>Plantillas de utilidad para 5 negocios. Las respuestas dentro de la ventana de 24 h no se cobran</td><td>5 – 15 €</td><td class="num">10 €</td></tr>
+        <tr><td><strong>Asesoría de Noesis</strong></td><td>La contabilidad y los impuestos de la propia empresa</td><td>60 – 150 €</td><td class="num">100 €</td></tr>
+        <tr><td colspan="3"><strong>Subtotal mensual</strong></td><td class="num"><strong>161 €</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Total del primer año, por ruta</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Bloque</th><th>Cálculo</th><th class="num">A y B</th><th class="num">C</th></tr></thead>
+      <tbody>
+        <tr><td>Gasto de una sola vez</td><td>Setup legal completo</td><td class="num">2.267 €</td><td class="num">2.267 €</td></tr>
+        <tr><td>Gasto recurrente</td><td>161 € × 12 meses</td><td class="num">1.932 €</td><td class="num">1.932 €</td></tr>
+        <tr><td>API de Veri*Factu</td><td>30 € × 12 meses</td><td class="num">—</td><td class="num">360 €</td></tr>
+        <tr><td><strong>Subtotal</strong></td><td></td><td class="num"><strong>4.199 €</strong></td><td class="num"><strong>4.559 €</strong></td></tr>
+        <tr><td><strong>Colchón del 10 %</strong></td><td>El que pediste, y hace falta</td><td class="num">+ 420 €</td><td class="num">+ 456 €</td></tr>
+        <tr><td><strong>Total primer año</strong></td><td>Con colchón</td><td class="num"><strong>4.619 €</strong></td><td class="num"><strong>5.015 €</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Lo que este total no incluye</h3>
+  <ul>
+    <li><strong>Comisiones de Stripe.</strong> Son variables sobre lo cobrado, así que no son un coste fijo sino un porcentaje del ingreso. Están en vuestro modelo económico.</li>
+    <li><strong>Constitución de la sociedad</strong>, si no estuviera hecha: entre 600 y 1.000 € entre notaría, registro y gestoría. Si ya está constituida, cero.</li>
+    <li><strong>Vuestro tiempo.</strong> Es el coste mayor de esta lista con diferencia, y el único que no se puede pagar con dinero.</li>
+    <li><strong>Publicidad.</strong> Vuestra propia estrategia dice que no toca hasta tener un caso medible, así que queda fuera del primer año de esta cuenta.</li>
+  </ul>
+
+  <div class="callout-warn callout">
+    <h3>La perspectiva que importa</h3>
+    <p>Poner toda la empresa en regla cuesta menos que <strong>un solo cliente del plan Negocio durante ocho años</strong>, y menos que el CAC máximo de un único cliente Premium según vuestro propio modelo económico.</p>
+    <p>Dicho de otro modo: el coste no es el obstáculo. El obstáculo es el calendario de terceros, y por eso los trámites se abren esta semana y no la que viene.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>17. Si sale mal</h2>
+    <p class="sec-intro">El escenario pesimista, para saber cuál es el suelo antes de empezar y no descubrirlo a mitad.</p>
+  </div>
+  <p>Supongamos que se junta todo: la asesoría cobra por el extremo alto, el abogado también, App Review se deniega y hay que ir a un BSP, y el informe fiscal obliga a la Ruta C.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Concepto</th><th class="num">Pesimista</th></tr></thead>
+      <tbody>
+        <tr><td>Gasto de una sola vez, extremo alto del rango</td><td class="num">3.067 €</td></tr>
+        <tr><td>Recurrente, extremo alto: 245 € × 12</td><td class="num">2.940 €</td></tr>
+        <tr><td>API de Veri*Factu, extremo alto: 50 € × 12</td><td class="num">600 €</td></tr>
+        <tr><td>Sobrecoste de BSP frente a Cloud API directa</td><td class="num">~300 €</td></tr>
+        <tr><td><strong>Subtotal</strong></td><td class="num"><strong>6.907 €</strong></td></tr>
+        <tr><td>Colchón del 10 %</td><td class="num">+ 691 €</td></tr>
+        <tr><td><strong>Suelo pesimista, primer año</strong></td><td class="num"><strong>7.598 €</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Es <strong>1,6 veces</strong> el escenario de referencia, y sigue estando por debajo del coste de adquisición máximo de dos clientes Premium. El riesgo económico de este proyecto no está en el cumplimiento: está en el tiempo que tardéis en tener el primer autónomo pagando.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>18. Borrador de la declaración responsable</h2>
+    <p class="sec-intro">Para que la asesoría cobre por revisar y no por redactar, que es lo que abarata y acelera el encargo. Los campos entre corchetes salen de vuestro <code>config.py</code>.</p>
+  </div>
+
+  <div class="callout">
+    <h3>Esto es un borrador, no un documento válido</h3>
+    <p>No lo publiquéis ni lo firméis sin revisión profesional. Una declaración responsable mal hecha es peor que ninguna: os expone a 150.000 € por producto y ejercicio, y además da una falsa sensación de estar cubiertos.</p>
+  </div>
+
+  <pre>DECLARACIÓN RESPONSABLE
+Sistema Informático de Facturación · art. 13 RD 1007/2023 y Orden HAC/1177/2024
+
+<span class="c">— Identificación del productor —</span>
+Razón social:      [NOESIS_LEGAL_NAME]
+NIF:               [NOESIS_VERIFACTU_PRODUCER_NIF]
+Domicilio:         [NOESIS_LEGAL_ADDRESS]
+Contacto:          [NOESIS_LEGAL_EMAIL]
+
+<span class="c">— Identificación del sistema —</span>
+Nombre comercial:  [NOESIS_VERIFACTU_SYSTEM_NAME]
+Código:            [NOESIS_VERIFACTU_SYSTEM_ID]
+Versión:           [NOESIS_VERIFACTU_SYSTEM_VERSION]
+Fecha de versión:  [fecha del release]
+
+<span class="c">— Declaración —</span>
+La entidad productora identificada arriba DECLARA BAJO SU RESPONSABILIDAD que
+el sistema informático de facturación identificado cumple lo exigido en el
+artículo 29.2.j) de la Ley 58/2003, General Tributaria, y en el Reglamento
+aprobado por el Real Decreto 1007/2023, de 5 de diciembre, y en particular:
+
+  a) Garantiza la integridad, conservación, accesibilidad, legibilidad,
+     trazabilidad e inalterabilidad de los registros de facturación.
+  b) Genera un registro de alta por cada factura expedida y, en su caso, un
+     registro de anulación, encadenados mediante huella conforme a la
+     especificación técnica publicada por la AEAT.
+  c) Incorpora en la factura el código QR conforme a la especificación técnica
+     publicada por la AEAT.
+  d) No permite la llevanza de contabilidades paralelas ni la alteración,
+     ocultación o destrucción de registros ya generados.
+  e) Conserva el registro de eventos exigido por el Reglamento.
+  f) [Si procede] Remite los registros a la AEAT conforme a la modalidad
+     Veri*Factu.
+
+<span class="c">— Alcance y límites —</span>
+[Aquí la asesoría delimita qué modalidades, tipos de factura y funcionalidades
+cubre la declaración. Vuestro MVP emite altas F1 y F2 y rectificativas R1-R5.]
+
+Lugar y fecha:     [ciudad], [fecha]
+Firma:             [representante legal]</pre>
+
+  <h3>Tres consecuencias de ingeniería que conviene resolver ya</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Atar la versión al release, no a una variable suelta</h3></div>
+        <p><code>VERIFACTU_SYSTEM_VERSION</code> vale hoy <code>0.1.0</code> por defecto y se fija por entorno. Como cada versión necesita su declaración, alguien acabará desplegando una versión nueva con la declaración de la anterior. Debería derivarse del release, igual que ya hacéis con <code>RELEASE_ID</code> en <code>/health</code>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Archivar las declaraciones anteriores</h3></div>
+        <p>Una factura emitida con la versión 1.2 quedó amparada por la declaración de la 1.2, no por la de hoy. Guardad cada una con su versión y su fecha, y dejadlas accesibles. Es exactamente el mismo criterio con el que ya congeláis el perfil visual de una factura al emitirla.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">03</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Visible dentro del producto, no solo en la web</h3></div>
+        <p>La AEAT exige que sea accesible desde los menús del propio SIF. Una página <code>/declaracion-responsable</code> enlazada desde Ajustes y desde el pie del panel, con descarga en PDF, cumple y cuesta poco. En la web pública también, para que la vea quien compara antes de contratar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>19. Los dos encargos, redactados</h2>
+    <p class="sec-intro">Para copiar y enviar. Un profesional que recibe un encargo acotado responde antes y cobra menos que uno que tiene que averiguar qué le estáis pidiendo.</p>
+  </div>
+
+  <h3>Encargo a la asesoría fiscal</h3>
+  <pre>Asunto: Revisión de conformidad de un SIF y declaración responsable (RD 1007/2023)
+
+Somos [NOESIS_LEGAL_NAME], NIF [—]. Desarrollamos y vamos a comercializar un
+software de facturación para autónomos de servicios. Somos, por tanto,
+PRODUCTORES de un Sistema Informático de Facturación.
+
+Necesitamos:
+
+1. Revisión de conformidad del sistema con los arts. 9, 10, 11 y 13 del
+   RD 1007/2023 y la Orden HAC/1177/2024. Os entregamos documentación técnica
+   propia: algoritmo de huella, encadenamiento, QR, esquemas XML validados
+   contra los XSD oficiales, registro de eventos y control de inalterabilidad.
+
+2. Redacción o validación de la declaración responsable, con delimitación
+   expresa de su alcance. Tenemos un borrador que os enviamos para revisar.
+
+3. CRITERIO ESCRITO Y RAZONADO sobre dos cuestiones:
+   a) Si un piloto SIN CONTRAPRESTACIÓN con 3-5 usuarios constituye
+      "comercialización" a efectos de la obligación del productor vigente
+      desde el 29-jul-2025.
+   b) Si un usuario que factura antes de sus plazos (1-ene-2027 y 1-jul-2027)
+      con un SIF aún no certificado incurre en infracción.
+
+4. Vuestra opinión sobre el estado de la remisión a la AEAT: la tenemos
+   construida (SOAP/mTLS, cola durable, idempotencia) pero NO validada contra
+   entorno real. Queremos saber si conviene validarla nosotros o apoyarnos en
+   un proveedor especializado.
+
+Plazo deseado: [3 semanas]. Indicadnos honorarios y disponibilidad.</pre>
+
+  <h3>Encargo al abogado TIC</h3>
+  <pre>Asunto: Revisión de textos legales y cumplimiento de un SaaS B2B
+
+Somos [NOESIS_LEGAL_NAME], NIF [—]. Operamos un SaaS de gestión para autónomos
+de servicios en España. Vendemos a profesionales, no a consumidores.
+
+Tenemos ya redactados y publicados: aviso legal, política de privacidad,
+términos, política de cookies, contrato de encargado del tratamiento con lista
+de subencargados y una guía de cumplimiento para el cliente. Necesitamos:
+
+1. Revisión y validación de los cinco textos. No partimos de cero.
+
+2. Correcciones concretas que ya hemos detectado y queremos que confirméis:
+   - La guía de cumplimiento dice que nos integramos con un "sistema
+     homologado". Ese concepto no existe y contradice nuestra arquitectura.
+   - Falta un subencargado (proveedor de transcripción de audio en EE. UU.)
+     en la lista del contrato.
+
+3. Registro de actividades de tratamiento (art. 30 RGPD) en nuestros DOS
+   papeles: responsable de los datos de nuestros clientes y encargado de los
+   datos que ellos tratan a través de la plataforma.
+
+4. Criterio sobre el art. 50 del Reglamento (UE) 2024/1689, aplicable desde el
+   2-ago-2026, en dos supuestos:
+   a) Nuestro asistente conversacional, que hoy no se identifica como IA.
+   b) Los mensajes que nuestro sistema compone y envía a los clientes finales
+      de nuestros clientes, que salen con la identidad de estos últimos.
+
+5. Confirmación de que, vendiendo solo a profesionales, no nos aplica el
+   régimen de consumidores (desistimiento, garantías del TRLGDCU).
+
+Plazo deseado: [3 semanas]. Indicadnos honorarios y disponibilidad.</pre>
+
+  <div class="note">
+    <strong>Un consejo sobre los dos encargos:</strong> pedid a ambos que os digan expresamente <em>qué no cubren</em>. Un informe que delimita su alcance vale mucho más que uno que da a entender que lo abarca todo, sobre todo si algún día hay que enseñárselo a un inspector.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>20. Criterios de aceptación</h2>
+    <p class="sec-intro">Cómo sabéis que algo está hecho de verdad y no solo tachado de una lista.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Bloque</th><th>Está hecho cuando…</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Veri*Factu</strong></td><td>La declaración está firmada por el representante legal, publicada en <code>/declaracion-responsable</code>, enlazada desde el menú del producto, descargable en PDF, y su versión coincide con el release desplegado.</td></tr>
+        <tr><td><strong>Meta · canal central</strong></td><td>Escribís <code>NOESIS &lt;código&gt;</code> desde un móvil y responde «WhatsApp conectado a…». Una firma falsa en el webhook devuelve 401. Una plantilla proactiva llega de verdad.</td></tr>
+        <tr><td><strong>Meta · canal comercial</strong></td><td>El mismo remitente escribe a los dos números y salen <strong>dos conversaciones aisladas</strong>, cada una en su negocio. Un número no registrado se descarta sin caer al canal central.</td></tr>
+        <tr><td><strong>AI Act</strong></td><td>El asistente dice que es un sistema de IA en la web y en el primer mensaje de WhatsApp, y la decisión está escrita en <code>Decisiones.md</code> con su porqué.</td></tr>
+        <tr><td><strong>Protección de datos</strong></td><td>La lista de subencargados incluye todo proveedor externo configurable, el registro de actividades está archivado, y las puertas automáticas fallan si se configura un proveedor no declarado.</td></tr>
+        <tr><td><strong>Correo</strong></td><td>Un cliente pierde la contraseña, pide el enlace y le llega <strong>a la bandeja de entrada</strong>, no a spam. Probado con Gmail y con Outlook.</td></tr>
+        <tr><td><strong>Cobro</strong></td><td>Un alta real completa el Checkout, el webhook activa la cuenta, y un impago la devuelve a modo consulta. Los seis precios tienen <code>tax_behavior</code> distinto de <code>unspecified</code>.</td></tr>
+        <tr><td><strong>Recuperación</strong></td><td>Una copia se restaura en <strong>otro</strong> proveedor, con RPO y RTO cronometrados y anotados, y con responsable asignado.</td></tr>
+        <tr><td><strong>Todo junto</strong></td><td><code>noesis-doctor --strict</code> y <code>noesis-integrations-check --network --strict</code> pasan en producción sin un solo bloqueo.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>21. Glosario</h2>
+    <p class="sec-intro">Los términos que van a aparecer en las conversaciones con la asesoría, el abogado y Meta.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Término</th><th>Qué es</th></tr></thead>
+      <tbody>
+        <tr><td><strong>SIF</strong></td><td>Sistema Informático de Facturación. Cualquier programa que expide facturas. Noesis lo es.</td></tr>
+        <tr><td><strong>RRSIF</strong></td><td>El Reglamento que desarrolla los requisitos de los SIF, aprobado por el RD 1007/2023.</td></tr>
+        <tr><td><strong>Declaración responsable</strong></td><td>El documento con el que el fabricante certifica, bajo su responsabilidad, que su SIF cumple. No la valida nadie externo.</td></tr>
+        <tr><td><strong>Veri*Factu</strong></td><td>La modalidad en la que los registros se remiten a la AEAT en el momento de emitir. La alternativa es el SIF «no verificable», con más requisitos de conservación.</td></tr>
+        <tr><td><strong>Huella / hash encadenado</strong></td><td>La firma criptográfica que enlaza cada registro con el anterior. Si alguien altera una factura vieja, la cadena se rompe y se nota.</td></tr>
+        <tr><td><strong>EN 16931</strong></td><td>La norma europea de factura electrónica estructurada. Es el formato que exigirá la Ley Crea y Crece, y no tiene nada que ver con Veri*Factu.</td></tr>
+        <tr><td><strong>WABA</strong></td><td>WhatsApp Business Account. La cuenta bajo la que vive un número. Cada cliente vuestro tendrá la suya.</td></tr>
+        <tr><td><strong>Standard / Advanced access</strong></td><td>Los dos niveles de permisos de una aplicación de Meta. El primero solo llega a vuestros activos; el segundo, a los de otros negocios, y exige App Review.</td></tr>
+        <tr><td><strong>App Review</strong></td><td>La revisión que hace Meta de vuestra aplicación antes de concederle Advanced access.</td></tr>
+        <tr><td><strong>Embedded Signup</strong></td><td>El flujo que permitiría a un cliente conectar su WhatsApp desde vuestra web, sin tocar el panel de Meta. Todavía no lo usáis.</td></tr>
+        <tr><td><strong>BSP / Tech Provider</strong></td><td>Los dos tipos de socio de Meta. El BSP tiene línea de crédito y os factura; el Tech Provider construye software y son sus clientes quienes pagan a Meta.</td></tr>
+        <tr><td><strong>Ventana de 24 horas</strong></td><td>El plazo tras un mensaje entrante durante el cual se puede responder con texto libre. Fuera de él, solo plantillas aprobadas.</td></tr>
+        <tr><td><strong>DPA</strong></td><td>Contrato de encargado del tratamiento. Reparte responsabilidades de RGPD entre vosotros y vuestro cliente. Ya lo tenéis.</td></tr>
+        <tr><td><strong>RAT</strong></td><td>Registro de actividades de tratamiento, del art. 30 RGPD. Documento interno. Os falta.</td></tr>
+        <tr><td><strong>Subencargado</strong></td><td>Un proveedor vuestro que toca datos de vuestros clientes: Railway, Anthropic, Meta, el proveedor de correo. Tienen que estar listados.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>22. Las preguntas que os vais a hacer</h2>
+  </div>
+
+  <h3>¿Podemos empezar el piloto sin nada de esto?</h3>
+  <p>Sin cobrar, en gran medida sí, y es justo lo que propone la Ruta B. Sin la declaración firmada no deberíais cobrar, y sin Advanced access los números comerciales no funcionan aunque lo demás esté. El resto —correo, OAuth, ClamAV— degrada la experiencia pero no impide arrancar.</p>
+
+  <h3>¿Hacienda va a venir a revisar nuestro código?</h3>
+  <p>No hay un procedimiento de certificación previa. La declaración es autocertificación. El riesgo aparece si un cliente vuestro es inspeccionado y su software no cumple: ahí la AEAT puede tirar del hilo hasta el productor, y la sanción del fabricante es tres veces la del usuario.</p>
+
+  <h3>¿Y si nos saltamos la declaración y ya la haremos?</h3>
+  <p>Podríais. Pero fijaos en la asimetría: cuesta unos 900 € y unas semanas de espera, y evita una exposición de hasta 150.000 € por producto y ejercicio. Además, es de las pocas cosas de esta lista que un cliente sofisticado —o una gestoría prescriptora, que es vuestro canal más barato— os va a pedir por escrito antes de recomendaros.</p>
+
+  <h3>¿No sería más rápido usar el software de otro para facturar?</h3>
+  <p>Sería más lento y peor. Ya tenéis el registro fiscal construido y validado contra los esquemas oficiales; lo que falta es un documento. Integrar a un tercero significa tirar trabajo hecho, pagar por factura, depender de un competidor y <strong>seguir firmando vuestra propia declaración igualmente</strong>, porque la responsabilidad no se traslada. Es peor en las cuatro dimensiones.</p>
+
+  <h3>¿Cuándo podemos abrir el alta pública?</h3>
+  <p>Cuando esté todo lo de este documento, más la lista P0 de <code>Tareas-vivas.md</code>. Vuestra propia regla ya lo dice y es buena: <code>NOESIS_PUBLIC_SIGNUP_ENABLED</code> es «el último interruptor, no el primero». El piloto no necesita el alta pública abierta.</p>
+
+  <h3>¿Qué pasa si Meta deniega el App Review?</h3>
+  <p>Se pasa a un BSP para los números comerciales. Su aplicación ya está aprobada, se decide en una tarde y el canal central sigue siendo vuestro. Cuesta margen por mensaje, no tiempo. Está desarrollado en la sección 15.</p>
+
+  <h3>¿Esto lo tenemos que hacer todo antes de vender algo?</h3>
+  <p>No. Antes de <strong>cobrar</strong> hacen falta la declaración, Stripe y los textos revisados. Antes de <strong>abrir al público</strong> hace falta todo. Antes de <strong>que entre el primer usuario</strong> solo hace falta que el correo funcione y que el canal central responda. Son tres puertas distintas y confundirlas es lo que hace que un proyecto se sienta bloqueado cuando no lo está.</p>
+</section>
+
+<footer>
+  <p><strong>Fuentes.</strong> RD 1007/2023 y Orden HAC/1177/2024 · RDL 15/2025, de 2 de diciembre (BOE 3-dic-2025) · AEAT, preguntas frecuentes sobre certificación de sistemas informáticos y declaración responsable · Reglamento (UE) 2024/1689, art. 50, y directrices de la Comisión de 20-jul-2026 · Ley 18/2022 y RD 238/2026 · Documentación de Meta for Developers sobre WhatsApp Business Accounts, Embedded Signup, niveles de acceso y programas de socios · FNMT, lista de precios de certificados de representante.</p>
+  <p>Documentación interna contrastada: <code>Fiscalidad.md</code>, <code>Conectar-APIs.md</code>, <code>Decisiones.md</code>, <code>Competencia.md</code>, <code>Tareas-vivas.md</code>, <code>Estrategia-Marketing.html</code>, <code>Meta-Verificacion.html</code>, <code>WhatsApp-Puesta-en-marcha.html</code> y <code>project-state.json</code>, todos leídos de <code>origin/main</code>.</p>
+  <p>Precios de asesoría, alojamiento y APIs de Veri*Factu contrastados el 29-ago-2026 en fuentes públicas del sector. Son observaciones de mercado, no ofertas. Los honorarios profesionales son los que más varían: pedid dos o tres presupuestos.</p>
+  <p>Este documento explica, ordena y presupuesta; <strong>no es asesoramiento legal ni fiscal</strong>. Los apartados 1, 2, 4, 5 y 18 los tiene que revisar y firmar un profesional colegiado.</p>
+  <p>Redactado el 29-ago-2026 sobre <code>origin/main</code>. El <code>.html</code> es la fuente: se edita ahí y se reimprime el PDF.</p>
+</footer>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marketing de Noesis · Manual maestro</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+
+  .yes { color: var(--ok); font-weight: 650; }
+  .no { color: var(--stop); font-weight: 650; }
+  .part { color: var(--warn); font-weight: 650; }
+  .hi { font-weight: 650; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Noesis · Manual maestro</p>
+  <h1>Todo el marketing de Noesis</h1>
+  <p class="standfirst">La estrategia, la marca, el sistema de contenido con las 24 piezas escritas, la producción, la publicación, la medición y los criterios de parada. Un solo documento, para no tener que abrir cinco.</p>
+  <p class="crumbs">Consolidado el 1-sep-2026 · Los guiones plano a plano viven en <code>branding/contenido/Plan-editorial-y-guiones-Noesis.docx</code> · Las cifras, en <code>docs/Noesis-Modelo-Economico.xlsx</code></p>
+</header>
+
+<div class="status">
+  <div class="status-cell is-ok">
+    <span class="status-label">Estrategia</span>
+    <span class="status-value">Decidida</span>
+    <span class="status-note">Fases, canales, techos de CAC y criterios de parada por escrito.</span>
+  </div>
+  <div class="status-cell is-ok">
+    <span class="status-label">Contenido</span>
+    <span class="status-value">24 piezas escritas</span>
+    <span class="status-note">Con guion, planos, rótulo, copy, CTA, métrica y guardarraíl.</span>
+  </div>
+  <div class="status-cell is-warn">
+    <span class="status-label">Destino del tráfico</span>
+    <span class="status-value">Sin decidir</span>
+    <span class="status-note">El alta pública está cerrada. Hoy el CTA solo puede ser solicitar acceso.</span>
+  </div>
+  <div class="status-cell is-stop">
+    <span class="status-label">Ejecución</span>
+    <span class="status-value">Sin empezar</span>
+    <span class="status-note">Ni piloto cerrado ni una sola pieza publicada. Es lo único que falta.</span>
+  </div>
+</div>
+
+<section>
+  <div class="sec-head">
+    <h2>Índice</h2>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Parte</th><th>Secciones</th><th>Cuándo se lee</th></tr></thead>
+      <tbody>
+        <tr><td><strong>I · Estrategia</strong></td><td>1 Dónde estamos · 2 A quién vendemos · 3 El mensaje · 4 Las cuatro fases · 5 Canales · 6 Cuánto pagar por un cliente · 7 Dónde entra la IA</td><td>Una vez, y se revisa cada trimestre</td></tr>
+        <tr><td><strong>II · Marca</strong></td><td>8 Promesa y tono · 9 Los perfiles</td><td>Al abrir las cuentas</td></tr>
+        <tr><td><strong>III · Contenido</strong></td><td>10 Los pilares y la proporción · 11 Las 24 piezas · 12 Instagram y Facebook</td><td>Cada vez que se planifica una quincena</td></tr>
+        <tr><td><strong>IV · Producción</strong></td><td>13 Cómo sale el vídeo · 14 El motor · 15 Cómo se cuelga · 16 El ritmo semanal · 17 Checklist · 18 Archivo</td><td>Cada semana</td></tr>
+        <tr><td><strong>V · Decidir</strong></td><td>19 Qué se mide · 20 Vías de escape · 21 Errores caros</td><td>Cada viernes y cada mes</td></tr>
+        <tr><td><strong>VI · Arranque</strong></td><td>22 El primer mes · 23 Esta semana</td><td>Ahora</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>Qué es canónico y qué no.</strong> Este documento es la referencia de estrategia, sistema y operación. Los <em>guiones plano a plano</em> de cada pieza siguen en el <code>.docx</code> del plan editorial, que es el documento de rodaje. Las <em>cifras</em> —contribución, CAC, escenarios— salen del modelo económico en Excel, que se regenera con <code>python analysis/build_modelo_economico.py</code>. Si un número de aquí y el Excel no coinciden, manda el Excel.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>1. Dónde estamos de verdad</h2>
+    <p class="sec-intro">Una estrategia que ignore el punto de partida es un deseo. Este es el estado real, no el que gustaría.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Frente</th><th>Situación</th><th>Qué implica</th></tr></thead>
+      <tbody>
+        <tr><td>Producto</td><td>Desplegado en producción</td><td>Se puede enseñar. No es una promesa</td></tr>
+        <tr><td>Alta pública</td><td>Cerrada por decisión propia</td><td>No hay captación masiva. El único CTA real es «Solicita acceso»</td></tr>
+        <tr><td>Clientes de pago</td><td>Ninguno confirmado</td><td>No hay testimonios, ni casos, ni CAC observado</td></tr>
+        <tr><td>Piloto</td><td>Comprometido, no arrancado</td><td>Es el activo de marketing más valioso del año</td></tr>
+        <tr><td>Canales externos</td><td>Meta, Stripe, correo y OAuth sin validar</td><td>Vender antes de tenerlos es prometer lo que no se puede entregar</td></tr>
+        <tr><td>Contenido</td><td>24 piezas escritas, cero publicadas</td><td>No hay que inventar: hay que grabar y colgar</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <h3>La consecuencia incómoda</h3>
+    <p>Durante las primeras semanas no hay campaña de marketing. Hay venta directa y acompañada a un número muy pequeño de personas, con un único objetivo: <strong>fabricar evidencia</strong>. Gastar en publicidad antes de tener un caso medible es comprar visitas para una página que no puede demostrar nada.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>2. A quién le vendemos, y a quién no</h2>
+    <p class="sec-intro">Cuanto más estrecho sea el primer círculo, más barato es convencer y más creíble es el mensaje.</p>
+  </div>
+
+  <h3>El cliente ideal</h3>
+  <ul>
+    <li>Autónomo de servicios en España, de una a cinco personas, que trabaja en casa del cliente.</li>
+    <li>Factura a mano, con plantillas de Word, o dejándolo todo al gestor a fin de mes.</li>
+    <li>Vive en WhatsApp: es donde le llegan los avisos, las fotos y los presupuestos.</li>
+    <li>Pierde dinero de forma invisible: trabajos cerrados que no se facturan y facturas emitidas que nadie reclama.</li>
+    <li>No quiere aprender un ERP y no va a instalar una aplicación nueva.</li>
+  </ul>
+
+  <h3>Los oficios de salida</h3>
+  <p>Fontanería, electricidad, reformas, climatización y cerrajería. Son los cinco que marca la estrategia comercial.</p>
+  <div class="callout-warn callout">
+    <h3>Un desajuste que hay que resolver</h3>
+    <p>Los catálogos que el producto carga por oficio son <strong>fontanería, electricidad, reformas, limpieza y jardinería</strong>. No coinciden con los cinco de salida comercial: faltan climatización y cerrajería, y sobran limpieza y jardinería.</p>
+    <p>Hay que decidir cuáles son los cinco de verdad y alinear las dos cosas. Si el contenido atrae cerrajeros y el producto no trae su catálogo, la primera impresión es mala justo donde más importa.</p>
+  </div>
+
+  <h3>A quién no le vendemos todavía</h3>
+  <ul>
+    <li>Empresas de más de diez trabajadores: piden integraciones y control de obra que aún no existen.</li>
+    <li>Comercios y hostelería: su ciclo es TPV y caja, no trabajo, presupuesto y cobro.</li>
+    <li>Quien ya tiene ERP contratado y contento: el coste de cambio no lo paga nuestro mensaje.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>3. El mensaje y la competencia</h2>
+    <p class="sec-intro">Tres formas de decir lo mismo, ordenadas por lo que se puede demostrar.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Mensaje</th><th>Se demuestra con</th><th>Riesgo</th></tr></thead>
+      <tbody>
+        <tr><td><strong>«Haz tu trabajo; Noesis te ordena el negocio»</strong></td><td>Parte del día, tareas resueltas, tiempo administrativo y ciclo completo conectado</td><td>Hay que enseñar el producto para que «ordena» no suene genérico</td></tr>
+        <tr><td>«Se acabó el papeleo del domingo»</td><td>Horas ahorradas, documentos clasificados y facturas preparadas</td><td>El tiempo ahorrado debe proceder del cliente, no de una estimación inventada</td></tr>
+        <tr><td>«Tu negocio, por WhatsApp y bajo control»</td><td>Demostración en vivo de treinta segundos y confirmación antes de acciones sensibles</td><td>Suena a chatbot si no se enseña el ciclo entero</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>El principal es el primero: promesa amplia de tiempo y control, demostrada con hechos concretos. Cada caso real elegirá la prueba más fuerte del cliente sin convertir una sola métrica en toda la identidad.</p>
+
+  <h3>Frente a la competencia</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Quién</th><th>Qué hace</th><th>Cómo nos separamos</th></tr></thead>
+      <tbody>
+        <tr><td>Forjia</td><td>Lo más parecido: factura y gastos por WhatsApp con voz, Veri*Factu</td><td>Ciclo completo trabajo → presupuesto → factura → cobro, equipo en campo y proactividad. No competir en precio</td></tr>
+        <tr><td>Holded, Quipu, Billin</td><td>ERP y contabilidad completos</td><td>Ellos exigen que el autónomo se siente al ordenador. Nosotros vamos a donde ya está</td></tr>
+        <tr><td>Agentes de voz para gremios</td><td>Contestan el teléfono</td><td>Cogen la llamada; no cierran el cobro. Complementarios, no rivales</td></tr>
+        <tr><td>Experi</td><td>Agenda citas por WhatsApp</td><td>Una sola función del ciclo</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>Regla de posicionamiento:</strong> nunca diferenciarse por una función suelta que un competidor pueda añadir en un trimestre. Diferenciarse por el <span class="hi">ciclo completo</span> y por la <span class="hi">confirmación humana antes de tocar dinero</span>, que es una decisión de arquitectura y no una funcionalidad.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>4. Las cuatro fases</h2>
+    <p class="sec-intro">Cada fase tiene una puerta de salida. No se pasa a la siguiente sin cumplirla, aunque haya prisa. Esto es lo que impide gastar dinero antes de tiempo.</p>
+  </div>
+  <div class="steps">
+    <div class="step first-step">
+      <div class="step-n">0</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Mes 1-2 · Fabricar la prueba</h3><span class="chip chip-flat">sin gastar en ads</span></div>
+        <p>Tres a cinco autónomos del entorno cercano, acompañados de cerca durante dos cierres semanales. Gratis o a precio fundador. El objetivo no es facturar: es salir con cifras y con permiso para contarlas.</p>
+        <p><strong>Puerta:</strong> al menos tres clientes con una prueba propia que enseñar —horas ahorradas, tareas resueltas, facturas o documentos preparados, errores evitados o euros recuperados— y <strong>permiso escrito</strong> para usarla.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Mes 3-5 · Venta directa y prescriptores</h3><span class="chip chip-ok">el canal más barato</span></div>
+        <p>Gestorías y asociaciones gremiales. Una gestoría tiene cien autónomos y sufre cada trimestre la misma pelea por conseguir facturas y tickets. El portal de gestoría ya está construido: se le puede ofrecer que sus clientes le lleguen ordenados.</p>
+        <p>Aquí el producto se vende enseñándolo, no anunciándolo: visita, demo de diez minutos, alta acompañada.</p>
+        <p><strong>Puerta:</strong> 15-25 cuentas de pago y retención a 60 días medida. Si la gente se va, no se escala nada.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Mes 6-9 · Contenido por oficio y primeros ads</h3><span class="chip chip-warn">aquí empieza el gasto</span></div>
+        <p>A las páginas por oficio se les añade el caso real del piloto correspondiente. El buscador trae a quien ya está buscando solución, que es el tráfico más barato que existe.</p>
+        <p>Solo entonces se abre publicidad pagada: presupuesto pequeño, un oficio cada vez, midiendo el CAC contra el techo de la sección 6.</p>
+        <p><strong>Puerta:</strong> CAC pagado por debajo del techo del plan que se vende, y LTV/CAC ≥ 3.</p>
+        <p><strong>Ojo:</strong> la estrategia da por construidas las cinco páginas por oficio y una prueba automática que impide clonarlas. <span class="hi">Ninguna de las dos cosas existe en el código.</span> Es un desarrollo pendiente, no un activo disponible.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Mes 10-12 · Referidos y densidad por zona</h3><span class="chip chip-ok">coste marginal bajo</span></div>
+        <p>Los gremios se conocen entre ellos y se recomiendan por zona. Un programa de referidos con un mes gratis para ambos cuesta mucho menos que un clic pagado. Concentrar en pocas provincias para que el boca a boca se note.</p>
+        <p><strong>Puerta:</strong> que un tercio de las altas llegue sin coste de adquisición.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>5. Canales, ordenados por lo que cuestan</h2>
+    <p class="sec-intro">El orden no es por volumen, es por riesgo económico. Se agotan los baratos antes de tocar los caros.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Canal</th><th>Coste</th><th>Velocidad</th><th>Por qué funciona o no</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Gestorías prescriptoras</strong></td><td>Casi cero</td><td>Media</td><td>Cartera concentrada y dolor real cada trimestre. El portal ya está construido</td></tr>
+        <tr><td><strong>Venta directa del founder</strong></td><td>Tiempo</td><td>Lenta</td><td>Imprescindible al principio: es donde se aprende la objeción real</td></tr>
+        <tr><td>Asociaciones y gremios</td><td>Bajo</td><td>Media</td><td>Dan credibilidad prestada y acceso a listas</td></tr>
+        <tr><td>Instagram y Facebook orgánicos</td><td>Tiempo</td><td>Lenta</td><td>Construyen audiencia y vocabulario real. No traen clientes los primeros meses</td></tr>
+        <tr><td>SEO por oficio</td><td>Pendiente</td><td>Lenta</td><td>Tarda meses y luego no cuesta. Las páginas hay que construirlas antes</td></tr>
+        <tr><td>Referidos</td><td>Un mes gratis</td><td>Media</td><td>Solo funciona con un producto que ya gusta. Antes, no</td></tr>
+        <tr><td>Google Ads marca y competidor</td><td>Medio</td><td>Rápida</td><td>Intención altísima. Volumen pequeño</td></tr>
+        <tr><td>Meta Ads por oficio y zona</td><td>Alto</td><td>Rápida</td><td>Buena segmentación, pero interrumpe: el coste por alta sube</td></tr>
+        <tr><td>Ferias del sector</td><td>Muy alto</td><td>Lenta</td><td>No antes de tener producto probado y material</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>6. Cuánto podemos pagar por un cliente</h2>
+    <p class="sec-intro">No es una opinión: sale del margen de contribución del modelo económico. Es el número que evita arruinarse creciendo.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Plan</th><th class="num">Precio</th><th class="num">Contribución</th><th class="num">CAC máximo</th><th class="num">CAC sano</th></tr></thead>
+      <tbody>
+        <tr><td>Autónomo</td><td class="num">29 €</td><td class="num">20,83 €</td><td class="num">250 €</td><td class="num">125 €</td></tr>
+        <tr><td>Negocio</td><td class="num">49 €</td><td class="num">34,89 €</td><td class="num">419 €</td><td class="num">209 €</td></tr>
+        <tr><td>Premium</td><td class="num">99 €</td><td class="num">56,96 €</td><td class="num">683 €</td><td class="num">342 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>El CAC máximo recupera en doce meses, que es el límite. El sano recupera en seis. Por encima del techo <strong>se para la campaña</strong>, no se espera a que mejore.</p>
+
+  <div class="callout-warn callout">
+    <h3>El plan Autónomo no aguanta publicidad cara</h3>
+    <p>Con 20,83 € de contribución, un CAC de 250 € tarda un año en recuperarse. Con un churn del 5 % mensual la vida media serían veinte meses y el margen final, mínimo. La publicidad pagada tiene sentido para Negocio y Premium; para Autónomo hay que ganar por canales baratos o subir el ticket medio.</p>
+    <p>Referencia de escala: el equilibrio está en unas <strong>120 cuentas</strong> con el mix previsto (66 autónomos, 42 negocios, 12 premium). Solo con el plan caro bastarían 62; solo con el barato harían falta 169. Esa diferencia es la razón para no perseguir volumen barato.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>7. Dónde entra la IA, y dónde no</h2>
+    <p class="sec-intro">Dos usos legítimos y varias tentaciones que hay que rechazar por escrito, porque el daño de marca es irreversible.</p>
+  </div>
+  <p><strong>El límite exacto:</strong> la IA multiplica lo que ya funciona; no fabrica la prueba que todavía no existe.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th class="yes">Sí</th><th class="no">No</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Preparar contenido por oficio a partir de las conversaciones reales del piloto: las palabras del fontanero, no las del manual</td>
+          <td>Testimonios o casos inventados. Vendemos a un gremio donde todos se conocen; se descubre en una conversación de bar</td>
+        </tr>
+        <tr>
+          <td>Cualificar solicitudes de acceso antes de llamar, para no gastar la hora del founder en quien no encaja</td>
+          <td>Páginas por oficio clonadas. Google las penaliza y además contradice el argumento del producto</td>
+        </tr>
+        <tr>
+          <td>Agrupar objeciones de las llamadas y detectar cuál se repite: es lo que hay que responder en la web</td>
+          <td>Reseñas propias en directorios o comparadores</td>
+        </tr>
+        <tr>
+          <td>Generar variantes de titular y anuncio para probar, siempre con revisión humana antes de publicar</td>
+          <td>Cifras de ahorro sin un cliente que las firme</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>Coherencia de producto.</strong> Noesis se vende diciendo que prepara pero nunca decide sola sobre el dinero del cliente. Un marketing que fabrique pruebas con IA contradice el argumento central del producto. <span class="hi">La forma de vender tiene que parecerse al producto que se vende.</span>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>8. La marca: promesa y tono</h2>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Elemento</th><th>Qué es</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Promesa</strong></td><td>Noesis lleva la oficina mientras tú haces el trabajo</td></tr>
+        <tr><td><strong>Expresión corta</strong></td><td>Haz tu trabajo; Noesis te ordena el negocio</td></tr>
+        <tr><td><strong>Territorio</strong></td><td>Tiempo, menos papeleo, claridad y control. Los cobros, facturas y margen son <em>pruebas</em>, no el territorio</td></tr>
+        <tr><td><strong>Tono</strong></td><td>Cercano, útil y directo. Mano derecha tranquila; nunca banco, ERP ni gurú</td></tr>
+        <tr><td><strong>Colores</strong></td><td>Verde bosque <code>#14463B</code>, verde <code>#2E8B74</code>, crema <code>#F4F1E8</code></td></tr>
+        <tr><td><strong>Nombre público</strong></td><td>Noesis · usuario <code>@bynoesis</code> en las tres redes</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Los archivos —logotipos, avatares, portadas, paleta y plantillas en cuadrado, vertical e historia— están en <code>branding/</code>, ya exportados y listos para subir.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>9. Los perfiles: qué subir y qué escribir</h2>
+    <p class="sec-intro">Está todo preparado para copiar y pegar en <code>branding/redes-sociales/</code>. Esto es el resumen y el orden.</p>
+  </div>
+  <p><strong>Orden de apertura:</strong> LinkedIn primero (credibilidad empresarial), Instagram después (identificación y demostración), Facebook al final (confianza, comunidad y grupos).</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th></th><th>Instagram</th><th>Facebook</th></tr></thead>
+      <tbody>
+        <tr><td>Nombre visible</td><td>Noesis | Gestión para autónomos</td><td>Noesis</td></tr>
+        <tr><td>Categoría</td><td>Producto/servicio o Empresa de software</td><td>Empresa de software · Servicio empresarial</td></tr>
+        <tr><td>Imágenes</td><td>Perfil 1080. No usa portada</td><td>Perfil 1080 y portada 1640×856</td></tr>
+        <tr><td>Bio del piloto</td><td>«Noesis lleva la oficina mientras tú haces el trabajo. Agenda, facturas y documentos bajo control. ↓ Solicita acceso»</td><td>Presentación corta y descripción completa, ya redactadas</td></tr>
+        <tr><td>Botón</td><td>Enlace a bynoesis.com</td><td>Más información → bynoesis.com</td></tr>
+        <tr><td>Destacados</td><td>Empieza · Cómo funciona · Autónomos · Facturas · Nosotros</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>Antes de anunciar cualquier perfil:</strong> cuenta de empresa y no personal, verificación en dos pasos activada, los dos socios como administradores con cuentas distintas, mismo usuario y avatar en las tres redes, y <strong>las tres primeras publicaciones ya preparadas</strong>. Un perfil vacío que se anuncia se visita una vez y no se vuelve.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>10. Los cuatro pilares y la proporción</h2>
+    <p class="sec-intro">Es la decisión que más determina si una cuenta crece o se apaga. Vuestro plan ya la implica; aquí queda explícita.</p>
+  </div>
+  <div class="scroll"><table>
+  <thead><tr><th>Pilar</th><th>Serie</th><th class="num">De cada 10</th><th>Qué hace</th></tr></thead><tbody>
+  <tr><td><strong>Identificación</strong></td><td>E</td><td class="num">4</td><td>Que se reconozca. El producto no aparece, o aparece en el último segundo</td></tr>
+  <tr><td><strong>Valor práctico</strong></td><td>R</td><td class="num">3</td><td>Enseña algo útil que sirve aunque no te contrate</td></tr>
+  <tr><td><strong>Producto</strong></td><td>P</td><td class="num">2</td><td>Enseña Noesis funcionando. Es la venta</td></tr>
+  <tr><td><strong>Confianza</strong></td><td>T y G</td><td class="num">1</td><td>Quiénes sois, por qué así, y con quién</td></tr>
+  </tbody></table></div>
+  <div class="callout-warn callout">
+    <h3>Ocho de cada diez piezas no venden</h3>
+    <p>No es generosidad, es aritmética. Nadie sigue una cuenta para que le vendan, y una que vende en cada publicación pierde alcance en tres semanas. La venta funciona porque llega detrás de siete piezas que no vendieron.</p>
+    <p>El día que se invierta la proporción, dejará de haber a quién vender.</p>
+  </div>
+  <h3>La estructura de una pieza de venta que no molesta</h3>
+  <p>Ninguna pieza P empieza diciendo «Noesis hace esto». Empiezan con el problema, y el producto aparece resolviéndolo. Siempre la misma forma:
+  <span class="hi">problema reconocible → gesto real en pantalla → resultado → un solo siguiente paso</span>. Nunca una lista de funciones.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>11. Las 24 piezas</h2>
+    <p class="sec-intro">Todas escritas y listas para grabar. Aquí está el gancho, el rótulo, la llamada a la acción y la métrica de cada una; el guion plano a plano está en el documento de rodaje.</p>
+  </div>
+  <h3>Identificación emocional · 6 piezas</h3>
+  <p class="sec-intro">Que el autónomo se reconozca. No venden, y por eso funcionan: son las que se comparten.</p>
+  <div class="tpl-grid">
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">E01 · La segunda jornada</span>
+        <span class="arity">Reel físico · 25–35 s</span>
+      </div>
+      <div class="tpl-body">«Terminas ocho horas de trabajo. Y empiezan las otras dos.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> TRABAJO TERMINADO ≠ DÍA TERMINADO · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Descubrimiento</p>
+      <p class="tpl-use"><b>Pie:</b> Si al llegar a casa todavía te queda llevar el negocio, no eres el único.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Compártelo con quien siempre acaba dos veces. · <b>Se mide con:</b> Compartidos + retención al 75 %</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No presentar Noesis hasta el último segundo; la pieza debe funcionar sin vender.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">E02 · ‘Es una cosita rápida’</span>
+        <span class="arity">Reel sketch · 20–30 s</span>
+      </div>
+      <div class="tpl-body">«Cuando un cliente dice: ‘Es una cosita rápida’.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> RÁPIDA ERA LA FRASE · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Descubrimiento</p>
+      <p class="tpl-use"><b>Pie:</b> El trabajo puede ser pequeño. Gestionarlo casi nunca lo es.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> ¿Cuál ha sido tu ‘cosita rápida’ más larga? · <b>Se mide con:</b> Comentarios + compartidos</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No ridiculizar al cliente; el chiste es la carga administrativa.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">E03 · El ticket desaparecido</span>
+        <span class="arity">Reel POV · 20–25 s</span>
+      </div>
+      <div class="tpl-body">«Ese ticket que necesitas solo desaparece cuando lo necesitas.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> EL SITIO SEGURO: DESCONOCIDO · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Descubrimiento</p>
+      <p class="tpl-use"><b>Pie:</b> Los papeles pequeños acaban creando problemas grandes.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Guárdalo para el próximo ticket fantasma. · <b>Se mide con:</b> Guardados + finalizaciones</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> Si aparece el producto, mostrar captura o envío y revisión, no clasificación infalible.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">E04 · La factura fantasma</span>
+        <span class="arity">Reel diálogo · 25–35 s</span>
+      </div>
+      <div class="tpl-body">«¿Te ha pasado terminar un trabajo y acordarte de facturarlo tres semanas después?»</div>
+      <p class="tpl-use"><b>Rótulo:</b> TERMINADO NO SIEMPRE SIGNIFICA FACTURADO · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Descubrimiento</p>
+      <p class="tpl-use"><b>Pie:</b> El olvido no se nota hoy. Se nota cuando miras la caja.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> ¿Cuántas veces te ha pasado este año? · <b>Se mide con:</b> Comentarios cualificados + compartidos</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No afirmar una cifra de dinero perdido sin evidencia.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">E05 · Día 29: llama la gestoría</span>
+        <span class="arity">Reel sketch · 20–30 s</span>
+      </div>
+      <div class="tpl-body">«Día 29. Tu gestoría ya sabe que vas a decir: ‘te lo mando ahora’.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> TODO, PERO EN SIETE SITIOS · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Descubrimiento</p>
+      <p class="tpl-use"><b>Pie:</b> La gestoría no necesita perseguirte; necesita que el negocio llegue ordenado.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Etiqueta a quien cada trimestre vive esta película. · <b>Se mide con:</b> Compartidos + menciones</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No prometer presentación fiscal automática; Noesis prepara y el profesional decide.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">E06 · Facturar más no siempre es ganar más</span>
+        <span class="arity">Reel a cámara · 30–40 s</span>
+      </div>
+      <div class="tpl-body">«Puedes estar lleno de trabajo y aun así no saber qué trabajo te deja dinero.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> DE CADA 100 €, ¿CUÁNTO TE QUEDA? · <b>Canal:</b> Instagram + LinkedIn · <b>Fase:</b> Consideración</p>
+      <p class="tpl-use"><b>Pie:</b> Control no es mirar más números. Es entender qué trabajo merece la pena.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Guárdalo y revisa un trabajo esta semana. · <b>Se mide con:</b> Guardados + visitas al perfil</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No usar EBITDA ni tecnicismos; no inferir rentabilidad con datos incompletos.</p>
+    </div>
+  </div>
+  <h3>Valor práctico · 6 piezas</h3>
+  <p class="sec-intro">Enseñan algo útil que sirve aunque nunca te contrate. Son las que se guardan.</p>
+  <div class="tpl-grid">
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">R01 · ¿Fue rentable este trabajo?</span>
+        <span class="arity">Carrusel · 6 diapositivas</span>
+      </div>
+      <div class="tpl-body">«No mires solo cuánto cobraste. Mira lo que te costó hacerlo.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> COBRADO − COSTES − TIEMPO · <b>Canal:</b> Instagram + Facebook + LinkedIn · <b>Fase:</b> Consideración</p>
+      <p class="tpl-use"><b>Pie:</b> Una revisión imperfecta pero constante vale más que no mirar nunca.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Guárdalo para el próximo trabajo que cierres. · <b>Se mide con:</b> Guardados + deslizados completos</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> Aclarar que es una lectura operativa, no cálculo fiscal definitivo.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">R02 · Cinco datos antes de enviar un presupuesto</span>
+        <span class="arity">Carrusel · 7 diapositivas</span>
+      </div>
+      <div class="tpl-body">«Un presupuesto rápido puede salir caro si faltan estas cinco cosas.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> ANTES DE ENVIAR: ALCANCE · COSTE · TIEMPO · CONDICIONES · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Consideración</p>
+      <p class="tpl-use"><b>Pie:</b> Un presupuesto claro ahorra conversaciones y protege el margen.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Envíatelo por WhatsApp y úsalo como lista. · <b>Se mide con:</b> Guardados + envíos</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No presentar el contenido como asesoramiento legal contractual.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">R03 · Recordatorio de cobro sin sonar agresivo</span>
+        <span class="arity">Reel a cámara + plantilla · 25–35 s</span>
+      </div>
+      <div class="tpl-body">«Reclamar una factura no es discutir. Es recordar con claridad.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> CLARO, CONCRETO Y SIN DISCULPARTE · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Consideración</p>
+      <p class="tpl-use"><b>Pie:</b> Un buen recordatorio no acusa: identifica y pide una fecha.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Guarda la plantilla y adáptala a tu tono. · <b>Se mide con:</b> Guardados + compartidos</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No automatizar o enviar reclamaciones sin confirmación del titular.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">R04 · Facturado no es cobrado</span>
+        <span class="arity">Carrusel comparativo · 6 diapositivas</span>
+      </div>
+      <div class="tpl-body">«Puedes facturar 8.000 € y no tener 8.000 € disponibles.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> TRABAJO → FACTURA → COBRO → CAJA · <b>Canal:</b> Instagram + LinkedIn · <b>Fase:</b> Consideración</p>
+      <p class="tpl-use"><b>Pie:</b> Tu negocio respira con lo cobrado, no con lo que existe solo en una factura.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Revísalo con tus tres últimas facturas. · <b>Se mide con:</b> Guardados + comentarios cualificados</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> Etiquetar cualquier cantidad como ejemplo, no como caso real.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">R05 · Rutina de 10 minutos para los tickets</span>
+        <span class="arity">Reel tutorial · 30–40 s</span>
+      </div>
+      <div class="tpl-body">«Diez minutos los viernes evitan una tarde perdida al trimestre.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> FOTO · CONTEXTO · REVISIÓN · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Consideración</p>
+      <p class="tpl-use"><b>Pie:</b> Ordenar no significa decidirlo todo: significa saber qué está claro y qué falta revisar.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Pruébalo este viernes y cuéntanos si te sirve. · <b>Se mide con:</b> Guardados + respuestas a Stories</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> Ocultar NIF, importes y datos de documentos usados en rodaje.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">R06 · Cuánto ganas realmente por hora</span>
+        <span class="arity">Carrusel · 7 diapositivas</span>
+      </div>
+      <div class="tpl-body">«Tu hora no es solo la hora con la herramienta en la mano.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> PRECIO COBRADO ÷ TODO EL TIEMPO · <b>Canal:</b> Instagram + LinkedIn · <b>Fase:</b> Consideración</p>
+      <p class="tpl-use"><b>Pie:</b> El tiempo invisible también forma parte del trabajo.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Guárdalo y calcula solo un trabajo, no todo el año. · <b>Se mide con:</b> Guardados + deslizados completos</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No recomendar tarifas concretas sin conocer sector, zona y costes.</p>
+    </div>
+  </div>
+  <h3>Demostración de producto · 5 piezas</h3>
+  <p class="sec-intro">Enseñan Noesis funcionando. Aquí está la venta, y por eso son solo dos de cada diez.</p>
+  <div class="tpl-grid">
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">P01 · De WhatsApp a documento ordenado</span>
+        <span class="arity">Screen demo + voz · 25–35 s</span>
+      </div>
+      <div class="tpl-body">«Mandas el ticket como siempre. Noesis te pide lo que falta y lo deja preparado.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> ENVÍAS · NOESIS PROPONE · TÚ CONFIRMAS · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Evaluación</p>
+      <p class="tpl-use"><b>Pie:</b> Menos reenvíos y menos ‘¿dónde guardé esto?’. Siempre con revisión cuando hay dudas.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Solicita acceso al piloto. · <b>Se mide con:</b> Visitas al perfil + solicitudes</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No decir ‘automático al 100 %’. WhatsApp/Meta debe rotularse como piloto hasta validación real.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">P02 · Cliente nuevo detectado en una factura</span>
+        <span class="arity">Screen demo · 30–40 s</span>
+      </div>
+      <div class="tpl-body">«Si llega una factura con un cliente nuevo, Noesis no lo inventa ni lo mezcla: te lo propone.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> COINCIDENCIA EXACTA O ALTA POR CONFIRMAR · <b>Canal:</b> Instagram + LinkedIn · <b>Fase:</b> Evaluación</p>
+      <p class="tpl-use"><b>Pie:</b> Automatizar no es adivinar. Es preparar bien y preguntar cuando toca.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> ¿Te ahorraría tiempo este flujo? · <b>Se mide con:</b> DMs cualificados + solicitudes</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No mostrar emparejamiento por nombre ambiguo como si fuera seguro.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">P03 · Preparar una factura hablando</span>
+        <span class="arity">Screen demo conversacional · 30–45 s</span>
+      </div>
+      <div class="tpl-body">«‘Haz una factura a Marta por la reparación de hoy’. Noesis prepara; tú revisas y emites.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> HABLAS → BORRADOR → REVISAS → EMITES · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Evaluación</p>
+      <p class="tpl-use"><b>Pie:</b> La velocidad está en preparar. El control sigue siendo tuyo.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Pide una demo con tu tipo de trabajo. · <b>Se mide con:</b> Solicitudes de demo + finalizaciones</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No prometer validez fiscal externa no validada; usar ‘prepara’ y ‘borrador’.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">P04 · Recordatorio de cobro preparado</span>
+        <span class="arity">Screen demo + cara · 25–35 s</span>
+      </div>
+      <div class="tpl-body">«Noesis ve qué factura se retrasa y te prepara el mensaje. Tú decides si sale.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> NOESIS PREPARA. TÚ DECIDES. · <b>Canal:</b> Instagram + Facebook · <b>Fase:</b> Evaluación</p>
+      <p class="tpl-use"><b>Pie:</b> Reclamar deja de depender de acordarte, sin perder la relación con el cliente.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Solicita acceso al piloto. · <b>Se mide con:</b> Clics + solicitudes</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No enviar mensajes reales durante la grabación; usar entorno demo.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">P05 · El parte del día</span>
+        <span class="arity">Screen demo editorial · 30–45 s</span>
+      </div>
+      <div class="tpl-body">«No necesitas otro panel lleno de números. Necesitas saber qué toca hoy.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> QUÉ IMPORTA HOY · QUÉ PUEDE HACER NOESIS · <b>Canal:</b> Instagram + LinkedIn · <b>Fase:</b> Evaluación</p>
+      <p class="tpl-use"><b>Pie:</b> Orden no es tener más datos. Es que alguien te diga qué merece atención.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> ¿Qué debería aparecer en tu parte de mañana? · <b>Se mide con:</b> Comentarios cualificados + demos</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> Usar datos demo coherentes; nunca simular actividad como si fuera un cliente real.</p>
+    </div>
+  </div>
+  <h3>Confianza y marca · 4 piezas</h3>
+  <p class="sec-intro">Quiénes sois y por qué lo hacéis así. Sostienen todo lo demás.</p>
+  <div class="tpl-grid">
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">T01 · Por qué estamos construyendo Noesis</span>
+        <span class="arity">Founder video · 45–60 s</span>
+      </div>
+      <div class="tpl-body">«No empezamos queriendo hacer otro programa de facturas.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> HAZ TU TRABAJO; NOESIS TE ORDENA EL NEGOCIO · <b>Canal:</b> LinkedIn + Instagram · <b>Fase:</b> Confianza</p>
+      <p class="tpl-use"><b>Pie:</b> Estamos construyendo Noesis para que llevar el negocio no se coma el tiempo de hacer bien el oficio.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Si eres autónomo de servicios, queremos escucharte. · <b>Se mide con:</b> Comentarios cualificados + conversaciones</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> Hablar desde la motivación y lo construido; no inventar número de usuarios o éxito.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">T02 · Por qué Noesis no quiere ser un ERP</span>
+        <span class="arity">Founder post + carrusel</span>
+      </div>
+      <div class="tpl-body">«Un autónomo no necesita aprender cuarenta menús para entender su negocio.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> MENOS MENÚS. MÁS CONTEXTO. · <b>Canal:</b> LinkedIn · <b>Fase:</b> Confianza</p>
+      <p class="tpl-use"><b>Pie:</b> La infraestructura puede ser potente sin obligar al usuario a vivir dentro de ella.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> ¿Qué parte de tu software actual te obliga a pensar como un gestor? · <b>Se mide con:</b> Comentarios de ICP + guardados</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No atacar marcas ni afirmar superioridad no probada.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">T03 · Por qué pedimos confirmación</span>
+        <span class="arity">Reel fundador + demo · 35–50 s</span>
+      </div>
+      <div class="tpl-body">«Si afecta a dinero, impuestos o a un cliente, Noesis no debería decidir por ti.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> PREPARAR RÁPIDO. CONFIRMAR LO IMPORTANTE. · <b>Canal:</b> Instagram + LinkedIn · <b>Fase:</b> Confianza</p>
+      <p class="tpl-use"><b>Pie:</b> Diseñamos la automatización para ahorrar pasos, no para inventar decisiones.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> ¿Qué acción no dejarías nunca sin confirmar? · <b>Se mide con:</b> Comentarios cualificados + retención</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No presentar la confirmación como garantía absoluta; sigue siendo necesario revisar.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">T04 · Cómo evitamos mezclar negocios</span>
+        <span class="arity">Carrusel técnico-humano · 6 diapositivas</span>
+      </div>
+      <div class="tpl-body">«La confianza empieza por una regla simple: cada dato pertenece a un solo negocio.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> UN NEGOCIO · SU CONTEXTO · SUS PERMISOS · <b>Canal:</b> LinkedIn + Instagram · <b>Fase:</b> Confianza</p>
+      <p class="tpl-use"><b>Pie:</b> Seguridad no es un icono: son límites que el producto aplica en cada operación.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Guárdalo si evalúas herramientas para tu negocio. · <b>Se mide con:</b> Guardados + conversaciones con partners</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No usar ‘100 % seguro’ ni afirmar auditorías externas todavía pendientes.</p>
+    </div>
+  </div>
+  <h3>Comunidad, gestorías y prueba · 3 piezas</h3>
+  <p class="sec-intro">El puente a los prescriptores y el caso real cuando exista.</p>
+  <div class="tpl-grid">
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">G01 · Entrevista: el trabajo que nadie ve</span>
+        <span class="arity">Entrevista vertical · 45–60 s</span>
+      </div>
+      <div class="tpl-body">«¿Qué parte de llevar tu negocio haces cuando ya has terminado de trabajar?»</div>
+      <p class="tpl-use"><b>Rótulo:</b> EL TRABAJO QUE NADIE VE · <b>Canal:</b> Instagram + LinkedIn · <b>Fase:</b> Investigación</p>
+      <p class="tpl-use"><b>Pie:</b> Antes de construir promesas, escuchamos cómo se lleva de verdad un negocio de servicios.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Cuéntanos qué tarea te sigue a casa. · <b>Se mide con:</b> Respuestas cualitativas + entrevistas captadas</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No convertir una entrevista de investigación en testimonio comercial sin permiso explícito.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">G02 · El paquete que la gestoría sí puede revisar</span>
+        <span class="arity">Carrusel + demo · 6 diapositivas</span>
+      </div>
+      <div class="tpl-body">«Noesis no presenta por tu gestoría: prepara el trabajo para que llegue revisable.»</div>
+      <p class="tpl-use"><b>Rótulo:</b> NOESIS PREPARA. LA GESTORÍA REVISA. · <b>Canal:</b> LinkedIn + Facebook · <b>Fase:</b> Evaluación</p>
+      <p class="tpl-use"><b>Pie:</b> Menos persecución documental y más tiempo para el criterio profesional.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Gestorías: solicitad una demostración del flujo. · <b>Se mide con:</b> Demos de partners + guardados</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> No decir que sustituye a la gestoría ni que presenta impuestos de forma autónoma.</p>
+    </div>
+    <div class="tpl">
+      <div class="tpl-top">
+        <span class="tpl-name">G03 · Caso piloto medible</span>
+        <span class="arity">Caso en vídeo + carrusel</span>
+      </div>
+      <div class="tpl-body">«Antes: [problema medido]. Después de 30 días: [resultado validado].»</div>
+      <p class="tpl-use"><b>Rótulo:</b> PROBLEMA MEDIDO · CAMBIO OBSERVADO · LÍMITE CLARO · <b>Canal:</b> Instagram + LinkedIn + web · <b>Fase:</b> Conversión</p>
+      <p class="tpl-use"><b>Pie:</b> La prueba no es una frase bonita: es un cambio que podemos explicar y repetir.</p>
+      <p class="tpl-use"><b>Llamada a la acción:</b> Solicita una prueba para tu negocio. · <b>Se mide con:</b> Solicitud → piloto → pago</p>
+      <p class="tpl-use"><b>Guardarraíl:</b> NO PUBLICAR todavía: requiere 3–5 pilotos, permiso y evidencia. Nunca rellenar huecos con cifras estimadas.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>12. Instagram y Facebook no son la misma red</h2>
+    <p class="sec-intro">El plan manda 11 piezas a las dos, y está bien. Pero colgarlas igual desperdicia Facebook.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th></th><th>Instagram</th><th>Facebook</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Para qué sirve</strong></td><td>Descubrimiento. Que te encuentre quien no te conoce</td><td>Confianza y comunidad. Que quien te conoce te siga y te recomiende</td></tr>
+        <tr><td><strong>Quién está ahí</strong></td><td>Autónomo más joven, consume Reels</td><td>Autónomo de 35 a 60, grupos de gremio, recomendación local</td></tr>
+        <tr><td><strong>Cadencia</strong></td><td>3 Reels + 1 carrusel/semana · Stories 4-5 días</td><td>2-3 vídeos + 1 post práctico/semana</td></tr>
+        <tr><td><strong>El copy</strong></td><td>Corto. El vídeo hace el trabajo</td><td>Más largo y contextual. Aquí sí se lee</td></tr>
+        <tr><td><strong>Qué no hacer</strong></td><td>Llenar el perfil de capturas de software</td><td>Publicar el mismo texto que en Instagram</td></tr>
+        <tr><td><strong>Lo que nadie usa</strong></td><td>Los destacados como índice del perfil</td><td>Los grupos de autónomos y gremios</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Los grupos de Facebook, que es donde está el dinero</h3>
+  <p>Es el canal más barato después de las gestorías, y el que nadie trabaja porque da pereza. La regla que lo hace funcionar sin quemarlo: <strong>en un grupo se responde, no se publica</strong>. Alguien pregunta cómo reclamar una factura vencida y contestas de verdad, sin enlace. La marca aparece en tu perfil, no en tu respuesta. Un enlace en un grupo es publicidad; una respuesta útil es reputación, y en un gremio la reputación viaja sola.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>13. Cómo tiene que salir el vídeo</h2>
+    <p class="sec-intro">Especificaciones que no cambian con la moda. Las duraciones máximas de cada red sí cambian: confírmalas en la aplicación.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Parámetro</th><th>Cómo</th><th>Por qué</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Formato</strong></td><td>Vertical 9:16 · 1080 × 1920</td><td>Es el único que ocupa la pantalla entera en Reels</td></tr>
+        <tr><td><strong>Duración</strong></td><td>20-45 segundos</td><td>Es lo que fija el plan pieza a pieza. Menos no da tiempo a entender; más pierde retención</td></tr>
+        <tr><td><strong>Primer segundo</strong></td><td>Cara, objeto o problema reconocible</td><td>Es lo que más decide. Nada de logotipo ni intro</td></tr>
+        <tr><td><strong>Subtítulos</strong></td><td>Siempre, quemados en el vídeo</td><td>Se ve sin sonido, en la furgoneta o en una obra con ruido</td></tr>
+        <tr><td><strong>Zona segura</strong></td><td>Nada importante en el 15 % superior ni en el 35 % inferior</td><td>Ahí van el usuario, el pie, los botones y la música</td></tr>
+        <tr><td><strong>Portada</strong></td><td>Un fotograma con cara o rótulo legible, elegido a mano</td><td>Es lo que se ve en la cuadrícula del perfil</td></tr>
+        <tr><td><strong>Audio</strong></td><td>Voz propia limpia; música solo de fondo</td><td>Si la voz no se entiende, no hay pieza</td></tr>
+        <tr><td><strong>Sin marca de agua</strong></td><td>Exportar el original limpio</td><td>Un vídeo con marca de agua de otra red se distribuye peor</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>Con qué grabar:</strong> el móvil. Las piezas son furgoneta, manos, taller, pantalla y cara. Un móvil reciente con luz natural y un micro de solapa de veinte euros da mejor resultado que una cámara buena con mal sonido. La regla de oro del vídeo vertical: <span class="hi">el sonido importa más que la imagen</span>.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>14. El motor de producción</h2>
+    <p class="sec-intro">Cómo se crean dos semanas de contenido en una mañana, que es lo que hace esto sostenible con dos socios y un producto que construir.</p>
+  </div>
+  <h3>Bloque de grabación quincenal</h3>
+  <p>Props, guiones, documentos ficticios, audio y luz preparados de antemano. En una sola sesión salen seis piezas: dos de humor o identificación, dos educativas, una de founder y dos demos con datos de prueba. Más 15-20 clips sueltos de recurso —furgoneta, manos, oficina, pantallas, equipo— que después tapan cualquier hueco.</p>
+  <h3>Una idea, siete salidas</h3>
+  <p>Cada grabación se convierte en:</p>
+  <ol class="checks">
+    <li>Reel de Instagram de 25-35 segundos.</li>
+    <li>El mismo vídeo en Facebook, con copy más contextual.</li>
+    <li>Carrusel con la explicación práctica.</li>
+    <li>Post de founder en LinkedIn con el aprendizaje o la decisión.</li>
+    <li>Story con encuesta o pregunta.</li>
+    <li>Clip limpio, sin marca de agua, reservado para el día que se abra otra red.</li>
+    <li>Material para la página del oficio cuando se construya.</li>
+  </ol>
+  <p>Se graba una vez y se publica seis. Esa es toda la diferencia entre sostener una cuenta y abandonarla al segundo mes.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>15. Cómo se cuelga, paso a paso</h2>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Publicar desde Meta Business Suite, no desde el móvil</h3></div>
+        <p>Gestiona la página de Facebook y la cuenta de Instagram a la vez, permite programar y guarda borradores. Excepción: las Stories, que van desde el móvil porque son del día.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Publicar en Instagram y adaptar en Facebook</h3><span class="chip chip-warn">no replicar</span></div>
+        <p>Usa la publicación conjunta para el vídeo, pero <strong>cambia el texto</strong>. Es un minuto de trabajo y es la diferencia entre tener dos canales o uno duplicado. El vídeo, la portada y los subtítulos sí se replican tal cual.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">03</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Rellenar lo que casi nadie rellena</h3></div>
+        <p>Texto alternativo describiendo la imagen; ubicación con vuestra provincia, porque la estrategia pide densidad por zona y esto es gratis; y portada elegida a mano.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">04</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Etiquetas: pocas y de oficio</h3></div>
+        <p>Entre cinco y diez, del gremio y de la provincia: <code>#fontaneria</code>, <code>#electricistas</code>, <code>#reformas</code>, <code>#autonomos</code>. Nada de <code>#emprendimiento</code> ni <code>#productividad</code>: atraen a gente que no va a comprar nunca.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">05</div>
+      <div class="step-body">
+        <div class="step-head"><h3>Estar la primera hora</h3><span class="chip chip-ok">lo que más rinde</span></div>
+        <p>Responder todos los comentarios de la primera hora. No por el algoritmo: porque el plan busca comentarios del tipo «me pasa», y cada uno es una conversación que puede acabar en piloto. Respondido a los tres días no sirve de nada.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>16. El ritmo semanal</h2>
+    <p class="sec-intro">Con dos socios y un producto que construir, esto tiene que caber en unas pocas horas.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Cuándo</th><th>Qué</th><th>Cuánto</th><th>Quién</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cada 15 días</strong></td><td>Bloque de grabación: 6 piezas de una tirada</td><td>Media mañana</td><td>Los dos</td></tr>
+        <tr><td><strong>Lunes</strong></td><td>Montar y subtitular las tres piezas. Programarlas</td><td>2 horas</td><td>Quien monta</td></tr>
+        <tr><td><strong>Lunes</strong></td><td>Pasar el checklist de trece preguntas</td><td>15 minutos</td><td>El otro socio</td></tr>
+        <tr><td><strong>Mar · Jue · Sáb</strong></td><td>Se publica lo programado. Primera hora: comentarios</td><td>20 min/día</td><td>Quien publicó</td></tr>
+        <tr><td><strong>Cualquier día</strong></td><td>Stories: lo que pase de verdad, sin producción</td><td>5 minutos</td><td>Cualquiera</td></tr>
+        <tr><td><strong>Viernes</strong></td><td>Mirar los números y decidir qué se repite</td><td>20 minutos</td><td>Los dos</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Total: unas <strong>cinco horas semanales</strong> más media mañana quincenal. Si no cabe, se baja a dos piezas por semana antes que bajar la calidad. Publicar poco y bien sostiene; publicar mucho y mal quema la cuenta y a vosotros.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>17. Checklist antes de publicar</h2>
+    <p class="sec-intro">Trece preguntas. Las pasa quien no ha montado la pieza, porque quien la ha montado ya no la ve.</p>
+  </div>
+  <ol class="checks">
+    <li>¿Se entiende en dos segundos el problema o la promesa?</li>
+    <li>¿Habla a un autónomo de servicios reconocible?</li>
+    <li>¿La pieza intenta hacer una sola cosa?</li>
+    <li>¿Cada cifra, función y resultado puede demostrarse?</li>
+    <li>¿Lo que sigue en piloto aparece como piloto o demo?</li>
+    <li>¿Se ve que el usuario confirma lo sensible?</li>
+    <li>¿No aparecen datos reales, matrículas, clientes ni documentos?</li>
+    <li>¿Hay subtítulos, contraste y texto dentro de la zona segura?</li>
+    <li>¿Existe un único siguiente paso?</li>
+    <li>¿Sabemos qué métrica decide si se repite la pieza?</li>
+    <li>¿Hay consentimiento escrito si aparece un tercero o un caso?</li>
+    <li>¿Suena a mano derecha tranquila, y no a banco, ERP o gurú?</li>
+    <li>¿El destino del enlace funciona hoy?</li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>18. Archivo y nomenclatura</h2>
+    <p class="sec-intro">Aburrido y necesario. Dentro de seis meses querréis reeditar una pieza que funcionó.</p>
+  </div>
+  <pre>branding/contenido/publicado/
+  2026-09-02_E01_segunda-jornada/
+    original.mp4          <span class="c">← el máster sin subtítulos ni marca de agua</span>
+    ig-reel.mp4
+    fb-reel.mp4
+    portada.jpg
+    copy-ig.txt
+    copy-fb.txt
+    resultados.txt        <span class="c">← se rellena a los 7 días</span></pre>
+  <p>El código de pieza es el del plan editorial, así que archivo y plan hablan el mismo idioma. En <code>resultados.txt</code> bastan cuatro líneas: alcance, retención, guardados y si hubo alguna conversación.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>19. Qué se mide</h2>
+    <p class="sec-intro">Pocas métricas y todas accionables. Si una no cambia una decisión, no se mide.</p>
+  </div>
+  <h3>Cada viernes, por tipo de pieza</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Pieza</th><th>Qué mide su éxito</th><th>Qué decides con eso</th></tr></thead>
+      <tbody>
+        <tr><td>Identificación (E)</td><td>Compartidos y retención al 75 %</td><td>Si se comparte, repetir la situación con otro oficio</td></tr>
+        <tr><td>Valor práctico (R)</td><td>Guardados y visitas al perfil</td><td>Si se guarda, profundizar en esa duda</td></tr>
+        <tr><td>Producto (P)</td><td>Comentarios y mensajes cualificados</td><td>Si preguntan por un flujo, hacer la demo de ese flujo</td></tr>
+        <tr><td>Confianza (T, G)</td><td>Conversaciones con autónomos o partners</td><td>Si aparece una objeción, convertirla en la siguiente pieza</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Cada mes, para decidir de verdad</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Métrica</th><th>Decisión que dispara</th></tr></thead>
+      <tbody>
+        <tr><td>Solicitudes de acceso por canal</td><td>Dónde repetir esfuerzo</td></tr>
+        <tr><td>Solicitud → prueba iniciada</td><td>Si es baja, el problema es la promesa, no el canal</td></tr>
+        <tr><td>Prueba → pago</td><td>La que más mueve el CAC. Si es baja, el producto no engancha en 14 días</td></tr>
+        <tr><td>CAC por canal</td><td>Por encima del techo: parar ese canal</td></tr>
+        <tr><td><strong>Retención a 60 días</strong></td><td>Por debajo del objetivo: <strong>parar captación</strong> y arreglar producto</td></tr>
+        <tr><td>Euros recuperados por cliente</td><td>Es el material de marketing y la justificación del precio</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Las tres primeras se rellenan en la hoja <code>Ads_Captacion</code> del modelo económico, que calcula sola el CAC, el LTV y el veredicto.</p>
+
+  <div class="callout">
+    <h3>La expectativa que hay que fijar ahora</h3>
+    <p>Los tres primeros meses de contenido orgánico <strong>no van a traer clientes</strong>. Van a traer conversaciones, aprendizaje sobre qué duele de verdad y las palabras exactas que usa un fontanero, que es lo que después hará que las páginas por oficio y los anuncios funcionen.</p>
+    <p>Si al tercer mes no hay <em>ninguna</em> conversación cualificada, el problema no es la cadencia: es el mensaje. Ahí se para y se revisa, no se publica más fuerte.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>20. Vías de escape</h2>
+    <p class="sec-intro">Qué hacer cuando algo no salga. Escrito ahora, en frío, porque en caliente se tiende a insistir en lo que no funciona.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Si pasa esto</th><th>Se hace esto</th></tr></thead>
+      <tbody>
+        <tr><td><strong>El CAC pagado supera el techo</strong></td><td>Cortar publicidad y volver a prescriptores. No subir presupuesto esperando que mejore con volumen: en nichos pequeños suele empeorar</td></tr>
+        <tr><td><strong>El piloto no enseña ahorro medible</strong></td><td>Cambiar la prueba, no la promesa. Usar evidencia operativa del panel: tareas resueltas, documentos clasificados, trabajos sin facturar detectados</td></tr>
+        <tr><td><strong>El plan Autónomo no es rentable con captación pagada</strong></td><td>Convertirlo en producto de entrada, no en el producto. El esfuerzo pagado va a Negocio y Premium</td></tr>
+        <tr><td><strong>Meta encarece o bloquea WhatsApp</strong></td><td>Recordar que el canal no es el producto. El discurso pasa a «tu empresa sin papeleo». Ningún material debe decir que Noesis <em>es</em> WhatsApp</td></tr>
+        <tr><td><strong>Un competidor copia el ciclo completo</strong></td><td>No bajar precio: profundizar en el oficio. Una guerra de precios la gana quien más capital tiene</td></tr>
+        <tr><td><strong>La retención a 60 días es mala</strong></td><td>Parar la captación por completo. Meter clientes en un producto que abandonan quema dinero y reputación en un sector donde todos se conocen</td></tr>
+        <tr><td><strong>A los 12 meses no hay tracción</strong></td><td>Criterio fijado: menos de 40 cuentas de pago y retención bajo mínimos. Salidas en orden: concentrar en un solo oficio; vender el motor de facturación y Veri*Factu como marca blanca; o cerrar limpio</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>Por qué esta sección importa más que las otras.</strong> Con capital pequeño, la diferencia entre un proyecto que sobrevive y otro que no rara vez es la idea: es cuánto se tarda en reconocer que algo no funciona. Tener los criterios escritos antes de empezar convierte esa decisión en una comprobación mensual, y no en una discusión entre socios cuando ya no queda caja.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>21. Los errores que van a costar caro</h2>
+  </div>
+  <ol class="checks">
+    <li><strong>Publicar antes de que el formulario de acceso funcione.</strong> Mandas tráfico a una puerta cerrada y no vuelve.</li>
+    <li><strong>Copiar el mismo texto en Instagram y Facebook.</strong> Un minuto de trabajo convierte un canal duplicado en dos canales.</li>
+    <li><strong>Vender en más de dos de cada diez piezas.</strong> Se nota, y el alcance cae antes de que suban las ventas.</li>
+    <li><strong>Enseñar datos reales en una demo.</strong> Usad la cuenta demo, que existe y está bloqueada en solo lectura precisamente para esto.</li>
+    <li><strong>Prometer lo que está en piloto como si estuviera disponible.</strong> Es el error que no se perdona en un gremio.</li>
+    <li><strong>Publicar y desaparecer.</strong> La primera hora de comentarios vale más que la pieza siguiente.</li>
+    <li><strong>Cambiar de rumbo a las tres semanas.</strong> El orgánico tarda meses; tres semanas no son datos, son ruido.</li>
+    <li><strong>Poner enlaces en los grupos de Facebook.</strong> Te expulsan y quemas el canal más barato que tienes.</li>
+    <li><strong>Pedir permiso para publicar un caso después de tenerlo.</strong> Se pide antes de empezar el piloto, cuando es fácil.</li>
+    <li><strong>Empezar a gastar en ads antes de la puerta de la Fase 1.</strong> Es la regla que protege la caja.</li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>22. El primer mes, semana a semana</h2>
+    <p class="sec-intro">Un calendario de aprendizaje, no una parrilla rígida. Cada semana tiene una intención.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Semana</th><th>Intención</th><th>Instagram y Facebook</th><th>Extras</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="num">1</td><td><strong>«Me entienden»</strong></td>
+          <td>E01 La segunda jornada · R05 Rutina de tickets · E02 Cosita rápida</td>
+          <td>Story con encuesta: «¿A qué hora acaba de verdad tu día?» · T01 en LinkedIn</td>
+        </tr>
+        <tr>
+          <td class="num">2</td><td><strong>«Esto me sirve»</strong></td>
+          <td>R01 ¿Fue rentable este trabajo? · R03 Recordatorio de cobro · E06 Facturar no es ganar</td>
+          <td>Caja de preguntas: «¿Qué coste se te olvida?» · T02 No queremos ser un ERP</td>
+        </tr>
+        <tr>
+          <td class="num">3</td><td><strong>«Ah, es esto»</strong></td>
+          <td>P05 El parte del día · E03 El ticket desaparecido · R04 Facturado no es cobrado</td>
+          <td>Primera demo real. Cuenta demo, nunca datos reales</td>
+        </tr>
+        <tr>
+          <td class="num">4</td><td><strong>«Me fío»</strong></td>
+          <td>P01 De WhatsApp a documento · E05 Día 29 · R02 Cinco datos del presupuesto</td>
+          <td>T03 Por qué pedimos confirmación · Primer contacto con una gestoría</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Al terminar el mes quedan doce piezas publicadas, doce sin usar en reserva, y —esto es lo importante— datos sobre cuál de los cuatro pilares funciona con vuestro público. Eso decide el mes siguiente.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>23. Qué hay que decidir esta semana</h2>
+    <p class="sec-intro">Cinco cosas. Ninguna es de contenido: son las que hacen que el contenido sirva para algo.</p>
+  </div>
+  <ol class="checks">
+    <li><strong>Cerrar los tres a cinco autónomos del piloto con nombre y apellidos.</strong> Sin esto no arranca nada, y es la puerta de la Fase 0.</li>
+    <li><strong>Pedirles permiso escrito para publicar sus cifras</strong> antes de empezar, no después. Después es incómodo.</li>
+    <li><strong>Elegir la provincia de concentración</strong>, para que el boca a boca tenga densidad suficiente.</li>
+    <li><strong>Decidir los cinco oficios de verdad</strong> y alinear los catálogos del producto con ellos. Hoy no coinciden.</li>
+    <li><strong>Probar el formulario de solicitar acceso</strong> de punta a punta, porque es el destino de todos los CTA.</li>
+  </ol>
+  <div class="callout-warn callout">
+    <h3>Y una advertencia sobre el orden</h3>
+    <p>La tentación va a ser empezar por grabar, porque es lo divertido y porque el contenido ya está escrito. Pero publicar sin piloto cerrado significa construir audiencia sin tener nada que enseñarle cuando pregunte, y sin caso real que contar dentro de tres meses.</p>
+    <p>El piloto primero. El contenido puede arrancar la misma semana, pero no antes.</p>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Qué manda sobre qué.</strong> Este documento es la referencia de estrategia, sistema de contenido y operación. Los guiones plano a plano de las 24 piezas están en <code>branding/contenido/Plan-editorial-y-guiones-Noesis.docx</code>, que es el documento de rodaje. Las cifras de contribución, CAC y escenarios salen de <code>docs/Noesis-Modelo-Economico.xlsx</code>. Los archivos de marca y los textos de perfil, en <code>branding/</code>. Si un número de aquí y el Excel no coinciden, manda el Excel.</p>
+  <p>Consolida y sustituye a <code>docs/Estrategia-Marketing</code> y <code>docs/Publicar-en-redes</code>, que pueden retirarse cuando este documento se dé por bueno.</p>
+  <p>Las duraciones máximas y las herramientas de las plataformas cambian varias veces al año. Las proporciones, el ritmo, la zona segura y las reglas de contenido no dependen de eso.</p>
+  <p>Redactado el 1-sep-2026. El <code>.html</code> es la fuente: se edita ahí y se reimprime el PDF.</p>
+</footer>
+
+</div>
+
+</body>
+</html>

@@ -6,7 +6,7 @@
 
 ## Producto construido
 
-- El candidato del esquema 53 incorpora la base de datos de retención sin cambiar
+- El candidato del esquema 54 incorpora la base de datos de retención sin cambiar
   el comportamiento del producto: un Registro Interno de Valor multiempresa,
   idempotente y fail-open observa trabajos creados/cerrados, facturas emitidas,
   recordatorios enviados, documentos confirmados y presupuestos preparados/enviados.
@@ -19,7 +19,7 @@
   del asistente se conserva incluso con el ledger desactivado. No se muestra Confidence,
   Insight, Progress ni se concede autonomía. Exportación y baja RGPD incluyen el
   ledger. El rollback exige apagar, restaurar primero código anterior sobre esquema
-  53 y bajar después la BD; nunca código 53 sobre esquema 52. El lifecycle admite
+  54 y bajar después la BD; nunca código 54 sobre esquema 53. El lifecycle admite
   corrección/reversión, pero sus hooks por proceso siguen pendientes. El candidato
   aún no está desplegado ni validado con negocios reales.
 
@@ -442,6 +442,18 @@
   asigna serie y línea a facturas ya emitidas dentro de la transacción de migración
   y reinstala inmediatamente la inmutabilidad. El CI reproduce este salto con una
   factura emitida tanto en SQLite como en PostgreSQL.
+
+- Cada oficio tiene su plantilla de catálogo con el IVA ya puesto en cada partida y
+  la marca de si es material o mano de obra. El autónomo la ve entera antes de
+  cargarla en `/b/{id}/oficios`, con su oficio el primero cuando se deduce de lo que
+  escribió al darse de alta; cargarla dos veces no duplica nada. Ese marcado es lo
+  que permite avisar del 40% de material que hace decaer el tipo reducido en obras
+  de vivienda: Noesis avisa y nunca cambia el tipo.
+- El canal de Meta está construido y revisado —firma, idempotencia, medios acotados
+  y cola durable—, pero **los cinco avisos proactivos al titular no son aprobables
+  todavía**: mandan el mensaje entero en un único hueco de plantilla. Las cuatro
+  plantillas al cliente sí encajan. Los cuerpos de las nueve viven en
+  `noesis/whatsapp_templates.py`. Revisión completa en [[Revision-Meta]].
 
 ## Política comercial en el código actual
 

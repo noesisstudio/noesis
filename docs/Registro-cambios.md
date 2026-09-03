@@ -93,6 +93,170 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   producción.
 - **Estado de publicación:** documento preparado para revisión y aprobación de
   socios; implementación todavía no autorizada.
+## 2026-09-03 — refunde los documentos legales con `Ruta-legal` y corrige Meta
+
+- **Autor/agente:** Claude.
+- **Objetivo:** al fusionar con `origin/main` aparecieron 28 commits de otro agente,
+  entre ellos `Ruta-legal.pdf` (29-ago), que solapaba con los documentos legales
+  escritos hoy. Se refunden para que no queden dos rutas legales paralelas ni una
+  contradicción publicada.
+- **Áreas y archivos:** `docs/Constitucion-y-primer-euro.md` (recortado: los bloques
+  C y D pasan a punteros y la sección del plan cede el calendario a
+  `Plan-60-dias.pdf`), `docs/RGPD-estado-y-plan.md` y `docs/RGPD-QUE-HACER.md`
+  (incorporan el hallazgo de Groq y se declaran complementarios de `Ruta-legal`),
+  `docs/Inicio.md` y `docs/Tareas-vivas.md` (conflictos de fusión resueltos
+  conservando ambos lados). Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto. `scripts/check_project_truth.py` en
+  verde; enlaces `[[...]]` de los documentos nuevos verificados contra `docs/`.
+- **Dependencias o validaciones externas:** sigue pendiente la revisión RGPD
+  profesional. La decisión sobre Groq —declararlo o retirarlo— es del founder.
+- **Riesgo/punto probable de fallo:** **corrección de fondo.** Los documentos de hoy
+  afirmaban, siguiendo `Meta-Verificacion.pdf`, que la revisión de la aplicación de
+  Meta no hacía falta. `Ruta-legal.pdf` argumenta lo contrario con mejor base: el
+  `Standard access` solo alcanza activos propios, así que la WABA de un cliente exige
+  `Advanced access` y App Review. Se corrige en `Constitucion-y-primer-euro.md` y se
+  remite a `Ruta-legal`. `Meta-Verificacion.pdf` sigue diciendo lo antiguo y habría
+  que revisarlo.
+- **Diagnóstico y rollback:** todo es documentación; ningún archivo de `src/` se ha
+  tocado en ninguno de los commits de hoy.
+- **Estado de publicación:** los cuatro documentos de hoy quedan subordinados a
+  `Ruta-legal.pdf` como fuente principal de obligaciones y a `Plan-60-dias.pdf` como
+  calendario. Aportan lo que aquellos no cubren: forma jurídica y constitución,
+  auditoría del código, y residencia de datos.
+
+## 2026-09-03 — lista de acciones de protección de datos
+
+- **Autor/agente:** Claude.
+- **Objetivo:** convertir las dos auditorías anteriores (textos/código y residencia de
+  datos) en una única lista ejecutable, para que el founder sepa qué hacer hoy, qué
+  antes de cobrar, qué encargar fuera y cómo comprobar que está cerrado.
+- **Áreas y archivos:** documentación legal; `docs/RGPD-QUE-HACER.md` (nuevo) y enlace
+  en `docs/Inicio.md`. Sin cambios en `src/`. No duplica pendientes: las tareas siguen
+  en `docs/Tareas-vivas.md` y el porqué en los dos documentos de origen.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental).
+- **Dependencias o validaciones externas:** el bloque 2 entero depende de un abogado
+  de protección de datos, y el encargo 2.4 (tabla de plazos de conservación) bloquea
+  dos tareas de producto. El bloque 0 no depende de nadie.
+- **Riesgo/punto probable de fallo:** aplazar el punto 0.3 (mover la región de
+  Railway). Es la única tarea de la lista que se encarece sola: migrar un volumen
+  montado causa parada, y hoy el volumen está vacío.
+- **Diagnóstico y rollback:** documento autónomo; borrarlo no afecta al producto.
+- **Estado de publicación:** entregado. Ninguna de las acciones se ha ejecutado: el
+  documento es la lista, no el trabajo hecho.
+
+## 2026-09-03 — residencia de datos y verificación del proveedor de alojamiento
+
+- **Autor/agente:** Claude.
+- **Objetivo:** responder a la duda del founder sobre si Railway «sirve para RGPD» y
+  separar el mito (no existe ninguna licencia RGPD) del problema real, que es dónde
+  están alojados hoy los datos y las copias.
+- **Áreas y archivos:** documentación de despliegue y legal;
+  `docs/Servidores-y-residencia-de-datos.md` (nuevo), enlace en `docs/Inicio.md` y
+  una tarea P0 nueva en `docs/Tareas-vivas.md`. Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental). Se verificó
+  la documentación pública de Railway (compliance, DPA, privacidad, regiones y config
+  as code) y se leyeron `railway.json` y `src/noesis/config.py`.
+- **Dependencias o validaciones externas:** **la región de los servicios no se puede
+  verificar desde el repositorio**: vive en el panel de Railway y `railway.json` no
+  fija ninguna. El founder debe comprobarla. Hallazgo de código: `BACKUP_S3_REGION`
+  toma `us-east-1` por defecto en `config.py:476`.
+- **Riesgo/punto probable de fallo:** activar la copia externa a S3 sin fijar la
+  región europea replicaría la base completa a Virginia; y aplazar el cambio de
+  región hasta después del piloto convierte una operación indolora en una parada
+  negociada, porque migrar un volumen montado causa downtime.
+- **Diagnóstico y rollback:** el documento es autónomo. No se ha cambiado el valor por
+  defecto de `BACKUP_S3_REGION` en el código: es una decisión de despliegue del
+  founder y se ha dejado anotada, no aplicada.
+- **Estado de publicación:** entregado como análisis. Conclusión: Railway es apto para
+  RGPD —DPA autoservicio, certificación en el Marco de Privacidad de Datos UE-EE. UU.,
+  SOC 2 Tipo II y región en Ámsterdam—, y lo que falta son cuatro acciones del
+  founder, no un cambio de proveedor.
+
+## 2026-09-03 — auditoría RGPD del código y de los textos publicados
+
+- **Autor/agente:** Claude.
+- **Objetivo:** separar lo que Noesis ya cumple en materia de protección de datos de
+  lo que está publicado y no es cierto, para que la revisión profesional pendiente
+  llegue con la lista hecha y no descubra los problemas cobrando por horas.
+- **Áreas y archivos:** documentación legal; `docs/RGPD-estado-y-plan.md` (nuevo),
+  enlaces en `docs/Inicio.md` y `docs/Constitucion-y-primer-euro.md`, y una tarea P0
+  nueva en `docs/Tareas-vivas.md`. Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental). Los
+  hallazgos se verificaron leyendo `src/noesis/web/templates/` (privacidad,
+  encargado-tratamiento, cookies, cumplimiento, site_contacto),
+  `src/noesis/web/routers/account.py`, `src/noesis/db.py`,
+  `src/noesis/documents/storage.py` y `src/noesis/config.py`.
+- **Dependencias o validaciones externas:** el documento **no sustituye la revisión
+  RGPD profesional**, que sigue pendiente en `docs/Tareas-vivas.md`. Los plazos de
+  conservación y la procedencia de una evaluación de impacto los tiene que fijar un
+  abogado; sin ellos no se puede programar la purga automática.
+- **Riesgo/punto probable de fallo:** tratar la auditoría como suficiente y abrir el
+  cobro sin revisión externa. Tres afirmaciones publicadas son hoy incorrectas y
+  corregirlas es previo a cualquier cliente de pago.
+- **Diagnóstico y rollback:** el documento es autónomo; borrarlo no afecta al
+  producto. Ningún archivo de `src/` se ha modificado, así que los hallazgos siguen
+  presentes en el código hasta que se decida corregirlos.
+- **Estado de publicación:** entregado como análisis. **No se ha tocado ningún texto
+  legal publicado:** cambiar la política de cookies, la lista de subencargados o
+  `/cumplimiento` es una decisión del founder, y `/cumplimiento` además depende de la
+  decisión abierta sobre el alcance Veri\*Factu.
+
+## 2026-09-03 — forma jurídica, requisitos legales y camino al primer euro
+
+- **Autor/agente:** Claude.
+- **Objetivo:** responder a tres preguntas del founder en un solo documento: si
+  conviene S.L. o autónomo de cara a los permisos de Meta, qué hace falta legalmente
+  desde la constitución, y cuál es el camino crítico real hasta el primer cobro.
+- **Áreas y archivos:** documentación de negocio; `docs/Constitucion-y-primer-euro.md`
+  (nuevo), enlace en `docs/Inicio.md` y tres preguntas nuevas en
+  `docs/Preguntas-abiertas.md`. Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental).
+- **Dependencias o validaciones externas:** **todo el contenido fiscal, mercantil y
+  de protección de datos debe confirmarse con una gestoría y un abogado antes de
+  firmar o publicar nada.** Importes, plazos, epígrafes de IAE y requisitos de
+  verificación de Meta son orientativos y cambian. El documento señala además una
+  obligación no recogida hasta ahora: Noesis es *productor* de un sistema informático
+  de facturación y como tal le aplica el RD 1007/2023 antes que a sus clientes.
+- **Riesgo/punto probable de fallo:** tomar los importes o los plazos del documento
+  como definitivos, o iniciar la verificación de empresa en Meta con un nombre que no
+  coincida carácter a carácter con la escritura; un rechazo reinicia el reloj.
+- **Diagnóstico y rollback:** el documento es autónomo; borrarlo no afecta a nada del
+  producto ni de las pruebas.
+- **Estado de publicación:** documento entregado. Ninguna decisión tomada todavía:
+  las tres que bloquean el plan están en `docs/Preguntas-abiertas.md`.
+
+## 2026-09-01 — plan de contenido de 60 días para redes
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dar al founder un calendario y unos guiones listos para grabar que
+  conviertan la estrategia comercial en publicaciones concretas, alternando
+  contenido informativo del sector con contenido de producto.
+- **Áreas y archivos:** documentación de marketing;
+  `docs/Marketing-Calendario-60-dias.xlsx` y `docs/Marketing-Guiones-60-dias.docx`
+  (ambos nuevos). Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** ninguna del producto (cambio solo documental). Los dos
+  ficheros se han vuelto a abrir con `openpyxl` y `python-docx` para comprobar
+  hojas, número de filas, tablas y codificación.
+- **Dependencias o validaciones externas:** los guiones marcados con aviso contienen
+  afirmaciones fiscales y legales (IVA reducido en obra, retención de IRPF, Ley de
+  morosidad, Verifactu) que **deben verificarse en la AEAT o con un asesor el mismo
+  día de grabar**. El vídeo 26 no puede publicarse sin cifras reales del piloto y
+  permiso escrito del cliente. El vídeo 32 debe apoyarse en un fallo real de este
+  registro.
+- **Riesgo/punto probable de fallo:** publicar una fecha normativa o una cifra de
+  resultados sin verificar; sería el único error capaz de tirar la credibilidad de
+  los otros 33 vídeos.
+- **Diagnóstico y rollback:** los dos ficheros son autónomos; borrarlos no afecta a
+  nada del producto. El generador que los produjo no se ha añadido al repositorio
+  para no introducir `openpyxl` ni `python-docx` como dependencias.
+- **Estado de publicación:** documentos entregados, sin publicar todavía en ninguna
+  plataforma. La primera publicación prevista es el 7 de septiembre de 2026.
 
 ## 2026-08-31 — convierte la estrategia de contenido en un manual de producción
 
@@ -528,6 +692,87 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - Estado de publicación: local / commit / main / desplegado / validado real
 ```
 
+## 2026-09-01 12:00 — manuales de ruta legal, marketing y plan de 60 días
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dejar por escrito lo que falta para poder cobrar legalmente, consolidar
+  todo el marketing en un solo manual y ponerle fecha a ambas cosas.
+- **Áreas y archivos:** `docs/Ruta-legal.html/pdf`, `docs/Marketing-Noesis.html/pdf`,
+  `docs/Publicar-en-redes.html/pdf`, `docs/Plan-60-dias.html/pdf`,
+  `docs/Estado-Noesis.xlsx`, `scripts/build_estado_xlsx.py`, `docs/Inicio.md`.
+- **Cambios de datos/migración:** ninguno. Solo documentación.
+- **Pruebas ejecutadas:** ninguna nueva; no se toca código. La suite quedó en 577 con
+  el merge anterior.
+- **Hallazgos que cambian la planificación:**
+  - La obligación de Veri*Factu **del productor** está viva desde el 29-jul-2025; el
+    RDL 15/2025 solo aplazó la del usuario a 2027. `Fiscalidad.md` no separaba los dos
+    papeles.
+  - Remitir en nombre de clientes exige **convenio de colaboración social tipo 017** y
+    un modelo de representación **firmado por cada cliente**: aceptar las condiciones
+    del servicio no vale. Es una funcionalidad de onboarding que no existe.
+  - La **subsanación** de registros rechazados no está construida y sin ella no se
+    puede declarar conformidad completa del SIF.
+  - El **App Review** de Meta sí hace falta para los números comerciales, al contrario
+    de lo que dice la tabla del Camino A en `Meta-Verificacion`.
+  - El artículo 50 del Reglamento europeo de IA es aplicable desde el 2-ago-2026 y el
+    asistente no se identifica como máquina.
+  - Los oficios de la estrategia comercial y los catálogos del producto no coinciden.
+- **Dependencias o validaciones externas:** los apartados fiscales y de protección de
+  datos requieren revisión profesional antes de actuar sobre ellos.
+- **Riesgo/punto probable de fallo:** ninguno técnico. El riesgo es documental: si
+  `Marketing-Noesis` y `Estrategia-Marketing` conviven mucho tiempo, divergirán. El
+  maestro declara en su pie a cuál sustituye.
+- **Diagnóstico y rollback:** son documentos; se borran sin efecto sobre el producto.
+- **Estado de publicación:** local, pendiente de subir.
+
+## 2026-09-01 — fusión de la rama local con main tras 112 commits de divergencia
+
+- **Autor/agente:** Claude.
+- **Objetivo:** cerrar un `git merge origin/main` que había quedado a medias con
+  siete conflictos, e incorporar tres commits locales que llevaban un mes sin
+  subir: factura simplificada, catálogos por oficio y numeración heredada.
+- **Áreas y archivos:** `src/noesis/migrations.py`, `src/noesis/web/whatsapp.py`,
+  `src/noesis/whatsapp_templates.py`, `tests/test_trade_templates.py`,
+  `docs/project-state.json`, `docs/Mapa-codigo.md`, `docs/Tareas-vivas.md`,
+  `docs/Registro-cambios.md`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** **esquema 53**. La migración local
+  `material_o_mano_de_obra` chocaba en el número 40 con `demo_comercial` del
+  remoto; se renumera a **53**, detrás de `documentos_por_correo`. Sin esa
+  renumeración la columna `kind` no se habría creado nunca sobre una base ya en 52.
+- **Cómo se resolvió cada conflicto:**
+  - `migrations.py`: se conservan las 40-52 del remoto y la local pasa a 53.
+  - `whatsapp.py`: gana `sanitize_template_param` del remoto, que convierte los
+    saltos en un separador visible en vez de aplastarlos. Se retira el
+    `template_param` local por duplicado, pero se le aporta lo único que no
+    tenía: el tope de 1024 caracteres del parámetro de Meta. Se conservan
+    `MetaRejected` y la retirada de `send_payment_reminder`.
+  - `whatsapp_templates.py`: reescrito como **espejo** del runbook
+    `WhatsApp-Puesta-en-marcha` en lugar de proponer cuerpos distintos. Tener dos
+    fuentes de verdad sobre qué pegar en WhatsApp Manager era peor que no tener
+    ninguna. Ahora `python -m noesis.whatsapp_templates` confirma que los nueve
+    envíos encajan.
+  - `project-state.json`: base del remoto más las seis capacidades locales; dos
+    reescritas porque afirmaban que los cinco proactivos seguían rotos y el
+    remoto ya los arregló el 20-ago.
+  - Las dos bitácoras: entradas fusionadas por fecha, no concatenadas. 51+2 y
+    52+1, sin perder ninguna.
+  - `Tareas-vivas.md`: base del remoto más tres tareas nuevas; se descartan las
+    locales que el remoto ya resolvió.
+- **Pruebas ejecutadas:** suite completa **577 pasan, 132 subtests**. Ruff verde.
+  Fuente de verdad verde. Quedan **5 fallos que ya existían en `origin/main`
+  limpio**, comprobado en un árbol de trabajo aparte: cuatro de
+  `test_month_billing_separates_cash_flow_from_invoice_cohort`, que dependen de la
+  fecha del sistema, y uno de rasterización de PDF, que necesita dependencias de
+  OCR no instaladas en este equipo. **La fusión no introduce ninguna regresión.**
+- **Dependencias o validaciones externas:** ninguna nueva.
+- **Riesgo/punto probable de fallo:** la renumeración de la migración. Una base
+  que ya estuviera en 53 por otra vía quedaría descuadrada; producción está en 52,
+  así que aplicará la 53 al desplegar. Verificar `/ready` después.
+- **Diagnóstico y rollback:** la rama `respaldo-pre-merge` conserva el estado
+  anterior a la fusión. `python -m noesis.whatsapp_templates` y
+  `pytest tests/test_trade_templates.py` cubren lo tocado.
+- **Estado de publicación:** local, pendiente de subir.
+
 ## 2026-08-22 — dos manuales de diagnostico
 
 - **Autor/agente:** Claude.
@@ -800,6 +1045,41 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Diagnostico y rollback:** cambio de texto; revertir el commit restaura las
   etiquetas anteriores.
 - **Estado de publicacion:** local / commit en `main`.
+
+## 2026-08-20 — revisión del canal de Meta y espacio para las plantillas por oficio
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dos encargos del founder. Revisar entero el canal de Meta antes de
+  encenderlo, y dar pantalla propia a los catálogos por oficio, que existían en
+  código y en dos endpoints pero no se veían por ningún sitio.
+- **Áreas y archivos:** `src/noesis/whatsapp_templates.py` (nuevo),
+  `src/noesis/web/whatsapp.py` (`template_param`, `MetaRejected`, retirada de
+  `send_payment_reminder`), `src/noesis/trades.py` (`suggest_trade`,
+  `catalog_overview`), `src/noesis/web/routers/invoicing.py` (endpoint del detalle),
+  `src/noesis/web/routers/pages.py` y `templates/base.html` (alta de la página),
+  `templates/oficios.html` (nueva), `tests/test_trade_templates.py` (nuevo),
+  `scripts/build_estado_xlsx.py` (nuevo), `docs/Revision-Meta.md` (nuevo),
+  `docs/Estado-Noesis.xlsx` (nuevo), `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno. Los catálogos siguen en código.
+- **Pruebas ejecutadas:** suite completa **437 pasan, 85 subtests, 0 fallos**. Ruff
+  verde. Ocho pruebas nuevas cubren la adivinación del oficio, el IVA por partida,
+  la no duplicación al cargar dos veces, el aislamiento entre negocios, la página y
+  su API, y el contrato de las nueve plantillas de Meta.
+- **Dependencias o validaciones externas:** el bloqueo de los cinco proactivos al
+  titular **no se ha arreglado**: repartir el texto en huecos cambia la redacción
+  que recibe el founder cada mañana y esa decisión es suya. Los cuerpos aprobables
+  ya están escritos y `python -m noesis.whatsapp_templates` señala qué falta.
+- **Riesgo/punto probable de fallo:** `template_param` aplana saltos de línea, así
+  que un proactivo que hoy manda el mensaje entero en un hueco llegará como un
+  párrafo corrido en lugar de fallar. Es un mal menor y transitorio: esas cinco
+  plantillas no son aprobables todavía, de modo que nada empeora en producción.
+- **Diagnóstico y rollback:** `pytest tests/test_trade_templates.py`. La página se
+  desactiva quitando `oficios` de `_PAGES`; el saneado, retirando la llamada en
+  `queue_template`. Nada de esto toca datos.
+- **Aparte:** `Registro-cambios.md` y `Registro-QA.md` tenían marcadores de conflicto
+  de Git **commiteados** desde `d32ff10`. Resueltos conservando ambos lados en orden
+  cronológico; no se ha perdido ninguna entrada.
+- **Estado de publicación:** local sobre `main`, pendiente de subir.
 
 ## 2026-08-19 — control de acceso por persona y guia de permisos
 
@@ -1168,6 +1448,35 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   verde. Baseline corregido para repetir el guardián completo; recrawl de Google
   pendiente.
 
+## 2026-08-12 12:00 — editor documental con pie gráfico versionado
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir que cada negocio adapte sus facturas e incluya distintivos
+  obligatorios de ayudas o certificaciones sin convertir el documento fiscal en un
+  lienzo libre ni alterar facturas ya emitidas.
+- **Áreas y archivos:** migración 48, perfiles visuales y emisión en `db.py`, carga
+  saneada en cuenta, PDF de factura/presupuesto/muestra, Ajustes responsive, pruebas
+  y documentación viva.
+- **Cambios de datos/migración:** añade pie gráfico y opciones a `businesses`, tabla
+  `document_profiles` por versión y referencia multiempresa inmutable desde
+  `invoices`; el histórico recibe una versión común por negocio sin duplicar imagen
+  en cada fila.
+- **Pruebas ejecutadas:** 3 nuevas, 485 completas y ciclo 0 → 48 → 0 → 48 verdes;
+  Ruff, Bandit, detección de secretos y diff verdes. El primer pase completo detectó
+  el orden ambiguo del índice compuesto PostgreSQL; se corrigió y el segundo pasó.
+  Humo PostgreSQL real pendiente de CI.
+- **Dependencias o validaciones externas:** ninguna API. Falta probar en escritorio
+  y móvil con el distintivo real del founder.
+- **Riesgo/punto probable de fallo:** imágenes desproporcionadas o antiguas; se
+  validan bytes/píxeles, se recomprimen sin metadatos y el PDF limita altura, salta
+  de página y degrada sin romper si un perfil histórico estuviera dañado.
+- **Diagnóstico y rollback:** revisar `document_branding_updated`, última versión en
+  `document_profiles`, `invoices.document_profile_id` y el PDF de muestra. Revertir
+  la interfaz conserva perfiles; no retirar imágenes referenciadas por emitidas.
+- **Estado de publicación:** commit `c30321c` en `main`, CI completo y humo
+  PostgreSQL verdes; producción confirma el release y el esquema 48. Pendiente solo
+  recorrido visual con el distintivo real del founder.
+
 ## 2026-08-12 — alta recuperable y preparada para el primer resultado
 
 - **Autor/agente:** Codex.
@@ -1192,6 +1501,90 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Estado de publicación:** `main`, CI completo y humo PostgreSQL verdes;
   producción confirma release `8730826a79ab` y esquema 49. Recorrido visual y
   proveedores reales pendientes.
+
+## 2026-08-11 12:00 — configuración reversible con permiso de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** resolver errores de configuración durante onboarding/soporte sin
+  abrir acceso a fiscalidad, dinero, suscripción, integraciones o identidad.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración; reutiliza columnas y autorización
+  temporal existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 22 del centro administrativo, 4
+  focalizadas y suite completa **473/473** verde en 384 s; Ruff y verdad documental
+  verdes.
+- **Dependencias o validaciones externas:** CI
+  [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
+  completo; producción verificada en release `6a879b2b1153`, esquema 47 y HTTP 200
+  en `/health` y `/ready`. Falta recorrido visual con una cuenta y autorización
+  reales.
+- **Riesgo/punto probable de fallo:** un formulario parcial no debe inventar valores;
+  equipo y objetivo son obligatorios y muestran un estado sin seleccionar si faltan.
+  Permiso, administrador y caducidad se comprueban en la transacción.
+- **Diagnóstico y rollback:** buscar `admin.support_configuration_updated`,
+  `grant_id`, `changed_fields` y estados before/after seudonimizados. Revertir el
+  bloque devuelve ese alcance a solo lectura sin afectar otras funciones.
+- **Estado de publicación:** commit `6a879b2b1153` en `main`, CI verde y desplegado
+  y verificado en producción.
+
+## 2026-08-11 11:25 — primera corrección segura del centro de soporte
+
+- **Autor/agente:** Codex.
+- **Objetivo:** permitir resolver errores de organización documental sin acceder
+  como el cliente ni crear un editor administrativo universal.
+- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
+  responsive, pruebas y documentación viva.
+- **Cambios de datos/migración:** sin migración. Reutiliza la autorización temporal
+  del esquema 43 y las columnas documentales existentes.
+- **Pruebas ejecutadas:** 2 pruebas nuevas, 25 pruebas focalizadas y suite completa
+  **471/471** verde en 340 s; Ruff, verdad documental y `git diff --check` verdes.
+- **Dependencias o validaciones externas:** ninguna credencial ni proveedor. Falta
+  recorrido visual con un titular que abra el alcance documental y un caso real.
+- **Riesgo/punto probable de fallo:** formularios con carteras muy grandes y
+  caducidad/revocación durante una intervención. La escritura revalida alcance e
+  IDs en su misma transacción y falla cerrada.
+- **Diagnóstico y rollback:** buscar
+  `admin.support_document_metadata_updated`, `grant_id`, `item_id` y
+  `changed_fields` en la bitácora. Revertir el bloque devuelve el centro a solo
+  lectura sin deshacer documentos ya corregidos.
+- **Estado de publicación:** `bf2df0d` en `main`; CI 31475120052 completo y humo
+  PostgreSQL verdes. Producción responde release `bf2df0d7afe5`, esquema 47 y
+  `/health`/`/ready` 200. Falta recorrido visual real.
+
+## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
+
+- **Autor/agente:** Codex.
+- **Objetivo:** corregir la falsa agrupación de la demo y convertir Documentos en
+  un archivo comprensible y cómodo desde móvil sin duplicar el motor existente.
+- **Áreas y archivos:** sembrado comercial, pantalla/CSS de Documentos, prueba de
+  demo/OCR, CI y documentación compartida de producto y WhatsApp.
+- **Cambios de datos/migración:** sin migración. Al ejecutar la siembra explícita,
+  seis archivos ficticios se crean o reparan por nombre de forma idempotente y se
+  distribuyen en ingresos, gastos, tickets, pendientes y otros.
+- **Pruebas ejecutadas:** 23 pruebas focalizadas verdes de demo, OCR, archivo,
+  facturas recibidas, deduplicación, aislamiento y navegación; suite completa
+  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes. El primer CI
+  pasó dependencias, secretos, seguridad, estática, verdad y humo PostgreSQL, pero
+  canceló la suite sana al alcanzar el límite histórico de 15 minutos. Se amplía a
+  25 para cubrir pruebas y ciclo de migraciones sin esconder un bloqueo ilimitado.
+  El segundo CI pidió actualizar únicamente las tres líneas desplazadas de secretos
+  de prueba ya conocidos en `.secrets.baseline`; no apareció hash ni hallazgo nuevo.
+- **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
+  reparación de la demo publicada exige una ejecución explícita con
+  `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
+  el navegador gráfico provoca cierres de la aplicación; se verificó la captura
+  aportada y la estructura renderizada mediante TestClient.
+- **Riesgo/punto probable de fallo:** CSS responsive, selector de cámara y modal de
+  vista previa son los puntos a recorrer en un teléfono real. Las facturas ambiguas
+  continúan pendientes por diseño y no se fuerzan a ingreso o gasto.
+- **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
+  petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
+  altera documentos; revertir la reparación conserva los tipos ya corregidos.
+- **Estado de publicación:** funcionalidad `065f8bb`, límite CI `633dcf6` y baseline
+  `5bb715a` en `main`. CI 31470941717 completo y PostgreSQL verdes; producción
+  responde release `5bb715a68217`, esquema 47 y `/health`/`/ready` 200. Falta
+  revisión visual real y ejecutar una vez la reparación de la demo persistida.
 
 ## 2026-08-11 — calculadora por numero de clientes
 
@@ -1324,153 +1717,6 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `python analysis/build_modelo_economico.py`. Cambio solo documental.
 - **Estado de publicacion:** local / commit en `main`.
 
-## 2026-08-10 — runbook y explicación de WhatsApp, actualizados al modelo multicanal
-
-- **Autor/agente:** Claude.
-- **Objetivo:** el founder pidió entender el canal multicanal que construyó el socio y
-  dejar la documentación al día. Los dos documentos se escribieron primero sobre una
-  rama con 46 commits de retraso; se rehacen contra `main` y se trasladan aquí.
-- **Áreas y archivos:** solo documentación, ningún cambio en `src/`.
-  - `docs/WhatsApp-Como-funciona.html` + `.pdf` (nuevos): los dos canales, el enrutado
-    por receptor con sus tres salidas, las cuatro reglas de negocio (identidad única,
-    aportación pendiente, permisos cerrados por defecto, bandeja de equipo), el
-    recorrido de un coste, la matriz de quién ve qué y los límites deliberados.
-  - `docs/WhatsApp-Puesta-en-marcha.html` + `.pdf` (nuevos): runbook rehecho. Sustituye
-    la premisa antigua de «un único número para todos los negocios» por las dos clases
-    de número, añade la fase de alta de un número comercial desde administración
-    (`pending` -> probar -> `active`), la exigencia de que el usuario de sistema tenga
-    concedidos los activos de cada cliente, y una prueba de aceptación en dos bloques
-    con el aislamiento entre dos negocios.
-  - `docs/Inicio.md`: ambos entran en el mapa de contenido.
-- **Cambios de datos/migración:** ninguno.
-- **Pruebas ejecutadas:** ninguna ejecutable. Modelo verificado contra
-  `web/whatsapp.py` (`_handle_inbound`), `web/routers/whatsapp_business.py`, `db.py`
-  (`central_whatsapp_identity`, `resolve_worker_submission`) y la migración 45. HTML
-  comprobado sin etiquetas sin cerrar antes de imprimir cada PDF.
-- **Dependencias o validaciones externas:** las tareas de Meta siguen abiertas; los
-  documentos las ordenan, no las cierran.
-- **Riesgo/punto probable de fallo:** **hallazgo abierto y verificado hoy sobre
-  `main`.** Meta rechaza los parámetros de plantilla con saltos de línea, tabuladores
-  o más de cuatro espacios seguidos. `web/scheduler.py` sigue pasando
-  `"
-".join(lines)` como parámetro único en resumen diario, semanal, cierre, aviso
-  fiscal y aviso de cobros, y `_meta_payload()` no lo sanea. Los cinco proactivos
-  agotarán reintentos contra un número real; las pruebas no lo ven porque simulan Meta.
-- **Diagnóstico y rollback:** cambio solo documental.
-- **Estado de publicación:** local / commit en `main`.
-## 2026-08-12 12:00 — editor documental con pie gráfico versionado
-
-- **Autor/agente:** Codex.
-- **Objetivo:** permitir que cada negocio adapte sus facturas e incluya distintivos
-  obligatorios de ayudas o certificaciones sin convertir el documento fiscal en un
-  lienzo libre ni alterar facturas ya emitidas.
-- **Áreas y archivos:** migración 48, perfiles visuales y emisión en `db.py`, carga
-  saneada en cuenta, PDF de factura/presupuesto/muestra, Ajustes responsive, pruebas
-  y documentación viva.
-- **Cambios de datos/migración:** añade pie gráfico y opciones a `businesses`, tabla
-  `document_profiles` por versión y referencia multiempresa inmutable desde
-  `invoices`; el histórico recibe una versión común por negocio sin duplicar imagen
-  en cada fila.
-- **Pruebas ejecutadas:** 3 nuevas, 485 completas y ciclo 0 → 48 → 0 → 48 verdes;
-  Ruff, Bandit, detección de secretos y diff verdes. El primer pase completo detectó
-  el orden ambiguo del índice compuesto PostgreSQL; se corrigió y el segundo pasó.
-  Humo PostgreSQL real pendiente de CI.
-- **Dependencias o validaciones externas:** ninguna API. Falta probar en escritorio
-  y móvil con el distintivo real del founder.
-- **Riesgo/punto probable de fallo:** imágenes desproporcionadas o antiguas; se
-  validan bytes/píxeles, se recomprimen sin metadatos y el PDF limita altura, salta
-  de página y degrada sin romper si un perfil histórico estuviera dañado.
-- **Diagnóstico y rollback:** revisar `document_branding_updated`, última versión en
-  `document_profiles`, `invoices.document_profile_id` y el PDF de muestra. Revertir
-  la interfaz conserva perfiles; no retirar imágenes referenciadas por emitidas.
-- **Estado de publicación:** commit `c30321c` en `main`, CI completo y humo
-  PostgreSQL verdes; producción confirma el release y el esquema 48. Pendiente solo
-  recorrido visual con el distintivo real del founder.
-
-## 2026-08-11 12:00 — configuración reversible con permiso de soporte
-
-- **Autor/agente:** Codex.
-- **Objetivo:** resolver errores de configuración durante onboarding/soporte sin
-  abrir acceso a fiscalidad, dinero, suscripción, integraciones o identidad.
-- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
-  responsive, pruebas y documentación viva.
-- **Cambios de datos/migración:** sin migración; reutiliza columnas y autorización
-  temporal existentes.
-- **Pruebas ejecutadas:** 2 pruebas nuevas, 22 del centro administrativo, 4
-  focalizadas y suite completa **473/473** verde en 384 s; Ruff y verdad documental
-  verdes.
-- **Dependencias o validaciones externas:** CI
-  [31478332206](https://github.com/noesisstudio/noesis/actions/runs/31478332206)
-  completo; producción verificada en release `6a879b2b1153`, esquema 47 y HTTP 200
-  en `/health` y `/ready`. Falta recorrido visual con una cuenta y autorización
-  reales.
-- **Riesgo/punto probable de fallo:** un formulario parcial no debe inventar valores;
-  equipo y objetivo son obligatorios y muestran un estado sin seleccionar si faltan.
-  Permiso, administrador y caducidad se comprueban en la transacción.
-- **Diagnóstico y rollback:** buscar `admin.support_configuration_updated`,
-  `grant_id`, `changed_fields` y estados before/after seudonimizados. Revertir el
-  bloque devuelve ese alcance a solo lectura sin afectar otras funciones.
-- **Estado de publicación:** commit `6a879b2b1153` en `main`, CI verde y desplegado
-  y verificado en producción.
-
-## 2026-08-11 11:25 — primera corrección segura del centro de soporte
-
-- **Autor/agente:** Codex.
-- **Objetivo:** permitir resolver errores de organización documental sin acceder
-  como el cliente ni crear un editor administrativo universal.
-- **Áreas y archivos:** DB y auditoría de soporte, router/pantalla administrativa,
-  responsive, pruebas y documentación viva.
-- **Cambios de datos/migración:** sin migración. Reutiliza la autorización temporal
-  del esquema 43 y las columnas documentales existentes.
-- **Pruebas ejecutadas:** 2 pruebas nuevas, 25 pruebas focalizadas y suite completa
-  **471/471** verde en 340 s; Ruff, verdad documental y `git diff --check` verdes.
-- **Dependencias o validaciones externas:** ninguna credencial ni proveedor. Falta
-  recorrido visual con un titular que abra el alcance documental y un caso real.
-- **Riesgo/punto probable de fallo:** formularios con carteras muy grandes y
-  caducidad/revocación durante una intervención. La escritura revalida alcance e
-  IDs en su misma transacción y falla cerrada.
-- **Diagnóstico y rollback:** buscar
-  `admin.support_document_metadata_updated`, `grant_id`, `item_id` y
-  `changed_fields` en la bitácora. Revertir el bloque devuelve el centro a solo
-  lectura sin deshacer documentos ya corregidos.
-- **Estado de publicación:** `bf2df0d` en `main`; CI 31475120052 completo y humo
-  PostgreSQL verdes. Producción responde release `bf2df0d7afe5`, esquema 47 y
-  `/health`/`/ready` 200. Falta recorrido visual real.
-
-## 2026-08-11 09:26 — archivo documental claro y demo bien clasificada
-
-- **Autor/agente:** Codex.
-- **Objetivo:** corregir la falsa agrupación de la demo y convertir Documentos en
-  un archivo comprensible y cómodo desde móvil sin duplicar el motor existente.
-- **Áreas y archivos:** sembrado comercial, pantalla/CSS de Documentos, prueba de
-  demo/OCR, CI y documentación compartida de producto y WhatsApp.
-- **Cambios de datos/migración:** sin migración. Al ejecutar la siembra explícita,
-  seis archivos ficticios se crean o reparan por nombre de forma idempotente y se
-  distribuyen en ingresos, gastos, tickets, pendientes y otros.
-- **Pruebas ejecutadas:** 23 pruebas focalizadas verdes de demo, OCR, archivo,
-  facturas recibidas, deduplicación, aislamiento y navegación; suite completa
-  **469/469** verde en 344 s. Ruff, verdad documental y diff verdes. El primer CI
-  pasó dependencias, secretos, seguridad, estática, verdad y humo PostgreSQL, pero
-  canceló la suite sana al alcanzar el límite histórico de 15 minutos. Se amplía a
-  25 para cubrir pruebas y ciclo de migraciones sin esconder un bloqueo ilimitado.
-  El segundo CI pidió actualizar únicamente las tres líneas desplazadas de secretos
-  de prueba ya conocidos en `.secrets.baseline`; no apareció hash ni hallazgo nuevo.
-- **Dependencias o validaciones externas:** no añade proveedor ni credencial. La
-  reparación de la demo publicada exige una ejecución explícita con
-  `NOESIS_SEED_DEMO=true`. Revisión visual no ejecutada porque el founder indicó que
-  el navegador gráfico provoca cierres de la aplicación; se verificó la captura
-  aportada y la estructura renderizada mediante TestClient.
-- **Riesgo/punto probable de fallo:** CSS responsive, selector de cámara y modal de
-  vista previa son los puntos a recorrer en un teléfono real. Las facturas ambiguas
-  continúan pendientes por diseño y no se fuerzan a ingreso o gasto.
-- **Diagnóstico y rollback:** revisar `document_counts`, `kind` por nombre demo,
-  petición `/document-archive` y consola del navegador. Revertir plantilla/CSS no
-  altera documentos; revertir la reparación conserva los tipos ya corregidos.
-- **Estado de publicación:** funcionalidad `065f8bb`, límite CI `633dcf6` y baseline
-  `5bb715a` en `main`. CI 31470941717 completo y PostgreSQL verdes; producción
-  responde release `5bb715a68217`, esquema 47 y `/health`/`/ready` 200. Falta
-  revisión visual real y ejecutar una vez la reparación de la demo persistida.
-
 ## 2026-08-10 21:15 — segundo factor para la cartera profesional
 
 - **Autor/agente:** Codex.
@@ -1565,6 +1811,40 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   y producción verificada con release `a803da4343e6`, `/ready` y esquema 45. La
   validación extremo a extremo con Meta real permanece pendiente.
 
+## 2026-08-10 — runbook y explicación de WhatsApp, actualizados al modelo multicanal
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidió entender el canal multicanal que construyó el socio y
+  dejar la documentación al día. Los dos documentos se escribieron primero sobre una
+  rama con 46 commits de retraso; se rehacen contra `main` y se trasladan aquí.
+- **Áreas y archivos:** solo documentación, ningún cambio en `src/`.
+  - `docs/WhatsApp-Como-funciona.html` + `.pdf` (nuevos): los dos canales, el enrutado
+    por receptor con sus tres salidas, las cuatro reglas de negocio (identidad única,
+    aportación pendiente, permisos cerrados por defecto, bandeja de equipo), el
+    recorrido de un coste, la matriz de quién ve qué y los límites deliberados.
+  - `docs/WhatsApp-Puesta-en-marcha.html` + `.pdf` (nuevos): runbook rehecho. Sustituye
+    la premisa antigua de «un único número para todos los negocios» por las dos clases
+    de número, añade la fase de alta de un número comercial desde administración
+    (`pending` -> probar -> `active`), la exigencia de que el usuario de sistema tenga
+    concedidos los activos de cada cliente, y una prueba de aceptación en dos bloques
+    con el aislamiento entre dos negocios.
+  - `docs/Inicio.md`: ambos entran en el mapa de contenido.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** ninguna ejecutable. Modelo verificado contra
+  `web/whatsapp.py` (`_handle_inbound`), `web/routers/whatsapp_business.py`, `db.py`
+  (`central_whatsapp_identity`, `resolve_worker_submission`) y la migración 45. HTML
+  comprobado sin etiquetas sin cerrar antes de imprimir cada PDF.
+- **Dependencias o validaciones externas:** las tareas de Meta siguen abiertas; los
+  documentos las ordenan, no las cierran.
+- **Riesgo/punto probable de fallo:** **hallazgo abierto y verificado hoy sobre
+  `main`.** Meta rechaza los parámetros de plantilla con saltos de línea, tabuladores
+  o más de cuatro espacios seguidos. `web/scheduler.py` sigue pasando
+  `"
+".join(lines)` como parámetro único en resumen diario, semanal, cierre, aviso
+  fiscal y aviso de cobros, y `_meta_payload()` no lo sanea. Los cinco proactivos
+  agotarán reintentos contra un número real; las pruebas no lo ven porque simulan Meta.
+- **Diagnóstico y rollback:** cambio solo documental.
+- **Estado de publicación:** local / commit en `main`.
 ## 2026-08-08 21:05 — soporte temporal, CFO real y términos reforzados
 
 - **Autor/agente:** Codex.
@@ -1825,6 +2105,29 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   autenticación, cartera y cierre de sesión; pendiente solo inspección visual. Las
   actualizaciones documentales quedan en los commits de verificación posteriores.
 
+## 2026-08-06 21:00 — continuar la numeración que el autónomo traía de otro programa
+
+- **Autor/agente:** Claude.
+- **Objetivo:** quien llega desde Holded, Quipu o una plantilla ya lleva facturas
+  emitidas del ejercicio. Noesis empezaba siempre en el 1 y habría repetido números
+  dentro del mismo año y la misma serie. Era un bloqueo de venta para el cliente que
+  más interesa: el que ya factura.
+- **Áreas y archivos:** `src/noesis/db.py` (`set_series_next_number` y `_series_prefix`),
+  `src/noesis/web/routers/invoicing.py` (ruta nueva), `tests/test_backend.py`,
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno nuevo. Este commit **renumera a 40** la
+  migración `material_o_mano_de_obra`, que en local era la 38 y chocaba con la 38
+  `huellas_documentales` ya desplegada.
+- **Pruebas ejecutadas:** suite completa **429 pasan, 76 subtests, 0 fallos**. Verificado
+  a mano: sin ajustar emite `2026/0001`; declarando 88 emite `2026/0088` y sigue en
+  `2026/0089`; retroceder por debajo de lo emitido se rechaza con el motivo.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** solo se permite avanzar. Si alguien informa de que
+  no puede fijar un número, será porque ya hay una factura emitida igual o superior en
+  ese prefijo; el mensaje lo dice.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k "series_can_continue or
+  never_go_back"`. Revertir es quitar la función y su ruta; no hay dato que migrar.
+- **Estado de publicación:** commit local, pendiente de subir.
 ## 2026-08-06 19:42 — excepción explícita para la clave pública de demo
 
 - **Autor/agente:** Codex.
@@ -2055,6 +2358,59 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   revisar `email.available()` y el payload de `checkout/sessions`. El cambio no altera
   tablas ni datos y puede revertirse por adaptador.
 - **Estado de publicación:** local sobre `main`, validado y pendiente de push.
+## 2026-08-02 21:30 — catálogos por oficio y aviso del 40% en obras de vivienda
+
+- **Autor/agente:** Claude.
+- **Objetivo:** que la puesta en marcha deje de teclear el catálogo cliente a cliente, y
+  avisar del error fiscal más fácil de cometer en reformas: el tipo reducido del 10%
+  decae si el material supera el 40% de la base (art. 91.Uno.2.10º LIVA) y entonces la
+  obra tributa entera al 21%.
+- **Áreas y archivos:** `src/noesis/migrations.py` (migración 38), `src/noesis/db.py`
+  (`kind` en líneas y sus cuatro inserciones), `src/noesis/trades.py` (nuevo: catálogos
+  y regla), `src/noesis/tools.py` y `src/noesis/nlu.py` (el aviso llega al chat),
+  `src/noesis/web/routers/invoicing.py` (dos rutas y `aviso_fiscal`),
+  `tests/test_backend.py`, `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** **esquema 38**. `invoice_lines` gana `kind` con valor
+  'servicio' por defecto; lo ya emitido no se reinterpreta.
+- **Pruebas ejecutadas:** suite completa **408 pasan, 71 subtests, 0 fallos**. Con
+  servidor real: carga de catálogo por API, aviso al 60% de material, silencio al 28,6%
+  y con factura al 21%, y emisión efectiva pese al aviso.
+- **Dependencias o validaciones externas:** **la regla del 40% necesita revisión de
+  asesoría fiscal** antes de venderse como garantía. Falta ejecutar la migración 38 en
+  PostgreSQL.
+- **Riesgo/punto probable de fallo:** el aviso depende de que las líneas estén marcadas
+  como material. Una factura escrita a mano sin marcar nada cuenta como mano de obra y
+  no avisará: es un falso negativo consciente, preferible a alarmar sin motivo.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k "trade_catalog or
+  reduced_rate"`. Para desactivar solo el aviso basta con que `reduced_rate_warning`
+  devuelva `None`; la migración puede quedarse sin efecto secundario.
+- **Estado de publicación:** commit local, pendiente de subir.
+
+## 2026-08-02 20:10 — el error de emisión ofrece la factura simplificada cuando es legal
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el fundador se topó con «Antes de emitir completa: NIF del cliente,
+  domicilio del cliente» y no sabía que existía una salida. Si el destinatario es un
+  particular y el total cabe en el límite general de 400 € (RD 1619/2012), la factura
+  simplificada es legal y el producto ya la soporta; solo faltaba decirlo.
+- **Áreas y archivos:** `src/noesis/db.py` (aviso condicionado y
+  `_fits_simplified_invoice` como fuente única del límite), `src/noesis/tools.py`
+  (usa el mismo ayudante), `tests/test_backend.py` (dos pruebas nuevas),
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** suite completa **400 pasan, 71 subtests, 0 fallos**. Además,
+  con servidor real: aviso con 150 € (sugiere) y con 900 € (no sugiere), ciclo completo
+  de simplificada emitida sin datos del destinatario con serie `T2026/0001`, y rechazo
+  al crear un ticket de 900 €.
+- **Dependencias o validaciones externas:** el límite de 400 € es el general; hay
+  supuestos sectoriales de 3.000 €. **Conviene confirmarlo con la asesoría fiscal**
+  antes de ofrecerlo a sectores con ese régimen.
+- **Riesgo/punto probable de fallo:** el aviso solo aparece si lo único que falta son
+  los datos del destinatario. Si alguien informa de que no lo ve, comprobar que no
+  falte además el NIF o el domicilio del propio negocio.
+- **Diagnóstico y rollback:** `pytest tests/test_backend.py -k simplified`. Revertir es
+  devolver el `raise ValueError` original en `issue_invoice`.
+- **Estado de publicación:** commit local, pendiente de subir.
 
 ## 2026-08-02 18:40 — el chat web emite el borrador, y la voz del plan Sin Límites deja de prometerse como activa
 

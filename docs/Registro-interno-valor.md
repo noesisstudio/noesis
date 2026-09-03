@@ -1,6 +1,6 @@
 # Registro interno de valor, WUB y confianza observada
 
-> **Estado:** candidato implementado en esquema 53; no desplegado ni visible para
+> **Estado:** candidato implementado en esquema 54; no desplegado ni visible para
 > clientes. La auditoría administrativa está apagada por defecto.
 
 ## Propósito y frontera
@@ -16,7 +16,7 @@ ninguna IA decide qué cuenta, calcula WUB o atribuye un resultado.
 
 ## Modelo de datos
 
-El esquema 53 añade, siempre filtrado por `business_id`:
+El esquema 54 añade, siempre filtrado por `business_id`:
 
 - `useful_actions`: acción terminal, proceso, origen, canal, modalidad de
   confirmación, estado, entidad, idempotencia y el booleano auditable
@@ -117,7 +117,7 @@ pendientes, `attention`. No se muestra aún al cliente.
 - `NOESIS_VALUE_LEDGER_ENABLED=false` es el valor por defecto y mantiene apagadas
   Useful Actions, Useful Outcomes y las métricas nuevas. La auditoría histórica en
   `assistant_actions` continúa escribiéndose; solo omite los cuatro campos de Trust
-  añadidos por el esquema 53. Activarlo no cambia permisos ni flujos.
+  añadidos por el esquema 54. Activarlo no cambia permisos ni flujos.
 - `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false` mantiene oculto el endpoint interno
   `/admin/value-ledger`; al activarlo sigue exigiendo administrador y registra el
   acceso en la bitácora de seguridad.
@@ -128,25 +128,25 @@ pendientes, `attention`. No se muestra aún al cliente.
 
 ## Rollback
 
-La combinación `código 53 + esquema 52` **no está soportada**: el código 53 conoce
-columnas nuevas de `assistant_actions` que PostgreSQL elimina al bajar a 52. La
+La combinación `código 54 + esquema 53` **no está soportada**: el código 54 conoce
+columnas nuevas de `assistant_actions` que PostgreSQL elimina al bajar a 53. La
 secuencia segura es obligatoria:
 
 1. Poner `NOESIS_VALUE_LEDGER_ENABLED=false` y comprobar que cesan las escrituras
    nuevas del ledger sin perder la auditoría preexistente.
-2. Volver al código anterior manteniendo inicialmente la base en esquema 53.
+2. Volver al código anterior manteniendo inicialmente la base en esquema 54.
 3. Validar con ese código los flujos principales de facturación, clientes, cobros,
    agenda, documentos, presupuestos, WhatsApp y auditoría.
-4. Solo después, si se necesita rollback completo, ejecutar el downgrade 53→52.
+4. Solo después, si se necesita rollback completo, ejecutar el downgrade 54→53.
 
-Nunca se baja la base a 52 mientras código 53 pueda seguir sirviendo tráfico.
+Nunca se baja la base a 53 mientras código 54 pueda seguir sirviendo tráfico.
 PostgreSQL elimina las columnas aditivas únicamente en el paso 4. SQLite conserva
 columnas inertes para no reconstruir tablas críticas. La prueba local ejecutada con
-el código base `294ce375` sobre esquema 53 cubre negocio, cliente, trabajo, cierre,
+el código base anterior al ledger sobre esquema 54 cubre negocio, cliente, trabajo, cierre,
 factura, cobro, presupuesto y `assistant_actions`.
 
 El primer despliegue es opt-in: preparar `NOESIS_VALUE_LEDGER_ENABLED=false` y
-`NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`, migrar 52→53 en un entorno PostgreSQL no
+`NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`, migrar 53→54 en un entorno PostgreSQL no
 productivo, ejecutar smoke, comprobar el producto, activar después el ledger y
 reconciliar los datos piloto. Solo entonces se considera una activación gradual.
 Antes se exige suite completa, rollback seguro y revisión de índices. Ninguna
