@@ -80,6 +80,34 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — revisión de los siete frentes abiertos
+
+- **Autor/agente:** Claude, a petición del founder.
+- **Objetivo:** reunir en un solo documento lo que hoy no funciona del todo —voz, copias,
+  RGPD, teléfono del cliente, latencia, permisos de administración y Cal.com—, con la
+  causa verificada de cada cosa y qué hacer, más una revisión de código.
+- **Áreas y archivos:** `docs/Frentes-abiertos.html` (nuevo). Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** ninguna del producto; es documentación. Todo lo afirmado se
+  contrastó contra el código o contra producción antes de escribirlo.
+- **Correcciones a documentos anteriores.** Dos afirmaciones de los informes de RGPD ya no
+  son ciertas y el documento lo dice: (1) **el iframe de Cal.com ya no existe** y la CSP es
+  `frame-src 'none'` en todas las páginas, así que el hallazgo A2 está cerrado; (2) los
+  proveedores sí se declaran solos —verificado en vivo: al configurar `ANTHROPIC_API_KEY`
+  su fila apareció en `/privacidad` sin tocar ningún texto.
+- **Hallazgos nuevos de la revisión:** `whatsapp.py` usa el `kind` crudo de la propuesta en
+  vez de `applied_kind`, así que con confianza baja el móvil ofrece registrar una factura
+  que la web guarda como documento sin clasificar; el patrón `except Exception` que devuelve
+  la heurística sigue en extracción de gastos y borrador de factura, donde un fallo de la IA
+  es indistinguible de una duda; el asistente no ve los documentos de la conversación; y la
+  batería tarda 38 minutos, que es la razón real por la que no se ejecuta antes de publicar.
+- **Dependencias o validaciones externas:** el documento fija cinco preguntas concretas para
+  el abogado y la lista de DPA por archivar.
+- **Riesgo/punto probable de fallo:** ninguno; no toca producción.
+- **Diagnóstico y rollback:** borrar el archivo revierte el cambio entero.
+- **Estado de publicación:** publicado también como artefacto para poder consultarlo fuera
+  del repositorio. La fuente sigue siendo este archivo.
+
 ## 2026-09-04 — un PDF con varias facturas dejaba de clasificarse
 
 - **Autor/agente:** Claude, siguiendo la prueba real del founder.

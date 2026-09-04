@@ -1,0 +1,933 @@
+<title>Frentes abiertos de Noesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Paleta y tipografía de docs/design/STYLE_TOKENS.json. No se inventan colores. */
+  :root{
+    --canvas:#f4f1ea; --surface:#ffffff; --surface-2:#faf8f3;
+    --border:#e2ded3; --border-strong:#d3cec1;
+    --ink:#15211c; --muted:#5d6b66; --faint:#8d968f;
+    --brand:#14463b; --brand-2:#2e8b74; --brand-soft:#e4efe9;
+    --green:#1f8a6d; --green-soft:#e2f1ea;
+    --amber:#b7831f; --amber-soft:#f5edd6;
+    --red:#c0533f;   --red-soft:#f7e8e3;
+    --shadow:0 1px 2px rgba(21,33,28,.05);
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --canvas:#111714; --surface:#18211d; --surface-2:#1e2823;
+      --border:#2b3631; --border-strong:#3a4741;
+      --ink:#e9e5da; --muted:#a1aea8; --faint:#7d8a84;
+      --brand:#4fae93; --brand-2:#6cc4aa; --brand-soft:#1d2f29;
+      --green:#5cb795; --green-soft:#182a24;
+      --amber:#d6a747; --amber-soft:#2e2716;
+      --red:#e0806c;   --red-soft:#331e1a;
+      --shadow:0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --canvas:#111714; --surface:#18211d; --surface-2:#1e2823;
+    --border:#2b3631; --border-strong:#3a4741;
+    --ink:#e9e5da; --muted:#a1aea8; --faint:#7d8a84;
+    --brand:#4fae93; --brand-2:#6cc4aa; --brand-soft:#1d2f29;
+    --green:#5cb795; --green-soft:#182a24;
+    --amber:#d6a747; --amber-soft:#2e2716;
+    --red:#e0806c;   --red-soft:#331e1a;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--canvas); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px}
+
+  /* ---------------------------------------------------------- cabecera --- */
+  header.top{border-bottom:1px solid var(--border); background:var(--surface)}
+  .top-in{padding:44px 0 34px; display:flex; flex-wrap:wrap; gap:32px; align-items:flex-end; justify-content:space-between}
+  .eyebrow{
+    font-size:11.5px; font-weight:600; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--brand-2); margin:0 0 12px;
+  }
+  h1{
+    font-family:var(--serif); font-weight:600; font-size:clamp(2rem,4.6vw,3rem);
+    line-height:1.08; margin:0; letter-spacing:-.015em; text-wrap:balance; max-width:16ch;
+  }
+  .lede{margin:16px 0 0; max-width:56ch; color:var(--muted); font-size:17px}
+  .meta{
+    font-family:var(--mono); font-size:12.5px; color:var(--faint);
+    display:flex; flex-direction:column; gap:5px; text-align:right;
+  }
+  @media (max-width:720px){ .meta{text-align:left} }
+
+  /* ------------------------------------------------------------ marco --- */
+  .layout{display:grid; grid-template-columns:214px minmax(0,1fr); gap:56px; padding:44px 0 96px; align-items:start}
+  @media (max-width:960px){ .layout{grid-template-columns:1fr; gap:0} nav.rail{display:none} }
+  nav.rail{position:sticky; top:26px}
+  nav.rail h2{
+    font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint);
+    margin:0 0 14px; font-weight:600; font-family:var(--sans);
+  }
+  nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
+  nav.rail a{
+    display:flex; gap:10px; align-items:baseline; padding:7px 10px; border-radius:6px;
+    color:var(--muted); text-decoration:none; font-size:13.5px; line-height:1.35;
+  }
+  nav.rail a:hover{background:var(--brand-soft); color:var(--brand)}
+  nav.rail .n{font-family:var(--mono); font-size:11px; color:var(--faint); flex:none}
+  a:focus-visible,summary:focus-visible{outline:2px solid var(--brand-2); outline-offset:3px; border-radius:4px}
+
+  /* ---------------------------------------------------------- resumen --- */
+  .board{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:1px;
+    background:var(--border); border:1px solid var(--border); border-radius:10px;
+    overflow:hidden; margin:0 0 56px;
+  }
+  .board div{background:var(--surface); padding:18px 20px}
+  .board dt{font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); font-weight:600; margin:0 0 7px}
+  .board dd{margin:0; font-size:14.5px; color:var(--muted)}
+  .board .big{
+    font-family:var(--serif); font-size:1.7rem; line-height:1.1; color:var(--ink);
+    display:block; margin-bottom:3px; font-variant-numeric:tabular-nums;
+  }
+
+  /* --------------------------------------------------------- secciones --- */
+  section.area{margin:0 0 60px; scroll-margin-top:22px}
+  .area-head{display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; margin:0 0 6px}
+  .area-head .n{font-family:var(--mono); font-size:13px; color:var(--faint); flex:none}
+  h2.area-title{
+    font-family:var(--serif); font-weight:600; font-size:1.62rem; line-height:1.2;
+    margin:0; letter-spacing:-.01em; text-wrap:balance;
+  }
+  .chip{
+    font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; white-space:nowrap; line-height:1.5;
+  }
+  .c-red{background:var(--red-soft); color:var(--red)}
+  .c-amber{background:var(--amber-soft); color:var(--amber)}
+  .c-green{background:var(--green-soft); color:var(--green)}
+  .c-brand{background:var(--brand-soft); color:var(--brand)}
+  .area-sub{margin:0 0 22px; color:var(--muted); max-width:70ch}
+
+  .panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .panel > .row{padding:22px 24px; border-top:1px solid var(--border)}
+  .panel > .row:first-child{border-top:0}
+  .row h3{
+    font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; font-weight:600;
+    margin:0 0 11px; color:var(--brand-2);
+  }
+  .row p{margin:0 0 12px; max-width:72ch}
+  .row p:last-child{margin-bottom:0}
+  .row ul,.row ol{margin:0; padding-left:20px; max-width:72ch}
+  .row li{margin:0 0 8px}
+  .row li:last-child{margin-bottom:0}
+  .sev{border-left:3px solid var(--border-strong)}
+  .sev-red{border-left-color:var(--red)}
+  .sev-amber{border-left-color:var(--amber)}
+  .sev-green{border-left-color:var(--green)}
+
+  code,.mono{font-family:var(--mono); font-size:.875em}
+  code{background:var(--surface-2); border:1px solid var(--border); padding:1px 5px; border-radius:4px}
+  pre{
+    background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
+    padding:13px 15px; overflow-x:auto; margin:0 0 12px; font-family:var(--mono);
+    font-size:12.5px; line-height:1.62;
+  }
+  pre:last-child{margin-bottom:0}
+  strong{font-weight:600}
+  .quote{
+    border-left:3px solid var(--brand-2); padding:2px 0 2px 15px; margin:0 0 12px;
+    color:var(--muted); font-style:italic; max-width:70ch;
+  }
+
+  table{border-collapse:collapse; width:100%; font-size:14px}
+  .scroll{overflow-x:auto; margin:0 0 12px}
+  .scroll:last-child{margin-bottom:0}
+  th,td{text-align:left; padding:8px 14px 8px 0; border-bottom:1px solid var(--border); vertical-align:top}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:600; white-space:nowrap}
+  td.num,th.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; padding-right:0}
+  tbody tr:last-child td{border-bottom:0}
+  .good{color:var(--green); font-weight:500}
+  .bad{color:var(--red); font-weight:500}
+
+  .steps{counter-reset:s; list-style:none; padding:0; margin:0}
+  .steps li{position:relative; padding-left:32px; margin:0 0 13px}
+  .steps li:last-child{margin-bottom:0}
+  .steps li::before{
+    counter-increment:s; content:counter(s);
+    position:absolute; left:0; top:1px; width:21px; height:21px; border-radius:50%;
+    background:var(--brand-soft); color:var(--brand); font-family:var(--mono);
+    font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:500;
+  }
+
+  footer.end{border-top:1px solid var(--border); background:var(--surface); padding:34px 0 52px}
+  footer.end p{margin:0 0 10px; color:var(--muted); font-size:14.5px; max-width:74ch}
+  footer.end p:last-child{margin-bottom:0}
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div>
+      <p class="eyebrow">Revisión técnica · Noesis</p>
+      <h1>Frentes abiertos</h1>
+      <p class="lede">
+        Siete áreas que hoy no funcionan del todo, cada una con lo que falla de verdad,
+        por qué falla y qué hay que hacer. Todo lo que aquí se afirma está medido contra
+        el código o contra producción; donde no he podido medir, lo digo.
+      </p>
+    </div>
+    <div class="meta">
+      <span>4 de septiembre de 2026</span>
+      <span>release 2354e92141a2</span>
+      <span>esquema 55 · 639 pruebas</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout">
+  <nav class="rail" aria-label="Secciones">
+    <h2>Frentes</h2>
+    <ol>
+      <li><a href="#audio"><span class="n">01</span> Notas de voz</a></li>
+      <li><a href="#copias"><span class="n">02</span> Copias de seguridad</a></li>
+      <li><a href="#rgpd"><span class="n">03</span> Protección de datos</a></li>
+      <li><a href="#telefono"><span class="n">04</span> Teléfono del cliente</a></li>
+      <li><a href="#latencia"><span class="n">05</span> Lentitud y latencia</a></li>
+      <li><a href="#admin"><span class="n">06</span> Permisos de administración</a></li>
+      <li><a href="#cal"><span class="n">07</span> Cal.com</a></li>
+      <li><a href="#codigo"><span class="n">08</span> Revisión de código</a></li>
+      <li><a href="#orden"><span class="n">09</span> Por dónde empezar</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <dl class="board">
+      <div>
+        <dt>Bloquean el piloto</dt>
+        <dd><span class="big">3</span>Copias externas, Stripe y validación jurídica</dd>
+      </div>
+      <div>
+        <dt>Funcionan hoy</dt>
+        <dd><span class="big">WhatsApp</span>Texto, PDF, OCR, IVA y clasificación con IA</dd>
+      </div>
+      <div>
+        <dt>Decisión tuya, no técnica</dt>
+        <dd><span class="big">2</span>La voz y el número comercial de cada cliente</dd>
+      </div>
+      <div>
+        <dt>Arreglado hoy</dt>
+        <dd><span class="big">5</span>Dos de ellos los encontraste tú usándolo</dd>
+      </div>
+    </dl>
+
+    <!-- ============================================================ 01 === -->
+    <section class="area" id="audio">
+      <div class="area-head">
+        <span class="n">01</span>
+        <h2 class="area-title">Las notas de voz no se transcriben</h2>
+        <span class="chip c-amber">Decisión pendiente</span>
+      </div>
+      <p class="area-sub">
+        No es un fallo de programación: el circuito está construido y probado. Falta elegir
+        con qué se convierte el sonido en texto, y esa elección tiene peaje por los dos caminos.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-amber">
+          <h3>Qué falla exactamente</h3>
+          <p>
+            Si mandas un audio, Noesis te responde: <em>«He recibido tu nota de voz pero no he
+            podido transcribirla. Escríbeme la orden en texto, por favor.»</em> Fíjate en el
+            «he recibido»: el audio llega perfectamente. Lo que no hay es traductor.
+          </p>
+          <p>De los seis pasos de una nota de voz, cinco funcionan:</p>
+          <pre>1. Grabas y envías                     OK
+2. Meta avisa al servidor              OK
+3. El servidor descarga el .ogg        OK
+4. Convertir el sonido en texto        NO HAY MOTOR
+5. El cerebro entiende la orden        OK
+6. Te contesta                         OK</pre>
+          <p>
+            Verificado en producción el 4-sep: <code>GROQ_API_KEY</code> está vacía. Lo confirma
+            la propia web, porque <code>/privacidad</code> solo pinta la fila de un proveedor
+            cuando su clave existe, y Groq no aparece.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Por qué está así</h3>
+          <p>
+            Porque tu propio documento de protección de datos lo prohíbe, y con razón.
+            <code>RGPD-QUE-HACER.md</code>, punto 1.0, el más urgente de todo el bloque:
+          </p>
+          <p class="quote">
+            «Mientras no se hayan archivado contrato/DPA y garantías, no configurar
+            <code>GROQ_API_KEY</code> en producción. Basta con que alguien ponga la variable para
+            estar mandando las notas de voz de los clientes de tus clientes a un subencargado no
+            declarado, sin base contractual y sin notificación.»
+          </p>
+          <p>
+            Que la clave esté vacía hoy <strong>es la conducta correcta</strong>, no un descuido.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Las dos salidas</h3>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr><th>&nbsp;</th><th>Groq (en la nube)</th><th>Whisper en tu servidor</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>Qué hay que hacer</strong></td><td>Crear cuenta, generar clave, ponerla en Railway</td><td>Descomentar <code>faster-whisper</code> en <code>requirements.txt</code></td></tr>
+                <tr><td><strong>Peaje</strong></td><td>Archivar el DPA de Groq antes</td><td>Subir el plan de Railway: necesita más RAM</td></tr>
+                <tr><td><strong>Coste</strong></td><td>Por uso, y el audio es barato</td><td>Fijo cada mes, lo uses o no</td></tr>
+                <tr><td><strong>Dónde viaja el audio</strong></td><td>Estados Unidos</td><td>No sale de tu servidor</td></tr>
+                <tr><td><strong>Calidad</strong></td><td>Modelo grande</td><td>Modelo <code>base</code> por defecto, más flojo</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            El propio <code>requirements.txt</code> avisa del coste de la vía local:
+            <em>«necesita más RAM; en Railway conviene subir un poco el plan»</em>.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Qué haría yo</h3>
+          <p>
+            <strong>Groq, archivando primero el DPA.</strong> Es una tarde de gestión frente a un
+            coste fijo mensual, transcribe mejor que un modelo <code>base</code> local, y el
+            trabajo legal ya está medio hecho: Groq aparece de forma condicional en privacidad,
+            en el contrato de encargado y en la matriz de proveedores. Falta guardar el papel.
+          </p>
+          <p>
+            La vía local tiene sentido más adelante, cuando «tus audios no salen de nuestros
+            servidores» valga como argumento de venta y tengas volumen que lo pague.
+          </p>
+          <ol class="steps">
+            <li>Aceptar y <strong>archivar el DPA de Groq</strong>, junto con las garantías de transferencia internacional.</li>
+            <li>Crear la clave en <code>console.groq.com</code> y ponerla en Railway como <code>GROQ_API_KEY</code>.</li>
+            <li>Comprobar que Groq aparece ya en <code>/privacidad</code>: es la señal de que el sistema lo ha declarado solo.</li>
+            <li><strong>Medir la precisión con audio real</strong> en castellano y catalán, con ruido de obra. Tu registro de QA lo tiene pendiente y nadie lo ha hecho.</li>
+          </ol>
+          <p>
+            El paso 4 no es opcional. Que transcriba no significa que transcriba bien a un
+            fontanero en una obra, y ese es el caso de uso real.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 02 === -->
+    <section class="area" id="copias">
+      <div class="area-head">
+        <span class="n">02</span>
+        <h2 class="area-title">No hay copia fuera de Railway</h2>
+        <span class="chip c-red">Bloquea el piloto</span>
+      </div>
+      <p class="area-sub">
+        Este es el más serio de la lista y el menos visible, porque no da error nunca.
+        Da error el día que ya no puedes arreglarlo.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-red">
+          <h3>Qué falla exactamente</h3>
+          <p>
+            Las copias se hacen y se verifican, pero <strong>viven en el mismo sitio que los
+            datos</strong>. Si pierdes la cuenta de Railway —un impago, una suspensión, un borrado
+            por error— pierdes a la vez el original y la copia.
+          </p>
+          <p>De las siete variables que exige el sistema, hoy hay una:</p>
+          <pre>BACKUP_S3_ENDPOINT               vacía
+BACKUP_S3_BUCKET                 vacía
+BACKUP_S3_ACCESS_KEY             vacía
+BACKUP_S3_SECRET_KEY             vacía
+NOESIS_BACKUP_S3_REGION          definida
+NOESIS_BACKUP_S3_PROVIDER_NAME   vacía
+NOESIS_BACKUP_S3_DATA_REGION     vacía</pre>
+          <p>
+            <code>noesis-doctor</code> lo marca como bloqueo. El sistema, además, se niega a enviar
+            una copia si no sabe la región de firma, el proveedor y la residencia de los datos:
+            es una defensa deliberada para no acabar guardando datos personales en una
+            jurisdicción que nadie ha declarado.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Lo que sí está construido</h3>
+          <p>
+            Bastante, y bueno. La subida firmada a S3 está escrita, cada copia se restaura al
+            crearla, y existe un simulacro semanal independiente con su propia entrada de
+            comando (<code>noesis-restore-check</code>). No hay que programar nada:
+            <strong>hay que contratar un bucket y rellenar seis variables.</strong>
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>Contratar almacenamiento compatible con S3 <strong>en la Unión Europea</strong> y en un proveedor distinto de Railway. Que sea otro proveedor es el punto entero del ejercicio.</li>
+            <li>Crear un <strong>bucket privado</strong> con versionado y regla de retención, para que un borrado accidente o un cifrado malicioso no se propague a la copia.</li>
+            <li>Crear un usuario con permisos <strong>solo de escritura</strong> sobre ese bucket. Si el servidor se ve comprometido, que no pueda borrar el histórico.</li>
+            <li>Rellenar las seis variables que faltan, incluidas región, nombre del proveedor y residencia declarada.</li>
+            <li>Ejecutar <code>noesis-restore-check</code> y <strong>restaurar de verdad</strong> en un entorno aparte. Una copia que nunca se ha restaurado no es una copia: es una carpeta.</li>
+            <li>Archivar el DPA de ese proveedor. Entra en la misma lista que Groq y Anthropic.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 03 === -->
+    <section class="area" id="rgpd">
+      <div class="area-head">
+        <span class="n">03</span>
+        <h2 class="area-title">Protección de datos</h2>
+        <span class="chip c-amber">Papeleo, no código</span>
+      </div>
+      <p class="area-sub">
+        El código ya hace lo correcto casi en todo. Lo que falta son papeles firmados y una
+        revisión profesional, y eso no lo puede cerrar ningún agente.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-green">
+          <h3>Lo que ya está resuelto</h3>
+          <ul>
+            <li><strong>Los proveedores se declaran solos.</strong> Cada fila de la tabla de subencargados aparece únicamente si su clave está configurada. Lo verifiqué hoy en vivo: al activar Anthropic, su fila apareció sin tocar ningún texto.</li>
+            <li><strong>El iframe de Cal.com ya no está</strong>, y la política de seguridad es <code>frame-src 'none'</code> en todas las páginas. Era el hallazgo más grave del informe anterior.</li>
+            <li><strong>Las bajas se registran</strong> con conservación legal en vez de borrar lo que la ley obliga a guardar.</li>
+            <li><strong>Existen los cuatro procedimientos escritos</strong>: registro de actividades, matriz de proveedores, derechos y bajas, y brechas.</li>
+            <li><strong>El consentimiento de IA es por negocio</strong> y explícito. Mandar el PDF de un cliente a un tercero no ocurre por defecto.</li>
+          </ul>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Lo que falta, por orden de urgencia</h3>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Pendiente</th><th>Por qué importa</th><th>Quién</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Archivar los DPA</strong> de Anthropic, Groq, Railway, Stripe y el proveedor de copias</td><td>Sin contrato firmado, cada envío a un tercero carece de base. Es lo que se audita primero</td><td>Tú</td></tr>
+                <tr><td><strong>Región de Railway</strong>: comprobarla y moverla a la UE si hace falta</td><td><code>railway.json</code> no fija ninguna, y el valor por defecto de la cuenta es estadounidense. Mover el volumen con clientes dentro causa parada y cuesta más</td><td>Tú, ya</td></tr>
+                <tr><td><strong>Tabla de plazos de conservación</strong> por tipo de dato</td><td>Desbloquea el borrado automático. Sin ella, ninguna purga se puede programar sin inventarse plazos</td><td>Abogado</td></tr>
+                <tr><td><strong>Rol de la gestoría</strong>: ¿subencargada o responsable independiente?</td><td>Decide quién responde si un despacho filtra un expediente. Hoy no está escrito en ningún sitio</td><td>Abogado</td></tr>
+                <tr><td><strong>Base de cada transferencia internacional</strong>, proveedor por proveedor</td><td>«Cláusulas tipo» dicho en genérico no basta: hay que verificar si aplica decisión de adecuación o cláusulas más su evaluación</td><td>Abogado</td></tr>
+                <tr><td><strong>Limitación de responsabilidad</strong> ante un error de cálculo fiscal</td><td>Es el riesgo real del producto: presentas cifras de IVA e IRPF</td><td>Abogado</td></tr>
+                <tr><td><strong>Transparencia del Reglamento de IA</strong> (art. 50)</td><td>Aplica desde el 2-ago-2026. Noesis lo cumple de hecho; falta la línea explícita en los términos</td><td>Abogado</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="row">
+          <h3>Una incoherencia pequeña que conviene cerrar</h3>
+          <p>
+            <code>cookies.html</code> sigue afirmando que <em>«no intervienen empresas ajenas»</em>,
+            mientras que <code>privacidad.html</code> lista Cal.com, Stripe, Google y Meta como
+            proveedores. Ahora que el iframe se retiró la frase es defendible —un enlace no envía
+            nada hasta que alguien lo pulsa—, pero <strong>dos páginas tuyas dicen cosas distintas
+            sobre lo mismo</strong>, y eso es exactamente lo que un inspector lee primero.
+            Es una frase, no un desarrollo.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>El criterio que yo aplicaría</h3>
+          <p>
+            <strong>Tú probando con tus datos no tiene ningún problema.</strong> Eres el
+            responsable del tratamiento de tu propia información y no puedes vulnerar tus propios
+            derechos. Bloquear el desarrollo por papeleo que aún no aplica sería paralizarte
+            para nada.
+          </p>
+          <p>
+            <strong>El primer cliente que no seas tú cambia todo.</strong> Ahí pasas a encargado,
+            y los datos de los clientes de tu cliente empiezan a viajar. Los DPA y la región de
+            Railway tienen que estar cerrados antes de ese día, no después.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 04 === -->
+    <section class="area" id="telefono">
+      <div class="area-head">
+        <span class="n">04</span>
+        <h2 class="area-title">Conectar el teléfono de cada cliente</h2>
+        <span class="chip c-brand">Depende de cuál de las dos</span>
+      </div>
+      <p class="area-sub">
+        Aquí hay dos cosas que se confunden con facilidad y que no tienen nada que ver:
+        una funciona hoy y la otra necesita permiso de Meta.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-green">
+          <h3>A · El móvil personal del autónomo · Funciona ya</h3>
+          <p>
+            Cada cliente de Noesis vincula <strong>su propio móvil</strong> al número central y le
+            habla desde él. No hace falta que tenga número de empresa, ni WhatsApp Business, ni
+            permiso ninguno de Meta.
+          </p>
+          <p>
+            Funciona porque cuando el mensaje entra por el número central, el sistema identifica
+            el negocio <strong>por el teléfono de quien escribe</strong>, no por el que recibe.
+            Así, cien autónomos pueden compartir un único número de Noesis y cada uno ve solo
+            lo suyo. Los trabajadores también vinculan el suyo desde <em>Equipo</em>, con su
+            propio código de un solo uso.
+          </p>
+          <p>Dos límites que conviene tener claros:</p>
+          <ul>
+            <li>Un mismo teléfono no puede pertenecer a dos negocios a la vez. El sistema lo detecta y pide que se resuelva desde Equipo o Ajustes.</li>
+            <li>Sigue rigiendo la ventana de 24 horas de WhatsApp: pasado un día de silencio, Noesis solo puede volver a escribir con una plantilla aprobada.</li>
+          </ul>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>B · El número comercial del cliente · Construido, sin permiso</h3>
+          <p>
+            Que los <em>clientes de tu cliente</em> escriban al número de su empresa y Noesis
+            recoja esas solicitudes. El motor está hecho: existe la tabla de conexiones, el alta
+            técnica desde administración, el aislamiento entre empresas y la bandeja.
+          </p>
+          <p>
+            Lo que falta no es código, es autorización. Para operar sobre la cuenta de WhatsApp
+            de un cliente, Meta tiene que haberte concedido ese activo, y eso exige
+            <code>whatsapp_business_management</code> en <strong>acceso avanzado</strong>, que
+            pasa por revisión de aplicación. Sin eso la API devuelve error aunque el cliente te
+            comparta la cuenta a mano.
+          </p>
+          <p>
+            Y el alta sigue siendo manual: administración registra la conexión, nace en estado
+            <em>pendiente</em> y con la recepción apagada hasta que se prueba. El autoservicio
+            —<em>Embedded Signup</em>— no está construido.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li><strong>Pilota con A.</strong> Cero fricción con Meta, cero revisión, funciona hoy. Cubre lo que vendes: que el autónomo gestione su negocio desde el móvil.</li>
+            <li><strong>Pregunta a soporte de Meta</strong> si tu caso exige revisión de aplicación y cuánto tarda. Tus documentos lo tienen como pendiente de confirmar, y la respuesta decide si el camino es de semanas o de meses.</li>
+            <li><strong>Ten un plan B escrito</strong>: si la revisión se alarga, un proveedor de soluciones (BSP) puede dar los números de cliente mientras tanto.</li>
+            <li>Construir <em>Embedded Signup</em> solo cuando B esté validado con dos clientes reales. Antes es automatizar algo que aún no sabes si te van a aprobar.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 05 === -->
+    <section class="area" id="latencia">
+      <div class="area-head">
+        <span class="n">05</span>
+        <h2 class="area-title">El panel va lento, y no es el servidor</h2>
+        <span class="chip c-amber">Causa localizada</span>
+      </div>
+      <p class="area-sub">
+        Medido, no opinado. Dejé el medidor en el repositorio
+        (<code>scripts/profile_panel.py</code>) para poder discutir esto con números.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-amber">
+          <h3>La medición</h3>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr><th>Pantalla</th><th class="num">60 clientes</th><th class="num">250 clientes</th><th class="num">Consultas</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Resumen</td><td class="num">126 ms</td><td class="num">299 ms</td><td class="num">23</td></tr>
+                <tr><td>Agenda</td><td class="num">140 ms</td><td class="num">292 ms</td><td class="num">22</td></tr>
+                <tr><td>Facturas</td><td class="num">136 ms</td><td class="num">298 ms</td><td class="num">22</td></tr>
+                <tr><td>Proyectos</td><td class="num">137 ms</td><td class="num">313 ms</td><td class="num">25</td></tr>
+                <tr><td>Ajustes</td><td class="num">236 ms</td><td class="num">358 ms</td><td class="num">35</td></tr>
+                <tr><td>Impuestos <span class="good">(ya arreglada)</span></td><td class="num">246 ms</td><td class="num">691 ms</td><td class="num">34</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            El dato que lo explica todo: al multiplicar los datos por cuatro, <strong>el número de
+            consultas no cambia pero el tiempo se dobla</strong>. Eso descarta el problema clásico
+            de «muchas consultas pequeñas» y señala otro.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>La causa</h3>
+          <p>
+            Las consultas <strong>se traen tablas enteras y filtran después en Python</strong>.
+            <code>list_invoices(business_id)</code> no tiene límite ni filtro de fechas: devuelve
+            todas las facturas que ha emitido el negocio desde el primer día, cada una con
+            subconsultas correlacionadas para pagos y estado de Veri*Factu. Se llama desde trece
+            sitios distintos.
+          </p>
+          <p>
+            No es un problema de índices: la base tiene <strong>96</strong>, incluidos los
+            correctos sobre <code>invoices(business_id, status)</code>. El índice encuentra rápido
+            las filas; el problema es que se piden todas.
+          </p>
+          <p>
+            <strong>En producción es peor que en esta medición</strong>, porque cada una de esas
+            22–35 consultas cruza la red hasta PostgreSQL, mientras que aquí SQLite está en el
+            mismo disco.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Lo ya corregido, como prueba de que el enfoque funciona</h3>
+          <p>
+            <em>Impuestos</em> era la peor con diferencia. El cálculo del trimestre se llamaba a sí
+            mismo para cada trimestre anterior, y cada llamada releía facturas, gastos y facturas
+            recibidas enteras: <strong>ocho lecturas completas</strong> para pedir el cuarto
+            trimestre. Ahora lee una vez y reparte.
+          </p>
+          <pre>tax_quarter(4T)  antes  281,6 ms
+                 ahora    38,8 ms     7 veces más rápido</pre>
+          <p>
+            Con las cifras <strong>idénticas al céntimo</strong> en los cuatro trimestres,
+            contrastadas antes y después con tipos de IVA e IRPF distintos. Es código de dinero:
+            sin ese contraste el cambio no era publicable.
+          </p>
+        </div>
+
+        <div class="row sev sev-red">
+          <h3>Aparte: el webhook contesta demasiado tarde</h3>
+          <p>
+            Este no es lentitud del panel, es un riesgo distinto y peor. Cuando llega una foto,
+            el servidor no le contesta a Meta hasta haber <strong>descargado la imagen, pasado el
+            OCR, llamado a la IA y compuesto la respuesta</strong>. Si eso se alarga más de lo que
+            Meta espera, Meta corta y reintenta, y el reintento choca con el trabajo en curso.
+          </p>
+          <p>
+            El síntoma es el peor posible: <strong>mandas una foto de un ticket y no pasa nada.</strong>
+            Sin error, sin aviso. Justo la función más diferencial del producto.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Qué hacer, por orden de rentabilidad</h3>
+          <ol class="steps">
+            <li><strong>Medir el webhook con una foto real</strong> y cronometrarlo. Es gratis y decide si el punto 2 es urgente o puede esperar.</li>
+            <li><strong>Contestar 200 al instante y procesar el medio aparte.</strong> Es el cambio que elimina el fallo silencioso de las fotos.</li>
+            <li><strong>Dar límite y rango de fechas a las consultas grandes</strong>, empezando por <code>list_invoices</code>. Ninguna pantalla necesita todas las facturas de la historia; necesita las de un periodo y una página.</li>
+            <li><strong>Ajustes y Resumen</strong>, que son las siguientes: 35 consultas y 62 KB de HTML la primera.</li>
+            <li>Más adelante, adelgazar <code>app.css</code>: son 235 KB que el navegador analiza en cada carga, aunque viajen comprimidos a 46 KB.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 06 === -->
+    <section class="area" id="admin">
+      <div class="area-head">
+        <span class="n">06</span>
+        <h2 class="area-title">Permisos de administración</h2>
+        <span class="chip c-amber">Riesgo al crecer</span>
+      </div>
+      <p class="area-sub">
+        Hoy no es un problema porque el equipo eres tú. Se convierte en uno el día que
+        entra la primera persona a ayudar.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-green">
+          <h3>Lo que está bien pensado</h3>
+          <p>
+            El acceso de soporte a la cuenta de un cliente ya tiene <strong>consentimiento con
+            alcances</strong>: el cliente autoriza, se limita a un ámbito concreto y caduca.
+            Los cuatro alcances son configuración de la cuenta, organización de documentos,
+            borradores no emitidos y diagnóstico de integraciones. Eso está bien diseñado y es
+            más de lo que tiene mucha herramienta madura.
+          </p>
+          <p>
+            Además, <strong>toda acción de administración queda en la bitácora encadenada</strong>
+            con el usuario, la cuenta afectada y la fecha. Y el panel puede exigir que el
+            administrador haya entrado con Google, no solo con contraseña.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Qué falla</h3>
+          <p>
+            <strong>Ser administrador es un sí o un no.</strong> No hay roles. Quien es
+            administrador puede hacer absolutamente todo:
+          </p>
+          <ul>
+            <li>Activar, desactivar y cambiar el plan de cualquier cuenta</li>
+            <li>Registrar conexiones de WhatsApp de clientes</li>
+            <li>Corregir metadatos de documentos ajenos</li>
+            <li>Reintentar correos</li>
+            <li>Cambiar el estado de una solicitud de baja RGPD</li>
+            <li>Leer el registro de valor de todos los negocios</li>
+          </ul>
+          <p>
+            El problema concreto que esto crea: el día que alguien te ayude con la facturación,
+            para darle acceso a los planes tienes que darle también <strong>acceso a los
+            documentos de tus clientes</strong>. No hay forma de separarlo.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Qué hacer</h3>
+          <p>
+            Es un cambio acotado, y la parte difícil —el registro auditado y el consentimiento
+            por alcances— ya está hecha. Se trata de reutilizar esa idea un nivel más arriba.
+          </p>
+          <ol class="steps">
+            <li>Añadir un <strong>rol al usuario administrador</strong>, con tres valores para empezar: <em>lectura</em>, <em>soporte</em> y <em>propietario</em>.</li>
+            <li><strong>Etiquetar cada ruta de administración</strong> con el rol mínimo que exige, en un solo sitio, en vez de repetir la comprobación en cada función.</li>
+            <li><strong>Ocultar en el panel lo que el rol no permite</strong>, para que nadie descubra por un error que existía un botón que no podía pulsar.</li>
+            <li>Reservar para <em>propietario</em> lo irreversible: cambios de plan, conexiones de WhatsApp y resolución de solicitudes RGPD.</li>
+            <li>Registrar también <strong>los intentos denegados</strong>. Un permiso que se intenta usar y se rechaza es justo lo que quieres ver en la bitácora.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 07 === -->
+    <section class="area" id="cal">
+      <div class="area-head">
+        <span class="n">07</span>
+        <h2 class="area-title">Cal.com</h2>
+        <span class="chip c-green">Mejor de lo que dicen tus documentos</span>
+      </div>
+      <p class="area-sub">
+        Lo revisé esperando encontrar el problema grave que describen los informes de RGPD.
+        Ya no está.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-green">
+          <h3>El problema grave está resuelto</h3>
+          <p>
+            El informe decía que <code>site_contacto.html</code> incrustaba Cal.com en un iframe,
+            enviando la IP del visitante a un tercero <strong>antes de cualquier
+            consentimiento</strong>, y que la política de seguridad abría un hueco solo para esa
+            página.
+          </p>
+          <p>
+            Hoy no queda nada de eso. La página de contacto usa <strong>enlaces normales</strong>
+            que abren en otra pestaña, y la política de seguridad es <code>frame-src 'none'</code>
+            sin excepciones. Un enlace no envía nada hasta que alguien lo pulsa, y quien lo pulsa
+            sabe que va a Cal.com.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Lo que queda, que es menor</h3>
+          <ul>
+            <li>
+              <strong>Un enlace pierde la cabecera de referencia.</strong> En la página de contacto
+              los enlaces llevan <code>rel="noopener noreferrer"</code>, pero en preguntas
+              frecuentes uno lleva solo <code>rel="noopener"</code>. Sin <code>noreferrer</code>,
+              Cal.com aprende desde qué página exacta llegó el visitante. Es una palabra en un
+              atributo.
+            </li>
+            <li>
+              <strong>La incoherencia de textos</strong> que ya mencioné: cookies dice que no
+              intervienen terceros, privacidad lista Cal.com entre ellos.
+            </li>
+            <li>
+              <strong>Depender de Cal.com para vender.</strong> No es un problema técnico ni legal,
+              es de negocio: tu embudo de captación pasa por un servicio externo que no controlas.
+              Aceptable hoy, conviene tenerlo consciente.
+            </li>
+          </ul>
+        </div>
+
+        <div class="row">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>Uniformar <code>rel="noopener noreferrer"</code> en <strong>todos</strong> los enlaces salientes a Cal.com. Cinco minutos.</li>
+            <li>Reescribir la frase de cookies para que diga la verdad exacta: no hay incrustaciones ni seguimiento, y hay enlaces a terceros que el visitante decide pulsar.</li>
+            <li>No reintroducir el iframe. Si alguien lo propone por comodidad, el coste es un banner de consentimiento y volver al hallazgo que ya se cerró.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 08 === -->
+    <section class="area" id="codigo">
+      <div class="area-head">
+        <span class="n">08</span>
+        <h2 class="area-title">Revisión de código</h2>
+        <span class="chip c-brand">8 hallazgos</span>
+      </div>
+      <p class="area-sub">
+        Solo cosas verificadas contra el código, no sospechas. Dos de ellas las encontraste tú
+        usando el producto, que es lo que más dice sobre dónde están los fallos que quedan.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-amber">
+          <h3>1 · WhatsApp y la web discrepan sobre qué es un documento</h3>
+          <p>
+            Cuando la IA propone un tipo con poca confianza, <code>service.py</code> guarda
+            <code>documento</code> genérico —el umbral es 65— pero <code>whatsapp.py</code> lee la
+            propuesta cruda, no la aplicada. Resultado: con una confianza de 50 y una propuesta de
+            «factura recibida», <strong>WhatsApp te ofrece registrarla mientras el archivo queda
+            guardado como documento sin clasificar</strong>. Lo que te pregunta el móvil no
+            coincide con lo que ve la web.
+          </p>
+          <p>
+            <strong>Gravedad media:</strong> sigue pidiendo confirmación, así que no puede crear
+            nada a tus espaldas. <strong>Arreglo:</strong> usar <code>applied_kind</code> en
+            <code>whatsapp.py</code>, que es el valor que ya se decidió y se guardó.
+          </p>
+        </div>
+
+        <div class="row sev sev-red">
+          <h3>2 · La batería de pruebas tarda 38 minutos</h3>
+          <p>
+            Y esa es su gravedad real: <strong>una prueba que tarda 38 minutos no la ejecuta nadie
+            antes de subir</strong>. Deja de proteger el código y se convierte en un trámite que se
+            salta. Hoy mismo publicamos dos veces sin esperarla.
+          </p>
+          <p>
+            <strong>Arreglo:</strong> paralelizar por archivos, separar un subconjunto rápido para
+            el momento de subir, y dejar la batería completa para integración continua.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>3 · Los fallos de la IA se disfrazan de duda</h3>
+          <p>
+            El patrón <code>except Exception</code> que devuelve la heurística aparece también en
+            la extracción de gastos y en el borrador de factura. Desde fuera, <strong>«la IA
+            falló» y «la IA no supo» se ven exactamente igual</strong>. Eso es lo que hizo que el
+            fallo de las facturas múltiples costara una hora de encontrar.
+          </p>
+          <p>
+            <strong>Arreglo:</strong> hoy se corrigió en el clasificador. Falta aplicar el mismo
+            criterio a las otras dos rutas.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>4 · El asistente no ve los documentos</h3>
+          <p>
+            Si mandas un PDF y escribes «súbela», el asistente <strong>no sabe que acabas de
+            enviar un archivo</strong>: te pide cliente, importe y concepto como si fueras a crear
+            una factura nueva a mano. Los documentos y la conversación no comparten contexto.
+          </p>
+          <p>
+            <strong>Arreglo:</strong> pasar al asistente los documentos recientes de la
+            conversación, para que una orden como «regístrala» se refiera a lo que acaba de llegar.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>5 · Reenviar un documento era un callejón sin salida · corregido hoy</h3>
+          <p>
+            Un PDF archivado cuando aún no había IA configurada no se podía volver a clasificar
+            <strong>nunca</strong>: el sistema contestaba «ya estaba guardado» y terminaba. La
+            causa era que el duplicado heredaba de la clase de errores de subida y se trataba como
+            uno más. Ahora reenviar significa «míralo otra vez», sin duplicar el archivo.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>6 · Un PDF con varias facturas se clasificaba mal · corregido hoy</h3>
+          <p>
+            El modelo contesta con una <strong>lista</strong> de objetos cuando el documento lleva
+            varias facturas. El lector recortaba desde la primera llave hasta la última, lo que con
+            dos o más objetos deja comas sueltas y deja de ser JSON válido: la respuesta correcta
+            del modelo se tiraba entera. Medido contra el modelo real:
+            <strong class="bad">0 aciertos de 6</strong> antes,
+            <strong class="good">5 de 5</strong> después.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>7 · Una prueba daba resultados distintos según la máquina · corregido hoy</h3>
+          <p>
+            La prueba de baja RGPD contaba los avisos por un prefijo que casa con dos correos
+            distintos, así que pasaba en integración continua y fallaba en tu portátil.
+            <strong>Una prueba que depende de quién la ejecuta es peor que una que falla</strong>,
+            porque enseña a ignorar los fallos.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>8 · La versión de la API de Meta va tres por detrás</h3>
+          <p>
+            El código pide <code>v23.0</code> y Meta ya sirve los campos del webhook en
+            <code>v26.0</code>. Funciona, pero Meta retira versiones a los dos años. No es urgente
+            y no debe hacerse con prisa: subir de versión exige repasar los campos que cambian y
+            volver a probar el canal entero.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 09 === -->
+    <section class="area" id="orden">
+      <div class="area-head">
+        <span class="n">09</span>
+        <h2 class="area-title">Por dónde empezar</h2>
+      </div>
+      <p class="area-sub">
+        Ordenado por lo que más duele si no se hace, no por lo que más apetece.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-red">
+          <h3>Esta semana</h3>
+          <ol class="steps">
+            <li><strong>Comprobar la región de Railway</strong> y moverla a la UE si está fuera. Cuanto más tardes, más caro: mover el volumen con clientes dentro implica parada de servicio.</li>
+            <li><strong>Contratar el bucket de copias</strong> fuera de Railway. Hoy un solo incidente en un proveedor se lleva el original y la copia.</li>
+            <li><strong>Cronometrar el webhook con una foto real.</strong> Es gratis y descarta —o confirma— el fallo silencioso más caro que tienes.</li>
+          </ol>
+        </div>
+        <div class="row sev sev-amber">
+          <h3>Este mes</h3>
+          <ol class="steps">
+            <li><strong>Archivar los DPA</strong> de Anthropic, Groq, Railway, Stripe y copias. Desbloquea la voz de paso.</li>
+            <li><strong>Encargar la consulta al abogado</strong> con las cinco preguntas de la sección 3. Pide primero la tabla de conservación: desbloquea las demás.</li>
+            <li><strong>Cerrar Stripe</strong>, que sigue a medias y sin él no cobras.</li>
+            <li><strong>Preguntar a Meta</strong> si tu caso exige revisión de aplicación. La respuesta cambia la planificación entera del canal comercial.</li>
+          </ol>
+        </div>
+        <div class="row">
+          <h3>Cuando entre el primer cliente que no seas tú</h3>
+          <ol class="steps">
+            <li>Roles en el panel de administración, antes de que haya una segunda persona con acceso.</li>
+            <li>Límite y rango de fechas en las consultas grandes. Con un cliente no se nota; con veinte, sí.</li>
+            <li>Acelerar la batería de pruebas, para que alguien la ejecute de verdad.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="end">
+  <div class="wrap">
+    <p>
+      <strong>Cómo comprobar cada cosa por tu cuenta.</strong>
+      <code>python scripts/check_whatsapp.py</code> dice el estado del canal de Meta en cinco
+      segundos. <code>python scripts/profile_panel.py</code> mide la lentitud del panel.
+      <code>noesis-doctor</code> resume la preparación del piloto.
+      Y <code>/privacidad</code> revela qué proveedores están realmente configurados en
+      producción, porque cada fila aparece solo si su clave existe.
+    </p>
+    <p>
+      Los dos fallos más difíciles de este documento no salieron de ninguna prueba automática.
+      Salieron de usar el producto durante dos horas. Es la señal más clara de dónde conviene
+      invertir el tiempo: en recorrer caminos que nadie ha recorrido.
+    </p>
+  </div>
+</footer>
