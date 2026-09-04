@@ -1,5 +1,34 @@
 # Registro de QA
 
+## 2026-09-04 — IVA por el asistente y canal de Meta verificado
+
+- **Canal de Meta, contra la cuenta real.** Token permanente de usuario del sistema
+  válido y sin caducidad, con `whatsapp_business_messaging` y
+  `whatsapp_business_management`. Número de prueba `+1 555-184-7575` en calidad
+  GREEN. Meta tiene registrado `https://bynoesis.com/webhook/whatsapp`, activo y con
+  `messages` suscrito. Verificación GET devuelve el challenge; un verify token falso
+  se rechaza con 403. **Un webhook firmado se acepta con 200 y una firma falsa se
+  rechaza con 401**, así que el `WHATSAPP_APP_SECRET` desplegado es el de Meta. El
+  sobre firmado que se manda no lleva eventos y no crea ningún dato.
+  Reproducible con `python scripts/check_whatsapp.py`.
+- **Límite:** las nueve plantillas no están dadas de alta, así que ningún mensaje
+  iniciado por Noesis puede salir. No se ha probado todavía una conversación real
+  con el número. Meta sirve los campos en `v26.0` y el código pide `v23.0`.
+- **IVA por el asistente.** Antes «¿cómo va mi IVA?» resolvía a `resumen_negocio`
+  (cifras del mes) y «cuánto IVA tengo que pagar» no resolvía a nada; ninguna de las
+  20 herramientas alcanzaba `db.tax_quarter`, así que una pregunta fiscal no tenía
+  respuesta correcta posible. Ahora `ver_impuestos` expone el 303 y el 130 del
+  trimestre, el cerebro local reconoce la pregunta y extrae trimestre y año.
+  Verificado que no hay regresión: «factura a Pepe 500 euros iva 21» sigue creando
+  factura y «cuánto llevo facturado» sigue siendo el resumen del mes.
+- **Prueba de baja RGPD corregida.** Dependía del entorno: contaba los avisos por el
+  prefijo `privacy-request-`, que casa con el del titular y con el interno. Fallaba
+  con `NOESIS_ADMIN_EMAIL` puesto y pasaba sin él. Ahora pasa en ambos casos.
+- **Batería:** `tests/test_backend.py` completo, **425 pruebas en 1.081,76 s, 0
+  fallos**, más 30 de cerebro interno, flujos de campo y multicanal. Total
+  recolectado: **633**. El único fallo restante de la tanda completa anterior era un
+  `PermissionError` de `tempfile` en Windows, que no se reproduce aislado.
+
 ## 2026-09-04 — publicación real y comprobaciones posteriores
 
 - Backup de base y documentos creado/verificado antes del push; restauración

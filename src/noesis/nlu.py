@@ -302,6 +302,19 @@ def parse(text: str) -> tuple[str, dict] | None:
     if re.search(r"(gestoria|gestor).*(pide|solicitud|pendient)", norm):
         return ("ver_solicitudes_gestoria", {})
 
+    # --- Impuestos: va antes del resumen porque "como va mi iva" casa con ambos y
+    # la pregunta fiscal es la concreta. El resumen del mes no responde al 303.
+    if re.search(r"(\biva\b|\birpf\b|impuesto|hacienda|modelo\s*(303|130)|"
+                 r"trimestral|declaracion)", norm):
+        args: dict = {}
+        trimestre = re.search(r"\b([1-4])\s*(?:t\b|er\s+trimestre|º?\s*trimestre)", norm)
+        if trimestre:
+            args["trimestre"] = int(trimestre.group(1))
+        anio = re.search(r"\b(20\d{2})\b", norm)
+        if anio:
+            args["anio"] = int(anio.group(1))
+        return ("ver_impuestos", args)
+
     # --- Resumen / ingresos
     if re.search(r"(cuanto.*facturad|ingresos|resumen|como va|como voy|que tal va|"
                  r"balance|beneficio|facturacion|este mes|mis numeros|cuanto llevo)", norm):
@@ -418,6 +431,27 @@ def format_reply(tool: str, result: dict) -> str:
                 f"pendiente {_eur(r['pending'])}, gastos {_eur(r['expenses'])}.\n\n"
                 f"Beneficio estimado: **{_eur(r['estimated_profit'])}**. "
                 f"Aparta al menos {_eur(r['vat_estimated'])} de IVA para no confundirte: no es caja libre.")
+    if tool == "ver_impuestos":
+        if not result.get("ok"):
+            return result.get("error") or "No he podido calcular el trimestre."
+        iva = result["iva_resultado"]
+        signo = "a pagar" if iva >= 0 else "a tu favor"
+        lines = [
+            f"🧾 {result['label']}. IVA {signo}: **{_eur(abs(iva))}**.",
+            f"• Repercutido {_eur(result['iva_repercutido'])} − soportado "
+            f"{_eur(result['iva_soportado'])} (modelo 303)",
+            f"• IRPF del periodo: {_eur(result['irpf_pago'])} (modelo 130)",
+        ]
+        if result["datos_incompletos"]:
+            lines.append(
+                f"⚠️ Hay {result['datos_incompletos']} apunte(s) sin IVA o sin base: "
+                "la cifra se moverá cuando los completes."
+            )
+        lines.append(
+            "Son cifras de apoyo con lo registrado hasta hoy. "
+            "Quien presenta y valida es tu gestoría."
+        )
+        return "\n".join(lines)
     if tool == "listar_clientes":
         cs = result["clientes"]
         if not cs:

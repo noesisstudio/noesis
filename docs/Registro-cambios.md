@@ -80,6 +80,34 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — el asistente ya puede responder por el IVA y el IRPF
+
+- **Autor/agente:** Claude, a petición del founder («si le pregunto cómo va mi IVA,
+  ¿funcionará?»).
+- **Objetivo:** que una pregunta fiscal por WhatsApp o por el chat se conteste con el
+  cálculo real del trimestre en vez de con el resumen del mes.
+- **Áreas y archivos:** `src/noesis/tools.py` (herramienta `ver_impuestos` y su
+  despacho), `src/noesis/nlu.py` (patrón fiscal antes del de resumen y redacción de
+  la respuesta), `tests/test_backend.py` (prueba nueva),
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno; esquema 55 sin tocar. La herramienta solo
+  lee: `db.tax_quarter` no escribe nada.
+- **Pruebas ejecutadas:** `tests/test_backend.py` completo en verde (425 pruebas,
+  0 fallos, 18 min), más cerebro interno, flujos de campo, plantillas de oficio y
+  multicanal (30 pruebas). `ruff` limpio. Total recolectado 633.
+- **Dependencias o validaciones externas:** ninguna. El cálculo ya existía y lo usan
+  la web, la gestoría y el aviso trimestral; lo único nuevo es que el asistente
+  llega a él.
+- **Riesgo/punto probable de fallo:** el patrón fiscal se evalúa **antes** que el de
+  resumen, porque «como va mi iva» casaba con los dos. Si alguien añade un patrón más
+  arriba que capture `iva`, volverá a romperse; por eso la prueba fija que «factura a
+  Pepe 500 euros iva 21» sigue creando una factura y «cuánto llevo facturado» sigue
+  siendo el resumen del mes. La respuesta declara que son cifras de apoyo y que la
+  gestoría valida la presentación, según la regla de oro 8.
+- **Diagnóstico y rollback:** `pytest -k asking_about_vat`. Revertir el commit deja
+  el comportamiento anterior, en el que la pregunta fiscal no tenía respuesta.
+- **Estado de publicación:** desplegable. No cambia esquema ni datos.
+
 ## 2026-09-04 — la prueba de baja RGPD dependía del entorno del que la ejecuta
 
 - **Autor/agente:** Claude.

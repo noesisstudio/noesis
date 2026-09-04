@@ -1507,6 +1507,46 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(invoice["base"], 100.0)
         self.assertEqual(invoice["total"], 121.0)
 
+    def test_asking_about_vat_answers_the_quarter_and_not_the_month(self):
+        # «¿Cómo va mi IVA?» caía en resumen_negocio, que contesta facturado y
+        # cobrado del mes: nunca el 303. El cálculo trimestral existía en la base
+        # de datos pero ninguna herramienta lo alcanzaba, así que el asistente no
+        # podía responder una pregunta fiscal sin inventársela.
+        for frase in (
+            "como va mi iva",
+            "cuanto iva tengo que pagar",
+            "que me toca pagar de iva este trimestre",
+            "resumen del modelo 303",
+            "cuanto irpf llevo",
+        ):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], "ver_impuestos")
+        self.assertEqual(nlu.parse("el irpf del 2T"), ("ver_impuestos", {"trimestre": 2}))
+        self.assertEqual(
+            nlu.parse("impuestos del 3er trimestre 2026"),
+            ("ver_impuestos", {"trimestre": 3, "anio": 2026}),
+        )
+        # Preguntar por el negocio sigue siendo el resumen del mes, y una factura
+        # que menciona su tipo de IVA sigue siendo una factura.
+        self.assertEqual(nlu.parse("cuanto llevo facturado")[0], "resumen_negocio")
+        self.assertEqual(nlu.parse("factura a Pepe 500 euros iva 21")[0], "crear_factura")
+
+        from noesis import tools
+
+        business, _ = self.make_business("Fiscal")
+        result = json.loads(tools.run_tool("ver_impuestos", {}, business["id"]))
+        self.assertTrue(result["ok"])
+        self.assertIn("iva_resultado", result)
+        self.assertIn("irpf_pago", result)
+        reply = nlu.format_reply("ver_impuestos", result)
+        self.assertIn("303", reply)
+        self.assertIn("gestoría", reply)
+        # Un trimestre imposible se rechaza en vez de reventar el cálculo.
+        rechazado = json.loads(
+            tools.run_tool("ver_impuestos", {"trimestre": 7}, business["id"])
+        )
+        self.assertFalse(rechazado["ok"])
+
     def test_web_chat_issues_the_draft_it_told_you_to_issue(self):
         # El mensaje que confirma el borrador sugiere «emitir factura N». Esa
         # orden solo la entendía WhatsApp, así que en la web el borrador se

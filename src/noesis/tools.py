@@ -152,6 +152,20 @@ TOOLS: list[dict] = [
         },
     },
     {
+        "name": "ver_impuestos",
+        "description": (
+            "IVA del modelo 303 e IRPF del modelo 130 de un trimestre. Cifras de "
+            "apoyo calculadas con lo registrado; la gestoría valida la presentación."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "trimestre": {"type": "integer", "description": "1 a 4"},
+                "anio": {"type": "integer", "description": "Año; por defecto el actual"},
+            },
+        },
+    },
+    {
         "name": "registrar_gasto",
         "description": "Registra un gasto del negocio (ej. 'gasolina 45 euros').",
         "input_schema": {
@@ -476,6 +490,15 @@ def _resumen_negocio(business_id, mes=None):
     return db.month_billing(mes, business_id=business_id)
 
 
+def _ver_impuestos(business_id, trimestre=None, anio=None):
+    hoy = date.today()
+    year = int(anio or hoy.year)
+    quarter = int(trimestre or (hoy.month - 1) // 3 + 1)
+    if quarter not in (1, 2, 3, 4):
+        return {"ok": False, "error": "El trimestre debe estar entre 1 y 4."}
+    return {"ok": True, **db.tax_quarter(year, quarter, business_id)}
+
+
 def _registrar_gasto(
     business_id, concepto, importe, iva=None, categoria=None, proyecto_id=None
 ):
@@ -583,6 +606,7 @@ _DISPATCH = {
     "registrar_pago": _registrar_pago,
     "ver_cobros_pendientes": _ver_cobros_pendientes,
     "resumen_negocio": _resumen_negocio,
+    "ver_impuestos": _ver_impuestos,
     "registrar_gasto": _registrar_gasto,
     "listar_clientes": _listar_clientes,
     "ver_perfil_cliente": _ver_perfil_cliente,
