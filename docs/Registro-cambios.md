@@ -80,6 +80,31 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — el comprobador de WhatsApp valida firma y suscripción
+
+- **Autor/agente:** Claude.
+- **Objetivo:** cerrar la comprobación del canal sin depender de lo que se vea en la
+  consola de Meta ni de un mensaje real. Quedaban dos incógnitas: si Meta llamaba de
+  verdad a nuestra URL y si el `WHATSAPP_APP_SECRET` desplegado era el bueno.
+- **Áreas y archivos:** `scripts/check_whatsapp.py`, `.env.example`
+  (`WHATSAPP_WABA_ID`). Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** `ruff` en verde y ejecución real contra Meta y contra
+  producción. **Resultado: todo verde salvo las nueve plantillas, que no están dadas
+  de alta.** Verificado en `https://bynoesis.com`: webhook registrado y activo con
+  `messages` suscrito, challenge correcto, verify token falso rechazado con 403,
+  webhook firmado aceptado con 200 y firma falsa rechazada con 401.
+- **Dependencias o validaciones externas:** el sobre firmado que manda el script no
+  lleva eventos, así que atraviesa la verificación de firma sin crear ningún dato.
+  Es la única forma de comprobar el secreto desplegado sin esperar a un mensaje real.
+- **Riesgo/punto probable de fallo:** ninguno; el script no escribe en Meta ni en la
+  base de datos. Un despliegue caído se ve como fallo de firma, no como caída.
+- **Diagnóstico y rollback:** `python scripts/check_whatsapp.py`. Borrar el archivo
+  revierte el cambio entero.
+- **Estado de publicación:** el canal de entrada queda verificado de punta a punta.
+  Falta el alta de las nueve plantillas y la conversación real con el número de
+  prueba. Anotado que Meta sirve los campos en `v26.0` frente al `v23.0` del código.
+
 ## 2026-09-04 — comprobador del canal de WhatsApp contra Meta
 
 - **Autor/agente:** Claude.

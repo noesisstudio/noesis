@@ -3,10 +3,12 @@
 Solo hace lecturas: no envia ningun mensaje ni cambia nada en Meta. Contesta a
 las cuatro preguntas que bloquean una prueba real con el numero:
 
-1. El token, si esta vivo y hasta cuando.
+1. El token, si esta vivo, hasta cuando y con que permisos.
 2. El numero, si responde y en que estado de calidad esta.
-3. Las plantillas, si las nueve que usa el codigo estan de alta y aprobadas.
-4. El webhook desplegado, si devuelve el challenge con el verify token vigente.
+3. La suscripcion, si Meta llama a nuestra URL y con el campo `messages`.
+4. Las plantillas, si las nueve que usa el codigo estan de alta y aprobadas.
+5. El webhook desplegado, si devuelve el challenge con el verify token vigente.
+6. La firma, si el servidor valida `X-Hub-Signature-256` con el secreto vigente.
 
 Uso:
 
@@ -19,6 +21,8 @@ Lee las credenciales del entorno; si hay un `.env` en la raiz, lo carga antes.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
 import os
 import sys
@@ -275,6 +279,52 @@ def revisar_webhook(base: str, verify_token: str) -> None:
         _decir(AVISO, f"Un verify token falso devuelve HTTP {codigo_falso}, se esperaba 403.")
 
 
+def revisar_firma(base: str, app_secret: str) -> None:
+    """Comprueba que el servidor valida X-Hub-Signature-256 con el secreto vigente.
+
+    Manda un sobre de webhook sin eventos: pasa por la verificacion de firma y no
+    crea ningun dato. Es la unica forma de saber que el secreto desplegado coincide
+    con el de Meta sin esperar a un mensaje real.
+    """
+    if not app_secret:
+        _decir(FALLO, "WHATSAPP_APP_SECRET esta vacio: no se puede firmar nada.")
+        return
+    url = base.rstrip("/") + "/webhook/whatsapp"
+    cuerpo = json.dumps({"object": "whatsapp_business_account", "entry": []}).encode()
+    firma = hmac.new(app_secret.encode(), cuerpo, hashlib.sha256).hexdigest()
+
+    def _post(cabecera: str) -> int:
+        peticion = urllib.request.Request(
+            url,
+            data=cuerpo,
+            headers={"Content-Type": "application/json", "X-Hub-Signature-256": cabecera},
+        )
+        try:
+            with urllib.request.urlopen(peticion, timeout=30) as respuesta:
+                return respuesta.status
+        except urllib.error.HTTPError as error:
+            return error.code
+
+    try:
+        bueno = _post(f"sha256={firma}")
+        malo = _post("sha256=" + "0" * 64)
+    except Exception as error:
+        _decir(AVISO, f"No se pudo probar la firma: {error}")
+        return
+    if bueno == 200:
+        _decir(OK, "El servidor acepta un webhook firmado: el app secret desplegado es correcto.")
+    else:
+        _decir(
+            FALLO,
+            f"Un webhook bien firmado devuelve HTTP {bueno}.",
+            "WHATSAPP_APP_SECRET del servidor no coincide con el de Meta. Igualalo en Railway.",
+        )
+    if malo == 401:
+        _decir(OK, "Una firma falsa se rechaza con 401.")
+    else:
+        _decir(FALLO, f"Una firma falsa devuelve HTTP {malo}, se esperaba 401.")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Comprobador del canal de WhatsApp.")
     parser.add_argument(
@@ -306,6 +356,7 @@ def main(argv: list[str] | None = None) -> int:
             revisar_suscripcion(app_id, os.getenv("WHATSAPP_APP_SECRET", ""), version, args.url)
             revisar_plantillas(token, version, args.waba or os.getenv("WHATSAPP_WABA_ID", ""))
     revisar_webhook(args.url, os.getenv("WHATSAPP_VERIFY_TOKEN", ""))
+    revisar_firma(args.url, os.getenv("WHATSAPP_APP_SECRET", ""))
 
     print(f"\nFallos que bloquean la prueba: {_fallos}")
     return 1 if _fallos else 0
