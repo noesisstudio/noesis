@@ -29,6 +29,17 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   fallarán a la vez con el mismo error de versión.
 - **Diagnóstico y rollback:** `python scripts/check_whatsapp.py`. Con `--sin-red`
   solo comprueba el webhook. Borrar el archivo revierte el cambio entero.
+- **Ampliación del mismo día:** el comprobador lee ya la suscripción del webhook con
+  el token de app (`app_id|app_secret`) y avisa si Meta sirve los campos en una
+  versión distinta de `META_GRAPH_VERSION`. Se retira la consulta del campo
+  `whatsapp_business_account_id` del número: no existe en la Graph API y siempre
+  fallaba. El id de la WABA se pasa ahora con `--waba` o `WHATSAPP_WABA_ID`.
+- **Resuelto:** token permanente de usuario del sistema en Railway y en `.env`,
+  `WHATSAPP_VERIFY_TOKEN` igualado, y webhook `https://bynoesis.com/webhook/whatsapp`
+  registrado y activo en Meta con el campo `messages` suscrito. El comprobador
+  devuelve 0 fallos. Queda el alta de las nueve plantillas.
+- **Aviso nuevo:** Meta sirve los campos del webhook en `v26.0` y el código pide
+  `v23.0`. Funciona, pero hay que planificar la subida.
 - **Estado de publicación:** las nueve plantillas ya encajan con sus envíos
   (`python -m noesis.whatsapp_templates` no reporta desajustes), así que el paso
   siguiente es token, verify token y alta de plantillas, en ese orden.
