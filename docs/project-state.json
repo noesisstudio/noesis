@@ -2,7 +2,7 @@
   "state_date": "2026-09-04",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 638,
+  "verified_test_count": 639,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -110,7 +110,8 @@
     "whatsapp_outbound_hardening": "template_values_are_flattened_into_a_visible_separator_and_capped_at_the_1024_character_limit_before_queueing_and_a_permanent_4xx_from_meta_cancels_the_send_immediately_instead_of_retrying_six_times",
     "tax_quarter_over_the_assistant": "vat_303_and_irpf_130_of_a_quarter_exposed_as_ver_impuestos_tool_and_recognised_by_the_local_brain_so_a_fiscal_question_is_answered_from_registered_invoices_and_expenses_instead_of_the_month_summary_warns_about_incomplete_entries_and_states_the_gestoria_validates_the_filing",
     "quarterly_tax_reads_once": "tax_quarter_loads_invoices_expenses_and_received_invoices_once_and_shares_them_with_the_model_130_recursion_over_previous_quarters_instead_of_rereading_every_table_per_quarter_figures_unchanged_to_the_cent_and_a_test_pins_one_read_per_table",
-    "resent_document_is_reread": "resending_the_same_pdf_over_whatsapp_reclassifies_the_stored_document_instead_of_answering_that_it_was_already_saved_and_stopping_so_a_paper_archived_before_the_ai_was_configured_can_still_be_proposed_no_duplicate_row_and_the_reply_says_it_was_already_on_file_instead_of_printing_an_internal_id"
+    "resent_document_is_reread": "resending_the_same_pdf_over_whatsapp_reclassifies_the_stored_document_instead_of_answering_that_it_was_already_saved_and_stopping_so_a_paper_archived_before_the_ai_was_configured_can_still_be_proposed_no_duplicate_row_and_the_reply_says_it_was_already_on_file_instead_of_printing_an_internal_id",
+    "multi_invoice_pdf_classification": "a_pdf_holding_several_invoices_is_answered_by_the_model_as_a_list_of_objects_and_the_first_one_is_taken_instead_of_discarding_the_whole_reply_measured_against_the_real_model_zero_of_six_before_and_five_of_five_after_and_an_unparseable_model_reply_is_now_logged_apart_from_the_model_being_unsure"
   },
   "ai_route": [
     "reglas_locales",

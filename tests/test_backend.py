@@ -5786,6 +5786,43 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(docs[0]["filename"], "factura-luz.pdf")
         self.assertIn("papeles", replies[-1])
 
+    def test_model_answer_with_several_invoices_is_not_thrown_away(self):
+        # Un PDF con varias facturas dentro se contesta como lista de objetos, no
+        # como uno solo. El recorte iba de la primera llave a la última, así que con
+        # dos o más quedaba un texto con comas sueltas que no era JSON: la respuesta
+        # correcta del modelo se tiraba y el papel acababa sin clasificar. Medido
+        # contra la IA real: 0 aciertos de 6 antes, 5 de 5 después.
+        from noesis.adapters import extraction
+
+        uno = '{"kind": "ticket", "confidence": 80, "reason": "x"}'
+        lista_de_tres = (
+            '```json\n[\n'
+            ' {"kind": "factura_recibida", "confidence": 95, "reason": "la primera"},\n'
+            ' {"kind": "factura_recibida", "confidence": 95, "reason": "la segunda"},\n'
+            ' {"kind": "factura_recibida", "confidence": 95, "reason": "la tercera"}\n'
+            ']\n```'
+        )
+        self.assertEqual(extraction._json_object(uno)["kind"], "ticket")
+        # Todos los objetos describen el mismo papel: vale el primero.
+        primero = extraction._json_object(lista_de_tres)
+        self.assertIsNotNone(primero, "una lista de objetos no puede descartarse")
+        self.assertEqual(primero["kind"], "factura_recibida")
+        self.assertEqual(primero["reason"], "la primera")
+        # Las formas que ya funcionaban siguen funcionando.
+        for texto, esperado in (
+            ('```json\n{"kind": "albaran", "confidence": 70, "reason": "y"}\n```', "albaran"),
+            ('Aquí tienes: {"kind": "contrato", "confidence": 90, "reason": "z"} y ya.',
+             "contrato"),
+            ('{"kind": "ticket", "confidence": 60, "lineas": [1, 2], "reason": "w"}',
+             "ticket"),
+        ):
+            with self.subTest(texto=texto[:40]):
+                self.assertEqual(extraction._json_object(texto)["kind"], esperado)
+        self.assertIsNone(extraction._json_object("no hay json aquí"))
+        self.assertIsNone(extraction._json_object(""))
+        # Y una lista sin objetos no puede colarse como clasificación.
+        self.assertIsNone(extraction._json_object("[1, 2, 3]"))
+
     def test_resending_a_stored_pdf_reclassifies_it_instead_of_dead_ending(self):
         # Reenviar el mismo papel contestaba «ya estaba guardado como documento N»
         # y ahí moría: un PDF archivado cuando no había IA disponible no se podía

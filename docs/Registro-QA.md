@@ -1,5 +1,20 @@
 # Registro de QA
 
+## 2026-09-04 — clasificación de un PDF con varias facturas
+
+- **Medición contra el modelo real** (`claude-haiku-4-5-20251001`), con PDF generado
+  con tres facturas donde el negocio figura como cliente: **0 aciertos de 6** antes
+  del arreglo (todos caían a la heurística con `kind=documento`, confianza 55) y
+  **5 de 5** después, con `kind=factura_recibida`, confianza 95 y `method=ia`.
+- **Contraste:** un PDF de una sola factura acertaba siempre, antes y después. La
+  diferencia no era el reenvío ni el duplicado, sino el número de facturas dentro.
+- **Confirmado que el modelo respondía bien todo el tiempo:** la respuesta cruda
+  contenía `factura_recibida` con confianza 95 y una explicación correcta; se perdía
+  al interpretarla.
+- **Límite:** medido con PDF sintético, no con el archivo real del founder, que no
+  está en el repositorio. La forma reproducida (lista de objetos) es la que devolvió
+  el modelo en las seis llamadas registradas.
+
 ## 2026-09-04 — primera conversación real por WhatsApp
 
 - **Circuito completo verificado con el número de prueba y un móvil real:**

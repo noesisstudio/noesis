@@ -80,6 +80,41 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — un PDF con varias facturas dejaba de clasificarse
+
+- **Autor/agente:** Claude, siguiendo la prueba real del founder.
+- **Objetivo:** su PDF de 3 páginas quedaba «sin poder decidir el tipo» mientras que
+  uno de 1 página se clasificaba perfecto. Parecía que el sistema «se quedaba
+  atascado tras un error»; no lo estaba.
+- **Causa:** un documento con varias facturas dentro se contesta como **lista** de
+  objetos JSON. `_json_object` recortaba desde la primera `{` hasta la última `}`, y
+  con dos o más objetos eso deja comas sueltas y deja de ser JSON válido. La
+  respuesta del modelo —correcta, `factura_recibida` con confianza 95— se tiraba, se
+  caía a la heurística y el usuario leía «no consigo decidir el tipo». El `except`
+  solo registraba el nombre del tipo de excepción, así que un fallo de interpretación
+  era indistinguible de una IA dudando: por eso costó encontrarlo.
+- **Áreas y archivos:** `src/noesis/adapters/extraction.py` (`_json_object` acepta
+  listas y hay un aviso propio cuando la IA responde y no se la entiende),
+  `tests/test_backend.py`, `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno; esquema 55 sin tocar.
+- **Pruebas ejecutadas:** medición contra el modelo real con un PDF de tres facturas:
+  **0 aciertos de 6 antes, 5 de 5 después**. Prueba nueva verificada por
+  contradicción (con el código anterior falla con «una lista de objetos no puede
+  descartarse»). 37 pruebas de OCR, facturas recibidas, correo entrante, multicanal
+  y adaptador de facturación en verde. Total recolectado 639.
+- **Dependencias o validaciones externas:** el arreglo se validó con llamadas reales
+  a `claude-haiku-4-5-20251001`, el clasificador configurado.
+- **Riesgo/punto probable de fallo:** `_json_object` lo usan también el borrador de
+  factura y la extracción de gasto. Ahora intenta primero el texto entero y solo
+  recorta si eso falla, así que acepta estrictamente más de lo que aceptaba; una
+  lista sin objetos sigue devolviendo `None` y la prueba lo fija.
+- **Diagnóstico y rollback:** `pytest -k model_answer_with_several_invoices`.
+- **Estado de publicación:** desplegable. **Queda pendiente**, y es el mismo PDF que
+  lo destapó: cuando el titular escribe «súbela» refiriéndose a un documento que
+  acaba de mandar, el asistente no ve ese documento y le pide cliente, importe y
+  concepto como si fuera a crear una factura nueva. El asistente y los documentos no
+  comparten contexto.
+
 ## 2026-09-04 — reenviar un documento ya no es un callejón sin salida
 
 - **Autor/agente:** Claude, tras probar el founder el canal real con una factura.
