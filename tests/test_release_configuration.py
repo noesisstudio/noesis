@@ -11,7 +11,7 @@ from noesis.web.routers.pages import _legal_context
 class EffectiveMailProviderTestCase(TestCase):
     def test_brevo_ignores_unused_smtp_metadata(self):
         with patch.multiple(
-            config, BREVO_API_KEY="test-api", SMTP_HOST="smtp.example.com",
+            config, BREVO_API_KEY="test-api", SMTP_HOST="smtp.example.com",  # pragma: allowlist secret
             SMTP_PROVIDER_NAME="", SMTP_PROVIDER_REGION="", COMPAT_AI_BASE_URL="",
             BACKUP_S3_ENDPOINT="", BACKUP_S3_BUCKET="", BACKUP_S3_ACCESS_KEY="",
             BACKUP_S3_SECRET_KEY="",

@@ -2,6 +2,10 @@
 
 ## 2026-09-04 — validación previa a main
 
+- Se incorpora compatibilidad del código anterior d3740a0 sobre BD 55 antes del
+  downgrade: cliente, factura emitida, cobro y exportación. El script exige base
+  local `noesis_ci` y comprueba que está importando el código 53.
+
 - Dos pruebas nuevas pasan para proveedor efectivo: Brevo prevalece sobre SMTP
   residual y SMTP sin API exige identificación. La suite verificada acumulada es
   620; el CI final debe ejecutar las 620 juntas con el lock actualizado.

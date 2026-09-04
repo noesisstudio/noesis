@@ -2,6 +2,10 @@
 
 ## 2026-09-04 — puerta de revisión aislada, sin despliegue
 
+- **Rollback código primero:** se añade prueba explícita con el código base
+  d3740a0 (esquema 53) sobre BD efímera 55 antes de bajar tablas; recorre cliente,
+  emisión, cobro y exportación. Sin checkout ni comandos en producción.
+
 - **Proveedor efectivo:** la lectura detectó SMTP residual junto a Brevo. El
   adaptador siempre utiliza Brevo cuando hay API key y no cae a SMTP tras error.
   Se alinea la puerta legal y su contexto con esa prioridad: ya no exige datos de

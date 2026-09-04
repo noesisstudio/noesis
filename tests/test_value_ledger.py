@@ -514,10 +514,10 @@ class ValueLedgerTestCase(unittest.TestCase):
 
     def test_outcome_read_or_write_failure_never_blocks_a_payment(self):
         db.update_fiscal(
-            self.business["id"], nif="A12345678", address="Calle Principal 1"
+            self.business["id"], nif="A12345678", address="Calle Principal 1"  # pragma: allowlist secret
         )
         client = db.add_client(
-            "Cliente Fiscal", nif="B12345678", address="Calle Cliente 2",
+            "Cliente Fiscal", nif="B12345678", address="Calle Cliente 2",  # pragma: allowlist secret
             business_id=self.business["id"],
         )
         invoice = db.add_invoice(
