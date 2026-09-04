@@ -2,6 +2,12 @@
 
 ## 2026-09-04 — validación previa a main
 
+- **PostgreSQL 16 completo OK:** job de `33855685663`, incluidos migración histórica,
+  humo de rutas, restauración de backup, código 53 sobre BD 55, rollback completo y
+  flujo RGPD con permisos/concurrencia/exportación/avisos. Solo queda el job general:
+  el escáner interpretó el SHA público fijado para rollback como secreto; se anota
+  ese valor concreto y se repite, sin desactivar el control.
+
 - Suite local completa terminada: **627 pruebas, OK en 642,162 s**, más las dos
   pruebas nuevas de proveedor efectivo correctas (629 verificadas). El conteo
   previo 618 era incompleto; el CI final contrastará el total con descubrimiento.

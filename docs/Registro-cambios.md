@@ -2,6 +2,11 @@
 
 ## 2026-09-04 — puerta de revisión aislada, sin despliegue
 
+- **PostgreSQL completo correcto:** ejecución `33855685663` valida migraciones,
+  humo, backup/restauración, código anterior sobre esquema nuevo y privacidad.
+  Se documenta como público el SHA fijo del checkout anterior para el escáner;
+  el resto del CI se repite sin excepciones nuevas sobre código o dependencias.
+
 - **Recuento verificado:** suite completa local 627/627 en 642,162 s, más dos
   contratos nuevos de proveedor. Se corrige la foto a 629 y la aserción del humo
   al rechazo real del POST administrativo (303 a login, sin cambio de permisos).
