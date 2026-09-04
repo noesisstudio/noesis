@@ -305,7 +305,11 @@ def legal_identity_ready() -> bool:
 
 def legal_provider_context_ready() -> bool:
     """Evita publicar o cobrar con un proveedor activo pero no identificado."""
-    smtp_named = not SMTP_HOST or bool(SMTP_PROVIDER_NAME and SMTP_PROVIDER_REGION)
+    # El adaptador usa Brevo con prioridad y no reintenta por SMTP si la API falla.
+    # Un SMTP antiguo e inactivo no debe bloquear una instalación que usa Brevo.
+    smtp_named = bool(BREVO_API_KEY) or not SMTP_HOST or bool(
+        SMTP_PROVIDER_NAME and SMTP_PROVIDER_REGION
+    )
     compat_named = not COMPAT_AI_BASE_URL or bool(
         COMPAT_AI_LEGAL_NAME and COMPAT_AI_REGION
     )

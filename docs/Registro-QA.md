@@ -2,6 +2,12 @@
 
 ## 2026-09-04 — validación previa a main
 
+- Dos pruebas nuevas pasan para proveedor efectivo: Brevo prevalece sobre SMTP
+  residual y SMTP sin API exige identificación. La suite verificada acumulada es
+  620; el CI final debe ejecutar las 620 juntas con el lock actualizado.
+- Tercer CI: rollback e inmutabilidad PostgreSQL correctos; se ajusta la nueva
+  aserción de acceso al contrato existente (GET admin redirige, POST rechaza 403).
+
 - Segunda ejecución: auditoría de dependencias correcta tras pypdf 6.16.1. Se
   verificaron los 49 SHA-256 del branding contra los archivos y se anotan como
   falsos positivos exactos; fixtures fiscales/contraseña se marcan explícitamente.

@@ -6,6 +6,11 @@
 
 ## Producto construido
 
+- Revisión aislada del 4-sep: pypdf actualizado a 6.16.1 por tres CVE y puerta
+  legal de correo alineada con el proveedor efectivo (Brevo tiene prioridad sobre
+  SMTP residual). CI manual de rama y ensayo PostgreSQL añadidos; publicación aún
+  no autorizada, resultados finales en Registro-QA.
+
 - El candidato del esquema 55 convierte la baja con conservación en un proceso
   real y trazable. Si no hay facturas emitidas ni jornada, la cuenta se borra como
   antes; si los hay, se crea una única solicitud abierta por negocio, se devuelve

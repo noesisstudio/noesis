@@ -457,12 +457,12 @@ class ValueLedgerTestCase(unittest.TestCase):
     def test_mature_business_flows_are_observed_after_success(self):
         db.update_fiscal(
             self.business["id"],
-            nif="A12345678",
+            nif="A12345678",  # pragma: allowlist secret
             address="Calle Principal 1",
         )
         client = db.add_client(
             "Cliente Fiscal",
-            nif="B12345678",
+            nif="B12345678",  # pragma: allowlist secret
             address="Calle Cliente 2",
             business_id=self.business["id"],
         )

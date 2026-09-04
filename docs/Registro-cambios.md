@@ -2,6 +2,13 @@
 
 ## 2026-09-04 — puerta de revisión aislada, sin despliegue
 
+- **Proveedor efectivo:** la lectura detectó SMTP residual junto a Brevo. El
+  adaptador siempre utiliza Brevo cuando hay API key y no cae a SMTP tras error.
+  Se alinea la puerta legal y su contexto con esa prioridad: ya no exige datos de
+  un SMTP sin uso ni atribuye a Brevo la región de otro proveedor. Dos regresiones
+  nuevas pasan; SMTP efectivo continúa exigiendo nombre y región. Sin cambios
+  al envío ni a variables externas. Revertible con este commit.
+
 - **Segunda iteración:** el escáner detectó NIF/contraseña sintéticos y huellas del
   manifiesto de branding. Se cotejaron las 49 huellas con sus archivos y se
   registran solo esos valores como falsos positivos, sin excluir archivos ni

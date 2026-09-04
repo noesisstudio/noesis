@@ -87,7 +87,14 @@ def _privacy() -> None:
             assert response.status_code == 303, response.text
             assert "ok=baja-solicitada" in response.headers["location"]
         assert "Solicitud #" in http.get(f"/b/{bid}/ajustes").text
-        assert http.get("/admin").status_code == 403
+        denied = http.get("/admin", follow_redirects=False)
+        assert denied.status_code == 303 and denied.headers["location"] == "/login"
+        denied_write = http.post(
+            "/admin/privacidad/1/estado",
+            data={"status": "completed", "resolution_note": "No autorizado"},
+            follow_redirects=False,
+        )
+        assert denied_write.status_code == 403
     requests = db.list_privacy_requests(business_id=bid)
     assert len(requests) == 1
     request = requests[0]

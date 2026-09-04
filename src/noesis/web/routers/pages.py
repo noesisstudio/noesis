@@ -47,10 +47,9 @@ def _legal_context(request: Request) -> dict:
         "legal_ready": config.legal_publication_ready(),
         "legal_document_version": config.LEGAL_DOCUMENT_VERSION,
         "smtp_provider_name": (
-            config.SMTP_PROVIDER_NAME
-            or ("Brevo" if config.BREVO_API_KEY else "")
+            "Brevo" if config.BREVO_API_KEY else config.SMTP_PROVIDER_NAME
         ),
-        "smtp_provider_region": config.SMTP_PROVIDER_REGION,
+        "smtp_provider_region": "" if config.BREVO_API_KEY else config.SMTP_PROVIDER_REGION,
         "compat_ai_legal_name": config.COMPAT_AI_LEGAL_NAME,
         "compat_ai_region": config.COMPAT_AI_REGION,
         "anthropic_enabled": bool(config.ANTHROPIC_API_KEY),
