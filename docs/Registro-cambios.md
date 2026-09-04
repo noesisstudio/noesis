@@ -7,6 +7,32 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — comprobador del canal de WhatsApp contra Meta
+
+- **Autor/agente:** Claude.
+- **Objetivo:** el founder pidió poder volver a probar el canal de Meta. No había
+  forma de saber si las credenciales servían sin mandar un mensaje real, así que se
+  añade un comprobador de solo lectura y se dejan localizados los dos bloqueos.
+- **Áreas y archivos:** `scripts/check_whatsapp.py` (nuevo). Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** `ruff check scripts/check_whatsapp.py` en verde y ejecución
+  real contra la Graph API y contra `https://bynoesis.com`. Detecta correctamente los
+  tres fallos vigentes y devuelve código de salida 1.
+- **Dependencias o validaciones externas:** **dos bloqueos confirmados con Meta.**
+  (1) `WHATSAPP_TOKEN` caducó el 14-07-2026: hay que generar uno de usuario del
+  sistema sin caducidad, con `whatsapp_business_messaging` y
+  `whatsapp_business_management`. (2) El `WHATSAPP_VERIFY_TOKEN` del servidor no
+  coincide con el de `.env`: la verificación GET del webhook devuelve 403, así que
+  Meta hoy no puede suscribirlo. El rechazo de token falso sí funciona.
+- **Riesgo/punto probable de fallo:** ninguno en producción; el script no escribe
+  nada ni en Meta ni en la base de datos. Si Meta retira `v23.0`, todas las llamadas
+  fallarán a la vez con el mismo error de versión.
+- **Diagnóstico y rollback:** `python scripts/check_whatsapp.py`. Con `--sin-red`
+  solo comprueba el webhook. Borrar el archivo revierte el cambio entero.
+- **Estado de publicación:** las nueve plantillas ya encajan con sus envíos
+  (`python -m noesis.whatsapp_templates` no reporta desajustes), así que el paso
+  siguiente es token, verify token y alta de plantillas, en ese orden.
+
 ## 2026-09-03 — refunde los documentos legales con `Ruta-legal` y corrige Meta
 
 - **Autor/agente:** Claude.
