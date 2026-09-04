@@ -94,7 +94,8 @@ def _privacy() -> None:
             data={"status": "completed", "resolution_note": "No autorizado"},
             follow_redirects=False,
         )
-        assert denied_write.status_code == 403
+        assert denied_write.status_code == 303
+        assert denied_write.headers["location"] == "/login"
     requests = db.list_privacy_requests(business_id=bid)
     assert len(requests) == 1
     request = requests[0]

@@ -2,6 +2,10 @@
 
 ## 2026-09-04 — puerta de revisión aislada, sin despliegue
 
+- **Recuento verificado:** suite completa local 627/627 en 642,162 s, más dos
+  contratos nuevos de proveedor. Se corrige la foto a 629 y la aserción del humo
+  al rechazo real del POST administrativo (303 a login, sin cambio de permisos).
+
 - **Rollback código primero:** se añade prueba explícita con el código base
   d3740a0 (esquema 53) sobre BD efímera 55 antes de bajar tablas; recorre cliente,
   emisión, cobro y exportación. Sin checkout ni comandos en producción.

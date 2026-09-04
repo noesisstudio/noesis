@@ -2,6 +2,12 @@
 
 ## 2026-09-04 — validación previa a main
 
+- Suite local completa terminada: **627 pruebas, OK en 642,162 s**, más las dos
+  pruebas nuevas de proveedor efectivo correctas (629 verificadas). El conteo
+  previo 618 era incompleto; el CI final contrastará el total con descubrimiento.
+- La ruta administrativa HTML rechaza GET y POST mediante 303 a login, no 403;
+  el humo verifica ambas redirecciones sin seguirlas. No se altera el permiso.
+
 - Se incorpora compatibilidad del código anterior d3740a0 sobre BD 55 antes del
   downgrade: cliente, factura emitida, cobro y exportación. El script exige base
   local `noesis_ci` y comprueba que está importando el código 53.
