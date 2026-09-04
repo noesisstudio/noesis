@@ -1132,6 +1132,16 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
             kind="documento", note="Recibido por WhatsApp", run_ocr=True,
             auto_classify=True,
         )
+        already_stored = False
+    except docservice.DuplicateDocument as exc:
+        # Reenviar el mismo papel es la forma natural de pedir «míralo otra vez».
+        # Antes se contestaba «ya estaba guardado» y ahí moría: un documento que se
+        # archivó sin IA disponible no había manera de volver a clasificarlo.
+        document = docservice.reclassify(business["id"], exc.existing_id)
+        if not document:
+            send(phone, str(exc), business_id=business["id"])
+            return {"phone": phone, "media": "document", "ingested": False}
+        already_stored = True
     except docservice.UploadError as exc:
         send(phone, str(exc), business_id=business["id"])
         return {"phone": phone, "media": "document", "ingested": False}
@@ -1156,26 +1166,31 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
                 phone,
                 f"📄 He leído «{filename}»: parece una factura recibida de "
                 f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
-                "¿La registro? Responde SÍ o NO." + context_note,
+                "¿La registro? Responde SÍ o NO." + context_note
+                + (" (Ya lo tenía archivado; lo he vuelto a leer.)"
+                   if already_stored else ""),
                 business_id=business["id"],
             )
             return {"phone": phone, "media": "document", "ingested": True,
                     "pending": True, "document_id": document["id"],
-                    "classification": kind}
+                    "already_stored": already_stored, "classification": kind}
     labels = {"factura_emitida": "factura emitida histórica", "presupuesto": "presupuesto",
               "contrato": "contrato", "albaran": "albarán", "proveedor": "documento de proveedor"}
     reading = labels.get(kind)
     send(
         phone,
-        f"📎 Guardado «{filename}» en tus papeles. "
+        (f"📎 Ya tenía «{filename}» archivado y lo he vuelto a leer. "
+         if already_stored else f"📎 Guardado «{filename}» en tus papeles. ")
         + (f"Parece {reading}; confírmalo en Documentos." if reading
-           else "No estoy segura del tipo; te lo he dejado pendiente para revisar.")
+           else "No consigo decidir el tipo; te lo dejo pendiente de revisar "
+                "en Documentos.")
         + context_note,
         business_id=business["id"],
     )
     return {
         "phone": phone, "media": "document", "ingested": True,
-        "document_id": document["id"], "classification": kind,
+        "document_id": document["id"], "already_stored": already_stored,
+        "classification": kind,
     }
 
 

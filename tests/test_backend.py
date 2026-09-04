@@ -5786,6 +5786,43 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(docs[0]["filename"], "factura-luz.pdf")
         self.assertIn("papeles", replies[-1])
 
+    def test_resending_a_stored_pdf_reclassifies_it_instead_of_dead_ending(self):
+        # Reenviar el mismo papel contestaba «ya estaba guardado como documento N»
+        # y ahí moría: un PDF archivado cuando no había IA disponible no se podía
+        # volver a clasificar por WhatsApp de ninguna manera. Ahora se relee.
+        business, _ = self._connected_business("Reenvío PDF")
+        from noesis.documents import repo as docrepo
+
+        replies = []
+        envio = {
+            "from": "34600111222", "id": "wamid-dup-1",
+            "media_document_id": "media-dup",
+            "media_document_mime": "application/pdf",
+            "media_document_filename": "factura-repetida.pdf",
+        }
+        with (
+            patch.object(whatsapp, "_download_media",
+                         return_value=b"%PDF-1.4 mismo contenido"),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            primero = whatsapp.handle_inbound(envio)["results"][0]
+            segundo = whatsapp.handle_inbound(
+                {**envio, "id": "wamid-dup-2"}
+            )["results"][0]
+
+        self.assertTrue(primero["ingested"])
+        self.assertFalse(primero["already_stored"])
+        # El reenvío no es un error: reconoce el archivo y lo vuelve a proponer.
+        self.assertTrue(segundo["ingested"])
+        self.assertTrue(segundo["already_stored"])
+        self.assertEqual(segundo["document_id"], primero["document_id"])
+        # No se duplica el papel en el archivo.
+        self.assertEqual(len(docrepo.list_for_business(business["id"])), 1)
+        # Y la respuesta lo dice, en vez de soltar un identificador interno.
+        self.assertIn("vuelto a leer", replies[-1])
+        self.assertNotIn("ya estaba guardado como documento", replies[-1])
+
     def test_whatsapp_pdf_caption_links_the_right_project_and_client(self):
         from fpdf import FPDF
         from noesis.documents import repo as docrepo

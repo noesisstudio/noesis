@@ -80,6 +80,39 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — reenviar un documento ya no es un callejón sin salida
+
+- **Autor/agente:** Claude, tras probar el founder el canal real con una factura.
+- **Objetivo:** el founder subió un PDF cuando aún no había IA configurada, se archivó
+  sin clasificar, y al reenviarlo con la IA ya puesta el sistema contestaba «Este
+  archivo ya estaba guardado como documento 8» y se paraba. **No había ninguna forma
+  de volver a clasificar por WhatsApp un documento ya archivado.**
+- **Causa:** `DuplicateDocument` hereda de `UploadError`, y el manejador de entrada
+  trataba todos los `UploadError` igual: mandar el texto del error y salir. El
+  duplicado no es un error del usuario, es una petición de releer.
+- **Áreas y archivos:** `src/noesis/documents/service.py` (nueva `reclassify`),
+  `src/noesis/web/whatsapp.py` (rama propia para `DuplicateDocument` y mensajes que
+  dicen que el papel ya estaba archivado), `tests/test_backend.py`,
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno; esquema 55 sin tocar. El reenvío **no crea
+  una fila nueva**: reutiliza el documento existente.
+- **Pruebas ejecutadas:** `ruff` limpio; prueba nueva
+  `test_resending_a_stored_pdf_reclassifies_it_instead_of_dead_ending` en verde y
+  verificada por contradicción (con el código anterior falla con
+  `KeyError: 'already_stored'`); 36 pruebas de `test_showcase_and_pdf_ocr`,
+  `test_received_invoices`, `test_inbound_email` y `test_whatsapp_multichannel` en
+  verde. Total recolectado 638.
+- **Límite asumido, a petición expresa del founder:** se publica **sin esperar** a que
+  termine `tests/test_backend.py` completo, que estaba corriendo. Se planteó la
+  objeción —este es el camino por el que entran todos los documentos— y el founder
+  pidió subirlo igual. Si la batería completa saca algo, se corrige encima.
+- **Riesgo/punto probable de fallo:** `already_stored` se fija en las dos ramas del
+  `try`; si alguien añade una tercera salida sin fijarlo, saltará `KeyError` en el
+  envío. La prueba nueva lo cubre.
+- **Diagnóstico y rollback:** `pytest -k resending_a_stored_pdf`. Revertir el commit
+  devuelve el comportamiento anterior, que dejaba el documento inalcanzable.
+- **Estado de publicación:** desplegable. No cambia esquema ni datos.
+
 ## 2026-09-04 — el trimestre fiscal deja de releer las tablas por cada trimestre
 
 - **Autor/agente:** Claude, a petición del founder («el panel va muy lento»).

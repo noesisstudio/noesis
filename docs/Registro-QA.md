@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-09-04 — primera conversación real por WhatsApp
+
+- **Circuito completo verificado con el número de prueba y un móvil real:**
+  vinculación con código de un solo uso, respuesta del asistente, envío de un PDF de
+  3 páginas y guardado en Documentos. Firma, entrega y respuesta correctas.
+- **Fallo encontrado en esa prueba:** reenviar el mismo PDF contestaba «ya estaba
+  guardado como documento N» y terminaba ahí. Un documento archivado antes de
+  configurar la IA quedaba imposible de clasificar por WhatsApp. Corregido.
+- **`ANTHROPIC_API_KEY` activada en producción** y verificada de dos formas: la fila
+  de Anthropic aparece ya en `/privacidad` (se pinta solo si la clave existe), y una
+  llamada real confirma que responden los dos modelos configurados,
+  `claude-haiku-4-5-20251001` (clasificador) y `claude-sonnet-4-6` (asistente).
+- **`GROQ_API_KEY` sigue vacía a propósito**, según [[RGPD-QUE-HACER]] 1.0: no
+  configurarla en producción hasta archivar DPA y garantías. La voz no funciona y esa
+  es la conducta correcta hoy.
+- **Límite:** no se ha medido todavía el tiempo del webhook con una foto real, que
+  sigue siendo el riesgo abierto del canal.
+
 ## 2026-09-04 — perfilado del panel y equivalencia fiscal
 
 - **Perfilado con datos reales** (`scripts/profile_panel.py`, base temporal). Con
