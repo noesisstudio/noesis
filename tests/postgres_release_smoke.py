@@ -32,10 +32,10 @@ def _snapshot() -> dict:
     # SQL fijo: no admite nombres procedentes de usuarios ni de argumentos.
     with db.get_conn() as conn:
         return {
-            "invoices": [dict(r) for r in conn.execute("SELECT * FROM invoices ORDER BY id")],
-            "clients": [dict(r) for r in conn.execute("SELECT * FROM clients ORDER BY id")],
-            "users": [dict(r) for r in conn.execute("SELECT * FROM users ORDER BY id")],
-            "clockins": [dict(r) for r in conn.execute("SELECT * FROM worker_clockins ORDER BY id")],
+            "invoices": [dict(r) for r in conn.execute("SELECT * FROM invoices ORDER BY id").fetchall()],
+            "clients": [dict(r) for r in conn.execute("SELECT * FROM clients ORDER BY id").fetchall()],
+            "users": [dict(r) for r in conn.execute("SELECT * FROM users ORDER BY id").fetchall()],
+            "clockins": [dict(r) for r in conn.execute("SELECT * FROM worker_clockins ORDER BY id").fetchall()],
         }
 
 

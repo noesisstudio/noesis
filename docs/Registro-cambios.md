@@ -2,6 +2,11 @@
 
 ## 2026-09-04 — puerta de revisión aislada, sin despliegue
 
+- **Hallazgo del primer CI:** tres avisos de seguridad en pypdf 6.15.0
+  (CVE-2026-84309/84310/84311). Se eleva el mínimo a 6.16.1 y se regenera únicamente
+  su entrada del lock. El nuevo test PostgreSQL necesitaba `fetchall()` para el
+  cursor del adaptador; se corrige el test, no el adaptador. Revalidación pendiente.
+
 - **Objetivo:** verificar el candidato de valor/RGPD antes de decidir su publicación.
 - **Áreas:** CI admite ejecución manual por rama; nuevo humo PostgreSQL exclusivo
   de `localhost/noesis_ci` prueba rollback 55→54→53→54→55 con datos históricos,

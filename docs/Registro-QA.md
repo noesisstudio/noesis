@@ -2,6 +2,11 @@
 
 ## 2026-09-04 — validación previa a main
 
+- Primer CI `33854946594`: bloqueó tres CVE en pypdf 6.15.0. Las migraciones
+  históricas y el humo PostgreSQL existente pasaron; el nuevo humo falló porque
+  usaba iteración directa sobre el cursor propio. Se corrige con `fetchall()` y
+  se actualiza pypdf a 6.16.1; se repite el CI sin ocultar ni excluir los avisos.
+
 - Se prepara ejecución manual del CI desde `codex/review-value-privacy`, sin push
   a main ni PR. PostgreSQL 16 del runner es efímero y no tiene datos reales.
 - El nuevo `tests/postgres_release_smoke.py` solo permite `localhost/noesis_ci`:
