@@ -5,15 +5,19 @@
 
 ## P0 — publicar y pilotar con seguridad
 
-- [ ] Migrar 54→55 en PostgreSQL no productivo y comprobar alta, baja directa sin
-  datos protegidos, baja con factura/jornada, idempotencia, bandeja interna, avisos,
-  exportación y rollback 55→54. La actualización de estado nunca debe borrar datos.
-  Validar además los textos públicos, `frame-src 'none'` y el fallo cerrado de S3.
+- [x] Validación técnica PostgreSQL 16 no productiva del candidato 55: migración,
+  baja con factura, idempotencia/concurrencia, aislamiento, bandeja, outbox,
+  exportación y rollback 55→54→53→54→55. Código anterior 53 probado sobre BD 55;
+  datos e inmutabilidad conservados. Humo de rutas y backup/restauración correctos.
+  Evidencia y límites: [[Revision-pre-main-2026-09-04]].
+- [ ] Tras autorizar publicación: copia reciente verificada de producción, migrar,
+  comprobar release/esquema/ready, cuentas existentes y una solicitud humana completa
+  con entrega real de correo. La verificación del CI no sustituye ese recorrido.
 
-- [ ] Desplegar el esquema 54 primero en un entorno PostgreSQL no productivo y
-  ejecutar migración 53→54 y humo completo con
+- [ ] Publicar el candidato solo después del CI completo y autorización, con
   `NOESIS_VALUE_LEDGER_ENABLED=false` y
-  `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. Comprobar producto y rollback seguro:
+  `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. El humo y rollback PostgreSQL aislados
+  ya están verificados. Mantener la secuencia de rollback seguro:
   apagar ledger, restaurar código anterior aún sobre esquema 54, validar flujos y
   solo entonces ensayar 54→53. Nunca servir código 54 sobre esquema 53. Después,
   activar únicamente el ledger en 3-5 negocios piloto y reconciliar manualmente

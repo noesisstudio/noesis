@@ -2,6 +2,16 @@
 
 ## 2026-09-04 — validación previa a main
 
+- **RESULTADO FINAL:** CI `33855910788` verde en ambos jobs. **629 pruebas en
+  275,502 s**, migraciones completas SQLite, PostgreSQL 16 con datos históricos,
+  35 rutas, backup/restauración, código anterior 53 sobre BD 55, rollback
+  55→54→53→54→55 y flujo RGPD. Auditoría de dependencias sin vulnerabilidades
+  conocidas, escáner de secretos, Bandit, Ruff y verdad documental correctos.
+- Código probado `fbfa76b7379f6295cb4efac62a2c6bca9e17aaa5`; el cierre posterior
+  solo cambia documentación. Ver [[Revision-pre-main-2026-09-04]]. Apto técnicamente
+  para publicación controlada, no apertura masiva. Falta autorización del founder
+  y copia fresca verificada antes de publicar. Sin push a main ni despliegue.
+
 - **PostgreSQL 16 completo OK:** job de `33855685663`, incluidos migración histórica,
   humo de rutas, restauración de backup, código 53 sobre BD 55, rollback completo y
   flujo RGPD con permisos/concurrencia/exportación/avisos. Solo queda el job general:

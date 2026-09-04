@@ -2,6 +2,14 @@
 
 ## 2026-09-04 — puerta de revisión aislada, sin despliegue
 
+- **Cierre:** CI `33855910788` correcto: 629 pruebas en 275,502 s, migraciones,
+  PostgreSQL, restauración y rollback código/BD. Se actualizan estado, pendientes,
+  despliegue e informe [[Revision-pre-main-2026-09-04]]. El commit de cierre es
+  exclusivamente documental; el runtime sigue siendo el probado en `fbfa76b`.
+- **Decisión:** técnicamente apto para despliegue controlado tras autorización y
+  copia reciente verificada. Altas y WUB siguen apagados; revisiones jurídicas,
+  pruebas reales e infraestructura de backup externa no se dan por resueltas.
+
 - **PostgreSQL completo correcto:** ejecución `33855685663` valida migraciones,
   humo, backup/restauración, código anterior sobre esquema nuevo y privacidad.
   Se documenta como público el SHA fijo del checkout anterior para el escáner;

@@ -8,7 +8,7 @@
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Migrar primero el esquema 55 en PostgreSQL no productivo y validar 54->55->54, la bandeja de privacidad y la baja con conservacion sin borrar datos. Mantener ambos flags del registro de valor en false y ejecutar tambien el humo y rollback 53->54. Activar despues solo el ledger para reconciliar WUB y outcomes con 3-5 negocios. Validar DPA y regiones de Railway, tabla legal de conservacion, proveedores activos, catch-all, Stripe, Google OAuth, Meta y el resto de puertas de Tareas-vivas.md."
+    "pending_after_deploy": "CI aislado 33855910788 verificado: 629 pruebas, PostgreSQL 16, restauracion, codigo 53 sobre BD 55, rollback 55->54->53->54->55 y privacidad HTTP. Pendientes autorizacion y copia reciente de produccion antes de publicar; despues verificar release, esquema 55, ready y acceso existente. Mantener alta publica y ambos flags de valor en false. Antes de apertura: validar DPA, regiones, conservacion, copia externa, integraciones y piloto real. Reconciliar WUB/outcomes con 3-5 negocios solo al autorizar su activacion."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -117,7 +117,7 @@
     "anthropic_fallback"
   ],
   "external_validation_pending": [
-    "schema_55_non_production_postgres_migration_privacy_request_smoke_and_rollback_to_54_then_schema_54_value_ledger_smoke_and_3_5_business_wub_outcome_reconciliation",
+    "schema_55_production_release_authorization_fresh_verified_backup_post_deploy_smoke_and_human_privacy_request_then_3_5_business_wub_outcome_reconciliation",
     "hostinger_catch_all_preserves_original_recipient_and_real_imap_pilot",
     "rotate_any_secret_exposed_in_shared_material",
     "professional_legal_review",

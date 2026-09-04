@@ -79,6 +79,9 @@ secuencia debe repetirse en el entorno PostgreSQL no productivo.
 
 ### Despliegue y rollback seguro del esquema 55
 
+La revisión técnica aislada del 4-sep está documentada en
+[[Revision-pre-main-2026-09-04]]. No equivale a autorización de despliegue.
+
 1. Migrar 54→55 en PostgreSQL no productivo. No requiere feature flag porque la
    tabla nueva está inerte hasta que una persona solicita una baja.
 2. Probar una baja directa sin facturas y otra con factura o jornada. La segunda
@@ -89,6 +92,12 @@ secuencia debe repetirse en el entorno PostgreSQL no productivo.
 4. Exportar la cuenta y comprobar que incluye la solicitud sin notas internas.
 5. Ensayar 55→54 en el entorno aislado. El rollback elimina solo la bandeja de
    solicitudes; no toca facturas, clientes, documentos ni el ledger de valor.
+
+En producción, volver **primero al código anterior conservando el esquema nuevo**.
+La compatibilidad código 53 sobre BD 55 se prueba en CI. No bajar tablas con el
+candidato atendiendo tráfico. Si hay solicitudes o métricas nuevas reales,
+exportarlas y conservar una copia antes de considerar un downgrade: quitar las
+tablas también quitaría esos registros. Priorizar rollback de código sin borrado.
 
 ## Checklist antes de exponer
 - [ ] `NOESIS_SECRET` puesta y aleatoria (nunca la de por defecto).
