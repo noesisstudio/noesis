@@ -50,7 +50,7 @@ def _rollback() -> None:
     assert migrations.upgrade(55) == 55
     assert _snapshot() == original
     # La guardia fiscal debe seguir funcionando tras todo el ciclo.
-    emitted = next(i for i in original["invoices"] if i["status"] == "emitida")
+    emitted = next(i for i in original["invoices"] if i["status"] in {"enviada", "parcial", "cobrada"})
     try:
         with db.get_conn() as conn:
             conn.execute(
@@ -69,9 +69,9 @@ def _privacy() -> None:
     bid = business["id"]
     user = db.create_user("privacy-release@example.com", auth.hash_password(PASSWORD), bid)
     other = db.create_business("Otra cuenta CI", "other-release@example.com")
-    db.update_fiscal(bid, nif="A12345678", address="Calle Prueba 1")
+    db.update_fiscal(bid, nif="A12345678", address="Calle Prueba 1")  # pragma: allowlist secret
     customer = db.add_client(
-        "Cliente CI", nif="B12345678", address="Calle Prueba 2", business_id=bid,
+        "Cliente CI", nif="B12345678", address="Calle Prueba 2", business_id=bid,  # pragma: allowlist secret
     )
     invoice = db.add_invoice(customer["id"], "Servicio de prueba", 100, business_id=bid)
     db.issue_invoice(invoice["id"], bid)

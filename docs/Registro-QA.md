@@ -2,6 +2,15 @@
 
 ## 2026-09-04 — validación previa a main
 
+- Segunda ejecución: auditoría de dependencias correcta tras pypdf 6.16.1. Se
+  verificaron los 49 SHA-256 del branding contra los archivos y se anotan como
+  falsos positivos exactos; fixtures fiscales/contraseña se marcan explícitamente.
+  El rollback PostgreSQL completó todo el ciclo; la aserción posterior utilizaba
+  `emitida` en vez del estado real `enviada`, y se corrige el nuevo test.
+- Lectura de configuración Railway sin SSH ni acceso a BD: altas públicas false,
+  flags de valor ausentes (default false), S3 ausente, Brevo activo y SMTP presente
+  sin nombre/región legales. No se cambió ninguna variable ni se lanzó despliegue.
+
 - Primer CI `33854946594`: bloqueó tres CVE en pypdf 6.15.0. Las migraciones
   históricas y el humo PostgreSQL existente pasaron; el nuevo humo falló porque
   usaba iteración directa sobre el cursor propio. Se corrige con `fetchall()` y

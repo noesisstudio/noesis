@@ -421,11 +421,11 @@ class ValueLedgerTestCase(unittest.TestCase):
     def test_scheduler_keeps_legacy_audit_when_value_ledger_is_disabled(self):
         config.VALUE_LEDGER_ENABLED = False
         db.update_fiscal(
-            self.business["id"], nif="A12345678", address="Calle Principal 1"
+            self.business["id"], nif="A12345678", address="Calle Principal 1"  # pragma: allowlist secret
         )
         client = db.add_client(
             "Cliente aviso",
-            nif="B12345678",
+            nif="B12345678",  # pragma: allowlist secret
             address="Calle Cliente 2",
             phone="600111222",
             business_id=self.business["id"],
@@ -539,7 +539,7 @@ class ValueLedgerTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        password = "password-segura-123"
+        password = "password-segura-123"  # pragma: allowlist secret
         admin = db.create_user(
             "admin-value@example.com",
             auth.hash_password(password),
