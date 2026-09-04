@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -151,3 +152,9 @@ jobs:
 
       - name: Ejecutar humo Postgres
         run: uv run python tests/postgres_smoke.py
+
+      - name: Validar privacidad y rollback del candidato aislado
+        env:
+          NOESIS_VALUE_LEDGER_ENABLED: "false"
+          NOESIS_VALUE_LEDGER_ADMIN_ENABLED: "false"
+        run: uv run python tests/postgres_release_smoke.py

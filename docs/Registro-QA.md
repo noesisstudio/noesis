@@ -1,5 +1,15 @@
 # Registro de QA
 
+## 2026-09-04 — validación previa a main
+
+- Se prepara ejecución manual del CI desde `codex/review-value-privacy`, sin push
+  a main ni PR. PostgreSQL 16 del runner es efímero y no tiene datos reales.
+- El nuevo `tests/postgres_release_smoke.py` solo permite `localhost/noesis_ci`:
+  valida rollback 55→54→53→54→55, datos históricos e inmutabilidad, baja HTTP,
+  conservación, aislamiento, concurrencia, panel admin, exportación y outbox.
+- Estado inicial: Ruff, verdad documental y diff correctos. Suite completa y CI
+  pendientes de resultado; no constituye aprobación de producción.
+
 ## 2026-09-03 — RGPD operativo, transparencia y conservación
 
 - **Regresión:** `python -m unittest discover -s tests -q` ejecutó 615 pruebas en

@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-09-04 — puerta de revisión aislada, sin despliegue
+
+- **Objetivo:** verificar el candidato de valor/RGPD antes de decidir su publicación.
+- **Áreas:** CI admite ejecución manual por rama; nuevo humo PostgreSQL exclusivo
+  de `localhost/noesis_ci` prueba rollback 55→54→53→54→55 con datos históricos,
+  inmutabilidad fiscal, baja HTTP, permisos, concurrencia, exportación y avisos.
+- **Pruebas:** Ruff y verdad del proyecto correctos; suite completa y CI en curso.
+- **Límites:** sin producción, credenciales de servicios ni envíos reales. No se
+  crea PR para evitar previews automáticas. Solo rama de revisión.
+- **Riesgo/rollback:** no cambia el runtime. El humo descarta tablas nuevas solo en
+  la base efímera del CI; se rechaza cualquier host remoto o nombre de BD distinto.
+  Revertir este commit retira únicamente esta puerta y sus notas.
+
 Bitácora cronológica obligatoria de modificaciones del repositorio. Su objetivo es
 permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió, qué
 área puede haberlo causado, cómo se verificó y cómo se puede aislar o revertir**.
