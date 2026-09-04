@@ -80,6 +80,38 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — el trimestre fiscal deja de releer las tablas por cada trimestre
+
+- **Autor/agente:** Claude, a petición del founder («el panel va muy lento»).
+- **Objetivo:** medir la lentitud del panel en vez de opinar, y atacar lo más caro.
+- **Áreas y archivos:** `src/noesis/db.py` (`tax_quarter` se parte en una carga
+  pública y `_tax_quarter_from`, que recibe los datos ya leídos),
+  `scripts/profile_panel.py` (nuevo medidor), `tests/test_backend.py`,
+  `docs/project-state.json`, `docs/Registro-QA.md`.
+- **Cambios de datos/migración:** ninguno; esquema 55 sin tocar. Solo lectura.
+- **Pruebas ejecutadas:** las 27 fiscales en verde, `tests/test_backend.py`,
+  `test_invoicing_adapter.py` y `test_received_invoices.py` completos. Total
+  recolectado 637. **Comparación de cifras antes/después con facturas y gastos
+  repartidos por los cuatro trimestres y tipos de IVA e IRPF distintos: idénticas
+  al céntimo en ingresos, IVA repercutido, soportado, resultado, IRPF del periodo
+  y pagos previos.**
+- **Medición:** con 400 facturas y 300 gastos, `tax_quarter(4T)` pasa de **281,6 ms
+  a 38,8 ms** (mejor de 7). El 1T no cambia (35 ms) porque no tiene trimestres
+  anteriores. En el panel, la pantalla de Impuestos baja de 34 a 25 consultas.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** es código de dinero. El riesgo era que la
+  recursión compartiera datos mal filtrados; por eso la comparación de cifras y una
+  prueba nueva que fija **una lectura por tabla** sea cual sea el trimestre. Con el
+  código anterior esa prueba falla con «list_invoices se leyó 8 veces».
+- **Diagnóstico y rollback:** `python scripts/profile_panel.py` mide todas las
+  pantallas; `pytest -k tax_quarter_reads_each_table_once` fija la mejora.
+- **Estado de publicación:** desplegable. **Queda pendiente el patrón de fondo:**
+  cada pantalla del panel hace 22-35 consultas y varias traen tablas enteras para
+  filtrar en Python, así que al pasar de 60 a 250 clientes los tiempos se doblan
+  aunque el número de consultas no cambie. Las siguientes peores son Ajustes
+  (35 consultas, 62 KB de HTML) y Resumen. Medido en SQLite local: en producción
+  con PostgreSQL cada consulta cruza además la red.
+
 ## 2026-09-04 — el asistente ya puede responder por el IVA y el IRPF
 
 - **Autor/agente:** Claude, a petición del founder («si le pregunto cómo va mi IVA,

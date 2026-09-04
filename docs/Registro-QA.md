@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-09-04 — perfilado del panel y equivalencia fiscal
+
+- **Perfilado con datos reales** (`scripts/profile_panel.py`, base temporal). Con
+  60 clientes/150 facturas: 123-246 ms y 22-35 consultas por pantalla. Con
+  250 clientes/600 facturas: 292-691 ms **con el mismo número de consultas**. El
+  coste crece con el volumen aunque los viajes no: las consultas traen tablas
+  enteras y se filtra en Python.
+- **Equivalencia fiscal antes/después del cambio en `tax_quarter`.** Cuatro
+  trimestres de 2025 con IVA 21/10/21/4, IRPF 15/0/7/15 y gastos trimestrales:
+  ingresos, IVA repercutido, soportado, resultado, IRPF del periodo y pagos previos
+  **idénticos al céntimo** en los cuatro. Sin este contraste el cambio no era
+  publicable.
+- **Mejora medida:** `tax_quarter(4T)` de 281,6 ms a 38,8 ms con 400 facturas y
+  300 gastos. Pantalla de Impuestos: de 34 a 25 consultas.
+- **Prueba de regresión verificada por contradicción:** con el código anterior,
+  `test_tax_quarter_reads_each_table_once_whatever_the_quarter` falla con
+  «list_invoices se leyó 8 veces, se esperaba 1».
+- **Límite:** medido en SQLite sobre Windows. No se ha perfilado contra PostgreSQL
+  ni contra producción, donde cada consulta añade latencia de red.
+
 ## 2026-09-04 — IVA por el asistente y canal de Meta verificado
 
 - **Canal de Meta, contra la cuenta real.** Token permanente de usuario del sistema

@@ -2,7 +2,7 @@
   "state_date": "2026-09-04",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 633,
+  "verified_test_count": 637,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -108,7 +108,8 @@
     "trade_templates": "five_trade_catalogs_with_their_usual_vat_per_line_material_or_labour_marked_visible_and_loadable_from_their_own_page_suggested_trade_guessed_from_the_free_text_sector_and_loading_twice_never_duplicates_the_catalog",
     "whatsapp_template_contract": "the_nine_meta_templates_are_declared_in_code_mirroring_the_runbook_with_name_category_audience_body_and_slot_count_so_a_console_report_flags_any_send_that_stops_matching_what_was_approved",
     "whatsapp_outbound_hardening": "template_values_are_flattened_into_a_visible_separator_and_capped_at_the_1024_character_limit_before_queueing_and_a_permanent_4xx_from_meta_cancels_the_send_immediately_instead_of_retrying_six_times",
-    "tax_quarter_over_the_assistant": "vat_303_and_irpf_130_of_a_quarter_exposed_as_ver_impuestos_tool_and_recognised_by_the_local_brain_so_a_fiscal_question_is_answered_from_registered_invoices_and_expenses_instead_of_the_month_summary_warns_about_incomplete_entries_and_states_the_gestoria_validates_the_filing"
+    "tax_quarter_over_the_assistant": "vat_303_and_irpf_130_of_a_quarter_exposed_as_ver_impuestos_tool_and_recognised_by_the_local_brain_so_a_fiscal_question_is_answered_from_registered_invoices_and_expenses_instead_of_the_month_summary_warns_about_incomplete_entries_and_states_the_gestoria_validates_the_filing",
+    "quarterly_tax_reads_once": "tax_quarter_loads_invoices_expenses_and_received_invoices_once_and_shares_them_with_the_model_130_recursion_over_previous_quarters_instead_of_rereading_every_table_per_quarter_figures_unchanged_to_the_cent_and_a_test_pins_one_read_per_table"
   },
   "ai_route": [
     "reglas_locales",

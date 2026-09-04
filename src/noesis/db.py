@@ -9983,6 +9983,31 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
     gestor, no una presentación oficial."""
     if quarter not in _QUARTERS:
         raise ValueError("El trimestre debe estar entre 1 y 4.")
+    # El modelo 130 necesita los trimestres anteriores, y antes cada uno volvía a
+    # leer las tres tablas enteras: doce lecturas para pedir el 4T. Se leen una vez
+    # y se reparten por la recursión.
+    return _tax_quarter_from(
+        year,
+        quarter,
+        [
+            i for i in list_invoices(business_id)
+            if i.get("status") in ("enviada", "parcial", "cobrada")
+        ],
+        list_expenses(business_id),
+        list_received_invoices(business_id),
+    )
+
+
+def _tax_quarter_from(
+    year: int,
+    quarter: int,
+    all_invoices: list,
+    all_expenses: list,
+    all_received: list,
+) -> dict:
+    """Calcula un trimestre sobre datos ya leídos. Ver `tax_quarter`."""
+    if quarter not in _QUARTERS:
+        raise ValueError("El trimestre debe estar entre 1 y 4.")
     m0, m1 = _QUARTERS[quarter]
     quarter_start, end = f"{year}-{m0}", f"{year}-{m1}"
     year_start = f"{year}-01"
@@ -9990,12 +10015,6 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
     def _in_range(d: str | None, start: str) -> bool:
         return bool(d) and start <= d[:7] <= end
 
-    all_invoices = [
-        i for i in list_invoices(business_id)
-        if i.get("status") in ("enviada", "parcial", "cobrada")
-    ]
-    all_expenses = list_expenses(business_id)
-    all_received = list_received_invoices(business_id)
     invoices = [
         i for i in all_invoices
         if _in_range(i.get("issued_at") or i.get("created_at"), year_start)
@@ -10051,7 +10070,9 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
     # los pagos estimados de trimestres anteriores para obtener el importe del periodo.
     irpf_acumulado = round(max(rendimiento * 0.20 - irpf_retenido, 0), 2)
     pagos_previos = round(sum(
-        tax_quarter(year, previous, business_id)["irpf_pago"]
+        _tax_quarter_from(
+            year, previous, all_invoices, all_expenses, all_received
+        )["irpf_pago"]
         for previous in range(1, quarter)
     ), 2)
     irpf_pago = round(max(irpf_acumulado - pagos_previos, 0), 2)

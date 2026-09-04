@@ -1821,6 +1821,52 @@ class BackendTestCase(unittest.TestCase):
         self.assertIn("varios clientes", ambiguous["reply"])
         self.assertEqual(len(db.list_clients(business["id"])), before)
 
+    def test_tax_quarter_reads_each_table_once_whatever_the_quarter(self):
+        # El modelo 130 necesita los trimestres anteriores y la función se llamaba
+        # a sí misma: cada llamada releía facturas, gastos y facturas recibidas
+        # enteras, así que pedir el 4T costaba doce lecturas completas y tardaba
+        # siete veces más que el 1T. Se leen una vez y se reparten.
+        business, client = self.make_business("Lecturas")
+        for month, base in ((2, 1000), (5, 2000), (8, 1500)):
+            invoice = db.add_invoice(
+                client["id"], f"Trabajo {month}", base, vat_rate=21,
+                irpf_rate=15, business_id=business["id"],
+            )
+            db.issue_invoice(
+                invoice["id"], business["id"],
+                _issued_at_override=f"2025-{month:02d}-15T10:00:00",
+            )
+
+        lecturas: dict[str, int] = {}
+
+        def _contar(nombre, original):
+            def _envuelto(*a, **k):
+                lecturas[nombre] = lecturas.get(nombre, 0) + 1
+                return original(*a, **k)
+            return _envuelto
+
+        originales = {
+            n: getattr(db, n)
+            for n in ("list_invoices", "list_expenses", "list_received_invoices")
+        }
+        try:
+            for nombre, original in originales.items():
+                setattr(db, nombre, _contar(nombre, original))
+            cuarto = db.tax_quarter(2025, 4, business["id"])
+        finally:
+            for nombre, original in originales.items():
+                setattr(db, nombre, original)
+
+        for nombre, veces in lecturas.items():
+            self.assertEqual(veces, 1, f"{nombre} se leyó {veces} veces, se esperaba 1")
+        # El acumulado del año sigue siendo el de las tres facturas emitidas.
+        self.assertEqual(cuarto["ingresos"], 4500.0)
+        # Y el 4T sigue descontando lo estimado en los trimestres anteriores.
+        previos = round(sum(
+            db.tax_quarter(2025, q, business["id"])["irpf_pago"] for q in (1, 2, 3)
+        ), 2)
+        self.assertEqual(cuarto["pagos_previos_estimados"], previos)
+
     def test_invalid_tax_quarter_and_csv_formula(self):
         business, _ = self.make_business()
         with self.assertRaises(ValueError):
