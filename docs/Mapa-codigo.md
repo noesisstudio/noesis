@@ -6,7 +6,7 @@
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría. La recuperación de acceso consume token, cambia credencial y revoca
   sesiones en una sola transacción; pedir otro enlace invalida los anteriores.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 52;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 55;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -34,7 +34,18 @@
   recuperación de contraseña de gestoría de los usuarios de empresa, con tokens
   hasheados, caducables y de un solo uso. La 52 añade rutas opacas de correo por
   negocio, deduplicación de mensajes sin contenido y propuestas confirmables de
-  cliente para documentos.
+  cliente para documentos. La 53 distingue material y mano de obra en líneas. La
+  54 añade un registro observacional de acciones y resultados útiles, relaciones
+  multiempresa protegidas, zona horaria y metadatos opcionales de correlación de
+  propuestas sin modificar permisos ni flujos. La 55 registra solicitudes de
+  privacidad por negocio, impide duplicar una solicitud abierta y separa seguimiento
+  de cualquier supresión técnica.
+- `src/noesis/value_ledger.py`: taxonomía central v1, escritores fail-open,
+  idempotencia, calificación binaria por contexto de delegación, infraestructura de
+  ciclo corregido/revertido todavía sin hooks operativos, outcomes muchos-a-muchos,
+  WUB móvil y semanal, profundidad, consistencia, aceptación por familia, activación
+  y estado conservador de control. No ejecuta acciones ni usa IA para calcular
+  métricas.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -167,9 +178,9 @@
 - `src/noesis/web/templates/site_equipo.html`: página pública de equipo y principios;
   explica responsabilidades reales sin atribuir personas, clientes o credenciales
   todavía no verificadas.
-- `src/noesis/web/templates/site_contacto.html`: contacto y reserva de reunión con el
-  calendario incrustado. Es la única ruta donde la CSP permite `frame-src` de cal.com;
-  el resto del sitio mantiene `'none'`.
+- `src/noesis/web/templates/site_contacto.html`: contacto y reserva mediante enlace
+  externo consciente. Cal.com no se incrusta ni se carga por visitar Noesis; la CSP
+  mantiene `frame-src 'none'` en todas las rutas.
 - `src/noesis/web/templates/solicitar_acceso.html`: formulario público de solicitud de
   acceso. Producto se fusionó con la portada, que conserva las anclas `#como-funciona`
   y `#cumplimiento-legal` a las que redirigen los enlaces antiguos.
@@ -246,6 +257,9 @@
   cerrada en producción si falta identidad legal o autorización explícita y no
   expone el diagnóstico de proveedores en la API del cliente. La solicitud pública
   distingue también un despacho profesional sin crearle una cuenta ni permisos.
+  La baja borra directamente solo si no hay conservación obligatoria; con facturas
+  o jornada crea una solicitud idempotente, avisa por la outbox y deja evidencia en
+  la bitácora sin fingir que los datos ya se han suprimido.
 - `src/noesis/web/routers/pages.py` + `templates/access_entry.html`: `/acceso` es la
   puerta pública única. Deriva autónomo/empresa al login titular y gestoría a su
   identidad profesional separada; un cliente final conserva el portal por enlace.
@@ -263,7 +277,9 @@
   solicitudes: el alta crea el negocio, arranca la prueba ese día y devuelve un
   enlace de un solo uso —reutiliza `password_resets`— para que el titular elija su
   contraseña, de modo que el equipo nunca llega a conocerla. También resume las
-  visitas de la web del último mes. La ficha técnica por cuenta llama a
+  visitas de la web del último mes. La bandeja `Privacidad y bajas` muestra las
+  solicitudes abiertas y exige una nota para cada cambio de estado; el estado es
+  seguimiento administrativo y nunca dispara un borrado. La ficha técnica por cuenta llama a
   `db.admin_support_snapshot`: solo devuelve estados y recuentos, nunca contenido
   operativo, y registra cada consulta en la bitácora encadenada. Si el titular abre
   el alcance temporal `document_metadata`, `db.admin_support_document_metadata` y

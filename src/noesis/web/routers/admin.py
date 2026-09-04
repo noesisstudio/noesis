@@ -7,7 +7,10 @@ import secrets
 from datetime import date
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import (
+    FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response,
+)
 
 from ... import config, db, readiness, security_center
 from ...adapters import billing as billing_adapter
@@ -48,16 +51,87 @@ def admin_panel(request: Request):
     data["readiness"] = readiness.collect_readiness(check_database=False)
     data["security"] = security_center.build_security_report()
     requests_list = db.list_access_requests()
+    privacy_requests = db.list_privacy_requests()
     return TEMPLATES.TemplateResponse(request, "admin.html", {
         "data": data,
         "hoy": date.today().isoformat(),
         "mi_negocio": user["business_id"],
         "access_requests": requests_list,
         "access_pending": sum(1 for r in requests_list if r["status"] == "nueva"),
+        "privacy_requests": privacy_requests,
+        "privacy_pending": sum(
+            1 for row in privacy_requests
+            if row["status"] in db.PRIVACY_REQUEST_OPEN_STATUSES
+        ),
         "visits": db.page_views_summary(30),
         "invite": request.session.pop("last_invite", None),
         "admin_error": request.session.pop("admin_error", None),
+        "admin_success": request.session.pop("admin_success", None),
     })
+
+
+@router.post("/admin/privacidad/{privacy_request_id}/estado")
+def admin_update_privacy_request(
+    request: Request,
+    privacy_request_id: int,
+    status: str = Form(...),
+    resolution_note: str = Form(...),
+):
+    """Documenta el seguimiento; nunca borra datos desde este control."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        updated = db.update_privacy_request(
+            privacy_request_id,
+            status=status,
+            resolution_note=resolution_note,
+        )
+    except (ValueError, *db.IntegrityError) as exc:
+        request.session["admin_error"] = str(exc)
+        return RedirectResponse("/admin#privacidad", status_code=303)
+    if not updated:
+        return Response("Solicitud no encontrada.", status_code=404)
+    db.record_security_event(
+        "privacy.request_status_updated",
+        severity="warning",
+        area="privacy",
+        actor_user_id=user["id"],
+        subject_business_id=updated["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={
+            "privacy_request_id": updated["id"],
+            "status": updated["status"],
+        },
+    )
+    request.session["admin_success"] = (
+        f"Solicitud #{updated['id']} actualizada."
+    )
+    return RedirectResponse("/admin#privacidad", status_code=303)
+
+
+@router.get("/admin/value-ledger", response_class=JSONResponse)
+def admin_value_ledger(request: Request, business_id: int | None = None):
+    """Auditoría interna mínima, oculta por defecto y siempre de solo lectura."""
+    if not _is_admin(request):
+        return Response("No autorizado.", status_code=403)
+    if not config.VALUE_LEDGER_ADMIN_ENABLED:
+        return Response("No encontrado.", status_code=404)
+    from ... import value_ledger
+    user = auth.current_user(request)
+    try:
+        snapshot = value_ledger.admin_snapshot(business_id)
+    except ValueError as exc:
+        return Response(str(exc), status_code=404)
+    db.record_security_event(
+        "admin.value_ledger_viewed",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=business_id or user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"mode": "read_only", "scope": "business" if business_id else "weekly"},
+    )
+    return JSONResponse(jsonable_encoder(snapshot))
 
 
 @router.get("/admin/cuentas/{business_id}", response_class=HTMLResponse)

@@ -2,6 +2,34 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Medir el trabajo útil sin gobernar el trabajo (2026-08-31)
+
+El Registro Interno de Valor se añade como observador, no como un nuevo motor de
+negocio. Escribe después de que una operación termine, falla abierto y puede
+apagarse sin detener facturas, clientes, cobros, agenda, documentos, presupuestos o
+WhatsApp. La taxonomía versionada y determinista decide qué cuenta para WUB; una IA
+nunca calcula la métrica ni atribuye causalidad.
+
+Useful Action y Useful Outcome se separan. Un cobro puede observarse sin afirmar que
+Noesis lo causó; solo existe atribución asistida o directa cuando hay evidencia
+enlazada. WUB exige tres acciones núcleo en dos procesos, con semana oficial por
+zona horaria, profundidad y consistencia como contexto. Confidence, Insight,
+Progress y cualquier aumento automático de autonomía quedan fuera hasta tener
+aceptaciones, correcciones y reversiones reales del piloto.
+
+La taxonomía solo marca familias candidatas. Cada instancia debe demostrar un
+contexto válido de delegación y guarda `qualifies_for_wub=true/false`: asistente web
+o WhatsApp, propuesta confirmada, regla autorizada o automatización explícita. Un
+formulario manual se observa, pero no cuenta. No existen puntos ni pesos.
+
+La auditoría nueva está oculta por feature flag y el ledger parte apagado. Apagarlo
+no elimina la escritura histórica de `assistant_actions`: solo retira sus campos
+nuevos de correlación. Conserva aislamiento por negocio y forma parte de
+exportación/borrado RGPD. «Todo bajo control» solo puede afirmarse dentro de
+procesos conectados y sin fallos o pendientes conocidos. La infraestructura de
+lifecycle existe, pero los hooks de corrección/reversión por proceso siguen fuera
+de esta fase.
+
 ## Un catch-all enruta documentos; nunca decide su contabilidad (2026-08-27)
 
 Noesis puede recibir las facturas de todos los negocios en un único buzón de

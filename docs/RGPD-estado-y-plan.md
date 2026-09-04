@@ -13,6 +13,14 @@
 > Contexto de por qué esto bloquea el primer cobro: [[Constitucion-y-primer-euro]],
 > bloque C.
 
+> **Estado del candidato posterior a la auditoría:** ya se han corregido el iframe
+> de Cal.com, su excepción CSP, la afirmación de sistema homologado, la identificación
+> condicional de proveedores, el valor S3 estadounidense por defecto y el callejón sin
+> salida de la baja. El esquema 55 añade seguimiento sin borrado automático. También
+> existen borradores de ROPA, matriz de proveedores, derechos y brechas. Las secciones
+> de hallazgos se conservan como evidencia histórica; los pendientes vivos son la
+> revisión profesional, DPA/regiones, tabla de conservación, purga y pruebas externas.
+
 Noesis tiene dos sombreros a la vez y esa es la raíz de todo lo demás:
 
 - **Responsable** de los datos de la cuenta del autónomo: su email, su NIF, su

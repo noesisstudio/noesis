@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -151,3 +152,20 @@ jobs:
 
       - name: Ejecutar humo Postgres
         run: uv run python tests/postgres_smoke.py
+
+      - name: Obtener código base para rollback seguro
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: d3740a052432a29c9306bf16629a711384df9352 # pragma: allowlist secret
+          path: .legacy-baseline
+
+      - name: Validar código anterior sobre esquema nuevo
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.legacy-baseline/src
+        run: uv run python tests/postgres_legacy_smoke.py
+
+      - name: Validar privacidad y rollback del candidato aislado
+        env:
+          NOESIS_VALUE_LEDGER_ENABLED: "false"
+          NOESIS_VALUE_LEDGER_ADMIN_ENABLED: "false"
+        run: uv run python tests/postgres_release_smoke.py

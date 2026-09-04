@@ -2510,11 +2510,18 @@ def record_assistant_action(
     requested_by: str = "noesis",
     approved_by: str | None = None,
     error: str | None = None,
+    process_key: str | None = None,
+    action_family: str | None = None,
+    correlation_key: str | None = None,
+    trigger_source: str | None = None,
 ) -> dict:
     policy = AUTOMATION_BY_KEY.get(str(action_key or "").strip())
     if not policy:
         raise ValueError("La acción de Noesis no existe.")
-    if status not in {"proposed", "approved", "executed", "failed", "cancelled"}:
+    if status not in {
+        "proposed", "approved", "executed", "failed", "cancelled",
+        "rejected", "corrected", "reverted",
+    }:
         raise ValueError("El estado de la acción no es válido.")
     summary = str(summary or "").strip()
     if not summary:
@@ -2529,12 +2536,29 @@ def record_assistant_action(
         payload_text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         if len(payload_text) > 12_000:
             raise ValueError("El detalle de la acción es demasiado grande.")
+    process_key = str(process_key or "").strip()[:50] or None
+    action_family = str(action_family or "").strip()[:80] or None
+    correlation_key = str(correlation_key or "").strip()[:240] or None
+    trigger_source = str(trigger_source or "").strip().lower()[:40] or None
+    if trigger_source and trigger_source not in {
+        "manual_form", "user_initiated", "noesis_proposed", "authorized_rule",
+        "automation", "external_integration",
+    }:
+        raise ValueError("El origen de la acción no es válido.")
+    if any((process_key, action_family, correlation_key)) and not all(
+        (process_key, action_family, correlation_key)
+    ):
+        raise ValueError(
+            "El proceso, la familia y la correlación deben registrarse juntos."
+        )
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO assistant_actions "
             "(business_id, action_key, risk_level, status, summary, target_type, "
             "target_id, payload, requested_by, approved_by, created_at, approved_at, "
-            "executed_at, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "executed_at, error, process_key, action_family, correlation_key, "
+            "trigger_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "?, ?, ?, ?) "
             "RETURNING id",
             (
                 business_id, action_key, policy["risk"], status, summary[:500],
@@ -2542,6 +2566,7 @@ def record_assistant_action(
                 str(requested_by or "noesis")[:30],
                 (approved_by or "").strip()[:80] or None,
                 now, approved_at, executed_at, (error or "").strip()[:1000] or None,
+                process_key, action_family, correlation_key, trigger_source,
             ),
         ).fetchone()
         saved = conn.execute(
@@ -3865,7 +3890,20 @@ def add_job(client_id, description, scheduled_for=None, zone=None,
         new_id = row["id"]
     if project_id and worker_id:
         _ensure_project_member(project_id, worker_id, business_id)
-    return get_job(new_id, business_id)
+    saved = get_job(new_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "job_created",
+        entity_type="job",
+        entity_id=new_id,
+        metadata={
+            "scheduled": bool(scheduled_for),
+            "has_project": bool(project_id),
+            "has_worker": bool(worker_id),
+        },
+    )
+    return saved
 
 
 def get_job(job_id, business_id) -> dict | None:
@@ -4233,7 +4271,16 @@ def complete_job(
     record_product_event(business_id, "job_completed")
     if job.get("price_estimate") and float(job["price_estimate"]) > 0:
         prepare_job_invoice_draft(job_id, business_id)
-    return get_job_completion(job_id, business_id) or {"id": row["id"]}
+    saved = get_job_completion(job_id, business_id) or {"id": row["id"]}
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "job_completed",
+        entity_type="job",
+        entity_id=job_id,
+        metadata={"confirmation_status": status},
+    )
+    return saved
 
 
 def confirm_job_completion(
@@ -6627,7 +6674,20 @@ def issue_invoice(
                 conn, business_id, "emision", invoice_id=invoice_id,
                 details=f"numero={number}", created_at=issued_at,
             )
-    return get_invoice(invoice_id, business_id)
+    saved = get_invoice(invoice_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "invoice_issued",
+        entity_type="invoice",
+        entity_id=invoice_id,
+        completed_at=issued_at,
+        metadata={"invoice_type": invoice_type},
+    )
+    value_ledger.observe_job_invoiced_from_invoice(
+        business_id, invoice_id=invoice_id, occurred_at=issued_at
+    )
+    return saved
 
 
 def _payment_text(value, label: str, max_length: int) -> str | None:
@@ -6758,7 +6818,16 @@ def add_invoice_payment(
             "WHERE id=? AND business_id=? AND invoice_id=?",
             (payment_id, business_id, invoice_id),
         ).fetchone()
-    return dict(payment)
+    saved = dict(payment)
+    from . import value_ledger
+    value_ledger.observe_payment_received(
+        business_id,
+        invoice_id=invoice_id,
+        payment_id=payment_id,
+        amount=amount_decimal,
+        occurred_at=paid_at,
+    )
+    return saved
 
 
 def list_invoice_payments(invoice_id, business_id) -> list[dict]:
@@ -6794,6 +6863,7 @@ def invoice_paid_amount(invoice_id, business_id) -> float | None:
 def mark_invoice_paid(invoice_id, business_id) -> dict | None:
     """Registra el importe restante; repetir la operación no duplica el cobro."""
     payment_time = _now()
+    payment_id = None
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         invoice, already_paid = _locked_invoice_with_paid(
@@ -6806,7 +6876,7 @@ def mark_invoice_paid(invoice_id, business_id) -> dict | None:
         if total <= 0:
             return None
         if remaining > 0:
-            _insert_invoice_payment(
+            payment_id = _insert_invoice_payment(
                 conn, invoice, remaining, None, payment_time,
                 "Cobro completo registrado",
             )
@@ -6816,7 +6886,17 @@ def mark_invoice_paid(invoice_id, business_id) -> dict | None:
                 details=f"importe={float(remaining):.2f};metodo=no indicado",
                 created_at=payment_time,
             )
-    return get_invoice(invoice_id, business_id)
+    saved = get_invoice(invoice_id, business_id)
+    if payment_id is not None:
+        from . import value_ledger
+        value_ledger.observe_payment_received(
+            business_id,
+            invoice_id=invoice_id,
+            payment_id=payment_id,
+            amount=remaining,
+            occurred_at=payment_time,
+        )
+    return saved
 
 
 def delete_invoice(invoice_id, business_id) -> bool:
@@ -9728,7 +9808,15 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
              irpf_rate or 0, irpf_amount, total, valid_until, notes or None, _now()),
         ).fetchone()
         new_id = row["id"]
-    return get_quote(new_id, business_id)
+    saved = get_quote(new_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "quote_prepared",
+        entity_type="quote",
+        entity_id=new_id,
+    )
+    return saved
 
 
 def get_quote(quote_id, business_id) -> dict | None:
@@ -9781,7 +9869,15 @@ def mark_quote_sent(quote_id, business_id) -> dict | None:
         conn.execute("UPDATE quotes SET status='enviado', number=? "
                      "WHERE id=? AND business_id=? AND status='borrador'",
                      (number, quote_id, business_id))
-    return get_quote(quote_id, business_id)
+    saved = get_quote(quote_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "quote_sent",
+        entity_type="quote",
+        entity_id=quote_id,
+    )
+    return saved
 
 
 def reject_quote(quote_id, business_id, *, decision_source="owner",
@@ -9859,10 +9955,13 @@ def accept_quote(quote_id, business_id, *, decision_source="owner",
              decision_ip_hash, str(decision_user_agent or "")[:300] or None,
              quote_id, business_id),
         )
-    return {
+    result = {
         "quote": get_quote(quote_id, business_id),
         "invoice": get_invoice(invoice_id, business_id),
     }
+    from . import value_ledger
+    value_ledger.observe_quote_accepted(business_id, quote_id=quote_id)
+    return result
 
 
 def delete_quote(quote_id, business_id) -> bool:
@@ -13010,7 +13109,162 @@ def admin_update_document_metadata(
     return {"document": dict(saved), "changed_fields": changed_fields}
 
 
-# ----------------------------------------------------------- RGPD (export/borrado) ---
+# ----------------------------------------------------------- RGPD (derechos/export/borrado) ---
+PRIVACY_REQUEST_STATUSES = (
+    "received", "in_review", "waiting_requester", "legal_hold",
+    "completed", "rejected", "cancelled",
+)
+PRIVACY_REQUEST_OPEN_STATUSES = (
+    "received", "in_review", "waiting_requester", "legal_hold",
+)
+PRIVACY_REQUEST_TYPES = (
+    "access", "rectification", "erasure", "restriction", "portability",
+    "objection", "account_closure",
+)
+
+
+def create_privacy_request(
+    business_id: int,
+    *,
+    requester_user_id: int,
+    request_type: str = "account_closure",
+    retention_required: bool = False,
+) -> dict:
+    """Registra una solicitud o devuelve la abierta, sin ejecutar el borrado.
+
+    ``active_key`` hace la operación idempotente incluso si el formulario se
+    reenvía. La resolución y la supresión material son pasos separados.
+    """
+    business_id = int(business_id)
+    requester_user_id = int(requester_user_id)
+    request_type = str(request_type or "").strip().lower()
+    if request_type not in PRIVACY_REQUEST_TYPES:
+        raise ValueError("Tipo de solicitud de privacidad no válido.")
+    active_key = f"{business_id}:{request_type}"
+    now = _now()
+    try:
+        with get_conn() as conn:
+            owner = conn.execute(
+                "SELECT id FROM users WHERE id=? AND business_id=?",
+                (requester_user_id, business_id),
+            ).fetchone()
+            if not owner:
+                raise ValueError("El solicitante no pertenece a esta cuenta.")
+            existing = conn.execute(
+                "SELECT * FROM privacy_requests WHERE active_key=?",
+                (active_key,),
+            ).fetchone()
+            if existing:
+                return dict(existing)
+            row = conn.execute(
+                "INSERT INTO privacy_requests "
+                "(business_id, requester_user_id, request_type, status, "
+                "retention_required, active_key, requested_at, updated_at) "
+                "VALUES (?, ?, ?, 'received', ?, ?, ?, ?) RETURNING *",
+                (
+                    business_id, requester_user_id, request_type,
+                    bool(retention_required), active_key, now, now,
+                ),
+            ).fetchone()
+    except IntegrityError:
+        # Dos clics simultáneos compiten por la misma clave. El que pierde
+        # devuelve el expediente que ya ganó, en vez de responder con error.
+        with get_conn() as conn:
+            existing = conn.execute(
+                "SELECT * FROM privacy_requests WHERE active_key=?",
+                (active_key,),
+            ).fetchone()
+        if not existing:
+            raise
+        return dict(existing)
+    return dict(row)
+
+
+def get_open_privacy_request(
+    business_id: int, request_type: str = "account_closure",
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM privacy_requests WHERE business_id=? "
+            "AND request_type=? AND status IN (?,?,?,?) "
+            "ORDER BY requested_at DESC, id DESC LIMIT 1",
+            (
+                int(business_id), request_type,
+                *PRIVACY_REQUEST_OPEN_STATUSES,
+            ),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_privacy_requests(
+    *, status: str | None = None, business_id: int | None = None,
+    limit: int = 200,
+) -> list[dict]:
+    """Bandeja interna con el mínimo contexto para poder atender la solicitud."""
+    where, params = [], []
+    if status:
+        if status not in PRIVACY_REQUEST_STATUSES:
+            raise ValueError("Estado de privacidad no válido.")
+        where.append("pr.status=?")
+        params.append(status)
+    if business_id is not None:
+        where.append("pr.business_id=?")
+        params.append(int(business_id))
+    query = (
+        "SELECT pr.*, b.name AS business_name, u.email AS requester_email "
+        "FROM privacy_requests pr "
+        "JOIN businesses b ON b.id=pr.business_id "
+        "LEFT JOIN users u ON u.id=pr.requester_user_id"
+    )
+    if where:
+        query += " WHERE " + " AND ".join(where)
+    query += (
+        " ORDER BY CASE pr.status WHEN 'received' THEN 0 "
+        "WHEN 'in_review' THEN 1 WHEN 'waiting_requester' THEN 2 "
+        "WHEN 'legal_hold' THEN 3 ELSE 4 END, "
+        "pr.requested_at ASC, pr.id ASC LIMIT ?"
+    )
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        return [dict(row) for row in conn.execute(query, params).fetchall()]
+
+
+def update_privacy_request(
+    request_id: int, *, status: str, resolution_note: str,
+) -> dict | None:
+    """Actualiza el seguimiento; nunca borra datos como efecto lateral."""
+    status = str(status or "").strip().lower()
+    note = str(resolution_note or "").strip()[:2000]
+    if status not in PRIVACY_REQUEST_STATUSES:
+        raise ValueError("Estado de privacidad no válido.")
+    if not note:
+        raise ValueError("Documenta el motivo o la actuación realizada.")
+    now = _now()
+    terminal = status in {"completed", "rejected", "cancelled"}
+    with get_conn() as conn:
+        current = conn.execute(
+            "SELECT * FROM privacy_requests WHERE id=?", (int(request_id),)
+        ).fetchone()
+        if not current:
+            return None
+        active_key = None if terminal else (
+            current["active_key"]
+            or f"{current['business_id']}:{current['request_type']}"
+        )
+        conn.execute(
+            "UPDATE privacy_requests SET status=?, resolution_note=?, "
+            "active_key=?, updated_at=?, resolved_at=? WHERE id=?",
+            (
+                status, note, active_key,
+                now, now if terminal else None, int(request_id),
+            ),
+        )
+        row = conn.execute(
+            "SELECT * FROM privacy_requests WHERE id=?", (int(request_id),)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def export_business_data(business_id) -> dict:
     """Vuelca TODOS los datos de un negocio (derecho de portabilidad RGPD)."""
     return {
@@ -13044,6 +13298,10 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "bank_transactions": list_bank_transactions(business_id, limit=500),
         "email_outbox": list_email_messages(business_id, limit=500),
+        "privacy_requests": [dict(r) for r in _rows(
+            "SELECT id, business_id, request_type, status, retention_required, "
+            "requested_at, updated_at, resolved_at FROM privacy_requests "
+            "WHERE business_id=? ORDER BY requested_at, id", business_id)],
         "invoice_records": list_invoice_records(business_id),
         "invoice_events": list_invoice_events(business_id),
         "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
@@ -13102,6 +13360,19 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "assistant_actions": [dict(r) for r in _rows(
             "SELECT * FROM assistant_actions WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_actions": [dict(r) for r in _rows(
+            "SELECT * FROM useful_actions WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_action_events": [dict(r) for r in _rows(
+            "SELECT * FROM useful_action_events WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_outcomes": [dict(r) for r in _rows(
+            "SELECT * FROM useful_outcomes WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_action_outcomes": [dict(r) for r in _rows(
+            "SELECT * FROM useful_action_outcomes WHERE business_id=? "
+            "ORDER BY useful_action_id, useful_outcome_id",
             business_id)],
         "document_classifications": [dict(r) for r in _rows(
             "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
@@ -13302,7 +13573,7 @@ def delete_business_cascade(business_id) -> bool:
         for table in (
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
-            "email_outbox",
+            "email_outbox", "privacy_requests",
             "inbound_email_messages", "inbound_email_routes",
             "verifactu_cancellation_outbox", "verifactu_outbox",
             "document_sequences",
@@ -13310,6 +13581,8 @@ def delete_business_cascade(business_id) -> bool:
             "invoice_events", "invoice_cancellation_records", "invoice_records",
             "portal_tokens",
             "product_events", "assistant_messages", "business_memories",
+            "useful_action_outcomes", "useful_action_events",
+            "useful_outcomes", "useful_actions",
             "assistant_actions", "automation_permissions",
             "integration_settings",
             "document_client_candidates", "document_classifications",

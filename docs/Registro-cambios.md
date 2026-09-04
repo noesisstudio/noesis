@@ -1,5 +1,78 @@
 ﻿# Registro de cambios
 
+## 2026-09-04 — copia verificada y publicación autorizada del esquema 55
+
+- **Autorización:** el founder solicita copia y publicación después del CI verde.
+- **Backup real previo (esquema 53):** `noesis-20260904-090824-601912.dump.gz`
+  (123.805 bytes) y `noesis-20260904-090829-568655.docs.zip` (82.060 bytes).
+  Creación validada y segundo simulacro de restauración correcto en 3,854 s.
+  Copia fijada fuera de rotación en `/data/backups/predeploy-schema55-20260904`.
+- **Publicación:** fast-forward a main de `4f5e88f`; Railway
+  `56d18ded-993c-4aa8-96d1-a623a8d75c79` termina SUCCESS. `/ready` devuelve
+  esquema 55 y release `4f5e88f071cd`; 14 páginas/8 cabeceras correctas.
+- **Regresión real:** demo autónomo (Inicio, Ajustes, Suscripción, Facturas,
+  Documentos) y gestoría en 200; admin inaccesible para la demo normal. Recuentos
+  antes/después idénticos: 9 negocios, 9 usuarios, 19 clientes, 24 facturas,
+  24 líneas y 2 fichajes. Auditoría íntegra; alta y ambos flags WUB false.
+- **Límites/rollback:** copia dentro de Railway, no offsite. No se ha probado una
+  baja real ni enviado avisos nuevos. Para regresión, volver primero al código
+  d3740a0 sobre BD 55; no borrar tablas nuevas con solicitudes reales. El cierre
+  documental no modifica código, dependencias, workflow ni configuración externa.
+
+## 2026-09-04 — puerta de revisión aislada, sin despliegue
+
+- **Cierre:** CI `33855910788` correcto: 629 pruebas en 275,502 s, migraciones,
+  PostgreSQL, restauración y rollback código/BD. Se actualizan estado, pendientes,
+  despliegue e informe [[Revision-pre-main-2026-09-04]]. El commit de cierre es
+  exclusivamente documental; el runtime sigue siendo el probado en `fbfa76b`.
+- **Decisión:** técnicamente apto para despliegue controlado tras autorización y
+  copia reciente verificada. Altas y WUB siguen apagados; revisiones jurídicas,
+  pruebas reales e infraestructura de backup externa no se dan por resueltas.
+
+- **PostgreSQL completo correcto:** ejecución `33855685663` valida migraciones,
+  humo, backup/restauración, código anterior sobre esquema nuevo y privacidad.
+  Se documenta como público el SHA fijo del checkout anterior para el escáner;
+  el resto del CI se repite sin excepciones nuevas sobre código o dependencias.
+
+- **Recuento verificado:** suite completa local 627/627 en 642,162 s, más dos
+  contratos nuevos de proveedor. Se corrige la foto a 629 y la aserción del humo
+  al rechazo real del POST administrativo (303 a login, sin cambio de permisos).
+
+- **Rollback código primero:** se añade prueba explícita con el código base
+  d3740a0 (esquema 53) sobre BD efímera 55 antes de bajar tablas; recorre cliente,
+  emisión, cobro y exportación. Sin checkout ni comandos en producción.
+
+- **Proveedor efectivo:** la lectura detectó SMTP residual junto a Brevo. El
+  adaptador siempre utiliza Brevo cuando hay API key y no cae a SMTP tras error.
+  Se alinea la puerta legal y su contexto con esa prioridad: ya no exige datos de
+  un SMTP sin uso ni atribuye a Brevo la región de otro proveedor. Dos regresiones
+  nuevas pasan; SMTP efectivo continúa exigiendo nombre y región. Sin cambios
+  al envío ni a variables externas. Revertible con este commit.
+
+- **Segunda iteración:** el escáner detectó NIF/contraseña sintéticos y huellas del
+  manifiesto de branding. Se cotejaron las 49 huellas con sus archivos y se
+  registran solo esos valores como falsos positivos, sin excluir archivos ni
+  desactivar detectores. El humo usa los estados reales enviada/parcial/cobrada.
+- **Configuración:** consulta de solo lectura al control plane de Railway, sin
+  imprimir secretos ni acceder a datos: altas cerradas, flags WUB ausentes (false),
+  S3 sin configurar, Brevo activo y SMTP presente sin metadatos legales.
+
+- **Hallazgo del primer CI:** tres avisos de seguridad en pypdf 6.15.0
+  (CVE-2026-84309/84310/84311). Se eleva el mínimo a 6.16.1 y se regenera únicamente
+  su entrada del lock. El nuevo test PostgreSQL necesitaba `fetchall()` para el
+  cursor del adaptador; se corrige el test, no el adaptador. Revalidación pendiente.
+
+- **Objetivo:** verificar el candidato de valor/RGPD antes de decidir su publicación.
+- **Áreas:** CI admite ejecución manual por rama; nuevo humo PostgreSQL exclusivo
+  de `localhost/noesis_ci` prueba rollback 55→54→53→54→55 con datos históricos,
+  inmutabilidad fiscal, baja HTTP, permisos, concurrencia, exportación y avisos.
+- **Pruebas:** Ruff y verdad del proyecto correctos; suite completa y CI en curso.
+- **Límites:** sin producción, credenciales de servicios ni envíos reales. No se
+  crea PR para evitar previews automáticas. Solo rama de revisión.
+- **Riesgo/rollback:** no cambia el runtime. El humo descarta tablas nuevas solo en
+  la base efímera del CI; se rechaza cualquier host remoto o nombre de BD distinto.
+  Revertir este commit retira únicamente esta puerta y sus notas.
+
 Bitácora cronológica obligatoria de modificaciones del repositorio. Su objetivo es
 permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió, qué
 área puede haberlo causado, cómo se verificó y cómo se puede aislar o revertir**.
@@ -44,6 +117,126 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   (`python -m noesis.whatsapp_templates` no reporta desajustes), así que el paso
   siguiente es token, verify token y alta de plantillas, en ese orden.
 
+## 2026-09-03 — salida operativa RGPD, proveedores y baja trazable
+
+- **Autor/agente:** Codex, a petición del founder tras la auditoría RGPD compartida.
+- **Objetivo:** corregir afirmaciones públicas falsas y cerrar el callejón sin salida
+  de una baja con conservación, sin inventar plazos ni ejecutar una purga automática.
+- **Áreas y archivos:** esquema 55, operaciones RGPD en `db.py`, baja de cuenta,
+  bandeja interna, Ajustes, contacto/CSP, privacidad, cookies, contrato de encargado,
+  cumplimiento, configuración y diagnóstico de backups, pruebas y documentación
+  interna de ROPA, proveedores, derechos y brechas.
+- **Cambios de datos/migración:** nueva tabla multiempresa `privacy_requests` con
+  tipo, estado, retención, referencia abierta idempotente, solicitante y fechas. No
+  modifica tablas fiscales ni borra datos al cambiar el estado. El rollback 55→54
+  elimina únicamente esta bandeja.
+- **Comportamiento:** una cuenta sin registros protegidos conserva el borrado directo.
+  Con facturas emitidas o jornada, se registra la solicitud, se devuelve referencia,
+  se encolan avisos y se audita. Cal.com deja de cargarse en iframe; `frame-src`
+  queda en `none`. La copia externa falla cerrada sin región, proveedor y residencia.
+- **Pruebas ejecutadas:** 615 pruebas de regresión completas `OK`; después se
+  añadieron y ejecutaron tres pruebas específicas del seguimiento desde
+  administración, rollback 55→54→55 y concurrencia, también `OK` (618 verificadas
+  en total). Ruff, compilación, JSON, verdad documental
+  y `git diff --check` en verde.
+- **Dependencias o validaciones externas:** DPA y regiones reales de Railway,
+  contratos de proveedores, tabla de conservación, migración PostgreSQL 54→55→54,
+  correo real, restauración S3, solicitud completa y simulacro de brecha.
+- **Riesgo/punto probable de fallo:** tratar `completed` como borrado efectivo o
+  activar S3/Groq sin contrato. La UI recuerda que el estado no borra; el destino S3
+  falla cerrado y la purga sigue sin programarse.
+- **Diagnóstico y rollback:** consultar `privacy_requests`, outbox y eventos
+  `privacy.*`; ante regresión, volver al código anterior manteniendo esquema 55,
+  validar flujos y solo después bajar 55→54. No borrar expedientes antes de exportar.
+- **Estado de publicación:** cambio local; no se ha hecho push ni despliegue y no se
+  ha ejecutado nada contra Railway o producción.
+
+## 2026-09-01 — WUB solo mide delegación y el rollback respeta auditoría previa
+
+- **Autor/agente:** Codex, tras revisión externa del commit `35ef41f`.
+- **Objetivo:** corregir cinco observaciones sin rediseñar ni ampliar el Registro
+  Interno de Valor: excluir formularios manuales de WUB, conservar auditoría previa
+  con el flag apagado, hacer seguro el rollback, desplegar opt-in y declarar el
+  lifecycle real.
+- **Áreas y archivos:** `value_ledger.py`, esquema 53, validación de metadatos en
+  `db.py`, flag en `config.py`, auditoría del scheduler, smoke PostgreSQL, pruebas
+  del ledger y fecha estable del test de cohortes; documentación de despliegue,
+  estado, decisión, arquitectura, propuesta, QA y operación.
+- **Cambios de datos/migración:** `useful_actions` incorpora
+  `qualifies_for_wub`, separado de la candidatura de taxonomía. `manual_form` y
+  `automation` quedan como orígenes explícitos. El esquema sigue siendo 53 porque
+  el candidato no se ha desplegado.
+- **Pruebas ejecutadas:** 570/570; 20 contratos del ledger; cuatro reproducciones
+  del test de cohortes; código `294ce375` sobre esquema 53; Ruff, compilación, JSON,
+  verdad documental y diff check. Evidencia detallada en `Registro-QA.md`.
+- **Dependencias o validaciones externas:** migración/smoke/rollback PostgreSQL en
+  entorno no productivo y reconciliación con 3-5 negocios. Nada se ha ejecutado en
+  Railway ni producción.
+- **Riesgo/punto probable de fallo:** contexto incorrecto en un hook o downgrade de
+  BD antes de retirar código 53. La decisión binaria central y la secuencia
+  código-anterior-sobre-esquema-53 impiden ambos atajos.
+- **Diagnóstico y rollback:** mantener ambos flags en `false`; para volver atrás,
+  apagar ledger, restaurar código anterior con esquema 53, validar y solo entonces
+  bajar 53→52. Nunca servir código 53 sobre esquema 52.
+- **Estado de publicación:** candidato en rama de revisión; no fusionado ni
+  desplegado.
+
+## 2026-08-31 — base observacional de valor, WUB y confianza
+
+- **Autor/agente:** Codex.
+- **Objetivo:** implementar la base de Useful Actions, Useful Outcomes y WUB como
+  capa aditiva, backward-compatible y auditable, sin gobernar ni alterar los
+  flujos que observa.
+- **Áreas y archivos:** esquema 53 en `migrations.py`; taxonomía, writers fail-open,
+  outcomes, WUB y trust en `value_ledger.py`; hooks terminales en datos,
+  documentos, herramientas, scheduler y WhatsApp; auditoría admin oculta; RGPD;
+  smoke PostgreSQL; 17 pruebas; documentación de arquitectura, estado, pendientes,
+  decisiones y QA.
+- **Cambios de datos/migración:** cuatro tablas aisladas por `business_id`, zona
+  horaria y elegibilidad en negocio y cuatro campos opcionales de correlación en
+  `assistant_actions`. No se cambia ninguna tabla fiscal ni estado operativo. El
+  rollback 53→52 elimina el ledger; SQLite conserva inertes las columnas aditivas.
+- **Pruebas ejecutadas:** 567/567 pruebas, 17 contratos específicos, seguridad
+  generativa, migración 53→52→53, lint Ruff, compilación, DDL PostgreSQL simulado,
+  índice WUB, JSON, verdad documental y diff limpio. Evidencia en
+  `Registro-QA.md`.
+- **Dependencias o validaciones externas:** humo y rollback contra PostgreSQL real
+  deben ejecutarse en un entorno no productivo. Después se reconcilia con 3-5
+  negocios antes de mostrar métricas o fijar objetivos.
+- **Riesgo/punto probable de fallo:** volumen de escritura o una taxonomía prematura.
+  Las claves idempotentes e índices acotan duplicados/consultas; los errores se
+  registran pero nunca bloquean la operación principal. No se copia contenido.
+- **Diagnóstico y rollback:** poner `NOESIS_VALUE_LEDGER_ENABLED=false` detiene las
+  escrituras; `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false` oculta auditoría. Revisar el
+  log `noesis.value_ledger`. Si hace falta, bajar a 52 o revertir los hooks sin tocar
+  facturas, cobros, clientes, agenda, documentos, presupuestos, WhatsApp o permisos.
+- **Estado de publicación:** candidato completo y probado localmente; no desplegado.
+
+## 2026-08-31 — propuesta integral de hábito, confianza, valor y retención
+
+- **Autor/agente:** Codex.
+- **Objetivo:** convertir las dos propuestas de retención y el acuerdo sobre WUB en
+  un documento único, revisable por los socios y suficientemente preciso para
+  separar decisiones de producto, instrumentación, experiencia y fases futuras.
+- **Áreas y archivos:** `docs/Propuesta-sistema-retencion-habito-valor.md` y enlace
+  desde `docs/Inicio.md`. Integra Registro Interno de Valor, Habit Engine, Trust
+  Engine, Value Engine, WUB, Insight Engine, Progress Engine, Confidence aplazado,
+  matriz de acciones, métricas, plan por fases, pruebas y puertas del piloto.
+- **Cambios de datos/migración:** ninguno. Es una propuesta de dirección; no cambia
+  producto, runtime, esquema, permisos ni automatizaciones.
+- **Pruebas ejecutadas:** revisión estructural y de enlaces relativos;
+  `git diff --check`; comprobación de verdad documental del proyecto.
+- **Dependencias o validaciones externas:** los umbrales WUB, tiempos recuperados,
+  atribución económica y relación con retención deben validarse con 3-5 negocios
+  reales antes de convertirse en objetivos o mensajes comerciales.
+- **Riesgo/punto probable de fallo:** interpretar la propuesta como funcionalidad ya
+  publicada o intentar construir simultáneamente los cinco motores. El documento
+  marca como primera secuencia Registro de Valor, Habit, Trust, Value y piloto.
+- **Diagnóstico y rollback:** el encabezado identifica expresamente el estado de
+  propuesta. Revertir este cambio retira solo documentación y no afecta datos ni
+  producción.
+- **Estado de publicación:** documento preparado para revisión y aprobación de
+  socios; implementación todavía no autorizada.
 ## 2026-09-03 — refunde los documentos legales con `Ruta-legal` y corrige Meta
 
 - **Autor/agente:** Claude.

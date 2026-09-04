@@ -43,9 +43,11 @@
       <tr><th>Tipo de datos</th>
         <td>Datos identificativos y de contacto de los clientes del Cliente (nombre,
           teléfono, dirección, email, NIF), datos económicos de facturación y cobro, e
-          información de los trabajos y documentos que el Cliente suba.</td></tr>
+          información de trabajos, comunicaciones y documentos. Cuando el Cliente usa
+          funciones de equipo, también datos identificativos y registros de jornada de
+          sus trabajadores.</td></tr>
       <tr><th>Categorías de interesados</th>
-        <td>Los clientes, contactos y proveedores del Cliente.</td></tr>
+        <td>Los clientes, contactos, proveedores y trabajadores del Cliente.</td></tr>
       <tr><th>Operaciones</th>
         <td>Recogida, registro, conservación, consulta, uso, comunicación al propio cliente
           final (p. ej. envío de un presupuesto o factura) y supresión.</td></tr>
@@ -76,16 +78,29 @@
       bajo contrato y con garantías equivalentes:</p>
     <table class="legal-table">
       <tr><th>Proveedor</th><th>Servicio</th><th>Ubicación</th></tr>
-      <tr><td>Railway</td><td>Alojamiento de la aplicación y base de datos</td><td>UE / EE. UU. (con garantías RGPD)</td></tr>
-      <tr><td>Anthropic</td><td>Asistente con IA (solo si el Cliente lo activa)</td><td>EE. UU. (cláusulas contractuales tipo)</td></tr>
+      <tr><td>Railway</td><td>Alojamiento de la aplicación, base de datos y archivos</td><td>Región contratada; usa sus propios subencargados publicados</td></tr>
+      {% if anthropic_enabled %}
+      <tr><td>Anthropic</td><td>Ayuda avanzada (solo si el Cliente la activa)</td><td>EE. UU.; garantías contractuales aplicables</td></tr>
+      {% endif %}
       {% if compat_ai_legal_name %}
       <tr><td>{{ compat_ai_legal_name }}</td><td>Asistente con IA (solo si el Cliente lo activa)</td><td>{{ compat_ai_region }}</td></tr>
       {% endif %}
-      <tr><td>Meta Platforms</td><td>Mensajería de WhatsApp (solo si el Cliente la conecta)</td><td>UE / EE. UU. (con garantías RGPD)</td></tr>
+      {% if groq_enabled %}
+      <tr><td>Groq</td><td>Transcripción de audios enviados al asistente</td><td>EE. UU.; garantías contractuales aplicables</td></tr>
+      {% endif %}
+      <tr><td>Meta Platforms</td><td>Mensajería de WhatsApp (solo si el Cliente la conecta)</td><td>UE / EE. UU.; condiciones y garantías de Meta</td></tr>
       {% if smtp_provider_name %}
       <tr><td>{{ smtp_provider_name }}</td><td>Envío de correos transaccionales</td><td>{{ smtp_provider_region or "Según contrato vigente" }}</td></tr>
       {% endif %}
+      {% if backup_provider_name %}
+      <tr><td>{{ backup_provider_name }}</td><td>Copia de seguridad externa cifrada</td><td>{{ backup_provider_region }}</td></tr>
+      {% endif %}
     </table>
+    <p>Stripe (pagos y suscripción de Noesis), Google (inicio de sesión opcional) y
+      Cal.com (reserva abierta voluntariamente en su propia web) tratan datos de la
+      relación directa entre Noesis y el titular de la cuenta. No reciben por defecto la
+      cartera de clientes del Cliente y no se presentan aquí como subencargados de ese
+      contenido operativo.</p>
     <p>Noesis informará de cualquier <b>cambio de subencargados</b> con antelación
       razonable, dando al Cliente la posibilidad de oponerse por motivos justificados.</p>
 
@@ -116,6 +131,10 @@
       suprimirá</b> los datos personales tratados por su cuenta, así como las copias
       existentes, salvo que deba conservarlos por obligación legal. El Cliente puede
       <b>exportar sus datos</b> en cualquier momento desde la propia aplicación.</p>
+    <p>Cuando existan datos sujetos a conservación, la petición de baja queda registrada
+      con una referencia y estado de seguimiento. La conservación obligatoria no autoriza
+      su uso ordinario: esos datos deben permanecer limitados a la obligación que la
+      justifica hasta que puedan suprimirse.</p>
 
     <h2>10. Responsabilidad</h2>
     <p>Cada parte responde del cumplimiento de las obligaciones que le corresponden como

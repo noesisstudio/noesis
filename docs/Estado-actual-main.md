@@ -6,6 +6,46 @@
 
 ## Producto construido
 
+- Revisión aislada del 4-sep: pypdf actualizado a 6.16.1 por tres CVE y puerta
+  legal de correo alineada con el proveedor efectivo (Brevo tiene prioridad sobre
+  SMTP residual). CI manual verde: 629 pruebas, migraciones, PostgreSQL, backup y
+  rollback código anterior/BD. Publicado con autorización tras copia real y
+  restauración verificada: release `4f5e88f071cd`, esquema 55, comprobación pública
+  y accesos demo correctos. Ver [[Revision-pre-main-2026-09-04]]. Altas públicas
+  y ambos flags WUB siguen apagados; no equivale a apertura comercial.
+
+- El candidato del esquema 55 convierte la baja con conservación en un proceso
+  real y trazable. Si no hay facturas emitidas ni jornada, la cuenta se borra como
+  antes; si los hay, se crea una única solicitud abierta por negocio, se devuelve
+  una referencia, se encolan avisos y se audita la acción. Dirección ve la bandeja
+  y debe documentar cada cambio de estado; marcarla no borra nada como efecto
+  lateral. Se han añadido borradores operativos de ROPA, matriz de proveedores,
+  derechos/bajas y brechas. Cal.com ya no se incrusta, la CSP prohíbe frames en
+  todo el sitio, los textos nombran proveedores activos y describen los roles, y
+  `/cumplimiento` deja de atribuir a Noesis una integración inexistente con un
+  sistema homologado. La copia S3 falla cerrada si no constan región de firma,
+  proveedor y residencia contractual. La purga automática sigue deliberadamente
+  pendiente hasta que un profesional valide la tabla de conservación. Este
+  bloque está desplegado desde el 4-sep con backup previo verificado. La copia
+  externa y la validación jurídica y humana siguen pendientes.
+
+- El candidato del esquema 54 incorpora la base de datos de retención sin cambiar
+  el comportamiento del producto: un Registro Interno de Valor multiempresa,
+  idempotente y fail-open observa trabajos creados/cerrados, facturas emitidas,
+  recordatorios enviados, documentos confirmados y presupuestos preparados/enviados.
+  Separa acciones de resultados —cobro, aceptación y trabajo facturado— y solo
+  atribuye ayuda cuando existe evidencia enlazada. Calcula WUB móvil y semanal,
+  profundidad, consistencia y aceptación de propuestas de forma determinista. Cada
+  instancia distingue delegación útil de formulario manual mediante
+  `qualifies_for_wub`; la actividad manual puede auditarse, pero no suma WUB. El
+  ledger y su auditoría interna parten apagados; la auditoría histórica de acciones
+  del asistente se conserva incluso con el ledger desactivado. No se muestra Confidence,
+  Insight, Progress ni se concede autonomía. Exportación y baja RGPD incluyen el
+  ledger. El rollback exige apagar, restaurar primero código anterior sobre esquema
+  54 y bajar después la BD; nunca código 54 sobre esquema 53. El lifecycle admite
+  corrección/reversión, pero sus hooks por proceso siguen pendientes. El candidato
+  está desplegado con flags apagados; su uso con negocios reales no está validado.
+
 - La identidad existente ya tiene un paquete profesional versionado en `branding/`:
   originales SVG, logo horizontal, símbolo y wordmark en versiones primaria,
   inversa y monocroma; 49 PNG transparentes y con fondo; avatares/portadas para

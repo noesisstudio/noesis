@@ -5,6 +5,28 @@
 
 ## P0 — publicar y pilotar con seguridad
 
+- [x] Validación técnica PostgreSQL 16 no productiva del candidato 55: migración,
+  baja con factura, idempotencia/concurrencia, aislamiento, bandeja, outbox,
+  exportación y rollback 55→54→53→54→55. Código anterior 53 probado sobre BD 55;
+  datos e inmutabilidad conservados. Humo de rutas y backup/restauración correctos.
+  Evidencia y límites: [[Revision-pre-main-2026-09-04]].
+- [x] Publicación autorizada del esquema 55: backup real y restauración previa,
+  release/ready, páginas públicas, accesos demo, recuentos operativos y auditoría
+  verificados el 4-sep. Artefactos fijados fuera de rotación en Railway.
+- [ ] Recorrer una solicitud humana completa con entrega real de correo. No se
+  ha borrado ni cancelado ninguna cuenta real para probar el despliegue.
+
+- [ ] Mantener el candidato ya publicado con
+  `NOESIS_VALUE_LEDGER_ENABLED=false` y
+  `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. El humo y rollback PostgreSQL aislados
+  ya están verificados. Mantener la secuencia de rollback seguro:
+  apagar ledger, restaurar código anterior aún sobre esquema 54, validar flujos y
+  solo entonces ensayar 54→53. Nunca servir código 54 sobre esquema 53. Después,
+  activar únicamente el ledger en 3-5 negocios piloto y reconciliar manualmente
+  acciones/outcomes, contexto `qualifies_for_wub`, zonas horarias, WUB semanal,
+  profundidad y aceptación. No enseñar métricas ni activar Confidence, Insight o
+  Progress.
+
 - [ ] Recorrer en escritorio y móvil el alta recuperable del esquema 49 ya
   desplegada en el release `8730826a79ab`:
   salir y volver en cada paso, revisar la identidad visual de factura, comprobar que
@@ -41,27 +63,20 @@
   servicios web y Postgres, porque `railway.json` no fija ninguna y el valor por
   defecto de la cuenta es estadounidense; si están fuera de la UE, moverlos a
   `europe-west4-drams3a` **mientras el volumen siga vacío**, ya que la migración de
-  volumen causa parada y se encarece con cada cliente real; y corregir
-  `BACKUP_S3_REGION`, que en `config.py` toma `us-east-1` por defecto y replicaría la
-  base entera a Virginia sin base de transferencia declarada. Ninguna de las cuatro
-  depende del abogado ni de la constitución.
-- [ ] Cerrar los siete bloqueos de RGPD detallados en [[RGPD-estado-y-plan]] antes
-  del primer cliente de pago. Tres son afirmaciones publicadas que hoy no son
-  ciertas: la tabla de subencargados omite Stripe, Google y Cal.com y solo pinta el
-  proveedor de correo si la variable está configurada; `site_contacto.html` incrusta
-  un iframe de Cal.com mientras `cookies.html` afirma que no intervienen empresas
-  ajenas y que no hace falta banner; y `/cumplimiento` dice que Noesis se integra con
-  un sistema homologado de un tercero cuando Veri\*Factu es desarrollo propio. Los
-  Antes que todos ellos va Groq: `adapters/transcription.py` envía audio a
-  `api.groq.com` sin estar declarado como subencargado, así que basta configurar
-  `GROQ_API_KEY` para incumplir el propio contrato; hay que declararlo o retirarlo.
-  Los otros tres son carencias: `delete_business_cascade` remite a una «baja con
-  conservación fiscal» que no existe, nada purga una cuenta cancelada pese a que la
-  política promete conservar solo mientras esté activa, y falta el registro de
-  actividades del art. 30. Quitar el iframe, completar la tabla de subencargados con
-  su comprobación en `readiness.py` y escribir el procedimiento de baja no dependen
-  del abogado y se pueden hacer ya; la purga automática necesita antes la tabla de
-  plazos de conservación.
+  volumen causa parada y se encarece con cada cliente real. El candidato ya eliminó
+  el valor `us-east-1` por defecto: una copia externa no sale si faltan región de
+  firma, proveedor o residencia contractual. Falta verificar y configurar esos
+  valores reales, no deducirlos del endpoint.
+- [ ] Completar la validación profesional y externa de RGPD. El candidato ya retira
+  el iframe de Cal.com y su excepción CSP; corrige `/cumplimiento`; declara Stripe,
+  Google, Cal.com, Groq, correo, IA y backup según configuración; bloquea el alta si
+  un proveedor configurable no está identificado; registra bajas con conservación;
+  y añade [[RGPD-Registro-actividades]], [[RGPD-Matriz-proveedores]],
+  [[RGPD-Procedimiento-derechos-y-bajas]] y [[RGPD-Procedimiento-brechas]]. Falta que
+  el abogado valide roles, textos y tabla exacta de conservación; firmar/archivar
+  DPA; demostrar regiones; ensayar una solicitud completa y una brecha; y solo
+  entonces diseñar bloqueo y purga automática de cuentas canceladas. No programar
+  esa purga con plazos inventados.
 - [ ] La identidad legal ya está completada y publicada. Revisar aviso legal,
   privacidad, términos, DPA y fiscalidad con profesionales. Mantener
   `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.

@@ -98,11 +98,11 @@ son ciertas**, y eso es peor que una carencia. Detalle en [[RGPD-estado-y-plan]]
 
 ## 1.0 · DECIDIR QUÉ PASA CON GROQ — LA MÁS URGENTE DEL BLOQUE
 
-- [ ] Elegir una de las dos salidas: **declararlo** añadiendo la fila al contrato por
-      variable, como ya se hace con el proveedor de correo, y notificar el cambio de
-      subencargado con la antelación que el propio contrato exige; **o retirarlo** y
-      dejar la transcripción solo en local con `faster-whisper`.
-- [ ] Mientras no esté decidido, **no configurar `GROQ_API_KEY` en producción**.
+- [x] Se ha elegido **declararlo**: Groq aparece de forma condicional en privacidad,
+      contrato de encargado y matriz de proveedores cuando existe `GROQ_API_KEY`.
+      Falta archivar el DPA/condiciones antes de activar la variable en producción.
+- [ ] Mientras no se hayan archivado contrato/DPA y garantías, **no configurar
+      `GROQ_API_KEY` en producción**.
 
 **Problema:** `adapters/transcription.py` envía audio a `api.groq.com`, en Estados
 Unidos, y Groq no aparece en la lista de subencargados. Basta con que alguien ponga
@@ -117,9 +117,9 @@ variable de entorno. Hallazgo de [`Ruta-legal.pdf`](Ruta-legal.pdf).
 
 ## 1.1 · QUITAR EL IFRAME DE CAL.COM
 
-- [ ] Eliminar el `<iframe>` de `site_contacto.html` y dejar los enlaces a
+- [x] Eliminar el `<iframe>` de `site_contacto.html` y dejar los enlaces a
       `cal.com/bynoesis` que ya están justo debajo.
-- [ ] Quitar también la excepción de la CSP en `server.py`, que hoy abre
+- [x] Quitar también la excepción de la CSP en `server.py`, que hoy abre
       `frame-src` a `cal.com` y `app.cal.com` solo en `/contacto`. Si se borra el
       iframe pero se deja la excepción, queda un permiso abierto sin motivo.
 
@@ -138,11 +138,11 @@ más banner— cuesta mucho más y no mejora nada.
 
 ## 1.2 · COMPLETAR LA LISTA DE SUBENCARGADOS
 
-- [ ] Añadir a `privacidad.html` y `encargado-tratamiento.html`: **Stripe** (trata
+- [x] Añadir a `privacidad.html` y `encargado-tratamiento.html`: **Stripe** (trata
       nombre, dirección, NIF e importes), **Google** (si se activa el acceso con
       Google), y el **proveedor de copias de seguridad**.
-- [ ] Quitar Cal.com de la ecuación haciendo 1.1, o declararlo si se queda.
-- [ ] Llevar las variables de proveedor a la comprobación de `readiness.py`, junto a
+- [x] Quitar Cal.com de la carga de Noesis; el enlace externo y su rol sí se explican.
+- [x] Llevar las variables de proveedor a la comprobación de `readiness.py`, junto a
       la identidad legal.
 
 **Problema añadido:** hoy el proveedor de correo **solo se pinta si la variable está
@@ -154,23 +154,22 @@ automática, no solo corregir el texto.
 
 ## 1.3 · REESCRIBIR `/CUMPLIMIENTO`
 
-- [ ] **Antes: decidir el alcance Veri\*Factu del piloto** (camino (a) o (b) del
-      bloque D de [[Constitucion-y-primer-euro]]). Esta decisión es tuya y bloquea
-      la reescritura.
-- [ ] Reescribir el apartado 2 según lo decidido.
+- [x] Aplicar el criterio conservador: no presentarlo como definitivamente conforme
+      hasta pruebas AEAT, documentación técnica y declaración responsable.
+- [x] Reescribir el apartado 2 sin inventar una integración homologada externa.
 
 **Problema:** la página dice que *«Noesis se integra con un sistema homologado cuando
 lo conectas»*. No existe tal integración: Veri\*Factu es desarrollo propio. Es una
 afirmación engañosa sobre cumplimiento, en la página titulada «Usar Noesis en regla».
 
-**Quién: tú decides, producto escribe. Bloqueado por tu decisión.**
+**Quién: producto corregido; founder y asesor validan antes de activar AEAT.**
 
 ## 1.4 · DAR SALIDA AL DERECHO DE SUPRESIÓN
 
-- [ ] Escribir el procedimiento de «baja con conservación legal»: a qué dirección se
-      escribe, plazo de respuesta (un mes), y **tabla de qué se conserva, por qué y
-      hasta cuándo**.
-- [ ] Enlazarlo desde el mensaje de error que hoy no lleva a ninguna parte.
+- [x] Escribir el procedimiento de «baja con conservación legal», registrar la
+      solicitud, devolver referencia, encolar avisos y dar seguimiento interno.
+- [x] Sustituir el mensaje de error por una confirmación y estado visibles en Ajustes.
+- [ ] Validar con abogado la tabla exacta de qué se conserva, por qué y hasta cuándo.
 
 **Problema:** el borrado de cuenta falla si hay facturas emitidas o registros de
 jornada, y remite a «solicita una baja con conservación fiscal» — **un procedimiento
@@ -197,14 +196,13 @@ sus clientes **para siempre**.
 
 ## 1.6 · CREAR EL REGISTRO DE ACTIVIDADES DEL TRATAMIENTO
 
-- [ ] Dos tablas: una como **responsable** (datos de las cuentas) y otra como
+- [x] Borrador vivo con tablas como **responsable** (datos de las cuentas) y como
       **encargado** (datos de los clientes de tus clientes).
-- [ ] Anotar en él la cadena de subencargados: Railway → Google Cloud → Cloudflare.
+- [x] Anotar en él la cadena de subencargados: Railway → Google Cloud → Cloudflare.
 - [ ] Anotar, razonada, la decisión sobre delegado de protección de datos.
 
-**Problema:** es **obligatorio** (art. 30) y no existe. La excepción para menos de
-250 trabajadores no aplica, porque el tratamiento no es ocasional: es la actividad
-principal. Es lo primero que se pide si la Agencia pregunta.
+**Problema original:** es **obligatorio** (art. 30) y no existía. Ya hay un borrador
+operativo basado en el sistema real; el abogado debe validarlo y dirección mantenerlo.
 
 **Quién: abogado lo redacta (encargo 2.2), tú lo mantienes.**
 

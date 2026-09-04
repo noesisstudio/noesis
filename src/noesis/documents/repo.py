@@ -198,7 +198,21 @@ def confirm_classification(
             "SELECT * FROM document_classifications WHERE id=? AND business_id=?",
             (row["id"], business_id),
         ).fetchone()
-    return dict(saved)
+    result = dict(saved)
+    from .. import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "document_classification_confirmed",
+        entity_type="document",
+        entity_id=doc_id,
+        idempotency_key=f"document_classification:{row['id']}",
+        metadata={
+            "detected_kind": result.get("detected_kind"),
+            "confirmed_kind": confirmed_kind,
+            "corrected": result.get("detected_kind") != confirmed_kind,
+        },
+    )
+    return result
 
 
 def latest_classification(doc_id: int, business_id: int) -> dict | None:

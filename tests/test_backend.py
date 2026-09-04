@@ -641,6 +641,7 @@ class BackendTestCase(unittest.TestCase):
     def test_month_billing_separates_cash_flow_from_invoice_cohort(self):
         business, client = self.make_business("Cohortes de cobro")
         this_month = date.today().strftime("%Y-%m")
+        today = date.today().isoformat()
         previous_month = (date.today().replace(day=1) - timedelta(days=1)).strftime(
             "%Y-%m"
         )
@@ -658,15 +659,15 @@ class BackendTestCase(unittest.TestCase):
                 business_id=business["id"],
             )["id"],
             business["id"],
-            _issued_at_override=f"{this_month}-02T10:00:00",
+            _issued_at_override=f"{today}T08:00:00",
         )
         db.add_invoice_payment(
             old_invoice["id"], 121, business_id=business["id"],
-            paid_at=f"{this_month}-03T10:00:00",
+            paid_at=f"{today}T10:00:00",
         )
         db.add_invoice_payment(
             current_invoice["id"], 40, business_id=business["id"],
-            paid_at=f"{this_month}-04T10:00:00",
+            paid_at=f"{today}T11:00:00",
         )
 
         month = db.month_billing(this_month, business_id=business["id"])
@@ -1100,6 +1101,191 @@ class BackendTestCase(unittest.TestCase):
                 (f"gestoria:{business['id']}:%",),
             ).fetchone()["total"]
         self.assertEqual(remaining_runs, 0)
+
+    def test_account_closure_with_legal_records_is_tracked_and_idempotent(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client = self.make_business("Baja con conservación")
+        user = db.create_user(
+            "baja-conservacion@example.com",
+            auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        invoice = db.add_invoice(
+            client["id"], "Trabajo emitido", 100, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as http:
+                http.post(
+                    "/login",
+                    data={"email": user["email"], "password": TEST_PASSWORD},
+                )
+                response = http.post(
+                    f"/b/{business['id']}/account/delete",
+                    data={"confirm": "BORRAR", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertIn("ok=baja-solicitada", response.headers["location"])
+                settings = http.get(f"/b/{business['id']}/ajustes")
+                self.assertIn("Solicitud #", settings.text)
+                self.assertNotIn("Solicitar baja y borrado", settings.text)
+
+                duplicate = http.post(
+                    f"/b/{business['id']}/account/delete",
+                    data={"confirm": "BORRAR", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(duplicate.status_code, 303)
+
+        self.assertIsNotNone(db.get_business(business["id"]))
+        requests = db.list_privacy_requests(business_id=business["id"])
+        self.assertEqual(len(requests), 1)
+        self.assertTrue(requests[0]["retention_required"])
+        self.assertEqual(requests[0]["requester_user_id"], user["id"])
+        notices = [
+            row for row in db.list_email_messages(business["id"], limit=20)
+            if str(row.get("idempotency_key") or "").startswith("privacy-request-")
+        ]
+        self.assertEqual(len(notices), 1)
+        self.assertIn(
+            "privacy.account_closure_requested",
+            [event["event_type"] for event in db.list_security_events(20)],
+        )
+
+    def test_privacy_request_status_never_deletes_the_business(self):
+        business, _ = self.make_business("Baja revisada")
+        user = db.create_user(
+            "baja-revisada@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        created = db.create_privacy_request(
+            business["id"], requester_user_id=user["id"],
+            retention_required=True,
+        )
+        with self.assertRaises(ValueError):
+            db.update_privacy_request(
+                created["id"], status="completed", resolution_note="",
+            )
+        completed = db.update_privacy_request(
+            created["id"], status="completed",
+            resolution_note="Datos operativos revisados; ejecución documentada aparte.",
+        )
+        self.assertEqual(completed["status"], "completed")
+        self.assertIsNone(completed["active_key"])
+        self.assertIsNotNone(db.get_business(business["id"]))
+
+    def test_admin_can_track_a_privacy_request_without_deleting_data(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Baja en panel")
+        admin = db.create_user(
+            "admin-privacidad@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=TRUE WHERE id=?", (admin["id"],))
+        created = db.create_privacy_request(
+            business["id"], requester_user_id=admin["id"],
+            retention_required=True,
+        )
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as http:
+                http.post(
+                    "/login",
+                    data={"email": admin["email"], "password": TEST_PASSWORD},
+                )
+                panel = http.get("/admin")
+                self.assertIn("Privacidad y bajas", panel.text)
+                response = http.post(
+                    f"/admin/privacidad/{created['id']}/estado",
+                    data={
+                        "status": "legal_hold",
+                        "resolution_note": "Facturas emitidas pendientes de plazo.",
+                    },
+                    follow_redirects=False,
+                )
+        self.assertEqual(response.status_code, 303)
+        tracked = db.list_privacy_requests(business_id=business["id"])[0]
+        self.assertEqual(tracked["status"], "legal_hold")
+        self.assertIsNotNone(db.get_business(business["id"]))
+        self.assertIn(
+            "privacy.request_status_updated",
+            [event["event_type"] for event in db.list_security_events(20)],
+        )
+
+    def test_privacy_request_migration_rolls_back_without_touching_business(self):
+        business, _ = self.make_business("Rollback privacidad")
+        user = db.create_user(
+            "rollback-privacidad@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.create_privacy_request(
+            business["id"], requester_user_id=user["id"],
+            retention_required=True,
+        )
+
+        self.assertEqual(migrations.current_version(), 55)
+        self.assertEqual(migrations.downgrade(54), 54)
+        self.assertIsNotNone(db.get_business(business["id"]))
+        with db.get_conn() as conn:
+            table = conn.execute(
+                "SELECT 1 AS found FROM sqlite_master "
+                "WHERE type='table' AND name='privacy_requests'"
+            ).fetchone()
+        self.assertIsNone(table)
+        self.assertEqual(migrations.upgrade(55), 55)
+        self.assertEqual(db.list_privacy_requests(business_id=business["id"]), [])
+
+    def test_concurrent_privacy_request_is_still_one_open_case(self):
+        business, _ = self.make_business("Baja concurrente")
+        user = db.create_user(
+            "baja-concurrente@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+
+        def submit(_index):
+            return db.create_privacy_request(
+                business["id"], requester_user_id=user["id"],
+                retention_required=True,
+            )["id"]
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            ids = list(pool.map(submit, range(8)))
+        self.assertEqual(len(set(ids)), 1)
+        self.assertEqual(
+            len(db.list_privacy_requests(business_id=business["id"])), 1
+        )
+
+    def test_public_privacy_pages_match_loaded_third_parties(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "STRIPE_SECRET_KEY", "sk_test_example"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", "client"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "secret"),
+            patch.object(config, "BREVO_API_KEY", "brevo"),
+            patch.object(config, "GROQ_API_KEY", "groq"),
+        ):
+            with TestClient(server.app) as http:
+                contact = http.get("/contacto")
+                privacy = http.get("/privacidad")
+                processor = http.get("/encargado-tratamiento")
+                compliance = http.get("/cumplimiento")
+        self.assertNotIn("<iframe", contact.text.lower())
+        self.assertIn("cal.com/bynoesis/sesion-de-estrategia", contact.text)
+        self.assertIn("frame-src 'none'", contact.headers["content-security-policy"])
+        for provider in ("Stripe", "Google", "Brevo", "Groq", "Cal.com"):
+            self.assertIn(provider, privacy.text)
+        self.assertIn("Stripe", processor.text)
+        self.assertNotIn("sistema homologado", compliance.text.lower())
 
     def test_whatsapp_signature(self):
         payload = b'{"entry":[]}'

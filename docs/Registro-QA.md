@@ -1,5 +1,168 @@
 # Registro de QA
 
+## 2026-09-04 — publicación real y comprobaciones posteriores
+
+- Backup de base y documentos creado/verificado antes del push; restauración
+  aislada independiente OK en 3,854 s. Artefactos fijados en
+  `/data/backups/predeploy-schema55-20260904`, fuera de rotación.
+- Release `4f5e88f071cd`, esquema 55, Railway SUCCESS. Comprobador externo:
+  14 páginas públicas y 8 cabeceras, status ok. Accesos demo reales de titular y
+  gestoría correctos; cinco pantallas autenticadas del titular en 200.
+- Comparación de seis tablas operativas contra la cabecera del backup: recuentos
+  idénticos. Cadena de auditoría íntegra. Flags reales: signup=false,
+  ledger=false, ledger_admin=false; proveedor legal efectivo correcto.
+- Límite: no se ejerció supresión ni se modificaron clientes/facturas reales; la
+  solicitud humana con correo y la recuperación fuera de Railway siguen pendientes.
+
+## 2026-09-04 — validación previa a main
+
+- **RESULTADO FINAL:** CI `33855910788` verde en ambos jobs. **629 pruebas en
+  275,502 s**, migraciones completas SQLite, PostgreSQL 16 con datos históricos,
+  35 rutas, backup/restauración, código anterior 53 sobre BD 55, rollback
+  55→54→53→54→55 y flujo RGPD. Auditoría de dependencias sin vulnerabilidades
+  conocidas, escáner de secretos, Bandit, Ruff y verdad documental correctos.
+- Código probado `fbfa76b7379f6295cb4efac62a2c6bca9e17aaa5`; el cierre posterior
+  solo cambia documentación. Ver [[Revision-pre-main-2026-09-04]]. Apto técnicamente
+  para publicación controlada, no apertura masiva. Falta autorización del founder
+  y copia fresca verificada antes de publicar. Sin push a main ni despliegue.
+
+- **PostgreSQL 16 completo OK:** job de `33855685663`, incluidos migración histórica,
+  humo de rutas, restauración de backup, código 53 sobre BD 55, rollback completo y
+  flujo RGPD con permisos/concurrencia/exportación/avisos. Solo queda el job general:
+  el escáner interpretó el SHA público fijado para rollback como secreto; se anota
+  ese valor concreto y se repite, sin desactivar el control.
+
+- Suite local completa terminada: **627 pruebas, OK en 642,162 s**, más las dos
+  pruebas nuevas de proveedor efectivo correctas (629 verificadas). El conteo
+  previo 618 era incompleto; el CI final contrastará el total con descubrimiento.
+- La ruta administrativa HTML rechaza GET y POST mediante 303 a login, no 403;
+  el humo verifica ambas redirecciones sin seguirlas. No se altera el permiso.
+
+- Se incorpora compatibilidad del código anterior d3740a0 sobre BD 55 antes del
+  downgrade: cliente, factura emitida, cobro y exportación. El script exige base
+  local `noesis_ci` y comprueba que está importando el código 53.
+
+- Dos pruebas nuevas pasan para proveedor efectivo: Brevo prevalece sobre SMTP
+  residual y SMTP sin API exige identificación. La suite verificada acumulada es
+  620; el CI final debe ejecutar las 620 juntas con el lock actualizado.
+- Tercer CI: rollback e inmutabilidad PostgreSQL correctos; se ajusta la nueva
+  aserción de acceso al contrato existente (GET admin redirige, POST rechaza 403).
+
+- Segunda ejecución: auditoría de dependencias correcta tras pypdf 6.16.1. Se
+  verificaron los 49 SHA-256 del branding contra los archivos y se anotan como
+  falsos positivos exactos; fixtures fiscales/contraseña se marcan explícitamente.
+  El rollback PostgreSQL completó todo el ciclo; la aserción posterior utilizaba
+  `emitida` en vez del estado real `enviada`, y se corrige el nuevo test.
+- Lectura de configuración Railway sin SSH ni acceso a BD: altas públicas false,
+  flags de valor ausentes (default false), S3 ausente, Brevo activo y SMTP presente
+  sin nombre/región legales. No se cambió ninguna variable ni se lanzó despliegue.
+
+- Primer CI `33854946594`: bloqueó tres CVE en pypdf 6.15.0. Las migraciones
+  históricas y el humo PostgreSQL existente pasaron; el nuevo humo falló porque
+  usaba iteración directa sobre el cursor propio. Se corrige con `fetchall()` y
+  se actualiza pypdf a 6.16.1; se repite el CI sin ocultar ni excluir los avisos.
+
+- Se prepara ejecución manual del CI desde `codex/review-value-privacy`, sin push
+  a main ni PR. PostgreSQL 16 del runner es efímero y no tiene datos reales.
+- El nuevo `tests/postgres_release_smoke.py` solo permite `localhost/noesis_ci`:
+  valida rollback 55→54→53→54→55, datos históricos e inmutabilidad, baja HTTP,
+  conservación, aislamiento, concurrencia, panel admin, exportación y outbox.
+- Estado inicial: Ruff, verdad documental y diff correctos. Suite completa y CI
+  pendientes de resultado; no constituye aprobación de producción.
+
+## 2026-09-03 — RGPD operativo, transparencia y conservación
+
+- **Regresión:** `python -m unittest discover -s tests -q` ejecutó 615 pruebas en
+  529,386 s y terminó `OK`. Después se añadieron las pruebas de la bandeja
+  administrativa, del rollback 55→54→55 y de concurrencia, y se ejecutaron
+  aisladamente en verde; el conjunto verificado suma 618. Los logs de Meta, AEAT,
+  SMTP, backup y ledger son fallos simulados esperados por sus pruebas.
+- **Baja y derechos:** se comprobó que una factura emitida impide el borrado directo,
+  pero ya no devuelve error: crea una única solicitud, mantiene la cuenta, muestra
+  referencia, encola aviso y registra `privacy.account_closure_requested`. El reenvío
+  no duplica expediente ni correo. Una nota vacía no permite cerrar la solicitud.
+- **Separación de control y ejecución:** el panel admin lista el expediente y permite
+  documentar `legal_hold`; la prueba confirma que el negocio sigue existiendo y que
+  se añade `privacy.request_status_updated`. Cambiar estado nunca ejecuta supresión.
+- **Transparencia web:** `/contacto` no contiene iframe, conserva el enlace externo y
+  responde con `frame-src 'none'`; privacidad nombra Stripe, Google, Brevo, Groq y
+  Cal.com cuando corresponden; encargado explica el reparto y `/cumplimiento` ya no
+  contiene «sistema homologado».
+- **Backups:** una configuración S3 con credenciales pero sin región de firma,
+  proveedor o residencia devuelve fallo antes de conectar. Integración, centro de
+  seguridad y readiness aplican el mismo contrato.
+- **Calidad estática:** `python -m ruff check ...`, `py_compile`, JSON,
+  `scripts/check_project_truth.py`, `git diff --check` y pruebas específicas de
+  backup, seguridad, integración, producción y plataforma quedaron en verde.
+- **Límites:** no se usaron credenciales, PostgreSQL externo, Railway ni producción.
+  Faltan migración/rollback real, DPA/regiones, validación jurídica de conservación,
+  solicitud humana extremo a extremo y simulacro de brecha.
+
+## 2026-09-01 — correcciones de revisión externa del registro de valor
+
+- **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **570
+  pruebas** y terminó `OK`. El primer intento detectó cuatro ejecuciones heredadas
+  del mismo test que fijaba el día 2 del mes y fallaba cuando el calendario real era
+  día 1; se sustituyó solo esa suposición temporal por la fecha actual y las cuatro
+  reproducciones más la suite completa quedaron verdes. No se relajó la protección
+  que rechaza fechas de emisión futuras.
+- **Delegación WUB:** 20 pruebas específicas del ledger verifican ahora el booleano
+  `qualifies_for_wub`. Crear un trabajo mediante DB/formulario conserva telemetría
+  `manual_form` pero aporta cero acciones WUB; crearlo mediante `run_tool` del
+  asistente sí califica. También califican una regla autorizada, una propuesta
+  confirmada y una automatización explícita. La consulta WUB exige simultáneamente
+  familia candidata e instancia delegada.
+- **Atribución conservadora:** outcomes enlazan como evidencia de Noesis únicamente
+  acciones con contexto delegado. Los resultados posteriores a operaciones
+  manuales siguen registrados, pero con atribución `observed`.
+- **Flag y auditoría anterior:** con `VALUE_LEDGER_ENABLED=false`, la prueba real de
+  `send_payment_reminders` encola el WhatsApp y conserva exactamente una fila
+  histórica de `assistant_actions`, sin campos nuevos ni Useful Actions. Las
+  propuestas/decisiones de Trust añadidas por esquema 53 permanecen apagadas.
+- **Rollback seguro:** se creó localmente una base limpia en esquema 53 y se ejecutó
+  contra ella el código base `294ce375`. Negocio, cliente, trabajo, cierre, factura,
+  cobro, presupuesto y auditoría terminaron con
+  `LEGACY_CODE_ON_SCHEMA_53_OK`. Esto valida volver primero al código anterior y
+  solo después bajar la BD. No se considera soportado código 53 sobre esquema 52.
+- **Lifecycle:** la transición aislada continúa cubierta, pero no hay hooks reales
+  conectados por proceso. La documentación ya la presenta como infraestructura
+  disponible con instrumentación pendiente, no como cobertura operativa.
+- **Límites externos:** no se ha consultado ni modificado producción y no se ha
+  ejecutado Railway. PostgreSQL no productivo sigue siendo puerta obligatoria para
+  migración, smoke, activación opt-in y ensayo de rollback antes de cualquier merge.
+
+## 2026-08-31 — registro de valor, WUB y confianza observada
+
+- **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **567
+  pruebas** y terminó `OK`. Incluye los 13 contratos generativos de seguridad con
+  Hypothesis, invariantes fiscales, Stripe, WhatsApp, documentos, permisos,
+  backups, SEO, onboarding, facturación y multiempresa. Los mensajes de error del
+  log corresponden a fallos simulados que sus propias pruebas esperan.
+- **Cobertura nueva:** 17 pruebas específicas comprueban taxonomía y binario WUB,
+  idempotencia por negocio, aislamiento, canal/origen/confirmación separados,
+  tres acciones y dos procesos, límite lunes-lunes con zona horaria, profundidad,
+  consistencia y racha, elegibilidad, lifecycle/reversión, outcomes muchos-a-muchos,
+  deduplicación de dinero, atribución conservadora, confianza por correlación,
+  feature flag, fail-open, flujos maduros, permisos admin, índice de consulta,
+  exportación/borrado RGPD y rollback 53→52→53.
+- **Compatibilidad de flujos:** el test integrado recorre creación/cierre de trabajo,
+  factura, emisión, cobro, presupuesto, envío y aceptación. El resultado operativo
+  se conserva aunque el escritor de métricas lance una excepción.
+- **Base de datos:** esquema SQLite limpio alcanza 53; downgrade y reupgrade pasan.
+  Los contratos de DDL PostgreSQL —índice único antes de FK compuesta y parámetros—
+  pasan en la suite. `tests/postgres_smoke.py` incorpora además idempotencia,
+  relación action/outcome y alcance por negocio para ejecutarlos en el entorno
+  PostgreSQL no productivo antes del despliegue.
+- **Privacidad y seguridad:** el ledger no contiene el texto del trabajo probado;
+  la auditoría devuelve 403 a usuario normal, 404 con el flag apagado y solo datos
+  internos al administrador con el flag activo. El acceso queda en la bitácora de
+  seguridad. Las cuatro tablas forman parte de portabilidad y baja RGPD.
+- **Calidad estática:** `py -m ruff check src/noesis tests/test_value_ledger.py`,
+  `py -m py_compile` de archivos afectados, `git diff --check`, JSON válido y
+  `py scripts/check_project_truth.py` pasan.
+- **Límite externo:** no se ha ejecutado el humo contra PostgreSQL real porque el
+  único entorno accesible es producción. El candidato no se ha desplegado; esa
+  prueba y el rollback son puerta obligatoria en un entorno no productivo.
 ## 2026-09-01 — fusión de 112 commits y comprobación de que no rompe nada
 
 ### Qué se probó y con qué resultado

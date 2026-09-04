@@ -220,6 +220,60 @@
     {% endif %}
   </div>
 
+  <!-- ================= 🛡️ Privacidad y bajas ================= -->
+  <div class="dept-head" id="privacidad">
+    <span class="dept-ic">🛡️</span>
+    <div>
+      <h2>Privacidad y bajas</h2>
+      <p>{% if privacy_pending %}Hay {{ privacy_pending }} solicitud(es) que requieren seguimiento.{% else %}No hay solicitudes abiertas.{% endif %}</p>
+    </div>
+  </div>
+  {% if admin_success %}<div class="admin-note success">{{ admin_success }}</div>{% endif %}
+  <div class="card">
+    <div class="card-h">
+      <h2>Registro de solicitudes</h2>
+      <span class="hint">el estado no borra datos automáticamente</span>
+    </div>
+    {% if privacy_requests %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Referencia</th><th>Cuenta</th><th>Solicitud</th><th>Estado</th><th>Seguimiento</th></tr></thead>
+      <tbody>
+      {% for req in privacy_requests %}
+        <tr>
+          <td><b>#{{ req.id }}</b><small>{{ req.requested_at }}</small></td>
+          <td><b>{{ req.business_name }}</b><small>{{ req.requester_email or 'Usuario eliminado' }}</small></td>
+          <td>
+            {{ 'Baja y supresión' if req.request_type == 'account_closure' else req.request_type }}
+            {% if req.retention_required %}<small class="amber">con conservación legal</small>{% endif %}
+          </td>
+          <td><span class="badge {{ 'b-green' if req.status == 'completed' else 'b-amber' if req.status in ('received','in_review','waiting_requester','legal_hold') else 'b-gray' }}">{{ req.status }}</span></td>
+          <td>
+          {% if req.status in ('received','in_review','waiting_requester','legal_hold') %}
+            <form method="post" action="/admin/privacidad/{{ req.id }}/estado" class="req-actions">
+              <select class="input" name="status" required>
+                <option value="in_review">En revisión</option>
+                <option value="waiting_requester">Esperando al solicitante</option>
+                <option value="legal_hold">Conservación legal</option>
+                <option value="completed">Completada</option>
+                <option value="rejected">Rechazada con motivo</option>
+                <option value="cancelled">Cancelada por el solicitante</option>
+              </select>
+              <input class="input" name="resolution_note" maxlength="2000" placeholder="Actuación y motivo documentados" required>
+              <button class="btn sm" type="submit">Guardar seguimiento</button>
+            </form>
+          {% else %}
+            <span class="meta">{{ req.resolution_note or 'Sin nota' }}</span>
+          {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+      <p class="empty">Cuando una baja no pueda borrarse al instante por conservación fiscal o laboral, aparecerá aquí con una referencia trazable.</p>
+    {% endif %}
+  </div>
+
   <!-- ================= 💰 Finanzas ================= -->
   <div class="dept-head" id="finanzas">
     <span class="dept-ic">💰</span>

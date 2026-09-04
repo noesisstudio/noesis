@@ -10,6 +10,10 @@ usa la vista de grafo para navegar.
   riesgos y pista para diagnosticar o revertir una regresión.
 - [[Plan-maestro-Noesis]] — visión, principios, arquitectura objetivo y criterios.
 - [[Producto]] — qué es Noesis, para quién y la propuesta de valor.
+- [[Propuesta-sistema-retencion-habito-valor]] — propuesta para socios que integra
+  Habit, Trust, Value, WUB y las fases posteriores de Insight, Progress y Confidence.
+- [[Registro-interno-valor]] — contrato técnico del esquema 54: taxonomía,
+  idempotencia, WUB, outcomes, privacidad, flags, auditoría y rollback.
 - [[Competencia]] — Forjia y el resto del mercado.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
@@ -18,6 +22,14 @@ usa la vista de grafo para navegar.
   puede hacer cada una, cómo se da y se quita acceso, y cómo cumple el RGPD.
 - [[Seguridad-operativa]] — amenazas, controles, secretos, incidentes y puerta de
   salida segura al piloto.
+- [[RGPD-Registro-actividades]] — inventario vivo de tratamientos como responsable
+  y como encargado, con categorías, bases, destinatarios y controles.
+- [[RGPD-Matriz-proveedores]] — rol, datos, activación y evidencia contractual que
+  se exige a cada proveedor antes de recibir datos reales.
+- [[RGPD-Procedimiento-derechos-y-bajas]] — recepción, verificación, conservación,
+  resolución y prueba de las solicitudes de derechos y baja.
+- [[RGPD-Procedimiento-brechas]] — contención, evaluación, comunicaciones y cierre
+  de incidentes con datos personales.
 - [`Diagnostico.pdf`](Diagnostico.pdf) — cuando algo falla, dónde mirar: las siete
   piezas, las cuatro puertas de una petición, síntomas y causas, y qué preguntar.
 - [`Diagnostico-tecnico.pdf`](Diagnostico-tecnico.pdf) — lo mismo con el archivo, la

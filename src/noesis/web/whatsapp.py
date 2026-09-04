@@ -833,7 +833,8 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
             return "No encuentro ese borrador. No he emitido ni enviado nada."
         if invoice.get("status") == "borrador":
             result = json.loads(tools.run_tool(
-                "enviar_factura", {"factura_id": invoice_id}, business["id"]
+                "enviar_factura", {"factura_id": invoice_id}, business["id"],
+                channel="whatsapp",
             ))
             if not result.get("ok"):
                 return result.get("error") or "No he podido emitir la factura."
@@ -913,6 +914,39 @@ def _execute_collection(business: dict, payload: dict) -> str:
         log.exception("No se pudo encolar el recordatorio confirmado.")
         return f"No he podido enviarlo ({exc}). Inténtalo desde la web."
     db.mark_reminder_sent(invoice["id"], business["id"])
+    correlation_key = str(
+        payload.get("value_correlation_key")
+        or f"collection_confirmed:{business['id']}:{invoice['id']}:{day}"
+    )
+    from .. import value_ledger
+    with value_ledger.observation_context(
+        channel="whatsapp",
+        trigger_source="noesis_proposed",
+        completion_mode="user_confirmed",
+    ):
+        value_ledger.observe_useful_action(
+            business["id"],
+            "payment_reminder_sent",
+            entity_type="invoice",
+            entity_id=invoice["id"],
+            idempotency_key=(
+                f"collect-confirmed:{business['id']}:{invoice['id']}:{day}"
+            ),
+        )
+    value_ledger.observe_trust_decision(
+        business["id"],
+        "payment_reminders",
+        f"Envié el recordatorio confirmado de la factura {number}.",
+        status="executed",
+        target_type="invoice",
+        target_id=invoice["id"],
+        requested_by="noesis",
+        approved_by="propietario por WhatsApp",
+        process_key="collections",
+        action_family="payment_reminder_sent",
+        correlation_key=correlation_key,
+        trigger_source="noesis_proposed",
+    )
     db.record_product_event(
         business["id"], "collection_confirmed",
         json.dumps({"invoice_id": invoice["id"]}, separators=(",", ":")),
@@ -1578,6 +1612,27 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             _finish_inbound_message(message_id, claimed_ids)
             continue
         if pending and _is_no(text):
+            try:
+                rejected_payload = json.loads(pending.get("payload") or "{}")
+            except (TypeError, ValueError):
+                rejected_payload = {}
+            correlation_key = rejected_payload.get("value_correlation_key")
+            if pending.get("kind") == "reclamar" and correlation_key:
+                from .. import value_ledger
+                value_ledger.observe_trust_decision(
+                    business["id"],
+                    "payment_reminders",
+                    "El propietario descartó el recordatorio propuesto.",
+                    status="rejected",
+                    target_type="invoice",
+                    target_id=rejected_payload.get("invoice_id"),
+                    requested_by="noesis",
+                    approved_by="propietario por WhatsApp",
+                    process_key="collections",
+                    action_family="payment_reminder_sent",
+                    correlation_key=correlation_key,
+                    trigger_source="noesis_proposed",
+                )
             db.clear_pending_action(business["id"], phone)
             send(
                 phone,

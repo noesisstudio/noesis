@@ -606,7 +606,15 @@ _TOOL_ENTITLEMENTS = {
 }
 
 
-def run_tool(name: str, tool_input: dict, business_id: int) -> str:
+def run_tool(
+    name: str,
+    tool_input: dict,
+    business_id: int,
+    *,
+    channel: str = "web",
+    trigger_source: str = "user_initiated",
+    completion_mode: str = "user_confirmed",
+) -> str:
     """Ejecuta una herramienta para un negocio y devuelve JSON (para Claude/NLU)."""
     fn = _DISPATCH.get(name)
     if fn is None:
@@ -626,7 +634,13 @@ def run_tool(name: str, tool_input: dict, business_id: int) -> str:
             ensure_ascii=False,
         )
     try:
-        result = fn(business_id=business_id, **tool_input)
+        from . import value_ledger
+        with value_ledger.observation_context(
+            channel=channel,
+            trigger_source=trigger_source,
+            completion_mode=completion_mode,
+        ):
+            result = fn(business_id=business_id, **tool_input)
     except (TypeError, ValueError) as e:
         result = {"error": f"Parámetros inválidos para {name}: {e}"}
     except Exception:  # noqa: BLE001
