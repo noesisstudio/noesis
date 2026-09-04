@@ -1,5 +1,24 @@
 ﻿# Registro de cambios
 
+## 2026-09-04 — copia verificada y publicación autorizada del esquema 55
+
+- **Autorización:** el founder solicita copia y publicación después del CI verde.
+- **Backup real previo (esquema 53):** `noesis-20260904-090824-601912.dump.gz`
+  (123.805 bytes) y `noesis-20260904-090829-568655.docs.zip` (82.060 bytes).
+  Creación validada y segundo simulacro de restauración correcto en 3,854 s.
+  Copia fijada fuera de rotación en `/data/backups/predeploy-schema55-20260904`.
+- **Publicación:** fast-forward a main de `4f5e88f`; Railway
+  `56d18ded-993c-4aa8-96d1-a623a8d75c79` termina SUCCESS. `/ready` devuelve
+  esquema 55 y release `4f5e88f071cd`; 14 páginas/8 cabeceras correctas.
+- **Regresión real:** demo autónomo (Inicio, Ajustes, Suscripción, Facturas,
+  Documentos) y gestoría en 200; admin inaccesible para la demo normal. Recuentos
+  antes/después idénticos: 9 negocios, 9 usuarios, 19 clientes, 24 facturas,
+  24 líneas y 2 fichajes. Auditoría íntegra; alta y ambos flags WUB false.
+- **Límites/rollback:** copia dentro de Railway, no offsite. No se ha probado una
+  baja real ni enviado avisos nuevos. Para regresión, volver primero al código
+  d3740a0 sobre BD 55; no borrar tablas nuevas con solicitudes reales. El cierre
+  documental no modifica código, dependencias, workflow ni configuración externa.
+
 ## 2026-09-04 — puerta de revisión aislada, sin despliegue
 
 - **Cierre:** CI `33855910788` correcto: 629 pruebas en 275,502 s, migraciones,

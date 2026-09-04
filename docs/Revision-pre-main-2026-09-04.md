@@ -6,9 +6,24 @@ Rama de revisión: `codex/review-value-privacy`. Base remota comprobada:
 `d3740a052432a29c9306bf16629a711384df9352`. Incluye el registro de valor/WUB,
 correcciones de su revisión externa y el bloque RGPD, no solamente textos legales.
 
-**APTO TÉCNICAMENTE para publicación controlada, pendiente de autorización del
-founder y copia reciente verificada de producción antes del push.** No autoriza
-apertura masiva ni activar el ledger. Main y Railway no se han modificado.
+**PUBLICADO con autorización del founder el 4-sep**, después de backup real y
+restauración verificada. Esquema 55, páginas públicas, acceso demo y recuentos
+operativos correctos. No autoriza apertura masiva ni activar el ledger.
+
+## Resultado de publicación
+
+- Primer release publicado: `4f5e88f071cd`; Railway
+  `56d18ded-993c-4aa8-96d1-a623a8d75c79`, SUCCESS.
+- Backup previo de esquema 53: `noesis-20260904-090824-601912.dump.gz`
+  (123.805 bytes) y `noesis-20260904-090829-568655.docs.zip` (82.060 bytes).
+  Segundo simulacro aislado de restauración OK en 3,854 s.
+- Ambos artefactos fijados en `/data/backups/predeploy-schema55-20260904`, fuera
+  de rotación. Siguen dentro de Railway: no demuestran recuperación offsite.
+- 14 páginas y 8 cabeceras correctas; demo de autónomo en Inicio, Ajustes,
+  Suscripción, Facturas y Documentos, y demo de gestoría en 200.
+- Recuentos idénticos a la copia: negocios, usuarios, clientes, facturas, líneas
+  y fichajes. Integridad de auditoría correcta. Altas y ambos flags de valor false.
+- El commit de cierre de esta evidencia es solo documental; no cambia el runtime.
 
 ## Hallazgos corregidos
 

@@ -7,8 +7,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "CI aislado 33855910788 verificado: 629 pruebas, PostgreSQL 16, restauracion, codigo 53 sobre BD 55, rollback 55->54->53->54->55 y privacidad HTTP. Pendientes autorizacion y copia reciente de produccion antes de publicar; despues verificar release, esquema 55, ready y acceso existente. Mantener alta publica y ambos flags de valor en false. Antes de apertura: validar DPA, regiones, conservacion, copia externa, integraciones y piloto real. Reconciliar WUB/outcomes con 3-5 negocios solo al autorizar su activacion."
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Publicado y verificado el 4-sep: esquema 55, ready, 14 paginas, 8 cabeceras, accesos demo, seis recuentos operativos conservados y auditoria integra. Backup real previo de BD/documentos y restauracion aislada OK, fijado fuera de rotacion en Railway. Mantener alta publica y ambos flags de valor en false. Pendientes solicitud humana con correo, DPA, regiones, conservacion, copia externa fuera de Railway, integraciones y piloto real. Reconciliar WUB/outcomes con 3-5 negocios solo al autorizar su activacion."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -117,7 +117,7 @@
     "anthropic_fallback"
   ],
   "external_validation_pending": [
-    "schema_55_production_release_authorization_fresh_verified_backup_post_deploy_smoke_and_human_privacy_request_then_3_5_business_wub_outcome_reconciliation",
+    "human_privacy_request_real_email_and_3_5_business_wub_outcome_reconciliation_before_opt_in_activation",
     "hostinger_catch_all_preserves_original_recipient_and_real_imap_pilot",
     "rotate_any_secret_exposed_in_shared_material",
     "professional_legal_review",

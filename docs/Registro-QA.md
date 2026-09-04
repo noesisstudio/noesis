@@ -1,5 +1,19 @@
 # Registro de QA
 
+## 2026-09-04 — publicación real y comprobaciones posteriores
+
+- Backup de base y documentos creado/verificado antes del push; restauración
+  aislada independiente OK en 3,854 s. Artefactos fijados en
+  `/data/backups/predeploy-schema55-20260904`, fuera de rotación.
+- Release `4f5e88f071cd`, esquema 55, Railway SUCCESS. Comprobador externo:
+  14 páginas públicas y 8 cabeceras, status ok. Accesos demo reales de titular y
+  gestoría correctos; cinco pantallas autenticadas del titular en 200.
+- Comparación de seis tablas operativas contra la cabecera del backup: recuentos
+  idénticos. Cadena de auditoría íntegra. Flags reales: signup=false,
+  ledger=false, ledger_admin=false; proveedor legal efectivo correcto.
+- Límite: no se ejerció supresión ni se modificaron clientes/facturas reales; la
+  solicitud humana con correo y la recuperación fuera de Railway siguen pendientes.
+
 ## 2026-09-04 — validación previa a main
 
 - **RESULTADO FINAL:** CI `33855910788` verde en ambos jobs. **629 pruebas en

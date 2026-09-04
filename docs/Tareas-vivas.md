@@ -10,11 +10,13 @@
   exportación y rollback 55→54→53→54→55. Código anterior 53 probado sobre BD 55;
   datos e inmutabilidad conservados. Humo de rutas y backup/restauración correctos.
   Evidencia y límites: [[Revision-pre-main-2026-09-04]].
-- [ ] Tras autorizar publicación: copia reciente verificada de producción, migrar,
-  comprobar release/esquema/ready, cuentas existentes y una solicitud humana completa
-  con entrega real de correo. La verificación del CI no sustituye ese recorrido.
+- [x] Publicación autorizada del esquema 55: backup real y restauración previa,
+  release/ready, páginas públicas, accesos demo, recuentos operativos y auditoría
+  verificados el 4-sep. Artefactos fijados fuera de rotación en Railway.
+- [ ] Recorrer una solicitud humana completa con entrega real de correo. No se
+  ha borrado ni cancelado ninguna cuenta real para probar el despliegue.
 
-- [ ] Publicar el candidato solo después del CI completo y autorización, con
+- [ ] Mantener el candidato ya publicado con
   `NOESIS_VALUE_LEDGER_ENABLED=false` y
   `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. El humo y rollback PostgreSQL aislados
   ya están verificados. Mantener la secuencia de rollback seguro:
