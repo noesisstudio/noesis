@@ -1147,10 +1147,17 @@ class BackendTestCase(unittest.TestCase):
         self.assertTrue(requests[0]["retention_required"])
         self.assertEqual(requests[0]["requester_user_id"], user["id"])
         notices = [
-            row for row in db.list_email_messages(business["id"], limit=20)
+            str(row.get("idempotency_key") or "")
+            for row in db.list_email_messages(business["id"], limit=20)
             if str(row.get("idempotency_key") or "").startswith("privacy-request-")
         ]
-        self.assertEqual(len(notices), 1)
+        # Se avisa al titular y, si hay buzón interno configurado, también a
+        # privacidad: son dos correos distintos y legítimos. Lo que la idempotencia
+        # prohíbe es repetir cualquiera de los dos al reenviar la solicitud.
+        self.assertEqual(len(notices), len(set(notices)))
+        self.assertEqual(
+            len([key for key in notices if key.startswith("privacy-request-user:")]), 1
+        )
         self.assertIn(
             "privacy.account_closure_requested",
             [event["event_type"] for event in db.list_security_events(20)],

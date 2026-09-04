@@ -80,6 +80,36 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-04 — la prueba de baja RGPD dependía del entorno del que la ejecuta
+
+- **Autor/agente:** Claude.
+- **Objetivo:** la batería completa daba 5 fallos sobre 629. Averiguar si eran del
+  producto antes de subir nada.
+- **Áreas y archivos:** `tests/test_backend.py`. Sin cambios en `src/`.
+- **Cambios de datos/migración:** ninguno; esquema sin tocar.
+- **Pruebas ejecutadas:** batería completa (624 pasan, 5 fallan, 37 min). Los cuatro
+  fallos de `test_account_closure_with_legal_records_is_tracked_and_idempotent` se
+  reproducen aislados y **no son del producto**: el test contaba los avisos por el
+  prefijo `privacy-request-`, que casa a la vez con `privacy-request-user:` y con
+  `privacy-request-admin:`. `account.py` encola los dos a propósito, y el segundo
+  solo si hay `NOESIS_LEGAL_EMAIL` o `NOESIS_ADMIN_EMAIL`. Con un buzón interno
+  configurado salían dos y el test exigía uno: pasaba en CI y fallaba en la máquina
+  del founder. Ahora comprueba lo que quería comprobar —que reenviar la solicitud no
+  duplica ningún aviso y que al titular le llega exactamente uno— y pasa con y sin
+  buzón interno. El quinto,
+  `test_whatsapp_multichannel::test_central_phone_cannot_mix_owner_and_worker_identities`,
+  pasa aislado y con su archivo entero; en la tanda completa muere con
+  `PermissionError` en `tempfile.py` al borrar un directorio temporal: es un bloqueo
+  de archivos de Windows, no del código.
+- **Dependencias o validaciones externas:** ninguna.
+- **Riesgo/punto probable de fallo:** ninguno en producción; solo cambia una
+  aserción de prueba. El aviso interno de privacidad seguía enviándose bien.
+- **Diagnóstico y rollback:** `pytest -k test_account_closure` con y sin
+  `NOESIS_ADMIN_EMAIL`. Antes fallaba con la variable puesta.
+- **Estado de publicación:** batería verde salvo el bloqueo de ficheros de Windows,
+  que no se reproduce fuera de la tanda completa. Queda por confirmar si en Linux
+  desaparece.
+
 ## 2026-09-04 — el comprobador de WhatsApp valida firma y suscripción
 
 - **Autor/agente:** Claude.
