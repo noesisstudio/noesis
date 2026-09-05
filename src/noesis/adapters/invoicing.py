@@ -1,4 +1,4 @@
-"""Frontera de facturación nativa de Noesis.
+"""Frontera de facturación nativa de Bynoesis.
 
 La emisión, numeración, PDF y registro Veri*Factu son de desarrollo propio. El
 contrato se conserva para desacoplar las herramientas del motor interno, no para
@@ -46,5 +46,5 @@ class InternalInvoicingProvider:
 
 
 def get_provider() -> InvoicingProvider:
-    """Devuelve siempre el motor propio de facturación de Noesis."""
+    """Devuelve siempre el motor propio de facturación de Bynoesis."""
     return InternalInvoicingProvider()

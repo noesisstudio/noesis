@@ -1,6 +1,6 @@
 # Tipografías y licencias
 
-Noesis utiliza dos familias tipográficas abiertas:
+Bynoesis utiliza dos familias tipográficas abiertas:
 
 - **Fraunces** para la voz editorial, titulares y el wordmark. Proyecto:
   <https://github.com/undercasetype/Fraunces>. Licencia SIL Open Font License 1.1.
@@ -12,6 +12,6 @@ la aplicación. No se modifica ni se renombra la tipografía. La licencia OFL pe
 su uso comercial y redistribución bajo sus condiciones:
 <https://openfontlicense.org/open-font-license-official-text/>.
 
-Los logotipos y composiciones de Noesis son activos propios del proyecto. Este
+Los logotipos y composiciones de Bynoesis son activos propios del proyecto. Este
 archivo documenta las licencias tipográficas; no concede derechos de marca a
 terceros.

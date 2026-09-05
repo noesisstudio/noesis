@@ -1,4 +1,4 @@
-<title>Frentes abiertos de Noesis</title>
+<title>Frentes abiertos de Bynoesis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -179,7 +179,7 @@
 <header class="top">
   <div class="wrap top-in">
     <div>
-      <p class="eyebrow">Revisión técnica · Noesis</p>
+      <p class="eyebrow">Revisión técnica · Bynoesis</p>
       <h1>Frentes abiertos</h1>
       <p class="lede">
         Siete áreas que hoy no funcionan del todo, cada una con lo que falla de verdad,
@@ -188,7 +188,7 @@
       </p>
     </div>
     <div class="meta">
-      <span>4 de septiembre de 2026</span>
+      <span>Revisado el 5 de septiembre de 2026</span>
       <span>release 2354e92141a2</span>
       <span>esquema 55 · 639 pruebas</span>
     </div>
@@ -199,6 +199,7 @@
   <nav class="rail" aria-label="Secciones">
     <h2>Frentes</h2>
     <ol>
+      <li><a href="#marca"><span class="n">00</span> Cambio de marca</a></li>
       <li><a href="#audio"><span class="n">01</span> Notas de voz</a></li>
       <li><a href="#copias"><span class="n">02</span> Copias de seguridad</a></li>
       <li><a href="#rgpd"><span class="n">03</span> Protección de datos</a></li>
@@ -213,6 +214,10 @@
 
   <main>
     <dl class="board">
+      <div>
+        <dt>Pendiente en Railway</dt>
+        <dd><span class="big">4</span>Variables que aún dicen «Noesis»</dd>
+      </div>
       <div>
         <dt>Bloquean el piloto</dt>
         <dd><span class="big">3</span>Copias externas, Stripe y validación jurídica</dd>
@@ -231,6 +236,110 @@
       </div>
     </dl>
 
+    <!-- ============================================================ 00 === -->
+    <section class="area" id="marca">
+      <div class="area-head">
+        <span class="n">00</span>
+        <h2 class="area-title">El cambio de nombre a Bynoesis</h2>
+        <span class="chip c-red">Te quedan 4 variables</span>
+      </div>
+      <p class="area-sub">
+        Hecho el 5 de septiembre. Todo lo que ve una persona ya dice Bynoesis, pero hay
+        cuatro valores que el código no controla y que siguen diciendo el nombre viejo.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-red">
+          <h3>Lo que tienes que hacer tú, en Railway</h3>
+          <p>
+            Estas cuatro están puestas en Railway, no en el código, así que el renombrado
+            no las ha tocado. Hasta que las cambies, <strong>tus correos y tus facturas
+            seguirán firmando como Noesis</strong>.
+          </p>
+          <pre>WHATSAPP_TEMPLATE_*              los nueve, a bynoesis_*
+                                 (o bórralas: valen los valores por defecto)
+SMTP_FROM                        Bynoesis &lt;no-reply@bynoesis.com&gt;
+NOESIS_VERIFACTU_PRODUCER_NAME   Bynoesis
+NOESIS_VERIFACTU_SYSTEM_NAME     Bynoesis</pre>
+          <p>
+            <strong>Los dos de Veri*Factu corren prisa.</strong> Se graban dentro de cada
+            registro de factura y forman parte de una cadena que no se puede reescribir.
+            Sigues en entorno de pruebas y no hay remisión real a Hacienda, así que hoy
+            cambiarlos es gratis. Después de la primera factura real, ya no.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Lo que ya está renombrado</h3>
+          <p>
+            <strong>1.159 apariciones en 196 ficheros</strong>: pantallas, respuestas del
+            asistente, correos, documentación y marca. Más seis archivos cuyo nombre llevaba
+            la marca, renombrados también para que las referencias no quedaran rotas.
+          </p>
+          <p>
+            Se hizo buscando <code>Noesis</code> como <strong>palabra suelta</strong>, no como
+            texto contenido. Por construcción, ese patrón no puede tocar
+            <code>NOESIS_SECRET</code>, <code>noesis.web.server</code> ni
+            <code>noesis-doctor</code>: lo verifiqué antes de ejecutarlo.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Lo que no se ha renombrado, y por qué</h3>
+          <p>
+            Tres grupos donde cambiar el nombre <strong>tumba producción el mismo día</strong>.
+            Son nombres internos que ningún cliente ve nunca.
+          </p>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Qué</th><th class="num">Cuántos</th><th>Qué pasaría si se renombra</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>Variables <code>NOESIS_*</code></td>
+                  <td class="num">96</td>
+                  <td>Están puestas en Railway. El servidor se queda sin clave de sesión, sin URL base, sin número de WhatsApp y sin identidad fiscal <strong>a la vez</strong></td>
+                </tr>
+                <tr>
+                  <td>El paquete <code>noesis</code> y sus imports</td>
+                  <td class="num">409</td>
+                  <td><code>Procfile</code> y <code>railway.json</code> arrancan <code>noesis.web.server</code> y ejecutan <code>noesis.migrations</code>. La aplicación no arranca</td>
+                </tr>
+                <tr>
+                  <td>Comandos y ficheros estáticos</td>
+                  <td class="num">—</td>
+                  <td><code>noesis-doctor</code>, <code>noesis-web</code> y <code>noesis-mark.svg</code> se referencian por nombre</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Si algún día quieres cambiarlos también, es una operación aparte: variables nuevas
+            en Railway conviviendo con las viejas, despliegue, y retirada de las antiguas. Con
+            parada planificada, no de pasada.
+          </p>
+        </div>
+
+        <div class="row">
+          <h3>Dos cosas que aproveché porque hoy salían gratis</h3>
+          <ul>
+            <li>
+              <strong>Las nueve plantillas de Meta pasan a <code>bynoesis_*</code>.</strong>
+              Comprobé antes que ninguna está dada de alta —9 de 9 ausentes—, así que hoy no
+              cuesta nada. Mañana, con ellas creadas y aprobadas, te obligaría a darlas de
+              alta dos veces y esperar dos revisiones.
+            </li>
+            <li>
+              <strong>La palabra de vinculación acepta las dos.</strong> El mensaje que se
+              genera dice ya <code>BYNOESIS &lt;código&gt;</code>, pero <code>NOESIS</code> sigue
+              valiendo. Si tienes una captura, un correo o unas instrucciones antiguas, siguen
+              funcionando. Lo mismo con el cerebro local, que entiende «permisos de noesis» y
+              «permisos de bynoesis». Hay una prueba que fija las dos formas.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <!-- ============================================================ 01 === -->
     <section class="area" id="audio">
       <div class="area-head">
@@ -247,7 +356,7 @@
         <div class="row sev sev-amber">
           <h3>Qué falla exactamente</h3>
           <p>
-            Si mandas un audio, Noesis te responde: <em>«He recibido tu nota de voz pero no he
+            Si mandas un audio, Bynoesis te responde: <em>«He recibido tu nota de voz pero no he
             podido transcribirla. Escríbeme la orden en texto, por favor.»</em> Fíjate en el
             «he recibido»: el audio llega perfectamente. Lo que no hay es traductor.
           </p>
@@ -426,7 +535,7 @@ NOESIS_BACKUP_S3_DATA_REGION     vacía</pre>
                 <tr><td><strong>Rol de la gestoría</strong>: ¿subencargada o responsable independiente?</td><td>Decide quién responde si un despacho filtra un expediente. Hoy no está escrito en ningún sitio</td><td>Abogado</td></tr>
                 <tr><td><strong>Base de cada transferencia internacional</strong>, proveedor por proveedor</td><td>«Cláusulas tipo» dicho en genérico no basta: hay que verificar si aplica decisión de adecuación o cláusulas más su evaluación</td><td>Abogado</td></tr>
                 <tr><td><strong>Limitación de responsabilidad</strong> ante un error de cálculo fiscal</td><td>Es el riesgo real del producto: presentas cifras de IVA e IRPF</td><td>Abogado</td></tr>
-                <tr><td><strong>Transparencia del Reglamento de IA</strong> (art. 50)</td><td>Aplica desde el 2-ago-2026. Noesis lo cumple de hecho; falta la línea explícita en los términos</td><td>Abogado</td></tr>
+                <tr><td><strong>Transparencia del Reglamento de IA</strong> (art. 50)</td><td>Aplica desde el 2-ago-2026. Bynoesis lo cumple de hecho; falta la línea explícita en los términos</td><td>Abogado</td></tr>
               </tbody>
             </table>
           </div>
@@ -477,28 +586,28 @@ NOESIS_BACKUP_S3_DATA_REGION     vacía</pre>
         <div class="row sev sev-green">
           <h3>A · El móvil personal del autónomo · Funciona ya</h3>
           <p>
-            Cada cliente de Noesis vincula <strong>su propio móvil</strong> al número central y le
+            Cada cliente de Bynoesis vincula <strong>su propio móvil</strong> al número central y le
             habla desde él. No hace falta que tenga número de empresa, ni WhatsApp Business, ni
             permiso ninguno de Meta.
           </p>
           <p>
             Funciona porque cuando el mensaje entra por el número central, el sistema identifica
             el negocio <strong>por el teléfono de quien escribe</strong>, no por el que recibe.
-            Así, cien autónomos pueden compartir un único número de Noesis y cada uno ve solo
+            Así, cien autónomos pueden compartir un único número de Bynoesis y cada uno ve solo
             lo suyo. Los trabajadores también vinculan el suyo desde <em>Equipo</em>, con su
             propio código de un solo uso.
           </p>
           <p>Dos límites que conviene tener claros:</p>
           <ul>
             <li>Un mismo teléfono no puede pertenecer a dos negocios a la vez. El sistema lo detecta y pide que se resuelva desde Equipo o Ajustes.</li>
-            <li>Sigue rigiendo la ventana de 24 horas de WhatsApp: pasado un día de silencio, Noesis solo puede volver a escribir con una plantilla aprobada.</li>
+            <li>Sigue rigiendo la ventana de 24 horas de WhatsApp: pasado un día de silencio, Bynoesis solo puede volver a escribir con una plantilla aprobada.</li>
           </ul>
         </div>
 
         <div class="row sev sev-amber">
           <h3>B · El número comercial del cliente · Construido, sin permiso</h3>
           <p>
-            Que los <em>clientes de tu cliente</em> escriban al número de su empresa y Noesis
+            Que los <em>clientes de tu cliente</em> escriban al número de su empresa y Bynoesis
             recoja esas solicitudes. El motor está hecho: existe la tabla de conexiones, el alta
             técnica desde administración, el aislamiento entre empresas y la bandeja.
           </p>
@@ -887,6 +996,7 @@ NOESIS_BACKUP_S3_DATA_REGION     vacía</pre>
         <div class="row sev sev-red">
           <h3>Esta semana</h3>
           <ol class="steps">
+            <li><strong>Cambiar las cuatro variables del renombrado</strong> en Railway. Las dos de Veri*Factu antes de la primera factura real, porque después ya no se pueden reescribir.</li>
             <li><strong>Comprobar la región de Railway</strong> y moverla a la UE si está fuera. Cuanto más tardes, más caro: mover el volumen con clientes dentro implica parada de servicio.</li>
             <li><strong>Contratar el bucket de copias</strong> fuera de Railway. Hoy un solo incidente en un proveedor se lleva el original y la copia.</li>
             <li><strong>Cronometrar el webhook con una foto real.</strong> Es gratis y descarta —o confirma— el fallo silencioso más caro que tienes.</li>

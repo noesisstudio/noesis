@@ -1,7 +1,7 @@
-"""Agentes avanzados del cerebro de Noesis.
+"""Agentes avanzados del cerebro de Bynoesis.
 
 El proveedor privado y el externo comparten contexto, herramientas y aislamiento.
-Cuando el modelo propone una acción, Noesis valida y ejecuta la herramienta en el
+Cuando el modelo propone una acción, Bynoesis valida y ejecuta la herramienta en el
 servidor antes de devolver el resultado. Web y WhatsApp usan el mismo bucle.
 """
 
@@ -49,7 +49,7 @@ def _system_prompt(business: dict) -> str:
     sector = business.get("sector") or "servicios"
     vat = business.get("default_vat", 21)
     irpf = business.get("default_irpf", 0)
-    return f"""Eres Noesis, el copiloto de negocio de un autónomo de {sector} \
+    return f"""Eres Bynoesis, el copiloto de negocio de un autónomo de {sector} \
 (fontanero, electricista, reformas, limpieza, jardinería...). Hablas por WhatsApp.
 
 Tu misión: quitarle ruido mental. Te ocupas de su agenda, sus clientes, sus \
@@ -85,7 +85,7 @@ las ejecutes tú. Deja el borrador o el aviso preparado y dile que lo confirme �
 desde la app. Nunca muevas dinero ni envíes nada sin su confirmación explícita.
 - Transferencias, pagos, devoluciones, impuestos, borrados y contratos SIEMPRE \
 requieren aprobación específica. No presentes una preferencia como permiso: consulta \
-el control de Noesis si hay dudas.
+el control de Bynoesis si hay dudas.
 
 CONTEXTO TEMPORAL
 - Hoy es {_DIAS[hoy.weekday()]} {hoy.isoformat()}.
@@ -161,7 +161,7 @@ class NoesisAgent:
         self._lock = threading.Lock()
 
     def send(self, user_text: str) -> str:
-        """Procesa un mensaje del autónomo y devuelve la respuesta de Noesis."""
+        """Procesa un mensaje del autónomo y devuelve la respuesta de Bynoesis."""
         with self._lock:
             self._mutated_in_send = False
             try:
@@ -438,7 +438,7 @@ class CompatibleNoesisAgent(OpenAICompatibleNoesisAgent):
 def daily_summary_text(business_id: int) -> str:
     """Genera el resumen proactivo del día (el 'parte de la mañana').
 
-    Esto es lo que Noesis enviaría solo cada mañana por WhatsApp: la función
+    Esto es lo que Bynoesis enviaría solo cada mañana por WhatsApp: la función
     estrella para reducir ruido mental.
     """
     today = date.today().isoformat()

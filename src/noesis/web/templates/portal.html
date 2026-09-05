@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if data %}{{ data.business.name }} · Tu portal{% else %}Enlace no válido{% endif %} · Noesis</title>
+  <title>{% if data %}{{ data.business.name }} · Tu portal{% else %}Enlace no válido{% endif %} · Bynoesis</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
@@ -69,11 +69,11 @@
   <div class="portal">
     <div class="portal-head">
       <div class="mark"><img src="/static/noesis-mark.svg" alt=""></div>
-      <div><div class="kicker">Noesis</div><h1>Enlace no disponible</h1></div>
+      <div><div class="kicker">Bynoesis</div><h1>Enlace no disponible</h1></div>
     </div>
     <div class="banner warn">Este enlace no es válido o ha caducado. Pide a tu
       proveedor que te envíe uno nuevo.</div>
-    <div class="foot">Portal seguro de <a href="https://bynoesis.com">Noesis</a></div>
+    <div class="foot">Portal seguro de <a href="https://bynoesis.com">Bynoesis</a></div>
   </div>
 {% else %}
   {% set quotes = data.quotes | selectattr('status', 'in', ['enviado', 'aceptado', 'rechazado']) | list %}
@@ -102,7 +102,7 @@
     {% elif ok == 'nojusto' %}
       <div class="banner warn">Ese documento ya no está disponible.</div>
     {% elif ok == 'readonly' %}
-      <div class="banner warn">Puedes consultar el presupuesto, pero el profesional debe reactivar Noesis antes de registrar tu respuesta.</div>
+      <div class="banner warn">Puedes consultar el presupuesto, pero el profesional debe reactivar Bynoesis antes de registrar tu respuesta.</div>
     {% elif subscription_read_only %}
       <div class="banner info">Este portal está temporalmente en modo consulta. Puedes abrir y descargar documentos, pero no enviar respuestas todavía.</div>
     {% endif %}
@@ -252,7 +252,7 @@
       <div class="doc"><div class="empty">Todavía no hay facturas emitidas a tu nombre.</div></div>
     {% endif %}
 
-    <div class="foot">Portal seguro de <a href="https://bynoesis.com">Noesis</a> ·
+    <div class="foot">Portal seguro de <a href="https://bynoesis.com">Bynoesis</a> ·
       Tus datos solo los ve {{ data.business.name }}.</div>
   </div>
   <script>

@@ -1,6 +1,6 @@
 """Canal WhatsApp: onboarding, entrada idempotente y salida durable.
 
-Hay un único número de Noesis. El teléfono remitente identifica al negocio y los
+Hay un único número de Bynoesis. El teléfono remitente identifica al negocio y los
 mensajes salientes se persisten antes de contactar con Meta. Los proactivos usan
 plantillas aprobadas; las respuestas a un mensaje entrante pueden usar texto libre
 dentro de la ventana de atención de 24 horas.
@@ -63,6 +63,13 @@ def recipient_phone(value: str | None) -> str | None:
 
 
 # ----------------------------------------------------------- Onboarding exprés --
+# La marca pasó de «Noesis» a «Bynoesis». Se emite la nueva y se siguen aceptando
+# las dos: quien tenga a mano un mensaje, una captura o una instrucción antigua no
+# puede quedarse sin poder vincular su teléfono.
+_PALABRA_CLAVE = "BYNOESIS"
+_PALABRAS_CLAVE = frozenset({"BYNOESIS", "NOESIS"})
+
+
 def start_link(business_id: int) -> dict:
     """Genera un código de vinculación y el enlace wa.me para enviarlo."""
     code = secrets.token_hex(3).upper()
@@ -71,16 +78,16 @@ def start_link(business_id: int) -> dict:
         datetime.now() + timedelta(seconds=_CODE_TTL)
     ).isoformat(timespec="seconds")
     db.create_whatsapp_link(code_hash, business_id, expires)
-    text = f"NOESIS {code}"
+    text = f"{_PALABRA_CLAVE} {code}"
     number = NOESIS_NUMBER or "TUNUMERO"
     link = f"https://wa.me/{number}?text={text.replace(' ', '%20')}"
     return {"code": code, "link": link, "number": NOESIS_NUMBER}
 
 
 def _try_link(from_phone: str, text: str) -> str | None:
-    """Si el texto es ``NOESIS <code>``, liga el teléfono al negocio."""
+    """Si el texto es ``BYNOESIS <code>``, liga el teléfono al negocio."""
     parts = (text or "").strip().split()
-    if len(parts) != 2 or parts[0].upper() != "NOESIS":
+    if len(parts) != 2 or parts[0].upper() not in _PALABRAS_CLAVE:
         return None
     business_id = db.consume_whatsapp_link(
         hashlib.sha256(parts[1].upper().encode()).hexdigest()
@@ -113,11 +120,11 @@ def _try_link(from_phone: str, text: str) -> str | None:
 
 
 def _try_worker_link(from_phone: str, text: str) -> dict | None:
-    """Liga ``NOESIS EQUIPO <negocio> <código>`` al teléfono remitente."""
+    """Liga ``BYNOESIS EQUIPO <negocio> <código>`` al teléfono remitente."""
     parts = (text or "").strip().split()
-    if len(parts) != 4 or [part.upper() for part in parts[:2]] != [
-        "NOESIS", "EQUIPO"
-    ]:
+    if len(parts) != 4 or parts[0].upper() not in _PALABRAS_CLAVE or (
+        parts[1].upper() != "EQUIPO"
+    ):
         return None
     try:
         business_id = int(parts[2])
@@ -133,7 +140,7 @@ def _try_worker_link(from_phone: str, text: str) -> dict | None:
             "subscription_required": True,
             "reply": (
                 "La cuenta de tu empresa está en modo consulta. El titular debe "
-                "activar Noesis antes de vincular el equipo."
+                "activar Bynoesis antes de vincular el equipo."
             ),
         }
     if not billing_adapter.has_entitlement(
@@ -218,7 +225,7 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
             "business_id": worker["business_id"],
             "worker_id": worker["id"],
             "reply": (
-                "La cuenta está en modo consulta. El titular debe activar Noesis "
+                "La cuenta está en modo consulta. El titular debe activar Bynoesis "
                 "antes de fichar o actualizar trabajos."
             ),
             "clocked": False,
@@ -1582,7 +1589,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
         if not business:
             send(
                 phone,
-                "Tu número no está dado de alta en Noesis. Regístrate en "
+                "Tu número no está dado de alta en Bynoesis. Regístrate en "
                 "bynoesis.com y conecta tu WhatsApp para empezar.",
             )
             results.append({"phone": phone, "known": False})

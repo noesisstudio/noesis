@@ -11,7 +11,7 @@ vigente no se fija aquí porque depende del consumo y cambia; se controla en el
 proveedor y en [[Unit-economics-y-cerebro-interno]].
 
 ### Pasos (los hace el founder; el código ya está preparado)
-1. Crear cuenta en [railway.app](https://railway.app) con el GitHub de Noesis.
+1. Crear cuenta en [railway.app](https://railway.app) con el GitHub de Bynoesis.
 2. **New Project → Deploy from GitHub repo** → elegir `noesisstudio/noesis`.
 3. Railway detecta `railway.json`: ejecuta las migraciones en pre-deploy, arranca
    Uvicorn y usa `/ready` como healthcheck.
@@ -34,14 +34,14 @@ proveedor y en [[Unit-economics-y-cerebro-interno]].
      (guía paso a paso en la sección "Activar Stripe" de abajo).
    - Email (SMTP): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
    - Facturación legal nativa: variables `NOESIS_VERIFACTU_*` y certificado/clave
-     indicados en [[Conectar-APIs]]. Noesis no delega la facturación en otro SaaS.
+     indicados en [[Conectar-APIs]]. Bynoesis no delega la facturación en otro SaaS.
    - `PORT` lo inyecta Railway automáticamente.
    - Primer release del esquema 54: `NOESIS_VALUE_LEDGER_ENABLED=false` y
      `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. No activar la observación hasta
      completar el smoke posterior a la migración.
    - Copia S3 externa: además de credenciales, configurar explícitamente
      `NOESIS_BACKUP_S3_REGION`, `NOESIS_BACKUP_S3_PROVIDER_NAME` y
-     `NOESIS_BACKUP_S3_DATA_REGION`. Sin esos tres datos Noesis no sube la copia.
+     `NOESIS_BACKUP_S3_DATA_REGION`. Sin esos tres datos Bynoesis no sube la copia.
 5. **Volumen persistente**: se mantiene montado en `/data` para documentos, modelos
    y la copia histórica de SQLite. La base operativa vive en Postgres.
 6. **Dominio**: Settings → Networking → Custom Domain → `bynoesis.com`, y apuntar el

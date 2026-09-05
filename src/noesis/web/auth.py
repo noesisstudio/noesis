@@ -2,7 +2,7 @@
 
 No usamos librerías externas para el hash: PBKDF2-HMAC-SHA256 con sal aleatoria y
 600.000 iteraciones es seguro y viene en la librería estándar de Python. Esto
-encaja con el objetivo de mantener Noesis con el mínimo de dependencias.
+encaja con el objetivo de mantener Bynoesis con el mínimo de dependencias.
 """
 
 from __future__ import annotations

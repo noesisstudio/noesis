@@ -8,14 +8,14 @@
 
 ## 1. Contexto
 
-Noesis quita ruido mental a autónomos de servicios. Esta rama une el ciclo
+Bynoesis quita ruido mental a autónomos de servicios. Esta rama une el ciclo
 proyecto → trabajo → fichaje/coste → documento/gasto → factura/cobro → gestoría y
 aplica el principio de que el usuario conserva la última palabra.
 
 ## 2. Resultado observable
 
 El autónomo ve una lectura sencilla y puede abrir el detalle; el trabajador recibe
-su parte y registra ejecución; la gestoría descarga un archivo trazable; Noesis
+su parte y registra ejecución; la gestoría descarga un archivo trazable; Bynoesis
 acompaña y propone sin poder mover dinero ni presentar obligaciones por sí solo.
 
 ## 3. Qué funciona

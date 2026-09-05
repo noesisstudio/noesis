@@ -653,7 +653,7 @@ def set_whatsapp_status(business_id, status, phone=None) -> dict:
                 (norm,),
             ).fetchone():
                 raise ValueError(
-                    "Ese teléfono ya identifica a un trabajador en Noesis. "
+                    "Ese teléfono ya identifica a un trabajador en Bynoesis. "
                     "Cada número central debe tener una sola identidad."
                 )
             conn.execute("UPDATE businesses SET whatsapp_status=?, whatsapp_phone=? "
@@ -1944,8 +1944,8 @@ def integration_catalog(business_id: int) -> list[dict]:
         }
 
     definitions = (
-        ("whatsapp", "WhatsApp", "Habla con Noesis y recibe avisos desde el móvil."),
-        ("ai_local", "IA privada", "Modelo propio en infraestructura controlada por Noesis."),
+        ("whatsapp", "WhatsApp", "Habla con Bynoesis y recibe avisos desde el móvil."),
+        ("ai_local", "IA privada", "Modelo propio en infraestructura controlada por Bynoesis."),
         ("ai_external", "IA avanzada", "Respaldo para consultas y documentos complejos."),
         ("email", "Correo", "Envíos de gestoría, acceso y comunicaciones operativas."),
         ("verifactu", "Veri*Factu", "Registro fiscal preparado y, con certificado, envío a AEAT."),
@@ -1986,7 +1986,7 @@ def integration_catalog(business_id: int) -> list[dict]:
             tone = "green" if active else "gray"
             detail = (
                 f"Modelo {config.LOCAL_AI_MODEL}; no consume créditos externos"
-                if active else "Noesis puede conectarla sin cambiar sus herramientas"
+                if active else "Bynoesis puede conectarla sin cambiar sus herramientas"
             )
         elif key == "ai_external":
             active = integration_enabled(
@@ -2193,7 +2193,7 @@ def business_operational_health(business_id: int) -> dict:
     }
 
 
-# ------------------------------------------------------- Memoria de Noesis ---
+# ------------------------------------------------------- Memoria de Bynoesis ---
 def add_assistant_message(
     business_id: int,
     role: str,
@@ -2203,7 +2203,7 @@ def add_assistant_message(
     page: str | None = None,
     source: str | None = None,
 ) -> dict:
-    """Guarda una intervención del usuario o de Noesis, aislada por negocio."""
+    """Guarda una intervención del usuario o de Bynoesis, aislada por negocio."""
     if role not in {"user", "assistant"}:
         raise ValueError("Rol de conversación no válido.")
     channel = (channel or "web").strip().lower()[:30]
@@ -2374,7 +2374,7 @@ AUTOMATION_CATALOG: tuple[dict, ...] = (
     {
         "key": "bank_transfer", "group": "Decisiones sensibles",
         "label": "Realizar transferencias o pagos",
-        "description": "Noesis nunca mueve dinero sin tu aprobación específica.",
+        "description": "Bynoesis nunca mueve dinero sin tu aprobación específica.",
         "risk": "critical", "default": "confirm",
         "allowed_modes": ("confirm", "blocked"),
     },
@@ -2388,7 +2388,7 @@ AUTOMATION_CATALOG: tuple[dict, ...] = (
     {
         "key": "tax_submission", "group": "Decisiones sensibles",
         "label": "Presentar impuestos o registros fiscales",
-        "description": "Noesis calcula y prepara; tú y tu gestoría revisáis antes de presentar.",
+        "description": "Bynoesis calcula y prepara; tú y tu gestoría revisáis antes de presentar.",
         "risk": "critical", "default": "confirm",
         "allowed_modes": ("confirm", "blocked"),
     },
@@ -2455,7 +2455,7 @@ def update_automation_permission(
     mode = str(mode or "").strip().lower()
     policy = AUTOMATION_BY_KEY.get(action_key)
     if not policy:
-        raise ValueError("La acción de Noesis no existe.")
+        raise ValueError("La acción de Bynoesis no existe.")
     if mode not in policy["allowed_modes"]:
         if policy["risk"] == "critical":
             raise ValueError(
@@ -2481,14 +2481,14 @@ def update_automation_permission(
 
 
 def automation_decision(business_id: int, action_key: str) -> dict:
-    """Respuesta única para cualquier herramienta que quiera actuar por Noesis."""
+    """Respuesta única para cualquier herramienta que quiera actuar por Bynoesis."""
     policy = next(
         (item for item in automation_catalog(business_id)
          if item["key"] == action_key),
         None,
     )
     if not policy:
-        raise ValueError("La acción de Noesis no existe.")
+        raise ValueError("La acción de Bynoesis no existe.")
     mode = policy["mode"]
     return {
         **policy,
@@ -2517,7 +2517,7 @@ def record_assistant_action(
 ) -> dict:
     policy = AUTOMATION_BY_KEY.get(str(action_key or "").strip())
     if not policy:
-        raise ValueError("La acción de Noesis no existe.")
+        raise ValueError("La acción de Bynoesis no existe.")
     if status not in {
         "proposed", "approved", "executed", "failed", "cancelled",
         "rejected", "corrected", "reverted",
@@ -2700,14 +2700,14 @@ def business_initials(name: str | None) -> str:
 
 
 def business_brand_color(business: dict | None) -> str:
-    """Color de marca del negocio, con el verde Noesis como valor por defecto."""
+    """Color de marca del negocio, con el verde Bynoesis como valor por defecto."""
     color = (business or {}).get("brand_color")
     return color if color and _HEX_RE.match(color) else BRAND_COLOR_DEFAULT
 
 
 # ----------------------------------------------------- Panel personalizable ---
 # Bloques del inicio que el autónomo puede ordenar y ocultar a su gusto.
-# El orden de esta tupla es la disposición por defecto (recomendada por Noesis).
+# El orden de esta tupla es la disposición por defecto (recomendada por Bynoesis).
 PANEL_BLOCKS = (
     ("foco", "Lo primero hoy"),
     ("pulso", "Pulso del negocio"),
@@ -2924,7 +2924,7 @@ def update_branding(business_id, *, template=None, brand_color=None,
 
 
 # ----------------------------------------------- Ledger del copiloto (consejos) ---
-# Cierra el bucle del consejo: lo que Noesis RECOMIENDA, lo que el autónomo ACEPTA
+# Cierra el bucle del consejo: lo que Bynoesis RECOMIENDA, lo que el autónomo ACEPTA
 # (entra a la acción) y lo que COMPLETA. Permite medir si el copiloto sirve y
 # enseñarle al autónomo qué hizo con lo que le sugerimos.
 REC_STATES = {"recomendado", "aceptado", "completado", "descartado"}
@@ -5412,7 +5412,7 @@ def create_rectifying_invoice(
     rectification_type = (rectification_type or "").strip().upper()
     if rectification_type != "I":
         raise ValueError(
-            "Noesis solo prepara rectificativas por diferencias. "
+            "Bynoesis solo prepara rectificativas por diferencias. "
             "La rectificación por sustitución requiere revisión fiscal."
         )
     concept = (concept or "").strip()
@@ -5534,7 +5534,7 @@ def update_rectifying_invoice_draft(
     rectification_type = (rectification_type or "").strip().upper()
     if rectification_type != "I":
         raise ValueError(
-            "Noesis solo prepara rectificativas por diferencias. "
+            "Bynoesis solo prepara rectificativas por diferencias. "
             "La rectificación por sustitución requiere revisión fiscal."
         )
     concept = (concept or "").strip()
@@ -6154,7 +6154,7 @@ def set_series_next_number(
     """Fija el próximo número de una serie para continuar otra numeración.
 
     Quien llega desde otro programa ya lleva emitidas facturas de este ejercicio.
-    Si Noesis empezara en el 1 repetiría números dentro del mismo año y la misma
+    Si Bynoesis empezara en el 1 repetiría números dentro del mismo año y la misma
     serie, que es justo lo que la ley no permite. Por eso el titular puede decir
     por dónde va, y por eso **solo se puede avanzar**: retroceder por debajo de lo
     ya emitido aquí crearía el duplicado que se quiere evitar.
@@ -8105,7 +8105,7 @@ def global_search(business_id, query: str, limit: int = 6) -> dict:
 
 
 def list_admin_emails() -> list[str]:
-    """Correos de los administradores de Noesis (para los partes internos)."""
+    """Correos de los administradores de Bynoesis (para los partes internos)."""
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT email FROM users WHERE is_admin=TRUE ORDER BY email"
@@ -9302,7 +9302,7 @@ def profit_and_loss(business_id, year: int | None = None) -> dict:
     if untyped:
         missing.append(f"{len(untyped)} gasto(s) sin IVA especificado: se cuentan "
                        "con IVA incluido y el coste real es algo menor.")
-    missing.append("Amortizaciones e intereses no están registrados en Noesis: "
+    missing.append("Amortizaciones e intereses no están registrados en Bynoesis: "
                    "el EBITDA y el resultado son aproximados. El cierre "
                    "definitivo es de tu gestoría.")
 
@@ -10876,7 +10876,7 @@ def ensure_whatsapp_customer_contact(
                 "RETURNING id",
                 (
                     business_id, lead_name, sender_phone,
-                    "Entrada creada por Noesis; pendiente de revisar y convertir.",
+                    "Entrada creada por Bynoesis; pendiente de revisar y convertir.",
                     _now(),
                 ),
             ).fetchone()
@@ -12290,7 +12290,7 @@ def account_cost_control(month: str | None = None) -> dict:
 
 
 def admin_overview() -> dict:
-    """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
+    """Cifras globales del negocio Bynoesis (solo para el fundador). NO expone datos
     operativos de cada autónomo, solo metadatos de cuenta y agregados."""
     with get_conn() as conn:
         rows = conn.execute(

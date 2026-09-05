@@ -65,7 +65,7 @@
   sobre firmado que se manda no lleva eventos y no crea ningún dato.
   Reproducible con `python scripts/check_whatsapp.py`.
 - **Límite:** las nueve plantillas no están dadas de alta, así que ningún mensaje
-  iniciado por Noesis puede salir. No se ha probado todavía una conversación real
+  iniciado por Bynoesis puede salir. No se ha probado todavía una conversación real
   con el número. Meta sirve los campos en `v26.0` y el código pide `v23.0`.
 - **IVA por el asistente.** Antes «¿cómo va mi IVA?» resolvía a `resumen_negocio`
   (cifras del mes) y «cuánto IVA tengo que pagar» no resolvía a nada; ninguna de las
@@ -194,7 +194,7 @@
   asistente sí califica. También califican una regla autorizada, una propuesta
   confirmada y una automatización explícita. La consulta WUB exige simultáneamente
   familia candidata e instancia delegada.
-- **Atribución conservadora:** outcomes enlazan como evidencia de Noesis únicamente
+- **Atribución conservadora:** outcomes enlazan como evidencia de Bynoesis únicamente
   acciones con contexto delegado. Los resultados posteriores a operaciones
   manuales siguen registrados, pero con atribución `observed`.
 - **Flag y auditoría anterior:** con `VALUE_LEDGER_ENABLED=false`, la prueba real de
@@ -347,7 +347,7 @@
 - **Documento:** la guía Word se abre como OOXML válido, contiene ocho páginas tras
   renderizado y todas fueron revisadas: no hay solapes, cortes, desbordamientos,
   imágenes deformadas ni páginas accidentales en blanco.
-- **Contenido:** los textos usan Noesis como marca y `@bynoesis` como usuario; el eje
+- **Contenido:** los textos usan Bynoesis como marca y `@bynoesis` como usuario; el eje
   es tiempo, orden y control. No reaparece el posicionamiento centrado únicamente en
   cobros ni quedan marcadores por rellenar.
 - **Límite:** no se afirma que los perfiles estén creados ni que el usuario esté
@@ -356,9 +356,9 @@
 
 ## 2026-08-31 — corrección del posicionamiento de marca
 
-- **Fuente de verdad usada:** `Plan-maestro-Noesis.md` fija «Noesis lleva la oficina
+- **Fuente de verdad usada:** `Plan-maestro-Bynoesis.md` fija «Bynoesis lleva la oficina
   mientras tú haces el trabajo» y `design/PRODUCT_PRINCIPLES.md` fija «Haz tu
-  trabajo; Noesis te ordena el negocio». Cobros, facturación y margen quedan como
+  trabajo; Bynoesis te ordena el negocio». Cobros, facturación y margen quedan como
   pruebas concretas, no como territorio único de marca.
 - **Exportaciones:** portada LinkedIn 4200 × 700, Facebook 1640 × 856, Open Graph
   1200 × 630 y tablero 1800 × 1200 regenerados con el nuevo eje de tiempo, menos
@@ -534,7 +534,7 @@
   `pyproject.toml`, pero no regeneró `uv.lock`.
 - **Corrección:** lock regenerado con `py -m uv lock`; añade `openpyxl 3.1.5` y su
   dependencia `et-xmlfile 2.0.0`, además de reflejar el extra `analysis` del
-  proyecto. No se ha cambiado ninguna dependencia de runtime de Noesis.
+  proyecto. No se ha cambiado ninguna dependencia de runtime de Bynoesis.
 - **Segunda barrera revelada por CI:** una vez reparado el lock, `pip-audit` alcanzó
   su paso y rechazó `pip 26.1.2` por `PYSEC-2026-3721`; la versión corregida indicada
   por el auditor es 26.2. El extra `security` fija `pip>=26.2,<27` para que la propia
@@ -590,7 +590,7 @@
   para una direccion del propio founder.
 - **Resultado:** HTTP 303 a `?sent=1` —respuesta identica exista o no la cuenta, por
   diseño— y **el correo llego** al buzon de `xavier@bynoesis.com` con el asunto
-  "Restablecer tu contraseña de Noesis" y el remitente «Noesis».
+  "Restablecer tu contraseña de Bynoesis" y el remitente «Bynoesis».
 - **Que queda demostrado:** la clave de Brevo es valida, la via HTTPS funciona desde
   Railway —que bloquea SMTP—, `SMTP_FROM` produce el remitente correcto y la cola
   entrega. El adaptador ya se habia verificado interceptando la peticion; ahora se
@@ -805,7 +805,7 @@
 
 - La portada, el panel real de la demo, Documentos, el asistente, la cartera de
   gestoría y el portal del cliente se recorrieron con capturas reales. La jerarquía
-  y la separación por tareas son coherentes con el parte de Noesis; Documentos
+  y la separación por tareas son coherentes con el parte de Bynoesis; Documentos
   mantiene 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 elementos en Otros.
 - En móvil se reprodujo un mojibake en el centro de la barra inferior y una fila de
   sugerencias parcialmente oculta. El centro muestra ahora `DEMO` y todas las
@@ -860,7 +860,7 @@
 - Se reproducía el fallo funcional: los botones dependían de que el Customer Portal
   estuviera configurado manualmente en Stripe y un rechazo volvía a la misma página
   fuera del área visible, por lo que parecía que el clic no hacía nada.
-- El adaptador crea o reutiliza solo una configuración versionada de Noesis con
+- El adaptador crea o reutiliza solo una configuración versionada de Bynoesis con
   actualización de tarjeta, cancelación al final del período, historial y cambios
   entre los seis `price_id`. Cada sesión conserva esa configuración también en el
   fallback general; una configuración externa no se reutiliza por error.
@@ -913,7 +913,7 @@
 - Evidencia sandbox real: Checkout de Autónomo mensual, suscripción `active`,
   metadatos `business_id=1`, `plan=autonomo`, `billing_period=monthly` y entregas
   `checkout.session.completed`, `invoice.paid` y
-  `customer.subscription.created` aceptadas por Noesis con HTTP 200.
+  `customer.subscription.created` aceptadas por Bynoesis con HTTP 200.
 - La regresión reproduce que un Checkout posterior podía degradar `active` a
   `pending`; ahora la decisión se toma bajo el bloqueo de la misma fila y conserva
   `active`/`trialing`.
@@ -1459,7 +1459,7 @@
   ya registrada en la baseline, había cambiado de línea: también quedó exceptuada
   inline y se retiró solo esa huella histórica de la baseline. No se relajó el
   detector. Los primeros humos PostgreSQL no llegaron a descargar las Actions por
-  un `Service Unavailable` de GitHub, sin ejecutar código de Noesis.
+  un `Service Unavailable` de GitHub, sin ejecutar código de Bynoesis.
 
 ### Qué no se ha probado
 
@@ -1614,7 +1614,7 @@
   material al 28,6% → no avisa; material al 60% → avisa; factura entera al 21% → no
   avisa, porque la regla no aplica y no hay que molestar.
 - **El aviso no decide**: comprobado que tras avisar los tipos siguen como los puso el
-  titular (10% y 21%) y **la factura se emite igualmente** (`2026/0002`). Noesis no
+  titular (10% y 21%) y **la factura se emite igualmente** (`2026/0002`). Bynoesis no
   puede conocer las otras condiciones del reducido —vivienda de particular, terminada
   hace más de dos años—, así que la elección es del autónomo.
 - El aviso viaja al detalle de la factura (`aviso_fiscal`) y al chat al crear el
@@ -1985,7 +1985,7 @@ que dice comprobar.
 - **Entradilla del hero**: pasa a nombrar WhatsApp lo primero, cumpliendo la ley 2 de
   `PRODUCT_PRINCIPLES` («primero WhatsApp, después app»). El titular **no se toca**: es
   la frase canónica del producto, fijada como base de la landing.
-- **Sección «cada momento de tu día» sustituida** por «Así se ve un día con Noesis»: una
+- **Sección «cada momento de tu día» sustituida** por «Así se ve un día con Bynoesis»: una
   conversación real de WhatsApp con las cuatro horas del día perfecto descrito en
   `WhatsApp-Cerebro` §10. Elimina de paso la redundancia con «Cómo funciona», que contaba
   el mismo ciclo con otras palabras.
@@ -2077,7 +2077,7 @@ que dice comprobar.
 - Los logs confirmaron que Uvicorn completaba el startup; la advertencia de Google
   solo mantenía cerrado `/admin`. La caída era posterior, durante el healthcheck.
 - Railway documenta que sus healthchecks usan `Host: healthcheck.railway.app`.
-  `TrustedHostMiddleware` lo rechazaba porque Noesis solo admitía el dominio público,
+  `TrustedHostMiddleware` lo rechazaba porque Bynoesis solo admitía el dominio público,
   el privado y localhost.
 - La configuración añade ese host exacto únicamente cuando existe
   `RAILWAY_ENVIRONMENT`; no acepta comodines ni cambia los hosts de instalaciones
@@ -2422,7 +2422,7 @@ que dice comprobar.
 - Corrección posterior del founder: Holded no es una integración futura. Se elimina
   `HOLDED_API_KEY`, el proveedor externo y cualquier selección dinámica; una prueba
   de regresión exige que `get_provider()` devuelva siempre el motor nativo. La
-  facturación y Veri*Factu quedan como desarrollo propio de Noesis.
+  facturación y Veri*Factu quedan como desarrollo propio de Bynoesis.
 
 - Se contrastaron los documentos vivos con `origin/main`, `config.py`, todos los
   adaptadores y las salidas HTTP/SMTP reales. Las integraciones externas del código
@@ -2514,7 +2514,7 @@ que dice comprobar.
 ## 2026-07-16 — la muestra pública replica las pantallas reales del panel
 
 - Cada apartado de la demo de la portada reproduce ahora la plantilla real del
-  panel (misma jerarquía y clases: nota de Noesis, cabecera, métricas, tarjetas,
+  panel (misma jerarquía y clases: nota de Bynoesis, cabecera, métricas, tarjetas,
   tablas, calendario, chat y ajustes) reducida con `zoom`, con datos inventados
   coherentes entre pantallas. Antes eran resúmenes aproximados.
 - Añadida la barra de subapartados real bajo la barra superior: Dinero abre
@@ -2564,7 +2564,7 @@ que dice comprobar.
 
 - La portada adopta una jerarquía de campaña centrada: promesa, explicación breve,
   prueba de 14 días, enlace para entender el producto y el Inicio real debajo. Se
-  conserva la identidad de Noesis; no se copian marca, promociones, clientes ni
+  conserva la identidad de Bynoesis; no se copian marca, promociones, clientes ni
   métricas de Holded.
 - La muestra ya no abre pestañas o resúmenes inventados. Expone solo el Inicio real
   con datos de una empresa de ejemplo, la misma barra superior, menú y bloques que
@@ -2583,7 +2583,7 @@ que dice comprobar.
 ## 2026-07-16 — demo pública alineada con el Inicio real
 
 - La pestaña «Inicio» de la vista pública reutiliza la jerarquía y los componentes
-  del panel real: Parte de hoy, prioridad, métricas, agenda, trabajo de Noesis,
+  del panel real: Parte de hoy, prioridad, métricas, agenda, trabajo de Bynoesis,
   lectura de dinero, gráfico y cobros pendientes. También replica su armazón:
   marca, menú agrupado, negocio activo, barra superior y puesta en marcha. El marco
   se presenta como «Vista del producto» y «Empresa de ejemplo»; no llama a datos ni
@@ -2606,7 +2606,7 @@ que dice comprobar.
 
 - La Home ofrece una cuenta ficticia identificada como datos simulados. Sus ocho
   apartados usan pestañas accesibles y mantienen trabajos, clientes, facturas,
-  cobros, documentos, equipo y lectura de Noesis coherentes entre sí.
+  cobros, documentos, equipo y lectura de Bynoesis coherentes entre sí.
 - CTA públicos cambiados a «Empieza ahora →». Desde cada plan se conserva plan y
   periodicidad en el alta; los errores de formulario no pierden esa selección.
 - Selector mensual/anual sincronizado en Home, Precios y Suscripción. Catálogo
@@ -2766,7 +2766,7 @@ que dice comprobar.
 - Pendiente externo: Meta, Stripe, proveedor de IA y certificado AEAT no se validan
   sin credenciales reales y siguen figurando como bloqueo de piloto.
 
-## 2026-07-12 — Noesis persistente y entrada documental universal
+## 2026-07-12 — Bynoesis persistente y entrada documental universal
 
 - Migración 21 aplicada en SQLite: historial del asistente, memoria confirmada,
   clasificación documental trazable y protección de facturas históricas.
@@ -2774,8 +2774,8 @@ que dice comprobar.
   RGPD, señales de clientes y confirmación de una factura recibida enviada por PDF
   en WhatsApp.
 - Navegador: historial persistente comprobado entre Home y Clientes; el panel de
-  Noesis abre desde cada pantalla y conserva el contexto de página.
-- Documentos: subida web sin selector técnico; Noesis propone el tipo y la persona
+  Bynoesis abre desde cada pantalla y conserva el contexto de página.
+- Documentos: subida web sin selector técnico; Bynoesis propone el tipo y la persona
   confirma. Web y WhatsApp usan el mismo clasificador.
 - Responsive comprobado a 390 × 844: asistente y panel inferior sin solapamiento
   del campo de texto ni scroll horizontal (`scrollWidth = clientWidth = 375`).

@@ -1,6 +1,6 @@
 {
-  "name": "Noesis",
-  "short_name": "Noesis",
+  "name": "Bynoesis",
+  "short_name": "Bynoesis",
   "description": "Copiloto de negocio por WhatsApp para autónomos de servicios.",
   "start_url": "/app",
   "scope": "/",

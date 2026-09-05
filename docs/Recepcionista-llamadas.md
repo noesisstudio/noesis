@@ -7,7 +7,7 @@
 ## Qué es
 
 Un número de teléfono al que el autónomo desvía su móvil (desvío condicional: solo si no
-contesta o está ocupado). Noesis atiende la llamada con voz natural, y hace lo mismo que ya
+contesta o está ocupado). Bynoesis atiende la llamada con voz natural, y hace lo mismo que ya
 hace por WhatsApp:
 
 1. Entiende qué necesita el cliente (cita, presupuesto, urgencia, información).
@@ -22,7 +22,7 @@ otra puerta de entrada. **No es un contestador: resuelve.**
 ## Por qué
 
 - La competencia que solo hace "answering con IA" no tiene el negocio dentro: apunta el
-  recado y ahí acaba. Noesis tiene la agenda, los clientes y los precios: puede cerrar la
+  recado y ahí acaba. Bynoesis tiene la agenda, los clientes y los precios: puede cerrar la
   cita de verdad.
 - El autónomo pierde trabajos por no coger el teléfono en la obra/consulta/ruta. Cada
   llamada perdida es dinero perdido y ruido mental ("tengo que devolver la llamada").

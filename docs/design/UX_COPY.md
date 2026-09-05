@@ -1,11 +1,11 @@
-# UX_COPY.md — Voz de Noesis y diccionario de lenguaje
+# UX_COPY.md — Voz de Bynoesis y diccionario de lenguaje
 
-> Cómo habla Noesis y cómo traducimos la jerga a lenguaje de oficio. Codex y Fable
+> Cómo habla Bynoesis y cómo traducimos la jerga a lenguaje de oficio. Codex y Fable
 > no inventan copy: usan esto. Fijado 2026-07-08.
 
-## La voz de Noesis (figura con carácter)
+## La voz de Bynoesis (figura con carácter)
 
-Noesis es la **mano derecha** del negocio: competente, tranquila, directa, cercana.
+Bynoesis es la **mano derecha** del negocio: competente, tranquila, directa, cercana.
 No es un becario entusiasta ni un banco serio. Habla como alguien que **ya ha
 revisado tu negocio por ti** y te dice lo importante.
 
@@ -37,7 +37,7 @@ revisado tu negocio por ti** y te dice lo importante.
 
 ## Diccionario: jerga → humano
 
-| Técnico (oculto / modo avanzado) | Lenguaje de Noesis (por defecto) |
+| Técnico (oculto / modo avanzado) | Lenguaje de Bynoesis (por defecto) |
 |---|---|
 | DSO / días de cobro | días que tardas en cobrar |
 | Solvencia operativa | colchón de caja |
@@ -67,10 +67,10 @@ revisado tu negocio por ti** y te dice lo importante.
 - **Éxito:** breve y humano: "Hecho. Se lo he enviado a Marta." (no "Operación
   completada con éxito").
 - **Botón crear:** verbos reales — "Hacer factura", "Apuntar posible cliente",
-  "Añadir gasto", "Enviar presupuesto", "Preguntar a Noesis".
+  "Añadir gasto", "Enviar presupuesto", "Preguntar a Bynoesis".
 
 ## Idiomas
 
-El tono se mantiene en ES / CA / EN (la voz de Noesis es la misma figura en los tres).
+El tono se mantiene en ES / CA / EN (la voz de Bynoesis es la misma figura en los tres).
 La traducción de interfaz completa es de la capa C; el diccionario de arriba se
 traduce con el mismo criterio (oficio, no jerga).

@@ -21,14 +21,14 @@
 > de hallazgos se conservan como evidencia histórica; los pendientes vivos son la
 > revisión profesional, DPA/regiones, tabla de conservación, purga y pruebas externas.
 
-Noesis tiene dos sombreros a la vez y esa es la raíz de todo lo demás:
+Bynoesis tiene dos sombreros a la vez y esa es la raíz de todo lo demás:
 
 - **Responsable** de los datos de la cuenta del autónomo: su email, su NIF, su
   actividad, lo que escribe al asistente.
 - **Encargado** de los datos que ese autónomo mete sobre *sus* clientes: nombres,
   teléfonos, direcciones, importes, fotos de documentos.
 
-Lo segundo es lo que te expone. Si Noesis pierde datos, quien tiene que dar la cara
+Lo segundo es lo que te expone. Si Bynoesis pierde datos, quien tiene que dar la cara
 ante la Agencia es el fontanero, y luego se vuelve contra ti. Por eso el RGPD no es
 una página en el pie de la web: es la condición para poder cobrar.
 
@@ -41,7 +41,7 @@ rehacerlo, y para usarlo como argumento comercial ante gestorías.
 
 | Pieza | Dónde está | Por qué cuenta |
 |---|---|---|
-| **Reparto de roles explicado y coherente** | `privacidad.html`, `encargado-tratamiento.html`, `cumplimiento.html` | Los tres textos dicen lo mismo: el cliente es responsable, Noesis encargado |
+| **Reparto de roles explicado y coherente** | `privacidad.html`, `encargado-tratamiento.html`, `cumplimiento.html` | Los tres textos dicen lo mismo: el cliente es responsable, Bynoesis encargado |
 | **Evidencia de consentimiento** | `account.py`, evento `legal_accepted` | Guarda versión del documento, qué documentos, IP, método de alta y fecha. Es exactamente lo que exige el art. 7.1 para *acreditar* el consentimiento |
 | **Minimización por defecto** | `db.py`, `ai_external` nace `disabled` | La IA externa está apagada por negocio hasta que el cliente la enciende. Esto es privacidad desde el diseño y por defecto (art. 25) de verdad, no en un párrafo |
 | **Portabilidad (art. 20)** | `/api/{id}/export` y `/api/{id}/clients/{id}/export` | Volcado completo en JSON, de la cuenta entera y de un cliente concreto |
@@ -107,15 +107,15 @@ nada.
 
 ### A3 · `/cumplimiento` publica una afirmación que no es cierta
 
-La página dice: *«Noesis se integra con un sistema homologado cuando lo conectas.
-Hasta entonces, los documentos que genera Noesis son de apoyo a la gestión.»*
+La página dice: *«Bynoesis se integra con un sistema homologado cuando lo conectas.
+Hasta entonces, los documentos que genera Bynoesis son de apoyo a la gestión.»*
 
 No existe tal integración. [[Decisiones]] y [[Fiscalidad]] son claras: Veri\*Factu es
 **desarrollo propio**, con el registro construido y la remisión a la AEAT construida
 pero **no validada externamente**.
 
 Publicar que te apoyas en un sistema homologado de un tercero es una afirmación
-engañosa sobre cumplimiento, en la página que precisamente se titula «Usar Noesis en
+engañosa sobre cumplimiento, en la página que precisamente se titula «Usar Bynoesis en
 regla». Hay que reescribirla según el camino (a) o (b) del bloque D de
 [[Constitucion-y-primer-euro]], y esa decisión sigue abierta.
 
@@ -184,9 +184,9 @@ es exactamente lo que se audita.
 
 **B4 · La gestoría no está en el reparto de roles.** El producto tiene cartera
 multiempresa, permisos explícitos y MFA, pero ni el contrato de encargado ni la
-privacidad dicen **qué es** una gestoría: ¿subencargada de Noesis, o responsable
+privacidad dicen **qué es** una gestoría: ¿subencargada de Bynoesis, o responsable
 independiente a la que el cliente concede acceso? Mi criterio es lo segundo —el
-acceso lo concede el cliente, no Noesis—, pero hay que escribirlo, porque decide
+acceso lo concede el cliente, no Bynoesis—, pero hay que escribirlo, porque decide
 quién responde si un despacho filtra un expediente.
 
 **B5 · Notificación de brecha: como encargado no evalúas, avisas.**
@@ -207,7 +207,7 @@ canal de gestorías funciona, designar un contacto de privacidad ayuda a vender.
 
 **B8 · Reglamento de IA (fuera del RGPD, misma revisión).** Desde el 2 de agosto de
 2026 aplican las obligaciones de transparencia del art. 50: dejar claro que se
-interactúa con un sistema de IA. Noesis lo cumple de hecho, pero conviene una línea
+interactúa con un sistema de IA. Bynoesis lo cumple de hecho, pero conviene una línea
 explícita en los términos. Confírmalo en la misma consulta.
 
 ---

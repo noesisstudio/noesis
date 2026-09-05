@@ -51,7 +51,7 @@ TEMPLATES.env.globals["seo_home_graph"] = {
         {
             "@type": "Organization",
             "@id": f"{_public_origin}/#organization",
-            "name": "Noesis",
+            "name": "Bynoesis",
             "url": _public_origin,
             "logo": f"{_public_origin}/static/noesis-mark.svg",
             "email": config.PUBLIC_CONTACT_EMAIL,
@@ -63,14 +63,14 @@ TEMPLATES.env.globals["seo_home_graph"] = {
             },
             "areaServed": "ES",
             "description": (
-                "Noesis ordena trabajos, clientes, documentos, facturas y cobros "
+                "Bynoesis ordena trabajos, clientes, documentos, facturas y cobros "
                 "desde WhatsApp para autónomos y pequeños negocios de servicios."
             ),
         },
         {
             "@type": "WebSite",
             "@id": f"{_public_origin}/#website",
-            "name": "Noesis",
+            "name": "Bynoesis",
             "url": _public_origin,
             "inLanguage": "es",
             "publisher": {"@id": f"{_public_origin}/#organization"},
@@ -183,7 +183,7 @@ def _trusted_origin(request: Request, origin: str) -> bool:
     if not config.IS_PRODUCTION:
         return False
 
-    # Salto legítimo del proxy: el origen solo puede ser el público de Noesis,
+    # Salto legítimo del proxy: el origen solo puede ser el público de Bynoesis,
     # siempre HTTPS estándar, y el Host interno también debe estar autorizado.
     public_hosts = {
         (urlsplit(config.BASE_URL).hostname or "").lower(),

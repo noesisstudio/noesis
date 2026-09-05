@@ -1,4 +1,4 @@
-# Principios de producto de Noesis
+# Principios de producto de Bynoesis
 
 > Guardarraíl para Fable, Opus y Codex. Si un diseño, un copy o una función
 > contradice esto, no se ejecuta: se para y se pregunta. Enlazado desde
@@ -6,7 +6,7 @@
 
 ## La frase que lo une todo
 
-> **Noesis es un asistente operativo que elimina el ruido del negocio, con un
+> **Bynoesis es un asistente operativo que elimina el ruido del negocio, con un
 > software potente detrás. "Haz tu trabajo; yo te ordeno el negocio."**
 
 Es la base de producto, diseño, landing, pitch y desarrollo. Todo se mide contra
@@ -14,7 +14,7 @@ ella.
 
 ## El modelo: la mente y el cuerpo
 
-- **Noesis es la mente / la figura.** Habla con el usuario, interpreta, recomienda,
+- **Bynoesis es la mente / la figura.** Habla con el usuario, interpreta, recomienda,
   ejecuta y le da el **parte del día**. Tiene carácter y voz propia (ver
   [`UX_COPY.md`](UX_COPY.md)).
 - **La infraestructura es el cuerpo.** Facturas, cobros, leads, agenda, gestoría,
@@ -37,7 +37,7 @@ ella.
    margen). La factura es una consecuencia, no el eje.
 4. **Primero lenguaje humano, después el técnico.** "Días que tardas en cobrar", no
    "DSO". El término técnico solo aparece en modo avanzado o como subtítulo.
-5. **Primero la lectura de Noesis, después los datos del usuario.** El usuario habla,
+5. **Primero la lectura de Bynoesis, después los datos del usuario.** El usuario habla,
    manda fotos y audios; no rellena formularios como punto de partida.
 6. **Primero confirmar, después ejecutar lo irreversible.** Enviar factura, reclamar
    cobro, mandar a gestoría o mover una cita se **propone**; el usuario confirma.
@@ -50,22 +50,22 @@ ella.
   clasificación y revisión; Proyectos, avance y margen.
 - Un dato aparece solo si ayuda a decidir en esa pantalla. La profundidad queda
   disponible por capas para quien la necesite, sin obligar a entender estadística.
-- Lo transversal no es la estructura visual, sino Noesis: lee el contexto real,
+- Lo transversal no es la estructura visual, sino Bynoesis: lee el contexto real,
   explica por qué, propone el siguiente paso y permite preguntar sin perder la
   pantalla ni la conversación.
 
 ## Innegociables (heredados del método)
 
-- **Noesis no inventa.** Si falta un dato, dice cuál falta. El parte de un negocio
+- **Bynoesis no inventa.** Si falta un dato, dice cuál falta. El parte de un negocio
   vacío dice "aún no tengo nada que ordenarte, empieza por aquí" — nunca simula
   actividad. La "memoria del negocio" solo muestra lo que de verdad se sabe.
-- **Nada fiscal se presenta como definitivo.** Noesis prepara; la gestoría decide.
+- **Nada fiscal se presenta como definitivo.** Bynoesis prepara; la gestoría decide.
 - **Aislamiento por `business_id`, siempre.** La mente está acotada al negocio del
   usuario.
 - **Trazabilidad:** qué detectó el sistema, qué corrigió el humano, qué fue
   automático. Tablas append-only (Veri*Factu, fichaje) intocables.
 
-## Qué NO es Noesis
+## Qué NO es Bynoesis
 
 - No es un ERP con cuarenta menús (eso es Holded/Odoo; nos sirve de referencia de
   **credibilidad**, no de **experiencia**).
@@ -76,8 +76,8 @@ ella.
 ## Norte (hacia dónde diseñamos, aunque aterrice por fases)
 
 - **Modo por defecto:** Simple / Oficio. Es el usuario central.
-- **Persona:** Noesis habla como figura con carácter (mano derecha del negocio).
-- **Agenda-gestor:** el destino es que Noesis **reorganice y agende solo** (propone
+- **Persona:** Bynoesis habla como figura con carácter (mano derecha del negocio).
+- **Agenda-gestor:** el destino es que Bynoesis **reorganice y agende solo** (propone
   mover citas, agrupa por zona, con confirmación). Se diseña hacia ahí desde ya,
   aunque la V1 empiece mostrando y sugiriendo.
 - **Voz avanzada (contestar llamadas):** nivel premium V2 (telefonía, coste por

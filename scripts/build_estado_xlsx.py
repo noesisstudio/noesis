@@ -1,4 +1,4 @@
-"""Genera docs/Estado-Noesis.xlsx: el estado de cada pieza, en una hoja de cálculo.
+"""Genera docs/Estado-Bynoesis.xlsx: el estado de cada pieza, en una hoja de cálculo.
 
 El vault de Obsidian explica el porqué de las cosas; esta hoja sirve para lo
 otro: mirar de un vistazo qué está hecho, qué bloquea y qué falta, y poder
@@ -23,7 +23,7 @@ from xml.sax.saxutils import escape
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-OUTPUT = ROOT / "docs" / "Estado-Noesis.xlsx"
+OUTPUT = ROOT / "docs" / "Estado-Bynoesis.xlsx"
 
 # Estilos: 0 normal, 1 cabecera, 2 texto con ajuste, 3 negrita, 4 número.
 HEADER, WRAP, BOLD, NUMBER = 1, 2, 3, 4
@@ -280,7 +280,7 @@ def _sheet_meta() -> tuple[str, list[list], list[int]]:
         [
             "Ventana de 24 horas", "OK", "—",
             "El texto libre solo se usa respondiendo a un mensaje entrante; todo "
-            "lo que Noesis inicia va por plantilla. La regla se cumple por "
+            "lo que Bynoesis inicia va por plantilla. La regla se cumple por "
             "diseño, no por comprobación.",
             "Nada mientras no se añada un proactivo en texto libre.",
             "src/noesis/web/whatsapp.py · send / send_template",
@@ -393,7 +393,7 @@ def _sheet_summary() -> tuple[str, list[list], list[int]]:
         [
             "Aviso del 40% en obras", "Activo",
             "Cada partida dice si es material o mano de obra; al facturar con "
-            "líneas al 10% Noesis avisa si el material pasa del 40% de la base. "
+            "líneas al 10% Bynoesis avisa si el material pasa del 40% de la base. "
             "Avisa, no cambia el tipo.",
         ],
     ]

@@ -1,4 +1,4 @@
-"""Las acciones que Noesis sabe ejecutar (multi-negocio).
+"""Las acciones que Bynoesis sabe ejecutar (multi-negocio).
 
 Cada herramienta tiene (1) un esquema que se le da a Claude para que sepa cuándo
 y cómo usarla, y (2) una función Python que la ejecuta contra la base de datos.
@@ -275,7 +275,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "ver_control_noesis",
-        "description": "Consulta qué puede hacer Noesis solo y qué debe confirmar el usuario.",
+        "description": "Consulta qué puede hacer Bynoesis solo y qué debe confirmar el usuario.",
         "input_schema": {"type": "object", "properties": {}},
     },
 ]
@@ -373,7 +373,7 @@ def _enviar_factura(business_id, factura_id):
     if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
     client = db.get_client(inv["client_id"], business_id)
-    # La emisión y la huella quedan siempre dentro del motor nativo de Noesis.
+    # La emisión y la huella quedan siempre dentro del motor nativo de Bynoesis.
     issued = _provider.issue(inv, client or {})
     inv = db.get_invoice(factura_id, business_id)
     return {"ok": True, "factura": inv, "emision": issued}
@@ -426,12 +426,12 @@ def prepare_invoice_delivery(
             raise ValueError("El cliente no tiene correo configurado.")
         email_adapter.queue_email(
             target,
-            f"Factura {invoice['number']} — {business.get('name') or 'Noesis'}",
+            f"Factura {invoice['number']} — {business.get('name') or 'Bynoesis'}",
             (
                 f"Hola {client.get('name') or ''},\n\n"
                 f"Te enviamos la factura {invoice['number']} por {amount}. "
                 "Encontrarás el PDF adjunto.\n\n"
-                f"— {business.get('name') or 'Noesis'}"
+                f"— {business.get('name') or 'Bynoesis'}"
             ),
             business_id=business_id,
             idempotency_key=f"invoice:{business_id}:{factura_id}:email:{day}",

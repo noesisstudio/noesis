@@ -1,7 +1,7 @@
 """Copias verificadas de SQLite y Postgres.
 
 SQLite conserva su copia consistente ``.db``. Postgres se vuelca mediante psycopg
-a un formato lógico comprimido y portable dentro de Noesis. Cada copia se restaura
+a un formato lógico comprimido y portable dentro de Bynoesis. Cada copia se restaura
 en una base o esquema desechable antes de rotarla o enviarla fuera del servidor.
 """
 

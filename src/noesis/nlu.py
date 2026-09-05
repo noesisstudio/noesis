@@ -1,4 +1,4 @@
-"""Cerebro local de Noesis (NLU por reglas) — sin coste, sin APIs externas.
+"""Cerebro local de Bynoesis (NLU por reglas) — sin coste, sin APIs externas.
 
 Resuelve los comandos más frecuentes (facturar, agendar, gastos, cobros, resumen)
 con expresiones regulares y un pequeño parser de fechas en español. Así el chatbot
@@ -190,9 +190,10 @@ def parse(text: str) -> tuple[str, dict] | None:
     if norm in {"hola", "hey", "buenas", "ayuda", "help", "que puedes hacer"}:
         return (HELP, {})
 
-    # --- Centro de control: límites reales de Noesis
-    if re.search(r"(que puedes hacer solo|que puedes hacer sin|permisos de noesis|control de noesis|"
-                 r"que haces sin preguntar|autonomia)", norm):
+    # --- Centro de control: límites reales de Bynoesis
+    # «(by)?noesis»: la marca cambió y quien escribe puede usar cualquiera de las dos.
+    if re.search(r"(que puedes hacer solo|que puedes hacer sin|permisos de (?:by)?noesis|"
+                 r"control de (?:by)?noesis|que haces sin preguntar|autonomia)", norm):
         return ("ver_control_noesis", {})
 
     # --- Crear proyecto sencillo, local y sin IA
@@ -335,7 +336,7 @@ def _eur(n) -> str:
 
 
 def help_text() -> str:
-    return ("Soy Noesis. No soy un chat para entretenerte: soy tu oficina pequeña.\n\n"
+    return ("Soy Bynoesis. No soy un chat para entretenerte: soy tu oficina pequeña.\n\n"
             "Puedo registrar cosas y también ayudarte a decidir qué toca mirar:\n"
             "• «Factura a Juan por cambio de grifo 95 euros»\n"
             "• «Ticket de venta por desplazamiento 36,30 euros»\n"

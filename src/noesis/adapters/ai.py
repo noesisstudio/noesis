@@ -1,4 +1,4 @@
-"""Adaptadores del cerebro avanzado de Noesis.
+"""Adaptadores del cerebro avanzado de Bynoesis.
 
 El camino rutinario nunca llega aquí: ``nlu.py`` resuelve primero dentro del
 proceso. Este módulo permite que el segundo nivel sea un servicio privado

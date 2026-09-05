@@ -22,10 +22,10 @@
 1. **Feature de retención**: el autónomo deja de pasar la caja de zapatos con
    tickets cada trimestre. Su gestoría recibe sola un paquete limpio. Quien tiene
    esto configurado NO se da de baja: el coste de cambio se dispara.
-2. **Canal de adquisición**: la gestoría descubre que los clientes con Noesis le
+2. **Canal de adquisición**: la gestoría descubre que los clientes con Bynoesis le
    dan cero trabajo sucio. Una gestoría mediana lleva 50-300 autónomos → es el
    canal con CAC más bajo posible (ya está en Plan-Evolucion como apuesta). El
-   paquete lleva marca Noesis: cada envío es una demo ante un prescriptor.
+   paquete lleva marca Bynoesis: cada envío es una demo ante un prescriptor.
 
 ### Diseño (migración 15, `gestoria`)
 - Columnas en `businesses`: `gestoria_name`, `gestoria_email`,
@@ -59,7 +59,7 @@
   cierre, ZIP con recuentos correctos, revocación efectiva.
 
 ### Fase 2 del canal (NO ahora; cuando haya ≥10 gestorías recibiendo paquetes)
-Panel multi-cliente para gestorías (una gestoría, N negocios Noesis) + programa
+Panel multi-cliente para gestorías (una gestoría, N negocios Bynoesis) + programa
 de partner (comisión recurrente o precio por volumen). No construir hasta que
 las gestorías lo pidan: primero que prueben el paquete.
 
@@ -67,7 +67,7 @@ las gestorías lo pidan: primero que prueben el paquete.
 
 ## 2. App nativa y widget — decisión honesta por etapas
 
-**Lo que ya hay**: Noesis ES instalable hoy (PWA: manifest + service worker en
+**Lo que ya hay**: Bynoesis ES instalable hoy (PWA: manifest + service worker en
 producción). En Android se añade a la pantalla de inicio con icono propio y
 funciona a pantalla completa; en iPhone también (con límites de iOS).
 
@@ -80,8 +80,8 @@ código nativas más la web. Eso, hoy, con 0 clientes de pago, es músculo mal p
 
 | Etapa | Qué | Coste | Cuándo |
 |---|---|---|---|
-| A (ya) | PWA pulida: **share target** en Android (compartir una foto → se abre Noesis en "nuevo gasto" — el gesto widget-like más barato que existe) + accesos directos del icono (mantener pulsado → "Hablar", "Nueva factura", "Agenda") + push web en Android | ~0 € | con el plan WhatsApp |
-| B | **Atajo de Siri/iOS Shortcuts publicado por Noesis**: el usuario añade un atajo que graba audio y lo manda a `/api/{id}/chat/audio` con su token. Botón en pantalla de inicio del iPhone, dos toques y hablas — SIN app, sin App Store | 0 € | cuando W4 (audio) esté vivo |
+| A (ya) | PWA pulida: **share target** en Android (compartir una foto → se abre Bynoesis en "nuevo gasto" — el gesto widget-like más barato que existe) + accesos directos del icono (mantener pulsado → "Hablar", "Nueva factura", "Agenda") + push web en Android | ~0 € | con el plan WhatsApp |
+| B | **Atajo de Siri/iOS Shortcuts publicado por Bynoesis**: el usuario añade un atajo que graba audio y lo manda a `/api/{id}/chat/audio` con su token. Botón en pantalla de inicio del iPhone, dos toques y hablas — SIN app, sin App Store | 0 € | cuando W4 (audio) esté vivo |
 | C | App **Capacitor** (envoltorio nativo de la web actual, una sola base de código): presencia en tiendas, push nativo iOS, credibilidad | 124 € + días de agente | ≥25-50 clientes de pago o cuando lo pidan pilotos |
 | D | **Widgets nativos** (WidgetKit/Glance: agenda de hoy en la pantalla de inicio, botón de voz) | semanas de agente + mantenimiento | cuando la app C tenga uso real |
 
@@ -116,7 +116,7 @@ Priorizados por (valor para el autónomo × datos que YA tenemos × coste de con
    canal nº 1 de captación de un oficio. Nadie del segmento lo automatiza unido
    al cobro (el momento de máxima satisfacción). Config: enlace de perfil de
    Google en Ajustes + plantilla Meta. Coste ridículo, valor percibido enorme.
-   → Esto convierte a Noesis de "ahorra tiempo" a "**te trae clientes**": otra
+   → Esto convierte a Bynoesis de "ahorra tiempo" a "**te trae clientes**": otra
    liga de disposición a pagar.
 5. **Semáforo de morosidad por cliente**. Con el ledger: días medios de pago
    reales por cliente. Al crear presupuesto/trabajo para un moroso conocido, el

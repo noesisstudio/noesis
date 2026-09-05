@@ -63,7 +63,7 @@ ACTION_TAXONOMY: dict[str, ActionDefinition] = {
     ),
     "quote_sent": ActionDefinition("quotes", True, "Presupuesto enviado"),
     "client_created": ActionDefinition(
-        "clients", False, "Cliente creado con ayuda de Noesis"
+        "clients", False, "Cliente creado con ayuda de Bynoesis"
     ),
 }
 
@@ -188,7 +188,7 @@ def _qualifies_for_wub(
     """Decide de forma binaria si esta instancia representa delegación útil.
 
     La taxonomía marca qué familias son candidatas. La procedencia concreta debe
-    demostrar además que Noesis intervino materialmente. Un formulario ordinario
+    demostrar además que Bynoesis intervino materialmente. Un formulario ordinario
     o una integración meramente observada pueden conservar telemetría, pero nunca
     cuentan para WUB por defecto.
     """
@@ -963,13 +963,13 @@ def known_control_state(business_id: int) -> dict:
         "state": state,
         "title": title,
         "explanation": (
-            "No hay tareas importantes pendientes detectadas por Noesis en los "
+            "No hay tareas importantes pendientes detectadas por Bynoesis en los "
             "procesos conectados."
             if state == "under_control" else health["summary"]
         ),
         "attention": health["attention"],
         "unknown_integrations": unknown,
-        "scope": "datos y procesos conectados a Noesis",
+        "scope": "datos y procesos conectados a Bynoesis",
     }
 
 

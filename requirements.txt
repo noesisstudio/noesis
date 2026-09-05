@@ -1,4 +1,4 @@
-# Dependencias de Noesis. Fuente de verdad: pyproject.toml (mantener sincronizado).
+# Dependencias de Bynoesis. Fuente de verdad: pyproject.toml (mantener sincronizado).
 anthropic>=0.40.0,<1
 python-dotenv>=1.0.0,<2
 defusedxml>=0.7.0,<1

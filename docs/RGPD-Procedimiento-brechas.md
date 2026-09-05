@@ -14,10 +14,10 @@ comunicación y aprendizaje. Debe ensayarse antes de incorporar datos reales.
 
 ## 2. Determinar el rol
 
-- Si Noesis actúa como **encargado**, debe informar al negocio responsable sin
+- Si Bynoesis actúa como **encargado**, debe informar al negocio responsable sin
   dilación indebida y aportar la información disponible; no decide por él si debe
   notificar a la autoridad.
-- Si Noesis actúa como **responsable** de los datos afectados, evalúa probabilidad
+- Si Bynoesis actúa como **responsable** de los datos afectados, evalúa probabilidad
   y gravedad para los derechos de las personas. Cuando exista riesgo, la
   notificación a la autoridad debe realizarse, si es posible, dentro de 72 horas
   desde que se tiene constancia. Si el riesgo es alto, también se comunica a las

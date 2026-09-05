@@ -1,4 +1,4 @@
-"""Servidor web de Noesis (FastAPI) — app multipágina.
+"""Servidor web de Bynoesis (FastAPI) — app multipágina.
 
 Un único proceso, fácil de desplegar 24/7, sirve:
   1. Las PÁGINAS del producto (resumen, ingresos, costes, facturas, cobros,
@@ -64,7 +64,7 @@ async def lifespan(app: "FastAPI"):
 
 
 app = FastAPI(
-    title="Noesis",
+    title="Bynoesis",
     version="0.3.0",
     lifespan=lifespan,
     docs_url=None if config.IS_PRODUCTION else "/docs",

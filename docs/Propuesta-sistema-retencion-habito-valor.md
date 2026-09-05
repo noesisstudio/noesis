@@ -1,4 +1,4 @@
-# Noesis — propuesta integral de hábito, confianza, valor y retención
+# Bynoesis — propuesta integral de hábito, confianza, valor y retención
 
 > **Estado:** estrategia aprobada para su base de datos; el candidato del esquema 54
 > implementa únicamente el Registro Interno de Valor, WUB y medición de confianza.
@@ -10,7 +10,7 @@
 
 ## 1. Resumen ejecutivo
 
-Noesis no debe optimizarse para que el autónomo pase más tiempo dentro de una
+Bynoesis no debe optimizarse para que el autónomo pase más tiempo dentro de una
 aplicación. Debe conseguir exactamente lo contrario: que dedique cada vez menos
 tiempo a administrar su negocio porque puede delegar ese trabajo con seguridad.
 
@@ -18,15 +18,15 @@ La retención no se construirá mediante puntos, rachas, notificaciones constant
 dependencia artificial. Se construirá mediante cinco motores de producto:
 
 1. **Habit Engine:** consigue que, cuando ocurre algo administrativo, el autónomo
-   piense «se lo digo a Noesis».
-2. **Trust Engine:** permite confiar progresivamente más trabajo a Noesis sin
+   piense «se lo digo a Bynoesis».
+2. **Trust Engine:** permite confiar progresivamente más trabajo a Bynoesis sin
    perder confirmación, trazabilidad ni control.
-3. **Value Engine:** demuestra qué trabajo ha resuelto Noesis y qué resultados
+3. **Value Engine:** demuestra qué trabajo ha resuelto Bynoesis y qué resultados
    verificables ha ayudado a conseguir.
 4. **Insight Engine:** transforma un histórico suficiente en patrones útiles que
    el propietario difícilmente detectaría por sí mismo.
 5. **Progress Engine:** demuestra, con períodos comparables, cómo evoluciona el
-   negocio y qué ha aportado Noesis a lo largo del tiempo.
+   negocio y qué ha aportado Bynoesis a lo largo del tiempo.
 
 La propuesta es construir ahora la base común, Habit, Trust y Value, y medirlos
 mediante **WUB — Weekly Useful Business**. Insight y Progress deben quedar diseñados
@@ -36,7 +36,7 @@ regla, pero nunca concederá autonomía de manera silenciosa.
 
 La idea central es:
 
-> El autónomo hace su trabajo. Noesis organiza, recuerda, prepara, ejecuta lo
+> El autónomo hace su trabajo. Bynoesis organiza, recuerda, prepara, ejecuta lo
 > autorizado, controla, aprende y demuestra lo que ha resuelto.
 
 ---
@@ -60,7 +60,7 @@ La idea central es:
 - Un Delegation Score o Delegated Work Rate aparentemente exactos.
 - Aumentar autonomía basándose únicamente en comportamiento repetido.
 - Mostrar horas ahorradas antes de calibrar tiempos manuales reales.
-- Atribuir dinero a Noesis sin una cadena causal verificable.
+- Atribuir dinero a Bynoesis sin una cadena causal verificable.
 - Insights basados en pocas observaciones o datos incompletos.
 - Comparaciones «antes/después» entre períodos no comparables.
 - Gamificación, rachas, rankings o notificaciones destinadas a generar actividad.
@@ -72,9 +72,9 @@ La idea central es:
 ```text
 Ocurre algo en el negocio
         ↓
-El usuario se lo dice a Noesis o Noesis lo detecta
+El usuario se lo dice a Bynoesis o Bynoesis lo detecta
         ↓
-Noesis informa, propone, prepara o ejecuta según el permiso vigente
+Bynoesis informa, propone, prepara o ejecuta según el permiso vigente
         ↓
 El usuario confirma cuando corresponde
         ↓
@@ -84,7 +84,7 @@ Se registra una Useful Action
         ↓
 Puede producirse posteriormente una Useful Outcome
         ↓
-Noesis demuestra el valor de forma comprensible
+Bynoesis demuestra el valor de forma comprensible
         ↓
 La interacción aporta contexto y mejora la siguiente
         ↓
@@ -106,7 +106,7 @@ auditoría, pero no deben convertirse directamente en una métrica comercial.
 ### 4.1 Useful Action
 
 Una **Useful Action** es trabajo administrativo real completado con intervención
-material de Noesis.
+material de Bynoesis.
 
 Debe cumplir todos estos criterios:
 
@@ -139,7 +139,7 @@ No cuentan:
 - Crear un borrador que nunca se completa.
 - Pulsar dos veces o repetir una llamada por un error de red.
 - Realizar manualmente todo el proceso en un formulario sin aportación material de
-  Noesis, si lo que se está midiendo es delegación.
+  Bynoesis, si lo que se está midiendo es delegación.
 
 ### 4.2 Evitar la inflación de acciones
 
@@ -174,10 +174,10 @@ Ejemplos:
 La atribución se clasificará como:
 
 - **Directa:** existe una relación causal clara y comprobable.
-- **Asistida:** Noesis participó, pero no puede considerarse la única causa.
-- **Observada:** el resultado ocurrió, pero no se atribuye a Noesis.
+- **Asistida:** Bynoesis participó, pero no puede considerarse la única causa.
+- **Observada:** el resultado ocurrió, pero no se atribuye a Bynoesis.
 
-Solo las dos primeras podrán aparecer como impacto ayudado por Noesis. Una outcome
+Solo las dos primeras podrán aparecer como impacto ayudado por Bynoesis. Una outcome
 observada sirve para análisis, pero no para una afirmación comercial.
 
 Ejemplo correcto:
@@ -186,7 +186,7 @@ Ejemplo correcto:
 
 Ejemplo incorrecto:
 
-> Noesis te ha hecho ganar 480 €.
+> Bynoesis te ha hecho ganar 480 €.
 
 ### 4.4 Modelo de datos propuesto
 
@@ -226,7 +226,7 @@ resultado se completa correctamente.
 
 | Proceso | Useful Actions iniciales | Useful Outcomes relacionadas |
 |---|---|---|
-| Clientes | Alta o actualización confirmada a partir de información tratada por Noesis | Cliente reutilizado correctamente en un ciclo posterior |
+| Clientes | Alta o actualización confirmada a partir de información tratada por Bynoesis | Cliente reutilizado correctamente en un ciclo posterior |
 | Agenda y trabajos | Crear, reprogramar o cerrar un trabajo | Cita confirmada; trabajo convertido en factura |
 | Presupuestos | Preparar y enviar; realizar seguimiento confirmado | Presupuesto aceptado o reactivado |
 | Documentos y gastos | Clasificar, validar y archivar | Documento aceptado; gasto incorporado al período correcto |
@@ -245,7 +245,7 @@ cuente simultáneamente como cliente, trabajo, facturación y cobro.
 
 Crear la asociación mental:
 
-> Situación administrativa → «Se lo digo a Noesis».
+> Situación administrativa → «Se lo digo a Bynoesis».
 
 El objetivo no es aumentar sesiones en el dashboard. Es hacer que más situaciones
 reales se resuelvan con menos esfuerzo mediante WhatsApp, audio, web o una regla
@@ -253,7 +253,7 @@ previamente autorizada.
 
 ### 5.2 Ciclo
 
-**Trigger:** ocurre algo o Noesis detecta una necesidad.
+**Trigger:** ocurre algo o Bynoesis detecta una necesidad.
 
 > Ayer terminaste dos trabajos que todavía no están facturados.
 
@@ -261,7 +261,7 @@ previamente autorizada.
 
 > Sí, prepara las dos.
 
-**Reward:** Noesis resuelve y comunica el resultado real.
+**Reward:** Bynoesis resuelve y comunica el resultado real.
 
 > Hecho. Una factura está lista. En la segunda falta el NIF del cliente.
 
@@ -274,12 +274,12 @@ Debe responder solo a cuatro preguntas:
 
 1. ¿Cómo está mi negocio hoy?
 2. ¿Qué necesita mi atención?
-3. ¿Qué ha dejado resuelto Noesis?
+3. ¿Qué ha dejado resuelto Bynoesis?
 4. ¿Cuál es la siguiente acción útil?
 
 Ejemplo:
 
-> Buenos días, Marc. Hoy tienes tres trabajos. No hay nada urgente. Ayer Noesis
+> Buenos días, Marc. Hoy tienes tres trabajos. No hay nada urgente. Ayer Bynoesis
 > ordenó dos documentos y dejó preparada una factura. Hay un presupuesto de
 > 1.400 € que lleva seis días sin respuesta.
 
@@ -293,10 +293,10 @@ Acciones:
 
 Al volver a la aplicación:
 
-> Mientras estabas trabajando, Noesis registró un cobro, clasificó dos documentos
+> Mientras estabas trabajando, Bynoesis registró un cobro, clasificó dos documentos
 > y detectó una factura vencida.
 
-Esta pieza comunica que Noesis aporta valor mientras el usuario está fuera, no solo
+Esta pieza comunica que Bynoesis aporta valor mientras el usuario está fuera, no solo
 cuando abre el software.
 
 ### 5.5 Closing Loops
@@ -313,7 +313,7 @@ La recompensa central es alivio mental, no entretenimiento.
 
 ### 5.6 Política de interrupciones
 
-Noesis no notificará porque el cliente lleve tiempo sin entrar. Solo lo hará si hay:
+Bynoesis no notificará porque el cliente lleve tiempo sin entrar. Solo lo hará si hay:
 
 - Un riesgo.
 - Una oportunidad.
@@ -330,7 +330,7 @@ acciones posteriores, descartes, silencios y desactivaciones para identificar ru
 
 ### 6.1 Objetivo
 
-Conseguir que el usuario pase progresivamente de usar Noesis a confiarle una parte
+Conseguir que el usuario pase progresivamente de usar Bynoesis a confiarle una parte
 mayor de su administración, siempre con límites explícitos y reversibles.
 
 ### 6.2 Escalera de confianza
@@ -360,7 +360,7 @@ mayor de su administración, siempre con límites explícitos y reversibles.
 
 - Las acciones fiscales, económicas o irreversibles mantienen confirmación.
 - Cada automatización puede consultarse, pausarse y revocarse.
-- El usuario puede ver qué hizo Noesis, cuándo, por qué y bajo qué permiso.
+- El usuario puede ver qué hizo Bynoesis, cuándo, por qué y bajo qué permiso.
 - Las correcciones conservan el antes, el después y el motivo.
 - Los estados preparado, enviado, aceptado y cobrado nunca se confunden.
 - Una conducta repetida no se interpreta como permiso silencioso.
@@ -376,7 +376,7 @@ Durante el piloto solo se recopilarán:
 - Tiempo hasta la confirmación.
 - Reglas creadas, pausadas o revocadas.
 
-Cuando exista evidencia suficiente, Noesis podrá sugerir:
+Cuando exista evidencia suficiente, Bynoesis podrá sugerir:
 
 > Has confirmado ocho de los últimos nueve recordatorios similares. ¿Quieres crear
 > una regla para estos casos?
@@ -390,7 +390,7 @@ para ampliar autonomía por sí sola.
 
 ### 7.1 Objetivo
 
-El cliente no debería tener que recordar por qué paga Noesis. El producto debe
+El cliente no debería tener que recordar por qué paga Bynoesis. El producto debe
 demostrar periódicamente:
 
 - Qué ha gestionado.
@@ -402,7 +402,7 @@ demostrar periódicamente:
 
 ### 7.2 Primera versión: valor operativo
 
-> Esta semana Noesis completó siete gestiones en facturación, documentos y cobros.
+> Esta semana Bynoesis completó siete gestiones en facturación, documentos y cobros.
 
 Esta versión puede construirse en cuanto el Registro Interno de Valor sea fiable.
 
@@ -425,7 +425,7 @@ También podrá traducirse de forma prudente:
 
 > Aproximadamente media jornada que no has dedicado a oficina.
 
-Noesis nunca afirmará que el usuario dedicó ese tiempo a su familia, descanso o
+Bynoesis nunca afirmará que el usuario dedicó ese tiempo a su familia, descanso o
 nuevos clientes si no puede saberlo.
 
 ### 7.4 Valor potencial del tiempo
@@ -443,15 +443,15 @@ Mensajes válidos:
 
 > 840 € se cobraron después de recordatorios confirmados.
 
-> Noesis detectó 1.200 € en trabajos terminados que todavía no estaban facturados.
+> Bynoesis detectó 1.200 € en trabajos terminados que todavía no estaban facturados.
 
 > Dos presupuestos fueron aceptados después de sus seguimientos.
 
 Mensajes no válidos:
 
-> Noesis te ha hecho ganar 5.000 €.
+> Bynoesis te ha hecho ganar 5.000 €.
 
-> Noesis ha protegido 3.000 €, cuando solo existen facturas pendientes.
+> Bynoesis ha protegido 3.000 €, cuando solo existen facturas pendientes.
 
 ### 7.6 Momentos de Proof of Value
 
@@ -459,7 +459,7 @@ Mensajes no válidos:
 
 **Semanal:** procesos gestionados, resultados y pendientes cerrados.
 
-**Mensual:** qué ocurrió, qué hizo Noesis, outcomes verificables, tiempo calibrado
+**Mensual:** qué ocurrió, qué hizo Bynoesis, outcomes verificables, tiempo calibrado
 y dos oportunidades para el mes siguiente.
 
 **Acumulado:** se guardará desde el primer día, pero se presentará dentro de
@@ -625,7 +625,7 @@ La comparación deberá controlar o explicar:
 - Cambios de precios, sector o actividad.
 - Diferencias en la duración de los períodos.
 
-Si no existe un «antes» fiable, Noesis no lo inventará.
+Si no existe un «antes» fiable, Bynoesis no lo inventará.
 
 ### 10.3 Goals Engine
 
@@ -639,7 +639,7 @@ objetivo:
 - Mejorar margen.
 - Reducir impagos.
 
-Solo se mostrará progreso si Noesis dispone de una línea base y una métrica válida.
+Solo se mostrará progreso si Bynoesis dispone de una línea base y una métrica válida.
 
 ### 10.4 Momentos de victoria
 
@@ -660,12 +660,12 @@ El resultado empresarial constituye la recompensa.
 
 1. El autónomo termina un trabajo.
 2. Escribe: «Terminado lo de Carlos, 480 más IVA».
-3. Noesis identifica cliente, trabajo y fiscalidad.
+3. Bynoesis identifica cliente, trabajo y fiscalidad.
 4. Prepara la factura.
 5. El autónomo confirma.
 6. La factura se emite: Useful Action de facturación.
 7. Pasan diez días sin cobrarse.
-8. Noesis propone un recordatorio.
+8. Bynoesis propone un recordatorio.
 9. El autónomo confirma.
 10. Se envía: Useful Action de cobros.
 11. Posteriormente se registra el pago.
@@ -674,7 +674,7 @@ El resultado empresarial constituye la recompensa.
     WUB esa semana.
 14. El cliente recibe:
 
-> Esta semana Noesis completó cinco gestiones en facturación y cobros. La factura
+> Esta semana Bynoesis completó cinco gestiones en facturación y cobros. La factura
 > de Carlos se cobró después del seguimiento que confirmaste. Ahora mismo no tienes
 > nada urgente pendiente.
 
@@ -712,12 +712,12 @@ o, cuando corresponda:
 
 **Parte diario**
 
-> Ayer Noesis dejó resueltas tres gestiones: ordenó dos documentos y preparó una
+> Ayer Bynoesis dejó resueltas tres gestiones: ordenó dos documentos y preparó una
 > factura. Necesitas revisar una cosa.
 
 **Resumen semanal**
 
-> Esta semana Noesis completó siete gestiones en tres áreas: documentos,
+> Esta semana Bynoesis completó siete gestiones en tres áreas: documentos,
 > facturación y cobros.
 
 **Resultado verificable**
@@ -726,7 +726,7 @@ o, cuando corresponda:
 
 **Resumen mensual posterior**
 
-> Noesis gestionó 38 tareas y te evitó aproximadamente entre siete y ocho horas de
+> Bynoesis gestionó 38 tareas y te evitó aproximadamente entre siete y ocho horas de
 > administración. Dos cobros llegaron después de seguimientos confirmados.
 
 ---
@@ -854,7 +854,7 @@ merece entrar en el producto.
 
 ## 16. Veredicto final de dirección
 
-La dirección estratégica es sólida. Noesis no debe competir solamente como software
+La dirección estratégica es sólida. Bynoesis no debe competir solamente como software
 de facturación, ERP sencillo o asistente por WhatsApp. Su oportunidad es convertirse
 en la capa operativa inteligente del pequeño negocio.
 
@@ -872,7 +872,7 @@ La secuencia recomendada es:
 > **Registro de Valor → Habit → Trust → Value → WUB y piloto → Value avanzado →
 > Insight → Progress → Confidence.**
 
-Noesis ya dispone de eventos, acciones del asistente, resúmenes programados y
+Bynoesis ya dispone de eventos, acciones del asistente, resúmenes programados y
 permisos explícitos sobre los que construir. No se trata de rehacer el SaaS, sino de
 crear la capa transversal que une lo construido y lo convierte en una experiencia
 de delegación, seguridad, alivio mental y valor acumulado.

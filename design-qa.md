@@ -1,4 +1,4 @@
-# Design QA — sitio público Noesis
+# Design QA — sitio público Bynoesis
 
 - **Fuente visual:** `C:\Users\mikic\.codex\generated_images\019f52cc-5f50-7bf1-861e-1ae7f775c7be\exec-5a2c6bb9-2616-4ec9-9708-18007de7e13e.png`
 - **Captura implementada:** `C:\Users\mikic\Documents\noesis-codex-internal-brain\tmp\design-qa\home-desktop-pass1.png`
@@ -103,7 +103,7 @@ La comparación del hero confirma:
 
 - La portada adopta la jerarquía de la referencia elegida: cabecera oscura,
   promesa centrada, explicación breve, acciones de alta y producto inmediatamente
-  después. Mantiene la marca, paleta y voz propias de Noesis.
+  después. Mantiene la marca, paleta y voz propias de Bynoesis.
 - La muestra deja de navegar por vistas creadas únicamente para marketing. Muestra
   el Inicio basado en el panel real y explica que no ejecuta acciones.
 - No hay nueva captura: la comparación de referencia y prototipo sigue bloqueada por

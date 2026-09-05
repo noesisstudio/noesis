@@ -1,4 +1,4 @@
-"""Genera el modelo economico de Noesis en xlsx.
+"""Genera el modelo economico de Bynoesis en xlsx.
 
 Todas las cifras proceden de docs/Unit-economics-y-cerebro-interno.md y de
 analysis/build_unit_economics.mjs (fechadas 15/07/2026). Lo que no consta en el
@@ -99,7 +99,7 @@ def body(ws, rng, size=10):
 ws = wb.active
 ws.title = "Resumen"
 ws.sheet_properties.tabColor = FOREST
-title(ws, "Noesis \u2014 Modelo economico",
+title(ws, "Bynoesis \u2014 Modelo economico",
       "Modelo vivo: las celdas azules son entradas editables y el resto son formulas. "
       "Las cifras proceden del analisis interno fechado el 15/07/2026 con fuentes citadas en la hoja Fuentes. "
       "Lo que el repositorio no acredita esta en la hoja Datos_Pendientes y NO se ha estimado.")
@@ -122,7 +122,7 @@ for i, (lab, a, b, c, u, n) in enumerate(rows):
     ws.cell(row=r, column=5, value=u)
     ws.cell(row=r, column=6, value=n)
 
-section(ws, 10, "Resultado por plan (modelo Noesis)", 6)
+section(ws, 10, "Resultado por plan (modelo Bynoesis)", 6)
 header(ws, 11, ["Metrica", "Autonomo", "Negocio", "Premium", "Unidad", "Nota"])
 res = [
     ("COGS software", "='Unit_Economics'!E13", "='Unit_Economics'!F13", "='Unit_Economics'!G13", "\u20ac/mes", "Stripe, WhatsApp, IA, voz, almacenamiento"),
@@ -536,11 +536,11 @@ title(ws, "Hipotesis de coste del documento externo",
 widths(ws, {"A": 32, "B": 34, "C": 16, "D": 16, "E": 14, "F": 40})
 
 section(ws, 4, "Tabla recibida", 6)
-header(ws, 5, ["Concepto de gasto", "Calculo (hipotesis)", "Coste mensual/usuario", "", "", "Contraste con el modelo Noesis"])
+header(ws, 5, ["Concepto de gasto", "Calculo (hipotesis)", "Coste mensual/usuario", "", "", "Contraste con el modelo Bynoesis"])
 ext = [
-    ("API de Meta (WhatsApp)", "150 mensajes enviados x 0,0166 \u20ac", "=150*Supuestos!B29", "El modelo Noesis usa 30/80/200 mensajes segun plan, no 150 fijos"),
-    ("Inteligencia Artificial (LLM)", "150 procesamientos x ~0,02 \u20ac", 3.00, "El modelo Noesis estima 0,05/0,22/0,69 \u20ac: el cerebro interno resuelve el 60%"),
-    ("Servidor y base de datos", "Prorrateo basico por usuario", 1.00, "El modelo Noesis reparte 65 \u20ac de plataforma entre las cuentas activas"),
+    ("API de Meta (WhatsApp)", "150 mensajes enviados x 0,0166 \u20ac", "=150*Supuestos!B29", "El modelo Bynoesis usa 30/80/200 mensajes segun plan, no 150 fijos"),
+    ("Inteligencia Artificial (LLM)", "150 procesamientos x ~0,02 \u20ac", 3.00, "El modelo Bynoesis estima 0,05/0,22/0,69 \u20ac: el cerebro interno resuelve el 60%"),
+    ("Servidor y base de datos", "Prorrateo basico por usuario", 1.00, "El modelo Bynoesis reparte 65 \u20ac de plataforma entre las cuentas activas"),
 ]
 for i, (a, b, c, nota) in enumerate(ext):
     r = 6 + i
@@ -589,7 +589,7 @@ widths(ws, {"A": 30, "B": 15, "C": 15, "D": 15, "E": 15, "F": 15, "G": 15})
 
 section(ws, 4, "COGS software por plan", 7)
 header(ws, 5, ["Escenario", "Autonomo", "Negocio", "Premium", "", "", ""])
-ws.cell(row=6, column=1, value="Modelo Noesis (con fuentes)").font = Font(name="Aptos", size=10, color=INK)
+ws.cell(row=6, column=1, value="Modelo Bynoesis (con fuentes)").font = Font(name="Aptos", size=10, color=INK)
 ws.cell(row=7, column=1, value="Hipotesis externa").font = Font(name="Aptos", size=10, color=INK)
 ws.cell(row=8, column=1, value="Diferencia").font = Font(name="Aptos", size=10, bold=True, color=STOP)
 ws.cell(row=9, column=1, value="Multiplicador").font = Font(name="Aptos", size=10, bold=True, color=STOP)
@@ -608,7 +608,7 @@ for j, col in enumerate(["B", "C", "D"]):
 
 section(ws, 11, "Margen bruto comparado", 7)
 header(ws, 12, ["Escenario", "Autonomo", "Negocio", "Premium", "", "", ""])
-ws.cell(row=13, column=1, value="Modelo Noesis").font = Font(name="Aptos", size=10, color=INK)
+ws.cell(row=13, column=1, value="Modelo Bynoesis").font = Font(name="Aptos", size=10, color=INK)
 ws.cell(row=14, column=1, value="Hipotesis externa").font = Font(name="Aptos", size=10, color=INK)
 ws.cell(row=15, column=1, value="Puntos perdidos").font = Font(name="Aptos", size=10, bold=True, color=STOP)
 for j, col in enumerate(["B", "C", "D"]):
@@ -625,7 +625,7 @@ for j, col in enumerate(["B", "C", "D"]):
 ws["A17"] = "Como leerlo"
 ws["A17"].font = Font(name="Aptos", size=10, bold=True, color=FOREST)
 ws["A18"] = ("La hipotesis externa aplica un coste plano por usuario, asi que penaliza mucho al plan barato y "
-             "apenas al caro, mientras que el modelo Noesis escala el coste con el uso incluido en cada plan. "
+             "apenas al caro, mientras que el modelo Bynoesis escala el coste con el uso incluido en cada plan. "
              "Si el piloto midiera un consumo parecido al de la hipotesis, el plan Autonomo seria el primero en "
              "sufrir. Es el escenario que conviene vigilar durante los primeros 30 dias.")
 ws["A18"].alignment = Alignment(wrap_text=True, vertical="top")
@@ -1147,12 +1147,12 @@ header(ws, 4, ["Indicador", "Objetivo", "Observado", "Unidad", "Fuente del dato"
 kpis = [
     ("Resolucion por cerebro interno", 0.60, None, "%", "Logs de IA por negocio", "Si baja del 40% el coste de IA se dispara", PCT),
     ("Activacion: alta hasta primer cobro", None, None, "dias", "Eventos de producto", "Mide si el producto engancha antes de que caduque la prueba"),
-    ("Trabajos cerrados sin facturar", None, None, "n/mes", "Panel de trabajos", "Es el dinero que Noesis rescata: el argumento de venta"),
+    ("Trabajos cerrados sin facturar", None, None, "n/mes", "Panel de trabajos", "Es el dinero que Bynoesis rescata: el argumento de venta"),
     ("Cobros recuperados", None, None, "€/mes", "Recordatorios y portal", "Convierte la suscripcion en inversion con retorno"),
     ("Tiempo ahorrado declarado", None, None, "h/semana", "Entrevista de cierre", "El testimonio que sostiene el precio"),
     ("Minutos de soporte por cuenta", 12, None, "min/mes", "Registro de soporte", "Autonomo: el supuesto es 12 min. Es la partida que rompe el margen"),
     ("Minutos de voz consumidos (Premium)", 100, None, "min/mes", "Adaptador de voz", "Si nadie los usa, sacarlos del plan y venderlos como add-on"),
-    ("Correcciones sobre lo que propone Noesis", None, None, "%", "Eventos de correccion", "Mide la confianza real en el asistente"),
+    ("Correcciones sobre lo que propone Bynoesis", None, None, "%", "Eventos de correccion", "Mide la confianza real en el asistente"),
     ("Coste por cuenta observado", 1.48, None, "€/mes", "Costes por negocio", "Contrasta con el COGS estimado del modelo"),
     ("Retencion a 60 dias", None, None, "%", "Suscripciones", "Sin esto no hay LTV defendible"),
     ("CAC por canal", None, None, "€", "Ads_Captacion", "El supuesto de 150 € esta sin validar"),
@@ -1187,7 +1187,7 @@ title(ws, "Coste de IA por opcion",
 widths(ws, {"A": 34, "B": 22, "C": 16, "D": 16, "E": 16, "F": 34})
 header(ws, 4, ["Opcion", "Coste/interaccion", "75/mes", "300/mes", "1.500/mes", "Nota"])
 ai_rows = [
-    ("Cerebro determinista Noesis", 0, 0, 0, 0, "Codigo propio: sin coste por token"),
+    ("Cerebro determinista Bynoesis", 0, 0, 0, 0, "Codigo propio: sin coste por token"),
     ("Cloudflare Qwen3 30B A3B", 0.0007, 0.05, 0.21, 1.07, "Proveedor compatible barato"),
     ("Groq Qwen3 32B", 0.0027, 0.20, 0.80, 3.98, "Latencia baja"),
     ("Anthropic Haiku 4.5", 0.0123, 0.92, 3.68, 18.41, "Respaldo de calidad"),
@@ -1217,7 +1217,7 @@ for i, (a, b) in enumerate(host):
     ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=6)
 
 ws["A16"] = ("No existe un servidor publico gratuito adecuado como nucleo de produccion: los tiers gratis pueden "
-             "cambiar, limitar concurrencia, cortar solicitudes y tratar datos fuera de Noesis. El modelo open "
+             "cambiar, limitar concurrencia, cortar solicitudes y tratar datos fuera de Bynoesis. El modelo open "
              "source evita licencia por token, pero no elimina computo, seguridad ni mantenimiento.")
 ws["A16"].alignment = Alignment(wrap_text=True, vertical="top")
 ws["A16"].font = Font(name="Aptos", size=9.5, color=MUTED)
@@ -1306,7 +1306,7 @@ ws.merge_cells("A18:D21")
 # --- Guardar ---------------------------------------------------------------
 DEFAULT_OUT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "docs", "Noesis-Modelo-Economico.xlsx",
+    "docs", "Bynoesis-Modelo-Economico.xlsx",
 )
 out = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OUT
 for s in wb.worksheets:

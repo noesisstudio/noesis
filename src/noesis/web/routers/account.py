@@ -150,7 +150,7 @@ def _google_profile(code: str) -> dict:
 def _account_destination(business_id: int, user: dict | None = None) -> str:
     """Cada identidad entra por donde trabaja.
 
-    Administracion no usa Noesis para llevar un negocio: entra a gestionar los de
+    Administracion no usa Bynoesis para llevar un negocio: entra a gestionar los de
     los demas. Aterrizar en un panel con Trabajos, Clientes y Facturas la obliga a
     buscar la puerta de su propio trabajo, y a completar un alta que no le sirve.
     Su panel de negocio sigue existiendo y accesible desde el propio /admin.
@@ -385,7 +385,7 @@ def delete_account(request: Request, business_id: int, confirm: str = Form(""),
         try:
             email_adapter.queue_email(
                 user["email"],
-                "Hemos registrado tu solicitud de baja · Noesis",
+                "Hemos registrado tu solicitud de baja · Bynoesis",
                 "\n".join([
                     "Hemos registrado tu solicitud de baja.",
                     f"Referencia: #{privacy_request['id']}",
@@ -569,11 +569,11 @@ def access_request_submit(
     try:
         email_adapter.queue_email(
             created["email"],
-            "Hemos recibido tu solicitud · Noesis",
+            "Hemos recibido tu solicitud · Bynoesis",
             "\n".join([
                 f"Hola, {created['name']}:",
                 "",
-                "Hemos recibido tu solicitud de acceso a Noesis. La revisamos y te",
+                "Hemos recibido tu solicitud de acceso a Bynoesis. La revisamos y te",
                 "escribimos en menos de 24 horas laborables con tu acceso y una fecha",
                 "para ponerlo en marcha juntos.",
                 "",
@@ -581,7 +581,7 @@ def access_request_submit(
                 f"{config.BASE_URL}/contacto",
                 "",
                 "Un saludo,",
-                "El equipo de Noesis",
+                "El equipo de Bynoesis",
             ]),
             idempotency_key=f"access-request-confirmation:{created['id']}",
         )
@@ -1439,9 +1439,9 @@ def forgot_submit(request: Request, email: str = Form(...)):
         db.create_password_reset(user["id"], token_hash, ttl_minutes=60)
         link = f"{config.BASE_URL}/restablecer?token={token}"
         email_adapter.queue_email(
-            email, "Restablecer tu contraseña de Noesis",
+            email, "Restablecer tu contraseña de Bynoesis",
             f"Hola,\n\nPara crear una contraseña nueva, abre este enlace (válido 1 hora):\n"
-            f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Noesis",
+            f"{link}\n\nSi no lo has pedido tú, ignora este correo.\n\n— Bynoesis",
             business_id=user["business_id"],
             idempotency_key=f"password-reset:{user['id']}:{token_hash[:20]}",
         )

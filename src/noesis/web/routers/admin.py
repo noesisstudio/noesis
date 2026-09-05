@@ -609,11 +609,11 @@ def admin_request_approve(request: Request, request_id: int):
         # así que no hay motivo para dejar al fundador esperando a SMTP.
         email_adapter.queue_email(
             solicitud["email"],
-            "Tu acceso a Noesis ya está listo",
+            "Tu acceso a Bynoesis ya está listo",
             "\n".join([
                 f"Hola, {solicitud['name']}:",
                 "",
-                "Ya tienes tu cuenta de Noesis preparada. Elige tu contraseña aquí:",
+                "Ya tienes tu cuenta de Bynoesis preparada. Elige tu contraseña aquí:",
                 invite_url,
                 "",
                 f"El enlace caduca en {config.INVITE_TTL_MINUTES // 1440} días.",

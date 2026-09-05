@@ -314,7 +314,7 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
                     follow_redirects=True,
                 )
                 self.assertEqual(read_only_portal.status_code, 200)
-                self.assertIn("reactivar Noesis", read_only_portal.text)
+                self.assertIn("reactivar Bynoesis", read_only_portal.text)
 
 
 if __name__ == "__main__":

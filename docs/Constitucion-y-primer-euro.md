@@ -50,7 +50,7 @@ mete una migración de activos justo cuando ya hay clientes reales dentro.
 | **Cobro y facturación** | Stripe y el IVA funcionan igual | Igual |
 | **Futuro: socios, inversión, Embedded Signup** | Hay que constituir sí o sí antes | Ya está hecho |
 
-La primera fila es la que cierra el debate. Noesis emite facturas con validez
+La primera fila es la que cierra el debate. Bynoesis emite facturas con validez
 fiscal, encadena huellas Veri\*Factu y guarda datos tributarios de terceros. Un
 fallo en el cálculo de una retención no es un bug: es un problema con Hacienda de
 otra persona. Asumir eso con responsabilidad personal ilimitada, con 4.000 € de
@@ -86,11 +86,11 @@ dinero sigue siendo tuyo y sigue estando disponible para pagar gastos.
 ### La rama que no puedo resolver yo: tu empresa de eventos
 
 Si esa empresa **ya es una S.L. tuya**, existe un atajo legítimo: ampliar el objeto
-social, dar de alta el epígrafe informático y operar Noesis como marca comercial de
+social, dar de alta el epígrafe informático y operar Bynoesis como marca comercial de
 esa sociedad. Ahorra la constitución entera y la verificación de Meta se puede pedir
 ya, con una entidad que lleva tiempo inscrita —lo cual, además, verifica mejor.
 
-El precio del atajo: **las facturas a los clientes de Noesis saldrán con la razón
+El precio del atajo: **las facturas a los clientes de Bynoesis saldrán con la razón
 social de eventos**, los dos negocios comparten responsabilidad patrimonial, y
 separarlos después obliga a una escisión o a una venta de rama de actividad. Mi
 criterio: úsalo solo si el efectivo es el problema real; si no, sociedad limpia.
@@ -145,7 +145,7 @@ mismo.
   profesionales con retención; 115 si alquilas local; 349 si hay operaciones
   intracomunitarias; 347 si superas el umbral con algún tercero.
 - **Facturación propia**: numeración correlativa, datos completos y conservación
-  durante cuatro años. Noesis va a facturarse a sí mismo con las mismas reglas que
+  durante cuatro años. Bynoesis va a facturarse a sí mismo con las mismas reglas que
   exige a sus clientes.
 
 ### Bloque C · Protección de datos
@@ -170,7 +170,7 @@ viva desde el 29-jul-2025, no en 2027, y falta la declaración responsable.
 - **Seguro de responsabilidad civil profesional y ciberriesgo**. 300-600 €/año. Antes
   del primer cliente de pago; además, es de lo primero que pregunta una gestoría
   antes de meterte su cartera.
-- **Marca «Noesis» en la OEPM**, clase 42 y probablemente 35. ~150 €/clase. Puede
+- **Marca «Bynoesis» en la OEPM**, clase 42 y probablemente 35. ~150 €/clase. Puede
   esperar a tener diez clientes, pero comprueba **hoy** que el nombre está libre:
   descubrirlo tarde es carísimo.
 - **Cesión de propiedad intelectual del código a la sociedad**. Si has desarrollado a

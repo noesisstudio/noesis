@@ -74,7 +74,7 @@ class SeoTestCase(unittest.TestCase):
             self.assertNotIn(privado, rutas)
 
     def test_sitemap_does_not_claim_fake_freshness_or_ignored_priority(self):
-        """Noesis no debe decir que todo cambió hoy si no puede demostrarlo."""
+        """Bynoesis no debe decir que todo cambió hoy si no puede demostrarlo."""
         scheduler, client = self._client()
         with scheduler, client as http:
             texto = http.get("/sitemap.xml").text
@@ -188,7 +188,7 @@ class SeoTestCase(unittest.TestCase):
         organizacion = next(
             item for item in datos["@graph"] if item["@type"] == "Organization"
         )
-        self.assertEqual(organizacion["name"], "Noesis")
+        self.assertEqual(organizacion["name"], "Bynoesis")
         self.assertNotIn('application/ld+json', prices)
 
     def test_non_public_routes_send_an_explicit_noindex_header(self):

@@ -1,6 +1,6 @@
 """Tareas programadas y worker de la cola de WhatsApp.
 
-Los avisos programados son conversaciones iniciadas por Noesis y siempre usan una
+Los avisos programados son conversaciones iniciadas por Bynoesis y siempre usan una
 plantilla aprobada por Meta. Las respuestas inmediatas al usuario se gestionan en
 ``whatsapp.py`` como texto libre dentro de la ventana de 24 horas.
 """
@@ -377,7 +377,7 @@ def send_weekly_summaries() -> None:
 
 def send_collection_proposals(now: datetime | None = None) -> int:
     """Cobros en piloto automático: si hay una factura vencida y el negocio no
-    tiene recordatorios automáticos, Noesis propone reclamarla por WhatsApp y
+    tiene recordatorios automáticos, Bynoesis propone reclamarla por WhatsApp y
     espera un SÍ del dueño antes de escribir al cliente."""
     from . import whatsapp
 
@@ -471,7 +471,7 @@ def send_founder_digest(now: datetime | None = None) -> bool:
     data = db.admin_overview()
     reports = data["dept_reports"]
     body = "\n".join([
-        f"Parte semanal de Noesis · semana {week:02d}/{year}",
+        f"Parte semanal de Bynoesis · semana {week:02d}/{year}",
         "",
         f"💰 Finanzas: {reports['finanzas']}",
         f"📈 Crecimiento: {reports['crecimiento']}",
@@ -486,7 +486,7 @@ def send_founder_digest(now: datetime | None = None) -> bool:
         f"Detalle completo: {config.BASE_URL}/admin",
         "— Generado automáticamente por el centro de mando.",
     ])
-    subject = f"Noesis · parte semanal W{week:02d}: MRR {data['mrr']} €"
+    subject = f"Bynoesis · parte semanal W{week:02d}: MRR {data['mrr']} €"
     for address in admins:
         email_adapter.queue_email(
             address, subject, body,

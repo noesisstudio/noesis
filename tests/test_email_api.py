@@ -35,7 +35,7 @@ class EmailApiTestCase(unittest.TestCase):
                          "SMTP_USER", "SMTP_PASS", "IS_PRODUCTION")
         }
         config.BREVO_API_KEY = "clave-de-prueba"  # pragma: allowlist secret
-        config.SMTP_FROM = "Noesis <info@bynoesis.com>"
+        config.SMTP_FROM = "Bynoesis <info@bynoesis.com>"
         config.IS_PRODUCTION = False
 
     def tearDown(self):
@@ -69,7 +69,7 @@ class EmailApiTestCase(unittest.TestCase):
         cuerpo = capturado["cuerpo"]
         # El remitente se separa en nombre y dirección, como pide la API.
         self.assertEqual(
-            cuerpo["sender"], {"name": "Noesis", "email": "info@bynoesis.com"}
+            cuerpo["sender"], {"name": "Bynoesis", "email": "info@bynoesis.com"}
         )
         self.assertEqual(cuerpo["to"], [{"email": "cliente@ejemplo.com"}])
         self.assertEqual(cuerpo["textContent"], "Cuerpo")

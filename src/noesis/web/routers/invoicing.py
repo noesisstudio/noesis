@@ -512,12 +512,12 @@ async def api_deliver_invoice(
             }
         target = explicit_email
         business = db.get_business(business_id) or {}
-        subject = f"Factura {invoice['number']} — {business.get('name') or 'Noesis'}"
+        subject = f"Factura {invoice['number']} — {business.get('name') or 'Bynoesis'}"
         text_body = (
             f"Hola {client.get('name') or ''},\n\n"
             f"Te enviamos la factura {invoice['number']} por "
             f"{invoice['total']:.2f} EUR. Encontrarás el PDF adjunto.\n\n"
-            f"— {business.get('name') or 'Noesis'}"
+            f"— {business.get('name') or 'Bynoesis'}"
         )
         queued = email_adapter.queue_email(
             target,

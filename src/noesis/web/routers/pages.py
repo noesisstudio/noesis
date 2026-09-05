@@ -1,4 +1,4 @@
-"""Paginas HTML de Noesis."""
+"""Paginas HTML de Bynoesis."""
 
 from __future__ import annotations
 
@@ -363,7 +363,7 @@ def page(request: Request, business_id: int, page: str):
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
         "entitlements": billing_adapter.entitlements_for(biz),
-        # El parte de sección: la figura de Noesis en cada pantalla — lectura,
+        # El parte de sección: la figura de Bynoesis en cada pantalla — lectura,
         # cifras clave y puerta al acompañante (None en el Home, que tiene el suyo).
         "page_brief": chat.page_brief(business_id, page),
         "subscription_read_only": not db.subscription_allows_access(biz),

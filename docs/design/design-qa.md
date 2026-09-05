@@ -7,7 +7,7 @@
 
 ## Resultado
 
-- La Home prioriza el parte de Noesis, una acción y cuatro métricas compactas.
+- La Home prioriza el parte de Bynoesis, una acción y cuatro métricas compactas.
 - El detalle financiero permanece disponible en su apartado.
 - Proyectos muestra resumen y lista antes del desglose operativo.
 - El menú móvil sincroniza sus atributos accesibles y no desborda a 390 px.

@@ -4,7 +4,7 @@
   <div class="page-title">
     <div class="kicker">Configuración</div>
     <h1>Ajustes</h1>
-    <p>Configura tu negocio y conecta los canales. Noesis está diseñado para funcionar
+    <p>Configura tu negocio y conecta los canales. Bynoesis está diseñado para funcionar
        con el mínimo de servicios externos: tus datos viven en tu servidor.</p>
   </div>
   <div class="page-actions">
@@ -45,7 +45,7 @@
       </form>
       <div class="insight" style="margin-top:14px">
         ¿Facturas a empresas? Suele aplicarse <b>retención de IRPF</b> (15%, o 7% los
-        primeros años). ¿A particulares? Normalmente 0%. Noesis usa lo que pongas aquí
+        primeros años). ¿A particulares? Normalmente 0%. Bynoesis usa lo que pongas aquí
         y podrás ajustarlo por factura cuando exista el flujo avanzado.
       </div>
     </div>
@@ -81,7 +81,7 @@
   </div>
 
   <div class="card card-action" id="whatsapp-conexion">
-    <div class="card-h"><h2>WhatsApp privado con Noesis</h2>
+    <div class="card-h"><h2>WhatsApp privado con Bynoesis</h2>
       {% if business.whatsapp_status == 'conectado' %}<span class="badge b-green">conectado</span>
       {% else %}<span class="badge b-amber">no conectado</span>{% endif %}</div>
     <div class="card-b">
@@ -93,7 +93,7 @@
         </button>
         <div id="whatsapp-preference-msg" class="meta" role="status"></div>
       {% elif wa is defined %}
-        <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Noesis desde el móvil.</p>
+        <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Bynoesis desde el móvil.</p>
         <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener">
           Abrir WhatsApp y vincular mi número
         </a>
@@ -121,13 +121,13 @@
     </div>
     <div class="card-b">
       <p style="margin-top:0">
-        Conecta un número comercial propio para que Noesis reciba solicitudes,
+        Conecta un número comercial propio para que Bynoesis reciba solicitudes,
         documentos y consultas de tus clientes sin mezclarlos con tus órdenes internas.
       </p>
       <div class="grid g3" style="margin-top:14px">
         <div class="soft-card"><b>Clientes</b><p class="meta">Escriben al número de tu negocio. Cada remitente queda dentro de tu expediente.</p></div>
-        <div class="soft-card"><b>Equipo</b><p class="meta">Escribe al número central de Noesis. Costes y dudas esperan tu revisión.</p></div>
-        <div class="soft-card"><b>Tú decides</b><p class="meta">Noesis ordena y resume; no confirma importes ni compromisos por ti.</p></div>
+        <div class="soft-card"><b>Equipo</b><p class="meta">Escribe al número central de Bynoesis. Costes y dudas esperan tu revisión.</p></div>
+        <div class="soft-card"><b>Tú decides</b><p class="meta">Bynoesis ordena y resume; no confirma importes ni compromisos por ti.</p></div>
       </div>
       <div id="wb-connections" style="margin-top:14px">
         <div class="empty">Comprobando tu canal comercial…</div>
@@ -399,7 +399,7 @@
         aceptadas con errores: {{ verifactu_queue.aceptado_con_errores }} ·
         rechazadas: {{ verifactu_queue.rechazado }}.
       {% else %}
-        <b>Remisión AEAT desactivada:</b> Noesis genera y conserva el registro,
+        <b>Remisión AEAT desactivada:</b> Bynoesis genera y conserva el registro,
         la huella y el QR, pero no realiza ninguna conexión externa hasta configurar
         entorno, certificado y clave privada en el servidor.
       {% endif %}
@@ -478,7 +478,7 @@
               <label><input type="checkbox" name="remove_logo" value="1"> Quitar</label>
             </div>
             {% else %}
-            <p class="hint brand-monogram-note">Sin logotipo, Noesis usa automáticamente
+            <p class="hint brand-monogram-note">Sin logotipo, Bynoesis usa automáticamente
               las iniciales de {{ business.name }}.</p>
             {% endif %}
           </fieldset>
@@ -648,7 +648,7 @@
 <div class="card autonomy-card" id="control-noesis" style="margin-top:16px">
   <div class="card-h">
     <div>
-      <div class="kicker">Centro de control de Noesis</div>
+      <div class="kicker">Centro de control de Bynoesis</div>
       <h2>Decide hasta dónde puede llegar</h2>
     </div>
     <span class="badge b-green">tú tienes la última palabra</span>
@@ -691,7 +691,7 @@
     </div>
     <div id="automation-msg" class="meta" role="status"></div>
     <details class="autonomy-history">
-      <summary>Ver qué ha hecho Noesis</summary>
+      <summary>Ver qué ha hecho Bynoesis</summary>
       {% if assistant_actions %}
         <div class="autonomy-action-list">
           {% for action in assistant_actions %}
@@ -705,7 +705,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="empty">Aún no hay acciones automáticas. Cuando Noesis actúe,
+        <div class="empty">Aún no hay acciones automáticas. Cuando Bynoesis actúe,
           quedará aquí con su motivo y resultado.</div>
       {% endif %}
     </details>
@@ -751,7 +751,7 @@
   </div>
 
   <div class="card">
-    <div class="card-h"><h2>Cómo te explica Noesis</h2><span class="hint">una preferencia para toda la cuenta</span></div>
+    <div class="card-h"><h2>Cómo te explica Bynoesis</h2><span class="hint">una preferencia para toda la cuenta</span></div>
     <div class="card-b">
       <label class="fld">Nivel de explicación</label>
       <select id="explanation-select">
@@ -766,10 +766,10 @@
   </div>
 
   <div class="card">
-    <div class="card-h"><h2>Ayuda avanzada de Noesis</h2><span class="hint">tú decides</span></div>
+    <div class="card-h"><h2>Ayuda avanzada de Bynoesis</h2><span class="hint">tú decides</span></div>
     <div class="card-b">
       <p class="muted" style="margin-top:0">
-        Noesis resuelve primero dentro del sistema. Si una consulta necesita más
+        Bynoesis resuelve primero dentro del sistema. Si una consulta necesita más
         comprensión, puedes permitir que use el servicio avanzado incluido en tu plan.
       </p>
       <label class="lrow" style="align-items:flex-start;cursor:pointer">
@@ -777,7 +777,7 @@
           <b>Usar ayuda avanzada cuando haga falta</b>
           <small class="muted" style="display:block;margin-top:4px">
             Puedes cambiarlo cuando quieras. Los cálculos y las acciones sensibles
-            siempre se validan dentro de Noesis.
+            siempre se validan dentro de Bynoesis.
           </small>
         </span>
         <input id="ai-external-preference" type="checkbox"
@@ -789,7 +789,7 @@
   </div>
 
   <div class="card memory-card" id="memoria-noesis">
-    <div class="card-h"><h2>Lo que Noesis recuerda</h2><span class="hint">visible y bajo tu control</span></div>
+    <div class="card-h"><h2>Lo que Bynoesis recuerda</h2><span class="hint">visible y bajo tu control</span></div>
     <div class="card-b">
       <p class="muted" style="margin-top:0">Guarda solo detalles que quieras mantener entre conversaciones. Puedes corregirlos volviendo a guardar el mismo tema o borrarlos cuando quieras.</p>
       <div class="memory-form">
@@ -802,7 +802,7 @@
         {% for memory in assistant_memories %}
         <div class="memory-row" data-memory-id="{{ memory.id }}">
           <div><strong>{{ memory.memory_key }}</strong><span>{{ memory.memory_value }}</span></div>
-          <button class="icon-btn" aria-label="Hacer que Noesis olvide {{ memory.memory_key }}" title="Olvidar" onclick="forgetMemory({{ memory.id }})"></button>
+          <button class="icon-btn" aria-label="Hacer que Bynoesis olvide {{ memory.memory_key }}" title="Olvidar" onclick="forgetMemory({{ memory.id }})"></button>
         </div>
         {% else %}
         <div class="memory-empty">Aún no guardo ninguna preferencia permanente. La conversación sí se conserva, pero no la convierto en un hecho sin que tú lo decidas.</div>
@@ -818,7 +818,7 @@
       <div class="lrow"><span>Asistente</span><b>local + IA opcional</b></div>
       <div class="lrow"><span>Gráficos y diseño</span><b>sin CDN externo</b></div>
       <div class="insight" style="margin-top:14px">
-        Noesis usa el mínimo de APIs externas. Lo rutinario se resuelve dentro del
+        Bynoesis usa el mínimo de APIs externas. Lo rutinario se resuelve dentro del
         servidor; solo las consultas complejas, si lo activas, usan IA en la nube.
         Hacemos copia de seguridad automática de tus datos cada día.
       </div>
@@ -858,7 +858,7 @@
 <script>
 async function disconnectWhatsApp(button) {
   const msg = el('whatsapp-preference-msg');
-  if (!confirm('¿Desconectar este WhatsApp de Noesis? Podrás volver a vincularlo cuando quieras.')) return;
+  if (!confirm('¿Desconectar este WhatsApp de Bynoesis? Podrás volver a vincularlo cuando quieras.')) return;
   button.disabled = true;
   try {
     await apiPost('/integrations/whatsapp', { action: 'disconnect' });
@@ -929,7 +929,7 @@ async function saveMemory() {
   location.reload();
 }
 async function forgetMemory(memoryId) {
-  if (!confirm('¿Quieres que Noesis olvide este dato?')) return;
+  if (!confirm('¿Quieres que Bynoesis olvide este dato?')) return;
   const msg = el('memory-msg');
   try { await apiDelete(`/assistant/memories/${memoryId}`); }
   catch (e) { msg.textContent = e.message; return; }

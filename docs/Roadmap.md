@@ -62,7 +62,7 @@ puede entrar, trabajar, facturar, cobrar y entregar papeles sin asistencia técn
 
 ## Límites permanentes
 
-- Noesis prepara y propone; el titular autoriza dinero, fiscalidad, emisiones,
+- Bynoesis prepara y propone; el titular autoriza dinero, fiscalidad, emisiones,
   mensajes sensibles y borrados irreversibles.
 - Lo observado se distingue de lo confirmado; la memoria es visible y corregible.
 - Ninguna integración externa puede apagar el núcleo local.

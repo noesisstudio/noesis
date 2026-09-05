@@ -14,7 +14,7 @@ lo que todavía exige una evidencia contractual o del panel de producción.
 | Groq | Transcripción de voz | Encargado/subencargado según contrato | Archivo de audio y resultado transcrito | Solo si se configura voz | DPA/condiciones, retención, transferencias y texto público |
 | Stripe | Suscripción, pago, impuestos y fraude | Encargado y responsable independiente según operación | Titular, contacto, pago, factura y señales antifraude | Si se cobra | DPA, cuenta verificada, webhooks, portal, política y reparto de roles |
 | Google | OAuth/OpenID Connect | Responsable/encargado según operación | Email, nombre e identificador de cuenta | Solo si la persona elige Google | Proyecto verificado, pantalla de consentimiento, privacidad/términos y credenciales restringidas |
-| Cal.com | Reserva externa | Servicio independiente para la reserva | Datos que introduce quien reserva | Solo al abrir el enlace externo | Política enlazada y cuenta configurada. No se incrusta en Noesis |
+| Cal.com | Reserva externa | Servicio independiente para la reserva | Datos que introduce quien reserva | Solo al abrir el enlace externo | Política enlazada y cuenta configurada. No se incrusta en Bynoesis |
 | Proveedor S3 | Copia externa | Encargado | Base, metadatos y archivos cifrados | Solo con configuración completa | Nombre, DPA, residencia contractual, región de firma, cifrado, versionado, retención y restauración probada |
 
 ## Regla de alta de un proveedor

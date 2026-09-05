@@ -29,7 +29,7 @@ from .. import config, db
 
 log = logging.getLogger("noesis.email")
 
-# "Noesis <info@bynoesis.com>" -> ("Noesis", "info@bynoesis.com")
+# "Bynoesis <info@bynoesis.com>" -> ("Bynoesis", "info@bynoesis.com")
 _REMITENTE = re.compile(r"^\s*(?P<nombre>.*?)\s*<(?P<correo>[^>]+)>\s*$")
 
 
@@ -49,10 +49,10 @@ def _sender() -> dict:
     coincidencia = _REMITENTE.match(bruto)
     if coincidencia:
         return {
-            "name": coincidencia.group("nombre") or "Noesis",
+            "name": coincidencia.group("nombre") or "Bynoesis",
             "email": coincidencia.group("correo"),
         }
-    return {"name": "Noesis", "email": bruto or config.SMTP_USER}
+    return {"name": "Bynoesis", "email": bruto or config.SMTP_USER}
 
 
 def _send_via_api(
@@ -170,12 +170,12 @@ def send_invoice_email(to: str, biz_name: str, invoice_number: str,
         return False
     subject = f"Factura {invoice_number} — {biz_name}"
     body = (f"Hola,\n\nAdjunto la factura {invoice_number} por {total}.\n\n"
-            f"Si tienes alguna duda, responde a este correo.\n\n— {biz_name} vía Noesis")
+            f"Si tienes alguna duda, responde a este correo.\n\n— {biz_name} vía Bynoesis")
     html = (f"<div style='font-family:sans-serif;max-width:600px'>"
             f"<p>Hola,</p>"
             f"<p>Adjunto la factura <b>{invoice_number}</b> por <b>{total}</b>.</p>"
             f"<p>Si tienes alguna duda, responde a este correo.</p>"
-            f"<p style='color:#666'>— {biz_name} vía Noesis</p></div>")
+            f"<p style='color:#666'>— {biz_name} vía Bynoesis</p></div>")
     attachments = None
     if pdf_data:
         attachments = [(
@@ -194,7 +194,7 @@ def send_reminder_email(to: str, biz_name: str, client_name: str,
     body = (f"Hola {client_name},\n\n"
             f"Te recordamos que la factura {invoice_number} por {total} "
             f"lleva {days_late} días pendiente de pago.\n\n"
-            f"Si ya lo has gestionado, ignora este mensaje.\n\n— {biz_name} vía Noesis")
+            f"Si ya lo has gestionado, ignora este mensaje.\n\n— {biz_name} vía Bynoesis")
     return send_email(to, subject, body)
 
 

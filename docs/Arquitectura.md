@@ -173,7 +173,7 @@ Detalle y pendientes: [[Backend_Hardening]].
 
 ```text
 Titular ───────┐
-Trabajador ────┴─> número central Noesis
+Trabajador ────┴─> número central Bynoesis
                     ├─ identidad por teléfono vinculado
                     ├─ órdenes/parte/fichaje
                     └─ aportación pendiente -> revisión titular -> efecto

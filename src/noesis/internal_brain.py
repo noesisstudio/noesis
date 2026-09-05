@@ -1,4 +1,4 @@
-"""Capa interna de redacción y comunicaciones de Noesis.
+"""Capa interna de redacción y comunicaciones de Bynoesis.
 
 Convierte hechos ya guardados en mensajes profesionales sin usar un LLM. La capa
 no inventa destinatarios, importes ni fechas y nunca envía en el mismo paso en el

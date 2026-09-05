@@ -193,7 +193,7 @@ def _stripe_plan(obj: dict, metadata: dict) -> str | None:
         # Un precio de suscripción ajeno al catálogo no puede heredar por accidente
         # los permisos del plan anterior. El webhook se reintentará tras corregir
         # el catálogo o el producto de Stripe.
-        raise ValueError("El precio de Stripe no pertenece al catálogo de Noesis.")
+        raise ValueError("El precio de Stripe no pertenece al catálogo de Bynoesis.")
     plan = metadata.get("plan")
     if plan and plan not in billing_adapter.PLANS:
         raise ValueError("Plan de Stripe no reconocido.")

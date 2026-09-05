@@ -184,7 +184,7 @@ def forgot_submit(request: Request, email: str = Form(...)):
         link = f"{config.BASE_URL}/gestoria/restablecer?token={token}"
         email_adapter.queue_email(
             email,
-            "Restablecer el acceso profesional a Noesis",
+            "Restablecer el acceso profesional a Bynoesis",
             "\n".join([
                 f"Hola, equipo de {account['firm_name']}:",
                 "",
@@ -196,7 +196,7 @@ def forgot_submit(request: Request, email: str = Form(...)):
                 "el segundo factor.",
                 "Si no lo habéis pedido, ignorad este correo.",
                 "",
-                "— Noesis",
+                "— Bynoesis",
             ]),
             business_id=None,
             idempotency_key=(

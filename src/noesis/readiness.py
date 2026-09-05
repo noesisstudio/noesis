@@ -408,7 +408,7 @@ def collect_readiness(*, check_database: bool = True) -> dict:
 
 def _print_human(report: dict) -> None:
     labels = {"ok": "OK", "warning": "AVISO", "blocker": "BLOQUEO"}
-    print("Noesis · preparación del piloto")
+    print("Bynoesis · preparación del piloto")
     for check in report["checks"]:
         print(f"[{labels[check['status']]}] {check['area']}: {check['summary']}")
         if check["action"]:

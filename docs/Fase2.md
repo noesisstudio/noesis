@@ -41,5 +41,5 @@ y degrada con elegancia cuando falta una clave externa (mismo patrón que WhatsA
   instantánea fiscal de facturas emitidas. La baja automática se bloquea si existen
   facturas sujetas a conservación y debe tramitarse como baja con retención fiscal.
 - WhatsApp exige `WHATSAPP_APP_SECRET` en producción y deduplica cada `message.id`.
-- La facturación es nativa de Noesis: ningún SaaS externo recibe las facturas ni
+- La facturación es nativa de Bynoesis: ningún SaaS externo recibe las facturas ni
   controla su numeración o registro Veri*Factu.

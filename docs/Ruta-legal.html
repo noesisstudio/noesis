@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruta legal · Noesis</title>
+<title>Ruta legal · Bynoesis</title>
 <style>
   :root {
     --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
@@ -185,9 +185,9 @@
 <div class="page">
 
 <header>
-  <p class="eyebrow">Noesis · Documento de decisión</p>
+  <p class="eyebrow">Bynoesis · Documento de decisión</p>
   <h1>Qué falta para poder cobrar el primer euro</h1>
-  <p class="standfirst">Todo lo que obliga a Noesis y a su producto, explicado desde cero. Tres rutas completas para resolverlo, desarrolladas fase a fase. El coste de cada una. Y el material listo para encargar el trabajo mañana por la mañana.</p>
+  <p class="standfirst">Todo lo que obliga a Bynoesis y a su producto, explicado desde cero. Tres rutas completas para resolverlo, desarrolladas fase a fase. El coste de cada una. Y el material listo para encargar el trabajo mañana por la mañana.</p>
   <p class="crumbs">Verificado sobre <code>origin/main</code> el 29-ago-2026 · Complementa <a href="Meta-Verificacion.pdf">Meta-Verificacion.pdf</a> y <a href="WhatsApp-Puesta-en-marcha.pdf">WhatsApp-Puesta-en-marcha.pdf</a> · Pendientes vivos en <code>Tareas-vivas.md</code> · Foto verificable en <code>project-state.json</code></p>
 </header>
 
@@ -259,7 +259,7 @@
 
   <h3>Qué es Veri*Factu, en dos frases</h3>
   <p>El Real Decreto 1007/2023 obliga a que cada factura emitida quede registrada de forma <strong>inalterable y trazable</strong>: una huella criptográfica que encadena cada factura con la anterior, un código QR en el documento y, opcionalmente, el envío del registro a la Agencia Tributaria en el momento de emitir. El objetivo declarado es acabar con el software de doble contabilidad.</p>
-  <p>Un programa que cumple todo eso se llama <strong>SIF</strong>: Sistema Informático de Facturación. Noesis es un SIF, y eso no es opcional ni discutible: si un programa emite facturas, es un SIF.</p>
+  <p>Un programa que cumple todo eso se llama <strong>SIF</strong>: Sistema Informático de Facturación. Bynoesis es un SIF, y eso no es opcional ni discutible: si un programa emite facturas, es un SIF.</p>
 
   <h3>Los dos papeles, y por qué importa la diferencia</h3>
   <div class="scroll">
@@ -349,7 +349,7 @@
   <ol>
     <li><strong>Es vuestro competidor directo.</strong> Está en <code>Competencia.md</code>. Construir el núcleo fiscal sobre la infraestructura de la empresa a la que queréis quitarle clientes es una dependencia estratégica difícil de deshacer, y le regala información sobre vuestro volumen.</li>
     <li><strong>Ya tenéis construida la parte difícil.</strong> Todo lo enumerado al final de la sección 1. Cambiar a Holded significa tirar trabajo hecho y probado para pagar por algo peor integrado.</li>
-    <li><strong>Contradice una decisión que ya tomasteis por escrito:</strong> «Noesis construye la facturación y el registro fiscal de forma nativa y no los conecta por API». Reabrir eso ahora, sin un motivo técnico nuevo, es coste de reflexión sin beneficio.</li>
+    <li><strong>Contradice una decisión que ya tomasteis por escrito:</strong> «Bynoesis construye la facturación y el registro fiscal de forma nativa y no los conecta por API». Reabrir eso ahora, sin un motivo técnico nuevo, es coste de reflexión sin beneficio.</li>
   </ol>
 
   <h3>Lo que de verdad falta es más pequeño de lo que parece</h3>
@@ -385,7 +385,7 @@
   <div class="callout">
     <h3>El problema</h3>
     <p><code>Meta-Verificacion.pdf</code> dice, como primer consejo y en negrita, «no hagas la revisión de la aplicación», y en la tabla del Camino A responde «¿Revisión de la app? <strong>No hace falta</strong>».</p>
-    <p>Eso es correcto para el número central de Noesis, que es un activo vuestro. <strong>No lo es para los números comerciales de los clientes.</strong> La documentación de Meta dice:</p>
+    <p>Eso es correcto para el número central de Bynoesis, que es un activo vuestro. <strong>No lo es para los números comerciales de los clientes.</strong> La documentación de Meta dice:</p>
     <p><em>«The partner's app must have <strong>Advanced access</strong> for the <code>whatsapp_business_management</code> permission to access your shared WABA via the API.»</em> Sin él, <em>«API calls return error code 200»</em>.</p>
     <p>La WABA de vuestro cliente, aunque os la conceda a mano desde su Business Manager, sigue siendo de otro negocio. El razonamiento del runbook —que la revisión solo hace falta para Embedded Signup— confunde <em>cómo</em> se concede el activo con <em>de quién</em> es el activo. Lo que dispara el requisito es lo segundo.</p>
   </div>
@@ -401,11 +401,11 @@
   <h3>Directo, BSP o Tech Provider</h3>
   <div class="scroll">
     <table>
-      <thead><tr><th>Vía</th><th>Quién paga a Meta</th><th>Coste</th><th>Encaje con Noesis</th></tr></thead>
+      <thead><tr><th>Vía</th><th>Quién paga a Meta</th><th>Coste</th><th>Encaje con Bynoesis</th></tr></thead>
       <tbody>
         <tr><td><strong>Cloud API directa</strong></td><td>Vosotros</td><td>Solo el mensaje, sin cuota</td><td>Es lo que ya tenéis montado y funcionando</td></tr>
         <tr><td><strong>BSP / Solution Partner</strong><br><span class="tpl-use">Twilio, 360dialog, Infobip</span></td><td>El BSP, que os factura</td><td>Mensaje más margen</td><td>Su aplicación ya está aprobada: os quita App Review del camino crítico</td></tr>
-        <tr><td><strong>Tech Provider</strong></td><td>Cada cliente, directamente a Meta</td><td>Solo vuestro desarrollo</td><td>Es lo que Noesis <em>es</em>: software que otros usan con su propio número</td></tr>
+        <tr><td><strong>Tech Provider</strong></td><td>Cada cliente, directamente a Meta</td><td>Solo vuestro desarrollo</td><td>Es lo que Bynoesis <em>es</em>: software que otros usan con su propio número</td></tr>
       </tbody>
     </table>
   </div>
@@ -431,7 +431,7 @@
     <strong>Arreglo propuesto:</strong> una frase en la cabecera del asistente y otra en el primer mensaje de WhatsApp tras vincular. Además, dejar la decisión escrita en <code>Decisiones.md</code> con su porqué, que es como trabajáis. Coste: minutos. Es de las mejores relaciones esfuerzo/riesgo de toda la lista.
   </div>
 
-  <p>Hay un matiz que conviene que valore el abogado y que no he visto tratado en vuestra documentación: los mensajes que Noesis compone y envía a los <strong>clientes finales del autónomo</strong> salen con la identidad del autónomo, no con la de Noesis. Quién es ahí el «responsable del despliegue» a efectos del artículo 50, y si esa comunicación exige alguna divulgación, es una pregunta razonable para el encargo de la sección 19.</p>
+  <p>Hay un matiz que conviene que valore el abogado y que no he visto tratado en vuestra documentación: los mensajes que Bynoesis compone y envía a los <strong>clientes finales del autónomo</strong> salen con la identidad del autónomo, no con la de Bynoesis. Quién es ahí el «responsable del despliegue» a efectos del artículo 50, y si esa comunicación exige alguna divulgación, es una pregunta razonable para el encargo de la sección 19.</p>
 </section>
 
 <section>
@@ -454,7 +454,7 @@
       <div class="step-n">02</div>
       <div class="step-body">
         <div class="step-head"><h3>Falta el registro de actividades de tratamiento</h3><span class="chip chip-warn">art. 30 RGPD</span></div>
-        <p>Lo necesitáis por partida doble: como <strong>responsable</strong>, por los datos de vuestros propios clientes —altas, sesiones, facturación de la suscripción, solicitudes de acceso—, y como <strong>encargado</strong>, por los datos que ellos tratan a través de Noesis: sus clientes finales, sus trabajadores, sus documentos.</p>
+        <p>Lo necesitáis por partida doble: como <strong>responsable</strong>, por los datos de vuestros propios clientes —altas, sesiones, facturación de la suscripción, solicitudes de acceso—, y como <strong>encargado</strong>, por los datos que ellos tratan a través de Bynoesis: sus clientes finales, sus trabajadores, sus documentos.</p>
         <p>No se publica: es un documento interno. Pero es lo primero que pide la AEPD en una inspección, y su ausencia es por sí sola una infracción, con independencia de que todo lo demás esté bien.</p>
         <p>La buena noticia: con el DPA ya escrito, buena parte del trabajo es estructurar lo que ya tenéis. Las categorías de datos, las finalidades, los plazos de conservación y los destinatarios están descritos por toda vuestra documentación.</p>
       </div>
@@ -463,7 +463,7 @@
       <div class="step-n">03</div>
       <div class="step-body">
         <div class="step-head"><h3>Y una corrección en un texto público</h3><span class="chip chip-stop">inexacto hoy</span></div>
-        <p>La página de cumplimiento dice: «<em>Noesis se integra con un sistema homologado cuando lo conectas. Hasta entonces, los documentos que genera Noesis son de apoyo a la gestión.</em>»</p>
+        <p>La página de cumplimiento dice: «<em>Bynoesis se integra con un sistema homologado cuando lo conectas. Hasta entonces, los documentos que genera Bynoesis son de apoyo a la gestión.</em>»</p>
         <p>Eso falla por partida triple. Contradice a <code>Fiscalidad.md</code>, que dice que el registro es nativo. Usa «homologado», que como ya hemos visto no existe. Y describe una arquitectura —integrarse con un tercero— que vuestra propia decisión escrita descarta.</p>
         <p>Es un texto legal y público, dirigido a clientes, y ahora mismo es inexacto en las dos direcciones: promete menos de lo que hacéis y a la vez usa una palabra que induce a error. Entra en el encargo del abogado de la sección 19.</p>
       </div>
@@ -604,13 +604,13 @@
   </div>
 
   <h3>La idea</h3>
-  <p>Ningún usuario toca Noesis hasta que la declaración responsable está firmada, Meta ha concedido los permisos y los textos legales están revisados. El piloto empieza tarde pero empieza entero: alta, uso y cobro el mismo día.</p>
+  <p>Ningún usuario toca Bynoesis hasta que la declaración responsable está firmada, Meta ha concedido los permisos y los textos legales están revisados. El piloto empieza tarde pero empieza entero: alta, uso y cobro el mismo día.</p>
 
   <h3>Cuándo es vuestra ruta</h3>
   <ul>
     <li>Si la asesoría no os da el criterio escrito sobre el piloto gratuito, o tarda en dárselo.</li>
     <li>Si alguno de los dos socios no está cómodo operando con usuarios reales antes de tener todos los papeles.</li>
-    <li>Si preferís concentrar el esfuerzo comercial en una sola conversación por cliente —«esto es Noesis, cuesta esto, empezamos»— en vez de dos.</li>
+    <li>Si preferís concentrar el esfuerzo comercial en una sola conversación por cliente —«esto es Bynoesis, cuesta esto, empezamos»— en vez de dos.</li>
   </ul>
 
   <div class="steps">
@@ -714,7 +714,7 @@
 
   <h3>La idea</h3>
   <p>La obligación del productor se activa al <strong>comercializar</strong>. Un piloto sin contraprestación no es una venta. Eso compra cinco o seis semanas de uso real sin mover la exposición legal ni un milímetro, y esas semanas son el activo más valioso que vais a construir este año.</p>
-  <p>Durante ese tiempo la facturación puede quedarse en modo preparación, sin remisión a la AEAT: recordad que <strong>a los usuarios no les obliga nada hasta julio de 2027</strong>, así que un autónomo que use Noesis hoy para presupuestos, agenda, gastos, documentos y WhatsApp no incumple absolutamente nada.</p>
+  <p>Durante ese tiempo la facturación puede quedarse en modo preparación, sin remisión a la AEAT: recordad que <strong>a los usuarios no les obliga nada hasta julio de 2027</strong>, así que un autónomo que use Bynoesis hoy para presupuestos, agenda, gastos, documentos y WhatsApp no incumple absolutamente nada.</p>
 
   <h3>Cuándo es vuestra ruta</h3>
   <ul>
@@ -753,13 +753,13 @@
       <div class="step-n">B2</div>
       <div class="step-body">
         <div class="step-head"><h3>Semana 3 o 4 · Arranca el piloto, gratis</h3><span class="chip chip-ok">aquí está la diferencia</span></div>
-        <p><strong>Objetivo:</strong> tener autónomos reales usando Noesis mientras Meta y los profesionales siguen a lo suyo.</p>
+        <p><strong>Objetivo:</strong> tener autónomos reales usando Bynoesis mientras Meta y los profesionales siguen a lo suyo.</p>
         <p><strong>Condiciones de arranque —las tres, no dos:</strong> el número central responde; el correo sale y llega a la bandeja de entrada; y el criterio escrito de la asesoría está en vuestro poder.</p>
         <p><strong>Qué usan los pilotos desde el día uno:</strong> agenda y trabajos, clientes y CRM, presupuestos, gastos y documentos por foto, fichaje del equipo, y todo el canal central de WhatsApp con su parte del día. Es la mayor parte del producto.</p>
         <p><strong>Qué queda desactivado:</strong> la remisión a la AEAT y el cobro de la suscripción. La facturación funciona en modo preparación, que es exactamente lo que vuestra página de cumplimiento ya describe hoy.</p>
         <p><strong>Qué se les dice, literalmente:</strong> que están en un piloto gratuito, que la facturación con registro fiscal se activa en unas semanas, y que el precio será el de la tarifa cuando llegue. Sin letra pequeña. Un autónomo que entiende que está ayudando a construir algo perdona un fallo; uno que se siente vendido, no.</p>
         <p><strong>Entregable:</strong> tres a cinco cuentas activas usando el producto a diario.</p>
-        <p><strong>Criterio de cierre:</strong> cada piloto ha completado una semana entera de uso sin que nadie de Noesis toque nada por él.</p>
+        <p><strong>Criterio de cierre:</strong> cada piloto ha completado una semana entera de uso sin que nadie de Bynoesis toque nada por él.</p>
       </div>
     </div>
 
@@ -791,7 +791,7 @@
     <li>Cinco o seis semanas de uso real antes del primer cobro.</li>
     <li>Una lista de fricciones auténticas en vez de suposiciones.</li>
     <li>La prueba de aislamiento multicanal hecha con negocios reales, no simulada.</li>
-    <li>Tres autónomos que ya saben lo que Noesis les ahorra cuando llega el momento de pedirles la tarjeta. Que es, según vuestra propia estrategia, «el activo de marketing más valioso del año».</li>
+    <li>Tres autónomos que ya saben lo que Bynoesis les ahorra cuando llega el momento de pedirles la tarjeta. Que es, según vuestra propia estrategia, «el activo de marketing más valioso del año».</li>
   </ul>
 
   <h3>Riesgos propios y cómo se controlan</h3>
@@ -1007,7 +1007,7 @@
         <tr><td><strong>Monitor externo 24/7</strong></td><td>Independiente de GitHub y Railway, como pide vuestra propia decisión</td><td>0 – 20 €</td><td class="num">10 €</td></tr>
         <tr><td><strong>Dominio</strong></td><td>Prorrateado</td><td>1 €</td><td class="num">1 €</td></tr>
         <tr><td><strong>WhatsApp</strong></td><td>Plantillas de utilidad para 5 negocios. Las respuestas dentro de la ventana de 24 h no se cobran</td><td>5 – 15 €</td><td class="num">10 €</td></tr>
-        <tr><td><strong>Asesoría de Noesis</strong></td><td>La contabilidad y los impuestos de la propia empresa</td><td>60 – 150 €</td><td class="num">100 €</td></tr>
+        <tr><td><strong>Asesoría de Bynoesis</strong></td><td>La contabilidad y los impuestos de la propia empresa</td><td>60 – 150 €</td><td class="num">100 €</td></tr>
         <tr><td colspan="3"><strong>Subtotal mensual</strong></td><td class="num"><strong>161 €</strong></td></tr>
       </tbody>
     </table>
@@ -1251,7 +1251,7 @@ Plazo deseado: [3 semanas]. Indicadnos honorarios y disponibilidad.</pre>
     <table>
       <thead><tr><th>Término</th><th>Qué es</th></tr></thead>
       <tbody>
-        <tr><td><strong>SIF</strong></td><td>Sistema Informático de Facturación. Cualquier programa que expide facturas. Noesis lo es.</td></tr>
+        <tr><td><strong>SIF</strong></td><td>Sistema Informático de Facturación. Cualquier programa que expide facturas. Bynoesis lo es.</td></tr>
         <tr><td><strong>RRSIF</strong></td><td>El Reglamento que desarrolla los requisitos de los SIF, aprobado por el RD 1007/2023.</td></tr>
         <tr><td><strong>Declaración responsable</strong></td><td>El documento con el que el fabricante certifica, bajo su responsabilidad, que su SIF cumple. No la valida nadie externo.</td></tr>
         <tr><td><strong>Veri*Factu</strong></td><td>La modalidad en la que los registros se remiten a la AEAT en el momento de emitir. La alternativa es el SIF «no verificable», con más requisitos de conservación.</td></tr>

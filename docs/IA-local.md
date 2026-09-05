@@ -2,7 +2,7 @@
 
 ## Decisión de producto
 
-Noesis debe sentirse inteligente desde la primera sesión, sin quitar control al
+Bynoesis debe sentirse inteligente desde la primera sesión, sin quitar control al
 autónomo. El onboarding ofrece dos opciones explícitas:
 
 1. **Experiencia completa (recomendada):** usa el cerebro interno y puede escalar a
@@ -34,13 +34,13 @@ La reserva del crédito externo se hace de forma atómica y aislada por
 falla y responde Anthropic, se usa la misma reserva: nunca dos créditos por el mismo
 mensaje.
 
-Si una herramienta de escritura pudo ejecutarse antes de la caída, Noesis detiene el
+Si una herramienta de escritura pudo ejecutarse antes de la caída, Bynoesis detiene el
 fallback y pide revisar la actividad reciente. Así evita que un segundo modelo cree
 dos trabajos, gastos, facturas, presupuestos, proyectos o tareas iguales.
 
 ## Servicio privado
 
-Noesis no obliga a una marca de modelo. `src/noesis/adapters/ai.py` acepta el
+Bynoesis no obliga a una marca de modelo. `src/noesis/adapters/ai.py` acepta el
 contrato `POST /v1/chat/completions` usado por Ollama, llama.cpp, vLLM y otros
 servidores compatibles. Configuración:
 

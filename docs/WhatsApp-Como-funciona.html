@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cómo funciona el WhatsApp de Noesis</title>
+<title>Cómo funciona el WhatsApp de Bynoesis</title>
 <style>
   :root {
     --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
@@ -176,8 +176,8 @@
 <div class="page">
 
   <header>
-    <p class="eyebrow">Noesis · Cómo funciona</p>
-    <h1>Los dos WhatsApp de Noesis</h1>
+    <p class="eyebrow">Bynoesis · Cómo funciona</p>
+    <h1>Los dos WhatsApp de Bynoesis</h1>
     <p class="standfirst">Qué se ha construido con el canal multicanal, explicado desde el negocio y no desde el código. Verificado leyendo <code>main</code>, no resumiendo lo que dice el commit.</p>
     <p class="crumbs">Decisión original en <code>Decisiones.md</code> (2026-08-10) · diagrama de identidades en <code>Arquitectura.md</code> · pasos externos pendientes en el runbook <code>WhatsApp-Puesta-en-marcha.pdf</code>.</p>
   </header>
@@ -190,17 +190,17 @@
   <section>
     <div class="sec-head">
       <h2>1. Los dos canales</h2>
-      <p class="sec-intro">Un número es el de Noesis, para trabajar por dentro. El otro es el del autónomo, para que le escriban sus clientes. Nunca se mezclan.</p>
+      <p class="sec-intro">Un número es el de Bynoesis, para trabajar por dentro. El otro es el del autónomo, para que le escriban sus clientes. Nunca se mezclan.</p>
     </div>
 
     <div class="scroll">
       <table>
-        <thead><tr><th>&nbsp;</th><th>Número central de Noesis</th><th>Número comercial del negocio</th></tr></thead>
+        <thead><tr><th>&nbsp;</th><th>Número central de Bynoesis</th><th>Número comercial del negocio</th></tr></thead>
         <tbody>
           <tr><td><strong>Quién escribe</strong></td><td>El titular y sus trabajadores</td><td>Los clientes finales de ese autónomo</td></tr>
           <tr><td><strong>Para qué</strong></td><td>Órdenes, parte del día, fichaje, costes de obra, fotos de albarán, dudas y bloqueos</td><td>Pedir presupuesto, preguntar, mandar una foto, confirmar una cita</td></tr>
           <tr><td><strong>Cuántos hay</strong></td><td>Uno solo, compartido por todos los negocios</td><td>Uno por negocio, el suyo propio</td></tr>
-          <tr><td><strong>Quién lo paga y lo da de alta</strong></td><td>Noesis</td><td>El negocio, registrado desde Administración</td></tr>
+          <tr><td><strong>Quién lo paga y lo da de alta</strong></td><td>Bynoesis</td><td>El negocio, registrado desde Administración</td></tr>
           <tr><td><strong>Cómo se identifica al que escribe</strong></td><td>Por su teléfono, que debe estar vinculado</td><td>Por su teléfono, pero solo dentro de ese negocio</td></tr>
         </tbody>
       </table>
@@ -210,7 +210,7 @@
   <section>
     <div class="sec-head">
       <h2>2. La regla que lo sostiene todo</h2>
-      <p class="sec-intro">Meta manda todos los mensajes al mismo sitio: una única dirección de tu servidor. Lo primero que hace Noesis es preguntarse a qué número escribieron, y solo después mira quién escribió.</p>
+      <p class="sec-intro">Meta manda todos los mensajes al mismo sitio: una única dirección de tu servidor. Lo primero que hace Bynoesis es preguntarse a qué número escribieron, y solo después mira quién escribió.</p>
     </div>
 
     <figure class="fig fig-wide">
@@ -240,7 +240,7 @@
 
         <path class="wire" d="M562,164 H584 V56 H620" marker-end="url(#ar)"/>
         <rect class="node node-ok" x="626" y="32" width="270" height="52" rx="9"/>
-        <text class="t" x="640" y="55">El central de Noesis</text>
+        <text class="t" x="640" y="55">El central de Bynoesis</text>
         <text class="s" x="640" y="71">operación interna: titular o trabajador</text>
 
         <path class="wire" d="M584,164 H620" marker-end="url(#ar)"/>
@@ -253,7 +253,7 @@
         <text class="t" x="640" y="273">Cualquier otro</text>
         <text class="s" x="640" y="289">se ignora: no hay número de repuesto</text>
       </svg>
-      <figcaption>La tercera salida es la importante. Si llega un mensaje a un número que no está registrado, Noesis no intenta adivinar de quién es: lo descarta. Responder con la identidad equivocada sería enseñarle a un cliente el nombre de otra empresa.</figcaption>
+      <figcaption>La tercera salida es la importante. Si llega un mensaje a un número que no está registrado, Bynoesis no intenta adivinar de quién es: lo descarta. Responder con la identidad equivocada sería enseñarle a un cliente el nombre de otra empresa.</figcaption>
     </figure>
 
     <div class="note">Hay dos comprobaciones más en la misma puerta: que la cuenta de WhatsApp Business coincida con la del número registrado, y que la recepción esté activada para esa conexión. Si algo no cuadra, el mensaje se descarta con el motivo anotado, en vez de seguir adelante «por si acaso».</div>
@@ -272,7 +272,7 @@
           <h3>Un teléfono, una identidad</h3>
           <span class="chip chip-stop">Si hay duda, se para</span>
         </div>
-        <p>En el número central, tu teléfono puede ser el del titular de un negocio o el de un trabajador, pero no las dos cosas, ni de dos empresas a la vez. Si un mismo número aparece vinculado dos veces, Noesis <strong>no ejecuta nada</strong>: avisa de que hay ambigüedad y pide que el titular lo arregle.</p>
+        <p>En el número central, tu teléfono puede ser el del titular de un negocio o el de un trabajador, pero no las dos cosas, ni de dos empresas a la vez. Si un mismo número aparece vinculado dos veces, Bynoesis <strong>no ejecuta nada</strong>: avisa de que hay ambigüedad y pide que el titular lo arregle.</p>
         <div class="rule-why"><strong>Por qué importa:</strong> un autónomo que además trabaja de peón para otra empresa mandaría «entrada» sin que nadie sepa a qué obra. Es preferible bloquear y que alguien lo aclare que fichar en la empresa equivocada. Es una decisión deliberada para el piloto; más adelante se puede añadir un selector de contexto explícito, pero no antes de ver cómo se comporta de verdad.</div>
       </div>
 
@@ -282,7 +282,7 @@
           <span class="chip chip-warn">Espera al titular</span>
         </div>
         <p>Cuando un trabajador manda «he comprado 40 € de material», eso entra como una <strong>aportación pendiente</strong>. No toca el proyecto, ni el margen, ni la contabilidad. Solo cuando el titular la acepta se convierte en una línea de material del trabajo.</p>
-        <div class="rule-why"><strong>Por qué importa:</strong> mantiene intacto el principio de Noesis —prepara, pero el autónomo confirma el dinero— ahora que hay más manos escribiendo. La aceptación se aplica una sola vez aunque se pulse dos veces, así que un doble clic no duplica el coste.</div>
+        <div class="rule-why"><strong>Por qué importa:</strong> mantiene intacto el principio de Bynoesis —prepara, pero el autónomo confirma el dinero— ahora que hay más manos escribiendo. La aceptación se aplica una sola vez aunque se pulse dos veces, así que un doble clic no duplica el coste.</div>
       </div>
 
       <div class="rule">
@@ -299,7 +299,7 @@
           <h3>El equipo deja de escribirle al jefe</h3>
           <span class="chip chip-ok">El cambio que se nota</span>
         </div>
-        <p>Antes, un trabajador con una duda llamaba o escribía al móvil personal del titular. Ahora escribe a Noesis: los costes, documentos, dudas y bloqueos van a una bandeja dentro de Equipo, y el titular recibe un resumen en lugar de veinte interrupciones.</p>
+        <p>Antes, un trabajador con una duda llamaba o escribía al móvil personal del titular. Ahora escribe a Bynoesis: los costes, documentos, dudas y bloqueos van a una bandeja dentro de Equipo, y el titular recibe un resumen en lugar de veinte interrupciones.</p>
         <div class="rule-why"><strong>Por qué importa:</strong> es la promesa del producto —quitar ruido mental— aplicada al ruido que genera el propio equipo, que suele ser el peor.</div>
       </div>
 

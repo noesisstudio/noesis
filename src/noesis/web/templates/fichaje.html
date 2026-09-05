@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>{% if data %}Fichaje · {{ data.business.name }}{% else %}Enlace no válido{% endif %} · Noesis</title>
+  <title>{% if data %}Fichaje · {{ data.business.name }}{% else %}Enlace no válido{% endif %} · Bynoesis</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
@@ -14,7 +14,7 @@
     {% if not data %}
       <header class="clock-head" style="background:var(--brand)">
         <div class="clock-mark" style="color:var(--brand)">N</div>
-        <div><div class="kicker">Noesis</div><h1>Enlace no disponible</h1></div>
+        <div><div class="kicker">Bynoesis</div><h1>Enlace no disponible</h1></div>
       </header>
       <div class="clock-card">
         <div class="clock-message warn" style="display:block">Este enlace no es válido,
@@ -221,7 +221,7 @@
         </div>
       {% endif %}
     {% endif %}
-    <div class="clock-foot">Acceso personal protegido por Noesis</div>
+    <div class="clock-foot">Acceso personal protegido por Bynoesis</div>
   </div>
 </main>
 
@@ -423,7 +423,7 @@ document.getElementById('field-form')?.addEventListener('submit', async event =>
     const response=await fetch(path,options), result=await response.json();
     if(!response.ok)throw new Error(result.error||'No se pudo guardar.');
     message.className='clock-message ok';
-    message.textContent=fieldState.mode==='complete'?'Trabajo cerrado. Noesis ha preparado la factura si tenía importe.':'Guardado.';
+    message.textContent=fieldState.mode==='complete'?'Trabajo cerrado. Bynoesis ha preparado la factura si tenía importe.':'Guardado.';
     setTimeout(()=>location.reload(),900);
   }catch(error){message.className='clock-message error';message.textContent=error.message;submit.disabled=false;}
 });

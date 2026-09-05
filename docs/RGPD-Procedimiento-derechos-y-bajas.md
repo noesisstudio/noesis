@@ -1,6 +1,6 @@
 # Procedimiento de derechos, bajas y conservación
 
-Versión interna: 2026-09-03. Responsable: dirección de Noesis hasta designar
+Versión interna: 2026-09-03. Responsable: dirección de Bynoesis hasta designar
 formalmente una persona de privacidad.
 
 ## Entrada y registro
@@ -10,7 +10,7 @@ formalmente una persona de privacidad.
    `BORRAR`.
 2. Si la cuenta no tiene registros sujetos a conservación, el sistema puede
    ejecutar el borrado en cascada y eliminar los archivos después del commit.
-3. Si hay facturas emitidas o registros de jornada, Noesis no simula un borrado:
+3. Si hay facturas emitidas o registros de jornada, Bynoesis no simula un borrado:
    crea una fila en `privacy_requests`, devuelve una referencia, encola avisos al
    solicitante y al responsable, y registra un evento de seguridad.
 4. Los reenvíos del formulario devuelven la misma solicitud abierta mediante una
@@ -22,7 +22,7 @@ formalmente una persona de privacidad.
    información adicional proporcional; no solicitar un DNI completo por defecto.
 2. Clasificar: acceso, rectificación, supresión, limitación, portabilidad,
    oposición o baja de cuenta.
-3. Determinar si Noesis actúa como responsable o como encargado. Si la persona es
+3. Determinar si Bynoesis actúa como responsable o como encargado. Si la persona es
    cliente final de un negocio, trasladar la solicitud a ese responsable y ayudarle.
 4. Anotar fecha, alcance, estado, decisiones y comunicaciones. El plazo ordinario
    del RGPD es un mes desde la recepción; cualquier ampliación debe justificarse y
@@ -32,7 +32,7 @@ formalmente una persona de privacidad.
 
 1. Exportar la cuenta si el titular lo ha pedido.
 2. Inventariar facturas, justificantes, jornada, litigios o bloqueos aplicables.
-3. Aplicar la tabla de conservación validada por el asesor. Noesis no fija ahora
+3. Aplicar la tabla de conservación validada por el asesor. Bynoesis no fija ahora
    plazos inventados en código.
 4. Suprimir datos sin base de conservación; minimizar o seudonimizar lo que deba
    conservarse; limitar su acceso al motivo legal.

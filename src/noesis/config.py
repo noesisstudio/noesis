@@ -60,7 +60,7 @@ MODEL_OUTPUT_USD_PER_MTOK = float(
 # realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
 FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
 # Segundo nivel privado opcional. Acepta servidores con contrato OpenAI-compatible
-# (Ollama, llama.cpp o vLLM). Si falta, Noesis pasa a la IA externa consentida.
+# (Ollama, llama.cpp o vLLM). Si falta, Bynoesis pasa a la IA externa consentida.
 LOCAL_AI_BASE_URL = os.getenv("NOESIS_LOCAL_AI_BASE_URL", "").strip()
 LOCAL_AI_MODEL = os.getenv("NOESIS_LOCAL_AI_MODEL", "").strip()
 LOCAL_AI_API_KEY = os.getenv("NOESIS_LOCAL_AI_API_KEY", "").strip()
@@ -95,7 +95,7 @@ FALLBACK_OUTPUT_USD_PER_MTOK = float(
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 
 # Railway inyecta DATABASE_URL al enlazar el servicio Postgres. Sin esa variable,
-# Noesis conserva SQLite para desarrollo local y pruebas.
+# Bynoesis conserva SQLite para desarrollo local y pruebas.
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 # Fallback SQLite local. NOESIS_DB_PATH sigue siendo útil para conservar/copiar una
@@ -166,13 +166,13 @@ VERIFACTU_QR_BASE_URL = os.getenv(
 # Identificación del productor y del sistema (bloque SistemaInformatico del XSD).
 # El NIF no tiene valor ficticio: debe configurarse antes de activar el modo.
 VERIFACTU_PRODUCER_NAME = os.getenv(
-    "NOESIS_VERIFACTU_PRODUCER_NAME", "Noesis"
+    "NOESIS_VERIFACTU_PRODUCER_NAME", "Bynoesis"
 ).strip()
 VERIFACTU_PRODUCER_NIF = os.getenv(
     "NOESIS_VERIFACTU_PRODUCER_NIF", ""
 ).strip().upper()
 VERIFACTU_SYSTEM_NAME = os.getenv(
-    "NOESIS_VERIFACTU_SYSTEM_NAME", "Noesis"
+    "NOESIS_VERIFACTU_SYSTEM_NAME", "Bynoesis"
 ).strip()
 VERIFACTU_SYSTEM_ID = os.getenv(
     "NOESIS_VERIFACTU_SYSTEM_ID", "NO"
@@ -373,7 +373,7 @@ ADMIN_SESSION_IDLE_MINUTES = max(
     15, int(os.getenv("NOESIS_ADMIN_SESSION_IDLE_MINUTES", "60"))
 )
 
-# Acceso opcional con Google (OAuth 2.0 / OpenID Connect). Noesis no muestra ni
+# Acceso opcional con Google (OAuth 2.0 / OpenID Connect). Bynoesis no muestra ni
 # intenta este flujo hasta que ambos valores estén configurados en el entorno.
 GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
@@ -419,7 +419,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
-SMTP_FROM = os.getenv("SMTP_FROM", "Noesis <no-reply@bynoesis.com>")
+SMTP_FROM = os.getenv("SMTP_FROM", "Bynoesis <no-reply@bynoesis.com>")
 EMAIL_RETRY_BASE_SECONDS = int(os.getenv("EMAIL_RETRY_BASE_SECONDS", "30"))
 EMAIL_RETRY_MAX_SECONDS = int(os.getenv("EMAIL_RETRY_MAX_SECONDS", "3600"))
 
@@ -490,31 +490,31 @@ WHATSAPP_RETRY_MAX_SECONDS = int(
 WHATSAPP_MAX_ATTEMPTS = int(os.getenv("WHATSAPP_MAX_ATTEMPTS", "6"))
 WHATSAPP_TEMPLATE_LANGUAGE = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "es")
 WHATSAPP_TEMPLATE_DAILY_SUMMARY = os.getenv(
-    "WHATSAPP_TEMPLATE_DAILY_SUMMARY", "noesis_resumen_diario"
+    "WHATSAPP_TEMPLATE_DAILY_SUMMARY", "bynoesis_resumen_diario"
 )
 WHATSAPP_TEMPLATE_WEEKLY_SUMMARY = os.getenv(
-    "WHATSAPP_TEMPLATE_WEEKLY_SUMMARY", "noesis_resumen_semanal"
+    "WHATSAPP_TEMPLATE_WEEKLY_SUMMARY", "bynoesis_resumen_semanal"
 )
 WHATSAPP_TEMPLATE_PAYMENT_ALERT = os.getenv(
-    "WHATSAPP_TEMPLATE_PAYMENT_ALERT", "noesis_aviso_cobros"
+    "WHATSAPP_TEMPLATE_PAYMENT_ALERT", "bynoesis_aviso_cobros"
 )
 WHATSAPP_TEMPLATE_PAYMENT_REMINDER = os.getenv(
-    "WHATSAPP_TEMPLATE_PAYMENT_REMINDER", "noesis_recordatorio_cobro"
+    "WHATSAPP_TEMPLATE_PAYMENT_REMINDER", "bynoesis_recordatorio_cobro"
 )
 WHATSAPP_TEMPLATE_INVOICE = os.getenv(
-    "WHATSAPP_TEMPLATE_INVOICE", "noesis_factura_lista"
+    "WHATSAPP_TEMPLATE_INVOICE", "bynoesis_factura_lista"
 )
 WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP = os.getenv(
-    "WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP", "noesis_seguimiento_presupuesto"
+    "WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP", "bynoesis_seguimiento_presupuesto"
 )
 WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER = os.getenv(
-    "WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER", "noesis_recordatorio_cita"
+    "WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER", "bynoesis_recordatorio_cita"
 )
 WHATSAPP_TEMPLATE_DAILY_CLOSING = os.getenv(
-    "WHATSAPP_TEMPLATE_DAILY_CLOSING", "noesis_cierre_dia"
+    "WHATSAPP_TEMPLATE_DAILY_CLOSING", "bynoesis_cierre_dia"
 )
 WHATSAPP_TEMPLATE_TAX_NOTICE = os.getenv(
-    "WHATSAPP_TEMPLATE_TAX_NOTICE", "noesis_aviso_fiscal"
+    "WHATSAPP_TEMPLATE_TAX_NOTICE", "bynoesis_aviso_fiscal"
 )
 # Transcripción de voz vía API (Groq/Whisper). Si falta, se intenta whisper local.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")

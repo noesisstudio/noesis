@@ -1,12 +1,12 @@
-# Guía técnica para ingeniería — Noesis
+# Guía técnica para ingeniería — Bynoesis
 
-> **Propósito.** Documento de entrada para una persona de ingeniería que necesite entender Noesis de extremo a extremo: web, datos, cerebro, automatizaciones, WhatsApp, seguridad y dependencias externas.
+> **Propósito.** Documento de entrada para una persona de ingeniería que necesite entender Bynoesis de extremo a extremo: web, datos, cerebro, automatizaciones, WhatsApp, seguridad y dependencias externas.
 >
 > **Foto del código:** 20-07-2026 · esquema 33 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
 
 ## 1. Qué es el sistema
 
-Noesis es un SaaS multiempresa para autónomos y pequeños negocios de servicios. La intención de producto es que el profesional haga su trabajo y Noesis se ocupe del ruido administrativo: clientes, agenda, proyectos, documentos, facturas, cobros, equipo y gestoría.
+Bynoesis es un SaaS multiempresa para autónomos y pequeños negocios de servicios. La intención de producto es que el profesional haga su trabajo y Bynoesis se ocupe del ruido administrativo: clientes, agenda, proyectos, documentos, facturas, cobros, equipo y gestoría.
 
 No es un chatbot aislado ni un dashboard financiero genérico. Es una aplicación operativa con tres entradas equivalentes:
 
@@ -14,7 +14,7 @@ No es un chatbot aislado ni un dashboard financiero genérico. Es una aplicació
 - **WhatsApp:** conversación y recepción de texto, audio, foto y PDF.
 - **Automatizaciones:** tareas programadas que preparan o envían acciones solo bajo reglas autorizadas por el titular.
 
-La regla transversal es: **Noesis puede leer, calcular y preparar; dinero, fiscalidad, emisión definitiva, envíos sensibles y borrados irreversibles requieren confirmación o una regla explícitamente autorizada.**
+La regla transversal es: **Bynoesis puede leer, calcular y preparar; dinero, fiscalidad, emisión definitiva, envíos sensibles y borrados irreversibles requieren confirmación o una regla explícitamente autorizada.**
 
 ```mermaid
 flowchart LR
@@ -126,7 +126,7 @@ Todas estas pantallas siguen la convención `/b/{business_id}/{apartado}`. La se
 
 | Apartado | Para qué sirve | Datos/acciones clave |
 |---|---|---|
-| `resumen` | Parte de hoy y puesta en marcha | prioridad, agenda, dinero, cobros, progreso y lectura de Noesis |
+| `resumen` | Parte de hoy y puesta en marcha | prioridad, agenda, dinero, cobros, progreso y lectura de Bynoesis |
 | `tesoreria`, `ingresos`, `costes`, `analisis`, `impuestos` | Entender caja, rentabilidad y obligaciones | series, P&G, previsión, pendientes, costes e informes CSV |
 | `clientes`, `crm`, `productos` | Relación comercial | clientes, leads, preferencias, catálogo, importación y portal |
 | `agenda` | Trabajos/visitas y planificación operativa | trabajos, asignaciones, estado de campo y feed ICS privado |
@@ -199,7 +199,7 @@ El modo consulta se fuerza en servidor, no solo con botones ocultos: web, API, W
 3. El trabajo se asigna a trabajadores. Campo puede aportar fichaje, materiales, actualizaciones, fotos, evidencia y cierre/conformidad.
 4. Las entradas de coste y horas actualizan el detalle de rentabilidad del proyecto.
 5. Desde el trabajo se prepara un borrador de factura; el titular revisa, emite y puede enviar por el canal permitido.
-6. Los cobros se registran como pagos parciales o completos. Noesis identifica pendientes y puede preparar un seguimiento, nunca ejecutarlo sin permiso.
+6. Los cobros se registran como pagos parciales o completos. Bynoesis identifica pendientes y puede preparar un seguimiento, nunca ejecutarlo sin permiso.
 
 ### 7.3 Entrada documental universal
 
@@ -221,13 +221,13 @@ El titular da de alta el trabajador y genera un enlace/token de trabajador. El t
 
 ### 7.5 Gestoría
 
-Noesis agrupa emitidas, gastos, recibidas y originales en paquetes por período. El paquete tiene manifiesto, huella y versionado: si no cambió nada se conserva la versión; si cambió una fuente se crea la siguiente. El portal de gestoría puede pedir documentación y descargar el paquete sin entrar en el panel del autónomo.
+Bynoesis agrupa emitidas, gastos, recibidas y originales en paquetes por período. El paquete tiene manifiesto, huella y versionado: si no cambió nada se conserva la versión; si cambió una fuente se crea la siguiente. El portal de gestoría puede pedir documentación y descargar el paquete sin entrar en el panel del autónomo.
 
 ### 7.6 Calendario y conciliación sin API obligatoria
 
 Agenda puede crear un token aleatorio y exponer `/cal/{token}.ics`. El enlace es de
 solo lectura, no indexable y revocable: rotarlo invalida inmediatamente el anterior.
-Google Calendar, Apple Calendar u Outlook pueden suscribirse a él sin que Noesis
+Google Calendar, Apple Calendar u Outlook pueden suscribirse a él sin que Bynoesis
 almacene credenciales de esos servicios.
 
 Cobros admite CSV bancarios comunes. `banking.py` normaliza fecha, importe, concepto,
@@ -236,7 +236,7 @@ negocio. Una propuesta puede apoyarse en importe, número de factura y cliente, 
 solo el endpoint de confirmación crea `invoice_payments`. Importar nunca mueve dinero
 ni marca una factura como cobrada automáticamente.
 
-## 8. Cerebro y acompañamiento de Noesis
+## 8. Cerebro y acompañamiento de Bynoesis
 
 ### Orden de resolución
 
@@ -262,7 +262,7 @@ La IA avanzada externa requiere consentimiento por negocio y reserva de crédito
 
 ### Conexión de un negocio
 
-En Ajustes/Onboarding se genera un código de vinculación. El propietario lo envía desde el número que usará con Noesis. `whatsapp.py` asocia ese teléfono al `business_id`; no se deduce el negocio por un texto libre.
+En Ajustes/Onboarding se genera un código de vinculación. El propietario lo envía desde el número que usará con Bynoesis. `whatsapp.py` asocia ese teléfono al `business_id`; no se deduce el negocio por un texto libre.
 
 Para trabajadores existe una vinculación específica. Tras enlazarse, los comandos de jornada y consulta de plan se resuelven contra el trabajador autorizado, no contra el titular.
 
@@ -332,7 +332,7 @@ La tabla de ejecuciones programadas impide duplicados entre réplicas. Cuando un
 - La recurrencia crea borradores por defecto. La emisión automática solo se activa con autorización explícita del titular y conserva una clave idempotente por periodo.
 - No activar remisión hasta disponer de NIF del productor, certificado PEM, clave y entorno AEAT de pruebas validado con asesoría fiscal.
 - `invoicing.py` conserva una frontera interna, pero el único proveedor es el motor
-  nativo de Noesis: numeración, PDF y Veri*Factu no se delegan.
+  nativo de Bynoesis: numeración, PDF y Veri*Factu no se delegan.
 
 La ingeniería debe tratar esta zona como sensible: no modificar numeración, inmutabilidad, cálculos o borrados sin revisar [`Fiscalidad.md`](Fiscalidad.md), pruebas y criterio de asesoría.
 
@@ -346,7 +346,7 @@ La ingeniería debe tratar esta zona como sensible: no modificar numeración, in
 - Cabeceras CSP, HSTS en HTTPS, `X-Frame-Options: DENY`, `nosniff` y `no-store` en rutas privadas.
 - Límites de JSON, audio y subida de documentos.
 - Eventos Stripe/WhatsApp idempotentes y reintentables.
-- Historial de acciones de Noesis, estado de colas y salud por negocio sin exponer secretos ni contenido completo.
+- Historial de acciones de Bynoesis, estado de colas y salud por negocio sin exponer secretos ni contenido completo.
 - Exportación y borrado RGPD con preservación de documentos exigidos fiscalmente.
 
 ### Riesgos que requieren validación externa
@@ -399,4 +399,4 @@ Para Railway, `railway.json` aplica migraciones en predeploy, arranca Uvicorn y 
 - ¿Dónde se restaurará una copia externa y cuál es el tiempo objetivo de recuperación?
 - ¿Qué tres a cinco autónomos formarán el piloto y qué métricas de activación, tiempo ahorrado, cobro recuperado, coste y corrección se medirán?
 
-Estas respuestas no son detalles de implementación: determinan la seguridad, el coste y la fiabilidad con las que Noesis puede empezar a operar con clientes reales.
+Estas respuestas no son detalles de implementación: determinan la seguridad, el coste y la fiabilidad con las que Bynoesis puede empezar a operar con clientes reales.

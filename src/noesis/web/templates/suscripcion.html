@@ -4,7 +4,7 @@
   <div class="page-title">
     <div class="kicker">Tu cuenta</div>
     <h1>Suscripción</h1>
-    <p>Tu plan de Noesis. Durante la prueba puedes completar el ciclo; después conservas
+    <p>Tu plan de Bynoesis. Durante la prueba puedes completar el ciclo; después conservas
        el panel en modo consulta hasta activar una suscripción.</p>
   </div>
   <div class="page-actions">
@@ -55,7 +55,7 @@
   <span>No se ha hecho ningún cambio ni ningún cargo. Ya he registrado el fallo para soporte; vuelve a intentarlo una vez y, si persiste, escríbenos.</span></div>
 {% elif status == 'portal_return' %}
 <div class="subscription-notice subscription-success" style="margin-bottom:16px"><div><b>Stripe ha recibido el cambio.</b>
-  <span>Noesis actualizará el plan, el pago o la cancelación en cuanto llegue la confirmación firmada.</span></div></div>
+  <span>Bynoesis actualizará el plan, el pago o la cancelación en cuanto llegue la confirmación firmada.</span></div></div>
 {% endif %}
 
 {% if is_active_subscription %}
@@ -198,7 +198,7 @@
 
 {% if is_active_subscription %}
 <section class="subscription-cancel-card" aria-label="Cancelación de la suscripción">
-  <div><b>¿Necesitas dejar Noesis?</b><span>Stripe te pedirá confirmación. Noesis no cancelará nada sin tu aprobación.</span></div>
+  <div><b>¿Necesitas dejar Bynoesis?</b><span>Stripe te pedirá confirmación. Bynoesis no cancelará nada sin tu aprobación.</span></div>
   <form method="post" action="/b/{{ business.id }}/suscripcion/portal" data-stripe-portal-form>
     <input type="hidden" name="action" value="cancel">
     <button class="btn danger" type="submit">Cancelar suscripción</button>

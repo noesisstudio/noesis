@@ -80,6 +80,62 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-05 — la marca pasa de «Noesis» a «Bynoesis»
+
+- **Autor/agente:** Claude, a petición del founder.
+- **Objetivo:** el producto se llama Bynoesis. Unificar el nombre en todo lo que ve
+  una persona, sin tocar lo que rompería producción.
+- **Qué se ha renombrado:** 1.159 apariciones de `Noesis` como palabra suelta en 196
+  ficheros —plantillas HTML, textos del asistente, correos, documentación y marca—,
+  con `Noesis`, que por construcción no toca ningún identificador técnico.
+  Además se renombran seis ficheros cuyo nombre llevaba la marca (`Estado-Bynoesis.xlsx`,
+  `Marketing-Bynoesis.*`, `Bynoesis-Modelo-Economico.xlsx`, `Plan-maestro-Bynoesis.md`,
+  y dos de `branding/`), porque las referencias ya apuntaban al nombre nuevo y habrían
+  quedado rotas.
+- **Qué NO se ha renombrado, y por qué.** Renombrarlo habría tumbado producción:
+  - **Las 96 variables `NOESIS_*`** están puestas en Railway. Cambiarlas en el código
+    deja el servidor sin clave de sesión, sin URL base, sin número de WhatsApp y sin
+    identidad Veri*Factu **a la vez**.
+  - **El paquete `noesis` y sus 409 imports.** `Procfile` y `railway.json` arrancan
+    `noesis.web.server` y ejecutan `noesis.migrations`; renombrarlo impide el arranque.
+  - **Las entradas de comando** `noesis-doctor`, `noesis-web`, y los ficheros estáticos
+    `noesis-mark.svg` y compañía, referenciados por nombre.
+- **Sí renombrado con cuidado:** las **nueve plantillas de Meta** pasan a `bynoesis_*`.
+  Se comprobó antes que ninguna está dada de alta (9 de 9 ausentes), así que hoy es
+  gratis; mañana obligaría a crearlas dos veces. **Hay que actualizar las variables
+  `WHATSAPP_TEMPLATE_*` en Railway**, o borrarlas para que valgan los valores por defecto.
+- **Compatibilidad de la palabra de vinculación.** El mensaje que se genera dice ya
+  `BYNOESIS <código>`, pero `_try_link` y `_try_worker_link` **siguen aceptando
+  `NOESIS`**: quien tenga a mano una captura o unas instrucciones antiguas no puede
+  quedarse sin poder vincular. Igual en el patrón del centro de control del cerebro
+  local, que acepta «permisos de noesis» y «permisos de bynoesis».
+- **Valores que viajan fuera y han cambiado:** `SMTP_FROM`,
+  `NOESIS_VERIFACTU_PRODUCER_NAME` y `NOESIS_VERIFACTU_SYSTEM_NAME` pasan a Bynoesis.
+  Los dos últimos se graban en cada registro Veri*Factu; el entorno sigue en `pruebas`
+  y no hay remisión real, así que el momento de cambiarlos es ahora. **Hay que
+  actualizarlos también en Railway.**
+- **Pruebas ejecutadas:** `ruff` limpio en `src`, `tests` y `scripts`; el módulo importa
+  y resuelve los nombres nuevos. **Batería completa: 639 pasan, 1 falla** —
+  `test_clamav_protocol_clean_and_malware`, con el `PermissionError` de `tempfile`
+  en Windows al borrar el temporal; pasa aislada, así que no es del renombrado.
+  Además, 56 pruebas de páginas, SEO, plataforma, configuración de release y
+  readiness en verde, que son las que romperían si un texto visible hubiera quedado
+  descuadrado. Prueba nueva
+  `test_linking_accepts_the_old_keyword_after_the_rename` que fija que las dos palabras
+  vinculan y que cualquier otra no.
+- **Riesgo/punto probable de fallo:** el despliegue no cambia de comportamiento porque
+  ninguna variable de entorno ni ruta de módulo se ha tocado. El riesgo real está en
+  las tres variables de Railway que hay que actualizar a mano (`WHATSAPP_TEMPLATE_*`,
+  `SMTP_FROM` y los dos de Veri*Factu). Si no se hacen, el remitente del correo y la
+  identidad Veri*Factu seguirán diciendo «Noesis».
+- **Logo:** se archiva `branding/logos/bynoesis-logo-lockup.jpg` (1934×544), el lockup
+  con la marca nueva que entregó el founder. Los PNG antiguos de `branding/logos/png/`
+  conservan su nombre: son binarios referenciados por ruta y renombrarlos rompería
+  los enlaces sin ganar nada.
+- **Diagnóstico y rollback:** `git revert` del commit devuelve el nombre anterior; los
+  renombrados de fichero vuelven con él.
+- **Estado de publicación:** desplegable. No cambia esquema ni datos.
+
 ## 2026-09-04 — revisión de los siete frentes abiertos
 
 - **Autor/agente:** Claude, a petición del founder.
@@ -533,7 +589,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 ## 2026-09-03 — auditoría RGPD del código y de los textos publicados
 
 - **Autor/agente:** Claude.
-- **Objetivo:** separar lo que Noesis ya cumple en materia de protección de datos de
+- **Objetivo:** separar lo que Bynoesis ya cumple en materia de protección de datos de
   lo que está publicado y no es cierto, para que la revisión profesional pendiente
   llegue con la lista hecha y no descubra los problemas cobrando por horas.
 - **Áreas y archivos:** documentación legal; `docs/RGPD-estado-y-plan.md` (nuevo),
@@ -575,7 +631,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   de protección de datos debe confirmarse con una gestoría y un abogado antes de
   firmar o publicar nada.** Importes, plazos, epígrafes de IAE y requisitos de
   verificación de Meta son orientativos y cambian. El documento señala además una
-  obligación no recogida hasta ahora: Noesis es *productor* de un sistema informático
+  obligación no recogida hasta ahora: Bynoesis es *productor* de un sistema informático
   de facturación y como tal le aplica el RD 1007/2023 antes que a sus clientes.
 - **Riesgo/punto probable de fallo:** tomar los importes o los plazos del documento
   como definitivos, o iniciar la verificación de empresa en Meta con un nombre que no
@@ -619,7 +675,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Objetivo:** entregar un sistema editorial ejecutable para que el equipo pueda
   producir contenido que primero identifique y ayude al autónomo, después demuestre
   el producto y solo entonces pida una prueba.
-- **Áreas y archivos:** `branding/contenido/Plan-editorial-y-guiones-Noesis.docx`,
+- **Áreas y archivos:** `branding/contenido/Plan-editorial-y-guiones-Bynoesis.docx`,
   su generador reproducible en `branding/contenido/scripts/` y documentación viva.
   El manual reúne 24 fichas de contenido, cinco campañas, un mes editorial, método
   de producción, métricas, checklist y límites de comunicación.
@@ -641,7 +697,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 
 - **Autor/agente:** Codex.
 - **Objetivo:** sustituir el fondo teal suave del avatar por el verde bosque fuerte
-  de Noesis, manteniendo sin cambios la estrella original y su contorno exterior.
+  de Bynoesis, manteniendo sin cambios la estrella original y su contorno exterior.
 - **Áreas y archivos:** revisión 1.2.2 del generador, manifiesto y avatares de
   `branding/`; copias listas para subir, guía Word y documentación viva. Portadas,
   símbolo maestro, lockups e iconos de aplicación siguen sin cambios.
@@ -700,7 +756,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Dependencias o validaciones externas:** sigue pendiente observar el recorte real
   en cada plataforma una vez se creen los perfiles.
 - **Riesgo/punto probable de fallo:** un contorno demasiado fino desaparecería en
-  miniatura y uno excesivo deformaría el símbolo. La exportación usa tinta Noesis y
+  miniatura y uno excesivo deformaría el símbolo. La exportación usa tinta Bynoesis y
   conserva un margen amplio para la máscara circular.
 - **Diagnóstico y rollback:** `manifest.json` registra la versión 1.2 y los hashes;
   `npm run build` reproduce los activos. Revertir el commit devuelve el avatar con
@@ -738,7 +794,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 
 - **Autor/agente:** Codex.
 - **Objetivo:** corregir el enfoque excesivamente centrado en cobros del primer kit
-  y devolver la marca a la misión aprobada: Noesis lleva la oficina, quita ruido
+  y devolver la marca a la misión aprobada: Bynoesis lleva la oficina, quita ruido
   mental y permite al autónomo centrarse en su oficio sin perder el control.
 - **Áreas y archivos:** guía, generador, manifiesto, tablero y portadas de `branding/`;
   introducción pública del `README`; mensaje rector y pruebas de
@@ -763,7 +819,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 ## 2026-08-31 — convierte el símbolo existente en un sistema de marca exportable
 
 - **Autor/agente:** Codex.
-- **Objetivo:** dar a Noesis un paquete de branding profesional y reproducible para
+- **Objetivo:** dar a Bynoesis un paquete de branding profesional y reproducible para
   web, documentos y creación de LinkedIn, Instagram, Facebook y otros perfiles sin
   inventar una identidad paralela ni deformar el símbolo ya reconocido por el producto.
 - **Áreas y archivos:** nueva raíz `branding/` con guía de marca, licencias,
@@ -802,7 +858,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   apagado por defecto. Falta probar el catch-all real y la conservación del
   destinatario antes de activar el scheduler en producción.
 - **Riesgo/punto probable de fallo:** que Hostinger reescriba o pierda el destinatario
-  original. En ese caso Noesis rechaza el mensaje; nunca intenta deducir el negocio
+  original. En ese caso Bynoesis rechaza el mensaje; nunca intenta deducir el negocio
   por remitente, asunto o nombre de archivo. Un catch-all también recibe spam y
   errores tipográficos, por lo que debe aislarse del soporte humano.
 - **Diagnóstico y rollback:** estados/contadores de `inbound_email_messages`, eventos
@@ -1052,9 +1108,9 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Autor/agente:** Claude.
 - **Objetivo:** dejar por escrito lo que falta para poder cobrar legalmente, consolidar
   todo el marketing en un solo manual y ponerle fecha a ambas cosas.
-- **Áreas y archivos:** `docs/Ruta-legal.html/pdf`, `docs/Marketing-Noesis.html/pdf`,
+- **Áreas y archivos:** `docs/Ruta-legal.html/pdf`, `docs/Marketing-Bynoesis.html/pdf`,
   `docs/Publicar-en-redes.html/pdf`, `docs/Plan-60-dias.html/pdf`,
-  `docs/Estado-Noesis.xlsx`, `scripts/build_estado_xlsx.py`, `docs/Inicio.md`.
+  `docs/Estado-Bynoesis.xlsx`, `scripts/build_estado_xlsx.py`, `docs/Inicio.md`.
 - **Cambios de datos/migración:** ninguno. Solo documentación.
 - **Pruebas ejecutadas:** ninguna nueva; no se toca código. La suite quedó en 577 con
   el merge anterior.
@@ -1075,7 +1131,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Dependencias o validaciones externas:** los apartados fiscales y de protección de
   datos requieren revisión profesional antes de actuar sobre ellos.
 - **Riesgo/punto probable de fallo:** ninguno técnico. El riesgo es documental: si
-  `Marketing-Noesis` y `Estrategia-Marketing` conviven mucho tiempo, divergirán. El
+  `Marketing-Bynoesis` y `Estrategia-Marketing` conviven mucho tiempo, divergirán. El
   maestro declara en su pie a cuál sustituye.
 - **Diagnóstico y rollback:** son documentos; se borran sin efecto sobre el producto.
 - **Estado de publicación:** local, pendiente de subir.
@@ -1203,7 +1259,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   comprobando el HTML entregado.
 - **Dependencias o validaciones externas:** ninguna.
 - **Riesgo/punto probable de fallo:** ninguno funcional. Aparte, en la consola de
-  Google el nombre y el logo de **Noesis** solo se muestran tras publicar la app y
+  Google el nombre y el logo de **Bynoesis** solo se muestran tras publicar la app y
   pasar la verificacion de marca, que es automatica en minutos; hasta entonces el
   usuario ve el dominio. Eso es de Google y no de este cambio.
 - **Diagnostico y rollback:** revertir el commit deja el boton con solo texto.
@@ -1245,7 +1301,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Cambios de datos/migracion:** ninguno.
 - **Hallazgo principal:** Meta mezcla en la misma consola dos caminos. La revision de
   la aplicacion y Facebook Login pertenecen a **Embedded Signup**, donde un cliente
-  conecta su numero desde la web del proveedor. **Noesis no lo usa**: verificado por
+  conecta su numero desde la web del proveedor. **Bynoesis no lo usa**: verificado por
   busqueda en `src/`, no hay ni una referencia, y `Conectar-APIs.md` confirma que el
   alta de WABA y numero la hace administracion a mano. Para el piloto basta con
   verificacion de empresa, numero, pago, token de sistema y plantillas.
@@ -1290,7 +1346,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Cambios de datos/migracion:** ninguno.
 - **Pruebas ejecutadas:** recuperacion de contraseña disparada contra
   `https://bynoesis.com/recuperar`. HTTP 303 a `?sent=1` y el correo **llego** al buzon
-  del founder con el remitente «Noesis». Queda demostrado que la clave es valida, que
+  del founder con el remitente «Bynoesis». Queda demostrado que la clave es valida, que
   la via HTTPS atraviesa Railway —que bloquea SMTP— y que la cola entrega.
 - **Dependencias o validaciones externas:** `smtp_real` **sigue pendiente a
   proposito**. Un envio a un buzon del propio dominio no demuestra entregabilidad:
@@ -1344,7 +1400,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   el adaptador construye bien la peticion a Brevo; **falta contratar `BREVO_API_KEY`**,
   que es la unica via que funciona en Railway porque bloquea los puertos SMTP.
 - **Riesgo/punto probable de fallo:** si en el futuro una cuenta de administracion
-  necesitara usar Noesis para su propio negocio, el enlace "Mi panel de negocio" se lo
+  necesitara usar Bynoesis para su propio negocio, el enlace "Mi panel de negocio" se lo
   permite; nada queda inaccesible.
 - **Diagnostico y rollback:** revertir el commit devuelve el aterrizaje anterior.
 - **Estado de publicacion:** local / commit en `main`.
@@ -1414,7 +1470,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   `src/noesis/web/routers/pages.py` y `templates/base.html` (alta de la página),
   `templates/oficios.html` (nueva), `tests/test_trade_templates.py` (nuevo),
   `scripts/build_estado_xlsx.py` (nuevo), `docs/Revision-Meta.md` (nuevo),
-  `docs/Estado-Noesis.xlsx` (nuevo), `docs/project-state.json`, `docs/Registro-QA.md`.
+  `docs/Estado-Bynoesis.xlsx` (nuevo), `docs/project-state.json`, `docs/Registro-QA.md`.
 - **Cambios de datos/migración:** ninguno. Los catálogos siguen en código.
 - **Pruebas ejecutadas:** suite completa **437 pasan, 85 subtests, 0 fallos**. Ruff
   verde. Ocho pruebas nuevas cubren la adivinación del oficio, el IVA por partida,
@@ -1666,7 +1722,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   incompatible o sin especificar; tarjeta, cancelación y portal general no deben
   crear nunca una segunda suscripción.
 - **Riesgo/punto probable de fallo:** permisos de la clave Stripe para crear una
-  configuración de portal o catálogo fiscal incompatible. Si crearla falla, Noesis
+  configuración de portal o catálogo fiscal incompatible. Si crearla falla, Bynoesis
   intenta el portal predeterminado; si también falla, muestra y audita el error.
 - **Diagnóstico y rollback:** buscar `subscription_portal_failed` y el log
   `Stripe portal`; revisar la configuración con metadata
@@ -1691,7 +1747,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   la API oficial de Customer Portal; queda recorrerlos con la cuenta real de prueba.
 - **Riesgo/punto probable de fallo:** una configuración incompleta del portal puede
   rechazar el flujo específico; el adaptador intenta entonces el portal general y,
-  si tampoco abre, Noesis muestra un fallo sin aplicar cambios ni cargos.
+  si tampoco abre, Bynoesis muestra un fallo sin aplicar cambios ni cargos.
 - **Diagnóstico y rollback:** revisar `subscription_portal_requested`, los logs
   `Stripe portal (<acción>) fallo`, la entrega webhook y la configuración sandbox.
   Revertir este bloque conserva la suscripción, pero devuelve botones genéricos.
@@ -1713,7 +1769,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   de Billing documentada oficialmente por OpenAI. Stripe debe tener habilitados en
   el portal los seis precios mensuales/anuales para que upgrade y anualidad sean
   efectivos.
-- **Riesgo/punto probable de fallo:** si el portal no está configurado, Noesis falla
+- **Riesgo/punto probable de fallo:** si el portal no está configurado, Bynoesis falla
   cerrado y vuelve con `status=noportal`; nunca crea un Checkout alternativo activo.
 - **Diagnóstico y rollback:** revisar el evento
   `subscription_change_requested`, la configuración del portal y la respuesta de
@@ -1775,7 +1831,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 
 - **Autor/agente:** Codex.
 - **Objetivo:** convertir la configuración inicial de Search Console en una base
-  técnica mantenible, sin prometer reseñas, frescura ni capacidades que Noesis no
+  técnica mantenible, sin prometer reseñas, frescura ni capacidades que Bynoesis no
   pueda demostrar.
 - **Áreas y archivos:** rutas públicas y sitemap en `web/routers/pages.py`;
   cabeceras en `web/server.py`; metadatos y navegación en `site_base.html`;
@@ -2044,7 +2100,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   costes y sin datos inventados, a partir de una tabla de costes que le paso un
   tercero. El documento de referencia no llego; solo la tabla.
 - **Areas y archivos:** solo documentacion y analisis, ningun cambio en `src/`.
-  - `docs/Noesis-Modelo-Economico.xlsx` (nuevo): diez hojas con formulas vivas
+  - `docs/Bynoesis-Modelo-Economico.xlsx` (nuevo): diez hojas con formulas vivas
     —Resumen, Supuestos, Unit_Economics, Hipotesis_Externa, Comparador,
     Anual_vs_Mensual, Escala_Breakeven, Opciones_IA, Datos_Pendientes y Fuentes.
     Entradas en azul, calculos en negro, convencion de modelo financiero.
@@ -2139,7 +2195,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 ## 2026-08-10 11:45 — WhatsApp multicanal y coordinación del equipo
 
 - **Autor/agente:** Codex.
-- **Objetivo:** separar el canal interno de Noesis de la recepción comercial de cada
+- **Objetivo:** separar el canal interno de Bynoesis de la recepción comercial de cada
   negocio, quitar interrupciones al titular y garantizar que clientes, documentos,
   conversaciones y costes nunca se crucen entre empresas.
 - **Áreas y archivos:** migración/DB, motor y outbox de WhatsApp, resumen diario,
@@ -2388,7 +2444,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 - **Autor/agente:** Codex.
 - **Objetivo:** convertir la cartera funcional pero vacía en una mesa de trabajo
   real para despachos: prioridad por cliente, períodos, archivo, revisión y primera
-  lectura fiscal, manteniendo a Noesis como canal compartido con el autónomo.
+  lectura fiscal, manteniendo a Bynoesis como canal compartido con el autónomo.
 - **Áreas y archivos:** migración y datos de gestoría, nuevo
   `gestoria_workspace.py`, router profesional, demo comercial, plantillas/CSS,
   pruebas, mapa, decisiones, estado y pendientes.
@@ -2464,7 +2520,7 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 
 - **Autor/agente:** Claude.
 - **Objetivo:** quien llega desde Holded, Quipu o una plantilla ya lleva facturas
-  emitidas del ejercicio. Noesis empezaba siempre en el 1 y habría repetido números
+  emitidas del ejercicio. Bynoesis empezaba siempre en el 1 y habría repetido números
   dentro del mismo año y la misma serie. Era un bloqueo de venta para el cliente que
   más interesa: el que ya factura.
 - **Áreas y archivos:** `src/noesis/db.py` (`set_series_next_number` y `_series_prefix`),

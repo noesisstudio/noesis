@@ -1,6 +1,6 @@
 # Benchmark SaaS
 
-Referencias revisadas para orientar el pulido de producto de Noesis sin copiar marca,
+Referencias revisadas para orientar el pulido de producto de Bynoesis sin copiar marca,
 interfaz ni funcionalidades propietarias.
 
 ## Productos mirados
@@ -26,7 +26,7 @@ interfaz ni funcionalidades propietarias.
   https://www.wearetenet.com/blog/saas-landing-page-examples
   https://grooic.com/blog/best-ai-saas-landing-page-examples
 
-## Patrones aplicados a Noesis
+## Patrones aplicados a Bynoesis
 
 - Priorizar la acción siguiente, no solo mostrar métricas.
 - Separar "facturado" de "cobrado" y destacar cobros atrasados.
@@ -46,12 +46,12 @@ interfaz ni funcionalidades propietarias.
 
 La referencia pública de Holded confirma como base profesional: series de numeración,
 facturas completas y simplificadas, múltiples líneas con cantidad/precio/impuesto,
-borradores, rectificación, recurrencia, PDF, cobros e historial. Noesis cubre ya ese
+borradores, rectificación, recurrencia, PDF, cobros e historial. Bynoesis cubre ya ese
 nucleo con desarrollo propio y añade controles coherentes con su posicionamiento:
 emisión recurrente desactivada por defecto, confirmación reforzada para anular y
 trazabilidad visible por factura.
 
-| Capacidad | Noesis candidato, esquema 33 | Diferencia consciente |
+| Capacidad | Bynoesis candidato, esquema 33 | Diferencia consciente |
 |---|---|---|
 | Series y numeración | General, rectificativa y ticket; correlativas por negocio/serie/año | Falta editor avanzado de plantillas y prefijos por sede |
 | Tipos y líneas | Completa F1 y simplificada F2; cantidad, precio, descuento e IVA mixto | El 0 % es tipo cero; faltan exenciones E1-E8 y no sujeción N1/N2 |
@@ -72,5 +72,5 @@ Fuentes primarias de referencia:
 
 ## Límite consciente
 
-Noesis no debe convertirse en un ERP amplio como Holded. Su hueco diferencial sigue
+Bynoesis no debe convertirse en un ERP amplio como Holded. Su hueco diferencial sigue
 siendo: autónomo de servicios, WhatsApp primero, oficina ligera y proactiva.

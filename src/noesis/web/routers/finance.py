@@ -236,10 +236,10 @@ def _calendar_ics(business: dict) -> str:
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//Noesis//Agenda de trabajos//ES",
+        "PRODID:-//Bynoesis//Agenda de trabajos//ES",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        f"X-WR-CALNAME:{_ics_escape('Noesis · ' + business['name'])}",
+        f"X-WR-CALNAME:{_ics_escape('Bynoesis · ' + business['name'])}",
         "X-WR-TIMEZONE:Europe/Madrid",
     ]
     for job in jobs:

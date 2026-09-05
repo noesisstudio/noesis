@@ -1,4 +1,4 @@
-# Demostración comercial dentro de Noesis
+# Demostración comercial dentro de Bynoesis
 
 La demostración no es una web paralela ni una maqueta. Son cuentas y portales
 reales dentro del mismo SaaS, con la misma base de datos, cálculos, rutas,

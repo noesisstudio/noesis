@@ -1,4 +1,4 @@
-<title>Noesis · Auditoría y plan de apertura</title>
+<title>Bynoesis · Auditoría y plan de apertura</title>
 
 <style>
   :root {
@@ -400,7 +400,7 @@
           No es que estén mal programadas — están bien hechas. Es que necesitan
           servicios externos que no están dados de alta, y el propio código está
           diseñado para degradarse con elegancia en vez de romperse. El resultado es
-          que el cliente manda la foto y Noesis le responde que la ha guardado pero no
+          que el cliente manda la foto y Bynoesis le responde que la ha guardado pero no
           ha podido leer el importe. Funciona, pero no es lo que vendiste.
         </p>
       </div>
@@ -412,7 +412,7 @@
         </div>
         <div class="item">
           <b>Notas de voz → texto</b>
-          <p>Necesita un servicio de transcripción (hay uno preparado que cuesta céntimos) o el modelo de voz instalado en el servidor. No hay ninguno de los dos. Resultado: Noesis contesta que ha recibido la nota pero no ha podido transcribirla y pide que se lo escriban.</p>
+          <p>Necesita un servicio de transcripción (hay uno preparado que cuesta céntimos) o el modelo de voz instalado en el servidor. No hay ninguno de los dos. Resultado: Bynoesis contesta que ha recibido la nota pero no ha podido transcribirla y pide que se lo escriban.</p>
         </div>
         <div class="item">
           <b>Asistente en su versión avanzada</b>
@@ -433,7 +433,7 @@
           <p>Privacidad, aviso legal, términos y contrato de encargado del tratamiento son visibles con los huecos sin rellenar y un aviso que dice «borrador, revísalo con un profesional». Es lo más grave de la lista.</p>
         </div>
         <div class="item">
-          <b>Los enlaces que Noesis manda por correo no llevan a ninguna parte</b>
+          <b>Los enlaces que Bynoesis manda por correo no llevan a ninguna parte</b>
           <p>La dirección que la app considera «su casa» sigue apuntando al dominio antiguo, que ya no existe. Afecta a recuperar contraseña, al enlace de pago que se manda al cliente final y a las vueltas desde Stripe.</p>
         </div>
         <div class="item">
@@ -491,7 +491,7 @@
             literalmente lo que vende tu producto. No puedes poner un NIF real en las
             páginas legales, y sin él esas páginas no cumplen. Meta no te va a verificar
             la empresa, y sin verificación no hay número de WhatsApp de producción — el
-            corazón de Noesis. Y Stripe te pedirá datos fiscales para ingresarte el dinero.
+            corazón de Bynoesis. Y Stripe te pedirá datos fiscales para ingresarte el dinero.
           </p>
         </div>
         <div class="do">
@@ -553,7 +553,7 @@
           <span class="pill you">Tú</span>
         </div>
         <p class="what">
-          Es la contraseña del buzón <code>info@bynoesis.com</code>. Noesis la usa para
+          Es la contraseña del buzón <code>info@bynoesis.com</code>. Bynoesis la usa para
           enviar correos en tu nombre: recuperación de contraseña, facturas, avisos.
           <strong>SMTP</strong> es el protocolo con el que se envía correo; piénsalo como
           la llave del buzón de salida.
@@ -597,7 +597,7 @@
           <span class="pill you">Tú</span>
         </div>
         <p class="what">
-          Es <strong>la dirección que la app considera «su casa»</strong>. Cuando Noesis
+          Es <strong>la dirección que la app considera «su casa»</strong>. Cuando Bynoesis
           tiene que escribir su propia dirección dentro de algo — el enlace de recuperar
           contraseña de un correo, el enlace de pago que se manda al cliente final, la
           vuelta desde Stripe — usa esta variable.
@@ -606,7 +606,7 @@
           <span class="label">Por qué importa</span>
           <p>
             Ahora mismo apunta a <code>app.bynoesis.com</code>, que <strong>ya no
-            existe</strong> desde que cambiaste el dominio. Cualquier enlace que Noesis
+            existe</strong> desde que cambiaste el dominio. Cualquier enlace que Bynoesis
             mande a un cliente lleva a una página que no carga.
           </p>
         </div>
@@ -659,14 +659,14 @@ bynoesis.com,www.bynoesis.com</code>
           <span class="pill you">Tú</span>
         </div>
         <p class="what">
-          Dos comprobaciones rápidas. <code>DATABASE_URL</code> le dice a Noesis qué base
+          Dos comprobaciones rápidas. <code>DATABASE_URL</code> le dice a Bynoesis qué base
           de datos usar. <code>NOESIS_SEED_DEMO</code>, si existe, crea automáticamente
           una cuenta de demostración con la contraseña <code>demo1234</code>.
         </p>
         <div class="why">
           <span class="label">Por qué importa</span>
           <p>
-            Si <code>DATABASE_URL</code> estuviera vacía, Noesis guardaría todo en un
+            Si <code>DATABASE_URL</code> estuviera vacía, Bynoesis guardaría todo en un
             simple fichero dentro del servidor, que puede borrarse en cada despliegue —
             perderías datos de clientes. Y una cuenta pública con contraseña
             <code>demo1234</code> es una puerta abierta a cualquiera que la pruebe.
@@ -714,7 +714,7 @@ bynoesis.com,www.bynoesis.com</code>
             confianza con un cartel de obras en la puerta.
           </p>
           <p>
-            Un matiz importante: como tus clientes meterán en Noesis datos de <em>sus</em>
+            Un matiz importante: como tus clientes meterán en Bynoesis datos de <em>sus</em>
             clientes, legalmente tú eres el «encargado» de esos datos. Ese contrato regula
             esa responsabilidad, y es el documento que más conviene que revise un
             profesional.
@@ -829,16 +829,16 @@ bynoesis.com,www.bynoesis.com</code>
       <p class="phase-note">Buena noticia primero: tus clientes no necesitan cuenta de Meta.</p>
 
       <p class="what">
-        Aclaro tu duda de ayer, porque cambia el trabajo. Noesis usa <strong>un solo
+        Aclaro tu duda de ayer, porque cambia el trabajo. Bynoesis usa <strong>un solo
         número de WhatsApp: el tuyo</strong>. El cliente no crea nada en Meta. Su alta es
         pulsar un botón que le abre WhatsApp con un mensaje ya escrito tipo
         <code>NOESIS 4F2A1B</code>, enviarlo, y listo: su teléfono queda vinculado a su
-        negocio. A partir de ahí, cuando escribe, Noesis sabe quién es y le responde solo
+        negocio. A partir de ahí, cuando escribe, Bynoesis sabe quién es y le responde solo
         con sus datos.
       </p>
       <p class="what">
         El acceso a Meta es todo tuyo. Como todo sale de un número único, ten en cuenta un
-        efecto de diseño: cuando Noesis reclama un cobro al cliente de tu cliente, a esa
+        efecto de diseño: cuando Bynoesis reclama un cobro al cliente de tu cliente, a esa
         persona le llega desde tu número, no desde el del fontanero. Que cada autónomo
         tenga su propio número es otro modelo mucho más complejo, y para un piloto de tres
         o cinco negocios no compensa.
@@ -893,7 +893,7 @@ bynoesis.com,www.bynoesis.com</code>
         </div>
         <p class="what">
           Un <strong>webhook</strong> es el timbre de tu casa: la dirección web que Meta
-          llama cada vez que alguien te escribe. Sin él, Noesis nunca se entera de los
+          llama cada vez que alguien te escribe. Sin él, Bynoesis nunca se entera de los
           mensajes que entran. Las <strong>plantillas</strong> son textos aprobados
           previamente por Meta, obligatorios para escribir tú primero a alguien fuera de
           una conversación reciente.
@@ -1132,7 +1132,7 @@ bynoesis.com,www.bynoesis.com</code>
         <dt>SMTP</dt>
         <dd>
           El protocolo estándar para enviar correo electrónico. «Configurar SMTP» significa
-          darle a Noesis la dirección del servidor de correo y la contraseña del buzón
+          darle a Bynoesis la dirección del servidor de correo y la contraseña del buzón
           desde el que enviará.
         </dd>
       </div>
@@ -1150,7 +1150,7 @@ bynoesis.com,www.bynoesis.com</code>
         <dt>Encargado del tratamiento</dt>
         <dd>
           Figura del RGPD. Tu cliente es el «responsable» de los datos de sus propios
-          clientes; tú, al guardarlos en Noesis para prestarle el servicio, eres el
+          clientes; tú, al guardarlos en Bynoesis para prestarle el servicio, eres el
           «encargado». La relación entre ambos debe estar escrita en un contrato, que es
           una de las páginas legales pendientes.
         </dd>

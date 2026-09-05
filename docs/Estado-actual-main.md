@@ -22,7 +22,7 @@
   lateral. Se han añadido borradores operativos de ROPA, matriz de proveedores,
   derechos/bajas y brechas. Cal.com ya no se incrusta, la CSP prohíbe frames en
   todo el sitio, los textos nombran proveedores activos y describen los roles, y
-  `/cumplimiento` deja de atribuir a Noesis una integración inexistente con un
+  `/cumplimiento` deja de atribuir a Bynoesis una integración inexistente con un
   sistema homologado. La copia S3 falla cerrada si no constan región de firma,
   proveedor y residencia contractual. La purga automática sigue deliberadamente
   pendiente hasta que un profesional valide la tabla de conservación. Este
@@ -50,9 +50,9 @@
   originales SVG, logo horizontal, símbolo y wordmark en versiones primaria,
   inversa y monocroma; 49 PNG transparentes y con fondo; avatares/portadas para
   redes, plantillas editables, paleta JSON/CSS, guía de uso, licencias y manifiesto
-  verificable. El nombre público queda unificado como **Noesis**; `bynoesis.com` y
+  verificable. El nombre público queda unificado como **Bynoesis**; `bynoesis.com` y
   `@bynoesis` son dominio/usuario, no una segunda marca. Su territorio verbal es
-  tiempo, orden, calma y control: «Haz tu trabajo; Noesis te ordena el negocio».
+  tiempo, orden, calma y control: «Haz tu trabajo; Bynoesis te ordena el negocio».
   Facturación, cobros y margen son pruebas del valor, no el posicionamiento completo.
   La aplicación no cambia. `branding/redes-sociales/` convierte esa identidad en un
   paquete operativo: imagen de perfil, portada cuando existe, descripción y lista de
@@ -72,13 +72,13 @@
 
 - El candidato del esquema 52 prepara una entrada documental por correo sin comprar
   buzones ni gastar uno de los alias de Hostinger por cliente. Un único catch-all
-  entrega a direcciones privadas distintas por negocio; Noesis falla cerrado si no
+  entrega a direcciones privadas distintas por negocio; Bynoesis falla cerrado si no
   puede demostrar el destinatario, deduplica, valida y clasifica con el mismo motor
   de Web/WhatsApp y no conserva remitente, asunto, cuerpo ni el correo original. Las
   facturas emitidas reutilizan clientes por NIF exacto o dejan un alta editable por
   confirmar. La función permanece apagada hasta superar la prueba real de Hostinger.
 
-- Dirección ya puede entender la rentabilidad operativa de Noesis **cuenta por
+- Dirección ya puede entender la rentabilidad operativa de Bynoesis **cuenta por
   cuenta** sin abrir los datos del negocio del cliente. El centro interno combina
   el precio mensual comprometido, consumo de IA, plantillas y entregas de WhatsApp,
   correo y extracciones con los costes reales del libro CFO. Cada coste se reparte
@@ -112,7 +112,7 @@
   reales después de publicar.
 
 - La publicación ya no depende solo de una comprobación manual. El comando
-  `noesis-production-check` observa Noesis desde fuera, sin sesiones ni secretos, y
+  `noesis-production-check` observa Bynoesis desde fuera, sin sesiones ni secretos, y
   rechaza que producción siga detrás de `main`, una migración a medias o releases distintos entre `/health` y `/ready`,
   pérdida de protecciones HTTP, páginas públicas caídas o no indexables, canonical/H1
   rotos y marcadores legales reaparecidos. Un workflow independiente lo ejecuta cada
@@ -143,7 +143,7 @@
   Documentos, asistente, cartera de gestoría en escritorio y portal de cliente en
   móvil. Se corrigieron tres defectos visibles: el distintivo central corrupto de la
   demo móvil, las sugerencias del asistente ocultas horizontalmente y las fechas ISO
-  del portal; también se representa correctamente el énfasis del criterio de Noesis.
+  del portal; también se representa correctamente el énfasis del criterio de Bynoesis.
   Los siete contratos Stripe de gestión, tarjeta, cambio y cancelación siguen verdes
   y bloquean un segundo Checkout. El esquema continúa en 49 y el repositorio cuenta
   con **506 pruebas**. El release `aed36de59e30`, el CI completo, el humo PostgreSQL
@@ -167,11 +167,11 @@
   muestra su **Plan actual** y separa gestión general, cambio de tarjeta,
   cancelación y mejoras mensuales/anuales mediante flujos acotados del portal de
   Stripe. Cada mejora lleva el plan y período elegidos a la confirmación segura;
-  los niveles inferiores constan como incluidos. Noesis nunca aplica por sí mismo
+  los niveles inferiores constan como incluidos. Bynoesis nunca aplica por sí mismo
   una cancelación o un cambio irreversible. No queda ningún formulario de Checkout
   en la pantalla activa y el servidor redirige también cualquier POST antiguo o
   manipulado al portal, de manera que el mismo negocio no pueda crear una segunda
-  suscripción por error. Noesis crea y reutiliza una configuración versionada del
+  suscripción por error. Bynoesis crea y reutiliza una configuración versionada del
   Customer Portal con cambio de tarjeta, cancelación y los seis precios conocidos,
   de modo que los botones no dependen de una configuración manual incompleta en
   Stripe. El estado de carga evita dobles envíos y cualquier rechazo vuelve al
@@ -284,7 +284,7 @@
   El plan superior se llama **Premium**, no “Sin Límites”, porque conserva límites
   transparentes de uso avanzado y de la futura voz.
 - WhatsApp separa dos contextos que no deben confundirse. El número central de
-  Noesis identifica al titular o al trabajador y sirve para órdenes internas,
+  Bynoesis identifica al titular o al trabajador y sirve para órdenes internas,
   fichaje, parte, costes, justificantes y dudas. Cada negocio puede conectar además
   su propio número comercial para sus clientes finales. El webhook resuelve primero
   `phone_number_id` y WABA receptores y solo después el remitente; contactos,
@@ -294,7 +294,7 @@
   de alta WABA y `phone_number_id` como conexión pendiente desde la ficha técnica de
   la cuenta; no recibe ni muestra tokens y toda activación queda auditada.
   El número comercial es siempre propiedad del negocio: puede reutilizar el suyo o
-  elegir uno separado para atención y citas; Noesis no compra un número por cliente.
+  elegir uno separado para atención y citas; Bynoesis no compra un número por cliente.
 - Los mensajes comerciales crean una bandeja trazable y un lead o vínculo con el
   cliente dentro de la empresa correcta. Fotos y PDF pasan por la entrada documental
   existente, se previsualizan desde Clientes y nunca se convierten por sí solos en
@@ -309,7 +309,7 @@
   el titular activa ese permiso. El parte diario resume aportaciones, costes y
   conversaciones pendientes para evitar interrupciones constantes.
 - Un teléfono del canal central solo puede identificar a un titular o a un
-  trabajador. Noesis rechaza una segunda vinculación y, ante una ambigüedad heredada,
+  trabajador. Bynoesis rechaza una segunda vinculación y, ante una ambigüedad heredada,
   falla cerrado: informa del conflicto sin ejecutar órdenes ni asociar documentos.
 - El perfil documental del negocio controla plantilla, color, logotipo, pie común,
   condiciones y validez predeterminada. Los presupuestos incorporan IVA/IRPF,
@@ -341,7 +341,7 @@
   como un tercer panel: entra únicamente por el enlace privado de su profesional.
   Una gestoría sin cuenta puede solicitar el espacio profesional o aceptar la
   invitación de un cliente, pero nunca obtiene acceso a empresas por registrarse.
-- Noesis cubre el ciclo cliente → presupuesto → trabajo/proyecto → fichaje y costes
+- Bynoesis cubre el ciclo cliente → presupuesto → trabajo/proyecto → fichaje y costes
   → factura → cobro, aislado siempre por `business_id`.
 - La entrada documental es común para web y WhatsApp: clasifica tickets, facturas,
   presupuestos, contratos y albaranes; propone y pide confirmación cuando el efecto
@@ -387,7 +387,7 @@
 - El cerebro funciona por capas: reglas locales, compositor interno, servicio privado
   compatible, proveedor externo compatible y Anthropic como respaldo autorizado.
   Que falle una IA nunca apaga el producto local.
-- Noesis aparece en todas las secciones con una lectura contextual, el motivo y el
+- Bynoesis aparece en todas las secciones con una lectura contextual, el motivo y el
   siguiente paso. La estructura de cada pantalla sigue siendo propia de su función;
   no existe una plantilla universal de KPIs.
 - Agenda ofrece un enlace privado y revocable para suscribirse desde Google Calendar,
@@ -471,7 +471,7 @@
   cargarla en `/b/{id}/oficios`, con su oficio el primero cuando se deduce de lo que
   escribió al darse de alta; cargarla dos veces no duplica nada. Ese marcado es lo
   que permite avisar del 40% de material que hace decaer el tipo reducido en obras
-  de vivienda: Noesis avisa y nunca cambia el tipo.
+  de vivienda: Bynoesis avisa y nunca cambia el tipo.
 - El canal de Meta está construido y revisado —firma, idempotencia, medios acotados
   y cola durable—, pero **los cinco avisos proactivos al titular no son aprobables
   todavía**: mandan el mensaje entero en un único hueco de plantilla. Las cuatro

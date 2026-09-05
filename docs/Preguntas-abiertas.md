@@ -34,7 +34,7 @@ Contexto y consecuencias de cada una en [[Constitucion-y-primer-euro]].
    tener NIF definitivo o puede pedirse ya con la sociedad existente. Cambiar de
    entidad después obliga a rehacer la verificación y a reconceder los WABA.
 
-6. **Alcance Veri\*Factu durante el piloto.** Noesis es productor de un sistema
+6. **Alcance Veri\*Factu durante el piloto.** Bynoesis es productor de un sistema
    informático de facturación y la remisión a la AEAT está construida pero no
    validada externamente. Dos caminos: completar la validación técnica y publicar la
    declaración responsable, o declarar explícitamente que el módulo no se ofrece como

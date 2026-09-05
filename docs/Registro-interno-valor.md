@@ -6,7 +6,7 @@
 ## Propósito y frontera
 
 Esta capa registra trabajo administrativo que **ya ha terminado correctamente** en
-Noesis. No decide fiscalidad, no concede permisos, no cambia estados de negocio y no
+Bynoesis. No decide fiscalidad, no concede permisos, no cambia estados de negocio y no
 ejecuta acciones. Sus escritores se llaman después del commit principal y fallan
 abiertos: si medir falla, facturar, cobrar, agendar, enviar o confirmar sigue
 funcionando igual.
@@ -50,7 +50,7 @@ y el borrado de una cuenta las elimina en orden referencial.
 
 Los resultados v1 son `payment_received`, `quote_accepted` y `job_invoiced`. Un
 cobro sin recordatorio previo es `observed`, nunca se presenta como causado por
-Noesis. Un borrador o una visita no cuenta. Las acciones revertidas o invalidadas
+Bynoesis. Un borrador o una visita no cuenta. Las acciones revertidas o invalidadas
 quedan auditadas pero salen del numerador WUB.
 
 La columna de taxonomía `counts_for_wub` solo indica que la familia es candidata.
@@ -58,7 +58,7 @@ Cada instancia calcula además `qualifies_for_wub` sin puntos ni pesos. Solo val
 `true` si la acción es candidata y procede de un contexto material de delegación:
 
 - petición del usuario ejecutada por el asistente web o WhatsApp;
-- propuesta proactiva de Noesis confirmada por el usuario;
+- propuesta proactiva de Bynoesis confirmada por el usuario;
 - regla previamente autorizada;
 - automatización identificada explícitamente.
 
@@ -77,7 +77,7 @@ Son dimensiones distintas:
 - `completion_mode`: `user_confirmed`, `authorized_rule`, `system_observed` o
   `external_confirmed`.
 
-Así, una propuesta de Noesis aceptada por WhatsApp no se confunde con una regla
+Así, una propuesta de Bynoesis aceptada por WhatsApp no se confunde con una regla
 previamente autorizada que ejecuta el scheduler.
 
 ## Cálculos

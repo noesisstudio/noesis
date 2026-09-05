@@ -108,10 +108,10 @@
   todos los precios
   usan un `tax_behavior` compatible y distinto de `unspecified`; y completar impago,
   downgrade, reactivación y permisos reales. El 14-ago se repitieron 7/7 contratos
-  locales del portal (incluido el bloqueo de segundo Checkout); esto valida Noesis,
+  locales del portal (incluido el bloqueo de segundo Checkout); esto valida Bynoesis,
   pero no sustituye el clic autenticado dentro del Customer Portal de Stripe.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
-  negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
+  negocios distintos con el mismo token de sistema/activos concedidos a Bynoesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente
   aislado entre empresas, texto, audio, foto/PDF, opt-out, ventana de 24 horas,
   plantillas fuera de ventana, estados, reintentos, revocación y cuenta inactiva.
@@ -161,7 +161,7 @@
   remitente activo, pero la entregabilidad exige envíos reales a Gmail y Outlook.
   **20-ago: primer envío real correcto.** Con `BREVO_API_KEY` y `SMTP_FROM` en
   Railway, una recuperación de contraseña disparada contra producción llegó al buzón
-  de `xavier@bynoesis.com` con el remitente «Noesis». Queda comprobar que no cae en
+  de `xavier@bynoesis.com` con el remitente «Bynoesis». Queda comprobar que no cae en
   spam en Gmail y Outlook, y recorrer factura al cliente final, invitación de
   gestoría y reintento de la outbox.
 - [ ] Entrada documental Hostinger: activar el catch-all hacia un único buzón de
@@ -248,7 +248,7 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
   R5 limitada a facturas simplificadas F2.
 - [ ] Validar con asesoría y XSD AEAT si el piloto necesita rectificación por
-  sustitución (`S`) y sus importes rectificados; hasta entonces Noesis la rechaza
+  sustitución (`S`) y sus importes rectificados; hasta entonces Bynoesis la rechaza
   expresamente y no inventa un registro fiscal incompleto.
 - [ ] Evaluar servicio privado y proveedor compatible con el mismo corpus en
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
@@ -321,7 +321,7 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 ## Límites permanentes
 
-- Noesis prepara; el autónomo confirma pagos, transferencias, impuestos, emisiones,
+- Bynoesis prepara; el autónomo confirma pagos, transferencias, impuestos, emisiones,
   envíos sensibles y borrados irreversibles.
 - Todo aprendizaje distingue observado de confirmado y es visible y corregible.
 - Toda operación filtra por `business_id`.

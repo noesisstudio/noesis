@@ -36,7 +36,7 @@ def _validate_pdf(data: bytes) -> None:
     if not data.startswith(b"%PDF-"):
         raise UnsafeDocument("El contenido no corresponde a un PDF válido.")
     if any(marker in data for marker in _PDF_ACTIVE_MARKERS):
-        raise UnsafeDocument("El PDF contiene funciones activas que Noesis no admite.")
+        raise UnsafeDocument("El PDF contiene funciones activas que Bynoesis no admite.")
     pages = len(_PDF_PAGE_RE.findall(data))
     if pages > config.MAX_PDF_PAGES:
         raise UnsafeDocument(

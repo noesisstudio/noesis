@@ -1,4 +1,4 @@
-# 🧭 Noesis — Inicio
+# 🧭 Bynoesis — Inicio
 
 Mapa de contenido (MOC) del proyecto. Abre esta carpeta como *vault* en Obsidian y
 usa la vista de grafo para navegar.
@@ -8,8 +8,8 @@ usa la vista de grafo para navegar.
 - [[Tareas-vivas]] — único listado vivo de pendientes y prioridades.
 - [[Registro-cambios]] — bitácora cronológica obligatoria: qué cambió, pruebas,
   riesgos y pista para diagnosticar o revertir una regresión.
-- [[Plan-maestro-Noesis]] — visión, principios, arquitectura objetivo y criterios.
-- [[Producto]] — qué es Noesis, para quién y la propuesta de valor.
+- [[Plan-maestro-Bynoesis]] — visión, principios, arquitectura objetivo y criterios.
+- [[Producto]] — qué es Bynoesis, para quién y la propuesta de valor.
 - [[Propuesta-sistema-retencion-habito-valor]] — propuesta para socios que integra
   Habit, Trust, Value, WUB y las fases posteriores de Insight, Progress y Confidence.
 - [[Registro-interno-valor]] — contrato técnico del esquema 54: taxonomía,
@@ -58,14 +58,14 @@ usa la vista de grafo para navegar.
   credenciales, solo lectura y activación segura.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
-- [`Noesis-Modelo-Economico.xlsx`](Noesis-Modelo-Economico.xlsx) — modelo vivo:
+- [`Bynoesis-Modelo-Economico.xlsx`](Bynoesis-Modelo-Economico.xlsx) — modelo vivo:
   supuestos, unit economics, escenarios, proyección a 24 meses, sensibilidad,
   capacidad de soporte, captación y KPIs del piloto. Se regenera con
   `python analysis/build_modelo_economico.py`.
 - [`Estrategia-Marketing.pdf`](Estrategia-Marketing.pdf) — a quién vendemos, con qué
   mensaje, por qué canales, cuánto podemos pagar por un cliente, dónde entra la IA
   y las vías de escape con sus criterios de parada.
-- [`Marketing-Noesis.pdf`](Marketing-Noesis.pdf) — **manual maestro de marketing**:
+- [`Marketing-Bynoesis.pdf`](Marketing-Bynoesis.pdf) — **manual maestro de marketing**:
   consolida la estrategia, la marca, las 24 piezas de contenido con su gancho, copy,
   CTA y métrica, la producción, la publicación en Instagram y Facebook, la medición
   y los criterios de parada. Sustituye a `Estrategia-Marketing` y `Publicar-en-redes`.
@@ -77,7 +77,7 @@ usa la vista de grafo para navegar.
 - [`Plan-60-dias.pdf`](Plan-60-dias.pdf) — el plan de ejecución que pone fecha a todo
   lo anterior: cuatro frentes en paralelo, nueve semanas y una puerta de salida por
   semana.
-- [`Estado-Noesis.xlsx`](Estado-Noesis.xlsx) — estado de cada pieza en hoja de cálculo:
+- [`Estado-Bynoesis.xlsx`](Estado-Bynoesis.xlsx) — estado de cada pieza en hoja de cálculo:
   canal de Meta, plantillas y catálogos por oficio. Se regenera con
   `python scripts/build_estado_xlsx.py`.
 - [[Constitucion-y-primer-euro]] — la pieza que `Ruta-legal` no cubre: S.L. o
@@ -96,7 +96,7 @@ usa la vista de grafo para navegar.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
-- [[Despliegue]] — cómo operar Noesis online 24/7 en bynoesis.com.
+- [[Despliegue]] — cómo operar Bynoesis online 24/7 en bynoesis.com.
 - [[Decisiones]] — registro de decisiones importantes (y por qué).
 - [[Metodo-operativo-Fable]] — el criterio de trabajo, heredable por Opus y Codex.
 - [[Preguntas-abiertas]] — dudas que esperan respuesta del founder.

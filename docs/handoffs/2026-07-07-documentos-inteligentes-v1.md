@@ -29,7 +29,7 @@
   la propuesta (entidades propias) y dejarlo anotado en el PR.
 
 ### 1. Contexto del producto
-Noesis convierte la "caja de zapatos" de papeles en un flujo trazable
+Bynoesis convierte la "caja de zapatos" de papeles en un flujo trazable
 documento→factura/gasto→gestoría. Hoy `documents/` guarda archivos, hace OCR de
 imágenes y extrae borradores de gasto con Claude Vision. Esta tarea lo convierte
 en un pipeline con tipos, estados y destinos, y añade la mitad que falta del ciclo:

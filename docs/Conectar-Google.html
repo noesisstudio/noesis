@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Conectar Google · Noesis</title>
+<title>Conectar Google · Bynoesis</title>
 <style>
   :root {
     --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
@@ -180,7 +180,7 @@
 <div class="page">
 
   <header>
-    <p class="eyebrow">Noesis · Runbook de producción</p>
+    <p class="eyebrow">Bynoesis · Runbook de producción</p>
     <h1>Conectar el acceso con Google</h1>
     <p class="standfirst">Media hora en la consola de Google y dos variables en Railway. Es la integración más rápida de todas las pendientes, y ahora mismo bloquea tu panel de administración.</p>
     <p class="crumbs">Variables y criterios de aceptación en <code>Conectar-APIs.md</code> §2. Estado verificable en <code>project-state.json</code>.</p>
@@ -190,7 +190,7 @@
     <h3>Empieza por aquí: tu panel de administración está cerrado</h3>
     <p>En producción, <code>NOESIS_ADMIN_REQUIRE_GOOGLE_OAUTH</code> vale <strong>true</strong> por defecto. Sin credenciales de Google, <code>_is_admin()</code> rechaza cualquier sesión: <strong>no puedes entrar en <code>/admin</code> aunque tu correo sea el del fundador y hayas iniciado sesión con contraseña</strong>.</p>
     <p>Eso significa que la gestión de permisos que acabamos de construir —activar un cliente, ampliarle la prueba, ver por qué una entrega falla— existe en el código pero es inalcanzable en producción hasta terminar esta guía.</p>
-    <p>El resto de Noesis funciona con normalidad: el arranque solo deja un error en el log y mantiene el servicio en pie, para que una credencial pendiente no tumbe a los autónomos.</p>
+    <p>El resto de Bynoesis funciona con normalidad: el arranque solo deja un error en el log y mantiene el servicio en pie, para que una credencial pendiente no tumbe a los autónomos.</p>
   </div>
 
   <section>
@@ -219,7 +219,7 @@
       </table>
     </div>
 
-    <div class="note"><strong>Noesis pide exactamente tres permisos: <code>openid</code>, <code>email</code> y <code>profile</code>.</strong> Google los clasifica como no sensibles, así que <strong>no hacen falta ni verificación de la app ni revisión de seguridad</strong>. Por eso esta integración se cierra en una tarde y Meta tarda una semana.</div>
+    <div class="note"><strong>Bynoesis pide exactamente tres permisos: <code>openid</code>, <code>email</code> y <code>profile</code>.</strong> Google los clasifica como no sensibles, así que <strong>no hacen falta ni verificación de la app ni revisión de seguridad</strong>. Por eso esta integración se cierra en una tarde y Meta tarda una semana.</div>
 
     <p>El código además es estricto con lo que acepta: si Google no devuelve <code>email_verified</code> en verdadero, o falta el identificador estable del usuario, el acceso se rechaza. Un correo sin verificar no entra.</p>
   </section>
@@ -234,7 +234,7 @@
       <h3>La URI de redirección coincide carácter a carácter, o no funciona</h3>
       <pre>https://bynoesis.com/auth/google/callback</pre>
       <p>Google compara el texto exacto. Fallan por igual <code>http</code> en vez de <code>https</code>, poner <code>www.</code> delante, o una barra final de más. El error que verás es <code>redirect_uri_mismatch</code>.</p>
-      <p>Noesis la construye a partir de <code>NOESIS_BASE_URL</code>, así que <strong>esa variable y lo que registres en Google tienen que ser el mismo dominio</strong>. Si algún día cambias de dominio, se cambian las dos a la vez.</p>
+      <p>Bynoesis la construye a partir de <code>NOESIS_BASE_URL</code>, así que <strong>esa variable y lo que registres en Google tienen que ser el mismo dominio</strong>. Si algún día cambias de dominio, se cambian las dos a la vez.</p>
     </div>
   </section>
 
@@ -251,7 +251,7 @@
         <div class="step-body">
           <div class="step-head"><h3>Crear el proyecto</h3><span class="chip chip-flat">2 minutos</span></div>
           <p>Entra en <code>console.cloud.google.com</code> <strong>con la cuenta de Google de la empresa</strong>, no con una personal. Si mañana esa cuenta personal se pierde, el acceso de todos tus clientes se va con ella.</p>
-          <p>Crea un proyecto llamado <strong>Noesis</strong>, o reutiliza uno que ya tengas.</p>
+          <p>Crea un proyecto llamado <strong>Bynoesis</strong>, o reutiliza uno que ya tengas.</p>
         </div>
       </li>
 
@@ -261,7 +261,7 @@
           <div class="step-head"><h3>Configurar la marca</h3><span class="chip chip-warn">Lo ve tu cliente</span></div>
           <p>En <strong>Branding</strong>, rellena:</p>
           <ul>
-            <li><strong>Nombre de la aplicación:</strong> <code>Noesis</code>. Es literalmente lo que leerá el autónomo: «Noesis quiere acceder a tu cuenta de Google».</li>
+            <li><strong>Nombre de la aplicación:</strong> <code>Bynoesis</code>. Es literalmente lo que leerá el autónomo: «Bynoesis quiere acceder a tu cuenta de Google».</li>
             <li><strong>Correo de asistencia:</strong> uno del dominio propio.</li>
             <li><strong>Dominio autorizado:</strong> <code>bynoesis.com</code>.</li>
             <li><strong>Enlaces</strong> a privacidad y términos, que ya están publicados.</li>
@@ -284,7 +284,7 @@
         <span class="step-n">04</span>
         <div class="step-body">
           <div class="step-head"><h3>Crear el cliente OAuth</h3><span class="chip chip-stop">El paso que importa</span></div>
-          <p>En <strong>Clients → Crear cliente</strong>, tipo <strong>Aplicación web</strong>, nombre <code>Noesis web</code>.</p>
+          <p>En <strong>Clients → Crear cliente</strong>, tipo <strong>Aplicación web</strong>, nombre <code>Bynoesis web</code>.</p>
           <p><strong>Orígenes autorizados de JavaScript:</strong></p>
           <pre>https://bynoesis.com</pre>
           <p><strong>URIs de redirección autorizados:</strong></p>
@@ -319,7 +319,7 @@ GOOGLE_OAUTH_CLIENT_SECRET=<span class="c">&lt;empieza por GOCSPX-&gt;</span></p
       <li>Entras con tu cuenta y llegas a tu panel.</li>
       <li>Entras en <code>/admin</code>. <strong>Este es el desbloqueo real</strong> de la gestión de permisos.</li>
       <li>Un correo que ya tenía cuenta con contraseña entra con Google <strong>a la misma cuenta</strong>, sin duplicarla.</li>
-      <li>Cancelas en la pantalla de Google: vuelves a Noesis sin sesión y sin un error feo.</li>
+      <li>Cancelas en la pantalla de Google: vuelves a Bynoesis sin sesión y sin un error feo.</li>
     </ol>
 
     <div class="note">Al terminar, <code>noesis-doctor --strict</code> debe dejar de marcar Google como bloqueo, y el resultado se anota en <code>Registro-QA.md</code>. Una integración no está conectada porque existan sus variables, sino porque su prueba está registrada.</div>
@@ -337,7 +337,7 @@ GOOGLE_OAUTH_CLIENT_SECRET=<span class="c">&lt;empieza por GOCSPX-&gt;</span></p
         <tbody>
           <tr>
             <td><code>redirect_uri_mismatch</code></td>
-            <td>La URI registrada no es idéntica a la que envía Noesis. Compara <code>NOESIS_BASE_URL</code> con lo que pusiste en Google, carácter a carácter.</td>
+            <td>La URI registrada no es idéntica a la que envía Bynoesis. Compara <code>NOESIS_BASE_URL</code> con lo que pusiste en Google, carácter a carácter.</td>
           </tr>
           <tr>
             <td>«Acceso bloqueado: no has completado el proceso de verificación»</td>
@@ -345,7 +345,7 @@ GOOGLE_OAUTH_CLIENT_SECRET=<span class="c">&lt;empieza por GOCSPX-&gt;</span></p
           </tr>
           <tr>
             <td>Vuelves al login sin explicación</td>
-            <td>Noesis rechazó el perfil: Google no marcó el correo como verificado, o el <code>state</code> no coincidió. Lo segundo suele ser una cookie de sesión perdida entre dominios.</td>
+            <td>Bynoesis rechazó el perfil: Google no marcó el correo como verificado, o el <code>state</code> no coincidió. Lo segundo suele ser una cookie de sesión perdida entre dominios.</td>
           </tr>
           <tr>
             <td>El botón no aparece</td>

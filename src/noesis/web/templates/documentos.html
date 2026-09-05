@@ -4,7 +4,7 @@
   <div class="page-title">
     <div class="kicker">Tus papeles, en orden</div>
     <h1>Documentos</h1>
-    <p>Sube o fotografía cualquier papel. Noesis propone dónde guardarlo y
+    <p>Sube o fotografía cualquier papel. Bynoesis propone dónde guardarlo y
        <b>tú confirmas</b>. Si no está segura, te pregunta; nada se registra por su cuenta.</p>
   </div>
   <div class="page-actions">
@@ -18,7 +18,7 @@
     <div>
       <div class="kicker">Entrada por correo</div>
       <h2 style="margin:4px 0 6px">Reenvía aquí tus facturas</h2>
-      <p style="margin:0">Es una dirección privada de este negocio. Noesis guardará los adjuntos y te pedirá confirmar cualquier alta o dato fiscal.</p>
+      <p style="margin:0">Es una dirección privada de este negocio. Bynoesis guardará los adjuntos y te pedirá confirmar cualquier alta o dato fiscal.</p>
     </div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
       <code id="inbound-email-address" style="overflow-wrap:anywhere; max-width:100%">{{ inbound_email_address }}</code>
@@ -38,7 +38,7 @@
     <div class="document-upload-intro">
       <div class="kicker">Entrada rápida</div>
       <h2>Sube un PDF o haz una foto</h2>
-      <p>Noesis lo lee, propone una carpeta y te pide confirmación si hay dudas.</p>
+      <p>Bynoesis lo lee, propone una carpeta y te pide confirmación si hay dudas.</p>
     </div>
     <div class="document-upload-actions">
       <label class="document-file-picker" for="d-file">
@@ -204,8 +204,8 @@ async function load() {
   try {
     const st = await api('/documents/ocr-status');
     el('d-ocr').textContent = st.ocr
-      ? 'Lectura local activa. Noesis propondrá un tipo y tú lo confirmarás.'
-      : 'Sin OCR local. La IA clasificará si está conectada; si no, Noesis te preguntará.';
+      ? 'Lectura local activa. Bynoesis propondrá un tipo y tú lo confirmarás.'
+      : 'Sin OCR local. La IA clasificará si está conectada; si no, Bynoesis te preguntará.';
   } catch (e) {}
   renderRequests();
   renderList();

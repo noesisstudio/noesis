@@ -129,7 +129,7 @@ def _check_brevo(*, network: bool) -> IntegrationCheck:
     if not sender or "@" not in sender:
         return IntegrationCheck(
             "correo", "blocker", "SMTP_FROM no contiene un remitente válido.",
-            "Usa Noesis <no-reply@bynoesis.com>.",
+            "Usa Bynoesis <no-reply@bynoesis.com>.",
         )
     if not network:
         return IntegrationCheck(
@@ -239,7 +239,7 @@ def _check_stripe(*, network: bool) -> IntegrationCheck:
     if errors:
         return IntegrationCheck(
             "stripe", "blocker", " | ".join(errors[:8]),
-            "Corrige el catálogo; Noesis comunica precios sin IVA.",
+            "Corrige el catálogo; Bynoesis comunica precios sin IVA.",
         )
     return IntegrationCheck(
         "stripe", "ok", "Seis precios activos, EUR, recurrentes y con IVA exclusivo.",
@@ -343,7 +343,7 @@ def collect_checks(*, network: bool = False) -> dict:
 
 def _print_human(report: dict) -> None:
     labels = {"ok": "OK", "warning": "PENDIENTE", "blocker": "BLOQUEO", "skipped": "SIN CONFIGURAR"}
-    print("Noesis · comprobación de integraciones (solo lectura)")
+    print("Bynoesis · comprobación de integraciones (solo lectura)")
     for item in report["checks"]:
         print(f"[{labels[item['status']]}] {item['area']}: {item['summary']}")
         if item["action"]:

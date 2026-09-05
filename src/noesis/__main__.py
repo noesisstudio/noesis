@@ -1,4 +1,4 @@
-"""Permite ejecutar Noesis con: py -m noesis"""
+"""Permite ejecutar Bynoesis con: py -m noesis"""
 
 from .cli import main
 

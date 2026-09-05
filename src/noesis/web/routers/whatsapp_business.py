@@ -22,7 +22,7 @@ def api_whatsapp_business(business_id: int):
         "inbox": db.list_whatsapp_inbox(business_id, limit=50),
         "principle": (
             "El número del negocio atiende a sus clientes; el número central de "
-            "Noesis queda reservado al titular y al equipo."
+            "Bynoesis queda reservado al titular y al equipo."
         ),
     }
 

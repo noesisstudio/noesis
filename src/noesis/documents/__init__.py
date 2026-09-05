@@ -1,4 +1,4 @@
-"""Módulo de documentos ("papeles") de Noesis — AISLADO a propósito.
+"""Módulo de documentos ("papeles") de Bynoesis — AISLADO a propósito.
 
 Todo lo relativo a los archivos que sube el autónomo (recibos, contratos, fotos de
 tickets, facturas de proveedor) vive aquí, separado del resto, para que si algo

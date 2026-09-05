@@ -1,7 +1,7 @@
 """OCR local y defensivo para PDF escaneado o fotografiado.
 
 PDFium solo rasteriza. La lectura se delega al mismo adaptador Tesseract usado por
-las fotos, de modo que ningún documento abandona la infraestructura de Noesis.
+las fotos, de modo que ningún documento abandona la infraestructura de Bynoesis.
 """
 
 from __future__ import annotations

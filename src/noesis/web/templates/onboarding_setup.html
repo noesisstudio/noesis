@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Personaliza tu negocio</title>
+  <title>Bynoesis · Personaliza tu negocio</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
 <body class="public-auth-body">
   <header class="auth-topbar">
-    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a>
+    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Bynoesis</span></a>
     <a href="/b/{{ business.id }}/resumen">Salir · continuaré aquí al volver</a>
   </header>
   <div class="onboarding-center">
     <div class="onboarding-card">
       <a class="site-brand onboarding-brand" href="/">
         <img src="/static/noesis-mark.svg" alt="">
-        <span>Noesis</span>
+        <span>Bynoesis</span>
       </a>
 
       <div class="onboarding-steps" aria-label="Progreso del alta">
@@ -29,10 +29,10 @@
         <span class="onboarding-step">4</span><span>Revisión</span>
       </div>
 
-      <div class="kicker">Adapta Noesis a tu operativa</div>
+      <div class="kicker">Adapta Bynoesis a tu operativa</div>
       <h1>¿Cómo funciona {{ business.name }}?</h1>
       <p class="onboarding-lead">Usamos estas respuestas para priorizar tu primer
-        recorrido y entender qué tipo de negocio obtiene más valor de Noesis.</p>
+        recorrido y entender qué tipo de negocio obtiene más valor de Bynoesis.</p>
 
       {% if error %}
       <div class="form-error">Revisa el sector, el tamaño del equipo y tu objetivo principal.</div>
@@ -65,13 +65,13 @@
           <option value="control" {{ 'selected' if business.primary_goal == 'control' }}>Ver con claridad cómo va el negocio</option>
         </select>
 
-        <label class="fld" style="margin-top:20px">¿Cómo quieres que te acompañe Noesis? *</label>
+        <label class="fld" style="margin-top:20px">¿Cómo quieres que te acompañe Bynoesis? *</label>
         <div class="choice-grid ai-choice-grid">
           <label class="choice-card ai-choice-card">
             <input type="radio" name="ai_mode" value="enabled" required checked>
             <span>
               <b>Experiencia completa</b>
-              <small>Recomendado · Noesis resuelve primero dentro del sistema y usa IA avanzada solo cuando hace falta.</small>
+              <small>Recomendado · Bynoesis resuelve primero dentro del sistema y usa IA avanzada solo cuando hace falta.</small>
             </span>
           </label>
           <label class="choice-card ai-choice-card">
@@ -91,7 +91,7 @@
         </select>
         <p class="meta" style="margin:9px 0 0">
           La prueba incluye {{ ai_credits.limit }} consultas avanzadas al mes. Puedes
-          cambiarlo en Ajustes. Noesis nunca mueve dinero, emite ni envía nada
+          cambiarlo en Ajustes. Bynoesis nunca mueve dinero, emite ni envía nada
           irreversible sin tu confirmación.
         </p>
 

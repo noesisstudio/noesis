@@ -128,7 +128,7 @@
 - `branding/BRAND_GUIDE.md`: nombre, posicionamiento visual, variantes del logo,
   zona de seguridad, tamaños mínimos, paleta, tipografía, fotografía, voz y uso en redes.
 - `branding/sources/`: símbolo maestro y lockups SVG con la Fraunces ya autoalojada
-  por Noesis; son los originales para impresión, edición o exportación futura.
+  por Bynoesis; son los originales para impresión, edición o exportación futura.
 - `branding/logos/png/` y `branding/social/`: exportaciones transparentes, con fondo,
   avatares y portadas listas para cada superficie. El avatar de redes es una adaptación
   específica —estrella ampliada, interior original y contorno solo exterior sobre
@@ -138,13 +138,13 @@
 - `branding/redes-sociales/`: paquete operativo por canal con los PNG que se deben
   subir, textos listos para copiar, controles de seguridad, guía Word renderizada y
   archivos de reserva para YouTube/TikTok. No se carga en el runtime de la aplicación.
-- `branding/contenido/Plan-editorial-y-guiones-Noesis.docx`: manual operativo de
+- `branding/contenido/Plan-editorial-y-guiones-Bynoesis.docx`: manual operativo de
   contenido con 24 fichas, campañas, calendario, producción, medición y límites.
 - `branding/contenido/scripts/build_content_playbook.py`: fuente reproducible del
   manual editorial; usa la identidad existente y no forma parte del runtime.
 - `branding/scripts/build_brand_assets.mjs`: generador determinista con Sharp; crea
   exportaciones y `manifest.json` con dimensiones, uso y SHA-256. Su dependencia
-  queda aislada en `branding/package.json` y no entra en el runtime de Noesis.
+  queda aislada en `branding/package.json` y no entra en el runtime de Bynoesis.
 
 ## Web y acompañante
 
@@ -179,7 +179,7 @@
   explica responsabilidades reales sin atribuir personas, clientes o credenciales
   todavía no verificadas.
 - `src/noesis/web/templates/site_contacto.html`: contacto y reserva mediante enlace
-  externo consciente. Cal.com no se incrusta ni se carga por visitar Noesis; la CSP
+  externo consciente. Cal.com no se incrusta ni se carga por visitar Bynoesis; la CSP
   mantiene `frame-src 'none'` en todas las rutas.
 - `src/noesis/web/templates/solicitar_acceso.html`: formulario público de solicitud de
   acceso. Producto se fusionó con la portada, que conserva las anclas `#como-funciona`
@@ -192,7 +192,7 @@
   cobra 11 meses y da 12. Autónomo conserva el núcleo y Negocio/Premium habilitan
   Proyectos, Equipo, Gestoría y Análisis avanzado. El adaptador también puede leer
   una suscripción concreta por API y convertirla en evidencia solo si coinciden
-  negocio, cliente, suscripción, estado activo y un precio conocido de Noesis.
+  negocio, cliente, suscripción, estado activo y un precio conocido de Bynoesis.
   Para una cuenta activa crea sesiones efímeras del portal general o deep links
   acotados a tarjeta, cancelación y confirmación del precio exacto; si Stripe aún no
   permite un flujo específico, cae al portal general sin crear un Checkout. Antes
@@ -219,11 +219,11 @@
   ruta de Checkout repite esta protección en servidor ante formularios antiguos o
   peticiones manipuladas.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
-  de acciones de Noesis.
+  de acciones de Bynoesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve
   por reglas, después por IA privada, proveedor compatible y Anthropic; los niveles
   externos comparten consentimiento y un crédito por mensaje.
-- `src/noesis/web/templates/base.html`: capa persistente de Noesis: lectura real de
+- `src/noesis/web/templates/base.html`: capa persistente de Bynoesis: lectura real de
   la sección, siguiente paso con motivo, preguntas contextuales y conversación.
 - `src/noesis/web/routers/projects.py`: proyectos, trabajos vinculados, tareas,
   equipo, horas y costes.
@@ -350,7 +350,7 @@
 - `templates/oficios.html` + `routers/invoicing.py`: la pantalla de plantillas por
   oficio. Muestra cada partida con su IVA, si es material o mano de obra y cuáles
   tiene ya el negocio; carga la plantilla sin duplicar lo existente.
-- `scripts/build_estado_xlsx.py`: genera `docs/Estado-Noesis.xlsx` leyendo los
+- `scripts/build_estado_xlsx.py`: genera `docs/Estado-Bynoesis.xlsx` leyendo los
   módulos reales, sin dependencias — un `.xlsx` es un zip de XML y se escribe a
   mano. Vuelve a ejecutarlo cuando cambien las plantillas o los catálogos.
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el

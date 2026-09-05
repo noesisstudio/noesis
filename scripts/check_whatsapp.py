@@ -343,7 +343,7 @@ def main(argv: list[str] | None = None) -> int:
     phone_id = os.getenv("WHATSAPP_PHONE_ID", "")
     version = os.getenv("META_GRAPH_VERSION", "v23.0")
 
-    print(f"Noesis - canal de WhatsApp (Graph {version})")
+    print(f"Bynoesis - canal de WhatsApp (Graph {version})")
     if not args.sin_red:
         if not token:
             _decir(FALLO, "WHATSAPP_TOKEN esta vacio.")

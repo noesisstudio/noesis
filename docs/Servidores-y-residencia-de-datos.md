@@ -61,7 +61,7 @@ están en California o Virginia:
 - La base de datos entera: clientes, facturas, importes, NIF.
 - El volumen `/data/uploads`: **los papeles escaneados**. Facturas, tickets,
   documentos con nombres, direcciones y a veces el DNI de terceros que nunca
-  aceptaron nada de Noesis.
+  aceptaron nada de Bynoesis.
 
 ¿Es ilegal? **No.** Con la certificación de Railway en el Marco de Privacidad de
 Datos, la transferencia tiene amparo. ¿Es vendible a una gestoría española que te

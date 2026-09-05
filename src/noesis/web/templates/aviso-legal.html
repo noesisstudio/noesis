@@ -1,6 +1,6 @@
 {% extends "site_base.html" %}
 {% block page_title %}Aviso legal{% endblock %}
-{% block meta_description %}Datos identificativos del responsable de Noesis y condiciones generales del sitio web.{% endblock %}
+{% block meta_description %}Datos identificativos del responsable de Bynoesis y condiciones generales del sitio web.{% endblock %}
 {% block final_cta %}{% endblock %}
 {% block content %}
 <div class="legal-wrap legal">
@@ -10,13 +10,13 @@
     {% if not legal_ready %}
     <div class="note">
       El acceso comercial permanece cerrado mientras se completa la identificación
-      legal del prestador. Noesis no acepta altas públicas ni pagos en este estado.
+      legal del prestador. Bynoesis no acepta altas públicas ni pagos en este estado.
     </div>
     {% endif %}
 
     <h2>1. Titular del sitio y del servicio</h2>
     <div class="meta-box">
-      <b>Titular:</b> {{ legal_name or "Noesis · acceso piloto cerrado" }}<br>
+      <b>Titular:</b> {{ legal_name or "Bynoesis · acceso piloto cerrado" }}<br>
       {% if legal_nif %}<b>NIF/CIF:</b> {{ legal_nif }}<br>{% endif %}
       {% if legal_address %}<b>Domicilio:</b> {{ legal_address }}<br>{% endif %}
       <b>Email:</b> {{ legal_email }}<br>
@@ -25,7 +25,7 @@
     </div>
 
     <h2>2. Objeto</h2>
-    <p>Noesis es una aplicación de software como servicio (SaaS) que ayuda a profesionales
+    <p>Bynoesis es una aplicación de software como servicio (SaaS) que ayuda a profesionales
       autónomos y pequeños negocios a gestionar su agenda, clientes, presupuestos, facturas,
       cobros y gastos. El acceso y uso se rige por los <a href="/terminos">Términos de
       uso</a> y la <a href="/privacidad">Política de privacidad</a>.</p>
@@ -36,7 +36,7 @@
       inutilizar o sobrecargar el servicio, o impedir su normal uso por terceros.</p>
 
     <h2>4. Propiedad intelectual e industrial</h2>
-    <p>El software, la marca “Noesis”, el logotipo, los diseños, textos y demás elementos del
+    <p>El software, la marca “Bynoesis”, el logotipo, los diseños, textos y demás elementos del
       servicio son titularidad de {{ legal_name or "su titular legítimo" }} o de sus licenciantes y están protegidos por
       la normativa de propiedad intelectual e industrial. No se cede ningún derecho sobre
       ellos más allá del uso del servicio conforme a los Términos. Los datos que el usuario

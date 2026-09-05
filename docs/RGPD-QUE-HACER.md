@@ -141,7 +141,7 @@ más banner— cuesta mucho más y no mejora nada.
 - [x] Añadir a `privacidad.html` y `encargado-tratamiento.html`: **Stripe** (trata
       nombre, dirección, NIF e importes), **Google** (si se activa el acceso con
       Google), y el **proveedor de copias de seguridad**.
-- [x] Quitar Cal.com de la carga de Noesis; el enlace externo y su rol sí se explican.
+- [x] Quitar Cal.com de la carga de Bynoesis; el enlace externo y su rol sí se explican.
 - [x] Llevar las variables de proveedor a la comprobación de `readiness.py`, junto a
       la identidad legal.
 
@@ -158,9 +158,9 @@ automática, no solo corregir el texto.
       hasta pruebas AEAT, documentación técnica y declaración responsable.
 - [x] Reescribir el apartado 2 sin inventar una integración homologada externa.
 
-**Problema:** la página dice que *«Noesis se integra con un sistema homologado cuando
+**Problema:** la página dice que *«Bynoesis se integra con un sistema homologado cuando
 lo conectas»*. No existe tal integración: Veri\*Factu es desarrollo propio. Es una
-afirmación engañosa sobre cumplimiento, en la página titulada «Usar Noesis en regla».
+afirmación engañosa sobre cumplimiento, en la página titulada «Usar Bynoesis en regla».
 
 **Quién: producto corregido; founder y asesor validan antes de activar AEAT.**
 
@@ -226,7 +226,7 @@ Entra con esta lista escrita. Siete encargos:
 - [ ] **2.4** Fijar la **tabla de plazos de conservación** por tipo de dato: fiscal,
       mercantil, registro de jornada, documentos, conversaciones del asistente y
       logs. **Pide este primero: desbloquea 1.4 y 1.5.**
-- [ ] **2.5** Definir el **rol de la gestoría**: ¿subencargada de Noesis, o
+- [ ] **2.5** Definir el **rol de la gestoría**: ¿subencargada de Bynoesis, o
       responsable independiente a la que el cliente concede acceso? Decide quién
       responde si un despacho filtra un expediente.
 - [ ] **2.6** Revisar la **limitación de responsabilidad** de los términos frente a
@@ -237,7 +237,7 @@ Entra con esta lista escrita. Siete encargos:
 
 **Añade a la misma consulta, aunque no sea RGPD:** desde el 2 de agosto de 2026
 aplican las obligaciones de transparencia del Reglamento de IA (art. 50) — dejar
-claro que se interactúa con un sistema de IA. Noesis lo cumple de hecho; conviene una
+claro que se interactúa con un sistema de IA. Bynoesis lo cumple de hecho; conviene una
 línea explícita en los términos.
 
 ---

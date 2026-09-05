@@ -1769,7 +1769,7 @@ def _downgrade_companion_memory(conn) -> None:
 
 
 def _upgrade_autonomy_control(conn) -> None:
-    """Permisos configurables y trazabilidad de las acciones de Noesis.
+    """Permisos configurables y trazabilidad de las acciones de Bynoesis.
 
     Los límites críticos no dependen solo de la interfaz: ``db.py`` valida qué
     modos admite cada acción antes de persistirlos. El registro de acciones deja
@@ -3130,7 +3130,7 @@ def _upgrade_gestoria_fiscal_workspace(conn) -> None:
     """Perfil fiscal mínimo y explícito para la cartera profesional.
 
     No guarda declaraciones ni autoriza presentaciones: solo permite que el
-    despacho indique qué obligaciones debe preparar Noesis para cada negocio.
+    despacho indique qué obligaciones debe preparar Bynoesis para cada negocio.
     """
     t = _types(conn.dialect)
     conn.execute(
@@ -3295,7 +3295,7 @@ def _downgrade_platform_cost_ledger(conn) -> None:
 
 
 def _upgrade_whatsapp_multichannel(conn) -> None:
-    """Separa el canal privado de Noesis del WhatsApp comercial de cada negocio.
+    """Separa el canal privado de Bynoesis del WhatsApp comercial de cada negocio.
 
     Los números empresariales se resuelven por ``phone_number_id`` antes de mirar al
     remitente. Las tablas conservan el negocio en todas las relaciones para que una
@@ -4310,7 +4310,7 @@ def downgrade(target: int | None = None) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Migraciones de Noesis")
+    parser = argparse.ArgumentParser(description="Migraciones de Bynoesis")
     parser.add_argument("action", choices=("upgrade", "downgrade", "current"))
     parser.add_argument("target", nargs="?", type=int)
     args = parser.parse_args()

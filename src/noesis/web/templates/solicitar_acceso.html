@@ -1,6 +1,6 @@
 {% extends "site_base.html" %}
-{% block page_title %}{% if selected_profile == 'gestoria' %}Noesis para gestorías{% else %}Solicitar acceso{% endif %}{% endblock %}
-{% block meta_description %}{% if selected_profile == 'gestoria' %}Solicita un espacio profesional para gestionar tu cartera de clientes con Noesis.{% else %}Deja tus datos y te damos acceso a Noesis con acompañamiento. Abrimos con pocos negocios para configurarlo contigo desde el primer trabajo.{% endif %}{% endblock %}
+{% block page_title %}{% if selected_profile == 'gestoria' %}Bynoesis para gestorías{% else %}Solicitar acceso{% endif %}{% endblock %}
+{% block meta_description %}{% if selected_profile == 'gestoria' %}Solicita un espacio profesional para gestionar tu cartera de clientes con Bynoesis.{% else %}Deja tus datos y te damos acceso a Bynoesis con acompañamiento. Abrimos con pocos negocios para configurarlo contigo desde el primer trabajo.{% endif %}{% endblock %}
 {% block content %}
   <section class="public-page-hero">
     <div>
@@ -10,7 +10,7 @@
     {% if selected_profile == 'gestoria' %}
     <p>Cuéntanos cómo trabaja tu despacho. Configuraremos un espacio separado y seguro para revisar varias empresas sin mezclar información.</p>
     {% else %}
-    <p>Abrimos con pocos negocios a la vez para poder configurar Noesis contigo,
+    <p>Abrimos con pocos negocios a la vez para poder configurar Bynoesis contigo,
       comprobar que encaja con tu oficio y acompañarte en el primer trabajo completo.</p>
     {% endif %}
   </section>
@@ -99,7 +99,7 @@
 
           <label class="auth-consent">
             <input type="checkbox" name="acepto" value="1" required>
-            <span>Acepto que Noesis guarde estos datos para responderme, según la
+            <span>Acepto que Bynoesis guarde estos datos para responderme, según la
               <a href="/privacidad" target="_blank">Política de Privacidad</a>.</span>
           </label>
           <button class="btn primary full">Enviar solicitud</button>

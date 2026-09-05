@@ -103,11 +103,11 @@ def invite_gestoria(business_id: int, request: Request):
     link = f"{config.BASE_URL}/gestoria/accept/{token}"
     emailed = email_adapter.queue_email(
         email,
-        f"{business.get('name') or 'Un cliente'} te invita a su cartera Noesis",
+        f"{business.get('name') or 'Un cliente'} te invita a su cartera Bynoesis",
         (
             f"Hola,\n\n{business.get('name') or 'Tu cliente'} te ha dado acceso "
-            "a su documentación en Noesis. Acepta la invitación durante los "
-            f"próximos 7 días:\n\n{link}\n\nEl enlace es personal y de un solo uso.\n\n— Noesis"
+            "a su documentación en Bynoesis. Acepta la invitación durante los "
+            f"próximos 7 días:\n\n{link}\n\nEl enlace es personal y de un solo uso.\n\n— Bynoesis"
         ),
         business_id=business_id,
         idempotency_key=(

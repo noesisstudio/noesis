@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "purpose": "Fuente única de tokens visuales de Noesis. Codex NO inventa colores, radios, sombras ni densidades: usa esto. Fijado 2026-07-08.",
+    "purpose": "Fuente única de tokens visuales de Bynoesis. Codex NO inventa colores, radios, sombras ni densidades: usa esto. Fijado 2026-07-08.",
     "status": "Base = valores reales de web/static/app.css. 'proposed' = evolución cálida acordada (dirección DESIGN.md §6). Aplicar 'proposed' en el reskin.",
     "reference_docs": ["DESIGN.md", "UX_COPY.md", "PRODUCT_PRINCIPLES.md"]
   },
@@ -38,7 +38,7 @@
   "typography": {
     "sans": "\"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
     "serif": "\"Fraunces\", \"Iowan Old Style\", \"Palatino Linotype\", Georgia, serif",
-    "_voice_rule": "Serif (Fraunces) = VOZ de Noesis: el parte, titulares, recomendaciones. Sans (Inter) = DATOS: importes, tablas, formularios. Es la firma tipográfica; usarla con intención."
+    "_voice_rule": "Serif (Fraunces) = VOZ de Bynoesis: el parte, titulares, recomendaciones. Sans (Inter) = DATOS: importes, tablas, formularios. Es la firma tipográfica; usarla con intención."
   },
   "radius": {
     "md": "12px",

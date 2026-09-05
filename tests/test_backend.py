@@ -1564,7 +1564,7 @@ class BackendTestCase(unittest.TestCase):
         )
 
         # Dictada por voz, la frase natural lleva un conector entre el nombre y
-        # el importe. Si se cuela en el nombre, Noesis crea un cliente nuevo mal
+        # el importe. Si se cuela en el nombre, Bynoesis crea un cliente nuevo mal
         # escrito en vez de reconocer al que ya existe.
         for frase, cliente, base in (
             ("factura para Juan Perez de 250 euros por reparar una bajante",
@@ -1645,7 +1645,7 @@ class BackendTestCase(unittest.TestCase):
 
     def test_series_can_continue_a_numbering_brought_from_another_program(self):
         # Quien llega desde otro programa ya lleva facturas emitidas del año. Si
-        # Noesis empezara en el 1, repetiría números dentro del mismo ejercicio.
+        # Bynoesis empezara en el 1, repetiría números dentro del mismo ejercicio.
         business, client = self.make_business()
         first = db.add_invoice(
             client["id"], "Primera", 100, business_id=business["id"]
@@ -2700,9 +2700,9 @@ class PaymentReminderTestCase(unittest.TestCase):
                 page = client.get(f"/b/{business['id']}/ajustes")
                 self.assertEqual(page.status_code, 200)
                 self.assertIn("Recordatorios de cobro", page.text)
-                self.assertIn("Centro de control de Noesis", page.text)
-                self.assertIn("Noesis nunca mueve dinero", page.text)
-                self.assertIn("Ayuda avanzada de Noesis", page.text)
+                self.assertIn("Centro de control de Bynoesis", page.text)
+                self.assertIn("Bynoesis nunca mueve dinero", page.text)
+                self.assertIn("Ayuda avanzada de Bynoesis", page.text)
                 self.assertNotIn("Yo vigilo que todo siga funcionando", page.text)
                 self.assertNotIn("Calendario externo", page.text)
                 self.assertNotIn("IA privada", page.text)
@@ -3323,7 +3323,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Taller García", home_page.text)
                 self.assertIn("product-home-preview", home_page.text)
                 self.assertIn("data-product-demo", home_page.text)
-                self.assertNotIn("Inicio de Noesis", home_page.text)
+                self.assertNotIn("Inicio de Bynoesis", home_page.text)
                 self.assertNotIn("Empresa de ejemplo", home_page.text)
                 self.assertNotIn("Vista de ejemplo basada", home_page.text)
                 self.assertIn("hero-impact", home_page.text)
@@ -3331,7 +3331,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Puesta en marcha", home_page.text)
                 self.assertIn("6 de 6 pasos listos", home_page.text)
                 self.assertIn("Beneficio este mes", home_page.text)
-                self.assertIn("Noesis está trabajando", home_page.text)
+                self.assertIn("Bynoesis está trabajando", home_page.text)
                 self.assertIn("Cómo va el dinero", home_page.text)
                 self.assertIn("data-demo-crumb", home_page.text)
                 self.assertIn("Conectar WhatsApp", home_page.text)
@@ -5576,6 +5576,30 @@ class WhatsappMediaTestCase(unittest.TestCase):
         db.set_whatsapp_status(business["id"], "conectado", phone=phone)
         return db.get_business(business["id"]), client
 
+    def test_linking_accepts_the_old_keyword_after_the_rename(self):
+        # La marca pasó de «Noesis» a «Bynoesis». El mensaje que se genera lleva ya
+        # la palabra nueva, pero quien tenga a mano una captura, un correo o unas
+        # instrucciones antiguas no puede quedarse sin poder vincular su teléfono.
+        business, _ = self.make_business("Renombrada")
+
+        enlace = whatsapp.start_link(business["id"])
+        self.assertTrue(enlace["link"])
+        self.assertIn("BYNOESIS", enlace["link"].replace("%20", " "))
+
+        # La palabra nueva vincula.
+        respuesta = whatsapp._try_link("34600111222", f"BYNOESIS {enlace['code']}")
+        self.assertIsNotNone(respuesta)
+        self.assertNotIn("no es válido", respuesta)
+
+        # Y la antigua también, con un código nuevo.
+        otro = whatsapp.start_link(business["id"])
+        vieja = whatsapp._try_link("34600111333", f"NOESIS {otro['code']}")
+        self.assertIsNotNone(vieja)
+        self.assertNotIn("no es válido", vieja)
+
+        # Cualquier otra palabra sigue sin ser una vinculación.
+        self.assertIsNone(whatsapp._try_link("34600111444", f"HOLA {otro['code']}"))
+
     def test_photo_creates_draft_and_yes_confirms_once(self):
         from noesis.adapters import extraction
 
@@ -6695,7 +6719,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Dirección Noesis")
+        admin_business, _ = self.make_business("Dirección Bynoesis")
         target, _ = self.make_business("Cuenta con correo bloqueado")
         other, _ = self.make_business("Otra cuenta")
         admin = db.create_user(
@@ -6896,7 +6920,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
 
         prohibido = "\r\n\t\v\f\u2028\u2029"
         parte = (
-            "Tu parte de hoy en Noesis:\n"
+            "Tu parte de hoy en Bynoesis:\n"
             "\n"
             "Trabajos:\n"
             "\u2022 #12 \u00b7 09:00 \u00b7 Comunidad Los Olivos: reparar bajante\n"
@@ -6928,7 +6952,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertIn("Comunidad Los Olivos", enviado)
         self.assertIn("240,00", enviado)
         self.assertIn("\u00b7", enviado, "los saltos dejan un separador visible")
-        self.assertNotIn("Noesis:Trabajos", enviado, "las lineas no pueden pegarse")
+        self.assertNotIn("Bynoesis:Trabajos", enviado, "las lineas no pueden pegarse")
 
         # 3. Lo guardado es exactamente lo que saldra, para que un reintento no
         #    cambie el texto ni el diagnostico enseñe otra cosa.
@@ -7003,7 +7027,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertNotIn("https://", boton)
 
     def test_each_identity_lands_where_it_works(self):
-        """Administracion no lleva un negocio con Noesis: gestiona los de los demas.
+        """Administracion no lleva un negocio con Bynoesis: gestiona los de los demas.
 
         Aterrizar en un panel con Trabajos, Clientes y Facturas la obliga a buscar
         la puerta de su propio trabajo. Un cliente, al reves, no debe acabar nunca
@@ -7011,7 +7035,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Noesis Studio")
+        admin_business, _ = self.make_business("Bynoesis Studio")
         cliente, _ = self.make_business("Fontaneria cliente")
         admin = db.create_user(
             "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
@@ -7059,7 +7083,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Noesis Studio")
+        admin_business, _ = self.make_business("Bynoesis Studio")
         cliente, _ = self.make_business("Fontaneria de prueba")
         admin = db.create_user(
             "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
@@ -7469,7 +7493,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Dirección Noesis")
+        admin_business, _ = self.make_business("Dirección Bynoesis")
         target, _ = self.make_business("Cuenta diagnosticada")
         db.add_client(
             "CLIENTE-SECRETO-NO-MOSTRAR", phone="699999999",
@@ -7507,7 +7531,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 self.assertIn("Cuenta diagnosticada", page.text)
                 self.assertIn("Ventana temporal abierta", page.text)
                 self.assertIn("Diagnóstico de integraciones", page.text)
-                self.assertIn("Consumo y rentabilidad de Noesis", page.text)
+                self.assertIn("Consumo y rentabilidad de Bynoesis", page.text)
                 self.assertNotIn("CLIENTE-SECRETO-NO-MOSTRAR", page.text)
                 client.post("/logout")
                 client.post("/login", data={
@@ -8273,7 +8297,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
             ) as urlopen,
         ):
             result = ai_adapter.local_chat(
-                system="Eres Noesis.",
+                system="Eres Bynoesis.",
                 messages=[{"role": "user", "content": "Ayúdame."}],
                 tools=[{
                     "name": "listar_clientes",
