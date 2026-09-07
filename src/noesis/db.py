@@ -11862,6 +11862,80 @@ def ai_usage_summary(month: str | None = None) -> dict:
     return {"month": month, "total": total, "per_business": per_business}
 
 
+def admin_api_usage(business_id: int, month: str | None = None) -> dict:
+    """Telemetría por cuenta/proveedor, sin contenido ni factura del proveedor."""
+    import math
+
+    month = month or date.today().strftime("%Y-%m")
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", month):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT event_data, created_at FROM product_events "
+            "WHERE business_id=? AND event_name='ai_usage' "
+            "AND CAST(created_at AS TEXT) LIKE ? ORDER BY id",
+            (business_id, f"{month}%"),
+        ).fetchall()
+    groups = {}
+    invalid = 0
+
+    def number(value):
+        try:
+            result = float(value)
+            return result if math.isfinite(result) and result >= 0 else None
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+    for row in rows:
+        try:
+            data = json.loads(row["event_data"] or "{}")
+        except (ValueError, TypeError):
+            invalid += 1
+            continue
+        if not isinstance(data, dict):
+            invalid += 1
+            continue
+        provider = str(data.get("provider") or "desconocido")[:80]
+        model = str(data.get("model") or "sin modelo registrado")[:120]
+        item = groups.setdefault((provider, model), {
+            "provider": provider, "model": model, "calls": 0,
+            "input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0,
+            "unpriced_calls": 0, "duration_samples": 0, "duration_ms": 0.0,
+            "last_seen": None,
+        })
+        item["calls"] += 1
+        item["input_tokens"] += int(number(data.get("in")) or 0)
+        item["output_tokens"] += int(number(data.get("out")) or 0)
+        cost = number(data.get("estimated_cost_usd"))
+        if cost is None:
+            item["unpriced_calls"] += 1
+        else:
+            item["estimated_cost_usd"] += cost
+        duration = number(data.get("duration_ms"))
+        if duration is not None:
+            item["duration_samples"] += 1
+            item["duration_ms"] += duration
+        item["last_seen"] = str(row["created_at"])
+    result = []
+    for item in groups.values():
+        item["estimated_cost_usd"] = round(item["estimated_cost_usd"], 6)
+        item["mean_duration_ms"] = (
+            round(item["duration_ms"] / item["duration_samples"])
+            if item["duration_samples"] else None
+        )
+        del item["duration_ms"]
+        result.append(item)
+    return {
+        "business_id": business_id, "month": month, "as_of": _now(),
+        "scope": "business", "currency": "USD", "cost_basis": "estimate",
+        "usd_to_eur_assumption": config.COST_USD_TO_EUR,
+        "rows": sorted(result, key=lambda item: (item["provider"], item["model"])),
+        "invalid_records": invalid,
+        "coverage": "Solo llamadas con evento ai_usage; no representa todas las APIs "
+        "ni la factura del proveedor. Sin eventos no significa consumo cero.",
+    }
+
+
 def admin_alerts() -> list[dict]:
     """Alarmas operativas para el fundador: qué está fallando y dónde llamar."""
     alerts: list[dict] = []
@@ -12143,7 +12217,7 @@ def account_cost_control(month: str | None = None) -> dict:
             "ai_calls": int(ai.get("calls") or 0),
             "ai_tokens": int(ai.get("input") or 0) + int(ai.get("output") or 0),
             "ai_estimated_cost_eur": round(
-                float(ai.get("estimated_cost_usd") or 0) * 0.92, 4
+                float(ai.get("estimated_cost_usd") or 0) * config.COST_USD_TO_EUR, 4
             ),
             "ai_credits_used": credit_used,
             "ai_credits_limit": credit_limit,
@@ -12391,7 +12465,7 @@ def admin_overview() -> dict:
     # solo una aproximación operativa; la factura del proveedor sigue mandando.
     # Una extracción local no recibe un coste ficticio: si el proveedor no devuelve
     # uso medible, la factura real se registra en el libro CFO.
-    ai_cost_eur = round(ai_total["estimated_cost_usd"] * 0.92, 2)
+    ai_cost_eur = round(ai_total["estimated_cost_usd"] * config.COST_USD_TO_EUR, 2)
     margen_pct = round((mrr - ai_cost_eur) / mrr * 100) if mrr else None
     altas_mes = altas_by_month.get(today.strftime("%Y-%m"), 0)
     en_riesgo = len([
@@ -12749,6 +12823,7 @@ def admin_support_snapshot(business_id: int) -> dict | None:
             "subscription_status": business.get("subscription_status"),
             "trial_ends_at": business.get("trial_ends_at"),
             "whatsapp_status": business.get("whatsapp_status"),
+            "whatsapp_phone": business.get("whatsapp_phone"),
             "fiscal_profile_complete": bool(
                 business.get("nif") and business.get("address")
             ),

@@ -1,0 +1,8 @@
+<div class="admin-context"><b>Continuidad de las entregas digitales</b><p>Revisa incidencias y abre la ficha correspondiente. Los recuentos de mensajes y correos proceden de eventos registrados, no de una confirmación en vivo de los proveedores.</p><span>Período de canales: {{ data.cost_control.month }} · cola fiscal: estado actual.</span></div>
+<section class="card">
+  <div class="card-h"><h2>Canales por cuenta</h2><span class="hint">Sin contenido ni destinatarios</span></div>
+  <div class="table-wrap"><table><thead><tr><th>Cuenta</th><th>WhatsApp entrante / saliente</th><th>Registros de correo</th><th>Fallos registrados</th><th>Diagnóstico</th></tr></thead><tbody>
+  {% for row in data.cost_control.rows %}<tr><td><b>{{ row.name }}</b></td><td>{{ row.whatsapp_in }} / {{ row.whatsapp_out }}</td><td>{{ row.email_out }}</td><td><span class="badge {{ 'b-red' if row.whatsapp_failed or row.email_failed else 'b-gray' }}">{{ row.whatsapp_failed + row.email_failed }} registrados</span></td><td><a class="btn sm" href="/admin/cuentas/{{ row.id }}#entregas">Revisar entregas</a></td></tr>{% else %}<tr><td colspan="5" class="empty">No hay cuentas con datos disponibles en este entorno.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="card-b"><p class="meta">Los registros salientes incluyen elementos pendientes y fallidos; no equivalen a entregas confirmadas. Cero fallos registrados no demuestra que todo haya llegado. La ficha muestra los estados disponibles.</p></div>
+</section>

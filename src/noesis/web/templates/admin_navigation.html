@@ -1,0 +1,21 @@
+<a class="admin-skip" href="#admin-content">Saltar al contenido</a>
+<aside class="admin-rail" aria-label="Administración interna">
+  <a class="admin-brand" href="/admin"><img src="/static/noesis-mark.svg" width="28" height="28" alt="">Bynoesis</a>
+  <p class="admin-rail-caption">Empresa <span>Uso interno</span></p>
+  {% if admin_scope == 'account' %}
+  <a class="admin-return" href="/admin#vista-cuentas">← Todas las cuentas</a>
+  <p class="admin-rail-context">{{ snapshot.business.name }}</p>
+  {% endif %}
+  <details class="admin-nav-disclosure" open>
+  <summary>Departamentos <span data-admin-nav-current></span></summary>
+  <nav class="admin-navigation" aria-label="Apartados de administración">
+    {% for key, label, description in admin_views %}
+    {% if admin_scope == 'company' and key == 'resumen' %}<p class="admin-nav-group">Visión general</p>{% endif %}
+    {% if admin_scope == 'company' and key == 'cuentas' %}<p class="admin-nav-group">Negocio</p>{% endif %}
+    {% if admin_scope == 'company' and key == 'operaciones' %}<p class="admin-nav-group">Servicio y control</p>{% endif %}
+    <a href="#vista-{{ key }}" data-admin-nav="{{ key }}"><span>{{ label }}</span><small>{{ description }}</small></a>
+    {% endfor %}
+  </nav>
+  </details>
+  <p class="admin-rail-footer">Acceso administrativo<br><span>Consulta y acciones auditadas.</span></p>
+</aside>

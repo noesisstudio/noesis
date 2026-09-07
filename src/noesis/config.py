@@ -1,5 +1,6 @@
 """Configuración central. Lee variables del archivo .env."""
 
+import math
 import os
 import re
 from pathlib import Path
@@ -93,6 +94,11 @@ FALLBACK_OUTPUT_USD_PER_MTOK = float(
     os.getenv("NOESIS_FALLBACK_OUTPUT_USD_PER_MTOK", "5")
 )
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
+
+# Hipótesis de gestión, no tipo de cambio vivo ni conversión contable.
+COST_USD_TO_EUR = float(os.getenv("NOESIS_COST_USD_TO_EUR", "0.92"))
+if not math.isfinite(COST_USD_TO_EUR) or COST_USD_TO_EUR <= 0:
+    raise ValueError("NOESIS_COST_USD_TO_EUR debe ser positivo y finito.")
 
 # Railway inyecta DATABASE_URL al enlazar el servicio Postgres. Sin esa variable,
 # Bynoesis conserva SQLite para desarrollo local y pruebas.

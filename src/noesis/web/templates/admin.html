@@ -6,31 +6,27 @@
   <title>Bynoesis · Panel de control</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  <link rel="stylesheet" href="/static/admin-workspace.css?v={{ asset_v }}">
 </head>
-<body style="background:var(--bg)">
-<div class="admin-wrap">
-  <div class="page-head">
-    <div class="page-title">
-      <div class="kicker">Bynoesis · Fundador</div>
-      <h1>Centro de mando</h1>
-      <p>Cada departamento te informa con sus cifras y su parte diario.
-         Solo metadatos de cuenta y agregados — sin datos operativos de cada autónomo.</p>
-    </div>
-    <div class="page-actions">
-      {% if data.businesses %}<a class="btn" href="/b/{{ mi_negocio }}/resumen">Mi panel de negocio</a>{% endif %}
-      <form method="post" action="/logout"><button class="btn" type="submit">Salir</button></form>
-    </div>
+<body class="admin-workspace">
+{% set admin_scope = 'company' %}
+{% set admin_views = [('resumen','Dirección','Prioridades y visión global'),('cuentas','Cuentas y soporte','Titulares, acceso y seguimiento'),('captacion','Marketing y ventas','Adquisición y solicitudes'),('finanzas','Finanzas y consumo','Ingresos, costes y uso'),('operaciones','Operaciones','Entregas e incidencias'),('ingenieria','Ingeniería y seguridad','Sistemas y continuidad'),('privacidad','Administración legal','Derechos y bajas')] %}
+{% include 'admin_navigation.html' %}
+<main class="admin-wrap" data-admin-workspace data-admin-default="{{ 'captacion' if invite else 'resumen' }}">
+  <div class="admin-topbar">
+    <div><span class="admin-product-label">Bynoesis / Empresa</span><span class="admin-environment">Espacio interno</span></div>
+    <div class="admin-top-actions"><a class="btn sm" href="/admin" data-admin-refresh>Actualizar</a>{% if data.businesses %}<a class="btn sm" href="/b/{{ mi_negocio }}/resumen">Abrir mi negocio</a>{% endif %}<form method="post" action="/logout"><button class="btn sm" type="submit">Salir</button></form></div>
   </div>
-
-  <div class="admin-grid">
-    <div class="stat"><div class="lbl">Cuentas</div><div class="val">{{ data.total }}</div><div class="delta flat">{{ data.en_prueba }} en prueba</div></div>
-    <div class="stat"><div class="lbl">Activados</div><div class="val green">{{ data.activados }}</div><div class="delta flat">{{ data.tasa_activacion }}% del total</div></div>
-    <div class="stat"><div class="lbl">Primer cobro</div><div class="val green">{{ data.resultados }}</div><div class="delta flat">ciclo completo</div></div>
-    <div class="stat"><div class="lbl">MRR</div><div class="val">{{ data.mrr }} €</div><div class="delta flat">{{ data.activos }} suscripción(es)</div></div>
-    <div class="stat"><div class="lbl">En riesgo</div><div class="val {{ 'red' if data.en_riesgo }}">{{ data.en_riesgo }}</div><div class="delta flat">activados sin uso 14+ días</div></div>
-    <div class="stat"><div class="lbl">Alarmas</div><div class="val {{ 'red' if data.alerts else 'green' }}">{{ data.alerts|length }}</div><div class="delta flat">ahora mismo</div></div>
-  </div>
-
+  <header class="admin-view-head" id="admin-content" tabindex="-1">
+    <div class="kicker">Centro de mando</div><h1 id="admin-view-title">Dirección</h1><p id="admin-view-hint">Prioridades y visión global</p>
+    <p class="admin-freshness">Lectura del sistema: <time>{{ admin_as_of }}</time> · actualización al abrir o pulsar Actualizar, no monitorización en vivo.</p>
+  </header>
+  {% if admin_error %}<div class="admin-note error" role="alert">{{ admin_error }}</div>{% endif %}
+  {% if admin_success %}<div class="admin-note success" role="status">{{ admin_success }}</div>{% endif %}
+<div id="vista-resumen" data-admin-panel="resumen">
+{% include 'admin_direction.html' %}
+</div>
+<div id="vista-cuentas" data-admin-panel="cuentas">
   <section class="admin-card gestion-panel" id="gestion">
     <div class="admin-card-head">
       <div>
@@ -39,16 +35,17 @@
       </div>
       <span class="meta">Cada cambio queda registrado en la bitácora</span>
     </div>
-    <p class="meta gestion-intro">Lo que más vas a hacer, sin entrar en ninguna ficha.
-      Aquí se decide qué puede usar cada cuenta; el contenido de sus negocios no se
-      abre desde aquí ni desde ningún otro sitio.</p>
+    <p class="meta gestion-intro">Abre una ficha para revisar identidad, consumo y entregas. Las modificaciones de acceso están separadas de la consulta; requieren los permisos existentes.</p>
 
+    <label class="admin-search">Buscar cuenta<input class="input" type="search" data-admin-account-search placeholder="Nombre, correo o teléfono" autocomplete="off"></label>
+    <p class="meta" data-admin-search-status role="status" hidden></p>
     <div class="gestion-list">
       {% for b in data.businesses %}
-      <div class="gestion-row">
+      <div class="gestion-row" data-admin-account-row>
         <div class="gestion-id">
-          <b>{{ b.name }}</b>
-          <span class="meta">{{ b.owner_email or 'sin titular' }}</span>
+          <a class="admin-account-name" href="/admin/cuentas/{{ b.id }}">{{ b.name }}</a>
+          <span class="meta">{{ b.owner_email or 'Sin correo de titular' }}</span>
+          <span class="meta">WhatsApp del titular: {{ b.whatsapp_phone or 'Sin teléfono vinculado' }}</span>
         </div>
 
         <div class="gestion-state">
@@ -67,13 +64,13 @@
           {% endif %}
         </div>
 
-        <div class="gestion-actions">
+        <details class="admin-account-actions"><summary>Modificar acceso o plan</summary><div class="gestion-actions">
           <form method="post" action="/admin/cuentas/{{ b.id }}/suscripcion">
             <input type="hidden" name="volver" value="admin">
             <select name="plan" aria-label="Plan para {{ b.name }}">
-              <option value="autonomo">Autónomo</option>
-              <option value="pro" selected>Negocio</option>
-              <option value="premium">Premium</option>
+              <option value="autonomo" {% if b.plan == 'autonomo' %}selected{% endif %}>Autónomo</option>
+              <option value="pro" {% if b.plan not in ('autonomo', 'premium') %}selected{% endif %}>Negocio</option>
+              <option value="premium" {% if b.plan == 'premium' %}selected{% endif %}>Premium</option>
             </select>
             <button class="btn sm primary" type="submit" name="action" value="activar">Activar</button>
           </form>
@@ -88,7 +85,7 @@
           </form>
 
           <a class="btn sm" href="/admin/cuentas/{{ b.id }}#acceso">Personas y acceso →</a>
-        </div>
+        </div></details>
       </div>
       {% else %}
       <p class="meta">Todavía no hay ninguna cuenta.</p>
@@ -96,68 +93,76 @@
     </div>
   </section>
 
-  <!-- ================= 📈 Visitas de la web ================= -->
-  <div class="dept-head" id="visitas">
-    <span class="dept-ic">📈</span>
+  <details class="admin-disclosure"><summary>Actividad agregada de las cuentas <span>Histórico del producto; no son ingresos de Bynoesis</span></summary><div class="admin-disclosure-body">
+  <!-- =================  Clientes ================= -->
+  <div class="dept-head" id="cuentas">
     <div>
-      <h2>Visitas de la web</h2>
-      <p>Últimos {{ visits.days }} días. Recuento propio, sin cookies ni terceros:
-         no se guarda IP ni navegador, así que no se puede seguir a nadie.</p>
+      <h2>Uso histórico del producto</h2>
+      <p>{{ data.dept_reports.clientes }}</p>
     </div>
   </div>
-  <div class="admin-grid">
-    <div class="stat"><div class="lbl">Visitas totales</div><div class="val">{{ visits.total }}</div><div class="delta flat">{{ visits.days }} días</div></div>
-    <div class="stat"><div class="lbl">Solicitudes recibidas</div><div class="val green">{{ access_requests|length }}</div><div class="delta flat">desde el inicio</div></div>
-    <div class="stat"><div class="lbl">Días con visitas</div><div class="val">{{ visits.by_day|length }}</div><div class="delta flat">de {{ visits.days }}</div></div>
-  </div>
-  <div class="grid g2">
-    <div class="card">
-      <div class="card-h"><h2>Páginas más vistas</h2><span class="hint">últimos {{ visits.days }} días</span></div>
-      <div class="card-b">
-        {% if visits.by_path %}
-        <div class="table-wrap"><table>
-          <thead><tr><th>Página</th><th class="t-right">Visitas</th></tr></thead>
+  <div class="card">
+    <div class="card-h"><h2>Cuentas</h2><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp · contacto directo para emergencias</span></div>
+    <div class="card-b table-pad">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Negocio</th><th>Contacto</th><th>Plan</th><th>Estado</th>
+            <th class="t-right">Activación</th><th class="t-right">Última actividad</th>
+            <th class="t-right">Clientes</th><th class="t-right">Facturas</th>
+            <th class="t-right">Facturado</th><th class="t-right">Cobrado</th>
+            <th class="t-right">IA (in/out)</th><th></th></tr></thead>
           <tbody>
-            {% for fila in visits.by_path %}
-            <tr><td>{{ fila.path }}</td><td class="t-right">{{ fila.views }}</td></tr>
-            {% endfor %}
+          {% for b in data.businesses %}
+            <tr>
+              <td>
+                <b>{{ b.name }}</b>
+                <div class="meta">{{ b.sector or '—' }}{% if b.n_equipo %} · equipo {{ b.n_equipo }}{% endif %}{% if b.gestoria_cadence and b.gestoria_cadence != 'off' %} · gestoría{% endif %}</div>
+              </td>
+              <td class="meta">
+                {% if b.owner_email %}<a href="mailto:{{ b.owner_email }}">{{ b.owner_email }}</a>{% else %}—{% endif %}
+                {% if b.whatsapp_phone %}<br><a href="https://wa.me/34{{ b.whatsapp_phone|replace(' ','')|replace('+34','') }}" target="_blank" rel="noopener"> {{ b.whatsapp_phone }}</a>{% endif %}
+              </td>
+              <td>{{ b.plan }}</td>
+              <td><span class="badge {{ 'b-green' if b.subscription_status=='active' else 'b-amber' if b.subscription_status=='trial' else 'b-red' }}">{{ b.subscription_status }}</span></td>
+              <td class="t-right"><span class="badge {{ 'b-green' if b.activated else 'b-amber' }}">{{ b.activation_progress }}%</span></td>
+              <td class="t-right">
+                {% if b.last_activity %}
+                  <span class="{{ 'meta' if (b.days_inactive or 0) < 14 }}">{{ b.last_activity }}</span>
+                  {% if (b.days_inactive or 0) >= 14 %}<span class="badge b-red">{{ b.days_inactive }}d</span>{% endif %}
+                {% else %}<span class="meta">nunca</span>{% endif %}
+              </td>
+              <td class="t-right num">{{ b.n_clientes }}</td>
+              <td class="t-right num">{{ b.n_facturas }}</td>
+              <td class="t-right num">{{ '%.2f'|format(b.facturado) }} €</td>
+              <td class="t-right num">{{ '%.2f'|format(b.cobrado) }} €</td>
+              <td class="t-right num meta">
+                {% if b.ai.calls or b.ai.extractions %}
+                  {{ b.ai.calls }}·{{ b.ai.input }}/{{ b.ai.output }}
+                  {% if b.ai.extractions %} +{{ b.ai.extractions }}{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td class="t-right"><a class="btn sm primary" href="/admin/cuentas/{{ b.id }}">Gestionar</a></td>
+            </tr>
+          {% endfor %}
           </tbody>
-        </table></div>
-        {% else %}
-        <p class="empty">Todavía no hay visitas registradas.</p>
-        {% endif %}
+        </table>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h2>De dónde llega la gente</h2><span class="hint">sitios que te traen visitas</span></div>
-      <div class="card-b">
-        {% if visits.by_referrer %}
-        <div class="table-wrap"><table>
-          <thead><tr><th>Procedencia</th><th class="t-right">Visitas</th></tr></thead>
-          <tbody>
-            {% for fila in visits.by_referrer %}
-            <tr><td>{{ fila.referrer_host }}</td><td class="t-right">{{ fila.views }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table></div>
-        {% else %}
-        <p class="empty">Nadie ha llegado desde otro sitio todavía. Cuando compartas
-          el enlace o Google te indexe, aparecerá aquí.</p>
-        {% endif %}
-      </div>
+      {% if not data.businesses %}<div class="empty-state"><b>Aún no hay cuentas</b><span>Cuando se registren autónomos, aparecerán aquí.</span></div>{% endif %}
     </div>
   </div>
-
-  <!-- ================= 📬 Solicitudes de acceso ================= -->
+  </div></details>
+</div>
+<div id="vista-captacion" data-admin-panel="captacion">
+<div class="admin-context"><b>De la visita a la relación comercial</b><p>Atiende solicitudes y revisa la adquisición. Las visitas son páginas vistas, no personas únicas; no se calcula conversión cruzando períodos distintos.</p><span>Fuentes: contador propio de páginas, solicitudes y cuentas.</span></div>
+<!-- =================  Solicitudes de acceso ================= -->
   <div class="dept-head" id="solicitudes">
-    <span class="dept-ic">📬</span>
     <div>
       <h2>Solicitudes de acceso</h2>
       <p>{% if access_pending %}Tienes {{ access_pending }} solicitud(es) sin atender.{% else %}Todas las solicitudes están atendidas.{% endif %}</p>
     </div>
   </div>
 
-  {% if admin_error %}<div class="admin-note error">{{ admin_error }}</div>{% endif %}
+
 
   {% if invite %}
   <div class="admin-note success">
@@ -220,84 +225,111 @@
     {% endif %}
   </div>
 
-  <!-- ================= 🛡️ Privacidad y bajas ================= -->
-  <div class="dept-head" id="privacidad">
-    <span class="dept-ic">🛡️</span>
+  <!-- =================  Visitas de la web ================= -->
+  <div class="dept-head" id="visitas">
     <div>
-      <h2>Privacidad y bajas</h2>
-      <p>{% if privacy_pending %}Hay {{ privacy_pending }} solicitud(es) que requieren seguimiento.{% else %}No hay solicitudes abiertas.{% endif %}</p>
+      <h2>Visitas de la web</h2>
+      <p>Últimos {{ visits.days }} días. Recuento propio, sin cookies ni terceros:
+         no se guarda IP ni navegador, así que no se puede seguir a nadie.</p>
     </div>
   </div>
-  {% if admin_success %}<div class="admin-note success">{{ admin_success }}</div>{% endif %}
-  <div class="card">
-    <div class="card-h">
-      <h2>Registro de solicitudes</h2>
-      <span class="hint">el estado no borra datos automáticamente</span>
+  <div class="admin-grid">
+    <div class="stat"><div class="lbl">Páginas vistas</div><div class="val">{{ visits.total }}</div><div class="delta flat">{{ visits.days }} días</div></div>
+    <div class="stat"><div class="lbl">Solicitudes recibidas</div><div class="val green">{{ access_requests|length }}</div><div class="delta flat">desde el inicio</div></div>
+    <div class="stat"><div class="lbl">Días con visitas</div><div class="val">{{ visits.by_day|length }}</div><div class="delta flat">de {{ visits.days }}</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h"><h2>Páginas más vistas</h2><span class="hint">últimos {{ visits.days }} días</span></div>
+      <div class="card-b">
+        {% if visits.by_path %}
+        <div class="table-wrap"><table>
+          <thead><tr><th>Página</th><th class="t-right">Visitas</th></tr></thead>
+          <tbody>
+            {% for fila in visits.by_path %}
+            <tr><td>{{ fila.path }}</td><td class="t-right">{{ fila.views }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+        {% else %}
+        <p class="empty">Todavía no hay visitas registradas.</p>
+        {% endif %}
+      </div>
     </div>
-    {% if privacy_requests %}
-    <div class="table-wrap"><table>
-      <thead><tr><th>Referencia</th><th>Cuenta</th><th>Solicitud</th><th>Estado</th><th>Seguimiento</th></tr></thead>
-      <tbody>
-      {% for req in privacy_requests %}
-        <tr>
-          <td><b>#{{ req.id }}</b><small>{{ req.requested_at }}</small></td>
-          <td><b>{{ req.business_name }}</b><small>{{ req.requester_email or 'Usuario eliminado' }}</small></td>
-          <td>
-            {{ 'Baja y supresión' if req.request_type == 'account_closure' else req.request_type }}
-            {% if req.retention_required %}<small class="amber">con conservación legal</small>{% endif %}
-          </td>
-          <td><span class="badge {{ 'b-green' if req.status == 'completed' else 'b-amber' if req.status in ('received','in_review','waiting_requester','legal_hold') else 'b-gray' }}">{{ req.status }}</span></td>
-          <td>
-          {% if req.status in ('received','in_review','waiting_requester','legal_hold') %}
-            <form method="post" action="/admin/privacidad/{{ req.id }}/estado" class="req-actions">
-              <select class="input" name="status" required>
-                <option value="in_review">En revisión</option>
-                <option value="waiting_requester">Esperando al solicitante</option>
-                <option value="legal_hold">Conservación legal</option>
-                <option value="completed">Completada</option>
-                <option value="rejected">Rechazada con motivo</option>
-                <option value="cancelled">Cancelada por el solicitante</option>
-              </select>
-              <input class="input" name="resolution_note" maxlength="2000" placeholder="Actuación y motivo documentados" required>
-              <button class="btn sm" type="submit">Guardar seguimiento</button>
-            </form>
-          {% else %}
-            <span class="meta">{{ req.resolution_note or 'Sin nota' }}</span>
-          {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table></div>
-    {% else %}
-      <p class="empty">Cuando una baja no pueda borrarse al instante por conservación fiscal o laboral, aparecerá aquí con una referencia trazable.</p>
-    {% endif %}
+    <div class="card">
+      <div class="card-h"><h2>De dónde llega la gente</h2><span class="hint">sitios que te traen visitas</span></div>
+      <div class="card-b">
+        {% if visits.by_referrer %}
+        <div class="table-wrap"><table>
+          <thead><tr><th>Procedencia</th><th class="t-right">Visitas</th></tr></thead>
+          <tbody>
+            {% for fila in visits.by_referrer %}
+            <tr><td>{{ fila.referrer_host }}</td><td class="t-right">{{ fila.views }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+        {% else %}
+        <p class="empty">No hay procedencias registradas en este período. La ausencia de referente no demuestra que no haya tráfico externo.</p>
+        {% endif %}
+      </div>
+    </div>
   </div>
 
-  <!-- ================= 💰 Finanzas ================= -->
-  <div class="dept-head" id="finanzas">
-    <span class="dept-ic">💰</span>
+  <!-- =================  Crecimiento ================= -->
+  <div class="dept-head">
     <div>
-      <h2>Finanzas</h2>
-      <p>{{ data.dept_reports.finanzas }}</p>
+      <h2>Crecimiento</h2>
+      <p>{{ data.dept_reports.crecimiento }}</p>
     </div>
-  </div>
-  <div class="admin-grid fin-grid">
-    <div class="stat"><div class="lbl">MRR</div><div class="val">{{ data.finanzas.mrr }} €</div><div class="delta flat">ingreso recurrente mensual</div></div>
-    <div class="stat"><div class="lbl">Run-rate anual</div><div class="val">{{ data.finanzas.run_rate }} €</div><div class="delta flat">MRR × 12</div></div>
-    <div class="stat"><div class="lbl">Coste IA (mes)</div><div class="val amber">{{ '%.2f'|format(data.finanzas.ai_cost_eur) }} €</div><div class="delta flat">estimado por tokens</div></div>
-    <div class="stat"><div class="lbl">Margen IA estimado</div>
-      <div class="val {{ 'green' if data.finanzas.margen_pct and data.finanzas.margen_pct >= 70 }}">{{ data.finanzas.margen_pct ~ '%' if data.finanzas.margen_pct is not none else '—' }}</div>
-      <div class="delta flat">hipótesis técnica, no margen contable</div></div>
   </div>
   <div class="grid g2 admin-charts">
     <div class="card">
-      <div class="card-h"><h2>Margen observado · {{ data.finanzas.cost_ledger.period }}</h2>
+      <div class="card-h"><h2>Altas por mes</h2><span class="hint">últimos 12 meses</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-altas"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Distribución de planes</h2><span class="hint">todas las cuentas</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ch-planes"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- =================  Marketing ================= -->
+  <div class="dept-head">
+    <div>
+      <h2>Marketing y adquisición</h2>
+      <p>Cuántas cuentas alcanzan cada hito. Una cuenta puede cumplir varios; no son pasos consecutivos ni porcentajes de conversión.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Hitos de adopción</h2>
+      <span class="hint">recuentos independientes · no es una cohorte</span></div>
+    <div class="card-b"><div class="chart-box"><canvas id="ch-funnel"></canvas></div></div>
+  </div>
+
+
+</div>
+<div id="vista-finanzas" data-admin-panel="finanzas">
+<div class="admin-context"><b>Economía de Bynoesis</b><p>Separa ingresos comprometidos, costes registrados y consumo estimado. Los importes que facturan los clientes no son ingresos de nuestra empresa.</p><span>Ingresos: estado actual de las suscripciones y catálogo. Costes y uso: {{ data.cost_control.month }}.</span></div>
+<!-- =================  Finanzas ================= -->
+  <div class="dept-head" id="finanzas">
+    <div>
+      <h2>Finanzas</h2>
+      <p>El ingreso recurrente se estima con el plan actual. No equivale a cobros conciliados de Stripe ni a beneficio contable.</p>
+    </div>
+  </div>
+  <div class="admin-grid fin-grid">
+    <div class="stat"><div class="lbl">Ingreso mensual comprometido</div><div class="val">{{ data.finanzas.mrr }} €</div><p>Estado actual de planes activos. No equivale a caja cobrada.</p></div>
+    <div class="stat"><div class="lbl">Costes registrados · {{ data.cost_control.month }}</div><div class="val">{{ ('%.2f €'|format(data.finanzas.observed_costs)) if data.finanzas.cost_ledger.has_observed_data else 'Sin datos' }}</div><p>Entradas reales y ajustes. No incluye previsiones.</p></div>
+    <div class="stat"><div class="lbl">Contribución estimada</div><div class="val">{{ ('%.2f €'|format(data.finanzas.observed_contribution)) if data.finanzas.observed_contribution is not none else 'Sin datos' }}</div><p>Ingreso comprometido menos costes registrados; depende de completar el libro de costes.</p></div>
+  </div>
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Detalle económico · {{ data.finanzas.cost_ledger.period }}</h2>
         {% if data.finanzas.cost_ledger.has_observed_data %}<span class="badge b-green">con costes registrados</span>
         {% else %}<span class="badge b-amber">faltan costes reales</span>{% endif %}</div>
       <div class="card-b">
         <div class="lrow"><span>MRR comprometido</span><b>{{ data.finanzas.mrr }} €</b></div>
-        <div class="lrow"><span>Costes reales + ajustes</span><b>{{ '%.2f'|format(data.finanzas.observed_costs) }} €</b></div>
+        <div class="lrow"><span>Costes reales + ajustes</span><b>{{ ('%.2f €'|format(data.finanzas.observed_costs)) if data.finanzas.cost_ledger.has_observed_data else 'Sin costes registrados' }}</b></div>
         <div class="lrow"><span>Contribución observada</span><b>{{ ('%.2f €'|format(data.finanzas.observed_contribution)) if data.finanzas.observed_contribution is not none else 'Sin datos suficientes' }}</b></div>
         <div class="lrow"><span>Margen observado</span><b>{{ (data.finanzas.observed_margin_pct ~ '%') if data.finanzas.observed_margin_pct is not none else '—' }}</b></div>
         <div class="lrow"><span>Coste por cuenta de pago</span><b>{{ ('%.2f €'|format(data.finanzas.observed_cost_per_active_account)) if data.finanzas.observed_cost_per_active_account is not none else '—' }}</b></div>
@@ -305,7 +337,7 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-h"><h2>Registrar coste</h2><span class="hint">factura o dato verificable</span></div>
+      <details class="admin-cost-entry"><summary>Registrar un coste <span>Factura, previsión o ajuste documentado</span></summary>
       <div class="card-b">
         <form method="post" action="/admin/costes">
           <div class="grid g2">
@@ -318,12 +350,12 @@
           <input class="input" name="note" maxlength="500" placeholder="Ej. Factura Railway de agosto">
           <button class="btn primary" style="margin-top:12px">Registrar sin sobrescribir históricos</button>
         </form>
-      </div>
+      </div></details>
     </div>
   </div>
   {% if data.finanzas.cost_ledger.entries %}
   <div class="card">
-    <div class="card-h"><h2>Entradas del período</h2><span class="hint">registro append-only</span></div>
+    <div class="card-h"><h2>Entradas del período</h2><span class="hint">histórico sin sobrescritura</span></div>
     <div class="card-b table-pad"><div class="table-wrap"><table>
       <thead><tr><th>Origen</th><th>Categoría</th><th>Nota</th><th class="t-right">Importe</th></tr></thead>
       <tbody>{% for entry in data.finanzas.cost_ledger.entries %}<tr>
@@ -334,9 +366,9 @@
     </table></div></div>
   </div>
   {% endif %}
-  <div class="grid g2 admin-charts">
+  <details class="admin-disclosure"><summary>Diagnóstico de uso del producto <span>Volumen de clientes y tokens, separados de las cuentas de Bynoesis</span></summary><div class="admin-disclosure-body">  <div class="grid g2 admin-charts">
     <div class="card">
-      <div class="card-h"><h2>Facturado vs. cobrado</h2><span class="hint">top cuentas por volumen</span></div>
+      <div class="card-h"><h2>Volumen de los clientes</h2><span class="hint">histórico agregado · no ingresos propios</span></div>
       <div class="card-b"><div class="chart-box"><canvas id="ch-volumen"></canvas></div></div>
     </div>
     <div class="card">
@@ -344,10 +376,11 @@
       <div class="card-b"><div class="chart-box"><canvas id="ch-ia"></canvas></div></div>
     </div>
   </div>
+</div></details>
   <div class="card">
     <div class="card-h"><h2>Uso de IA · {{ data.ai_usage.month }}</h2><span class="hint">uso y coste estimado</span></div>
     <div class="card-b">
-      <div class="row">
+      <div class="admin-usage-facts">
         <span class="badge b-gray">Llamadas al agente: {{ data.ai_usage.total.calls }}</span>
         <span class="badge b-gray">Tokens entrada: {{ '{:,}'.format(data.ai_usage.total.input).replace(',', '.') }}</span>
         <span class="badge b-gray">Tokens salida: {{ '{:,}'.format(data.ai_usage.total.output).replace(',', '.') }}</span>
@@ -355,8 +388,8 @@
         <span class="badge b-gray">Extracciones (fotos/PDF): {{ data.ai_usage.total.extractions }}</span>
       </div>
       <p class="meta" style="margin-top:8px">
-        Lo rutinario se resuelve gratis en local (NLU); aquí solo aparece lo que
-        de verdad llama a la API. El detalle por cliente, en la tabla de cuentas.
+        Las reglas locales no consumen tokens de un proveedor externo, pero sí infraestructura.
+        Aquí se muestran los eventos instrumentados; no todos los costes de las APIs. El detalle está en la ficha de cada cuenta.
       </p>
     </div>
   </div>
@@ -403,7 +436,7 @@
             <td>
               <b>{{ row.ai_credits_used }} / {{ row.ai_credits_limit }}</b>
               <small class="meta">{{ row.ai_credits_pct }} % · {{ row.ai_calls }} llamadas · {{ row.ai_tokens }} tokens</small>
-              <small class="meta">coste medido ~{{ '%.4f'|format(row.ai_estimated_cost_eur) }} €</small>
+              <small class="meta">coste estimado ~{{ '%.4f'|format(row.ai_estimated_cost_eur) }} €</small>
             </td>
             <td>
               <b>WA {{ row.whatsapp_in }}↓ / {{ row.whatsapp_out }}↑</b>
@@ -420,7 +453,7 @@
             </td>
             <td>
               <span class="badge {{ 'b-red' if row.risk == 'critical' else 'b-amber' if row.risk == 'review' else 'b-gray' if row.risk == 'demo' else 'b-green' }}">
-                {{ 'revisar ahora' if row.risk == 'critical' else 'vigilar' if row.risk == 'review' else 'demo' if row.risk == 'demo' else 'en orden' }}
+                {{ 'revisar ahora' if row.risk == 'critical' else 'vigilar' if row.risk == 'review' else 'demo' if row.risk == 'demo' else 'sin alertas detectadas' }}
               </span>
               {% if row.contribution_eur is not none and row.revenue_eur %}
                 <small class="meta">{{ '%.2f'|format(row.contribution_eur) }} € · {{ row.margin_pct }} %</small>
@@ -454,137 +487,22 @@
     </div>
   </section>
 
-  <!-- ================= 📈 Crecimiento ================= -->
+
+</div>
+<div id="vista-operaciones" data-admin-panel="operaciones">
+{% include 'admin_delivery_summary.html' %}
+<!-- =================  Operaciones ================= -->
   <div class="dept-head">
-    <span class="dept-ic">📈</span>
     <div>
-      <h2>Crecimiento</h2>
-      <p>{{ data.dept_reports.crecimiento }}</p>
-    </div>
-  </div>
-  <div class="grid g2 admin-charts">
-    <div class="card">
-      <div class="card-h"><h2>Altas por mes</h2><span class="hint">últimos 12 meses</span></div>
-      <div class="card-b"><div class="chart-box"><canvas id="ch-altas"></canvas></div></div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h2>Distribución de planes</h2><span class="hint">todas las cuentas</span></div>
-      <div class="card-b"><div class="chart-box"><canvas id="ch-planes"></canvas></div></div>
+      <h2>Incidencias y entregas</h2>
+      <p>La logística de este SaaS son sus entregas digitales: mensajes, correos y remisiones. Los fallos por cuenta se revisan desde su ficha.</p>
     </div>
   </div>
 
-  <!-- ================= 📣 Marketing ================= -->
-  <div class="dept-head">
-    <span class="dept-ic">📣</span>
-    <div>
-      <h2>Marketing y adquisición</h2>
-      <p>{{ data.dept_reports.marketing }}</p>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-h"><h2>Embudo de adquisición</h2>
-      <span class="hint">del alta al pago</span></div>
-    <div class="card-b"><div class="chart-box"><canvas id="ch-funnel"></canvas></div></div>
-  </div>
-
-  <!-- ================= ⚙️ Operaciones ================= -->
-  <div class="dept-head">
-    <span class="dept-ic">⚙️</span>
-    <div>
-      <h2>Operaciones y sistemas</h2>
-      <p>{{ data.dept_reports.operaciones }}</p>
-    </div>
-  </div>
-
-  <div class="card" id="seguridad">
-    <div class="card-h">
-      <div>
-        <div class="kicker">Responsable CISO interno · solo lectura</div>
-        <h2>Seguridad y continuidad</h2>
-      </div>
-      <span class="badge {{ 'b-red' if data.security.status == 'rojo' else 'b-amber' if data.security.status == 'ambar' else 'b-green' }}">
-        {{ data.security.score }}/10 · {{ data.security.status }}
-      </span>
-    </div>
-    <div class="card-b">
-      <p class="assistant-line">{{ data.security.headline }}</p>
-      <div class="mini-list" style="margin-top:12px">
-        {% for check in data.security.findings %}
-        <div class="lrow" style="align-items:flex-start">
-          <span class="badge {{ 'b-red' if check.level == 'critical' else 'b-amber' if check.level == 'warning' else 'b-green' if check.level == 'ok' else 'b-gray' }}">
-            {{ check.control }}
-          </span>
-          <span style="flex:1;margin-left:10px">
-            {{ check.evidence }}
-            {% if check.action %}<span class="meta" style="display:block">Siguiente: {{ check.action }}</span>{% endif %}
-          </span>
-        </div>
-        {% endfor %}
-      </div>
-      <p class="meta" style="margin-top:12px">
-        La nota mide controles internos verificables. No sustituye pentest, revisión
-        RGPD ni configuración segura del proveedor de infraestructura.
-      </p>
-    </div>
-  </div>
-
-  <div class="grid g2 admin-charts">
-    <div class="card">
-      <div class="card-h"><h2>Actividad de seguridad</h2><span class="hint">sin contenido de clientes</span></div>
-      <div class="card-b">
-        <div class="lrow"><span>Críticos · 24 h</span><b class="num {{ 'red' if data.security.counts['24h'].get('critical', 0) }}">{{ data.security.counts['24h'].get('critical', 0) }}</b></div>
-        <div class="lrow"><span>Avisos · 24 h</span><b class="num">{{ data.security.counts['24h'].get('warning', 0) }}</b></div>
-        <div class="lrow"><span>Críticos · 7 días</span><b class="num">{{ data.security.counts['7d'].get('critical', 0) }}</b></div>
-        <div class="lrow"><span>Avisos · 7 días</span><b class="num">{{ data.security.counts['7d'].get('warning', 0) }}</b></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h2>Últimos eventos auditados</h2><span class="hint">cadena append-only</span></div>
-      <div class="card-b mini-list">
-        {% for event in data.security.recent_events[:6] %}
-        <div class="lrow">
-          <span class="badge {{ 'b-red' if event.severity == 'critical' else 'b-amber' if event.severity == 'warning' else 'b-gray' }}">{{ event.area }}</span>
-          <span style="flex:1;margin-left:10px">{{ event.event_type }}</span>
-          <span class="meta">{{ event.created_at|string|truncate(19, True, '') }}</span>
-        </div>
-        {% else %}
-        <p class="meta">La bitácora aún no tiene eventos.</p>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-h">
-      <h2>Servicios e integraciones</h2>
-      <span class="badge {{ 'b-green' if data.readiness.ready else 'b-amber' }}">
-        {{ data.readiness.counts.ok }} preparados ·
-        {{ data.readiness.counts.warning }} avisos ·
-        {{ data.readiness.counts.blocker }} bloqueos
-      </span>
-    </div>
-    <div class="card-b">
-      {% for check in data.readiness.checks %}
-      <div class="lrow" style="align-items:flex-start">
-        <span class="badge {{ 'b-green' if check.status == 'ok' else ('b-red' if check.status == 'blocker' else 'b-amber') }}">
-          {{ check.area }}
-        </span>
-        <span style="flex:1;margin-left:10px">
-          <b>{{ check.summary }}</b>
-          {% if check.action %}<small class="meta" style="display:block;margin-top:3px">{{ check.action }}</small>{% endif %}
-        </span>
-      </div>
-      {% endfor %}
-      <p class="meta" style="margin-top:12px">
-        Esta información es interna. El cliente solo ve las funciones que puede usar
-        y sus propias preferencias.
-      </p>
-    </div>
-  </div>
   {% if data.alerts %}
   <div class="card admin-alerts">
     <div class="card-h">
-      <h2>🚨 Alarmas</h2>
+      <h2>Avisos del servicio</h2>
       <span class="badge b-red">{{ data.alerts|length }} activa(s)</span>
     </div>
     <div class="card-b">
@@ -642,6 +560,99 @@
         {% endif %}
       </div>
     </div>
+
+  </div>
+
+
+</div>
+<div id="vista-ingenieria" data-admin-panel="ingenieria">
+<div class="admin-context"><b>Fiabilidad y seguridad del servicio</b><p>Comprueba controles, configuración e incidencias técnicas. Un control preparado no demuestra por sí solo una entrega real ni disponibilidad permanente.</p><span>Fuentes: diagnóstico local, registro de seguridad y configuración efectiva.</span></div>
+  <div class="card" id="seguridad">
+    <div class="card-h">
+      <div>
+        <div class="kicker">Controles de seguridad · solo lectura</div>
+        <h2>Seguridad y continuidad</h2>
+      </div>
+      <span class="badge {{ 'b-red' if data.security.status == 'rojo' else 'b-amber' if data.security.status == 'ambar' else 'b-green' }}">
+        {{ data.security.score }}/10 · {{ data.security.status }}
+      </span>
+    </div>
+    <div class="card-b">
+      <p class="assistant-line">{{ data.security.headline }}</p>
+      <div class="mini-list" style="margin-top:12px">
+        {% for check in data.security.findings %}
+        <div class="lrow" style="align-items:flex-start">
+          <span class="badge {{ 'b-red' if check.level == 'critical' else 'b-amber' if check.level == 'warning' else 'b-green' if check.level == 'ok' else 'b-gray' }}">
+            {{ check.control }}
+          </span>
+          <span style="flex:1;margin-left:10px">
+            {{ check.evidence }}
+            {% if check.action %}<span class="meta" style="display:block">Siguiente: {{ check.action }}</span>{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="meta" style="margin-top:12px">
+        La nota mide controles internos verificables. No sustituye pentest, revisión
+        RGPD ni configuración segura del proveedor de infraestructura.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid g2 admin-charts">
+    <div class="card">
+      <div class="card-h"><h2>Actividad de seguridad</h2><span class="hint">sin contenido de clientes</span></div>
+      <div class="card-b">
+        <div class="lrow"><span>Críticos · 24 h</span><b class="num {{ 'red' if data.security.counts['24h'].get('critical', 0) }}">{{ data.security.counts['24h'].get('critical', 0) }}</b></div>
+        <div class="lrow"><span>Avisos · 24 h</span><b class="num">{{ data.security.counts['24h'].get('warning', 0) }}</b></div>
+        <div class="lrow"><span>Críticos · 7 días</span><b class="num">{{ data.security.counts['7d'].get('critical', 0) }}</b></div>
+        <div class="lrow"><span>Avisos · 7 días</span><b class="num">{{ data.security.counts['7d'].get('warning', 0) }}</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Últimos eventos auditados</h2><span class="hint">histórico de auditoría</span></div>
+      <div class="card-b mini-list">
+        {% for event in data.security.recent_events[:6] %}
+        <div class="lrow">
+          <span class="badge {{ 'b-red' if event.severity == 'critical' else 'b-amber' if event.severity == 'warning' else 'b-gray' }}">{{ event.area }}</span>
+          <span style="flex:1;margin-left:10px">{{ event.event_type }}</span>
+          <span class="meta">{{ event.created_at|string|truncate(19, True, '') }}</span>
+        </div>
+        {% else %}
+        <p class="meta">La bitácora aún no tiene eventos.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">
+      <h2>Servicios e integraciones</h2>
+      <span class="badge {{ 'b-green' if data.readiness.ready else 'b-amber' }}">
+        {{ data.readiness.counts.ok }} preparados ·
+        {{ data.readiness.counts.warning }} avisos ·
+        {{ data.readiness.counts.blocker }} bloqueos
+      </span>
+    </div>
+    <div class="card-b">
+      {% for check in data.readiness.checks %}
+      <div class="lrow" style="align-items:flex-start">
+        <span class="badge {{ 'b-green' if check.status == 'ok' else ('b-red' if check.status == 'blocker' else 'b-amber') }}">
+          {{ check.area }}
+        </span>
+        <span style="flex:1;margin-left:10px">
+          <b>{{ check.summary }}</b>
+          {% if check.action %}<small class="meta" style="display:block;margin-top:3px">{{ check.action }}</small>{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+      <p class="meta" style="margin-top:12px">
+        Esta información es interna. El cliente solo ve las funciones que puede usar
+        y sus propias preferencias.
+      </p>
+    </div>
+  </div>
+
     <div class="card">
       <div class="card-h">
         <h2>Copias de seguridad</h2>
@@ -668,72 +679,72 @@
         {% endif %}
       </div>
     </div>
+</div>
+<div id="vista-privacidad" data-admin-panel="privacidad">
+<div class="admin-context"><b>Seguimiento administrativo y legal</b><p>Documenta solicitudes y actuaciones. Cambiar un estado no elimina datos ni acredita por sí solo el cumplimiento legal.</p><span>Fuente: registro interno de solicitudes de privacidad · todos los estados.</span></div>
+<!-- =================  Privacidad y bajas ================= -->
+  <div class="dept-head" id="privacidad">
+    <div>
+      <h2>Privacidad y bajas</h2>
+      <p>{% if privacy_pending %}Hay {{ privacy_pending }} solicitud(es) que requieren seguimiento.{% else %}No hay solicitudes abiertas.{% endif %}</p>
+    </div>
   </div>
 
-  <!-- ================= 👥 Clientes ================= -->
-  <div class="dept-head" id="cuentas">
-    <span class="dept-ic">👥</span>
-    <div>
-      <h2>Clientes</h2>
-      <p>{{ data.dept_reports.clientes }}</p>
-    </div>
-  </div>
   <div class="card">
-    <div class="card-h"><h2>Cuentas</h2><span class="hint">{{ data.whatsapp_conectados }} con WhatsApp · contacto directo para emergencias</span></div>
-    <div class="card-b table-pad">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Negocio</th><th>Contacto</th><th>Plan</th><th>Estado</th>
-            <th class="t-right">Activación</th><th class="t-right">Última actividad</th>
-            <th class="t-right">Clientes</th><th class="t-right">Facturas</th>
-            <th class="t-right">Facturado</th><th class="t-right">Cobrado</th>
-            <th class="t-right">IA (in/out)</th><th></th></tr></thead>
-          <tbody>
-          {% for b in data.businesses %}
-            <tr>
-              <td>
-                <b>{{ b.name }}</b>
-                <div class="meta">{{ b.sector or '—' }}{% if b.n_equipo %} · equipo {{ b.n_equipo }}{% endif %}{% if b.gestoria_cadence and b.gestoria_cadence != 'off' %} · gestoría{% endif %}</div>
-              </td>
-              <td class="meta">
-                {% if b.owner_email %}<a href="mailto:{{ b.owner_email }}">{{ b.owner_email }}</a>{% else %}—{% endif %}
-                {% if b.whatsapp_phone %}<br><a href="https://wa.me/34{{ b.whatsapp_phone|replace(' ','')|replace('+34','') }}" target="_blank" rel="noopener">📱 {{ b.whatsapp_phone }}</a>{% endif %}
-              </td>
-              <td>{{ b.plan }}</td>
-              <td><span class="badge {{ 'b-green' if b.subscription_status=='active' else 'b-amber' if b.subscription_status=='trial' else 'b-red' }}">{{ b.subscription_status }}</span></td>
-              <td class="t-right"><span class="badge {{ 'b-green' if b.activated else 'b-amber' }}">{{ b.activation_progress }}%</span></td>
-              <td class="t-right">
-                {% if b.last_activity %}
-                  <span class="{{ 'meta' if (b.days_inactive or 0) < 14 }}">{{ b.last_activity }}</span>
-                  {% if (b.days_inactive or 0) >= 14 %}<span class="badge b-red">{{ b.days_inactive }}d</span>{% endif %}
-                {% else %}<span class="meta">nunca</span>{% endif %}
-              </td>
-              <td class="t-right num">{{ b.n_clientes }}</td>
-              <td class="t-right num">{{ b.n_facturas }}</td>
-              <td class="t-right num">{{ '%.2f'|format(b.facturado) }} €</td>
-              <td class="t-right num">{{ '%.2f'|format(b.cobrado) }} €</td>
-              <td class="t-right num meta">
-                {% if b.ai.calls or b.ai.extractions %}
-                  {{ b.ai.calls }}·{{ b.ai.input }}/{{ b.ai.output }}
-                  {% if b.ai.extractions %} +{{ b.ai.extractions }}📷{% endif %}
-                {% else %}—{% endif %}
-              </td>
-              <td class="t-right"><a class="btn sm primary" href="/admin/cuentas/{{ b.id }}">Gestionar</a></td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% if not data.businesses %}<div class="empty-state"><b>Aún no hay cuentas</b><span>Cuando se registren autónomos, aparecerán aquí.</span></div>{% endif %}
+    <div class="card-h">
+      <h2>Registro de solicitudes</h2>
+      <span class="hint">el estado no borra datos automáticamente</span>
     </div>
+    {% if privacy_requests %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Referencia</th><th>Cuenta</th><th>Solicitud</th><th>Estado</th><th>Seguimiento</th></tr></thead>
+      <tbody>
+      {% for req in privacy_requests %}
+        <tr>
+          <td><b>#{{ req.id }}</b><small>{{ req.requested_at }}</small></td>
+          <td><b>{{ req.business_name }}</b><small>{{ req.requester_email or 'Usuario eliminado' }}</small></td>
+          <td>
+            {{ 'Baja y supresión' if req.request_type == 'account_closure' else req.request_type }}
+            {% if req.retention_required %}<small class="amber">con conservación legal</small>{% endif %}
+          </td>
+          <td><span class="badge {{ 'b-green' if req.status == 'completed' else 'b-amber' if req.status in ('received','in_review','waiting_requester','legal_hold') else 'b-gray' }}">{{ req.status }}</span></td>
+          <td>
+          {% if req.status in ('received','in_review','waiting_requester','legal_hold') %}
+            <form method="post" action="/admin/privacidad/{{ req.id }}/estado" class="req-actions">
+              <select class="input" name="status" required>
+                <option value="in_review">En revisión</option>
+                <option value="waiting_requester">Esperando al solicitante</option>
+                <option value="legal_hold">Conservación legal</option>
+                <option value="completed">Completada</option>
+                <option value="rejected">Rechazada con motivo</option>
+                <option value="cancelled">Cancelada por el solicitante</option>
+              </select>
+              <input class="input" name="resolution_note" maxlength="2000" placeholder="Actuación y motivo documentados" required>
+              <button class="btn sm" type="submit">Guardar seguimiento</button>
+            </form>
+          {% else %}
+            <span class="meta">{{ req.resolution_note or 'Sin nota' }}</span>
+          {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+      <p class="empty">Cuando una baja no pueda borrarse al instante por conservación fiscal o laboral, aparecerá aquí con una referencia trazable.</p>
+    {% endif %}
   </div>
+
+
 </div>
+
+</main>
 
 <script src="/static/vendor/chart.umd.min.js"></script>
 <script>
 const C = {{ data.charts | tojson }};
 const PAL = { brand: '#2e8b74', forest: '#14463b', soft: '#a9d2c5',
-              amber: '#b7831f', red: '#c0533f', blue: '#6b8cff', grid: '#ece8db' };
+              amber: '#b7831f', red: '#c0533f', blue: '#2e8b74', grid: '#ece8db' };
 const BASE = (extra = {}) => Object.assign({
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { position: 'bottom',
@@ -747,7 +758,7 @@ const monthLabel = m => new Date(m + '-01T00:00:00')
 new Chart(document.getElementById('ch-altas'), {
   type: 'bar',
   data: { labels: C.meses.map(monthLabel),
-    datasets: [{ label: 'Cuentas nuevas', data: C.altas,
+    datasets: [{ label: 'Cuentas creadas', data: C.altas,
       backgroundColor: PAL.brand, borderRadius: 6, maxBarThickness: 26 }] },
   options: BASE({ scales: { x: { grid: { display: false } },
     y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: PAL.grid },
@@ -805,5 +816,6 @@ new Chart(document.getElementById('ch-ia'), {
               y: { grid: { display: false } } } })
 });
 </script>
+<script src="/static/admin-workspace.js?v={{ asset_v }}"></script>
 </body>
 </html>

@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 7-sep — centro de mando preparado para publicación
+
+Administración dividida en Dirección, Cuentas y soporte, Marketing y ventas,
+Finanzas y consumo, Operaciones, Ingeniería y seguridad, Administración legal.
+Sin nuevos permisos ni cambios de esquema. Consulta de consumo por cuenta y
+modelo con límites explícitos; no equivale a factura completa del proveedor.
+Se publica solo el panel y sus dependencias; los trabajos locales de copias,
+WhatsApp, extracción y paginación no se incluyen. Ver `Admin-centro-mando-release.md`.
+
 > Lectura humana del estado. La fuente verificable para migración, pruebas, precios,
 > política de suscripción y publicación es [`project-state.json`](project-state.json).
 > Los pendientes solo viven en [[Tareas-vivas]].

@@ -1,5 +1,16 @@
 # Mapa de código
 
+## Centro de mando administrativo — 7-sep
+
+`admin.html` organiza siete departamentos; `admin_direction.html` resume las
+prioridades y `admin_delivery_summary.html` la actividad registrada de canales.
+`admin_navigation.html` comparte navegación con `admin_account.html`.
+`admin-workspace.css/js` aíslan estilo, búsqueda y navegación progresiva.
+`db.admin_api_usage` agrega eventos ai_usage por negocio, mes y proveedor/modelo;
+router admin exige autorización existente y audita el endpoint JSON de consumo.
+No carga contenidos de documentos ni credenciales. `NOESIS_COST_USD_TO_EUR`
+es una hipótesis de estimación, no altera contabilidad ni impuestos.
+
 ## Núcleo
 
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por

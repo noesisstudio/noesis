@@ -1,5 +1,21 @@
 ﻿# Registro de cambios
 
+## 2026-09-07 — centro de mando administrativo, publicación acotada
+
+Objetivo: una administración interna comprensible por departamento. Siete vistas,
+jerarquía sin emoticonos, búsqueda por identidad y teléfono, ficha por tareas,
+menú móvil plegable, recarga real y fuentes/períodos explícitos. Consumo observado
+por cuenta/proveedor/modelo con API administrativa auditada y coste no conocido
+separado de cero; hipótesis USD/EUR configurable, no contable.
+
+Áreas: templates admin, admin-workspace CSS/JS, router admin, consultas de consumo
+en db, config y versionado de recursos. No cambia permisos, facturación, pagos,
+WhatsApp, esquema ni copias. Los candidatos locales anteriores no forman parte
+de esta publicación. QA exacta y límites en `Admin-centro-mando-release.md`.
+Riesgo: regresión visual/consulta; rollback mediante revert del commit de este
+panel, sin migraciones. Diagnóstico: /admin, /admin/cuentas/{id}, consola y
+/admin/cuentas/{id}/consumo; comprobar período, cobertura y versión de recursos.
+
 ## 2026-09-04 — copia verificada y publicación autorizada del esquema 55
 
 - **Autorización:** el founder solicita copia y publicación después del CI verde.

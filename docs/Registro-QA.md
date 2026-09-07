@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-09-07 — release acotada del centro de mando
+
+- Suite completa del snapshot aislado: **644/644**, 531,053 s, SQLite y
+  proveedores simulados. Código seleccionado idéntico al snapshot probado.
+- Cuatro pruebas propias de administración: aislamiento del consumo, coste
+  desconocido, períodos inválidos, hipótesis FX, autorización HTTP y teléfono
+  vinculado, siete departamentos y estados sin costes.
+- Ruff sobre src/tests, Bandit alto riesgo/confianza, detector de secretos de los
+  archivos nuevos/relevantes, sintaxis JS y diff: correctos.
+- Navegador local con datos sintéticos: escritorio y 390 px, comparación antes/
+  después de Finanzas al mismo tamaño, menú plegable, sección activa, búsqueda
+  sin tildes/sin resultados y recarga real conservando departamento. Sin errores
+  de consola en la revisión. Las acciones administrativas conservan sus forms.
+- Fuera de esta release: copias/WhatsApp/extracción/paginación y otros candidatos
+  locales. Sin migraciones. Safari físico, Postgres y proveedores reales no
+  quedan certificados por estas pruebas. Evidencia y rollback en
+  `Admin-centro-mando-release.md`.
+
 ## 2026-09-04 — clasificación de un PDF con varias facturas
 
 - **Medición contra el modelo real** (`claude-haiku-4-5-20251001`), con PDF generado

@@ -1,13 +1,13 @@
 {
-  "state_date": "2026-09-04",
+  "state_date": "2026-09-07",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 639,
+  "verified_test_count": 644,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
+    "current_repository_candidate_deployed": false,
     "pending_after_deploy": "Publicado y verificado el 4-sep: esquema 55, ready, 14 paginas, 8 cabeceras, accesos demo, seis recuentos operativos conservados y auditoria integra. Backup real previo de BD/documentos y restauracion aislada OK, fijado fuera de rotacion en Railway. Mantener alta publica y ambos flags de valor en false. Pendientes solicitud humana con correo, DPA, regiones, conservacion, copia externa fuera de Railway, integraciones y piloto real. Reconciliar WUB/outcomes con 3-5 negocios solo al autorizar su activacion."
   },
   "pricing_eur_ex_vat": {
@@ -136,5 +136,6 @@
     "auditoria_seguridad_privacidad_fiscal",
     "external_uptime_alerting_and_incident_on_call",
     "piloto_3_5_negocios"
-  ]
+  ],
+  "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_644_isolated_tests_no_schema_changes_deployment_verification_after_push"
 }

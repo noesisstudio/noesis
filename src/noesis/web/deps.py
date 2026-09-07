@@ -23,7 +23,8 @@ TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 
 def _asset_version() -> str:
     """Versiona assets por fecha de modificacion para romper cache tras despliegues."""
-    paths = [HERE / "static" / "app.css", HERE / "static" / "app.js"]
+    paths = [HERE / "static" / name for name in
+             ("app.css", "app.js", "admin-workspace.css", "admin-workspace.js")]
     try:
         return str(int(max(p.stat().st_mtime for p in paths if p.exists())))
     except ValueError:

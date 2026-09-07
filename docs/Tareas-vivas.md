@@ -1,5 +1,14 @@
 # Tareas vivas
 
+## Seguimiento del centro de mando — 7-sep
+
+- Verificar la revisión publicada y probar Safari/iPhone físico con cuenta autorizada.
+- Conciliar consumo registrado con facturas de proveedores; completar cobertura
+  de APIs sin presentar ausencia de eventos como coste cero.
+- Roles administrativos granulares y métricas comerciales por cohorte pendientes.
+- Copias independientes, WhatsApp y demás candidatos locales se revisan aparte;
+  no entran en el commit del centro de mando.
+
 > Único listado vivo de pendientes. La fotografía verificable está en
 > [`project-state.json`](project-state.json); planes y traspasos no duplican estados.
 

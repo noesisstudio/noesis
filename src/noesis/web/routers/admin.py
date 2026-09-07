@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import secrets
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Form, Request
 from fastapi.encoders import jsonable_encoder
@@ -55,6 +55,7 @@ def admin_panel(request: Request):
     return TEMPLATES.TemplateResponse(request, "admin.html", {
         "data": data,
         "hoy": date.today().isoformat(),
+        "admin_as_of": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"),
         "mi_negocio": user["business_id"],
         "access_requests": requests_list,
         "access_pending": sum(1 for r in requests_list if r["status"] == "nueva"),
@@ -135,13 +136,17 @@ def admin_value_ledger(request: Request, business_id: int | None = None):
 
 
 @router.get("/admin/cuentas/{business_id}", response_class=HTMLResponse)
-def admin_account_support(request: Request, business_id: int):
+def admin_account_support(request: Request, business_id: int, month: str | None = None):
     """Diagnóstico técnico y correcciones autorizadas de alcance mínimo."""
     if not _is_admin(request):
         return RedirectResponse("/login", status_code=303)
     snapshot = db.admin_support_snapshot(business_id)
     if not snapshot:
         return Response("Cuenta no encontrada.", status_code=404)
+    try:
+        api_usage = db.admin_api_usage(business_id, month)
+    except ValueError as exc:
+        return Response(str(exc), status_code=400)
     user = auth.current_user(request)
     db.record_security_event(
         "admin.support_snapshot_viewed",
@@ -175,12 +180,13 @@ def admin_account_support(request: Request, business_id: int):
             metadata={"grant_id": configuration_support["grant_id"]},
         )
     trial_ends = str((snapshot.get("business") or {}).get("trial_ends_at") or "")
-    cost_control = db.account_cost_control()
+    cost_control = db.account_cost_control(api_usage["month"])
     account_cost = next(
         (row for row in cost_control["rows"] if row["id"] == business_id), None
     )
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
+        "api_usage": api_usage,
         "trial_expired": bool(trial_ends) and trial_ends < date.today().isoformat(),
         "delivery_failures": db.admin_support_delivery_failures(business_id),
         "subscription_blocked": not db.subscription_allows_access(
@@ -200,6 +206,25 @@ def admin_account_support(request: Request, business_id: int):
         "admin_error": request.session.pop("admin_error", None),
         "admin_success": request.session.pop("admin_success", None),
     })
+
+
+@router.get("/admin/cuentas/{business_id}/consumo", response_class=JSONResponse)
+def admin_account_usage(request: Request, business_id: int, month: str | None = None):
+    """Lectura auditada; ninguna clave externa viaja al navegador."""
+    if not _is_admin(request):
+        return Response("No autorizado.", status_code=403)
+    if not db.get_business(business_id):
+        return Response("Cuenta no encontrada.", status_code=404)
+    try:
+        usage = db.admin_api_usage(business_id, month)
+    except ValueError as exc:
+        return Response(str(exc), status_code=400)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.api_usage_viewed", area="admin", actor_user_id=user["id"],
+        subject_business_id=business_id, metadata={"month": usage["month"]},
+    )
+    return JSONResponse(jsonable_encoder(usage), headers={"Cache-Control": "no-store"})
 
 
 @router.post("/admin/cuentas/{business_id}/configuracion-segura")
