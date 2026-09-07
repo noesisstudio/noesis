@@ -1,5 +1,31 @@
 ﻿# Registro de cambios
 
+## 2026-09-07 — documento «Arreglos»: nueve fallos pedidos por el founder
+
+Objetivo: dejar por escrito, con causa localizada en el código, los nueve puntos
+que el founder encontró usando el producto. Documentación únicamente; no se toca
+`src/`, ni esquema, ni pruebas.
+
+Verificado ejecutando contra base temporal (seis de los nueve): el reconocedor no
+entiende «hazme una factura a Juan de 100 euros» (parte el número en el separador
+«de» y deja base cero), ni importes sin la palabra «euros», ni el punto de los
+miles; «crear cliente», «nuevo proveedor» y «crear usuario» no crean nada y caen
+en el resumen del coach; con dos clientes homónimos la desambiguación funciona
+pero viaja como excepción y aborta la operación entera.
+
+Verificado leyendo código: `_validated_invoice` valida campo a campo y no
+comprueba base + IVA − IRPF = total, ni base × tipo = cuota, ni el formato del
+NIF; para las facturas recibidas solo existe `set_received_invoice_status`, así
+que una mal leída no se puede corregir; `overdue_invoices` es código muerto —una
+sola aparición en todo el repositorio, su propia definición—; el ICS emite
+`TZID=Europe/Madrid` sin el `VTIMEZONE` que la norma exige; y la rama de
+duplicados que se arregló en 7b2d8cc solo cubre PDF, no fotos.
+
+Aclarado con el founder: los tres avisos de factura (importe, IVA y CIF) deben
+avisar; «no lo digas» en el dictado original era un desliz.
+
+Nuevo: `docs/Arreglos.html`. Sin riesgo de regresión.
+
 ## 2026-09-07 — centro de mando administrativo, publicación acotada
 
 Objetivo: una administración interna comprensible por departamento. Siete vistas,

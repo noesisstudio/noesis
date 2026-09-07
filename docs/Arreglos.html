@@ -1,0 +1,1034 @@
+<title>Arreglos pendientes de Bynoesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Paleta y tipografía de docs/design/STYLE_TOKENS.json. No se inventan colores. */
+  :root{
+    --canvas:#f4f1ea; --surface:#ffffff; --surface-2:#faf8f3;
+    --border:#e2ded3; --border-strong:#d3cec1;
+    --ink:#15211c; --muted:#5d6b66; --faint:#8d968f;
+    --brand:#14463b; --brand-2:#2e8b74; --brand-soft:#e4efe9;
+    --green:#1f8a6d; --green-soft:#e2f1ea;
+    --amber:#b7831f; --amber-soft:#f5edd6;
+    --red:#c0533f;   --red-soft:#f7e8e3;
+    --shadow:0 1px 2px rgba(21,33,28,.05);
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --canvas:#111714; --surface:#18211d; --surface-2:#1e2823;
+      --border:#2b3631; --border-strong:#3a4741;
+      --ink:#e9e5da; --muted:#a1aea8; --faint:#7d8a84;
+      --brand:#4fae93; --brand-2:#6cc4aa; --brand-soft:#1d2f29;
+      --green:#5cb795; --green-soft:#182a24;
+      --amber:#d6a747; --amber-soft:#2e2716;
+      --red:#e0806c;   --red-soft:#331e1a;
+      --shadow:0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --canvas:#111714; --surface:#18211d; --surface-2:#1e2823;
+    --border:#2b3631; --border-strong:#3a4741;
+    --ink:#e9e5da; --muted:#a1aea8; --faint:#7d8a84;
+    --brand:#4fae93; --brand-2:#6cc4aa; --brand-soft:#1d2f29;
+    --green:#5cb795; --green-soft:#182a24;
+    --amber:#d6a747; --amber-soft:#2e2716;
+    --red:#e0806c;   --red-soft:#331e1a;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--canvas); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px}
+
+  /* ---------------------------------------------------------- cabecera --- */
+  header.top{border-bottom:1px solid var(--border); background:var(--surface)}
+  .top-in{padding:44px 0 34px; display:flex; flex-wrap:wrap; gap:32px; align-items:flex-end; justify-content:space-between}
+  .eyebrow{
+    font-size:11.5px; font-weight:600; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--brand-2); margin:0 0 12px;
+  }
+  h1{
+    font-family:var(--serif); font-weight:600; font-size:clamp(2rem,4.6vw,3rem);
+    line-height:1.08; margin:0; letter-spacing:-.015em; text-wrap:balance; max-width:16ch;
+  }
+  .lede{margin:16px 0 0; max-width:56ch; color:var(--muted); font-size:17px}
+  .meta{
+    font-family:var(--mono); font-size:12.5px; color:var(--faint);
+    display:flex; flex-direction:column; gap:5px; text-align:right;
+  }
+  @media (max-width:720px){ .meta{text-align:left} }
+
+  /* ------------------------------------------------------------ marco --- */
+  .layout{display:grid; grid-template-columns:214px minmax(0,1fr); gap:56px; padding:44px 0 96px; align-items:start}
+  @media (max-width:960px){ .layout{grid-template-columns:1fr; gap:0} nav.rail{display:none} }
+  nav.rail{position:sticky; top:26px}
+  nav.rail h2{
+    font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint);
+    margin:0 0 14px; font-weight:600; font-family:var(--sans);
+  }
+  nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
+  nav.rail a{
+    display:flex; gap:10px; align-items:baseline; padding:7px 10px; border-radius:6px;
+    color:var(--muted); text-decoration:none; font-size:13.5px; line-height:1.35;
+  }
+  nav.rail a:hover{background:var(--brand-soft); color:var(--brand)}
+  nav.rail .n{font-family:var(--mono); font-size:11px; color:var(--faint); flex:none}
+  a:focus-visible,summary:focus-visible{outline:2px solid var(--brand-2); outline-offset:3px; border-radius:4px}
+
+  /* ---------------------------------------------------------- resumen --- */
+  .board{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:1px;
+    background:var(--border); border:1px solid var(--border); border-radius:10px;
+    overflow:hidden; margin:0 0 56px;
+  }
+  .board div{background:var(--surface); padding:18px 20px}
+  .board dt{font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); font-weight:600; margin:0 0 7px}
+  .board dd{margin:0; font-size:14.5px; color:var(--muted)}
+  .board .big{
+    font-family:var(--serif); font-size:1.7rem; line-height:1.1; color:var(--ink);
+    display:block; margin-bottom:3px; font-variant-numeric:tabular-nums;
+  }
+
+  /* --------------------------------------------------------- secciones --- */
+  section.area{margin:0 0 60px; scroll-margin-top:22px}
+  .area-head{display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; margin:0 0 6px}
+  .area-head .n{font-family:var(--mono); font-size:13px; color:var(--faint); flex:none}
+  h2.area-title{
+    font-family:var(--serif); font-weight:600; font-size:1.62rem; line-height:1.2;
+    margin:0; letter-spacing:-.01em; text-wrap:balance;
+  }
+  .chip{
+    font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; white-space:nowrap; line-height:1.5;
+  }
+  .c-red{background:var(--red-soft); color:var(--red)}
+  .c-amber{background:var(--amber-soft); color:var(--amber)}
+  .c-green{background:var(--green-soft); color:var(--green)}
+  .c-brand{background:var(--brand-soft); color:var(--brand)}
+  .area-sub{margin:0 0 22px; color:var(--muted); max-width:70ch}
+
+  .panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .panel > .row{padding:22px 24px; border-top:1px solid var(--border)}
+  .panel > .row:first-child{border-top:0}
+  .row h3{
+    font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; font-weight:600;
+    margin:0 0 11px; color:var(--brand-2);
+  }
+  .row p{margin:0 0 12px; max-width:72ch}
+  .row p:last-child{margin-bottom:0}
+  .row ul,.row ol{margin:0; padding-left:20px; max-width:72ch}
+  .row li{margin:0 0 8px}
+  .row li:last-child{margin-bottom:0}
+  .sev{border-left:3px solid var(--border-strong)}
+  .sev-red{border-left-color:var(--red)}
+  .sev-amber{border-left-color:var(--amber)}
+  .sev-green{border-left-color:var(--green)}
+
+  code,.mono{font-family:var(--mono); font-size:.875em}
+  code{background:var(--surface-2); border:1px solid var(--border); padding:1px 5px; border-radius:4px}
+  pre{
+    background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
+    padding:13px 15px; overflow-x:auto; margin:0 0 12px; font-family:var(--mono);
+    font-size:12.5px; line-height:1.62;
+  }
+  pre:last-child{margin-bottom:0}
+  strong{font-weight:600}
+  .quote{
+    border-left:3px solid var(--brand-2); padding:2px 0 2px 15px; margin:0 0 12px;
+    color:var(--muted); font-style:italic; max-width:70ch;
+  }
+
+  table{border-collapse:collapse; width:100%; font-size:14px}
+  .scroll{overflow-x:auto; margin:0 0 12px}
+  .scroll:last-child{margin-bottom:0}
+  th,td{text-align:left; padding:8px 14px 8px 0; border-bottom:1px solid var(--border); vertical-align:top}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:600; white-space:nowrap}
+  td.num,th.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; padding-right:0}
+  tbody tr:last-child td{border-bottom:0}
+  .good{color:var(--green); font-weight:500}
+  .bad{color:var(--red); font-weight:500}
+
+  .steps{counter-reset:s; list-style:none; padding:0; margin:0}
+  .steps li{position:relative; padding-left:32px; margin:0 0 13px}
+  .steps li:last-child{margin-bottom:0}
+  .steps li::before{
+    counter-increment:s; content:counter(s);
+    position:absolute; left:0; top:1px; width:21px; height:21px; border-radius:50%;
+    background:var(--brand-soft); color:var(--brand); font-family:var(--mono);
+    font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:500;
+  }
+
+  footer.end{border-top:1px solid var(--border); background:var(--surface); padding:34px 0 52px}
+  footer.end p{margin:0 0 10px; color:var(--muted); font-size:14.5px; max-width:74ch}
+  footer.end p:last-child{margin-bottom:0}
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div>
+      <p class="eyebrow">Encargo del founder · Bynoesis</p>
+      <h1>Arreglos</h1>
+      <p class="lede">
+        Nueve cosas que no funcionan como deberían, dichas por ti mientras usabas el
+        producto. Cada una con lo que falla, la línea de código donde falla y qué hay
+        que hacer. Todo lo de aquí está ejecutado contra el código de hoy: donde digo
+        «probado» es que lo corrí y pegué la salida.
+      </p>
+    </div>
+    <div class="meta">
+      <span>Revisado el 7 de septiembre de 2026</span>
+      <span>release 5641a9137494</span>
+      <span>esquema 55 · 644 pruebas</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout">
+  <nav class="rail" aria-label="Secciones">
+    <h2>Arreglos</h2>
+    <ol>
+      <li><a href="#leer"><span class="n">01</span> Leer no es comprobar</a></li>
+      <li><a href="#corregir"><span class="n">02</span> Corregir una recibida</a></li>
+      <li><a href="#impagadas"><span class="n">03</span> Facturas sin cobrar</a></li>
+      <li><a href="#alta"><span class="n">04</span> Crear cliente o proveedor</a></li>
+      <li><a href="#sergio"><span class="n">05</span> Los dos Sergios</a></li>
+      <li><a href="#numeros"><span class="n">06</span> Pedir números internos</a></li>
+      <li><a href="#subir"><span class="n">07</span> Qué se sube y qué no</a></li>
+      <li><a href="#calendario"><span class="n">08</span> El calendario</a></li>
+      <li><a href="#frases"><span class="n">09</span> Frases que no entiende</a></li>
+      <li><a href="#orden"><span class="n">10</span> Por dónde empezar</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <dl class="board">
+      <div>
+        <dt>Arreglos identificados</dt>
+        <dd><span class="big">9</span>Todos con causa localizada en el código</dd>
+      </div>
+      <div>
+        <dt>Código muerto</dt>
+        <dd><span class="big">1</span>Escrito, nunca llamado desde ningún sitio</dd>
+      </div>
+      <div>
+        <dt>Sin manera de arreglarlo</dt>
+        <dd><span class="big">2</span>Recibida mal leída y número de WhatsApp ocupado</dd>
+      </div>
+      <div>
+        <dt>Ya funciona bien</dt>
+        <dd><span class="big">3</span>Desambiguar, recalcular y no dejar emitir sin NIF</dd>
+      </div>
+      <div>
+        <dt>Verificado ejecutando</dt>
+        <dd><span class="big">6</span>Los demás, leyendo el código</dd>
+      </div>
+    </dl>
+
+    <!-- ============================================================ 01 === -->
+    <section class="area" id="leer">
+      <div class="area-head">
+        <span class="n">01</span>
+        <h2 class="area-title">Leer una factura no es comprobarla</h2>
+        <span class="chip c-red">No existe</span>
+      </div>
+      <p class="area-sub">
+        Tu frase fue: «la única cosa que haces es leérmelo». Es literal. El sistema
+        extrae los campos y te los repite. No compara ni uno solo contra otro.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-red">
+          <h3>Qué falla</h3>
+          <p>
+            La extracción valida <strong>cada campo por separado</strong> y ninguno
+            contra los demás. En <code>_validated_invoice</code> se comprueba que el
+            tipo de IVA sea 0, 4, 10 o 21; que la confianza esté entre 0 y 100; que las
+            fechas sean fechas. Ahí acaba.
+          </p>
+          <p>Lo que <em>no</em> se comprueba, y tú pediste que sí:</p>
+          <div class="scroll"><table>
+            <thead><tr><th>Comprobación</th><th>Existe hoy</th><th>Qué pasaría si estuviera</th></tr></thead>
+            <tbody>
+              <tr><td>base + IVA − IRPF = total</td><td class="bad">No</td><td>Cazaría una suma mal leída antes de que la registres</td></tr>
+              <tr><td>base × tipo = cuota de IVA</td><td class="bad">No</td><td>Cazaría un 21 % leído sobre una factura al 10 %</td></tr>
+              <tr><td>Formato y letra del CIF</td><td class="bad">No</td><td>Cazaría un CIF con un dígito mal del OCR</td></tr>
+              <tr><td>CIF contra el cliente ya guardado</td><td class="bad">No</td><td>Cazaría una factura atribuida al cliente equivocado</td></tr>
+              <tr><td>Tipo de IVA es 0, 4, 10 o 21</td><td class="good">Sí</td><td>—</td></tr>
+            </tbody>
+          </table></div>
+          <p>
+            No hay ni una función de validación de NIF en todo el repositorio. Lo busqué:
+            <code>nif</code> aparece 26 veces en <code>documents/</code> y todas son para
+            <em>guardar</em> o <em>comparar textos</em>, ninguna para validar la letra.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Por qué está así</h3>
+          <p>
+            La instrucción que se le manda al modelo termina con
+            «<span class="mono">No inventes cifras ni completes datos dudosos</span>», y
+            el diseño confía en que el modelo se autocontrole. Es una apuesta razonable
+            para un campo suelto y mala para la aritmética: un modelo que lee mal un 8
+            como un 3 te devuelve un total perfectamente formado y perfectamente falso,
+            con una confianza alta, porque él no ha sumado nada.
+          </p>
+          <p>
+            El comentario del código dice «<span class="mono">Valida campo a campo el
+            borrador de factura. Nada dudoso pasa</span>». Esa segunda frase no es cierta
+            hoy: campo a campo sí, pero una factura donde 100 + 21 = 130 pasa entera.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>
+              Una función que, con base, tipo, cuota, IRPF y total sobre la mesa, diga
+              qué no cuadra. Tres reglas, con una tolerancia de un céntimo por redondeo.
+            </li>
+            <li>
+              Un validador de NIF/CIF español de verdad: la letra del DNI sale del resto
+              de dividir entre 23, y la de CIF de una suma ponderada. Son quince líneas.
+            </li>
+            <li>
+              Que el mensaje de WhatsApp cambie de tono cuando algo no cuadra. Hoy dice
+              «parece una factura recibida de X por Y €. ¿La registro?» pase lo que pase.
+              Debería decir <em>qué</em> no le cuadra y proponer el número que sí cuadra.
+            </li>
+            <li>
+              Que la confianza baje sola cuando la aritmética falla, para que el
+              documento caiga en revisión manual en vez de en confirmación directa.
+            </li>
+          </ol>
+          <p style="margin-top:14px">
+            Los tres avisos que pediste —importe, IVA y CIF— salen de este mismo punto.
+            <span class="quote" style="display:block;margin-top:10px">
+              Al dictarme la lista dijiste «si está mal el CIF, no lo digas», y luego
+              «que me lo digas» en los otros dos. Te pregunté y confirmaste que era un
+              desliz: los tres avisan.
+            </span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 02 === -->
+    <section class="area" id="corregir">
+      <div class="area-head">
+        <span class="n">02</span>
+        <h2 class="area-title">Una factura recibida mal leída no se puede corregir</h2>
+        <span class="chip c-red">Sin salida</span>
+      </div>
+      <p class="area-sub">
+        Pediste que al arreglar una factura a mano se actualice. En las que tú emites ya
+        pasa. En las que subes, no hay forma de arreglarla.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-green">
+          <h3>Lo que sí funciona</h3>
+          <p>
+            Un borrador de factura <strong>emitida</strong> se edita bien.
+            <code>update_invoice_draft</code> recalcula base, cuota, IRPF y total desde
+            las líneas nuevas, borra las viejas y las reescribe en la misma transacción.
+            Está bien hecho y no hay que tocarlo.
+          </p>
+          <p>
+            También está bien que una factura ya emitida se niegue a editarse
+            («<span class="mono">Una factura emitida no puede editarse</span>»). Eso es
+            obligatorio: una factura con número asignado y cadena Veri*Factu no se
+            reescribe, se rectifica.
+          </p>
+        </div>
+
+        <div class="row sev sev-red">
+          <h3>Qué falla</h3>
+          <p>
+            Para las <strong>recibidas</strong> existe exactamente una operación de
+            escritura: <code>set_received_invoice_status</code>. Cambia el estado y nada
+            más. No hay <span class="mono">update_received_invoice</span> en ningún sitio
+            del repositorio.
+          </p>
+          <p>Es decir: si la IA lee 1.210 € donde ponía 121 €, y tú confirmas, la única salida es</p>
+          <pre>delete_received_invoice(id)   →   volver a subir el PDF   →   volver a confirmar</pre>
+          <p>
+            Y el documento sigue archivado, así que al resubirlo salta el duplicado. Es un
+            callejón sin salida en la práctica.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>
+              Una función que actualice importe, tipo de IVA, cuota, número, fecha y
+              proveedor de una recibida, recalculando lo derivado igual que hace la
+              hermana de las emitidas.
+            </li>
+            <li>
+              Que corregirla marque el documento como revisado a mano, para que el sistema
+              no vuelva a proponerte lo que ya arreglaste.
+            </li>
+            <li>
+              Que se pueda hacer por WhatsApp con lenguaje llano: «la factura de Gómez son
+              121, no 1210». Hoy no hay ni herramienta ni frase que lo permita.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 03 === -->
+    <section class="area" id="impagadas">
+      <div class="area-head">
+        <span class="n">03</span>
+        <h2 class="area-title">Las facturas sin cobrar no avisan a nadie</h2>
+        <span class="chip c-red">Código muerto</span>
+      </div>
+      <p class="area-sub">
+        Pediste que si una factura no está pagada, entre en las notificaciones. La
+        función que las encuentra ya está escrita. No la llama nadie.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-red">
+          <h3>Qué falla</h3>
+          <p>
+            <code>overdue_invoices(business_id, min_days=1)</code> existe: coge los cobros
+            pendientes, calcula los días de retraso contra la fecha de vencimiento y
+            devuelve los vencidos con un campo <code>days_late</code>. Está bien escrita.
+          </p>
+          <p>Busqué quién la usa en todo el proyecto, tests incluidos:</p>
+          <pre>$ grep -rn "overdue_invoices" --include=*.py .
+./src/noesis/db.py:10097:def overdue_invoices(business_id, min_days: int = 1)</pre>
+          <p>
+            <strong>Una sola línea: su propia definición.</strong> Nunca se llama. Ni
+            desde el panel, ni desde el asistente, ni desde el planificador, ni desde un
+            test. Es código muerto.
+          </p>
+          <p>
+            Lo que sí se usa por todas partes —diez sitios— es
+            <code>pending_payments</code>, que devuelve todo lo pendiente sin distinguir
+            lo vencido. Por eso una factura que lleva cuarenta días sin cobrar aparece
+            en la misma lista, con el mismo peso visual, que una emitida ayer.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Lo que ya está montado alrededor</h3>
+          <p>
+            La infraestructura para avisar existe entera y es buena:
+            <code>queue_payment_reminder</code> encola el recordatorio,
+            <code>mark_reminder_sent</code> apunta cuándo se mandó y lleva la cuenta, y
+            el registro de valor guarda si tú aceptaste o rechazaste la propuesta. Está
+            todo construido menos el disparador.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>
+              Llamar a <code>overdue_invoices</code> desde el resumen diario y desde el
+              panel, y darle a lo vencido un sitio propio, separado de lo pendiente.
+            </li>
+            <li>
+              Que el asistente lo diga sin que se lo preguntes. Hoy solo contesta si
+              escribes «cobros pendientes»; debería salir en el parte del día.
+            </li>
+            <li>
+              Enganchar el aviso al recordatorio que ya existe, respetando el paso de
+              confirmación: proponer, no mandar solo.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 04 === -->
+    <section class="area" id="alta">
+      <div class="area-head">
+        <span class="n">04</span>
+        <h2 class="area-title">No se puede dar de alta un cliente ni un proveedor hablando</h2>
+        <span class="chip c-red">No existe</span>
+      </div>
+      <p class="area-sub">
+        Esto lo probé ejecutándolo. Los tres intentos fallan, y ninguno te dice que ha
+        fallado.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-red">
+          <h3>Probado, con la salida real</h3>
+          <pre>&gt; crear cliente Ana Ruiz
+  👥 Tus clientes: Sergio Lopez, Sergio Martinez.
+
+&gt; nuevo proveedor Ferreteria Gomez
+  Así veo Prueba SL ahora mismo: facturado 0,00 € este mes…
+
+&gt; crear usuario para Marta
+  Así veo Prueba SL ahora mismo: facturado 0,00 € este mes…
+
+CLIENTES:    ['Sergio Lopez', 'Sergio Martinez']
+PROVEEDORES: []</pre>
+          <p>
+            Ana Ruiz no se creó. Ferretería Gómez tampoco. Y en ninguno de los tres casos
+            el sistema dijo «no sé hacer eso»: al primero le contestó con la lista de
+            clientes, a los otros dos con el balance del mes. Pides un alta y recibes un
+            informe.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>La causa</h3>
+          <p>
+            El asistente tiene <strong>21 herramientas</strong>. Ninguna crea un cliente,
+            un proveedor ni un usuario:
+          </p>
+          <pre>agendar_trabajo          ver_agenda               crear_factura
+preparar_factura_trabajo crear_presupuesto        enviar_factura
+registrar_pago           ver_cobros_pendientes    resumen_negocio
+ver_impuestos            registrar_gasto          listar_clientes
+ver_perfil_cliente       ver_proyectos            ver_proyecto
+crear_proyecto           crear_tarea_proyecto     ver_equipo
+ver_documentos_pendientes ver_solicitudes_gestoria ver_control_noesis</pre>
+          <p>
+            Un cliente solo nace <strong>de rebote</strong>, dentro de
+            <code>crear_factura</code>, que llama a
+            <code>get_or_create_client</code>. Un proveedor solo nace al confirmar una
+            factura recibida. Ninguno de los dos se puede crear a propósito.
+          </p>
+          <p>
+            Y cuando el reconocedor de frases no encuentra nada, el mensaje cae en el
+            resumen del coach en vez de decir que no ha entendido. Por eso «nuevo
+            proveedor» te devuelve el balance.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>
+              Tres herramientas nuevas —<code>crear_cliente</code>,
+              <code>crear_proveedor</code>, <code>crear_usuario</code>— con el nombre como
+              único campo obligatorio y NIF, teléfono, correo y dirección opcionales.
+            </li>
+            <li>
+              Que reconozca las frases naturales: «crear cliente X», «nuevo proveedor X»,
+              «da de alta a X», «apunta a X con CIF B12345678».
+            </li>
+            <li>
+              Que cuando no entienda una orden, <strong>lo diga</strong>. Caer en el
+              resumen del mes es lo peor que puede hacer: parece que te ignora.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 05 === -->
+    <section class="area" id="sergio">
+      <div class="area-head">
+        <span class="n">05</span>
+        <h2 class="area-title">Los dos Sergios</h2>
+        <span class="chip c-amber">Medio hecho</span>
+      </div>
+      <p class="area-sub">
+        Este es el caso que más detallaste. La buena noticia: media función ya está
+        escrita y funciona. La mala: cuando acierta es invisible y cuando duda se
+        comporta como un error.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-green">
+          <h3>Lo que ya funciona</h3>
+          <p>
+            <code>resolve_client_reference</code> hace justo lo que pediste: acepta
+            «Sergio» para «Sergio Martínez» si no hay otro, y si hay dos, los enumera en
+            vez de elegir a ciegas o crear un duplicado. Lo probé:
+          </p>
+          <pre>&gt; factura a Sergio 100 euros        (un solo Sergio)
+  🧾 Factura #1 preparado para Sergio Martinez: 121,00 €</pre>
+          <p>
+            Resuelto por nombre parcial, sin preguntar nada. Eso es exactamente lo que
+            querías y ya está.
+          </p>
+        </div>
+
+        <div class="row sev sev-red">
+          <h3>Qué falla cuando hay dos</h3>
+          <pre>&gt; factura a Sergio 200 euros        (dos Sergios)
+  Uy, algo no ha ido bien: Hay varios clientes que encajan con
+  «Sergio»: Sergio Lopez, Sergio Martinez. Indica el nombre completo.</pre>
+          <p>Tres problemas en esa única línea:</p>
+          <ul>
+            <li>
+              <strong>«Uy, algo no ha ido bien»</strong>. No ha ido mal nada. El sistema
+              ha hecho lo correcto: ha detectado una ambigüedad. Pero viaja por el canal
+              de excepciones, así que se presenta con la cara de un fallo.
+            </li>
+            <li>
+              <strong>Se pierden los 200 €.</strong> La ambigüedad aborta la operación
+              entera. Tienes que reescribir el importe, el concepto y todo lo demás.
+            </li>
+            <li>
+              <strong>No hay forma de elegir.</strong> Te lista dos nombres pero no acepta
+              «el primero», ni «Martínez», ni un 1 o un 2. Tienes que teclear el nombre
+              completo exacto.
+            </li>
+          </ul>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Y si no es ninguno de los dos</h3>
+          <p>
+            Pediste que si el nombre no existe, se cree con el CIF que hayas dicho antes.
+            Hoy <code>get_or_create_client</code> crea el cliente, pero
+            <strong>solo con el nombre</strong>: el CIF que mencionaste en la misma frase
+            no llega, porque el reconocedor de frases ni siquiera lo extrae. Te queda un
+            cliente a medias que tendrás que completar a mano en la web.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>
+              Que la ambigüedad deje de ser una excepción y pase a ser una pregunta con
+              memoria: guardar la operación a medias y esperar tu respuesta, igual que ya
+              se hace con el SÍ/NO de emitir.
+            </li>
+            <li>
+              Aceptar respuestas humanas para elegir: «el primero», «Martínez», «1».
+            </li>
+            <li>
+              Enseñar al reconocedor a leer el CIF de la frase, para poder crear el
+              cliente completo de una vez.
+            </li>
+            <li>
+              Cuando desambigüe, enseñar algo que distinga de verdad a los dos Sergios
+              —el CIF, o la última factura— y no dos nombres casi iguales.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 06 === -->
+    <section class="area" id="numeros">
+      <div class="area-head">
+        <span class="n">06</span>
+        <h2 class="area-title">Te obliga a saberte números internos</h2>
+        <span class="chip c-amber">Diseño</span>
+      </div>
+      <p class="area-sub">
+        «Me hace decir qué número del cliente, qué número del proveedor». Tienes razón, y
+        se puede señalar exactamente dónde.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-amber">
+          <h3>Qué falla</h3>
+          <p>
+            De las 21 herramientas, cuatro exigen un identificador numérico que solo
+            existe dentro de la base de datos:
+          </p>
+          <div class="scroll"><table>
+            <thead><tr><th>Herramienta</th><th>Exige</th><th>Lo natural sería</th></tr></thead>
+            <tbody>
+              <tr><td>enviar_factura</td><td><code>factura_id</code></td><td>«la factura de Sergio»</td></tr>
+              <tr><td>registrar_pago</td><td><code>factura_id</code></td><td>«me ha pagado Sergio»</td></tr>
+              <tr><td>preparar_factura_trabajo</td><td><code>trabajo_id</code></td><td>«factura el trabajo de ayer»</td></tr>
+              <tr><td>crear_tarea_proyecto</td><td><code>proyecto_id</code></td><td>«en la obra de Badalona»</td></tr>
+            </tbody>
+          </table></div>
+          <p>
+            <code>crear_factura</code> sí acepta el nombre del cliente, y por eso es la
+            que mejor se siente de usar. Las otras cuatro te devuelven a la web a mirar
+            un número.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <p>
+            La solución ya está inventada dentro de la casa: el mismo patrón de
+            <code>resolve_client_reference</code>, aplicado a facturas, trabajos y
+            proyectos. Buscar por lo que la persona sabe —el cliente, la fecha, el
+            importe, el sitio— y preguntar solo cuando de verdad haya dos candidatos.
+          </p>
+          <p>
+            Es el arreglo que más cambia la sensación de uso y el que menos riesgo tiene,
+            porque no toca nada del cálculo ni de la fiscalidad.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 07 === -->
+    <section class="area" id="subir">
+      <div class="area-head">
+        <span class="n">07</span>
+        <h2 class="area-title">Qué se sube por WhatsApp y qué no</h2>
+        <span class="chip c-amber">Incoherente</span>
+      </div>
+      <p class="area-sub">
+        Preguntaste por «los papeles que se suben o no se suben». Se suben, pero con
+        límites que no están escritos en ningún sitio y con una incoherencia entre fotos
+        y PDF.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-amber">
+          <h3>Lo que acepta hoy</h3>
+          <div class="scroll"><table>
+            <thead><tr><th>Envío</th><th>Se acepta</th><th>Qué hace después</th></tr></thead>
+            <tbody>
+              <tr><td>Foto JPG, PNG o WEBP</td><td class="good">Sí</td><td>OCR, clasifica y propone gasto o factura</td></tr>
+              <tr><td>PDF</td><td class="good">Sí</td><td>Extrae con IA y propone registrar la recibida</td></tr>
+              <tr><td>Word, Excel, ODT</td><td class="bad">No</td><td>«Por ahora solo acepto documentos en PDF»</td></tr>
+              <tr><td>Foto HEIC de iPhone</td><td class="bad">No</td><td>«Solo puedo leer fotos JPG, PNG o WEBP»</td></tr>
+              <tr><td>Más de 15 MB</td><td class="bad">No</td><td>Avisa del límite</td></tr>
+            </tbody>
+          </table></div>
+          <p>
+            El HEIC merece una nota: la web <em>sí</em> lo sabe leer, hay un validador
+            escrito para ese formato. WhatsApp normalmente convierte a JPEG antes de
+            enviar, así que en la práctica casi nunca molesta, pero la asimetría está ahí.
+          </p>
+        </div>
+
+        <div class="row sev sev-red">
+          <h3>La incoherencia, y es concreta</h3>
+          <p>
+            El 4 de septiembre se arregló que reenviar un documento ya archivado lo
+            volviera a leer, en vez de contestar «ya estaba guardado» y morir ahí. El
+            razonamiento del commit era bueno:
+          </p>
+          <p class="quote">
+            «Un duplicado no es un error del usuario: reenviar un papel es pedir que se
+            mire otra vez.»
+          </p>
+          <p>
+            Ese arreglo se aplicó <strong>solo a la rama del PDF</strong>. Lo comprobé
+            sobre el propio commit: toca únicamente
+            <code>_ingest_document</code>. La rama de las fotos sigue capturando el
+            duplicado dentro del error genérico y respondiendo con el texto seco.
+          </p>
+          <p>
+            Resultado práctico: reenvías un PDF y lo relee; reenvías la foto de un ticket
+            y te suelta «Este archivo ya estaba guardado como documento 47», con un número
+            interno que no significa nada para ti. El mismo gesto, dos comportamientos.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Un tercer detalle</h3>
+          <p>
+            Cuando el sistema clasifica un PDF como <strong>factura emitida</strong> —una
+            que hiciste tú— se limita a archivarla y decirte «confírmalo en Documentos».
+            Solo las <em>recibidas</em> se ofrecen para registrar. Si subes tu propio
+            historial de facturas, entra como papel muerto.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>Llevar la rama del duplicado a las fotos, copiando lo que ya hace el PDF.</li>
+            <li>Quitar los identificadores internos de los mensajes al usuario.</li>
+            <li>Decir de antemano qué formatos valen, en vez de rechazar después.</li>
+            <li>Decidir qué hacer con las facturas emitidas históricas, hoy sin destino.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 08 === -->
+    <section class="area" id="calendario">
+      <div class="area-head">
+        <span class="n">08</span>
+        <h2 class="area-title">El calendario</h2>
+        <span class="chip c-red">Roto en el sitio exacto</span>
+      </div>
+      <p class="area-sub">
+        Dijiste que no funciona. He encontrado un fallo de norma que explica que los
+        eventos no aparezcan, o aparezcan a la hora equivocada, al suscribirse desde
+        Google Calendar, Outlook o el iPhone.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-red">
+          <h3>Qué falla</h3>
+          <p>
+            El calendario que publica Bynoesis escribe cada evento con la hora anclada a
+            una zona horaria por nombre:
+          </p>
+          <pre>DTSTART;TZID=Europe/Madrid:20260907T090000
+DTEND;TZID=Europe/Madrid:20260907T100000</pre>
+          <p>
+            Pero el archivo <strong>no incluye el bloque <code>VTIMEZONE</code></strong>
+            que define qué es «Europe/Madrid». Lo comprobé: no aparece ni una vez en todo
+            el fichero.
+          </p>
+          <p>
+            La norma del formato exige que cualquier zona citada por nombre esté definida
+            dentro del propio archivo. Sin esa definición, cada programa hace lo que
+            quiere: unos plantan el evento en UTC —dos horas de desvío en verano, una en
+            invierno—, otros descartan el evento, y algunos rechazan el calendario entero.
+          </p>
+          <p>
+            La cabecera lleva un <code>X-WR-TIMEZONE</code>, que no es norma sino una
+            extensión que Google inventó. Algunos clientes la respetan y otros la ignoran,
+            y eso explica que el fallo parezca aleatorio según el móvil.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Lo que sí está bien</h3>
+          <p>
+            El resto del calendario está cuidado: los caracteres se escapan como manda la
+            norma, los eventos de día entero se distinguen de los de hora concreta, los
+            cancelados se marcan como cancelados, el identificador de cada evento es
+            estable, y la dirección lleva un testigo secreto rotable con
+            <code>noindex</code>. Solo falta el bloque de zona horaria.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>
+              Añadir el <code>VTIMEZONE</code> de Europe/Madrid con sus dos reglas de
+              cambio de hora. Son unas veinte líneas fijas y arregla el fallo de raíz.
+            </li>
+            <li>
+              Comprobar el resultado con un validador de calendarios antes de darlo por
+              bueno, y suscribirse de verdad desde un móvil.
+            </li>
+          </ol>
+          <p style="margin-top:14px">
+            <strong>Aviso:</strong> esto explica el calendario que <em>publica</em>
+            Bynoesis. Si lo que no te funciona es la reserva de citas de Cal.com, es otra
+            cosa distinta y está tratada en
+            <a href="Frentes-abiertos.html#cal">Frentes abiertos</a>. Dime cuál de las dos
+            era y lo miro.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 09 === -->
+    <section class="area" id="frases">
+      <div class="area-head">
+        <span class="n">09</span>
+        <h2 class="area-title">Frases que deberían funcionar y no funcionan</h2>
+        <span class="chip c-amber">Reconocedor</span>
+      </div>
+      <p class="area-sub">
+        Probado ejecutando, sobre una base de datos limpia y sin IA externa, para ver qué
+        aguanta el reconocedor por sí solo.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-amber">
+          <h3>La tabla</h3>
+          <div class="scroll"><table>
+            <thead><tr><th>Lo que escribes</th><th>Qué pasa</th></tr></thead>
+            <tbody>
+              <tr><td><span class="mono">factura a Juan 95 euros</span></td><td class="good">Borrador correcto, 114,95 €</td></tr>
+              <tr><td><span class="mono">factura a Juan por pintura 95 euros</span></td><td class="good">Borrador con concepto</td></tr>
+              <tr><td><span class="mono">hazme una factura a Juan de 100 euros</span></td><td class="bad">«La base debe ser distinta de cero»</td></tr>
+              <tr><td><span class="mono">factura a Juan 95</span></td><td class="bad">No lo entiende</td></tr>
+              <tr><td><span class="mono">facturame a Maria 300</span></td><td class="bad">No lo entiende</td></tr>
+              <tr><td><span class="mono">factura a Juan 1.250,50 euros</span></td><td class="bad">No lo entiende</td></tr>
+              <tr><td><span class="mono">hazme una factura de 500 a Talleres Lopez</span></td><td class="bad">No lo entiende</td></tr>
+              <tr><td><span class="mono">hazme una factura</span></td><td class="bad">Te suelta el balance del mes</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="row sev sev-red">
+          <h3>El caso del «de 100 euros»</h3>
+          <p>
+            Este merece explicación porque el mensaje de error no tiene ningún sentido
+            para quien lo lee. El patrón que reconoce las facturas usa la palabra
+            <strong>«de» como separador del concepto</strong>. Al escribir «a Juan
+            <em>de</em> 100 euros», el reconocedor parte la frase ahí y se queda con
+            <code>1</code> como concepto y <code>00</code> como importe. Base: cero euros.
+          </p>
+          <p>
+            La base de datos lo rechaza, así que <strong>no llega a crearse una factura
+            mala</strong>. Pero el mensaje que te llega es «La base de cada línea debe ser
+            distinta de cero», que no ayuda a nadie a entender que sobraba un «de».
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Los otros dos, en una línea cada uno</h3>
+          <ul>
+            <li>
+              <strong>Sin la palabra «euros» no reconoce el importe.</strong> «factura a
+              Juan 95» se pierde. Al dictar por voz, la palabra se cae a menudo.
+            </li>
+            <li>
+              <strong>El punto de los miles rompe el número.</strong> «1.250,50 euros» no
+              se reconoce, y es el formato en que un español escribe cualquier factura
+              seria.
+            </li>
+          </ul>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Un matiz importante antes de sacar conclusiones</h3>
+          <p>
+            Estas pruebas corrieron <strong>sin clave de IA</strong>, a propósito, para
+            aislar el reconocedor. En producción la clave está puesta, y las frases que
+            aquí fallan van a parar al asistente, que sí sabe crear facturas y
+            probablemente resuelva varias. Lo que no cambia es que
+            <strong>cada frase que se le escapa al reconocedor cuesta dinero</strong>: en
+            vez de resolverse gratis en local, consume crédito de IA externa.
+          </p>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Y una cosa que no es como la cuentas</h3>
+          <p>
+            La confirmación SÍ/NO antes de tocar dinero <strong>solo salta en las notas de
+            voz</strong>. Un mensaje escrito crea el borrador directamente, sin preguntar.
+            Como queda en borrador y no se emite, no es grave, pero conviene saberlo
+            porque el producto promete otra cosa.
+          </p>
+        </div>
+
+        <div class="row sev sev-green">
+          <h3>Qué hacer</h3>
+          <ol class="steps">
+            <li>Que «de» delante de un número no se tome como separador de concepto.</li>
+            <li>Aceptar importes sin la palabra «euros» cuando la frase ya es una orden de facturar.</li>
+            <li>Aceptar el punto de los miles.</li>
+            <li>Aceptar el orden inverso: importe primero, cliente después.</li>
+            <li>Y sobre todo: que cuando no entienda, lo diga en vez de contestar otra cosa.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 10 === -->
+    <section class="area" id="orden">
+      <div class="area-head">
+        <span class="n">10</span>
+        <h2 class="area-title">Por dónde empezar</h2>
+        <span class="chip c-brand">Mi criterio</span>
+      </div>
+      <p class="area-sub">
+        Ordenado por lo que más mejora la sensación de uso dividido entre lo que cuesta,
+        no por gravedad teórica.
+      </p>
+
+      <div class="panel">
+        <div class="row sev sev-green">
+          <h3>Primero, porque es barato y se nota mucho</h3>
+          <ol class="steps">
+            <li>
+              <strong>Que diga cuando no entiende.</strong> Es el cambio más pequeño del
+              documento y el que más cambia la percepción. Hoy contestar con el balance a
+              «nuevo proveedor» hace que el producto parezca sordo.
+            </li>
+            <li>
+              <strong>El bloque de zona horaria del calendario.</strong> Veinte líneas
+              fijas, arregla un «no funciona» entero.
+            </li>
+            <li>
+              <strong>Los cuatro remiendos del reconocedor de frases.</strong> Patrones de
+              texto, sin tocar cálculo ni fiscalidad, con una prueba por caso.
+            </li>
+            <li>
+              <strong>Encender <code>overdue_invoices</code>.</strong> La función ya está
+              escrita; falta llamarla desde algún sitio.
+            </li>
+          </ol>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Después, porque es lo que de verdad pediste</h3>
+          <ol class="steps">
+            <li>
+              <strong>Las tres comprobaciones de la factura</strong> —importe, IVA y
+              CIF— con el validador de NIF. Es el corazón de tu queja: que leer no es
+              comprobar.
+            </li>
+            <li>
+              <strong>Poder corregir una factura recibida.</strong> Hoy es un callejón
+              sin salida y eso destruye la confianza en todo lo que subes.
+            </li>
+            <li>
+              <strong>Alta de cliente, proveedor y usuario hablando.</strong> Tres
+              herramientas nuevas.
+            </li>
+          </ol>
+        </div>
+
+        <div class="row sev sev-amber">
+          <h3>Al final, porque es el más delicado</h3>
+          <ol class="steps">
+            <li>
+              <strong>La desambiguación con memoria</strong> —los dos Sergios— y quitar
+              los identificadores numéricos de las cuatro herramientas que los piden.
+              Es el que mejor deja el producto y el que más superficie toca, porque cambia
+              cómo se guarda una conversación a medias.
+            </li>
+          </ol>
+        </div>
+
+        <div class="row sev sev-red">
+          <h3>Fuera de este documento, pero sigue ahí</h3>
+          <p>
+            El número de WhatsApp de tu socio sigue bloqueado. Hay un índice único global
+            sobre el teléfono, así que un número solo puede estar en una cuenta de toda la
+            plataforma, y <strong>no existe ninguna acción de administrador para
+            liberarlo</strong>: solo el titular de la cuenta que lo retiene puede soltarlo
+            desde Ajustes. Si esa cuenta es de un correo al que ya no tenéis acceso, hay
+            que tocar la base de datos a mano.
+          </p>
+          <p>
+            Además, el mensaje que ve quien intenta vincular —«Ese teléfono ya está
+            vinculado o no es válido»— tapa tres causas distintas: que el número esté en
+            otra cuenta, que esté dado de alta como trabajador, o que no tenga nueve
+            dígitos. Separarlas es media hora y ahorra la tarde que perdisteis.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="end">
+  <div class="wrap">
+    <p>
+      Nueve arreglos. Seis los verifiqué ejecutando el código contra una base de datos
+      temporal, y he pegado la salida literal; los otros tres leyendo el código y el
+      historial de commits. Donde no he podido comprobar algo —el comportamiento con la
+      clave de IA puesta, y cuál de los dos calendarios es el que te falla— lo digo en su
+      sección en vez de suponerlo.
+    </p>
+    <p>
+      Nada de lo aquí descrito está arreglado todavía: este documento es el mapa, no el
+      trabajo. Dime por dónde quieres que empiece y lo hago en ese orden.
+    </p>
+  </div>
+</footer>
