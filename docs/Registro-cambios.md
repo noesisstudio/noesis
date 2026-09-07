@@ -1,5 +1,26 @@
 ﻿# Registro de cambios
 
+## 2026-09-07 — fiabilidad conversacional, documentos y facturas recibidas
+
+Objetivo: convertir los fallos reproducibles de `Arreglos.html` en contratos de
+producto sin consumir IA externa. Se añade validación determinista y no
+contabilizable de base/IVA/IRPF/total, fechas y NIF español; una incoherencia baja
+la confianza y bloquea el alta rápida por WhatsApp hasta revisión humana. Las
+facturas recibidas ya se corrigen desde Costes mediante API autenticada y aislada.
+
+WhatsApp vuelve a leer fotos duplicadas igual que los PDF, sin crear otro archivo
+ni mostrar identificadores internos. El calendario incluye `VTIMEZONE`. El cerebro
+local entiende importes sin «euros», miles españoles, «factúrame» y el orden
+importe→cliente; permite crear cliente/proveedor de forma explícita. Un alta de
+usuario incompleta se deriva a la invitación segura de Equipo.
+
+Áreas: `fiscal_validation.py`, extracción, documentos/Costes, WhatsApp, NLU,
+herramientas, calendario y pruebas. Sin migración, credenciales, llamadas pagadas
+ni producción. Pruebas dirigidas y simulación sintética en `Registro-QA.md`.
+Riesgo: interpretación de lenguaje o edición accidental; diagnóstico en las rutas
+locales y tests citados. Rollback: revertir este cambio completo; no hay datos de
+esquema que deshacer.
+
 ## 2026-09-07 — documento «Arreglos»: nueve fallos pedidos por el founder
 
 Objetivo: dejar por escrito, con causa localizada en el código, los nueve puntos

@@ -18,6 +18,9 @@ _WEEKDAYS = {
     "viernes": 4, "sabado": 5, "domingo": 6,
 }
 
+# Importe dictado en formato español: 1200, 1.200, 1.200,50 o 95,50.
+_AMOUNT_RE = r"(?:\d{1,3}(?:[.\s]\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)"
+
 
 def _strip_accents(s: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", s)
@@ -29,12 +32,21 @@ def _norm(s: str) -> str:
 
 
 def _parse_amount(text: str) -> float | None:
-    m = re.search(r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur\b)", text, re.I)
+    m = re.search(rf"({_AMOUNT_RE})\s*(?:€|euros?|eur\b)", text, re.I)
     if not m:
-        m = re.search(r"(\d+(?:[.,]\d{1,2})?)", text)
+        m = re.search(rf"({_AMOUNT_RE})", text)
     if m:
-        return float(m.group(1).replace(",", "."))
+        return _amount_value(m.group(1))
     return None
+
+
+def _amount_value(value: str) -> float:
+    compact = str(value).replace(" ", "")
+    if "," in compact:
+        compact = compact.replace(".", "").replace(",", ".")
+    elif re.fullmatch(r"\d{1,3}(?:\.\d{3})+", compact):
+        compact = compact.replace(".", "")
+    return float(compact)
 
 
 def _parse_time(norm: str) -> tuple[int, int] | None:
@@ -83,6 +95,8 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 # Parser de intención -> (tool, args)
 # --------------------------------------------------------------------------- #
 HELP = "__help__"
+NEED_INVOICE = "__need_invoice__"
+NEED_USER_INVITE = "__need_user_invite__"
 
 
 # Conectores que el hablante pone entre el nombre y el importe. El patron los
@@ -107,25 +121,50 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
       - "factura a Juan 95€ por reparación de grifo"       (importe antes de concepto)
       - "factura a Juan 95 euros"                          (sin concepto explícito)
     """
+    # Variante frecuente: "factura a Juan de 100 euros". Debe resolverse antes
+    # del patrón con concepto para que el 100 no se parta en "1" + "00".
+    m = re.search(
+        verb_re + rf"\s+(?:a|para|per\s+a)\s+(.+?)\s+(?:de|por|per)\s+"
+        rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?$",
+        text, re.I,
+    )
+    if m:
+        return {
+            "cliente": _limpiar_cliente(m.group(1)),
+            "concepto": "Servicio",
+            "base": _amount_value(m.group(2)),
+        }
     # Orden 1: verbo a CLIENTE por CONCEPTO IMPORTE
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+(?:por|de|per)\s+(.+?)[,]?\s*"
-                  r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?$", text, re.I)
+                  rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?$", text, re.I)
     if m:
         return {"cliente": _limpiar_cliente(m.group(1)), "concepto": m.group(2).strip(),
-                "base": float(m.group(3).replace(",", "."))}
+                "base": _amount_value(m.group(3))}
     # Orden 2: verbo a CLIENTE IMPORTE por CONCEPTO
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
-                  r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)\s+"
+                  rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?\s+"
                   r"(?:por|de|per)\s+(.+)", text, re.I)
     if m:
         return {"cliente": _limpiar_cliente(m.group(1)), "concepto": m.group(3).strip(),
-                "base": float(m.group(2).replace(",", "."))}
+                "base": _amount_value(m.group(2))}
     # Orden 3: verbo a CLIENTE IMPORTE (sin concepto, "Servicio" por defecto)
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
-                  r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)", text, re.I)
+                  rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?(?:\s|$)", text, re.I)
     if m:
         return {"cliente": _limpiar_cliente(m.group(1)), "concepto": "Servicio",
-                "base": float(m.group(2).replace(",", "."))}
+                "base": _amount_value(m.group(2))}
+    # Orden 4: verbo IMPORTE a CLIENTE por CONCEPTO.
+    m = re.search(
+        verb_re + rf"\s+(?:de\s+)?({_AMOUNT_RE})\s*(?:€|euros?|eur)?\s+"
+        r"(?:a|para|per\s+a)\s+(.+?)(?:\s+(?:por|de|per)\s+(.+))?$",
+        text, re.I,
+    )
+    if m:
+        return {
+            "cliente": _limpiar_cliente(m.group(2)),
+            "concepto": (m.group(3) or "Servicio").strip(),
+            "base": _amount_value(m.group(1)),
+        }
     return None
 
 
@@ -154,22 +193,22 @@ def _parse_simplified_sale(text: str, norm: str) -> dict | None:
     args = _parse_doc_command(text, norm, verb)
     if not args:
         patterns = (
-            verb + r"\s+(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)\s+"
+            verb + rf"\s+({_AMOUNT_RE})\s*(?:€|euros?|eur)\s+"
             r"(?:por|de|per)\s+(.+)$",
             verb + r"\s+(?:por|de|per)\s+(.+?)[,]?\s*"
-            r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?$",
+            rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?$",
         )
         first = re.search(patterns[0], text, re.I)
         second = re.search(patterns[1], text, re.I) if not first else None
         if first:
             args = {
                 "cliente": "", "concepto": first.group(2).strip(),
-                "base": float(first.group(1).replace(",", ".")),
+                "base": _amount_value(first.group(1)),
             }
         elif second:
             args = {
                 "cliente": "", "concepto": second.group(1).strip(),
-                "base": float(second.group(2).replace(",", ".")),
+                "base": _amount_value(second.group(2)),
             }
         else:
             amount = _parse_amount(text)
@@ -195,6 +234,26 @@ def parse(text: str) -> tuple[str, dict] | None:
     if re.search(r"(que puedes hacer solo|que puedes hacer sin|permisos de (?:by)?noesis|"
                  r"control de (?:by)?noesis|que haces sin preguntar|autonomia)", norm):
         return ("ver_control_noesis", {})
+
+    # Altas explícitas: no hace falta crear una factura de rebote para guardar
+    # una relación comercial. El acceso de una persona, en cambio, exige correo,
+    # rol e invitación segura y no se concede desde una frase incompleta.
+    party = re.search(
+        r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+(?:un|una)?\s*"
+        r"(cliente|proveedor)\s+(.+?)\s*$",
+        text, re.I,
+    )
+    if party:
+        name = party.group(2).strip(" ,.")
+        return (
+            "crear_cliente" if _norm(party.group(1)) == "cliente" else "crear_proveedor",
+            {"nombre": name},
+        )
+    if re.search(
+        r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+(?:un|una)?\s*usuario\b",
+        norm,
+    ):
+        return (NEED_USER_INVITE, {})
 
     # --- Crear proyecto sencillo, local y sin IA
     if "proyect" in norm and re.search(r"\b(crea|crear|nuevo|abre)\b", norm):
@@ -245,11 +304,13 @@ def parse(text: str) -> tuple[str, dict] | None:
 
     # --- Crear factura: acepta varios órdenes naturales ---
     if "factura" in norm:
-        args = _parse_doc_command(text, norm, r"factura(?:r|me)?")
+        args = _parse_doc_command(text, norm, r"fact[uú]ra(?:r|me)?")
         if args:
             args["tipo_factura"] = "F1"
             _add_tax_rates(norm, args)
             return ("crear_factura", args)
+        if re.search(r"\b(?:hazme|crea|crear|nueva|quiero|necesito|prepara|factura)\b", norm):
+            return (NEED_INVOICE, {})
 
     # --- Registrar gasto: "gasto 45 en gasolina", "gasté 45 de material",
     #     "me he gastado 45", "compré 30 de tornillos", "ticket de 12"
@@ -374,6 +435,14 @@ def format_reply(tool: str, result: dict) -> str:
                 f"{f['id']}»; para entregarlo también, «emitir y enviar factura "
                 f"{f['id']}»."
                 + (f"\n\n⚠️ {aviso}" if aviso else ""))
+    if tool == "crear_cliente":
+        client = result["cliente"]
+        suffix = " Ya existía; he reutilizado su ficha." if result.get("existing") else ""
+        return f"Cliente guardado: **{client['name']}**.{suffix}"
+    if tool == "crear_proveedor":
+        supplier = result["proveedor"]
+        suffix = " Ya existía; he reutilizado su ficha." if result.get("existing") else ""
+        return f"Proveedor guardado: **{supplier['name']}**.{suffix}"
     if tool == "enviar_factura":
         f = result["factura"]
         quien = f.get("client_name") or f.get("recipient_name") or "tu cliente"

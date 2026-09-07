@@ -1,5 +1,18 @@
 # Estado actual del producto
 
+## 7-sep — candidato de fiabilidad en revisión
+
+La lectura de facturas ya contrasta aritmética, fechas y dígitos de control antes
+de proponer un alta por WhatsApp; las discrepancias no se autocorrigen ni se
+contabilizan. Costes permite corregir facturas recibidas, las fotos repetidas se
+releen sin duplicarse y el ICS declara la zona horaria completa. El camino local
+acepta los dictados habituales de importes y altas explícitas de clientes y
+proveedores. Los usuarios siguen entrando únicamente mediante invitación segura.
+
+Una simulación sintética recorre el trabajo de oficina sin proveedor de IA. Este
+candidato no cambia esquema ni se ha desplegado; los medios reales, Stripe, Meta,
+correo y calendarios físicos siguen necesitando validación externa.
+
 ## 7-sep — centro de mando preparado para publicación
 
 Administración dividida en Dirección, Cuentas y soporte, Marketing y ventas,

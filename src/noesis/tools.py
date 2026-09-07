@@ -184,6 +184,24 @@ TOOLS: list[dict] = [
         },
     },
     {
+        "name": "crear_cliente",
+        "description": "Crea o reutiliza un cliente por su nombre, sin generar documentos.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"nombre": {"type": "string"}},
+            "required": ["nombre"],
+        },
+    },
+    {
+        "name": "crear_proveedor",
+        "description": "Crea o reutiliza un proveedor por su nombre, sin registrar gastos.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"nombre": {"type": "string"}},
+            "required": ["nombre"],
+        },
+    },
+    {
         "name": "listar_clientes",
         "description": "Lista los clientes guardados.",
         "input_schema": {"type": "object", "properties": {}},
@@ -291,6 +309,18 @@ def _agendar_trabajo(business_id, cliente, descripcion, fecha_hora, zona=None,
                      zone=zona or c.get("zone"), price_estimate=precio_estimado,
                      business_id=business_id)
     return {"ok": True, "trabajo": job, "cliente": c}
+
+
+def _crear_cliente(business_id, nombre):
+    before = db.resolve_client_reference(nombre, business_id)
+    client = before or db.add_client(nombre, business_id=business_id)
+    return {"ok": True, "cliente": client, "existing": bool(before)}
+
+
+def _crear_proveedor(business_id, nombre):
+    before = db.find_supplier(business_id, name=nombre)
+    supplier = before or db.add_supplier(nombre, business_id=business_id)
+    return {"ok": True, "proveedor": supplier, "existing": bool(before)}
 
 
 def _ver_agenda(business_id, fecha):
@@ -597,6 +627,8 @@ def _ver_control_noesis(business_id):
 
 
 _DISPATCH = {
+    "crear_cliente": _crear_cliente,
+    "crear_proveedor": _crear_proveedor,
     "agendar_trabajo": _agendar_trabajo,
     "ver_agenda": _ver_agenda,
     "crear_factura": _crear_factura,

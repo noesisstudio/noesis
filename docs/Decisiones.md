@@ -2,6 +2,19 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Una lectura incoherente no se confirma con un «sí» (2026-09-07)
+
+La confianza declarada por un modelo nunca prevalece sobre una contradicción
+determinista. Si base, IVA, IRPF, total, fechas o un identificador fiscal español
+no cuadran, Bynoesis conserva el documento y los campos propuestos, limita la
+confianza y obliga a revisarlos en Documentos. No inventa la cifra correcta y no
+permite que un «sí» rápido por WhatsApp la convierta en apunte contable.
+
+La comprobación es aditiva y local. No bloquea documentos parciales ni pretende
+validar identificadores extranjeros; tampoco sustituye la revisión fiscal. Las
+facturas recibidas confirmadas siguen siendo corregibles porque no forman parte de
+la cadena inmutable de facturas emitidas.
+
 ## Medir el trabajo útil sin gobernar el trabajo (2026-08-31)
 
 El Registro Interno de Valor se añade como observador, no como un nuevo motor de

@@ -22,6 +22,7 @@ _DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domin
 _MUTATING_TOOLS = {
     "agendar_trabajo", "crear_factura", "crear_presupuesto", "registrar_gasto",
     "crear_proyecto", "crear_tarea_proyecto", "preparar_factura_trabajo",
+    "crear_cliente", "crear_proveedor",
 }
 
 
@@ -60,6 +61,7 @@ trabajo.
 QUÉ PUEDES HACER (y solo esto)
 - Agendar trabajos y consultar la agenda de un día.
 - Crear presupuestos y facturas en BORRADOR, registrar gastos.
+- Crear una ficha de cliente o proveedor cuando el usuario lo pida expresamente.
 - Preparar tickets de venta como factura simplificada F2 solo cuando el usuario
   diga explícitamente "ticket de venta" o "factura simplificada". Una foto de un
   ticket o "ticket de 20 euros" es un gasto, no una venta.

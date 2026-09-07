@@ -85,6 +85,12 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   derechos del plan antes de consultar o modificar módulos premium y mantiene el flujo común de
   entrega de factura: PDF, canal habitual, email/plantilla WhatsApp, idempotencia y
   evento trazable.
+- `src/noesis/fiscal_validation.py`: comprobación local de aritmética de borradores,
+  fechas y dígitos de control de NIF/NIE/CIF. Solo genera avisos; no corrige ni
+  contabiliza. WhatsApp exige revisión web si encuentra una incoherencia.
+- `src/noesis/db.py` + `web/routers/documents.py` + `templates/costes.html`:
+  corrección autenticada y multiempresa de facturas recibidas ya confirmadas, sin
+  alterar el documento original.
 - `src/noesis/documents/ocr.py` + `pdf_ocr.py`: lectura local de imágenes y PDF
   escaneado; detecta modelos Tesseract instalados, prioriza `cat+spa+eng`, prepara
   la imagen y limita páginas, píxeles, tiempo y texto antes de clasificar.
@@ -98,7 +104,8 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   certificado ordinario o sello, TLS mínimo, límite de respuesta e idempotencia de
   duplicados.
 - `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM;
-  separa ticket de gasto de ticket de venta F2 y entiende el trabajo a facturar.
+  separa ticket de gasto de ticket de venta F2, entiende importes españoles y
+  altas explícitas de cliente/proveedor, y deriva usuarios a invitación segura.
 - `src/noesis/internal_brain.py`: compositor local de comunicaciones. Usa hechos del
   negocio, evita ambigüedad y deja el envío pendiente de SÍ/NO del titular.
 - `src/noesis/agent.py`: agentes privado, compatible y Anthropic con historial, recuerdos

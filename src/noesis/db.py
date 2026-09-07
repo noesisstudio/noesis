@@ -8918,6 +8918,70 @@ def set_received_invoice_status(received_id, status, *, business_id) -> dict:
     return get_received_invoice(received_id, business_id)
 
 
+def update_received_invoice(received_id, *, business_id: int, **changes) -> dict:
+    """Corrige una factura recibida sin tocar su documento ni cruzar negocios."""
+    current = get_received_invoice(received_id, business_id)
+    if not current:
+        raise ValueError("Factura recibida no encontrada.")
+    allowed = {
+        "supplier_id", "number", "concept", "issued_on", "due_on", "base",
+        "vat_rate", "vat_amount", "irpf_amount", "total", "category", "note",
+    }
+    unknown = set(changes) - allowed
+    if unknown:
+        raise ValueError("Hay campos que no se pueden modificar.")
+    values = {key: changes.get(key, current.get(key)) for key in allowed}
+    values["total"] = _positive_money(values["total"], "El total")
+    values["vat_rate"] = (
+        _tax_rate(values["vat_rate"], "El IVA", {0, 4, 10, 21})
+        if values["vat_rate"] not in (None, "") else None
+    )
+    for key, label in (
+        ("base", "La base"), ("vat_amount", "La cuota de IVA"),
+        ("irpf_amount", "El IRPF"),
+    ):
+        raw = values[key]
+        if raw in (None, ""):
+            values[key] = None
+        else:
+            try:
+                values[key] = round(float(raw), 2)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{label} no es un importe válido.") from exc
+            if values[key] < 0:
+                raise ValueError(f"{label} no puede ser negativa.")
+    values["issued_on"] = _optional_date(values["issued_on"], "La fecha de emisión")
+    values["due_on"] = _optional_date(values["due_on"], "El vencimiento")
+    values["number"] = (str(values["number"] or "").strip()[:50] or None)
+    values["concept"] = (str(values["concept"] or "").strip()[:500] or None)
+    values["category"] = (str(values["category"] or "").strip()[:100] or None)
+    values["note"] = (str(values["note"] or "").strip()[:2000] or None)
+    supplier_id = values["supplier_id"]
+    with get_conn() as conn:
+        if supplier_id not in (None, ""):
+            supplier = conn.execute(
+                "SELECT id FROM suppliers WHERE id=? AND business_id=?",
+                (supplier_id, business_id),
+            ).fetchone()
+            if not supplier:
+                raise ValueError("Proveedor no encontrado.")
+        else:
+            supplier_id = None
+        updated = conn.execute(
+            "UPDATE received_invoices SET supplier_id=?, number=?, concept=?, "
+            "issued_on=?, due_on=?, base=?, vat_rate=?, vat_amount=?, "
+            "irpf_amount=?, total=?, category=?, note=? "
+            "WHERE id=? AND business_id=?",
+            (supplier_id, values["number"], values["concept"], values["issued_on"],
+             values["due_on"], values["base"], values["vat_rate"],
+             values["vat_amount"], values["irpf_amount"], values["total"],
+             values["category"], values["note"], received_id, business_id),
+        )
+        if updated.rowcount != 1:
+            raise ValueError("Factura recibida no encontrada.")
+    return get_received_invoice(received_id, business_id)
+
+
 def delete_received_invoice(received_id, business_id) -> None:
     with get_conn() as conn:
         conn.execute(

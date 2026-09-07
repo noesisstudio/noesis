@@ -167,6 +167,13 @@ def _validated_invoice(raw: dict | None) -> dict | None:
         "total": _money(raw.get("total")),
         "confidence": confidence,
     }
+    from ..fiscal_validation import invoice_draft_issues
+
+    issues = invoice_draft_issues(result)
+    result["validation_issues"] = issues
+    result["requires_review"] = bool(issues)
+    if issues and result["confidence"] is not None:
+        result["confidence"] = min(result["confidence"], 50)
     essentials = ("total", "supplier", "customer", "number")
     return result if any(result[f] is not None for f in essentials) else None
 

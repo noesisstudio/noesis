@@ -241,6 +241,23 @@ def _calendar_ics(business: dict) -> str:
         "METHOD:PUBLISH",
         f"X-WR-CALNAME:{_ics_escape('Bynoesis · ' + business['name'])}",
         "X-WR-TIMEZONE:Europe/Madrid",
+        "BEGIN:VTIMEZONE",
+        "TZID:Europe/Madrid",
+        "BEGIN:DAYLIGHT",
+        "TZOFFSETFROM:+0100",
+        "TZOFFSETTO:+0200",
+        "TZNAME:CEST",
+        "DTSTART:19700329T020000",
+        "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+        "END:DAYLIGHT",
+        "BEGIN:STANDARD",
+        "TZOFFSETFROM:+0200",
+        "TZOFFSETTO:+0100",
+        "TZNAME:CET",
+        "DTSTART:19701025T030000",
+        "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU",
+        "END:STANDARD",
+        "END:VTIMEZONE",
     ]
     for job in jobs:
         start_line, end_line = _ics_event_dates(job.get("scheduled_for") or "")

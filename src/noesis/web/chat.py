@@ -756,6 +756,19 @@ def _handle(
         tool, args = parsed
         if tool == nlu.HELP:
             return {"reply": _coach_reply(business_id, message), "source": "local"}
+        if tool == nlu.NEED_INVOICE:
+            return {
+                "reply": "Claro. Dime **cliente, concepto e importe**; por ejemplo: "
+                         "«factura a Ana por reparar el termo 120 euros».",
+                "source": "local",
+            }
+        if tool == nlu.NEED_USER_INVITE:
+            return {
+                "reply": "Para dar acceso a alguien necesito su correo y el rol. "
+                         "Hazlo desde Equipo para que reciba una invitación segura; "
+                         "no crearé una contraseña ni daré permisos desde un mensaje incompleto.",
+                "source": "local",
+            }
         if tool == "__need_date__":
             return {"reply": "Te lo puedo agendar, pero me falta el día. Dímelo como lo dirías por WhatsApp: "
                              "**mañana por la mañana**, **el jueves a las 10** o "

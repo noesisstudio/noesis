@@ -1567,18 +1567,39 @@ class BackendTestCase(unittest.TestCase):
         # el importe. Si se cuela en el nombre, Bynoesis crea un cliente nuevo mal
         # escrito en vez de reconocer al que ya existe.
         for frase, cliente, base in (
+            ("hazme una factura a Juan de 100 euros", "Juan", 100.0),
             ("factura para Juan Perez de 250 euros por reparar una bajante",
              "Juan Perez", 250.0),
             ("hazme una factura para Los Olivos de 1200 euros por la reforma",
              "Los Olivos", 1200.0),
             ("factura a Maria Garcia 80 euros", "Maria Garcia", 80.0),
             ("factura a Juan 95 euros por cambiar el termo", "Juan", 95.0),
+            ("factura a Taller Sol 1.200,50 por la reforma", "Taller Sol", 1200.5),
+            ("hazme una factura de 100 para Juan por revisar el termo", "Juan", 100.0),
         ):
             with self.subTest(frase=frase):
                 herramienta, datos = nlu.parse(frase)
                 self.assertEqual(herramienta, "crear_factura")
                 self.assertEqual(datos["cliente"], cliente)
                 self.assertEqual(datos["base"], base)
+
+        self.assertEqual(nlu.parse("crear cliente Ana Ruiz"),
+                         ("crear_cliente", {"nombre": "Ana Ruiz"}))
+        self.assertEqual(nlu.parse("nuevo proveedor Materiales Sol"),
+                         ("crear_proveedor", {"nombre": "Materiales Sol"}))
+        self.assertEqual(nlu.parse("hazme una factura"), (nlu.NEED_INVOICE, {}))
+
+        party_business, _ = self.make_business("Altas por chat")
+        created_client = chat.handle(party_business["id"], "crear cliente Ana Ruiz")
+        created_supplier = chat.handle(
+            party_business["id"], "nuevo proveedor Materiales Sol"
+        )
+        self.assertIn("Cliente guardado", created_client["reply"])
+        self.assertIn("Proveedor guardado", created_supplier["reply"])
+        self.assertEqual(len(db.list_clients(party_business["id"])), 2)
+        self.assertEqual(len(db.list_suppliers(party_business["id"])), 1)
+        incomplete = chat.handle(party_business["id"], "hazme una factura")
+        self.assertIn("cliente, concepto e importe", incomplete["reply"])
 
         business, _ = self.make_business()
         chat.handle(business["id"], "factura a Juan por reparación 100 euros")
@@ -1968,6 +1989,8 @@ class BackendTestCase(unittest.TestCase):
                 self.assertEqual(feed.status_code, 200)
                 self.assertTrue(feed.headers["content-type"].startswith("text/calendar"))
                 self.assertIn("BEGIN:VCALENDAR", feed.text)
+                self.assertIn("BEGIN:VTIMEZONE", feed.text)
+                self.assertIn("TZID:Europe/Madrid", feed.text)
                 self.assertIn("Revisar caldera", feed.text)
                 self.assertNotIn("Secreto de otro negocio", feed.text)
                 agenda = client.get(f"/b/{business['id']}/agenda")
@@ -5642,6 +5665,42 @@ class WhatsappMediaTestCase(unittest.TestCase):
                 "from": "34600111222", "id": "wamid-foto-3", "text": "sí",
             })
         self.assertEqual(len(db.list_expenses(business["id"])), 1)
+
+    def test_repeated_photo_is_reread_without_leaking_an_internal_id(self):
+        from noesis.adapters import extraction
+        from noesis.documents import repo as docrepo
+
+        business, _ = self._connected_business("Foto repetida")
+        replies = []
+        extracted = {
+            "concept": "Material", "amount": 25.5, "vat_rate": 21,
+            "date": None, "supplier": "Ferretería",
+        }
+        with (
+            patch.object(whatsapp, "_download_media", return_value=TINY_JPEG),
+            patch.object(extraction, "extract_expense", return_value=extracted),
+            patch.object(
+                whatsapp, "send",
+                side_effect=lambda phone, text, **kw: replies.append(text),
+            ),
+        ):
+            first = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-photo-repeat-1",
+                "image_id": "media-repeat", "image_mime": "image/jpeg",
+            })["results"][0]
+            second = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-photo-repeat-2",
+                "image_id": "media-repeat", "image_mime": "image/jpeg",
+            })["results"][0]
+
+        self.assertTrue(first["ingested"])
+        self.assertFalse(first["already_stored"])
+        self.assertTrue(second["ingested"])
+        self.assertTrue(second["already_stored"])
+        self.assertEqual(first["document_id"], second["document_id"])
+        self.assertEqual(len(docrepo.list_for_business(business["id"])), 1)
+        self.assertIn("vuelto a leer", replies[-1])
+        self.assertNotIn("documento #", replies[-1])
 
     def test_photo_no_discards_and_unknown_phone_gets_invite(self):
         from noesis.adapters import extraction

@@ -88,6 +88,7 @@
 {% block scripts %}
 <script>
 let catChart = null;
+let RECEIVED_INVOICES = [];
 async function load() {
   const s = await api('/summary');
   const cats = await api('/costs/breakdown');
@@ -125,6 +126,7 @@ async function load() {
   el('c-empty').innerHTML = ex.length ? '' : emptyState('Aún no has registrado gastos', 'Añade el primero para ver margen, categorías y CSV.', '#registrar-gasto', 'Registrar gasto');
 
   const received = await api('/received-invoices');
+  RECEIVED_INVOICES = received;
   el('r-body').innerHTML = received.map(r => `<tr>
     <td class="meta">${r.issued_on || dateIso(r.created_at)}</td>
     <td>${esc(r.supplier_name || '—')}</td>
@@ -134,7 +136,8 @@ async function load() {
     <td class="t-right num">${eur(r.total)}</td>
     <td>${r.status === 'pagada' ? '<span class="badge b-green">Pagada</span>'
         : '<span class="badge b-amber">Pendiente</span>'}</td>
-    <td class="t-right table-actions">${r.status === 'pendiente'
+    <td class="t-right table-actions"><button class="btn sm" onclick="editReceived(${r.id})">Editar</button>
+      ${r.status === 'pendiente'
       ? `<button class="btn sm" onclick="payReceived(${r.id})">Marcar pagada</button>` : ''}</td>
   </tr>`).join('');
   el('r-empty').innerHTML = received.length ? '' : emptyState(
@@ -146,6 +149,32 @@ async function payReceived(id) {
   try { await apiPost('/received-invoices/' + id + '/status', { status: 'pagada' }); }
   catch (e) { alert(e.message); return; }
   load();
+}
+function editReceived(id) {
+  const invoice=RECEIVED_INVOICES.find(item=>item.id===id);
+  if(!invoice) return;
+  formModal({
+    title: 'Corregir factura recibida', submitLabel: 'Guardar cambios',
+    fields: [
+      {name:'supplier_name',label:'Proveedor',value:invoice.supplier_name||''},
+      {name:'supplier_nif',label:'NIF del proveedor',value:invoice.supplier_nif||''},
+      {name:'number',label:'Número de factura',value:invoice.number||''},
+      {name:'concept',label:'Concepto',value:invoice.concept||''},
+      {name:'issued_on',label:'Fecha de emisión',type:'date',value:invoice.issued_on||''},
+      {name:'due_on',label:'Vencimiento',type:'date',value:invoice.due_on||''},
+      {name:'base',label:'Base (€)',type:'number',value:invoice.base??''},
+      {name:'vat_rate',label:'IVA (%)',type:'number',value:invoice.vat_rate??''},
+      {name:'vat_amount',label:'Cuota de IVA (€)',type:'number',value:invoice.vat_amount??''},
+      {name:'irpf_amount',label:'IRPF (€)',type:'number',value:invoice.irpf_amount??''},
+      {name:'total',label:'Total (€)',type:'number',value:invoice.total??''}
+    ],
+    onSubmit: async values => {
+      const numeric=['base','vat_rate','vat_amount','irpf_amount','total'];
+      numeric.forEach(key=>values[key]=values[key]===''?null:Number(values[key]));
+      await apiPatch('/received-invoices/' + invoice.id, values);
+      await load();
+    }
+  });
 }
 async function del(id){ if(confirm('¿Borrar este gasto?')){ await apiDelete('/expenses/'+id); load(); } }
 async function addExpense() {

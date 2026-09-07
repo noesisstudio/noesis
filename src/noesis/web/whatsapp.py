@@ -773,6 +773,17 @@ def _eur(number) -> str:
     )
 
 
+def _unsafe_invoice_draft_reply(draft: dict) -> str | None:
+    issues = draft.get("validation_issues") or []
+    if not issues:
+        return None
+    return (
+        "⚠️ He leído la factura, pero las cifras o los datos fiscales no cuadran. "
+        + " ".join(str(issue) for issue in issues[:3])
+        + " No la registraré desde WhatsApp: corrígela primero en Documentos."
+    )
+
+
 def _extraction_budget_ok(business_id: int) -> bool:
     """Tope diario de extracciones IA por negocio para proteger el margen."""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -990,6 +1001,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             business_id=business["id"],
         )
         return {"phone": phone, "media": "image", "ingested": False}
+    already_stored = False
     try:
         document = docservice.upload(
             business["id"],
@@ -1000,6 +1012,17 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             run_ocr=True,
             auto_classify=True,
         )
+    except docservice.DuplicateDocument as exc:
+        document = docservice.reclassify(business["id"], exc.existing_id)
+        if not document:
+            send(
+                phone,
+                "Ya tenía esta foto, pero no he podido volver a leerla. "
+                "Revísala en Documentos.",
+                business_id=business["id"],
+            )
+            return {"phone": phone, "media": "image", "ingested": False}
+        already_stored = True
     except docservice.UploadError as exc:
         send(phone, str(exc), business_id=business["id"])
         return {"phone": phone, "media": "image", "ingested": False}
@@ -1025,6 +1048,16 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             if context.get("matched"):
                 context_note = f" Lo he asociado a {context['label']}."
         if detected_kind == "factura_recibida" and draft and draft.get("total"):
+            unsafe_reply = _unsafe_invoice_draft_reply(draft)
+            if unsafe_reply:
+                send(phone, unsafe_reply + context_note, business_id=business["id"])
+                return {
+                    "phone": phone, "media": "image", "ingested": True,
+                    "pending": False, "document_id": document["id"],
+                    "classification": detected_kind,
+                    "already_stored": already_stored,
+                    "requires_review": True,
+                }
             payload = {**draft, "document_id": document["id"]}
             db.set_pending_action(business["id"], phone, "factura_recibida", payload)
             send(
@@ -1032,35 +1065,44 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
                 f"📄 Parece una factura recibida de "
                 f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
                 "¿La guardo como factura de proveedor? Responde SÍ o NO."
-                + context_note,
+                + context_note
+                + (" (Ya la tenía archivada; la he vuelto a leer.)"
+                   if already_stored else ""),
                 business_id=business["id"],
             )
             return {"phone": phone, "media": "image", "ingested": True,
                     "pending": True, "document_id": document["id"],
-                    "classification": detected_kind}
+                    "classification": detected_kind,
+                    "already_stored": already_stored}
         send(
             phone,
-            "He guardado la foto. Parece una factura emitida por ti, así que no "
+            ("Ya tenía esta foto archivada y la he vuelto a leer. "
+             if already_stored else "He guardado la foto. ")
+            + "Parece una factura emitida por ti, así que no "
             "la reemitiré ni la meteré en Veri*Factu. Revísala en Documentos para "
             "confirmar que es histórica." + context_note,
             business_id=business["id"],
         )
         return {"phone": phone, "media": "image", "ingested": True,
                 "pending": False, "document_id": document["id"],
-                "classification": detected_kind}
+                "classification": detected_kind,
+                "already_stored": already_stored}
 
     if detected_kind in {"contrato", "presupuesto", "albaran", "proveedor"}:
         labels = {"contrato": "un contrato", "presupuesto": "un presupuesto",
                   "albaran": "un albarán", "proveedor": "un documento de proveedor"}
         send(
             phone,
-            f"📎 Guardado. Parece {labels[detected_kind]}. Lo he dejado pendiente "
+            ("📎 Ya tenía esta foto y la he vuelto a leer. " if already_stored
+             else "📎 Foto guardada. ")
+            + f"Parece {labels[detected_kind]}. Lo he dejado pendiente "
             "de tu confirmación en Documentos." + context_note,
             business_id=business["id"],
         )
         return {"phone": phone, "media": "image", "ingested": True,
                 "pending": False, "document_id": document["id"],
-                "classification": detected_kind}
+                "classification": detected_kind,
+                "already_stored": already_stored}
 
     fields = None
     if _extraction_budget_ok(business["id"]):
@@ -1088,16 +1130,21 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             detail += f", del {fields['date']}"
         send(
             phone,
-            detail + ". ¿Lo apunto como gasto? Responde SÍ o NO." + context_note,
+            detail + ". ¿Lo apunto como gasto? Responde SÍ o NO." + context_note
+            + (" (Ya la tenía archivada; la he vuelto a leer.)"
+               if already_stored else ""),
             business_id=business["id"],
         )
         return {
             "phone": phone, "media": "image", "ingested": True,
             "pending": True, "document_id": document["id"],
+            "already_stored": already_stored,
         }
     send(
         phone,
-        "He guardado la foto en tus papeles, pero no he podido leer el "
+        ("Ya tenía esta foto archivada y la he vuelto a leer, pero no he podido "
+         if already_stored else "He guardado la foto en tus papeles, pero no he podido ")
+        + "leer el "
         "importe. Dímelo en un mensaje (ej.: «gasto 25,50 ferretería») o "
         "complétalo desde la web." + context_note,
         business_id=business["id"],
@@ -1105,6 +1152,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
     return {
         "phone": phone, "media": "image", "ingested": True,
         "pending": False, "document_id": document["id"],
+        "already_stored": already_stored,
     }
 
 
@@ -1165,6 +1213,15 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
     if kind == "factura_recibida":
         draft = docservice.invoice_draft(business["id"], document["id"])
         if draft and draft.get("total"):
+            unsafe_reply = _unsafe_invoice_draft_reply(draft)
+            if unsafe_reply:
+                send(phone, unsafe_reply + context_note, business_id=business["id"])
+                return {
+                    "phone": phone, "media": "document", "ingested": True,
+                    "pending": False, "document_id": document["id"],
+                    "already_stored": already_stored, "classification": kind,
+                    "requires_review": True,
+                }
             db.set_pending_action(
                 business["id"], phone, "factura_recibida",
                 {**draft, "document_id": document["id"]},

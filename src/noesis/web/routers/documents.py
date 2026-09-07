@@ -218,6 +218,8 @@ async def api_document_client_candidate_confirm(
         body = await request.json()
     except Exception:  # noqa: BLE001
         body = {}
+    if not isinstance(body, dict):
+        body = {}
     try:
         client = docservice.confirm_client_candidate(
             business_id,
@@ -340,6 +342,37 @@ async def api_received_invoice_status(business_id: int, received_id: int,
         return db.set_received_invoice_status(
             received_id, body.get("status"), business_id=business_id)
     except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.patch("/api/{business_id}/received-invoices/{received_id}")
+async def api_update_received_invoice(business_id: int, received_id: int,
+                                      request: Request):
+    """Permite corregir el borrador confirmado; nunca altera una factura emitida."""
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    try:
+        supplier_id = body.get("supplier_id")
+        supplier_name = str(body.pop("supplier_name", "") or "").strip()
+        supplier_nif = str(body.pop("supplier_nif", "") or "").strip()
+        if supplier_name:
+            known = db.find_supplier(
+                business_id, nif=supplier_nif, name=supplier_name
+            )
+            if not known:
+                known = db.add_supplier(
+                    supplier_name, nif=supplier_nif, business_id=business_id
+                )
+            supplier_id = known["id"]
+        body["supplier_id"] = supplier_id or None
+        return db.update_received_invoice(
+            received_id, business_id=business_id, **body
+        )
+    except (ValueError, TypeError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
 

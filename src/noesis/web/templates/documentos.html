@@ -435,8 +435,11 @@ async function readDoc(id) {
   el('r-vat').value = draft.vat_rate ?? '';
   el('r-vat-amount').value = draft.vat_amount ?? '';
   el('r-total').value = draft.total ?? '';
-  el('r-confidence').textContent = (draft.confidence ? `la IA está un ${draft.confidence}% segura` : 'revisa los datos')
+  el('r-confidence').textContent = (draft.confidence ? `la lectura está un ${draft.confidence}% segura` : 'revisa los datos')
     + (draft.direction === 'emitida' ? ' · parece EMITIDA por ti' : draft.direction === 'recibida' ? ' · parece RECIBIDA' : '');
+  if (draft.validation_issues?.length) {
+    el('r-msg').textContent = 'Revisa antes de guardar: ' + draft.validation_issues.join(' ');
+  }
   el('r-confirm-received').style.display=emitted?'none':'';
   el('r-mark-issued').style.display=emitted?'none':'';
   el('r-confirm-client').style.display=(emitted&&reviewClientResolution?.status==='pending')?'':'none';

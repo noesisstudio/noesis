@@ -212,6 +212,57 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
             db.add_received_invoice(100, issued_on="30/06/2026",
                                     business_id=self.business["id"])
 
+    def test_received_invoice_can_be_corrected_without_crossing_tenants(self):
+        supplier = db.add_supplier("Proveedor Uno", business_id=self.business["id"])
+        received = db.add_received_invoice(
+            121, supplier_id=supplier["id"], number="ERR-1",
+            business_id=self.business["id"],
+        )
+        corrected = db.update_received_invoice(
+            received["id"], business_id=self.business["id"],
+            number="F-2026-44", base=100, vat_rate=21, vat_amount=21,
+            irpf_amount=0, total=121, issued_on="2026-09-01",
+        )
+        self.assertEqual(corrected["number"], "F-2026-44")
+        self.assertEqual(corrected["base"], 100)
+        with self.assertRaises(ValueError):
+            db.update_received_invoice(
+                received["id"], business_id=self.other["id"], total=10
+            )
+
+    def test_received_invoice_edit_button_reaches_the_authenticated_api(self):
+        from starlette.testclient import TestClient
+
+        from noesis.web import auth, server
+
+        received = db.add_received_invoice(
+            50, number="ANTES", business_id=self.business["id"]
+        )
+        password = "Prueba-segura-123!"  # pragma: allowlist secret
+        db.create_user(
+            "edicion@example.com", auth.hash_password(password),
+            self.business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                logged = client.post("/login", data={
+                    "email": "edicion@example.com", "password": password,
+                }, follow_redirects=False)
+                self.assertEqual(logged.status_code, 303)
+                page = client.get(f"/b/{self.business['id']}/costes")
+                self.assertIn("editReceived", page.text)
+                response = client.patch(
+                    f"/api/{self.business['id']}/received-invoices/{received['id']}",
+                    json={"number": "DESPUES", "total": 60},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["number"], "DESPUES")
+                foreign = client.patch(
+                    f"/api/{self.other['id']}/received-invoices/{received['id']}",
+                    json={"number": "AJENA", "total": 70},
+                )
+                self.assertIn(foreign.status_code, {403, 404})
+
     def test_status_cycle_and_delete_release_document(self):
         doc = self._upload_doc(self.business["id"])
         received = db.add_received_invoice(
@@ -292,6 +343,33 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
         self.assertIsNone(result["vat_rate"])
         self.assertIsNone(result["issued_on"])
         self.assertIsNone(result["confidence"])
+
+    def test_validated_invoice_warns_on_arithmetic_dates_and_spanish_nif(self):
+        result = extraction._validated_invoice({
+            "number": "F-2", "supplier": "Proveedor",
+            "supplier_nif": "12345678A", "base": 100, "vat_rate": 21,
+            "vat_amount": 10, "irpf_amount": 0, "total": 150,
+            "issued_on": "2026-09-10", "due_on": "2026-09-01",
+            "confidence": 98,
+        })
+        self.assertTrue(result["requires_review"])
+        self.assertEqual(result["confidence"], 50)
+        self.assertEqual(len(result["validation_issues"]), 4)
+
+        coherent = extraction._validated_invoice({
+            "number": "F-3", "supplier": "Proveedor",
+            "supplier_nif": "12345678Z", "base": 100, "vat_rate": 21,
+            "vat_amount": 21, "irpf_amount": 0, "total": 121,
+            "confidence": 96,
+        })
+        self.assertFalse(coherent["requires_review"])
+        self.assertEqual(coherent["confidence"], 96)
+
+        foreign = extraction._validated_invoice({
+            "number": "DE-1", "supplier": "Proveedor UE",
+            "supplier_nif": "DE123456789", "total": 20, "confidence": 90,
+        })
+        self.assertFalse(foreign["requires_review"])
 
     def test_gestoria_package_includes_received_invoices(self):
         import io

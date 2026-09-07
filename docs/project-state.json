@@ -2,7 +2,7 @@
   "state_date": "2026-09-07",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 644,
+  "verified_test_count": 650,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -56,6 +56,7 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
+    "customer_reliability_candidate": "no_schema_change_local_invoice_arithmetic_date_and_spanish_tax_id_review_received_invoice_authenticated_correction_repeated_photo_reread_timezone_complete_ics_expanded_zero_cost_nlu_explicit_client_supplier_creation_safe_user_invitation_guidance_and_23_message_synthetic_customer_journey_not_deployed",
     "useful_value_ledger": "schema_54_opt_in_additive_fail_open_observer_with_versioned_taxonomy_and_per_instance_qualifies_for_wub_manual_forms_excluded_delegated_contexts_explicit_tenant_scoped_idempotent_actions_lifecycle_infrastructure_without_process_hooks_many_to_many_outcomes_conservative_attribution_preexisting_assistant_audit_preserved_when_disabled_rolling_and_closed_week_wub_depth_consistency_activation_and_trust_metrics_no_customer_ui_no_confidence_or_autonomy_changes_admin_off_rgpd_export_delete_and_safe_code_first_rollback_plan",
     "commercial_onboarding": "schema_49_resumable_exact_step_trial_or_subscribe_then_business_complete_invoice_identity_collection_messages_truthful_whatsapp_review_checkout_and_first_customer_activation",
     "onboarding_sector_capture": "free_text_up_to_80_characters",
@@ -137,5 +138,5 @@
     "external_uptime_alerting_and_incident_on_call",
     "piloto_3_5_negocios"
   ],
-  "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_644_isolated_tests_no_schema_changes_deployment_verification_after_push"
+  "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push"
 }

@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-09-07 — simulación de cliente y correcciones de fiabilidad
+
+- Corpus de 23 mensajes de autónomo, incluido dictado acentuado, importes sin
+  moneda, `1.250,50`, orden inverso, altas y consultas: todos tienen ruta local
+  determinista y no consumen créditos.
+- Recorrido sintético completo: cliente, proveedor, factura, presupuesto, agenda,
+  gasto, resumen, IVA, cartera y cobros. Con dos clientes «Sergio», la operación se
+  detiene y no crea factura ni cliente duplicados.
+- Facturas: incoherencias de cuota, total, fechas y NIF generan revisión y limitan
+  confianza; caso coherente conserva la confianza original.
+- Factura recibida: corrección, aislamiento entre negocios, botón y `PATCH`
+  autenticado verificados. Foto repetida: una sola fila/archivo, segunda lectura y
+  respuesta sin id interno. Calendario: `VTIMEZONE` presente y aislamiento intacto.
+- Pruebas dirigidas: 28 correctas. Suite completa: **650/650** en 604,156 s.
+  Ruff, compilación y `git diff --check` correctos. Bandit no estaba instalado en
+  este entorno aislado; la puerta de CI debe ejecutar el extra de seguridad.
+- Límites: bytes, facturas y conversaciones sintéticos; sin Meta, OCR/modelo,
+  calendario físico, correo, Stripe ni producción. No certifica precisión de
+  extracción sobre documentos reales.
+
 ## 2026-09-07 — release acotada del centro de mando
 
 - Suite completa del snapshot aislado: **644/644**, 531,053 s, SQLite y

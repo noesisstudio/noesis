@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Candidato de fiabilidad — 7-sep
+
+- [x] Validación local de aritmética/fechas/NIF en borradores, corrección de
+  recibidas, relectura de fotos duplicadas, `VTIMEZONE`, dictado de importes y alta
+  explícita de cliente/proveedor con simulación sintética sin créditos.
+- [ ] Recorrer el candidato con móvil y calendario reales; probar OCR/voz con un
+  corpus anonimizado y Meta real antes de afirmar precisión externa.
+- [ ] Diseñar desambiguación conversacional persistente («el primero», apellido o
+  teléfono) y referencias humanas para trabajos/documentos sin mostrar ids.
+- [ ] El alta de usuarios debe reutilizar el flujo de invitación de Equipo con
+  correo, rol y confirmación; nunca crear credenciales desde texto libre.
+
 ## Seguimiento del centro de mando — 7-sep
 
 - Verificar la revisión publicada y probar Safari/iPhone físico con cuenta autorizada.
