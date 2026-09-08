@@ -14,6 +14,11 @@ permisos de páginas y bloquea el paso del token, y el aviso *going away soon* d
 tokens. Se cita «Administración de contenido» como alternativa duradera y se
 recuerda reutilizar la app de WhatsApp si ya existe.
 
+También se documenta la pantalla siguiente, «Productos disponibles»: no hay que
+configurar ninguno —Messenger, Instagram, WhatsApp o marketing solo estorban—, y
+la app se queda en modo desarrollo y tipo Empresa, que es lo que evita la revisión
+de Meta.
+
 Áreas: `facebook/Conectar-Facebook.md` y `facebook/Conectar-Facebook.html`.
 Documentación únicamente: no se toca `src/`, ni esquema, ni pruebas, ni
 credenciales. Sin límites externos nuevos. Riesgo: que Meta vuelva a renombrar la

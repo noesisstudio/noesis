@@ -80,8 +80,14 @@ te dice cuál es. No se puede saltar ese paso.
    lista, bajo «¿Buscas otra cosa?», marca **«Otro»** — el que avisa de que la app
    «se creará en la experiencia antigua». Luego, cuando pida el tipo de
    aplicación, elige **Empresa** (*Business*).
-5. Dentro de la app, ve a **Configuración → Básica** y apunta dos valores:
-   - **Identificador de la app** (un número largo).
+5. Al crearla aparece **«Productos disponibles»** (Messenger, Instagram, WhatsApp,
+   API de marketing…). **No configures ninguno**: parece que hay que elegir algo y
+   no hace falta nada. Los permisos de página se conceden en el paso 2, no aquí.
+6. Comprueba arriba que pone **Tipo de aplicación: Empresa** y **Modo de la
+   aplicación: En desarrollo**. Deja el modo en desarrollo; pasarlo a producción es
+   lo que dispararía la revisión de Meta.
+7. Ve a **Configuración de la aplicación → Básica** y apunta dos valores:
+   - **Identificador de la app** (un número largo; ya se ve en la barra superior).
    - **Clave secreta de la app** — hay que pulsar «Mostrar».
 
 Guárdalos en un sitio temporal. La clave secreta es un secreto de verdad: no la
