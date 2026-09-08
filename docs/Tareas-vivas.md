@@ -5,6 +5,22 @@
 
 ## P0 — publicar y pilotar con seguridad
 
+- [ ] Ejecutar los seis P0 de
+  [`cumplimiento/Plan-Datos-Servidores-Copias`](cumplimiento/Plan-Datos-Servidores-Copias.md):
+  bucket de copias en un segundo proveedor europeo con credencial de solo
+  escritura, versionado y bloqueo de objetos, cifrado en cliente antes de subir,
+  primer simulacro de restauración externa cronometrado (hoy RPO y RTO son
+  estimaciones, no medidas), región UE y retención de logs a 30 días, y firma de
+  los DPA con cada subencargado. Hasta cerrarlos, los riesgos de pérdida total del
+  proveedor, ransomware y fuga de la copia siguen en alto y no deben tratarse datos
+  reales de terceros a escala.
+- [ ] Completar en `cumplimiento/Subencargados-y-transferencias.md` el estado real
+  de cada DPA y verificar la certificación de los proveedores estadounidenses en la
+  lista oficial del marco de adecuación. Sincronizar la tabla con la que publica
+  `web/templates/encargado-tratamiento.html`.
+- [ ] Nombrar sustituto y asesoría jurídica en la tabla de contactos de
+  `cumplimiento/Procedimiento-brechas.md`: a las 3 de la mañana no se busca
+  abogado, se llama al que ya está en la tabla.
 - [ ] Recorrer en escritorio y móvil el alta recuperable del esquema 49 ya
   desplegada en el release `8730826a79ab`:
   salir y volver en cada paso, revisar la identidad visual de factura, comprobar que
@@ -180,6 +196,13 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   en escritorio/móvil y, cuando las URL sean definitivas, añadirlas como `sameAs` al
   `Organization` de la portada. Reservar YouTube/TikTok sin abrir un calendario
   adicional hasta sostener el canal principal.
+
+- [ ] Conectar la automatización de Facebook: crear los secretos `FACEBOOK_PAGE_ID`
+  y `FACEBOOK_PAGE_TOKEN` del repositorio siguiendo `marketing/facebook/README.md`
+  (unos 15 minutos con `marketing/facebook/conectar.py`). Hasta que existan, los
+  workflows quedan en pausa sin publicar nada. Después, la única tarea recurrente es
+  leer cada domingo la incidencia «Revisión Facebook» y ampliar el calendario cuando
+  el informe avise de que quedan pocas piezas nuevas.
 
 - [ ] SEO operativo: publicado y verificado el candidato del 13-ago, volver a inspeccionar
   `/autonomos`, `/gestorias` y `/precios` en Search Console, solicitar indexación y

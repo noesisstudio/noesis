@@ -7,6 +7,135 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-08 — foto técnica del almacenamiento y las copias
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dejar escrito cómo está estructurado el almacenamiento hoy (base,
+  volumen y copias), qué hace exactamente `backups.py` paso a paso, y los puntos
+  débiles encontrados al leer el código. Complementa la carpeta de cumplimiento,
+  que decide el «debería»; este documento describe el «es».
+- **Áreas y archivos:** `docs/Almacenamiento-y-copias.md` (nuevo) y enlace desde
+  `docs/Inicio.md`. No toca `src/noesis/`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** lectura del código citado; cada afirmación del documento
+  apunta a archivo y línea. Sin cambios ejecutables que probar.
+- **Dependencias o validaciones externas:** los hallazgos 1 y 2 se verifican en el
+  panel de Railway (a qué apuntan `NOESIS_DOCS_PATH` y `NOESIS_BACKUP_DIR`, y dónde
+  está montado el volumen). No se ha podido comprobar desde aquí.
+- **Riesgo/punto probable de fallo:** el documento afirma que `.env.example`
+  documenta `NOESIS_BACKUP_DIR=/backups`, fuera del volumen `/data`. Si el panel ya
+  tiene un valor correcto, el riesgo es solo documental; si se copió tal cual, las
+  copias se pierden en cada despliegue. Los arreglos 1-3 y 6 no están aplicados
+  todavía: el documento los describe, no los corrige.
+- **Diagnóstico y rollback:** documental y aislado; borrar el archivo y el enlace.
+- **Estado de publicación:** en el árbol de trabajo, sin commit.
+
+## 2026-09-08 — plan de datos, servidores y copias, y carpeta de cumplimiento
+
+- **Autor/agente:** Claude.
+- **Objetivo:** responder por escrito a dónde se almacena cada dato, en qué
+  servidores y cómo se hacen las copias, con la legislación europea aplicada, y
+  dejar montada la estructura documental de cumplimiento que hoy no existía
+  (registro del art. 30, retención, subencargados, brechas, derechos y
+  continuidad). El detonante: las copias viven en el mismo proveedor que produce
+  los datos y nunca se ha restaurado fuera de él.
+- **Áreas y archivos:** carpeta nueva `docs/cumplimiento/` (índice, plan de datos y
+  copias, RAT, política de retención, subencargados y transferencias, análisis de
+  riesgos con cribado de EIPD, procedimiento de brechas, derechos, continuidad con
+  RPO/RTO, registro de evidencias y cuatro plantillas), prompt reutilizable en
+  `docs/prompts/Prompt-Seguridad-Datos-UE.md`, verificador
+  `scripts/check_cumplimiento.py` y enlaces desde `docs/Inicio.md` y
+  `docs/Tareas-vivas.md`. **No toca `src/noesis/`**: es documentación y una
+  comprobación de higiene documental.
+- **Cambios de datos/migración:** ninguno. Sin esquema, sin variables nuevas y sin
+  efecto en el despliegue.
+- **Pruebas ejecutadas:** `python scripts/check_cumplimiento.py` (estructura
+  completa, fechas de revisión válidas, un aviso esperado por no haber simulacro
+  externo todavía) y `ruff check` sobre el script.
+- **Dependencias o validaciones externas:** el plan describe seis acciones P0 que
+  se ejecutan **en el proveedor**, no en el repositorio: bucket externo en un
+  segundo proveedor europeo con credencial de solo escritura, versionado y bloqueo
+  de objetos, cifrado en cliente de las copias, primer simulacro de restauración
+  externa cronometrado, región UE y retención de logs, y firma de los DPA. Siguen
+  pendientes la revisión jurídica y el pentest independiente.
+- **Riesgo/punto probable de fallo:** riesgo de que la documentación se
+  desincronice de las páginas legales publicadas (`privacidad`, `cookies`,
+  `encargado-tratamiento`): si se añade un subencargado en un sitio y no en el
+  otro, el cliente puede alegar que no fue informado. El verificador detecta
+  documentos sin revisar, no divergencias de contenido.
+- **Diagnóstico y rollback:** todo el cambio es documental y aislado en
+  `docs/cumplimiento/`, `docs/prompts/` y un script. Para revertir, borrar esas
+  rutas; nada del producto depende de ellas.
+- **Estado de publicación:** en el árbol de trabajo, sin commit ni despliegue. No
+  afecta a lo desplegado.
+
+## 2026-09-08 — publicación automática en Facebook cada 3 días
+
+- **Autor/agente:** Claude.
+- **Objetivo:** que la página de Facebook publique sola una pieza cada 3 días y que
+  la única intervención humana sea leer un informe el domingo. Sustituye la
+  publicación manual, que no se estaba haciendo con regularidad.
+- **Áreas y archivos:** carpeta nueva `marketing/facebook/` (`calendario.json` con 48
+  piezas, `nucleo.py`, `publicar.py`, `revision.py`, `conectar.py` y `README.md`),
+  workflows `.github/workflows/facebook-publicar.yml` (diario, publica solo si el día
+  cae en la cadencia) y `.github/workflows/facebook-revision.yml` (domingos, abre la
+  incidencia de revisión), pruebas `tests/test_marketing_facebook.py` y bloque de
+  variables de Facebook en `.env.example`. No toca `src/noesis/`: es promoción de
+  Noesis, no producto.
+- **Cambios de datos/migración:** ninguno. No hay estado persistido: la verdad es lo
+  publicado en la página, que se consulta antes de escribir. Por eso la automatización
+  no hace commits y no dispara despliegues de Railway.
+- **Pruebas ejecutadas:** 22 pruebas nuevas en `tests/test_marketing_facebook.py`
+  (cadencia de 3 días, rotación del calendario, antiduplicados, recuperación de una
+  publicación fallida, pausa sin credenciales, error de Meta e informe semanal) más la
+  suite completa; `ruff` sobre `tests` y `marketing`; simulacros del publicador y del
+  informe desde este ordenador. Sin credenciales reales de Meta, la publicación
+  efectiva no se ha podido validar contra Facebook.
+- **Dependencias o validaciones externas:** Graph API de Meta con un token de página
+  (`FACEBOOK_PAGE_ID` y `FACEBOOK_PAGE_TOKEN` como secretos del repositorio) y GitHub
+  Actions programado. Solo biblioteca estándar: el workflow no instala dependencias.
+- **Riesgo/punto probable de fallo:** token de página revocado o caducado (error 190),
+  permisos incompletos en el token (error 200) o bloqueo temporal de la página por
+  parte de Meta (error 368). Mientras falten los secretos la automatización queda en
+  pausa sin fallar, y el informe del domingo avisa. Riesgo editorial: el calendario da
+  la vuelta a los 144 días; el informe avisa varias semanas antes.
+- **Diagnóstico y rollback:** cada ejecución deja resumen en la pestaña de Actions y
+  el informe del domingo compara calendario contra página real. Para pararlo todo,
+  deshabilitar los dos workflows desde Actions; para pararlo sin tocar GitHub, borrar
+  el secreto `FACEBOOK_PAGE_TOKEN`. Ningún cambio afecta al producto desplegado.
+- **Estado de publicación:** código en `main`. La automatización no publicará nada
+  hasta que se creen los secretos de la página siguiendo `marketing/facebook/README.md`.
+
+## 2026-09-02 — piezas de presentación e índice navegable en el manual editorial
+
+- **Autor/agente:** Claude.
+- **Objetivo:** dar guion a las dos primeras piezas que se van a grabar —quiénes son
+  los socios y qué es Noesis— para que el perfil pueda explicarse antes de pedir
+  nada, y hacer navegable un manual que ya pasa de cuarenta páginas.
+- **Áreas y archivos:** `branding/contenido/scripts/build_content_playbook.py` (fichas
+  nuevas `T00` y `P00`, grupo «Presentación» en el mapa, recuentos calculados, nota de
+  calendario, página «Cómo usar este manual» y columna de ficha en el mapa) y su salida
+  `branding/contenido/Plan-editorial-y-guiones-Noesis.docx`, versión 1.1 con 26 fichas.
+  `T00` y `P00` abren el documento y se publican y fijan antes de la Semana 1.
+- **Cambios de datos/migración:** ninguno. No cambia producto, runtime ni base de datos.
+- **Pruebas ejecutadas:** regeneración del DOCX desde el generador; verificado que las
+  piezas nuevas son «FICHA 01 DE 26» y «FICHA 02 DE 26», que el mapa declara 26 piezas
+  y numera cada una con su ficha, que el índice lista las once partes y que las 24
+  fichas anteriores conservan su contenido.
+- **Dependencias o validaciones externas:** el guion usa la biografía pública de
+  `site_equipo.html`; si cambia el papel de un socio hay que rehacer la ficha. La
+  pieza se graba y se publica fuera del repositorio.
+- **Riesgo/punto probable de fallo:** que al grabar se añadan cifras, clientes o
+  resultados que todavía no existen, o que `P00` enseñe WhatsApp como disponible; los
+  guardarraíles de ambas fichas lo prohíben y obligan a rotular «demo» y «piloto».
+- **Diagnóstico y rollback:** el generador reconstruye el documento; revertir este
+  commit deja el manual en la versión 1.0 con 24 fichas y sin índice.
+- **Límites externos:** `P00` describe el flujo de WhatsApp, cuya validación real con
+  Meta sigue pendiente según `docs/project-state.json`; hasta entonces solo puede
+  mostrarse rotulado como piloto.
+- **Estado de publicación:** guion listo para rodar; no implica que la pieza se haya
+  grabado ni publicado.
+
 ## 2026-08-31 — convierte la estrategia de contenido en un manual de producción
 
 - **Autor/agente:** Codex.

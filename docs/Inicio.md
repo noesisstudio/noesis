@@ -18,6 +18,13 @@ usa la vista de grafo para navegar.
   puede hacer cada una, cómo se da y se quita acceso, y cómo cumple el RGPD.
 - [[Seguridad-operativa]] — amenazas, controles, secretos, incidentes y puerta de
   salida segura al piloto.
+- [[Almacenamiento-y-copias]] — foto técnica de dónde vive cada archivo, qué hace
+  exactamente el sistema de copias y sus siete puntos débiles conocidos.
+- [`cumplimiento/`](cumplimiento/README.md) — dónde se almacena cada dato, en qué
+  servidores, cómo se hacen las copias y qué exige la normativa europea: registro
+  del art. 30, retención, subencargados y transferencias, riesgos, brechas,
+  derechos y continuidad con RPO/RTO. El prompt que lo generó está en
+  [`prompts/Prompt-Seguridad-Datos-UE`](prompts/Prompt-Seguridad-Datos-UE.md).
 - [`Diagnostico.pdf`](Diagnostico.pdf) — cuando algo falla, dónde mirar: las siete
   piezas, las cuatro puertas de una petición, síntomas y causas, y qué preguntar.
 - [`Diagnostico-tecnico.pdf`](Diagnostico-tecnico.pdf) — lo mismo con el archivo, la
