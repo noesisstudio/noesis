@@ -359,7 +359,7 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     _draw_document_footer(
         pdf, biz, document_kind="invoice",
         default_text=(
-            "Factura generada con Noesis. Conserva este documento junto con los "
+            "Factura generada con Bynoesis. Conserva este documento junto con los "
             "registros y justificantes de la operación."
         ),
     )

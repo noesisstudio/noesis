@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Conectar el correo · Noesis</title>
+<title>Conectar el correo · Bynoesis</title>
 <style>
   :root {
     --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
@@ -180,7 +180,7 @@
 <div class="page">
 
   <header>
-    <p class="eyebrow">Noesis · Runbook de producción</p>
+    <p class="eyebrow">Bynoesis · Runbook de producción</p>
     <h1>Conectar el correo</h1>
     <p class="standfirst">Media hora repartida en dos sitios: una cuenta en Brevo y unos registros en el DNS de Hostinger. Cuesta cero euros y es lo que hace que un cliente que olvida su contraseña pueda recuperarla.</p>
     <p class="crumbs">Variables y criterios de aceptación en <code>Conectar-APIs.md</code>. Estado verificable en <code>project-state.json</code>.</p>
@@ -202,7 +202,7 @@
 
     <p><strong>Brevo envía por ti</strong> desde servidores que llevan años con buena reputación. Podría ser Postmark, Mailgun o Amazon SES; está elegido porque su plan gratuito da <strong>300 correos al día</strong>, de sobra para el piloto.</p>
 
-    <div class="note"><strong>Por qué la API y no SMTP.</strong> SMTP es el protocolo clásico del correo, el que configuras en Outlook. <strong>Railway bloquea sus puertos</strong>, y con razón: si dejaran enviar SMTP a cualquiera, se llenarían de spammers. Por eso Noesis habla con Brevo por HTTPS, que es tráfico web normal. Una configuración SMTP clásica no saldría nunca de Railway.</div>
+    <div class="note"><strong>Por qué la API y no SMTP.</strong> SMTP es el protocolo clásico del correo, el que configuras en Outlook. <strong>Railway bloquea sus puertos</strong>, y con razón: si dejaran enviar SMTP a cualquiera, se llenarían de spammers. Por eso Bynoesis habla con Brevo por HTTPS, que es tráfico web normal. Una configuración SMTP clásica no saldría nunca de Railway.</div>
   </section>
 
   <section>
@@ -249,8 +249,8 @@
         <div class="step-body">
           <div class="step-head"><h3>Dos variables en Railway</h3></div>
           <pre>BREVO_API_KEY=<span class="c">xkeysib-…</span>
-SMTP_FROM=Noesis &lt;no-reply@bynoesis.com&gt;</pre>
-          <p>El formato de <code>SMTP_FROM</code> importa: Noesis separa el nombre de la dirección con ese patrón <code>Nombre &lt;correo&gt;</code>. Si pones solo la dirección, funciona igual pero los correos saldrán sin nombre visible.</p>
+SMTP_FROM=Bynoesis &lt;no-reply@bynoesis.com&gt;</pre>
+          <p>El formato de <code>SMTP_FROM</code> importa: Bynoesis separa el nombre de la dirección con ese patrón <code>Nombre &lt;correo&gt;</code>. Si pones solo la dirección, funciona igual pero los correos saldrán sin nombre visible.</p>
           <div class="note">El nombre <code>SMTP_FROM</code> despista un poco: se llama así por herencia, pero se usa también cuando el envío va por la API. No hace falta configurar ningún <code>SMTP_HOST</code> ni <code>SMTP_USER</code>.</div>
         </div>
       </li>
@@ -269,7 +269,7 @@ SMTP_FROM=Noesis &lt;no-reply@bynoesis.com&gt;</pre>
       <li>Míralo en <strong>Gmail y en Outlook</strong>, no solo en uno. Y comprueba que <strong>no ha caído en spam</strong>: si cayó, el paso 2 no está bien.</li>
       <li>Emite una factura de prueba y envíala a un correo tuyo. Debe llegar con su PDF.</li>
       <li>En Brevo, <strong>Statistics</strong> te muestra cada envío con su estado: entregado, rebotado o abierto.</li>
-      <li>En Noesis, <code>/admin</code> → «Gestionar» de una cuenta → <strong>Entregas atascadas</strong> debe estar vacío. Si algo falló, ahí sale el motivo.</li>
+      <li>En Bynoesis, <code>/admin</code> → «Gestionar» de una cuenta → <strong>Entregas atascadas</strong> debe estar vacío. Si algo falló, ahí sale el motivo.</li>
       <li>Ejecuta <code>noesis-doctor --strict</code>: debe decir «Correo saliente por API HTTPS configurado».</li>
     </ol>
   </section>
@@ -307,7 +307,7 @@ SMTP_FROM=Noesis &lt;no-reply@bynoesis.com&gt;</pre>
       </table>
     </div>
 
-    <div class="note"><strong>Nada se pierde mientras tanto.</strong> Noesis guarda cada correo en una cola antes de intentar enviarlo. Si el proveedor falla, se reintenta; si no hay proveedor configurado, se registra en el log en vez de romper la operación. Por eso puedes emitir facturas hoy aunque el correo no salga todavía.</div>
+    <div class="note"><strong>Nada se pierde mientras tanto.</strong> Bynoesis guarda cada correo en una cola antes de intentar enviarlo. Si el proveedor falla, se reintenta; si no hay proveedor configurado, se registra en el log en vez de romper la operación. Por eso puedes emitir facturas hoy aunque el correo no salga todavía.</div>
   </section>
 
   <section>

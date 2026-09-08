@@ -42,7 +42,7 @@
 
 <details class="card" style="margin-top:16px" id="recurring-card">
   <summary class="card-h" style="cursor:pointer">
-    <div><b>Facturas programadas</b><div class="meta">Noesis prepara cada vencimiento; solo las emite automáticamente si tú lo autorizas.</div></div>
+    <div><b>Facturas programadas</b><div class="meta">Bynoesis prepara cada vencimiento; solo las emite automáticamente si tú lo autorizas.</div></div>
     <button class="btn sm" type="button" onclick="event.preventDefault();newRecurring()">Programar</button>
   </summary>
   <div class="card-b" id="recurring-list"></div>
@@ -57,7 +57,7 @@
 </details>
 
 <div class="insight" style="margin-top:16px">
-  Con Noesis no hace falta entrar aquí para facturar: dile por WhatsApp
+  Con Bynoesis no hace falta entrar aquí para facturar: dile por WhatsApp
   <b>“factura a Juan por la caldera 180 €”</b> y aparece sola en esta lista.
 </div>
 {% endblock %}
@@ -371,7 +371,7 @@ function render(f) {
   if (f === 'todas') {
     el('f-empty').innerHTML = `<div class="empty-state">
       <b>Tu primera factura, en un minuto</b>
-      <span>Elige el cliente, el concepto y el importe. Noesis calcula el IVA y el IRPF, y queda en borrador hasta que la emitas.</span>
+      <span>Elige el cliente, el concepto y el importe. Bynoesis calcula el IVA y el IRPF, y queda en borrador hasta que la emitas.</span>
       <br><button class="btn primary sm" onclick="newInvoice()">Crear mi primera factura</button></div>`;
   } else {
     el('f-empty').innerHTML = emptyState('Sin facturas en este estado',
@@ -385,7 +385,7 @@ async function send(id){
 }
 async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
 async function deliver(id){
-  if(!confirm('¿Entregar esta factura por el canal habitual del cliente? El PDF y el enlace privado quedarán preparados y Noesis reintentará si el proveedor falla.')) return;
+  if(!confirm('¿Entregar esta factura por el canal habitual del cliente? El PDF y el enlace privado quedarán preparados y Bynoesis reintentará si el proveedor falla.')) return;
   try {
     const result=await apiPost(`/invoices/${id}/deliver`,{channel:'auto'});
     if(!result.queued) throw new Error('El cliente no tiene correo ni WhatsApp configurado.');
@@ -488,7 +488,7 @@ async function rectificationModal(original, draft=null) {
         <div class="t-right"><span class="meta">Total emitido</span><b>${eur(original.total)}</b><small>Base ${eur(original.base)}</small></div>
       </div>
       <div class="notice safe-notice"><b>La factura original no se modifica.</b>
-        <span>Noesis preparará una factura rectificativa por diferencias, en borrador y con su propia numeración. Tú decides cuándo emitirla.</span></div>
+        <span>Bynoesis preparará una factura rectificativa por diferencias, en borrador y con su propia numeración. Tú decides cuándo emitirla.</span></div>
       ${oldQuarter?`<div class="notice warning-notice"><b>Esta corrección afecta a un período anterior.</b>
         <span>Antes de emitirla, confirma con tu gestoría en qué autoliquidación debe reflejarse.</span></div>`:''}
       <div class="nf-row rectification-grid">

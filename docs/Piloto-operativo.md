@@ -29,7 +29,7 @@ noesis-doctor --json --strict
 - IA: orden rutinaria local, consulta compleja, herramienta con datos reales,
   catalán, dato ausente, caída del primer proveedor, fallback y límite mensual.
 - Dinero: borrador, emisión confirmada, pago parcial, impago, enlace Stripe, webhook
-  duplicado, fallo y cancelación. Noesis nunca mueve dinero sin aceptación.
+  duplicado, fallo y cancelación. Bynoesis nunca mueve dinero sin aceptación.
 - Fiscal: IVA/IRPF, rectificativa, huella/QR/XML, cola y rechazo en entorno de pruebas
   AEAT; revisión con gestoría antes de producción.
 - Operaciones: copia, restauración aislada, caída de correo, cola WhatsApp, alerta,

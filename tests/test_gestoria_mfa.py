@@ -56,7 +56,7 @@ class GestoriaMfaTestCase(unittest.TestCase):
         code = mfa.code_for_counter(secret, counter)
 
         self.assertEqual(mfa.matching_counter(account, code), counter)
-        self.assertIn("otpauth://totp/Noesis%3A", mfa.provisioning_uri(account))
+        self.assertIn("otpauth://totp/Bynoesis%3A", mfa.provisioning_uri(account))
         codes = mfa.generate_recovery_codes()
         self.assertEqual(len(codes), 8)
         self.assertEqual(len(set(codes)), 8)

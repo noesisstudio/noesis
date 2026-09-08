@@ -26,18 +26,18 @@ transcribe audio y no sustituye al modelo que razona o redacta.
 ## Guía rápida para el founder: dónde entrar y qué copiar
 
 No pegues ninguna clave en un chat ni en un documento. En Railway abre el proyecto
-de Noesis, entra en el servicio web, **Variables**, pulsa **New variable** y añade
+de Bynoesis, entra en el servicio web, **Variables**, pulsa **New variable** y añade
 cada nombre y valor. Haz primero todas las pruebas con Stripe y Meta en modo test.
 
 ### Stripe, paso a paso
 
 1. Entra en [Stripe Dashboard · API keys](https://dashboard.stripe.com/test/apikeys)
    y comprueba que estás en un **sandbox**, no en live.
-2. Crea una clave restringida para Noesis si el panel permite asignar los permisos
+2. Crea una clave restringida para Bynoesis si el panel permite asignar los permisos
    de Customers, Checkout Sessions, Billing Portal, Products, Prices,
    Subscriptions, Invoices y Tax. Si la configuración bloquea el piloto, usa
    temporalmente la `sk_test_...` estándar y sustitúyela antes de producción.
-3. Copia la clave privada en Railway como `STRIPE_SECRET_KEY`. Noesis no necesita
+3. Copia la clave privada en Railway como `STRIPE_SECRET_KEY`. Bynoesis no necesita
    una `pk_...` porque crea Checkout desde el servidor.
 4. En **Product catalog**, crea Autónomo, Negocio y Premium. Dentro de cada
    producto crea un precio mensual y otro anual con los importes de la sección 3.
@@ -72,7 +72,7 @@ y [webhooks](https://docs.stripe.com/webhooks).
 4. A `WHATSAPP_VERIFY_TOKEN` ponle tú una cadena aleatoria larga. No es una clave
    que Meta te entregue: Meta la usará para comprobar que controlas el webhook.
 5. En **App settings → Basic**, copia **App secret** a `WHATSAPP_APP_SECRET`.
-   Noesis lo usa para verificar `X-Hub-Signature-256` y rechazar callbacks falsos.
+   Bynoesis lo usa para verificar `X-Hub-Signature-256` y rechazar callbacks falsos.
 6. En **WhatsApp → Configuration → Webhooks**, configura callback
    `https://bynoesis.com/webhook/whatsapp`, pega el mismo verify token y suscribe
    el campo `messages` de la WABA.
@@ -84,10 +84,10 @@ y [webhooks](https://docs.stripe.com/webhooks).
    prueba con una cuenta piloto.
 
 El número configurado en `WHATSAPP_PHONE_ID` es el **canal central privado** al que
-escriben titular y trabajadores. Los números comerciales de los clientes de Noesis
+escriben titular y trabajadores. Los números comerciales de los clientes de Bynoesis
 no se añaden como nuevas variables de Railway ni guardan tokens propios: cada WABA
 y `phone_number_id` se registra en `whatsapp_connections` después de que Meta haya
-concedido el activo al usuario de sistema de Noesis. El mismo token permanente solo
+concedido el activo al usuario de sistema de Bynoesis. El mismo token permanente solo
 puede usarse si tiene permiso real sobre todos esos activos.
 
 Para validar el modo multicanal del esquema 45, usa dos negocios y dos números de
@@ -208,7 +208,7 @@ aceptación se cambia a `true` y se repite `noesis-doctor --strict`.
 
 ### Qué crear
 
-Una cuenta transaccional y un remitente verificado del dominio de Noesis. En Railway
+Una cuenta transaccional y un remitente verificado del dominio de Bynoesis. En Railway
 se prefiere la API HTTPS de Brevo porque la plataforma bloquea los puertos SMTP. En
 otra infraestructura puede usarse SMTP como alternativa. La outbox y los reintentos
 son comunes: cambiar de transporte no cambia el flujo del producto.
@@ -217,7 +217,7 @@ Vía recomendada en Railway:
 
 ```dotenv
 BREVO_API_KEY=<clave de la API transaccional>
-SMTP_FROM=Noesis <no-reply@bynoesis.com>
+SMTP_FROM=Bynoesis <no-reply@bynoesis.com>
 ```
 
 Alternativa SMTP:
@@ -227,7 +227,7 @@ SMTP_HOST=<host SMTP>
 SMTP_PORT=587
 SMTP_USER=<usuario SMTP>
 SMTP_PASS=<contraseña SMTP>
-SMTP_FROM=Noesis <no-reply@bynoesis.com>
+SMTP_FROM=Bynoesis <no-reply@bynoesis.com>
 ```
 
 El adaptador SMTP usa TLS implícito en el puerto 465 y STARTTLS en los demás. En
@@ -251,7 +251,7 @@ pantalla de consentimiento y registrar exactamente:
 
 - Origen autorizado: `https://bynoesis.com`
 - URI de redirección: `https://bynoesis.com/auth/google/callback`
-- Scopes usados por Noesis: `openid email profile`
+- Scopes usados por Bynoesis: `openid email profile`
 
 ```dotenv
 GOOGLE_OAUTH_CLIENT_ID=<client id>
@@ -259,7 +259,7 @@ GOOGLE_OAUTH_CLIENT_SECRET=<client secret>
 ```
 
 Google exige que la URI coincida exactamente, incluido protocolo y barra final.
-Noesis oculta el botón si falta una de las dos variables.
+Bynoesis oculta el botón si falta una de las dos variables.
 
 ### Prueba de aceptación
 
@@ -270,9 +270,9 @@ Noesis oculta el botón si falta una de las dos variables.
 
 Referencia: [OpenID Connect de Google](https://developers.google.com/identity/openid-connect/openid-connect).
 
-## 3. Stripe Billing — suscripción de Noesis
+## 3. Stripe Billing — suscripción de Bynoesis
 
-Stripe aquí cobra **la suscripción SaaS de Noesis**. No cobra las facturas que el
+Stripe aquí cobra **la suscripción SaaS de Bynoesis**. No cobra las facturas que el
 autónomo emite a sus clientes y no es todavía un «cobro por enlace».
 
 ### IVA del catálogo
@@ -320,7 +320,7 @@ Crear el webhook `https://bynoesis.com/webhook/stripe` con:
 
 Activar también el Customer Portal en Stripe y habilitar **actualizar método de
 pago**, **cambiar plan** con los seis precios mensuales/anuales y **cancelar al final
-del período**. Noesis abre flujos separados para cada acción y Stripe debe mostrar
+del período**. Bynoesis abre flujos separados para cada acción y Stripe debe mostrar
 la confirmación antes de aplicar el cambio. Estas opciones se configuran por separado
 en sandbox y live. No reutilizar secretos de test en live ni confundir la clave
 secreta con la publicable.
@@ -343,7 +343,7 @@ Referencias: [SaaS con Stripe](https://docs.stripe.com/saas),
 En Meta Business / Meta for Developers:
 
 1. verificar la empresa y crear una app con WhatsApp;
-2. añadir o portar el número único de Noesis;
+2. añadir o portar el número único de Bynoesis;
 3. generar un token permanente con los permisos necesarios;
 4. configurar el webhook y suscribir el campo `messages`;
 5. aprobar las plantillas proactivas en español.
@@ -364,15 +364,15 @@ Plantillas que deben coincidir exactamente con las aprobadas:
 
 ```dotenv
 WHATSAPP_TEMPLATE_LANGUAGE=es
-WHATSAPP_TEMPLATE_DAILY_SUMMARY=noesis_resumen_diario
-WHATSAPP_TEMPLATE_WEEKLY_SUMMARY=noesis_resumen_semanal
-WHATSAPP_TEMPLATE_PAYMENT_ALERT=noesis_aviso_cobros
-WHATSAPP_TEMPLATE_PAYMENT_REMINDER=noesis_recordatorio_cobro
-WHATSAPP_TEMPLATE_INVOICE=noesis_factura_lista
-WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP=noesis_seguimiento_presupuesto
-WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER=noesis_recordatorio_cita
-WHATSAPP_TEMPLATE_DAILY_CLOSING=noesis_cierre_dia
-WHATSAPP_TEMPLATE_TAX_NOTICE=noesis_aviso_fiscal
+WHATSAPP_TEMPLATE_DAILY_SUMMARY=bynoesis_resumen_diario
+WHATSAPP_TEMPLATE_WEEKLY_SUMMARY=bynoesis_resumen_semanal
+WHATSAPP_TEMPLATE_PAYMENT_ALERT=bynoesis_aviso_cobros
+WHATSAPP_TEMPLATE_PAYMENT_REMINDER=bynoesis_recordatorio_cobro
+WHATSAPP_TEMPLATE_INVOICE=bynoesis_factura_lista
+WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP=bynoesis_seguimiento_presupuesto
+WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER=bynoesis_recordatorio_cita
+WHATSAPP_TEMPLATE_DAILY_CLOSING=bynoesis_cierre_dia
+WHATSAPP_TEMPLATE_TAX_NOTICE=bynoesis_aviso_fiscal
 ```
 
 La firma `X-Hub-Signature-256` es obligatoria en producción. El texto libre solo
@@ -401,7 +401,7 @@ en [[Revision-Meta]].
 - Texto, audio, imagen de ticket, PDF/factura recibida y ticket de venta F2.
 - Confirmación antes de crear gasto, emitir o enviar algo irreversible.
 - Emisión confirmada, PDF generado y entrega por email o plantilla
-  `noesis_factura_lista` con enlace privado sin duplicar la factura.
+  `bynoesis_factura_lista` con enlace privado sin duplicar la factura.
 - Estados `sent`, `delivered`, `read` y fallo; reintento sin duplicados.
 - Factura lista, recordatorio de cobro, presupuesto, cita, cierre diario y aviso fiscal.
 - Cuenta caducada en modo consulta: no ejecuta acciones ni automatizaciones.
@@ -446,7 +446,7 @@ NOESIS_COMPAT_AI_OUTPUT_USD_PER_MTOK=<tarifa vigente>
 
 La URL externa debe ser HTTPS. Antes de usarla hay que revisar contrato de
 tratamiento, región, retención de prompts y si el modelo soporta correctamente las
-herramientas de Noesis.
+herramientas de Bynoesis.
 
 ### Opción C — servicio privado compatible
 
@@ -507,7 +507,7 @@ Prueba de aceptación:
 ## 8. Entrada documental por catch-all de Hostinger
 
 No necesita un alias por empresa. Hostinger dirige las direcciones inexistentes a
-un buzón real y Noesis genera para cada negocio una dirección opaca, por ejemplo
+un buzón real y Bynoesis genera para cada negocio una dirección opaca, por ejemplo
 `docs.<token>@bynoesis.com`. El token enruta; no concede permisos ni confirma datos.
 
 1. En hPanel abre **Emails**, entra en el plan de `bynoesis.com`, ve a
@@ -555,7 +555,7 @@ railway ssh env PYTHONPATH=src python -m noesis.documents.inbound_email --networ
 Hostinger documenta el catch-all dentro de las
 [opciones del buzón](https://support.hostinger.com/en/articles/1583217-how-to-create-and-manage-mailboxes-for-hostinger-email)
 y publica [IMAP SSL](https://support.hostinger.com/en/articles/1575756-how-to-get-email-account-configuration-details-for-hostinger-email)
-en `imap.hostinger.com:993`. Noesis no borra el mensaje del servidor y no guarda
+en `imap.hostinger.com:993`. Bynoesis no borra el mensaje del servidor y no guarda
 remitente, asunto, cuerpo ni el original; conserva únicamente huella, estado y
 contadores para idempotencia y diagnóstico.
 
@@ -574,6 +574,8 @@ NOESIS_BACKUP_S3_BUCKET=<bucket>
 NOESIS_BACKUP_S3_ACCESS_KEY=<access key>
 NOESIS_BACKUP_S3_SECRET_KEY=<secret key>
 NOESIS_BACKUP_S3_REGION=auto
+NOESIS_BACKUP_S3_PROVIDER_NAME=<razón social del proveedor>
+NOESIS_BACKUP_S3_DATA_REGION=<región contractual real, por ejemplo UE-Fráncfort>
 NOESIS_BACKUP_S3_PREFIX=production
 ```
 
@@ -586,9 +588,9 @@ No usa una API key. Usa SOAP con autenticación mTLS mediante certificado y clav
 Primero se valida contra el portal de pruebas de la AEAT y con asesoría fiscal.
 
 ```dotenv
-NOESIS_VERIFACTU_PRODUCER_NAME=Noesis
+NOESIS_VERIFACTU_PRODUCER_NAME=Bynoesis
 NOESIS_VERIFACTU_PRODUCER_NIF=<NIF real del productor>
-NOESIS_VERIFACTU_SYSTEM_NAME=Noesis
+NOESIS_VERIFACTU_SYSTEM_NAME=Bynoesis
 NOESIS_VERIFACTU_SYSTEM_ID=NO
 NOESIS_VERIFACTU_SYSTEM_VERSION=<versión publicada>
 VERIFACTU_CERT_PATH=/data/secrets/verifactu-cert.pem
@@ -601,7 +603,7 @@ NOESIS_VERIFACTU_MAX_RESPONSE_BYTES=2097152
 
 Los PEM deben montarse como archivos privados persistentes; no se pegan en Git ni
 en un campo que el código espera que sea una ruta. Usar `VERIFACTU_CERT_TYPE=sello`
-solo con un certificado de sello: Noesis seleccionará los endpoints oficiales
+solo con un certificado de sello: Bynoesis seleccionará los endpoints oficiales
 `prewww10/www10`; `persona` usa `prewww1/www1`. La autorización del certificado para
 remitir por cada obligado tributario debe verificarse con asesoría.
 
@@ -619,7 +621,7 @@ Referencia: [esquemas y WSDL oficiales de la AEAT](https://sede.agenciatributari
 
 ## 11. Servicios que no forman parte de la arquitectura
 
-Noesis **no se conecta a Holded ni delega la facturación**. Numeración, emisión, PDF,
+Bynoesis **no se conecta a Holded ni delega la facturación**. Numeración, emisión, PDF,
 registro Veri*Factu, cola y remisión AEAT son desarrollo propio. Holded puede seguir
 apareciendo en documentos de mercado como competidor o referencia visual, nunca como
 proveedor técnico ni variable de producción.
@@ -629,7 +631,7 @@ Tampoco existe todavía un adaptador conectable para:
 - Sincronización bidireccional con Google/Apple/Outlook: hoy hay ICS privado de solo
   lectura, que no requiere API.
 - Banca PSD2: hoy hay importación y conciliación CSV con confirmación del titular.
-- Cobro por enlace de las facturas del autónomo: Stripe actual solo factura Noesis.
+- Cobro por enlace de las facturas del autónomo: Stripe actual solo factura Bynoesis.
 - Recepcionista telefónico: es diseño P2, no integración disponible.
 - Telegram y conectores directos con gestorías: no son necesarios para el piloto.
 

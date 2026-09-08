@@ -56,10 +56,10 @@ def matching_counter(account: dict, code: str, *, at: int | None = None) -> int 
 
 
 def provisioning_uri(account: dict) -> str:
-    label = urllib.parse.quote(f"Noesis:{account['email']}", safe="")
+    label = urllib.parse.quote(f"Bynoesis:{account['email']}", safe="")
     query = urllib.parse.urlencode({
         "secret": secret_for(account),
-        "issuer": "Noesis",
+        "issuer": "Bynoesis",
         "algorithm": "SHA1",
         "digits": str(_DIGITS),
         "period": str(_STEP_SECONDS),

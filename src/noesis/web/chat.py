@@ -2,7 +2,7 @@
 
 Resuelve primero con reglas internas, después con un servicio privado opcional y,
 solo con consentimiento y créditos, con el proveedor externo. Si falla un nivel,
-Noesis conserva la respuesta y las órdenes rutinarias locales.
+Bynoesis conserva la respuesta y las órdenes rutinarias locales.
 """
 
 from __future__ import annotations
@@ -295,7 +295,7 @@ def daily_briefing(business_id: int) -> dict:
 
 
 def _compose_briefing(business_id: int) -> dict:
-    """El 'parte' del día, en primera persona: Noesis ha revisado el negocio y dice
+    """El 'parte' del día, en primera persona: Bynoesis ha revisado el negocio y dice
     lo importante, con su acción al lado. Reutiliza el mismo cerebro que el plan y el
     asistente. NUNCA inventa: si no hay nada que ordenar, lo dice con honestidad."""
     biz = db.get_business(business_id) or {}
@@ -414,7 +414,7 @@ _PAGE_HINTS = {
     "clientes": "tu lista de clientes y lo que mueve cada uno",
     "crm": "los posibles clientes: quién pidió precio y a quién seguir hoy",
     "productos": "tu catálogo: qué vendes, a qué precio y con qué margen",
-    "documentos": "tus papeles: subes o fotografías, Noesis propone y tú confirmas",
+    "documentos": "tus papeles: subes o fotografías, Bynoesis propone y tú confirmas",
     "ajustes": "los datos de tu negocio: fiscales, marca, gestoría, idioma y canales",
 }
 
@@ -457,7 +457,7 @@ def page_briefing(business_id: int, page: str) -> str | None:
 
 
 def page_note(business_id: int, page: str, state: dict | None = None) -> str | None:
-    """La voz de Noesis en la cabecera de cada pantalla: UNA línea con un dato real
+    """La voz de Bynoesis en la cabecera de cada pantalla: UNA línea con un dato real
     del negocio, en primera persona. Resiliente (nunca tumba la página) y honesta
     (si no hay nada, lo dice). Devuelve None en el Home (ya tiene su parte) y en
     páginas sin lectura útil. Acepta el estado precomputado para no leer dos veces."""
@@ -561,12 +561,12 @@ def page_note(business_id: int, page: str, state: dict | None = None) -> str | N
     if page == "presupuestos":
         return "No hay presupuestos esperando respuesta. Aquí preparas, envías y sigues cada oportunidad hasta aceptarla o cerrarla."
     if page == "ajustes":
-        return "Aquí decides cómo trabaja Noesis contigo: datos fiscales, permisos, integraciones y nivel de explicación."
+        return "Aquí decides cómo trabaja Bynoesis contigo: datos fiscales, permisos, integraciones y nivel de explicación."
     return f"Aquí tienes {_PAGE_HINTS[page]}."
 
 
 # Pregunta natural con la que el botón "Explícamelo" abre el acompañante en cada
-# pantalla. La figura de Noesis es la misma en todas partes: lee, muestra y explica.
+# pantalla. La figura de Bynoesis es la misma en todas partes: lee, muestra y explica.
 _PAGE_ASK = {
     "facturas": "Explícame cómo va mi facturación este mes y qué harías tú.",
     "cobros": "¿A quién le reclamo primero y qué mensaje le mando?",
@@ -634,7 +634,7 @@ def _page_focus(page: str, state: dict) -> dict | None:
 
 
 def _note_stats(page: str, state: dict) -> list[dict]:
-    """Las 2-4 cifras clave de cada pantalla, presentadas POR Noesis (no una pared
+    """Las 2-4 cifras clave de cada pantalla, presentadas POR Bynoesis (no una pared
     de KPIs muda). Solo datos ya leídos en el estado: cero consultas nuevas."""
     def chip(label, value, tone=""):
         return {"label": label, "value": value, "tone": tone}
@@ -693,7 +693,7 @@ def _note_stats(page: str, state: dict) -> list[dict]:
 
 
 def page_brief(business_id: int, page: str) -> dict | None:
-    """El parte de sección: la figura de Noesis en cada pantalla — su lectura en
+    """El parte de sección: la figura de Bynoesis en cada pantalla — su lectura en
     primera persona, las cifras clave que la sostienen y la puerta para pedirle
     que lo explique. Una sola pieza en toda la app; resiliente como page_note."""
     if page == "resumen" or page not in _PAGE_HINTS:
@@ -756,6 +756,19 @@ def _handle(
         tool, args = parsed
         if tool == nlu.HELP:
             return {"reply": _coach_reply(business_id, message), "source": "local"}
+        if tool == nlu.NEED_INVOICE:
+            return {
+                "reply": "Claro. Dime **cliente, concepto e importe**; por ejemplo: "
+                         "«factura a Ana por reparar el termo 120 euros».",
+                "source": "local",
+            }
+        if tool == nlu.NEED_USER_INVITE:
+            return {
+                "reply": "Para dar acceso a alguien necesito su correo y el rol. "
+                         "Hazlo desde Equipo para que reciba una invitación segura; "
+                         "no crearé una contraseña ni daré permisos desde un mensaje incompleto.",
+                "source": "local",
+            }
         if tool == "__need_date__":
             return {"reply": "Te lo puedo agendar, pero me falta el día. Dímelo como lo dirías por WhatsApp: "
                              "**mañana por la mañana**, **el jueves a las 10** o "
@@ -767,7 +780,10 @@ def _handle(
             rate = float(business.get("default_vat") or 21)
             args["base"] = round(float(args["base"]) / (1 + rate / 100), 2)
             args["iva"] = rate
-        result = json.loads(run_tool(tool, args, business_id))
+        ledger_channel = "whatsapp" if channel == "whatsapp" else "web"
+        result = json.loads(
+            run_tool(tool, args, business_id, channel=ledger_channel)
+        )
         return {"reply": nlu.format_reply(tool, result), "source": "local"}
 
     # Marco común para el segundo nivel, sea privado o externo.
@@ -971,7 +987,7 @@ def handle_read_only(
             "reply": (
                 "Esta demostración es de solo lectura: puedo enseñarte el resultado, "
                 "pero no guardar cambios. Prueba **¿Qué tengo hoy?**, **¿Quién me debe?** "
-                "o **Dame el resumen del mes**. En tu cuenta, Noesis dejará la acción "
+                "o **Dame el resumen del mes**. En tu cuenta, Bynoesis dejará la acción "
                 "preparada para que la revises; nunca enviará dinero o documentación "
                 "fiscal sin tu confirmación."
             ),

@@ -1,4 +1,4 @@
-"""Datos de demostración para ver Noesis lleno, como en un negocio real.
+"""Datos de demostración para ver Bynoesis lleno, como en un negocio real.
 
 Dos niveles:
 
@@ -456,7 +456,7 @@ def _showcase_document_bytes(filename: str) -> bytes:
         image = Image.new("RGB", (1000, 1400), "white")
         draw = ImageDraw.Draw(image)
         draw.text((80, 90), "FERRETERIA CENTRAL", fill="black")
-        draw.text((80, 150), "Ticket de ejemplo Noesis", fill="black")
+        draw.text((80, 150), "Ticket de ejemplo Bynoesis", fill="black")
         draw.text((80, 230), "Material y consumibles       80,00 EUR", fill="black")
         draw.text((80, 290), "IVA 21%                      16,80 EUR", fill="black")
         draw.text((80, 370), "TOTAL                         96,80 EUR", fill="black")
@@ -468,7 +468,7 @@ def _showcase_document_bytes(filename: str) -> bytes:
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 12, "Documento de ejemplo Noesis", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 12, "Documento de ejemplo Bynoesis", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=11)
     safe_name = filename.encode("latin-1", errors="replace").decode("latin-1")
     pdf.cell(0, 9, safe_name, new_x="LMARGIN", new_y="NEXT")

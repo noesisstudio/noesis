@@ -3,30 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Diagnóstico de {{ snapshot.business.name }}</title>
+  <title>Bynoesis · Diagnóstico de {{ snapshot.business.name }}</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  <link rel="stylesheet" href="/static/admin-workspace.css?v={{ asset_v }}">
 </head>
-<body style="background:var(--bg)">
-<main class="admin-wrap support-console">
-  <a class="back" href="/admin#cuentas">← Volver al centro de mando</a>
+<body class="admin-workspace">
+{% set admin_scope = 'account' %}
+{% set admin_views = [('resumen','Resumen','Identidad y actividad'),('consumo','Consumo','APIs y costes'),('acceso','Acceso y plan','Personas y permisos'),('canales','WhatsApp','Conexiones comerciales'),('operaciones','Entregas','Colas e incidencias'),('soporte','Soporte autorizado','Intervención temporal')] %}
+{% include 'admin_navigation.html' %}
+<main class="admin-wrap support-console" data-admin-workspace>
+  <div class="admin-location"><a href="/admin">Administración</a><span>/</span><a href="/admin#vista-cuentas">Cuentas</a><span>/</span><span>{{ snapshot.business.name }}</span></div>
 
   <header class="page-head support-head">
     <div class="page-title">
-      <div class="kicker">Gestión de la cuenta · Permisos, acceso y diagnóstico</div>
+      <div class="kicker">Ficha de cuenta</div>
       <h1>{{ snapshot.business.name }}</h1>
       <p>{{ snapshot.business.owner_email or 'Sin correo titular' }} · {{ snapshot.business.sector or 'Sector sin completar' }}</p>
     </div>
     <div class="support-status">
-      <span class="badge {{ 'b-green' if snapshot.business.subscription_status == 'active' else 'b-amber' }}">{{ snapshot.business.subscription_status or 'sin estado' }}</span>
-      <span class="badge b-gray">Plan {{ snapshot.business.plan or 'sin asignar' }}</span>
+      <span class="badge {{ 'b-green' if snapshot.business.subscription_status == 'active' else 'b-amber' }}">{{ {'trial':'En prueba','active':'Activa','past_due':'Pago pendiente','canceled':'Cancelada','inactive':'Inactiva','pending':'Pendiente'}.get(snapshot.business.subscription_status, snapshot.business.subscription_status or 'Sin estado') }}</span>
+      <span class="badge b-gray">Plan {{ {'trial':'Prueba','autonomo':'Autónomo','pro':'Negocio','premium':'Premium'}.get(snapshot.business.plan, snapshot.business.plan or 'Sin asignar') }}</span>
     </div>
   </header>
+
+  <header class="admin-view-head" id="admin-content" tabindex="-1"><h2 id="admin-view-title">Resumen</h2><p id="admin-view-hint">Identidad y actividad</p></header>
+
+  <section class="support-section" aria-label="Conexión y actualización" data-admin-panel="resumen">
+    <div class="support-section-head"><h2>WhatsApp del titular</h2>
+      <a class="btn" href="?month={{ api_usage.month }}">Actualizar datos</a></div>
+    <p><strong>{{ snapshot.business.whatsapp_phone or 'Sin teléfono vinculado' }}</strong>
+      · {{ {'no_conectado':'Sin conectar','conectado':'Conectado'}.get(snapshot.business.whatsapp_status, snapshot.business.whatsapp_status or 'Sin configurar') }}</p>
+    <p class="meta">Este es el móvil que habla con Bynoesis. Las conexiones comerciales
+      aparecen en el apartado WhatsApp. Datos leídos al abrir: {{ api_usage.as_of }}.
+      No es una conexión en tiempo real con los proveedores.</p>
+  </section>
+  <section class="support-section" id="consumo-api" data-admin-panel="consumo">
+    <div class="support-section-head"><h2>Consumo por API y modelo</h2>
+      <a class="btn" href="/admin/cuentas/{{ snapshot.business.id }}/consumo?month={{ api_usage.month }}">Ver JSON</a></div>
+    <form method="get" action="#vista-consumo" class="support-form">
+      <label>Mes <input type="month" name="month" value="{{ api_usage.month }}" required></label>
+      <button class="btn" type="submit">Consultar</button>
+    </form>
+    <p class="meta">Por cuenta, no por empleado. {{ api_usage.coverage }}</p>
+    <p class="meta">Las estimaciones en euros usan {{ api_usage.usd_to_eur_assumption }} EUR por USD. Hipótesis configurable, no cambio de divisa en tiempo real.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Proveedor / modelo</th><th>Llamadas</th><th>Tokens entrada / salida</th><th>Estimación USD</th><th>Latencia media</th></tr></thead>
+      <tbody>{% for row in api_usage.rows %}<tr>
+        <td>{{ row.provider }}<br><small>{{ row.model }}</small></td>
+        <td>{{ row.calls }}</td><td>{{ row.input_tokens }} / {{ row.output_tokens }}</td>
+        <td>{{ '%.6f'|format(row.estimated_cost_usd) }} USD{% if row.unpriced_calls %}<br><small>{{ row.unpriced_calls }} sin coste registrado</small>{% endif %}</td>
+        <td>{{ (row.mean_duration_ms|string ~ ' ms') if row.mean_duration_ms is not none else 'Sin medir' }}</td>
+      </tr>{% else %}<tr><td colspan="5">No hay llamadas instrumentadas en este período.</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if api_usage.invalid_records %}<p class="meta">{{ api_usage.invalid_records }} registros no interpretables; no incluidos.</p>{% endif %}
+  </section>
 
   {% if admin_error %}<div class="admin-note error">{{ admin_error }}</div>{% endif %}
   {% if admin_success %}<div class="admin-note success">{{ admin_success }}</div>{% endif %}
 
-  <section class="support-boundary" aria-label="Límite de privacidad">
+  <section class="support-boundary" aria-label="Límite de privacidad" data-admin-panel="resumen">
     <div>
       <div class="kicker">Límite de privacidad</div>
       <h2>Se gestiona el acceso, no se abre el negocio</h2>
@@ -35,34 +71,34 @@
     <span class="badge b-green">Acceso auditado</span>
   </section>
 
-  <section class="support-section">
+  <section class="support-section" data-admin-panel="resumen">
     <div class="support-section-head">
       <div><div class="kicker">Estado general</div><h2>Cuenta y activación</h2></div>
       <span class="meta">Alta {{ snapshot.business.created_at|string|truncate(10, True, '') }}</span>
     </div>
     <div class="admin-grid">
       <div class="stat"><div class="lbl">Activación</div><div class="val">{{ snapshot.activation.progress }}%</div><div class="delta flat">{{ 'activada' if snapshot.activation.activated else 'en configuración' }}</div></div>
-      <div class="stat"><div class="lbl">WhatsApp</div><div class="val support-value">{{ snapshot.business.whatsapp_status or 'sin configurar' }}</div><div class="delta flat">estado de integración</div></div>
+      <div class="stat"><div class="lbl">WhatsApp</div><div class="val support-value">{{ {'no_conectado':'Sin conectar','conectado':'Conectado'}.get(snapshot.business.whatsapp_status, snapshot.business.whatsapp_status or 'Sin configurar') }}</div><div class="delta flat">estado de integración</div></div>
       <div class="stat"><div class="lbl">Perfil fiscal</div><div class="val support-value {{ 'green' if snapshot.business.fiscal_profile_complete }}">{{ 'completo' if snapshot.business.fiscal_profile_complete else 'incompleto' }}</div><div class="delta flat">sin mostrar datos fiscales</div></div>
-      <div class="stat"><div class="lbl">Última señal</div><div class="val support-value">{{ snapshot.last_event.created_at|string|truncate(10, True, '') if snapshot.last_event else 'sin actividad' }}</div><div class="delta flat">{{ snapshot.last_event.event_name if snapshot.last_event else 'ningún evento' }}</div></div>
+      <div class="stat"><div class="lbl">Última señal</div><div class="val support-value">{{ snapshot.last_event.created_at|string|truncate(10, True, '') if snapshot.last_event else 'sin señal' }}</div><div class="delta flat">{{ snapshot.last_event.event_name if snapshot.last_event else 'ningún evento' }}</div></div>
     </div>
   </section>
 
   {% if account_cost %}
-  <section class="support-section" id="rentabilidad">
+  <section class="support-section" id="rentabilidad" data-admin-panel="consumo">
     <div class="support-section-head">
-      <div><div class="kicker">Control interno · {{ cost_control.month }}</div><h2>Consumo y rentabilidad de Noesis</h2></div>
+      <div><div class="kicker">Control interno · {{ cost_control.month }}</div><h2>Consumo y rentabilidad de Bynoesis</h2></div>
       <span class="badge {{ 'b-red' if account_cost.risk == 'critical' else 'b-amber' if account_cost.risk == 'review' else 'b-gray' if account_cost.risk == 'demo' else 'b-green' }}">
-        {{ 'revisar ahora' if account_cost.risk == 'critical' else 'vigilar' if account_cost.risk == 'review' else 'demo' if account_cost.risk == 'demo' else 'en orden' }}
+        {{ 'revisar ahora' if account_cost.risk == 'critical' else 'vigilar' if account_cost.risk == 'review' else 'demo' if account_cost.risk == 'demo' else 'sin alertas detectadas' }}
       </span>
     </div>
     <p class="meta" style="margin:0 0 14px">Solo combina el precio de la suscripción,
-      metadatos técnicos de uso y el libro CFO de Noesis. No abre facturas, clientes,
+      metadatos técnicos de uso y el libro CFO de Bynoesis. No abre facturas, clientes,
       mensajes, archivos ni importes del negocio.</p>
     <div class="admin-grid">
       <div class="stat"><div class="lbl">Ingreso comprometido</div><div class="val support-value">{{ '%.2f'|format(account_cost.revenue_eur) }} €</div><div class="delta flat">mensual, no caja</div></div>
       <div class="stat"><div class="lbl">Acciones avanzadas</div><div class="val support-value">{{ account_cost.ai_credits_used }} / {{ account_cost.ai_credits_limit }}</div><div class="delta flat">{{ account_cost.ai_credits_pct }} % del plan</div></div>
-      <div class="stat"><div class="lbl">Coste IA medido</div><div class="val support-value">{{ '%.4f'|format(account_cost.ai_estimated_cost_eur) }} €</div><div class="delta flat">tokens con tarifa configurada</div></div>
+      <div class="stat"><div class="lbl">Coste IA estimado</div><div class="val support-value">{{ '%.4f'|format(account_cost.ai_estimated_cost_eur) }} €</div><div class="delta flat">tokens con tarifa configurada; no es una factura</div></div>
       <div class="stat"><div class="lbl">Coste real asignado</div><div class="val support-value">{{ ('%.2f €'|format(account_cost.allocated_observed_cost_eur)) if cost_control.has_observed_data else '—' }}</div><div class="delta flat">{{ 'reparto reconciliado' if cost_control.has_observed_data else 'faltan facturas de proveedores' }}</div></div>
       <div class="stat"><div class="lbl">Contribución</div><div class="val support-value">{{ ('%.2f €'|format(account_cost.contribution_eur)) if account_cost.contribution_eur is not none else '—' }}</div><div class="delta flat">{{ (account_cost.margin_pct|string ~ ' %') if account_cost.margin_pct is not none else 'aún no calculable' }}</div></div>
       <div class="stat"><div class="lbl">Canales</div><div class="val support-value">{{ account_cost.whatsapp_in }}↓ · {{ account_cost.whatsapp_out }}↑</div><div class="delta flat">WhatsApp · {{ account_cost.email_out }} correos</div></div>
@@ -75,7 +111,7 @@
   </section>
   {% endif %}
 
-  <section class="support-section" id="suscripcion">
+  <section class="support-section" id="suscripcion" data-admin-panel="acceso">
     <div class="support-section-head">
       <div><div class="kicker">Control del propietario</div><h2>Permisos de la cuenta</h2></div>
       <span class="meta">Cada cambio queda registrado</span>
@@ -129,7 +165,7 @@
     </form>
   </section>
 
-  <section class="support-section">
+  <section class="support-section" data-admin-panel="resumen">
     <div class="support-section-head"><div><div class="kicker">Volumen</div><h2>Elementos de la cuenta</h2></div><span class="meta">Solo cantidades</span></div>
     <div class="support-counts">
       {% for label, key in [('Usuarios','users'),('Clientes','clients'),('Trabajos','jobs'),('Proyectos','projects'),('Equipo','workers'),('Facturas','invoices'),('Gastos','expenses'),('Facturas recibidas','received_invoices'),('Documentos','documents'),('Por revisar','documents_pending'),('Gestorías','gestoria_accesses')] %}
@@ -138,8 +174,8 @@
     </div>
   </section>
 
-  <div class="support-columns">
-    <section class="support-section">
+  <div class="support-columns" data-admin-panel="operaciones">
+    <section class="support-section" data-admin-panel="operaciones">
       <div class="support-section-head"><div><div class="kicker">Datos</div><h2>Estados internos</h2></div></div>
       <h3 class="support-subtitle">Facturas</h3>
       <div class="support-list">
@@ -151,7 +187,7 @@
       </div>
     </section>
 
-    <section class="support-section">
+    <section class="support-section" data-admin-panel="operaciones">
       <div class="support-section-head"><div><div class="kicker">Entregas</div><h2>Colas de integraciones</h2></div></div>
       {% for channel, states in snapshot.queues.items() %}
       <h3 class="support-subtitle">{{ channel|capitalize }}</h3>
@@ -162,7 +198,7 @@
     </section>
   </div>
 
-  <section class="support-section" id="acceso">
+  <section class="support-section" id="acceso" data-admin-panel="acceso">
     <div class="support-section-head">
       <div><div class="kicker">Control de acceso</div><h2>Quién puede entrar</h2></div>
       <span class="meta">Suspender no borra nada y es reversible</span>
@@ -253,7 +289,7 @@
     </div>
   </section>
 
-  <section class="support-section" id="entregas">
+  <section class="support-section" id="entregas" data-admin-panel="operaciones">
     <div class="support-section-head">
       <div><div class="kicker">Diagnóstico</div><h2>Entregas atascadas</h2></div>
       <span class="meta">Motivo técnico, sin contenido del cliente</span>
@@ -283,12 +319,12 @@
     {% endif %}
   </section>
 
-  <section class="support-section" id="whatsapp">
+  <section class="support-section" id="whatsapp" data-admin-panel="canales">
     <div class="support-section-head">
       <div><div class="kicker">Canal comercial</div><h2>Números de WhatsApp del negocio</h2></div>
       <span class="meta">Alta técnica auditada</span>
     </div>
-    <p class="meta">Registra únicamente activos que el usuario de sistema de Noesis ya pueda administrar en Meta. La conexión nace pendiente; actívala después de probar webhook y envío. Los tokens siguen exclusivamente en Railway.</p>
+    <p class="meta">Registra únicamente activos que el usuario de sistema de Bynoesis ya pueda administrar en Meta. La conexión nace pendiente; actívala después de probar webhook y envío. Los tokens siguen exclusivamente en Railway.</p>
     <div class="support-list" style="margin:16px 0">
       {% for connection in whatsapp_connections %}
       <div style="align-items:flex-start;gap:16px">
@@ -313,7 +349,7 @@
     </form>
   </section>
 
-  <section class="support-locked">
+  <section class="support-locked" data-admin-panel="soporte">
     {% if snapshot.support_grant %}
     <div><div class="kicker">Intervención autorizada</div><h2>Ventana temporal abierta por el titular</h2>
       <p><b>Motivo:</b> {{ snapshot.support_grant.purpose }}<br>
@@ -328,7 +364,7 @@
 
   {% if configuration_support %}
   {% set config = configuration_support.values %}
-  <section class="support-section support-editor" id="safe-configuration">
+  <section class="support-section support-editor" id="safe-configuration" data-admin-panel="soporte">
     <div class="support-section-head">
       <div>
         <div class="kicker">Corrección autorizada · Configuración</div>
@@ -336,7 +372,7 @@
       </div>
       <span class="badge b-amber">Permiso temporal</span>
     </div>
-    <p class="meta support-editor-intro">Estos cambios son reversibles y afectan a cómo se presenta el negocio y cómo Noesis se explica. No permiten cambiar titular, acceso, NIF, dirección fiscal, impuestos, cuenta de cobro, suscripción, integraciones, automatizaciones ni documentos ya emitidos.</p>
+    <p class="meta support-editor-intro">Estos cambios son reversibles y afectan a cómo se presenta el negocio y cómo Bynoesis se explica. No permiten cambiar titular, acceso, NIF, dirección fiscal, impuestos, cuenta de cobro, suscripción, integraciones, automatizaciones ni documentos ya emitidos.</p>
     <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/configuracion-segura" class="support-config-form">
       <label><span class="fld">Nombre del negocio</span><input class="input" name="name" value="{{ config.name or '' }}" maxlength="160" required><small>Se aplicará a documentos futuros; nunca reescribe facturas emitidas.</small></label>
       <label><span class="fld">Sector</span><input class="input" name="sector" value="{{ config.sector or '' }}" maxlength="80" required></label>
@@ -358,7 +394,7 @@
           {% for value, label in [('es','Español'),('ca','Català'),('en','English')] %}<option value="{{ value }}" {{ 'selected' if (config.language or 'es') == value }}>{{ label }}</option>{% endfor %}
         </select>
       </label>
-      <label><span class="fld">Cómo explica Noesis</span>
+      <label><span class="fld">Cómo explica Bynoesis</span>
         <select class="input" name="explanation_level" required>
           {% for value, label in [('claro','Claro y acompañado'),('directo','Breve y directo'),('detallado','Con más detalle')] %}<option value="{{ value }}" {{ 'selected' if (config.explanation_level or 'claro') == value }}>{{ label }}</option>{% endfor %}
         </select>
@@ -385,7 +421,7 @@
   {% endif %}
 
   {% if document_support %}
-  <section class="support-section support-editor" id="document-metadata">
+  <section class="support-section support-editor" id="document-metadata" data-admin-panel="soporte">
     <div class="support-section-head">
       <div>
         <div class="kicker">Corrección autorizada · Documentos</div>
@@ -446,5 +482,6 @@
   </section>
   {% endif %}
 </main>
+<script src="/static/admin-workspace.js?v={{ asset_v }}"></script>
 </body>
 </html>

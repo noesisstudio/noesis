@@ -1,7 +1,7 @@
 # Competencia
 
 El mercado está **fragmentado**: cada uno hace una pieza, nadie lo une todo. Ese es
-el hueco de [[Producto|Noesis]].
+el hueco de [[Producto|Bynoesis]].
 
 ## Directos / referentes
 - **Forjia** (getforjia.com) — el más parecido. Factura/gastos por WhatsApp con voz,
@@ -12,7 +12,7 @@ el hueco de [[Producto|Noesis]].
 - **Javadex / OptimusCall / AI Hispania** — agentes de voz que contestan el teléfono
   para gremios. Sin la parte administrativa.
 - **Holded / Quipu / Billin** — ERP/contabilidad completos, ya homologados Verifactu.
-  Son referencias de cobertura y credibilidad, no proveedores: Noesis construye la
+  Son referencias de cobertura y credibilidad, no proveedores: Bynoesis construye la
   facturación y el registro fiscal de forma nativa y no los conecta por API (ver
   [[Arquitectura]], [[Fiscalidad]] y [[Decisiones]]).
 

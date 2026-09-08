@@ -1,7 +1,7 @@
 # Producto
 
 ## Qué es
-**Noesis**: el copiloto de negocio por WhatsApp para autónomos de servicios. Hablas
+**Bynoesis**: el copiloto de negocio por WhatsApp para autónomos de servicios. Hablas
 con él por texto o audio y se ocupa de tu agenda, clientes, cobros y facturas, para
 que tú solo tengas que hacer tu trabajo. Quita "ruido mental".
 
@@ -27,8 +27,8 @@ agenda inteligente + control de cobros + **resumen diario** + facturación integ
 Ver [[Investigación]] sobre por qué este es el hueco.
 
 ## Experiencia de producto
-Noesis no se presenta como un panel financiero. La primera lectura siempre responde
-en este orden: **qué está pasando, qué toca hacer y qué está resolviendo Noesis**.
+Bynoesis no se presenta como un panel financiero. La primera lectura siempre responde
+en este orden: **qué está pasando, qué toca hacer y qué está resolviendo Bynoesis**.
 Los datos avanzados siguen disponibles al entrar en cada apartado. La cuenta elige
 en Ajustes si prefiere una explicación clara, directa o detallada; esa preferencia
 se aplica al asistente completo, no mediante selectores repetidos en cada pantalla.
@@ -43,7 +43,7 @@ un profesional puede profundizar sin obligar al usuario no financiero a leer un 
 - **Web/app**: dashboard de control + chatbot interno. Ver [[Arquitectura]].
 
 ## Modelo de negocio
-SaaS de suscripción. Noesis compite por quitar trabajo administrativo, no por ser el
+SaaS de suscripción. Bynoesis compite por quitar trabajo administrativo, no por ser el
 facturador más barato. El catálogo adoptado es **29 / 49 / 99 € al mes + IVA**, con
 75 / 300 / 1.500 créditos avanzados. La prueba completa dura 14 días; después la
 cuenta queda en modo consulta hasta activar o recuperar la suscripción.

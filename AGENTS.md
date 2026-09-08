@@ -1,4 +1,4 @@
-# AGENTS.md - Manual del proyecto Noesis
+# AGENTS.md - Manual del proyecto Bynoesis
 
 Este archivo es la fuente de verdad compartida para cualquier agente de IA que
 trabaje en el repositorio. Léelo entero antes de tocar nada. La visión y el contexto
@@ -14,10 +14,10 @@ están en `docs/`, empezando por [`docs/Inicio.md`](docs/Inicio.md).
 > [`docs/design/PRODUCT_PRINCIPLES.md`](docs/design/PRODUCT_PRINCIPLES.md),
 > [`docs/design/DESIGN.md`](docs/design/DESIGN.md),
 > [`docs/design/UX_COPY.md`](docs/design/UX_COPY.md) y
-> [`docs/design/STYLE_TOKENS.json`](docs/design/STYLE_TOKENS.json). Noesis da el
+> [`docs/design/STYLE_TOKENS.json`](docs/design/STYLE_TOKENS.json). Bynoesis da el
 > parte del día; no es un dashboard fintech.
 
-## 1. Qué es Noesis
+## 1. Qué es Bynoesis
 
 Copiloto de negocio por WhatsApp para autónomos de servicios: fontanería,
 electricidad, reformas, limpieza, jardinería y similares. Gestiona agenda, clientes,
@@ -77,7 +77,7 @@ Archivos clave:
 5. IVA 21/10/4/0 e IRPF. Total = base + IVA - IRPF. Ver `docs/Fiscalidad.md`.
 6. Marca: `#14463b`, `#2e8b74`, `#f4f1e8`; usar variables de `app.css`.
 7. Facturación, pagos, email, voz, IA y extracción detrás de adaptadores.
-8. Noesis prepara; el autónomo confirma dinero, fiscalidad y acciones irreversibles.
+8. Bynoesis prepara; el autónomo confirma dinero, fiscalidad y acciones irreversibles.
 9. Antes de cerrar: tests, servidor, páginas afectadas y estado documental.
 
 ## 5. Protocolo multi-agente y trazabilidad

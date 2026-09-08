@@ -20,7 +20,7 @@ def api_chat_history(business_id: int, limit: int = 60):
 
 @router.get("/api/{business_id}/assistant/memories")
 def api_assistant_memories(business_id: int):
-    """Memoria visible: el usuario puede saber qué conserva Noesis."""
+    """Memoria visible: el usuario puede saber qué conserva Bynoesis."""
     return {"items": db.list_memories(business_id)}
 
 
@@ -74,7 +74,7 @@ async def api_update_assistant_permission(business_id: int, request: Request):
 
 @router.get("/api/{business_id}/assistant/actions")
 def api_assistant_actions(business_id: int, limit: int = 30):
-    """Historial auditable de lo que Noesis propuso o llegó a ejecutar."""
+    """Historial auditable de lo que Bynoesis propuso o llegó a ejecutar."""
     return {"items": db.list_assistant_actions(business_id, limit=limit)}
 
 @router.post("/api/{business_id}/chat")

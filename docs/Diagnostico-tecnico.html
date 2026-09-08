@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Diagnóstico técnico · Noesis</title>
+<title>Diagnóstico técnico · Bynoesis</title>
 <style>
   :root {
     --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
@@ -184,7 +184,7 @@
 <div class="page">
 
   <header>
-    <p class="eyebrow">Noesis · Manual de diagnóstico técnico</p>
+    <p class="eyebrow">Bynoesis · Manual de diagnóstico técnico</p>
     <h1>Dónde vive cada cosa</h1>
     <p class="standfirst">La misma guía de diagnóstico, con el archivo, la función y la tabla concreta al lado de cada explicación. Para señalar un fallo con precisión, o para dárselo a quien vaya a tocar el código.</p>
     <p class="crumbs">Verificado sobre <code>main</code>, esquema 50. La versión sin jerga es <code>Diagnostico.pdf</code>.</p>
@@ -193,7 +193,7 @@
   <section>
     <div class="sec-head">
       <h2>1. Levantar el proyecto desde cero</h2>
-      <p class="sec-intro">Lo mínimo para tener Noesis corriendo en una máquina limpia.</p>
+      <p class="sec-intro">Lo mínimo para tener Bynoesis corriendo en una máquina limpia.</p>
     </div>
 
     <pre>git clone https://github.com/noesisstudio/noesis
@@ -262,7 +262,7 @@ pip install -e ".[audio]"      <span class="c"># transcripción local con faster
 
     <div class="callout callout-warn">
       <h3>El punto que no se puede tocar a la ligera</h3>
-      <p><code>auth_guard</code> es el <strong>único</strong> sitio que autoriza <code>/b/</code> y <code>/api/</code> en todo Noesis. Es la garantía de aislamiento entre negocios: un cambio ahí afecta a todos los clientes a la vez.</p>
+      <p><code>auth_guard</code> es el <strong>único</strong> sitio que autoriza <code>/b/</code> y <code>/api/</code> en todo Bynoesis. Es la garantía de aislamiento entre negocios: un cambio ahí afecta a todos los clientes a la vez.</p>
       <p>Antes hay tres middlewares más, en este orden inverso al de declaración: <code>security_headers</code>, <code>canonical_public_host</code> y <code>request_observability</code>. Un 403 raro con origen correcto suele venir de la comprobación CSRF por cabeceras, en <code>csrf_response</code>.</p>
     </div>
   </section>

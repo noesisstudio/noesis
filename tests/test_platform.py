@@ -1,4 +1,4 @@
-"""Regresión de plataforma: dominios base, proyectos y memoria de Noesis."""
+"""Regresión de plataforma: dominios base, proyectos y memoria de Bynoesis."""
 
 from __future__ import annotations
 
@@ -280,7 +280,7 @@ class PlatformTestCase(unittest.TestCase):
         self.assertEqual(reply["source"], "local")
         self.assertIn("CRM".lower(), reply["reply"].lower())
 
-    # ------------------------------------------------- Parte de Noesis (Home)
+    # ------------------------------------------------- Parte de Bynoesis (Home)
     def test_daily_briefing_honest_and_actionable(self):
         empty = chat.daily_briefing(self.bid)
         self.assertFalse(empty["has_activity"])
@@ -315,7 +315,7 @@ class PlatformTestCase(unittest.TestCase):
             chat._business_state = original
 
     def test_page_brief_stats_and_resilience(self):
-        # El parte de sección: lectura + cifras presentadas por Noesis + pregunta
+        # El parte de sección: lectura + cifras presentadas por Bynoesis + pregunta
         # para el acompañante. Una sola pieza en toda la app.
         self.assertIsNone(chat.page_brief(self.bid, "resumen"))
         brief = chat.page_brief(self.bid, "facturas")

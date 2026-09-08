@@ -16,7 +16,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / "contenido"
-OUTPUT = OUTPUT_DIR / "Plan-editorial-y-guiones-Noesis.docx"
+OUTPUT = OUTPUT_DIR / "Plan-editorial-y-guiones-Bynoesis.docx"
 LOGO = ROOT / "logos" / "png" / "lockup" / "noesis-logo-primary-1024.png"
 
 FOREST = "14463B"
@@ -389,7 +389,7 @@ CARDS = [
         ("Plano 1: cierras la furgoneta y dices: ‘Por fin, terminado’.", "Plano 2: llegas a casa; sobreimpreso: ‘facturas, tickets, mañana, cobros’.", "Plano 3: miras el móvil y dices: ‘Vale… ahora empieza mi otro trabajo’.", "Cierre: ‘Tu negocio no debería vivir entero en tu cabeza’."),
         ("Exterior real al acabar la jornada.", "Corte rápido a mesa de casa con papeles y móvil.", "Primer plano final, tono cómplice; no dramatizar en exceso."),
         "TRABAJO TERMINADO ≠ DÍA TERMINADO", "Si al llegar a casa todavía te queda llevar el negocio, no eres el único.",
-        "Compártelo con quien siempre acaba dos veces.", "Compartidos + retención al 75 %", "No presentar Noesis hasta el último segundo; la pieza debe funcionar sin vender."),
+        "Compártelo con quien siempre acaba dos veces.", "Compartidos + retención al 75 %", "No presentar Bynoesis hasta el último segundo; la pieza debe funcionar sin vender."),
     ContentCard(
         "E02", "‘Es una cosita rápida’", "Identificación emocional", "Reel sketch · 20–30 s",
         "Instagram + Facebook", "Fontanería, electricidad, reformas y mantenimiento", "Humor reconocible y alcance",
@@ -425,7 +425,7 @@ CARDS = [
         ("Pantalla: ‘Gestoría llamando’.", "Tú respondes muy seguro: ‘Sí, lo tengo todo’.", "Corte a mesa/furgoneta buscando tickets.", "Remate: ‘Todo… repartido por siete sitios’."),
         ("Usar notificación ficticia, no un número real.", "Plano abierto del caos controlado.", "Cerrar con gesto de ‘otra vez’."),
         "TODO, PERO EN SIETE SITIOS", "La gestoría no necesita perseguirte; necesita que el negocio llegue ordenado.",
-        "Etiqueta a quien cada trimestre vive esta película.", "Compartidos + menciones", "No prometer presentación fiscal automática; Noesis prepara y el profesional decide."),
+        "Etiqueta a quien cada trimestre vive esta película.", "Compartidos + menciones", "No prometer presentación fiscal automática; Bynoesis prepara y el profesional decide."),
     ContentCard(
         "E06", "Facturar más no siempre es ganar más", "Emocional + racional", "Reel a cámara · 30–40 s",
         "Instagram + LinkedIn", "Autónomo ocupado que no conoce margen", "Romper una creencia y generar guardados",
@@ -494,36 +494,36 @@ CARDS = [
     ContentCard(
         "P01", "De WhatsApp a documento ordenado", "Demostración de producto", "Screen demo + voz · 25–35 s",
         "Instagram + Facebook", "Autónomo móvil-first", "Mostrar el flujo documental sin exagerar",
-        "Evaluación", "Mandas el ticket como siempre. Noesis te pide lo que falta y lo deja preparado.",
+        "Evaluación", "Mandas el ticket como siempre. Bynoesis te pide lo que falta y lo deja preparado.",
         "Mostrar un archivo de prueba entrando, clasificación propuesta y confirmación humana.",
-        ("‘Envío este ticket de prueba’.", "‘Noesis lee los datos y propone gasto/ticket’.", "‘Si falta cliente o trabajo, me lo pregunta’.", "‘Yo confirmo y queda ordenado para revisar’."),
+        ("‘Envío este ticket de prueba’.", "‘Bynoesis lee los datos y propone gasto/ticket’.", "‘Si falta cliente o trabajo, me lo pregunta’.", "‘Yo confirmo y queda ordenado para revisar’."),
         ("Grabación 9:16 del flujo demo.", "Zoom a propuesta y botón de confirmar.", "Usar datos ficticios y el rótulo ‘DEMO / PILOTO’ si WhatsApp real no está validado."),
         "ENVÍAS · NOESIS PROPONE · TÚ CONFIRMAS", "Menos reenvíos y menos ‘¿dónde guardé esto?’. Siempre con revisión cuando hay dudas.",
         "Solicita acceso al piloto.", "Visitas al perfil + solicitudes", "No decir ‘automático al 100 %’. WhatsApp/Meta debe rotularse como piloto hasta validación real."),
     ContentCard(
         "P02", "Cliente nuevo detectado en una factura", "Demostración de producto", "Screen demo · 30–40 s",
         "Instagram + LinkedIn", "Autónomo con clientes nuevos frecuentes", "Probar que el sistema evita duplicados y pide confirmación",
-        "Evaluación", "Si llega una factura con un cliente nuevo, Noesis no lo inventa ni lo mezcla: te lo propone.",
+        "Evaluación", "Si llega una factura con un cliente nuevo, Bynoesis no lo inventa ni lo mezcla: te lo propone.",
         "Comparar coincidencia exacta con cliente existente frente a alta editable pendiente.",
-        ("‘Subo una factura de prueba’.", "‘Noesis busca una coincidencia exacta dentro de este negocio’.", "‘Si existe, la vincula como propuesta’.", "‘Si no existe, prepara un cliente nuevo editable’.", "‘Nada se consolida sin confirmar’."),
+        ("‘Subo una factura de prueba’.", "‘Bynoesis busca una coincidencia exacta dentro de este negocio’.", "‘Si existe, la vincula como propuesta’.", "‘Si no existe, prepara un cliente nuevo editable’.", "‘Nada se consolida sin confirmar’."),
         ("Pantalla dividida: existente / nuevo.", "Enfatizar el estado ‘por confirmar’.", "No enseñar datos internos ni otros negocios."),
         "COINCIDENCIA EXACTA O ALTA POR CONFIRMAR", "Automatizar no es adivinar. Es preparar bien y preguntar cuando toca.",
         "¿Te ahorraría tiempo este flujo?", "DMs cualificados + solicitudes", "No mostrar emparejamiento por nombre ambiguo como si fuera seguro."),
     ContentCard(
         "P03", "Preparar una factura hablando", "Demostración de producto", "Screen demo conversacional · 30–45 s",
         "Instagram + Facebook", "Autónomo que trabaja por voz/móvil", "Enseñar la promesa central: conversación a borrador",
-        "Evaluación", "‘Haz una factura a Marta por la reparación de hoy’. Noesis prepara; tú revisas y emites.",
+        "Evaluación", "‘Haz una factura a Marta por la reparación de hoy’. Bynoesis prepara; tú revisas y emites.",
         "Crear borrador desde una orden natural, mostrar resumen fiscal y confirmación final.",
-        ("Orden: ‘Prepara una factura a Marta…’.", "Noesis pide el dato que falta, si falta alguno.", "Muestra cliente, concepto, base, IVA/IRPF aplicable y total.", "Usuario revisa.", "Cierre: ‘Emitir y enviar siempre requiere confirmación’."),
+        ("Orden: ‘Prepara una factura a Marta…’.", "Bynoesis pide el dato que falta, si falta alguno.", "Muestra cliente, concepto, base, IVA/IRPF aplicable y total.", "Usuario revisa.", "Cierre: ‘Emitir y enviar siempre requiere confirmación’."),
         ("Alternar conversación y vista previa.", "Mantener importes ficticios y redondos.", "Subrayar la pregunta de confirmación, no solo el PDF final."),
         "HABLAS → BORRADOR → REVISAS → EMITES", "La velocidad está en preparar. El control sigue siendo tuyo.",
         "Pide una demo con tu tipo de trabajo.", "Solicitudes de demo + finalizaciones", "No prometer validez fiscal externa no validada; usar ‘prepara’ y ‘borrador’."),
     ContentCard(
         "P04", "Recordatorio de cobro preparado", "Demostración de producto", "Screen demo + cara · 25–35 s",
         "Instagram + Facebook", "Autónomo con facturas pendientes", "Mostrar una acción útil con control humano",
-        "Evaluación", "Noesis ve qué factura se retrasa y te prepara el mensaje. Tú decides si sale.",
+        "Evaluación", "Bynoesis ve qué factura se retrasa y te prepara el mensaje. Tú decides si sale.",
         "Enseñar detección de vencida, mensaje propuesto y confirmación.",
-        ("‘Esta factura lleva X días vencida’ — dato de demo.", "‘Noesis propone un mensaje con cliente, factura e importe’.", "‘Puedes editar el tono’.", "‘Solo se envía cuando confirmas’."),
+        ("‘Esta factura lleva X días vencida’ — dato de demo.", "‘Bynoesis propone un mensaje con cliente, factura e importe’.", "‘Puedes editar el tono’.", "‘Solo se envía cuando confirmas’."),
         ("Comenzar con rostro y dolor.", "Cortar a pantalla para la propuesta.", "Volver al rostro para el cierre humano."),
         "NOESIS PREPARA. TÚ DECIDES.", "Reclamar deja de depender de acordarte, sin perder la relación con el cliente.",
         "Solicita acceso al piloto.", "Clics + solicitudes", "No enviar mensajes reales durante la grabación; usar entorno demo."),
@@ -532,22 +532,22 @@ CARDS = [
         "Instagram + LinkedIn", "Autónomo con muchas tareas abiertas", "Explicar el corazón del producto",
         "Evaluación", "No necesitas otro panel lleno de números. Necesitas saber qué toca hoy.",
         "Mostrar un parte que prioriza cobros, visitas, presupuesto y documento pendiente.",
-        ("‘Buenos días: hoy lo primero es…’.", "Señala tres prioridades, no diez KPIs.", "Abre una acción: preparar recordatorio o presupuesto.", "Cierre: ‘La app es donde entiendes; Noesis te da el parte’."),
+        ("‘Buenos días: hoy lo primero es…’.", "Señala tres prioridades, no diez KPIs.", "Abre una acción: preparar recordatorio o presupuesto.", "Cierre: ‘La app es donde entiendes; Bynoesis te da el parte’."),
         ("Plano de pantalla limpio.", "Cursor lento, una acción cada vez.", "No recorrer todos los menús; mantener un único relato."),
         "QUÉ IMPORTA HOY · QUÉ PUEDE HACER NOESIS", "Orden no es tener más datos. Es que alguien te diga qué merece atención.",
         "¿Qué debería aparecer en tu parte de mañana?", "Comentarios cualificados + demos", "Usar datos demo coherentes; nunca simular actividad como si fuera un cliente real."),
 
     ContentCard(
-        "T01", "Por qué estamos construyendo Noesis", "Confianza y marca", "Founder video · 45–60 s",
+        "T01", "Por qué estamos construyendo Bynoesis", "Confianza y marca", "Founder video · 45–60 s",
         "LinkedIn + Instagram", "Autónomos, gestorías y colaboradores", "Dar rostro, misión y motivación real",
         "Confianza", "No empezamos queriendo hacer otro programa de facturas.",
         "Explicar que el problema observado es el trabajo administrativo que continúa después del oficio.",
-        ("‘Vimos que muchos autónomos terminan el trabajo y empiezan a llevar el negocio’.", "‘Agenda, clientes, documentos, facturas y cobros viven separados o en la cabeza’.", "‘Noesis nace para quitar ese ruido y dar control’.", "‘No para sustituir al profesional, sino para ser su mano derecha’."),
+        ("‘Vimos que muchos autónomos terminan el trabajo y empiezan a llevar el negocio’.", "‘Agenda, clientes, documentos, facturas y cobros viven separados o en la cabeza’.", "‘Bynoesis nace para quitar ese ruido y dar control’.", "‘No para sustituir al profesional, sino para ser su mano derecha’."),
         ("Fundador a cámara, espacio real de trabajo.", "Intercalar 2–3 planos del producto.", "Sin música épica ni afirmaciones grandilocuentes."),
-        "HAZ TU TRABAJO; NOESIS TE ORDENA EL NEGOCIO", "Estamos construyendo Noesis para que llevar el negocio no se coma el tiempo de hacer bien el oficio.",
+        "HAZ TU TRABAJO; NOESIS TE ORDENA EL NEGOCIO", "Estamos construyendo Bynoesis para que llevar el negocio no se coma el tiempo de hacer bien el oficio.",
         "Si eres autónomo de servicios, queremos escucharte.", "Comentarios cualificados + conversaciones", "Hablar desde la motivación y lo construido; no inventar número de usuarios o éxito."),
     ContentCard(
-        "T02", "Por qué Noesis no quiere ser un ERP", "Confianza y categoría", "Founder post + carrusel",
+        "T02", "Por qué Bynoesis no quiere ser un ERP", "Confianza y categoría", "Founder post + carrusel",
         "LinkedIn", "Profesionales, gestorías, partners y early adopters", "Definir la categoría frente a software denso",
         "Confianza", "Un autónomo no necesita aprender cuarenta menús para entender su negocio.",
         "Contrastar operar hablando y entender con un parte frente a trabajar módulo por módulo.",
@@ -558,9 +558,9 @@ CARDS = [
     ContentCard(
         "T03", "Por qué pedimos confirmación", "Confianza y seguridad", "Reel fundador + demo · 35–50 s",
         "Instagram + LinkedIn", "Usuarios preocupados por errores", "Convertir una fricción aparente en promesa de control",
-        "Confianza", "Si afecta a dinero, impuestos o a un cliente, Noesis no debería decidir por ti.",
+        "Confianza", "Si afecta a dinero, impuestos o a un cliente, Bynoesis no debería decidir por ti.",
         "Enseñar tres momentos: emitir, reclamar y clasificar dudoso; todos con confirmación.",
-        ("‘Automatizar no significa quitarte el control’.", "‘Noesis puede preparar una factura, un recordatorio o una clasificación’.", "‘Pero si es irreversible o dudoso, te pregunta’.", "‘La confianza se construye dejando claro qué sabe y qué no’."),
+        ("‘Automatizar no significa quitarte el control’.", "‘Bynoesis puede preparar una factura, un recordatorio o una clasificación’.", "‘Pero si es irreversible o dudoso, te pregunta’.", "‘La confianza se construye dejando claro qué sabe y qué no’."),
         ("A cámara para el principio.", "Tres microcapturas del producto.", "Cerrar con el botón de confirmar visible."),
         "PREPARAR RÁPIDO. CONFIRMAR LO IMPORTANTE.", "Diseñamos la automatización para ahorrar pasos, no para inventar decisiones.",
         "¿Qué acción no dejarías nunca sin confirmar?", "Comentarios cualificados + retención", "No presentar la confirmación como garantía absoluta; sigue siendo necesario revisar."),
@@ -578,7 +578,7 @@ CARDS = [
         "G01", "Entrevista: el trabajo que nadie ve", "Investigación y comunidad", "Entrevista vertical · 45–60 s",
         "Instagram + LinkedIn", "Autónomo real de un oficio prioritario", "Aprender y construir cercanía antes de tener casos",
         "Investigación", "¿Qué parte de llevar tu negocio haces cuando ya has terminado de trabajar?",
-        "Una pregunta, una respuesta y una conclusión del fundador; no forzar testimonio de Noesis.",
+        "Una pregunta, una respuesta y una conclusión del fundador; no forzar testimonio de Bynoesis.",
         ("Pregunta 1: ‘¿Qué haces al llegar a casa?’.", "Pregunta 2: ‘¿Qué se te suele quedar atrás?’.", "Pregunta 3: ‘¿Qué te gustaría resolver con un audio o mensaje?’.", "Cierre del founder: una frase de aprendizaje, sin vender."),
         ("Grabar en entorno real con permiso.", "Subtítulos literales, edición mínima.", "Recoger consentimiento específico de imagen y publicación."),
         "EL TRABAJO QUE NADIE VE", "Antes de construir promesas, escuchamos cómo se lleva de verdad un negocio de servicios.",
@@ -586,7 +586,7 @@ CARDS = [
     ContentCard(
         "G02", "El paquete que la gestoría sí puede revisar", "Gestoría y partners", "Carrusel + demo · 6 diapositivas",
         "LinkedIn + Facebook", "Gestorías y autónomos con gestor", "Explicar colaboración ordenada, no sustitución",
-        "Evaluación", "Noesis no presenta por tu gestoría: prepara el trabajo para que llegue revisable.",
+        "Evaluación", "Bynoesis no presenta por tu gestoría: prepara el trabajo para que llegue revisable.",
         "Mostrar documentos por periodo, pendientes, trazabilidad y paquete de revisión.",
         ("S1: problema: documentos repartidos.", "S2: orden por periodo y tipo.", "S3: pendientes visibles.", "S4: propuesta de datos, no verdad automática.", "S5: paquete para revisar.", "S6: la gestoría mantiene el criterio fiscal."),
         ("Capturas demo sin datos reales.", "Usar dos colores: preparado / pendiente.", "No mostrar envío o presentación fiscal como automática."),
@@ -614,8 +614,8 @@ def add_cover(doc: Document):
         picture = p.add_run().add_picture(str(LOGO), width=Inches(3.6))
         set_picture_alt(
             picture,
-            title="Logotipo de Noesis",
-            description="Símbolo de estrella y nombre Noesis en verde corporativo.",
+            title="Logotipo de Bynoesis",
+            description="Símbolo de estrella y nombre Bynoesis en verde corporativo.",
         )
         p.paragraph_format.space_after = Pt(36)
     kicker = doc.add_paragraph()
@@ -629,11 +629,11 @@ def add_cover(doc: Document):
     sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     sub.paragraph_format.space_after = Pt(34)
     set_run(sub.add_run("Instagram · Facebook · LinkedIn · Campañas"), size=13, color=MUTED)
-    add_callout(doc, "Que el autónomo primero se sienta entendido, después ayudado y finalmente vea por qué Noesis merece una prueba.", fill=CREAM, accent=FOREST, size=12)
+    add_callout(doc, "Que el autónomo primero se sienta entendido, después ayudado y finalmente vea por qué Bynoesis merece una prueba.", fill=CREAM, accent=FOREST, size=12)
     meta = doc.add_paragraph()
     meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
     meta.paragraph_format.space_before = Pt(30)
-    set_run(meta.add_run("Versión 1.1 · 2 de septiembre de 2026\nUso interno · Noesis"), size=9.5, color=MUTED, bold=True)
+    set_run(meta.add_run("Versión 1.1 · 2 de septiembre de 2026\nUso interno · Bynoesis"), size=9.5, color=MUTED, bold=True)
     page_break(doc)
 
 
@@ -658,7 +658,7 @@ def add_index(doc: Document):
 
 def add_strategy(doc: Document):
     add_title(doc, "La decisión editorial", "Qué debe conseguir el contenido antes de pedir una venta")
-    add_callout(doc, "Noesis no debe parecer una empresa que publica funciones. Debe convertirse en la marca que mejor entiende el trabajo invisible de los autónomos de servicios.", label="Norte")
+    add_callout(doc, "Bynoesis no debe parecer una empresa que publica funciones. Debe convertirse en la marca que mejor entiende el trabajo invisible de los autónomos de servicios.", label="Norte")
     add_heading(doc, "El recorrido que debe provocar", 1)
     add_matrix(doc, ["Momento", "Lo que piensa la persona", "Contenido que lo provoca"], [
         ("1 · Me identifica", "‘Estos entienden mi vida’", "Humor, escenas cotidianas, preguntas reales"),
@@ -696,7 +696,7 @@ def add_audience(doc: Document):
     add_heading(doc, "Qué no debe dominar el contenido", 1)
     add_bullet(doc, "Jerga de startup, IA o finanzas.")
     add_bullet(doc, "Promesas para cualquier empresa o cualquier sector.")
-    add_bullet(doc, "Vida de oficina genérica: Noesis debe oler a furgoneta, visita, herramienta, cliente y fin de jornada.")
+    add_bullet(doc, "Vida de oficina genérica: Bynoesis debe oler a furgoneta, visita, herramienta, cliente y fin de jornada.")
     page_break(doc)
 
 
@@ -798,7 +798,7 @@ def add_calendar(doc: Document):
         ("Semana 1 · ‘Me entienden’", [
             ("Lunes", "IG/FB Reel", "E01 · La segunda jornada", "Compartidos"),
             ("Martes", "Stories", "Encuesta: ‘¿A qué hora acaba de verdad tu día?’", "Respuestas"),
-            ("Miércoles", "LinkedIn founder", "T01 · Por qué construimos Noesis", "Conversaciones"),
+            ("Miércoles", "LinkedIn founder", "T01 · Por qué construimos Bynoesis", "Conversaciones"),
             ("Jueves", "IG carrusel", "R05 · Rutina de tickets", "Guardados"),
             ("Viernes", "IG/FB Reel", "E02 · Cosita rápida", "Comentarios"),
         ]),
@@ -942,15 +942,15 @@ def add_sources(doc: Document):
         "Aprendizaje de retención, conversión, CAC y objeciones por oficio.",
     ):
         add_bullet(doc, item)
-    add_callout(doc, "Hasta que exista esa evidencia, el mejor marketing de Noesis es mostrar con honestidad cómo prepara, organiza y pide confirmación.", fill=CREAM, accent=FOREST, size=11)
+    add_callout(doc, "Hasta que exista esa evidencia, el mejor marketing de Bynoesis es mostrar con honestidad cómo prepara, organiza y pide confirmación.", fill=CREAM, accent=FOREST, size=11)
 
 
 def set_core_properties(doc: Document):
     props = doc.core_properties
-    props.title = "Sistema editorial y guiones de contenido · Noesis"
+    props.title = "Sistema editorial y guiones de contenido · Bynoesis"
     props.subject = "Manual operativo de contenido para Instagram, Facebook, LinkedIn y campañas"
-    props.author = "Noesis"
-    props.keywords = "Noesis, marketing, contenido, guiones, Instagram, Facebook, LinkedIn"
+    props.author = "Bynoesis"
+    props.keywords = "Bynoesis, marketing, contenido, guiones, Instagram, Facebook, LinkedIn"
     props.comments = "Documento interno de trabajo. No contiene datos personales ni resultados simulados."
 
 

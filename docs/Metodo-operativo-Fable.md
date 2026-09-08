@@ -1,6 +1,6 @@
 # Método operativo de Fable
 
-> **Qué es este documento.** El cerebro operativo de Fable 5 aplicado a Noesis,
+> **Qué es este documento.** El cerebro operativo de Fable 5 aplicado a Bynoesis,
 > escrito para ser heredado. No es una guía de estilo ni una lista de normas: es el
 > criterio con el que se ha ordenado este producto, explicado para que **Opus pueda
 > revisar estrategia** y **Codex pueda ejecutar código** sin reinterpretar el
@@ -11,7 +11,7 @@
 > Última revisión de continuidad: **2026-07-20**.
 >
 > **Dirección de producto y diseño (fijada 2026-07-08):** la piel y el lenguaje de
-> Noesis se rigen por `docs/design/` — [`PRODUCT_PRINCIPLES.md`](design/PRODUCT_PRINCIPLES.md)
+> Bynoesis se rigen por `docs/design/` — [`PRODUCT_PRINCIPLES.md`](design/PRODUCT_PRINCIPLES.md)
 > (la frase pilar, el modelo mente/cuerpo y las seis leyes), [`DESIGN.md`](design/DESIGN.md),
 > [`UX_COPY.md`](design/UX_COPY.md) y [`STYLE_TOKENS.json`](design/STYLE_TOKENS.json).
 > Antes de tocar cualquier pantalla o copy, léelos.
@@ -20,7 +20,7 @@
 
 ## 1. Cómo Fable entiende el producto
 
-**Qué es Noesis.** Un sistema operativo de negocio para autónomos y pequeñas
+**Qué es Bynoesis.** Un sistema operativo de negocio para autónomos y pequeñas
 empresas de servicios, con WhatsApp como canal diferencial y un asistente que actúa
 como apoyo de CEO/CFO/administrativo/comercial. No es "una app de IA": la IA es el
 acompañante, no el producto. El producto es **orden**: agenda, clientes, cobros,
@@ -28,7 +28,7 @@ facturas, documentos y gestoría conectados con trazabilidad.
 
 **Qué problema real resuelve.** El autónomo de servicios (fontanero, reformas,
 limpieza…) pierde dinero y calma por tres vías: trabajos hechos sin facturar,
-facturas sin cobrar y la caja de zapatos de papeles para la gestoría. Noesis cierra
+facturas sin cobrar y la caja de zapatos de papeles para la gestoría. Bynoesis cierra
 el ciclo *"del trabajo terminado al dinero cobrado"* y convierte la caja de zapatos
 en un paquete ordenado. Todo lo demás (CRM, proyectos, ratios) orbita alrededor de
 ese ciclo; si una función no lo alimenta, es secundaria.
@@ -38,7 +38,7 @@ desde el móvil, en ratos muertos, con poca paciencia para software. Cada pantal
 debe responder: *qué pasa, qué falta, qué hago ahora*. Ver [[Producto]] y
 [[Benchmark_SaaS]].
 
-**Qué NO debe convertirse Noesis.**
+**Qué NO debe convertirse Bynoesis.**
 - Un ERP genérico con cuarenta menús (eso ya existe y aburre al cliente objetivo).
 - Un chatbot que promete y no persiste nada.
 - Un panel de demos: pantallas bonitas sin backend son deuda, no progreso.

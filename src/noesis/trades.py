@@ -12,7 +12,7 @@ entonces la operación tributa entera al 21%. Es la equivocación más fácil de
 cometer en reformas, y solo se puede avisar si cada línea dice si es material o
 mano de obra. Por eso el catálogo lo marca y la factura lo conserva.
 
-Noesis **avisa, no decide**: no cambia tipos ni bloquea la emisión. Las otras
+Bynoesis **avisa, no decide**: no cambia tipos ni bloquea la emisión. Las otras
 condiciones del reducido —vivienda de particular, construcción terminada hace
 más de dos años— no constan en el sistema y las conoce el autónomo, así que la
 elección final es suya. Los precios son orientativos: se ajustan con el cliente.

@@ -23,18 +23,36 @@ _FIELDS = ("concept", "amount", "vat_rate", "date", "supplier")
 
 
 def _json_object(text: str) -> dict | None:
+    """Primer objeto JSON de una respuesta del modelo.
+
+    Un PDF con varias facturas dentro se contesta como **lista** de objetos, no como
+    uno solo. Antes se recortaba desde la primera llave hasta la última, así que con
+    dos o más objetos quedaba un texto con comas sueltas que no era JSON: la
+    respuesta correcta del modelo se tiraba a la basura y el documento acababa sin
+    clasificar. Vale el primer objeto, porque todos describen el mismo papel.
+    """
     text = (text or "").strip()
     if text.startswith("```"):
         lines = text.splitlines()
         text = "\n".join(lines[1:-1]).strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        value = json.loads(text[start:end + 1])
-    except (json.JSONDecodeError, TypeError):
-        return None
-    return value if isinstance(value, dict) else None
+    intentos = [text]
+    # Recortes por si el modelo escribe algo alrededor del JSON.
+    for apertura, cierre in (("[", "]"), ("{", "}")):
+        inicio, fin = text.find(apertura), text.rfind(cierre)
+        if 0 <= inicio < fin:
+            intentos.append(text[inicio:fin + 1])
+    for intento in intentos:
+        try:
+            value = json.loads(intento)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list):
+            primero = next((item for item in value if isinstance(item, dict)), None)
+            if primero is not None:
+                return primero
+    return None
 
 
 def _short_text(value, max_length: int) -> str | None:
@@ -149,6 +167,13 @@ def _validated_invoice(raw: dict | None) -> dict | None:
         "total": _money(raw.get("total")),
         "confidence": confidence,
     }
+    from ..fiscal_validation import invoice_draft_issues
+
+    issues = invoice_draft_issues(result)
+    result["validation_issues"] = issues
+    result["requires_review"] = bool(issues)
+    if issues and result["confidence"] is not None:
+        result["confidence"] = min(result["confidence"], 50)
     essentials = ("total", "supplier", "customer", "number")
     return result if any(result[f] is not None for f in essentials) else None
 
@@ -365,9 +390,22 @@ def classify_document(
             getattr(block, "text", "") for block in response.content
             if getattr(block, "type", "") == "text"
         )
-        return _validated_classification(_json_object(text)) or fallback
+        propuesta = _validated_classification(_json_object(text))
+        if propuesta:
+            return propuesta
+        # Distinguir «la IA no supo» de «la IA contestó y no la entendimos» es lo que
+        # convierte un fallo silencioso en algo diagnosticable: por fuera los dos se
+        # veían igual, como una heurística dudando.
+        log.warning(
+            "La IA respondió pero no se pudo interpretar su clasificación (%d caracteres).",
+            len(text),
+        )
+        return fallback
     except Exception as exc:  # noqa: BLE001
-        log.warning("No se pudo clasificar el documento: %s", type(exc).__name__)
+        log.warning(
+            "No se pudo clasificar el documento: %s: %s",
+            type(exc).__name__, str(exc)[:200],
+        )
         return fallback
 
 

@@ -188,6 +188,22 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
     return doc
 
 
+def reclassify(business_id: int, doc_id: int) -> dict | None:
+    """Vuelve a proponer el tipo de un documento ya archivado.
+
+    Reenviar el mismo papel es la forma natural de pedir «míralo otra vez»: pudo
+    guardarse cuando no había IA disponible, o con una propuesta que no llegó al
+    listón de confianza. Sin esto, el duplicado era un callejón sin salida.
+    """
+    doc = repo.get(doc_id, business_id)
+    if not doc:
+        return None
+    proposal = classify(business_id, doc_id)
+    doc = repo.get(doc_id, business_id) or doc
+    doc["classification"] = proposal
+    return doc
+
+
 def _fold_reference(value: str | None) -> str:
     text = unicodedata.normalize("NFKD", str(value or "").strip().lower())
     text = "".join(char for char in text if not unicodedata.combining(char))

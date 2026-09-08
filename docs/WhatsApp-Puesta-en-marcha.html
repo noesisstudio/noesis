@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Puesta en marcha de WhatsApp · Noesis</title>
+<title>Puesta en marcha de WhatsApp · Bynoesis</title>
 <style>
   :root {
     --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
@@ -180,7 +180,7 @@
 <div class="page">
 
   <header>
-    <p class="eyebrow">Noesis · Runbook de producción</p>
+    <p class="eyebrow">Bynoesis · Runbook de producción</p>
     <h1>Poner WhatsApp en marcha</h1>
     <p class="standfirst">Todo lo que falta para que el canal funcione con clientes reales, en orden de dependencia. El motor multicanal ya está construido y desplegado: lo que queda es trabajo con Meta, salvo un punto que es código.</p>
     <p class="crumbs">Variables y criterios de aceptación en <code>Conectar-APIs.md</code> §4. Cómo funciona el modelo por dentro, en <code>WhatsApp-Como-funciona.pdf</code>. Pendientes vivos en <code>Tareas-vivas.md</code>; foto verificable en <code>project-state.json</code>.</p>
@@ -212,12 +212,12 @@
   <section>
     <div class="sec-head">
       <h2>Lo primero: ahora hay dos clases de número</h2>
-      <p class="sec-intro">Es el cambio que hace que este documento no se parezca a lo que dice el asistente de Meta. Un número es de Noesis. Los otros son de cada cliente.</p>
+      <p class="sec-intro">Es el cambio que hace que este documento no se parezca a lo que dice el asistente de Meta. Un número es de Bynoesis. Los otros son de cada cliente.</p>
     </div>
 
     <div class="scroll">
       <table>
-        <thead><tr><th>&nbsp;</th><th>Número central de Noesis</th><th>Número comercial de cada negocio</th></tr></thead>
+        <thead><tr><th>&nbsp;</th><th>Número central de Bynoesis</th><th>Número comercial de cada negocio</th></tr></thead>
         <tbody>
           <tr><td><strong>Quién escribe</strong></td><td>Titular y trabajadores</td><td>Los clientes finales de ese autónomo</td></tr>
           <tr><td><strong>Cuántos</strong></td><td>Uno, compartido</td><td>Uno por negocio</td></tr>
@@ -228,7 +228,7 @@
       </table>
     </div>
 
-    <div class="note"><strong>Un número comercial no añade variables de entorno.</strong> Meta concede el activo al usuario del sistema de Noesis, y el WABA y el <code>phone_number_id</code> se registran desde Administración. El formulario solo admite identificadores públicos: nunca tokens ni secretos.</div>
+    <div class="note"><strong>Un número comercial no añade variables de entorno.</strong> Meta concede el activo al usuario del sistema de Bynoesis, y el WABA y el <code>phone_number_id</code> se registran desde Administración. El formulario solo admite identificadores públicos: nunca tokens ni secretos.</div>
   </section>
 
   <section>
@@ -338,7 +338,7 @@
             <span class="chip chip-flat">Sale en el asistente</span>
           </div>
           <ol>
-            <li>Añade el número y elige nombre para mostrar: <strong>Noesis</strong>. Pasa una revisión y debe encajar con la marca y el dominio.</li>
+            <li>Añade el número y elige nombre para mostrar: <strong>Bynoesis</strong>. Pasa una revisión y debe encajar con la marca y el dominio.</li>
             <li>Verifica por SMS o llamada.</li>
             <li>Fija el <strong>PIN de seis dígitos</strong> y guárdalo en el gestor de contraseñas: sin él no se puede migrar ni recuperar el número.</li>
             <li>Copia el <strong>Phone number ID</strong> —no el número— a <code>WHATSAPP_PHONE_ID</code>.</li>
@@ -384,7 +384,7 @@
             <span class="chip chip-warn">Verde no significa correcto</span>
           </div>
           <ul>
-            <li>Callback: <code>https://bynoesis.com/webhook/whatsapp</code>. Es <strong>el mismo para todos los números</strong>, centrales y comerciales: Noesis distingue por el receptor.</li>
+            <li>Callback: <code>https://bynoesis.com/webhook/whatsapp</code>. Es <strong>el mismo para todos los números</strong>, centrales y comerciales: Bynoesis distingue por el receptor.</li>
             <li>Verify token: el mismo valor que <code>WHATSAPP_VERIFY_TOKEN</code> en Railway.</li>
             <li>Suscribe el campo <code>messages</code> <strong>en cada WABA</strong>, no solo en la app. Sin esa suscripción no entra nada aunque el webhook esté verificado.</li>
             <li>Copia el <strong>App Secret</strong> a <code>WHATSAPP_APP_SECRET</code>. En producción la firma es obligatoria: sin el secreto, todo entra como 401.</li>
@@ -400,7 +400,7 @@
             <span class="chip chip-stop">De horas a una semana</span>
           </div>
           <p>Centro de cuentas de empresa → Centro de seguridad → <strong>Verificación de empresa</strong>. Arráncalo el primer día: es lo que más tarda y limita cuántos números puedes tener.</p>
-          <p>La identidad legal de Noesis ya está completada y publicada, así que el dato que declares en Meta debe ser exactamente ese.</p>
+          <p>La identidad legal de Bynoesis ya está completada y publicada, así que el dato que declares en Meta debe ser exactamente ese.</p>
 
           <div class="scroll">
             <table>
@@ -435,7 +435,7 @@
             <h3>El cliente concede el activo</h3>
             <span class="chip chip-warn">Lo hace él, no tú</span>
           </div>
-          <p>El negocio da a su WABA y a su número acceso al usuario del sistema de Noesis desde su propio Business Manager. Hasta que Meta registre esa concesión, el token no puede enviar por ese número aunque lo des de alta.</p>
+          <p>El negocio da a su WABA y a su número acceso al usuario del sistema de Bynoesis desde su propio Business Manager. Hasta que Meta registre esa concesión, el token no puede enviar por ese número aunque lo des de alta.</p>
         </div>
       </li>
 
@@ -488,16 +488,16 @@
 
     <div class="note"><strong>El número y el orden de las variables están fijados en el código.</strong> Cambiarlos en Meta sin cambiar el código rompe el envío, y Meta no avisa: simplemente lo rechaza.</div>
 
-    <h4>Una variable · el cuerpo lo genera Noesis entero</h4>
+    <h4>Una variable · el cuerpo lo genera Bynoesis entero</h4>
     <div class="tpl-grid">
       <div class="tpl">
         <div class="tpl-top"><span class="tpl-name">noesis_resumen_diario</span><span class="arity">1 variable</span></div>
-        <div class="tpl-body">Tu parte de hoy en Noesis:<br><span class="v"><b>1</b><i>el parte entero</i></span></div>
+        <div class="tpl-body">Tu parte de hoy en Bynoesis:<br><span class="v"><b>1</b><i>el parte entero</i></span></div>
         <p class="tpl-use">El parte de la mañana.</p>
       </div>
       <div class="tpl">
         <div class="tpl-top"><span class="tpl-name">noesis_resumen_semanal</span><span class="arity">1 variable</span></div>
-        <div class="tpl-body">Tu semana en Noesis:<br><span class="v"><b>1</b><i>el repaso entero</i></span></div>
+        <div class="tpl-body">Tu semana en Bynoesis:<br><span class="v"><b>1</b><i>el repaso entero</i></span></div>
         <p class="tpl-use">El repaso de la semana.</p>
       </div>
       <div class="tpl">
@@ -507,7 +507,7 @@
       </div>
       <div class="tpl">
         <div class="tpl-top"><span class="tpl-name">noesis_aviso_fiscal</span><span class="arity">1 variable</span></div>
-        <div class="tpl-body">Aviso fiscal de Noesis:<br><span class="v"><b>1</b><i>el aviso entero</i></span></div>
+        <div class="tpl-body">Aviso fiscal de Bynoesis:<br><span class="v"><b>1</b><i>el aviso entero</i></span></div>
         <p class="tpl-use">Aviso trimestral de los modelos 303 y 130.</p>
       </div>
       <div class="tpl">

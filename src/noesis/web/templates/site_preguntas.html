@@ -1,16 +1,16 @@
 {% extends "site_base.html" %}
-{% block page_title %}Preguntas sobre Noesis y WhatsApp{% endblock %}
-{% block meta_description %}Respuestas claras sobre WhatsApp, Veri*Factu, gestoría, equipo, datos, seguridad, prueba y precios de Noesis.{% endblock %}
+{% block page_title %}Preguntas sobre Bynoesis y WhatsApp{% endblock %}
+{% block meta_description %}Respuestas claras sobre WhatsApp, Veri*Factu, gestoría, equipo, datos, seguridad, prueba y precios de Bynoesis.{% endblock %}
 {% block content %}
   <section class="public-page-hero faq-page-hero">
-    <div><span class="eyebrow">Preguntas</span><h1>Lo importante antes de confiar tu negocio a Noesis.</h1></div>
+    <div><span class="eyebrow">Preguntas</span><h1>Lo importante antes de confiar tu negocio a Bynoesis.</h1></div>
     <p>Respuestas directas sobre cómo funciona, qué decide el sistema y qué control conservas tú.</p>
   </section>
 
   <section class="public-section faq-layout" id="faq">
     <aside class="faq-index" aria-label="Categorías de preguntas">
       <b>En esta página</b>
-      <a href="#empezar">Empezar</a><a href="#whatsapp">WhatsApp y Noesis</a>
+      <a href="#empezar">Empezar</a><a href="#whatsapp">WhatsApp y Bynoesis</a>
       <a href="#legalidad">Facturación y legalidad</a><a href="#datos">Datos y seguridad</a>
       <a href="#equipo-faq">Equipo y gestoría</a>
     </aside>
@@ -21,23 +21,23 @@
         <details><summary>¿Qué pasa después de los 14 días?</summary><p>{% if public_signup_available %}Si no eliges plan, sigues entrando a consultar y descargar todo lo tuyo; lo que se queda esperando es crear, enviar y automatizar. No desaparece nada ni se te cobra automáticamente.{% else %}La prueba pública todavía no está abierta. Durante el piloto acordamos contigo el acceso y nunca hacemos un cobro sin que elijas antes un plan.{% endif %}</p></details>
       </div></section>
 
-      <section id="whatsapp"><span class="eyebrow">WhatsApp y Noesis</span><h2>Hablar, entender y actuar</h2><div class="public-accordion">
-        <details><summary>¿Puedo hablarle con notas de voz?</summary><p>{% if voice_available %}Sí. Noesis puede transcribir una instrucción, identificar los datos relevantes y preparar el siguiente paso para que lo revises.{% else %}La función está preparada y se habilita durante la puesta en marcha. Si no está activa, Noesis conserva el audio y te pide el dato por escrito sin inventarlo.{% endif %}</p></details>
+      <section id="whatsapp"><span class="eyebrow">WhatsApp y Bynoesis</span><h2>Hablar, entender y actuar</h2><div class="public-accordion">
+        <details><summary>¿Puedo hablarle con notas de voz?</summary><p>{% if voice_available %}Sí. Bynoesis puede transcribir una instrucción, identificar los datos relevantes y preparar el siguiente paso para que lo revises.{% else %}La función está preparada y se habilita durante la puesta en marcha. Si no está activa, Bynoesis conserva el audio y te pide el dato por escrito sin inventarlo.{% endif %}</p></details>
         <details><summary>¿Entiende fotografías de tickets y facturas?</summary><p>{% if ocr_available %}Puede detectar y extraer documentos. Si el tipo o algún dato no está claro, lo deja pendiente y te pregunta antes de clasificarlo definitivamente.{% else %}Guarda y ordena el documento. La lectura automática se habilita durante la puesta en marcha; mientras tanto, te pide confirmar los datos antes de registrarlos.{% endif %}</p></details>
-        <details><summary>¿Noesis envía o paga sin preguntarme?</summary><p>No. Preparar no es autorizar. Enviar facturas, reclamar cobros, mover citas o cualquier acción irreversible requiere el nivel de permiso definido y, en los casos sensibles, tu confirmación.</p></details>
+        <details><summary>¿Bynoesis envía o paga sin preguntarme?</summary><p>No. Preparar no es autorizar. Enviar facturas, reclamar cobros, mover citas o cualquier acción irreversible requiere el nivel de permiso definido y, en los casos sensibles, tu confirmación.</p></details>
       </div></section>
 
       <section id="legalidad"><span class="eyebrow">Facturación y legalidad</span><h2>Trabajar en regla</h2><div class="public-accordion">
-        <details><summary>¿Puedo emitir facturas correctas antes de activar Veri*Factu?</summary><p>Sí, para los casos actualmente soportados: factura completa o simplificada, series correlativas, fecha, emisor, destinatario cuando corresponde, conceptos, IVA, IRPF y total. Noesis bloquea la emisión si faltan datos obligatorios. Operaciones exentas, no sujetas o internacionales requieren todavía revisión específica con la gestoría.</p></details>
+        <details><summary>¿Puedo emitir facturas correctas antes de activar Veri*Factu?</summary><p>Sí, para los casos actualmente soportados: factura completa o simplificada, series correlativas, fecha, emisor, destinatario cuando corresponde, conceptos, IVA, IRPF y total. Bynoesis bloquea la emisión si faltan datos obligatorios. Operaciones exentas, no sujetas o internacionales requieren todavía revisión específica con la gestoría.</p></details>
         <details><summary>¿Está adaptado a Veri*Factu?</summary><p>El registro, la huella, el QR, la cola y la conexión técnica están preparados, pero no se activan como servicio definitivo sin certificado y pruebas con la AEAT. Según el calendario vigente, la adaptación es obligatoria desde el 1 de enero de 2027 para sociedades y desde el 1 de julio de 2027 para el resto de empresas y autónomos.</p></details>
-        <details><summary>¿Calcula IVA e IRPF?</summary><p>Sí, aplicando las reglas configuradas en cada documento. Noesis no presenta una estimación fiscal como definitiva: tu gestoría valida la presentación.</p></details>
+        <details><summary>¿Calcula IVA e IRPF?</summary><p>Sí, aplicando las reglas configuradas en cada documento. Bynoesis no presenta una estimación fiscal como definitiva: tu gestoría valida la presentación.</p></details>
         <details><summary>¿Sustituye a mi gestoría?</summary><p>No. Ordena y prepara el trabajo administrativo. La gestoría mantiene el criterio profesional en las decisiones fiscales delicadas.</p></details>
       </div></section>
 
       <section id="datos"><span class="eyebrow">Datos y seguridad</span><h2>Tu negocio sigue siendo tuyo</h2><div class="public-accordion">
         <details><summary>¿Puedo llevarme mis datos?</summary><p>Sí. Puedes exportar la cuenta y descargar los principales registros y documentos.</p></details>
         <details><summary>¿Mis datos están separados de otros negocios?</summary><p>Sí. Cada lectura y escritura se limita al negocio correspondiente, con controles de sesión y aislamiento por identificador de negocio.</p></details>
-        <details><summary>¿Toda la información sale a una IA externa?</summary><p>No. Lo rutinario se intenta resolver dentro de Noesis. La IA externa se reserva para tareas avanzadas y se puede desactivar desde Ajustes.</p></details>
+        <details><summary>¿Toda la información sale a una IA externa?</summary><p>No. Lo rutinario se intenta resolver dentro de Bynoesis. La IA externa se reserva para tareas avanzadas y se puede desactivar desde Ajustes.</p></details>
       </div></section>
 
       <section id="equipo-faq"><span class="eyebrow">Equipo y gestoría</span><h2>Que cada persona vea solo lo que necesita</h2><div class="public-accordion">
@@ -49,7 +49,7 @@
   </section>
 
   <section class="team-contact" aria-labelledby="faq-contact-title">
-    <div><span class="eyebrow">¿Prefieres hablarlo en directo?</span><h2 id="faq-contact-title">Agenda una reunión con nosotros.</h2><p>Cuéntanos tu caso concreto y te enseñamos Noesis con tus propios datos.</p></div>
+    <div><span class="eyebrow">¿Prefieres hablarlo en directo?</span><h2 id="faq-contact-title">Agenda una reunión con nosotros.</h2><p>Cuéntanos tu caso concreto y te enseñamos Bynoesis con tus propios datos.</p></div>
     <a class="btn primary" href="https://cal.com/bynoesis" target="_blank" rel="noopener">Agendar reunión <span aria-hidden="true">→</span></a>
   </section>
 {% endblock %}

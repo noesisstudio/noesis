@@ -23,7 +23,7 @@ def _subscription_required(business: dict | None) -> JSONResponse | None:
     return JSONResponse(
         {
             "error": (
-                "La cuenta está en modo consulta. El titular debe activar Noesis "
+                "La cuenta está en modo consulta. El titular debe activar Bynoesis "
                 "antes de registrar cambios."
             ),
             "code": "subscription_required",

@@ -1,4 +1,4 @@
-/* Helpers compartidos por todas las páginas de Noesis. */
+/* Helpers compartidos por todas las páginas de Bynoesis. */
 const BIZ = window.NOESIS_BIZ;
 
 const eur = n => (n ?? 0).toLocaleString('es-ES',
@@ -181,7 +181,7 @@ function barlist(items, cls) {
 }
 
 /* Compartir un enlace privado (portal, presupuesto, acceso del equipo).
-   Es el momento en que Noesis "sale" hacia el cliente final, así que enseña
+   Es el momento en que Bynoesis "sale" hacia el cliente final, así que enseña
    una previsualización de lo que va a recibir, no un campo de texto pelado.
    Modal accesible: atrapa Escape y devuelve el foco a quien lo abrió. */
 const WA_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 18.2a8.1 8.1 0 0 1-4.2-1.1l-.3-.2-3 .8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.6.8-.8 1-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4 0-.5.1-.7l.4-.5c.1-.2.2-.3.3-.5v-.5c0-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
@@ -276,7 +276,7 @@ function qcSheet() {
     ${item('clientes?nuevo=1', 'Cliente', 'una ficha nueva')}
     ${item('costes?nuevo=1', 'Gasto', 'apunta un ticket')}
     ${item('equipo?nuevo=1', 'Persona del equipo', 'con su acceso de fichaje')}
-    ${item('asistente', 'Trabajo (por chat)', 'díselo a Noesis con tus palabras')}
+    ${item('asistente', 'Trabajo (por chat)', 'díselo a Bynoesis con tus palabras')}
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });

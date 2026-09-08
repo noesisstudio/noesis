@@ -87,7 +87,7 @@ def _summary_pdf(business: dict, label: str, invoices: list[dict],
     pdf.ln(6)
     pdf.set_font("helvetica", "I", 9)
     pdf.set_text_color(110, 110, 110)
-    pdf.multi_cell(0, 5, "Generado por Noesis (bynoesis.com). Los PDFs de las "
+    pdf.multi_cell(0, 5, "Generado por Bynoesis (bynoesis.com). Los PDFs de las "
                          "facturas y los justificantes de gasto acompanan a este "
                          "resumen dentro del mismo paquete.")
     return bytes(pdf.output())
@@ -305,10 +305,10 @@ def notify_gestoria(business: dict, label: str) -> bool:
     return email_adapter.queue_email(
         email,
         f"Documentación {label} de {business.get('name') or 'su cliente'}",
-        (f"Hola,\n\n{business.get('name') or 'Su cliente'} usa Noesis para su "
+        (f"Hola,\n\n{business.get('name') or 'Su cliente'} usa Bynoesis para su "
          f"gestión. El paquete del período {label} (facturas emitidas, gastos "
          f"con justificantes y resumen fiscal) ya está disponible aquí:\n\n"
-         f"{link}\n\nEste enlace es privado; no lo compartas.\n\n— Noesis"),
+         f"{link}\n\nEste enlace es privado; no lo compartas.\n\n— Bynoesis"),
         business_id=business["id"],
         idempotency_key=f"gestoria:{business['id']}:{label}",
     )

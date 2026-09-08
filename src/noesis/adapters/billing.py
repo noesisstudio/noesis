@@ -1,6 +1,6 @@
 """Adaptador de cobro de la suscripción (Stripe), solo stdlib (urllib).
 
-No añadimos la librería oficial de Stripe para mantener Noesis ligero: hablamos con
+No añadimos la librería oficial de Stripe para mantener Bynoesis ligero: hablamos con
 la API REST de Stripe por HTTPS. Dos implementaciones:
 
   - StripeBillingProvider -> Checkout real cuando hay STRIPE_SECRET_KEY.
@@ -206,7 +206,7 @@ class StripeBillingProvider:
         return products
 
     def _managed_portal_configuration(self, return_url: str) -> str | None:
-        """Obtiene o crea el portal que necesitan los flujos vendidos por Noesis.
+        """Obtiene o crea el portal que necesitan los flujos vendidos por Bynoesis.
 
         Stripe separa la sesión del portal de sus capacidades. Esta configuración
         versionada evita que los botones dependan de ajustes manuales diferentes
@@ -224,7 +224,7 @@ class StripeBillingProvider:
 
             data = {
                 "business_profile[headline]": (
-                    "Gestiona tu plan de Noesis de forma segura."
+                    "Gestiona tu plan de Bynoesis de forma segura."
                 ),
                 "business_profile[privacy_policy_url]": (
                     f"{config.BASE_URL}/privacidad"

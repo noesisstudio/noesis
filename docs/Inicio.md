@@ -1,4 +1,4 @@
-# 🧭 Noesis — Inicio
+# 🧭 Bynoesis — Inicio
 
 Mapa de contenido (MOC) del proyecto. Abre esta carpeta como *vault* en Obsidian y
 usa la vista de grafo para navegar.
@@ -8,8 +8,12 @@ usa la vista de grafo para navegar.
 - [[Tareas-vivas]] — único listado vivo de pendientes y prioridades.
 - [[Registro-cambios]] — bitácora cronológica obligatoria: qué cambió, pruebas,
   riesgos y pista para diagnosticar o revertir una regresión.
-- [[Plan-maestro-Noesis]] — visión, principios, arquitectura objetivo y criterios.
-- [[Producto]] — qué es Noesis, para quién y la propuesta de valor.
+- [[Plan-maestro-Bynoesis]] — visión, principios, arquitectura objetivo y criterios.
+- [[Producto]] — qué es Bynoesis, para quién y la propuesta de valor.
+- [[Propuesta-sistema-retencion-habito-valor]] — propuesta para socios que integra
+  Habit, Trust, Value, WUB y las fases posteriores de Insight, Progress y Confidence.
+- [[Registro-interno-valor]] — contrato técnico del esquema 54: taxonomía,
+  idempotencia, WUB, outcomes, privacidad, flags, auditoría y rollback.
 - [[Competencia]] — Forjia y el resto del mercado.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
@@ -25,6 +29,14 @@ usa la vista de grafo para navegar.
   del art. 30, retención, subencargados y transferencias, riesgos, brechas,
   derechos y continuidad con RPO/RTO. El prompt que lo generó está en
   [`prompts/Prompt-Seguridad-Datos-UE`](prompts/Prompt-Seguridad-Datos-UE.md).
+- [[RGPD-Registro-actividades]] — inventario vivo de tratamientos como responsable
+  y como encargado, con categorías, bases, destinatarios y controles.
+- [[RGPD-Matriz-proveedores]] — rol, datos, activación y evidencia contractual que
+  se exige a cada proveedor antes de recibir datos reales.
+- [[RGPD-Procedimiento-derechos-y-bajas]] — recepción, verificación, conservación,
+  resolución y prueba de las solicitudes de derechos y baja.
+- [[RGPD-Procedimiento-brechas]] — contención, evaluación, comunicaciones y cierre
+  de incidentes con datos personales.
 - [`Diagnostico.pdf`](Diagnostico.pdf) — cuando algo falla, dónde mirar: las siete
   piezas, las cuatro puertas de una petición, síntomas y causas, y qué preguntar.
 - [`Diagnostico-tecnico.pdf`](Diagnostico-tecnico.pdf) — lo mismo con el archivo, la
@@ -53,14 +65,14 @@ usa la vista de grafo para navegar.
   credenciales, solo lectura y activación segura.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
-- [`Noesis-Modelo-Economico.xlsx`](Noesis-Modelo-Economico.xlsx) — modelo vivo:
+- [`Bynoesis-Modelo-Economico.xlsx`](Bynoesis-Modelo-Economico.xlsx) — modelo vivo:
   supuestos, unit economics, escenarios, proyección a 24 meses, sensibilidad,
   capacidad de soporte, captación y KPIs del piloto. Se regenera con
   `python analysis/build_modelo_economico.py`.
 - [`Estrategia-Marketing.pdf`](Estrategia-Marketing.pdf) — a quién vendemos, con qué
   mensaje, por qué canales, cuánto podemos pagar por un cliente, dónde entra la IA
   y las vías de escape con sus criterios de parada.
-- [`Marketing-Noesis.pdf`](Marketing-Noesis.pdf) — **manual maestro de marketing**:
+- [`Marketing-Bynoesis.pdf`](Marketing-Bynoesis.pdf) — **manual maestro de marketing**:
   consolida la estrategia, la marca, las 24 piezas de contenido con su gancho, copy,
   CTA y métrica, la producción, la publicación en Instagram y Facebook, la medición
   y los criterios de parada. Sustituye a `Estrategia-Marketing` y `Publicar-en-redes`.
@@ -72,15 +84,26 @@ usa la vista de grafo para navegar.
 - [`Plan-60-dias.pdf`](Plan-60-dias.pdf) — el plan de ejecución que pone fecha a todo
   lo anterior: cuatro frentes en paralelo, nueve semanas y una puerta de salida por
   semana.
-- [`Estado-Noesis.xlsx`](Estado-Noesis.xlsx) — estado de cada pieza en hoja de cálculo:
+- [`Estado-Bynoesis.xlsx`](Estado-Bynoesis.xlsx) — estado de cada pieza en hoja de cálculo:
   canal de Meta, plantillas y catálogos por oficio. Se regenera con
   `python scripts/build_estado_xlsx.py`.
+- [[Constitucion-y-primer-euro]] — la pieza que `Ruta-legal` no cubre: S.L. o
+  autónomo decidido por lo que Meta verifica de verdad, los trámites de constitución
+  en orden de dependencia y el presupuesto del arranque.
+- [[RGPD-estado-y-plan]] — auditoría de protección de datos contra el código y los
+  textos publicados, complementaria a la parte 5 de `Ruta-legal`: qué cumple ya y los
+  hallazgos concretos que quedaban fuera.
+- [[Servidores-y-residencia-de-datos]] — no existe la «licencia RGPD»: qué exige de
+  verdad un proveedor, qué cumple Railway, dónde están hoy los datos y por qué mover
+  la región es más barato antes del primer cliente.
+- [[RGPD-QUE-HACER]] — la lista ejecutable que sale de los dos anteriores: qué hacer
+  hoy, qué antes de cobrar, qué encargar fuera y diez criterios verificables.
 - [[Unit-economics-y-cerebro-interno]] — precios, márgenes, escala y decisión de IA.
 - [[Analisis-unit-economics.ipynb]] — modelo reproducible completo por plan.
 - [[Piloto-operativo]] — puerta de salida, casos reales, métricas e incidentes.
 - [[Fiscalidad]] — IVA, IRPF y Verifactu.
 - [[Roadmap]] — qué está hecho y qué falta, por fases.
-- [[Despliegue]] — cómo operar Noesis online 24/7 en bynoesis.com.
+- [[Despliegue]] — cómo operar Bynoesis online 24/7 en bynoesis.com.
 - [[Decisiones]] — registro de decisiones importantes (y por qué).
 - [[Metodo-operativo-Fable]] — el criterio de trabajo, heredable por Opus y Codex.
 - [[Preguntas-abiertas]] — dudas que esperan respuesta del founder.

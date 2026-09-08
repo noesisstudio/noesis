@@ -16,7 +16,7 @@
 - **¿Requiere revisión antes de implementar?** sí / no — <de quién>
 
 ### 1. Contexto del producto (2-4 líneas)
-<Qué es Noesis y qué papel juega esta tarea en el ciclo trabajo→factura→cobro→gestoría.
+<Qué es Bynoesis y qué papel juega esta tarea en el ciclo trabajo→factura→cobro→gestoría.
 No repitas los docs: enlaza [[Producto]] / [[Arquitectura]] y di solo lo específico.>
 
 ### 2. Objetivo de la tarea

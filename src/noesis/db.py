@@ -653,7 +653,7 @@ def set_whatsapp_status(business_id, status, phone=None) -> dict:
                 (norm,),
             ).fetchone():
                 raise ValueError(
-                    "Ese teléfono ya identifica a un trabajador en Noesis. "
+                    "Ese teléfono ya identifica a un trabajador en Bynoesis. "
                     "Cada número central debe tener una sola identidad."
                 )
             conn.execute("UPDATE businesses SET whatsapp_status=?, whatsapp_phone=? "
@@ -1944,8 +1944,8 @@ def integration_catalog(business_id: int) -> list[dict]:
         }
 
     definitions = (
-        ("whatsapp", "WhatsApp", "Habla con Noesis y recibe avisos desde el móvil."),
-        ("ai_local", "IA privada", "Modelo propio en infraestructura controlada por Noesis."),
+        ("whatsapp", "WhatsApp", "Habla con Bynoesis y recibe avisos desde el móvil."),
+        ("ai_local", "IA privada", "Modelo propio en infraestructura controlada por Bynoesis."),
         ("ai_external", "IA avanzada", "Respaldo para consultas y documentos complejos."),
         ("email", "Correo", "Envíos de gestoría, acceso y comunicaciones operativas."),
         ("verifactu", "Veri*Factu", "Registro fiscal preparado y, con certificado, envío a AEAT."),
@@ -1986,7 +1986,7 @@ def integration_catalog(business_id: int) -> list[dict]:
             tone = "green" if active else "gray"
             detail = (
                 f"Modelo {config.LOCAL_AI_MODEL}; no consume créditos externos"
-                if active else "Noesis puede conectarla sin cambiar sus herramientas"
+                if active else "Bynoesis puede conectarla sin cambiar sus herramientas"
             )
         elif key == "ai_external":
             active = integration_enabled(
@@ -2193,7 +2193,7 @@ def business_operational_health(business_id: int) -> dict:
     }
 
 
-# ------------------------------------------------------- Memoria de Noesis ---
+# ------------------------------------------------------- Memoria de Bynoesis ---
 def add_assistant_message(
     business_id: int,
     role: str,
@@ -2203,7 +2203,7 @@ def add_assistant_message(
     page: str | None = None,
     source: str | None = None,
 ) -> dict:
-    """Guarda una intervención del usuario o de Noesis, aislada por negocio."""
+    """Guarda una intervención del usuario o de Bynoesis, aislada por negocio."""
     if role not in {"user", "assistant"}:
         raise ValueError("Rol de conversación no válido.")
     channel = (channel or "web").strip().lower()[:30]
@@ -2374,7 +2374,7 @@ AUTOMATION_CATALOG: tuple[dict, ...] = (
     {
         "key": "bank_transfer", "group": "Decisiones sensibles",
         "label": "Realizar transferencias o pagos",
-        "description": "Noesis nunca mueve dinero sin tu aprobación específica.",
+        "description": "Bynoesis nunca mueve dinero sin tu aprobación específica.",
         "risk": "critical", "default": "confirm",
         "allowed_modes": ("confirm", "blocked"),
     },
@@ -2388,7 +2388,7 @@ AUTOMATION_CATALOG: tuple[dict, ...] = (
     {
         "key": "tax_submission", "group": "Decisiones sensibles",
         "label": "Presentar impuestos o registros fiscales",
-        "description": "Noesis calcula y prepara; tú y tu gestoría revisáis antes de presentar.",
+        "description": "Bynoesis calcula y prepara; tú y tu gestoría revisáis antes de presentar.",
         "risk": "critical", "default": "confirm",
         "allowed_modes": ("confirm", "blocked"),
     },
@@ -2455,7 +2455,7 @@ def update_automation_permission(
     mode = str(mode or "").strip().lower()
     policy = AUTOMATION_BY_KEY.get(action_key)
     if not policy:
-        raise ValueError("La acción de Noesis no existe.")
+        raise ValueError("La acción de Bynoesis no existe.")
     if mode not in policy["allowed_modes"]:
         if policy["risk"] == "critical":
             raise ValueError(
@@ -2481,14 +2481,14 @@ def update_automation_permission(
 
 
 def automation_decision(business_id: int, action_key: str) -> dict:
-    """Respuesta única para cualquier herramienta que quiera actuar por Noesis."""
+    """Respuesta única para cualquier herramienta que quiera actuar por Bynoesis."""
     policy = next(
         (item for item in automation_catalog(business_id)
          if item["key"] == action_key),
         None,
     )
     if not policy:
-        raise ValueError("La acción de Noesis no existe.")
+        raise ValueError("La acción de Bynoesis no existe.")
     mode = policy["mode"]
     return {
         **policy,
@@ -2510,11 +2510,18 @@ def record_assistant_action(
     requested_by: str = "noesis",
     approved_by: str | None = None,
     error: str | None = None,
+    process_key: str | None = None,
+    action_family: str | None = None,
+    correlation_key: str | None = None,
+    trigger_source: str | None = None,
 ) -> dict:
     policy = AUTOMATION_BY_KEY.get(str(action_key or "").strip())
     if not policy:
-        raise ValueError("La acción de Noesis no existe.")
-    if status not in {"proposed", "approved", "executed", "failed", "cancelled"}:
+        raise ValueError("La acción de Bynoesis no existe.")
+    if status not in {
+        "proposed", "approved", "executed", "failed", "cancelled",
+        "rejected", "corrected", "reverted",
+    }:
         raise ValueError("El estado de la acción no es válido.")
     summary = str(summary or "").strip()
     if not summary:
@@ -2529,12 +2536,29 @@ def record_assistant_action(
         payload_text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         if len(payload_text) > 12_000:
             raise ValueError("El detalle de la acción es demasiado grande.")
+    process_key = str(process_key or "").strip()[:50] or None
+    action_family = str(action_family or "").strip()[:80] or None
+    correlation_key = str(correlation_key or "").strip()[:240] or None
+    trigger_source = str(trigger_source or "").strip().lower()[:40] or None
+    if trigger_source and trigger_source not in {
+        "manual_form", "user_initiated", "noesis_proposed", "authorized_rule",
+        "automation", "external_integration",
+    }:
+        raise ValueError("El origen de la acción no es válido.")
+    if any((process_key, action_family, correlation_key)) and not all(
+        (process_key, action_family, correlation_key)
+    ):
+        raise ValueError(
+            "El proceso, la familia y la correlación deben registrarse juntos."
+        )
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO assistant_actions "
             "(business_id, action_key, risk_level, status, summary, target_type, "
             "target_id, payload, requested_by, approved_by, created_at, approved_at, "
-            "executed_at, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "executed_at, error, process_key, action_family, correlation_key, "
+            "trigger_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "?, ?, ?, ?) "
             "RETURNING id",
             (
                 business_id, action_key, policy["risk"], status, summary[:500],
@@ -2542,6 +2566,7 @@ def record_assistant_action(
                 str(requested_by or "noesis")[:30],
                 (approved_by or "").strip()[:80] or None,
                 now, approved_at, executed_at, (error or "").strip()[:1000] or None,
+                process_key, action_family, correlation_key, trigger_source,
             ),
         ).fetchone()
         saved = conn.execute(
@@ -2675,14 +2700,14 @@ def business_initials(name: str | None) -> str:
 
 
 def business_brand_color(business: dict | None) -> str:
-    """Color de marca del negocio, con el verde Noesis como valor por defecto."""
+    """Color de marca del negocio, con el verde Bynoesis como valor por defecto."""
     color = (business or {}).get("brand_color")
     return color if color and _HEX_RE.match(color) else BRAND_COLOR_DEFAULT
 
 
 # ----------------------------------------------------- Panel personalizable ---
 # Bloques del inicio que el autónomo puede ordenar y ocultar a su gusto.
-# El orden de esta tupla es la disposición por defecto (recomendada por Noesis).
+# El orden de esta tupla es la disposición por defecto (recomendada por Bynoesis).
 PANEL_BLOCKS = (
     ("foco", "Lo primero hoy"),
     ("pulso", "Pulso del negocio"),
@@ -2899,7 +2924,7 @@ def update_branding(business_id, *, template=None, brand_color=None,
 
 
 # ----------------------------------------------- Ledger del copiloto (consejos) ---
-# Cierra el bucle del consejo: lo que Noesis RECOMIENDA, lo que el autónomo ACEPTA
+# Cierra el bucle del consejo: lo que Bynoesis RECOMIENDA, lo que el autónomo ACEPTA
 # (entra a la acción) y lo que COMPLETA. Permite medir si el copiloto sirve y
 # enseñarle al autónomo qué hizo con lo que le sugerimos.
 REC_STATES = {"recomendado", "aceptado", "completado", "descartado"}
@@ -3865,7 +3890,20 @@ def add_job(client_id, description, scheduled_for=None, zone=None,
         new_id = row["id"]
     if project_id and worker_id:
         _ensure_project_member(project_id, worker_id, business_id)
-    return get_job(new_id, business_id)
+    saved = get_job(new_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "job_created",
+        entity_type="job",
+        entity_id=new_id,
+        metadata={
+            "scheduled": bool(scheduled_for),
+            "has_project": bool(project_id),
+            "has_worker": bool(worker_id),
+        },
+    )
+    return saved
 
 
 def get_job(job_id, business_id) -> dict | None:
@@ -4233,7 +4271,16 @@ def complete_job(
     record_product_event(business_id, "job_completed")
     if job.get("price_estimate") and float(job["price_estimate"]) > 0:
         prepare_job_invoice_draft(job_id, business_id)
-    return get_job_completion(job_id, business_id) or {"id": row["id"]}
+    saved = get_job_completion(job_id, business_id) or {"id": row["id"]}
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "job_completed",
+        entity_type="job",
+        entity_id=job_id,
+        metadata={"confirmation_status": status},
+    )
+    return saved
 
 
 def confirm_job_completion(
@@ -5365,7 +5412,7 @@ def create_rectifying_invoice(
     rectification_type = (rectification_type or "").strip().upper()
     if rectification_type != "I":
         raise ValueError(
-            "Noesis solo prepara rectificativas por diferencias. "
+            "Bynoesis solo prepara rectificativas por diferencias. "
             "La rectificación por sustitución requiere revisión fiscal."
         )
     concept = (concept or "").strip()
@@ -5487,7 +5534,7 @@ def update_rectifying_invoice_draft(
     rectification_type = (rectification_type or "").strip().upper()
     if rectification_type != "I":
         raise ValueError(
-            "Noesis solo prepara rectificativas por diferencias. "
+            "Bynoesis solo prepara rectificativas por diferencias. "
             "La rectificación por sustitución requiere revisión fiscal."
         )
     concept = (concept or "").strip()
@@ -6107,7 +6154,7 @@ def set_series_next_number(
     """Fija el próximo número de una serie para continuar otra numeración.
 
     Quien llega desde otro programa ya lleva emitidas facturas de este ejercicio.
-    Si Noesis empezara en el 1 repetiría números dentro del mismo año y la misma
+    Si Bynoesis empezara en el 1 repetiría números dentro del mismo año y la misma
     serie, que es justo lo que la ley no permite. Por eso el titular puede decir
     por dónde va, y por eso **solo se puede avanzar**: retroceder por debajo de lo
     ya emitido aquí crearía el duplicado que se quiere evitar.
@@ -6627,7 +6674,20 @@ def issue_invoice(
                 conn, business_id, "emision", invoice_id=invoice_id,
                 details=f"numero={number}", created_at=issued_at,
             )
-    return get_invoice(invoice_id, business_id)
+    saved = get_invoice(invoice_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "invoice_issued",
+        entity_type="invoice",
+        entity_id=invoice_id,
+        completed_at=issued_at,
+        metadata={"invoice_type": invoice_type},
+    )
+    value_ledger.observe_job_invoiced_from_invoice(
+        business_id, invoice_id=invoice_id, occurred_at=issued_at
+    )
+    return saved
 
 
 def _payment_text(value, label: str, max_length: int) -> str | None:
@@ -6758,7 +6818,16 @@ def add_invoice_payment(
             "WHERE id=? AND business_id=? AND invoice_id=?",
             (payment_id, business_id, invoice_id),
         ).fetchone()
-    return dict(payment)
+    saved = dict(payment)
+    from . import value_ledger
+    value_ledger.observe_payment_received(
+        business_id,
+        invoice_id=invoice_id,
+        payment_id=payment_id,
+        amount=amount_decimal,
+        occurred_at=paid_at,
+    )
+    return saved
 
 
 def list_invoice_payments(invoice_id, business_id) -> list[dict]:
@@ -6794,6 +6863,7 @@ def invoice_paid_amount(invoice_id, business_id) -> float | None:
 def mark_invoice_paid(invoice_id, business_id) -> dict | None:
     """Registra el importe restante; repetir la operación no duplica el cobro."""
     payment_time = _now()
+    payment_id = None
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         invoice, already_paid = _locked_invoice_with_paid(
@@ -6806,7 +6876,7 @@ def mark_invoice_paid(invoice_id, business_id) -> dict | None:
         if total <= 0:
             return None
         if remaining > 0:
-            _insert_invoice_payment(
+            payment_id = _insert_invoice_payment(
                 conn, invoice, remaining, None, payment_time,
                 "Cobro completo registrado",
             )
@@ -6816,7 +6886,17 @@ def mark_invoice_paid(invoice_id, business_id) -> dict | None:
                 details=f"importe={float(remaining):.2f};metodo=no indicado",
                 created_at=payment_time,
             )
-    return get_invoice(invoice_id, business_id)
+    saved = get_invoice(invoice_id, business_id)
+    if payment_id is not None:
+        from . import value_ledger
+        value_ledger.observe_payment_received(
+            business_id,
+            invoice_id=invoice_id,
+            payment_id=payment_id,
+            amount=remaining,
+            occurred_at=payment_time,
+        )
+    return saved
 
 
 def delete_invoice(invoice_id, business_id) -> bool:
@@ -8025,7 +8105,7 @@ def global_search(business_id, query: str, limit: int = 6) -> dict:
 
 
 def list_admin_emails() -> list[str]:
-    """Correos de los administradores de Noesis (para los partes internos)."""
+    """Correos de los administradores de Bynoesis (para los partes internos)."""
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT email FROM users WHERE is_admin=TRUE ORDER BY email"
@@ -8838,6 +8918,70 @@ def set_received_invoice_status(received_id, status, *, business_id) -> dict:
     return get_received_invoice(received_id, business_id)
 
 
+def update_received_invoice(received_id, *, business_id: int, **changes) -> dict:
+    """Corrige una factura recibida sin tocar su documento ni cruzar negocios."""
+    current = get_received_invoice(received_id, business_id)
+    if not current:
+        raise ValueError("Factura recibida no encontrada.")
+    allowed = {
+        "supplier_id", "number", "concept", "issued_on", "due_on", "base",
+        "vat_rate", "vat_amount", "irpf_amount", "total", "category", "note",
+    }
+    unknown = set(changes) - allowed
+    if unknown:
+        raise ValueError("Hay campos que no se pueden modificar.")
+    values = {key: changes.get(key, current.get(key)) for key in allowed}
+    values["total"] = _positive_money(values["total"], "El total")
+    values["vat_rate"] = (
+        _tax_rate(values["vat_rate"], "El IVA", {0, 4, 10, 21})
+        if values["vat_rate"] not in (None, "") else None
+    )
+    for key, label in (
+        ("base", "La base"), ("vat_amount", "La cuota de IVA"),
+        ("irpf_amount", "El IRPF"),
+    ):
+        raw = values[key]
+        if raw in (None, ""):
+            values[key] = None
+        else:
+            try:
+                values[key] = round(float(raw), 2)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{label} no es un importe válido.") from exc
+            if values[key] < 0:
+                raise ValueError(f"{label} no puede ser negativa.")
+    values["issued_on"] = _optional_date(values["issued_on"], "La fecha de emisión")
+    values["due_on"] = _optional_date(values["due_on"], "El vencimiento")
+    values["number"] = (str(values["number"] or "").strip()[:50] or None)
+    values["concept"] = (str(values["concept"] or "").strip()[:500] or None)
+    values["category"] = (str(values["category"] or "").strip()[:100] or None)
+    values["note"] = (str(values["note"] or "").strip()[:2000] or None)
+    supplier_id = values["supplier_id"]
+    with get_conn() as conn:
+        if supplier_id not in (None, ""):
+            supplier = conn.execute(
+                "SELECT id FROM suppliers WHERE id=? AND business_id=?",
+                (supplier_id, business_id),
+            ).fetchone()
+            if not supplier:
+                raise ValueError("Proveedor no encontrado.")
+        else:
+            supplier_id = None
+        updated = conn.execute(
+            "UPDATE received_invoices SET supplier_id=?, number=?, concept=?, "
+            "issued_on=?, due_on=?, base=?, vat_rate=?, vat_amount=?, "
+            "irpf_amount=?, total=?, category=?, note=? "
+            "WHERE id=? AND business_id=?",
+            (supplier_id, values["number"], values["concept"], values["issued_on"],
+             values["due_on"], values["base"], values["vat_rate"],
+             values["vat_amount"], values["irpf_amount"], values["total"],
+             values["category"], values["note"], received_id, business_id),
+        )
+        if updated.rowcount != 1:
+            raise ValueError("Factura recibida no encontrada.")
+    return get_received_invoice(received_id, business_id)
+
+
 def delete_received_invoice(received_id, business_id) -> None:
     with get_conn() as conn:
         conn.execute(
@@ -9222,7 +9366,7 @@ def profit_and_loss(business_id, year: int | None = None) -> dict:
     if untyped:
         missing.append(f"{len(untyped)} gasto(s) sin IVA especificado: se cuentan "
                        "con IVA incluido y el coste real es algo menor.")
-    missing.append("Amortizaciones e intereses no están registrados en Noesis: "
+    missing.append("Amortizaciones e intereses no están registrados en Bynoesis: "
                    "el EBITDA y el resultado son aproximados. El cierre "
                    "definitivo es de tu gestoría.")
 
@@ -9728,7 +9872,15 @@ def add_quote(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
              irpf_rate or 0, irpf_amount, total, valid_until, notes or None, _now()),
         ).fetchone()
         new_id = row["id"]
-    return get_quote(new_id, business_id)
+    saved = get_quote(new_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "quote_prepared",
+        entity_type="quote",
+        entity_id=new_id,
+    )
+    return saved
 
 
 def get_quote(quote_id, business_id) -> dict | None:
@@ -9781,7 +9933,15 @@ def mark_quote_sent(quote_id, business_id) -> dict | None:
         conn.execute("UPDATE quotes SET status='enviado', number=? "
                      "WHERE id=? AND business_id=? AND status='borrador'",
                      (number, quote_id, business_id))
-    return get_quote(quote_id, business_id)
+    saved = get_quote(quote_id, business_id)
+    from . import value_ledger
+    value_ledger.observe_useful_action(
+        business_id,
+        "quote_sent",
+        entity_type="quote",
+        entity_id=quote_id,
+    )
+    return saved
 
 
 def reject_quote(quote_id, business_id, *, decision_source="owner",
@@ -9859,10 +10019,13 @@ def accept_quote(quote_id, business_id, *, decision_source="owner",
              decision_ip_hash, str(decision_user_agent or "")[:300] or None,
              quote_id, business_id),
         )
-    return {
+    result = {
         "quote": get_quote(quote_id, business_id),
         "invoice": get_invoice(invoice_id, business_id),
     }
+    from . import value_ledger
+    value_ledger.observe_quote_accepted(business_id, quote_id=quote_id)
+    return result
 
 
 def delete_quote(quote_id, business_id) -> bool:
@@ -9884,6 +10047,31 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
     gestor, no una presentación oficial."""
     if quarter not in _QUARTERS:
         raise ValueError("El trimestre debe estar entre 1 y 4.")
+    # El modelo 130 necesita los trimestres anteriores, y antes cada uno volvía a
+    # leer las tres tablas enteras: doce lecturas para pedir el 4T. Se leen una vez
+    # y se reparten por la recursión.
+    return _tax_quarter_from(
+        year,
+        quarter,
+        [
+            i for i in list_invoices(business_id)
+            if i.get("status") in ("enviada", "parcial", "cobrada")
+        ],
+        list_expenses(business_id),
+        list_received_invoices(business_id),
+    )
+
+
+def _tax_quarter_from(
+    year: int,
+    quarter: int,
+    all_invoices: list,
+    all_expenses: list,
+    all_received: list,
+) -> dict:
+    """Calcula un trimestre sobre datos ya leídos. Ver `tax_quarter`."""
+    if quarter not in _QUARTERS:
+        raise ValueError("El trimestre debe estar entre 1 y 4.")
     m0, m1 = _QUARTERS[quarter]
     quarter_start, end = f"{year}-{m0}", f"{year}-{m1}"
     year_start = f"{year}-01"
@@ -9891,12 +10079,6 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
     def _in_range(d: str | None, start: str) -> bool:
         return bool(d) and start <= d[:7] <= end
 
-    all_invoices = [
-        i for i in list_invoices(business_id)
-        if i.get("status") in ("enviada", "parcial", "cobrada")
-    ]
-    all_expenses = list_expenses(business_id)
-    all_received = list_received_invoices(business_id)
     invoices = [
         i for i in all_invoices
         if _in_range(i.get("issued_at") or i.get("created_at"), year_start)
@@ -9952,7 +10134,9 @@ def tax_quarter(year: int, quarter: int, business_id) -> dict:
     # los pagos estimados de trimestres anteriores para obtener el importe del periodo.
     irpf_acumulado = round(max(rendimiento * 0.20 - irpf_retenido, 0), 2)
     pagos_previos = round(sum(
-        tax_quarter(year, previous, business_id)["irpf_pago"]
+        _tax_quarter_from(
+            year, previous, all_invoices, all_expenses, all_received
+        )["irpf_pago"]
         for previous in range(1, quarter)
     ), 2)
     irpf_pago = round(max(irpf_acumulado - pagos_previos, 0), 2)
@@ -10756,7 +10940,7 @@ def ensure_whatsapp_customer_contact(
                 "RETURNING id",
                 (
                     business_id, lead_name, sender_phone,
-                    "Entrada creada por Noesis; pendiente de revisar y convertir.",
+                    "Entrada creada por Bynoesis; pendiente de revisar y convertir.",
                     _now(),
                 ),
             ).fetchone()
@@ -11742,6 +11926,80 @@ def ai_usage_summary(month: str | None = None) -> dict:
     return {"month": month, "total": total, "per_business": per_business}
 
 
+def admin_api_usage(business_id: int, month: str | None = None) -> dict:
+    """Telemetría por cuenta/proveedor, sin contenido ni factura del proveedor."""
+    import math
+
+    month = month or date.today().strftime("%Y-%m")
+    if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", month):
+        raise ValueError("El período debe tener formato AAAA-MM.")
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT event_data, created_at FROM product_events "
+            "WHERE business_id=? AND event_name='ai_usage' "
+            "AND CAST(created_at AS TEXT) LIKE ? ORDER BY id",
+            (business_id, f"{month}%"),
+        ).fetchall()
+    groups = {}
+    invalid = 0
+
+    def number(value):
+        try:
+            result = float(value)
+            return result if math.isfinite(result) and result >= 0 else None
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+    for row in rows:
+        try:
+            data = json.loads(row["event_data"] or "{}")
+        except (ValueError, TypeError):
+            invalid += 1
+            continue
+        if not isinstance(data, dict):
+            invalid += 1
+            continue
+        provider = str(data.get("provider") or "desconocido")[:80]
+        model = str(data.get("model") or "sin modelo registrado")[:120]
+        item = groups.setdefault((provider, model), {
+            "provider": provider, "model": model, "calls": 0,
+            "input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0,
+            "unpriced_calls": 0, "duration_samples": 0, "duration_ms": 0.0,
+            "last_seen": None,
+        })
+        item["calls"] += 1
+        item["input_tokens"] += int(number(data.get("in")) or 0)
+        item["output_tokens"] += int(number(data.get("out")) or 0)
+        cost = number(data.get("estimated_cost_usd"))
+        if cost is None:
+            item["unpriced_calls"] += 1
+        else:
+            item["estimated_cost_usd"] += cost
+        duration = number(data.get("duration_ms"))
+        if duration is not None:
+            item["duration_samples"] += 1
+            item["duration_ms"] += duration
+        item["last_seen"] = str(row["created_at"])
+    result = []
+    for item in groups.values():
+        item["estimated_cost_usd"] = round(item["estimated_cost_usd"], 6)
+        item["mean_duration_ms"] = (
+            round(item["duration_ms"] / item["duration_samples"])
+            if item["duration_samples"] else None
+        )
+        del item["duration_ms"]
+        result.append(item)
+    return {
+        "business_id": business_id, "month": month, "as_of": _now(),
+        "scope": "business", "currency": "USD", "cost_basis": "estimate",
+        "usd_to_eur_assumption": config.COST_USD_TO_EUR,
+        "rows": sorted(result, key=lambda item: (item["provider"], item["model"])),
+        "invalid_records": invalid,
+        "coverage": "Solo llamadas con evento ai_usage; no representa todas las APIs "
+        "ni la factura del proveedor. Sin eventos no significa consumo cero.",
+    }
+
+
 def admin_alerts() -> list[dict]:
     """Alarmas operativas para el fundador: qué está fallando y dónde llamar."""
     alerts: list[dict] = []
@@ -12023,7 +12281,7 @@ def account_cost_control(month: str | None = None) -> dict:
             "ai_calls": int(ai.get("calls") or 0),
             "ai_tokens": int(ai.get("input") or 0) + int(ai.get("output") or 0),
             "ai_estimated_cost_eur": round(
-                float(ai.get("estimated_cost_usd") or 0) * 0.92, 4
+                float(ai.get("estimated_cost_usd") or 0) * config.COST_USD_TO_EUR, 4
             ),
             "ai_credits_used": credit_used,
             "ai_credits_limit": credit_limit,
@@ -12170,7 +12428,7 @@ def account_cost_control(month: str | None = None) -> dict:
 
 
 def admin_overview() -> dict:
-    """Cifras globales del negocio Noesis (solo para el fundador). NO expone datos
+    """Cifras globales del negocio Bynoesis (solo para el fundador). NO expone datos
     operativos de cada autónomo, solo metadatos de cuenta y agregados."""
     with get_conn() as conn:
         rows = conn.execute(
@@ -12271,7 +12529,7 @@ def admin_overview() -> dict:
     # solo una aproximación operativa; la factura del proveedor sigue mandando.
     # Una extracción local no recibe un coste ficticio: si el proveedor no devuelve
     # uso medible, la factura real se registra en el libro CFO.
-    ai_cost_eur = round(ai_total["estimated_cost_usd"] * 0.92, 2)
+    ai_cost_eur = round(ai_total["estimated_cost_usd"] * config.COST_USD_TO_EUR, 2)
     margen_pct = round((mrr - ai_cost_eur) / mrr * 100) if mrr else None
     altas_mes = altas_by_month.get(today.strftime("%Y-%m"), 0)
     en_riesgo = len([
@@ -12629,6 +12887,7 @@ def admin_support_snapshot(business_id: int) -> dict | None:
             "subscription_status": business.get("subscription_status"),
             "trial_ends_at": business.get("trial_ends_at"),
             "whatsapp_status": business.get("whatsapp_status"),
+            "whatsapp_phone": business.get("whatsapp_phone"),
             "fiscal_profile_complete": bool(
                 business.get("nif") and business.get("address")
             ),
@@ -13010,7 +13269,162 @@ def admin_update_document_metadata(
     return {"document": dict(saved), "changed_fields": changed_fields}
 
 
-# ----------------------------------------------------------- RGPD (export/borrado) ---
+# ----------------------------------------------------------- RGPD (derechos/export/borrado) ---
+PRIVACY_REQUEST_STATUSES = (
+    "received", "in_review", "waiting_requester", "legal_hold",
+    "completed", "rejected", "cancelled",
+)
+PRIVACY_REQUEST_OPEN_STATUSES = (
+    "received", "in_review", "waiting_requester", "legal_hold",
+)
+PRIVACY_REQUEST_TYPES = (
+    "access", "rectification", "erasure", "restriction", "portability",
+    "objection", "account_closure",
+)
+
+
+def create_privacy_request(
+    business_id: int,
+    *,
+    requester_user_id: int,
+    request_type: str = "account_closure",
+    retention_required: bool = False,
+) -> dict:
+    """Registra una solicitud o devuelve la abierta, sin ejecutar el borrado.
+
+    ``active_key`` hace la operación idempotente incluso si el formulario se
+    reenvía. La resolución y la supresión material son pasos separados.
+    """
+    business_id = int(business_id)
+    requester_user_id = int(requester_user_id)
+    request_type = str(request_type or "").strip().lower()
+    if request_type not in PRIVACY_REQUEST_TYPES:
+        raise ValueError("Tipo de solicitud de privacidad no válido.")
+    active_key = f"{business_id}:{request_type}"
+    now = _now()
+    try:
+        with get_conn() as conn:
+            owner = conn.execute(
+                "SELECT id FROM users WHERE id=? AND business_id=?",
+                (requester_user_id, business_id),
+            ).fetchone()
+            if not owner:
+                raise ValueError("El solicitante no pertenece a esta cuenta.")
+            existing = conn.execute(
+                "SELECT * FROM privacy_requests WHERE active_key=?",
+                (active_key,),
+            ).fetchone()
+            if existing:
+                return dict(existing)
+            row = conn.execute(
+                "INSERT INTO privacy_requests "
+                "(business_id, requester_user_id, request_type, status, "
+                "retention_required, active_key, requested_at, updated_at) "
+                "VALUES (?, ?, ?, 'received', ?, ?, ?, ?) RETURNING *",
+                (
+                    business_id, requester_user_id, request_type,
+                    bool(retention_required), active_key, now, now,
+                ),
+            ).fetchone()
+    except IntegrityError:
+        # Dos clics simultáneos compiten por la misma clave. El que pierde
+        # devuelve el expediente que ya ganó, en vez de responder con error.
+        with get_conn() as conn:
+            existing = conn.execute(
+                "SELECT * FROM privacy_requests WHERE active_key=?",
+                (active_key,),
+            ).fetchone()
+        if not existing:
+            raise
+        return dict(existing)
+    return dict(row)
+
+
+def get_open_privacy_request(
+    business_id: int, request_type: str = "account_closure",
+) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM privacy_requests WHERE business_id=? "
+            "AND request_type=? AND status IN (?,?,?,?) "
+            "ORDER BY requested_at DESC, id DESC LIMIT 1",
+            (
+                int(business_id), request_type,
+                *PRIVACY_REQUEST_OPEN_STATUSES,
+            ),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_privacy_requests(
+    *, status: str | None = None, business_id: int | None = None,
+    limit: int = 200,
+) -> list[dict]:
+    """Bandeja interna con el mínimo contexto para poder atender la solicitud."""
+    where, params = [], []
+    if status:
+        if status not in PRIVACY_REQUEST_STATUSES:
+            raise ValueError("Estado de privacidad no válido.")
+        where.append("pr.status=?")
+        params.append(status)
+    if business_id is not None:
+        where.append("pr.business_id=?")
+        params.append(int(business_id))
+    query = (
+        "SELECT pr.*, b.name AS business_name, u.email AS requester_email "
+        "FROM privacy_requests pr "
+        "JOIN businesses b ON b.id=pr.business_id "
+        "LEFT JOIN users u ON u.id=pr.requester_user_id"
+    )
+    if where:
+        query += " WHERE " + " AND ".join(where)
+    query += (
+        " ORDER BY CASE pr.status WHEN 'received' THEN 0 "
+        "WHEN 'in_review' THEN 1 WHEN 'waiting_requester' THEN 2 "
+        "WHEN 'legal_hold' THEN 3 ELSE 4 END, "
+        "pr.requested_at ASC, pr.id ASC LIMIT ?"
+    )
+    params.append(max(1, min(int(limit), 500)))
+    with get_conn() as conn:
+        return [dict(row) for row in conn.execute(query, params).fetchall()]
+
+
+def update_privacy_request(
+    request_id: int, *, status: str, resolution_note: str,
+) -> dict | None:
+    """Actualiza el seguimiento; nunca borra datos como efecto lateral."""
+    status = str(status or "").strip().lower()
+    note = str(resolution_note or "").strip()[:2000]
+    if status not in PRIVACY_REQUEST_STATUSES:
+        raise ValueError("Estado de privacidad no válido.")
+    if not note:
+        raise ValueError("Documenta el motivo o la actuación realizada.")
+    now = _now()
+    terminal = status in {"completed", "rejected", "cancelled"}
+    with get_conn() as conn:
+        current = conn.execute(
+            "SELECT * FROM privacy_requests WHERE id=?", (int(request_id),)
+        ).fetchone()
+        if not current:
+            return None
+        active_key = None if terminal else (
+            current["active_key"]
+            or f"{current['business_id']}:{current['request_type']}"
+        )
+        conn.execute(
+            "UPDATE privacy_requests SET status=?, resolution_note=?, "
+            "active_key=?, updated_at=?, resolved_at=? WHERE id=?",
+            (
+                status, note, active_key,
+                now, now if terminal else None, int(request_id),
+            ),
+        )
+        row = conn.execute(
+            "SELECT * FROM privacy_requests WHERE id=?", (int(request_id),)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def export_business_data(business_id) -> dict:
     """Vuelca TODOS los datos de un negocio (derecho de portabilidad RGPD)."""
     return {
@@ -13044,6 +13458,10 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "bank_transactions": list_bank_transactions(business_id, limit=500),
         "email_outbox": list_email_messages(business_id, limit=500),
+        "privacy_requests": [dict(r) for r in _rows(
+            "SELECT id, business_id, request_type, status, retention_required, "
+            "requested_at, updated_at, resolved_at FROM privacy_requests "
+            "WHERE business_id=? ORDER BY requested_at, id", business_id)],
         "invoice_records": list_invoice_records(business_id),
         "invoice_events": list_invoice_events(business_id),
         "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
@@ -13102,6 +13520,19 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "assistant_actions": [dict(r) for r in _rows(
             "SELECT * FROM assistant_actions WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_actions": [dict(r) for r in _rows(
+            "SELECT * FROM useful_actions WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_action_events": [dict(r) for r in _rows(
+            "SELECT * FROM useful_action_events WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_outcomes": [dict(r) for r in _rows(
+            "SELECT * FROM useful_outcomes WHERE business_id=? ORDER BY id",
+            business_id)],
+        "useful_action_outcomes": [dict(r) for r in _rows(
+            "SELECT * FROM useful_action_outcomes WHERE business_id=? "
+            "ORDER BY useful_action_id, useful_outcome_id",
             business_id)],
         "document_classifications": [dict(r) for r in _rows(
             "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
@@ -13302,7 +13733,7 @@ def delete_business_cascade(business_id) -> bool:
         for table in (
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
-            "email_outbox",
+            "email_outbox", "privacy_requests",
             "inbound_email_messages", "inbound_email_routes",
             "verifactu_cancellation_outbox", "verifactu_outbox",
             "document_sequences",
@@ -13310,6 +13741,8 @@ def delete_business_cascade(business_id) -> bool:
             "invoice_events", "invoice_cancellation_records", "invoice_records",
             "portal_tokens",
             "product_events", "assistant_messages", "business_memories",
+            "useful_action_outcomes", "useful_action_events",
+            "useful_outcomes", "useful_actions",
             "assistant_actions", "automation_permissions",
             "integration_settings",
             "document_client_candidates", "document_classifications",

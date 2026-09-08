@@ -1,7 +1,7 @@
 """Copias verificadas de SQLite y Postgres.
 
 SQLite conserva su copia consistente ``.db``. Postgres se vuelca mediante psycopg
-a un formato lógico comprimido y portable dentro de Noesis. Cada copia se restaura
+a un formato lógico comprimido y portable dentro de Bynoesis. Cada copia se restaura
 en una base o esquema desechable antes de rotarla o enviarla fuera del servidor.
 """
 
@@ -522,15 +522,20 @@ def _aws_signing_key(secret: str, day: str, region: str) -> bytes:
 
 def _upload_offsite(path: Path) -> bool | None:
     """Sube por S3 Signature V4 solo cuando están todas las credenciales."""
-    values = (
+    credentials = (
         config.BACKUP_S3_ENDPOINT,
         config.BACKUP_S3_BUCKET,
         config.BACKUP_S3_ACCESS_KEY,
         config.BACKUP_S3_SECRET_KEY,
     )
-    if not any(values):
+    if not any(credentials):
         return None
-    if not all(values):
+    legal_context = (
+        config.BACKUP_S3_REGION,
+        config.BACKUP_S3_PROVIDER_NAME,
+        config.BACKUP_S3_DATA_REGION,
+    )
+    if not all(credentials) or not all(legal_context):
         log.error("Configuración S3 de backups incompleta; no se sube la copia.")
         return False
 
@@ -551,7 +556,7 @@ def _upload_offsite(path: Path) -> bool | None:
     now = datetime.now(timezone.utc)
     amz_date = now.strftime("%Y%m%dT%H%M%SZ")
     day = now.strftime("%Y%m%d")
-    region = config.BACKUP_S3_REGION or "us-east-1"
+    region = config.BACKUP_S3_REGION
     payload_hash = _file_sha256(path)
     host = parsed.netloc
     canonical_headers = (

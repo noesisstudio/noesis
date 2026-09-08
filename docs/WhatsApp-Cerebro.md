@@ -6,7 +6,7 @@
 > validar con Meta.
 
 > **Qué es este documento**: el diseño completo, pensado y decidido, para convertir
-> WhatsApp en el verdadero centro de Noesis. Escrito el 2026-07-03 a petición del
+> WhatsApp en el verdadero centro de Bynoesis. Escrito el 2026-07-03 a petición del
 > founder ("el punto más diferencial es el WhatsApp, no las facturas").
 >
 > ✅ **CONSTRUIDO el mismo día** (migración 14): W0 (router de mèdia +
@@ -198,7 +198,7 @@ sería falsear registros). Diseño: columna `invoices.source` ('noesis' default 
 ingresos e IVA soportado histórico; **jamás** se re-emiten (`issue_invoice` las
 rechaza), jamás generan registro Veri*Factu, y el PDF original queda en
 `documents/` como justificante. Numeración: conservar la del PDF original en un
-campo aparte (`external_number`), no consumir la secuencia de Noesis.
+campo aparte (`external_number`), no consumir la secuencia de Bynoesis.
 
 ## 7. Fase W4 — Audio bien resuelto (decisión de coste para el founder)
 

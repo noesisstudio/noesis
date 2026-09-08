@@ -1,1 +1,1 @@
-"""Capa web de Noesis: servidor FastAPI (dashboard + API + onboarding + webhook)."""
+"""Capa web de Bynoesis: servidor FastAPI (dashboard + API + onboarding + webhook)."""

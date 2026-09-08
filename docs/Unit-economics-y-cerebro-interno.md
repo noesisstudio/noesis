@@ -1,11 +1,11 @@
-# Cerebro interno y unit economics de Noesis
+# Cerebro interno y unit economics de Bynoesis
 
 > Análisis ejecutivo · 15/07/2026 · importes mensuales sin IVA salvo indicación.
 
 ## Resumen ejecutivo
 
 - **Sí conviene construir inteligencia interna; no conviene entrenar un modelo
-  fundacional.** Noesis puede resolver hechos, cálculos, clasificación y redacción
+  fundacional.** Bynoesis puede resolver hechos, cálculos, clasificación y redacción
   repetible con código propio; Qwen local o compatible cubre lenguaje libre y Haiku
   queda como respaldo de calidad.
 - **La IA de texto no amenaza el margen en el piloto.** En el escenario híbrido, su
@@ -22,7 +22,7 @@
 ## Qué se ha construido
 
 El servicio interno no es un chatbot paralelo. Se integra delante de la IA externa
-y usa los mismos datos, permisos, adaptadores y auditoría de Noesis:
+y usa los mismos datos, permisos, adaptadores y auditoría de Bynoesis:
 
 ```text
 mensaje web / WhatsApp
@@ -110,7 +110,7 @@ Con 8.000 tokens de entrada y 1.200 de salida por interacción avanzada:
 
 | Opción | Coste aproximado/interacción | 75/mes | 300/mes | 1.500/mes |
 |---|---:|---:|---:|---:|
-| Cerebro determinista Noesis | ~0 € | 0 € | 0 € | 0 € |
+| Cerebro determinista Bynoesis | ~0 € | 0 € | 0 € | 0 € |
 | Cloudflare Qwen3 30B A3B | 0,0007 € | 0,05 € | 0,21 € | 1,07 € |
 | Groq Qwen3 32B | 0,0027 € | 0,20 € | 0,80 € | 3,98 € |
 | Anthropic Haiku 4.5 | 0,0123 € | 0,92 € | 3,68 € | 18,41 € |
@@ -122,7 +122,7 @@ más pago por uso es normalmente más barato y requiere menos operación.
 
 No hay un «servidor público gratuito» adecuado como núcleo de producción: los tiers
 gratis pueden cambiar, limitar concurrencia, cortar solicitudes y tratar datos fuera
-de Noesis. Sirven para desarrollo, no para una promesa fiable a clientes. El modelo
+de Bynoesis. Sirven para desarrollo, no para una promesa fiable a clientes. El modelo
 open source evita licencia por token; no elimina cómputo, seguridad ni mantenimiento.
 
 ## Recomendación operativa

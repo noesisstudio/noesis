@@ -10,7 +10,7 @@ Dos reglas de Meta explican por qué los cuerpos son como son:
 
 1. **El cuerpo no puede ser solo una variable.** Por eso los cinco avisos al
    titular llevan un encabezado fijo delante del hueco, aunque el texto lo
-   componga Noesis entero.
+   componga Bynoesis entero.
 2. **Un hueco no admite saltos de línea, tabuladores ni cuatro espacios
    seguidos.** De eso se encarga `whatsapp.sanitize_template_param`, que los
    convierte en un separador visible al encolar.
@@ -34,7 +34,7 @@ class TemplateSpec:
 
     setting: str          # variable de entorno que fija el nombre
     default_name: str     # nombre por defecto, el que hay que crear en Meta
-    category: str         # categoría de Meta: siempre utility en Noesis
+    category: str         # categoría de Meta: siempre utility en Bynoesis
     audience: str         # a quién le llega: 'titular' o 'cliente'
     purpose: str
     body: str
@@ -70,29 +70,29 @@ class TemplateSpec:
 SPECS: tuple[TemplateSpec, ...] = (
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_DAILY_SUMMARY",
-        default_name="noesis_resumen_diario",
+        default_name="bynoesis_resumen_diario",
         category="utility",
         audience="titular",
         purpose="El parte de la mañana.",
-        body="Tu parte de hoy en Noesis: {{1}}",
+        body="Tu parte de hoy en Bynoesis: {{1}}",
         params=(
             "el parte entero",
         ),
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_WEEKLY_SUMMARY",
-        default_name="noesis_resumen_semanal",
+        default_name="bynoesis_resumen_semanal",
         category="utility",
         audience="titular",
         purpose="El repaso de la semana.",
-        body="Tu semana en Noesis: {{1}}",
+        body="Tu semana en Bynoesis: {{1}}",
         params=(
             "el repaso entero",
         ),
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_DAILY_CLOSING",
-        default_name="noesis_cierre_dia",
+        default_name="bynoesis_cierre_dia",
         category="utility",
         audience="titular",
         purpose="El cierre del día.",
@@ -103,18 +103,18 @@ SPECS: tuple[TemplateSpec, ...] = (
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_TAX_NOTICE",
-        default_name="noesis_aviso_fiscal",
+        default_name="bynoesis_aviso_fiscal",
         category="utility",
         audience="titular",
         purpose="Aviso trimestral de los modelos 303 y 130.",
-        body="Aviso fiscal de Noesis: {{1}}",
+        body="Aviso fiscal de Bynoesis: {{1}}",
         params=(
             "el aviso entero",
         ),
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_PAYMENT_ALERT",
-        default_name="noesis_aviso_cobros",
+        default_name="bynoesis_aviso_cobros",
         category="utility",
         audience="titular",
         purpose="Propuesta de reclamar una factura vencida, que espera un SÍ.",
@@ -125,7 +125,7 @@ SPECS: tuple[TemplateSpec, ...] = (
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_PAYMENT_REMINDER",
-        default_name="noesis_recordatorio_cobro",
+        default_name="bynoesis_recordatorio_cobro",
         category="utility",
         audience="cliente",
         purpose="Recordatorio de cobro al cliente del autónomo.",
@@ -140,7 +140,7 @@ SPECS: tuple[TemplateSpec, ...] = (
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_INVOICE",
-        default_name="noesis_factura_lista",
+        default_name="bynoesis_factura_lista",
         category="utility",
         audience="cliente",
         purpose="Entrega de la factura emitida. Sin ella no hay entrega por WhatsApp.",
@@ -155,7 +155,7 @@ SPECS: tuple[TemplateSpec, ...] = (
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP",
-        default_name="noesis_seguimiento_presupuesto",
+        default_name="bynoesis_seguimiento_presupuesto",
         category="utility",
         audience="cliente",
         purpose="Seguimiento de un presupuesto que lleva días abierto.",
@@ -170,7 +170,7 @@ SPECS: tuple[TemplateSpec, ...] = (
     ),
     TemplateSpec(
         setting="WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER",
-        default_name="noesis_recordatorio_cita",
+        default_name="bynoesis_recordatorio_cita",
         category="utility",
         audience="cliente",
         purpose="Confirmación de cita. Aquí no hay enlace: son cuatro huecos, no cinco.",

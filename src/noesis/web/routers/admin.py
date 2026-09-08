@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import logging
 import secrets
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import (
+    FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response,
+)
 
 from ... import config, db, readiness, security_center
 from ...adapters import billing as billing_adapter
@@ -48,26 +51,102 @@ def admin_panel(request: Request):
     data["readiness"] = readiness.collect_readiness(check_database=False)
     data["security"] = security_center.build_security_report()
     requests_list = db.list_access_requests()
+    privacy_requests = db.list_privacy_requests()
     return TEMPLATES.TemplateResponse(request, "admin.html", {
         "data": data,
         "hoy": date.today().isoformat(),
+        "admin_as_of": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"),
         "mi_negocio": user["business_id"],
         "access_requests": requests_list,
         "access_pending": sum(1 for r in requests_list if r["status"] == "nueva"),
+        "privacy_requests": privacy_requests,
+        "privacy_pending": sum(
+            1 for row in privacy_requests
+            if row["status"] in db.PRIVACY_REQUEST_OPEN_STATUSES
+        ),
         "visits": db.page_views_summary(30),
         "invite": request.session.pop("last_invite", None),
         "admin_error": request.session.pop("admin_error", None),
+        "admin_success": request.session.pop("admin_success", None),
     })
 
 
+@router.post("/admin/privacidad/{privacy_request_id}/estado")
+def admin_update_privacy_request(
+    request: Request,
+    privacy_request_id: int,
+    status: str = Form(...),
+    resolution_note: str = Form(...),
+):
+    """Documenta el seguimiento; nunca borra datos desde este control."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        updated = db.update_privacy_request(
+            privacy_request_id,
+            status=status,
+            resolution_note=resolution_note,
+        )
+    except (ValueError, *db.IntegrityError) as exc:
+        request.session["admin_error"] = str(exc)
+        return RedirectResponse("/admin#privacidad", status_code=303)
+    if not updated:
+        return Response("Solicitud no encontrada.", status_code=404)
+    db.record_security_event(
+        "privacy.request_status_updated",
+        severity="warning",
+        area="privacy",
+        actor_user_id=user["id"],
+        subject_business_id=updated["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={
+            "privacy_request_id": updated["id"],
+            "status": updated["status"],
+        },
+    )
+    request.session["admin_success"] = (
+        f"Solicitud #{updated['id']} actualizada."
+    )
+    return RedirectResponse("/admin#privacidad", status_code=303)
+
+
+@router.get("/admin/value-ledger", response_class=JSONResponse)
+def admin_value_ledger(request: Request, business_id: int | None = None):
+    """Auditoría interna mínima, oculta por defecto y siempre de solo lectura."""
+    if not _is_admin(request):
+        return Response("No autorizado.", status_code=403)
+    if not config.VALUE_LEDGER_ADMIN_ENABLED:
+        return Response("No encontrado.", status_code=404)
+    from ... import value_ledger
+    user = auth.current_user(request)
+    try:
+        snapshot = value_ledger.admin_snapshot(business_id)
+    except ValueError as exc:
+        return Response(str(exc), status_code=404)
+    db.record_security_event(
+        "admin.value_ledger_viewed",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=business_id or user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"mode": "read_only", "scope": "business" if business_id else "weekly"},
+    )
+    return JSONResponse(jsonable_encoder(snapshot))
+
+
 @router.get("/admin/cuentas/{business_id}", response_class=HTMLResponse)
-def admin_account_support(request: Request, business_id: int):
+def admin_account_support(request: Request, business_id: int, month: str | None = None):
     """Diagnóstico técnico y correcciones autorizadas de alcance mínimo."""
     if not _is_admin(request):
         return RedirectResponse("/login", status_code=303)
     snapshot = db.admin_support_snapshot(business_id)
     if not snapshot:
         return Response("Cuenta no encontrada.", status_code=404)
+    try:
+        api_usage = db.admin_api_usage(business_id, month)
+    except ValueError as exc:
+        return Response(str(exc), status_code=400)
     user = auth.current_user(request)
     db.record_security_event(
         "admin.support_snapshot_viewed",
@@ -101,12 +180,13 @@ def admin_account_support(request: Request, business_id: int):
             metadata={"grant_id": configuration_support["grant_id"]},
         )
     trial_ends = str((snapshot.get("business") or {}).get("trial_ends_at") or "")
-    cost_control = db.account_cost_control()
+    cost_control = db.account_cost_control(api_usage["month"])
     account_cost = next(
         (row for row in cost_control["rows"] if row["id"] == business_id), None
     )
     return TEMPLATES.TemplateResponse(request, "admin_account.html", {
         "snapshot": snapshot,
+        "api_usage": api_usage,
         "trial_expired": bool(trial_ends) and trial_ends < date.today().isoformat(),
         "delivery_failures": db.admin_support_delivery_failures(business_id),
         "subscription_blocked": not db.subscription_allows_access(
@@ -126,6 +206,25 @@ def admin_account_support(request: Request, business_id: int):
         "admin_error": request.session.pop("admin_error", None),
         "admin_success": request.session.pop("admin_success", None),
     })
+
+
+@router.get("/admin/cuentas/{business_id}/consumo", response_class=JSONResponse)
+def admin_account_usage(request: Request, business_id: int, month: str | None = None):
+    """Lectura auditada; ninguna clave externa viaja al navegador."""
+    if not _is_admin(request):
+        return Response("No autorizado.", status_code=403)
+    if not db.get_business(business_id):
+        return Response("Cuenta no encontrada.", status_code=404)
+    try:
+        usage = db.admin_api_usage(business_id, month)
+    except ValueError as exc:
+        return Response(str(exc), status_code=400)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.api_usage_viewed", area="admin", actor_user_id=user["id"],
+        subject_business_id=business_id, metadata={"month": usage["month"]},
+    )
+    return JSONResponse(jsonable_encoder(usage), headers={"Cache-Control": "no-store"})
 
 
 @router.post("/admin/cuentas/{business_id}/configuracion-segura")
@@ -535,11 +634,11 @@ def admin_request_approve(request: Request, request_id: int):
         # así que no hay motivo para dejar al fundador esperando a SMTP.
         email_adapter.queue_email(
             solicitud["email"],
-            "Tu acceso a Noesis ya está listo",
+            "Tu acceso a Bynoesis ya está listo",
             "\n".join([
                 f"Hola, {solicitud['name']}:",
                 "",
-                "Ya tienes tu cuenta de Noesis preparada. Elige tu contraseña aquí:",
+                "Ya tienes tu cuenta de Bynoesis preparada. Elige tu contraseña aquí:",
                 invite_url,
                 "",
                 f"El enlace caduca en {config.INVITE_TTL_MINUTES // 1440} días.",

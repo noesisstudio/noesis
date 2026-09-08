@@ -293,7 +293,7 @@ def poll_mailbox(limit: int | None = None) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Prueba segura del buzón documental catch-all de Noesis."
+        description="Prueba segura del buzón documental catch-all de Bynoesis."
     )
     parser.add_argument("--business-id", type=int)
     parser.add_argument("--create-route", action="store_true")

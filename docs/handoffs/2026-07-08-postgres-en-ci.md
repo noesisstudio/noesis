@@ -10,7 +10,7 @@
   CI sigue verde.
 
 ### 1. Contexto del producto
-Noesis corre en producción sobre **Postgres** (Railway) y en local/tests sobre
+Bynoesis corre en producción sobre **Postgres** (Railway) y en local/tests sobre
 **SQLite**. Hoy nos ha mordido —por segunda vez— un bug que **solo peta en
 Postgres** y es invisible para el CI actual (todo SQLite): un `COALESCE(issued_on
 TEXT, created_at timestamp)` que Postgres rechaza por mezclar tipos. Tumbó el Home en

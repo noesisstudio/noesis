@@ -1,5 +1,26 @@
 # Tareas vivas
 
+## Candidato de fiabilidad — 7-sep
+
+- [x] Validación local de aritmética/fechas/NIF en borradores, corrección de
+  recibidas, relectura de fotos duplicadas, `VTIMEZONE`, dictado de importes y alta
+  explícita de cliente/proveedor con simulación sintética sin créditos.
+- [ ] Recorrer el candidato con móvil y calendario reales; probar OCR/voz con un
+  corpus anonimizado y Meta real antes de afirmar precisión externa.
+- [ ] Diseñar desambiguación conversacional persistente («el primero», apellido o
+  teléfono) y referencias humanas para trabajos/documentos sin mostrar ids.
+- [ ] El alta de usuarios debe reutilizar el flujo de invitación de Equipo con
+  correo, rol y confirmación; nunca crear credenciales desde texto libre.
+
+## Seguimiento del centro de mando — 7-sep
+
+- Verificar la revisión publicada y probar Safari/iPhone físico con cuenta autorizada.
+- Conciliar consumo registrado con facturas de proveedores; completar cobertura
+  de APIs sin presentar ausencia de eventos como coste cero.
+- Roles administrativos granulares y métricas comerciales por cohorte pendientes.
+- Copias independientes, WhatsApp y demás candidatos locales se revisan aparte;
+  no entran en el commit del centro de mando.
+
 > Único listado vivo de pendientes. La fotografía verificable está en
 > [`project-state.json`](project-state.json); planes y traspasos no duplican estados.
 
@@ -21,6 +42,28 @@
 - [ ] Nombrar sustituto y asesoría jurídica en la tabla de contactos de
   `cumplimiento/Procedimiento-brechas.md`: a las 3 de la mañana no se busca
   abogado, se llama al que ya está en la tabla.
+- [x] Validación técnica PostgreSQL 16 no productiva del candidato 55: migración,
+  baja con factura, idempotencia/concurrencia, aislamiento, bandeja, outbox,
+  exportación y rollback 55→54→53→54→55. Código anterior 53 probado sobre BD 55;
+  datos e inmutabilidad conservados. Humo de rutas y backup/restauración correctos.
+  Evidencia y límites: [[Revision-pre-main-2026-09-04]].
+- [x] Publicación autorizada del esquema 55: backup real y restauración previa,
+  release/ready, páginas públicas, accesos demo, recuentos operativos y auditoría
+  verificados el 4-sep. Artefactos fijados fuera de rotación en Railway.
+- [ ] Recorrer una solicitud humana completa con entrega real de correo. No se
+  ha borrado ni cancelado ninguna cuenta real para probar el despliegue.
+
+- [ ] Mantener el candidato ya publicado con
+  `NOESIS_VALUE_LEDGER_ENABLED=false` y
+  `NOESIS_VALUE_LEDGER_ADMIN_ENABLED=false`. El humo y rollback PostgreSQL aislados
+  ya están verificados. Mantener la secuencia de rollback seguro:
+  apagar ledger, restaurar código anterior aún sobre esquema 54, validar flujos y
+  solo entonces ensayar 54→53. Nunca servir código 54 sobre esquema 53. Después,
+  activar únicamente el ledger en 3-5 negocios piloto y reconciliar manualmente
+  acciones/outcomes, contexto `qualifies_for_wub`, zonas horarias, WUB semanal,
+  profundidad y aceptación. No enseñar métricas ni activar Confidence, Insight o
+  Progress.
+
 - [ ] Recorrer en escritorio y móvil el alta recuperable del esquema 49 ya
   desplegada en el release `8730826a79ab`:
   salir y volver en cada paso, revisar la identidad visual de factura, comprobar que
@@ -52,6 +95,25 @@
   ya está publicado: CI completo/PostgreSQL verdes, `/health` y `/ready` coherentes
   y portada, `/acceso` y `/gestoria/login` en 200. Falta activar y recorrer TOTP,
   anti-replay y recuperación con una cuenta profesional y un autenticador reales.
+- [ ] Residencia de datos, según [[Servidores-y-residencia-de-datos]]: firmar el DPA
+  autoservicio de Railway y archivarlo; comprobar en el panel la región de los
+  servicios web y Postgres, porque `railway.json` no fija ninguna y el valor por
+  defecto de la cuenta es estadounidense; si están fuera de la UE, moverlos a
+  `europe-west4-drams3a` **mientras el volumen siga vacío**, ya que la migración de
+  volumen causa parada y se encarece con cada cliente real. El candidato ya eliminó
+  el valor `us-east-1` por defecto: una copia externa no sale si faltan región de
+  firma, proveedor o residencia contractual. Falta verificar y configurar esos
+  valores reales, no deducirlos del endpoint.
+- [ ] Completar la validación profesional y externa de RGPD. El candidato ya retira
+  el iframe de Cal.com y su excepción CSP; corrige `/cumplimiento`; declara Stripe,
+  Google, Cal.com, Groq, correo, IA y backup según configuración; bloquea el alta si
+  un proveedor configurable no está identificado; registra bajas con conservación;
+  y añade [[RGPD-Registro-actividades]], [[RGPD-Matriz-proveedores]],
+  [[RGPD-Procedimiento-derechos-y-bajas]] y [[RGPD-Procedimiento-brechas]]. Falta que
+  el abogado valide roles, textos y tabla exacta de conservación; firmar/archivar
+  DPA; demostrar regiones; ensayar una solicitud completa y una brecha; y solo
+  entonces diseñar bloqueo y purga automática de cuentas canceladas. No programar
+  esa purga con plazos inventados.
 - [ ] La identidad legal ya está completada y publicada. Revisar aviso legal,
   privacidad, términos, DPA y fiscalidad con profesionales. Mantener
   `NOESIS_PUBLIC_SIGNUP_ENABLED=false` hasta cerrar toda esta lista P0.
@@ -83,10 +145,10 @@
   todos los precios
   usan un `tax_behavior` compatible y distinto de `unspecified`; y completar impago,
   downgrade, reactivación y permisos reales. El 14-ago se repitieron 7/7 contratos
-  locales del portal (incluido el bloqueo de segundo Checkout); esto valida Noesis,
+  locales del portal (incluido el bloqueo de segundo Checkout); esto valida Bynoesis,
   pero no sustituye el clic autenticado dentro del Customer Portal de Stripe.
 - [ ] Meta real: validar el número central y al menos dos números comerciales de
-  negocios distintos con el mismo token de sistema/activos concedidos a Noesis.
+  negocios distintos con el mismo token de sistema/activos concedidos a Bynoesis.
   Comprobar webhook firmado, coincidencia WABA + `phone_number_id`, mismo remitente
   aislado entre empresas, texto, audio, foto/PDF, opt-out, ventana de 24 horas,
   plantillas fuera de ventana, estados, reintentos, revocación y cuenta inactiva.
@@ -136,7 +198,7 @@
   remitente activo, pero la entregabilidad exige envíos reales a Gmail y Outlook.
   **20-ago: primer envío real correcto.** Con `BREVO_API_KEY` y `SMTP_FROM` en
   Railway, una recuperación de contraseña disparada contra producción llegó al buzón
-  de `xavier@bynoesis.com` con el remitente «Noesis». Queda comprobar que no cae en
+  de `xavier@bynoesis.com` con el remitente «Bynoesis». Queda comprobar que no cae en
   spam en Gmail y Outlook, y recorrer factura al cliente final, invitación de
   gestoría y reintento de la outbox.
 - [ ] Entrada documental Hostinger: activar el catch-all hacia un único buzón de
@@ -230,7 +292,7 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   original inmutable, un solo borrador pendiente, revisión antes de emitir y causa
   R5 limitada a facturas simplificadas F2.
 - [ ] Validar con asesoría y XSD AEAT si el piloto necesita rectificación por
-  sustitución (`S`) y sus importes rectificados; hasta entonces Noesis la rechaza
+  sustitución (`S`) y sus importes rectificados; hasta entonces Bynoesis la rechaza
   expresamente y no inventa un registro fiscal incompleto.
 - [ ] Evaluar servicio privado y proveedor compatible con el mismo corpus en
   castellano/catalán: herramientas, calidad, latencia, coste, concurrencia y caídas.
@@ -303,7 +365,7 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
 
 ## Límites permanentes
 
-- Noesis prepara; el autónomo confirma pagos, transferencias, impuestos, emisiones,
+- Bynoesis prepara; el autónomo confirma pagos, transferencias, impuestos, emisiones,
   envíos sensibles y borrados irreversibles.
 - Todo aprendizaje distingue observado de confirmado y es visible y corregible.
 - Toda operación filtra por `business_id`.

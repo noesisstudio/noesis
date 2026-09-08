@@ -1,4 +1,4 @@
-// Service worker mínimo de Noesis: habilita instalar la app y deja la base para
+// Service worker mínimo de Bynoesis: habilita instalar la app y deja la base para
 // trabajo offline más adelante. De momento, paso directo a la red.
 const CACHE = "noesis-v1";
 

@@ -2,12 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Conecta tu WhatsApp</title>
+  <title>Bynoesis · Conecta tu WhatsApp</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
 <body class="public-auth-body">
-  <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a><a href="/b/{{ business.id }}/resumen">Ir al panel</a></header>
+  <header class="auth-topbar"><a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Bynoesis</span></a><a href="/b/{{ business.id }}/resumen">Ir al panel</a></header>
   <main class="onboarding-review-shell">
     <section class="onboarding-review-card" aria-labelledby="whatsapp-title">
       <div class="auth-progress complete-progress" aria-label="Paso 4 de 4">
@@ -37,14 +37,14 @@
         <div class="onboarding-whatsapp-copy">
           <span class="eyebrow">Tu canal diario</span><h2>Conecta WhatsApp</h2>
           <p>Abre el mensaje preparado y envíalo tal cual. La vinculación solo se
-            considera terminada cuando Noesis recibe y verifica el código.</p>
+            considera terminada cuando Bynoesis recibe y verifica el código.</p>
         </div>
         {% if business.whatsapp_status == 'conectado' %}
         <div class="onboarding-wa-status connected"><b>WhatsApp conectado</b><span>{{ business.whatsapp_phone or 'Número verificado' }}</span></div>
         {% elif status == 'pending' %}
         <div class="onboarding-wa-status pending"><b>Aún no ha llegado el código</b><span>Envíalo desde WhatsApp y vuelve a comprobar.</span></div>
         {% else %}
-        <div class="onboarding-wa-status pending"><b>Pendiente de conectar</b><span>Noesis no marcará este paso como conectado antes de verificarlo.</span></div>
+        <div class="onboarding-wa-status pending"><b>Pendiente de conectar</b><span>Bynoesis no marcará este paso como conectado antes de verificarlo.</span></div>
         {% endif %}
 
         {% if business.whatsapp_status != 'conectado' %}

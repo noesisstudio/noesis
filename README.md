@@ -1,8 +1,8 @@
-# Noesis
+# Bynoesis
 
 [![CI](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml/badge.svg)](https://github.com/noesisstudio/noesis/actions/workflows/ci.yml)
 
-**Haz tu trabajo; Noesis te ordena el negocio.** Noesis es el copiloto de negocio
+**Haz tu trabajo; Bynoesis te ordena el negocio.** Bynoesis es el copiloto de negocio
 por WhatsApp para autónomos y pequeños negocios de servicios (fontaneros,
 electricistas, reformas, limpieza, jardinería…). Hablas con él por texto o audio y
 lleva la oficina —agenda, clientes, presupuestos, facturas, documentos y cobros—

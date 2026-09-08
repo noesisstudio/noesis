@@ -1,0 +1,34 @@
+<section class="admin-priority">
+  <div class="admin-priority-copy"><span class="kicker">Lo que requiere atención</span>
+    <h2>Una lectura común para todo el equipo.</h2>
+    <p>Solicitudes, cuentas y servicio en un mismo lugar. Cada departamento conserva sus datos, sus períodos y su siguiente acción.</p>
+  </div>
+  <div class="admin-priority-list">
+    <a href="#vista-captacion"><span><b>Solicitudes de acceso</b><small>Pendientes de primera atención</small></span><strong>{{ access_pending }}</strong></a>
+    <a href="#vista-operaciones"><span><b>Avisos del servicio</b><small>Reglas internas; revisar su causa</small></span><strong>{{ data.alerts|length }}</strong></a>
+    <a href="#vista-ingenieria"><span><b>Preparación técnica</b><small>Bloqueos detectados en configuración</small></span><strong>{{ data.readiness.counts.blocker }}</strong></a>
+    <a href="#vista-privacidad"><span><b>Solicitudes de privacidad</b><small>Abiertas y en seguimiento</small></span><strong>{{ privacy_pending }}</strong></a>
+  </div>
+</section>
+<section class="admin-section" aria-labelledby="empresa-heading">
+  <div class="admin-section-title"><div><span class="kicker">Dimensión del servicio</span><h2 id="empresa-heading">Cuentas, uso e ingresos</h2></div><span class="meta">Estado actual · no son cifras de caja</span></div>
+  <div class="admin-grid">
+    <div class="stat"><div class="lbl">Cuentas registradas</div><div class="val">{{ data.total }}</div><p>{{ data.en_prueba }} en prueba. Incluye las cuentas que existan en este entorno.</p></div>
+    <div class="stat"><div class="lbl">Uso operativo iniciado</div><div class="val">{{ data.activados }}</div><p>Cuentas con cliente, trabajo y factura. No significa suscripción de pago.</p></div>
+    <div class="stat"><div class="lbl">Ingreso mensual comprometido</div><div class="val">{{ data.mrr }} €</div><p>Planes activos a tarifa de catálogo. No son cobros conciliados.</p></div>
+  </div>
+</section>
+<section class="admin-section" aria-labelledby="departamentos-heading">
+  <div class="admin-section-title"><div><span class="kicker">Espacios de trabajo</span><h2 id="departamentos-heading">Cada área, con una pregunta clara</h2></div></div>
+  <div class="admin-departments">
+    <a href="#vista-cuentas"><span class="admin-department-label">Relación con clientes</span><h3>¿A quién tenemos que ayudar?</h3><p>Titulares, teléfonos vinculados, acceso y diagnóstico por cuenta.</p><span class="admin-department-status">{{ data.en_riesgo }} cuentas activadas sin actividad en 14 días o más</span><b>Abrir cuentas y soporte</b></a>
+    <a href="#vista-captacion"><span class="admin-department-label">Marketing y ventas</span><h3>¿Cómo llega y avanza la demanda?</h3><p>Páginas vistas, solicitudes y adopción. Cada indicador conserva su período.</p><span class="admin-department-status">{{ access_pending }} solicitudes pendientes</span><b>Abrir marketing y ventas</b></a>
+    <a href="#vista-finanzas"><span class="admin-department-label">Finanzas</span><h3>¿Qué ingresamos y qué nos cuesta?</h3><p>Ingreso comprometido, libro de costes y consumo por cuenta.</p><span class="admin-department-status">{{ 'Hay costes registrados; revisar cobertura' if data.cost_control.has_observed_data else 'Faltan costes reales para evaluar rentabilidad' }}</span><b>Abrir finanzas y consumo</b></a>
+    <a href="#vista-operaciones"><span class="admin-department-label">Operaciones</span><h3>¿Qué entregas requieren revisión?</h3><p>Mensajes, correos y remisiones. Seguimiento de incidencias por cuenta.</p><span class="admin-department-status">{{ data.cost_control.accounts_to_review }} cuentas a revisar por consumo, entrega o margen</span><b>Abrir operaciones</b></a>
+    <a href="#vista-ingenieria"><span class="admin-department-label">Ingeniería y seguridad</span><h3>¿Qué evidencia respalda el servicio?</h3><p>Controles de seguridad, integraciones y actividad técnica auditada.</p><span class="admin-department-status">{{ data.readiness.counts.blocker }} bloqueos · {{ data.readiness.counts.warning }} avisos de configuración</span><b>Abrir ingeniería y seguridad</b></a>
+    <a href="#vista-privacidad"><span class="admin-department-label">Administración legal</span><h3>¿Qué solicitudes debemos atender?</h3><p>Derechos, bajas y actuaciones documentadas, sin borrados implícitos.</p><span class="admin-department-status">{{ privacy_pending }} solicitudes abiertas</span><b>Abrir administración legal</b></a>
+  </div>
+</section>
+<details class="admin-disclosure"><summary>Cómo interpretar esta vista <span>Fuentes, períodos y cobertura</span></summary><div class="admin-disclosure-body">
+  <dl class="admin-definitions"><div><dt>Cuentas y uso</dt><dd>Base de cuentas y actividad histórica. El uso operativo requiere cliente, trabajo y factura; un primer cobro es otro hito, no ingreso de Bynoesis.</dd></div><div><dt>Ingresos</dt><dd>Planes activos valorados con el catálogo actual. Para beneficio real faltan cobros conciliados, descuentos y todos los costes aplicables.</dd></div><div><dt>Alertas</dt><dd>Los avisos operativos y los bloqueos de configuración tienen fuentes distintas. No se suman como si fueran incidentes únicos.</dd></div><div><dt>Lo que aún no se mide</dt><dd>Sin atribución publicitaria completa, CAC, satisfacción, SLA ni todos los costes de proveedores. No se presentan como cero ni como objetivos cumplidos.</dd></div></dl>
+</div></details>

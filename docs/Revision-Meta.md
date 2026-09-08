@@ -2,7 +2,7 @@
 
 > Revisión completa del 2026-08-20 a petición del founder. Cubre webhook, firma,
 > idempotencia, medios entrantes, cola de salida y las nueve plantillas.
-> La versión filtrable está en [`Estado-Noesis.xlsx`](Estado-Noesis.xlsx),
+> La versión filtrable está en [`Estado-Bynoesis.xlsx`](Estado-Bynoesis.xlsx),
 > hoja «Meta (WhatsApp)». Para encender la cuenta, [[Conectar-APIs]] sección 4.
 
 ## Resumen en una frase
@@ -28,8 +28,8 @@ Eso choca con dos reglas de Meta a la vez:
 2. **Un valor no puede contener saltos de línea, tabuladores ni cuatro espacios
    seguidos.** Aunque la plantilla estuviera aprobada, el envío fallaría.
 
-Afecta a `noesis_resumen_diario`, `noesis_cierre_dia`, `noesis_resumen_semanal`,
-`noesis_aviso_fiscal` y `noesis_aviso_cobros`. Es decir: el parte de la mañana, el
+Afecta a `bynoesis_resumen_diario`, `bynoesis_cierre_dia`, `bynoesis_resumen_semanal`,
+`bynoesis_aviso_fiscal` y `bynoesis_aviso_cobros`. Es decir: el parte de la mañana, el
 cierre del día, el resumen semanal, el aviso fiscal trimestral y la propuesta de
 cobro. Justo la parte que el founder llama «el punto más diferencial».
 
@@ -73,7 +73,7 @@ cuerpo. Esas se pueden crear en Meta hoy mismo.
   de idempotencia por negocio. Los estados no retroceden aunque Meta los entregue
   desordenados, y una cuenta en modo consulta cancela el envío en vez de mandarlo.
 - **Ventana de 24 horas.** El texto libre solo se usa respondiendo a un entrante;
-  todo lo que Noesis inicia va por plantilla. Se cumple por diseño.
+  todo lo que Bynoesis inicia va por plantilla. Se cumple por diseño.
 
 ## 3. Lo que se ha arreglado en esta revisión
 

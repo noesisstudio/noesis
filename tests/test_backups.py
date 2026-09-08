@@ -23,6 +23,9 @@ class VerifiedBackupTestCase(unittest.TestCase):
             "BACKUP_S3_BUCKET": config.BACKUP_S3_BUCKET,
             "BACKUP_S3_ACCESS_KEY": config.BACKUP_S3_ACCESS_KEY,
             "BACKUP_S3_SECRET_KEY": config.BACKUP_S3_SECRET_KEY,
+            "BACKUP_S3_REGION": config.BACKUP_S3_REGION,
+            "BACKUP_S3_PROVIDER_NAME": config.BACKUP_S3_PROVIDER_NAME,
+            "BACKUP_S3_DATA_REGION": config.BACKUP_S3_DATA_REGION,
         }
         root = Path(self.temporary.name)
         config.DATABASE_URL = ""
@@ -33,6 +36,9 @@ class VerifiedBackupTestCase(unittest.TestCase):
         config.BACKUP_S3_BUCKET = ""
         config.BACKUP_S3_ACCESS_KEY = ""
         config.BACKUP_S3_SECRET_KEY = ""
+        config.BACKUP_S3_REGION = ""
+        config.BACKUP_S3_PROVIDER_NAME = ""
+        config.BACKUP_S3_DATA_REGION = ""
         db.init_db()
 
     def tearDown(self):
@@ -150,6 +156,17 @@ class VerifiedBackupTestCase(unittest.TestCase):
         upload.assert_any_call(destination)
         uploaded_documents = upload.call_args_list[1].args[0]
         self.assertTrue(uploaded_documents.name.endswith(".docs.zip"))
+
+    def test_offsite_backup_fails_closed_without_legal_destination_context(self):
+        artifact = Path(config.BACKUP_DIR) / "copy.db"
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        artifact.write_bytes(b"backup")
+        config.BACKUP_S3_ENDPOINT = "https://storage.example"
+        config.BACKUP_S3_BUCKET = "noesis"
+        config.BACKUP_S3_ACCESS_KEY = "access"
+        config.BACKUP_S3_SECRET_KEY = "secret"  # pragma: allowlist secret
+
+        self.assertFalse(backups._upload_offsite(artifact))
 
     def test_only_admin_can_download_latest_verified_backup(self):
         from starlette.testclient import TestClient

@@ -1,4 +1,4 @@
-"""Paginas HTML de Noesis."""
+"""Paginas HTML de Bynoesis."""
 
 from __future__ import annotations
 
@@ -44,12 +44,20 @@ def _legal_context(request: Request) -> dict:
         "legal_address": config.LEGAL_ADDRESS,
         "legal_email": config.LEGAL_EMAIL or config.PUBLIC_CONTACT_EMAIL,
         "legal_registry": config.LEGAL_REGISTRY,
-        "legal_ready": config.legal_identity_ready(),
+        "legal_ready": config.legal_publication_ready(),
         "legal_document_version": config.LEGAL_DOCUMENT_VERSION,
-        "smtp_provider_name": config.SMTP_PROVIDER_NAME,
-        "smtp_provider_region": config.SMTP_PROVIDER_REGION,
+        "smtp_provider_name": (
+            "Brevo" if config.BREVO_API_KEY else config.SMTP_PROVIDER_NAME
+        ),
+        "smtp_provider_region": "" if config.BREVO_API_KEY else config.SMTP_PROVIDER_REGION,
         "compat_ai_legal_name": config.COMPAT_AI_LEGAL_NAME,
         "compat_ai_region": config.COMPAT_AI_REGION,
+        "anthropic_enabled": bool(config.ANTHROPIC_API_KEY),
+        "groq_enabled": bool(config.GROQ_API_KEY),
+        "google_oauth_enabled": config.google_oauth_available(),
+        "stripe_enabled": bool(config.STRIPE_SECRET_KEY),
+        "backup_provider_name": config.BACKUP_S3_PROVIDER_NAME,
+        "backup_provider_region": config.BACKUP_S3_DATA_REGION,
     }
 
 
@@ -355,7 +363,7 @@ def page(request: Request, business_id: int, page: str):
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
         "entitlements": billing_adapter.entitlements_for(biz),
-        # El parte de sección: la figura de Noesis en cada pantalla — lectura,
+        # El parte de sección: la figura de Bynoesis en cada pantalla — lectura,
         # cifras clave y puerta al acompañante (None en el Home, que tiene el suyo).
         "page_brief": chat.page_brief(business_id, page),
         "subscription_read_only": not db.subscription_allows_access(biz),
@@ -383,6 +391,8 @@ def page(request: Request, business_id: int, page: str):
     ):
         context["wa"] = whatsapp.start_link(business_id)
     if page == "ajustes":
+        context["privacy_request"] = db.get_open_privacy_request(business_id)
+        context["legal_email"] = config.LEGAL_EMAIL or config.PUBLIC_CONTACT_EMAIL
         context["support_grant"] = db.active_support_grant(business_id)
         context["support_scopes"] = db.SUPPORT_SCOPES
         context["support_notice"] = request.session.pop("support_notice", "")

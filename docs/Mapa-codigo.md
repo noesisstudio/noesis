@@ -1,12 +1,23 @@
 # Mapa de código
 
+## Centro de mando administrativo — 7-sep
+
+`admin.html` organiza siete departamentos; `admin_direction.html` resume las
+prioridades y `admin_delivery_summary.html` la actividad registrada de canales.
+`admin_navigation.html` comparte navegación con `admin_account.html`.
+`admin-workspace.css/js` aíslan estilo, búsqueda y navegación progresiva.
+`db.admin_api_usage` agrega eventos ai_usage por negocio, mes y proveedor/modelo;
+router admin exige autorización existente y audita el endpoint JSON de consumo.
+No carga contenidos de documentos ni credenciales. `NOESIS_COST_USD_TO_EUR`
+es una hipótesis de estimación, no altera contabilidad ni impuestos.
+
 ## Núcleo
 
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría. La recuperación de acceso consume token, cambia credencial y revoca
   sesiones en una sola transacción; pedir otro enlace invalida los anteriores.
-- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 52;
+- `src/noesis/migrations.py`: esquema SQLite/Postgres. El candidato llega a 55;
   facturación profesional queda congelada al emitir, los límites de autenticación
   son compartidos y la bitácora de seguridad es append-only y encadenada por hash.
   El salto 32 → 33 suspende el guardián de facturas solo dentro del backfill
@@ -34,7 +45,18 @@
   recuperación de contraseña de gestoría de los usuarios de empresa, con tokens
   hasheados, caducables y de un solo uso. La 52 añade rutas opacas de correo por
   negocio, deduplicación de mensajes sin contenido y propuestas confirmables de
-  cliente para documentos.
+  cliente para documentos. La 53 distingue material y mano de obra en líneas. La
+  54 añade un registro observacional de acciones y resultados útiles, relaciones
+  multiempresa protegidas, zona horaria y metadatos opcionales de correlación de
+  propuestas sin modificar permisos ni flujos. La 55 registra solicitudes de
+  privacidad por negocio, impide duplicar una solicitud abierta y separa seguimiento
+  de cualquier supresión técnica.
+- `src/noesis/value_ledger.py`: taxonomía central v1, escritores fail-open,
+  idempotencia, calificación binaria por contexto de delegación, infraestructura de
+  ciclo corregido/revertido todavía sin hooks operativos, outcomes muchos-a-muchos,
+  WUB móvil y semanal, profundidad, consistencia, aceptación por familia, activación
+  y estado conservador de control. No ejecuta acciones ni usa IA para calcular
+  métricas.
 - `src/noesis/gestoria_workspace.py`: lectura trimestral/anual para despachos;
   reconcilia facturas emitidas, facturas recibidas, gastos y documentos, calcula
   borradores explicables, detecta huecos y candidatos 347, y genera una primera
@@ -63,6 +85,12 @@
   derechos del plan antes de consultar o modificar módulos premium y mantiene el flujo común de
   entrega de factura: PDF, canal habitual, email/plantilla WhatsApp, idempotencia y
   evento trazable.
+- `src/noesis/fiscal_validation.py`: comprobación local de aritmética de borradores,
+  fechas y dígitos de control de NIF/NIE/CIF. Solo genera avisos; no corrige ni
+  contabiliza. WhatsApp exige revisión web si encuentra una incoherencia.
+- `src/noesis/db.py` + `web/routers/documents.py` + `templates/costes.html`:
+  corrección autenticada y multiempresa de facturas recibidas ya confirmadas, sin
+  alterar el documento original.
 - `src/noesis/documents/ocr.py` + `pdf_ocr.py`: lectura local de imágenes y PDF
   escaneado; detecta modelos Tesseract instalados, prioriza `cat+spa+eng`, prepara
   la imagen y limita páginas, píxeles, tiempo y texto antes de clasificar.
@@ -76,7 +104,8 @@
   certificado ordinario o sello, TLS mínimo, límite de respuesta e idempotencia de
   duplicados.
 - `src/noesis/nlu.py`: cerebro local para órdenes rutinarias sin coste de LLM;
-  separa ticket de gasto de ticket de venta F2 y entiende el trabajo a facturar.
+  separa ticket de gasto de ticket de venta F2, entiende importes españoles y
+  altas explícitas de cliente/proveedor, y deriva usuarios a invitación segura.
 - `src/noesis/internal_brain.py`: compositor local de comunicaciones. Usa hechos del
   negocio, evita ambigüedad y deja el envío pendiente de SÍ/NO del titular.
 - `src/noesis/agent.py`: agentes privado, compatible y Anthropic con historial, recuerdos
@@ -117,7 +146,7 @@
 - `branding/BRAND_GUIDE.md`: nombre, posicionamiento visual, variantes del logo,
   zona de seguridad, tamaños mínimos, paleta, tipografía, fotografía, voz y uso en redes.
 - `branding/sources/`: símbolo maestro y lockups SVG con la Fraunces ya autoalojada
-  por Noesis; son los originales para impresión, edición o exportación futura.
+  por Bynoesis; son los originales para impresión, edición o exportación futura.
 - `branding/logos/png/` y `branding/social/`: exportaciones transparentes, con fondo,
   avatares y portadas listas para cada superficie. El avatar de redes es una adaptación
   específica —estrella ampliada, interior original y contorno solo exterior sobre
@@ -127,13 +156,13 @@
 - `branding/redes-sociales/`: paquete operativo por canal con los PNG que se deben
   subir, textos listos para copiar, controles de seguridad, guía Word renderizada y
   archivos de reserva para YouTube/TikTok. No se carga en el runtime de la aplicación.
-- `branding/contenido/Plan-editorial-y-guiones-Noesis.docx`: manual operativo de
+- `branding/contenido/Plan-editorial-y-guiones-Bynoesis.docx`: manual operativo de
   contenido con 24 fichas, campañas, calendario, producción, medición y límites.
 - `branding/contenido/scripts/build_content_playbook.py`: fuente reproducible del
   manual editorial; usa la identidad existente y no forma parte del runtime.
 - `branding/scripts/build_brand_assets.mjs`: generador determinista con Sharp; crea
   exportaciones y `manifest.json` con dimensiones, uso y SHA-256. Su dependencia
-  queda aislada en `branding/package.json` y no entra en el runtime de Noesis.
+  queda aislada en `branding/package.json` y no entra en el runtime de Bynoesis.
 
 ## Web y acompañante
 
@@ -167,9 +196,9 @@
 - `src/noesis/web/templates/site_equipo.html`: página pública de equipo y principios;
   explica responsabilidades reales sin atribuir personas, clientes o credenciales
   todavía no verificadas.
-- `src/noesis/web/templates/site_contacto.html`: contacto y reserva de reunión con el
-  calendario incrustado. Es la única ruta donde la CSP permite `frame-src` de cal.com;
-  el resto del sitio mantiene `'none'`.
+- `src/noesis/web/templates/site_contacto.html`: contacto y reserva mediante enlace
+  externo consciente. Cal.com no se incrusta ni se carga por visitar Bynoesis; la CSP
+  mantiene `frame-src 'none'` en todas las rutas.
 - `src/noesis/web/templates/solicitar_acceso.html`: formulario público de solicitud de
   acceso. Producto se fusionó con la portada, que conserva las anclas `#como-funciona`
   y `#cumplimiento-legal` a las que redirigen los enlaces antiguos.
@@ -181,7 +210,7 @@
   cobra 11 meses y da 12. Autónomo conserva el núcleo y Negocio/Premium habilitan
   Proyectos, Equipo, Gestoría y Análisis avanzado. El adaptador también puede leer
   una suscripción concreta por API y convertirla en evidencia solo si coinciden
-  negocio, cliente, suscripción, estado activo y un precio conocido de Noesis.
+  negocio, cliente, suscripción, estado activo y un precio conocido de Bynoesis.
   Para una cuenta activa crea sesiones efímeras del portal general o deep links
   acotados a tarjeta, cancelación y confirmación del precio exacto; si Stripe aún no
   permite un flujo específico, cae al portal general sin crear un Checkout. Antes
@@ -208,11 +237,11 @@
   ruta de Checkout repite esta protección en servidor ante formularios antiguos o
   peticiones manipuladas.
 - `src/noesis/web/routers/assistant.py`: conversación, memoria, permisos y registro
-  de acciones de Noesis.
+  de acciones de Bynoesis.
 - `src/noesis/web/chat.py`: parte del día, plan operativo y acompañamiento. Resuelve
   por reglas, después por IA privada, proveedor compatible y Anthropic; los niveles
   externos comparten consentimiento y un crédito por mensaje.
-- `src/noesis/web/templates/base.html`: capa persistente de Noesis: lectura real de
+- `src/noesis/web/templates/base.html`: capa persistente de Bynoesis: lectura real de
   la sección, siguiente paso con motivo, preguntas contextuales y conversación.
 - `src/noesis/web/routers/projects.py`: proyectos, trabajos vinculados, tareas,
   equipo, horas y costes.
@@ -246,6 +275,9 @@
   cerrada en producción si falta identidad legal o autorización explícita y no
   expone el diagnóstico de proveedores en la API del cliente. La solicitud pública
   distingue también un despacho profesional sin crearle una cuenta ni permisos.
+  La baja borra directamente solo si no hay conservación obligatoria; con facturas
+  o jornada crea una solicitud idempotente, avisa por la outbox y deja evidencia en
+  la bitácora sin fingir que los datos ya se han suprimido.
 - `src/noesis/web/routers/pages.py` + `templates/access_entry.html`: `/acceso` es la
   puerta pública única. Deriva autónomo/empresa al login titular y gestoría a su
   identidad profesional separada; un cliente final conserva el portal por enlace.
@@ -263,7 +295,9 @@
   solicitudes: el alta crea el negocio, arranca la prueba ese día y devuelve un
   enlace de un solo uso —reutiliza `password_resets`— para que el titular elija su
   contraseña, de modo que el equipo nunca llega a conocerla. También resume las
-  visitas de la web del último mes. La ficha técnica por cuenta llama a
+  visitas de la web del último mes. La bandeja `Privacidad y bajas` muestra las
+  solicitudes abiertas y exige una nota para cada cambio de estado; el estado es
+  seguimiento administrativo y nunca dispara un borrado. La ficha técnica por cuenta llama a
   `db.admin_support_snapshot`: solo devuelve estados y recuentos, nunca contenido
   operativo, y registra cada consulta en la bitácora encadenada. Si el titular abre
   el alcance temporal `document_metadata`, `db.admin_support_document_metadata` y
@@ -334,7 +368,7 @@
 - `templates/oficios.html` + `routers/invoicing.py`: la pantalla de plantillas por
   oficio. Muestra cada partida con su IVA, si es material o mano de obra y cuáles
   tiene ya el negocio; carga la plantilla sin duplicar lo existente.
-- `scripts/build_estado_xlsx.py`: genera `docs/Estado-Noesis.xlsx` leyendo los
+- `scripts/build_estado_xlsx.py`: genera `docs/Estado-Bynoesis.xlsx` leyendo los
   módulos reales, sin dependencias — un `.xlsx` es un zip de XML y se escribe a
   mano. Vuelve a ejecutarlo cuando cambien las plantillas o los catálogos.
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el

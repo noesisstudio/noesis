@@ -641,6 +641,7 @@ class BackendTestCase(unittest.TestCase):
     def test_month_billing_separates_cash_flow_from_invoice_cohort(self):
         business, client = self.make_business("Cohortes de cobro")
         this_month = date.today().strftime("%Y-%m")
+        today = date.today().isoformat()
         previous_month = (date.today().replace(day=1) - timedelta(days=1)).strftime(
             "%Y-%m"
         )
@@ -658,15 +659,15 @@ class BackendTestCase(unittest.TestCase):
                 business_id=business["id"],
             )["id"],
             business["id"],
-            _issued_at_override=f"{this_month}-02T10:00:00",
+            _issued_at_override=f"{today}T08:00:00",
         )
         db.add_invoice_payment(
             old_invoice["id"], 121, business_id=business["id"],
-            paid_at=f"{this_month}-03T10:00:00",
+            paid_at=f"{today}T10:00:00",
         )
         db.add_invoice_payment(
             current_invoice["id"], 40, business_id=business["id"],
-            paid_at=f"{this_month}-04T10:00:00",
+            paid_at=f"{today}T11:00:00",
         )
 
         month = db.month_billing(this_month, business_id=business["id"])
@@ -1101,6 +1102,198 @@ class BackendTestCase(unittest.TestCase):
             ).fetchone()["total"]
         self.assertEqual(remaining_runs, 0)
 
+    def test_account_closure_with_legal_records_is_tracked_and_idempotent(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, client = self.make_business("Baja con conservación")
+        user = db.create_user(
+            "baja-conservacion@example.com",
+            auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        invoice = db.add_invoice(
+            client["id"], "Trabajo emitido", 100, business_id=business["id"]
+        )
+        db.issue_invoice(invoice["id"], business["id"])
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as http:
+                http.post(
+                    "/login",
+                    data={"email": user["email"], "password": TEST_PASSWORD},
+                )
+                response = http.post(
+                    f"/b/{business['id']}/account/delete",
+                    data={"confirm": "BORRAR", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 303)
+                self.assertIn("ok=baja-solicitada", response.headers["location"])
+                settings = http.get(f"/b/{business['id']}/ajustes")
+                self.assertIn("Solicitud #", settings.text)
+                self.assertNotIn("Solicitar baja y borrado", settings.text)
+
+                duplicate = http.post(
+                    f"/b/{business['id']}/account/delete",
+                    data={"confirm": "BORRAR", "password": TEST_PASSWORD},
+                    follow_redirects=False,
+                )
+                self.assertEqual(duplicate.status_code, 303)
+
+        self.assertIsNotNone(db.get_business(business["id"]))
+        requests = db.list_privacy_requests(business_id=business["id"])
+        self.assertEqual(len(requests), 1)
+        self.assertTrue(requests[0]["retention_required"])
+        self.assertEqual(requests[0]["requester_user_id"], user["id"])
+        notices = [
+            str(row.get("idempotency_key") or "")
+            for row in db.list_email_messages(business["id"], limit=20)
+            if str(row.get("idempotency_key") or "").startswith("privacy-request-")
+        ]
+        # Se avisa al titular y, si hay buzón interno configurado, también a
+        # privacidad: son dos correos distintos y legítimos. Lo que la idempotencia
+        # prohíbe es repetir cualquiera de los dos al reenviar la solicitud.
+        self.assertEqual(len(notices), len(set(notices)))
+        self.assertEqual(
+            len([key for key in notices if key.startswith("privacy-request-user:")]), 1
+        )
+        self.assertIn(
+            "privacy.account_closure_requested",
+            [event["event_type"] for event in db.list_security_events(20)],
+        )
+
+    def test_privacy_request_status_never_deletes_the_business(self):
+        business, _ = self.make_business("Baja revisada")
+        user = db.create_user(
+            "baja-revisada@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        created = db.create_privacy_request(
+            business["id"], requester_user_id=user["id"],
+            retention_required=True,
+        )
+        with self.assertRaises(ValueError):
+            db.update_privacy_request(
+                created["id"], status="completed", resolution_note="",
+            )
+        completed = db.update_privacy_request(
+            created["id"], status="completed",
+            resolution_note="Datos operativos revisados; ejecución documentada aparte.",
+        )
+        self.assertEqual(completed["status"], "completed")
+        self.assertIsNone(completed["active_key"])
+        self.assertIsNotNone(db.get_business(business["id"]))
+
+    def test_admin_can_track_a_privacy_request_without_deleting_data(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Baja en panel")
+        admin = db.create_user(
+            "admin-privacidad@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        with db.get_conn() as conn:
+            conn.execute("UPDATE users SET is_admin=TRUE WHERE id=?", (admin["id"],))
+        created = db.create_privacy_request(
+            business["id"], requester_user_id=admin["id"],
+            retention_required=True,
+        )
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as http:
+                http.post(
+                    "/login",
+                    data={"email": admin["email"], "password": TEST_PASSWORD},
+                )
+                panel = http.get("/admin")
+                self.assertIn("Privacidad y bajas", panel.text)
+                response = http.post(
+                    f"/admin/privacidad/{created['id']}/estado",
+                    data={
+                        "status": "legal_hold",
+                        "resolution_note": "Facturas emitidas pendientes de plazo.",
+                    },
+                    follow_redirects=False,
+                )
+        self.assertEqual(response.status_code, 303)
+        tracked = db.list_privacy_requests(business_id=business["id"])[0]
+        self.assertEqual(tracked["status"], "legal_hold")
+        self.assertIsNotNone(db.get_business(business["id"]))
+        self.assertIn(
+            "privacy.request_status_updated",
+            [event["event_type"] for event in db.list_security_events(20)],
+        )
+
+    def test_privacy_request_migration_rolls_back_without_touching_business(self):
+        business, _ = self.make_business("Rollback privacidad")
+        user = db.create_user(
+            "rollback-privacidad@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+        db.create_privacy_request(
+            business["id"], requester_user_id=user["id"],
+            retention_required=True,
+        )
+
+        self.assertEqual(migrations.current_version(), 55)
+        self.assertEqual(migrations.downgrade(54), 54)
+        self.assertIsNotNone(db.get_business(business["id"]))
+        with db.get_conn() as conn:
+            table = conn.execute(
+                "SELECT 1 AS found FROM sqlite_master "
+                "WHERE type='table' AND name='privacy_requests'"
+            ).fetchone()
+        self.assertIsNone(table)
+        self.assertEqual(migrations.upgrade(55), 55)
+        self.assertEqual(db.list_privacy_requests(business_id=business["id"]), [])
+
+    def test_concurrent_privacy_request_is_still_one_open_case(self):
+        business, _ = self.make_business("Baja concurrente")
+        user = db.create_user(
+            "baja-concurrente@example.com", auth.hash_password(TEST_PASSWORD),
+            business["id"],
+        )
+
+        def submit(_index):
+            return db.create_privacy_request(
+                business["id"], requester_user_id=user["id"],
+                retention_required=True,
+            )["id"]
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            ids = list(pool.map(submit, range(8)))
+        self.assertEqual(len(set(ids)), 1)
+        self.assertEqual(
+            len(db.list_privacy_requests(business_id=business["id"])), 1
+        )
+
+    def test_public_privacy_pages_match_loaded_third_parties(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        with (
+            patch.object(server, "start_scheduler", lambda: None),
+            patch.object(config, "STRIPE_SECRET_KEY", "sk_test_example"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_ID", "client"),
+            patch.object(config, "GOOGLE_OAUTH_CLIENT_SECRET", "secret"),
+            patch.object(config, "BREVO_API_KEY", "brevo"),
+            patch.object(config, "GROQ_API_KEY", "groq"),
+        ):
+            with TestClient(server.app) as http:
+                contact = http.get("/contacto")
+                privacy = http.get("/privacidad")
+                processor = http.get("/encargado-tratamiento")
+                compliance = http.get("/cumplimiento")
+        self.assertNotIn("<iframe", contact.text.lower())
+        self.assertIn("cal.com/bynoesis/sesion-de-estrategia", contact.text)
+        self.assertIn("frame-src 'none'", contact.headers["content-security-policy"])
+        for provider in ("Stripe", "Google", "Brevo", "Groq", "Cal.com"):
+            self.assertIn(provider, privacy.text)
+        self.assertIn("Stripe", processor.text)
+        self.assertNotIn("sistema homologado", compliance.text.lower())
+
     def test_whatsapp_signature(self):
         payload = b'{"entry":[]}'
         old_secret, old_production = config.WHATSAPP_APP_SECRET, config.IS_PRODUCTION
@@ -1314,6 +1507,46 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(invoice["base"], 100.0)
         self.assertEqual(invoice["total"], 121.0)
 
+    def test_asking_about_vat_answers_the_quarter_and_not_the_month(self):
+        # «¿Cómo va mi IVA?» caía en resumen_negocio, que contesta facturado y
+        # cobrado del mes: nunca el 303. El cálculo trimestral existía en la base
+        # de datos pero ninguna herramienta lo alcanzaba, así que el asistente no
+        # podía responder una pregunta fiscal sin inventársela.
+        for frase in (
+            "como va mi iva",
+            "cuanto iva tengo que pagar",
+            "que me toca pagar de iva este trimestre",
+            "resumen del modelo 303",
+            "cuanto irpf llevo",
+        ):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], "ver_impuestos")
+        self.assertEqual(nlu.parse("el irpf del 2T"), ("ver_impuestos", {"trimestre": 2}))
+        self.assertEqual(
+            nlu.parse("impuestos del 3er trimestre 2026"),
+            ("ver_impuestos", {"trimestre": 3, "anio": 2026}),
+        )
+        # Preguntar por el negocio sigue siendo el resumen del mes, y una factura
+        # que menciona su tipo de IVA sigue siendo una factura.
+        self.assertEqual(nlu.parse("cuanto llevo facturado")[0], "resumen_negocio")
+        self.assertEqual(nlu.parse("factura a Pepe 500 euros iva 21")[0], "crear_factura")
+
+        from noesis import tools
+
+        business, _ = self.make_business("Fiscal")
+        result = json.loads(tools.run_tool("ver_impuestos", {}, business["id"]))
+        self.assertTrue(result["ok"])
+        self.assertIn("iva_resultado", result)
+        self.assertIn("irpf_pago", result)
+        reply = nlu.format_reply("ver_impuestos", result)
+        self.assertIn("303", reply)
+        self.assertIn("gestoría", reply)
+        # Un trimestre imposible se rechaza en vez de reventar el cálculo.
+        rechazado = json.loads(
+            tools.run_tool("ver_impuestos", {"trimestre": 7}, business["id"])
+        )
+        self.assertFalse(rechazado["ok"])
+
     def test_web_chat_issues_the_draft_it_told_you_to_issue(self):
         # El mensaje que confirma el borrador sugiere «emitir factura N». Esa
         # orden solo la entendía WhatsApp, así que en la web el borrador se
@@ -1331,21 +1564,42 @@ class BackendTestCase(unittest.TestCase):
         )
 
         # Dictada por voz, la frase natural lleva un conector entre el nombre y
-        # el importe. Si se cuela en el nombre, Noesis crea un cliente nuevo mal
+        # el importe. Si se cuela en el nombre, Bynoesis crea un cliente nuevo mal
         # escrito en vez de reconocer al que ya existe.
         for frase, cliente, base in (
+            ("hazme una factura a Juan de 100 euros", "Juan", 100.0),
             ("factura para Juan Perez de 250 euros por reparar una bajante",
              "Juan Perez", 250.0),
             ("hazme una factura para Los Olivos de 1200 euros por la reforma",
              "Los Olivos", 1200.0),
             ("factura a Maria Garcia 80 euros", "Maria Garcia", 80.0),
             ("factura a Juan 95 euros por cambiar el termo", "Juan", 95.0),
+            ("factura a Taller Sol 1.200,50 por la reforma", "Taller Sol", 1200.5),
+            ("hazme una factura de 100 para Juan por revisar el termo", "Juan", 100.0),
         ):
             with self.subTest(frase=frase):
                 herramienta, datos = nlu.parse(frase)
                 self.assertEqual(herramienta, "crear_factura")
                 self.assertEqual(datos["cliente"], cliente)
                 self.assertEqual(datos["base"], base)
+
+        self.assertEqual(nlu.parse("crear cliente Ana Ruiz"),
+                         ("crear_cliente", {"nombre": "Ana Ruiz"}))
+        self.assertEqual(nlu.parse("nuevo proveedor Materiales Sol"),
+                         ("crear_proveedor", {"nombre": "Materiales Sol"}))
+        self.assertEqual(nlu.parse("hazme una factura"), (nlu.NEED_INVOICE, {}))
+
+        party_business, _ = self.make_business("Altas por chat")
+        created_client = chat.handle(party_business["id"], "crear cliente Ana Ruiz")
+        created_supplier = chat.handle(
+            party_business["id"], "nuevo proveedor Materiales Sol"
+        )
+        self.assertIn("Cliente guardado", created_client["reply"])
+        self.assertIn("Proveedor guardado", created_supplier["reply"])
+        self.assertEqual(len(db.list_clients(party_business["id"])), 2)
+        self.assertEqual(len(db.list_suppliers(party_business["id"])), 1)
+        incomplete = chat.handle(party_business["id"], "hazme una factura")
+        self.assertIn("cliente, concepto e importe", incomplete["reply"])
 
         business, _ = self.make_business()
         chat.handle(business["id"], "factura a Juan por reparación 100 euros")
@@ -1412,7 +1666,7 @@ class BackendTestCase(unittest.TestCase):
 
     def test_series_can_continue_a_numbering_brought_from_another_program(self):
         # Quien llega desde otro programa ya lleva facturas emitidas del año. Si
-        # Noesis empezara en el 1, repetiría números dentro del mismo ejercicio.
+        # Bynoesis empezara en el 1, repetiría números dentro del mismo ejercicio.
         business, client = self.make_business()
         first = db.add_invoice(
             client["id"], "Primera", 100, business_id=business["id"]
@@ -1588,6 +1842,52 @@ class BackendTestCase(unittest.TestCase):
         self.assertIn("varios clientes", ambiguous["reply"])
         self.assertEqual(len(db.list_clients(business["id"])), before)
 
+    def test_tax_quarter_reads_each_table_once_whatever_the_quarter(self):
+        # El modelo 130 necesita los trimestres anteriores y la función se llamaba
+        # a sí misma: cada llamada releía facturas, gastos y facturas recibidas
+        # enteras, así que pedir el 4T costaba doce lecturas completas y tardaba
+        # siete veces más que el 1T. Se leen una vez y se reparten.
+        business, client = self.make_business("Lecturas")
+        for month, base in ((2, 1000), (5, 2000), (8, 1500)):
+            invoice = db.add_invoice(
+                client["id"], f"Trabajo {month}", base, vat_rate=21,
+                irpf_rate=15, business_id=business["id"],
+            )
+            db.issue_invoice(
+                invoice["id"], business["id"],
+                _issued_at_override=f"2025-{month:02d}-15T10:00:00",
+            )
+
+        lecturas: dict[str, int] = {}
+
+        def _contar(nombre, original):
+            def _envuelto(*a, **k):
+                lecturas[nombre] = lecturas.get(nombre, 0) + 1
+                return original(*a, **k)
+            return _envuelto
+
+        originales = {
+            n: getattr(db, n)
+            for n in ("list_invoices", "list_expenses", "list_received_invoices")
+        }
+        try:
+            for nombre, original in originales.items():
+                setattr(db, nombre, _contar(nombre, original))
+            cuarto = db.tax_quarter(2025, 4, business["id"])
+        finally:
+            for nombre, original in originales.items():
+                setattr(db, nombre, original)
+
+        for nombre, veces in lecturas.items():
+            self.assertEqual(veces, 1, f"{nombre} se leyó {veces} veces, se esperaba 1")
+        # El acumulado del año sigue siendo el de las tres facturas emitidas.
+        self.assertEqual(cuarto["ingresos"], 4500.0)
+        # Y el 4T sigue descontando lo estimado en los trimestres anteriores.
+        previos = round(sum(
+            db.tax_quarter(2025, q, business["id"])["irpf_pago"] for q in (1, 2, 3)
+        ), 2)
+        self.assertEqual(cuarto["pagos_previos_estimados"], previos)
+
     def test_invalid_tax_quarter_and_csv_formula(self):
         business, _ = self.make_business()
         with self.assertRaises(ValueError):
@@ -1689,6 +1989,8 @@ class BackendTestCase(unittest.TestCase):
                 self.assertEqual(feed.status_code, 200)
                 self.assertTrue(feed.headers["content-type"].startswith("text/calendar"))
                 self.assertIn("BEGIN:VCALENDAR", feed.text)
+                self.assertIn("BEGIN:VTIMEZONE", feed.text)
+                self.assertIn("TZID:Europe/Madrid", feed.text)
                 self.assertIn("Revisar caldera", feed.text)
                 self.assertNotIn("Secreto de otro negocio", feed.text)
                 agenda = client.get(f"/b/{business['id']}/agenda")
@@ -2421,9 +2723,9 @@ class PaymentReminderTestCase(unittest.TestCase):
                 page = client.get(f"/b/{business['id']}/ajustes")
                 self.assertEqual(page.status_code, 200)
                 self.assertIn("Recordatorios de cobro", page.text)
-                self.assertIn("Centro de control de Noesis", page.text)
-                self.assertIn("Noesis nunca mueve dinero", page.text)
-                self.assertIn("Ayuda avanzada de Noesis", page.text)
+                self.assertIn("Centro de control de Bynoesis", page.text)
+                self.assertIn("Bynoesis nunca mueve dinero", page.text)
+                self.assertIn("Ayuda avanzada de Bynoesis", page.text)
                 self.assertNotIn("Yo vigilo que todo siga funcionando", page.text)
                 self.assertNotIn("Calendario externo", page.text)
                 self.assertNotIn("IA privada", page.text)
@@ -3044,7 +3346,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Taller García", home_page.text)
                 self.assertIn("product-home-preview", home_page.text)
                 self.assertIn("data-product-demo", home_page.text)
-                self.assertNotIn("Inicio de Noesis", home_page.text)
+                self.assertNotIn("Inicio de Bynoesis", home_page.text)
                 self.assertNotIn("Empresa de ejemplo", home_page.text)
                 self.assertNotIn("Vista de ejemplo basada", home_page.text)
                 self.assertIn("hero-impact", home_page.text)
@@ -3052,7 +3354,7 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 self.assertIn("Puesta en marcha", home_page.text)
                 self.assertIn("6 de 6 pasos listos", home_page.text)
                 self.assertIn("Beneficio este mes", home_page.text)
-                self.assertIn("Noesis está trabajando", home_page.text)
+                self.assertIn("Bynoesis está trabajando", home_page.text)
                 self.assertIn("Cómo va el dinero", home_page.text)
                 self.assertIn("data-demo-crumb", home_page.text)
                 self.assertIn("Conectar WhatsApp", home_page.text)
@@ -5297,6 +5599,30 @@ class WhatsappMediaTestCase(unittest.TestCase):
         db.set_whatsapp_status(business["id"], "conectado", phone=phone)
         return db.get_business(business["id"]), client
 
+    def test_linking_accepts_the_old_keyword_after_the_rename(self):
+        # La marca pasó de «Noesis» a «Bynoesis». El mensaje que se genera lleva ya
+        # la palabra nueva, pero quien tenga a mano una captura, un correo o unas
+        # instrucciones antiguas no puede quedarse sin poder vincular su teléfono.
+        business, _ = self.make_business("Renombrada")
+
+        enlace = whatsapp.start_link(business["id"])
+        self.assertTrue(enlace["link"])
+        self.assertIn("BYNOESIS", enlace["link"].replace("%20", " "))
+
+        # La palabra nueva vincula.
+        respuesta = whatsapp._try_link("34600111222", f"BYNOESIS {enlace['code']}")
+        self.assertIsNotNone(respuesta)
+        self.assertNotIn("no es válido", respuesta)
+
+        # Y la antigua también, con un código nuevo.
+        otro = whatsapp.start_link(business["id"])
+        vieja = whatsapp._try_link("34600111333", f"NOESIS {otro['code']}")
+        self.assertIsNotNone(vieja)
+        self.assertNotIn("no es válido", vieja)
+
+        # Cualquier otra palabra sigue sin ser una vinculación.
+        self.assertIsNone(whatsapp._try_link("34600111444", f"HOLA {otro['code']}"))
+
     def test_photo_creates_draft_and_yes_confirms_once(self):
         from noesis.adapters import extraction
 
@@ -5339,6 +5665,42 @@ class WhatsappMediaTestCase(unittest.TestCase):
                 "from": "34600111222", "id": "wamid-foto-3", "text": "sí",
             })
         self.assertEqual(len(db.list_expenses(business["id"])), 1)
+
+    def test_repeated_photo_is_reread_without_leaking_an_internal_id(self):
+        from noesis.adapters import extraction
+        from noesis.documents import repo as docrepo
+
+        business, _ = self._connected_business("Foto repetida")
+        replies = []
+        extracted = {
+            "concept": "Material", "amount": 25.5, "vat_rate": 21,
+            "date": None, "supplier": "Ferretería",
+        }
+        with (
+            patch.object(whatsapp, "_download_media", return_value=TINY_JPEG),
+            patch.object(extraction, "extract_expense", return_value=extracted),
+            patch.object(
+                whatsapp, "send",
+                side_effect=lambda phone, text, **kw: replies.append(text),
+            ),
+        ):
+            first = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-photo-repeat-1",
+                "image_id": "media-repeat", "image_mime": "image/jpeg",
+            })["results"][0]
+            second = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-photo-repeat-2",
+                "image_id": "media-repeat", "image_mime": "image/jpeg",
+            })["results"][0]
+
+        self.assertTrue(first["ingested"])
+        self.assertFalse(first["already_stored"])
+        self.assertTrue(second["ingested"])
+        self.assertTrue(second["already_stored"])
+        self.assertEqual(first["document_id"], second["document_id"])
+        self.assertEqual(len(docrepo.list_for_business(business["id"])), 1)
+        self.assertIn("vuelto a leer", replies[-1])
+        self.assertNotIn("documento #", replies[-1])
 
     def test_photo_no_discards_and_unknown_phone_gets_invite(self):
         from noesis.adapters import extraction
@@ -5506,6 +5868,80 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(len(docs), 1)
         self.assertEqual(docs[0]["filename"], "factura-luz.pdf")
         self.assertIn("papeles", replies[-1])
+
+    def test_model_answer_with_several_invoices_is_not_thrown_away(self):
+        # Un PDF con varias facturas dentro se contesta como lista de objetos, no
+        # como uno solo. El recorte iba de la primera llave a la última, así que con
+        # dos o más quedaba un texto con comas sueltas que no era JSON: la respuesta
+        # correcta del modelo se tiraba y el papel acababa sin clasificar. Medido
+        # contra la IA real: 0 aciertos de 6 antes, 5 de 5 después.
+        from noesis.adapters import extraction
+
+        uno = '{"kind": "ticket", "confidence": 80, "reason": "x"}'
+        lista_de_tres = (
+            '```json\n[\n'
+            ' {"kind": "factura_recibida", "confidence": 95, "reason": "la primera"},\n'
+            ' {"kind": "factura_recibida", "confidence": 95, "reason": "la segunda"},\n'
+            ' {"kind": "factura_recibida", "confidence": 95, "reason": "la tercera"}\n'
+            ']\n```'
+        )
+        self.assertEqual(extraction._json_object(uno)["kind"], "ticket")
+        # Todos los objetos describen el mismo papel: vale el primero.
+        primero = extraction._json_object(lista_de_tres)
+        self.assertIsNotNone(primero, "una lista de objetos no puede descartarse")
+        self.assertEqual(primero["kind"], "factura_recibida")
+        self.assertEqual(primero["reason"], "la primera")
+        # Las formas que ya funcionaban siguen funcionando.
+        for texto, esperado in (
+            ('```json\n{"kind": "albaran", "confidence": 70, "reason": "y"}\n```', "albaran"),
+            ('Aquí tienes: {"kind": "contrato", "confidence": 90, "reason": "z"} y ya.',
+             "contrato"),
+            ('{"kind": "ticket", "confidence": 60, "lineas": [1, 2], "reason": "w"}',
+             "ticket"),
+        ):
+            with self.subTest(texto=texto[:40]):
+                self.assertEqual(extraction._json_object(texto)["kind"], esperado)
+        self.assertIsNone(extraction._json_object("no hay json aquí"))
+        self.assertIsNone(extraction._json_object(""))
+        # Y una lista sin objetos no puede colarse como clasificación.
+        self.assertIsNone(extraction._json_object("[1, 2, 3]"))
+
+    def test_resending_a_stored_pdf_reclassifies_it_instead_of_dead_ending(self):
+        # Reenviar el mismo papel contestaba «ya estaba guardado como documento N»
+        # y ahí moría: un PDF archivado cuando no había IA disponible no se podía
+        # volver a clasificar por WhatsApp de ninguna manera. Ahora se relee.
+        business, _ = self._connected_business("Reenvío PDF")
+        from noesis.documents import repo as docrepo
+
+        replies = []
+        envio = {
+            "from": "34600111222", "id": "wamid-dup-1",
+            "media_document_id": "media-dup",
+            "media_document_mime": "application/pdf",
+            "media_document_filename": "factura-repetida.pdf",
+        }
+        with (
+            patch.object(whatsapp, "_download_media",
+                         return_value=b"%PDF-1.4 mismo contenido"),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            primero = whatsapp.handle_inbound(envio)["results"][0]
+            segundo = whatsapp.handle_inbound(
+                {**envio, "id": "wamid-dup-2"}
+            )["results"][0]
+
+        self.assertTrue(primero["ingested"])
+        self.assertFalse(primero["already_stored"])
+        # El reenvío no es un error: reconoce el archivo y lo vuelve a proponer.
+        self.assertTrue(segundo["ingested"])
+        self.assertTrue(segundo["already_stored"])
+        self.assertEqual(segundo["document_id"], primero["document_id"])
+        # No se duplica el papel en el archivo.
+        self.assertEqual(len(docrepo.list_for_business(business["id"])), 1)
+        # Y la respuesta lo dice, en vez de soltar un identificador interno.
+        self.assertIn("vuelto a leer", replies[-1])
+        self.assertNotIn("ya estaba guardado como documento", replies[-1])
 
     def test_whatsapp_pdf_caption_links_the_right_project_and_client(self):
         from fpdf import FPDF
@@ -6342,7 +6778,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Dirección Noesis")
+        admin_business, _ = self.make_business("Dirección Bynoesis")
         target, _ = self.make_business("Cuenta con correo bloqueado")
         other, _ = self.make_business("Otra cuenta")
         admin = db.create_user(
@@ -6543,7 +6979,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
 
         prohibido = "\r\n\t\v\f\u2028\u2029"
         parte = (
-            "Tu parte de hoy en Noesis:\n"
+            "Tu parte de hoy en Bynoesis:\n"
             "\n"
             "Trabajos:\n"
             "\u2022 #12 \u00b7 09:00 \u00b7 Comunidad Los Olivos: reparar bajante\n"
@@ -6575,7 +7011,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertIn("Comunidad Los Olivos", enviado)
         self.assertIn("240,00", enviado)
         self.assertIn("\u00b7", enviado, "los saltos dejan un separador visible")
-        self.assertNotIn("Noesis:Trabajos", enviado, "las lineas no pueden pegarse")
+        self.assertNotIn("Bynoesis:Trabajos", enviado, "las lineas no pueden pegarse")
 
         # 3. Lo guardado es exactamente lo que saldra, para que un reintento no
         #    cambie el texto ni el diagnostico enseñe otra cosa.
@@ -6650,7 +7086,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertNotIn("https://", boton)
 
     def test_each_identity_lands_where_it_works(self):
-        """Administracion no lleva un negocio con Noesis: gestiona los de los demas.
+        """Administracion no lleva un negocio con Bynoesis: gestiona los de los demas.
 
         Aterrizar en un panel con Trabajos, Clientes y Facturas la obliga a buscar
         la puerta de su propio trabajo. Un cliente, al reves, no debe acabar nunca
@@ -6658,7 +7094,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Noesis Studio")
+        admin_business, _ = self.make_business("Bynoesis Studio")
         cliente, _ = self.make_business("Fontaneria cliente")
         admin = db.create_user(
             "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
@@ -6706,7 +7142,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Noesis Studio")
+        admin_business, _ = self.make_business("Bynoesis Studio")
         cliente, _ = self.make_business("Fontaneria de prueba")
         admin = db.create_user(
             "duenyo@example.com", auth.hash_password(TEST_PASSWORD),
@@ -7116,7 +7552,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         from starlette.testclient import TestClient
         from noesis.web import server
 
-        admin_business, _ = self.make_business("Dirección Noesis")
+        admin_business, _ = self.make_business("Dirección Bynoesis")
         target, _ = self.make_business("Cuenta diagnosticada")
         db.add_client(
             "CLIENTE-SECRETO-NO-MOSTRAR", phone="699999999",
@@ -7154,7 +7590,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
                 self.assertIn("Cuenta diagnosticada", page.text)
                 self.assertIn("Ventana temporal abierta", page.text)
                 self.assertIn("Diagnóstico de integraciones", page.text)
-                self.assertIn("Consumo y rentabilidad de Noesis", page.text)
+                self.assertIn("Consumo y rentabilidad de Bynoesis", page.text)
                 self.assertNotIn("CLIENTE-SECRETO-NO-MOSTRAR", page.text)
                 client.post("/logout")
                 client.post("/login", data={
@@ -7920,7 +8356,7 @@ class AdminCommandCenterTestCase(unittest.TestCase):
             ) as urlopen,
         ):
             result = ai_adapter.local_chat(
-                system="Eres Noesis.",
+                system="Eres Bynoesis.",
                 messages=[{"role": "user", "content": "Ayúdame."}],
                 tools=[{
                     "name": "listar_clientes",

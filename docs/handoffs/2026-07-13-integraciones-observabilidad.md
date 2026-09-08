@@ -10,7 +10,7 @@
 
 ## 1. Contexto del producto
 
-Noesis debe quitar ruido sin convertir al autónomo en administrador de un ERP. Este
+Bynoesis debe quitar ruido sin convertir al autónomo en administrador de un ERP. Este
 bloque unifica conexiones y problemas operativos en Ajustes, pero mantiene WhatsApp,
 la gestoría y la fiscalidad en sus flujos existentes.
 
@@ -47,7 +47,7 @@ documentos y colas están funcionando, sin exponer secretos ni datos de otro neg
 
 ## 6. Riesgos y límites
 
-- No confundir Stripe de suscripción de Noesis con cobro de facturas del autónomo.
+- No confundir Stripe de suscripción de Bynoesis con cobro de facturas del autónomo.
 - No permitir que una preferencia sustituya confirmación de pagos o impuestos.
 - La salud local no reemplaza monitorización, alertas y restauración externas del P0.
 
@@ -60,7 +60,7 @@ documentos y colas están funcionando, sin exponer secretos ni datos de otro neg
 - [x] Suite local verde.
 - [x] Servidor, Ajustes, API de integraciones, `/health` y `/ready` en 200.
 - [ ] QA visual desktop/móvil; la sesión no tuvo un navegador capaz de alcanzar
-  localhost. No confundir este bloqueo de herramienta con un fallo HTTP de Noesis.
+  localhost. No confundir este bloqueo de herramienta con un fallo HTTP de Bynoesis.
 - [ ] Smoke con proveedores reales.
 
 ## 8. Próximo paso

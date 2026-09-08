@@ -1,4 +1,4 @@
-"""Servidor web de Noesis (FastAPI) — app multipágina.
+"""Servidor web de Bynoesis (FastAPI) — app multipágina.
 
 Un único proceso, fácil de desplegar 24/7, sirve:
   1. Las PÁGINAS del producto (resumen, ingresos, costes, facturas, cobros,
@@ -64,7 +64,7 @@ async def lifespan(app: "FastAPI"):
 
 
 app = FastAPI(
-    title="Noesis",
+    title="Bynoesis",
     version="0.3.0",
     lifespan=lifespan,
     docs_url=None if config.IS_PRODUCTION else "/docs",
@@ -264,17 +264,10 @@ async def security_headers(request: Request, call_next):
         and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml"}
     ):
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
-    # El calendario de reservas es el único contenido externo que se incrusta, y
-    # solo en su propia página: el resto del sitio mantiene frame-src 'none'.
-    frame_src = (
-        "https://cal.com https://app.cal.com"
-        if request.url.path == "/contacto"
-        else "'none'"
-    )
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; img-src 'self' data:; font-src 'self'; "
         "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
-        f"connect-src 'self'; object-src 'none'; frame-src {frame_src}; "
+        "connect-src 'self'; object-src 'none'; frame-src 'none'; "
         "frame-ancestors 'none'; base-uri 'self'; "
         "form-action 'self' https://checkout.stripe.com"
     )
@@ -282,7 +275,7 @@ async def security_headers(request: Request, call_next):
         response.headers["Content-Security-Policy-Report-Only"] = (
             "default-src 'self'; img-src 'self' data:; font-src 'self'; "
             "style-src 'self'; script-src 'self'; connect-src 'self'; "
-            f"object-src 'none'; frame-src {frame_src}; frame-ancestors 'none'; "
+            "object-src 'none'; frame-src 'none'; frame-ancestors 'none'; "
             "base-uri 'self'; form-action 'self' https://checkout.stripe.com"
         )
     if config.HTTPS_ONLY or config.IS_PRODUCTION:

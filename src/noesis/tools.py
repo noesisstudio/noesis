@@ -1,4 +1,4 @@
-"""Las acciones que Noesis sabe ejecutar (multi-negocio).
+"""Las acciones que Bynoesis sabe ejecutar (multi-negocio).
 
 Cada herramienta tiene (1) un esquema que se le da a Claude para que sepa cuándo
 y cómo usarla, y (2) una función Python que la ejecuta contra la base de datos.
@@ -152,6 +152,20 @@ TOOLS: list[dict] = [
         },
     },
     {
+        "name": "ver_impuestos",
+        "description": (
+            "IVA del modelo 303 e IRPF del modelo 130 de un trimestre. Cifras de "
+            "apoyo calculadas con lo registrado; la gestoría valida la presentación."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "trimestre": {"type": "integer", "description": "1 a 4"},
+                "anio": {"type": "integer", "description": "Año; por defecto el actual"},
+            },
+        },
+    },
+    {
         "name": "registrar_gasto",
         "description": "Registra un gasto del negocio (ej. 'gasolina 45 euros').",
         "input_schema": {
@@ -167,6 +181,24 @@ TOOLS: list[dict] = [
                 },
             },
             "required": ["concepto", "importe"],
+        },
+    },
+    {
+        "name": "crear_cliente",
+        "description": "Crea o reutiliza un cliente por su nombre, sin generar documentos.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"nombre": {"type": "string"}},
+            "required": ["nombre"],
+        },
+    },
+    {
+        "name": "crear_proveedor",
+        "description": "Crea o reutiliza un proveedor por su nombre, sin registrar gastos.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"nombre": {"type": "string"}},
+            "required": ["nombre"],
         },
     },
     {
@@ -261,7 +293,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "ver_control_noesis",
-        "description": "Consulta qué puede hacer Noesis solo y qué debe confirmar el usuario.",
+        "description": "Consulta qué puede hacer Bynoesis solo y qué debe confirmar el usuario.",
         "input_schema": {"type": "object", "properties": {}},
     },
 ]
@@ -277,6 +309,18 @@ def _agendar_trabajo(business_id, cliente, descripcion, fecha_hora, zona=None,
                      zone=zona or c.get("zone"), price_estimate=precio_estimado,
                      business_id=business_id)
     return {"ok": True, "trabajo": job, "cliente": c}
+
+
+def _crear_cliente(business_id, nombre):
+    before = db.resolve_client_reference(nombre, business_id)
+    client = before or db.add_client(nombre, business_id=business_id)
+    return {"ok": True, "cliente": client, "existing": bool(before)}
+
+
+def _crear_proveedor(business_id, nombre):
+    before = db.find_supplier(business_id, name=nombre)
+    supplier = before or db.add_supplier(nombre, business_id=business_id)
+    return {"ok": True, "proveedor": supplier, "existing": bool(before)}
 
 
 def _ver_agenda(business_id, fecha):
@@ -359,7 +403,7 @@ def _enviar_factura(business_id, factura_id):
     if not inv or inv.get("business_id") != business_id:
         return {"ok": False, "error": "No existe esa factura."}
     client = db.get_client(inv["client_id"], business_id)
-    # La emisión y la huella quedan siempre dentro del motor nativo de Noesis.
+    # La emisión y la huella quedan siempre dentro del motor nativo de Bynoesis.
     issued = _provider.issue(inv, client or {})
     inv = db.get_invoice(factura_id, business_id)
     return {"ok": True, "factura": inv, "emision": issued}
@@ -412,12 +456,12 @@ def prepare_invoice_delivery(
             raise ValueError("El cliente no tiene correo configurado.")
         email_adapter.queue_email(
             target,
-            f"Factura {invoice['number']} — {business.get('name') or 'Noesis'}",
+            f"Factura {invoice['number']} — {business.get('name') or 'Bynoesis'}",
             (
                 f"Hola {client.get('name') or ''},\n\n"
                 f"Te enviamos la factura {invoice['number']} por {amount}. "
                 "Encontrarás el PDF adjunto.\n\n"
-                f"— {business.get('name') or 'Noesis'}"
+                f"— {business.get('name') or 'Bynoesis'}"
             ),
             business_id=business_id,
             idempotency_key=f"invoice:{business_id}:{factura_id}:email:{day}",
@@ -474,6 +518,15 @@ def _ver_cobros_pendientes(business_id):
 
 def _resumen_negocio(business_id, mes=None):
     return db.month_billing(mes, business_id=business_id)
+
+
+def _ver_impuestos(business_id, trimestre=None, anio=None):
+    hoy = date.today()
+    year = int(anio or hoy.year)
+    quarter = int(trimestre or (hoy.month - 1) // 3 + 1)
+    if quarter not in (1, 2, 3, 4):
+        return {"ok": False, "error": "El trimestre debe estar entre 1 y 4."}
+    return {"ok": True, **db.tax_quarter(year, quarter, business_id)}
 
 
 def _registrar_gasto(
@@ -574,6 +627,8 @@ def _ver_control_noesis(business_id):
 
 
 _DISPATCH = {
+    "crear_cliente": _crear_cliente,
+    "crear_proveedor": _crear_proveedor,
     "agendar_trabajo": _agendar_trabajo,
     "ver_agenda": _ver_agenda,
     "crear_factura": _crear_factura,
@@ -583,6 +638,7 @@ _DISPATCH = {
     "registrar_pago": _registrar_pago,
     "ver_cobros_pendientes": _ver_cobros_pendientes,
     "resumen_negocio": _resumen_negocio,
+    "ver_impuestos": _ver_impuestos,
     "registrar_gasto": _registrar_gasto,
     "listar_clientes": _listar_clientes,
     "ver_perfil_cliente": _ver_perfil_cliente,
@@ -606,7 +662,15 @@ _TOOL_ENTITLEMENTS = {
 }
 
 
-def run_tool(name: str, tool_input: dict, business_id: int) -> str:
+def run_tool(
+    name: str,
+    tool_input: dict,
+    business_id: int,
+    *,
+    channel: str = "web",
+    trigger_source: str = "user_initiated",
+    completion_mode: str = "user_confirmed",
+) -> str:
     """Ejecuta una herramienta para un negocio y devuelve JSON (para Claude/NLU)."""
     fn = _DISPATCH.get(name)
     if fn is None:
@@ -626,7 +690,13 @@ def run_tool(name: str, tool_input: dict, business_id: int) -> str:
             ensure_ascii=False,
         )
     try:
-        result = fn(business_id=business_id, **tool_input)
+        from . import value_ledger
+        with value_ledger.observation_context(
+            channel=channel,
+            trigger_source=trigger_source,
+            completion_mode=completion_mode,
+        ):
+            result = fn(business_id=business_id, **tool_input)
     except (TypeError, ValueError) as e:
         result = {"error": f"Parámetros inválidos para {name}: {e}"}
     except Exception:  # noqa: BLE001

@@ -48,12 +48,12 @@ class IntegrationCheckTestCase(unittest.TestCase):
 
     def test_brevo_checks_key_and_active_sender_without_sending(self):
         responses = [
-            {"companyName": "Noesis"},
+            {"companyName": "Bynoesis"},
             {"senders": [{"email": "no-reply@bynoesis.com", "active": True}]},
         ]
         with (
             patch.object(config, "BREVO_API_KEY", "brevo-key"),
-            patch.object(config, "SMTP_FROM", "Noesis <no-reply@bynoesis.com>"),
+            patch.object(config, "SMTP_FROM", "Bynoesis <no-reply@bynoesis.com>"),
             patch.object(integration_check, "_json_get", side_effect=responses) as get,
         ):
             result = integration_check._check_brevo(network=True)
@@ -149,7 +149,7 @@ class IntegrationCheckTestCase(unittest.TestCase):
         exposed = "credential-that-must-not-appear"
         with (
             patch.object(config, "BREVO_API_KEY", exposed),
-            patch.object(config, "SMTP_FROM", "Noesis <no-reply@bynoesis.com>"),
+            patch.object(config, "SMTP_FROM", "Bynoesis <no-reply@bynoesis.com>"),
             patch.object(
                 integration_check,
                 "_json_get",

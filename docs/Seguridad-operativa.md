@@ -1,6 +1,6 @@
 # Seguridad operativa
 
-Guía viva para proteger Noesis, sus clientes, trabajadores y gestorías. No es una
+Guía viva para proteger Bynoesis, sus clientes, trabajadores y gestorías. No es una
 declaración de invulnerabilidad: describe controles verificables, amenazas asumidas y
 responsabilidades que siguen fuera del código.
 
@@ -78,7 +78,7 @@ email, teléfono, IP, token, secreto, contraseña, fichero, documento, mensaje o
 
 - Variables: `NOESIS_CLAMAV_HOST`, `NOESIS_CLAMAV_PORT`,
   `NOESIS_CLAMAV_TIMEOUT_SECONDS` y `NOESIS_CLAMAV_REQUIRED`.
-- Noesis usa `INSTREAM`: el contenido viaja en memoria al daemon privado, no a una
+- Bynoesis usa `INSTREAM`: el contenido viaja en memoria al daemon privado, no a una
   API de terceros y no se escribe antes del veredicto.
 - `FOUND` se rechaza siempre. Si `REQUIRED=true`, timeout, caída o respuesta inválida
   también se rechazan antes de almacenar. Sin ClamAV siguen actuando las validaciones
@@ -88,7 +88,7 @@ email, teléfono, IP, token, secreto, contraseña, fichero, documento, mensaje o
 
 ## Restauración y continuidad
 
-- Al crear cada copia, Noesis ya la restaura en un fichero SQLite temporal o en un
+- Al crear cada copia, Bynoesis ya la restaura en un fichero SQLite temporal o en un
   esquema PostgreSQL aleatorio y compara esquema y recuentos.
 - Cada domingo a las 04:30, `noesis-restore-check` repite de forma independiente la
   restauración de la última base y verifica el manifiesto/hashes del ZIP documental.
@@ -137,7 +137,7 @@ email, teléfono, IP, token, secreto, contraseña, fichero, documento, mensaje o
 
 ## Trabajo que requiere especialistas o infraestructura
 
-Noesis puede construir controles internos, pero no debe autocertificarse. Antes de
+Bynoesis puede construir controles internos, pero no debe autocertificarse. Antes de
 escalar datos reales se mantienen como tareas externas: pentest autenticado, revisión
 RGPD/DPA, auditoría fiscal/AEAT, configuración de red y hosting, restauración externa
 y respuesta a incidentes ensayada. RLS de PostgreSQL, KMS/cifrado selectivo y MFA de

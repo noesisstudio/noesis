@@ -166,7 +166,7 @@ class AccessRequestTestCase(unittest.TestCase):
             business_name="Electricidad Soler", sector="Electricidad",
         )
         admin_business, admin_user = db.create_account(
-            "Noesis", config.ADMIN_EMAIL, auth.hash_password("clave-larga-admin"),
+            "Bynoesis", config.ADMIN_EMAIL, auth.hash_password("clave-larga-admin"),
             "software",
         )
 
@@ -203,7 +203,7 @@ class AccessRequestTestCase(unittest.TestCase):
         )
         request = db.create_access_request("Repetido", "repetido@ejemplo.com")
         db.create_account(
-            "Noesis", config.ADMIN_EMAIL, auth.hash_password("clave-larga-admin"),
+            "Bynoesis", config.ADMIN_EMAIL, auth.hash_password("clave-larga-admin"),
             "software",
         )
 

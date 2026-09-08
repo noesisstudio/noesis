@@ -1,5 +1,288 @@
 # Registro de QA
 
+## 2026-09-07 — simulación de cliente y correcciones de fiabilidad
+
+- Corpus de 23 mensajes de autónomo, incluido dictado acentuado, importes sin
+  moneda, `1.250,50`, orden inverso, altas y consultas: todos tienen ruta local
+  determinista y no consumen créditos.
+- Recorrido sintético completo: cliente, proveedor, factura, presupuesto, agenda,
+  gasto, resumen, IVA, cartera y cobros. Con dos clientes «Sergio», la operación se
+  detiene y no crea factura ni cliente duplicados.
+- Facturas: incoherencias de cuota, total, fechas y NIF generan revisión y limitan
+  confianza; caso coherente conserva la confianza original.
+- Factura recibida: corrección, aislamiento entre negocios, botón y `PATCH`
+  autenticado verificados. Foto repetida: una sola fila/archivo, segunda lectura y
+  respuesta sin id interno. Calendario: `VTIMEZONE` presente y aislamiento intacto.
+- Pruebas dirigidas: 28 correctas. Suite completa: **650/650** en 604,156 s.
+  Ruff, compilación y `git diff --check` correctos. Bandit no estaba instalado en
+  este entorno aislado; la puerta de CI debe ejecutar el extra de seguridad.
+- Límites: bytes, facturas y conversaciones sintéticos; sin Meta, OCR/modelo,
+  calendario físico, correo, Stripe ni producción. No certifica precisión de
+  extracción sobre documentos reales.
+
+## 2026-09-07 — release acotada del centro de mando
+
+- Suite completa del snapshot aislado: **644/644**, 531,053 s, SQLite y
+  proveedores simulados. Código seleccionado idéntico al snapshot probado.
+- Cuatro pruebas propias de administración: aislamiento del consumo, coste
+  desconocido, períodos inválidos, hipótesis FX, autorización HTTP y teléfono
+  vinculado, siete departamentos y estados sin costes.
+- Ruff sobre src/tests, Bandit alto riesgo/confianza, detector de secretos de los
+  archivos nuevos/relevantes, sintaxis JS y diff: correctos.
+- Navegador local con datos sintéticos: escritorio y 390 px, comparación antes/
+  después de Finanzas al mismo tamaño, menú plegable, sección activa, búsqueda
+  sin tildes/sin resultados y recarga real conservando departamento. Sin errores
+  de consola en la revisión. Las acciones administrativas conservan sus forms.
+- Fuera de esta release: copias/WhatsApp/extracción/paginación y otros candidatos
+  locales. Sin migraciones. Safari físico, Postgres y proveedores reales no
+  quedan certificados por estas pruebas. Evidencia y rollback en
+  `Admin-centro-mando-release.md`.
+
+## 2026-09-04 — clasificación de un PDF con varias facturas
+
+- **Medición contra el modelo real** (`claude-haiku-4-5-20251001`), con PDF generado
+  con tres facturas donde el negocio figura como cliente: **0 aciertos de 6** antes
+  del arreglo (todos caían a la heurística con `kind=documento`, confianza 55) y
+  **5 de 5** después, con `kind=factura_recibida`, confianza 95 y `method=ia`.
+- **Contraste:** un PDF de una sola factura acertaba siempre, antes y después. La
+  diferencia no era el reenvío ni el duplicado, sino el número de facturas dentro.
+- **Confirmado que el modelo respondía bien todo el tiempo:** la respuesta cruda
+  contenía `factura_recibida` con confianza 95 y una explicación correcta; se perdía
+  al interpretarla.
+- **Límite:** medido con PDF sintético, no con el archivo real del founder, que no
+  está en el repositorio. La forma reproducida (lista de objetos) es la que devolvió
+  el modelo en las seis llamadas registradas.
+
+## 2026-09-04 — primera conversación real por WhatsApp
+
+- **Circuito completo verificado con el número de prueba y un móvil real:**
+  vinculación con código de un solo uso, respuesta del asistente, envío de un PDF de
+  3 páginas y guardado en Documentos. Firma, entrega y respuesta correctas.
+- **Fallo encontrado en esa prueba:** reenviar el mismo PDF contestaba «ya estaba
+  guardado como documento N» y terminaba ahí. Un documento archivado antes de
+  configurar la IA quedaba imposible de clasificar por WhatsApp. Corregido.
+- **`ANTHROPIC_API_KEY` activada en producción** y verificada de dos formas: la fila
+  de Anthropic aparece ya en `/privacidad` (se pinta solo si la clave existe), y una
+  llamada real confirma que responden los dos modelos configurados,
+  `claude-haiku-4-5-20251001` (clasificador) y `claude-sonnet-4-6` (asistente).
+- **`GROQ_API_KEY` sigue vacía a propósito**, según [[RGPD-QUE-HACER]] 1.0: no
+  configurarla en producción hasta archivar DPA y garantías. La voz no funciona y esa
+  es la conducta correcta hoy.
+- **Límite:** no se ha medido todavía el tiempo del webhook con una foto real, que
+  sigue siendo el riesgo abierto del canal.
+
+## 2026-09-04 — perfilado del panel y equivalencia fiscal
+
+- **Perfilado con datos reales** (`scripts/profile_panel.py`, base temporal). Con
+  60 clientes/150 facturas: 123-246 ms y 22-35 consultas por pantalla. Con
+  250 clientes/600 facturas: 292-691 ms **con el mismo número de consultas**. El
+  coste crece con el volumen aunque los viajes no: las consultas traen tablas
+  enteras y se filtra en Python.
+- **Equivalencia fiscal antes/después del cambio en `tax_quarter`.** Cuatro
+  trimestres de 2025 con IVA 21/10/21/4, IRPF 15/0/7/15 y gastos trimestrales:
+  ingresos, IVA repercutido, soportado, resultado, IRPF del periodo y pagos previos
+  **idénticos al céntimo** en los cuatro. Sin este contraste el cambio no era
+  publicable.
+- **Mejora medida:** `tax_quarter(4T)` de 281,6 ms a 38,8 ms con 400 facturas y
+  300 gastos. Pantalla de Impuestos: de 34 a 25 consultas.
+- **Prueba de regresión verificada por contradicción:** con el código anterior,
+  `test_tax_quarter_reads_each_table_once_whatever_the_quarter` falla con
+  «list_invoices se leyó 8 veces, se esperaba 1».
+- **Límite:** medido en SQLite sobre Windows. No se ha perfilado contra PostgreSQL
+  ni contra producción, donde cada consulta añade latencia de red.
+
+## 2026-09-04 — IVA por el asistente y canal de Meta verificado
+
+- **Canal de Meta, contra la cuenta real.** Token permanente de usuario del sistema
+  válido y sin caducidad, con `whatsapp_business_messaging` y
+  `whatsapp_business_management`. Número de prueba `+1 555-184-7575` en calidad
+  GREEN. Meta tiene registrado `https://bynoesis.com/webhook/whatsapp`, activo y con
+  `messages` suscrito. Verificación GET devuelve el challenge; un verify token falso
+  se rechaza con 403. **Un webhook firmado se acepta con 200 y una firma falsa se
+  rechaza con 401**, así que el `WHATSAPP_APP_SECRET` desplegado es el de Meta. El
+  sobre firmado que se manda no lleva eventos y no crea ningún dato.
+  Reproducible con `python scripts/check_whatsapp.py`.
+- **Límite:** las nueve plantillas no están dadas de alta, así que ningún mensaje
+  iniciado por Bynoesis puede salir. No se ha probado todavía una conversación real
+  con el número. Meta sirve los campos en `v26.0` y el código pide `v23.0`.
+- **IVA por el asistente.** Antes «¿cómo va mi IVA?» resolvía a `resumen_negocio`
+  (cifras del mes) y «cuánto IVA tengo que pagar» no resolvía a nada; ninguna de las
+  20 herramientas alcanzaba `db.tax_quarter`, así que una pregunta fiscal no tenía
+  respuesta correcta posible. Ahora `ver_impuestos` expone el 303 y el 130 del
+  trimestre, el cerebro local reconoce la pregunta y extrae trimestre y año.
+  Verificado que no hay regresión: «factura a Pepe 500 euros iva 21» sigue creando
+  factura y «cuánto llevo facturado» sigue siendo el resumen del mes.
+- **Prueba de baja RGPD corregida.** Dependía del entorno: contaba los avisos por el
+  prefijo `privacy-request-`, que casa con el del titular y con el interno. Fallaba
+  con `NOESIS_ADMIN_EMAIL` puesto y pasaba sin él. Ahora pasa en ambos casos.
+- **Batería:** `tests/test_backend.py` completo, **425 pruebas en 1.081,76 s, 0
+  fallos**, más 30 de cerebro interno, flujos de campo y multicanal. Total
+  recolectado: **633**. El único fallo restante de la tanda completa anterior era un
+  `PermissionError` de `tempfile` en Windows, que no se reproduce aislado.
+
+## 2026-09-04 — publicación real y comprobaciones posteriores
+
+- Backup de base y documentos creado/verificado antes del push; restauración
+  aislada independiente OK en 3,854 s. Artefactos fijados en
+  `/data/backups/predeploy-schema55-20260904`, fuera de rotación.
+- Release `4f5e88f071cd`, esquema 55, Railway SUCCESS. Comprobador externo:
+  14 páginas públicas y 8 cabeceras, status ok. Accesos demo reales de titular y
+  gestoría correctos; cinco pantallas autenticadas del titular en 200.
+- Comparación de seis tablas operativas contra la cabecera del backup: recuentos
+  idénticos. Cadena de auditoría íntegra. Flags reales: signup=false,
+  ledger=false, ledger_admin=false; proveedor legal efectivo correcto.
+- Límite: no se ejerció supresión ni se modificaron clientes/facturas reales; la
+  solicitud humana con correo y la recuperación fuera de Railway siguen pendientes.
+
+## 2026-09-04 — validación previa a main
+
+- **RESULTADO FINAL:** CI `33855910788` verde en ambos jobs. **629 pruebas en
+  275,502 s**, migraciones completas SQLite, PostgreSQL 16 con datos históricos,
+  35 rutas, backup/restauración, código anterior 53 sobre BD 55, rollback
+  55→54→53→54→55 y flujo RGPD. Auditoría de dependencias sin vulnerabilidades
+  conocidas, escáner de secretos, Bandit, Ruff y verdad documental correctos.
+- Código probado `fbfa76b7379f6295cb4efac62a2c6bca9e17aaa5`; el cierre posterior
+  solo cambia documentación. Ver [[Revision-pre-main-2026-09-04]]. Apto técnicamente
+  para publicación controlada, no apertura masiva. Falta autorización del founder
+  y copia fresca verificada antes de publicar. Sin push a main ni despliegue.
+
+- **PostgreSQL 16 completo OK:** job de `33855685663`, incluidos migración histórica,
+  humo de rutas, restauración de backup, código 53 sobre BD 55, rollback completo y
+  flujo RGPD con permisos/concurrencia/exportación/avisos. Solo queda el job general:
+  el escáner interpretó el SHA público fijado para rollback como secreto; se anota
+  ese valor concreto y se repite, sin desactivar el control.
+
+- Suite local completa terminada: **627 pruebas, OK en 642,162 s**, más las dos
+  pruebas nuevas de proveedor efectivo correctas (629 verificadas). El conteo
+  previo 618 era incompleto; el CI final contrastará el total con descubrimiento.
+- La ruta administrativa HTML rechaza GET y POST mediante 303 a login, no 403;
+  el humo verifica ambas redirecciones sin seguirlas. No se altera el permiso.
+
+- Se incorpora compatibilidad del código anterior d3740a0 sobre BD 55 antes del
+  downgrade: cliente, factura emitida, cobro y exportación. El script exige base
+  local `noesis_ci` y comprueba que está importando el código 53.
+
+- Dos pruebas nuevas pasan para proveedor efectivo: Brevo prevalece sobre SMTP
+  residual y SMTP sin API exige identificación. La suite verificada acumulada es
+  620; el CI final debe ejecutar las 620 juntas con el lock actualizado.
+- Tercer CI: rollback e inmutabilidad PostgreSQL correctos; se ajusta la nueva
+  aserción de acceso al contrato existente (GET admin redirige, POST rechaza 403).
+
+- Segunda ejecución: auditoría de dependencias correcta tras pypdf 6.16.1. Se
+  verificaron los 49 SHA-256 del branding contra los archivos y se anotan como
+  falsos positivos exactos; fixtures fiscales/contraseña se marcan explícitamente.
+  El rollback PostgreSQL completó todo el ciclo; la aserción posterior utilizaba
+  `emitida` en vez del estado real `enviada`, y se corrige el nuevo test.
+- Lectura de configuración Railway sin SSH ni acceso a BD: altas públicas false,
+  flags de valor ausentes (default false), S3 ausente, Brevo activo y SMTP presente
+  sin nombre/región legales. No se cambió ninguna variable ni se lanzó despliegue.
+
+- Primer CI `33854946594`: bloqueó tres CVE en pypdf 6.15.0. Las migraciones
+  históricas y el humo PostgreSQL existente pasaron; el nuevo humo falló porque
+  usaba iteración directa sobre el cursor propio. Se corrige con `fetchall()` y
+  se actualiza pypdf a 6.16.1; se repite el CI sin ocultar ni excluir los avisos.
+
+- Se prepara ejecución manual del CI desde `codex/review-value-privacy`, sin push
+  a main ni PR. PostgreSQL 16 del runner es efímero y no tiene datos reales.
+- El nuevo `tests/postgres_release_smoke.py` solo permite `localhost/noesis_ci`:
+  valida rollback 55→54→53→54→55, datos históricos e inmutabilidad, baja HTTP,
+  conservación, aislamiento, concurrencia, panel admin, exportación y outbox.
+- Estado inicial: Ruff, verdad documental y diff correctos. Suite completa y CI
+  pendientes de resultado; no constituye aprobación de producción.
+
+## 2026-09-03 — RGPD operativo, transparencia y conservación
+
+- **Regresión:** `python -m unittest discover -s tests -q` ejecutó 615 pruebas en
+  529,386 s y terminó `OK`. Después se añadieron las pruebas de la bandeja
+  administrativa, del rollback 55→54→55 y de concurrencia, y se ejecutaron
+  aisladamente en verde; el conjunto verificado suma 618. Los logs de Meta, AEAT,
+  SMTP, backup y ledger son fallos simulados esperados por sus pruebas.
+- **Baja y derechos:** se comprobó que una factura emitida impide el borrado directo,
+  pero ya no devuelve error: crea una única solicitud, mantiene la cuenta, muestra
+  referencia, encola aviso y registra `privacy.account_closure_requested`. El reenvío
+  no duplica expediente ni correo. Una nota vacía no permite cerrar la solicitud.
+- **Separación de control y ejecución:** el panel admin lista el expediente y permite
+  documentar `legal_hold`; la prueba confirma que el negocio sigue existiendo y que
+  se añade `privacy.request_status_updated`. Cambiar estado nunca ejecuta supresión.
+- **Transparencia web:** `/contacto` no contiene iframe, conserva el enlace externo y
+  responde con `frame-src 'none'`; privacidad nombra Stripe, Google, Brevo, Groq y
+  Cal.com cuando corresponden; encargado explica el reparto y `/cumplimiento` ya no
+  contiene «sistema homologado».
+- **Backups:** una configuración S3 con credenciales pero sin región de firma,
+  proveedor o residencia devuelve fallo antes de conectar. Integración, centro de
+  seguridad y readiness aplican el mismo contrato.
+- **Calidad estática:** `python -m ruff check ...`, `py_compile`, JSON,
+  `scripts/check_project_truth.py`, `git diff --check` y pruebas específicas de
+  backup, seguridad, integración, producción y plataforma quedaron en verde.
+- **Límites:** no se usaron credenciales, PostgreSQL externo, Railway ni producción.
+  Faltan migración/rollback real, DPA/regiones, validación jurídica de conservación,
+  solicitud humana extremo a extremo y simulacro de brecha.
+
+## 2026-09-01 — correcciones de revisión externa del registro de valor
+
+- **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **570
+  pruebas** y terminó `OK`. El primer intento detectó cuatro ejecuciones heredadas
+  del mismo test que fijaba el día 2 del mes y fallaba cuando el calendario real era
+  día 1; se sustituyó solo esa suposición temporal por la fecha actual y las cuatro
+  reproducciones más la suite completa quedaron verdes. No se relajó la protección
+  que rechaza fechas de emisión futuras.
+- **Delegación WUB:** 20 pruebas específicas del ledger verifican ahora el booleano
+  `qualifies_for_wub`. Crear un trabajo mediante DB/formulario conserva telemetría
+  `manual_form` pero aporta cero acciones WUB; crearlo mediante `run_tool` del
+  asistente sí califica. También califican una regla autorizada, una propuesta
+  confirmada y una automatización explícita. La consulta WUB exige simultáneamente
+  familia candidata e instancia delegada.
+- **Atribución conservadora:** outcomes enlazan como evidencia de Bynoesis únicamente
+  acciones con contexto delegado. Los resultados posteriores a operaciones
+  manuales siguen registrados, pero con atribución `observed`.
+- **Flag y auditoría anterior:** con `VALUE_LEDGER_ENABLED=false`, la prueba real de
+  `send_payment_reminders` encola el WhatsApp y conserva exactamente una fila
+  histórica de `assistant_actions`, sin campos nuevos ni Useful Actions. Las
+  propuestas/decisiones de Trust añadidas por esquema 53 permanecen apagadas.
+- **Rollback seguro:** se creó localmente una base limpia en esquema 53 y se ejecutó
+  contra ella el código base `294ce375`. Negocio, cliente, trabajo, cierre, factura,
+  cobro, presupuesto y auditoría terminaron con
+  `LEGACY_CODE_ON_SCHEMA_53_OK`. Esto valida volver primero al código anterior y
+  solo después bajar la BD. No se considera soportado código 53 sobre esquema 52.
+- **Lifecycle:** la transición aislada continúa cubierta, pero no hay hooks reales
+  conectados por proceso. La documentación ya la presenta como infraestructura
+  disponible con instrumentación pendiente, no como cobertura operativa.
+- **Límites externos:** no se ha consultado ni modificado producción y no se ha
+  ejecutado Railway. PostgreSQL no productivo sigue siendo puerta obligatoria para
+  migración, smoke, activación opt-in y ensayo de rollback antes de cualquier merge.
+
+## 2026-08-31 — registro de valor, WUB y confianza observada
+
+- **Regresión completa:** `py -m unittest discover -s tests -q` ejecutó **567
+  pruebas** y terminó `OK`. Incluye los 13 contratos generativos de seguridad con
+  Hypothesis, invariantes fiscales, Stripe, WhatsApp, documentos, permisos,
+  backups, SEO, onboarding, facturación y multiempresa. Los mensajes de error del
+  log corresponden a fallos simulados que sus propias pruebas esperan.
+- **Cobertura nueva:** 17 pruebas específicas comprueban taxonomía y binario WUB,
+  idempotencia por negocio, aislamiento, canal/origen/confirmación separados,
+  tres acciones y dos procesos, límite lunes-lunes con zona horaria, profundidad,
+  consistencia y racha, elegibilidad, lifecycle/reversión, outcomes muchos-a-muchos,
+  deduplicación de dinero, atribución conservadora, confianza por correlación,
+  feature flag, fail-open, flujos maduros, permisos admin, índice de consulta,
+  exportación/borrado RGPD y rollback 53→52→53.
+- **Compatibilidad de flujos:** el test integrado recorre creación/cierre de trabajo,
+  factura, emisión, cobro, presupuesto, envío y aceptación. El resultado operativo
+  se conserva aunque el escritor de métricas lance una excepción.
+- **Base de datos:** esquema SQLite limpio alcanza 53; downgrade y reupgrade pasan.
+  Los contratos de DDL PostgreSQL —índice único antes de FK compuesta y parámetros—
+  pasan en la suite. `tests/postgres_smoke.py` incorpora además idempotencia,
+  relación action/outcome y alcance por negocio para ejecutarlos en el entorno
+  PostgreSQL no productivo antes del despliegue.
+- **Privacidad y seguridad:** el ledger no contiene el texto del trabajo probado;
+  la auditoría devuelve 403 a usuario normal, 404 con el flag apagado y solo datos
+  internos al administrador con el flag activo. El acceso queda en la bitácora de
+  seguridad. Las cuatro tablas forman parte de portabilidad y baja RGPD.
+- **Calidad estática:** `py -m ruff check src/noesis tests/test_value_ledger.py`,
+  `py -m py_compile` de archivos afectados, `git diff --check`, JSON válido y
+  `py scripts/check_project_truth.py` pasan.
+- **Límite externo:** no se ha ejecutado el humo contra PostgreSQL real porque el
+  único entorno accesible es producción. El candidato no se ha desplegado; esa
+  prueba y el rollback son puerta obligatoria en un entorno no productivo.
 ## 2026-09-01 — fusión de 112 commits y comprobación de que no rompe nada
 
 ### Qué se probó y con qué resultado
@@ -102,7 +385,7 @@
 - **Documento:** la guía Word se abre como OOXML válido, contiene ocho páginas tras
   renderizado y todas fueron revisadas: no hay solapes, cortes, desbordamientos,
   imágenes deformadas ni páginas accidentales en blanco.
-- **Contenido:** los textos usan Noesis como marca y `@bynoesis` como usuario; el eje
+- **Contenido:** los textos usan Bynoesis como marca y `@bynoesis` como usuario; el eje
   es tiempo, orden y control. No reaparece el posicionamiento centrado únicamente en
   cobros ni quedan marcadores por rellenar.
 - **Límite:** no se afirma que los perfiles estén creados ni que el usuario esté
@@ -111,9 +394,9 @@
 
 ## 2026-08-31 — corrección del posicionamiento de marca
 
-- **Fuente de verdad usada:** `Plan-maestro-Noesis.md` fija «Noesis lleva la oficina
+- **Fuente de verdad usada:** `Plan-maestro-Bynoesis.md` fija «Bynoesis lleva la oficina
   mientras tú haces el trabajo» y `design/PRODUCT_PRINCIPLES.md` fija «Haz tu
-  trabajo; Noesis te ordena el negocio». Cobros, facturación y margen quedan como
+  trabajo; Bynoesis te ordena el negocio». Cobros, facturación y margen quedan como
   pruebas concretas, no como territorio único de marca.
 - **Exportaciones:** portada LinkedIn 4200 × 700, Facebook 1640 × 856, Open Graph
   1200 × 630 y tablero 1800 × 1200 regenerados con el nuevo eje de tiempo, menos
@@ -289,7 +572,7 @@
   `pyproject.toml`, pero no regeneró `uv.lock`.
 - **Corrección:** lock regenerado con `py -m uv lock`; añade `openpyxl 3.1.5` y su
   dependencia `et-xmlfile 2.0.0`, además de reflejar el extra `analysis` del
-  proyecto. No se ha cambiado ninguna dependencia de runtime de Noesis.
+  proyecto. No se ha cambiado ninguna dependencia de runtime de Bynoesis.
 - **Segunda barrera revelada por CI:** una vez reparado el lock, `pip-audit` alcanzó
   su paso y rechazó `pip 26.1.2` por `PYSEC-2026-3721`; la versión corregida indicada
   por el auditor es 26.2. El extra `security` fija `pip>=26.2,<27` para que la propia
@@ -345,7 +628,7 @@
   para una direccion del propio founder.
 - **Resultado:** HTTP 303 a `?sent=1` —respuesta identica exista o no la cuenta, por
   diseño— y **el correo llego** al buzon de `xavier@bynoesis.com` con el asunto
-  "Restablecer tu contraseña de Noesis" y el remitente «Noesis».
+  "Restablecer tu contraseña de Bynoesis" y el remitente «Bynoesis».
 - **Que queda demostrado:** la clave de Brevo es valida, la via HTTPS funciona desde
   Railway —que bloquea SMTP—, `SMTP_FROM` produce el remitente correcto y la cola
   entrega. El adaptador ya se habia verificado interceptando la peticion; ahora se
@@ -560,7 +843,7 @@
 
 - La portada, el panel real de la demo, Documentos, el asistente, la cartera de
   gestoría y el portal del cliente se recorrieron con capturas reales. La jerarquía
-  y la separación por tareas son coherentes con el parte de Noesis; Documentos
+  y la separación por tareas son coherentes con el parte de Bynoesis; Documentos
   mantiene 1 ingreso, 2 gastos, 1 ticket, 2 pendientes y 2 elementos en Otros.
 - En móvil se reprodujo un mojibake en el centro de la barra inferior y una fila de
   sugerencias parcialmente oculta. El centro muestra ahora `DEMO` y todas las
@@ -615,7 +898,7 @@
 - Se reproducía el fallo funcional: los botones dependían de que el Customer Portal
   estuviera configurado manualmente en Stripe y un rechazo volvía a la misma página
   fuera del área visible, por lo que parecía que el clic no hacía nada.
-- El adaptador crea o reutiliza solo una configuración versionada de Noesis con
+- El adaptador crea o reutiliza solo una configuración versionada de Bynoesis con
   actualización de tarjeta, cancelación al final del período, historial y cambios
   entre los seis `price_id`. Cada sesión conserva esa configuración también en el
   fallback general; una configuración externa no se reutiliza por error.
@@ -668,7 +951,7 @@
 - Evidencia sandbox real: Checkout de Autónomo mensual, suscripción `active`,
   metadatos `business_id=1`, `plan=autonomo`, `billing_period=monthly` y entregas
   `checkout.session.completed`, `invoice.paid` y
-  `customer.subscription.created` aceptadas por Noesis con HTTP 200.
+  `customer.subscription.created` aceptadas por Bynoesis con HTTP 200.
 - La regresión reproduce que un Checkout posterior podía degradar `active` a
   `pending`; ahora la decisión se toma bajo el bloqueo de la misma fila y conserva
   `active`/`trialing`.
@@ -1214,7 +1497,7 @@
   ya registrada en la baseline, había cambiado de línea: también quedó exceptuada
   inline y se retiró solo esa huella histórica de la baseline. No se relajó el
   detector. Los primeros humos PostgreSQL no llegaron a descargar las Actions por
-  un `Service Unavailable` de GitHub, sin ejecutar código de Noesis.
+  un `Service Unavailable` de GitHub, sin ejecutar código de Bynoesis.
 
 ### Qué no se ha probado
 
@@ -1369,7 +1652,7 @@
   material al 28,6% → no avisa; material al 60% → avisa; factura entera al 21% → no
   avisa, porque la regla no aplica y no hay que molestar.
 - **El aviso no decide**: comprobado que tras avisar los tipos siguen como los puso el
-  titular (10% y 21%) y **la factura se emite igualmente** (`2026/0002`). Noesis no
+  titular (10% y 21%) y **la factura se emite igualmente** (`2026/0002`). Bynoesis no
   puede conocer las otras condiciones del reducido —vivienda de particular, terminada
   hace más de dos años—, así que la elección es del autónomo.
 - El aviso viaja al detalle de la factura (`aviso_fiscal`) y al chat al crear el
@@ -1740,7 +2023,7 @@ que dice comprobar.
 - **Entradilla del hero**: pasa a nombrar WhatsApp lo primero, cumpliendo la ley 2 de
   `PRODUCT_PRINCIPLES` («primero WhatsApp, después app»). El titular **no se toca**: es
   la frase canónica del producto, fijada como base de la landing.
-- **Sección «cada momento de tu día» sustituida** por «Así se ve un día con Noesis»: una
+- **Sección «cada momento de tu día» sustituida** por «Así se ve un día con Bynoesis»: una
   conversación real de WhatsApp con las cuatro horas del día perfecto descrito en
   `WhatsApp-Cerebro` §10. Elimina de paso la redundancia con «Cómo funciona», que contaba
   el mismo ciclo con otras palabras.
@@ -1832,7 +2115,7 @@ que dice comprobar.
 - Los logs confirmaron que Uvicorn completaba el startup; la advertencia de Google
   solo mantenía cerrado `/admin`. La caída era posterior, durante el healthcheck.
 - Railway documenta que sus healthchecks usan `Host: healthcheck.railway.app`.
-  `TrustedHostMiddleware` lo rechazaba porque Noesis solo admitía el dominio público,
+  `TrustedHostMiddleware` lo rechazaba porque Bynoesis solo admitía el dominio público,
   el privado y localhost.
 - La configuración añade ese host exacto únicamente cuando existe
   `RAILWAY_ENVIRONMENT`; no acepta comodines ni cambia los hosts de instalaciones
@@ -2177,7 +2460,7 @@ que dice comprobar.
 - Corrección posterior del founder: Holded no es una integración futura. Se elimina
   `HOLDED_API_KEY`, el proveedor externo y cualquier selección dinámica; una prueba
   de regresión exige que `get_provider()` devuelva siempre el motor nativo. La
-  facturación y Veri*Factu quedan como desarrollo propio de Noesis.
+  facturación y Veri*Factu quedan como desarrollo propio de Bynoesis.
 
 - Se contrastaron los documentos vivos con `origin/main`, `config.py`, todos los
   adaptadores y las salidas HTTP/SMTP reales. Las integraciones externas del código
@@ -2269,7 +2552,7 @@ que dice comprobar.
 ## 2026-07-16 — la muestra pública replica las pantallas reales del panel
 
 - Cada apartado de la demo de la portada reproduce ahora la plantilla real del
-  panel (misma jerarquía y clases: nota de Noesis, cabecera, métricas, tarjetas,
+  panel (misma jerarquía y clases: nota de Bynoesis, cabecera, métricas, tarjetas,
   tablas, calendario, chat y ajustes) reducida con `zoom`, con datos inventados
   coherentes entre pantallas. Antes eran resúmenes aproximados.
 - Añadida la barra de subapartados real bajo la barra superior: Dinero abre
@@ -2319,7 +2602,7 @@ que dice comprobar.
 
 - La portada adopta una jerarquía de campaña centrada: promesa, explicación breve,
   prueba de 14 días, enlace para entender el producto y el Inicio real debajo. Se
-  conserva la identidad de Noesis; no se copian marca, promociones, clientes ni
+  conserva la identidad de Bynoesis; no se copian marca, promociones, clientes ni
   métricas de Holded.
 - La muestra ya no abre pestañas o resúmenes inventados. Expone solo el Inicio real
   con datos de una empresa de ejemplo, la misma barra superior, menú y bloques que
@@ -2338,7 +2621,7 @@ que dice comprobar.
 ## 2026-07-16 — demo pública alineada con el Inicio real
 
 - La pestaña «Inicio» de la vista pública reutiliza la jerarquía y los componentes
-  del panel real: Parte de hoy, prioridad, métricas, agenda, trabajo de Noesis,
+  del panel real: Parte de hoy, prioridad, métricas, agenda, trabajo de Bynoesis,
   lectura de dinero, gráfico y cobros pendientes. También replica su armazón:
   marca, menú agrupado, negocio activo, barra superior y puesta en marcha. El marco
   se presenta como «Vista del producto» y «Empresa de ejemplo»; no llama a datos ni
@@ -2361,7 +2644,7 @@ que dice comprobar.
 
 - La Home ofrece una cuenta ficticia identificada como datos simulados. Sus ocho
   apartados usan pestañas accesibles y mantienen trabajos, clientes, facturas,
-  cobros, documentos, equipo y lectura de Noesis coherentes entre sí.
+  cobros, documentos, equipo y lectura de Bynoesis coherentes entre sí.
 - CTA públicos cambiados a «Empieza ahora →». Desde cada plan se conserva plan y
   periodicidad en el alta; los errores de formulario no pierden esa selección.
 - Selector mensual/anual sincronizado en Home, Precios y Suscripción. Catálogo
@@ -2521,7 +2804,7 @@ que dice comprobar.
 - Pendiente externo: Meta, Stripe, proveedor de IA y certificado AEAT no se validan
   sin credenciales reales y siguen figurando como bloqueo de piloto.
 
-## 2026-07-12 — Noesis persistente y entrada documental universal
+## 2026-07-12 — Bynoesis persistente y entrada documental universal
 
 - Migración 21 aplicada en SQLite: historial del asistente, memoria confirmada,
   clasificación documental trazable y protección de facturas históricas.
@@ -2529,8 +2812,8 @@ que dice comprobar.
   RGPD, señales de clientes y confirmación de una factura recibida enviada por PDF
   en WhatsApp.
 - Navegador: historial persistente comprobado entre Home y Clientes; el panel de
-  Noesis abre desde cada pantalla y conserva el contexto de página.
-- Documentos: subida web sin selector técnico; Noesis propone el tipo y la persona
+  Bynoesis abre desde cada pantalla y conserva el contexto de página.
+- Documentos: subida web sin selector técnico; Bynoesis propone el tipo y la persona
   confirma. Web y WhatsApp usan el mismo clasificador.
 - Responsive comprobado a 390 × 844: asistente y panel inferior sin solapamiento
   del campo de texto ni scroll horizontal (`scrollWidth = clientWidth = 375`).

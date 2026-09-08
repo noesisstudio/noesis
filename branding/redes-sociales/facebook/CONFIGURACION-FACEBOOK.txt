@@ -6,7 +6,7 @@ Foto de perfil: SUBIR-imagen-perfil-facebook-1080.png
 Imagen de portada: SUBIR-portada-facebook-1640x856.png
 
 IDENTIDAD
-Nombre de la página: Noesis
+Nombre de la página: Bynoesis
 Usuario preferente: @bynoesis
 Categoría principal: Empresa de software
 Categoría secundaria: Servicio empresarial
@@ -15,16 +15,16 @@ Correo público: info@bynoesis.com
 Ubicación: España. Añadir domicilio solo si es una dirección empresarial pública.
 
 PRESENTACION CORTA - COPIAR Y PEGAR
-Noesis lleva la oficina mientras tú haces el trabajo: agenda, clientes, facturas,
+Bynoesis lleva la oficina mientras tú haces el trabajo: agenda, clientes, facturas,
 documentos y control del negocio para autónomos de servicios.
 
 DESCRIPCION COMPLETA - COPIAR Y PEGAR
-Noesis es la mano derecha del autónomo de servicios. Ayuda a mantener la agenda,
+Bynoesis es la mano derecha del autónomo de servicios. Ayuda a mantener la agenda,
 los clientes, los trabajos, las facturas, los documentos, los costes y las tareas
 del negocio en orden, sin obligarte a aprender un ERP ni pasar el domingo haciendo
 papeleo.
 
-Noesis entiende qué está pasando, prepara lo administrativo y te enseña qué toca
+Bynoesis entiende qué está pasando, prepara lo administrativo y te enseña qué toca
 hacer. Tú mantienes el control y confirmas las acciones importantes.
 
 Está pensado para autónomos y pequeños negocios de fontanería, electricidad,

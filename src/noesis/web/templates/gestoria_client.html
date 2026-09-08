@@ -14,7 +14,7 @@
   </div>
 </div>
 {% if request.query_params.get('notice') == 'readonly' %}
-<div class="banner warn">Esta empresa está en modo consulta. Puedes revisar su expediente, pero el titular debe reactivar Noesis antes de guardar cambios.</div>
+<div class="banner warn">Esta empresa está en modo consulta. Puedes revisar su expediente, pero el titular debe reactivar Bynoesis antes de guardar cambios.</div>
 {% elif request.query_params.get('notice') == 'invalid' %}
 <div class="banner warn">No se pudo guardar el cambio. Revisa los datos del formulario y vuelve a intentarlo.</div>
 {% elif request.query_params.get('notice') == 'missing' %}
@@ -47,7 +47,7 @@
   <div class="gestoria-view-heading"><div><span class="eyebrow">Resumen del período</span><h2 id="gestoria-summary-title">Qué necesita atención ahora</h2></div><p>Una lectura clara antes de entrar en documentos o impuestos.</p></div>
 <section class="gestoria-client-brief {{ 'is-ready' if workspace.period.readiness_pct == 100 and not workspace.pending_documents else '' }}">
   <div>
-    <span class="eyebrow">Lectura de Noesis</span>
+    <span class="eyebrow">Lectura de Bynoesis</span>
     {% if workspace.pending_documents or workspace.period.missing_receipts or workspace.period.missing_received_originals %}
     <h2>Antes de cerrar {{ workspace.period.label }}, revisa {{ workspace.pending_documents|length + workspace.period.missing_receipts + workspace.period.missing_received_originals }} punto(s).</h2>
     <p>{{ workspace.pending_documents|length }} documento(s) sin validar, {{ workspace.period.missing_receipts }} gasto(s) sin justificante y {{ workspace.period.missing_received_originals }} factura(s) recibida(s) sin original.</p>

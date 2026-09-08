@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Documentación · Noesis</title>
+  <title>Documentación · Bynoesis</title>
   <link rel="icon" href="/static/noesis-mark.svg">
   <style>
     :root { --forest:#14463b; --teal:#2e8b74; --cream:#f4f1e8; --ink:#1c2220; }
@@ -35,7 +35,7 @@
 <body>
   <div class="head">
     <div class="wrap">
-      <div class="brand">Noesis · documentación para la gestoría</div>
+      <div class="brand">Bynoesis · documentación para la gestoría</div>
       <h1>{{ business.name if business else "Enlace no válido" }}</h1>
       {% if business and business.nif %}
       <div class="muted" style="color:#bcd4cb">NIF {{ business.nif }}</div>
@@ -46,7 +46,7 @@
     {% if not business %}
     <div class="card empty">
       Este enlace no es válido o ha sido revocado.<br>
-      Pide a tu cliente que te lo vuelva a enviar desde Noesis.
+      Pide a tu cliente que te lo vuelva a enviar desde Bynoesis.
     </div>
     {% else %}
     <div class="card">
@@ -73,7 +73,7 @@
     <div class="card">
       <b>Pedir documentación al cliente</b>
       <div class="muted" style="margin-top:4px">
-        Lo que escribas aquí le aparecerá dentro de su Noesis, en Documentos.
+        Lo que escribas aquí le aparecerá dentro de su Bynoesis, en Documentos.
       </div>
       <form method="post" action="/g/{{ token }}/solicitud" style="margin-top:10px">
         <textarea name="mensaje" required maxlength="2000" rows="3"
@@ -105,7 +105,7 @@
     </div>
     {% endif %}
     <div class="foot">
-      Generado por <a href="https://bynoesis.com">Noesis</a> — el copiloto de
+      Generado por <a href="https://bynoesis.com">Bynoesis</a> — el copiloto de
       negocio por WhatsApp. Enlace privado: no lo compartas.
     </div>
   </div>

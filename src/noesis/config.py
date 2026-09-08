@@ -1,5 +1,6 @@
 """Configuración central. Lee variables del archivo .env."""
 
+import math
 import os
 import re
 from pathlib import Path
@@ -60,7 +61,7 @@ MODEL_OUTPUT_USD_PER_MTOK = float(
 # realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
 FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
 # Segundo nivel privado opcional. Acepta servidores con contrato OpenAI-compatible
-# (Ollama, llama.cpp o vLLM). Si falta, Noesis pasa a la IA externa consentida.
+# (Ollama, llama.cpp o vLLM). Si falta, Bynoesis pasa a la IA externa consentida.
 LOCAL_AI_BASE_URL = os.getenv("NOESIS_LOCAL_AI_BASE_URL", "").strip()
 LOCAL_AI_MODEL = os.getenv("NOESIS_LOCAL_AI_MODEL", "").strip()
 LOCAL_AI_API_KEY = os.getenv("NOESIS_LOCAL_AI_API_KEY", "").strip()
@@ -94,8 +95,13 @@ FALLBACK_OUTPUT_USD_PER_MTOK = float(
 )
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 
+# Hipótesis de gestión, no tipo de cambio vivo ni conversión contable.
+COST_USD_TO_EUR = float(os.getenv("NOESIS_COST_USD_TO_EUR", "0.92"))
+if not math.isfinite(COST_USD_TO_EUR) or COST_USD_TO_EUR <= 0:
+    raise ValueError("NOESIS_COST_USD_TO_EUR debe ser positivo y finito.")
+
 # Railway inyecta DATABASE_URL al enlazar el servicio Postgres. Sin esa variable,
-# Noesis conserva SQLite para desarrollo local y pruebas.
+# Bynoesis conserva SQLite para desarrollo local y pruebas.
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 # Fallback SQLite local. NOESIS_DB_PATH sigue siendo útil para conservar/copiar una
@@ -166,13 +172,13 @@ VERIFACTU_QR_BASE_URL = os.getenv(
 # Identificación del productor y del sistema (bloque SistemaInformatico del XSD).
 # El NIF no tiene valor ficticio: debe configurarse antes de activar el modo.
 VERIFACTU_PRODUCER_NAME = os.getenv(
-    "NOESIS_VERIFACTU_PRODUCER_NAME", "Noesis"
+    "NOESIS_VERIFACTU_PRODUCER_NAME", "Bynoesis"
 ).strip()
 VERIFACTU_PRODUCER_NIF = os.getenv(
     "NOESIS_VERIFACTU_PRODUCER_NIF", ""
 ).strip().upper()
 VERIFACTU_SYSTEM_NAME = os.getenv(
-    "NOESIS_VERIFACTU_SYSTEM_NAME", "Noesis"
+    "NOESIS_VERIFACTU_SYSTEM_NAME", "Bynoesis"
 ).strip()
 VERIFACTU_SYSTEM_ID = os.getenv(
     "NOESIS_VERIFACTU_SYSTEM_ID", "NO"
@@ -270,7 +276,7 @@ LEGAL_NIF = os.getenv("NOESIS_LEGAL_NIF", "").strip().upper()
 LEGAL_ADDRESS = os.getenv("NOESIS_LEGAL_ADDRESS", "").strip()
 LEGAL_EMAIL = os.getenv("NOESIS_LEGAL_EMAIL", "").strip().lower()
 LEGAL_REGISTRY = os.getenv("NOESIS_LEGAL_REGISTRY", "").strip()
-LEGAL_DOCUMENT_VERSION = "2026-08-08"
+LEGAL_DOCUMENT_VERSION = "2026-09-03"
 # Buzón que se enseña en la web. El de respaldo es el del dominio propio, no una
 # cuenta personal: aparece en el pie, en la política de cookies y en contacto, y
 # tres direcciones distintas en un mismo sitio restan credibilidad.
@@ -303,9 +309,36 @@ def legal_identity_ready() -> bool:
     return all((LEGAL_NAME, LEGAL_NIF, LEGAL_ADDRESS, LEGAL_EMAIL))
 
 
+def legal_provider_context_ready() -> bool:
+    """Evita publicar o cobrar con un proveedor activo pero no identificado."""
+    # El adaptador usa Brevo con prioridad y no reintenta por SMTP si la API falla.
+    # Un SMTP antiguo e inactivo no debe bloquear una instalación que usa Brevo.
+    smtp_named = bool(BREVO_API_KEY) or not SMTP_HOST or bool(
+        SMTP_PROVIDER_NAME and SMTP_PROVIDER_REGION
+    )
+    compat_named = not COMPAT_AI_BASE_URL or bool(
+        COMPAT_AI_LEGAL_NAME and COMPAT_AI_REGION
+    )
+    backup_values = (
+        BACKUP_S3_ENDPOINT, BACKUP_S3_BUCKET,
+        BACKUP_S3_ACCESS_KEY, BACKUP_S3_SECRET_KEY,
+    )
+    backup_named = not any(backup_values) or bool(
+        all(backup_values)
+        and BACKUP_S3_REGION
+        and BACKUP_S3_PROVIDER_NAME
+        and BACKUP_S3_DATA_REGION
+    )
+    return smtp_named and compat_named and backup_named
+
+
+def legal_publication_ready() -> bool:
+    return legal_identity_ready() and legal_provider_context_ready()
+
+
 def public_signup_available() -> bool:
     """Impide aceptar términos o pagos con textos legales incompletos."""
-    return PUBLIC_SIGNUP_ENABLED and (legal_identity_ready() or not IS_PRODUCTION)
+    return PUBLIC_SIGNUP_ENABLED and (legal_publication_ready() or not IS_PRODUCTION)
 
 # Límites defensivos de documentos. Son independientes del tamaño en MB: una
 # imagen comprimida pequeña puede intentar reservar cientos de megapíxeles.
@@ -346,7 +379,7 @@ ADMIN_SESSION_IDLE_MINUTES = max(
     15, int(os.getenv("NOESIS_ADMIN_SESSION_IDLE_MINUTES", "60"))
 )
 
-# Acceso opcional con Google (OAuth 2.0 / OpenID Connect). Noesis no muestra ni
+# Acceso opcional con Google (OAuth 2.0 / OpenID Connect). Bynoesis no muestra ni
 # intenta este flujo hasta que ambos valores estén configurados en el entorno.
 GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
@@ -392,7 +425,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
-SMTP_FROM = os.getenv("SMTP_FROM", "Noesis <no-reply@bynoesis.com>")
+SMTP_FROM = os.getenv("SMTP_FROM", "Bynoesis <no-reply@bynoesis.com>")
 EMAIL_RETRY_BASE_SECONDS = int(os.getenv("EMAIL_RETRY_BASE_SECONDS", "30"))
 EMAIL_RETRY_MAX_SECONDS = int(os.getenv("EMAIL_RETRY_MAX_SECONDS", "3600"))
 
@@ -426,6 +459,14 @@ INBOUND_EMAIL_MAX_BYTES = max(
     int(os.getenv("NOESIS_INBOUND_EMAIL_MAX_BYTES", str(20 * 1024 * 1024))),
 )
 
+# Observabilidad de valor: las escrituras nuevas no cambian decisiones ni permisos
+# y fallan abiertas. El flag no apaga la auditoría assistant_actions preexistente.
+# El segundo controla solo la superficie administrativa, oculta durante el piloto.
+VALUE_LEDGER_ENABLED = env_bool("NOESIS_VALUE_LEDGER_ENABLED", False)
+VALUE_LEDGER_ADMIN_ENABLED = env_bool(
+    "NOESIS_VALUE_LEDGER_ADMIN_ENABLED", False
+)
+
 # Cobro de la suscripción (Stripe). Si no hay clave, el alta entra en prueba manual.
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -455,31 +496,31 @@ WHATSAPP_RETRY_MAX_SECONDS = int(
 WHATSAPP_MAX_ATTEMPTS = int(os.getenv("WHATSAPP_MAX_ATTEMPTS", "6"))
 WHATSAPP_TEMPLATE_LANGUAGE = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "es")
 WHATSAPP_TEMPLATE_DAILY_SUMMARY = os.getenv(
-    "WHATSAPP_TEMPLATE_DAILY_SUMMARY", "noesis_resumen_diario"
+    "WHATSAPP_TEMPLATE_DAILY_SUMMARY", "bynoesis_resumen_diario"
 )
 WHATSAPP_TEMPLATE_WEEKLY_SUMMARY = os.getenv(
-    "WHATSAPP_TEMPLATE_WEEKLY_SUMMARY", "noesis_resumen_semanal"
+    "WHATSAPP_TEMPLATE_WEEKLY_SUMMARY", "bynoesis_resumen_semanal"
 )
 WHATSAPP_TEMPLATE_PAYMENT_ALERT = os.getenv(
-    "WHATSAPP_TEMPLATE_PAYMENT_ALERT", "noesis_aviso_cobros"
+    "WHATSAPP_TEMPLATE_PAYMENT_ALERT", "bynoesis_aviso_cobros"
 )
 WHATSAPP_TEMPLATE_PAYMENT_REMINDER = os.getenv(
-    "WHATSAPP_TEMPLATE_PAYMENT_REMINDER", "noesis_recordatorio_cobro"
+    "WHATSAPP_TEMPLATE_PAYMENT_REMINDER", "bynoesis_recordatorio_cobro"
 )
 WHATSAPP_TEMPLATE_INVOICE = os.getenv(
-    "WHATSAPP_TEMPLATE_INVOICE", "noesis_factura_lista"
+    "WHATSAPP_TEMPLATE_INVOICE", "bynoesis_factura_lista"
 )
 WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP = os.getenv(
-    "WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP", "noesis_seguimiento_presupuesto"
+    "WHATSAPP_TEMPLATE_QUOTE_FOLLOWUP", "bynoesis_seguimiento_presupuesto"
 )
 WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER = os.getenv(
-    "WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER", "noesis_recordatorio_cita"
+    "WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER", "bynoesis_recordatorio_cita"
 )
 WHATSAPP_TEMPLATE_DAILY_CLOSING = os.getenv(
-    "WHATSAPP_TEMPLATE_DAILY_CLOSING", "noesis_cierre_dia"
+    "WHATSAPP_TEMPLATE_DAILY_CLOSING", "bynoesis_cierre_dia"
 )
 WHATSAPP_TEMPLATE_TAX_NOTICE = os.getenv(
-    "WHATSAPP_TEMPLATE_TAX_NOTICE", "noesis_aviso_fiscal"
+    "WHATSAPP_TEMPLATE_TAX_NOTICE", "bynoesis_aviso_fiscal"
 )
 # Transcripción de voz vía API (Groq/Whisper). Si falta, se intenta whisper local.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -503,7 +544,15 @@ BACKUP_S3_ENDPOINT = os.getenv("NOESIS_BACKUP_S3_ENDPOINT", "").strip()
 BACKUP_S3_BUCKET = os.getenv("NOESIS_BACKUP_S3_BUCKET", "").strip()
 BACKUP_S3_ACCESS_KEY = os.getenv("NOESIS_BACKUP_S3_ACCESS_KEY", "").strip()
 BACKUP_S3_SECRET_KEY = os.getenv("NOESIS_BACKUP_S3_SECRET_KEY", "").strip()
-BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "us-east-1").strip()
+# No se adivina región: la región de firma y la residencia contractual deben
+# configurarse y documentarse antes de enviar una copia fuera del servidor.
+BACKUP_S3_REGION = os.getenv("NOESIS_BACKUP_S3_REGION", "").strip()
+BACKUP_S3_PROVIDER_NAME = os.getenv(
+    "NOESIS_BACKUP_S3_PROVIDER_NAME", ""
+).strip()
+BACKUP_S3_DATA_REGION = os.getenv(
+    "NOESIS_BACKUP_S3_DATA_REGION", ""
+).strip()
 BACKUP_S3_PREFIX = os.getenv("NOESIS_BACKUP_S3_PREFIX", "noesis").strip()
 BACKUP_S3_SSE = os.getenv("NOESIS_BACKUP_S3_SSE", "AES256").strip()
 BACKUP_S3_TIMEOUT_SECONDS = int(

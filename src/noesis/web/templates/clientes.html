@@ -88,7 +88,7 @@ async function load() {
       </div>
       <button class="btn sm" onclick="noesisDrawer(true);noesisSend(decodeURIComponent('${ask}'))">Preguntar</button>
     </div>`;
-  }).join('') : '<div class="empty">Añade actividad y Noesis empezará a detectar patrones explicables.</div>';
+  }).join('') : '<div class="empty">Añade actividad y Bynoesis empezará a detectar patrones explicables.</div>';
   const active = cs.filter(c => c.n_trabajos || c.n_facturas).length;
   const totFact = cs.reduce((a,b)=>a+(b.facturado||0),0);
   el('cl-hint').textContent = cs.length
@@ -117,7 +117,7 @@ async function load() {
     </td></tr>`).join('');
   el('cl-empty').innerHTML = cs.length ? '' : `<div class="empty-state">
     <b>Empieza por tu cartera</b>
-    <span>Añade un cliente, o pega tu lista de siempre (nombre y teléfono) y Noesis la crea de golpe. También aparecen solos cuando facturas o agendas desde el asistente.</span>
+    <span>Añade un cliente, o pega tu lista de siempre (nombre y teléfono) y Bynoesis la crea de golpe. También aparecen solos cuando facturas o agendas desde el asistente.</span>
     <br><button class="btn primary sm" onclick="addClient()">Añadir cliente</button>
     <button class="btn sm" onclick="importClients()">Importar lista</button></div>`;
 
@@ -151,7 +151,7 @@ async function loadWhatsAppInbox() {
           <button class="btn sm" onclick="resolveWhatsApp(${item.conversation_id})">Cerrar</button>
         </td>
       </tr>`).join('')
-      : `<tr><td colspan="4">${emptyState('Sin entradas comerciales', 'Cuando un cliente escriba al número de tu negocio, aparecerá aquí sin mezclarse con tus órdenes a Noesis.', '', '')}</td></tr>`;
+      : `<tr><td colspan="4">${emptyState('Sin entradas comerciales', 'Cuando un cliente escriba al número de tu negocio, aparecerá aquí sin mezclarse con tus órdenes a Bynoesis.', '', '')}</td></tr>`;
   } catch (error) {
     el('wa-inbox-body').innerHTML = `<tr><td colspan="4"><div class="empty">${esc(error.message)}</div></td></tr>`;
   }
@@ -214,7 +214,7 @@ async function clientPreferences(id, name){
         {value:'',label:'Sin confirmar'},{value:'manana',label:'Por la mañana'},
         {value:'tarde',label:'Por la tarde'},{value:'cualquiera',label:'Le va bien cualquier hora'}])},
       {name:'payment_terms_days',label:'Plazo de pago acordado (días)',type:'number',value:current.payment_terms_days??'',placeholder:'30'},
-      {name:'note',label:'Algo que Noesis debe recordar',value:current.note||'',placeholder:'No llamar durante el servicio, prefiere mensajes…'}
+      {name:'note',label:'Algo que Bynoesis debe recordar',value:current.note||'',placeholder:'No llamar durante el servicio, prefiere mensajes…'}
     ],
     onSubmit: async values => {
       await apiPost(`/clients/${id}/preferences`, values);

@@ -1,4 +1,4 @@
-"""Arranca Noesis con el negocio de demostración cargado, en una base aparte.
+"""Arranca Bynoesis con el negocio de demostración cargado, en una base aparte.
 
 Uso:  python scripts/demo_server.py   (o el lanzador «noesis-demo» del editor)
 

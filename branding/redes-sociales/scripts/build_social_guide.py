@@ -12,7 +12,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "Guia-perfiles-sociales-Noesis.docx"
+OUTPUT = ROOT / "Guia-perfiles-sociales-Bynoesis.docx"
 
 FOREST = "14463B"
 TEAL = "2E8B74"
@@ -305,7 +305,7 @@ def build():
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before = Pt(34)
     set_paragraph_shading(p, SAGE)
-    set_run(p.add_run("Noesis lleva la oficina mientras tú haces el trabajo."), size=14, color=FOREST, bold=True)
+    set_run(p.add_run("Bynoesis lleva la oficina mientras tú haces el trabajo."), size=14, color=FOREST, bold=True)
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     set_run(p.add_run("Versión 1.1.2 · 31 de agosto de 2026"), size=9.5, color=MUTED)
@@ -313,7 +313,7 @@ def build():
     add_page_break(doc)
     add_title(doc, "Instagram", "Identificación, educación, humor de oficio y demostraciones breves")
     add_fact_table(doc, [
-        ("Nombre", "Noesis | Gestión para autónomos"),
+        ("Nombre", "Bynoesis | Gestión para autónomos"),
         ("Usuario", "@bynoesis"),
         ("Cuenta", "Empresa · pública"),
         ("Categoría", "Producto/servicio o Empresa de software"),
@@ -325,16 +325,16 @@ def build():
     p.add_run().add_picture(str(ROOT / "instagram" / "SUBIR-imagen-perfil-instagram-1080.png"), width=Inches(1.55))
     add_caption(doc, "Archivo: SUBIR-imagen-perfil-instagram-1080.png · Instagram no utiliza banner")
     add_heading(doc, "Bio oficial", 2)
-    add_copy_block(doc, "Tu negocio, en orden y bajo control.\nMenos papeleo. Más tiempo para tu oficio.\nPara autónomos de servicios.\n↓ Conoce Noesis")
+    add_copy_block(doc, "Tu negocio, en orden y bajo control.\nMenos papeleo. Más tiempo para tu oficio.\nPara autónomos de servicios.\n↓ Conoce Bynoesis")
     add_heading(doc, "Bio para el piloto", 2)
-    add_copy_block(doc, "Noesis lleva la oficina mientras tú haces el trabajo.\nAgenda, facturas y documentos bajo control.\n↓ Solicita acceso")
+    add_copy_block(doc, "Bynoesis lleva la oficina mientras tú haces el trabajo.\nAgenda, facturas y documentos bajo control.\n↓ Solicita acceso")
     add_heading(doc, "Destacados iniciales", 2)
     add_body(doc, "Empieza · Cómo funciona · Autónomos · Facturas · Nosotros")
 
     add_page_break(doc)
     add_title(doc, "Facebook", "Confianza, comunidad, grupos profesionales y distribución")
     add_fact_table(doc, [
-        ("Página", "Noesis"),
+        ("Página", "Bynoesis"),
         ("Usuario", "@bynoesis"),
         ("Categoría", "Empresa de software · Servicio empresarial"),
         ("Web", "https://bynoesis.com"),
@@ -350,9 +350,9 @@ def build():
     p.add_run().add_picture(str(ROOT / "facebook" / "SUBIR-imagen-perfil-facebook-1080.png"), width=Inches(1.25))
     add_caption(doc, "Perfil: SUBIR-imagen-perfil-facebook-1080.png")
     add_heading(doc, "Presentación corta", 2)
-    add_copy_block(doc, "Noesis lleva la oficina mientras tú haces el trabajo: agenda, clientes, facturas, documentos y control del negocio para autónomos de servicios.")
+    add_copy_block(doc, "Bynoesis lleva la oficina mientras tú haces el trabajo: agenda, clientes, facturas, documentos y control del negocio para autónomos de servicios.")
     add_heading(doc, "Descripción completa de Facebook", 1)
-    add_copy_block(doc, "Noesis es la mano derecha del autónomo de servicios. Ayuda a mantener la agenda, los clientes, los trabajos, las facturas, los documentos, los costes y las tareas del negocio en orden, sin obligarte a aprender un ERP ni pasar el domingo haciendo papeleo.\n\nNoesis entiende qué está pasando, prepara lo administrativo y te enseña qué toca hacer. Tú mantienes el control y confirmas las acciones importantes.\n\nEstá pensado para autónomos y pequeños negocios de fontanería, electricidad, reformas, climatización, limpieza, mantenimiento, jardinería y otros servicios.\n\nMás información y acceso: https://bynoesis.com")
+    add_copy_block(doc, "Bynoesis es la mano derecha del autónomo de servicios. Ayuda a mantener la agenda, los clientes, los trabajos, las facturas, los documentos, los costes y las tareas del negocio en orden, sin obligarte a aprender un ERP ni pasar el domingo haciendo papeleo.\n\nNoesis entiende qué está pasando, prepara lo administrativo y te enseña qué toca hacer. Tú mantienes el control y confirmas las acciones importantes.\n\nEstá pensado para autónomos y pequeños negocios de fontanería, electricidad, reformas, climatización, limpieza, mantenimiento, jardinería y otros servicios.\n\nMás información y acceso: https://bynoesis.com")
     add_heading(doc, "Configuración recomendada", 2)
     add_body(doc, "Mientras el acceso sea controlado, usar Más información. Cambiar a Registrarte solo cuando el alta pública esté validada y exista una URL real de registro.")
     add_check_table(doc, [
@@ -365,7 +365,7 @@ def build():
     add_page_break(doc)
     add_title(doc, "LinkedIn", "Credibilidad empresarial, fundadores, producto y alianzas")
     add_fact_table(doc, [
-        ("Página", "Noesis"),
+        ("Página", "Bynoesis"),
         ("URL", "linkedin.com/company/bynoesis"),
         ("Sector", "Desarrollo de software"),
         ("Tamaño", "2-10 empleados, solo si refleja el equipo real"),
@@ -381,11 +381,11 @@ def build():
     p.add_run().add_picture(str(ROOT / "linkedin" / "SUBIR-logo-linkedin-400.png"), width=Inches(1.2))
     add_caption(doc, "Logotipo: SUBIR-logo-linkedin-400.png")
     add_heading(doc, "Lema", 2)
-    add_copy_block(doc, "Noesis lleva la oficina mientras tú haces el trabajo.")
+    add_copy_block(doc, "Bynoesis lleva la oficina mientras tú haces el trabajo.")
 
     add_page_break(doc)
     add_heading(doc, "Descripción de empresa de LinkedIn", 1)
-    add_copy_block(doc, "Noesis es el copiloto operativo para autónomos y pequeños negocios de servicios. Conecta agenda, clientes, trabajos, proyectos, facturas, documentos, costes y gestoría para quitar ruido mental y devolver tiempo y control.\n\nNo es otro programa de facturación ni un chatbot genérico. Noesis entiende qué está pasando en el negocio, prepara el trabajo administrativo, explica lo importante y propone la siguiente acción. El profesional conserva el control y confirma las decisiones sensibles.\n\nNacemos para ayudar a fontaneros, electricistas, instaladores, reformas, climatización, limpieza, mantenimiento, jardinería y otros profesionales que tienen más trabajo que tiempo para gestionar la oficina.\n\nHaz tu trabajo; Noesis te ordena el negocio.")
+    add_copy_block(doc, "Bynoesis es el copiloto operativo para autónomos y pequeños negocios de servicios. Conecta agenda, clientes, trabajos, proyectos, facturas, documentos, costes y gestoría para quitar ruido mental y devolver tiempo y control.\n\nNo es otro programa de facturación ni un chatbot genérico. Bynoesis entiende qué está pasando en el negocio, prepara el trabajo administrativo, explica lo importante y propone la siguiente acción. El profesional conserva el control y confirma las decisiones sensibles.\n\nNacemos para ayudar a fontaneros, electricistas, instaladores, reformas, climatización, limpieza, mantenimiento, jardinería y otros profesionales que tienen más trabajo que tiempo para gestionar la oficina.\n\nHaz tu trabajo; Bynoesis te ordena el negocio.")
     add_heading(doc, "Especialidades", 2)
     add_body(doc, "Gestión para autónomos · Software para empresas de servicios · Organización del negocio · Agenda y clientes · Facturación y documentos · Proyectos, costes y márgenes · Automatización con control humano · Experiencia web y WhatsApp")
     add_heading(doc, "Comprobación", 2)
@@ -403,7 +403,7 @@ def build():
     add_heading(doc, "TikTok", 2)
     add_body(doc, "Reservar @bynoesis y subir RESERVAR-avatar-tiktok-1080.png. Activarlo solo cuando Instagram Reels tenga un formato repetible que pueda reutilizarse sin duplicar trabajo.")
     add_heading(doc, "No abrir todavía", 2)
-    add_body(doc, "X/Twitter y Pinterest no concentran al cliente inicial. Google Business Profile solo debe crearse si Noesis cumple las condiciones de atención presencial o ubicación pública; nunca se inventa una dirección.")
+    add_body(doc, "X/Twitter y Pinterest no concentran al cliente inicial. Google Business Profile solo debe crearse si Bynoesis cumple las condiciones de atención presencial o ubicación pública; nunca se inventa una dirección.")
     add_heading(doc, "Seguridad y propiedad", 1)
     add_check_table(doc, [
         "Registrar perfiles con correo corporativo controlado por la empresa.",
@@ -422,10 +422,10 @@ def build():
     add_body(doc, "Facebook - botón de acción: https://www.facebook.com/help/messenger-app/1638565256396310")
     add_body(doc, "Meta - Centro de cuentas: https://www.facebook.com/help/943858526073065")
 
-    doc.core_properties.title = "Perfiles oficiales de Noesis"
+    doc.core_properties.title = "Perfiles oficiales de Bynoesis"
     doc.core_properties.subject = "Instagram, Facebook y LinkedIn"
-    doc.core_properties.author = "Noesis"
-    doc.core_properties.keywords = "Noesis, branding, Instagram, Facebook, LinkedIn"
+    doc.core_properties.author = "Bynoesis"
+    doc.core_properties.keywords = "Bynoesis, branding, Instagram, Facebook, LinkedIn"
     doc.save(OUTPUT)
     print(OUTPUT)
 

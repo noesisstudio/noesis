@@ -1,14 +1,14 @@
-# Noesis — guía esencial de marca
+# Bynoesis — guía esencial de marca
 
 Versión 1.2.2 · 31 de agosto de 2026
 
 ## 1. Idea de marca
 
-Noesis es la mano derecha del autónomo de servicios. Su promesa estratégica es:
-**Noesis lleva la oficina mientras tú haces el trabajo**. La expresión pública y
-memorable de esa promesa es: **Haz tu trabajo; Noesis te ordena el negocio**.
+Bynoesis es la mano derecha del autónomo de servicios. Su promesa estratégica es:
+**Bynoesis lleva la oficina mientras tú haces el trabajo**. La expresión pública y
+memorable de esa promesa es: **Haz tu trabajo; Bynoesis te ordena el negocio**.
 
-La tecnología no ocupa el centro del discurso. Noesis devuelve tiempo, reduce el
+La tecnología no ocupa el centro del discurso. Bynoesis devuelve tiempo, reduce el
 papeleo y permite entender qué pasa y qué toca hacer sin perder el control. Facturar
 antes, cobrar mejor o conocer el margen son pruebas concretas de ese valor, pero no
 son por sí solas la identidad de la marca.
@@ -16,7 +16,7 @@ son por sí solas la identidad de la marca.
 ### Jerarquía del mensaje
 
 1. **Territorio de marca:** tiempo, calma y control del negocio.
-2. **Promesa:** Noesis lleva la oficina mientras el profesional ejerce su oficio.
+2. **Promesa:** Bynoesis lleva la oficina mientras el profesional ejerce su oficio.
 3. **Pruebas:** agenda ordenada, facturas preparadas, documentos clasificados,
    clientes atendidos, costes visibles y tareas recordadas.
 4. **Resultado económico:** menos olvidos, mejor margen y cobros más ordenados.
@@ -27,26 +27,26 @@ real, siempre como evidencia y no como posicionamiento maestro.
 
 ## 2. Nombre
 
-- Nombre público: **Noesis**.
+- Nombre público: **Bynoesis**.
 - Dominio y usuario digital preferente: **bynoesis.com** y **@bynoesis**.
 - «ByNoesis» no sustituye al nombre principal; se reserva para URL, usuario o firma
-  técnica cuando «Noesis» no esté disponible.
+  técnica cuando «Bynoesis» no esté disponible.
 - No usar «Nosis», «Novesis», «Noésis» ni escribir el nombre íntegro en mayúsculas.
 
 ## 3. Sistema de logo
 
 ### Símbolo
 
-La estrella de cuatro puntas funciona como brújula y punto de claridad: Noesis
+La estrella de cuatro puntas funciona como brújula y punto de claridad: Bynoesis
 detecta lo que importa, ordena el ruido y devuelve dirección. Su centro estable
 representa al profesional, que mantiene el control. Se conserva la geometría
 original para proteger el reconocimiento ya construido.
 
 ### Versiones
 
-- **Logo horizontal primario:** símbolo + Noesis en verde bosque. Uso preferente
+- **Logo horizontal primario:** símbolo + Bynoesis en verde bosque. Uso preferente
   sobre crema, blanco o fotografía muy clara.
-- **Logo horizontal inverso:** símbolo claro + Noesis en crema. Uso sobre verde
+- **Logo horizontal inverso:** símbolo claro + Bynoesis en crema. Uso sobre verde
   bosque o fondos oscuros.
 - **Símbolo primario:** aplicaciones, favicon, marca de agua y espacios cuadrados.
 - **Símbolo monocromo:** grabados, documentos a una tinta o restricciones técnicas.
@@ -108,7 +108,7 @@ wordmark.
 
 ## 7. Voz
 
-Noesis habla de tú, con frases cortas y una conclusión primero. Es cercana, directa
+Bynoesis habla de tú, con frases cortas y una conclusión primero. Es cercana, directa
 y tranquila. Puede usar humor cotidiano, pero no banaliza dinero, fiscalidad,
 seguridad ni errores.
 

@@ -1,4 +1,4 @@
-# Plan maestro de Noesis
+# Plan maestro de Bynoesis
 
 > Documento estable de dirección de producto, diseño, tecnología, operaciones,
 > finanzas y marketing. No contiene una fotografía operativa. Para saber qué existe
@@ -17,9 +17,9 @@ petición → presupuesto → agenda → trabajo → proyecto → coste
          → factura → cobro → documentos → gestoría
 ```
 
-**Promesa:** «Noesis lleva la oficina mientras tú haces el trabajo».
+**Promesa:** «Bynoesis lleva la oficina mientras tú haces el trabajo».
 
-Noesis no es otro programa de facturas con un chat añadido. Es un acompañante
+Bynoesis no es otro programa de facturas con un chat añadido. Es un acompañante
 persistente que conoce el estado del negocio, explica lo importante, propone la
 siguiente acción y ejecuta lo autorizado por web o WhatsApp.
 
@@ -41,7 +41,7 @@ La primera capa responde siempre:
 
 1. ¿Cómo está mi negocio?
 2. ¿Qué debo hacer ahora?
-3. ¿Qué está haciendo Noesis por mí?
+3. ¿Qué está haciendo Bynoesis por mí?
 
 Quien no entiende de números recibe lenguaje llano, significado y una acción. Quien
 sí entiende conserva cálculos, evidencia, histórico y desglose. El nivel de
@@ -49,7 +49,7 @@ explicación es una preferencia de cuenta, no un selector repetido en cada panta
 
 Una jornada ideal:
 
-- Noesis prepara el día y prioriza.
+- Bynoesis prepara el día y prioriza.
 - El trabajador recibe su trabajo, ficha y registra materiales/evidencias.
 - Proyecto, horas, coste, avance y margen se actualizan sin doble entrada.
 - Al terminar queda una factura preparada, nunca emitida sin control.
@@ -80,7 +80,7 @@ Agotar créditos o perder un proveedor nunca desactiva la operativa local. Ver
 
 ### Autonomía con control
 
-Noesis puede ordenar, calcular, clasificar, preparar borradores, recordar y ejecutar
+Bynoesis puede ordenar, calcular, clasificar, preparar borradores, recordar y ejecutar
 reglas de bajo riesgo previamente autorizadas. Transferencias, pagos, devoluciones,
 impuestos, emisión definitiva, envíos sensibles y borrados irreversibles exigen
 confirmación específica. Preparar no equivale a autorizar.
@@ -103,7 +103,7 @@ confirmación específica. Preparar no equivale a autorizar.
 ### Simplicidad progresiva
 
 Home y listados muestran situación, acción y pocas cifras. El detalle se abre por
-capas. Noesis tiene voz humana y profesional; no imita un dashboard fintech ni
+capas. Bynoesis tiene voz humana y profesional; no imita un dashboard fintech ni
 oculta datos importantes.
 
 ## 5. Arquitectura de producto objetivo
@@ -168,9 +168,9 @@ No se pide al autónomo duplicar horas, costes o documentos entre módulos.
 
 ## 7. Posicionamiento y referencias
 
-- **Forjia:** referencia directa de WhatsApp, facturación, gastos y gestoría. Noesis
+- **Forjia:** referencia directa de WhatsApp, facturación, gastos y gestoría. Bynoesis
   debe diferenciarse por orquestación, parte diario, campo y rentabilidad.
-- **Holded/Quipu:** referencias de mercado para profundidad contable. Noesis no les
+- **Holded/Quipu:** referencias de mercado para profundidad contable. Bynoesis no les
   delega la facturación; construye internamente la parte regulada y solo conecta
   directamente con la administración o infraestructura imprescindible.
 - **Jobber/ServiceTitan:** referencia de operación de campo, dispatch, checklists,
@@ -260,7 +260,7 @@ coste compatible con el plan y cero acciones monetarias incorrectas.
 
 ## 12. Norte
 
-Noesis habrá cumplido cuando el fontanero pueda hacer de fontanero: la oficina se
+Bynoesis habrá cumplido cuando el fontanero pueda hacer de fontanero: la oficina se
 mantiene ordenada, el trabajo llega al equipo, el coste llega al proyecto, la
 factura queda preparada, el cliente recibe seguimiento, la gestoría obtiene los
 papeles y el autónomo conserva el control sin cargar con el ruido mental.

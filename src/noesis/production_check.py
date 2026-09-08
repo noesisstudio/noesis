@@ -20,7 +20,7 @@ from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 
 
-USER_AGENT = "Noesis-Production-Check/1.0"
+USER_AGENT = "Bynoesis-Production-Check/1.0"
 LEGAL_PATHS = ("/privacidad", "/terminos", "/aviso-legal", "/encargado-tratamiento")
 LEGAL_PLACEHOLDERS = (
     "[razón social]",
@@ -249,7 +249,7 @@ def _repository_schema() -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Comprueba desde fuera que el release público de Noesis está completo."
+        description="Comprueba desde fuera que el release público de Bynoesis está completo."
     )
     parser.add_argument("--base-url", default="https://bynoesis.com")
     parser.add_argument(

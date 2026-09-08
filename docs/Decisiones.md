@@ -2,9 +2,50 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Una lectura incoherente no se confirma con un «sí» (2026-09-07)
+
+La confianza declarada por un modelo nunca prevalece sobre una contradicción
+determinista. Si base, IVA, IRPF, total, fechas o un identificador fiscal español
+no cuadran, Bynoesis conserva el documento y los campos propuestos, limita la
+confianza y obliga a revisarlos en Documentos. No inventa la cifra correcta y no
+permite que un «sí» rápido por WhatsApp la convierta en apunte contable.
+
+La comprobación es aditiva y local. No bloquea documentos parciales ni pretende
+validar identificadores extranjeros; tampoco sustituye la revisión fiscal. Las
+facturas recibidas confirmadas siguen siendo corregibles porque no forman parte de
+la cadena inmutable de facturas emitidas.
+
+## Medir el trabajo útil sin gobernar el trabajo (2026-08-31)
+
+El Registro Interno de Valor se añade como observador, no como un nuevo motor de
+negocio. Escribe después de que una operación termine, falla abierto y puede
+apagarse sin detener facturas, clientes, cobros, agenda, documentos, presupuestos o
+WhatsApp. La taxonomía versionada y determinista decide qué cuenta para WUB; una IA
+nunca calcula la métrica ni atribuye causalidad.
+
+Useful Action y Useful Outcome se separan. Un cobro puede observarse sin afirmar que
+Bynoesis lo causó; solo existe atribución asistida o directa cuando hay evidencia
+enlazada. WUB exige tres acciones núcleo en dos procesos, con semana oficial por
+zona horaria, profundidad y consistencia como contexto. Confidence, Insight,
+Progress y cualquier aumento automático de autonomía quedan fuera hasta tener
+aceptaciones, correcciones y reversiones reales del piloto.
+
+La taxonomía solo marca familias candidatas. Cada instancia debe demostrar un
+contexto válido de delegación y guarda `qualifies_for_wub=true/false`: asistente web
+o WhatsApp, propuesta confirmada, regla autorizada o automatización explícita. Un
+formulario manual se observa, pero no cuenta. No existen puntos ni pesos.
+
+La auditoría nueva está oculta por feature flag y el ledger parte apagado. Apagarlo
+no elimina la escritura histórica de `assistant_actions`: solo retira sus campos
+nuevos de correlación. Conserva aislamiento por negocio y forma parte de
+exportación/borrado RGPD. «Todo bajo control» solo puede afirmarse dentro de
+procesos conectados y sin fallos o pendientes conocidos. La infraestructura de
+lifecycle existe, pero los hooks de corrección/reversión por proceso siguen fuera
+de esta fase.
+
 ## Un catch-all enruta documentos; nunca decide su contabilidad (2026-08-27)
 
-Noesis puede recibir las facturas de todos los negocios en un único buzón de
+Bynoesis puede recibir las facturas de todos los negocios en un único buzón de
 Hostinger sin consumir un alias por cliente. Cada empresa obtiene una dirección
 virtual opaca `docs.<token>@bynoesis.com`; el destinatario original se resuelve antes
 de abrir los adjuntos y, si falta, es desconocido o aparecen dos rutas, el mensaje
@@ -74,7 +115,7 @@ separados deja el mando comercial completo sin ampliar la superficie de riesgo.
 
 ## Stripe confirma cada cambio irreversible en un flujo acotado (2026-08-14)
 
-Noesis no modifica directamente la suscripción desde un botón. Gestión general,
+Bynoesis no modifica directamente la suscripción desde un botón. Gestión general,
 tarjeta, cambio de precio/período y cancelación generan sesiones efímeras distintas
 del Customer Portal; para una mejora se envían el `subscription_item` y el
 `price_id` exactos y Stripe presenta importe, prorrateo y autenticación antes de
@@ -85,7 +126,7 @@ se crea un segundo Checkout ni se concede acceso por la URL de retorno.
 ## Una suscripción activa se modifica; nunca se vuelve a comprar (2026-08-13)
 
 Checkout se reserva al alta de una cuenta sin suscripción. Cuando Stripe ya marca
-una cuenta como `active` o `trialing`, Noesis presenta el plan vigente y centraliza
+una cuenta como `active` o `trialing`, Bynoesis presenta el plan vigente y centraliza
 nivel, periodicidad, tarjeta y cancelación en el portal seguro sobre la misma
 suscripción. Los planes superiores son mejoras y los inferiores aparecen incluidos.
 
@@ -111,7 +152,7 @@ el aspecto con el que fue emitido.
 
 ## WhatsApp separa operación interna y recepción comercial (2026-08-10)
 
-Titular y trabajadores escriben al número central de Noesis. El equipo no escribe
+Titular y trabajadores escriben al número central de Bynoesis. El equipo no escribe
 al teléfono personal del titular: fichajes, costes, documentos, dudas y bloqueos
 entran en una bandeja y el titular recibe un resumen. Ningún coste cambia un proyecto
 sin aceptación, y los márgenes permanecen privados salvo permiso explícito y proyecto
@@ -123,9 +164,9 @@ Los clientes finales escriben al número comercial de su proveedor. El receptor
 después dentro de ese ámbito. Un receptor desconocido nunca cae al canal central.
 Ese número pertenece al negocio: puede conectar su WhatsApp Business actual o, si
 quiere separar atención y vida personal, contratar por su cuenta uno dedicado a
-citas y clientes. Noesis no compra ni impone un número nuevo por cada suscripción.
+citas y clientes. Bynoesis no compra ni impone un número nuevo por cada suscripción.
 Los documentos quedan trazados y pendientes, las respuestas salen por la misma
-conexión y fuera de 24 horas se exige una plantilla aprobada. Noesis prepara y
+conexión y fuera de 24 horas se exige una plantilla aprobada. Bynoesis prepara y
 clasifica; no crea contabilidad ni compromisos irreversibles por un mensaje entrante.
 
 ## Soporte se autoriza por alcance; el CFO distingue observado de supuesto (2026-08-08)
@@ -155,7 +196,7 @@ El presupuesto comparte identidad visual con la factura, pero se identifica como
 oferta y su aceptación solo genera un borrador. El portal guarda fecha, canal y una
 huella seudónima para investigar discrepancias sin almacenar la IP en claro. Esa
 evidencia ayuda, pero no sustituye una firma electrónica cualificada ni permite a
-Noesis emitir por el titular.
+Bynoesis emitir por el titular.
 
 ## La gestoría recibe borradores explicables, no impuestos «hechos» (2026-08-07)
 
@@ -166,14 +207,14 @@ explícito, corregible y trazado por la gestoría. Cuando faltan base, cuota, r�
 prorrata o una característica de la operación, la interfaz pide criterio en lugar
 de rellenar el hueco.
 
-Noesis tampoco fija todavía una comisión para el canal de gestorías. La cartera
+Bynoesis tampoco fija todavía una comisión para el canal de gestorías. La cartera
 puede medir clientes conectados y demostrar el ahorro operativo, pero descuento,
 porcentaje, duración, devoluciones y liquidación son condiciones comerciales que
 debe aprobar el founder antes de prometer dinero a un despacho o a su cliente.
 
-## La demo son cuentas reales dentro de Noesis, no otro producto (2026-08-06)
+## La demo son cuentas reales dentro de Bynoesis, no otro producto (2026-08-06)
 
-Para enseñar Noesis no se mantendrá una segunda interfaz ni un conjunto de pantallas
+Para enseñar Bynoesis no se mantendrá una segunda interfaz ni un conjunto de pantallas
 inventadas. El acceso de autónomo, la cuenta profesional de gestoría y el portal del
 cliente recorren el mismo código y los mismos datos relacionados que usaría un
 cliente real. Así una reunión también prueba el producto y no una promesa separada.
@@ -188,7 +229,7 @@ puede ser conocida porque nunca abre datos reales ni autoridad operativa.
 Un PDF sin capa de texto no debe obligar a enviar una factura o ticket a una API de
 visión. PDFium rasteriza localmente y el mismo Tesseract de las fotos aplica OCR con
 límites estrictos. Si no puede leerlo con suficiente evidencia, el documento pasa a
-revisión; Noesis no inventa una clasificación. La extracción externa autorizada
+revisión; Bynoesis no inventa una clasificación. La extracción externa autorizada
 queda como respaldo explícito, no como requisito del recorrido normal.
 
 ## El alias público llega al servidor, pero nunca sirve una segunda web (2026-08-06)
@@ -214,7 +255,7 @@ pequeño ahorro adicional de almacenamiento no compensa ese riesgo de privacidad
 
 ## El SEO describe producto y audiencia; no fabrica autoridad (2026-08-13)
 
-Noesis separa las intenciones públicas de autónomos y gestorías en páginas propias,
+Bynoesis separa las intenciones públicas de autónomos y gestorías en páginas propias,
 pero mantiene una única identidad de empresa en la portada. El marcado estructurado
 solo declara `Organization` y `WebSite`: no se publican estrellas, reseñas, volumen
 de usuarios ni un resultado enriquecido de software hasta que existan evidencias
@@ -388,7 +429,7 @@ ese sí describe un envío masivo.
 
 ## Apertura pública cerrada por defecto y dominio canónico único (2026-07-27)
 
-En producción, Noesis no acepta nuevas cuentas ni inicia altas con Google mientras
+En producción, Bynoesis no acepta nuevas cuentas ni inicia altas con Google mientras
 falten la identidad legal mínima del prestador o la activación explícita
 `NOESIS_PUBLIC_SIGNUP_ENABLED`. Las cuentas ya creadas pueden seguir iniciando
 sesión. La web ofrece solicitar acceso al piloto y no simula que audio, OCR,
@@ -428,7 +469,7 @@ maquinaria ya probada de `password_resets`, con caducidad más larga— para que
 titular elija la suya. El enlace se envía por correo y además se muestra en pantalla,
 porque el SMTP puede fallar y el cliente objetivo vive en WhatsApp. El motivo de fondo
 es de responsabilidad: si el equipo nunca conoce la contraseña de un cliente, no puede
-ser señalado ante un incidente con los datos de *sus* clientes, de los que Noesis es
+ser señalado ante un incidente con los datos de *sus* clientes, de los que Bynoesis es
 encargada del tratamiento.
 
 La prueba de 14 días arranca el día de la aprobación, no el del formulario, para que
@@ -481,7 +522,7 @@ audio o IA en una decisión fiscal irreversible.
 
 ## Facturación progresiva: simple al entrar, completa cuando hace falta (2026-07-20)
 
-Noesis no replica la densidad de un ERP. El camino habitual enseña cliente, líneas,
+Bynoesis no replica la densidad de un ERP. El camino habitual enseña cliente, líneas,
 impuestos, forma de pago y total; las menciones legales, series y programaciones se
 abren solo cuando el negocio las necesita. Por debajo, el motor sí conserva cantidad,
 precio, descuento, IVA por línea, IRPF, fecha de operación, series separadas,
@@ -490,19 +531,19 @@ recurrencia idempotente, historial y PDF.
 Un borrador se puede editar y duplicar. Al emitir, la cabecera y las líneas quedan
 inalterables. Corregir se hace con rectificativa; anular ante la AEAT crea un registro
 nuevo, encadenado e inmutable, y exige confirmación escrita del titular. Motivo:
-combinar la facilidad de Noesis con la trazabilidad profesional observada en Holded,
+combinar la facilidad de Bynoesis con la trazabilidad profesional observada en Holded,
 sin copiar su arquitectura de ERP ni permitir atajos legalmente inseguros.
 
 La rectificativa operativa usa por defecto diferencias (`I`): conserva el original,
 solo permite un borrador pendiente y reserva R5 para rectificar F2. La sustitución
 (`S`) queda bloqueada hasta que una asesoría valide los importes rectificados y el
-registro AEAT completo. Noesis no ofrece una opción fiscal que todavía no puede
+registro AEAT completo. Bynoesis no ofrece una opción fiscal que todavía no puede
 explicar ni exportar correctamente.
 
 ## La obligación fiscal sobrevive al estado de la suscripción (2026-07-20)
 
 Una cuenta caducada queda en modo consulta para impedir nuevas operaciones, pero
-Noesis continúa remitiendo a la AEAT los registros Veri*Factu que ya se generaron
+Bynoesis continúa remitiendo a la AEAT los registros Veri*Factu que ya se generaron
 legalmente. Un impago del SaaS no puede convertir una outbox fiscal pendiente en
 incumplimiento. La factura emitida queda congelada en BD; cobros, recordatorios y
 respuesta AEAT viven en ledgers y eventos separados. Cualquier anomalía de huella
@@ -510,7 +551,7 @@ bloquea el envío externo y queda auditada.
 
 ## Facturación nativa; no conectar Holded ni otro SaaS de facturación (2026-07-20)
 
-El founder confirma que Noesis debe controlar internamente numeración, emisión, PDF,
+El founder confirma que Bynoesis debe controlar internamente numeración, emisión, PDF,
 registro Veri*Factu, trazabilidad y remisión AEAT. Holded y Quipu son únicamente
 referencias de mercado; no son proveedores técnicos ni caminos de respaldo.
 
@@ -524,7 +565,7 @@ multiempresa y ausencia de dependencia estratégica en otro SaaS. Esta decisión
 
 El alta anual compara el coste real de doce mensualidades con el pago anual, muestra
 el equivalente mensual y cuantifica el ahorro. El rojo se usa como acento comercial
-apagado, no como alarma. El sector es texto libre y se conserva entre pasos: Noesis
+apagado, no como alarma. El sector es texto libre y se conserva entre pasos: Bynoesis
 no obliga a un oficio a encajar en una lista incompleta y la segmentación interna se
 construye después sobre respuestas reales.
 
@@ -548,7 +589,7 @@ El cliente no ve un catálogo de APIs preparadas, caídas o aún sin contratar. 
 muestra únicamente controles con sentido para su trabajo —WhatsApp, gestoría,
 preferencia de ayuda avanzada y datos propios—. El diagnóstico de Google, Meta,
 SMTP, Stripe, IA, AEAT y copias queda reservado a administración. Motivo: la salud
-de infraestructura es una responsabilidad de Noesis, no ruido para el autónomo.
+de infraestructura es una responsabilidad de Bynoesis, no ruido para el autónomo.
 
 Para reducir coste y dependencia se construyen primero dos conectores internos: un
 calendario ICS privado y revocable, y conciliación por extracto CSV. La conciliación
@@ -587,13 +628,13 @@ automatizaciones hasta activar una suscripción. El límite se valida en servido
 web/API, portales, WhatsApp, colas y tareas programadas: ocultar botones no es control.
 
 La estructura de cada pantalla se diseña según su decisión principal, sin imponer una
-plantilla de KPIs. La coherencia transversal la aporta Noesis: lectura contextual,
+plantilla de KPIs. La coherencia transversal la aporta Bynoesis: lectura contextual,
 motivo, siguiente paso y conversación persistente. Abrir el acompañante muestra
 primero una lectura local y no consume IA por sí solo.
 
 ## Compositor interno antes del modelo; precio se decide con piloto (2026-07-15)
 
-Noesis redacta internamente las comunicaciones repetibles a partir de hechos
+Bynoesis redacta internamente las comunicaciones repetibles a partir de hechos
 confirmados: cobros, presupuestos, citas, gestoría y correos sencillos. Esta capa no
 es un LLM, no inventa importes o destinatarios y no consume créditos. Si el titular
 pide enviar desde WhatsApp, primero ve el borrador y confirma con SÍ/NO; web solo
@@ -610,7 +651,7 @@ founder lo adoptó el 2026-07-15; detalle y supuestos en
 
 ## Pago por uso antes de GPU propia durante el piloto (2026-07-14)
 
-Noesis admite un proveedor externo OpenAI-compatible entre la IA privada y
+Bynoesis admite un proveedor externo OpenAI-compatible entre la IA privada y
 Anthropic. Este nivel permite evaluar modelos abiertos en Groq, Cloudflare, Hugging
 Face u otro servicio sin acoplar el producto a un SDK. Sigue siendo externo: requiere
 consentimiento, consume un crédito del plan y no se presenta como privado ni gratis.
@@ -651,7 +692,7 @@ confirmación específica del autónomo. Detalle operativo en [[IA-local]].
 
 ## Las integraciones se eligen por negocio; lo local nunca se apaga (2026-07-13)
 
-Noesis separa capacidad interna de servicio externo. El alta crea la preferencia
+Bynoesis separa capacidad interna de servicio externo. El alta crea la preferencia
 externa desactivada hasta que el usuario elige durante el onboarding; la opción
 recomendada es activarla con límites. Una cuenta anterior sin preferencia conserva
 el comportamiento previo para no romper su operativa. Al desactivarla, el cerebro
@@ -669,7 +710,7 @@ marcar interés en la futura conexión bancaria no autoriza ninguna operación.
 
 ## Autonomía acotada y columna operativa única (2026-07-13)
 
-Noesis hace automáticamente trabajo interno de bajo riesgo y comunicaciones que
+Bynoesis hace automáticamente trabajo interno de bajo riesgo y comunicaciones que
 siguen una regla concreta aprobada. Preparar no equivale a autorizar: transferencias,
 pagos, devoluciones, presentación fiscal, emisión definitiva y borrado irreversible
 siempre exigen confirmación específica del autónomo. El límite se valida en servidor
@@ -686,13 +727,13 @@ carpetas estables, originales, manifiesto, huella, versión y trazabilidad de av
 descarga. Cambiar solo el nombre o email de la gestoría no amplía un permiso que el
 usuario haya restringido después.
 
-## Noesis recuerda solo lo explicable y la entrada es universal (2026-07-12)
+## Bynoesis recuerda solo lo explicable y la entrada es universal (2026-07-12)
 El acompañante conserva la conversación entre pantallas y canales, pero separa el
 historial de los recuerdos operativos. Un recuerdo permanente debe ser explícito,
 visible, borrable y confirmado; las señales de clientes se calculan con hechos
 trazables (vencimientos, cobros, presupuestos y trabajos), no con una nota opaca.
 
-Todo archivo entra por el mismo servicio de documentos. Noesis propone si es
+Todo archivo entra por el mismo servicio de documentos. Bynoesis propone si es
 ticket, factura recibida o emitida, presupuesto, contrato, albarán, proveedor u
 otro documento, registra confianza y motivo, y pide revisión humana cuando puede
 tener efecto contable. Motivo: acompañar no significa decidir en silencio, y web y
@@ -702,8 +743,8 @@ Las facturas emitidas antiguas se guardan como documento pendiente de revisión.
 Nunca se reemiten ni entran en la cadena Veri*Factu. La importación histórica con
 `source='importada'` se habilitará únicamente con un flujo específico y auditado.
 
-## Noesis da el parte; el detalle se abre por capas (2026-07-11)
-La Home prioriza situación, siguiente acción y trabajo de Noesis. No se eliminan
+## Bynoesis da el parte; el detalle se abre por capas (2026-07-11)
+La Home prioriza situación, siguiente acción y trabajo de Bynoesis. No se eliminan
 datos: se desplazan a Dinero, Cobros, Proyectos y el resto de apartados. Proyectos
 aplica la misma regla: tres cifras agregadas y listado primero; margen, horas,
 materiales y equipo solo al abrir un proyecto. El estilo de explicación es una
@@ -722,7 +763,7 @@ en [[Roadmap]]; criterio en [[Metodo-operativo-Fable]].
 
 ## FacturAI: referencia, no fusión (2026-07-07)
 El proyecto anterior "Automatizacion Facturas" (FacturAI) resuelve un subconjunto
-de Noesis con un stack incompatible (SQLAlchemy, JWT, WeasyPrint, Supabase).
+de Bynoesis con un stack incompatible (SQLAlchemy, JWT, WeasyPrint, Supabase).
 Decisión: **no copiar código ni fusionar stacks**; portar ideas concretas al
 estilo propio: el prompt de extracción de facturas completo (líneas, NIFs,
 confianza), la detección emitida/recibida por NIF (`_detect_empresa_context`), el
@@ -803,12 +844,12 @@ confirmación actuales. Ver [[Seguridad-operativa]].
 ## Decisión superada — no reconstruir Verifactu
 
 La idea inicial era integrar un proveedor homologado. Queda anulada por la decisión
-de 2026-07-20: la facturación y Veri*Factu son desarrollo propio de Noesis.
+de 2026-07-20: la facturación y Veri*Factu son desarrollo propio de Bynoesis.
 
-## Noesis es la marca; ByNoesis identifica el dominio y los usuarios (2026-08-31)
+## Bynoesis es la marca; ByNoesis identifica el dominio y los usuarios (2026-08-31)
 
 La estrella existente se conserva: ya forma parte del producto y expresa dirección
-sin depender de una moda de IA. La identidad principal se escribe **Noesis**. El
+sin depender de una moda de IA. La identidad principal se escribe **Bynoesis**. El
 dominio `bynoesis.com` y el usuario preferente `@bynoesis` resuelven disponibilidad,
 pero no crean una segunda marca ni sustituyen el nombre en titulares, ventas o
 producto.
@@ -816,12 +857,12 @@ producto.
 El sistema visual usa verde bosque `#14463b`, teal `#2e8b74` y crema `#f4f1e8`;
 Fraunces representa la voz y los titulares e Inter organiza cuerpo y datos. Las
 variantes, tamaños, fondos, redes y prohibiciones viven en `branding/`. Motivo:
-reconocer a Noesis en todos los puntos de contacto requiere consistencia y archivos
+reconocer a Bynoesis en todos los puntos de contacto requiere consistencia y archivos
 correctos, no un logo distinto para cada canal. Ver [[Producto]] y
 `design/PRODUCT_PRINCIPLES.md`.
 
-La promesa estratégica es **«Noesis lleva la oficina mientras tú haces el trabajo»**
-y su expresión corta es **«Haz tu trabajo; Noesis te ordena el negocio»**. La marca
+La promesa estratégica es **«Bynoesis lleva la oficina mientras tú haces el trabajo»**
+y su expresión corta es **«Haz tu trabajo; Bynoesis te ordena el negocio»**. La marca
 compite por devolver tiempo, quitar ruido mental y dar control del ciclo completo.
 Facturas preparadas, documentos ordenados, tareas resueltas, margen visible y cobros
 mejor gestionados demuestran esa promesa, pero ninguna de esas funciones se convierte
@@ -832,7 +873,7 @@ factura».
 ## Stripe confirma; Checkout no autoriza (2026-08-10)
 
 `checkout.session.completed` vincula cliente y suscripción, pero no activa ni
-concede el plan solicitado por sí solo. Noesis solo cambia acceso y plan cuando
+concede el plan solicitado por sí solo. Bynoesis solo cambia acceso y plan cuando
 Stripe acredita una factura pagada o una suscripción `active`/`trialing`; en cambios
 desde su portal manda el `price_id` vigente del catálogo, no metadata histórica.
 Los eventos se ordenan por negocio y una factura aislada, un evento antiguo, una

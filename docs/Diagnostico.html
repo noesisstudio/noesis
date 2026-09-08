@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Diagnóstico · Noesis</title>
+<title>Diagnóstico · Bynoesis</title>
 <style>
   :root {
     --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
@@ -184,22 +184,22 @@
 <div class="page">
 
   <header>
-    <p class="eyebrow">Noesis · Manual de diagnóstico</p>
+    <p class="eyebrow">Bynoesis · Manual de diagnóstico</p>
     <h1>Cuando algo falla, dónde mirar</h1>
-    <p class="standfirst">Cómo funciona Noesis por dentro, explicado sin jerga, para que cuando un cliente te diga «no me funciona» sepas en qué pieza está el problema antes de preguntarle nada.</p>
+    <p class="standfirst">Cómo funciona Bynoesis por dentro, explicado sin jerga, para que cuando un cliente te diga «no me funciona» sepas en qué pieza está el problema antes de preguntarle nada.</p>
     <p class="crumbs">Versión para leer. Hay una versión gemela con la referencia técnica al lado, en <code>Diagnostico-tecnico.pdf</code>.</p>
   </header>
 
   <div class="callout callout-warn">
     <h3>La regla que ahorra más tiempo</h3>
-    <p>Casi ningún fallo es «Noesis está roto». Casi todos son <strong>una pieza externa que no está conectada</strong> o <strong>una cuenta que no tiene permiso</strong>.</p>
+    <p>Casi ningún fallo es «Bynoesis está roto». Casi todos son <strong>una pieza externa que no está conectada</strong> o <strong>una cuenta que no tiene permiso</strong>.</p>
     <p>Por eso la primera pregunta no es «¿qué ha pasado?» sino <strong>«¿a quién le pasa y en qué pantalla?»</strong>. Con esas dos respuestas, este documento te lleva a la pieza en menos de un minuto.</p>
   </div>
 
   <section>
     <div class="sec-head">
       <h2>1. Las siete piezas</h2>
-      <p class="sec-intro">Noesis no es un bloque. Son siete cosas que pueden fallar por separado, y saber cuál falla es la mitad del trabajo.</p>
+      <p class="sec-intro">Bynoesis no es un bloque. Son siete cosas que pueden fallar por separado, y saber cuál falla es la mitad del trabajo.</p>
     </div>
 
     <div class="scroll">
@@ -211,7 +211,7 @@
           <tr><td>El cerebro</td><td>Entender «factura a Juan 95 euros»</td><td>El asistente y WhatsApp</td></tr>
           <tr><td>WhatsApp</td><td>Hablar con el autónomo y con sus clientes</td><td>Solo el canal. La web sigue igual</td></tr>
           <tr><td>El correo</td><td>Enviar facturas, recuperar contraseñas</td><td>Solo los envíos</td></tr>
-          <tr><td>Stripe</td><td>Cobrar la suscripción de Noesis</td><td>Solo activar y cambiar de plan</td></tr>
+          <tr><td>Stripe</td><td>Cobrar la suscripción de Bynoesis</td><td>Solo activar y cambiar de plan</td></tr>
           <tr><td>Hacienda</td><td>Veri*Factu, el registro fiscal</td><td>Solo la remisión, no la factura</td></tr>
         </tbody>
       </table>
@@ -274,7 +274,7 @@
       <p class="sec-intro">El concepto que explica la mitad de los comportamientos raros: las colas.</p>
     </div>
 
-    <p>Cuando Noesis tiene que enviar algo —una factura por correo, un aviso por WhatsApp, un registro a Hacienda— <strong>no lo envía en el momento</strong>. Lo guarda primero en una lista de pendientes y luego lo intenta.</p>
+    <p>Cuando Bynoesis tiene que enviar algo —una factura por correo, un aviso por WhatsApp, un registro a Hacienda— <strong>no lo envía en el momento</strong>. Lo guarda primero en una lista de pendientes y luego lo intenta.</p>
 
     <p>Parece un rodeo y es justo lo contrario. Si el proveedor está caído, el envío no se pierde: <strong>se reintenta con espera creciente</strong>, de treinta segundos hasta una hora, seis veces. Y si el mismo aviso se pide dos veces, sale una sola: cada envío lleva una marca que impide duplicarlo.</p>
 
@@ -301,7 +301,7 @@
         <div class="step-body">
           <div class="step-head"><h3>Las dos direcciones de salud</h3></div>
           <p><code>bynoesis.com/health</code> dice si el servicio está vivo y qué versión corre. <code>bynoesis.com/ready</code> añade si la base de datos está al día.</p>
-          <p>Si las dos responden y aun así algo no va, <strong>el problema no es Noesis</strong>: es una pieza externa.</p>
+          <p>Si las dos responden y aun así algo no va, <strong>el problema no es Bynoesis</strong>: es una pieza externa.</p>
         </div>
       </li>
       <li class="step">
@@ -339,13 +339,13 @@
     <div class="callout">
       <h3>El fallo que no da señal</h3>
       <p>Hay uno que no aparece en ninguna pantalla: <strong>que un correo llegue a la carpeta de spam</strong>. Para el sistema es un envío correcto; para el cliente, no llegó.</p>
-      <p>Si alguien dice que no recibió algo y en Entregas atascadas no hay nada, esa es la primera sospecha. Se comprueba mirando una bandeja real de Gmail, no desde Noesis.</p>
+      <p>Si alguien dice que no recibió algo y en Entregas atascadas no hay nada, esa es la primera sospecha. Se comprueba mirando una bandeja real de Gmail, no desde Bynoesis.</p>
     </div>
   </section>
 
   <section>
     <div class="sec-head">
-      <h2>6. Lo que Noesis nunca hace solo</h2>
+      <h2>6. Lo que Bynoesis nunca hace solo</h2>
       <p class="sec-intro">Conviene saberlo, porque más de una vez te dirán «no lo ha hecho» y la respuesta es que no debía hacerlo.</p>
     </div>
     <ul>

@@ -1,4 +1,4 @@
-# Branding de Noesis
+# Branding de Bynoesis
 
 Paquete oficial y versionado de identidad visual. Empieza por
 [`BRAND_GUIDE.md`](BRAND_GUIDE.md) y utiliza los archivos de `social/` directamente

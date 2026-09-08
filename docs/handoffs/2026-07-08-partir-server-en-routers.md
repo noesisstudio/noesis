@@ -10,7 +10,7 @@
   camino aparece la tentación de "ya que estoy, arreglo…", NO. Solo mover.
 
 ### 1. Contexto del producto
-Noesis conecta el ciclo trabajo→factura→cobro→gestoría. Toda la capa web vive hoy
+Bynoesis conecta el ciclo trabajo→factura→cobro→gestoría. Toda la capa web vive hoy
 en un único `web/server.py` que ha crecido a **2.597 líneas y 145 rutas**. No es un
 problema de usuario, es de mantenibilidad: es el paso técnico previo a la capa C
 (portal gestoría con cuentas, canales, proyectos). Ver [[Metodo-operativo-Fable]] §3

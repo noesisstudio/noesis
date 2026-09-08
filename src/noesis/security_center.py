@@ -121,13 +121,22 @@ def build_security_report() -> dict:
         config.BACKUP_S3_ACCESS_KEY,
         config.BACKUP_S3_SECRET_KEY,
     )
-    if all(s3_values):
-        add("ok", "Copia fuera del servidor", "Destino S3 completo y cifrado solicitado.")
+    s3_context = (
+        config.BACKUP_S3_REGION,
+        config.BACKUP_S3_PROVIDER_NAME,
+        config.BACKUP_S3_DATA_REGION,
+    )
+    if all(s3_values) and all(s3_context):
+        add(
+            "ok", "Copia fuera del servidor",
+            f"Destino {config.BACKUP_S3_PROVIDER_NAME} completo, "
+            f"residencia declarada {config.BACKUP_S3_DATA_REGION} y cifrado solicitado.",
+        )
     elif any(s3_values):
         add(
             "critical", "Copia fuera del servidor",
             "La configuracion S3 esta incompleta.",
-            "Completa las cuatro variables o retiralas hasta poder hacerlo.",
+            "Completa credenciales, región, proveedor y residencia o retíralos.",
         )
     else:
         add(

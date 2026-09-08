@@ -25,13 +25,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · {{ page_title }}</title>
+  <title>Bynoesis · {{ page_title }}</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <meta name="theme-color" content="#14463b">
   <link rel="apple-touch-icon" href="/static/noesis-mark.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Noesis">
+  <meta name="apple-mobile-web-app-title" content="Bynoesis">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <script>window.NOESIS_BIZ = {{ business.id }}; window.NOESIS_PAGE = {{ active|tojson }};</script>
 </head>
@@ -39,7 +39,7 @@
 <div class="app">
   <!-- Sidebar -->
   <aside class="sidebar" id="app-sidebar" aria-label="Navegación principal">
-    <div class="brand"><img class="mark" src="/static/noesis-mark.svg" alt=""> Noesis</div>
+    <div class="brand"><img class="mark" src="/static/noesis-mark.svg" alt=""> Bynoesis</div>
     <div class="section">
       {% set b = business.id %}
       {% set g_tesoreria = ['tesoreria', 'analisis', 'ingresos', 'costes'] %}
@@ -54,7 +54,7 @@
       <a class="nav-item {{ 'active' if active in g_facturacion }}" href="/b/{{ b }}/facturas"><span class="ic">{{ ic('facturas') }}</span> Facturas</a>
       {% if 'team' in entitlements %}<a class="nav-item {{ 'active' if active=='equipo' }}" href="/b/{{ b }}/equipo"><span class="ic">{{ ic('equipo') }}</span> Equipo</a>{% endif %}
       <a class="nav-item {{ 'active' if active=='documentos' }}" href="/b/{{ b }}/documentos"><span class="ic">{{ ic('documentos') }}</span> Documentos</a>
-      <div class="section-label">Noesis</div>
+      <div class="section-label">Bynoesis</div>
       <a class="nav-item {{ 'active' if active=='asistente' }}" href="/b/{{ b }}/asistente"><span class="ic">{{ ic('asistente') }}</span> Asistente</a>
       <a class="nav-item {{ 'active' if active=='ajustes' }}" href="/b/{{ b }}/ajustes"><span class="ic">{{ ic('ajustes') }}</span> Ajustes</a>
     </div>
@@ -77,12 +77,12 @@
         <button class="burger" aria-label="Menú" aria-controls="app-sidebar" aria-expanded="false" onclick="setNavOpen(!document.body.classList.contains('nav-open'))">
           <span></span><span></span><span></span>
         </button>
-        <div class="crumb">Noesis · <b>{{ page_title }}</b></div>
+        <div class="crumb">Bynoesis · <b>{{ page_title }}</b></div>
       </div>
       <div class="topbar-actions">
         {% if active != 'asistente' %}
         <button class="search-btn noesis-trigger" type="button" onclick="noesisDrawer(true)"
-           title="Hablar con Noesis sobre esta página" aria-label="Hablar con Noesis">
+           title="Hablar con Bynoesis sobre esta página" aria-label="Hablar con Bynoesis">
           <img src="/static/noesis-mark.svg" alt="">
         </button>
         {% endif %}
@@ -94,7 +94,7 @@
         {% if business.is_demo %}
         <span class="wa-pill">Demo · solo lectura</span>
         {% elif subscription_read_only %}
-        <a class="btn primary sm subscription-activate" href="/b/{{ business.id }}/suscripcion">Activar Noesis</a>
+        <a class="btn primary sm subscription-activate" href="/b/{{ business.id }}/suscripcion">Activar Bynoesis</a>
         {% else %}
         <div class="quick-create">
           <button class="btn primary sm qc-btn" type="button" aria-haspopup="true" aria-expanded="false"
@@ -147,7 +147,7 @@
     {% endif %}
     {% if business.is_demo %}
     <div class="readonly-banner" role="status">
-      <div><b>Datos de demostración</b><span>Puedes recorrer todo Noesis con información ficticia. Las acciones que enviarían o cambiarían datos están bloqueadas.</span></div>
+      <div><b>Datos de demostración</b><span>Puedes recorrer todo Bynoesis con información ficticia. Las acciones que enviarían o cambiarían datos están bloqueadas.</span></div>
     </div>
     {% elif subscription_read_only %}
     <div class="readonly-banner" role="status">
@@ -174,7 +174,7 @@
         </div>
         {% if active != 'asistente' %}
         <button class="pn-ask" type="button" onclick="noesisDrawer(true)">
-          Ver con Noesis</button>
+          Ver con Bynoesis</button>
         {% endif %}
       </div>
       {% endif %}
@@ -194,7 +194,7 @@
     <span aria-hidden="true">Demo</span>
   </span>
   {% elif subscription_read_only %}
-  <a class="bn-create locked" aria-label="Activar Noesis" href="/b/{{ business.id }}/suscripcion">
+  <a class="bn-create locked" aria-label="Activar Bynoesis" href="/b/{{ business.id }}/suscripcion">
     <span aria-hidden="true">€</span>
   </a>
   {% else %}
@@ -206,22 +206,22 @@
     <span class="ic">{{ ic('cobros') }}</span>Cobros</a>
   {% if active == 'asistente' %}
     <a class="bn-item active" href="/b/{{ business.id }}/asistente">
-      <span class="ic">{{ ic('asistente') }}</span>Noesis</a>
+      <span class="ic">{{ ic('asistente') }}</span>Bynoesis</a>
   {% else %}
     <button class="bn-item" type="button" onclick="noesisDrawer(true)">
-      <span class="ic">{{ ic('asistente') }}</span>Noesis</button>
+      <span class="ic">{{ ic('asistente') }}</span>Bynoesis</button>
   {% endif %}
 </nav>
 
 {% if active != 'asistente' %}
-<button class="companion-scrim" type="button" aria-label="Cerrar Noesis"
+<button class="companion-scrim" type="button" aria-label="Cerrar Bynoesis"
         onclick="noesisDrawer(false)"></button>
-<aside class="companion" id="noesis-companion" aria-label="Noesis, tu mano derecha"
+<aside class="companion" id="noesis-companion" aria-label="Bynoesis, tu mano derecha"
        aria-hidden="true">
   <header class="companion-head">
     <span class="companion-mark"><img src="/static/noesis-mark.svg" alt=""></span>
-    <div><b>Noesis</b><small>He revisado esta pantalla contigo</small></div>
-    <button class="iconbtn" type="button" aria-label="Cerrar Noesis"
+    <div><b>Bynoesis</b><small>He revisado esta pantalla contigo</small></div>
+    <button class="iconbtn" type="button" aria-label="Cerrar Bynoesis"
             onclick="noesisDrawer(false)">✕</button>
   </header>
   <div class="companion-context">
@@ -252,10 +252,10 @@
   {% endif %}
   <div class="companion-log" id="companion-log" aria-live="polite"></div>
   {% if business.is_demo %}
-  <p class="companion-subscribe">Demo de solo lectura: Noesis te enseña el contexto sin ejecutar acciones.</p>
+  <p class="companion-subscribe">Demo de solo lectura: Bynoesis te enseña el contexto sin ejecutar acciones.</p>
   {% elif subscription_read_only %}
   <a class="companion-subscribe" href="/b/{{ business.id }}/suscripcion">
-    Activa Noesis para conversar y actuar</a>
+    Activa Bynoesis para conversar y actuar</a>
   {% else %}
   <form class="companion-input" onsubmit="event.preventDefault(); noesisSend();">
     <input id="companion-message" class="input" placeholder="Dime qué necesitas…"

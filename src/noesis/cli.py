@@ -1,4 +1,4 @@
-"""Chat de prueba en la consola: simula la conversación de WhatsApp con Noesis.
+"""Chat de prueba en la consola: simula la conversación de WhatsApp con Bynoesis.
 
 El día de mañana, este mismo flujo lo alimentará el webhook de WhatsApp en vez
 del teclado. El cerebro (NoesisAgent) no cambia.
@@ -24,7 +24,7 @@ console = Console()
 
 def _banner() -> None:
     console.print(Panel.fit(
-        "[bold]Noesis[/bold] — copiloto por WhatsApp (prototipo local)\n"
+        "[bold]Bynoesis[/bold] — copiloto por WhatsApp (prototipo local)\n"
         f"Negocio: [cyan]{config.BUSINESS_NAME}[/cyan]   Modelo: [cyan]{config.MODEL}[/cyan]\n\n"
         "Escribe como en WhatsApp. Comandos: [yellow]resumen[/yellow] (parte del día), "
         "[yellow]reset[/yellow] (recarga demo), [yellow]salir[/yellow].",
@@ -71,9 +71,9 @@ def main() -> None:
             console.print("[yellow]Demo recargada.[/yellow]")
             continue
 
-        with console.status("[dim]Noesis está pensando...[/dim]"):
+        with console.status("[dim]Bynoesis está pensando...[/dim]"):
             reply = agent.send(user)
-        console.print("[bold magenta]Noesis ›[/bold magenta] ", end="")
+        console.print("[bold magenta]Bynoesis ›[/bold magenta] ", end="")
         console.print(Markdown(reply))
 
 

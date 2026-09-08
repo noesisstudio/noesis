@@ -1,6 +1,6 @@
 """Tareas programadas y worker de la cola de WhatsApp.
 
-Los avisos programados son conversaciones iniciadas por Noesis y siempre usan una
+Los avisos programados son conversaciones iniciadas por Bynoesis y siempre usan una
 plantilla aprobada por Meta. Las respuestas inmediatas al usuario se gestionan en
 ``whatsapp.py`` como texto libre dentro de la ventana de 24 horas.
 """
@@ -171,6 +171,20 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                 )
                 continue
             db.mark_reminder_sent(invoice["id"], business["id"])
+            from .. import value_ledger
+            with value_ledger.observation_context(
+                channel="system",
+                trigger_source="authorized_rule",
+                completion_mode="authorized_rule",
+            ):
+                value_ledger.observe_useful_action(
+                    business["id"],
+                    "payment_reminder_sent",
+                    entity_type="invoice",
+                    entity_id=invoice["id"],
+                    idempotency_key=idempotency_key,
+                    metadata={"cadence_step": step},
+                )
             db.record_product_event(
                 business["id"],
                 "payment_reminder_queued",
@@ -184,7 +198,7 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                     separators=(",", ":"),
                 ),
             )
-            db.record_assistant_action(
+            value_ledger.observe_trust_decision(
                 business["id"],
                 "payment_reminders",
                 f"Encolé el aviso de cobro de la factura "
@@ -199,6 +213,11 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                 },
                 requested_by="system",
                 approved_by="regla de cobros",
+                process_key="collections",
+                action_family="payment_reminder_sent",
+                correlation_key=idempotency_key,
+                trigger_source="authorized_rule",
+                preserve_legacy_audit=True,
             )
             queued += 1
     return queued
@@ -358,7 +377,7 @@ def send_weekly_summaries() -> None:
 
 def send_collection_proposals(now: datetime | None = None) -> int:
     """Cobros en piloto automático: si hay una factura vencida y el negocio no
-    tiene recordatorios automáticos, Noesis propone reclamarla por WhatsApp y
+    tiene recordatorios automáticos, Bynoesis propone reclamarla por WhatsApp y
     espera un SÍ del dueño antes de escribir al cliente."""
     from . import whatsapp
 
@@ -401,9 +420,16 @@ def send_collection_proposals(now: datetime | None = None) -> int:
             "con su enlace de pago? Responde SÍ o NO."
         )
         # La propuesta caduca en 12 h; si el dueño responde SÍ se ejecuta.
+        correlation_key = (
+            f"collection_proposal:{business['id']}:{top['id']}:{day}"
+        )
         db.set_pending_action(
             business["id"], phone, "reclamar",
-            {"invoice_id": top["id"]}, ttl_minutes=720,
+            {
+                "invoice_id": top["id"],
+                "value_correlation_key": correlation_key,
+            },
+            ttl_minutes=720,
         )
         if _deliver_template(
             business,
@@ -412,6 +438,20 @@ def send_collection_proposals(now: datetime | None = None) -> int:
             config.WHATSAPP_TEMPLATE_PAYMENT_ALERT,
             idempotency_key,
         ):
+            from .. import value_ledger
+            value_ledger.observe_trust_decision(
+                business["id"],
+                "payment_reminders",
+                f"Propuse reclamar la factura {number}; espero confirmación.",
+                status="proposed",
+                target_type="invoice",
+                target_id=top["id"],
+                requested_by="noesis",
+                process_key="collections",
+                action_family="payment_reminder_sent",
+                correlation_key=correlation_key,
+                trigger_source="noesis_proposed",
+            )
             queued += 1
     return queued
 
@@ -431,7 +471,7 @@ def send_founder_digest(now: datetime | None = None) -> bool:
     data = db.admin_overview()
     reports = data["dept_reports"]
     body = "\n".join([
-        f"Parte semanal de Noesis · semana {week:02d}/{year}",
+        f"Parte semanal de Bynoesis · semana {week:02d}/{year}",
         "",
         f"💰 Finanzas: {reports['finanzas']}",
         f"📈 Crecimiento: {reports['crecimiento']}",
@@ -446,7 +486,7 @@ def send_founder_digest(now: datetime | None = None) -> bool:
         f"Detalle completo: {config.BASE_URL}/admin",
         "— Generado automáticamente por el centro de mando.",
     ])
-    subject = f"Noesis · parte semanal W{week:02d}: MRR {data['mrr']} €"
+    subject = f"Bynoesis · parte semanal W{week:02d}: MRR {data['mrr']} €"
     for address in admins:
         email_adapter.queue_email(
             address, subject, body,

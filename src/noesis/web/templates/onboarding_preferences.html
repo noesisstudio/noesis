@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Noesis · Prepara tu operativa</title>
+  <title>Bynoesis · Prepara tu operativa</title>
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
 </head>
 <body class="public-auth-body">
   <header class="auth-topbar">
-    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Noesis</span></a>
+    <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""><span>Bynoesis</span></a>
     <a href="/b/{{ business.id }}/resumen">Salir · continuaré aquí al volver</a>
   </header>
   <div class="onboarding-center onboarding-operations-center">
@@ -125,7 +125,7 @@
               </label>
             </div>
           </div>
-          <p class="onboarding-helper">Noesis preparará los cálculos con estos valores; tú revisarás cada factura antes de emitirla.</p>
+          <p class="onboarding-helper">Bynoesis preparará los cálculos con estos valores; tú revisarás cada factura antes de emitirla.</p>
         </section>
 
         <section class="onboarding-config-section">
@@ -145,7 +145,7 @@
           </label>
           <label class="onboarding-switch-row">
             <input type="checkbox" id="onboarding-reminders" name="payment_reminders_enabled" value="1" {{ 'checked' if business.payment_reminders_enabled }}>
-            <span><b>Ayudarme a perseguir cobros</b><small>Noesis prepara los avisos según la cadencia que apruebes.</small></span>
+            <span><b>Ayudarme a perseguir cobros</b><small>Bynoesis prepara los avisos según la cadencia que apruebes.</small></span>
           </label>
           <label class="onboarding-reminder-days" id="onboarding-reminder-days">Avisar a los
             <input class="input" name="payment_reminder_days" maxlength="30" value="{{ business.payment_reminder_days or '3,7,15' }}" aria-label="Días de recordatorio">
