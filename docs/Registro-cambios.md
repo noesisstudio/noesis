@@ -13,6 +13,8 @@ los toma del argumento si está, si no del entorno (`FACEBOOK_APP_ID`,
 teclado ocultando los dos secretos. Los argumentos siguen funcionando igual para
 quien los use.
 
+Al escribir los secretos a ciegas es fácil que el pegado no entre y el fallo se confunda con una clave incorrecta, así que el script confirma cuántos caracteres ha recibido y, si Meta rechaza la clave, dice de dónde sacarla.
+
 Se documenta además que la sección «Revisión de la aplicación» no hay que tocarla: `Standard access` es el estado correcto para publicar en la página propia, y solicitar la revisión arrastraría verificación del negocio sin necesidad.
 
 Áreas: `facebook/conectar.py`, `facebook/README.md`,

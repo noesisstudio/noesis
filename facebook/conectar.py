@@ -57,6 +57,10 @@ def _pedir(valor: str | None, variable: str, pregunta: str, *, oculto: bool = Fa
     if not leido:
         print(f"ERROR · falta {variable}.", file=sys.stderr)
         raise SystemExit(1)
+    if oculto:
+        # Se escribe a ciegas: confirmar el tamaño evita perseguir un pegado
+        # incompleto creyendo que el valor es incorrecto.
+        print(f"  ({len(leido)} caracteres recibidos)")
     return leido
 
 
@@ -97,6 +101,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     except nucleo.ErrorGraph as exc:
         print(f"ERROR · no se ha podido alargar el token: {exc}", file=sys.stderr)
+        if "client secret" in str(exc).lower():
+            print(
+                "  La clave secreta no es la de esta app. Sácala de Configuración de la"
+                " aplicación → Básica → «Mostrar»: son 32 caracteres entre letras y"
+                " números. Si el pegado a ciegas falla, usa --app-secret o la variable"
+                " FACEBOOK_APP_SECRET.",
+                file=sys.stderr,
+            )
         return 1
 
     token_usuario = str(largo.get("access_token", ""))
