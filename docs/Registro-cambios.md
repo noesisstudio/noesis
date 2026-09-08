@@ -1,5 +1,24 @@
 ﻿# Registro de cambios
 
+## 2026-09-08 — guía de Facebook: la pantalla de casos de uso de Meta
+
+Objetivo: desatascar el alta de la app de Meta. La guía saltaba de «Crear app» a
+«tipo Empresa», pero el asistente actual pregunta antes por **casos de uso** y
+ninguno de los destacados corresponde a publicar en la propia página.
+
+Se documenta la ruta exacta: filtro «Otros» → «Otro» (bajo «¿Buscas otra cosa?»,
+la que crea la app en la experiencia antigua) → tipo Empresa. Se avisa de dos
+trampas de esa pantalla: «Crea una aplicación sin un caso de uso» deja la app sin
+permisos de páginas y bloquea el paso del token, y el aviso *going away soon* de
+«Otro» solo afecta a la creación de apps nuevas, no a las ya creadas ni a sus
+tokens. Se cita «Administración de contenido» como alternativa duradera y se
+recuerda reutilizar la app de WhatsApp si ya existe.
+
+Áreas: `facebook/Conectar-Facebook.md` y `facebook/Conectar-Facebook.html`.
+Documentación únicamente: no se toca `src/`, ni esquema, ni pruebas, ni
+credenciales. Sin límites externos nuevos. Riesgo: que Meta vuelva a renombrar la
+pantalla; la guía ya advierte de ello en el paso 2. Rollback: revertir el commit.
+
 ## 2026-09-07 — fiabilidad conversacional, documentos y facturas recibidas
 
 Objetivo: convertir los fallos reproducibles de `Arreglos.html` en contratos de

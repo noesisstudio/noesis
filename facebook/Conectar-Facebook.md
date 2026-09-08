@@ -72,15 +72,50 @@ te dice cuál es. No se puede saltar ese paso.
 
 1. Entra en <https://developers.facebook.com/apps> con la cuenta de Facebook que
    administra la página.
-2. **Crear app** → tipo **Empresa** (*Business*). Si ya tienes una app de Meta por
-   WhatsApp, puedes reutilizarla y saltar al paso 2.
+2. **Crear app**. Si ya tienes una app de Meta por WhatsApp, reutilízala y salta al
+   paso 2: no hace falta una segunda.
 3. Ponle un nombre reconocible («Bynoesis publicación»).
-4. Dentro de la app, ve a **Configuración → Básica** y apunta dos valores:
+4. Meta pregunta ahora por **casos de uso**, y esta pantalla despista: ninguno de
+   los seis «Destacados» es el nuestro. Filtra por **«Otros»** y, al final de la
+   lista, bajo «¿Buscas otra cosa?», marca **«Otro»** — el que avisa de que la app
+   «se creará en la experiencia antigua». Luego, cuando pida el tipo de
+   aplicación, elige **Empresa** (*Business*).
+5. Dentro de la app, ve a **Configuración → Básica** y apunta dos valores:
    - **Identificador de la app** (un número largo).
    - **Clave secreta de la app** — hay que pulsar «Mostrar».
 
 Guárdalos en un sitio temporal. La clave secreta es un secreto de verdad: no la
 pegues en ningún archivo del proyecto, ni en un chat, ni en un documento.
+
+### Por qué «Otro» y no los casos de uso que Meta ofrece
+
+Un caso de uso es un paquete de permisos preparado. Nosotros no necesitamos
+ninguno: solo publicamos en nuestra propia página con tres permisos que nos damos
+a nosotros mismos desde el Explorador de la API Graph (paso 2), con la app en modo
+desarrollo. «Otro» deja la app limpia y esos permisos disponibles sin revisión.
+
+| Caso de uso que ofrece Meta | Por qué no |
+|---|---|
+| API de marketing / anuncios con el Administrador | Son para **pagar** publicidad. Aquí se publica contenido orgánico |
+| API de Threads | Otra red |
+| Juego instantáneo | Otro producto |
+| Inicio de sesión con Facebook | Sirve para que **un cliente** entre en Bynoesis con su cuenta de Facebook. No es esto |
+| Conectar con clientes por WhatsApp | Interesa, pero es **otro trámite**: exige porfolio empresarial y va por [`docs/Conectar-APIs.md`](../docs/Conectar-APIs.md) |
+
+**Cuidado con «Crea una aplicación sin un caso de uso»**, que está en esa misma
+lista y suena a lo mismo. Da un identificador pelado, sin permisos ni productos, y
+en la experiencia nueva ya no se pueden añadir después los de páginas: el
+Explorador de la API Graph no ofrecerá `pages_manage_posts` y el paso 2 se queda
+bloqueado.
+
+«Otro» aparece marcado como *going away soon*. No afecta: Meta retira la forma de
+**crear** apps así, no las ya creadas ni sus tokens. El día que desaparezca se crea
+una nueva por el camino que haya entonces.
+
+Si prefieres no depender de una opción a extinguir, la alternativa duradera es el
+filtro **«Administración de contenido»**: ahí vive el caso de uso de gestionar
+publicaciones de página y también sirve. Con «Otro» se llega seguro; con aquel,
+antes.
 
 ## Paso 2 · Sacar el token corto (3 min)
 
