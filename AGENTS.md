@@ -62,6 +62,9 @@ Archivos clave:
 - `src/noesis/adapters/ai.py`: servicio privado OpenAI-compatible.
 - `src/noesis/documents/`: documentos, OCR, revisión y gestoría.
 - `src/noesis/adapters/`: integraciones externas reemplazables.
+- `marketing/facebook/`: automatización que promociona Noesis en Facebook y
+  publica sola cada 3 días. No es producto, no se despliega y no importa nada de
+  `src/noesis/`; su manual es `marketing/facebook/README.md`.
 
 ## 4. Reglas de oro
 

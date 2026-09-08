@@ -1,0 +1,55 @@
+name: Facebook · revisión del domingo
+
+# Único momento en el que hace falta una persona: leer la incidencia que abre este
+# workflow cada domingo y comprobar que no hay avisos.
+on:
+  schedule:
+    # 07:30 UTC = 09:30 en Madrid en verano, 08:30 en invierno.
+    - cron: "30 7 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: facebook-revision
+  cancel-in-progress: false
+
+jobs:
+  revisar:
+    name: Informe semanal
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configurar Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Construir el informe
+        id: informe
+        env:
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+          META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION }}
+        run: python marketing/facebook/revision.py --salida informe-facebook.md
+
+      - name: Abrir la revisión como incidencia
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITULO: ${{ steps.informe.outputs.titulo }}
+        run: |
+          gh label create facebook \
+            --color 1D4ED8 \
+            --description "Automatización de la página de Facebook" \
+            --force >/dev/null 2>&1 || true
+          gh issue create \
+            --title "${TITULO:-Revisión Facebook}" \
+            --body-file informe-facebook.md \
+            --label facebook

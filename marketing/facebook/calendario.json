@@ -1,0 +1,344 @@
+{
+  "version": 1,
+  "descripcion": "Cola editorial de la pagina de Facebook de Noesis. Se publica una pieza cada 'cadencia_dias' dias a partir de 'ancla', en orden. Al terminar la cola, el ciclo vuelve a empezar; la revision del domingo avisa varias semanas antes de que eso ocurra. Reglas: sin clientes ni cifras inventadas, sin prometer presentacion fiscal, sin vender la IA como argumento y sin precios (los precios viven en la web).",
+  "cadencia_dias": 3,
+  "ancla": "2026-09-09",
+  "publicaciones": [
+    {
+      "id": "F01",
+      "pilar": "piloto",
+      "titulo": "Qué es Noesis",
+      "texto": "Noesis lleva la oficina mientras tú haces el trabajo.\n\nEs un copiloto de negocio por WhatsApp para autónomos de servicios: fontanería, electricidad, reformas, climatización, limpieza, mantenimiento y jardinería.\n\nLe hablas como le hablarías a alguien de tu equipo. Le cuentas lo que ha pasado en el día y lo convierte en agenda, en clientes, en presupuestos y en facturas preparadas.\n\nLo que toca dinero, impuestos o a un cliente lo confirmas tú. Noesis prepara; tú decides.\n\nEstamos en piloto con autónomos de servicios. Si te interesa, entra y cuéntanos a qué te dedicas.",
+      "enlace": "https://bynoesis.com/solicitar-acceso"
+    },
+    {
+      "id": "F02",
+      "pilar": "identificacion",
+      "titulo": "La segunda jornada",
+      "texto": "Terminas a las siete. A las diez sigues con el móvil en la mano.\n\nPrimero el presupuesto que prometiste por la mañana. Luego los tickets del almacén. Después mirar, otra vez, quién te debe dinero.\n\nEl trabajo se acaba. El negocio no.\n\nNo es falta de organización. Es que llevar un oficio y llevar una oficina son dos trabajos distintos, y solo te pagan por uno.",
+      "enlace": ""
+    },
+    {
+      "id": "F03",
+      "pilar": "educacion",
+      "titulo": "El IVA que cobras no es tuyo",
+      "texto": "El IVA que cobras no es tuyo: solo está de paso por tu cuenta.\n\nUn hábito que quita sustos: cada vez que te entra el dinero de una factura, aparta ese IVA a otra cuenta el mismo día. No lo mires como ingreso, porque no lo es.\n\nCuando llegue el trimestre, el dinero ya está. Sin agujero y sin tirar de la caja del mes siguiente.\n\nQué porcentaje y qué plazos te tocan a ti te lo dice tu gestoría. El hábito de apartarlo lo pones tú.",
+      "enlace": ""
+    },
+    {
+      "id": "F04",
+      "pilar": "producto",
+      "titulo": "El parte del día",
+      "texto": "Al final del día, Noesis te da el parte.\n\nQué ha pasado hoy, qué ha quedado a medias, quién te debe dinero y qué conviene cerrar mañana. En un mensaje, sin abrir ningún programa.\n\nNo es un panel lleno de gráficos que no vas a mirar. Es lo que le preguntarías a alguien que te lleva la oficina: «¿cómo vamos?».",
+      "enlace": ""
+    },
+    {
+      "id": "F05",
+      "pilar": "comunidad",
+      "titulo": "Cuánto papeleo a la semana",
+      "texto": "Pregunta seria para autónomos de servicios: ¿cuántas horas a la semana te lleva el papeleo?\n\nNo el trabajo. El resto: presupuestos, facturas, tickets, cobros, mensajes por contestar y buscar ese documento que estaba «en un sitio seguro».\n\nDilo en los comentarios. Nos interesan las respuestas reales, también las incómodas.",
+      "enlace": ""
+    },
+    {
+      "id": "F06",
+      "pilar": "confianza",
+      "titulo": "No sustituimos a tu gestoría",
+      "texto": "Noesis no sustituye a tu gestoría. Le quita trabajo de encima.\n\nLas facturas, los tickets y los documentos le llegan ordenados, clasificados y revisables, en vez de en una carpeta con prisa el día 29.\n\nLa fiscalidad la lleva quien está preparado y responde por ella. Nosotros nos ocupamos de que le llegue todo, a tiempo y sin tener que perseguirte.\n\nSi llevas una gestoría y quieres ver cómo encaja, hablamos.",
+      "enlace": "https://bynoesis.com/gestorias"
+    },
+    {
+      "id": "F07",
+      "pilar": "identificacion",
+      "titulo": "El ticket que desaparece",
+      "texto": "El ticket solo desaparece cuando lo necesitas.\n\nLo guardaste en un sitio seguro. El sitio seguro fue la guantera, el bolsillo del pantalón que ya has lavado, una foto perdida entre 900 fotos o un chat contigo mismo.\n\nEs un papel de siete centímetros. Y acaba siendo un gasto que no te deduces, un margen que no cuadra y una llamada más de la gestoría.\n\nLos papeles pequeños crean los problemas grandes.",
+      "enlace": ""
+    },
+    {
+      "id": "F08",
+      "pilar": "educacion",
+      "titulo": "Poner fecha de pago en el presupuesto",
+      "texto": "Si en el presupuesto no pone cuándo se paga, se paga cuando el cliente quiera.\n\nTres líneas que cambian la conversación:\n\n1. Forma de pago (transferencia, tarjeta, efectivo).\n2. Plazo concreto: «a los 15 días de terminar», no «al finalizar».\n3. Qué pasa si se retrasa.\n\nNo es desconfiar. Es que el cliente sepa a qué atenerse desde el principio, igual que sabe el precio.\n\nReclamar es incómodo. Acordarlo por escrito antes, no.",
+      "enlace": ""
+    },
+    {
+      "id": "F09",
+      "pilar": "producto",
+      "titulo": "Le hablas y se agenda",
+      "texto": "«Agenda a Marta el martes a las diez para revisar la caldera.»\n\nEso es todo lo que escribes. Noesis crea la cita, la conecta con el cliente y te la recuerda antes.\n\nSin abrir un calendario, sin rellenar seis campos y sin aprender ninguna pantalla nueva. Le hablas como le hablarías a alguien del equipo, por texto o por audio.\n\nSi algo no le queda claro, te lo pregunta antes de guardarlo.",
+      "enlace": ""
+    },
+    {
+      "id": "F10",
+      "pilar": "confianza",
+      "titulo": "Tú confirmas lo que toca dinero",
+      "texto": "Noesis prepara. Tú confirmas.\n\nNada que toque dinero, impuestos o a un cliente sale sin que tú digas que sí. Ni una factura enviada por su cuenta, ni un aviso de cobro a tu mejor cliente, ni un precio decidido sin ti.\n\nPrepara el trabajo pesado y te lo deja listo para revisar en segundos. La última palabra es siempre tuya.\n\nUn copiloto no es alguien que te quita el volante.",
+      "enlace": ""
+    },
+    {
+      "id": "F11",
+      "pilar": "identificacion",
+      "titulo": "Es una cosita rápida",
+      "texto": "«Es una cosita rápida.»\n\nY la cosita rápida son: una visita para verlo, una vuelta al almacén a por material, un presupuesto por la noche, dos mensajes para confirmar, el trabajo y volver otro día porque faltaba una pieza.\n\nEl trabajo puede ser pequeño. Gestionarlo casi nunca lo es.\n\nRápida era la frase.",
+      "enlace": ""
+    },
+    {
+      "id": "F12",
+      "pilar": "educacion",
+      "titulo": "Un presupuesto que se acepta",
+      "texto": "Un presupuesto se acepta o se cae por cómo está escrito, no solo por el precio.\n\nCuatro cosas que ayudan:\n\n1. Explica qué incluye y, sobre todo, qué no incluye.\n2. Separa mano de obra y materiales. Se entiende mejor y se discute menos.\n3. Pon una fecha de validez. Los precios de material se mueven.\n4. Mándalo el mismo día de la visita, aunque sea corto.\n\nEl que llega primero y se entiende, gana muchas veces sin ser el más barato.",
+      "enlace": ""
+    },
+    {
+      "id": "F13",
+      "pilar": "producto",
+      "titulo": "Una foto y el ticket deja de ser un papel",
+      "texto": "Le mandas la foto del ticket del almacén y se acabó el papel.\n\nNoesis lo lee, lo guarda con su fecha y su importe y lo deja donde tiene que estar. Cuando llegue el trimestre, tu gestoría lo tiene sin pedírtelo.\n\nSi el ticket está arrugado, borroso o no acaba de entenderlo, no se lo inventa: te lo deja pendiente de confirmar.\n\nPreferimos preguntarte a colarte un número que no es.",
+      "enlace": ""
+    },
+    {
+      "id": "F14",
+      "pilar": "confianza",
+      "titulo": "Quiénes estamos detrás",
+      "texto": "Somos Xavier y Miquel, y estamos construyendo Noesis.\n\nVimos lo mismo en casi todos los negocios con los que trabajamos: se termina a las siete y a las diez se sigue con facturas, tickets y mensajes sin contestar.\n\nUno viene de cuentas y arquitectura de software; el otro, de dirección de empresas y procesos. Así que en vez de imaginarnos el problema, preguntamos a quien lo vive y lo estamos construyendo con ellos.\n\nAquí no hay un equipo enorme ni una máquina de marketing. Hay dos personas que contestan.",
+      "enlace": "https://bynoesis.com/equipo"
+    },
+    {
+      "id": "F15",
+      "pilar": "identificacion",
+      "titulo": "Terminado no siempre es facturado",
+      "texto": "Terminas el trabajo, el cliente queda contento, y tres semanas después: «¿esto lo llegué a facturar?».\n\nNo se nota hoy. Se nota cuando miras la cuenta a final de mes y los números no cuadran con lo que has trabajado.\n\nEl trabajo termina cuando está cobrado, no cuando recoges las herramientas.\n\n¿Cuántas veces te ha pasado este año?",
+      "enlace": ""
+    },
+    {
+      "id": "F16",
+      "pilar": "educacion",
+      "titulo": "Qué necesita de verdad tu gestoría",
+      "texto": "Tu gestoría no necesita perseguirte. Necesita cuatro cosas, y siempre las mismas:\n\n1. Las facturas que has emitido, con su fecha y su número seguido.\n2. Las facturas y tickets de lo que has comprado.\n3. Los movimientos del banco del negocio.\n4. Lo raro: una subvención, una compra grande, algo fuera de lo normal.\n\nSi llega cada semana en vez de cada trimestre, deja de ser una tarde perdida y pasa a ser diez minutos.\n\nEl orden no es para la gestoría. Es para que tú sepas cómo va tu negocio antes de que te lo cuenten.",
+      "enlace": ""
+    },
+    {
+      "id": "F17",
+      "pilar": "producto",
+      "titulo": "La factura preparada, tú la envías",
+      "texto": "«Cierra la reparación de Marta.»\n\nNoesis coge el trabajo, sus horas y sus materiales y te deja la factura preparada, con sus impuestos calculados y su numeración correcta.\n\nTú la miras. Si está bien, se envía. Si no, la corriges antes.\n\nLa parte lenta la hace él. La parte que tiene consecuencias la firmas tú.",
+      "enlace": "https://bynoesis.com/autonomos"
+    },
+    {
+      "id": "F18",
+      "pilar": "confianza",
+      "titulo": "Tus datos son tuyos",
+      "texto": "Hablemos de tus datos, que es un tema serio.\n\nTus clientes, tus facturas y tus documentos son tuyos. Puedes exportarlos cuando quieras y llevártelos si un día decides que esto no es para ti.\n\nCada negocio está separado del resto: nadie ve lo que hay en tu cuenta. Y lo que se resuelve dentro de Noesis no sale fuera; si en algún momento hiciera falta un servicio externo, se pide permiso, se dice para qué y se puede decir que no.\n\nSin letra pequeña ni datos secuestrados para que no te vayas.",
+      "enlace": "https://bynoesis.com/privacidad"
+    },
+    {
+      "id": "F19",
+      "pilar": "identificacion",
+      "titulo": "Día 29 y llama la gestoría",
+      "texto": "Día 29. Llama la gestoría. Y tú ya sabes lo que vas a contestar: «te lo mando ahora mismo».\n\nDespués viene el rato de buscar entre la furgoneta, la carpeta, el correo, tres chats y una foto que hiciste en junio.\n\nLo tienes todo, sí. Repartido en siete sitios distintos.\n\nNo es dejadez: es que nadie te dio nunca un sistema que aguante un día de trabajo de verdad.",
+      "enlace": ""
+    },
+    {
+      "id": "F20",
+      "pilar": "educacion",
+      "titulo": "Tu hora cuesta más de lo que crees",
+      "texto": "Si cobras la hora a lo que te dijeron hace cinco años, probablemente estás perdiendo dinero.\n\nEn tu hora también caben: la furgoneta y su combustible, el seguro, la cuota, las herramientas, el tiempo de ir y volver, los presupuestos que preparas y no salen, y las horas de oficina que nadie te paga.\n\nHaz la cuenta una vez al año, aunque sea en una servilleta: cuántas horas facturables tienes de verdad al mes y cuánto necesitas ingresar para vivir de esto.\n\nSubir precios da respeto. Trabajar a pérdida sin saberlo, más.",
+      "enlace": ""
+    },
+    {
+      "id": "F21",
+      "pilar": "producto",
+      "titulo": "Te avisa antes de que se te pase",
+      "texto": "Los cobros no se pierden por mala fe. Se pierden por olvido.\n\nNoesis vigila lo que has facturado y lo que ha entrado, y te avisa antes de que un cobro se enfríe: «esta factura lleva 30 días, ¿le escribo un recordatorio?».\n\nEl mensaje lo apruebas tú y sale con tu tono, no con el de un robot de recobros.\n\nCobrar a tiempo no va de perseguir. Va de no olvidarse.",
+      "enlace": ""
+    },
+    {
+      "id": "F22",
+      "pilar": "confianza",
+      "titulo": "Cuando duda, pregunta",
+      "texto": "Lo más importante que hace Noesis es reconocer cuándo no está seguro.\n\nSi un ticket está borroso, si un mensaje se puede entender de dos maneras o si un importe no cuadra, no rellena el hueco con lo que le parece: te lo deja marcado como pendiente y te pregunta.\n\nUna herramienta que se inventa un número no te ahorra trabajo. Te lo cambia por revisar todo dos veces.\n\nPreferimos una pregunta a tiempo que un error ordenado.",
+      "enlace": ""
+    },
+    {
+      "id": "F23",
+      "pilar": "identificacion",
+      "titulo": "El presupuesto que se enfrió",
+      "texto": "Ese presupuesto que mandaste hace tres semanas y del que no has vuelto a saber nada.\n\nNo lo has perdido por el precio. Lo has perdido porque a los dos días llamó otro, contestó antes y se acordó de hacer seguimiento.\n\nEl trabajo no siempre se lo lleva el mejor. Muchas veces se lo lleva el que estaba delante en el momento adecuado.\n\nUn mensaje a los cinco días cambia más resultados que bajar el precio.",
+      "enlace": ""
+    },
+    {
+      "id": "F24",
+      "pilar": "educacion",
+      "titulo": "Pedir anticipo no es desconfiar",
+      "texto": "Pedir un anticipo no es desconfiar del cliente. Es no financiarle tú el material.\n\nEn trabajos con compra de material por delante, un anticipo razonable al aceptar el presupuesto es normal en cualquier oficio serio. Y filtra: quien no está dispuesto a formalizar el principio, muchas veces tampoco lo está a pagar el final.\n\nDilo con naturalidad y por escrito, en el mismo presupuesto. Sin pedir perdón por cobrar.",
+      "enlace": ""
+    },
+    {
+      "id": "F25",
+      "pilar": "producto",
+      "titulo": "Quién te da trabajo de verdad",
+      "texto": "Tu cartera de clientes es tu activo más importante y casi nunca se mira.\n\nNoesis te la enseña en una lectura corta: quién te factura más, quién lleva meses sin llamar, quién tiene un presupuesto aceptado sin fecha y si hay algún cliente del que dependes demasiado.\n\nNo son gráficos para adornar. Son las tres o cuatro llamadas que deberías hacer esta semana.",
+      "enlace": ""
+    },
+    {
+      "id": "F26",
+      "pilar": "confianza",
+      "titulo": "Sin ERP y sin curso de tres horas",
+      "texto": "No queremos que aprendas otro programa.\n\nLa mayoría de herramientas de gestión mueren igual: se instalan con ilusión, se rellenan dos semanas y se abandonan porque mantenerlas al día es otro trabajo más.\n\nPor eso Noesis vive donde ya estás: en WhatsApp. Sin menús que memorizar, sin campos obligatorios y sin curso de tres horas para dar de alta un cliente.\n\nSi hace falta un manual para usarlo, el problema es la herramienta, no tú.",
+      "enlace": ""
+    },
+    {
+      "id": "F27",
+      "pilar": "identificacion",
+      "titulo": "La libreta de la furgoneta",
+      "texto": "La libreta de la furgoneta funciona. Hasta que funciona demasiado bien.\n\nAhí está todo: medidas, teléfonos, lo que te debe el del tercero, la pieza que falta pedir. Y está solo ahí. No lo puede ver nadie más, no se puede buscar y si se moja, se acabó.\n\nNo hay nada malo en la libreta. El problema es cuando tu negocio entero cabe en algo que puedes perder en una obra.",
+      "enlace": ""
+    },
+    {
+      "id": "F28",
+      "pilar": "educacion",
+      "titulo": "Reclamar sin romper la relación",
+      "texto": "Reclamar un cobro no tiene por qué ser incómodo. La mayoría de retrasos son despistes, no negativas.\n\nUna forma que funciona:\n\n1. A los pocos días del vencimiento, un mensaje corto y neutro con el número de factura y el importe.\n2. Sin reproches y sin explicaciones largas. Cuanto más corto, menos tenso.\n3. Si no hay respuesta, llamada breve preguntando si le falta algún dato para pagar.\n4. Deja siempre por escrito lo que se acuerde.\n\nEl tono no es el que decide si te pagan. Pero sí decide si vuelves a trabajar con esa persona.",
+      "enlace": ""
+    },
+    {
+      "id": "F29",
+      "pilar": "producto",
+      "titulo": "Saber si un trabajo grande va bien a tiempo",
+      "texto": "En un trabajo largo, el margen no se pierde al final.\n\nSe pierde por el camino: materiales que no estaban previstos y horas que nadie apuntó.\n\nNoesis lleva el presupuesto, los costes y el avance en el mismo sitio, y te dice a media obra si sigues dentro de lo que calculaste o si ya te has salido.\n\nEnterarte a mitad todavía te deja margen para hablar con el cliente. Enterarte al facturar, no.",
+      "enlace": ""
+    },
+    {
+      "id": "F30",
+      "pilar": "piloto",
+      "titulo": "Qué significa que estemos en piloto",
+      "texto": "Estamos en piloto, y preferimos decirlo claro.\n\nSignifica que damos acceso a pocos autónomos, hablamos con ellos a menudo y cambiamos cosas según lo que nos cuentan. No hay lista de espera infinita ni promesas de que lo hace todo solo.\n\nSi entras ahora, tienes acceso directo a quien lo está construyendo y tu forma de trabajar influye de verdad en el producto.\n\nSi lo que buscas es algo cerrado y terminado, mejor espera unos meses y te avisamos.",
+      "enlace": "https://bynoesis.com/solicitar-acceso"
+    },
+    {
+      "id": "F31",
+      "pilar": "identificacion",
+      "titulo": "Mucho trabajo y poca caja",
+      "texto": "Hay una frase que se repite en todos los oficios: «no he parado en todo el mes, pero no sé dónde está el dinero».\n\nY casi siempre es lo mismo. Trabajos pequeños que dan más vueltas de las que se cobran. Material que sube y precios que no. Facturas emitidas tarde. Cobros que llevan más de dos meses.\n\nTrabajar más no arregla ninguna de las cuatro. Verlas a tiempo, sí.",
+      "enlace": ""
+    },
+    {
+      "id": "F32",
+      "pilar": "educacion",
+      "titulo": "Los trabajos pequeños se comen el margen",
+      "texto": "El trabajo de veinte minutos casi nunca cuesta veinte minutos.\n\nCuenta lo que hay alrededor: el desplazamiento, aparcar, la explicación en la puerta, la vuelta al almacén, el presupuesto, la factura y el cobro. Ese trabajo «pequeño» te ha ocupado media mañana.\n\nNo significa que haya que rechazarlos: muchas veces son los que traen a los clientes buenos. Significa que tienen que tener su propio precio, con desplazamiento y mínimo de servicio incluidos.\n\nLo que no se mide, se regala.",
+      "enlace": ""
+    },
+    {
+      "id": "F33",
+      "pilar": "producto",
+      "titulo": "Una nota de voz entre trabajo y trabajo",
+      "texto": "No hace falta que te sientes a escribir nada.\n\nEntre un trabajo y otro, mandas una nota de voz: lo que has hecho, el material que has puesto y qué queda pendiente. Noesis lo escucha, lo ordena y lo deja registrado en el cliente y en el trabajo que toca.\n\nCuando llegues a casa, eso ya está hecho. No te espera para que lo pases a limpio.\n\nLa mejor herramienta administrativa es la que puedes usar con las manos sucias.",
+      "enlace": ""
+    },
+    {
+      "id": "F34",
+      "pilar": "confianza",
+      "titulo": "Por qué WhatsApp y no otra app",
+      "texto": "Nos preguntan por qué WhatsApp y no una aplicación nueva.\n\nPorque WhatsApp ya lo tienes abierto veinte veces al día. Porque no hay que instalar nada, ni recordar otra contraseña, ni entrar en un sitio al que solo entrarías si te obligan.\n\nUna herramienta de gestión solo sirve si se usa el martes por la tarde, con prisa y de pie. Todo lo que exija sentarse acaba abandonado.\n\nY si prefieres pantalla, también tienes la web con todo ordenado. Pero el día a día cabe en un chat.",
+      "enlace": ""
+    },
+    {
+      "id": "F35",
+      "pilar": "identificacion",
+      "titulo": "Cuarenta chats abiertos",
+      "texto": "Abres WhatsApp y hay cuarenta conversaciones. En doce hay trabajo pendiente. En tres, dinero.\n\nY todo está mezclado: fotos de una avería, la ubicación de un portal, un audio de dos minutos con las medidas, un «¿me pasas la factura?» de hace nueve días.\n\nEl trabajo entra por ahí, y está bien. El problema es que también se queda ahí, sin convertirse en cita, en presupuesto ni en factura.\n\nTu memoria no debería ser el único sistema de tu negocio.",
+      "enlace": ""
+    },
+    {
+      "id": "F36",
+      "pilar": "educacion",
+      "titulo": "Cuidado con el cliente que te da demasiado",
+      "texto": "Si un solo cliente te da más de un tercio de la facturación, no tienes un buen cliente: tienes un riesgo.\n\nPasa mucho con una constructora, una administración de fincas o una empresa que te tiene de mantenimiento. Va bien durante años, hasta que cambian de proveedor, se retrasan en los pagos o bajan el ritmo, y tu año entero depende de esa decisión.\n\nMira una vez al trimestre qué porcentaje te da cada cliente. Si uno se dispara, dedica tiempo a traer trabajo de otro sitio mientras las cosas van bien, no cuando ya vayan mal.",
+      "enlace": ""
+    },
+    {
+      "id": "F37",
+      "pilar": "producto",
+      "titulo": "La agenda ordenada por zonas",
+      "texto": "Tres visitas en un día pueden ser tres horas de furgoneta o una.\n\nNoesis mira tu agenda del día y te propone el orden que menos te hace cruzar la ciudad, con cada cita conectada a su cliente y a su trabajo.\n\nTú decides si te encaja: hay clientes que solo pueden a una hora y eso no lo sabe ningún programa.\n\nEl tiempo que no pasas conduciendo es tiempo que puedes facturar o que te devuelve la tarde.",
+      "enlace": ""
+    },
+    {
+      "id": "F38",
+      "pilar": "comunidad",
+      "titulo": "Tu cosita rápida más larga",
+      "texto": "Cuéntanos tu «cosita rápida» más larga.\n\nEsa que iban a ser veinte minutos y acabó en tres visitas, dos viajes al almacén y una semana de mensajes.\n\nLos comentarios de este tipo de publicaciones son lo mejor de esta página. Y sí, los leemos todos.",
+      "enlace": ""
+    },
+    {
+      "id": "F39",
+      "pilar": "identificacion",
+      "titulo": "El domingo por la tarde",
+      "texto": "Hay un rato que casi nadie cuenta como trabajo: el domingo por la tarde.\n\nNo estás en una obra ni en casa de un cliente. Estás poniendo al día facturas, mirando el mes que viene y preparando lo que no dio tiempo entre semana.\n\nSon horas que no se facturan y que tampoco descansas.\n\nEl objetivo no es trabajar más rápido el domingo. Es que el domingo deje de hacer falta.",
+      "enlace": ""
+    },
+    {
+      "id": "F40",
+      "pilar": "educacion",
+      "titulo": "La foto en el momento",
+      "texto": "Un hábito pequeño con mucho efecto: la foto en el momento.\n\nAntes de guardar el ticket en el bolsillo, foto. Antes de tapar una instalación, foto. Al terminar el trabajo, foto.\n\nDos segundos que luego te ahorran discusiones sobre cómo estaba aquello antes de que llegaras, gastos que no te deduces y trabajos que no te reconocen.\n\nEl mejor momento para documentar un trabajo es mientras lo tienes delante. Después ya es memoria, y la memoria se cansa.",
+      "enlace": ""
+    },
+    {
+      "id": "F41",
+      "pilar": "producto",
+      "titulo": "Todo en un sitio, y todo tuyo",
+      "texto": "Agenda, clientes, trabajos, presupuestos, facturas, documentos y gastos. En un solo sitio y conectados entre ellos.\n\nEso significa que una cita sabe de qué cliente es, un gasto sabe a qué trabajo pertenece y una factura sabe qué horas y qué materiales lleva dentro.\n\nY significa también que puedes exportarlo cuando quieras. Es tu negocio; los datos también.",
+      "enlace": "https://bynoesis.com/autonomos"
+    },
+    {
+      "id": "F42",
+      "pilar": "comunidad",
+      "titulo": "Anticipo sí o no",
+      "texto": "¿Pides anticipo antes de empezar un trabajo con material por delante?\n\nHay dos escuelas: quien lo pide siempre desde el primer día y quien no lo ha pedido nunca. Y las dos tienen argumentos.\n\nNos interesa saber cómo lo hacéis y por qué. Si has cambiado de opinión con los años, cuéntalo también.",
+      "enlace": ""
+    },
+    {
+      "id": "F43",
+      "pilar": "piloto",
+      "titulo": "Buscamos autónomos para el piloto",
+      "texto": "Buscamos autónomos de servicios para el piloto de Noesis.\n\nQué buscamos: fontanería, electricidad, reformas, climatización, limpieza, mantenimiento, jardinería y oficios parecidos. Que trabajes de verdad y tengas poco tiempo. Eso es todo.\n\nQué pides tú: entrar, usarlo en tu día a día y decirnos qué te sobra y qué te falta.\n\nQué pones: un rato de tu tiempo y sinceridad. No hace falta tarjeta durante la prueba y tus datos son exportables desde el primer día.",
+      "enlace": "https://bynoesis.com/solicitar-acceso"
+    },
+    {
+      "id": "F44",
+      "pilar": "comunidad",
+      "titulo": "Tu peor mes del año",
+      "texto": "¿Cuál es tu peor mes del año?\n\nCada oficio tiene el suyo. Agosto para unos, enero para otros, el mes de la cuota grande o el del trimestre.\n\nSaber cuál es el tuyo no es pesimismo: es lo que te permite llegar preparado en vez de a base de sustos.\n\nDinos el tuyo y por qué.",
+      "enlace": ""
+    },
+    {
+      "id": "F45",
+      "pilar": "confianza",
+      "titulo": "Lo que Noesis no hace",
+      "texto": "Decir lo que una herramienta no hace también es información útil.\n\nNoesis no presenta tus impuestos: prepara la información y tu gestoría hace su trabajo.\n\nNo decide precios por ti ni envía nada a un cliente sin que lo apruebes.\n\nNo es un ERP con cincuenta pantallas ni pretende serlo.\n\nY no funciona solo: funciona porque le cuentas lo que pasa, igual que se lo contarías a alguien de tu equipo.\n\nPrometer menos y cumplirlo nos parece mejor negocio.",
+      "enlace": ""
+    },
+    {
+      "id": "F46",
+      "pilar": "comunidad",
+      "titulo": "De qué oficio eres",
+      "texto": "Si has llegado hasta aquí, cuéntanos de qué oficio eres y desde cuándo.\n\nEsta página la leemos autónomos de fontanería, electricidad, reformas, climatización, limpieza, mantenimiento y jardinería, y cada oficio tiene sus manías con el papeleo.\n\nSaber quién hay al otro lado nos ayuda a escribir cosas que sirvan de verdad.",
+      "enlace": ""
+    },
+    {
+      "id": "F47",
+      "pilar": "piloto",
+      "titulo": "Si llevas una gestoría",
+      "texto": "Si llevas una gestoría, esto también va contigo.\n\nPersigues a los mismos clientes cada trimestre para conseguir los mismos documentos. No porque no quieran dártelos, sino porque los tienen repartidos por la furgoneta, el móvil y el correo.\n\nNoesis les ordena el material según lo van generando y te lo deja llegar revisable, en su sitio y a tiempo. Tú sigues decidiendo y respondiendo de lo tuyo.\n\nSi te interesa verlo, escríbenos y te lo enseñamos sin compromiso.",
+      "enlace": "https://bynoesis.com/gestorias"
+    },
+    {
+      "id": "F48",
+      "pilar": "piloto",
+      "titulo": "Escríbenos",
+      "texto": "Haz tu trabajo; Noesis te ordena el negocio.\n\nSi te has visto reflejado en algo de lo que publicamos aquí —la segunda jornada, el ticket perdido, la factura que se olvidó—, escríbenos.\n\nNo hay comercial, ni llamada de veinte minutos, ni presentación. Nos cuentas a qué te dedicas y te decimos claramente si Noesis te sirve ahora o todavía no.\n\nContestamos nosotros dos.",
+      "enlace": "https://bynoesis.com/contacto"
+    }
+  ]
+}

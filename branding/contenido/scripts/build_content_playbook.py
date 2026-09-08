@@ -362,6 +362,26 @@ class ContentCard:
 
 CARDS = [
     ContentCard(
+        "T00", "Hola, somos Xavier y Miquel", "Confianza y marca", "Founder video · 45–60 s",
+        "Instagram + LinkedIn + Facebook", "Quien llega por primera vez al perfil", "Poner cara al proyecto y fijar la promesa antes de pedir nada",
+        "Presentación", "No empezamos queriendo hacer otro programa de facturas.",
+        "Los dos socios se presentan, cuentan qué vieron trabajando con autónomos y qué están construyendo, sin enseñar todavía el producto.",
+        ("Xavier: ‘Hola, soy Xavier’. Miquel: ‘Y yo Miquel’. Los dos: ‘Y esto es Noesis’.", "Miquel: ‘Vimos lo mismo en casi todos los negocios con los que trabajamos: acabas a las siete y a las diez sigues con facturas, tickets y mensajes sin contestar’.", "Xavier: ‘Yo vengo de cuentas y de arquitectura de software; Miquel, de dirección de empresas y procesos. Así que en vez de imaginarlo, preguntamos y lo construimos’.", "Miquel: ‘Noesis es un copiloto por WhatsApp: le hablas como a un compañero y te deja la agenda, los clientes, los documentos y las facturas ordenados’.", "Xavier: ‘Prepara el trabajo, pero lo que toca dinero, impuestos o a un cliente lo confirmas tú. Y a tu gestoría le llega revisable: no la sustituimos’.", "Miquel: ‘Estamos en piloto y queremos autónomos de servicios que nos digan qué falta’.", "Cierre, los dos a cámara: ‘Haz tu trabajo; Noesis te ordena el negocio’."),
+        ("Un solo encuadre y una sola luz para los dos: se alternan en el mismo sitio o se graba un plano a dos con espacio para subtítulos.", "Espacio de trabajo real y ropa normal; nada de plató, pared vacía ni traje.", "Rótulo con nombre y papel el primer segundo de cada uno; sin música épica ni efectos.", "Como mucho dos planos de producto al mencionar el parte del día; el resto es cara y voz."),
+        "SOMOS XAVIER Y MIQUEL · ESTO ES NOESIS", "Antes de enseñarte nada, queremos que sepas quién está detrás y por qué. Somos dos socios construyendo Noesis para autónomos de servicios.",
+        "Si eres autónomo de servicios, escríbenos: queremos escucharte antes de venderte nada.", "Retención al 75 % + comentarios cualificados + visitas al perfil",
+        "No inventar usuarios, clientes ni resultados: se dice ‘estamos construyendo’ y ‘piloto’. No prometer presentación fiscal ni sustitución de la gestoría, ni vender la IA como argumento. En voz se dice Noesis; ‘bynoesis’ solo aparece en pantalla como web y usuario."),
+    ContentCard(
+        "P00", "Qué es Noesis, explicado desde cero", "Marca y producto", "Explicador a cámara · 45–60 s",
+        "Instagram + LinkedIn + Facebook", "Quien no ha oído hablar de Noesis todavía", "Definir el producto entero, sin escenas ni personajes, para quien parte de cero",
+        "Presentación", "Noesis lleva la oficina de tu negocio mientras tú haces el trabajo. Así es como lo hace.",
+        "Explicación pura a cámara, sin dramatizar ningún caso concreto: qué es, cómo se usa y qué no hace, en el orden en que ocurre de verdad.",
+        ("‘Noesis es un copiloto de negocio para autónomos de servicios: fontanería, electricidad, reformas, limpieza, mantenimiento’.", "‘Funciona por WhatsApp. Le hablas por texto o por audio, como le hablarías a alguien de tu equipo’.", "‘Le cuentas lo que ha pasado en el día y Noesis lo convierte en agenda, en cliente nuevo, en factura o en aviso de cobro’.", "‘Si le mandas un ticket o un documento, lo guarda y lo clasifica; si duda, te lo deja pendiente en vez de inventárselo’.", "‘Al final del día te da el parte: qué ha pasado, qué falta por cerrar y quién te debe dinero’.", "‘Todo lo que toca dinero, impuestos o a un cliente te lo pregunta antes de hacerlo: confirmas tú, no decide solo’.", "‘No es un ERP: sin menús ni pantallas que aprender. Y no sustituye a tu gestoría: le deja el trabajo preparado y revisable’.", "Cierre: ‘Eso es Noesis. Haz tu trabajo; nosotros te ordenamos el negocio’."),
+        ("A cámara, plano fijo, espacio de trabajo real; sin actuar ninguna escena, solo explicar.", "Microcapturas de pantalla como apoyo visual —WhatsApp con audio, ticket clasificado, parte del día—; nunca sustituyen a la explicación hablada.", "Datos de prueba y rótulo ‘demo’ en toda captura; WhatsApp operativo rotulado como piloto mientras Meta no esté validado.", "Ritmo pausado y claro: es el vídeo que define qué es Noesis para quien todavía no sabe nada."),
+        "NOESIS LLEVA LA OFICINA. TÚ HACES EL TRABAJO.", "Qué es Noesis, explicado desde cero: el copiloto de negocio por WhatsApp para autónomos de servicios. Sin menús que aprender y sin decisiones que no confirmes tú.",
+        "Guárdalo si es la primera vez que oyes hablar de Noesis.", "Retención al 75 % + guardados + compartidos",
+        "No enseñar WhatsApp operativo como disponible ni datos reales. No decir ‘100 % automático’, ‘sin errores’ ni ‘te lleva la fiscalidad’. Sin precios ni planes: esta pieza define el producto, no lo vende."),
+    ContentCard(
         "E01", "La segunda jornada", "Identificación emocional", "Reel físico · 25–35 s",
         "Instagram + Facebook", "Autónomo de oficio que termina tarde", "Conseguir compartidos y reconocimiento",
         "Descubrimiento", "Terminas ocho horas de trabajo. Y empiezan las otras dos.",
@@ -613,7 +633,26 @@ def add_cover(doc: Document):
     meta = doc.add_paragraph()
     meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
     meta.paragraph_format.space_before = Pt(30)
-    set_run(meta.add_run("Versión 1.0 · 31 de agosto de 2026\nUso interno · Noesis"), size=9.5, color=MUTED, bold=True)
+    set_run(meta.add_run("Versión 1.1 · 2 de septiembre de 2026\nUso interno · Noesis"), size=9.5, color=MUTED, bold=True)
+    page_break(doc)
+
+
+def add_index(doc: Document):
+    add_title(doc, "Cómo usar este manual", "Qué parte responde a cada pregunta antes de grabar o publicar")
+    add_matrix(doc, ["Parte", "Qué responde", "Cuándo se abre"], [
+        ("La decisión editorial", "Qué debe conseguir el contenido antes de pedir una venta", "Al planificar el mes o dudar de un tema"),
+        ("A quién hablamos", "Quién es el ICP y qué situaciones deben aparecer en cámara", "Al escribir un gancho o elegir localización"),
+        ("Canales y cadencia", "Qué hace cada red y cuánto se publica en ella", "Al montar la parrilla y decidir formato"),
+        ("Mapa de contenidos", f"Las {len(CARDS)} piezas base y en qué ficha está cada una", "Como índice de las fichas"),
+        (f"Fichas 01–{len(CARDS)}", "Gancho, guion, rodaje, copy, CTA, métrica y límite de cada pieza", "En preproducción y el día del rodaje"),
+        ("Campañas", "Cómo se agrupan las piezas en cinco relatos con un CTA", "Al lanzar una secuencia, no una pieza suelta"),
+        ("Primer mes editorial", "Un calendario de aprendizaje semana a semana", "Al programar publicaciones"),
+        ("Motor de producción", "Cómo grabar dos semanas de contenido en una mañana", "Antes de un bloque de rodaje"),
+        ("Cómo medir y decidir", "Qué métrica juzga cada pieza y cuándo repetir o parar", "Al revisar resultados"),
+        ("Checklist antes de publicar", "Los doce controles que protegen marca, cliente y producto", "Siempre, antes de darle a publicar"),
+        ("Fuentes y límites", "En qué se apoya el manual y qué falta validar", "Al afirmar algo que aún no está probado"),
+    ], [2450, 4300, 2610], font_size=8.9)
+    add_callout(doc, "Las piezas se nombran por su código (E01, R03, P05, T00…) y ese código es el mismo en el mapa, en las fichas, en las campañas y en el calendario.", fill=CREAM, accent=FOREST, size=10.5)
     page_break(doc)
 
 
@@ -684,21 +723,23 @@ def add_channels(doc: Document):
 
 
 def add_content_index(doc: Document):
-    add_title(doc, "Mapa de contenidos", "24 piezas base para producir, aprender y convertir")
+    add_title(doc, "Mapa de contenidos", f"{len(CARDS)} piezas base para producir, aprender y convertir")
+    numbers = {card.code: idx for idx, card in enumerate(CARDS, start=1)}
     groups = [
+        ("· Presentación", [c for c in CARDS if c.code in ("T00", "P00")]),
         ("E · Identificación", [c for c in CARDS if c.code.startswith("E")]),
         ("R · Valor racional", [c for c in CARDS if c.code.startswith("R")]),
-        ("P · Producto", [c for c in CARDS if c.code.startswith("P")]),
-        ("T · Confianza", [c for c in CARDS if c.code.startswith("T")]),
+        ("P · Producto", [c for c in CARDS if c.code.startswith("P") and c.code != "P00"]),
+        ("T · Confianza", [c for c in CARDS if c.code.startswith("T") and c.code != "T00"]),
         ("G · Comunidad y prueba", [c for c in CARDS if c.code.startswith("G")]),
     ]
     for group_idx, (title, cards) in enumerate(groups):
-        if group_idx == 2:
+        if group_idx == 3:
             page_break(doc)
             add_title(doc, "Mapa II", "Producto, confianza, comunidad y prueba")
         add_heading(doc, title, 2)
-        rows = [(c.code, c.title, c.format, c.objective) for c in cards]
-        add_matrix(doc, ["ID", "Pieza", "Formato", "Finalidad"], rows, [700, 2600, 2400, 3660], font_size=8.6)
+        rows = [(f"{numbers[c.code]:02d}", c.code, c.title, c.format, c.objective) for c in cards]
+        add_matrix(doc, ["Ficha", "ID", "Pieza", "Formato", "Finalidad"], rows, [700, 700, 2500, 2300, 3160], font_size=8.6)
     page_break(doc)
 
 
@@ -752,6 +793,7 @@ def add_campaigns(doc: Document):
 
 def add_calendar(doc: Document):
     add_title(doc, "Primer mes editorial", "Un calendario de aprendizaje, no una parrilla rígida")
+    add_callout(doc, "T00 y P00 se publican antes de la Semana 1 y se fijan en el perfil: quiénes somos y qué es Noesis. Son el contexto que hace entendible todo lo demás y la respuesta que se manda a quien pregunta.", fill=CREAM, accent=FOREST, size=10.5)
     weeks = [
         ("Semana 1 · ‘Me entienden’", [
             ("Lunes", "IG/FB Reel", "E01 · La segunda jornada", "Compartidos"),
@@ -918,6 +960,7 @@ def build():
     configure_document(doc)
     set_core_properties(doc)
     add_cover(doc)
+    add_index(doc)
     add_strategy(doc)
     add_audience(doc)
     add_channels(doc)

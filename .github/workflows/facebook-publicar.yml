@@ -1,0 +1,57 @@
+name: Facebook · publicar
+
+# Se ejecuta todos los días, pero el script solo publica cuando el día cae en la
+# cadencia del calendario (cada 3 días). Correr a diario permite además recuperar
+# una publicación que se haya quedado sin salir por un fallo puntual.
+on:
+  schedule:
+    # 06:40 UTC = 08:40 en Madrid en verano, 07:40 en invierno.
+    - cron: "40 6 * * *"
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: "Publicar aunque hoy no toque por calendario"
+        type: boolean
+        default: false
+      simulacro:
+        description: "Solo enseñar el texto, sin publicar"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Nunca dos publicaciones a la vez, y sin cancelar una que ya esté en marcha.
+concurrency:
+  group: facebook-publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Publicación programada
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configurar Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # El publicador solo usa biblioteca estándar: no hace falta instalar nada.
+      - name: Publicar lo que toque hoy
+        env:
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+          META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION }}
+          FORZAR: ${{ inputs.forzar }}
+          SIMULACRO: ${{ inputs.simulacro }}
+        run: |
+          argumentos=""
+          if [ "${FORZAR}" = "true" ]; then argumentos="${argumentos} --forzar"; fi
+          if [ "${SIMULACRO}" = "true" ]; then argumentos="${argumentos} --simulacro"; fi
+          python marketing/facebook/publicar.py ${argumentos}
