@@ -4,8 +4,9 @@ Guía para dejar la página de Facebook publicando sola. Se hace **una sola vez*
 desde este ordenador, y tarda unos 15 minutos. Después no hay que volver a entrar:
 la página publica una pieza cada 3 días y cada domingo llega un informe.
 
-- Manual técnico de la automatización: [`facebook/README.md`](../facebook/README.md).
+- Manual técnico de la automatización: [`README.md`](README.md).
 - Aquí se explica **el porqué de cada paso**, que es lo que suele faltar.
+- Misma guía en formato de lectura: [`Conectar-Facebook.html`](Conectar-Facebook.html).
 
 ## Antes de empezar
 

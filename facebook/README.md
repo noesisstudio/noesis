@@ -24,7 +24,7 @@ la página. Por eso no hay commits automáticos y no se dispara ningún desplieg
 ## Conectar la página
 
 > Si es la primera vez, sigue la guía explicada de
-> [`docs/Conectar-Facebook.md`](../docs/Conectar-Facebook.md): cuenta por qué
+> [`Conectar-Facebook.html`](Conectar-Facebook.html) (o su fuente [`.md`](Conectar-Facebook.md)): cuenta por qué
 > hay dos tokens y qué se ve en cada pantalla. Lo de aquí abajo es el resumen.
 
 

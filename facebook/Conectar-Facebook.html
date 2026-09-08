@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conectar Facebook · Bynoesis</title>
+<style>
+  :root {
+    --ground: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f3;
+    --border: #e0dcd1; --border-strong: #cec8b9;
+    --ink: #15211c; --muted: #5d6b66; --faint: #8b9490;
+    --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+    --ok: #1f8a6d; --ok-soft: #e2f1ea;
+    --warn: #b7831f; --warn-soft: #f5edd6;
+    --stop: #c0533f; --stop-soft: #f7e8e3;
+    --code-bg: #eeeadf; --code-ink: #2c3a34;
+    --radius: 12px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20,34,28,.04), 0 4px 14px rgba(20,34,28,.05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+      --border: #2b3833; --border-strong: #3d4d47;
+      --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+      --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+      --ok: #4fbf9a; --ok-soft: #14302a;
+      --warn: #d9a94a; --warn-soft: #332a13;
+      --stop: #e0806a; --stop-soft: #351f1a;
+      --code-bg: #101a17; --code-ink: #cfd8d4;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101714; --surface: #182220; --surface-2: #1e2a26;
+    --border: #2b3833; --border-strong: #3d4d47;
+    --ink: #e9e5db; --muted: #a3aea9; --faint: #7d8783;
+    --brand: #52b394; --brand-2: #7fcfb2; --brand-soft: #1b2f29;
+    --ok: #4fbf9a; --ok-soft: #14302a;
+    --warn: #d9a94a; --warn-soft: #332a13;
+    --stop: #e0806a; --stop-soft: #351f1a;
+    --code-bg: #101a17; --code-ink: #cfd8d4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 120px; display: flex; flex-direction: column; gap: 58px; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: .855em; background: var(--code-bg); color: var(--code-ink); padding: .12em .38em; border-radius: 5px; word-break: break-word; }
+  strong { font-weight: 650; }
+  p { margin: 0; max-width: 68ch; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-2); }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; }
+  .standfirst { font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); line-height: 1.5; color: var(--muted); max-width: 60ch; }
+  .crumbs { font-size: 13.5px; color: var(--faint); }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-cell { background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .status-cell::before { content: ""; height: 3px; width: 26px; border-radius: 2px; background: var(--dot, var(--faint)); }
+  .is-ok { --dot: var(--ok); } .is-warn { --dot: var(--warn); } .is-stop { --dot: var(--stop); }
+  .status-label { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+  .status-value { font-size: 15px; font-weight: 650; line-height: 1.35; }
+  .status-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+  .sec-head { display: flex; flex-direction: column; gap: 8px; }
+  h2 { margin: 0; padding-top: 20px; border-top: 2px solid var(--ink); font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.4vw, 31px); line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+  .sec-intro { color: var(--muted); max-width: 66ch; }
+  h3 { margin: 0; font-weight: 650; font-size: 17px; line-height: 1.3; }
+  h4 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  ul, ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  li::marker { color: var(--faint); }
+
+  .fig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px 18px; overflow-x: auto; box-shadow: var(--shadow); }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .fig figcaption { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  figure { margin: 0; }
+  .node { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
+  .node-brand { fill: var(--brand-soft); stroke: var(--brand-2); }
+  .node-ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .node-stop { fill: var(--stop-soft); stroke: var(--stop); }
+  .node-warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .wire { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+  svg text { font-family: var(--sans); fill: var(--ink); }
+  .t { font-size: 13px; font-weight: 650; }
+  .s { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; fill: var(--faint); }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; list-style: none; padding: 0; max-width: none; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius); padding: 20px 22px 21px 19px; box-shadow: var(--shadow); }
+  .step.hidden-step { border-left-color: var(--stop); }
+  .step.first-step { border-left-color: var(--brand-2); }
+  .step-n { grid-row: 1 / span 2; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--brand-2); padding-top: 2px; }
+  .step-body { grid-column: 2; display: flex; flex-direction: column; gap: 12px; }
+  .step-body > ul, .step-body > ol { max-width: 62ch; }
+  .step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+  .chip { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 2.5px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-stop { background: var(--stop-soft); color: var(--stop); }
+  .chip-flat { background: var(--brand-soft); color: var(--brand); }
+
+  .callout { background: var(--stop-soft); border: 1px solid var(--stop); border-radius: var(--radius); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .callout h3 { color: var(--stop); }
+  .callout p { max-width: 64ch; }
+  .callout-warn { background: var(--warn-soft); border-color: var(--warn); }
+  .callout-warn h3 { color: var(--warn); }
+
+  .note { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 15px 18px; font-size: 14.5px; color: var(--muted); max-width: 68ch; }
+  .note strong { color: var(--ink); }
+
+  .tpl-grid { display: flex; flex-direction: column; gap: 14px; }
+  .tpl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .tpl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .tpl-name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--brand); }
+  .arity { font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2.5px 9px; border-radius: 999px; white-space: nowrap; }
+  .tpl-body { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.85; }
+  .v { display: inline-flex; align-items: baseline; gap: 5px; background: var(--brand-soft); border: 1px solid var(--brand-2); border-radius: 6px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+  .v b { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand-2); }
+  .v i { font-style: normal; color: var(--brand); font-weight: 600; }
+  .tpl-use { font-size: 13.5px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 470px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; text-align: center; font-weight: 650; color: var(--brand-2); }
+
+  pre { margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; }
+  pre .c { color: var(--faint); }
+
+  .checks { counter-reset: chk; list-style: none; padding: 0; gap: 0; max-width: 66ch; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .checks li:last-child { border-bottom: none; }
+  .checks li::before { content: counter(chk); counter-increment: chk; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--faint); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 22px; font-size: 13.5px; color: var(--faint); display: flex; flex-direction: column; gap: 5px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 90px; gap: 44px; }
+    .step { grid-template-columns: 1fr; padding: 18px; }
+    .step-n { grid-row: auto; grid-column: 1; }
+    .step-body { grid-column: 1; }
+  }
+
+  @media print {
+    :root {
+      --ground: #fff; --surface: #fff; --surface-2: #faf8f3;
+      --border: #ddd8cc; --border-strong: #c3bcab;
+      --ink: #15211c; --muted: #4f5c57; --faint: #7a837f;
+      --brand: #14463b; --brand-2: #2e8b74; --brand-soft: #e4efe9;
+      --ok: #1f8a6d; --ok-soft: #e2f1ea;
+      --warn: #b7831f; --warn-soft: #f5edd6;
+      --stop: #b04a37; --stop-soft: #f7e8e3;
+      --code-bg: #f0ece1; --code-ink: #2c3a34; --shadow: none;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 14mm 12mm; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { padding: 0; gap: 26px; max-width: none; }
+    .step, .tpl, .fig, .scroll, .callout, .note, pre, .status { box-shadow: none; break-inside: avoid; }
+    .fig, .scroll { overflow: visible; }
+    .fig svg { min-width: 0; }
+    h2 { break-after: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
+</style></head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Bynoesis · Puesta en marcha</p>
+    <h1>Conectar Facebook</h1>
+    <p class="standfirst">Quince minutos, una sola vez, para que la página publique sola una pieza cada tres días. Después solo hay que leer un informe los domingos.</p>
+    <p class="crumbs">Manual técnico en <code>facebook/README.md</code>. Los textos que se publicarán están en <code>facebook/calendario.json</code>.</p>
+  </header>
+
+  <div class="status">
+    <div class="status-cell is-ok">
+      <span class="status-label">Duración</span>
+      <span class="status-value">~15 minutos</span>
+      <span class="status-note">Una sola vez. No hay que repetirlo salvo que cambies la contraseña de Facebook.</span>
+    </div>
+    <div class="status-cell is-warn">
+      <span class="status-label">Requisito</span>
+      <span class="status-value">Ser administrador</span>
+      <span class="status-note">De la página de Facebook de Bynoesis, y tener acceso a los ajustes del repositorio.</span>
+    </div>
+    <div class="status-cell is-stop">
+      <span class="status-label">Estado hoy</span>
+      <span class="status-value">En pausa</span>
+      <span class="status-note">Los workflows ya están en GitHub, pero sin los secretos no publican nada.</span>
+    </div>
+    <div class="status-cell is-ok">
+      <span class="status-label">Después</span>
+      <span class="status-value">2 min los domingos</span>
+      <span class="status-note">Leer la incidencia de revisión y comprobar que no hay avisos.</span>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Por qué hay dos tokens</h2>
+      <p class="sec-intro">Esta es la parte que confunde, y conviene entenderla antes de tocar nada: Meta no entrega una llave permanente directamente. Hay que pedir una temporal y cambiarla por la buena.</p>
+    </div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 790 196" role="img" aria-label="Cadena de cuatro pasos: la app de Meta genera un token corto, que se convierte en token de página, que se guarda como secreto en GitHub.">
+        <rect class="node node-brand" x="8" y="34" width="168" height="72" rx="10"/>
+        <text class="t" x="92" y="64" text-anchor="middle">App de Meta</text>
+        <text class="s" x="92" y="84" text-anchor="middle">Identifica al programa</text>
+
+        <rect class="node node-warn" x="210" y="34" width="168" height="72" rx="10"/>
+        <text class="t" x="294" y="64" text-anchor="middle">Token corto</text>
+        <text class="s" x="294" y="84" text-anchor="middle">Caduca en 1-2 horas</text>
+
+        <rect class="node node-ok" x="412" y="34" width="168" height="72" rx="10"/>
+        <text class="t" x="496" y="64" text-anchor="middle">Token de página</text>
+        <text class="s" x="496" y="84" text-anchor="middle">No caduca</text>
+
+        <rect class="node" x="614" y="34" width="168" height="72" rx="10"/>
+        <text class="t" x="698" y="64" text-anchor="middle">Secreto en GitHub</text>
+        <text class="s" x="698" y="84" text-anchor="middle">Donde vive la llave</text>
+
+        <path class="wire" d="M176 70 H202"/><path class="wire" d="M196 65 l8 5 -8 5" />
+        <path class="wire" d="M378 70 H404"/><path class="wire" d="M398 65 l8 5 -8 5" />
+        <path class="wire" d="M580 70 H606"/><path class="wire" d="M600 65 l8 5 -8 5" />
+
+        <text class="lbl" x="92" y="128" text-anchor="middle">Paso 1</text>
+        <text class="lbl" x="294" y="128" text-anchor="middle">Paso 2</text>
+        <text class="lbl" x="496" y="128" text-anchor="middle">Paso 3 · conectar.py</text>
+        <text class="lbl" x="698" y="128" text-anchor="middle">Paso 4</text>
+
+        <text class="s" x="294" y="158" text-anchor="middle">De usar y tirar: solo sirve</text>
+        <text class="s" x="294" y="174" text-anchor="middle">para pedir el definitivo</text>
+        <text class="s" x="496" y="158" text-anchor="middle">Mientras no cambies la contraseña</text>
+        <text class="s" x="496" y="174" text-anchor="middle">ni revoques los permisos</text>
+      </svg>
+      <figcaption>El token corto es de usar y tirar. Que caduque en dos horas da igual: lo que se guarda es el de página, y ese no caduca. Por eso existe un script intermedio y por eso el paso no se puede saltar.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Los seis pasos</h2>
+      <p class="sec-intro">En orden. Del 1 al 4 hay que hacerlos seguidos, porque el token del paso 2 caduca en un par de horas.</p>
+    </div>
+
+    <ol class="steps">
+      <li class="step first-step">
+        <span class="step-n">01</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Crear la app en Meta</h3><span class="chip chip-flat">5 min</span></div>
+          <p>Entra en <a href="https://developers.facebook.com/apps">developers.facebook.com/apps</a> con la cuenta que administra la página.</p>
+          <ul>
+            <li><strong>Crear app</strong> → tipo <strong>Empresa</strong>. Si ya tienes una app de Meta por WhatsApp, puedes reutilizarla y saltar al paso 2.</li>
+            <li>Ponle un nombre reconocible, por ejemplo «Bynoesis publicación».</li>
+            <li>Ve a <strong>Configuración → Básica</strong> y apunta el <strong>identificador de la app</strong> y la <strong>clave secreta</strong> (hay que pulsar «Mostrar»).</li>
+          </ul>
+          <div class="note">La clave secreta es un secreto de verdad. No la pegues en ningún archivo del proyecto, ni en un chat, ni en un documento.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">02</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Sacar el token corto</h3><span class="chip chip-flat">3 min</span><span class="chip chip-warn">aquí se atasca todo el mundo</span></div>
+          <p>Abre el <a href="https://developers.facebook.com/tools/explorer/">Explorador de la API Graph</a>.</p>
+          <ul>
+            <li>Arriba a la derecha, en «Aplicación de Meta», <strong>elige la app del paso 1</strong>. Este desplegable se pasa por alto con facilidad, y si te dejas otra app el token no servirá.</li>
+            <li>En «Permisos», añade los tres: <code>pages_show_list</code>, <code>pages_manage_posts</code> y <code>pages_read_engagement</code>.</li>
+            <li>Pulsa <strong>Generar token de acceso</strong> y acepta el diálogo de Facebook.</li>
+            <li>Copia la cadena larga del cuadro «Token de acceso».</li>
+          </ul>
+          <div class="note">Meta renombra estos botones cada pocos meses. Si no ves exactamente estas palabras, busca el desplegable de la app, la lista de permisos y el botón de generar: <strong>la secuencia siempre es la misma</strong>. Tienes una o dos horas para el paso 3; si caduca, repite este paso, no se rompe nada.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">03</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Convertirlo en la llave definitiva</h3><span class="chip chip-flat">2 min</span></div>
+          <p>Desde la carpeta del proyecto, en la terminal:</p>
+<pre>.venv/bin/python facebook/conectar.py \
+  --app-id TU_APP_ID \
+  --app-secret TU_CLAVE_SECRETA \
+  --token-corto EL_TOKEN_QUE_ACABAS_DE_COPIAR</pre>
+          <div class="note">En este Mac <code>python</code> a secas no existe: usa <code>.venv/bin/python</code>. Y ejecútalo con la ruta al archivo, no con <code>python -m</code>, o no encontrará sus propios módulos.</div>
+          <p>Verás algo así:</p>
+<pre>Páginas encontradas:
+
+- Bynoesis
+  FACEBOOK_PAGE_ID    = 1234567890
+  FACEBOOK_PAGE_TOKEN = EAAG...<span class="c">(muy largo)</span>
+  Caduca              = no caduca mientras no cambies la contraseña
+  Permisos            = pages_show_list, pages_manage_posts, pages_read_engagement</pre>
+          <p>Si en «Caduca» aparece una fecha en vez de «no caduca», algo salió mal en el paso 2: repítelo asegurándote de elegir la app correcta.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">04</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Guardar la llave en GitHub</h3><span class="chip chip-flat">3 min</span></div>
+          <p>En el repositorio: <strong>Settings → Secrets and variables → Actions → New repository secret</strong>. Uno por fila:</p>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Nombre del secreto</th><th>Valor</th><th>¿Obligatorio?</th></tr></thead>
+              <tbody>
+                <tr><td><code>FACEBOOK_PAGE_ID</code></td><td>El que imprimió el script</td><td>Sí</td></tr>
+                <tr><td><code>FACEBOOK_PAGE_TOKEN</code></td><td>El token largo</td><td>Sí</td></tr>
+                <tr><td><code>FACEBOOK_APP_ID</code></td><td>Identificador de la app</td><td>Recomendado</td></tr>
+                <tr><td><code>FACEBOOK_APP_SECRET</code></td><td>Clave secreta de la app</td><td>Recomendado</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Los dos últimos no hacen falta para publicar: sirven para que el informe del domingo pueda avisarte <strong>antes</strong> de que el token deje de funcionar. Sin ellos, el primer aviso llegaría el día que ya no publique.</p>
+          <div class="note">El nombre debe coincidir exactamente, en mayúsculas. <strong>Un secreto mal escrito no da error:</strong> llega vacío y la automatización se queda en pausa.</div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">05</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Probar sin publicar</h3><span class="chip chip-ok">seguro</span></div>
+          <p>En GitHub: <strong>Actions → «Facebook · publicar» → Run workflow</strong>, marcando <strong>simulacro</strong>. Verás el texto que saldría hoy, sin publicar nada.</p>
+          <p>Desde tu ordenador es lo mismo:</p>
+<pre>.venv/bin/python facebook/publicar.py --simulacro   <span class="c"># qué tocaría hoy</span>
+.venv/bin/python facebook/publicar.py --verificar   <span class="c"># ¿responde la página?</span>
+.venv/bin/python facebook/revision.py               <span class="c"># el informe del domingo</span></pre>
+          <p>Con <code>--simulacro</code> <strong>nunca</strong> se publica.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">06</span>
+        <div class="step-body">
+          <div class="step-head"><h3>Estrenarla</h3><span class="chip chip-flat">opcional</span></div>
+          <p>Si quieres que salga la primera pieza hoy mismo sin esperar a que toque: <strong>Actions → «Facebook · publicar» → Run workflow</strong>, con <strong>forzar</strong> marcado y <strong>simulacro desmarcado</strong>.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Qué pasa a partir de ahora</h2>
+      <p class="sec-intro">La única intervención humana prevista es leer un informe el domingo.</p>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Cuándo</th><th>Qué ocurre</th><th>Qué haces tú</th></tr></thead>
+        <tbody>
+          <tr><td>Cada día, 06:40 UTC</td><td>Mira si hoy toca por calendario</td><td>Nada</td></tr>
+          <tr><td>Cada 3 días</td><td>Publica una pieza</td><td>Nada</td></tr>
+          <tr><td>Domingos, 07:30 UTC</td><td>Se abre la incidencia «Revisión Facebook»</td><td>Leerla, ~2 min</td></tr>
+          <tr><td>Cada varios meses</td><td>El informe avisa de que el calendario se acaba</td><td>Ampliar <code>calendario.json</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Los textos futuros están en <code>facebook/calendario.json</code>: puedes cambiar cualquiera antes de que le toque salir.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Cuando algo falle</h2>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Síntoma</th><th>Qué significa</th><th>Qué hacer</th></tr></thead>
+        <tbody>
+          <tr><td>Error <strong>190</strong></td><td>El token murió: cambiaste la contraseña o revocaste permisos</td><td>Repetir los pasos 2 a 4</td></tr>
+          <tr><td>Error <strong>200</strong></td><td>Al token le faltan permisos</td><td>Repetir el paso 2 con los tres permisos</td></tr>
+          <tr><td>Error <strong>368</strong></td><td>Meta ha bloqueado temporalmente la página</td><td>Esperar; no reintentar en bucle</td></tr>
+          <tr><td>«Este usuario no administra ninguna página»</td><td>El token salió sin <code>pages_show_list</code>, o no eres administrador</td><td>Revisar permisos y tu rol en la página</td></tr>
+          <tr><td>No publica y no hay error</td><td>Faltan los secretos, o hoy no toca por calendario</td><td>Mirar la incidencia del domingo</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout callout-warn">
+      <h3>Nunca falla ruidosamente por falta de secretos</h3>
+      <p>Si falta un secreto, la automatización se queda en pausa y te lo recuerda el domingo. Es intencionado, para que un token caducado no llene el repositorio de correos de error. La contrapartida: <strong>un secreto mal escrito tampoco chilla</strong>, así que conviene hacer el simulacro del paso 5.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Seguridad</h2>
+    </div>
+    <div class="callout">
+      <h3>El token de página es una contraseña</h3>
+      <p>Permite publicar en la página en tu nombre. Vive solo en los secretos de GitHub: no lo pegues en un archivo del proyecto, ni en una captura, ni en una conversación con una IA.</p>
+      <p>Si aparece donde no debe, revócalo en <strong>developers.facebook.com → tu app → Configuración → Básica</strong> y repite la guía desde el paso 2.</p>
+    </div>
+    <p>La automatización solo tiene permiso para publicar y leer la página. No accede a mensajes, ni a anuncios, ni a datos de tus clientes.</p>
+  </section>
+
+  <footer>
+    <p>Bynoesis · Guía de conexión de Facebook · 8 de septiembre de 2026</p>
+    <p>Fuente editable: <code>facebook/Conectar-Facebook.md</code>. Para PDF, imprime esta página desde el navegador (⌘P): los estilos de impresión ya están preparados.</p>
+  </footer>
+
+</div>
+</body>
+</html>

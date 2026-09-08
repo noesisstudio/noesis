@@ -143,6 +143,29 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-08 — guía de Facebook en HTML y todo junto en `facebook/`
+
+- **Autor/agente:** Claude, a petición del founder.
+- **Objetivo:** poder leer la guía de conexión con comodidad y tener la
+  automatización, su manual y su guía en un único sitio.
+- **Áreas y archivos:** `facebook/Conectar-Facebook.html` (nuevo) y traslado de
+  `docs/Conectar-Facebook.md` a `facebook/Conectar-Facebook.md`. Enlaces
+  actualizados en `docs/Inicio.md` y `facebook/README.md`. No toca `src/noesis/`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** comprobación de que el HTML está bien formado (sin
+  etiquetas sin cerrar), revisión de que no queda ningún enlace a la ruta anterior
+  y las 22 pruebas de `tests/test_facebook.py`.
+- **Dependencias o validaciones externas:** ninguna. El HTML es autocontenido: sin
+  CDNs, sin JavaScript y sin fuentes externas, con el mismo sistema visual que
+  `Conectar-Correo.html` y `Conectar-Google.html`, incluidos modo oscuro y estilos
+  de impresión. No se genera PDF: se obtiene imprimiendo desde el navegador.
+- **Riesgo/punto probable de fallo:** el índice del vault enlaza ahora fuera de
+  `docs/`, así que en Obsidian es un enlace relativo y no un enlace wiki. Si se
+  vuelve a mover la carpeta, hay que revisar ese enlace y los dos del README.
+- **Diagnóstico y rollback:** documental; revertir el commit devuelve la guía a
+  `docs/` y borra el HTML.
+- **Estado de publicación:** en `main`.
+
 ## 2026-09-08 — guía de conexión de Facebook y carpeta propia
 
 - **Autor/agente:** Claude, a petición del founder.
