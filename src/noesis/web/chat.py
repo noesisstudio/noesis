@@ -727,6 +727,9 @@ def _handle(
     actor_phone: str | None = None,
 ) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
+    refusal = nlu.safety_refusal(message)
+    if refusal:
+        return {"reply": refusal, "source": "local"}
     if page and any(x in norm for x in (
             "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
             "explica esta", "explicame esta", "que es esto")):
@@ -754,6 +757,10 @@ def _handle(
 
     if parsed:
         tool, args = parsed
+        if tool == nlu.NEED_REVIEW:
+            return {"reply": args["reply"], "source": "local"}
+        if tool == "registrar_pago" and not config.ASSISTANT_REVIEW_ENABLED:
+            return {"reply": "Abre la factura en Facturas para revisar y registrar el cobro. No he cambiado su estado.", "source": "local"}
         if tool == nlu.HELP:
             return {"reply": _coach_reply(business_id, message), "source": "local"}
         if tool == nlu.NEED_INVOICE:
@@ -1003,6 +1010,7 @@ def handle(
     *,
     channel: str = "web",
     actor_phone: str | None = None,
+    actor_id: str | None = None,
 ) -> dict:
     """Entrada común del acompañante: responde y conserva la relación.
 
@@ -1018,13 +1026,25 @@ def handle(
         )
     except Exception:  # noqa: BLE001
         log.exception("No se pudo guardar la entrada del asistente para %s.", business_id)
-    result = _handle(
-        business_id,
-        message,
-        page,
-        channel=channel,
-        actor_phone=actor_phone,
-    )
+    from .. import action_review
+    enabled = config.ASSISTANT_REVIEW_ENABLED
+    actor = f"wa:{actor_phone}" if channel == "whatsapp" else f"web:{actor_id or 'owner'}"
+    result = action_review.respond(business_id, actor, message) if enabled else None
+    if result is None:
+        if enabled:
+            # Cualquier nueva orden invalida la anterior, incluso si la corrección
+            # es incompleta. Un SÍ posterior nunca confirma datos antiguos.
+            db.clear_pending_action(business_id, actor)
+            if nlu._norm(message).startswith("corregir:"):
+                message = message.split(":", 1)[1].strip()
+        state = {"actor": actor}
+        token = action_review.context.set(state if enabled else None)
+        try:
+            result = _handle(business_id, message, page, channel=channel, actor_phone=actor_phone)
+            if state.get("proposal"):
+                result = {**state["proposal"], "source": "local"}
+        finally:
+            action_review.context.reset(token)
     try:
         db.add_assistant_message(
             business_id, "assistant", result.get("reply") or "",

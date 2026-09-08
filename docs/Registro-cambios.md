@@ -48,6 +48,20 @@ Documentación únicamente: no se toca `src/`, ni esquema, ni pruebas, ni
 credenciales. Sin límites externos nuevos. Riesgo: que Meta vuelva a renombrar la
 pantalla; la guía ya advierte de ello en el paso 2. Rollback: revertir el commit.
 
+## 2026-09-08 — revisión conversacional y Whisper privado (candidato local)
+
+Objetivo: corregir interpretaciones peligrosas y revisar cliente/importe/acción
+antes de guardar. Áreas: NLU, herramientas, `action_review.py`, chat web/audio,
+WhatsApp, adaptador/servicio de voz, Dockerfile aislado y comprobador. Sin migración.
+Revisión nueva detrás de flag apagado; rechazos peligrosos son correcciones locales.
+Pruebas en `Registro-QA.md`; activación y límites en el runbook de fiabilidad/Whisper.
+Suite final 683/683, Ruff, compilación, verdad documental y diff limpios.
+Sin producción, compras, push ni credenciales; árbol principal ajeno preservado.
+Riesgo: interpretación, concurrencia y capacidad de voz. Diagnóstico: corpus y
+comparación propuesta/BD, proceso privado. Rollback: flag false y revert de código,
+sin restaurar BD; dejar vencer propuestas antes de reactivar. No se certifica voz
+ni entrega externa por tener pruebas locales.
+
 ## 2026-09-07 — fiabilidad conversacional, documentos y facturas recibidas
 
 Objetivo: convertir los fallos reproducibles de `Arreglos.html` en contratos de

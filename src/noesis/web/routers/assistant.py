@@ -97,32 +97,37 @@ async def api_chat(business_id: int, request: Request):
         return await run_in_threadpool(
             chat.handle_read_only, business_id, message, page
         )
-    return await run_in_threadpool(chat.handle, business_id, message, page)
+    return await run_in_threadpool(chat.handle, business_id, message, page, actor_id=f"{request.session.get('uid')}:{request.session.get('sv', 0)}")
 
 
 @router.post("/api/{business_id}/chat/audio")
-async def api_chat_audio(business_id: int, audio: UploadFile = File(...)):
+async def api_chat_audio(business_id: int, request: Request, audio: UploadFile = File(...)):
     # Nota de voz -> texto (Whisper local, sin coste por uso) -> cerebro local.
     from ...adapters import transcription
-    tr = transcription.get_transcriber()
+    actor_id = f"{request.session.get('uid')}:{request.session.get('sv', 0)}"
+    def audio_error(message: str, status: int):
+        if config.ASSISTANT_REVIEW_ENABLED:
+            db.clear_pending_action(business_id, f"web:{actor_id}")
+        return JSONResponse({"error": message}, status_code=status)
+    try:
+        tr = transcription.get_transcriber()
+    except ValueError:
+        tr = None
     if tr is None:
-        return JSONResponse(
-            {"error": "Transcripción de voz no disponible en este servidor."},
-            status_code=503)
+        return audio_error("Transcripción de voz no disponible en este servidor.", 503)
     data = await audio.read(config.MAX_AUDIO_BYTES + 1)
     if len(data) > config.MAX_AUDIO_BYTES:
-        return JSONResponse({"error": "El audio es demasiado grande."}, status_code=413)
+        return audio_error("El audio es demasiado grande.", 413)
     try:
         text = await run_in_threadpool(
             tr.transcribe, data, audio.filename or "audio"
         )
     except Exception:  # noqa: BLE001
-        return JSONResponse({"error": "No he podido entender el audio."}, status_code=422)
+        return audio_error("No he podido entender el audio. Se ha descartado la propuesta anterior; escribe de nuevo la orden.", 422)
     if not text:
-        return JSONResponse({"error": "El audio estaba vacío o no se entendió."},
-                            status_code=422)
+        return audio_error("El audio estaba vacío o no se entendió.", 422)
     result = await run_in_threadpool(
-        lambda: chat.handle(business_id, text, channel="audio")
+        lambda: chat.handle(business_id, text, channel="audio", actor_id=actor_id)
     )
     return {"transcription": text, **result}
 

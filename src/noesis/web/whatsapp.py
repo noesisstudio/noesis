@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from .. import config, db
+from .. import config, db, nlu
 from ..adapters import billing as billing_adapter
 from . import chat
 
@@ -1575,6 +1575,9 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                     db.get_business(connection["business_id"])
                     if connection else db.get_business_by_phone(phone)
                 )
+                if business and config.ASSISTANT_REVIEW_ENABLED:
+                    db.clear_pending_action(business["id"], f"wa:{phone}")
+                    db.clear_pending_action(business["id"], phone)
                 send(
                     phone,
                     "He recibido tu nota de voz pero no he podido transcribirla. "
@@ -1690,14 +1693,28 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             continue
 
         if message.get("image_id"):
+            if config.ASSISTANT_REVIEW_ENABLED:
+                db.clear_pending_action(business["id"], f"wa:{phone}")
             results.append(_ingest_image(business, phone, message))
             _finish_inbound_message(message_id, claimed_ids)
             continue
         if message.get("media_document_id"):
+            if config.ASSISTANT_REVIEW_ENABLED:
+                db.clear_pending_action(business["id"], f"wa:{phone}")
             results.append(_ingest_document(business, phone, message))
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
+        # La revisión de herramientas comparte contrato con la web. Su clave
+        # separada evita que un SÍ confirme por accidente un documento anterior.
+        if config.ASSISTANT_REVIEW_ENABLED:
+            reviewed = db.get_pending_action(business["id"], f"wa:{phone}")
+            if reviewed or nlu.safety_refusal(text):
+                reply = chat.handle(business["id"], text, channel="whatsapp", actor_phone=phone)
+                send(phone, reply.get("reply", ""), business_id=business["id"])
+                results.append({"business_id": business["id"], "reviewed": True})
+                _finish_inbound_message(message_id, claimed_ids)
+                continue
         pending = db.get_pending_action(business["id"], phone)
         if pending and _is_yes(text):
             send(
@@ -1757,7 +1774,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
-        if audio_id and text and _needs_confirmation(text):
+        if audio_id and text and _needs_confirmation(text) and not config.ASSISTANT_REVIEW_ENABLED:
             # Una nota de voz que mueve dinero nunca se ejecuta sin confirmar.
             db.set_pending_action(
                 business["id"], phone, "chat_action", {"text": text}
@@ -1777,6 +1794,8 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
         reply = chat.handle(
             business["id"], text, channel="whatsapp", actor_phone=phone
         ).get("reply", "")
+        if config.ASSISTANT_REVIEW_ENABLED and db.get_pending_action(business["id"], f"wa:{phone}"):
+            db.clear_pending_action(business["id"], phone)
         send(phone, reply, business_id=business["id"])
         results.append({
             "phone": phone,

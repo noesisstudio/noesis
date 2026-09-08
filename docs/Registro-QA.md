@@ -1,5 +1,37 @@
 # Registro de QA
 
+## 2026-09-08 — confirmación persistente y voz privada (local)
+
+Suite completa final: **683/683**, 497,572 s sobre este `src` explícito en PYTHONPATH.
+Después de esa suite, revisión fiscal final: el IRPF por defecto de F2 se conserva
+a cero como en la herramienta original; ampliada regresión y repetidos los 33
+tests de confirmación/voz. La suite completa precede a este último ajuste acotado.
+Ruff, compilación, verdad del proyecto y `git diff --check` correctos.
+Los 33 tests nuevos cubren órdenes negativas/destructivas,
+impuestos, cliente/cita, ambigüedad, corrección, caducidad, actor/canal/negocio,
+SÍ concurrente, IA con varias herramientas, gastos sin asociación inferida,
+datos desactualizados y suscripción revocada. HTTP de audio y webhook WhatsApp
+sintéticos; servicio privado con clave, límites, ocupado, timeout y limpieza.
+
+Humo adicional del servidor completo mediante TestClient y sesión real sintética:
+login 303; propuesta, confirmación, audio multipart y descarte 200; otro negocio
+403; páginas Asistente y Suscripción 200. Solo el texto transcrito se simula en
+ese humo; la inferencia real se comprueba separadamente por HTTP más abajo.
+La suite emite errores inyectados de proveedores y un aviso de tarea del scheduler
+contra una BD temporal ya sin tabla de outbox al final. No falla ninguna aserción;
+conviene mejorar el aislamiento del scheduler del harness. No es evidencia de una
+incidencia de producción. Deprecación de httpx/TestClient pendiente del harness.
+
+Primera suite: dos regresiones repetidas por herencia (IRPF del 2T y concepto
+«cambiar el termo»), corregidas y dirigidas en verde. Fixture WhatsApp corregido
+con vinculación real de pruebas, sin saltar el control de identidad.
+
+Whisper 1.2.1, venv temporal, modelo small real y audio SAPI español sintético.
+MKL Windows falló; CT2_USE_MKL=0 permitió transcribir en 10,69 s. Servicio HTTP real
+con adaptador y proceso aislado: health 200, texto en 7,92 s. «IVA» confundido con
+«y va»: regresión de rechazo añadida. No acredita precisión ca/es real, Meta,
+Linux ni producción. No compras ni cambios externos. Detalle y rollback: runbook.
+
 ## 2026-09-07 — simulación de cliente y correcciones de fiabilidad
 
 - Corpus de 23 mensajes de autónomo, incluido dictado acentuado, importes sin

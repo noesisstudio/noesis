@@ -1,5 +1,16 @@
 # Mapa de código
 
+## Confirmación conversacional y voz privada — 8-sep
+
+`action_review.py` intercepta herramientas en `chat.handle`, fija identidad y
+argumentos y consume una propuesta por negocio/conversación. Reutiliza
+`whatsapp_pending_actions` con prefijos `web:` y `wa:` sin migración. `tools.py`
+conserva el cliente revisado; `nlu.py` rechaza órdenes peligrosas. Web/audio comparten
+usuario/versión de sesión; WhatsApp usa la identidad vinculada previa.
+`private_voice.py` e `infra/whisper/Dockerfile` son un servicio opcional sin BD,
+consumido por `adapters/transcription.py` y comprobado por `integration_check.py`.
+Activación y límites: [[Fiabilidad-conversacional-y-Whisper]].
+
 ## Centro de mando administrativo — 7-sep
 
 `admin.html` organiza siete departamentos; `admin_direction.html` resume las

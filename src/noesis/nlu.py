@@ -28,7 +28,7 @@ def _strip_accents(s: str) -> str:
 
 
 def _norm(s: str) -> str:
-    return _strip_accents(s.lower()).strip()
+    return _strip_accents(s.lower()).strip().strip("¿?¡!.")
 
 
 def _parse_amount(text: str) -> float | None:
@@ -54,7 +54,7 @@ def _parse_time(norm: str) -> tuple[int, int] | None:
     if m:
         h = int(m.group(1))
         mn = int(m.group(2)) if m.group(2) else (30 if "y media" in norm else 0)
-        return h, mn
+        return (h, mn) if 0 <= h <= 23 and 0 <= mn <= 59 else None
     if "manana" in norm:
         return 9, 0
     if "mediodia" in norm:
@@ -97,6 +97,26 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 HELP = "__help__"
 NEED_INVOICE = "__need_invoice__"
 NEED_USER_INVITE = "__need_user_invite__"
+NEED_REVIEW = "__need_review__"
+
+
+def safety_refusal(text: str) -> str | None:
+    """Una orden negativa o destructiva nunca se interpreta como un alta."""
+    norm = _norm(text)
+    if re.search(r"\b(borra\w*|elimina\w*|anula\w*|cancela\w*|esborra\w*|suprime\w*)\b", norm):
+        return ("No he cambiado nada. Para borrar, anular o cancelar un registro, "
+                "ábrelo en su apartado y revisa la acción concreta.")
+    if re.search(r"^(?:por favor[, ]+)?(cambia\w*|modifica\w*|mueve|reprograma\w*|rectifica\w*)\b", norm):
+        return "Para modificar un registro existente, ábrelo en su apartado y revisa los nuevos datos. No he creado ni cambiado nada."
+    if re.search(r"\b(transferencia|transfiere|transferir|devolucion|devuelve)\b", norm):
+        return "No puedo mover dinero ni hacer transferencias o devoluciones. No he ejecutado ninguna operación."
+    if re.search(r"\b(no|nunca)\b.*\b(cre\w*|ha\w*|registr\w*|factur\w*|apunt\w*|anad\w*|envi\w*|gast\w*|paga\w*)\b", norm):
+        return "Entendido. No he registrado ni enviado nada."
+    if re.search(r"\by va\s+(incluido|incluida)\b", norm):
+        return "La transcripción del impuesto es dudosa. Escribe de nuevo la orden indicando «IVA incluido» o «más IVA». No he registrado nada."
+    if re.search(r"(?:\by\s+|;\s*)(?:despues\s+)?(?:crea|factura a|registra|gaste|gasto \d+|agenda a)\b", norm):
+        return "Revisemos una operación cada vez. Envíame primero una orden completa; no he guardado ninguna."
+    return None
 
 
 # Conectores que el hablante pone entre el nombre y el importe. El patron los
@@ -121,6 +141,8 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
       - "factura a Juan 95€ por reparación de grifo"       (importe antes de concepto)
       - "factura a Juan 95 euros"                          (sin concepto explícito)
     """
+    # Los impuestos son campos separados, nunca parte del cliente o concepto.
+    text = re.sub(r"\s+(?:IVA|IRPF)\s*(?:(?:del|al)\s*)?(?:incluido|inclos|\d+(?:[.,]\d+)?\s*%?)", "", text, flags=re.I).strip(" ,.")
     # Variante frecuente: "factura a Juan de 100 euros". Debe resolverse antes
     # del patrón con concepto para que el 100 no se parta en "1" + "00".
     m = re.search(
@@ -226,6 +248,25 @@ def _parse_simplified_sale(text: str, norm: str) -> dict | None:
 def parse(text: str) -> tuple[str, dict] | None:
     norm = _norm(text)
 
+    refusal = safety_refusal(text)
+    if refusal:
+        return (NEED_REVIEW, {"reply": refusal})
+    for field, allowed in (("iva", {0, 4, 10, 21}), ("irpf", {0, 7, 15})):
+        rate = re.search(rf"\b{field}\s*(?:(?:del|al)\s*)?(\d+(?:[.,]\d+)?)(?![\w.,])", norm)
+        if rate and float(rate.group(1).replace(",", ".")) not in allowed:
+            return (NEED_REVIEW, {"reply": "El tipo fiscal indicado no está admitido. Revisa IVA e IRPF en Facturas; no he sustituido el porcentaje por otro."})
+    if re.search(r"(?:que.*(?:trabajos|citas).*|agenda de )(hoy|mañana|demà)", text, re.I):
+        when = parse_date(text)
+        if when:
+            return ("ver_agenda", {"fecha": when[:10]})
+    # Un cobro no crea una factura. Los pagos parciales necesitan importe explícito
+    # y se revisan en Facturas mientras el contrato de esta orden sea saldo total.
+    if re.search(r"\b(pagado|cobrado|pago|cobro)\b", norm) and "factura" in norm:
+        paid = re.search(r"\bfactura\s*#?\s*(\d+)\b", norm)
+        if paid and re.search(r"\b(pagado|cobrado)\b", norm) and not re.search(r"\b(parcial|parte|euros|eur)\b|€", norm):
+            return ("registrar_pago", {"factura_id": int(paid.group(1))})
+        return (NEED_REVIEW, {"reply": "Para registrar un cobro parcial, abre la factura e indica el importe recibido. No he cambiado su estado."})
+
     if norm in {"hola", "hey", "buenas", "ayuda", "help", "que puedes hacer"}:
         return (HELP, {})
 
@@ -308,14 +349,15 @@ def parse(text: str) -> tuple[str, dict] | None:
         if args:
             args["tipo_factura"] = "F1"
             _add_tax_rates(norm, args)
+            if "iva incluido" in norm or "iva inclos" in norm:
+                args["importe_incluye_iva"] = True
             return ("crear_factura", args)
         if re.search(r"\b(?:hazme|crea|crear|nueva|quiero|necesito|prepara|factura)\b", norm):
             return (NEED_INVOICE, {})
 
     # --- Registrar gasto: "gasto 45 en gasolina", "gasté 45 de material",
     #     "me he gastado 45", "compré 30 de tornillos", "ticket de 12"
-    if re.search(r"\bgast", norm) or re.search(r"\bcompr[eaoé]", norm) \
-            or re.search(r"\b(ticket|recibo)\b", norm) or norm.startswith("gasto"):
+    if re.match(r"(?:(?:registra|registrar|apunta|añade|anade)\s+(?:un\s+)?)?(?:gasto\b|gaste\b|he gastado\b|me he gastado\b|compre\b|ticket\b|recibo\b)", norm):
         amount = _parse_amount(text)
         if amount is not None:
             cm = re.search(r"(?:en|de|por)\s+([a-záéíóúñ ]+)", text, re.I)
@@ -327,22 +369,22 @@ def parse(text: str) -> tuple[str, dict] | None:
         fecha = parse_date(text)
         # Nombre tras "a/con/para": 1ª palabra siempre, 2ª solo si va en mayúscula
         # (así "Marta el jueves" captura "Marta", no "Marta el").
-        cm = re.search(r"\b(?:a|con|para)\b\s+([A-Za-záéíóúñ]+)"
-                       r"(?:\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+))?", text)
+        cm = re.search(r"\b(?:agenda|agendame|apunta|apuntame|cita|reserva)\s+(?:a|con|para)\s+(.+?)(?=\s+(?:hoy|mañana|demà|el|pasado|a las|por la|para|en)\b|$)", text, re.I)
         cliente = None
         if cm:
-            cliente = cm.group(1) + (f" {cm.group(2)}" if cm.group(2) else "")
+            cliente = cm.group(1)
             cliente = cliente.strip()
         zona = None
         zm = re.search(r"\ben\s+([A-Za-záéíóúñ ]+)$", text.strip())
         if zm:
             zona = zm.group(1).strip()
         if cliente and fecha:
+            description = re.search(r"\s+para\s+(.+?)(?=\s+en\s+|$)", text, re.I)
             return ("agendar_trabajo", {
-                "cliente": cliente, "descripcion": "Trabajo", "fecha_hora": fecha,
+                "cliente": cliente, "descripcion": description.group(1).strip() if description else "Trabajo", "fecha_hora": fecha,
                 **({"zona": zona} if zona else {}),
             })
-        return ("__need_date__", {})
+        return (NEED_REVIEW, {"reply": "Me falta el cliente o una fecha válida. Dime, por ejemplo: «agenda a Marta López mañana a las 10 para reparar la caldera». No he creado ninguna cita."})
 
     # --- Ver agenda de hoy
     if re.search(r"(que tengo|que hay|trabajos|citas|que toca).*hoy", norm) \
@@ -414,6 +456,8 @@ def help_text() -> str:
 
 
 def format_reply(tool: str, result: dict) -> str:
+    if result.get("confirmation_required"):
+        return result["reply"]
     if result.get("error"):
         # El nombre de la herramienta le sirve al agente, no a quien lee: deja
         # solo el motivo, que es lo único accionable.
@@ -435,6 +479,8 @@ def format_reply(tool: str, result: dict) -> str:
                 f"{f['id']}»; para entregarlo también, «emitir y enviar factura "
                 f"{f['id']}»."
                 + (f"\n\n⚠️ {aviso}" if aviso else ""))
+    if tool == "registrar_pago":
+        return f"Cobro registrado en la factura #{result['factura']['id']}."
     if tool == "crear_cliente":
         client = result["cliente"]
         suffix = " Ya existía; he reutilizado su ficha." if result.get("existing") else ""
@@ -479,8 +525,8 @@ def format_reply(tool: str, result: dict) -> str:
     if tool == "ver_agenda":
         jobs = result["trabajos"]
         if not jobs:
-            return "📅 Hoy no tienes trabajos agendados. Buen momento para revisar cobros o registrar gastos pendientes."
-        lines = [f"📅 Tienes {len(jobs)} trabajo(s) hoy. Yo prepararía el día así:"]
+            return f"No tienes trabajos agendados para {result['fecha']}."
+        lines = [f"Tienes {len(jobs)} trabajo(s) para {result['fecha']}:"]
         for j in jobs:
             h = j["scheduled_for"].split("T")[1] if j.get("scheduled_for") and "T" in j["scheduled_for"] else ""
             lines.append(f"• {h} {j.get('client_name') or ''} — {j['description']}")

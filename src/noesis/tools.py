@@ -302,9 +302,18 @@ TOOLS: list[dict] = [
 # --------------------------------------------------------------------------- #
 # Implementaciones (todas reciben business_id).
 # --------------------------------------------------------------------------- #
+def _reviewed_client(business_id, cliente, cliente_id=None, **kwargs):
+    if cliente_id is None:
+        return db.get_or_create_client(cliente, business_id=business_id, **kwargs)
+    client = db.get_client(cliente_id, business_id)
+    if not client or client["name"] != cliente:
+        raise ValueError("La ficha del cliente ha cambiado. Revisa la propuesta otra vez.")
+    return client
+
+
 def _agendar_trabajo(business_id, cliente, descripcion, fecha_hora, zona=None,
-                     precio_estimado=None):
-    c = db.get_or_create_client(cliente, business_id=business_id, zone=zona)
+                     precio_estimado=None, cliente_id=None):
+    c = _reviewed_client(business_id, cliente, cliente_id, zone=zona)
     job = db.add_job(c["id"], descripcion, scheduled_for=fecha_hora,
                      zone=zona or c.get("zone"), price_estimate=precio_estimado,
                      business_id=business_id)
@@ -330,7 +339,7 @@ def _ver_agenda(business_id, fecha):
 
 def _crear_factura(
     business_id, concepto, base, cliente=None, iva=None, irpf=None,
-    tipo_factura="F1", importe_incluye_iva=False, lineas=None,
+    tipo_factura="F1", importe_incluye_iva=False, lineas=None, cliente_id=None,
 ):
     biz = db.get_business(business_id) or {}
     invoice_type = str(tipo_factura or "F1").strip().upper()
@@ -341,7 +350,7 @@ def _crear_factura(
         if invoice_type != "F2":
             raise ValueError("Indica el cliente de la factura completa.")
         client_name = "Cliente de mostrador"
-    c = db.get_or_create_client(client_name, business_id=business_id)
+    c = _reviewed_client(business_id, client_name, cliente_id)
     rate = biz.get("default_vat", 21) if iva is None else iva
     irpf_rate = (
         0 if invoice_type == "F2" and irpf is None
@@ -386,9 +395,9 @@ def _preparar_factura_trabajo(business_id, trabajo_id):
 
 
 def _crear_presupuesto(business_id, cliente, concepto, base, iva=None, irpf=None,
-                       validez_dias=None, notas=None):
+                       validez_dias=None, notas=None, cliente_id=None):
     biz = db.get_business(business_id) or {}
-    c = db.get_or_create_client(cliente, business_id=business_id)
+    c = _reviewed_client(business_id, cliente, cliente_id)
     rate = biz.get("default_vat", 21) if iva is None else iva
     irpf_rate = biz.get("default_irpf", 0) if irpf is None else irpf
     q = db.add_quote(c["id"], concepto, base, vat_rate=rate, irpf_rate=irpf_rate,
@@ -690,6 +699,10 @@ def run_tool(
             ensure_ascii=False,
         )
     try:
+        from . import action_review
+        proposed = action_review.propose(business_id, name, tool_input)
+        if proposed is not None:
+            return json.dumps(proposed, ensure_ascii=False)
         from . import value_ledger
         with value_ledger.observation_context(
             channel=channel,

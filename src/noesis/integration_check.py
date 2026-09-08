@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict, dataclass
 import json
+import os
 import re
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
@@ -249,6 +250,17 @@ def _check_stripe(*, network: bool) -> IntegrationCheck:
 
 
 def _check_groq(*, network: bool) -> IntegrationCheck:
+    if os.getenv("NOESIS_PRIVATE_WHISPER_URL"):
+        from .adapters.transcription import PrivateWhisperProvider
+        try:
+            private = PrivateWhisperProvider()
+            if network:
+                payload = _json_get(private.url + "/health")
+                if payload.get("status") != "ready":
+                    raise ValueError("Servicio todavía no preparado")
+        except (ValueError, RuntimeError):
+            return IntegrationCheck("voz", "blocker", "Whisper privado no está preparado o su configuración es inválida.", "Revisa modelo, clave y red privada; no se enviarán audios a un proveedor alternativo.")
+        return IntegrationCheck("voz", "warning", "Whisper privado configurado" + (" y accesible." if network else "; falta comprobar conexión."), "Valida notas reales ca/es/en, silencio, nombres e importes antes de activar la voz.")
     if not config.GROQ_API_KEY:
         return IntegrationCheck(
             "voz", "skipped", "Groq no está configurado; puede usarse Whisper privado.",

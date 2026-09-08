@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Confirmación y voz privada — candidato local 8-sep
+
+- [x] Preparar/revisar/confirmar/corregir detrás de flag apagado; sin clientes
+  implícitos ni asignación inferida de gastos a proyectos.
+- [x] Adaptador/servicio de voz con clave, límites y errores seguros. Modelo small
+  local real probado mediante HTTP con audio sintético, sin API pagada.
+- [ ] Revisión y publicación tras QA; validar PostgreSQL concurrente y build Linux.
+- [ ] Servicio privado de pruebas con presupuesto autorizado; corpus ca/es, ruido,
+  nombres/decimales; móvil y Meta reales antes de activar el piloto.
+- [ ] Correo, copia independiente y aceptación Stripe siguen separados. Runbook:
+  [[Fiabilidad-conversacional-y-Whisper]]. Árbol principal ajeno preservado.
+
 ## Candidato de fiabilidad — 7-sep
 
 - [x] Validación local de aritmética/fechas/NIF en borradores, corrección de

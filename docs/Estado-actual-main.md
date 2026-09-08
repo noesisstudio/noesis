@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 8-sep — candidato local de confirmación y voz privada
+
+Bloqueo de interpretaciones peligrosas y revisión persistente de herramientas con
+`NOESIS_ASSISTANT_REVIEW_ENABLED=false` por defecto. Identidad de cliente fijada,
+corrección y confirmación de un solo uso con pruebas web/audio/WhatsApp sintéticas.
+Servicio Whisper privado preparado y transcripción sintética real ejecutada mediante
+HTTP local. No desplegado ni contratado; faltan build Linux, corpus real y piloto.
+Detalle: [[Fiabilidad-conversacional-y-Whisper]]. Sin cambios de esquema ni Stripe.
+
 ## 7-sep — candidato de fiabilidad en revisión
 
 La lectura de facturas ya contrasta aritmética, fechas y dígitos de control antes
