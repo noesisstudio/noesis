@@ -6,7 +6,7 @@ COPY src/noesis/config.py /app/noesis/config.py
 COPY src/noesis/private_voice.py /app/noesis/private_voice.py
 COPY src/noesis/adapters/__init__.py /app/noesis/adapters/__init__.py
 COPY src/noesis/adapters/transcription.py /app/noesis/adapters/transcription.py
-RUN python -c "from huggingface_hub import snapshot_download; snapshot_download('Systran/faster-whisper-small', revision='536b0662742c02347bc0e980a01041f333bce120', local_dir='/models/small')"
+RUN python -c "from huggingface_hub import snapshot_download; snapshot_download('Systran/faster-whisper-small', revision='536b0662742c02347bc0e980a01041f333bce120', local_dir='/models/small')"  # pragma: allowlist secret -- revisión pública fijada
 ENV NOESIS_WHISPER_MODEL=/models/small NOESIS_WHISPER_DIR=/models HF_HUB_OFFLINE=1 NOESIS_WHISPER_MAX_SECONDS=120
 RUN useradd --uid 10001 --create-home voice && chown -R voice:voice /models /app
 USER voice

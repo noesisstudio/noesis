@@ -2,14 +2,14 @@
   "state_date": "2026-09-08",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 702,
+  "verified_test_count": 752,
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_644_isolated_tests_no_schema_changes_deployment_verification_after_push",
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Publicado y verificado el 4-sep: esquema 55, ready, 14 paginas, 8 cabeceras, accesos demo, seis recuentos operativos conservados y auditoria integra. Backup real previo de BD/documentos y restauracion aislada OK, fijado fuera de rotacion en Railway. Mantener alta publica y ambos flags de valor en false. Pendientes solicitud humana con correo, DPA, regiones, conservacion, copia externa fuera de Railway, integraciones y piloto real. Reconciliar WUB/outcomes con 3-5 negocios solo al autorizar su activacion."
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Release consolidado del 8-sep: esquema 55 sin migracion; 752 pruebas locales. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS son artefactos no provisionados. Verificar release, ready, paginas y datos conservados en Railway; siguen pendientes proveedores reales, PostgreSQL concurrente, movil fisico, restauracion externa, legal y piloto."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -57,12 +57,12 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
-    "supervised_learning_candidate": "local_not_deployed_default_off_requires_review_flag_explicit_post_success_approval_exact_tenant_rules_never_system_prompt_invoice_clarification_content_free_event_report_no_retraining_no_schema_change",
-    "conversation_review_candidate": "local_not_deployed_default_off_NOESIS_ASSISTANT_REVIEW_ENABLED_tenant_actor_scoped_single_use_review_correction_explicit_clients_stale_data_guard_no_schema_change",
+    "supervised_learning_candidate": "code_deployed_default_off_requires_review_flag_explicit_post_success_approval_exact_tenant_rules_never_system_prompt_invoice_clarification_content_free_event_report_no_retraining_no_schema_change",
+    "conversation_review_candidate": "code deployed, disabled by default; the review flag enables tenant and actor scoped single-use proposals, corrections, explicit clients and stale-data guards; no schema change",
     "private_voice_candidate": "authenticated_bounded_private_cpu_whisper_service_no_external_fallback_real_synthetic_small_model_http_transcription_verified_windows_MKL_workaround_linux_build_real_corpus_hosting_and_pilot_pending",
-    "customer_reliability_candidate": "no_schema_change_local_invoice_arithmetic_date_and_spanish_tax_id_review_received_invoice_authenticated_correction_repeated_photo_reread_timezone_complete_ics_expanded_zero_cost_nlu_explicit_client_supplier_creation_safe_user_invitation_guidance_and_23_message_synthetic_customer_journey_not_deployed",
-    "mobile_admin_candidate_2026_09_07": "local_not_deployed_mobile_contrast_opaque_create_sheet_owner_whatsapp_admin_monthly_tenant_provider_usage_estimates_audited_json_extraction_usage_fail_open_whatsapp_confidence_review",
-    "reliability_candidate_2026_09_06": "local_not_deployed_paired_backups_offsite_attempt_evidence_current_destination_ciso_freshness_s3_checksum_for_object_lock_single_host_multiple_document_review_no_partial_invoice_drafts_read_only_checker_fixes_orderly_scheduler_shutdown_aws_template_not_provisioned",
+    "customer_reliability_candidate": "code_deployed_no_schema_change_invoice_arithmetic_date_and_spanish_tax_id_review_received_invoice_authenticated_correction_repeated_photo_reread_timezone_complete_ics_expanded_zero_cost_nlu_explicit_client_supplier_creation_safe_user_invitation_guidance_real_provider_validation_pending",
+    "mobile_admin_candidate_2026_09_07": "code_deployed_mobile_contrast_opaque_create_sheet_owner_whatsapp_admin_monthly_tenant_provider_usage_estimates_audited_json_extraction_usage_fail_open_whatsapp_confidence_review",
+    "reliability_candidate_2026_09_06": "code_deployed_paired_backups_offsite_attempt_evidence_current_destination_ciso_freshness_s3_checksum_for_object_lock_single_host_multiple_document_review_no_partial_invoice_drafts_read_only_checker_fixes_orderly_scheduler_shutdown_aws_template_not_provisioned",
     "useful_value_ledger": "schema_54_opt_in_additive_fail_open_observer_with_versioned_taxonomy_and_per_instance_qualifies_for_wub_manual_forms_excluded_delegated_contexts_explicit_tenant_scoped_idempotent_actions_lifecycle_infrastructure_without_process_hooks_many_to_many_outcomes_conservative_attribution_preexisting_assistant_audit_preserved_when_disabled_rolling_and_closed_week_wub_depth_consistency_activation_and_trust_metrics_no_customer_ui_no_confidence_or_autonomy_changes_admin_off_rgpd_export_delete_and_safe_code_first_rollback_plan",
     "commercial_onboarding": "schema_49_resumable_exact_step_trial_or_subscribe_then_business_complete_invoice_identity_collection_messages_truthful_whatsapp_review_checkout_and_first_customer_activation",
     "onboarding_sector_capture": "free_text_up_to_80_characters",

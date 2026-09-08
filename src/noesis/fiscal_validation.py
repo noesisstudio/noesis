@@ -10,7 +10,7 @@ import re
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 
-_NIF_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE"
+_NIF_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE"  # pragma: allowlist secret -- tabla pública NIF
 _CIF_CONTROL_LETTERS = "JABCDEFGHI"
 
 

@@ -1,5 +1,25 @@
 ﻿# Registro de cambios
 
+## 2026-09-08 — consolidación de la mañana para `main`
+
+Objetivo: ordenar y publicar en una única base el trabajo concurrente sin perder
+protecciones. Se integra Facebook seguro en Windows, centro de mando móvil y consumo
+por cuenta, fiabilidad documental/WhatsApp, evidencia de copias, revisión de acciones,
+servicio Whisper privado y aprendizaje supervisado. Los conflictos documentales se
+sumaron; en WhatsApp se preservaron foto repetida, dirección de factura y fallo de
+borrador. Áreas y límites detallados en las entradas específicas siguientes.
+
+Pruebas: 107 dirigidas y 752 completas en verde, Ruff, compilación, JSON, verdad del
+proyecto, diff y detector de secretos. Los cuatro falsos positivos revisados quedan
+explicados en línea: tabla pública NIF, NIF ficticios y revisión pública de modelo.
+Sin migración ni credenciales. La revisión y el aprendizaje quedan
+apagados por defecto; Whisper no se despliega como servicio, AWS no se provisiona y
+una copia externa no sale sin configuración completa. Riesgo: combinación de rutas
+de documentos, scheduler y chat. Diagnóstico: logs sin contenido, health/ready y
+pruebas citadas. Rollback: apagar flags opcionales y revertir los tres commits de la
+consolidación; no restaurar la BD porque el esquema no cambia ni deshacer operaciones
+ya confirmadas. Publicación autorizada por el founder en esta tarea.
+
 ## 2026-09-08 — conectar Facebook desde Windows sin dejar la clave en el historial
 
 Objetivo: que el founder pueda completar la conexión desde su ordenador. La guía

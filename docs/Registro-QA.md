@@ -1,5 +1,27 @@
 # Registro de QA
 
+## 2026-09-08 — integración completa previa a producción
+
+Se reconciliaron sobre `origin/main` los cambios de Facebook del socio, el bloque
+local de administración/copias/fiabilidad y las capas opcionales de revisión,
+Whisper privado y aprendizaje supervisado. Conflictos resueltos conservando tanto
+la relectura de fotos repetidas como la distinción entre factura emitida y recibida
+sin borrador válido.
+
+Pruebas dirigidas de mayor riesgo: **107/107** en 68,272 s. Suite completa final:
+**752/752** en 594,109 s sobre `src` explícito en PYTHONPATH. Ruff completo,
+compilación, JSON, verdad de proyecto y `git diff --check` correctos. Una primera
+ejecución completa terminó con un `HealthCheck.too_slow` de Hypothesis al generar
+datos (752 tests, 690,895 s); la propiedad fiscal aislada pasó en 11,404 s y la
+segunda suite completa pasó. No se ocultó ni suprimió el control.
+
+Las trazas de Stripe, Meta, correo, AEAT, telemetría, backup y extracción son fallos
+inyectados por las pruebas y no llamadas reales. Sin PostgreSQL, dispositivos,
+proveedores ni credenciales reales en esta validación. Esquema permanece en 55.
+Detector de secretos sin hallazgos tras revisar y marcar cuatro falsos positivos;
+Bandit sin incidencias de severidad/confianza altas y `pip-audit` sin vulnerabilidades
+conocidas (el paquete local `noesis` no existe en PyPI y se omite como tal).
+
 ## 2026-09-08 — aprendizaje supervisado y diálogo guiado (local)
 
 19 pruebas nuevas de aprendizaje pasan (15,632 s): sin aprendizaje silencioso,

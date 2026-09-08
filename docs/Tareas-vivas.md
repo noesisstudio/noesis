@@ -1,6 +1,16 @@
 # Tareas vivas
 
-## Aprendizaje supervisado — candidato local 8-sep
+## Release consolidada — 8-sep
+
+- [x] Reconciliar el trabajo local con el `main` del socio y conservar ambas
+  protecciones en los conflictos. Validación local: 107 dirigidas y 752 completas.
+- [x] Preparar para producción administración, móvil, consumo, fiabilidad y copias,
+  manteniendo revisión/aprendizaje apagados y sin crear Whisper o AWS externos.
+- [ ] Verificar release, `ready`, esquema y páginas tras el despliegue de Railway.
+- [ ] Activar capacidades opcionales solo en entorno aislado y después de sus
+  validaciones reales; no confundir código publicado con servicio operativo.
+
+## Aprendizaje supervisado — código incluido y apagado 8-sep
 
 - [x] Corrección, acción confirmada y APRENDER explícito; memoria literal visible,
   eliminable y aislada, sin convertirla en instrucciones privilegiadas del modelo.
@@ -9,7 +19,7 @@
 - [ ] Revisión del candidato, PostgreSQL, corpus de conversaciones ca/es y piloto
   con voz/WhatsApp reales. No afirmar comprensión universal ni aprendizaje autónomo.
 - [ ] Ampliar diálogo a otros procesos y casos ambiguos solo tras evaluaciones.
-  Guía: [[Aprendizaje-supervisado-Bynoesis]]. Flags apagados, no publicado.
+  Guía: [[Aprendizaje-supervisado-Bynoesis]]. Flags apagados.
 
 ## Confirmación y voz privada — candidato local 8-sep
 
@@ -17,7 +27,8 @@
   implícitos ni asignación inferida de gastos a proyectos.
 - [x] Adaptador/servicio de voz con clave, límites y errores seguros. Modelo small
   local real probado mediante HTTP con audio sintético, sin API pagada.
-- [ ] Revisión y publicación tras QA; validar PostgreSQL concurrente y build Linux.
+- [x] Código de revisión preparado para publicar apagado tras QA local; falta validar
+  PostgreSQL concurrente y build Linux antes de activarlo.
 - [ ] Servicio privado de pruebas con presupuesto autorizado; corpus ca/es, ruido,
   nombres/decimales; móvil y Meta reales antes de activar el piloto.
 - [ ] Correo, copia independiente y aceptación Stripe siguen separados. Runbook:

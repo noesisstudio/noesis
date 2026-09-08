@@ -1,21 +1,31 @@
 # Estado actual del producto
 
-## 8-sep — candidato de aprendizaje supervisado, no desplegado
+## 8-sep — release de la mañana consolidada
+
+Código reunido sobre el último `main` del socio y validado con 752 pruebas. Entran
+las mejoras del centro de mando, móvil, consumo por cuenta, documentos, WhatsApp,
+copias y comprobadores. La revisión conversacional y el aprendizaje están presentes
+pero apagados por defecto; Whisper privado sigue sin servicio Linux contratado y la
+plantilla AWS no crea recursos por estar en el repositorio. Sin migración: esquema 55.
+La prueba local no sustituye Meta, voz, Stripe, correo, PostgreSQL o móvil reales.
+
+## 8-sep — aprendizaje supervisado incluido, apagado
 
 Correcciones aprobadas explícitamente se convierten en equivalencias literales
 por negocio; cada reutilización exige revisión y confirmación. Guía persistente
 de factura incompleta y recuentos de fallos/aclaraciones sin contenido personal.
 `NOESIS_ASSISTANT_LEARNING_ENABLED=false`, dependiente del flag de revisión.
-No reentrena modelos ni modifica código/permisos. Sin migración ni producción.
+No reentrena modelos ni modifica código/permisos. Sin migración y sin activación.
 Detalle y límites: [[Aprendizaje-supervisado-Bynoesis]].
 
-## 8-sep — candidato local de confirmación y voz privada
+## 8-sep — confirmación incluida y voz privada preparada
 
 Bloqueo de interpretaciones peligrosas y revisión persistente de herramientas con
 `NOESIS_ASSISTANT_REVIEW_ENABLED=false` por defecto. Identidad de cliente fijada,
 corrección y confirmación de un solo uso con pruebas web/audio/WhatsApp sintéticas.
 Servicio Whisper privado preparado y transcripción sintética real ejecutada mediante
-HTTP local. No desplegado ni contratado; faltan build Linux, corpus real y piloto.
+HTTP local. Revisión apagada; voz no desplegada ni contratada. Faltan build Linux,
+corpus real y piloto.
 Detalle: [[Fiabilidad-conversacional-y-Whisper]]. Sin cambios de esquema ni Stripe.
 
 ## 7-sep — candidato de fiabilidad en revisión

@@ -347,7 +347,7 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
     def test_validated_invoice_warns_on_arithmetic_dates_and_spanish_nif(self):
         result = extraction._validated_invoice({
             "number": "F-2", "supplier": "Proveedor",
-            "supplier_nif": "12345678A", "base": 100, "vat_rate": 21,
+            "supplier_nif": "12345678A", "base": 100, "vat_rate": 21,  # pragma: allowlist secret -- NIF ficticio
             "vat_amount": 10, "irpf_amount": 0, "total": 150,
             "issued_on": "2026-09-10", "due_on": "2026-09-01",
             "confidence": 98,
@@ -367,7 +367,7 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
 
         foreign = extraction._validated_invoice({
             "number": "DE-1", "supplier": "Proveedor UE",
-            "supplier_nif": "DE123456789", "total": 20, "confidence": 90,
+            "supplier_nif": "DE123456789", "total": 20, "confidence": 90,  # pragma: allowlist secret -- NIF ficticio
         })
         self.assertFalse(foreign["requires_review"])
 
