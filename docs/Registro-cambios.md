@@ -13,6 +13,8 @@ los toma del argumento si está, si no del entorno (`FACEBOOK_APP_ID`,
 teclado ocultando los dos secretos. Los argumentos siguen funcionando igual para
 quien los use.
 
+Se documenta además que la sección «Revisión de la aplicación» no hay que tocarla: `Standard access` es el estado correcto para publicar en la página propia, y solicitar la revisión arrastraría verificación del negocio sin necesidad.
+
 Áreas: `facebook/conectar.py`, `facebook/README.md`,
 `facebook/Conectar-Facebook.md` y `.html`. Sin migración, sin credenciales en el
 repositorio y sin llamadas pagadas. Pruebas: `tests/test_facebook.py` (22 verdes)

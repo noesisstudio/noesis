@@ -141,6 +141,14 @@ antes.
 > estas palabras, busca el desplegable de la app, la lista de permisos y el botón
 > de generar: la secuencia es siempre la misma.
 
+**Los permisos se conceden aquí, no en «Revisión de la aplicación».** Esa sección
+del panel muestra los tres permisos con `Standard access` y el aviso «No se ha
+solicitado revisar la aplicación»: ese es el estado correcto, no un pendiente. El
+acceso estándar ya permite usarlos sobre **tus propios** activos siendo
+administrador de la app. Pedir la revisión (*Advanced access*) solo hace falta
+para páginas de otras personas, y arrastra verificación del negocio, vídeo de
+demostración y semanas de espera.
+
 Tienes una o dos horas para el paso 3. Si te caduca, repite este paso: no se
 rompe nada.
 
