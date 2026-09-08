@@ -6,7 +6,8 @@
   protecciones en los conflictos. Validación local: 107 dirigidas y 752 completas.
 - [x] Preparar para producción administración, móvil, consumo, fiabilidad y copias,
   manteniendo revisión/aprendizaje apagados y sin crear Whisper o AWS externos.
-- [ ] Verificar release, `ready`, esquema y páginas tras el despliegue de Railway.
+- [x] Release `086039e0b538`, `ready`, esquema 55, 14 páginas y 8 cabeceras
+  verificados tras el despliegue; CI completo y humo PostgreSQL en verde.
 - [ ] Activar capacidades opcionales solo en entorno aislado y después de sus
   validaciones reales; no confundir código publicado con servicio operativo.
 

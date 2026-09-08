@@ -19,6 +19,8 @@ de documentos, scheduler y chat. Diagnóstico: logs sin contenido, health/ready 
 pruebas citadas. Rollback: apagar flags opcionales y revertir los tres commits de la
 consolidación; no restaurar la BD porque el esquema no cambia ni deshacer operaciones
 ya confirmadas. Publicación autorizada por el founder en esta tarea.
+Release `086039e0b538` publicado y verificado en Railway; puerta externa, CI y humo
+PostgreSQL verdes. Revisión, aprendizaje y ledger confirmados apagados.
 
 ## 2026-09-08 — conectar Facebook desde Windows sin dejar la clave en el historial
 

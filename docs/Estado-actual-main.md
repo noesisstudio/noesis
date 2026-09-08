@@ -2,12 +2,15 @@
 
 ## 8-sep — release de la mañana consolidada
 
-Código reunido sobre el último `main` del socio y validado con 752 pruebas. Entran
+Código reunido sobre el último `main` del socio, publicado como `086039e0b538` y
+validado con 752 pruebas, humo PostgreSQL y puerta externa. Entran
 las mejoras del centro de mando, móvil, consumo por cuenta, documentos, WhatsApp,
 copias y comprobadores. La revisión conversacional y el aprendizaje están presentes
 pero apagados por defecto; Whisper privado sigue sin servicio Linux contratado y la
 plantilla AWS no crea recursos por estar en el repositorio. Sin migración: esquema 55.
 La prueba local no sustituye Meta, voz, Stripe, correo, PostgreSQL o móvil reales.
+Producción respondió `health/ready`, esquema 55, 14 páginas y 8 cabeceras; revisión,
+aprendizaje y ledger se comprobaron apagados en Railway.
 
 ## 8-sep — aprendizaje supervisado incluido, apagado
 

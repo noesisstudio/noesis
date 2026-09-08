@@ -22,6 +22,11 @@ Detector de secretos sin hallazgos tras revisar y marcar cuatro falsos positivos
 Bandit sin incidencias de severidad/confianza altas y `pip-audit` sin vulnerabilidades
 conocidas (el paquete local `noesis` no existe en PyPI y se omite como tal).
 
+Después del push, Railway marcó SUCCESS y sirvió `086039e0b538`; `/health` y
+`/ready` correctos con esquema 55. Puerta externa: 14 páginas y 8 cabeceras.
+Flags de revisión, aprendizaje y ledger comprobados apagados. GitHub CI completo:
+tests/migraciones y humo PostgreSQL/rollback correctos.
+
 ## 2026-09-08 — aprendizaje supervisado y diálogo guiado (local)
 
 19 pruebas nuevas de aprendizaje pasan (15,632 s): sin aprendizaje silencioso,
