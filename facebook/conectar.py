@@ -5,7 +5,12 @@ cuando haya que renovarlo). Se ejecuta desde este ordenador, nunca en GitHub: el
 token que imprime es un secreto y no debe acabar en el repositorio.
 
 Uso:
-    python facebook/conectar.py --app-id 123 --app-secret ... --token-corto ...
+    python facebook/conectar.py
+
+Sin argumentos pregunta los tres valores por teclado, y los dos secretos no se
+ven al escribirlos: así no quedan guardados en el historial de la terminal.
+También acepta `--app-id`, `--app-secret` y `--token-corto`, o las variables de
+entorno FACEBOOK_APP_ID, FACEBOOK_APP_SECRET y FACEBOOK_TOKEN_CORTO.
 
 Los tres valores salen de developers.facebook.com, como explica el README.
 """
@@ -13,19 +18,20 @@ Los tres valores salen de developers.facebook.com, como explica el README.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
+from getpass import getpass
 
 import nucleo
 
 
 def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Obtiene el token de página de Facebook.")
-    parser.add_argument("--app-id", required=True, help="identificador de la app de Meta.")
-    parser.add_argument("--app-secret", required=True, help="clave secreta de la app de Meta.")
+    parser.add_argument("--app-id", help="identificador de la app de Meta.")
+    parser.add_argument("--app-secret", help="clave secreta de la app de Meta.")
     parser.add_argument(
         "--token-corto",
-        required=True,
         help="token de usuario del Explorador de la API Graph, con los permisos de página.",
     )
     parser.add_argument(
@@ -36,15 +42,46 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _pedir(valor: str | None, variable: str, pregunta: str, *, oculto: bool = False) -> str:
+    """Devuelve el valor del argumento, del entorno o preguntándolo por teclado.
+
+    Preguntarlo es lo preferible para los secretos: escritos en la línea de
+    comandos quedan en el historial de la terminal, y ahí no pintan nada.
+    """
+    if valor:
+        return valor.strip()
+    del_entorno = os.environ.get(variable, "").strip()
+    if del_entorno:
+        return del_entorno
+    leido = (getpass(pregunta) if oculto else input(pregunta)).strip()
+    if not leido:
+        print(f"ERROR · falta {variable}.", file=sys.stderr)
+        raise SystemExit(1)
+    return leido
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _argumentos(argv)
+    app_id = _pedir(args.app_id, "FACEBOOK_APP_ID", "Identificador de la app: ")
+    app_secret = _pedir(
+        args.app_secret,
+        "FACEBOOK_APP_SECRET",
+        "Clave secreta de la app (no se verá al escribir): ",
+        oculto=True,
+    )
+    token_corto = _pedir(
+        args.token_corto,
+        "FACEBOOK_TOKEN_CORTO",
+        "Token corto del Explorador (no se verá al escribir): ",
+        oculto=True,
+    )
     # Credenciales de trabajo: aquí el «acceso» todavía es el token corto.
     credenciales = nucleo.Credenciales(
         pagina="",
-        acceso=args.token_corto,
+        acceso=token_corto,
         version=args.version,
-        app_id=args.app_id,
-        app_secreto=args.app_secret,
+        app_id=app_id,
+        app_secreto=app_secret,
     )
 
     try:
@@ -53,9 +90,9 @@ def main(argv: list[str] | None = None) -> int:
             "oauth/access_token",
             {
                 "grant_type": "fb_exchange_token",
-                "client_id": args.app_id,
-                "client_secret": args.app_secret,
-                "fb_exchange_token": args.token_corto,
+                "client_id": app_id,
+                "client_secret": app_secret,
+                "fb_exchange_token": token_corto,
             },
         )
     except nucleo.ErrorGraph as exc:
@@ -69,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
 
     credenciales_largas = nucleo.Credenciales(
         pagina="", acceso=token_usuario, version=args.version,
-        app_id=args.app_id, app_secreto=args.app_secret,
+        app_id=app_id, app_secreto=app_secret,
     )
     try:
         cuentas = nucleo.graph_get(credenciales_largas, "me/accounts", {"fields": "id,name,access_token"})
@@ -100,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
                     "debug_token",
                     {
                         "input_token": token_pagina,
-                        "access_token": f"{args.app_id}|{args.app_secret}",
+                        "access_token": f"{app_id}|{app_secret}",
                     },
                 )
                 datos = revision.get("data", {})

@@ -43,12 +43,15 @@ Noesis (configuración de la página en `branding/redes-sociales/facebook/`).
 3. Copia ese token corto (caduca en una o dos horas, da igual) y ejecuta desde la
    raíz del proyecto:
 
-   ```bash
-   python facebook/conectar.py \
-     --app-id TU_APP_ID \
-     --app-secret TU_APP_SECRET \
-     --token-corto EL_TOKEN_DEL_EXPLORADOR
+   ```powershell
+   .venv\Scripts\python.exe facebook\conectar.py
    ```
+
+   En macOS o Linux: `.venv/bin/python facebook/conectar.py`. Pregunta los tres
+   valores por teclado y los dos secretos no se ven al escribirlos, para que no
+   queden en el historial de la terminal. También acepta `--app-id`,
+   `--app-secret` y `--token-corto`, o las variables de entorno equivalentes
+   (`FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_TOKEN_CORTO`).
 
    Te devuelve, para cada página que administras, el `FACEBOOK_PAGE_ID` y el
    `FACEBOOK_PAGE_TOKEN` definitivo. El token de página obtenido así **no caduca**
@@ -84,6 +87,9 @@ python facebook/revision.py                      # el informe del domingo
 ```
 
 Con `--simulacro` nunca se publica nada.
+
+En Windows, `python` se sustituye por `.venv\Scripts\python.exe` y las
+barras por `\`.
 
 ## El domingo
 

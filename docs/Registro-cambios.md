@@ -1,5 +1,25 @@
 ﻿# Registro de cambios
 
+## 2026-09-08 — conectar Facebook desde Windows sin dejar la clave en el historial
+
+Objetivo: que el founder pueda completar la conexión desde su ordenador. La guía
+daba rutas de macOS (`.venv/bin/python`), que en Windows no existen, y obligaba a
+pasar la clave secreta y el token corto como argumentos, con lo que quedaban
+escritos en el historial de PowerShell.
+
+`facebook/conectar.py` deja de exigir esos tres valores por línea de comandos:
+los toma del argumento si está, si no del entorno (`FACEBOOK_APP_ID`,
+`FACEBOOK_APP_SECRET`, `FACEBOOK_TOKEN_CORTO`) y, si tampoco, los pregunta por
+teclado ocultando los dos secretos. Los argumentos siguen funcionando igual para
+quien los use.
+
+Áreas: `facebook/conectar.py`, `facebook/README.md`,
+`facebook/Conectar-Facebook.md` y `.html`. Sin migración, sin credenciales en el
+repositorio y sin llamadas pagadas. Pruebas: `tests/test_facebook.py` (22 verdes)
+y comprobación de la precedencia argumento → entorno → teclado. Riesgo: bajo; si
+alguien invocaba el script sin los tres argumentos antes fallaba y ahora pregunta.
+Rollback: revertir el commit.
+
 ## 2026-09-08 — guía de Facebook: la pantalla de casos de uso de Meta
 
 Objetivo: desatascar el alta de la app de Meta. La guía saltaba de «Crear app» a

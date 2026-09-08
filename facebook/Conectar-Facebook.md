@@ -148,16 +148,30 @@ rompe nada.
 
 Desde la carpeta del proyecto, en la terminal:
 
-```bash
-.venv/bin/python facebook/conectar.py \
-  --app-id TU_APP_ID \
-  --app-secret TU_CLAVE_SECRETA \
-  --token-corto EL_TOKEN_QUE_ACABAS_DE_COPIAR
+En Windows (PowerShell):
+
+```powershell
+.venv\Scripts\python.exe facebook\conectar.py
 ```
 
-> En este Mac, `python` a secas no existe: usa `.venv/bin/python`, como arriba.
-> Y ejecútalo con esa ruta al archivo (no con `python -m`), o no encontrará sus
-> propios módulos.
+En macOS o Linux:
+
+```bash
+.venv/bin/python facebook/conectar.py
+```
+
+> `python` a secas no existe dentro del proyecto: hay que usar el del entorno
+> virtual, como arriba. Y ejecútalo con la ruta al archivo (no con `python -m`), o
+> no encontrará sus propios módulos.
+
+El script pregunta los tres valores por teclado. Los dos secretos **no se ven al
+escribirlos**, que es justo lo que se busca: escritos en la línea de comandos
+quedarían guardados en el historial de la terminal. Pega la clave secreta y el
+token aunque la pantalla no muestre nada, y pulsa Enter.
+
+Si prefieres automatizarlo, también acepta `--app-id`, `--app-secret` y
+`--token-corto`, o las variables de entorno `FACEBOOK_APP_ID`,
+`FACEBOOK_APP_SECRET` y `FACEBOOK_TOKEN_CORTO`.
 
 Verás algo así:
 
@@ -200,10 +214,10 @@ En GitHub: **Actions → «Facebook · publicar» → Run workflow**, marcando
 
 Desde tu ordenador es lo mismo:
 
-```bash
-.venv/bin/python facebook/publicar.py --simulacro    # qué tocaría hoy
-.venv/bin/python facebook/publicar.py --verificar    # ¿responde la página?
-.venv/bin/python facebook/revision.py                # el informe del domingo
+```powershell
+.venv\Scripts\python.exe facebook\publicar.py --simulacro   # qué tocaría hoy
+.venv\Scripts\python.exe facebook\publicar.py --verificar   # ¿responde la página?
+.venv\Scripts\python.exe facebook\revision.py               # el informe del domingo
 ```
 
 Con `--simulacro` **nunca** se publica.

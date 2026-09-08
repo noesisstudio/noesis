@@ -321,11 +321,9 @@
         <div class="step-body">
           <div class="step-head"><h3>Convertirlo en la llave definitiva</h3><span class="chip chip-flat">2 min</span></div>
           <p>Desde la carpeta del proyecto, en la terminal:</p>
-<pre>.venv/bin/python facebook/conectar.py \
-  --app-id TU_APP_ID \
-  --app-secret TU_CLAVE_SECRETA \
-  --token-corto EL_TOKEN_QUE_ACABAS_DE_COPIAR</pre>
-          <div class="note">En este Mac <code>python</code> a secas no existe: usa <code>.venv/bin/python</code>. Y ejecútalo con la ruta al archivo, no con <code>python -m</code>, o no encontrará sus propios módulos.</div>
+<pre>.venv\Scripts\python.exe facebook\conectar.py</pre>
+          <div class="note">En macOS o Linux, la misma orden es <code>.venv/bin/python facebook/conectar.py</code>. <code>python</code> a secas no existe dentro del proyecto: hay que usar el del entorno virtual. Y ejecútalo con la ruta al archivo, no con <code>python -m</code>, o no encontrará sus propios módulos.</div>
+          <div class="note">El script pregunta los tres valores por teclado y los dos secretos <strong>no se ven al escribirlos</strong>: escritos en la línea de comandos quedarían en el historial de la terminal. Pega la clave y el token aunque la pantalla no muestre nada, y pulsa Enter.</div>
           <p>Verás algo así:</p>
 <pre>Páginas encontradas:
 
@@ -365,9 +363,9 @@
           <div class="step-head"><h3>Probar sin publicar</h3><span class="chip chip-ok">seguro</span></div>
           <p>En GitHub: <strong>Actions → «Facebook · publicar» → Run workflow</strong>, marcando <strong>simulacro</strong>. Verás el texto que saldría hoy, sin publicar nada.</p>
           <p>Desde tu ordenador es lo mismo:</p>
-<pre>.venv/bin/python facebook/publicar.py --simulacro   <span class="c"># qué tocaría hoy</span>
-.venv/bin/python facebook/publicar.py --verificar   <span class="c"># ¿responde la página?</span>
-.venv/bin/python facebook/revision.py               <span class="c"># el informe del domingo</span></pre>
+<pre>.venv\Scripts\python.exe facebook\publicar.py --simulacro   <span class="c"># qué tocaría hoy</span>
+.venv\Scripts\python.exe facebook\publicar.py --verificar   <span class="c"># ¿responde la página?</span>
+.venv\Scripts\python.exe facebook\revision.py               <span class="c"># el informe del domingo</span></pre>
           <p>Con <code>--simulacro</code> <strong>nunca</strong> se publica.</p>
         </div>
       </li>
