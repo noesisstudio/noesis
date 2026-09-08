@@ -16,6 +16,37 @@ Necesitas tres cosas:
 2. Tener acceso al repositorio en GitHub para crear secretos (Settings → Secrets).
 3. Este proyecto descargado en el ordenador.
 
+## ¿Hace falta cuenta de Meta Developers?
+
+Sí: no hay forma de publicar por API sin una app de Meta. Pero no es una cuenta
+nueva ni un trámite. Se entra en <https://developers.facebook.com> **con tu cuenta
+de Facebook de siempre**; la primera vez aceptas las condiciones de desarrollador y
+ya está. Es gratis.
+
+Y probablemente ya la tienes: la guía de WhatsApp del proyecto
+([`docs/Conectar-APIs.md`](../docs/Conectar-APIs.md)) ya hace crear una app de Meta
+para copiar su clave secreta a `WHATSAPP_APP_SECRET`. **Si ese paso está hecho,
+reutiliza esa misma app** y sáltate el paso 1.
+
+Lo que **no** hace falta, que es lo que suele echar para atrás:
+
+| | ¿Hace falta? | Por qué |
+|---|---|---|
+| Revisión de la aplicación (*App Review*) | **No** | Publicas en tu propia página, siendo administrador de la app. La app se queda en modo desarrollo |
+| Verificación del negocio | **No** | Solo se exige para permisos avanzados sobre datos de terceros |
+| Publicar la app | **No** | En modo desarrollo funciona |
+| Pagar algo | **No** | Es gratis |
+
+La única condición es que tu cuenta sea administradora **de la app y de la
+página**. Como creas tú las dos, se cumple sola. Publicar en páginas de otras
+personas —clientes, por ejemplo— sí exigiría la revisión de Meta, pero eso no es
+lo que hace esta automatización.
+
+**Si prefieres no tocar nada de esto:** Meta Business Suite permite programar
+publicaciones a mano, sin app ni token. Pierdes el informe del domingo, la
+recuperación automática cuando una publicación falla, y hay que meter las 48
+piezas a mano y reprogramar cada pocos meses.
+
 ## Por qué hay dos tokens (esta es la parte que confunde)
 
 Meta no te da directamente una llave permanente. El camino es este:

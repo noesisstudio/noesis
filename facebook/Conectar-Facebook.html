@@ -210,6 +210,31 @@
 
   <section>
     <div class="sec-head">
+      <h2>¿Hace falta cuenta de Meta Developers?</h2>
+      <p class="sec-intro">Sí, pero no es una cuenta nueva ni un trámite: se entra con tu cuenta de Facebook de siempre, se aceptan las condiciones de desarrollador una vez y ya está. Es gratis.</p>
+    </div>
+
+    <div class="note"><strong>Probablemente ya la tienes.</strong> La guía de WhatsApp del proyecto (<code>docs/Conectar-APIs.md</code>) ya hace crear una app de Meta para copiar su clave secreta a <code>WHATSAPP_APP_SECRET</code>. Si ese paso está hecho, reutiliza esa misma app y sáltate el paso 1.</div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Lo que suele echar para atrás</th><th>¿Hace falta?</th><th>Por qué</th></tr></thead>
+        <tbody>
+          <tr><td>Revisión de la aplicación (<em>App Review</em>)</td><td><strong>No</strong></td><td>Publicas en tu propia página, siendo administrador de la app: se queda en modo desarrollo</td></tr>
+          <tr><td>Verificación del negocio</td><td><strong>No</strong></td><td>Solo para permisos avanzados sobre datos de terceros</td></tr>
+          <tr><td>Publicar la app</td><td><strong>No</strong></td><td>En modo desarrollo funciona</td></tr>
+          <tr><td>Pagar algo</td><td><strong>No</strong></td><td>Es gratis</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>La única condición es que tu cuenta sea administradora <strong>de la app y de la página</strong>. Como creas tú las dos, se cumple sola. Publicar en páginas de otras personas —clientes, por ejemplo— sí exigiría la revisión de Meta, pero no es lo que hace esta automatización.</p>
+
+    <div class="note"><strong>Si prefieres no tocar nada de esto:</strong> Meta Business Suite permite programar publicaciones a mano, sin app ni token. Pierdes el informe del domingo, la recuperación automática cuando una publicación falla, y hay que meter las 48 piezas a mano y reprogramar cada pocos meses.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
       <h2>Por qué hay dos tokens</h2>
       <p class="sec-intro">Esta es la parte que confunde, y conviene entenderla antes de tocar nada: Meta no entrega una llave permanente directamente. Hay que pedir una temporal y cambiarla por la buena.</p>
     </div>
