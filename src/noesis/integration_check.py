@@ -31,7 +31,8 @@ class IntegrationCheck:
 def _json_get(url: str, headers: dict[str, str] | None = None) -> dict:
     request = Request(
         url,
-        headers={"accept": "application/json", **(headers or {})},
+        headers={"accept": "application/json", "User-Agent": "Bynoesis-Integration-Check/1.0",
+                 **(headers or {})},
         method="GET",
     )
     try:

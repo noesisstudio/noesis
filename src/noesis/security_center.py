@@ -90,13 +90,10 @@ def build_security_report() -> dict:
         )
 
     latest_events = db.list_security_events(100)
-    restore_event = next(
-        (
-            event for event in latest_events
-            if event["event_type"].startswith("backup.restore_drill_")
-        ),
-        None,
-    )
+    restores = db.list_security_events(1, event_types=(
+        "backup.restore_drill_passed", "backup.restore_drill_failed",
+    ))
+    restore_event = restores[0] if restores else None
     if not restore_event:
         add(
             "warning", "Simulacro de restauracion",
@@ -108,6 +105,13 @@ def build_security_report() -> dict:
             "critical", "Simulacro de restauracion",
             "El ultimo simulacro independiente fallo.",
             "Trata la copia como no recuperable hasta repetirlo con exito.",
+        )
+    elif (_age_hours(restore_event["created_at"]) is None
+          or _age_hours(restore_event["created_at"]) > 192):
+        add(
+            "warning", "Simulacro de restauracion",
+            "El último simulacro tiene más de ocho días o una fecha inválida.",
+            "Repite noesis-restore-check en un entorno aislado.",
         )
     else:
         add(
@@ -127,10 +131,27 @@ def build_security_report() -> dict:
         config.BACKUP_S3_DATA_REGION,
     )
     if all(s3_values) and all(s3_context):
+        from .web.backups import offsite_destination_id
+
+        attempts = db.list_security_events(1, event_types=(
+            "backup.offsite_started", "backup.offsite_passed", "backup.offsite_failed",
+        ))
+        attempt = attempts[0] if attempts else None
+        current = bool(attempt and attempt["metadata"].get("destination_id")
+                       == offsite_destination_id())
+        age = _age_hours(attempt["created_at"]) if attempt else None
+        passed = bool(current and attempt["event_type"] == "backup.offsite_passed"
+                      and age is not None and age <= 48)
+        failed = bool(current and attempt["event_type"] == "backup.offsite_failed")
         add(
-            "ok", "Copia fuera del servidor",
-            f"Destino {config.BACKUP_S3_PROVIDER_NAME} completo, "
-            f"residencia declarada {config.BACKUP_S3_DATA_REGION} y cifrado solicitado.",
+            "ok" if passed else "critical" if failed else "warning",
+            "Copia fuera del servidor",
+            "El destino aceptó base y documentos en las últimas 48 horas. "
+            "Falta demostrar recuperación desde una descarga externa."
+            if passed else "La última subida externa falló. La copia local no la sustituye."
+            if failed else "Destino configurado, sin un envío completo reciente demostrado.",
+            "Descarga y restaura el juego en infraestructura independiente."
+            if passed else "Revisa el destino y ejecuta una copia; verifica ambos archivos.",
         )
     elif any(s3_values):
         add(

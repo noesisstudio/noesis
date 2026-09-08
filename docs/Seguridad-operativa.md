@@ -88,6 +88,10 @@ email, teléfono, IP, token, secreto, contraseña, fichero, documento, mensaje o
 
 ## Restauración y continuidad
 
+- Candidato local 6-sep: parejas BD/ZIP, evidencia de subida por destino y simulacros
+  caducables. Propuesta externa en [[Copias-independientes-AWS]]. No demuestra
+  protección externa activa ni impide exfiltración desde un servidor comprometido.
+
 - Al crear cada copia, Bynoesis ya la restaura en un fichero SQLite temporal o en un
   esquema PostgreSQL aleatorio y compara esquema y recuentos.
 - Cada domingo a las 04:30, `noesis-restore-check` repite de forma independiente la

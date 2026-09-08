@@ -402,11 +402,15 @@ def get_security_event(event_id: int) -> dict | None:
     return event
 
 
-def list_security_events(limit: int = 50) -> list[dict]:
+def list_security_events(limit: int = 50, *, event_types: tuple[str, ...] = ()) -> list[dict]:
     limit = max(1, min(int(limit), 200))
     with get_conn() as conn:
+        where = ""
+        if event_types:
+            where = " WHERE event_type IN (" + ",".join("?" for _ in event_types) + ")"
         rows = conn.execute(
-            "SELECT * FROM security_events ORDER BY id DESC LIMIT ?", (limit,)
+            "SELECT * FROM security_events" + where + " ORDER BY id DESC LIMIT ?",
+            (*event_types, limit),
         ).fetchall()
     events = []
     for raw in rows:
@@ -5804,7 +5808,13 @@ def update_invoice_draft(
     return get_invoice(invoice_id, business_id)
 
 
-def list_invoices(business_id, status=None) -> list[dict]:
+def list_invoices(business_id, status=None, *, client_id=None,
+                  limit: int | None = None, offset: int = 0) -> list[dict]:
+    """Listado compatible; filtros y páginas opcionales se ejecutan en SQL."""
+    if limit is not None and (type(limit) is not int or not 1 <= limit <= 200):
+        raise ValueError("El tamaño de página debe estar entre 1 y 200.")
+    if type(offset) is not int or offset < 0 or (offset and limit is None):
+        raise ValueError("El desplazamiento requiere una página válida.")
     q = (
         "SELECT i.*, COALESCE(i.recipient_name, c.name) AS client_name, "
         "COALESCE((SELECT SUM(p.amount) FROM invoice_payments p "
@@ -5840,7 +5850,13 @@ def list_invoices(business_id, status=None) -> list[dict]:
     if status:
         q += " AND i.status=?"
         params.append(status)
+    if client_id is not None:
+        q += " AND i.client_id=?"
+        params.append(client_id)
     q += " ORDER BY i.created_at DESC"
+    if limit is not None:
+        q += ", i.id DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
     with get_conn() as conn:
         return [
             _invoice_payment_state(r)
@@ -11747,7 +11763,7 @@ def client_portal_view(business_id: int, client_id: int) -> dict | None:
     if not biz or not client:
         return None
     quotes = [q for q in list_quotes(business_id) if q.get("client_id") == client_id]
-    invoices = [i for i in list_invoices(business_id) if i.get("client_id") == client_id]
+    invoices = list_invoices(business_id, client_id=client_id)
     with get_conn() as conn:
         work_completions = [dict(row) for row in conn.execute(
             "SELECT jc.id, jc.job_id, jc.status, jc.summary, jc.customer_name, "

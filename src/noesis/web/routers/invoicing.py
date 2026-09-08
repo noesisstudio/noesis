@@ -16,8 +16,14 @@ from ..deps import _read_json
 router = APIRouter()
 
 @router.get("/api/{business_id}/invoices")
-def api_invoices(business_id: int):
-    return db.list_invoices(business_id)
+def api_invoices(business_id: int, status: str | None = None,
+                 client_id: int | None = Query(None, ge=1),
+                 limit: int | None = Query(None, ge=1, le=200),
+                 offset: int = Query(0, ge=0)):
+    if offset and limit is None:
+        return JSONResponse({"error": "Indica limit para usar offset."}, status_code=400)
+    return db.list_invoices(business_id, status, client_id=client_id,
+                            limit=limit, offset=offset)
 
 
 @router.get("/api/{business_id}/invoices/{invoice_id}")

@@ -111,6 +111,55 @@ Riesgo: regresión visual/consulta; rollback mediante revert del commit de este
 panel, sin migraciones. Diagnóstico: /admin, /admin/cuentas/{id}, consola y
 /admin/cuentas/{id}/consumo; comprobar período, cobertura y versión de recursos.
 
+## 2026-09-07 — organización del administrador (local)
+
+- Seis departamentos y seis vistas por cuenta; navegación activa, contexto, foco
+  y diseño adaptable. Conserva formularios, permisos y enlaces anteriores.
+- Archivos: admin.html, admin_account.html, admin_navigation.html, admin-workspace.css/js,
+  deps.py; db.py/invoicing.py añaden paginación opcional y filtro SQL del portal;
+  config.py parametriza la conversión de costes estimados sin afectar cobros.
+- QA: Registro-QA y capturas `qa/admin-2026-09-07/`. Sin producción ni migraciones.
+- Riesgo: ocultación progresiva y filtros opcionales. Sin JS todos visibles;
+  revertir solo este diff para rollback. Candidato previo conservado, no push/deploy.
+- Commit de teléfono del socio no localizado tras fetch; base remota sigue f8df1bc.
+
+## 2026-09-07 — móvil, consumo y diagnóstico por cuenta (local)
+
+- CSS/JS: contraste, superficie opaca, cierre y foco. Admin/DB: teléfono del titular,
+  consumo mensual por negocio/proveedor/modelo y JSON privado auditado sin caché.
+- Extracción: telemetría fail-open; WhatsApp: tipo aplicado y revisión conservadora.
+- QA/límites: `Registro-QA.md` y `Revision-frentes-2026-09-07.md`.
+- Riesgo: aditivo, sin migración ni nuevas autorizaciones; no emisión automática.
+  Diagnóstico por cuenta/mes; rollback selectivo conservando el candidato anterior.
+  Sin commit, push ni despliegue.
+
+## 2026-09-06 — calculadora offline y presupuesto de copias
+
+- `scripts/estimate_backup_cost.py`, cuatro pruebas y guía de costes: tarifas
+  S3 Irlanda y salida Railway verificadas; crecimiento sin borrado explícito.
+- QA: 4/4 dirigidas, CLI y Ruff correctos. No se repite suite general (última 653).
+- Sin cambios de runtime, migraciones, producción, cuentas ni credenciales.
+  Tamaño real y multipart pendientes. Rollback: retirar herramienta y guía;
+  no hay datos que migrar ni borrado automático. Sin commit/push/despliegue.
+
+## 2026-09-06 — recuperación y prevención de resultados parciales, sin publicar
+
+- Objetivo autorizado: reforzar seguridad/fiabilidad; sin push ni despliegue.
+- Áreas: backups emparejados, evidencia externa/CISO, filtro de eventos, checksum
+  S3/Host/HTTPS/cifrado, extracción múltiple y aviso WhatsApp, diagnósticos Brevo/Meta,
+  plantilla AWS privada. Pruebas y límites en QA del 6-sep.
+- Límites: sin cuenta AWS ni datos enviados; voz, Meta real, Stripe y restauración
+  externa pendientes. No se cambian permisos ni confirmaciones, ni esquema 55.
+- Rollback: volver a f8df1bce conserva datos/copias. Crear juego nuevo al publicar;
+  históricos con marcas distintas necesitan pareja explícita, nunca borrarlos o
+  renombrarlos por suposición. CloudFormation no se ejecuta automáticamente y el
+  plazo de retención no tiene valor por defecto. No borrar buckets como rollback.
+- Hallazgo de QA adicional: scheduler sobrevivía al cierre de la app de prueba.
+  `server.py`/`scheduler.py` añaden cierre ordenado, esperando trabajos en curso.
+- Resultado final: 653/653 tests, migraciones SQLite 55→0→55, Ruff, Bandit y
+  detección de secretos correctos; sin vulnerabilidades conocidas en dependencias
+  instaladas según pip-audit. Sin validación PostgreSQL/CloudFormation real.
+
 ## 2026-09-04 — copia verificada y publicación autorizada del esquema 55
 
 - **Autorización:** el founder solicita copia y publicación después del CI verde.

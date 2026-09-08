@@ -462,10 +462,17 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _create_documents_backup() -> Path:
+def _documents_pair(database_path: Path) -> Path:
+    for suffix in (".dump.gz", ".sql.gz", ".db"):
+        if database_path.name.endswith(suffix):
+            return database_path.with_name(database_path.name[:-len(suffix)] + ".docs.zip")
+    raise RuntimeError("Formato de copia no reconocido para asociar documentos.")
+
+
+def _create_documents_backup(database_path: Path | None = None) -> Path:
     """Copia los documentos del volumen con rutas relativas y hashes verificables."""
     root = Path(config.DOCS_PATH)
-    destination = _destination(".docs.zip")
+    destination = _documents_pair(database_path) if database_path else _destination(".docs.zip")
     manifest: dict[str, str] = {}
     with zipfile.ZipFile(
         destination, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True
@@ -546,6 +553,12 @@ def _upload_offsite(path: Path) -> bool | None:
     if config.IS_PRODUCTION and parsed.scheme != "https":
         log.error("Los backups externos deben usar HTTPS en producción.")
         return False
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        log.error("El endpoint S3 no admite credenciales, query ni fragmento.")
+        return False
+    if config.IS_PRODUCTION and not config.BACKUP_S3_SSE:
+        log.error("La copia externa requiere cifrado solicitado en producción.")
+        return False
     prefix = config.BACKUP_S3_PREFIX.strip("/")
     object_key = "/".join(part for part in (prefix, path.name) if part)
     base_path = parsed.path.rstrip("/")
@@ -558,13 +571,21 @@ def _upload_offsite(path: Path) -> bool | None:
     day = now.strftime("%Y%m%d")
     region = config.BACKUP_S3_REGION
     payload_hash = _file_sha256(path)
+    # S3 exige checksum para subir a un bucket con retención Object Lock.
+    # MD5 se usa solo como checksum de transporte; la firma sigue siendo SHA-256.
+    checksum = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            checksum.update(chunk)
+    content_md5 = base64.b64encode(checksum.digest()).decode("ascii")
     host = parsed.netloc
     canonical_headers = (
+        f"content-md5:{content_md5}\n"
         f"host:{host}\n"
         f"x-amz-content-sha256:{payload_hash}\n"
         f"x-amz-date:{amz_date}\n"
     )
-    signed_headers = "host;x-amz-content-sha256;x-amz-date"
+    signed_headers = "content-md5;host;x-amz-content-sha256;x-amz-date"
     if config.BACKUP_S3_SSE:
         canonical_headers += (
             f"x-amz-server-side-encryption:{config.BACKUP_S3_SSE}\n"
@@ -601,10 +622,11 @@ def _upload_offsite(path: Path) -> bool | None:
         timeout=config.BACKUP_S3_TIMEOUT_SECONDS,
     )
     try:
-        connection.putrequest("PUT", canonical_uri)
+        connection.putrequest("PUT", canonical_uri, skip_host=True)
         connection.putheader("Host", host)
         connection.putheader("Content-Length", str(path.stat().st_size))
         connection.putheader("Content-Type", "application/octet-stream")
+        connection.putheader("Content-MD5", content_md5)
         connection.putheader("x-amz-content-sha256", payload_hash)
         connection.putheader("x-amz-date", amz_date)
         if config.BACKUP_S3_SSE:
@@ -629,6 +651,38 @@ def _upload_offsite(path: Path) -> bool | None:
         connection.close()
 
 
+def offsite_destination_id() -> str:
+    """Huella del destino, sin publicar endpoint, bucket ni credenciales."""
+    values = (
+        config.BACKUP_S3_ENDPOINT, config.BACKUP_S3_BUCKET,
+        config.BACKUP_S3_PREFIX, config.BACKUP_S3_REGION,
+        config.BACKUP_S3_PROVIDER_NAME, config.BACKUP_S3_DATA_REGION,
+        config.BACKUP_S3_SSE,
+    )
+    return hashlib.sha256(json.dumps(values).encode()).hexdigest()
+
+
+def _upload_backup_set(database_path: Path, documents_path: Path) -> None:
+    if not any((config.BACKUP_S3_ENDPOINT, config.BACKUP_S3_BUCKET,
+                config.BACKUP_S3_ACCESS_KEY, config.BACKUP_S3_SECRET_KEY)):
+        return
+    metadata = {"destination_id": offsite_destination_id()}
+    # Si se interrumpe el proceso no queda un éxito anterior como último intento.
+    db.record_security_event("backup.offsite_started", area="backups", metadata=metadata)
+    try:
+        database_ok = _upload_offsite(database_path) is True
+        documents_ok = _upload_offsite(documents_path) is True
+    except Exception as exc:  # noqa: BLE001 - la copia local sigue siendo válida
+        log.error("Subida externa interrumpida: %s", type(exc).__name__)
+        database_ok = documents_ok = False
+    passed = database_ok and documents_ok
+    db.record_security_event(
+        "backup.offsite_passed" if passed else "backup.offsite_failed",
+        severity="info" if passed else "critical", area="backups",
+        metadata={**metadata, "database_ok": database_ok, "archive_ok": documents_ok},
+    )
+
+
 def run_backup() -> Path | None:
     """Crea, restaura y valida una copia antes de rotar o subirla fuera."""
     storage = "postgres" if config.DATABASE_URL else "sqlite"
@@ -644,7 +698,7 @@ def run_backup() -> Path | None:
                 return None
             destination, origin_counts = created
             _verify_sqlite_backup(destination, origin_counts)
-        documents_backup = _create_documents_backup()
+        documents_backup = _create_documents_backup(destination)
         _verify_documents_backup(documents_backup)
     except Exception as exc:  # noqa: BLE001
         log.error("Fallo creando o verificando el backup %s: %s", storage, exc)
@@ -654,9 +708,8 @@ def run_backup() -> Path | None:
 
     _record_result(destination, "ok", storage)
     _rotate()
-    _upload_offsite(destination)
     if documents_backup is not None:
-        _upload_offsite(documents_backup)
+        _upload_backup_set(destination, documents_backup)
     log.info(
         "Copia de seguridad verificada: %s (%d bytes)",
         destination.name,
@@ -693,15 +746,6 @@ def latest_verified_backup() -> Path | None:
     return candidate
 
 
-def _latest_documents_backup() -> Path | None:
-    copies = sorted(
-        _backup_dir().glob("*.docs.zip"),
-        key=lambda candidate: candidate.stat().st_mtime,
-        reverse=True,
-    )
-    return copies[0] if copies else None
-
-
 def verify_latest_backup_set() -> dict:
     """Repite una restauracion aislada del ultimo juego de copias disponible.
 
@@ -710,7 +754,7 @@ def verify_latest_backup_set() -> dict:
     """
     started = monotonic_time.monotonic()
     database_path = latest_verified_backup()
-    documents_path = _latest_documents_backup()
+    documents_path = _documents_pair(database_path) if database_path else None
     storage = "postgres" if config.DATABASE_URL else "sqlite"
     try:
         if database_path is None:
@@ -729,8 +773,11 @@ def verify_latest_backup_set() -> dict:
             with closing(sqlite3.connect(database_path)) as source:
                 expected = _sqlite_counts(source)
             _verify_sqlite_backup(database_path, expected)
-        if documents_path is None:
-            raise RuntimeError("No hay una copia de documentos asociada.")
+        if documents_path is None or not documents_path.is_file():
+            raise RuntimeError(
+                "No hay un ZIP asociado a esta base. Crea un nuevo juego de copias; "
+                "los juegos históricos requieren identificar su pareja manualmente."
+            )
         _verify_documents_backup(documents_path)
     except Exception as exc:  # noqa: BLE001 - debe dejar evidencia y devolver estado
         duration = round(monotonic_time.monotonic() - started, 3)

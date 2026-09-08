@@ -11,6 +11,7 @@ from datetime import date
 import json
 import logging
 import math
+import time
 
 import anthropic
 
@@ -22,15 +23,35 @@ SUPPORTED_MIMES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 _FIELDS = ("concept", "amount", "vat_rate", "date", "supplier")
 
 
-def _json_object(text: str) -> dict | None:
-    """Primer objeto JSON de una respuesta del modelo.
+def _message(client, *, business_id=None, **kwargs):
+    """Mide la llamada aunque después falle el JSON; la observación no la rompe."""
+    start = time.monotonic()
+    response = client.messages.create(**kwargs)
+    if business_id is not None:
+        try:
+            from .. import db
+            usage = response.usage
+            tokens_in = max(0, int(usage.input_tokens or 0))
+            tokens_out = max(0, int(usage.output_tokens or 0))
+            rate_in = config.FALLBACK_INPUT_USD_PER_MTOK
+            rate_out = config.FALLBACK_OUTPUT_USD_PER_MTOK
+            priced = rate_in > 0 and rate_out > 0
+            db.record_product_event(business_id, "ai_usage", json.dumps({
+                "provider": "anthropic", "model": kwargs["model"],
+                "operation": "document_extraction", "in": tokens_in, "out": tokens_out,
+                "estimated_cost_usd": (
+                    (tokens_in * rate_in + tokens_out * rate_out) / 1_000_000
+                    if priced else None
+                ),
+                "duration_ms": round((time.monotonic() - start) * 1000),
+            }))
+        except Exception as exc:  # noqa: BLE001
+            log.warning("No se pudo registrar consumo documental: %s", type(exc).__name__)
+    return response
 
-    Un PDF con varias facturas dentro se contesta como **lista** de objetos, no como
-    uno solo. Antes se recortaba desde la primera llave hasta la última, así que con
-    dos o más objetos quedaba un texto con comas sueltas que no era JSON: la
-    respuesta correcta del modelo se tiraba a la basura y el documento acababa sin
-    clasificar. Vale el primer objeto, porque todos describen el mismo papel.
-    """
+
+def _json_object(text: str, *, single: bool = False) -> dict | None:
+    """Lee JSON y señala multiplicidad; un borrador nunca toma solo la primera factura."""
     text = (text or "").strip()
     if text.startswith("```"):
         lines = text.splitlines()
@@ -51,6 +72,11 @@ def _json_object(text: str) -> dict | None:
         if isinstance(value, list):
             primero = next((item for item in value if isinstance(item, dict)), None)
             if primero is not None:
+                if len(value) > 1:
+                    if single:
+                        log.warning("Extracción múltiple: se requiere separar los documentos.")
+                        return None
+                    return {**primero, "_multiple_documents": True}
                 return primero
     return None
 
@@ -179,7 +205,7 @@ def _validated_invoice(raw: dict | None) -> dict | None:
 
 
 def extract_invoice(
-    file_bytes: bytes, mime: str, *, allow_external: bool = True
+    file_bytes: bytes, mime: str, *, allow_external: bool = True, business_id: int | None = None
 ) -> dict | None:
     """Borrador completo de una factura (imagen o PDF). Nunca crea registros."""
     if not allow_external or not config.ANTHROPIC_API_KEY or not file_bytes:
@@ -218,7 +244,7 @@ def extract_invoice(
         }
     try:
         client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        response = client.messages.create(
+        response = _message(client, business_id=business_id,
             model=config.FALLBACK_MODEL,
             max_tokens=600,
             system=(
@@ -236,7 +262,7 @@ def extract_invoice(
             for block in response.content
             if getattr(block, "type", "") == "text"
         )
-        return _validated_invoice(_json_object(text))
+        return _validated_invoice(_json_object(text, single=True))
     except Exception as exc:  # noqa: BLE001
         log.warning("No se pudo extraer el borrador de la factura: %s",
                     type(exc).__name__)
@@ -341,6 +367,7 @@ def classify_document(
     business_name: str | None = None,
     business_nif: str | None = None,
     allow_external: bool = True,
+    business_id: int | None = None,
 ) -> dict:
     """Clasifica cualquier papel admitido. Solo propone; nunca crea registros."""
     fallback = _heuristic_classification(filename, text_hint)
@@ -374,7 +401,7 @@ def classify_document(
     )
     try:
         client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        response = client.messages.create(
+        response = _message(client, business_id=business_id,
             model=config.FALLBACK_MODEL,
             max_tokens=220,
             system=(
@@ -390,7 +417,15 @@ def classify_document(
             getattr(block, "text", "") for block in response.content
             if getattr(block, "type", "") == "text"
         )
-        propuesta = _validated_classification(_json_object(text))
+        raw = _json_object(text)
+        if raw and raw.get("_multiple_documents"):
+            return {
+                "kind": "documento", "confidence": 0, "method": "ia",
+                "multiple_documents": True,
+                "reason": "Parece que hay varios documentos en este archivo. "
+                "Envíalos por separado para revisar cada uno; no he registrado ninguna factura.",
+            }
+        propuesta = _validated_classification(raw)
         if propuesta:
             return propuesta
         # Distinguir «la IA no supo» de «la IA contestó y no la entendimos» es lo que
@@ -403,14 +438,14 @@ def classify_document(
         return fallback
     except Exception as exc:  # noqa: BLE001
         log.warning(
-            "No se pudo clasificar el documento: %s: %s",
-            type(exc).__name__, str(exc)[:200],
+            "No se pudo clasificar el documento: %s",
+            type(exc).__name__,
         )
         return fallback
 
 
 def extract_expense(
-    image_bytes: bytes, mime: str, *, allow_external: bool = True
+    image_bytes: bytes, mime: str, *, allow_external: bool = True, business_id: int | None = None
 ) -> dict | None:
     """Devuelve campos validados para un borrador de gasto, nunca crea el gasto."""
     if (
@@ -430,7 +465,7 @@ def extract_expense(
     )
     try:
         client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        response = client.messages.create(
+        response = _message(client, business_id=business_id,
             model=config.FALLBACK_MODEL,
             max_tokens=400,
             system=(
@@ -458,7 +493,7 @@ def extract_expense(
             for block in response.content
             if getattr(block, "type", "") == "text"
         )
-        return _validated_result(_json_object(text))
+        return _validated_result(_json_object(text, single=True))
     except Exception as exc:  # noqa: BLE001
         log.warning("No se pudo extraer el borrador del gasto: %s", type(exc).__name__)
         return None

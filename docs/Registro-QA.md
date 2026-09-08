@@ -38,6 +38,73 @@
   quedan certificados por estas pruebas. Evidencia y rollback en
   `Admin-centro-mando-release.md`.
 
+## 2026-09-07 — administración por departamentos, candidato local
+
+- Suite completa: 668/668 en 493,461 s, SQLite y proveedores simulados.
+- Repetición final dirigida: 48/48 en 51,454 s (`test_admin_usage` y
+  `AdminCommandCenterTestCase`), tras ajustes finales de textos y validación HTTP.
+- Nuevas regresiones: páginas de facturas sin cruces de negocio, filtros y límites;
+  hipótesis FX explícita. Pruebas existentes de admin ampliadas con las seis vistas
+  y validación HTTP de paginación. Ruff, sintaxis JS y verdad documental: OK.
+- Comparación antes/después a 1265×720; navegación de departamentos, ficha y mes
+  anterior mediante formulario real en servidor local aislado. La consulta conserva
+  `#vista-consumo`. Sin errores JS observados.
+- A 390×844: resumen, cuentas, captación, costes, operaciones y privacidad sin
+  desbordamiento horizontal del documento; tablas conservan desplazamiento interno.
+  Capturas en `qa/admin-2026-09-07/`. Viewport restaurado al terminar.
+- Contraste del texto auxiliar reforzado y enlaces anteriores conservados.
+  No equivale a auditoría completa WCAG ni a prueba en Safari físico.
+- Sin migraciones (55), commit, push ni despliegue. Postgres e integraciones reales
+  pendientes; no se han ejecutado acciones contra clientes reales.
+
+## 2026-09-07 — móvil y administración, candidato local
+
+- 57/57 dirigidas: `test_admin_usage`, `WhatsappMediaTestCase` y
+  `AdminCommandCenterTestCase`. Incluyen ocho nuevas regresiones, autorización,
+  aislamiento, JSON no-store, teléfono real de la cuenta, fallos de medición,
+  baja confianza y factura recibida no extraíble. Sin proveedores reales.
+- Ruff de src y nuevas pruebas, sintaxis JS y `check_project_truth.py`: OK.
+- Navegador integrado móvil: menú legible, Crear opaco, Escape y foco de retorno.
+  Capturas en `docs/qa/2026-09-07/`. Pendiente Safari/iPhone físico y Postgres.
+- Suite general: 661/661 en 575 s. Tras añadir cuatro pruebas y ajustar dos guardas
+  de WhatsApp, las 57 dirigidas se repitieron sobre el código final: OK.
+  Cobertura combinada de 665 pruebas; no es una segunda suite general de 665.
+  Sin migración, commit, push ni despliegue. Límites en `Revision-frentes-2026-09-07.md`.
+
+## 2026-09-06 — presupuesto offline
+
+- `tests.test_backup_cost_estimate`: 4/4, sin runtime ni credenciales; Ruff y CLI OK.
+- 1 GiB/30 juegos: 0,69 + 0,0003 + 1,610612736 = 2,300912736 USD/mes.
+- Sin borrado suma 365 juegos al año, no 30. Tamaño y factura reales pendientes.
+- No se repite suite general: 653 es la última ejecución, no el recuento ampliado.
+
+## 2026-09-06 — recuperación y revisión conservadora (candidato local)
+
+- Primera suite general: 648 pruebas, 647 correctas y un error Windows al eliminar
+  una BD temporal ocupada. Se observaron tareas del scheduler después del cierre
+  de clientes de prueba. No se considera verde esa ejecución.
+- Corrección: cierre de la aplicación detiene el scheduler esperando trabajos en
+  curso y libera su referencia. Se añade regresión de cierre repetido.
+- Regresiones dirigidas iniciales: 18/18 backup/CISO y 25/25 integración/WhatsApp;
+  tras checksum S3 y plantilla, 23/23 backup/CISO/guardas. Proveedores simulados,
+  restauración SQLite temporal real y ruta HTTP admin probada. Sin tráfico de negocio.
+- Ruff, Bandit (umbrales CI), diff-check y verdad del proyecto correctos.
+- Suite general final: **653/653 correctas en 533,180 s**, Python 3.12 Windows,
+  entorno sin `.env` y BD predeterminada temporal. No se repitió el bloqueo Windows.
+  Ciclo independiente SQLite **55→0→55** correcto. Ruff, compilación, Bandit con
+  umbrales CI y detector de secretos correctos; `pip-audit` no encontró
+  vulnerabilidades conocidas en dependencias instaladas (el proyecto local no se
+  audita como paquete PyPI). Esto no equivale a pentest ni a validación productiva.
+- Se descartó un intento intermedio al revisar el enlace con lifespan: el cierre
+  debe estar en el gestor existente, no en un handler on_event separado. La prueba
+  nueva comprueba el orden tareas→pool también ante una excepción. Guardas finales
+  aisladas: 6/6. El detector de secretos solo actualizó una línea ya registrada y
+  se marcó una URL ficticia de autenticación como fixture; no se añadieron secretos.
+- Límites: no PostgreSQL local disponible por CLI; sin CloudFormation real, sin
+  bucket creado, sin restauración externa, sin activación de voz ni plantillas Meta.
+  No se ha hecho push, ni despliegue, ni cambios sobre producción. La plantilla
+  tiene contratos locales, no validación real de AWS. No se certifica seguridad.
+
 ## 2026-09-04 — clasificación de un PDF con varias facturas
 
 - **Medición contra el modelo real** (`claude-haiku-4-5-20251001`), con PDF generado

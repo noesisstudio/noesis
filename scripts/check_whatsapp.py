@@ -42,7 +42,7 @@ _fallos = 0
 def _cargar_env() -> None:
     """Carga el .env de la raiz sin depender de python-dotenv."""
     ruta = RAIZ / ".env"
-    if not ruta.exists():
+    if os.getenv("PYTHON_DOTENV_DISABLED") == "1" or not ruta.exists():
         return
     for linea in ruta.read_text(encoding="utf-8").splitlines():
         linea = linea.strip()
@@ -326,6 +326,8 @@ def revisar_firma(base: str, app_secret: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    global _fallos
+    _fallos = 0
     parser = argparse.ArgumentParser(description="Comprobador del canal de WhatsApp.")
     parser.add_argument(
         "--url",
@@ -339,9 +341,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     _cargar_env()
-    token = os.getenv("WHATSAPP_TOKEN", "")
-    phone_id = os.getenv("WHATSAPP_PHONE_ID", "")
-    version = os.getenv("META_GRAPH_VERSION", "v23.0")
+    token = os.getenv("WHATSAPP_TOKEN", "").strip()
+    phone_id = os.getenv("WHATSAPP_PHONE_ID", "").strip()
+    version = os.getenv("META_GRAPH_VERSION", "v23.0").strip()
 
     print(f"Bynoesis - canal de WhatsApp (Graph {version})")
     if not args.sin_red:
@@ -354,7 +356,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 _decir(FALLO, "WHATSAPP_PHONE_ID esta vacio.")
             revisar_suscripcion(app_id, os.getenv("WHATSAPP_APP_SECRET", ""), version, args.url)
-            revisar_plantillas(token, version, args.waba or os.getenv("WHATSAPP_WABA_ID", ""))
+            revisar_plantillas(token, version, (args.waba or os.getenv("WHATSAPP_WABA_ID", "")).strip())
     revisar_webhook(args.url, os.getenv("WHATSAPP_VERIFY_TOKEN", ""))
     revisar_firma(args.url, os.getenv("WHATSAPP_APP_SECRET", ""))
 

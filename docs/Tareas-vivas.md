@@ -21,6 +21,15 @@
 - Copias independientes, WhatsApp y demás candidatos locales se revisan aparte;
   no entran en el commit del centro de mando.
 
+## Seguimiento del informe del socio — 7-sep
+
+- Revisar candidato móvil/admin/WhatsApp; Safari físico y Postgres antes de publicar.
+- Medir APIs restantes/actor y conciliar facturas. FX ya parametrizado, no cotización en vivo.
+- Cola duradera para media, paginación del resto de listados, roles internos y contexto documental reciente.
+- Revisar navegación administrativa por seis apartados y fichas; candidato local.
+- Voz, acuerdos/regiones, variables de marca y copia externa siguen pendientes.
+- Cal.com aplazado. Detalle en [revisión de frentes](Revision-frentes-2026-09-07.md).
+
 > Único listado vivo de pendientes. La fotografía verificable está en
 > [`project-state.json`](project-state.json); planes y traspasos no duplican estados.
 
@@ -42,6 +51,17 @@
 - [ ] Nombrar sustituto y asesoría jurídica en la tabla de contactos de
   `cumplimiento/Procedimiento-brechas.md`: a las 3 de la mañana no se busca
   abogado, se llama al que ya está en la tabla.
+
+- [ ] Medir tamaño comprimido y aprobar presupuesto/retención: calculadora en
+  [[Costes-backups-y-desarrollo-interno]]. Multipart antes de superar PUT simple;
+  no activar lifecycle por una estimación económica.
+
+- [ ] Revisar/publicar solo con autorización el candidato local del 6-sep de
+  backups, diagnóstico y multiplicidad documental. Crear un juego nuevo después:
+  los ZIP históricos requieren asociación explícita. Esquema 55 sin cambios.
+- [ ] Aprobar proveedor, región y retención de la copia independiente. Propuesta
+  no ejecutada en [[Copias-independientes-AWS]]. Cuenta/MFA, contrato, ensayo con
+  ficticios, permisos y restauración fuera de Railway pendientes. No hay bucket.
 - [x] Validación técnica PostgreSQL 16 no productiva del candidato 55: migración,
   baja con factura, idempotencia/concurrencia, aislamiento, bandeja, outbox,
   exportación y rollback 55→54→53→54→55. Código anterior 53 probado sobre BD 55;
@@ -99,8 +119,8 @@
   autoservicio de Railway y archivarlo; comprobar en el panel la región de los
   servicios web y Postgres, porque `railway.json` no fija ninguna y el valor por
   defecto de la cuenta es estadounidense; si están fuera de la UE, moverlos a
-  `europe-west4-drams3a` **mientras el volumen siga vacío**, ya que la migración de
-  volumen causa parada y se encarece con cada cliente real. El candidato ya eliminó
+  una región europea adecuada con backup y ventana acordada: el volumen **ya tiene
+  datos** y no se debe tratar como vacío. El candidato ya eliminó
   el valor `us-east-1` por defecto: una copia externa no sale si faltan región de
   firma, proveedor o residencia contractual. Falta verificar y configurar esos
   valores reales, no deducirlos del endpoint.

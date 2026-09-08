@@ -5886,11 +5886,13 @@ class WhatsappMediaTestCase(unittest.TestCase):
             ']\n```'
         )
         self.assertEqual(extraction._json_object(uno)["kind"], "ticket")
-        # Todos los objetos describen el mismo papel: vale el primero.
+        # La clasificación conserva evidencia de multiplicidad; no autoriza un borrador parcial.
         primero = extraction._json_object(lista_de_tres)
         self.assertIsNotNone(primero, "una lista de objetos no puede descartarse")
         self.assertEqual(primero["kind"], "factura_recibida")
         self.assertEqual(primero["reason"], "la primera")
+        self.assertTrue(primero["_multiple_documents"])
+        self.assertIsNone(extraction._json_object(lista_de_tres, single=True))
         # Las formas que ya funcionaban siguen funcionando.
         for texto, esperado in (
             ('```json\n{"kind": "albaran", "confidence": 70, "reason": "y"}\n```', "albaran"),
@@ -5942,6 +5944,31 @@ class WhatsappMediaTestCase(unittest.TestCase):
         # Y la respuesta lo dice, en vez de soltar un identificador interno.
         self.assertIn("vuelto a leer", replies[-1])
         self.assertNotIn("ya estaba guardado como documento", replies[-1])
+
+    def test_multiple_document_pdf_is_kept_without_partial_invoice_or_duplicate(self):
+        from noesis.adapters import extraction
+        from noesis.documents import repo as docrepo, service
+
+        business, _ = self._connected_business("Varias facturas")
+        proposal = {"kind": "documento", "confidence": 0, "method": "ia",
+                    "multiple_documents": True, "reason": "Envíalos por separado."}
+        replies = []
+        message = {"from": "34600111222", "id": "multiple-1",
+                   "media_document_id": "multi", "media_document_mime": "application/pdf",
+                   "media_document_filename": "varias.pdf"}
+        with (
+            patch.object(whatsapp, "_download_media", return_value=b"%PDF-1.4 multiple"),
+            patch.object(extraction, "classify_document", return_value=proposal),
+            patch.object(service, "invoice_draft") as draft,
+            patch.object(whatsapp, "send", side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            first = whatsapp.handle_inbound(message)["results"][0]
+            second = whatsapp.handle_inbound({**message, "id": "multiple-2"})["results"][0]
+        draft.assert_not_called()
+        self.assertFalse(first["pending"])
+        self.assertFalse(second["pending"])
+        self.assertEqual(len(docrepo.list_for_business(business["id"])), 1)
+        self.assertIn("por separado", replies[-1])
 
     def test_whatsapp_pdf_caption_links_the_right_project_and_client(self):
         from fpdf import FPDF

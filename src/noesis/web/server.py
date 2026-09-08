@@ -50,7 +50,7 @@ from .routers import (
     webhooks,
     whatsapp_business,
 )
-from .scheduler import start_scheduler
+from .scheduler import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
@@ -60,7 +60,11 @@ async def lifespan(app: "FastAPI"):
     try:
         yield
     finally:
-        db.close_pool()
+        try:
+            # No cerrar conexiones mientras una tarea aún las está utilizando.
+            stop_scheduler()
+        finally:
+            db.close_pool()
 
 
 app = FastAPI(

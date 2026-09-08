@@ -264,13 +264,14 @@ document.addEventListener('keydown', e => {
    pero con objetivos táctiles grandes y cierre por arrastre visual. */
 function qcSheet() {
   closeModal();
+  const opener = document.activeElement;
   const item = (href, label, hint) => `<a class="sheet-item" href="/b/${BIZ}/${href}">
     <b>${label}</b><small>${hint}</small></a>`;
   const ov = document.createElement('div');
   ov.className = 'modal-overlay sheet-overlay';
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Crear">
     <div class="sheet-grip" aria-hidden="true"></div>
-    <div class="sheet-title">¿Qué quieres crear?</div>
+    <div class="sheet-title">¿Qué quieres crear? <button type="button" class="btn sheet-close">Cerrar</button></div>
     ${item('facturas?nuevo=1', 'Factura', 'cobra por tu trabajo')}
     ${item('presupuestos?nuevo=1', 'Presupuesto', 'para cerrar un encargo')}
     ${item('clientes?nuevo=1', 'Cliente', 'una ficha nueva')}
@@ -279,7 +280,19 @@ function qcSheet() {
     ${item('asistente', 'Trabajo (por chat)', 'díselo a Bynoesis con tus palabras')}
   </div>`;
   document.body.appendChild(ov);
-  ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });
+  const closeSheet = () => { closeModal(); if (opener && opener.isConnected) opener.focus(); };
+  ov.querySelector('.sheet-close').addEventListener('click', closeSheet);
+  ov.querySelector('.sheet-close').focus();
+  ov.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); closeSheet(); }
+    if (e.key === 'Tab') {
+      const items = Array.from(ov.querySelectorAll('button, a[href]'));
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  ov.addEventListener('click', e => { if (e.target === ov) closeSheet(); });
 }
 
 /* Apertura directa del formulario de alta al llegar con ?nuevo=1 desde el menú

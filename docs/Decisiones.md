@@ -15,6 +15,30 @@ validar identificadores extranjeros; tampoco sustituye la revisión fiscal. Las
 facturas recibidas confirmadas siguen siendo corregibles porque no forman parte de
 la cadena inmutable de facturas emitidas.
 
+## Administración por tareas (2026-09-07)
+
+Separar resumen, cuentas, captación, costes, operaciones y privacidad mediante
+navegación progresiva. Mantener acciones, sesiones y autorización existentes,
+no dar soporte implícito ni ampliar acceso a datos. FX configurable conserva
+0,92 por defecto y se identifica como estimación, no como cotización en vivo.
+Sin esquema nuevo, carga diferida ni despliegue en este paso.
+
+## Consumo observable por negocio (2026-09-07)
+
+No atribuir a empleados consumo que solo lleva business_id. Mostrar proveedor/modelo,
+período y cobertura; separar tokens observados, coste estimado y factura real.
+La extracción registra metadatos sin contenido y falla de forma no bloqueante.
+El teléfono operativo del titular no se confunde con conexiones comerciales Meta.
+La clasificación aplicada por confianza es la que usa WhatsApp para decidir el flujo.
+
+## Recuperación demostrable y revisión conservadora (2026-09-06)
+
+La configuración de un bucket no es evidencia de envío. El panel distingue copia
+local, aceptación externa y restauración; no garantiza invulnerabilidad. Se prepara
+AWS privado europeo con escritor sin lectura/borrado y retención GOVERNANCE como
+propuesta pendiente de aprobación, no como servicio ya activo. Los archivos con
+varios documentos se revisan por separado, nunca registrando solo el primero.
+
 ## Medir el trabajo útil sin gobernar el trabajo (2026-08-31)
 
 El Registro Interno de Valor se añade como observador, no como un nuevo motor de

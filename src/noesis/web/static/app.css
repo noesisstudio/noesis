@@ -1448,7 +1448,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .public-menu summary::-webkit-details-marker { display:none; }
 .public-menu nav { position:absolute; right:0; top:47px; width:220px; padding:8px; background:#fff;
   border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); display:grid; }
-.public-menu nav a { padding:10px 12px; border-radius:8px; }
+.public-menu nav a { padding:10px 12px; border-radius:8px; color:var(--text); min-height:44px; }
 .public-menu nav a:hover { background:var(--brand-soft); color:var(--brand); }
 .public-site .btn { min-height:42px; padding:10px 16px; border-radius:8px; }
 .public-site .btn.light { background:#fff; border-color:#fff; color:var(--brand); font-weight:750; }
@@ -2488,6 +2488,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 /* Hoja inferior "Crear" (bottom sheet). */
 .sheet-overlay { align-items:flex-end; padding:0; }
 .sheet { width:100%; max-width:none; border-radius:20px 20px 0 0;
+  background:var(--surface); color:var(--text); box-shadow:var(--shadow);
+  max-height:calc(100dvh - 24px); overflow-y:auto; overscroll-behavior:contain;
   padding:8px 14px calc(16px + env(safe-area-inset-bottom));
   animation:sheet-up .18s ease; }
 @keyframes sheet-up { from { transform:translateY(40px); opacity:.4; }
@@ -2498,7 +2500,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   padding:0 6px 10px; }
 .sheet-item { display:block; padding:13px 12px; border-radius:12px; }
 .sheet-item b { display:block; font-size:15px; }
-.sheet-item small { display:block; color:var(--faint); font-size:12px;
+.sheet-item small { display:block; color:var(--muted); font-size:12px;
   margin-top:1px; }
 .sheet-item:active { background:var(--brand-soft); }
 @media (min-width:821px) { .sheet-overlay { display:none; } }

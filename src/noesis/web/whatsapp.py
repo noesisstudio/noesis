@@ -1036,7 +1036,20 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
         else " Hay varias coincidencias: revisa el cliente o proyecto en Documentos."
         if context.get("ambiguous") else ""
     )
-    detected_kind = classification.get("kind") or document.get("kind") or "documento"
+    if classification.get("multiple_documents"):
+        send(phone, classification["reason"], business_id=business["id"])
+        return {"phone": phone, "media": "image", "ingested": True,
+                "pending": False, "document_id": document["id"]}
+    detected_kind = classification.get("applied_kind") or document.get("kind") or "documento"
+    if detected_kind == "documento" and classification.get("kind") in {
+        "factura_recibida", "factura_emitida", "contrato", "presupuesto", "albaran",
+    }:
+        send(phone, "He guardado la foto, pero no tengo confianza suficiente en el "
+             "tipo de documento. Revísala en Documentos antes de registrarla."
+             + context_note, business_id=business["id"])
+        return {"phone": phone, "media": "image", "ingested": True,
+                "pending": False, "document_id": document["id"],
+                "classification": "documento"}
     if detected_kind in {"factura_recibida", "factura_emitida"}:
         draft = docservice.invoice_draft(business["id"], document["id"])
         if draft and draft.get("direction") == "emitida":
@@ -1078,9 +1091,12 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             phone,
             ("Ya tenía esta foto archivada y la he vuelto a leer. "
              if already_stored else "He guardado la foto. ")
-            + "Parece una factura emitida por ti, así que no "
-            "la reemitiré ni la meteré en Veri*Factu. Revísala en Documentos para "
-            "confirmar que es histórica." + context_note,
+            + ("Parece una factura emitida por ti, así que no "
+             "la reemitiré ni la meteré en Veri*Factu. Revísala en Documentos para "
+             "confirmar que es histórica." if detected_kind == "factura_emitida"
+             else "Parece una factura recibida, pero no he "
+             "podido preparar un borrador válido. Revísala en Documentos; no la he registrado.")
+            + context_note,
             business_id=business["id"],
         )
         return {"phone": phone, "media": "image", "ingested": True,
@@ -1107,7 +1123,7 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
     fields = None
     if _extraction_budget_ok(business["id"]):
         fields = extraction.extract_expense(
-            data, mime,
+            data, mime, business_id=business["id"],
             allow_external=db.integration_enabled(
                 business["id"], "ai_external",
                 available=bool(config.ANTHROPIC_API_KEY),
@@ -1209,7 +1225,12 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
         else " Hay varias coincidencias: revisa el cliente o proyecto en Documentos."
         if context.get("ambiguous") else ""
     )
-    kind = classification.get("kind") or "documento"
+    if classification.get("multiple_documents"):
+        send(phone, classification["reason"], business_id=business["id"])
+        return {"phone": phone, "media": "document", "ingested": True,
+                "pending": False, "document_id": document["id"],
+                "already_stored": already_stored, "classification": "documento"}
+    kind = classification.get("applied_kind") or document.get("kind") or "documento"
     if kind == "factura_recibida":
         draft = docservice.invoice_draft(business["id"], document["id"])
         if draft and draft.get("total"):
@@ -1342,7 +1363,7 @@ def _ingest_worker_media(worker: dict, phone: str, message: dict) -> dict:
     amount = document.get("ocr_amount")
     if message.get("image_id") and not amount and worker.get("can_submit_costs"):
         fields = extraction.extract_expense(
-            data, mime,
+            data, mime, business_id=business_id,
             allow_external=db.integration_enabled(
                 business_id, "ai_external", available=bool(config.ANTHROPIC_API_KEY)
             ),

@@ -281,7 +281,7 @@ def classify(business_id: int, doc_id: int) -> dict | None:
     data, mime, filename = payload
     business = db.get_business(business_id) or {}
     proposal = extraction.classify_document(
-        data, mime, filename,
+        data, mime, filename, business_id=business_id,
         text_hint=doc.get("ocr_text"),
         business_name=business.get("name"), business_nif=business.get("nif"),
         allow_external=db.integration_enabled(
@@ -350,7 +350,7 @@ def invoice_draft(business_id: int, doc_id: int) -> dict | None:
         return None
     data, mime, _filename = payload
     draft = extraction.extract_invoice(
-        data, mime,
+        data, mime, business_id=business_id,
         allow_external=db.integration_enabled(
             business_id, "ai_external", available=bool(config.ANTHROPIC_API_KEY)
         ),

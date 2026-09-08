@@ -840,6 +840,18 @@ def process_recurring_invoices() -> int:
     return len(db.process_due_recurring_invoices())
 
 
+def stop_scheduler() -> None:
+    """Espera los trabajos en curso y libera el programador al cerrar la app."""
+    global _scheduler
+    scheduler = _scheduler
+    if scheduler is not None:
+        try:
+            if scheduler.running:
+                scheduler.shutdown(wait=True)
+        finally:
+            _scheduler = None
+
+
 def start_scheduler() -> BackgroundScheduler:
     global _scheduler
     if _scheduler:

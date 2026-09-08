@@ -1,0 +1,68 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Bynoesis: copia independiente privada. Revisar y autorizar antes de desplegar; no genera claves.",
+  "Parameters": {
+    "RetentionDays": {
+      "Type": "Number", "MinValue": 1, "MaxValue": 365,
+      "Description": "Plazo operativo aprobado de bloqueo. Sin valor por defecto: requiere decision humana."
+    }
+  },
+  "Resources": {
+    "BackupBucket": {
+      "Type": "AWS::S3::Bucket", "DeletionPolicy": "Retain", "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true, "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true, "RestrictPublicBuckets": true
+        },
+        "OwnershipControls": {"Rules": [{"ObjectOwnership": "BucketOwnerEnforced"}]},
+        "VersioningConfiguration": {"Status": "Enabled"},
+        "BucketEncryption": {"ServerSideEncryptionConfiguration": [
+          {"ServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
+        ]},
+        "ObjectLockEnabled": true,
+        "ObjectLockConfiguration": {
+          "ObjectLockEnabled": "Enabled",
+          "Rule": {"DefaultRetention": {"Mode": "GOVERNANCE", "Days": {"Ref": "RetentionDays"}}}
+        }
+      }
+    },
+    "BackupWriter": {
+      "Type": "AWS::IAM::User",
+      "Properties": {"Policies": [{
+        "PolicyName": "UploadOnly",
+        "PolicyDocument": {
+          "Version": "2012-10-17", "Statement": [{
+            "Effect": "Allow", "Action": "s3:PutObject",
+            "Resource": {"Fn::Sub": "${BackupBucket.Arn}/noesis/*"}
+          }]
+        }
+      }]}
+    },
+    "BackupBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {"Ref": "BackupBucket"},
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {
+            "Sid": "DenyInsecureTransport", "Effect": "Deny", "Principal": "*", "Action": "s3:*",
+            "Resource": [{"Fn::GetAtt": ["BackupBucket", "Arn"]}, {"Fn::Sub": "${BackupBucket.Arn}/*"}],
+            "Condition": {"Bool": {"aws:SecureTransport": "false"}}
+          },
+          {
+            "Sid": "WriterCannotReadDeleteOrChangeRetention", "Effect": "Deny",
+            "Principal": {"AWS": {"Fn::GetAtt": ["BackupWriter", "Arn"]}},
+            "Action": ["s3:GetObject", "s3:GetObjectVersion", "s3:DeleteObject", "s3:DeleteObjectVersion",
+                       "s3:BypassGovernanceRetention", "s3:PutObjectRetention", "s3:PutObjectLegalHold"],
+            "Resource": {"Fn::Sub": "${BackupBucket.Arn}/*"}
+          }
+        ]}
+      }
+    }
+  },
+  "Outputs": {
+    "Bucket": {"Value": {"Ref": "BackupBucket"}},
+    "UploadUser": {"Value": {"Ref": "BackupWriter"}},
+    "Region": {"Value": {"Ref": "AWS::Region"}}
+  }
+}

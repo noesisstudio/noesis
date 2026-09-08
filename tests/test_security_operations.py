@@ -162,6 +162,46 @@ class SecurityOperationsTestCase(unittest.TestCase):
                             for item in report["findings"]))
         self.assertEqual(len(db.list_security_events()), before)
 
+    def test_offsite_configuration_alone_never_means_success(self):
+        settings = {
+            "BACKUP_S3_ENDPOINT": "https://storage.example",
+            "BACKUP_S3_BUCKET": "private", "BACKUP_S3_ACCESS_KEY": "test-access",
+            "BACKUP_S3_SECRET_KEY": "test-secret",  # pragma: allowlist secret
+            "BACKUP_S3_REGION": "eu-test", "BACKUP_S3_PROVIDER_NAME": "Test",
+            "BACKUP_S3_DATA_REGION": "EU",
+        }
+        def finding():
+            return next(item for item in security_center.build_security_report()["findings"]
+                        if item["control"] == "Copia fuera del servidor")
+
+        with patch.multiple(config, **settings):
+            self.assertEqual(finding()["level"], "warning")
+            metadata = {"destination_id": backups.offsite_destination_id()}
+            db.record_security_event("backup.offsite_passed", metadata=metadata)
+            self.assertEqual(finding()["level"], "ok")
+            # La evidencia no desaparece entre aperturas del panel.
+            for _ in range(105):
+                db.record_security_event("admin.panel_viewed")
+            self.assertEqual(finding()["level"], "ok")
+            db.record_security_event("backup.offsite_failed", metadata=metadata)
+            self.assertEqual(finding()["level"], "critical")
+            db.record_security_event("backup.offsite_started", metadata=metadata)
+            self.assertEqual(finding()["level"], "warning")
+            db.record_security_event("backup.offsite_passed", metadata=metadata)
+            with patch.object(config, "BACKUP_S3_BUCKET", "another-destination"):
+                self.assertEqual(finding()["level"], "warning")
+
+    def test_restore_evidence_expires(self):
+        from datetime import datetime, timedelta
+
+        with patch.object(db, "_now", return_value=(
+            datetime.now() - timedelta(days=9)
+        ).isoformat(timespec="seconds")):
+            db.record_security_event("backup.restore_drill_passed")
+        finding = next(item for item in security_center.build_security_report()["findings"]
+                       if item["control"] == "Simulacro de restauracion")
+        self.assertEqual(finding["level"], "warning")
+
     def test_auth_pressure_is_aggregated_without_identifiers(self):
         db.record_auth_attempt(
             "hash-no-reversible", "2099-01-01T10:00:00",

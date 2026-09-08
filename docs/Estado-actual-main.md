@@ -22,11 +22,35 @@ modelo con límites explícitos; no equivale a factura completa del proveedor.
 Se publica solo el panel y sus dependencias; los trabajos locales de copias,
 WhatsApp, extracción y paginación no se incluyen. Ver `Admin-centro-mando-release.md`.
 
+## Candidato local — 7-sep
+
+Administración reorganizada por departamentos y ficha por tareas, con navegación
+activa y adaptación móvil. Paginación SQL opcional de facturas y conversión FX
+configurable. Detalles y límites en `Admin-organizacion-2026-09-07.md`.
+No publicado; no se ha localizado el nuevo commit de teléfono del socio.
+
+Correcciones móviles, teléfono titular en admin, consumo por cuenta/proveedor/modelo
+y revisión conservadora en WhatsApp. Sin publicar. Alcance y pendientes en
+[revisión de frentes](Revision-frentes-2026-09-07.md). No es gasto completo por empleado.
+
 > Lectura humana del estado. La fuente verificable para migración, pruebas, precios,
 > política de suscripción y publicación es [`project-state.json`](project-state.json).
 > Los pendientes solo viven en [[Tareas-vivas]].
 
 ## Producto construido
+
+- Calculadora offline de costes AWS/Railway: [[Costes-backups-y-desarrollo-interno]].
+  Cuatro pruebas dirigidas adicionales, sin modificar runtime ni contratar servicios.
+
+- Candidato local del 6-sep, **sin publicar**: backups BD/ZIP emparejados; CISO
+  exige evidencia reciente de subida completa al destino actual y caduca simulacros.
+  S3 añade checksum para Object Lock y evita duplicar Host. La extracción múltiple
+  no devuelve una primera factura parcial y WhatsApp pide separar el archivo.
+  Diagnósticos de correo/Meta corregidos. AWS preparado, no contratado ni creado:
+  [[Copias-independientes-AWS]]. Sin migración ni cambios de permisos.
+  El cierre de la app detiene el scheduler antes de liberar la base de datos.
+  Suite local final 653/653, migraciones SQLite 55→0→55 y análisis estáticos
+  correctos; PostgreSQL y proveedores reales pendientes antes de publicar.
 
 - Revisión aislada del 4-sep: pypdf actualizado a 6.16.1 por tres CVE y puerta
   legal de correo alineada con el proveedor efectivo (Brevo tiene prioridad sobre

@@ -13,6 +13,29 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
 
 ## Núcleo
 
+- `web/templates/admin_navigation.html` y `static/admin-workspace.css/js`:
+  navegación progresiva por departamentos/ficha; no cambia permisos ni POST.
+- `db.list_invoices`: filtro de cliente y paginación SQL opcionales;
+  `routers/invoicing.api_invoices` expone límites validados sin cambiar defaults.
+- `config.COST_USD_TO_EUR`: hipótesis configurable de conversión para estimaciones.
+
+- `db.admin_api_usage`: consumo por negocio/mes/proveedor/modelo.
+  `web/routers/admin.py`: JSON administrativo auditado y ficha con teléfono titular.
+- `adapters/extraction._message`: observación documental fail-open.
+  `tests/test_admin_usage.py`: autorización, aislamiento y clasificación conservadora.
+
+- `scripts/estimate_backup_cost.py`: presupuesto offline S3/Railway por tamaño,
+  frecuencia y días. Sin runtime ni borrado; `tests/test_backup_cost_estimate.py`.
+
+- Fiabilidad 6-sep: `web/backups.py` empareja BD/ZIP y registra subida externa;
+  `security_center.py` exige evidencia reciente por destino. El filtro parametrizado
+  `db.list_security_events(event_types=...)` no pierde esos eventos entre aperturas
+  del panel. `infra/backups/aws-s3.json` es propuesta manual no desplegada.
+- `adapters/extraction.py` rechaza borradores parciales de respuestas múltiples;
+  `web/whatsapp.py` pide separación y conserva el archivo sin duplicarlo.
+- `web/server.py` cierra `web/scheduler.py` desde lifespan antes de cerrar el pool
+  de datos; espera los trabajos activos para evitar operaciones después del cierre.
+
 - `src/noesis/db.py`: única frontera de datos. Toda operación de negocio filtra por
   `business_id`. Incluye proyectos, permisos, conciliación, outboxes y entregas a
   gestoría. La recuperación de acceso consume token, cambia credencial y revoca
