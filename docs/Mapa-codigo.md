@@ -1,5 +1,15 @@
 # Mapa de código
 
+## Aprendizaje supervisado — 8-sep
+
+`learning.py` prepara equivalencias literales, diálogo de factura y ofertas de
+aprendizaje; `chat.handle` conserva el interceptador de revisión antes de herramientas.
+`action_review.py` aporta resultado/propuesta para no aprender de una operación
+fallida. `agent.py` excluye `language_rule` del prompt de sistema.
+Persistencia existente: `business_memories`, `whatsapp_pending_actions` con prefijos
+`learn:`/`clarify:`, `product_events`. API GET de informe en `routers/assistant.py`.
+Sin esquema nuevo; flags dependientes y apagados. Véase el runbook de aprendizaje.
+
 ## Confirmación conversacional y voz privada — 8-sep
 
 `action_review.py` intercepta herramientas en `chat.handle`, fija identidad y

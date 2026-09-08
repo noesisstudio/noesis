@@ -2,7 +2,7 @@
   "state_date": "2026-09-08",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 683,
+  "verified_test_count": 702,
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_644_isolated_tests_no_schema_changes_deployment_verification_after_push",
   "production": {
     "url": "https://bynoesis.com",
@@ -57,6 +57,7 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
+    "supervised_learning_candidate": "local_not_deployed_default_off_requires_review_flag_explicit_post_success_approval_exact_tenant_rules_never_system_prompt_invoice_clarification_content_free_event_report_no_retraining_no_schema_change",
     "conversation_review_candidate": "local_not_deployed_default_off_NOESIS_ASSISTANT_REVIEW_ENABLED_tenant_actor_scoped_single_use_review_correction_explicit_clients_stale_data_guard_no_schema_change",
     "private_voice_candidate": "authenticated_bounded_private_cpu_whisper_service_no_external_fallback_real_synthetic_small_model_http_transcription_verified_windows_MKL_workaround_linux_build_real_corpus_hosting_and_pilot_pending",
     "customer_reliability_candidate": "no_schema_change_local_invoice_arithmetic_date_and_spanish_tax_id_review_received_invoice_authenticated_correction_repeated_photo_reread_timezone_complete_ics_expanded_zero_cost_nlu_explicit_client_supplier_creation_safe_user_invitation_guidance_and_23_message_synthetic_customer_journey_not_deployed",

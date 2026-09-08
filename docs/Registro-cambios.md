@@ -48,6 +48,21 @@ Documentación únicamente: no se toca `src/`, ni esquema, ni pruebas, ni
 credenciales. Sin límites externos nuevos. Riesgo: que Meta vuelva a renombrar la
 pantalla; la guía ya advierte de ello en el paso 2. Rollback: revertir el commit.
 
+## 2026-09-08 — aprendizaje supervisado y aclaraciones (candidato local)
+
+Objetivo: convertir correcciones verificadas en equivalencias explícitamente
+aprobadas sin aumentar autonomía. Áreas: `learning.py`, chat, revisión, contexto
+del agente, API de informe, configuración, tests y runbook. Sin migración.
+Flag nuevo apagado y dependiente de revisión. Guía de factura por cliente/concepto/
+importe y telemetría sin contenido; memorias literales visibles y eliminables.
+19 pruebas nuevas y humo HTTP autenticado con aislamiento; regresión completa
+702/702 documentada en Registro-QA. Sin push, despliegue, compras ni servicios reales.
+Riesgo: interpretación, memoria persistente y concurrencia; diagnóstico mediante
+recuentos por negocio y reproducción sintética, no lectura global de chats.
+Rollback: apagar aprendizaje, reiniciar y dejar vencer pendientes; no restaurar
+BD ni deshacer acciones confirmadas. Revisión puede seguir activa. No es
+reentrenamiento ni garantía de comprender cualquier mensaje.
+
 ## 2026-09-08 — revisión conversacional y Whisper privado (candidato local)
 
 Objetivo: corregir interpretaciones peligrosas y revisar cliente/importe/acción

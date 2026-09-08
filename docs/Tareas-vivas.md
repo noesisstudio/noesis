@@ -1,5 +1,16 @@
 # Tareas vivas
 
+## Aprendizaje supervisado — candidato local 8-sep
+
+- [x] Corrección, acción confirmada y APRENDER explícito; memoria literal visible,
+  eliminable y aislada, sin convertirla en instrucciones privilegiadas del modelo.
+- [x] Factura incompleta guiada por campos y telemetría sin contenido; informe
+  autenticado por negocio y CLI. No se añade una pantalla administrativa.
+- [ ] Revisión del candidato, PostgreSQL, corpus de conversaciones ca/es y piloto
+  con voz/WhatsApp reales. No afirmar comprensión universal ni aprendizaje autónomo.
+- [ ] Ampliar diálogo a otros procesos y casos ambiguos solo tras evaluaciones.
+  Guía: [[Aprendizaje-supervisado-Bynoesis]]. Flags apagados, no publicado.
+
 ## Confirmación y voz privada — candidato local 8-sep
 
 - [x] Preparar/revisar/confirmar/corregir detrás de flag apagado; sin clientes

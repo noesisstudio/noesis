@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 8-sep — candidato de aprendizaje supervisado, no desplegado
+
+Correcciones aprobadas explícitamente se convierten en equivalencias literales
+por negocio; cada reutilización exige revisión y confirmación. Guía persistente
+de factura incompleta y recuentos de fallos/aclaraciones sin contenido personal.
+`NOESIS_ASSISTANT_LEARNING_ENABLED=false`, dependiente del flag de revisión.
+No reentrena modelos ni modifica código/permisos. Sin migración ni producción.
+Detalle y límites: [[Aprendizaje-supervisado-Bynoesis]].
+
 ## 8-sep — candidato local de confirmación y voz privada
 
 Bloqueo de interpretaciones peligrosas y revisión persistente de herramientas con

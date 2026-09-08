@@ -2,6 +2,15 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Aprender lenguaje no concede autonomía (2026-09-08)
+
+Una corrección solo se recuerda después de completar la acción revisada y recibir
+APRENDER explícito. La equivalencia es literal y privada por negocio; no modifica
+permisos ni se inyecta al modelo como instrucción de sistema. Toda reutilización
+vuelve a confirmar los datos. La telemetría sin contenido guía futuras regresiones,
+no entrena automáticamente ni se usa como una cifra inventada de precisión.
+Flags apagados, sin migración; detalles en [[Aprendizaje-supervisado-Bynoesis]].
+
 ## Una lectura incoherente no se confirma con un «sí» (2026-09-07)
 
 La confianza declarada por un modelo nunca prevalece sobre una contradicción

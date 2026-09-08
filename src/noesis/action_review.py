@@ -140,9 +140,9 @@ def respond(bid: int, actor: str, text: str) -> dict | None:
     if not claimed:
         return {"reply": "Esa propuesta ya se ha atendido. No la he repetido.", "source": "local"}
     if no:
-        return {"reply": "Descartado. No he cambiado ningún registro.", "source": "local"}
+        return {"reply": "Descartado. No he cambiado ningún registro.", "source": "local", "action_result": "discarded"}
     if not db.subscription_allows_access(db.get_business(bid)):
-        return {"reply": "Tu cuenta está en modo consulta. No he ejecutado la propuesta.", "source": "local"}
+        return {"reply": "Tu cuenta está en modo consulta. No he ejecutado la propuesta.", "source": "local", "action_result": "failed"}
     try:
         args = dict(payload["args"])
         _, current = _preview(bid, payload["tool"], args)
@@ -150,6 +150,7 @@ def respond(bid: int, actor: str, text: str) -> dict | None:
             raise ValueError("Los datos han cambiado desde la propuesta. Vuelve a pedir la operación para revisarlos.")
         from .tools import run_tool
         result = json.loads(run_tool(payload["tool"], args, bid, channel="whatsapp" if actor.startswith("wa:") else "web"))
-        return {"reply": nlu.format_reply(payload["tool"], result), "source": "local"}
+        outcome = "failed" if result.get("error") or result.get("ok") is False else "completed"
+        return {"reply": nlu.format_reply(payload["tool"], result), "source": "local", "action_result": outcome, "proposal_id": pending["id"]}
     except (ValueError, TypeError) as exc:
-        return {"reply": str(exc) + " No he repetido la operación.", "source": "local"}
+        return {"reply": str(exc) + " No he repetido la operación.", "source": "local", "action_result": "failed"}

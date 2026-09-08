@@ -768,6 +768,7 @@ def _handle(
                 "reply": "Claro. Dime **cliente, concepto e importe**; por ejemplo: "
                          "«factura a Ana por reparar el termo 120 euros».",
                 "source": "local",
+                "clarification_kind": "invoice",
             }
         if tool == nlu.NEED_USER_INVITE:
             return {
@@ -928,6 +929,12 @@ def _handle(
             "source": "local",
         }
 
+    from .. import learning
+    if learning.enabled():
+        return {"reply": "No he podido identificar una operación concreta y no he guardado cambios. "
+                "¿Quieres preparar una factura, registrar un gasto, agendar un trabajo o consultar datos? "
+                "Dime la orden completa empezando por «corregir:»; por ejemplo, «corregir: gasté 35 euros en gasolina».",
+                "source": "local", "needs_clarification": True}
     return {"reply": _coach_reply(business_id, message), "source": "local"}
 
 
@@ -1026,10 +1033,20 @@ def handle(
         )
     except Exception:  # noqa: BLE001
         log.exception("No se pudo guardar la entrada del asistente para %s.", business_id)
-    from .. import action_review
+    from .. import action_review, learning
     enabled = config.ASSISTANT_REVIEW_ENABLED
     actor = f"wa:{actor_phone}" if channel == "whatsapp" else f"web:{actor_id or 'owner'}"
-    result = action_review.respond(business_id, actor, message) if enabled else None
+    turn = {"message": message, "original": message}
+    if learning.enabled():
+        try:
+            turn = learning.prepare(business_id, actor, message)
+        except Exception:  # noqa: BLE001 - no ejecutar una interpretación si la memoria falla
+            return {"reply": "No he podido revisar la memoria. No he ejecutado nada; escribe la orden completa de nuevo.", "source": "local"}
+    message = turn["message"]
+    if "reply" in turn and enabled:
+        db.clear_pending_action(business_id, actor)
+    result = {"reply": turn["reply"], "source": "local", "needs_clarification": turn.get("needs_clarification", False)} if "reply" in turn else (
+        action_review.respond(business_id, actor, message) if enabled else None)
     if result is None:
         if enabled:
             # Cualquier nueva orden invalida la anterior, incluso si la corrección
@@ -1040,11 +1057,22 @@ def handle(
         state = {"actor": actor}
         token = action_review.context.set(state if enabled else None)
         try:
-            result = _handle(business_id, message, page, channel=channel, actor_phone=actor_phone)
+            if turn.get("tool_call"):
+                call = turn["tool_call"]
+                result = json.loads(run_tool(call["name"], call["args"], business_id, channel=channel))
+            else:
+                result = _handle(business_id, message, page, channel=channel, actor_phone=actor_phone)
             if state.get("proposal"):
                 result = {**state["proposal"], "source": "local"}
         finally:
             action_review.context.reset(token)
+    if learning.enabled():
+        if str(result.get("source", "")).startswith("ia") and not result.get("confirmation_required"):
+            result["reply"] += "\n\nNo he guardado cambios ni enviado nada en esta respuesta."
+        try:
+            result = learning.finish(business_id, actor, turn, result)
+        except Exception:  # noqa: BLE001 - un fallo al aprender jamás reintenta el negocio
+            log.warning("No se pudo completar el aprendizaje; no se repite la operación.")
     try:
         db.add_assistant_message(
             business_id, "assistant", result.get("reply") or "",

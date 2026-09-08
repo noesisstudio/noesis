@@ -24,6 +24,12 @@ def api_assistant_memories(business_id: int):
     return {"items": db.list_memories(business_id)}
 
 
+@router.get("/api/{business_id}/assistant/learning")
+def api_assistant_learning(business_id: int, days: int = 7):
+    from ... import learning
+    return {**learning.report(business_id, days), "rules": learning.rules(business_id)}
+
+
 @router.post("/api/{business_id}/assistant/memories")
 async def api_assistant_remember(business_id: int, request: Request):
     try:

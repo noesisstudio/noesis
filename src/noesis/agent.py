@@ -111,7 +111,7 @@ desplazamientos.
 def _system_with_business_context(business_id: int, business: dict) -> str:
     """Construye el mismo marco verificable para cualquier proveedor de IA."""
     memories = [item for item in db.list_memories(business_id)
-                if item.get("user_confirmed")][:12]
+                if item.get("user_confirmed") and item.get("scope_type") != "language_rule"][:12]
     signals = [item for item in db.client_insights(business_id)
                if item.get("level") in {"alto", "medio"}][:3]
     permissions = db.automation_catalog(business_id)

@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-09-08 — aprendizaje supervisado y diálogo guiado (local)
+
+19 pruebas nuevas de aprendizaje pasan (15,632 s): sin aprendizaje silencioso,
+oferta solo tras éxito, actor/negocio, rechazo de órdenes peligrosas, caducidad,
+olvido, firma de interpretación alterada, exclusión del prompt privilegiado,
+telemetría sin contenido, fallo de telemetría sin repetir, flags legacy,
+WhatsApp sintético y factura guiada con ambigüedad e IVA incluido.
+
+Humo adicional con servidor ASGI/TestClient y sesión sintética: login 303,
+desconocido/corrección/SÍ/APRENDER/reutilización/NO 200 y un único gasto;
+informe propio 200 y ajeno 403; factura guiada de 121 euros confirmada 200.
+No se ha probado entrega Meta, modelo externo, móvil físico ni PostgreSQL.
+Ruff, compilación y diff sin incidencias. Sin cambios de esquema ni producción.
+Suite completa final: **702/702**, 531,594 s, sobre este `src` explícito en
+PYTHONPATH; incluye también el ajuste final F2 del candidato anterior.
+Los errores de proveedores/telemetría visibles corresponden a fallos inyectados;
+no hay aserciones fallidas. Verificador de estado/esquema/precios correcto.
+
 ## 2026-09-08 — confirmación persistente y voz privada (local)
 
 Suite completa final: **683/683**, 497,572 s sobre este `src` explícito en PYTHONPATH.
