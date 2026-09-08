@@ -23,6 +23,11 @@ la página. Por eso no hay commits automáticos y no se dispara ningún desplieg
 
 ## Conectar la página
 
+> Si es la primera vez, sigue la guía explicada de
+> [`docs/Conectar-Facebook.md`](../docs/Conectar-Facebook.md): cuenta por qué
+> hay dos tokens y qué se ve en cada pantalla. Lo de aquí abajo es el resumen.
+
+
 Hazlo una sola vez. Necesitas ser administrador de la página de Facebook de
 Noesis (configuración de la página en `branding/redes-sociales/facebook/`).
 
@@ -39,7 +44,7 @@ Noesis (configuración de la página en `branding/redes-sociales/facebook/`).
    raíz del proyecto:
 
    ```bash
-   python marketing/facebook/conectar.py \
+   python facebook/conectar.py \
      --app-id TU_APP_ID \
      --app-secret TU_APP_SECRET \
      --token-corto EL_TOKEN_DEL_EXPLORADOR
@@ -72,10 +77,10 @@ la revisión del domingo te lo recuerda.
 ## Comprobarlo desde tu ordenador
 
 ```bash
-python marketing/facebook/publicar.py --simulacro          # qué tocaría hoy
-python marketing/facebook/publicar.py --simulacro --fecha 2026-10-01
-python marketing/facebook/publicar.py --verificar          # ¿responde la página?
-python marketing/facebook/revision.py                      # el informe del domingo
+python facebook/publicar.py --simulacro          # qué tocaría hoy
+python facebook/publicar.py --simulacro --fecha 2026-10-01
+python facebook/publicar.py --verificar          # ¿responde la página?
+python facebook/revision.py                      # el informe del domingo
 ```
 
 Con `--simulacro` nunca se publica nada.

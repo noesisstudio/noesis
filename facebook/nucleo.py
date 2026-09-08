@@ -290,7 +290,7 @@ def leer_credenciales() -> Credenciales:
         raise ErrorConfiguracion(
             "faltan variables para publicar en Facebook: "
             + ", ".join(faltan)
-            + ". Están explicadas en marketing/facebook/README.md."
+            + ". Están explicadas en facebook/README.md."
         )
     return Credenciales(
         pagina=os.environ["FACEBOOK_PAGE_ID"].strip(),

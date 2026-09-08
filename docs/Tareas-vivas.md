@@ -260,8 +260,8 @@ Credenciales, callbacks, variables y criterios de aceptación: [[Conectar-APIs]]
   adicional hasta sostener el canal principal.
 
 - [ ] Conectar la automatización de Facebook: crear los secretos `FACEBOOK_PAGE_ID`
-  y `FACEBOOK_PAGE_TOKEN` del repositorio siguiendo `marketing/facebook/README.md`
-  (unos 15 minutos con `marketing/facebook/conectar.py`). Hasta que existan, los
+  y `FACEBOOK_PAGE_TOKEN` del repositorio siguiendo `facebook/README.md`
+  (unos 15 minutos con `facebook/conectar.py`). Hasta que existan, los
   workflows quedan en pausa sin publicar nada. Después, la única tarea recurrente es
   leer cada domingo la incidencia «Revisión Facebook» y ampliar el calendario cuando
   el informe avise de que quedan pocas piezas nuevas.

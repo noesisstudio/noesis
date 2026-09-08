@@ -6,9 +6,9 @@ en el repositorio: la verdad es lo que hay publicado en la página, y se consult
 antes de escribir nada.
 
 Uso habitual:
-    python marketing/facebook/publicar.py                # lo que toque hoy
-    python marketing/facebook/publicar.py --simulacro    # enseña el texto, no publica
-    python marketing/facebook/publicar.py --forzar       # publica aunque hoy no toque
+    python facebook/publicar.py                # lo que toque hoy
+    python facebook/publicar.py --simulacro    # enseña el texto, no publica
+    python facebook/publicar.py --forzar       # publica aunque hoy no toque
 """
 
 from __future__ import annotations

@@ -143,6 +143,37 @@ permitir responder rápido a cuatro preguntas cuando algo falla: **qué cambió,
 No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
 (fotografía del producto) ni Git (diff exacto). Los conecta.
 
+## 2026-09-08 — guía de conexión de Facebook y carpeta propia
+
+- **Autor/agente:** Claude, a petición del founder.
+- **Objetivo:** el founder no entendió cómo se conecta la automatización siguiendo
+  solo el README técnico, así que se escribe una guía que explica el porqué de cada
+  paso —sobre todo por qué hacen falta dos tokens, que es donde se atasca—. Además
+  la automatización pasa de `marketing/facebook/` a `facebook/` en la raíz, porque
+  `marketing/` no contenía nada más.
+- **Áreas y archivos:** `docs/Conectar-Facebook.md` (nuevo), movimiento de
+  `marketing/facebook/` a `facebook/` y de `tests/test_marketing_facebook.py` a
+  `tests/test_facebook.py`, y actualización de todas las rutas en los dos
+  workflows, `.env.example`, `AGENTS.md`, `branding/redes-sociales/README.md`,
+  `docs/Tareas-vivas.md`, el README de la automatización y sus cuatro scripts. No
+  toca `src/noesis/`.
+- **Cambios de datos/migración:** ninguno.
+- **Pruebas ejecutadas:** las 22 pruebas de `tests/test_facebook.py` desde la ruta
+  nueva, `ruff check` sobre `facebook/` y el test, simulacro real
+  (`python facebook/publicar.py --simulacro`) y revisión de que no queda ninguna
+  referencia a `marketing/facebook` fuera de las entradas históricas de esta
+  bitácora, que no se reescriben.
+- **Dependencias o validaciones externas:** ninguna nueva. La guía describe
+  pantallas de developers.facebook.com que Meta renombra cada pocos meses; el
+  documento avisa de ello y describe la secuencia, no las palabras exactas.
+- **Riesgo/punto probable de fallo:** los dos workflows invocan la ruta nueva. Si
+  alguno hubiera quedado apuntando a `marketing/facebook/`, la publicación fallaría
+  en silencio hasta el informe del domingo; por eso se han comprobado los dos.
+- **Diagnóstico y rollback:** el movimiento es un `git mv` sin cambios de lógica;
+  revertir el commit devuelve la carpeta a su sitio.
+- **Estado de publicación:** en `main`. La automatización sigue en pausa hasta que
+  existan los secretos `FACEBOOK_PAGE_ID` y `FACEBOOK_PAGE_TOKEN`.
+
 ## 2026-09-08 — foto técnica del almacenamiento y las copias
 
 - **Autor/agente:** Claude.

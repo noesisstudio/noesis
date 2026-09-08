@@ -5,7 +5,7 @@ cuando haya que renovarlo). Se ejecuta desde este ordenador, nunca en GitHub: el
 token que imprime es un secreto y no debe acabar en el repositorio.
 
 Uso:
-    python marketing/facebook/conectar.py --app-id 123 --app-secret ... --token-corto ...
+    python facebook/conectar.py --app-id 123 --app-secret ... --token-corto ...
 
 Los tres valores salen de developers.facebook.com, como explica el README.
 """

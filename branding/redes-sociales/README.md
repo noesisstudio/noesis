@@ -29,10 +29,10 @@ adaptación específica para que los perfiles se reconozcan a tamaños pequeños
 
 ## Publicación automática
 
-Facebook ya no se publica a mano: `marketing/facebook/` cuelga una pieza cada
+Facebook ya no se publica a mano: `facebook/` cuelga una pieza cada
 tres días y abre un informe de revisión cada domingo. El contenido vive en
-`marketing/facebook/calendario.json` y las instrucciones de conexión en
-`marketing/facebook/README.md`. Instagram y LinkedIn siguen siendo manuales.
+`facebook/calendario.json` y las instrucciones de conexión en
+`facebook/README.md`. Instagram y LinkedIn siguen siendo manuales.
 
 ## Regla de marca
 

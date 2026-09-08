@@ -1,0 +1,180 @@
+# Conectar Facebook (publicación automática)
+
+Guía para dejar la página de Facebook publicando sola. Se hace **una sola vez**,
+desde este ordenador, y tarda unos 15 minutos. Después no hay que volver a entrar:
+la página publica una pieza cada 3 días y cada domingo llega un informe.
+
+- Manual técnico de la automatización: [`facebook/README.md`](../facebook/README.md).
+- Aquí se explica **el porqué de cada paso**, que es lo que suele faltar.
+
+## Antes de empezar
+
+Necesitas tres cosas:
+
+1. Ser **administrador** de la página de Facebook de Bynoesis.
+2. Tener acceso al repositorio en GitHub para crear secretos (Settings → Secrets).
+3. Este proyecto descargado en el ordenador.
+
+## Por qué hay dos tokens (esta es la parte que confunde)
+
+Meta no te da directamente una llave permanente. El camino es este:
+
+```text
+1. App de Meta          →  identifica al programa que publica (no publica nada por sí sola)
+2. Token corto          →  permiso temporal tuyo, caduca en 1-2 horas
+3. Token de página      →  la llave definitiva; se obtiene a partir del corto
+4. Secreto en GitHub    →  donde vive esa llave para que el robot la use
+```
+
+El **token corto** es de usar y tirar: solo sirve para que `conectar.py` pida a
+Meta el bueno. Que caduque en dos horas da igual, porque el que se guarda es el de
+página, y ese **no caduca** mientras no cambies la contraseña de Facebook ni
+revoques los permisos de la app.
+
+Por eso hay un script intermedio: convierte una llave temporal en una permanente y
+te dice cuál es. No se puede saltar ese paso.
+
+---
+
+## Paso 1 · Crear la app en Meta (5 min)
+
+1. Entra en <https://developers.facebook.com/apps> con la cuenta de Facebook que
+   administra la página.
+2. **Crear app** → tipo **Empresa** (*Business*). Si ya tienes una app de Meta por
+   WhatsApp, puedes reutilizarla y saltar al paso 2.
+3. Ponle un nombre reconocible («Bynoesis publicación»).
+4. Dentro de la app, ve a **Configuración → Básica** y apunta dos valores:
+   - **Identificador de la app** (un número largo).
+   - **Clave secreta de la app** — hay que pulsar «Mostrar».
+
+Guárdalos en un sitio temporal. La clave secreta es un secreto de verdad: no la
+pegues en ningún archivo del proyecto, ni en un chat, ni en un documento.
+
+## Paso 2 · Sacar el token corto (3 min)
+
+1. Abre el **Explorador de la API Graph**:
+   <https://developers.facebook.com/tools/explorer/>
+2. Arriba a la derecha, en «Aplicación de Meta», **elige la app del paso 1**. Este
+   desplegable se pasa por alto con facilidad, y si te dejas otra app, el token no
+   servirá.
+3. En «Permisos», añade estos tres:
+   - `pages_show_list` — ver qué páginas administras
+   - `pages_manage_posts` — publicar
+   - `pages_read_engagement` — leer lo ya publicado (para no duplicar)
+4. Pulsa **Generar token de acceso** y acepta el diálogo de Facebook.
+5. Copia la cadena larga que aparece en el cuadro «Token de acceso».
+
+> Meta cambia el nombre de estos botones cada pocos meses. Si no ves exactamente
+> estas palabras, busca el desplegable de la app, la lista de permisos y el botón
+> de generar: la secuencia es siempre la misma.
+
+Tienes una o dos horas para el paso 3. Si te caduca, repite este paso: no se
+rompe nada.
+
+## Paso 3 · Convertirlo en la llave definitiva (2 min)
+
+Desde la carpeta del proyecto, en la terminal:
+
+```bash
+.venv/bin/python facebook/conectar.py \
+  --app-id TU_APP_ID \
+  --app-secret TU_CLAVE_SECRETA \
+  --token-corto EL_TOKEN_QUE_ACABAS_DE_COPIAR
+```
+
+> En este Mac, `python` a secas no existe: usa `.venv/bin/python`, como arriba.
+> Y ejecútalo con esa ruta al archivo (no con `python -m`), o no encontrará sus
+> propios módulos.
+
+Verás algo así:
+
+```text
+Páginas encontradas:
+
+- Bynoesis
+  FACEBOOK_PAGE_ID    = 1234567890
+  FACEBOOK_PAGE_TOKEN = EAAG...(muy largo)
+  Caduca              = no caduca mientras no cambies la contraseña ni revoques permisos
+  Permisos            = pages_show_list, pages_manage_posts, pages_read_engagement
+```
+
+Si en «Caduca» aparece una fecha en vez de «no caduca», algo salió mal en el paso
+2: repítelo asegurándote de elegir la app correcta.
+
+## Paso 4 · Guardar la llave en GitHub (3 min)
+
+En el repositorio: **Settings → Secrets and variables → Actions → New repository
+secret**. Crea uno por fila:
+
+| Nombre del secreto | Valor | ¿Obligatorio? |
+|---|---|---|
+| `FACEBOOK_PAGE_ID` | el `FACEBOOK_PAGE_ID` que imprimió el script | Sí |
+| `FACEBOOK_PAGE_TOKEN` | el `FACEBOOK_PAGE_TOKEN` | Sí |
+| `FACEBOOK_APP_ID` | el identificador de la app | Recomendado |
+| `FACEBOOK_APP_SECRET` | la clave secreta de la app | Recomendado |
+
+Los dos últimos no hacen falta para publicar: sirven para que el informe del
+domingo pueda avisarte **antes** de que el token deje de funcionar. Sin ellos, el
+primer aviso llegaría el día que ya no publique.
+
+El nombre debe coincidir exactamente, en mayúsculas. Un secreto mal escrito no da
+error: simplemente llega vacío y la automatización se queda en pausa.
+
+## Paso 5 · Probar sin publicar (2 min)
+
+En GitHub: **Actions → «Facebook · publicar» → Run workflow**, marcando
+**`simulacro`**. Verás el texto que saldría hoy, sin publicar nada.
+
+Desde tu ordenador es lo mismo:
+
+```bash
+.venv/bin/python facebook/publicar.py --simulacro    # qué tocaría hoy
+.venv/bin/python facebook/publicar.py --verificar    # ¿responde la página?
+.venv/bin/python facebook/revision.py                # el informe del domingo
+```
+
+Con `--simulacro` **nunca** se publica.
+
+## Paso 6 · Estrenarla (opcional)
+
+Si quieres que salga la primera pieza hoy mismo sin esperar a que toque:
+**Actions → «Facebook · publicar» → Run workflow**, con **`forzar`** marcado y
+`simulacro` **desmarcado**.
+
+---
+
+## Qué pasa a partir de ahora
+
+| Cuándo | Qué ocurre | Qué haces tú |
+|---|---|---|
+| Cada día, 06:40 UTC | El robot mira si hoy toca por calendario | Nada |
+| Cada 3 días | Publica una pieza | Nada |
+| Domingos, 07:30 UTC | Se abre una incidencia «Revisión Facebook» | Leerla, ~2 min |
+| Cada varios meses | El informe avisa de que el calendario se acaba | Ampliar `calendario.json` |
+
+Los textos futuros están en `facebook/calendario.json`: puedes cambiar
+cualquiera antes de que le toque salir.
+
+## Cuando algo falle
+
+| Síntoma | Qué significa | Qué hacer |
+|---|---|---|
+| Error **190** | El token murió: cambiaste la contraseña de Facebook o revocaste permisos | Repetir los pasos 2 a 4 |
+| Error **200** | Al token le faltan permisos | Repetir el paso 2 con los tres permisos |
+| Error **368** | Meta ha bloqueado temporalmente la página | Esperar; no reintentar en bucle |
+| «Este usuario no administra ninguna página» | El token corto salió sin `pages_show_list`, o no eres administrador | Revisar permisos y tu rol en la página |
+| No publica y no hay error | Faltan los secretos, o hoy no toca por calendario | Mirar la incidencia del domingo |
+
+La automatización **nunca falla ruidosamente por falta de secretos**: se queda en
+pausa y te lo recuerda el domingo. Eso es intencionado, para que un token caducado
+no llene el repositorio de correos de error.
+
+## Seguridad
+
+- El `FACEBOOK_PAGE_TOKEN` permite publicar en la página en tu nombre. Trátalo
+  como una contraseña: solo en los secretos de GitHub.
+- No lo pegues en ningún archivo del proyecto, ni en una captura, ni en una
+  conversación con una IA. Si aparece en algún sitio, revócalo en
+  **developers.facebook.com → tu app → Configuración → Básica** y repite la guía.
+- La automatización solo tiene permiso para publicar y leer la página. No accede a
+  mensajes, anuncios ni a datos de tus clientes.

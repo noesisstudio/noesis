@@ -38,7 +38,7 @@ jobs:
           FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
           FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
           META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION }}
-        run: python marketing/facebook/revision.py --salida informe-facebook.md
+        run: python facebook/revision.py --salida informe-facebook.md
 
       - name: Abrir la revisión como incidencia
         env:

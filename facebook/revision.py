@@ -5,8 +5,8 @@ la salud del token y deja el informe listo para leerlo en un minuto. Se ejecuta
 desde GitHub Actions cada domingo y abre una incidencia con el resultado.
 
 Uso:
-    python marketing/facebook/revision.py               # informe por pantalla
-    python marketing/facebook/revision.py --salida x.md # además lo guarda
+    python facebook/revision.py               # informe por pantalla
+    python facebook/revision.py --salida x.md # además lo guarda
 """
 
 from __future__ import annotations
@@ -128,7 +128,7 @@ def construir_informe(dia: date, calendario: nucleo.Calendario) -> tuple[list[st
     lineas.append("")
     lineas.append(
         "Para cambiar o quitar cualquiera de estas piezas, edita "
-        "`marketing/facebook/calendario.json` antes de su fecha."
+        "`facebook/calendario.json` antes de su fecha."
     )
     lineas.append("")
 
@@ -136,7 +136,7 @@ def construir_informe(dia: date, calendario: nucleo.Calendario) -> tuple[list[st
     lineas.append("")
     if credenciales is None:
         lineas.append("- ⏸ La automatización está en pausa: faltan los secretos de la página.")
-        lineas.append("- Instrucciones en `marketing/facebook/README.md`, apartado «Conectar la página».")
+        lineas.append("- Instrucciones en `facebook/README.md`, apartado «Conectar la página».")
     else:
         estado = nucleo.diagnostico_conexion(credenciales)
         lineas.append(f"- Página: **{estado.nombre_pagina or '(sin nombre)'}**"
@@ -177,7 +177,7 @@ def construir_informe(dia: date, calendario: nucleo.Calendario) -> tuple[list[st
         "y actualiza el secreto `FACEBOOK_PAGE_TOKEN` (README, apartado «Renovar el token»)."
     )
     lineas.append(
-        "3. Un texto no te convence: edita `marketing/facebook/calendario.json`; "
+        "3. Un texto no te convence: edita `facebook/calendario.json`; "
         "el cambio vale desde el commit, sin desplegar nada."
     )
     return lineas, avisos
@@ -199,7 +199,7 @@ def main(argv: list[str] | None = None) -> int:
             "**La automatización todavía no está conectada.**",
             "",
             "Faltan los secretos de la página en el repositorio. Hasta que estén, no se "
-            "publica nada. Los pasos están en `marketing/facebook/README.md`, apartado "
+            "publica nada. Los pasos están en `facebook/README.md`, apartado "
             "«Conectar la página».",
             "",
         ]

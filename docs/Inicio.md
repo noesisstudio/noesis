@@ -59,6 +59,9 @@ usa la vista de grafo para navegar.
 - [`Conectar-Google.pdf`](Conectar-Google.pdf) — guía completa del acceso con
   Google: por qué bloquea hoy el panel de administración, los cinco pasos en la
   consola, las dos variables, la prueba de aceptación y los errores típicos.
+- [[Conectar-Facebook]] — guía paso a paso para dejar la página publicando sola:
+  por qué hay dos tokens, qué copiar de Meta, dónde guardarlo y cómo probarlo sin
+  publicar nada.
 - [[Conectar-APIs]] — guía única de credenciales, callbacks, variables y pruebas
   externas para conectar producción sin confundir código con servicio activo.
 - [[Demo-comercial]] — dos accesos dentro del SaaS real, portal de cliente,

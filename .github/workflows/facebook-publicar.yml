@@ -54,4 +54,4 @@ jobs:
           argumentos=""
           if [ "${FORZAR}" = "true" ]; then argumentos="${argumentos} --forzar"; fi
           if [ "${SIMULACRO}" = "true" ]; then argumentos="${argumentos} --simulacro"; fi
-          python marketing/facebook/publicar.py ${argumentos}
+          python facebook/publicar.py ${argumentos}

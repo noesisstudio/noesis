@@ -15,11 +15,11 @@ from pathlib import Path
 from unittest import mock
 
 RAIZ = Path(__file__).resolve().parents[1]
-DIRECTORIO = RAIZ / "marketing" / "facebook"
+DIRECTORIO = RAIZ / "facebook"
 
 
 def _cargar_modulos():
-    """Carga los scripts de marketing, que viven fuera del paquete del producto."""
+    """Carga los scripts de la automatización, que viven fuera del paquete del producto."""
 
     if str(DIRECTORIO) not in sys.path:
         sys.path.insert(0, str(DIRECTORIO))
