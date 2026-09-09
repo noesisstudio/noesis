@@ -1,4 +1,15 @@
-# Registro de QA
+﻿# Registro de QA
+
+## 2026-09-09 — demostración oscura de la portada
+
+- Entorno aislado en localhost con SQLite temporal. Ninguna cuenta real tocada.
+- `test_public_marketing`: 12 pruebas OK. Contratos Node `public_marketing` y
+  `public_calendar`: 2 OK. `check_project_truth`: correcto.
+- Contraste calculado para cada par de texto y fondo del panel: mínimo 6,37:1,
+  todos por encima del umbral AA.
+- Captura real a 1280 px en los casos «Factura» y «Cobros». Se detectó y corrigió
+  que la cifra de total pendiente era invisible sobre el fondo oscuro.
+- Pendiente: móvil físico, Safari y verificación en producción tras desplegar.
 
 ## 2026-09-09 — publicación y corrección PostgreSQL
 

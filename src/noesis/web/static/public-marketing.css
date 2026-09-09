@@ -211,3 +211,68 @@
 @media (prefers-reduced-motion: reduce) {
   .public-site *, .public-site *::before, .public-site *::after { animation: none !important; scroll-behavior: auto !important; transition: none !important; }
 }
+
+/* --- La demostración es un dispositivo, no una tarjeta más ---------------- */
+/* Único bloque con fondo saturado del sitio. Separa la conversación del
+   lienzo crema y la hace leer como una pantalla, que es lo que es. Contrastes
+   verificados AA sobre cada fondo. El borrador de ejemplo sigue en papel. */
+.public-site .conversation-demo {
+  --demo-ink: #0f3d34;
+  --demo-screen: #0a2b25;
+  --demo-raised: #15453a;
+  --demo-sent: #1d6b58;
+  --demo-text: #eaf3ef;
+  --demo-muted: #a7c2b9;
+  --demo-accent: #8fd6bd;
+  --demo-line: rgba(234, 243, 239, .14);
+  background: var(--demo-ink);
+  border-color: rgba(10, 43, 37, .55);
+  box-shadow: 0 18px 44px rgba(10, 43, 37, .20);
+  color: var(--demo-text);
+}
+.public-site .conversation-demo .conversation-top {
+  background: var(--demo-ink); border-bottom-color: var(--demo-line);
+}
+/* La marca lleva verdes fijos: sobre oscuro necesita su propio disco claro. */
+.public-site .conversation-demo .conversation-top img {
+  background: var(--bg, #f4f1e8); border-radius: 50%; padding: 4px;
+}
+.public-site .conversation-demo .conversation-top b { color: var(--demo-text); }
+.public-site .conversation-demo .conversation-top span { color: var(--demo-muted); }
+.public-site .conversation-demo .conversation-top .demo-label {
+  color: var(--demo-muted); border-color: var(--demo-line);
+}
+.public-site .conversation-demo .conversation-stage {
+  background: var(--demo-screen); display: flex; flex-direction: column;
+}
+/* Los casos cortos dejaban medio panel vacío. Anclados abajo, el hueco queda
+   arriba y se lee como historial, que es como se comporta un chat de verdad. */
+.public-site .conversation-demo .chat-case { flex: 1; justify-content: flex-end; }
+.public-site .conversation-demo .chat-bubble {
+  background: var(--demo-raised); border-color: var(--demo-line); color: var(--demo-text);
+}
+.public-site .conversation-demo .chat-bubble.outgoing {
+  background: var(--demo-sent); border-color: rgba(234, 243, 239, .18); color: #fff;
+}
+.public-site .conversation-demo .chat-result > small,
+.public-site .conversation-demo .chat-typing { color: var(--demo-muted); }
+.public-site .conversation-demo .invoice-total { border-top-color: var(--demo-line); }
+.public-site .conversation-demo .attachment-label { border-bottom-color: rgba(234, 243, 239, .22); }
+.public-site .conversation-demo .waveform i { background: var(--demo-accent); }
+.public-site .conversation-demo .conversation-controls,
+.public-site .conversation-demo .conversation-caption { border-top-color: var(--demo-line); }
+.public-site .conversation-demo .conversation-controls button,
+.public-site .conversation-demo .conversation-caption button { color: var(--demo-accent); }
+.public-site .conversation-demo .conversation-controls button[aria-pressed="true"] {
+  background: rgba(143, 214, 189, .16); color: var(--demo-text);
+}
+.public-site .conversation-demo .conversation-caption span { color: var(--demo-muted); }
+/* El borrador es un documento: se queda en papel aunque el marco sea oscuro. */
+.public-site .conversation-demo .sample-invoice-dialog {
+  background: #fff; color: var(--text, #15211c); border-color: var(--site-line);
+}
+/* La cifra usaba el verde de marca: sobre el panel oscuro desaparecía. */
+.public-site .conversation-demo .mini-result > b { color: var(--demo-accent); }
+.public-site .conversation-demo .mini-result {
+  border-top-color: var(--demo-line); border-bottom-color: var(--demo-line);
+}

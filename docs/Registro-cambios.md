@@ -1,5 +1,37 @@
 ﻿# Registro de cambios
 
+## 2026-09-09 — la demostración de la portada es un dispositivo
+
+Objetivo: el founder señaló que el bloque de conversación no se distinguía del
+resto de la página. Era blanco sobre crema, así que el elemento más importante
+de la portada era el que menos destacaba. Pasa a ser el único bloque con fondo
+saturado del sitio y se lee como lo que es: una pantalla.
+
+Se corrigen de paso tres cosas que ya estaban mal. `.mini-result > b` —la cifra
+del caso de cobros— usaba el verde de marca y quedaba con menos jerarquía que su
+propia etiqueta; sobre oscuro habría desaparecido. Los casos cortos dejaban medio
+escenario vacío por debajo, porque la altura es fija; ahora la conversación se
+ancla abajo y el hueco queda arriba, como el historial de un chat real. Y
+`noesis-mark.svg` lleva los verdes fijos dentro del SVG, así que sobre oscuro se
+perdía el polígono interior: recibe un disco claro propio.
+
+Límite conocido: durante la animación de entrada los pasos aún no visibles siguen
+ocupando su sitio con `opacity: 0`, así que en esos segundos el hueco queda abajo.
+Es deliberado para evitar saltos de maquetación y no se toca.
+
+Áreas: solo `web/static/public-marketing.css`, en un bloque nuevo al final del
+archivo y con todas las reglas acotadas bajo `.conversation-demo`. Sin cambios de
+plantilla, script, copy, esquema ni permisos. El borrador de ejemplo sigue en papel
+a propósito: es un documento, no parte del dispositivo.
+
+Pruebas: 12 de `test_public_marketing` y los dos contratos Node en verde;
+`check_project_truth` correcto. Contrastes calculados sobre cada fondo del panel,
+todos por encima de 4,5:1. Verificado con captura real en escritorio a 1280 px en
+los casos de factura y de cobros. Límites: no verificado en móvil físico, en Safari
+ni en producción. Riesgo: bajo y visual; no hay lógica implicada. Diagnóstico: si
+algo se vuelve ilegible, el bloque es contiguo y está comentado. Rollback: borrar
+ese bloque restaura el aspecto anterior sin tocar nada más.
+
 ## 2026-09-09 — compatibilidad PostgreSQL de los contadores públicos
 
 Tras publicar `ccb1b54`, Railway y la puerta pública (14 páginas, esquema 55,
