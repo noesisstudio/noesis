@@ -35,6 +35,41 @@ tras exportarlos. No tocar datos de negocio. Publicación autorizada por el foun
 commit y push a main, con despliegue automático de Railway. La comprobación del
 SHA remoto, despliegue y humo público se realiza después de publicar este commit.
 
+## 2026-09-09 — plan maestro para poder cobrar el primer euro
+
+Objetivo: el founder enseñó el panel de Meta con la verificación del negocio en
+«No aprobado» y pidió un documento único con todos los pasos para empezar a
+vender. La información estaba repartida entre `Ruta-legal`, `Meta-Verificacion`,
+`WhatsApp-Puesta-en-marcha`, `Constitucion-y-primer-euro` y `Tareas-vivas`, y dos
+de esos documentos se contradicen.
+
+Se añade `docs/Plan-primer-euro.html`: estado verificado hoy, las cuatro puertas
+en orden de dependencia (identidad legal, verificación de empresa, Advanced
+access, papeles para cobrar), las fases con responsable y criterio de cierre, las
+nueve plantillas, las variables por servicio, la prueba de aceptación y el coste.
+
+Resuelve la contradicción sobre App Review a favor de `Ruta-legal.html`, que es
+posterior y razona el porqué: Advanced access sobre `whatsapp_business_management`
+es obligatorio para acceder a la WABA de otro negocio aunque se conceda a mano, y
+sin él la API devuelve error 200. `Meta-Verificacion.html` sigue diciendo lo
+contrario en su tabla del Camino A y queda pendiente de corregir.
+
+Acota además el alcance de ese permiso, que `Ruta-legal` deja abierto a la lectura
+de que bloquea el piloto entero: solo afecta al número comercial de cada negocio.
+El número central es activo propio, todos los clientes escriben al mismo, y
+`_post_to_meta` cae a `_PHONE_ID` cuando el mensaje no lleva conexión, así que los
+avisos al cliente final salen igual. La página de precios no promete número propio;
+`ajustes.html` lo ofrece como conexión opcional. Conclusión documentada: se puede
+cobrar sin Advanced access, y se pide ya porque tarda semanas.
+
+Áreas: solo documentación, un archivo nuevo. Sin cambios en `src/noesis/`, sin
+migración, sin credenciales y sin llamadas pagadas. Pruebas: ninguna, no hay
+código afectado. Límites externos: el motivo concreto del rechazo de Meta solo se
+ve en el Centro de seguridad del founder, las variables vivas de Railway no se
+leen desde el repositorio, y el requisito de Advanced access se apoya en la
+documentación de Meta y no en una prueba con una WABA de cliente real. Riesgo:
+bajo. Diagnóstico y rollback: borrar el archivo y esta entrada.
+
 ## 2026-09-09 — vincular WhatsApp dice la verdad y no quema el código
 
 Objetivo: un teléfono que ya está de alta en Equipo no podía vincularse como

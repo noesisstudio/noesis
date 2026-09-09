@@ -1,0 +1,1328 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Del rechazo de Meta al primer euro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    --canvas: #f4f1ea;
+    --surface: #ffffff;
+    --surface-2: #faf8f3;
+    --border: #e2ddd0;
+    --border-strong: #cfc8b6;
+    --text: #15211c;
+    --muted: #5d6b66;
+    --faint: #8d9691;
+    --brand: #14463b;
+    --brand-2: #2e8b74;
+    --brand-soft: #e4efe9;
+    --brand-ink: #0f3d34;
+    --on-brand: #f4f1ea;
+    --green: #1f8a6d;
+    --green-soft: #e2f1ea;
+    --red: #a8412c;
+    --red-soft: #f7e8e3;
+    --amber: #98701c;
+    --amber-soft: #f3ead3;
+    --radius: 12px;
+    --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(20, 22, 31, .04), 0 4px 14px rgba(20, 22, 31, .05);
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #121714;
+      --surface: #19201c;
+      --surface-2: #1d2621;
+      --border: #2d3831;
+      --border-strong: #3d4a42;
+      --text: #e9ece8;
+      --muted: #9fada6;
+      --faint: #77837d;
+      --brand: #4fb497;
+      --brand-2: #6cc9ae;
+      --brand-soft: #16302a;
+      --brand-ink: #a8ddcb;
+      --on-brand: #eaf3ef;
+      --green: #4fb493;
+      --green-soft: #16302a;
+      --red: #e08b74;
+      --red-soft: #35211b;
+      --amber: #d6a94a;
+      --amber-soft: #332913;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --canvas: #121714;
+    --surface: #19201c;
+    --surface-2: #1d2621;
+    --border: #2d3831;
+    --border-strong: #3d4a42;
+    --text: #e9ece8;
+    --muted: #9fada6;
+    --faint: #77837d;
+    --brand: #4fb497;
+    --brand-2: #6cc9ae;
+    --brand-soft: #16302a;
+    --brand-ink: #a8ddcb;
+    --on-brand: #eaf3ef;
+    --green: #4fb493;
+    --green-soft: #16302a;
+    --red: #e08b74;
+    --red-soft: #35211b;
+    --amber: #d6a94a;
+    --amber-soft: #332913;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  .prose {
+    max-width: 68ch;
+  }
+
+  /* ---------- cabecera ---------- */
+
+  .top {
+    background: var(--brand);
+    color: var(--on-brand);
+    padding: 56px 0 44px;
+    margin-bottom: 48px;
+  }
+
+  .top-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--brand-2);
+  }
+
+  :root[data-theme="dark"] .eyebrow,
+  .top .eyebrow {
+    color: #7fc9b1;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(34px, 5.4vw, 54px);
+    line-height: 1.08;
+    letter-spacing: -.02em;
+    margin: 14px 0 18px;
+    text-wrap: balance;
+    max-width: 18ch;
+  }
+
+  .lede {
+    font-size: 18px;
+    line-height: 1.55;
+    max-width: 60ch;
+    color: #d5e4dd;
+    margin: 0;
+  }
+
+  .stamp-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .stamp {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .04em;
+    padding: 5px 10px;
+    border: 1px solid rgba(212, 228, 221, .32);
+    border-radius: 6px;
+    color: #bcd4ca;
+  }
+
+  /* ---------- estructura ---------- */
+
+  section {
+    margin-top: 64px;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(25px, 3vw, 32px);
+    line-height: 1.18;
+    letter-spacing: -.015em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+    max-width: 22ch;
+  }
+
+  h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.25;
+    margin: 36px 0 8px;
+    text-wrap: balance;
+  }
+
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .1em;
+    color: var(--faint);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  p {
+    margin: 0 0 14px;
+    max-width: 68ch;
+  }
+
+  .dek {
+    color: var(--muted);
+    font-size: 17px;
+    max-width: 62ch;
+    margin-bottom: 26px;
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  a {
+    color: var(--brand-2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: .855em;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 56px 0 0;
+  }
+
+  /* ---------- tablero de estado ---------- */
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 24px;
+  }
+
+  .cell {
+    background: var(--surface);
+    padding: 15px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .cell-name {
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .cell-note {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .chip {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .chip.ok {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+
+  .chip.wait {
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+
+  .chip.stop {
+    background: var(--red-soft);
+    color: var(--red);
+  }
+
+  /* ---------- aviso ---------- */
+
+  .flag {
+    border-left: 3px solid var(--red);
+    background: var(--red-soft);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 18px 20px;
+    margin: 24px 0;
+  }
+
+  .flag.calm {
+    border-left-color: var(--brand-2);
+    background: var(--brand-soft);
+  }
+
+  .flag p:last-child {
+    margin-bottom: 0;
+  }
+
+  .flag-title {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  /* ---------- cadena de puertas ---------- */
+
+  .gates {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 28px 0 8px;
+  }
+
+  .gate {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+  }
+
+  .gate.live {
+    border-top-color: var(--red);
+  }
+
+  .gate.next {
+    border-top-color: var(--amber);
+  }
+
+  .gate.end {
+    border-top-color: var(--green);
+  }
+
+  .gate-k {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+    letter-spacing: .08em;
+  }
+
+  .gate-t {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    margin: 6px 0 6px;
+    line-height: 1.2;
+  }
+
+  .gate-d {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  /* ---------- pasos ---------- */
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 24px;
+  }
+
+  .step {
+    background: var(--surface);
+    display: grid;
+    grid-template-columns: 54px 1fr 122px;
+    gap: 18px;
+    padding: 18px 20px;
+    align-items: start;
+  }
+
+  .step-n {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--brand-2);
+    padding-top: 2px;
+    letter-spacing: .04em;
+  }
+
+  .step-b h4 {
+    margin: 0 0 5px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .step-b p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 58ch;
+  }
+
+  .step-b p + p {
+    margin-top: 7px;
+  }
+
+  .who {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--faint);
+    text-align: right;
+    padding-top: 3px;
+    line-height: 1.5;
+  }
+
+  .who em {
+    display: block;
+    font-style: normal;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 720px) {
+    .step {
+      grid-template-columns: 40px 1fr;
+      gap: 12px;
+    }
+
+    .who {
+      grid-column: 2;
+      text-align: left;
+      padding-top: 8px;
+    }
+  }
+
+  /* ---------- tablas ---------- */
+
+  .tbl-scroll {
+    overflow-x: auto;
+    margin: 24px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14.5px;
+    min-width: 560px;
+  }
+
+  th {
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+
+  td.num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  td.mono {
+    font-family: var(--mono);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* ---------- listas ---------- */
+
+  ul, ol {
+    max-width: 66ch;
+    padding-left: 22px;
+    margin: 0 0 16px;
+  }
+
+  li {
+    margin-bottom: 7px;
+    line-height: 1.55;
+  }
+
+  li::marker {
+    color: var(--brand-2);
+  }
+
+  .checks {
+    list-style: none;
+    padding: 0;
+    max-width: 68ch;
+    margin: 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .checks li {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 10px;
+    margin: 0;
+    align-items: baseline;
+    font-size: 15px;
+  }
+
+  .checks .box {
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 4px;
+    display: inline-block;
+    position: relative;
+    top: 2px;
+  }
+
+  /* ---------- cierre ---------- */
+
+  .foot {
+    margin-top: 72px;
+    padding-top: 26px;
+    border-top: 2px solid var(--brand);
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 68ch;
+  }
+
+  .foot p {
+    font-size: 14px;
+    max-width: 68ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--brand-2);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <span class="eyebrow">Bynoesis · Plan maestro</span>
+    <h1>Del rechazo de Meta al primer euro</h1>
+    <p class="lede">Todo lo que falta para poder cobrar, en orden de dependencia. Qué está bloqueado hoy,
+      qué lo desbloquea, quién lo tiene que hacer y cómo se sabe que está hecho.</p>
+    <div class="stamp-row">
+      <span class="stamp">9 SEP 2026</span>
+      <span class="stamp">VERIFICADO SOBRE MAIN · 4df5088</span>
+      <span class="stamp">RELEASE 086039e0b538 · ESQUEMA 55</span>
+      <span class="stamp">NEGOCIO META 1689888138886179</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section style="margin-top:0">
+    <span class="sec-num">01 — SITUACIÓN</span>
+    <h2>Dónde estás hoy</h2>
+    <p class="dek">El producto está construido y desplegado. Lo que falta no es código: son cuatro
+      trámites encadenados y seis integraciones sin enchufar.</p>
+
+    <div class="board">
+      <div class="cell">
+        <span class="chip ok">Hecho</span>
+        <span class="cell-name">Producto en producción</span>
+        <span class="cell-note">Release verificado, esquema 55, 752 pruebas, CI y humo PostgreSQL en verde.</span>
+      </div>
+      <div class="cell">
+        <span class="chip ok">Hecho</span>
+        <span class="cell-name">Tests de casos de uso en Meta</span>
+        <span class="cell-note"><code>whatsapp_business_messaging</code> y <code>whatsapp_business_management</code> completados. Válidos 30 días.</span>
+      </div>
+      <div class="cell">
+        <span class="chip stop">Rechazado</span>
+        <span class="cell-name">Verificación de empresa</span>
+        <span class="cell-note">«No aprobado». Es el nudo del que cuelga todo lo demás en Meta.</span>
+      </div>
+      <div class="cell">
+        <span class="chip stop">Bloqueado</span>
+        <span class="cell-name">Verificación de acceso</span>
+        <span class="cell-note">Proveedor de tecnología. Meta no deja ni empezarla sin la anterior.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Sin pedir</span>
+        <span class="cell-name">App Review · Advanced access</span>
+        <span class="cell-note">Solicitud vacía. No frena la venta: frena que cada cliente use su propio número comercial.</span>
+      </div>
+      <div class="cell">
+        <span class="chip stop">Sin decidir</span>
+        <span class="cell-name">Identidad legal</span>
+        <span class="cell-note">Sin NIF no hay Meta, ni Veri*Factu, ni Stripe en live, ni contrato con gestorías.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Provisional</span>
+        <span class="cell-name">Número central de WhatsApp</span>
+        <span class="cell-note">El de prueba que presta Meta. Falta SIM dedicada y registro real.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Provisional</span>
+        <span class="cell-name">Token de Meta</span>
+        <span class="cell-note">El del panel caduca a las 24 h y no cubre los WABA de clientes.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Sin enviar</span>
+        <span class="cell-name">Las nueve plantillas</span>
+        <span class="cell-note">Redactadas y aprobables en el código. Nadie las ha mandado a aprobar.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Solo test</span>
+        <span class="cell-name">Stripe</span>
+        <span class="cell-note">Checkout, portal y webhook construidos. Faltan los seis precios en live.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Sin configurar</span>
+        <span class="cell-name">Correo saliente</span>
+        <span class="cell-note">Sin Brevo no hay invitación ni recuperación de contraseña. Railway bloquea SMTP.</span>
+      </div>
+      <div class="cell">
+        <span class="chip stop">Vencido</span>
+        <span class="cell-name">Declaración responsable Veri*Factu</span>
+        <span class="cell-note">Obligación de productor viva desde el 29-jul-2025. Requiere NIF real.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Pendiente</span>
+        <span class="cell-name">Revisión jurídica</span>
+        <span class="cell-note">Textos escritos y publicados. Falta la firma de un profesional colegiado.</span>
+      </div>
+      <div class="cell">
+        <span class="chip wait">Pendiente</span>
+        <span class="cell-name">Copia externa restaurada</span>
+        <span class="cell-note">Hoy el RPO y el RTO son estimaciones, no medidas. Es P0 en Tareas vivas.</span>
+      </div>
+      <div class="cell">
+        <span class="chip ok">Correcto</span>
+        <span class="cell-name">Altas públicas cerradas</span>
+        <span class="cell-note"><code>NOESIS_PUBLIC_SIGNUP_ENABLED=false</code>. Está bien así hasta el final del plan.</span>
+      </div>
+      <div class="cell">
+        <span class="chip ok">Corregido</span>
+        <span class="cell-name">Promesa de llamadas</span>
+        <span class="cell-note">Los minutos del plan Premium ya se presentan dentro del bloque de recepcionista en beta.</span>
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">02 — CORRECCIÓN</span>
+    <h2>La revisión de la aplicación sí hace falta</h2>
+    <p class="dek">Pero no para lo que crees, y no bloquea la venta. Esto es lo que más confusión
+      genera de todo el plan, así que va despacio.</p>
+
+    <h3>Tener muchos clientes no significa tener muchos números</h3>
+    <p>Todos tus clientes —el fontanero, la limpiadora, el electricista— escriben <strong>al mismo
+      número: el tuyo</strong>. Bynoesis distingue a cada persona por su teléfono. Ese número es un
+      activo de tu empresa, así que funciona con el acceso que Meta ya te dio automáticamente. Da
+      igual que tengas 5 clientes o 500.</p>
+    <p>El permiso que falta es para <em>otra cosa</em>: para que el cliente final de tu cliente —el
+      vecino que llama al fontanero— escriba al número del fontanero y Bynoesis conteste ahí.</p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th></th><th>Número central de Bynoesis</th><th>Número comercial de cada negocio</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Quién escribe</strong></td><td>Tus clientes: el titular y sus trabajadores</td><td>Los clientes finales de ese autónomo</td></tr>
+          <tr><td><strong>Cuántos hacen falta</strong></td><td>Uno, compartido por todos tus clientes</td><td>Uno por cada negocio que lo quiera</td></tr>
+          <tr><td><strong>De quién es el activo</strong></td><td>Tuyo</td><td>Del negocio de tu cliente</td></tr>
+          <tr><td><strong>Qué acceso exige Meta</strong></td><td>Standard · ya lo tienes</td><td>Advanced · App Review</td></tr>
+          <tr><td><strong>¿Hace falta para cobrar?</strong></td><td><strong>Sí, es el producto</strong></td><td>No. Es una capa opcional</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Los dos niveles de acceso de Meta</h3>
+    <p>La diferencia no está en <em>cómo</em> te conceden un activo, sino en <strong>de quién es</strong>:</p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th>Nivel</th><th>A qué da acceso</th><th>Cómo se obtiene</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Standard access</strong></td>
+            <td>Solo a los activos que posee tu propio negocio</td>
+            <td>Automático, al crear la aplicación</td>
+          </tr>
+          <tr>
+            <td><strong>Advanced access</strong></td>
+            <td>A activos y datos de <em>otros</em> negocios</td>
+            <td>App Review + verificación de empresa</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>La WABA de tu cliente, aunque te la conceda a mano desde su Business Manager, sigue siendo de
+      otro negocio. La documentación de Meta lo dice sin rodeos: la app del socio necesita Advanced
+      access sobre <code>whatsapp_business_management</code> para acceder a una WABA compartida, y sin
+      él las llamadas a la API devuelven <strong>error 200</strong>.</p>
+
+    <div class="flag calm">
+      <div class="flag-title">Lo que esto NO bloquea</div>
+      <p>No bloquea vender. Lo que la web promete en precios —«WhatsApp con texto, audio e imágenes»—
+        es el titular hablando con Bynoesis por tu número central, y eso funciona con el acceso que ya
+        tienes. Los recordatorios de cobro y las facturas al cliente final también salen: si el negocio
+        no tiene número propio, el código usa el central
+        (<code>phone_number_id or _PHONE_ID</code> en <code>web/whatsapp.py</code>).</p>
+    </div>
+
+    <div class="flag">
+      <div class="flag-title">Lo que sí bloquea</div>
+      <p>Que cada cliente conecte <strong>su propio número comercial</strong>, para que sus clientes
+        finales le escriban a él y no vean el número de Bynoesis. Sin Advanced access, cada llamada a
+        la API sobre esa WABA falla. No es un fallo del código —el motor multicanal está bien
+        construido y desplegado—: es un permiso que tarda semanas y que hoy no está pedido.</p>
+      <p>Por eso se pide <em>ahora</em>, en paralelo y sin prisa: cuando el primer cliente lo quiera,
+        ya estará concedido. Pedirlo el día que haga falta cuesta semanas de espera con un cliente
+        delante.</p>
+    </div>
+
+    <div class="flag calm">
+      <div class="flag-title">Cautela honesta</div>
+      <p>Esto se apoya en la documentación de Meta, no en una prueba tuya con una WABA de cliente real.
+        Confírmalo con soporte de Meta en cuanto puedas. Pero <strong>planifica como si fuera cierto</strong>:
+        equivocarte por exceso cuesta un trámite en paralelo que no molesta a nadie; equivocarte por
+        defecto cuesta el piloto entero y lo descubres al final.</p>
+    </div>
+
+    <p>Lo que sí quita presión: Embedded Signup —que el cliente se conecte solo desde bynoesis.com— no
+      hace falta todavía. Con tres a cinco pilotos, darlos de alta tú desde Administración es media hora
+      de trabajo total.</p>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">03 — LA CADENA</span>
+    <h2>Cuatro puertas, y solo se abren en este orden</h2>
+    <p class="dek">Ninguna de las cuatro se puede saltar ni adelantar. Todo el plan consiste en abrirlas
+      lo antes posible y trabajar en paralelo mientras esperas.</p>
+
+    <div class="gates">
+      <div class="gate live">
+        <span class="gate-k">PUERTA 1</span>
+        <div class="gate-t">Identidad legal</div>
+        <div class="gate-d">Un NIF que Meta pueda contrastar en un registro público. Desbloquea las otras tres a la vez.</div>
+      </div>
+      <div class="gate live">
+        <span class="gate-k">PUERTA 2</span>
+        <div class="gate-t">Verificación de empresa</div>
+        <div class="gate-d">Hoy rechazada. Sube el límite de 250 conversaciones y habilita todo lo demás en Meta.</div>
+      </div>
+      <div class="gate next">
+        <span class="gate-k">PUERTA 3</span>
+        <div class="gate-t">Advanced access</div>
+        <div class="gate-d">App Review y verificación de acceso. Solo para que cada cliente use su propio número comercial. No frena la venta, pero tarda semanas.</div>
+      </div>
+      <div class="gate end">
+        <span class="gate-k">PUERTA 4</span>
+        <div class="gate-t">Papeles para cobrar</div>
+        <div class="gate-d">Declaración responsable, revisión jurídica y Stripe en live. Es la puerta del dinero.</div>
+      </div>
+    </div>
+
+    <p style="margin-top:22px">Las puertas 2 y 3 las abre Meta a su ritmo y no se aceleran con dinero ni con
+      insistencia. Las puertas 1 y 4 dependen de ti y de dos profesionales. De ahí la regla que ordena
+      todo el calendario: <strong>lo que depende de terceros se arranca hoy aunque no esté todo listo, y
+      el trabajo propio se hace durante la espera.</strong></p>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">04 — ESTA SEMANA</span>
+    <h2>Fase 0 · Antes de tocar nada</h2>
+    <p class="dek">Tres cosas, y ninguna lleva más de una tarde. La primera es la más importante y la
+      más fácil de saltarse.</p>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-n">0.1</span>
+        <div class="step-b">
+          <h4>Lee el motivo del rechazo antes de reenviar nada</h4>
+          <p>Entra en <code>business.facebook.com</code> → Centro de seguridad y busca la razón concreta
+            del «No aprobado». Meta rechaza sobre todo por tres motivos: datos de empresa incompletos,
+            documentos ilegibles —una foto torcida basta— y datos legales que no coinciden con lo declarado.</p>
+          <p><strong>No pulses «Reenviar» con los mismos datos.</strong> Cada rechazo reinicia el reloj, y
+            no hay plazo comprometido: los rangos que publican los proveedores van de diez minutos a treinta días.</p>
+        </div>
+        <div class="who">Tú<em>10 minutos</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">0.2</span>
+        <div class="step-b">
+          <h4>Decide la identidad legal</h4>
+          <p>Es la decisión de la que cuelga el resto del documento. Está desarrollada en la fase 1.
+            No la aplaces esperando a que Meta conteste: Meta no va a contestar que sí.</p>
+        </div>
+        <div class="who">Tú<em>Esta semana</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">0.3</span>
+        <div class="step-b">
+          <h4>Haz por escrito la pregunta que ahorra cinco semanas</h4>
+          <p>A la asesoría fiscal, con respuesta razonada: <em>¿un piloto sin contraprestación constituye
+            comercialización a efectos del RD 1007/2023?</em> Si la respuesta es que no, puedes tener
+            autónomos usando Bynoesis gratis mientras esperas a Meta y a los papeles. Si no te lo dan por
+            escrito, la respuesta operativa es que no y el piloto espera.</p>
+        </div>
+        <div class="who">Asesoría<em>1 correo</em></div>
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">05 — PUERTA 1</span>
+    <h2>Fase 1 · La identidad legal</h2>
+    <p class="dek">Meta no lee tu formulario: contrasta lo que declaras contra registros públicos y bases
+      de datos empresariales de terceros. Ahí está la explicación más probable del rechazo.</p>
+
+    <p>Una S.L. española aparece en el Registro Mercantil y en el BORME, con nombre, NIF, domicilio y
+      fecha de inscripción. <strong>Un autónomo no aparece en ningún registro que Meta pueda consultar</strong>:
+      su expediente depende por completo de que un revisor acepte un certificado de situación censal
+      de la AEAT como prueba de existencia. No lo hace imposible; lo hace frágil.</p>
+
+    <h3>Las tres opciones reales</h3>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th>Opción</th><th>Coste primer año</th><th>Qué compra</th><th>Qué cuesta</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>S.L. nueva</strong><br><span style="color:var(--muted);font-size:13.5px">Recomendada</span></td>
+            <td class="num">1.800 – 2.700 €</td>
+            <td>Verificación de Meta sólida, responsabilidad limitada, y el contrato que una gestoría espera firmar</td>
+            <td>De 20 a 30 días de constitución y 400-1.000 € más que ser autónomo</td>
+          </tr>
+          <tr>
+            <td><strong>Ampliar tu sociedad de eventos</strong></td>
+            <td class="num">~0 € de constitución</td>
+            <td>Verificas ya, y con una entidad que lleva tiempo inscrita —lo cual verifica mejor</td>
+            <td>Las facturas salen con la razón social de eventos y los dos negocios comparten patrimonio</td>
+          </tr>
+          <tr>
+            <td><strong>Autónomo</strong></td>
+            <td class="num">1.400 – 1.700 €</td>
+            <td>Es lo más rápido y barato de arrancar</td>
+            <td>Respondes con tu patrimonio de un error fiscal en la factura de un tercero. Y es el camino que Meta ya te rechazó una vez</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flag">
+      <div class="flag-title">El error que no se puede deshacer barato</div>
+      <p>«Empiezo como autónomo y luego ya veré» no funciona aquí: la entidad legal va pegada al Business
+        Manager. Cambiar de titular después significa <strong>rehacer la verificación de Meta desde cero</strong>
+        con la nueva entidad y volver a conceder los WABA de los clientes que ya estuvieran dentro —justo
+        cuando ya hay gente real usando el producto.</p>
+    </div>
+
+    <p>Si vas a S.L., pon <strong>3.000 € de capital, no 1 €</strong>: por debajo de esa cifra hay que
+      destinar el 20 % del beneficio a reserva legal y los socios responden de la diferencia en
+      liquidación. Además, una S.L. de 1 € es exactamente la señal que no quieres dar a Meta, a Stripe
+      y a una gestoría que va a confiarte su cartera.</p>
+
+    <h3>Lo que desbloquea, el mismo día</h3>
+    <ul>
+      <li>La verificación de empresa de Meta, con nombre y NIF <em>exactamente</em> como constan en la escritura.</li>
+      <li><code>NOESIS_VERIFACTU_PRODUCER_NIF</code>, sin el cual no se puede activar el modo Veri*Factu.</li>
+      <li>Stripe en live y la facturación real de las suscripciones.</li>
+      <li>Los contratos de encargado del tratamiento con las gestorías.</li>
+      <li>Las cuatro variables de identidad legal que hoy mantienen cerradas las altas públicas.</li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">06 — PUERTAS 2 Y 3</span>
+    <h2>Fase 2 · Meta, en orden de dependencia</h2>
+    <p class="dek">Los cuatro primeros pasos se lanzan el mismo día, en cuanto exista la entidad. Los
+      cuatro siguientes son trabajo tuyo mientras Meta responde.</p>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-n">2.1</span>
+        <div class="step-b">
+          <h4>Reenviar la verificación de empresa</h4>
+          <p>Con la entidad ya inscrita y los documentos legibles. Si en el formulario escribes «Bynoesis
+            Studio SL» y la escritura dice «NOESIS STUDIO, S.L.», puede bastar para tumbarlo otra vez.</p>
+        </div>
+        <div class="who">Meta<em>Horas a 2 semanas</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.2</span>
+        <div class="step-b">
+          <h4>Solicitar App Review para Advanced access</h4>
+          <p>El mismo día, no después. Permiso <code>whatsapp_business_management</code>. Los tests que ya
+            tienes completados son el requisito previo, y caducan a los 30 días: si esperas demasiado,
+            hay que repetirlos.</p>
+        </div>
+        <div class="who">Meta<em>Semanas</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.3</span>
+        <div class="step-b">
+          <h4>Enviar las nueve plantillas a aprobación</h4>
+          <p>No dependen de nada más. Ejecuta <code>python -m noesis.whatsapp_templates</code>: imprime
+            exactamente los cuerpos que hay que pegar en WhatsApp Manager, ya redactados para ser
+            aprobables. Los nombres deben coincidir con las variables de Railway al carácter.</p>
+        </div>
+        <div class="who">Meta<em>1 – 2 días</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.4</span>
+        <div class="step-b">
+          <h4>Conseguir una SIM nueva y dedicada</h4>
+          <p>Este es el número al que escriben titular y trabajadores; no lo ve ningún cliente final.
+            No puede estar dado de alta en la app de WhatsApp —y una vez en Cloud API, ya no vuelve al
+            móvil—. Los números VoIP baratos suelen ser rechazados. Una eSIM prepago española sirve.</p>
+        </div>
+        <div class="who">Tú<em>1 día</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.5</span>
+        <div class="step-b">
+          <h4>Registrar el número y guardar el PIN</h4>
+          <p>Nombre para mostrar «Bynoesis», verificación por SMS o llamada, y el PIN de seis dígitos al
+            gestor de contraseñas: sin él no se puede migrar ni recuperar el número. Copia el
+            <strong>Phone number ID</strong> —no el número— a <code>WHATSAPP_PHONE_ID</code>.</p>
+        </div>
+        <div class="who">Tú<em>1 hora</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.6</span>
+        <div class="step-b">
+          <h4>Añadir método de pago con límite de gasto</h4>
+          <p>Sin tarjeta solo puedes escribir a cinco destinatarios de prueba. Meta cobra por plantilla
+            enviada; las respuestas dentro de la ventana de 24 horas no se cobran. Fija el límite el primer día.</p>
+        </div>
+        <div class="who">Tú<em>15 minutos</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.7</span>
+        <div class="step-b">
+          <h4>Generar el token permanente de usuario del sistema</h4>
+          <p>En Configuración del negocio → Usuarios → Usuarios del sistema, rol Administrador. Asigna
+            los activos: la app, tu WABA central y, según lleguen, la WABA y los números de cada cliente.
+            Caducidad <strong>Nunca</strong>, permisos <code>whatsapp_business_messaging</code> y
+            <code>whatsapp_business_management</code>. Solo se muestra una vez.</p>
+          <p>Un solo token para todo. No se guarda una credencial por cliente: si un cliente revoca el
+            permiso, ese número deja de enviar y los demás siguen.</p>
+        </div>
+        <div class="who">Tú<em>30 minutos</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.8</span>
+        <div class="step-b">
+          <h4>Cerrar el webhook y la firma</h4>
+          <p>Callback <code>https://bynoesis.com/webhook/whatsapp</code>, con el campo <code>messages</code>
+            suscrito <strong>en la WABA</strong>, no solo en la app —es el fallo silencioso más común—.
+            El App secret va a <code>WHATSAPP_APP_SECRET</code>; el verify token lo inventas tú.</p>
+        </div>
+        <div class="who">Tú<em>30 minutos</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">2.9</span>
+        <div class="step-b">
+          <h4>Dar de alta los dos números comerciales del piloto</h4>
+          <p>Solo cuando llegue el Advanced access. El cliente concede el activo desde su Business
+            Manager; tú lo registras en Administración → cuenta → Números de WhatsApp del negocio.
+            Nace <code>pending</code>, se prueba el webhook y solo entonces pasa a <code>active</code>.
+            El formulario admite identificadores públicos, nunca tokens.</p>
+        </div>
+        <div class="who">Tú + Meta<em>1 día</em></div>
+      </div>
+    </div>
+
+    <h3>Las nueve plantillas, tal como están en el código</h3>
+    <p>Cinco van al titular y cuatro al cliente final del autónomo. El número de huecos tiene que
+      coincidir exactamente con lo aprobado, o el envío falla al intentarlo y no antes.</p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th>Nombre en Meta</th><th>Para quién</th><th>Huecos</th><th>Para qué</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">bynoesis_resumen_diario</td><td>Titular</td><td class="num">1</td><td>El parte de la mañana</td></tr>
+          <tr><td class="mono">bynoesis_cierre_dia</td><td>Titular</td><td class="num">1</td><td>El cierre del día</td></tr>
+          <tr><td class="mono">bynoesis_resumen_semanal</td><td>Titular</td><td class="num">1</td><td>El repaso de la semana</td></tr>
+          <tr><td class="mono">bynoesis_aviso_fiscal</td><td>Titular</td><td class="num">1</td><td>Aviso trimestral del 303 y el 130</td></tr>
+          <tr><td class="mono">bynoesis_aviso_cobros</td><td>Titular</td><td class="num">1</td><td>Propuesta de reclamar una factura vencida</td></tr>
+          <tr><td class="mono">bynoesis_recordatorio_cobro</td><td>Cliente</td><td class="num">5</td><td>Recordatorio de cobro con enlace al portal</td></tr>
+          <tr><td class="mono">bynoesis_factura_lista</td><td>Cliente</td><td class="num">5</td><td>Entrega de la factura emitida</td></tr>
+          <tr><td class="mono">bynoesis_seguimiento_presupuesto</td><td>Cliente</td><td class="num">5</td><td>Seguimiento de un presupuesto abierto</td></tr>
+          <tr><td class="mono">bynoesis_recordatorio_cita</td><td>Cliente</td><td class="num">4</td><td>Confirmación de cita. Aquí no hay enlace</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flag calm">
+      <div class="flag-title">La verificación no te impide empezar</div>
+      <p>Sin verificar te quedas en <strong>250 conversaciones cada 24 horas y dos números</strong>. Para
+        tres a cinco autónomos eso sobra. La verificación limita cuándo puedes <em>crecer</em>, no cuándo
+        puedes empezar. Lo que sí te impide arrancar el piloto multicanal es el Advanced access.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">07 — TRABAJO PROPIO</span>
+    <h2>Fase 3 · Lo que hay que enchufar</h2>
+    <p class="dek">Todo esto se hace durante la espera de Meta. Son variables en Railway y cuentas en
+      cuatro proveedores. Ninguna depende de la verificación.</p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th>Servicio</th><th>Qué hay que crear</th><th>Qué desbloquea</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Brevo</strong><br><span class="mono" style="color:var(--muted)">BREVO_API_KEY</span></td>
+            <td>Autenticar <code>bynoesis.com</code> en el DNS, verificar <code>no-reply@</code> y crear la API key</td>
+            <td>Invitaciones, recuperación de contraseña y entrega de facturas. Railway bloquea los puertos SMTP, así que la vía HTTPS es obligatoria</td>
+          </tr>
+          <tr>
+            <td><strong>Stripe</strong><br><span class="mono" style="color:var(--muted)">STRIPE_SECRET_KEY</span></td>
+            <td>Seis precios —Autónomo, Pro y Premium, mensual y anual— más el webhook a <code>/webhook/stripe</code> y su signing secret</td>
+            <td>Cobrar. Prueba los seis checkouts en sandbox antes de repetir la configuración en live</td>
+          </tr>
+          <tr>
+            <td><strong>Google OAuth</strong><br><span class="mono" style="color:var(--muted)">GOOGLE_OAUTH_CLIENT_ID</span></td>
+            <td>Cliente web con la redirección exacta <code>/auth/google/callback</code></td>
+            <td>Tu propio panel <code>/admin</code>, que en producción exige Google si está configurado</td>
+          </tr>
+          <tr>
+            <td><strong>Copia S3</strong></td>
+            <td>Bucket privado en un segundo proveedor europeo, credencial de solo escritura, versionado y bloqueo de objetos</td>
+            <td>Que un ransomware o la caída de Railway no se lleve los datos de tus clientes</td>
+          </tr>
+          <tr>
+            <td><strong>Identidad legal</strong><br><span class="mono" style="color:var(--muted)">NOESIS_LEGAL_NIF</span></td>
+            <td>Nombre, NIF, domicilio y correo legal</td>
+            <td>Es la puerta que mantiene <code>NOESIS_PUBLIC_SIGNUP_ENABLED</code> cerrada aunque la pongas a true</td>
+          </tr>
+          <tr>
+            <td><strong>IA de respaldo</strong><br><span class="mono" style="color:var(--muted)">ANTHROPIC_API_KEY</span></td>
+            <td>Una sola clave, con límite de gasto</td>
+            <td>Lo que el cerebro local no resuelve. No hace falta contratar varias</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Cómo compruebas que está bien sin preguntarle a nadie</h3>
+    <p>El repositorio ya trae los comprobadores. Son de solo lectura: no envían mensajes, no cobran nada
+      y no imprimen secretos.</p>
+    <ul>
+      <li><code>python scripts/check_whatsapp.py --url https://bynoesis.com</code> — token vivo, número,
+        suscripción, las nueve plantillas, el challenge del webhook y la validación de la firma.</li>
+      <li><code>noesis-integrations-check --network --strict</code> — OCR, Brevo, Google, los seis precios
+        de Stripe, Groq y S3.</li>
+      <li><code>noesis-doctor --strict</code> — la foto de si el despliegue está listo.</li>
+      <li><code>noesis-restore-check</code> — la restauración, que es la única prueba de que la copia sirve.</li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">08 — PUERTA 4</span>
+    <h2>Fase 4 · Los papeles que abren el cobro</h2>
+    <p class="dek">Aquí no hay código. Son dos encargos profesionales, una firma tuya y una línea de texto
+      en el producto.</p>
+
+    <h3>Veri*Factu: sois dos cosas a la vez, y con relojes distintos</h3>
+    <p>Como <strong>productor</strong> del software, la obligación está viva desde el
+      <strong>29 de julio de 2025</strong>: solo se puede ofrecer software ya adaptado, y hay que emitir
+      la declaración responsable. Como <strong>usuarios</strong>, tus clientes autónomos no están
+      obligados hasta el <strong>1 de julio de 2027</strong>.</p>
+    <p>Esa asimetría es la que hace posible el piloto gratuito: un autónomo que hoy use Bynoesis para
+      presupuestos, agenda, gastos, documentos y WhatsApp no incumple absolutamente nada.</p>
+
+    <h3>Lo que hay que encargar y firmar</h3>
+    <div class="steps">
+      <div class="step">
+        <span class="step-n">4.1</span>
+        <div class="step-b">
+          <h4>Revisión fiscal del sistema de facturación</h4>
+          <p>Conformidad con los artículos 9, 10, 11 y 13 del RD 1007/2023, criterio escrito sobre el
+            piloto gratuito, y firma de la declaración responsable. Encargo puntual, no cuota.</p>
+        </div>
+        <div class="who">Asesoría<em>600 – 1.200 €</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">4.2</span>
+        <div class="step-b">
+          <h4>Revisión jurídica de los textos</h4>
+          <p>Aviso legal, privacidad, términos, cookies, contrato de encargado del tratamiento y
+            exposición al Reglamento europeo de IA. Los textos ya están escritos y publicados: el
+            abogado cobra por revisar, no por redactar, que es lo que abarata el encargo.</p>
+        </div>
+        <div class="who">Abogado TIC<em>800 – 1.500 €</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">4.3</span>
+        <div class="step-b">
+          <h4>Decir que el asistente es una máquina</h4>
+          <p>El artículo 50 del Reglamento (UE) 2024/1689 es aplicable desde el 2 de agosto de 2026 y
+            obliga a que un chatbot se identifique como tal. Hoy ni la web ni el primer mensaje de
+            WhatsApp tras vincular lo dicen. Son dos frases y una línea en <code>Decisiones.md</code>.</p>
+        </div>
+        <div class="who">Tú<em>Minutos</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">4.4</span>
+        <div class="step-b">
+          <h4>Firmar los DPA y cerrar el registro de actividades</h4>
+          <p>Un contrato de encargado con cada subencargado, y verificar la certificación de los
+            proveedores estadounidenses en la lista oficial del marco de adecuación. La tabla del
+            documento interno tiene que coincidir con la que publica la web.</p>
+        </div>
+        <div class="who">Tú + abogado<em>1 semana</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">4.5</span>
+        <div class="step-b">
+          <h4>Restaurar una copia de verdad y cronometrarla</h4>
+          <p>Hoy el RPO y el RTO son estimaciones. Hasta que exista un simulacro medido fuera de Railway,
+            no deberías tratar datos reales de terceros a escala. Es P0 en tus propias tareas vivas.</p>
+        </div>
+        <div class="who">Tú<em>1 día</em></div>
+      </div>
+      <div class="step">
+        <span class="step-n">4.6</span>
+        <div class="step-b">
+          <h4>Rotar los secretos que hayan aparecido en una captura o un PDF</h4>
+          <p><code>NOESIS_SECRET</code>, SMTP y cualquier credencial compartida en una conversación.
+            Revocar la anterior y redactar las copias. No reutilizar secretos sugeridos por una IA.</p>
+        </div>
+        <div class="who">Tú<em>1 hora</em></div>
+      </div>
+    </div>
+
+    <div class="flag">
+      <div class="flag-title">El interruptor que no se toca hasta el final</div>
+      <p><code>NOESIS_PUBLIC_SIGNUP_ENABLED</code> pasa a <code>true</code> cuando la declaración
+        responsable está firmada y publicada, los textos revisados y los comprobadores en verde.
+        Ni un día antes. Hasta entonces, cada alta se hace por invitación desde Administración —que
+        para tres a cinco pilotos es exactamente lo que quieres.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">09 — ACEPTACIÓN</span>
+    <h2>La prueba que cierra el canal</h2>
+    <p class="dek">Diez minutos desde tu móvil, cuando las piezas de Meta estén. Si una falla, sabes
+      exactamente cuál.</p>
+
+    <ul class="checks">
+      <li><span class="box"></span><span>Escribes <code>NOESIS &lt;código&gt;</code> al número central con el código de Ajustes, y responde «WhatsApp conectado a…».</span></li>
+      <li><span class="box"></span><span>Preguntas <em>¿qué tengo hoy?</em> y contesta el cerebro local, sin coste de IA.</span></li>
+      <li><span class="box"></span><span>Mandas la foto de un ticket: propone el gasto y espera un SÍ antes de guardarlo.</span></li>
+      <li><span class="box"></span><span>Emites una factura con <code>emitir factura &lt;n&gt;</code> y la confirmas.</span></li>
+      <li><span class="box"></span><span>Lanzas un aviso proactivo con plantilla y llega. Aquí es donde antes fallaba.</span></li>
+      <li><span class="box"></span><span>Compruebas los tres estados: <code>sent</code>, <code>delivered</code> y <code>read</code>.</span></li>
+      <li><span class="box"></span><span>Con una cuenta en modo consulta, no ejecuta nada.</span></li>
+      <li><span class="box"></span><span>Mandas un POST falso al webhook y responde <strong>401</strong>.</span></li>
+    </ul>
+
+    <div class="flag calm" style="margin-top:28px">
+      <div class="flag-title">Y la que de verdad demuestra que el producto es multicliente</div>
+      <p>El mismo remitente escribe a los <strong>dos números comerciales</strong> de dos negocios
+        distintos, y salen dos conversaciones aisladas, cada una en su negocio, cada salida por el número
+        receptor original. Esta prueba necesita el Advanced access de la puerta 3, y es la que hay que
+        pasar <em>antes</em> de vender el número comercial propio a nadie. El resto del producto se puede
+        cobrar sin ella.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">10 — DINERO</span>
+    <h2>Lo que cuesta llegar hasta aquí</h2>
+    <p class="dek">Estimaciones de mercado en España, no presupuestos cerrados. Sirven para decidir y
+      para no llevarse sustos.</p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th>Concepto</th><th>Nota</th><th>Rango</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Revisión fiscal del SIF</td><td>Con la declaración responsable firmada</td><td class="num">600 – 1.200 €</td></tr>
+          <tr><td>Revisión jurídica</td><td>Abogado TIC, sobre textos ya escritos</td><td class="num">800 – 1.500 €</td></tr>
+          <tr><td>Registro de actividades</td><td>Suele ir incluido en el paquete anterior</td><td class="num">0 – 350 €</td></tr>
+          <tr><td>Certificado electrónico</td><td>FNMT, representante de persona jurídica</td><td class="num">17 €</td></tr>
+          <tr><td>Constitución de la S.L.</td><td>Notaría, registro y gestoría. Cero si usas la sociedad existente</td><td class="num">600 – 1.000 €</td></tr>
+          <tr><td><strong>Recurrente</strong></td><td>Railway, Brevo, monitor, dominio, WhatsApp y tu propia asesoría</td><td class="num">~161 €/mes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Con el colchón del 10 %, el primer año sale en torno a <strong>4.600 €</strong> sin contar la
+      constitución ni las comisiones de Stripe, que son un porcentaje del ingreso y no un coste fijo.
+      Lo que esta cuenta no incluye y es el gasto mayor con diferencia: tu tiempo.</p>
+  </section>
+
+  <hr>
+
+  <section>
+    <span class="sec-num">11 — ORDEN</span>
+    <h2>Las ocho semanas, en tres carriles</h2>
+    <p class="dek">El carril de Meta y el de los profesionales no dependen de ti. El de producto es donde
+      pones las horas. Un plan que ponga el código primero y los trámites después añade semanas de
+      calendario sin añadir una hora de trabajo.</p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th>Semana</th><th>Meta</th><th>Profesionales</th><th>Producto</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="num"><strong>1</strong></td><td>Verificación reenviada, App Review y plantillas</td><td>Los dos encargos, con la pregunta del piloto</td><td>Brevo y DNS, Google OAuth</td></tr>
+          <tr><td class="num"><strong>2</strong></td><td>Esperando</td><td>Esperando</td><td>Divulgación de IA, rotación de secretos</td></tr>
+          <tr><td class="num"><strong>3</strong></td><td>Verificación concedida · número central registrado</td><td>—</td><td>Arranca el piloto gratuito</td></tr>
+          <tr><td class="num"><strong>4</strong></td><td>Token de sistema y método de pago</td><td>Informe fiscal con el criterio del piloto</td><td>Stripe en test</td></tr>
+          <tr><td class="num"><strong>5</strong></td><td>Plantillas aprobadas</td><td>Informe jurídico</td><td>Fricciones reales del piloto</td></tr>
+          <tr><td class="num"><strong>6</strong></td><td>Advanced access concedido</td><td>Correcciones aplicadas</td><td>Alta de los dos números comerciales</td></tr>
+          <tr><td class="num"><strong>7</strong></td><td>Prueba de aislamiento con negocios reales</td><td>Declaración lista para firma</td><td>Restauración cronometrada, monitor 24/7</td></tr>
+          <tr><td class="num"><strong>8</strong></td><td>Canal completo operativo</td><td>Declaración firmada</td><td>Publicarla, abrir el cobro</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Las semanas 3 a 7 son las que se desperdician esperando si decides no hacer piloto gratuito, y las
+      que se aprovechan con usuarios dentro si lo haces. Toda la diferencia entre las dos rutas está en
+      una pregunta por escrito a la asesoría, y no cuesta dinero.</p>
+  </section>
+
+  <div class="foot">
+    <p><strong>Qué no cubre este documento.</strong> No es asesoramiento legal ni fiscal: describe
+      obligaciones reales, pero quien tiene que aplicarlas a tu caso y firmar es un profesional colegiado.</p>
+    <p><strong>Tres cosas que no se han podido verificar.</strong> El motivo concreto del rechazo de Meta,
+      que solo aparece en tu Centro de seguridad. Las variables que hay puestas hoy en Railway, que no se
+      leen desde el repositorio. Y si el Advanced access es realmente obligatorio para una WABA concedida
+      a mano —se apoya en la documentación de Meta, no en una prueba con una WABA de cliente real.</p>
+    <p><strong>Sobre qué está verificado.</strong> Estado del producto contra <code>main</code> en el commit
+      4df5088, release <code>086039e0b538</code>, esquema 55. Fuentes internas: <code>project-state.json</code>,
+      <code>Tareas-vivas.md</code>, <code>Ruta-legal</code>, <code>Constitucion-y-primer-euro</code>,
+      <code>WhatsApp-Puesta-en-marcha</code>, <code>Revision-Meta</code> y
+      <code>src/noesis/whatsapp_templates.py</code>. Donde <code>Meta-Verificacion</code> y
+      <code>Ruta-legal</code> se contradicen sobre App Review, este documento sigue a <code>Ruta-legal</code>,
+      que es posterior y razona el porqué.</p>
+  </div>
+
+</div>
+</body>
+</html>
