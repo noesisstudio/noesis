@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 9-sep — PDF real solicitado desde el chat de WhatsApp
+
+La petición «envíame/pásame el ticket en PDF» ya no queda en manos del texto
+generativo: localiza una factura emitida del propio negocio y envía el documento
+real a través de Meta. Los borradores se bloquean y los errores se reconocen sin
+afirmar que existe un adjunto. Los cambios visuales posteriores del socio están
+integrados sin conflicto. La voz continúa bloqueada por configuración externa:
+producción no tiene Whisper privado, Groq ni un motor local disponible.
+
 ## 9-sep — publicación y hotfix PostgreSQL
 
 `ccb1b54` desplegado en Railway y puerta pública verde (14 páginas, esquema 55).

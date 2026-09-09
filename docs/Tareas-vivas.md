@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## Entrega de PDF y voz — 9-sep
+
+- [x] Interceptar peticiones de PDF al titular antes de la IA y enviar documento
+  real por Meta, con aislamiento, estado fiscal, nombre seguro y fallback veraz.
+- [x] Impedir que una respuesta generativa confirme un adjunto inexistente.
+- [x] Diagnóstico remoto de voz: ningún transcriptor está configurado.
+- [ ] Provisionar y validar Whisper privado o configurar Groq antes de anunciar
+  notas de voz como capacidad disponible.
+- [ ] Prueba humana del adjunto contra el número real después del despliegue.
+
 ## Rediseño público — 9-sep, publicación autorizada
 
 - [x] Cuatro páginas, hero conversacional, prueba de producto y navegación móvil.

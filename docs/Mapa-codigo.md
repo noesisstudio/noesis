@@ -1,5 +1,14 @@
 # Mapa de código
 
+## PDF reactivo por WhatsApp — 9-sep
+
+`web/whatsapp.py` reconoce localmente solicitudes de factura/ticket PDF antes de
+`chat.handle`, resuelve número, último documento o cliente solo dentro del negocio,
+exige estado emitido y llama a Meta con `type=document` y URL del portal existente.
+La misma capa bloquea afirmaciones generativas de adjuntos que no han ocurrido.
+No añade tabla ni adapta la cola proactiva: es una respuesta dentro de la ventana
+abierta por el mensaje entrante. Tests en `WhatsappMediaTestCase`.
+
 ## Web pública conversacional — 9-sep
 
 `web/public_marketing.py` centraliza CTA real, FAQs, schemas y nombres de eventos.

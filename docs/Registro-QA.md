@@ -1,5 +1,20 @@
 ﻿# Registro de QA
 
+## 2026-09-09 — PDF real al titular por WhatsApp
+
+- Caso reproducido: una respuesta de chat podía decir «PDF adjunto» sin realizar
+  ninguna llamada de documento a Meta.
+- Contratos añadidos: catalán con cliente concreto, seguimiento sin repetir nombre,
+  selección aislada por negocio, borrador no presentado como final, fallo del
+  proveedor con enlace seguro y eliminación de confirmaciones inventadas.
+- La estructura del mensaje sigue el contrato `document` por URL de la Cloud API:
+  destinatario individual, HTTPS, filename y caption. Ningún mensaje real se envía
+  durante las pruebas.
+- Comprobación de producción de solo lectura: OCR operativo; transcripción no
+  disponible porque Whisper privado, Groq y motor local están sin configurar.
+- Regresión completa: **771 pruebas Python, OK**, además de Ruff, Bandit, estado
+  documental y `git diff --check`. Los avisos de proveedor son fallos simulados.
+
 ## 2026-09-09 — demostración oscura de la portada
 
 - Entorno aislado en localhost con SQLite temporal. Ninguna cuenta real tocada.

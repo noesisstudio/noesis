@@ -2,7 +2,7 @@
   "state_date": "2026-09-09",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 767,
+  "verified_test_count": 771,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -97,7 +97,7 @@
     "stripe_tax": "checkout_requests_billing_address_tax_id_collection_and_automatic_tax_for_the_public_plus_vat_catalog_real_tax_result_still_requires_stripe_test_validation",
     "invoicing_engine": "native_multi_line_series_drafts_recurring_pdf_email_history_safe_difference_rectification_single_pending_draft_original_immutable_no_external_billing_saas_schema_48_three_templates_color_sanitized_logo_text_and_graphic_footer_size_alignment_scope_live_and_pdf_preview_versioned_visual_profile_frozen_on_issue_shared_quote_identity_and_pseudonymous_portal_decision_evidence",
     "professional_invoicing_upgrade": "schema_32_issued_invoices_receive_series_and_lines_in_transaction_then_database_immutability_is_restored",
-    "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant",
+    "whatsapp_invoicing": "sale_ticket_or_full_invoice_draft_unique_customer_match_second_confirmation_issue_pdf_preferred_channel_kpis_tax_and_accountant_owner_reactive_pdf_request_sends_real_meta_document_for_same_business_issued_invoice_and_blocks_generated_attachment_claims",
     "issue_order_available_on_both_channels": "the_draft_confirmation_message_suggests_emitir_factura_n_and_the_shared_brain_now_understands_it_so_the_web_chat_issues_the_draft_instead_of_falling_back_to_the_coach_whatsapp_keeps_its_extra_yes_no_confirmation_because_a_voice_note_can_be_misheard_and_tool_errors_no_longer_leak_internal_names",
     "voice_reception_promise": "premium_call_minutes_are_presented_inside_the_receptionist_beta_block_not_as_an_active_included_feature_because_no_telephony_exists_yet",
     "fiscal_integrity": "schema_33_immutable_issued_invoices_and_lines_separate_series_verified_alta_and_cancellation_chain",

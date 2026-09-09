@@ -1,5 +1,26 @@
 ﻿# Registro de cambios
 
+## 2026-09-09 — el PDF pedido por WhatsApp es un adjunto real
+
+Objetivo: corregir el caso real «envíame/pásame el ticket en PDF». Hasta ahora la
+petición caía en la IA conversacional, que podía afirmar que había adjuntado un
+archivo aunque el canal solo hubiese enviado texto. Se intercepta localmente la
+intención en castellano o catalán, se resuelve el número o cliente dentro del mismo
+`business_id`, se exige una factura ya emitida y se envía un mensaje `document`
+reactivo mediante la Cloud API con el PDF del portal y nombre seguro. Un fallo de
+Meta produce un mensaje veraz con enlace de descarga; nunca una falsa confirmación.
+
+Se añade una última defensa que sustituye cualquier afirmación generativa de PDF
+adjunto cuando no se ha ejecutado la operación. No cambia esquema, permisos,
+facturación ni la entrega existente a clientes. Los cambios previos del socio
+`f93e5c0..32aa061` se integran por fast-forward y no tocan este flujo.
+
+Pruebas: envío real simulado, selección de Marta frente a otro cliente, seguimiento
+«pásamelo en PDF», rechazo de borrador, fallo de Meta y bloqueo de afirmación falsa.
+Límite externo: producción no tiene transcriptor configurado; la nota de voz de la
+captura seguirá pidiendo texto hasta provisionar Whisper/Groq. Rollback: revertir
+este commit restaura el comportamiento anterior sin migración ni tocar documentos.
+
 ## 2026-09-09 — la demostración de la portada es un dispositivo
 
 Objetivo: el founder señaló que el bloque de conversación no se distinguía del

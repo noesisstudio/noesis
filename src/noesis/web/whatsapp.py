@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import secrets
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -794,6 +795,168 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
         "quedará generado y sus cifras pasarán a ingresos, impuestos, cliente y "
         "gestoría. ¿Confirmas? Responde SÍ o NO."
     )
+
+
+_PDF_SEND_VERBS = (
+    "envia", "enviam", "enviame", "enviamela", "enviamelo", "adjunta",
+    "adjuntame", "pasa", "pasame", "pasamela", "pasamelo", "passa",
+    "passam", "passamel", "manda", "mandame", "mandamela", "mandamelo",
+)
+
+
+def _searchable_text(value: str | None) -> str:
+    plain = unicodedata.normalize("NFKD", str(value or ""))
+    ascii_text = plain.encode("ascii", "ignore").decode().lower()
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", ascii_text).split())
+
+
+def _is_owner_pdf_request(text: str) -> bool:
+    """Reconoce una petición de adjunto sin delegarla a una IA generativa."""
+    normalized = _searchable_text(text)
+    verb = next(
+        (item for item in _PDF_SEND_VERBS
+         if re.search(rf"\b{re.escape(item)}\b", normalized)),
+        None,
+    )
+    named_document = re.search(
+        r"\b(factura|ticket|tiquet|documento|document)\b", normalized
+    )
+    pronoun_request = verb in {
+        "enviamela", "enviamelo", "pasamela", "pasamelo", "passamel",
+        "mandamela", "mandamelo",
+    }
+    return bool(re.search(r"\bpdf\b", normalized) and verb and (named_document or pronoun_request))
+
+
+def _claims_unsent_attachment(reply: str) -> bool:
+    """Detecta una confirmación textual que no puede equivaler a un adjunto real."""
+    normalized = _searchable_text(reply)
+    return bool(
+        re.search(r"\b(pdf|fitxer|fichero|archivo|documento)\b", normalized)
+        and (
+            re.search(r"\badjunt[oa]?\b", normalized)
+            or "descargable directamente del chat" in normalized
+            or "descarregable directament del xat" in normalized
+            or re.search(r"\b(te lo|te l|ja te l|ya te lo) he enviad[oa]\b", normalized)
+        )
+    )
+
+
+def _invoice_for_owner_pdf(business_id: int, text: str) -> tuple[dict | None, str | None]:
+    """Resuelve la factura citada; nunca mezcla resultados de otros negocios."""
+    normalized = _searchable_text(text)
+    invoices = db.list_invoices(business_id, limit=100)
+    if not invoices:
+        return None, "No encuentro ninguna factura o ticket en tu cuenta."
+
+    # Los números visibles pueden contener barras o guiones. La misma
+    # normalización del mensaje permite reconocer T2026/0004 como t2026 0004.
+    for invoice in invoices:
+        visible_number = _searchable_text(invoice.get("number"))
+        if visible_number and re.search(rf"\b{re.escape(visible_number)}\b", normalized):
+            return invoice, None
+
+    explicit = re.search(
+        r"\b(?:factura|ticket|tiquet)\s*(?:numero|num|n|id)?\s*#?\s*"
+        r"([a-z0-9][a-z0-9/_-]*)\b",
+        normalized,
+    )
+    if explicit:
+        value = explicit.group(1)
+        # «ticket de Marta» no contiene una referencia documental: Marta se
+        # resuelve como cliente unas líneas más abajo.
+        if value not in {"de", "del", "para", "per", "a", "en", "amb", "con"}:
+            invoice = db.find_invoice_reference(value, business_id)
+            if invoice:
+                return invoice, None
+
+    client_matches: list[tuple[int, dict]] = []
+    for invoice in invoices:
+        client_name = _searchable_text(invoice.get("client_name"))
+        if client_name and re.search(rf"\b{re.escape(client_name)}\b", normalized):
+            client_matches.append((len(client_name), invoice))
+    if client_matches:
+        longest = max(length for length, _ in client_matches)
+        candidates = [invoice for length, invoice in client_matches if length == longest]
+        return candidates[0], None
+
+    available = [
+        invoice for invoice in invoices
+        if invoice.get("status") in {"enviada", "parcial", "cobrada"}
+    ]
+    if available:
+        return available[0], None
+    return invoices[0], None
+
+
+def _safe_invoice_filename(invoice: dict) -> str:
+    stem = re.sub(
+        r"[^A-Za-z0-9._-]+", "-", str(invoice.get("number") or invoice["id"])
+    ).strip("-.") or str(invoice["id"])
+    prefix = "ticket" if invoice.get("invoice_type") == "F2" else "factura"
+    return f"{prefix}-{stem[:80]}.pdf"
+
+
+def _send_owner_invoice_pdf(business: dict, phone: str, text: str) -> dict:
+    """Envía al titular el PDF real como documento reactivo de WhatsApp."""
+    invoice, error = _invoice_for_owner_pdf(business["id"], text)
+    if not invoice:
+        return {"sent": False, "reply": error or "No encuentro ese documento."}
+    if invoice.get("status") not in {"enviada", "parcial", "cobrada"}:
+        return {
+            "sent": False,
+            "invoice_id": invoice["id"],
+            "reply": (
+                f"El ticket #{invoice['id']} todavía es un borrador. No voy a "
+                "presentarlo como definitivo. Primero dime «emitir ticket "
+                f"{invoice['id']}» y confirma la emisión."
+            ),
+        }
+    token = db.get_or_create_portal_token(business["id"], invoice["client_id"])
+    if not token:
+        return {
+            "sent": False, "invoice_id": invoice["id"],
+            "reply": "No he podido preparar un enlace seguro para ese PDF.",
+        }
+    document_url = f"{config.BASE_URL}/p/{token}/invoices/{invoice['id']}/pdf"
+    filename = _safe_invoice_filename(invoice)
+    number = invoice.get("number") or f"#{invoice['id']}"
+    caption = f"{('Ticket' if invoice.get('invoice_type') == 'F2' else 'Factura')} {number}"
+    try:
+        meta_message_id = _post_to_meta({
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": recipient_phone(phone) or phone,
+            "type": "document",
+            "document": {
+                "link": document_url,
+                "filename": filename,
+                "caption": caption,
+            },
+        })
+    except Exception as exc:  # noqa: BLE001 - se informa sin filtrar respuesta del proveedor.
+        log.warning(
+            "No se pudo adjuntar factura por WhatsApp business=%s invoice=%s: %s",
+            business["id"], invoice["id"], type(exc).__name__,
+        )
+        return {
+            "sent": False,
+            "invoice_id": invoice["id"],
+            "reply": (
+                "No he podido adjuntar el PDF en WhatsApp. No te diré que está "
+                f"enviado porque no lo está. Puedes descargarlo aquí: {document_url}"
+            ),
+        }
+    db.record_invoice_communication(
+        invoice["id"], business["id"], "entrega_enviada",
+        details=f"canal=whatsapp_titular;wamid={meta_message_id[:200]}",
+    )
+    return {
+        "sent": True,
+        "invoice_id": invoice["id"],
+        "meta_message_id": meta_message_id,
+        "filename": filename,
+    }
 
 
 def _eur(number) -> str:
@@ -1793,6 +1956,20 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
+        if _is_owner_pdf_request(text):
+            pdf_result = _send_owner_invoice_pdf(business, phone, text)
+            if not pdf_result["sent"]:
+                send(phone, pdf_result["reply"], business_id=business["id"])
+            results.append({
+                "phone": phone,
+                "business_id": business["id"],
+                "invoice_pdf": True,
+                "sent": pdf_result["sent"],
+                "invoice_id": pdf_result.get("invoice_id"),
+            })
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
+
         invoice_action = _prepare_invoice_action(business, phone, text)
         if invoice_action is not None:
             send(phone, invoice_action, business_id=business["id"])
@@ -1824,6 +2001,14 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
         reply = chat.handle(
             business["id"], text, channel="whatsapp", actor_phone=phone
         ).get("reply", "")
+        if _claims_unsent_attachment(reply):
+            latest = db.list_invoices(business["id"], limit=1)
+            reference = f" #{latest[0]['id']}" if latest else ""
+            reply = (
+                "No he adjuntado ningún archivo. El texto anterior no era una "
+                "confirmación válida de envío. Para recibir el PDF real aquí, "
+                f"escribe «pásame la factura{reference} en PDF»."
+            )
         if config.ASSISTANT_REVIEW_ENABLED and db.get_pending_action(business["id"], f"wa:{phone}"):
             db.clear_pending_action(business["id"], phone)
         send(phone, reply, business_id=business["id"])

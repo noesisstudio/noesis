@@ -5848,6 +5848,114 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(messages[0]["entity_id"], invoice["id"])
         self.assertIn("entrega preparada", replies[-1])
 
+    def test_owner_can_request_real_ticket_pdf_in_catalan(self):
+        business, first_client = self._connected_business("PDF al titular")
+        marta = db.add_client("Marta", business_id=business["id"])
+        other = db.add_invoice(
+            first_client["id"], "Otro trabajo", 20, invoice_type="F2",
+            business_id=business["id"],
+        )
+        db.issue_invoice(other["id"], business["id"])
+        ticket = db.add_invoice(
+            marta["id"], "Aire acondicionado", 300, invoice_type="F2",
+            business_id=business["id"],
+        )
+        ticket = db.issue_invoice(ticket["id"], business["id"])
+        replies = []
+        with (
+            patch.object(whatsapp, "_post_to_meta", return_value="wamid-document") as post,
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            result = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-owner-pdf-1",
+                "text": "Envia'm PDF tiquet Marta amb fitxer per aquí",
+            })
+
+        self.assertTrue(result["results"][0]["invoice_pdf"])
+        self.assertTrue(result["results"][0]["sent"])
+        self.assertEqual(result["results"][0]["invoice_id"], ticket["id"])
+        self.assertEqual(replies, [])
+        payload = post.call_args.args[0]
+        self.assertEqual(payload["type"], "document")
+        self.assertEqual(payload["recipient_type"], "individual")
+        self.assertEqual(payload["to"], "34600111222")
+        self.assertIn(f"/invoices/{ticket['id']}/pdf", payload["document"]["link"])
+        self.assertTrue(payload["document"]["filename"].startswith("ticket-"))
+        self.assertEqual(payload["document"]["caption"], f"Ticket {ticket['number']}")
+        self.assertEqual(
+            db.list_invoice_events(business["id"])[-1]["event_type"],
+            "entrega_enviada",
+        )
+
+    def test_owner_pdf_followup_uses_latest_issued_and_reports_meta_failure(self):
+        business, client = self._connected_business("PDF fallido")
+        ticket = db.add_invoice(
+            client["id"], "Reparación", 100, invoice_type="F2",
+            business_id=business["id"],
+        )
+        ticket = db.issue_invoice(ticket["id"], business["id"])
+        replies = []
+        with (
+            patch.object(whatsapp, "_post_to_meta", side_effect=RuntimeError("Meta cae")),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            result = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-owner-pdf-2",
+                "text": "Pásamelo en PDF",
+            })
+
+        self.assertTrue(result["results"][0]["invoice_pdf"])
+        self.assertFalse(result["results"][0]["sent"])
+        self.assertEqual(result["results"][0]["invoice_id"], ticket["id"])
+        self.assertIn("no lo está", replies[-1])
+        self.assertIn(f"/invoices/{ticket['id']}/pdf", replies[-1])
+
+    def test_owner_pdf_never_presents_a_draft_as_final(self):
+        business, client = self._connected_business("PDF borrador")
+        draft = db.add_invoice(
+            client["id"], "Pendiente", 75, invoice_type="F2",
+            business_id=business["id"],
+        )
+        replies = []
+        with (
+            patch.object(whatsapp, "_post_to_meta") as post,
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            result = whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-owner-pdf-3",
+                "text": f"Mándame el ticket {draft['id']} en PDF",
+            })
+
+        self.assertFalse(result["results"][0]["sent"])
+        post.assert_not_called()
+        self.assertIn("todavía es un borrador", replies[-1])
+
+    def test_generic_assistant_cannot_claim_an_attachment_it_did_not_send(self):
+        business, client = self._connected_business("Sin adjuntos inventados")
+        invoice = db.add_invoice(
+            client["id"], "Trabajo", 50, business_id=business["id"]
+        )
+        replies = []
+        with (
+            patch.object(
+                whatsapp.chat, "handle",
+                return_value={"reply": "Ya tienes el PDF adjunto y descargable directamente del chat."},
+            ),
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw: replies.append(text)),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-false-attachment",
+                "text": "Haz lo que te pedí antes",
+            })
+
+        self.assertIn("No he adjuntado ningún archivo", replies[-1])
+        self.assertIn(f"factura #{invoice['id']}", replies[-1])
+        self.assertNotIn("Ya tienes", replies[-1])
+
     def test_pdf_document_is_saved_to_papers(self):
         business, _ = self._connected_business("PDFs WhatsApp")
         from noesis.documents import repo as docrepo

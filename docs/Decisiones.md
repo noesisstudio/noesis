@@ -2,6 +2,15 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Un adjunto se confirma únicamente después de que Meta lo acepte (2026-09-09)
+
+Una respuesta generativa no puede representar una entrega. Las peticiones de PDF
+al propio titular pasan por una operación local separada: identidad ya vinculada,
+factura emitida del mismo negocio, enlace de portal existente y mensaje `document`
+aceptado por Meta. Si el proveedor falla, Bynoesis lo dice y facilita el enlace;
+si el documento es borrador, pide emitirlo primero. La IA no recibe autoridad para
+elegir otra cuenta, alterar la factura ni declarar un archivo adjunto.
+
 ## La conversación demuestra el producto sin inventar autonomía (2026-09-09)
 
 El hero pasa del panel a un ejemplo de WhatsApp: borrador, revisión y resultado.
