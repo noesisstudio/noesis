@@ -1,0 +1,30 @@
+<div class="conversation-demo{{ ' has-voice' if voice_available }}" id="demo-conversacion" data-conversation-demo>
+  <div class="conversation-top"><img src="/static/noesis-mark.svg" alt="" width="34" height="34"><div><b>Noesis</b><span>Tu negocio, en una conversación</span></div><span class="demo-label">Demostración</span></div>
+  <p class="visually-hidden">Ejemplos ficticios: pides una factura por 680 euros más IVA para Instalaciones García y Noesis prepara un borrador de 822,80 euros. Tú revisas antes de emitir. También puedes guardar documentos y consultar facturas pendientes. Las respuestas están abreviadas para esta demostración; no se ejecutan operaciones reales.</p>
+  <div class="conversation-stage" aria-hidden="true">
+    <div class="chat-case" data-chat-case="0">
+      <p class="chat-bubble incoming" data-chat-step="0">Hola. Soy Noesis.<br>¿Qué quieres hacer hoy?</p>
+      <div class="chat-bubble outgoing" data-chat-step="1">
+        {% if voice_available %}<div class="voice-message"><span>Audio · 0:06</span><span class="waveform">{% for n in range(18) %}<i></i>{% endfor %}</span></div>{% endif %}
+        <p>Haz una factura de 680 € más IVA a Instalaciones García por la reparación.</p>
+      </div>
+      <p class="chat-typing" data-chat-step="2">Preparando el borrador…</p>
+      <div class="chat-bubble incoming chat-result" data-chat-step="3"><b>Borrador preparado.</b><div class="invoice-preview"><span>Instalaciones García</span><dl><div><dt>Base</dt><dd>680,00 €</dd></div><div><dt>IVA · 21 %</dt><dd>142,80 €</dd></div><div class="invoice-total"><dt>Total</dt><dd>822,80 €</dd></div></dl></div><small>Revisa los datos antes de emitir.</small></div>
+    </div>
+    <div class="chat-case" data-chat-case="1" hidden>
+      <p class="chat-bubble incoming" data-chat-step="0">¿Un justificante para guardar?</p>
+      <div class="chat-bubble outgoing" data-chat-step="1"><span class="attachment-label">Documento adjunto · ticket.jpg</span><p>Guarda este gasto.</p></div>
+      <p class="chat-typing" data-chat-step="2">Guardando el documento…</p>
+      <div class="chat-bubble incoming chat-result" data-chat-step="3">{% if ocr_available %}<b>He leído 52,40 € de combustible.</b><div class="mini-result"><span>Combustible</span><b>52,40 €</b><small>Hoy · pendiente de revisión</small></div><small>Confirma la lectura antes de registrarlo como gasto.</small>{% else %}<b>Documento guardado.</b><div class="mini-result"><span>ticket.jpg</span><b>Pendiente de revisar</b><small>Hoy · en tus documentos</small></div><small>Dime el importe por escrito para registrar el gasto.</small>{% endif %}</div>
+    </div>
+    <div class="chat-case" data-chat-case="2" hidden>
+      <p class="chat-bubble incoming" data-chat-step="0">Los cobros, también a mano.</p>
+      <div class="chat-bubble outgoing" data-chat-step="1"><p>¿Qué facturas tengo pendientes?</p></div>
+      <p class="chat-typing" data-chat-step="2">Consultando tus registros…</p>
+      <div class="chat-bubble incoming chat-result" data-chat-step="3"><b>Tienes 3 facturas pendientes.</b><div class="mini-result"><span>Total pendiente</span><b>1.420,00 €</b><small>Según los cobros registrados</small></div><small>Puedes revisar los clientes y el detalle en Cobros.</small></div>
+    </div>
+  </div>
+  <div class="conversation-controls"><div role="group" aria-label="Ejemplo de conversación"><button type="button" data-chat-select="0" aria-pressed="true">Factura</button><button type="button" data-chat-select="1" aria-pressed="false">Ticket</button><button type="button" data-chat-select="2" aria-pressed="false">Cobros</button></div><button type="button" data-chat-pause hidden>Pausar</button></div>
+  <div class="conversation-caption"><span>Datos ficticios · respuestas abreviadas · sin sonido</span><button type="button" data-invoice-open>Ver borrador de ejemplo</button></div>
+  <dialog class="sample-invoice-dialog" aria-labelledby="sample-title"><form method="dialog"><button class="btn" aria-label="Cerrar borrador de ejemplo">Cerrar</button></form><span class="eyebrow">Documento de demostración · sin validez fiscal</span><h2 id="sample-title">Borrador de factura</h2><p>Cliente ficticio: Instalaciones García<br>Concepto: reparación</p><dl><div><dt>Base</dt><dd>680,00 €</dd></div><div><dt>IVA (21 %)</dt><dd>142,80 €</dd></div><div><dt>Total</dt><dd>822,80 €</dd></div></dl><p>En tu cuenta revisas el cliente, los datos fiscales y el concepto antes de emitir. Este ejemplo no crea ni envía una factura.</p></dialog>
+</div>

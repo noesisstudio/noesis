@@ -2,6 +2,17 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## La conversación demuestra el producto sin inventar autonomía (2026-09-09)
+
+El hero pasa del panel a un ejemplo de WhatsApp: borrador, revisión y resultado.
+Audio/OCR se condicionan a disponibilidad configurada; una demo no certifica al
+proveedor. No se publica un teléfono interno como demo ni testimonios inventados.
+Se conserva el panel navegable como evidencia secundaria. Cal.com se incrusta
+solo tras permiso revocable en Contacto, con adaptador local y origen/ventana
+verificados. La analítica añade contadores diarios cerrados sin identidad, reutiliza
+`page_views` con namespace excluido de visitas y no toca procesos empresariales.
+No hay despliegue implícito por acabar el rediseño. [[Rediseño-web-2026-09-09]].
+
 ## Aprender lenguaje no concede autonomía (2026-09-08)
 
 Una corrección solo se recuerda después de completar la acción revisada y recibir

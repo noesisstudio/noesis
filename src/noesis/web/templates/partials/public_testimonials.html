@@ -1,0 +1,12 @@
+{# Solo contenido editorial verificado y con permiso de publicación. Vacío por defecto. #}
+{% set testimonials = verified_testimonials | default([]) | selectattr('publication_approved') | list %}
+{% if testimonials %}
+<section class="story-section" aria-labelledby="testimonials-title">
+  <div class="story-heading"><span class="eyebrow">En su propio negocio</span><h2 id="testimonials-title">Quienes ya trabajan con Noesis.</h2></div>
+  <div class="input-grid">
+    {% for item in testimonials %}
+    <article><blockquote>{{ item.quote }}</blockquote><h3>{{ item.name }}</h3><p>{{ item.profession }}</p><p>{{ item.previous_problem }}</p><p>{{ item.verified_result }}</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

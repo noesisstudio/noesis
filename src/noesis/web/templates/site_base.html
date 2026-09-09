@@ -30,6 +30,7 @@
   <meta name="twitter:image:alt" content="Bynoesis, el negocio ordenado en una sola vista">
   <link rel="canonical" href="{{ base_url }}{{ request.url.path }}">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  <link rel="stylesheet" href="/static/public-marketing.css?v={{ asset_v }}">
   {% block structured_data %}{% endblock %}
 </head>
 <body class="landing-body public-site">
@@ -46,7 +47,6 @@
         <a href="/autonomos" class="{{ 'active' if site_active == 'autonomos' }}">Autónomos</a>
         <a href="/gestorias" class="{{ 'active' if site_active == 'gestorias' }}">Gestorías</a>
         <a href="/precios" class="{{ 'active' if site_active == 'precios' }}">Precios</a>
-        <a href="/preguntas" class="{{ 'active' if site_active == 'preguntas' }}">Preguntas</a>
         <a href="/contacto" class="{{ 'active' if site_active == 'contacto' }}">Contáctanos</a>
       </nav>
 
@@ -89,17 +89,19 @@
     <section class="public-final-cta" aria-labelledby="final-cta-title">
       <div>
         <span class="eyebrow">{% if public_signup_available %}Empieza sin riesgo{% else %}Piloto acompañado{% endif %}</span>
-        <h2 id="final-cta-title">{% block cta_title %}{% if public_signup_available %}Catorce días para poner orden de verdad.{% else %}Abrimos con pocos negocios y acompañamiento directo.{% endif %}{% endblock %}</h2>
+        <h2 id="final-cta-title">{% block cta_title %}Tu próxima gestión puede empezar con un mensaje.{% endblock %}</h2>
         <p>{% block cta_text %}{% if public_signup_available %}Sin tarjeta, sin permanencia y con tus datos siempre exportables.{% else %}Solicita acceso y configuraremos contigo el primer ciclo completo.{% endif %}{% endblock %}</p>
       </div>
       <div class="public-final-cta-actions">
-        {% if public_signup_available %}
+        {% if marketing_cta_href %}
+        <a class="btn light" href="{{ marketing_cta_href }}" data-public-event="final_cta">{{ marketing_cta_label }} →</a>
+        {% elif public_signup_available %}
         <a class="btn light" href="/onboarding?intent=trial">Prueba 14 días <span aria-hidden="true">→</span></a>
         {% else %}
         <a class="btn light" href="/solicitar-acceso">Solicitar acceso <span aria-hidden="true">→</span></a>
         {% endif %}
         {% if site_active != 'contacto' %}
-        <a class="btn ghost" href="/contacto">Reservar una llamada</a>
+        <a class="btn ghost" href="/contacto#reserva">Agendar una demo</a>
         {% endif %}
       </div>
     </section>
@@ -110,7 +112,7 @@
     <div class="public-footer-grid">
       <div class="public-footer-brand">
         <a class="site-brand" href="/"><img src="/static/noesis-mark.svg" alt=""> <span>Bynoesis</span></a>
-        <p>La oficina que trabaja contigo mientras tú haces el oficio.</p>
+        <p>Tu negocio, por WhatsApp.<br>Menos papeleo. Más control.</p>
       </div>
       <div class="public-footer-col">
         <b>Producto</b>
@@ -142,6 +144,7 @@
     </div>
   </footer>
   <script src="/static/public-site.js?v={{ asset_v }}" defer></script>
+  <script src="/static/public-marketing.js?v={{ asset_v }}" defer></script>
   {% block page_scripts %}{% endblock %}
   <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>

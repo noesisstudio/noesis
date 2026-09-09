@@ -65,6 +65,7 @@ def admin_panel(request: Request):
             if row["status"] in db.PRIVACY_REQUEST_OPEN_STATUSES
         ),
         "visits": db.page_views_summary(30),
+        "public_interactions": db.public_interactions_summary(30),
         "invite": request.session.pop("last_invite", None),
         "whatsapp_identity": request.session.pop("whatsapp_identity", None),
         "admin_error": request.session.pop("admin_error", None),

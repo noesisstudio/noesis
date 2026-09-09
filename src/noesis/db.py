@@ -10443,26 +10443,49 @@ def page_views_summary(days: int = 30) -> dict:
     desde = (date.today() - timedelta(days=max(1, int(days)))).isoformat()
     with get_conn() as conn:
         total = conn.execute(
-            "SELECT COALESCE(SUM(views), 0) AS total FROM page_views WHERE day >= ?",
+            "SELECT COALESCE(SUM(views), 0) AS total FROM page_views "
+            "WHERE day >= ? AND path NOT LIKE '@event:%'",
             (desde,),
         ).fetchone()["total"]
         por_dia = [dict(r) for r in conn.execute(
             "SELECT day, SUM(views) AS views FROM page_views WHERE day >= ? "
+            "AND path NOT LIKE '@event:%' "
             "GROUP BY day ORDER BY day", (desde,),
         ).fetchall()]
         por_pagina = [dict(r) for r in conn.execute(
             "SELECT path, SUM(views) AS views FROM page_views WHERE day >= ? "
+            "AND path NOT LIKE '@event:%' "
             "GROUP BY path ORDER BY views DESC LIMIT 15", (desde,),
         ).fetchall()]
         procedencia = [dict(r) for r in conn.execute(
             "SELECT referrer_host, SUM(views) AS views FROM page_views "
-            "WHERE day >= ? AND referrer_host <> '' "
+            "WHERE day >= ? AND referrer_host <> '' AND path NOT LIKE '@event:%' "
             "GROUP BY referrer_host ORDER BY views DESC LIMIT 10", (desde,),
         ).fetchall()]
     return {
         "days": int(days), "total": int(total or 0), "by_day": por_dia,
         "by_path": por_pagina, "by_referrer": procedencia,
     }
+
+
+def public_interactions_summary(days: int = 30) -> list[dict]:
+    """Contadores sin identidad en un espacio de claves separado de las visitas.
+
+    Reutiliza el contador diario existente, sin migración ni eventos de negocio.
+    Estas claves nunca son URLs rastreables ni suman páginas vistas.
+    """
+    since = (date.today() - timedelta(days=max(1, int(days)))).isoformat()
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT path, SUM(views) AS total FROM page_views "
+            "WHERE day >= ? AND path LIKE '@event:%' "
+            "GROUP BY path ORDER BY total DESC", (since,),
+        ).fetchall()
+    return [
+        {"page": row["path"].split(":", 2)[1],
+         "event": row["path"].split(":", 2)[2], "total": int(row["total"])}
+        for row in rows
+    ]
 
 
 # ------------------------------------------------- Solicitudes de acceso ---

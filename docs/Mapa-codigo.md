@@ -1,5 +1,17 @@
 # Mapa de código
 
+## Web pública conversacional — 9-sep
+
+`web/public_marketing.py` centraliza CTA real, FAQs, schemas y nombres de eventos.
+`templates/partials/public_conversation.html` y `static/public-marketing.js/css`
+demuestran tres casos sin ejecutar operaciones. `public_product_demo.html` conserva
+el panel previo; `public_testimonials.html` no muestra nada sin contenido aprobado.
+`public-calendar.js` conecta el iframe solo tras permiso y valida sus mensajes.
+`routers/pages.py` recibe contadores acotados; `db.public_interactions_summary`
+separa `@event:` de visitas; `admin` muestra ambos. Sin tablas nuevas. CSP en
+`server.py` permite Cal.com solo en Contacto. Los contratos están en
+`test_public_marketing.py` y dos tests Node sin red. Detalle: [[Rediseño-web-2026-09-09]].
+
 ## Aprendizaje supervisado — 8-sep
 
 `learning.py` prepara equivalencias literales, diálogo de factura y ofertas de

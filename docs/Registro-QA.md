@@ -1,5 +1,40 @@
 # Registro de QA
 
+## 2026-09-09 — rediseño público conversacional
+
+- Resultado final: **767 pruebas Python en 616,408 s, OK**, más dos contratos Node.
+  Ruff, Bandit y validación del estado verdes. Wheel: 167 archivos y comprobación
+  explícita de plantillas, parciales, JS/CSS, WebP y fuente local incluidos.
+
+- Entorno aislado en localhost, SQLite temporal, datos demo y planificador
+  desactivado. Ninguna cuenta real modificada; ningún mensaje o reserva enviado.
+- Primera suite completa: 764 pruebas, una regresión en el contrato de precios.
+  Corregido CTA de registro cerrado; actualizado el selector del nuevo hero y
+  restaurada la referencia versionada al gráfico diferido. El contrato vuelve a pasar.
+- Contratos públicos: rutas, H1/meta/canonical, JSON-LD/FAQ, enlaces y anchors,
+  copia condicionada a servicios, registro cerrado, número público explícito,
+  CSP/consentimiento, payload/origen/límite de carga y visitas separadas de eventos.
+- Dos contratos Node ejecutan el JS real sin red: secuencias, selección, pausa,
+  ocultación, reduced motion, modal, deduplicación y payload mínimo; Cal.com,
+  origen/ventana/namespace, altura, reserva simulada y revocación. Ambos verdes.
+- Ruff y Bandit (criterio CI high/high), sintaxis JS y `git diff --check` verdes.
+  Detector de secretos sin hallazgos nuevos; baseline solo actualiza números de
+  línea de CI y fecha, sin añadir excepciones.
+- Build wheel correcto con plantillas/assets incluidos; antes los omitía.
+  Sin dependencias nuevas de runtime ni migración.
+- Navegador: cuatro páginas a 320/390/768/1440 px sin scroll horizontal global.
+  Menú/teclado, modal, panel original y pestañas Facturas/Dinero; calendario real con
+  horarios y sin desbordamiento interno medido. Audio/OCR visual simulado a 320 px
+  sin recortes. Sin errores de consola en las rutas revisadas.
+- Administración local: una visita y una interacción de inicio de demo, separadas
+  en Marketing. Servidor administrativo de prueba cerrado tras validar.
+- Comparación de Autónomos/Gestorías antes y después al mismo ancho: WhatsApp y
+  resultado pasan al primer bloque. CTAs según configuración de cada entorno, no
+  prueba A/B de conversión. Capturas: `docs/qa/redesign-2026-09-09/`.
+- Límites: no CrUX/Core Web Vitals de campo, Safari físico, proveedor de voz/OCR/Meta
+  ni reserva/correo reales. No certificar WCAG o legalidad con esta revisión local.
+  Sin push ni deploy. Detalle: [[Rediseño-web-2026-09-09]].
+
 ## 2026-09-09 — vinculación de WhatsApp bloqueada por identidad de equipo
 
 - Reproducido en base temporal: con el teléfono del titular dado de alta en una

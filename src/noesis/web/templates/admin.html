@@ -324,6 +324,20 @@
     </div>
   </div>
 
+  <details class="card">
+    <summary class="card-h">Interacciones de la web · últimos 30 días</summary>
+    <div class="card-b">
+      <p class="meta">Recuentos agregados por página y acción, separados de las visitas.
+        Una acción se cuenta una vez por carga de página. No son personas únicas ni
+        un embudo individual; las reservas cuentan la señal recibida de Cal.com,
+        no una reunión celebrada. El bloqueo de scripts puede reducir el recuento.</p>
+      {% if public_interactions %}
+      <div class="table-wrap"><table><thead><tr><th>Página</th><th>Acción</th><th>Recuento</th></tr></thead>
+      <tbody>{% for row in public_interactions %}<tr><td>{{ row.page }}</td><td>{{ row.event }}</td><td>{{ row.total }}</td></tr>{% endfor %}</tbody></table></div>
+      {% else %}<p>Todavía no hay interacciones registradas.</p>{% endif %}
+    </div>
+  </details>
+
   <!-- =================  Crecimiento ================= -->
   <div class="dept-head">
     <div>

@@ -1,0 +1,4 @@
+<section class="story-section faq-story" aria-labelledby="faq-title">
+  <div class="story-heading"><span class="eyebrow">Antes de empezar</span><h2 id="faq-title">Las dudas, claras.</h2><a href="/preguntas">Todas las preguntas →</a></div>
+  <div class="public-accordion">{% for question, answer in marketing_faqs %}<details><summary>{{ question }}</summary><p>{{ answer }}</p></details>{% endfor %}</div>
+</section>

@@ -1,5 +1,30 @@
 ﻿# Registro de cambios
 
+## 2026-09-09 — web pública: la conversación como demostración
+
+Objetivo: implementar el prompt sobre `4df5088`, conservando la corrección del
+socio. Cuatro páginas con WhatsApp, demo, copy verificable, SEO y navegación móvil.
+Calendario real opt-in (enlace anterior 404), contador separado de visitas visible
+en Marketing. Sin cambios en gestiones, permisos o esquema; versión 55.
+
+Áreas: plantillas/parciales públicos, CSS/JS locales, `public_marketing`, `config`,
+`deps`, `pages`, `server`, `db/admin` y textos legales. El wheel incluye assets;
+CI ejecuta contratos JS. Archivos y QA: [[Rediseño-web-2026-09-09]], [[Registro-QA]].
+
+Validación final: 767 pruebas Python y dos contratos Node verdes, lint/seguridad,
+build con 167 archivos y navegador en cuatro anchos. `.secrets.baseline` solo
+sincroniza líneas de CI, sin nuevas excepciones.
+Corregidos CTA de alta cerrada y referencia de caché de gráficos durante regresión.
+Riesgo: presentación, declaraciones comerciales y protocolo externo. Límites:
+canal público demo, proveedores reales, cita/correo, Safari y métricas de campo.
+
+Diagnóstico: permiso/CSP/Cal.com ante calendario vacío; `/public/event` y Marketing
+ante recuentos ausentes. Rollback por revert normal, sin migración. Si el código
+anterior no excluye `@event:`, conservar esa exclusión o retirar solo esos contadores
+tras exportarlos. No tocar datos de negocio. Publicación autorizada por el founder:
+commit y push a main, con despliegue automático de Railway. La comprobación del
+SHA remoto, despliegue y humo público se realiza después de publicar este commit.
+
 ## 2026-09-09 — vincular WhatsApp dice la verdad y no quema el código
 
 Objetivo: un teléfono que ya está de alta en Equipo no podía vincularse como

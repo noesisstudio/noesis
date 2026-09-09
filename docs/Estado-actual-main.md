@@ -1,5 +1,20 @@
 # Estado actual del producto
 
+## 9-sep — rediseño público autorizado para publicación
+
+Sobre el `main` del socio `4df5088`, conservando su corrección de identidad del
+teléfono. Home centrada en **Tu negocio, por WhatsApp**, demo conversacional ligera,
+Autónomos por jornada y Gestorías con expediente real de ejemplo. Contacto integra
+el calendario real solo tras permiso explícito; el enlace heredado daba 404.
+Eventos agregados separados de visitas en Marketing, sin identificar visitantes.
+Sin migración ni cambios en las gestiones; esquema 55. El paquete instalable
+incluye ahora plantillas/assets. El founder autoriza commit y push a main para
+despliegue automático en Railway. En esta foto previa al push, la verificación
+del nuevo despliegue queda pendiente; no se da por completada anticipadamente.
+Detalle, evidencia, copy y límites: [[Rediseño-web-2026-09-09]]. QA: [[Registro-QA]].
+Faltan para la aceptación externa: canal público demo WhatsApp, proveedores reales,
+reserva coordinada/correo, móvil físico y métricas de campo tras publicación.
+
 ## 8-sep — release de la mañana consolidada
 
 Código reunido sobre el último `main` del socio, publicado como `086039e0b538` y

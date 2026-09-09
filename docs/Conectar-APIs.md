@@ -5,6 +5,15 @@
 > Los secretos se guardan en Railway o en el gestor del proveedor, nunca en Git.
 > Estado general: [[Estado-actual-main]]. Orden vivo: [[Tareas-vivas]].
 
+## Canal público de demostración
+
+El rediseño usa `NOESIS_PUBLIC_WHATSAPP_DEMO_PHONE` solo para un canal público
+preparado y probado. Formato internacional, solo dígitos, sin `+` ni espacios.
+Vacío por defecto: conserva el alta o la solicitud de acceso. No usar un teléfono
+personal o interno sin preparar una demo segura; no crea una integración Meta.
+Calendario en `web/public_marketing.py`: disponibilidad verificada, sin enviar
+una reserva. Detalle: [[Rediseño-web-2026-09-09]].
+
 ## Resumen ejecutivo
 
 | Servicio | Estado del código | Acción externa | Prioridad | ¿Activar ya? |

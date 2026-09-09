@@ -1,5 +1,18 @@
 # Tareas vivas
 
+## Rediseño público — 9-sep, publicación autorizada
+
+- [x] Cuatro páginas, hero conversacional, prueba de producto y navegación móvil.
+- [x] Calendario real opt-in, revocación, origen del iframe y altura adaptable.
+- [x] SEO coherente, contadores mínimos en Marketing y empaquetado de assets.
+- [x] Preservar el último cambio del socio sobre identidad de teléfono.
+- [x] Autorización del founder para publicar en main y Railway.
+- [ ] Verificar el SHA desplegado, CI y humo público después del push.
+- [ ] Canal público WhatsApp preparado antes de configurar su CTA dedicado.
+- [ ] Validación de voz/OCR/Meta reales, cita/correo coordinados y Safari físico.
+- [ ] Continuar ajustes con el socio y recoger métricas de campo tras publicar.
+  Detalle: [[Rediseño-web-2026-09-09]].
+
 ## Release consolidada — 8-sep
 
 - [x] Reconciliar el trabajo local con el `main` del socio y conservar ambas

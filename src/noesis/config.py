@@ -286,6 +286,8 @@ LEGAL_DOCUMENT_VERSION = "2026-09-03"
 PUBLIC_CONTACT_EMAIL = os.getenv(
     "NOESIS_CONTACT_EMAIL", LEGAL_EMAIL or "info@bynoesis.com"
 ).strip().lower()
+# Número expresamente preparado y verificado para demostraciones públicas.
+PUBLIC_WHATSAPP_DEMO_PHONE = os.getenv("NOESIS_PUBLIC_WHATSAPP_DEMO_PHONE", "").strip()
 # Buzón donde caen las solicitudes de acceso. Tiene variable propia para que no
 # dependa del correo del administrador ni del de contacto público: quien atiende
 # las solicitudes no tiene por qué ser quien administra el sistema.

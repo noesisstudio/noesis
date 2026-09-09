@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import logging
+import json
+import threading
+import time
+from collections import deque
 from datetime import date
 from xml.sax.saxutils import escape
 
@@ -10,14 +14,59 @@ from fastapi import APIRouter, Request
 from fastapi.responses import (
     FileResponse, HTMLResponse, RedirectResponse, Response,
 )
+from starlette.concurrency import run_in_threadpool
 
 from ... import config, db, verifactu_client
 from ...adapters import billing as billing_adapter
 from .. import whatsapp
 from ..deps import HERE, TEMPLATES
+from ..public_marketing import PUBLIC_EVENTS, PUBLIC_EVENT_PAGES, marketing_context
 
 router = APIRouter()
 log = logging.getLogger("noesis.billing")
+
+# Techo global por proceso, sin IP ni huella de visitante. Analítica orientativa.
+_public_event_times: deque = deque()
+_public_event_lock = threading.Lock()
+
+
+@router.post("/public/event", include_in_schema=False)
+async def public_event(request: Request):
+    origin = request.headers.get("origin", "")
+    if origin not in {config.BASE_URL.rstrip("/"), str(request.base_url).rstrip("/")}:
+        return Response(status_code=403)
+    if request.headers.get("sec-fetch-site", "same-origin") != "same-origin":
+        return Response(status_code=403)
+    if request.headers.get("content-type", "").split(";")[0] != "application/json":
+        return Response(status_code=415)
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > 256:
+            return Response(status_code=413)
+    try:
+        payload = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return Response(status_code=400)
+    if (not isinstance(payload, dict) or set(payload) != {"event", "page"}
+            or not isinstance(payload["event"], str) or not isinstance(payload["page"], str)
+            or payload["event"] not in PUBLIC_EVENTS or payload["page"] not in PUBLIC_EVENT_PAGES):
+        return Response(status_code=400)
+    with _public_event_lock:
+        now = time.monotonic()
+        while _public_event_times and _public_event_times[0] < now - 60:
+            _public_event_times.popleft()
+        if len(_public_event_times) >= 300:
+            return Response(status_code=429)
+        _public_event_times.append(now)
+    try:
+        await run_in_threadpool(
+            db.record_page_view, f"@event:{payload['page']}:{payload['event']}"
+        )
+    except Exception:
+        # Una medición perdida no debe impedir navegar ni reservar.
+        log.warning("public_event_not_counted")
+    return Response(status_code=204)
 
 _PAGES = {
     "resumen": "Inicio", "tesoreria": "Tesorería", "analisis": "Análisis",
@@ -65,6 +114,7 @@ def _legal_context(request: Request) -> dict:
 def home(request: Request):
     bid = request.session.get("bid")
     return TEMPLATES.TemplateResponse(request, "landing.html", {
+        **marketing_context("inicio", signup_available=TEMPLATES.env.globals["public_signup_available"]),
         "business_id": bid,
         "site_active": "inicio",
         "prices": billing_adapter.PLAN_PRICES,
@@ -227,6 +277,7 @@ def showcase_client_redirect():
 def site_page(request: Request):
     section = request.url.path.strip("/") or "precios"
     return TEMPLATES.TemplateResponse(request, _SITE_PAGES[section], {
+        **marketing_context(section, signup_available=TEMPLATES.env.globals["public_signup_available"]),
         "site_active": section,
         "business_id": request.session.get("bid"),
         "prices": billing_adapter.PLAN_PRICES,

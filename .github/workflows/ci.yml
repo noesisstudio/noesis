@@ -56,6 +56,9 @@ jobs:
       - name: Detectar errors estàtics
         run: uv run ruff check src tests
 
+      - name: Validar demostración pública y calendario sin red
+        run: node --test tests/public_marketing.test.cjs tests/public_calendar.test.cjs
+
       - name: Validar la font de veritat del projecte
         shell: bash
         run: |

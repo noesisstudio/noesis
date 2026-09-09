@@ -143,7 +143,7 @@ def _count_public_view(request: Request, status: int) -> None:
     if request.method != "GET" or status >= 400:
         return
     ruta = request.url.path
-    if ruta.startswith(_NO_CONTAR):
+    if ruta != "/gestorias" and ruta.startswith(_NO_CONTAR):
         return
     procedencia = ""
     referer = request.headers.get("referer") or ""
@@ -268,10 +268,12 @@ async def security_headers(request: Request, call_next):
         and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml"}
     ):
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    # Única excepción: calendario consentido en Contacto. Sin scripts remotos.
+    frame_source = "https://cal.com" if path == "/contacto" else "'none'"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; img-src 'self' data:; font-src 'self'; "
         "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
-        "connect-src 'self'; object-src 'none'; frame-src 'none'; "
+        f"connect-src 'self'; object-src 'none'; frame-src {frame_source}; "
         "frame-ancestors 'none'; base-uri 'self'; "
         "form-action 'self' https://checkout.stripe.com"
     )
@@ -279,7 +281,7 @@ async def security_headers(request: Request, call_next):
         response.headers["Content-Security-Policy-Report-Only"] = (
             "default-src 'self'; img-src 'self' data:; font-src 'self'; "
             "style-src 'self'; script-src 'self'; connect-src 'self'; "
-            "object-src 'none'; frame-src 'none'; frame-ancestors 'none'; "
+            f"object-src 'none'; frame-src {frame_source}; frame-ancestors 'none'; "
             "base-uri 'self'; form-action 'self' https://checkout.stripe.com"
         )
     if config.HTTPS_ONLY or config.IS_PRODUCTION:
