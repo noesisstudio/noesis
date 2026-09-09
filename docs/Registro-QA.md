@@ -1,5 +1,13 @@
 # Registro de QA
 
+## 2026-09-09 — publicación y corrección PostgreSQL
+
+`ccb1b54`: Railway SUCCESS; puerta externa OK (14 páginas, esquema 55,
+8 cabeceras). CI detecta ProgrammingError por LIKE con porcentaje literal en
+page_views_summary. Corrección: patrón parametrizado también en interacciones;
+regresión explícita añadida al humo PostgreSQL antes del flujo de privacidad/admin.
+El resultado de esa puerta para el hotfix debe verificarse tras su push.
+
 ## 2026-09-09 — rediseño público conversacional
 
 - Resultado final: **767 pruebas Python en 616,408 s, OK**, más dos contratos Node.

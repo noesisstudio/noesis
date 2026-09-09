@@ -1,5 +1,15 @@
 ﻿# Registro de cambios
 
+## 2026-09-09 — compatibilidad PostgreSQL de los contadores públicos
+
+Tras publicar `ccb1b54`, Railway y la puerta pública (14 páginas, esquema 55,
+8 cabeceras) pasan, pero CI detecta que el patrón LIKE literal con porcentaje
+rompe las consultas parametrizadas de psycopg al abrir administración. Se pasa
+el patrón como parámetro en las cinco consultas de `db.py`. Se amplía la puerta
+PostgreSQL descartable para comprobar contadores y el acceso administrativo.
+Sin migraciones, cambios de permisos ni datos de negocio. Riesgo acotado a estas
+consultas; no revertir al literal defectuoso. Revalidar CI y despliegue del hotfix.
+
 ## 2026-09-09 — web pública: la conversación como demostración
 
 Objetivo: implementar el prompt sobre `4df5088`, conservando la corrección del

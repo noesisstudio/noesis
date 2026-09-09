@@ -7,7 +7,8 @@
 - [x] SEO coherente, contadores mínimos en Marketing y empaquetado de assets.
 - [x] Preservar el último cambio del socio sobre identidad de teléfono.
 - [x] Autorización del founder para publicar en main y Railway.
-- [ ] Verificar el SHA desplegado, CI y humo público después del push.
+- [x] Verificar Railway y humo público de ccb1b54: correctos.
+- [ ] Verificar CI y despliegue del hotfix de contadores PostgreSQL.
 - [ ] Canal público WhatsApp preparado antes de configurar su CTA dedicado.
 - [ ] Validación de voz/OCR/Meta reales, cita/correo coordinados y Safari físico.
 - [ ] Continuar ajustes con el socio y recoger métricas de campo tras publicar.

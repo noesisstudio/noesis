@@ -140,7 +140,22 @@ def _privacy() -> None:
     print("Privacidad PostgreSQL: flujo HTTP, permisos, aislamiento, exportación y avisos OK.")
 
 
+def _public_counters() -> None:
+    before = db.page_views_summary()["total"]
+    db.record_page_view("/ci-marketing", "example.com")
+    db.record_page_view("@event:/ci-marketing:hero_demo_started")
+    summary = db.page_views_summary()
+    assert summary["total"] == before + 1
+    assert all(not row["path"].startswith("@event:") for row in summary["by_path"])
+    assert any(
+        row["page"] == "/ci-marketing" and row["total"] == 1
+        for row in db.public_interactions_summary()
+    )
+    print("Marketing PostgreSQL: visitas e interacciones separadas correctamente.")
+
+
 if __name__ == "__main__":
     _guard()
     _rollback()
+    _public_counters()
     _privacy()

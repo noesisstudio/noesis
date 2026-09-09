@@ -10444,23 +10444,23 @@ def page_views_summary(days: int = 30) -> dict:
     with get_conn() as conn:
         total = conn.execute(
             "SELECT COALESCE(SUM(views), 0) AS total FROM page_views "
-            "WHERE day >= ? AND path NOT LIKE '@event:%'",
-            (desde,),
+            "WHERE day >= ? AND path NOT LIKE ?",
+            (desde, "@event:%"),
         ).fetchone()["total"]
         por_dia = [dict(r) for r in conn.execute(
             "SELECT day, SUM(views) AS views FROM page_views WHERE day >= ? "
-            "AND path NOT LIKE '@event:%' "
-            "GROUP BY day ORDER BY day", (desde,),
+            "AND path NOT LIKE ? "
+            "GROUP BY day ORDER BY day", (desde, "@event:%"),
         ).fetchall()]
         por_pagina = [dict(r) for r in conn.execute(
             "SELECT path, SUM(views) AS views FROM page_views WHERE day >= ? "
-            "AND path NOT LIKE '@event:%' "
-            "GROUP BY path ORDER BY views DESC LIMIT 15", (desde,),
+            "AND path NOT LIKE ? "
+            "GROUP BY path ORDER BY views DESC LIMIT 15", (desde, "@event:%"),
         ).fetchall()]
         procedencia = [dict(r) for r in conn.execute(
             "SELECT referrer_host, SUM(views) AS views FROM page_views "
-            "WHERE day >= ? AND referrer_host <> '' AND path NOT LIKE '@event:%' "
-            "GROUP BY referrer_host ORDER BY views DESC LIMIT 10", (desde,),
+            "WHERE day >= ? AND referrer_host <> '' AND path NOT LIKE ? "
+            "GROUP BY referrer_host ORDER BY views DESC LIMIT 10", (desde, "@event:%"),
         ).fetchall()]
     return {
         "days": int(days), "total": int(total or 0), "by_day": por_dia,
@@ -10478,8 +10478,8 @@ def public_interactions_summary(days: int = 30) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT path, SUM(views) AS total FROM page_views "
-            "WHERE day >= ? AND path LIKE '@event:%' "
-            "GROUP BY path ORDER BY total DESC", (since,),
+            "WHERE day >= ? AND path LIKE ? "
+            "GROUP BY path ORDER BY total DESC", (since, "@event:%"),
         ).fetchall()
     return [
         {"page": row["path"].split(":", 2)[1],

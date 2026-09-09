@@ -32,7 +32,7 @@
     "product_preview": "all_sections_and_subsections_navigable_including_caja_analisis_ingresos_costes_presupuestos_cobros_impuestos_crm_productos",
     "demo_frame": "lightweight_three_case_whatsapp_conversation_first_original_navigable_panel_preserved_in_disclosure",
     "landing_narrative": "tu_negocio_por_whatsapp_message_document_and_optional_voice_to_reviewed_result_no_fabricated_claims_founders_and_separate_autonomos_gestorias_journeys",
-    "redesign_candidate": "2026-09-09: publicacion en main y Railway autorizada por el founder. Foto previa al push: verificar nuevo despliegue y CI. Base del socio 4df5088; sin cambiar gestiones ni esquema.",
+    "redesign_candidate": "2026-09-09: ccb1b54 publicado y verificado externamente. Hotfix de patrones LIKE parametrizados para PostgreSQL: verificar CI y despliegue del sucesor. Base del socio 4df5088; sin cambiar gestiones ni esquema.",
     "public_whatsapp_demo": "Solo NOESIS_PUBLIC_WHATSAPP_DEMO_PHONE explícito. Sin él: alta real o solicitud de acceso. Nunca el teléfono interno.",
     "structured_data_candidate": "existing_home_organization_website_preserved_faq_from_same_visible_source_breadcrumbs_on_audience_and_contact_pages_no_ratings_or_fake_certifications",
     "public_copy_language": "no_internal_jargon_on_public_pages_local_brain_and_read_only_mode_are_explained_as_customer_benefits",

@@ -1,5 +1,12 @@
 # Estado actual del producto
 
+## 9-sep — publicación y hotfix PostgreSQL
+
+`ccb1b54` desplegado en Railway y puerta pública verde (14 páginas, esquema 55).
+CI detecta un patrón LIKE incompatible con psycopg en los contadores del admin.
+El hotfix parametriza los cinco patrones y añade regresión PostgreSQL; verificar
+la ejecución remota y despliegue de este sucesor antes de declarar todo verde.
+
 ## 9-sep — rediseño público autorizado para publicación
 
 Sobre el `main` del socio `4df5088`, conservando su corrección de identidad del
