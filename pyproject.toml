@@ -46,7 +46,7 @@ security = [
     "pip-audit>=2.9.0,<3",
     "ruff>=0.16.0,<1",
 ]
-test = ["hypothesis>=6.130.0,<7"]
+test = ["hypothesis>=6.165.10,<7"]
 # Reconstruye el modelo economico editable de docs/. Solo lo necesita quien
 # regenera el libro: pip install -e ".[analysis]"
 analysis = ["openpyxl>=3.1.0,<4"]
