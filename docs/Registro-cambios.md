@@ -15,6 +15,13 @@ ancla abajo y el hueco queda arriba, como el historial de un chat real. Y
 `noesis-mark.svg` lleva los verdes fijos dentro del SVG, así que sobre oscuro se
 perdía el polígono interior: recibe un disco claro propio.
 
+El founder pidió además un marco. Se resuelve con anillos de `box-shadow`: una
+orla clara y un filo finísimo que separan el dispositivo del lienzo y lo apoyan
+sobre la página. No ocupan maquetación, así que no hay riesgo de desbordamiento
+lateral; aun así se comprobó que no aparece scroll horizontal a 390, 768 ni
+1280 px y que los márgenes quedan simétricos. En móvil la orla baja de 11 a 6 px
+porque el margen lateral es de 18 y si no casi toca el borde de la pantalla.
+
 Límite conocido: durante la animación de entrada los pasos aún no visibles siguen
 ocupando su sitio con `opacity: 0`, así que en esos segundos el hueco queda abajo.
 Es deliberado para evitar saltos de maquetación y no se toca.
@@ -26,8 +33,8 @@ a propósito: es un documento, no parte del dispositivo.
 
 Pruebas: 12 de `test_public_marketing` y los dos contratos Node en verde;
 `check_project_truth` correcto. Contrastes calculados sobre cada fondo del panel,
-todos por encima de 4,5:1. Verificado con captura real en escritorio a 1280 px en
-los casos de factura y de cobros. Límites: no verificado en móvil físico, en Safari
+todos por encima de 4,5:1. Verificado con captura real a 1280 px en los casos de
+factura, ticket y cobros, y a 390 px en móvil. Límites: no verificado en móvil físico, en Safari
 ni en producción. Riesgo: bajo y visual; no hay lógica implicada. Diagnóstico: si
 algo se vuelve ilegible, el bloque es contiguo y está comentado. Rollback: borrar
 ese bloque restaura el aspecto anterior sin tocar nada más.

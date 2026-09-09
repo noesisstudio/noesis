@@ -276,3 +276,20 @@
 .public-site .conversation-demo .mini-result {
   border-top-color: var(--demo-line); border-bottom-color: var(--demo-line);
 }
+/* El marco: una orla clara y un filo finísimo separan el dispositivo del
+   lienzo y lo apoyan sobre la página. No ocupa maquetación, son anillos. */
+.public-site .conversation-demo {
+  box-shadow:
+    0 0 0 10px var(--surface-2, #faf7f0),
+    0 0 0 11px rgba(20, 70, 59, .16),
+    0 22px 52px rgba(10, 43, 37, .17);
+}
+@media (max-width: 760px) {
+  /* En móvil el margen lateral es de 18px: una orla de 11px casi toca el borde. */
+  .public-site .conversation-demo {
+    box-shadow:
+      0 0 0 6px var(--surface-2, #faf7f0),
+      0 0 0 7px rgba(20, 70, 59, .16),
+      0 14px 34px rgba(10, 43, 37, .15);
+  }
+}

@@ -9,6 +9,8 @@
   todos por encima del umbral AA.
 - Captura real a 1280 px en los casos «Factura» y «Cobros». Se detectó y corrigió
   que la cifra de total pendiente era invisible sobre el fondo oscuro.
+- Marco: sin scroll horizontal y con márgenes simétricos medidos a 390, 768 y
+  1280 px. Orla reducida en móvil para no tocar el borde.
 - Pendiente: móvil físico, Safari y verificación en producción tras desplegar.
 
 ## 2026-09-09 — publicación y corrección PostgreSQL
