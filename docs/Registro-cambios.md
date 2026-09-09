@@ -15,6 +15,12 @@ ancla abajo y el hueco queda arriba, como el historial de un chat real. Y
 `noesis-mark.svg` lleva los verdes fijos dentro del SVG, así que sobre oscuro se
 perdía el polígono interior: recibe un disco claro propio.
 
+El founder pidió más presencia todavía, así que el marco se refuerza: la orla
+pasa a blanca para separarse del crema, y la elevación se reparte en tres sombras
+—contacto, cuerpo y difusa— en vez de una sola. La pantalla deja de ser un color
+plano y lleva un degradado corto con un filo de luz arriba, que la hace parecer
+encendida en lugar de rellena.
+
 El founder pidió además un marco. Se resuelve con anillos de `box-shadow`: una
 orla clara y un filo finísimo que separan el dispositivo del lienzo y lo apoyan
 sobre la página. No ocupan maquetación, así que no hay riesgo de desbordamiento
