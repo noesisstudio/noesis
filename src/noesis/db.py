@@ -644,22 +644,93 @@ def list_businesses() -> list[dict]:
             "SELECT * FROM businesses ORDER BY id").fetchall()]
 
 
+def whatsapp_identity_rows(phone: str) -> dict:
+    """Quién ocupa un teléfono en el número central: titulares y fichas de equipo.
+
+    Es la consulta que responde a «este número no me deja vincular»: el panel de
+    Cuentas solo enseña el teléfono del titular, así que una ficha de Equipo con
+    ese mismo número es invisible desde ahí.
+    """
+    norm = normalize_phone(phone)
+    if len(norm) != 9:
+        return {"norm": norm, "valid": False, "businesses": [], "workers": []}
+    with get_conn() as conn:
+        businesses = [dict(row) for row in conn.execute(
+            "SELECT id, name, whatsapp_status FROM businesses "
+            "WHERE whatsapp_phone_norm=? ORDER BY id", (norm,),
+        ).fetchall()]
+        workers = [dict(row) for row in conn.execute(
+            "SELECT id, business_id, name, active FROM workers "
+            "WHERE phone_norm=? ORDER BY id", (norm,),
+        ).fetchall()]
+    return {
+        "norm": norm, "valid": True,
+        "businesses": businesses, "workers": workers,
+    }
+
+
+def free_whatsapp_phone(phone: str) -> dict:
+    """Deja el número libre: lo quita de las fichas y desconecta los canales."""
+    identidad = whatsapp_identity_rows(phone)
+    if not identidad["valid"]:
+        raise ValueError("El teléfono debe tener 9 dígitos.")
+    for worker in identidad["workers"]:
+        update_worker(worker["id"], worker["business_id"], phone="")
+    for business in identidad["businesses"]:
+        disconnect_whatsapp(business["id"])
+    return identidad
+
+
+def whatsapp_phone_conflict(phone: str, business_id: int | None = None) -> str | None:
+    """Explica en claro por qué un teléfono no puede ser el número del titular.
+
+    El número central es una identidad única: si ya responde como trabajador o
+    como titular de otro negocio, vincularlo aquí dejaría dos cuentas contestando
+    al mismo WhatsApp. Devuelve el motivo con la salida concreta, o ``None`` si
+    el teléfono está libre.
+    """
+    identidad = whatsapp_identity_rows(phone)
+    if not identidad["valid"]:
+        return (
+            "Ese número no tiene el formato esperado (9 dígitos en España). "
+            "Escríbeme desde el móvil del negocio."
+        )
+    worker = next(
+        (row for row in identidad["workers"] if row["active"]), None
+    )
+    other = next(
+        (
+            row for row in identidad["businesses"]
+            if business_id is None or row["id"] != business_id
+        ),
+        None,
+    )
+    if worker:
+        return (
+            "Ese número ya identifica a un trabajador del equipo "
+            f"({worker['name']}), así que no puede ser además el del titular. "
+            "Entra en la web, Equipo, y quita el teléfono de esa ficha o dale "
+            "de baja. Después vuelve a enviarme el mismo código."
+        )
+    if other:
+        return (
+            f"Ese número ya es el WhatsApp del negocio «{other['name']}». "
+            "Entra en esa cuenta, Ajustes, y desconecta WhatsApp antes de "
+            "vincularlo aquí."
+        )
+    return None
+
+
 def set_whatsapp_status(business_id, status, phone=None) -> dict:
     if status not in {"no_conectado", "pendiente", "conectado"}:
         raise ValueError("Estado de WhatsApp no válido.")
+    if phone is not None and status == "conectado":
+        motivo = whatsapp_phone_conflict(phone, business_id)
+        if motivo:
+            raise ValueError(motivo)
     with get_conn() as conn:
         if phone is not None:
             norm = normalize_phone(phone)
-            if status == "conectado" and len(norm) != 9:
-                raise ValueError("El teléfono debe tener 9 dígitos.")
-            if status == "conectado" and conn.execute(
-                "SELECT 1 AS found FROM workers WHERE phone_norm=? AND active=TRUE",
-                (norm,),
-            ).fetchone():
-                raise ValueError(
-                    "Ese teléfono ya identifica a un trabajador en Bynoesis. "
-                    "Cada número central debe tener una sola identidad."
-                )
             conn.execute("UPDATE businesses SET whatsapp_status=?, whatsapp_phone=? "
                          ", whatsapp_phone_norm=? WHERE id=?",
                          (status, phone, norm or None, business_id))

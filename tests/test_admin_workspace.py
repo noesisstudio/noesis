@@ -50,6 +50,45 @@ class AdminWorkspaceTests(unittest.TestCase):
         with patch.object(config, "COST_USD_TO_EUR", 0.85):
             self.assertEqual(db.admin_api_usage(self.business)["usd_to_eur_assumption"], 0.85)
 
+    def test_phone_identity_lookup_finds_the_team_card_and_frees_it(self):
+        # Cuentas solo enseña el teléfono del titular: una ficha de Equipo con
+        # ese número era invisible y bloqueaba la vinculación sin explicación.
+        from starlette.testclient import TestClient
+        from noesis.web import auth, server
+
+        password = "test-only-password"  # pragma: allowlist secret
+        db.create_user("admin@example.com", auth.hash_password(password), self.business)
+        worker = db.create_worker(self.business, "Marta", phone="611459476")
+
+        with (patch.object(config, "ADMIN_EMAIL", "admin@example.com"),
+              patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
+              patch.object(server, "start_scheduler", lambda: None),
+              TestClient(server.app) as client):
+            self.assertEqual(
+                client.post("/admin/whatsapp/identidad",
+                            data={"telefono": "611459476"},
+                            follow_redirects=False).status_code, 303)
+            client.post("/login",
+                        data={"email": "admin@example.com", "password": password})
+
+            # La redirección lleva ya al panel con el resultado de la consulta.
+            panel = client.post("/admin/whatsapp/identidad",
+                                data={"telefono": "611 459 476"})
+            self.assertIn("Marta", panel.text)
+            self.assertIn(f"Ficha de Equipo #{worker['id']}", panel.text)
+
+            libre = client.post("/admin/whatsapp/identidad/liberar",
+                                data={"telefono": "611459476"})
+            self.assertIsNone(
+                db.get_worker(worker["id"], self.business)["phone_norm"]
+            )
+            self.assertIn("queda libre", libre.text)
+            self.assertIn("está libre", libre.text)
+
+        eventos = {e["event_type"] for e in db.list_security_events()}
+        self.assertIn("admin.whatsapp_identity_viewed", eventos)
+        self.assertIn("admin.whatsapp_identity_released", eventos)
+
     def test_admin_endpoint_authentication_privacy_and_phone(self):
         from starlette.testclient import TestClient
         from noesis.web import auth, server

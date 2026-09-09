@@ -148,6 +148,42 @@ class WhatsappMultichannelTestCase(unittest.TestCase):
         self.assertEqual(result[0]["status"], "sent")
         self.assertEqual(post.call_args.args[1], "4001")
 
+    def test_link_explains_the_worker_clash_and_keeps_the_code_alive(self):
+        # El titular escribe desde un móvil que ya está de alta en Equipo. El
+        # mensaje tiene que decir qué pasa y dónde se arregla, y el código no
+        # puede quemarse por un choque que no depende del código.
+        business = self.business("Titular")
+        worker = db.create_worker(business["id"], "Marta")
+        db.bind_worker_phone(business["id"], worker["access_code"], "600111222")
+
+        enlace = whatsapp.start_link(business["id"])
+        respuesta = whatsapp._try_link("34600111222", f"BYNOESIS {enlace['code']}")
+        self.assertIn("Marta", respuesta)
+        self.assertIn("Equipo", respuesta)
+        self.assertEqual(
+            db.get_business(business["id"])["whatsapp_status"], "no_conectado"
+        )
+
+        # Quitado el teléfono de la ficha, el mismo código sigue valiendo.
+        db.update_worker(worker["id"], business["id"], phone="")
+        conectado = whatsapp._try_link("34600111222", f"BYNOESIS {enlace['code']}")
+        self.assertIn("WhatsApp conectado", conectado)
+        self.assertEqual(
+            db.get_business(business["id"])["whatsapp_status"], "conectado"
+        )
+
+    def test_link_points_to_the_business_that_already_holds_the_phone(self):
+        primero = self.business("Primero")
+        segundo = self.business("Segundo")
+        db.set_whatsapp_status(primero["id"], "conectado", phone="600111222")
+
+        enlace = whatsapp.start_link(segundo["id"])
+        respuesta = whatsapp._try_link("34600111222", f"BYNOESIS {enlace['code']}")
+        self.assertIn("Primero", respuesta)
+        self.assertEqual(
+            db.get_business(segundo["id"])["whatsapp_status"], "no_conectado"
+        )
+
     def test_central_phone_cannot_mix_owner_and_worker_identities(self):
         owner_business = self.business("Titular")
         team_business = self.business("Empresa")

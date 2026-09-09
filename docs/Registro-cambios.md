@@ -1,5 +1,35 @@
 ﻿# Registro de cambios
 
+## 2026-09-09 — vincular WhatsApp dice la verdad y no quema el código
+
+Objetivo: un teléfono que ya está de alta en Equipo no podía vincularse como
+número del titular, y el error lo escondía todo bajo «Ese teléfono ya está
+vinculado o no es válido», que además consumía el código. Ahora el mensaje dice
+qué identidad ocupa el número, dónde se quita y el código sigue vivo para
+reenviarlo cuando esté arreglado.
+
+El panel tampoco permitía encontrar el choque: Cuentas solo enseña el teléfono
+del titular, así que una ficha de Equipo con ese número era invisible. Se añade
+en Cuentas la consulta «Identidad de un teléfono en WhatsApp», que mira titulares
+y fichas, y un botón para liberar el número. Ambas quedan auditadas.
+
+Áreas: `db.whatsapp_identity_rows`, `db.free_whatsapp_phone` y
+`db.whatsapp_phone_conflict` (motivo único para el choque, usado también por
+`set_whatsapp_status`), `web/whatsapp._try_link` y `_revive_link`, dos rutas en
+`routers/admin.py` con su sección en `admin.html`, y
+`scripts/whatsapp_identidad.py` para hacer lo mismo desde consola. Sin migración
+ni cambios de esquema, credenciales ni llamadas pagadas.
+
+Pruebas: suite completa, dos pruebas nuevas en `test_whatsapp_multichannel.py`
+(choque con Equipo con reintento del mismo código, y número que ya es de otro
+negocio) y una en `test_admin_workspace.py` (consulta, liberación, autenticación
+y eventos de seguridad). Riesgo: bajo; el bloqueo ya existía, cambian el mensaje,
+la vigencia del código y la visibilidad en el panel. La liberación es destructiva
+en lo suyo: quita el teléfono de la ficha y desconecta el canal, sin borrar
+personas ni datos. Diagnóstico: `log.warning` «Vinculación de WhatsApp
+bloqueada», eventos `admin.whatsapp_identity_*` y
+`python scripts/whatsapp_identidad.py <teléfono>`. Rollback: revertir el commit.
+
 ## 2026-09-08 — consolidación de la mañana para `main`
 
 Objetivo: ordenar y publicar en una única base el trabajo concurrente sin perder

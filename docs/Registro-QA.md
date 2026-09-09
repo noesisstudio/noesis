@@ -1,5 +1,26 @@
 # Registro de QA
 
+## 2026-09-09 — vinculación de WhatsApp bloqueada por identidad de equipo
+
+- Reproducido en base temporal: con el teléfono del titular dado de alta en una
+  ficha de Equipo, `BYNOESIS <código>` fallaba con el mensaje genérico y el
+  código quedaba consumido. Confirmado en producción por la conversación del
+  founder: el mismo número recibía antes la respuesta del canal de equipo.
+- Pruebas nuevas: el mensaje nombra al trabajador y la pantalla donde se
+  arregla; quitado el teléfono de la ficha, el mismo código vincula. Segundo
+  caso: número que ya es el WhatsApp de otro negocio, se nombra ese negocio y no
+  se toca el estado del que pide la vinculación.
+- Suite completa tras integrar el remoto: **755/755** en 201,5 s (SQLite y
+  proveedores simulados). Ruff correcto sobre src, tests y scripts.
+- Panel: la consulta encuentra la ficha de Equipo que no aparece en Cuentas,
+  liberar deja `phone_norm` a NULL, sin sesión devuelve 303 a login y quedan los
+  eventos `admin.whatsapp_identity_viewed` y `..._released`.
+- `scripts/whatsapp_identidad.py` probado en lectura contra la base local (ficha
+  de equipo encontrada y número libre). Recorrido completo simulado en base
+  temporal: bloqueo con motivo, liberación y reconexión con el mismo código.
+  `--liberar` no ejecutado en producción.
+- Límites: sin Meta real, sin Postgres de producción y sin envío de mensajes.
+
 ## 2026-09-08 — integración completa previa a producción
 
 Se reconciliaron sobre `origin/main` los cambios de Facebook del socio, el bloque

@@ -66,6 +66,7 @@ def admin_panel(request: Request):
         ),
         "visits": db.page_views_summary(30),
         "invite": request.session.pop("last_invite", None),
+        "whatsapp_identity": request.session.pop("whatsapp_identity", None),
         "admin_error": request.session.pop("admin_error", None),
         "admin_success": request.session.pop("admin_success", None),
     })
@@ -109,6 +110,67 @@ def admin_update_privacy_request(
         f"Solicitud #{updated['id']} actualizada."
     )
     return RedirectResponse("/admin#privacidad", status_code=303)
+
+
+@router.post("/admin/whatsapp/identidad")
+def admin_whatsapp_identity(request: Request, telefono: str = Form(...)):
+    """Consulta quién ocupa un teléfono en el número central de Bynoesis.
+
+    Cuentas solo enseña el teléfono del titular. Cuando una vinculación falla
+    porque el número ya está en una ficha de Equipo, esa ficha no se ve desde
+    ningún sitio del panel; esta consulta la saca.
+    """
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    identidad = db.whatsapp_identity_rows(telefono)
+    if not identidad["valid"]:
+        request.session["admin_error"] = (
+            "Ese teléfono no deja nueve dígitos; revísalo."
+        )
+        return RedirectResponse("/admin#identidad-whatsapp", status_code=303)
+    db.record_security_event(
+        "admin.whatsapp_identity_viewed",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"phone_norm": identidad["norm"], "mode": "read_only"},
+    )
+    request.session["whatsapp_identity"] = identidad
+    return RedirectResponse("/admin#identidad-whatsapp", status_code=303)
+
+
+@router.post("/admin/whatsapp/identidad/liberar")
+def admin_whatsapp_identity_release(request: Request, telefono: str = Form(...)):
+    """Libera el número: lo quita de las fichas y desconecta los canales."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    try:
+        identidad = db.free_whatsapp_phone(telefono)
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+        return RedirectResponse("/admin#identidad-whatsapp", status_code=303)
+    db.record_security_event(
+        "admin.whatsapp_identity_released",
+        severity="warning",
+        area="admin",
+        actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={
+            "phone_norm": identidad["norm"],
+            "workers": [row["id"] for row in identidad["workers"]],
+            "businesses": [row["id"] for row in identidad["businesses"]],
+        },
+    )
+    request.session["whatsapp_identity"] = db.whatsapp_identity_rows(telefono)
+    request.session["admin_success"] = (
+        f"{identidad['norm']} queda libre. Genera un código en Ajustes y "
+        "envíalo por WhatsApp."
+    )
+    return RedirectResponse("/admin#identidad-whatsapp", status_code=303)
 
 
 @router.get("/admin/value-ledger", response_class=JSONResponse)

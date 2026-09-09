@@ -84,14 +84,29 @@ def start_link(business_id: int) -> dict:
     return {"code": code, "link": link, "number": NOESIS_NUMBER}
 
 
+def _revive_link(code_hash: str, business_id: int) -> None:
+    """Devuelve la vigencia al código cuando el fallo no es culpa del código.
+
+    Si el teléfono choca con otra identidad, el problema se arregla en la web y
+    el mensaje ya enviado sigue sirviendo: quemar el código obligaría a volver a
+    generarlo por algo que no dependía de él.
+    """
+    expires = (
+        datetime.now() + timedelta(seconds=_CODE_TTL)
+    ).isoformat(timespec="seconds")
+    try:
+        db.create_whatsapp_link(code_hash, business_id, expires)
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo revivir el código de vinculación.")
+
+
 def _try_link(from_phone: str, text: str) -> str | None:
     """Si el texto es ``BYNOESIS <code>``, liga el teléfono al negocio."""
     parts = (text or "").strip().split()
     if len(parts) != 2 or parts[0].upper() not in _PALABRAS_CLAVE:
         return None
-    business_id = db.consume_whatsapp_link(
-        hashlib.sha256(parts[1].upper().encode()).hexdigest()
-    )
+    code_hash = hashlib.sha256(parts[1].upper().encode()).hexdigest()
+    business_id = db.consume_whatsapp_link(code_hash)
     if not business_id:
         return (
             "Ese código no es válido o ha caducado. Genera uno nuevo desde "
@@ -103,14 +118,29 @@ def _try_link(from_phone: str, text: str) -> str | None:
             "Tu cuenta está en modo consulta. Activa un plan desde la web y genera "
             "un código nuevo para conectar WhatsApp."
         )
+    conflicto = db.whatsapp_phone_conflict(from_phone, business_id)
+    if conflicto:
+        _revive_link(code_hash, business_id)
+        log.warning(
+            "Vinculación de WhatsApp bloqueada para el negocio %s: %s",
+            business_id, conflicto,
+        )
+        return conflicto
     try:
         db.set_whatsapp_status(business_id, "conectado", phone=from_phone)
         db.record_product_event(business_id, "whatsapp_connected")
+    except ValueError as exc:
+        _revive_link(code_hash, business_id)
+        log.warning(
+            "Vinculación de WhatsApp rechazada para el negocio %s: %s",
+            business_id, exc,
+        )
+        return str(exc)
     except Exception:  # noqa: BLE001
         log.exception("No se pudo vincular WhatsApp al negocio %s.", business_id)
         return (
-            "Ese teléfono ya está vinculado o no es válido. "
-            "Revísalo desde Ajustes."
+            "No he podido conectar el WhatsApp por un fallo interno. Genera un "
+            "código nuevo desde Ajustes e inténtalo otra vez."
         )
     business = db.get_business(business_id) or {}
     return (

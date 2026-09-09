@@ -93,6 +93,55 @@
     </div>
   </section>
 
+  <section class="admin-card" id="identidad-whatsapp">
+    <div class="admin-card-head">
+      <div>
+        <div class="kicker">Soporte</div>
+        <h2>Identidad de un teléfono en WhatsApp</h2>
+      </div>
+      <span class="meta">Cada consulta y cada liberación quedan en la bitácora</span>
+    </div>
+    <p class="meta">Un número solo puede ser una cosa: el móvil del titular de un negocio o el de una persona del equipo. Si vincular responde que el teléfono no es válido, casi siempre es que ya tiene la otra identidad. La lista de arriba solo enseña el teléfono del titular; esta consulta mira también las fichas de Equipo.</p>
+
+    <form method="post" action="/admin/whatsapp/identidad" class="admin-search">
+      <label>Teléfono<input class="input" type="tel" name="telefono" placeholder="600 000 000" required></label>
+      <button class="btn sm primary" type="submit">Consultar</button>
+    </form>
+
+    {% if whatsapp_identity %}
+    <div class="gestion-list">
+      {% for b in whatsapp_identity.businesses %}
+      <div class="gestion-row">
+        <div class="gestion-id">
+          <a class="admin-account-name" href="/admin/cuentas/{{ b.id }}">{{ b.name }}</a>
+          <span class="meta">Es el WhatsApp del titular · canal {{ b.whatsapp_status }}</span>
+        </div>
+        <div class="gestion-state"><span class="badge b-amber">titular</span></div>
+      </div>
+      {% endfor %}
+      {% for w in whatsapp_identity.workers %}
+      <div class="gestion-row">
+        <div class="gestion-id">
+          <a class="admin-account-name" href="/admin/cuentas/{{ w.business_id }}">{{ w.name }}</a>
+          <span class="meta">Ficha de Equipo #{{ w.id }} · negocio {{ w.business_id }} · {{ 'activa' if w.active else 'de baja' }}</span>
+        </div>
+        <div class="gestion-state"><span class="badge b-amber">equipo</span></div>
+      </div>
+      {% endfor %}
+      {% if not whatsapp_identity.businesses and not whatsapp_identity.workers %}
+      <p class="meta">{{ whatsapp_identity.norm }} está libre: puede vincularse como titular.</p>
+      {% endif %}
+    </div>
+    {% if whatsapp_identity.businesses or whatsapp_identity.workers %}
+    <form method="post" action="/admin/whatsapp/identidad/liberar" class="gestion-actions">
+      <input type="hidden" name="telefono" value="{{ whatsapp_identity.norm }}">
+      <button class="btn sm danger" type="submit">Liberar {{ whatsapp_identity.norm }}</button>
+      <span class="meta">Quita el teléfono de esas fichas y desconecta el canal de esos negocios. No borra ni personas ni datos.</span>
+    </form>
+    {% endif %}
+    {% endif %}
+  </section>
+
   <details class="admin-disclosure"><summary>Actividad agregada de las cuentas <span>Histórico del producto; no son ingresos de Bynoesis</span></summary><div class="admin-disclosure-body">
   <!-- =================  Clientes ================= -->
   <div class="dept-head" id="cuentas">
