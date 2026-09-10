@@ -201,6 +201,87 @@ class SeoTestCase(unittest.TestCase):
                         response.headers.get("x-robots-tag"), "noindex, nofollow"
                     )
 
+    def test_llms_txt_summarises_the_public_offer_for_ai_assistants(self):
+        """Los asistentes de IA leen /llms.txt para saber qué es la empresa.
+
+        Con precios copiados a mano acabaría contradiciendo a /precios; con
+        «noindex, nofollow» se pediría justo lo contrario de seguir sus enlaces.
+        """
+        from noesis.adapters import billing
+        from noesis.web.deps import TEMPLATES
+
+        scheduler, client = self._client()
+        with scheduler, client as http, patch.dict(
+            TEMPLATES.env.globals, {"public_signup_available": False}
+        ):
+            respuesta = http.get("/llms.txt")
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertTrue(
+            respuesta.headers["content-type"].startswith("text/markdown")
+        )
+        self.assertNotIn("x-robots-tag", respuesta.headers)
+        texto = respuesta.text
+        self.assertTrue(texto.startswith("# Bynoesis\n\n> "))
+        for clave, plan in billing.PLANS.items():
+            self.assertIn(f"{plan['name']}: {plan['price']} € al mes + IVA", texto)
+            self.assertIn(
+                f"{billing.PLAN_ANNUAL_PRICES[clave]} € al año + IVA", texto
+            )
+        base = config.BASE_URL.rstrip("/")
+        for ruta in ("/autonomos", "/gestorias", "/precios", "/preguntas"):
+            self.assertIn(f"]({base}{ruta})", texto)
+        # Con el alta cerrada no puede invitar a una prueba que no existe.
+        self.assertIn(f"{base}/solicitar-acceso", texto)
+        self.assertNotIn("Prueba de", texto)
+        self.assertIn(config.PUBLIC_CONTACT_EMAIL, texto)
+
+    def test_every_faq_answer_is_marked_up_exactly_as_it_is_shown(self):
+        """El JSON-LD de /preguntas y el texto visible salen de la misma fuente.
+
+        Sin voz activa, ni la página ni lo que leen los buscadores pueden
+        prometer que Bynoesis entiende notas de voz.
+        """
+        import json
+        import re
+
+        from noesis.web.deps import TEMPLATES
+
+        scheduler, client = self._client()
+        with scheduler, client as http, patch.dict(
+            TEMPLATES.env.globals, {"voice_available": False, "ocr_available": False}
+        ):
+            html = http.get("/preguntas").text
+
+        bloque = re.search(
+            r'<script type="application/ld\+json">(.*?)</script>', html, re.S
+        )
+        self.assertIsNotNone(bloque, "/preguntas no lleva datos estructurados")
+        grafo = json.loads(bloque.group(1))["@graph"]
+        faq = next(item for item in grafo if item["@type"] == "FAQPage")
+        self.assertEqual(len(faq["mainEntity"]), 16)
+        for pregunta in faq["mainEntity"]:
+            with self.subTest(pregunta=pregunta["name"]):
+                self.assertIn(f"<summary>{pregunta['name']}</summary>", html)
+                self.assertIn(f"<p>{pregunta['acceptedAnswer']['text']}</p>", html)
+        voz = next(p for p in faq["mainEntity"] if "notas de voz" in p["name"])
+        self.assertIn(
+            "se habilita durante la puesta en marcha", voz["acceptedAnswer"]["text"]
+        )
+
+    def test_public_pages_use_a_single_brand_name(self):
+        """Buscadores y asistentes agrupan lo que se dice de una empresa por su
+        nombre: dos nombres para el mismo producto reparten esa identidad."""
+        import re
+
+        from noesis.web.routers import pages
+
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            for ruta in (*pages._INDEXABLES, "/llms.txt"):
+                with self.subTest(ruta=ruta):
+                    self.assertIsNone(re.search(r"\bNoesis\b", http.get(ruta).text))
+
 
 if __name__ == "__main__":
     unittest.main()

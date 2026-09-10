@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 10-sep — SEO y GEO: un nombre y una ficha para asistentes
+
+Enviado a main; falta verificar en producción. La web pública deja de alternar «Noesis» y
+«Bynoesis»: títulos, descripciones, FAQ, CTA y demo usan solo Bynoesis. Nuevo
+`/llms.txt` con qué es, para quién, qué no hace, precios del catálogo y páginas;
+sin `noindex` ni recuento de visita. `/preguntas` publica FAQPage de sus 16
+respuestas desde la misma fuente que el HTML y según voz/OCR/alta reales. Sin
+migración ni cambios en gestiones; esquema 55. Bing sigue sin conectar.
+
 ## 10-sep — Facturas y Documentos comparten la misma fuente
 
 El Archivo ya incluye los PDFs reproducibles de todas las facturas del período,

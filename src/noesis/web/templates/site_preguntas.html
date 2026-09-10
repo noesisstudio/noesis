@@ -1,6 +1,8 @@
 {% extends "site_base.html" %}
 {% block page_title %}Preguntas sobre Bynoesis y WhatsApp{% endblock %}
 {% block meta_description %}Respuestas claras sobre WhatsApp, Veri*Factu, gestoría, equipo, datos, seguridad, prueba y precios de Bynoesis.{% endblock %}
+{# Preguntas y respuestas salen de public_marketing.question_groups, igual que el JSON-LD. #}
+{% block structured_data %}<script type="application/ld+json">{{ marketing_schema | tojson }}</script>{% endblock %}
 {% block content %}
   <section class="public-page-hero faq-page-hero">
     <div><span class="eyebrow">Preguntas</span><h1>Lo importante antes de confiar tu negocio a Bynoesis.</h1></div>
@@ -10,41 +12,15 @@
   <section class="public-section faq-layout" id="faq">
     <aside class="faq-index" aria-label="Categorías de preguntas">
       <b>En esta página</b>
-      <a href="#empezar">Empezar</a><a href="#whatsapp">WhatsApp y Bynoesis</a>
-      <a href="#legalidad">Facturación y legalidad</a><a href="#datos">Datos y seguridad</a>
-      <a href="#equipo-faq">Equipo y gestoría</a>
+      {% for group in question_groups %}<a href="#{{ group.id }}">{{ group.label }}</a>{% endfor %}
     </aside>
     <div class="faq-groups">
-      <section id="empezar"><span class="eyebrow">Empezar</span><h2>La prueba y el día a día</h2><div class="public-accordion">
-        <details open><summary>¿Necesito instalar una aplicación?</summary><p>No. El panel funciona en el navegador y se puede guardar como acceso directo. WhatsApp usa la integración oficial de Meta cuando está conectada.</p></details>
-        <details><summary>¿Tengo que cambiar mi forma de trabajar?</summary><p>No. Puedes empezar enviando mensajes y documentos como ya haces. Durante la puesta en marcha activamos también audio y lectura de imágenes si tu plan los necesita.</p></details>
-        <details><summary>¿Qué pasa después de los 14 días?</summary><p>{% if public_signup_available %}Si no eliges plan, sigues entrando a consultar y descargar todo lo tuyo; lo que se queda esperando es crear, enviar y automatizar. No desaparece nada ni se te cobra automáticamente.{% else %}La prueba pública todavía no está abierta. Durante el piloto acordamos contigo el acceso y nunca hacemos un cobro sin que elijas antes un plan.{% endif %}</p></details>
+      {% for group in question_groups %}{% set first_group = loop.first %}
+      <section id="{{ group.id }}"><span class="eyebrow">{{ group.label }}</span><h2>{{ group.title }}</h2><div class="public-accordion">
+        {% for question, answer in group.questions %}<details{% if first_group and loop.first %} open{% endif %}><summary>{{ question }}</summary><p>{{ answer }}</p></details>
+        {% endfor %}
       </div></section>
-
-      <section id="whatsapp"><span class="eyebrow">WhatsApp y Bynoesis</span><h2>Hablar, entender y actuar</h2><div class="public-accordion">
-        <details><summary>¿Puedo hablarle con notas de voz?</summary><p>{% if voice_available %}Sí. Bynoesis puede transcribir una instrucción, identificar los datos relevantes y preparar el siguiente paso para que lo revises.{% else %}La función está preparada y se habilita durante la puesta en marcha. Si no está activa, Bynoesis conserva el audio y te pide el dato por escrito sin inventarlo.{% endif %}</p></details>
-        <details><summary>¿Entiende fotografías de tickets y facturas?</summary><p>{% if ocr_available %}Puede detectar y extraer documentos. Si el tipo o algún dato no está claro, lo deja pendiente y te pregunta antes de clasificarlo definitivamente.{% else %}Guarda y ordena el documento. La lectura automática se habilita durante la puesta en marcha; mientras tanto, te pide confirmar los datos antes de registrarlos.{% endif %}</p></details>
-        <details><summary>¿Bynoesis envía o paga sin preguntarme?</summary><p>No. Preparar no es autorizar. Enviar facturas, reclamar cobros, mover citas o cualquier acción irreversible requiere el nivel de permiso definido y, en los casos sensibles, tu confirmación.</p></details>
-      </div></section>
-
-      <section id="legalidad"><span class="eyebrow">Facturación y legalidad</span><h2>Trabajar en regla</h2><div class="public-accordion">
-        <details><summary>¿Puedo emitir facturas correctas antes de activar Veri*Factu?</summary><p>Sí, para los casos actualmente soportados: factura completa o simplificada, series correlativas, fecha, emisor, destinatario cuando corresponde, conceptos, IVA, IRPF y total. Bynoesis bloquea la emisión si faltan datos obligatorios. Operaciones exentas, no sujetas o internacionales requieren todavía revisión específica con la gestoría.</p></details>
-        <details><summary>¿Está adaptado a Veri*Factu?</summary><p>El registro, la huella, el QR, la cola y la conexión técnica están preparados, pero no se activan como servicio definitivo sin certificado y pruebas con la AEAT. Según el calendario vigente, la adaptación es obligatoria desde el 1 de enero de 2027 para sociedades y desde el 1 de julio de 2027 para el resto de empresas y autónomos.</p></details>
-        <details><summary>¿Calcula IVA e IRPF?</summary><p>Sí, aplicando las reglas configuradas en cada documento. Bynoesis no presenta una estimación fiscal como definitiva: tu gestoría valida la presentación.</p></details>
-        <details><summary>¿Sustituye a mi gestoría?</summary><p>No. Ordena y prepara el trabajo administrativo. La gestoría mantiene el criterio profesional en las decisiones fiscales delicadas.</p></details>
-      </div></section>
-
-      <section id="datos"><span class="eyebrow">Datos y seguridad</span><h2>Tu negocio sigue siendo tuyo</h2><div class="public-accordion">
-        <details><summary>¿Puedo llevarme mis datos?</summary><p>Sí. Puedes exportar la cuenta y descargar los principales registros y documentos.</p></details>
-        <details><summary>¿Mis datos están separados de otros negocios?</summary><p>Sí. Cada lectura y escritura se limita al negocio correspondiente, con controles de sesión y aislamiento por identificador de negocio.</p></details>
-        <details><summary>¿Toda la información sale a una IA externa?</summary><p>No. Lo rutinario se intenta resolver dentro de Bynoesis. La IA externa se reserva para tareas avanzadas y se puede desactivar desde Ajustes.</p></details>
-      </div></section>
-
-      <section id="equipo-faq"><span class="eyebrow">Equipo y gestoría</span><h2>Que cada persona vea solo lo que necesita</h2><div class="public-accordion">
-        <details><summary>¿Cada trabajador tiene su propio panel?</summary><p>Sí. Puede recibir trabajos asignados, consultar su planificación y fichar sin acceder a la información privada del titular.</p></details>
-        <details><summary>¿La gestoría puede ver los documentos ordenados?</summary><p>Sí. El portal de gestoría organiza ingresos, gastos y documentos por períodos, con intercambio bidireccional y trazabilidad.</p></details>
-        <details><summary>¿Qué ve mi cliente?</summary><p>Un portal privado para consultar y aceptar presupuestos o descargar facturas mediante un enlace compartido por el negocio.</p></details>
-      </div></section>
+      {% endfor %}
     </div>
   </section>
 

@@ -240,7 +240,11 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
 ## Web y acompañante
 
 - `src/noesis/web/routers/pages.py`: además de las páginas públicas sirve
-  `robots.txt`, `sitemap.xml` y `/favicon.ico`. La lista `_INDEXABLES` decide qué
+  `robots.txt`, `sitemap.xml`, `llms.txt` y `/favicon.ico`. `llms.txt` es la ficha
+  en Markdown para asistentes de IA: se genera con `adapters/billing.PLANS`, el
+  contacto público y el estado del alta, no lleva `noindex` y no cuenta como visita.
+  Las 16 preguntas de `/preguntas` salen de `public_marketing.question_groups`,
+  la misma fuente que su FAQPage. La lista `_INDEXABLES` decide qué
   ve un buscador: si se añade una página pública, hay que incluirla ahí. El sitemap
   solo declara URLs demostrables; no inventa `lastmod` ni prioridades. Las reglas
   privadas de robots usan `/` final o `$`: `/gestoria` sin ancla bloquearía también

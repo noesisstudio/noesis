@@ -1,5 +1,19 @@
 # Tareas vivas
 
+## SEO y GEO — 10-sep
+
+- [x] Un solo nombre público, «Bynoesis», en títulos, descripciones, FAQ y demo.
+- [x] `/llms.txt` generado desde catálogo, contacto y estado del alta.
+- [x] FAQPage en `/preguntas` desde la misma fuente que las 16 respuestas visibles.
+- [ ] Publicar con autorización del founder y comprobar `/llms.txt` y `/preguntas`
+  en producción; validar la segunda en la prueba de resultados enriquecidos.
+- [ ] Founder: Bing Webmaster Tools → «Importar desde Google Search Console»
+  y confirmar que el sitemap aparece enviado.
+- [ ] Decidir contenido nuevo: páginas por oficio y guía Veri*Factu 2027. Sin
+  cifras, testimonios ni fichas de valoraciones hasta tener evidencia real.
+- [ ] Fichas externas (LinkedIn, directorios de software) con los mismos datos
+  que `/llms.txt`.
+
 ## Coherencia documental y Proyectos — 10-sep
 
 - [x] Mostrar en Documentos las facturas generadas desde web o WhatsApp sin

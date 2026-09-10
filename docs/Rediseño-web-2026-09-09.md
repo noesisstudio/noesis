@@ -100,7 +100,8 @@ de ingresos sobre estos contadores como si fueran cobros confirmados.
 | `/` | Tu negocio, por WhatsApp. Gestión para autónomos | Organization y WebSite existentes + FAQPage |
 | `/autonomos` | Gestión y facturación por WhatsApp para autónomos | FAQPage + BreadcrumbList |
 | `/gestorias` | Software para gestorías: documentos y clientes ordenados | FAQPage + BreadcrumbList |
-| `/contacto` | Reserva una demo de Noesis | BreadcrumbList |
+| `/contacto` | Reserva una demo con nuestro equipo | BreadcrumbList |
+| `/preguntas` | Preguntas sobre Bynoesis y WhatsApp | FAQPage (16) + BreadcrumbList, desde el 10-sep |
 
 Descripción específica por ruta, canonical limpio, OpenGraph/Twitter, un H1 y
 enlaces internos. FAQ visible y JSON-LD salen de la misma fuente. No se añaden

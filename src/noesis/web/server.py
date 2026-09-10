@@ -127,7 +127,7 @@ _request_log = logging.getLogger("noesis.request")
 # dentro de su cuenta.
 _NO_CONTAR = ("/b/", "/api/", "/admin", "/gestoria", "/p/", "/g/", "/t/", "/static/",
               "/webhook/", "/health", "/ready", "/favicon.ico", "/robots.txt",
-              "/sitemap.xml", "/sw.js",
+              "/sitemap.xml", "/llms.txt", "/sw.js",
               # Las mismas rutas que robots.txt esconde de los buscadores: no
               # describen interés por la web, sino uso de una cuenta existente.
               "/login", "/logout", "/onboarding", "/recuperar", "/restablecer")
@@ -261,11 +261,12 @@ async def security_headers(request: Request, call_next):
     # sí solo que una URL conocida desaparezca del índice. Toda ruta que no forma
     # parte del sitio público recibe además una orden HTTP explícita de no indexar.
     # Los estáticos quedan fuera: Google debe poder usar el logo y la imagen social.
+    # llms.txt tampoco lo lleva: existe para que los asistentes sigan sus enlaces.
     path = request.url.path
     if (
         path not in pages.INDEXABLE_PATHS
         and not path.startswith("/static/")
-        and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml"}
+        and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml", "/llms.txt"}
     ):
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
     # Única excepción: calendario consentido en Contacto. Sin scripts remotos.

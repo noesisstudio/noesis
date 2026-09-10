@@ -231,6 +231,83 @@ def sitemap():
     return Response(cuerpo, media_type="application/xml")
 
 
+@router.get("/llms.txt", include_in_schema=False)
+def llms_txt():
+    """Ficha en Markdown para asistentes de IA, según la convención llms.txt.
+
+    Se construye con el catálogo, el contacto y el estado del alta vigentes: una
+    cifra copiada a mano acabaría contradiciendo a /precios. Solo resume lo que la
+    web pública ya afirma; no añade clientes, valoraciones ni certificaciones.
+    """
+    base = config.BASE_URL.rstrip("/")
+    planes = "\n".join(
+        f"- {plan['name']}: {plan['price']} € al mes + IVA, o "
+        f"{billing_adapter.PLAN_ANNUAL_PRICES[clave]} € al año + IVA."
+        for clave, plan in billing_adapter.PLANS.items()
+    )
+    if TEMPLATES.env.globals["public_signup_available"]:
+        acceso = f"Prueba de {config.TRIAL_DAYS} días desde {base}/precios."
+    else:
+        acceso = (
+            "El alta pública está cerrada durante el piloto acompañado; el acceso "
+            f"se solicita en {base}/solicitar-acceso."
+        )
+    texto = f"""# Bynoesis
+
+> Bynoesis es un software de gestión por WhatsApp para autónomos y pequeños negocios de servicios en España. Prepara facturas y presupuestos, guarda tickets y documentos y ayuda a llevar clientes, agenda y cobros. El titular revisa y confirma antes de emitir, enviar o mover dinero.
+
+Bynoesis es un producto independiente: no pertenece a WhatsApp ni a Meta. Funciona en castellano, catalán e inglés, con un panel web para revisar el detalle.
+
+## Para quién
+
+- Autónomos y microempresas de servicios de 1 a 10 personas: fontanería, electricidad, reformas, climatización, mantenimiento, limpieza y jardinería.
+- Gestorías y asesorías que llevan la documentación de esos negocios.
+
+## Qué hace
+
+- Facturas y presupuestos a partir de un mensaje: cliente, concepto, IVA e IRPF en un borrador que el titular revisa antes de emitir.
+- Documentos: tickets, facturas recibidas y PDF ordenados por empresa, año y trimestre.
+- Cobros y agenda: facturas pendientes, recordatorios que el titular confirma y trabajos del día.
+- Gestoría: espacio profesional para revisar varias empresas por período, pedir lo que falta y consultar borradores fiscales orientativos.
+- Equipo y proyectos (planes Negocio y Premium): fichaje, costes y margen por proyecto.
+
+## Qué no hace
+
+- No presenta impuestos ni sustituye a la gestoría.
+- No emite, envía ni paga sin la confirmación del titular.
+- Veri*Factu: el registro, la huella encadenada y el QR están preparados; la conexión con la AEAT se activa tras certificado y pruebas. Bynoesis no declara una certificación de la AEAT.
+
+## Precios
+
+{planes}
+
+El pago anual da 12 meses de acceso por el precio de 11. {acceso}
+
+## Páginas
+
+- [Inicio]({base}/): cómo se gestiona un negocio por WhatsApp.
+- [Autónomos]({base}/autonomos): un día de trabajo con Bynoesis.
+- [Gestorías]({base}/gestorias): el espacio profesional para despachos.
+- [Precios]({base}/precios): planes y qué incluye cada uno.
+- [Preguntas frecuentes]({base}/preguntas): WhatsApp, Veri*Factu, datos y equipo.
+- [Equipo]({base}/equipo): quién construye Bynoesis.
+- [Contacto]({base}/contacto): demo con el equipo.
+- [Cumplimiento]({base}/cumplimiento): dónde están los datos y cómo se protegen.
+
+## Optional
+
+- [Privacidad]({base}/privacidad)
+- [Términos]({base}/terminos)
+- [Aviso legal]({base}/aviso-legal)
+- [Encargado del tratamiento]({base}/encargado-tratamiento)
+
+## Contacto
+
+- {config.PUBLIC_CONTACT_EMAIL}
+"""
+    return Response(texto, media_type="text/markdown")
+
+
 @router.get("/producto", include_in_schema=False)
 def producto_redirect():
     """La portada absorbió el contenido de Producto; los enlaces antiguos siguen vivos."""
@@ -277,7 +354,12 @@ def showcase_client_redirect():
 def site_page(request: Request):
     section = request.url.path.strip("/") or "precios"
     return TEMPLATES.TemplateResponse(request, _SITE_PAGES[section], {
-        **marketing_context(section, signup_available=TEMPLATES.env.globals["public_signup_available"]),
+        **marketing_context(
+            section,
+            signup_available=TEMPLATES.env.globals["public_signup_available"],
+            voice_available=TEMPLATES.env.globals["voice_available"],
+            ocr_available=TEMPLATES.env.globals["ocr_available"],
+        ),
         "site_active": section,
         "business_id": request.session.get("bid"),
         "prices": billing_adapter.PLAN_PRICES,

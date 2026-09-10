@@ -1,9 +1,9 @@
 <div class="conversation-demo{{ ' has-voice' if voice_available }}" id="demo-conversacion" data-conversation-demo>
-  <div class="conversation-top"><img src="/static/noesis-mark.svg" alt="" width="34" height="34"><div><b>Noesis</b><span>Tu negocio, en una conversación</span></div><span class="demo-label">Demostración</span></div>
-  <p class="visually-hidden">Ejemplos ficticios: pides una factura por 680 euros más IVA para Instalaciones García y Noesis prepara un borrador de 822,80 euros. Tú revisas antes de emitir. También puedes guardar documentos y consultar facturas pendientes. Las respuestas están abreviadas para esta demostración; no se ejecutan operaciones reales.</p>
+  <div class="conversation-top"><img src="/static/noesis-mark.svg" alt="" width="34" height="34"><div><b>Bynoesis</b><span>Tu negocio, en una conversación</span></div><span class="demo-label">Demostración</span></div>
+  <p class="visually-hidden">Ejemplos ficticios: pides una factura por 680 euros más IVA para Instalaciones García y Bynoesis prepara un borrador de 822,80 euros. Tú revisas antes de emitir. También puedes guardar documentos y consultar facturas pendientes. Las respuestas están abreviadas para esta demostración; no se ejecutan operaciones reales.</p>
   <div class="conversation-stage" aria-hidden="true">
     <div class="chat-case" data-chat-case="0">
-      <p class="chat-bubble incoming" data-chat-step="0">Hola. Soy Noesis.<br>¿Qué quieres hacer hoy?</p>
+      <p class="chat-bubble incoming" data-chat-step="0">Hola. Soy Bynoesis.<br>¿Qué quieres hacer hoy?</p>
       <div class="chat-bubble outgoing" data-chat-step="1">
         {% if voice_available %}<div class="voice-message"><span>Audio · 0:06</span><span class="waveform">{% for n in range(18) %}<i></i>{% endfor %}</span></div>{% endif %}
         <p>Haz una factura de 680 € más IVA a Instalaciones García por la reparación.</p>

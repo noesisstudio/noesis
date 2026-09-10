@@ -45,7 +45,7 @@ class PublicMarketingTests(unittest.TestCase):
 
     def test_public_routes_metadata_and_schema_are_consistent(self):
         titles = set()
-        for path in ("/", "/autonomos", "/gestorias", "/contacto"):
+        for path in ("/", "/autonomos", "/gestorias", "/contacto", "/preguntas"):
             with self.subTest(path=path):
                 response = self.http.get(path)
                 self.assertEqual(response.status_code, 200)

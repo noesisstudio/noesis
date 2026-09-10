@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Un solo nombre público y una ficha para asistentes de IA (2026-09-10)
+
+El founder fija **Bynoesis** como único nombre en la web pública. Buscadores y
+asistentes de IA agrupan lo que se dice de una empresa por su nombre; alternar
+«Noesis» y «Bynoesis» reparte esa identidad y puede confundirla con otra. Los
+identificadores internos (`noesis-mark.svg`, `dia-noesis`, el paquete `noesis`)
+no cambian porque no se leen como marca.
+
+`/llms.txt` resume en Markdown lo que la web ya afirma y se genera con el catálogo,
+el contacto y el estado del alta vigentes, para no contradecir a `/precios`. No
+lleva `noindex` y no suma visitas. `/preguntas` publica FAQPage desde la misma
+fuente que su texto visible. Ninguna de las dos piezas añade clientes,
+valoraciones, certificaciones ni promete aparecer en respuestas de IA.
+
 ## Una fuente contable, varias vistas coherentes (2026-09-10)
 
 Facturas es la fuente de verdad de las ventas y Documentos su archivo transversal,

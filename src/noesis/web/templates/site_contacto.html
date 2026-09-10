@@ -1,16 +1,16 @@
 {% extends "site_base.html" %}
-{% block page_title %}Reserva una demo de Noesis{% endblock %}
-{% block meta_description %}Habla con el equipo de Noesis y descubre cómo gestionar tu negocio por WhatsApp. Reserva una demo en la agenda o escríbenos directamente.{% endblock %}
+{% block page_title %}Reserva una demo con nuestro equipo{% endblock %}
+{% block meta_description %}Habla con el equipo de Bynoesis y descubre cómo gestionar tu negocio por WhatsApp. Reserva una demo en la agenda o escríbenos directamente.{% endblock %}
 {% block structured_data %}<script type="application/ld+json">{{ marketing_schema | tojson }}</script>{% endblock %}
 {% block content %}
-<section class="contact-hero story-section" id="reserva"><div class="contact-intro"><span class="eyebrow">Hablemos de tu negocio</span><h1>Menos teoría.<br>Veámoslo con un ejemplo.</h1><p>Habla directamente con el equipo. Te enseñamos Noesis, resolvemos tus dudas y vemos si encaja con tu forma de trabajar.</p><ul><li>Una gestión de principio a fin.</li><li>Qué puedes hacer desde WhatsApp.</li><li>Qué necesita tu puesta en marcha.</li></ul><a href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a></div>
+<section class="contact-hero story-section" id="reserva"><div class="contact-intro"><span class="eyebrow">Hablemos de tu negocio</span><h1>Menos teoría.<br>Veámoslo con un ejemplo.</h1><p>Habla directamente con el equipo. Te enseñamos Bynoesis, resolvemos tus dudas y vemos si encaja con tu forma de trabajar.</p><ul><li>Una gestión de principio a fin.</li><li>Qué puedes hacer desde WhatsApp.</li><li>Qué necesita tu puesta en marcha.</li></ul><a href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a></div>
 <div class="calendar-shell" data-calendar data-cal-url="{{ cal_booking_url }}">
   <div class="calendar-heading"><span class="eyebrow">Demo con el equipo</span><h2>Elige cuándo hablamos.</h2></div>
   <div class="calendar-consent" data-cal-consent><p>Para mostrarte la disponibilidad aquí, necesitamos cargar el calendario de <b>Cal.com</b>. Al permitirlo, ese servicio recibirá tu conexión y podrá utilizar sus propias cookies.</p><p><a href="https://cal.com/privacy" target="_blank" rel="noopener noreferrer">Privacidad de Cal.com</a> · <a href="/cookies">Tus opciones de privacidad</a></p><button class="btn primary" type="button" data-cal-allow>Permitir y ver calendario</button><p><a href="{{ cal_booking_url }}" target="_blank" rel="noopener noreferrer">Prefiero abrir Cal.com en otra pestaña →</a></p></div>
   <div data-cal-mount></div>
   <p data-cal-status role="status"></p>
   <button type="button" class="text-link" data-cal-revoke hidden>Retirar permiso y cerrar calendario</button>
-  <noscript><p>Abre <a href="{{ cal_booking_url }}">la agenda de Noesis</a> para reservar sin JavaScript en esta página.</p></noscript>
+  <noscript><p>Abre <a href="{{ cal_booking_url }}">la agenda de Bynoesis</a> para reservar sin JavaScript en esta página.</p></noscript>
 </div></section>
 <section class="story-section" aria-labelledby="direct-title"><div class="story-heading"><span class="eyebrow">Otras formas de contacto</span><h2 id="direct-title">¿Prefieres hablar<br>directamente con nosotros?</h2></div><div class="contact-options"><article><h3>Escríbenos</h3><p>Cuéntanos tu oficio y qué gestión te gustaría simplificar.</p><a href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a></article><article><h3>Solicita una prueba</h3><p>Preparamos contigo la cuenta y la conexión con WhatsApp.</p><a href="/solicitar-acceso">Solicitar acceso →</a></article>{% if public_whatsapp_demo %}<article><h3>WhatsApp</h3><p>Abre nuestro canal público de demostración.</p><a href="{{ marketing_cta_href }}" data-public-event="contact_whatsapp">Hablar por WhatsApp →</a></article>{% else %}<article><h3>¿Ya tienes cuenta?</h3><p>Entra para revisar tu negocio y tus integraciones.</p><a href="/acceso">Iniciar sesión →</a></article>{% endif %}</div></section>
 {% endblock %}

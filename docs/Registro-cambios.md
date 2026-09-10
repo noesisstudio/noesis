@@ -1,5 +1,29 @@
 ﻿# Registro de cambios
 
+## 2026-09-10 — SEO y GEO: un solo nombre, llms.txt y FAQ de /preguntas
+
+Objetivo: que buscadores y asistentes de IA reconozcan una única entidad y lean
+una ficha fiable. La web pública mezclaba «Noesis» y «Bynoesis» (descripción de la
+portada, FAQ marcada, CTA, demo, contacto y título del calendario); el founder fija
+Bynoesis. `/llms.txt` no existía (404) y `/preguntas` mostraba 16 respuestas sin
+datos estructurados.
+
+Áreas: `web/public_marketing.py` (FAQ y CTA con Bynoesis; `question_groups` como
+fuente única de las 16 preguntas, con respuestas según voz/OCR/alta), plantilla
+`site_preguntas.html` (bucle + FAQPage + BreadcrumbList), `routers/pages.py`
+(`/llms.txt` desde `billing.PLANS`, contacto y alta; flags a `/preguntas`),
+`server.py` (`/llms.txt` sin `noindex` y fuera del recuento de visitas), plantillas
+públicas y `public-calendar.js` (solo texto visible). Identificadores internos,
+espacio de nombres del calendario y rutas no cambian.
+
+Pruebas: tres contratos nuevos en `test_seo.py` (llms.txt con precios del catálogo,
+enlaces, alta cerrada y sin `noindex`; FAQPage idéntica al texto visible y sin
+prometer voz; ninguna página indexable dice «Noesis») y `/preguntas` añadida al
+contrato de metadatos de `test_public_marketing.py`. Recuentos en Registro-QA.
+Límites: no se ha publicado; Bing, resultados enriquecidos y citas en asistentes de
+IA dependen de terceros y no se prometen. Riesgo: bajo, solo contenido público.
+Rollback: revertir este commit; sin migración ni datos que deshacer.
+
 ## 2026-09-10 — archivo documental conectado y control claro de proyectos
 
 Objetivo: eliminar la contradicción por la que Facturas mostraba documentos

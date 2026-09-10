@@ -23,7 +23,7 @@
     url.searchParams.set('layout', 'month_view');
     url.searchParams.set('theme', 'light');
     iframe = document.createElement('iframe');
-    iframe.title = 'Reserva una demo con el equipo de Noesis';
+    iframe.title = 'Reserva una demo con el equipo de Bynoesis';
     iframe.name = 'cal-embed=noesis';
     iframe.referrerPolicy = 'no-referrer';
     iframe.src = url.href;

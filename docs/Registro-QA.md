@@ -1,5 +1,23 @@
 ﻿# Registro de QA
 
+## 2026-09-10 — SEO y GEO: nombre único, llms.txt y FAQ de /preguntas
+
+- Contratos nuevos en `test_seo.py`: `/llms.txt` responde Markdown sin
+  `X-Robots-Tag`, lista los tres planes con los precios mensual y anual de
+  `billing.PLANS`, enlaza las páginas comerciales, no invita a una prueba con el
+  alta cerrada e incluye el contacto público; FAQPage de `/preguntas` con 16
+  entradas idénticas al `<summary>`/`<p>` visible y sin prometer voz desactivada;
+  ninguna ruta de `_INDEXABLES` ni `/llms.txt` contiene «Noesis».
+- `/preguntas` añadida al contrato de metadatos, JSON-LD e IDs únicos de
+  `test_public_marketing.py`.
+- Dirigidas: SEO, marketing público, visitas y comprobador de producción, **36
+  pruebas OK**; Node `public_calendar` y `public_marketing` **2/2 OK**.
+- Regresión completa sobre `main` combinado con `ecee6b9` (Facturas/Documentos/
+  Proyectos del socio): **779 pruebas Python en 198 s, OK**. Ruff, puerta
+  documental y `git diff --check` verdes.
+- No probado: producción, Bing Webmaster Tools, prueba de resultados enriquecidos
+  de Google ni lectura real por asistentes de IA.
+
 ## 2026-09-10 — Facturas, Documentos y avance de Proyectos
 
 - Facturas en borrador y emitidas se proyectan en el archivo del mismo negocio y
