@@ -28,8 +28,8 @@ from . import chat
 log = logging.getLogger("uvicorn.error")
 
 NOESIS_NUMBER = os.getenv("NOESIS_WHATSAPP_NUMBER", "")
-_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
-_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
+_TOKEN = os.getenv("WHATSAPP_TOKEN", "").strip()
+_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "").strip()
 _CODE_TTL = 1800
 
 
@@ -795,7 +795,8 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
         )
     db.set_pending_action(
         business["id"], phone, "emitir_factura",
-        {"invoice_id": invoice["id"], "deliver": deliver},
+        {"invoice_id": invoice["id"], "deliver": deliver,
+         "invoice_fingerprint": _invoice_fingerprint(invoice, business["id"])},
     )
     action = "emitir y entregar" if deliver else "emitir"
     recipient = f" a {client.get('name')}" if deliver else ""
@@ -805,6 +806,11 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
         "quedará generado y sus cifras pasarán a ingresos, impuestos, cliente y "
         "gestoría. ¿Confirmas? Responde SÍ o NO."
     )
+
+
+def _invoice_fingerprint(invoice: dict, business_id: int) -> str:
+    from ..conversation_plan import invoice_fingerprint
+    return invoice_fingerprint(invoice, db.get_invoice_lines(invoice['id'], business_id))
 
 
 def _searchable_text(value: str | None) -> str:
@@ -973,7 +979,8 @@ def _safe_invoice_filename(invoice: dict) -> str:
 
 def _upload_owner_draft_pdf(data: bytes, filename: str) -> str:
     """Sube una vista previa concreta a Meta sin abrir el portal del cliente."""
-    if not (_TOKEN and re.fullmatch(r"\d+", _PHONE_ID)):
+    phone_id = _PHONE_ID.strip()
+    if not (_TOKEN and re.fullmatch(r"\d+", phone_id)):
         raise RuntimeError("WhatsApp Cloud API no está configurada.")
     if not data or len(data) > 10 * 1024 * 1024 or not data.startswith(b"%PDF"):
         raise ValueError("PDF no válido o demasiado grande.")
@@ -985,7 +992,7 @@ def _upload_owner_draft_pdf(data: bytes, filename: str) -> str:
         'Content-Type: application/pdf\r\n\r\n'
     ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
     request = urllib.request.Request(
-        f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{_PHONE_ID}/media",
+        f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{phone_id}/media",
         data=body, headers={"Authorization": f"Bearer {_TOKEN}",
                             "Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
@@ -1170,11 +1177,18 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
         invoice = db.get_invoice(invoice_id, business["id"])
         if not invoice:
             return "No encuentro ese borrador. No he emitido ni enviado nada."
+        if payload.get('invoice_fingerprint') and payload['invoice_fingerprint'] != _invoice_fingerprint(invoice, business['id']):
+            return "La factura ha cambiado desde que te pedí confirmación. Revísala y vuelve a pedir la emisión; no he emitido ni enviado nada."
         if invoice.get("status") == "borrador":
-            result = json.loads(tools.run_tool(
-                "enviar_factura", {"factura_id": invoice_id}, business["id"],
-                channel="whatsapp",
-            ))
+            from ..conversation_plan import expected_invoice
+            expectation = expected_invoice.set((business['id'], invoice_id, payload.get('invoice_fingerprint')))
+            try:
+                result = json.loads(tools.run_tool(
+                    "enviar_factura", {"factura_id": invoice_id}, business["id"],
+                    channel="whatsapp",
+                ))
+            finally:
+                expected_invoice.reset(expectation)
             if not result.get("ok"):
                 return result.get("error") or "No he podido emitir la factura."
         try:
@@ -1186,6 +1200,11 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
             return f"La factura está emitida, pero no he podido preparar la entrega: {exc}"
         invoice = delivery["factura"]
         _remember_invoice(business["id"], phone, invoice["id"])
+        if payload.get("owner_pdf"):
+            attachment = _send_owner_invoice_pdf(business, phone, f"factura {invoice_id}")
+            if not attachment["sent"]:
+                return f"Factura {invoice['number']} emitida. " + attachment["reply"]
+            return f"Factura {invoice['number']} emitida por {_eur(invoice['total'])}. He enviado su PDF aquí, no al cliente."
         if delivery["queued"]:
             return (
                 f"Hecho ✅ Factura {invoice['number']} emitida. PDF generado y "
@@ -2090,6 +2109,44 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 "phone": phone, "business_id": business["id"],
                 "confirmed": False,
             })
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
+
+        # Planificar primero: una emisión no puede quedar absorbida por descarga.
+        from ..conversation_plan import invoice_plan
+        plan = invoice_plan(text)
+        if plan.issue and (plan.owner_pdf or plan.ambiguous_recipient):
+            if plan.ambiguous_recipient:
+                response = "¿Quieres el PDF aquí para ti o enviarlo al cliente? No he emitido ni enviado nada."
+            else:
+                reference = re.search(r"\b(?:factura|ticket|tiquet)\s*#?\s*(\d+)\b", text, re.I)
+                lookup = f"factura {reference.group(1)}" if reference else re.sub(
+                    r"\b(?:emitir|emite|emitela|emetre|emet|emetla|y|i)\b", "", _searchable_text(text)
+                )
+                quote = None
+                if message.get('reply_to') and not reference:
+                    key = hashlib.sha256(message['reply_to'].encode()).hexdigest()
+                    quote = db.get_pending_action(business['id'], f'invoice-message:{phone}:{key}')
+                    lookup = f"factura {json.loads(quote['payload'])['invoice_id']}" if quote else ''
+                if message.get('reply_to') and not reference and not quote:
+                    invoice, error = None, "No puedo identificar la factura de ese mensaje anterior. Indica su número; no he emitido nada."
+                else:
+                    invoice, error = _invoice_for_owner_pdf(business["id"], lookup.strip(), phone)
+                if not invoice:
+                    response = error
+                elif invoice["status"] != "borrador":
+                    attachment = _send_owner_invoice_pdf(business, phone, f"factura {invoice['id']}")
+                    response = "Ya estaba emitida. He enviado su PDF aquí." if attachment["sent"] else attachment["reply"]
+                else:
+                    response = _prepare_invoice_action(business, phone, f"emitir factura {invoice['id']}")
+                    pending_issue = db.get_pending_action(business["id"], phone)
+                    if pending_issue and pending_issue['kind'] == 'emitir_factura':
+                        pending_payload = json.loads(pending_issue['payload'])
+                        pending_payload['owner_pdf'] = True
+                        db.set_pending_action(business["id"], phone, 'emitir_factura', pending_payload)
+                        response += " Después adjuntaré el PDF aquí para ti, no al cliente."
+            send(phone, response, business_id=business["id"])
+            results.append({"business_id": business["id"], "invoice_plan": True})
             _finish_inbound_message(message_id, claimed_ids)
             continue
 

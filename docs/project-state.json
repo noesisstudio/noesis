@@ -2,7 +2,7 @@
   "state_date": "2026-09-10",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 792,
+  "verified_test_count": 795,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -62,6 +62,7 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
+    "invoice_plan_foundation": "typed_no_effect_issue_owner_pdf_intent_confirmation_fingerprint_checked_inside_issue_transaction_gross_total_single_line_rounding_preserved_meta_phone_id_trimmed_real_upload_verified_no_recipient_send_other_domains_and_semantic_planner_pending",
     "compound_invoice_pdf_request": "create_before_lookup_attach_only_receipt_id_f2_customer_selection_ten_minute_scoped_context_fiscal_rejection_followup_no_retry_uncertain_mutations_three_new_regressions_no_schema_change",
     "invoice_conversation_candidate_2026_09_10": "exact_reference_no_latest_fallback_unknown_customer_asks_draft_real_pdf_watermark_meta_upload_no_issue_phone_scoped_expiring_focus_verified_meta_reply_mapping_tool_execution_receipts_and_local_turn_history_refresh_13_new_regressions_real_phone_validation_pending_no_migration",
     "supervised_learning_candidate": "code_deployed_default_off_requires_review_flag_explicit_post_success_approval_exact_tenant_rules_never_system_prompt_invoice_clarification_content_free_event_report_no_retraining_no_schema_change",

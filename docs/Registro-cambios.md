@@ -1,5 +1,19 @@
 ﻿# Registro de cambios
 
+## 2026-09-10 — Plan de emisión, céntimos y diagnóstico real de Meta
+
+La captura mostró 100 → 99,99 €, fallo de subida y pérdida de «emitir y envíame».
+Áreas: `conversation_plan.py`, `web/whatsapp.py`, `tools.py`, `db.py` y regresiones.
+Se separan intención de emisión y destinatario; la confirmación verifica huella
+de borrador/líneas dentro de la transacción. Descarga no autoriza envío a cliente.
+La creación con total incluido conserva el céntimo residual en la cuota; vía
+explícita de una línea, sin reescribir emitidas. Se normaliza espacio en ID Meta.
+Pruebas: 69 de conversación/WhatsApp/fiabilidad OK; casos adicionales en QA.
+Producción: configuración examinada sin mostrar secretos y PDF real subido a Meta
+con ID normalizado, sin emisión ni envío al destinatario. Riesgo medio por cálculo
+y confirmaciones. Sin migración; rollback por revert. Memorias previas caducan.
+El agente universal sigue pendiente, alcance en `Agente-operativo-fiable.md`.
+
 ## 2026-09-10 — Crear y adjuntar en la misma petición
 
 La prueba real del founder mostró que la búsqueda PDF interceptaba «créame un

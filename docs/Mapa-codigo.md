@@ -1,5 +1,14 @@
 # Mapa de código
 
+## Plan de emisión y confirmación de versión — 10-sep
+
+`conversation_plan.InvoicePlan` interpreta sin efectos; `invoice_fingerprint`
+vincula la confirmación a cabecera/líneas. `expected_invoice` pasa esa expectativa
+por contexto al motor nativo que la valida bajo transacción. `db.add_invoice`
+acepta `gross_total` explícito de una línea para conservar el precio final con
+ajuste de redondeo máximo de un céntimo. `tools._crear_factura` lo pasa solo cuando
+el importe incluye impuestos. No cambia el cálculo por defecto del editor.
+
 ## Orden compuesta y aclaraciones — 10-sep
 
 `whatsapp._handle_inbound` separa creación/adjunto y enlaza el PDF solo al recibo

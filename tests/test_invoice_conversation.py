@@ -16,6 +16,73 @@ class InvoiceConversationTestCase(unittest.TestCase):
     tearDown = fixtures.BackendTestCase.tearDown
     make_business = fixtures.BackendTestCase.make_business
 
+    def test_confirmation_rejects_changed_draft_inside_issue_transaction(self):
+        from noesis.conversation_plan import expected_invoice
+        biz, client = self.make_business('Confirmación de versión')
+        draft = self.invoice(biz, client)
+        fingerprint = whatsapp._invoice_fingerprint(draft, biz['id'])
+        with db.get_conn() as conn:
+            conn.execute('UPDATE invoices SET concept=? WHERE id=? AND business_id=?',
+                         ('Otro concepto', draft['id'], biz['id']))
+        token = expected_invoice.set((biz['id'], draft['id'], fingerprint))
+        try:
+            with self.assertRaisesRegex(ValueError, 'cambió'):
+                db.issue_invoice(draft['id'], biz['id'])
+        finally:
+            expected_invoice.reset(token)
+        self.assertEqual(db.get_invoice(draft['id'], biz['id'])['status'], 'borrador')
+
+    def test_issue_from_unknown_quote_never_uses_current_invoice(self):
+        biz, client = self.make_business('Cita no autorizada')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        draft = self.invoice(biz, client)
+        whatsapp._remember_invoice(biz['id'], '34600111222', draft['id'])
+        with patch.object(whatsapp, 'send') as send:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'unknown-issue',
+                'reply_to': 'unknown-old-message', 'text': 'Emitir y enviame el pdf'})
+        self.assertIn('mensaje anterior', send.call_args.args[1])
+        self.assertIsNone(db.get_pending_action(biz['id'], '34600111222'))
+
+    def test_vat_inclusive_total_is_preserved_through_issue_and_pdf(self):
+        biz, client = self.make_business('Precio final')
+        for rate in (0, 4, 10, 21):
+            for gross in (99.99, 100, 121, 200, 400):
+                with self.subTest(rate=rate, gross=gross):
+                    result = json.loads(tools.run_tool('crear_factura', {
+                        'cliente': client['name'], 'concepto': 'Revisión', 'base': gross,
+                        'iva': rate, 'tipo_factura': 'F2', 'importe_incluye_iva': True,
+                    }, biz['id']))
+                    invoice = result['factura']
+                    self.assertEqual(invoice['total'], gross)
+                    self.assertEqual(db.issue_invoice(invoice['id'], biz['id'])['total'], gross)
+                    lines = db.get_invoice_lines(invoice['id'], biz['id'])
+                    self.assertAlmostEqual(lines[0]['base'] + lines[0]['vat_amount'], gross)
+                    if rate == 21 and gross == 100:
+                        from noesis.web.invoice_pdf import build_invoice_pdf
+                        contents = PdfReader(BytesIO(build_invoice_pdf(invoice['id'], biz['id']))).pages[0].extract_text()
+                        self.assertIn('100,00', contents)
+                        self.assertIn('17,36', contents)
+
+    def test_issue_and_send_me_pdf_requires_confirmation_and_keeps_recipient(self):
+        biz, client = self.make_business('Emisión con plan')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        draft = self.invoice(biz, client)
+        whatsapp._remember_invoice(biz['id'], '34600111222', draft['id'])
+        with patch.object(whatsapp, 'send') as send, patch.object(whatsapp, '_post_to_meta', return_value='wamid-plan') as post:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'plan-issue', 'text': 'Emitir y enviame el pdf'})
+            self.assertIn('Confirmas', send.call_args.args[1])
+            self.assertEqual(db.get_invoice(draft['id'], biz['id'])['status'], 'borrador')
+            post.assert_not_called()
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'plan-yes', 'text': 'sí'})
+            self.assertEqual(post.call_args.args[0]['to'], '34600111222')
+            self.assertIn(f'/invoices/{draft["id"]}/pdf', post.call_args.args[0]['document']['link'])
+
+    def test_intent_plan_never_issues_on_negation_or_ambiguous_delivery(self):
+        from noesis.conversation_plan import invoice_plan
+        self.assertFalse(invoice_plan('no emitir y enviame pdf').issue)
+        self.assertTrue(invoice_plan('emitir y enviar pdf').ambiguous_recipient)
+        self.assertFalse(invoice_plan('emitir y enviar pdf al cliente').owner_pdf)
+
     def test_create_ticket_and_pdf_uses_new_draft_not_existing_demo(self):
         biz, client = self.make_business('Creación compuesta')
         db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
@@ -225,7 +292,7 @@ class InvoiceConversationTestCase(unittest.TestCase):
         response.__enter__.return_value = response
         response.read.return_value = b'{"id":"123456"}'
         data = b'%PDF-1.4 actual-test-content'
-        with patch.object(whatsapp, '_TOKEN', 'test-token'), patch.object(whatsapp, '_PHONE_ID', '12345'), \
+        with patch.object(whatsapp, '_TOKEN', 'test-token'), patch.object(whatsapp, '_PHONE_ID', '12345 \n'), \
              patch.object(whatsapp.urllib.request, 'urlopen', return_value=response) as request:
             media_id = whatsapp._upload_owner_draft_pdf(data, 'borrador-12.pdf')
             self.assertEqual(media_id, '123456')

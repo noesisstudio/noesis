@@ -2,6 +2,14 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Separar comprensión, autorización y ejecución (2026-09-10)
+
+El agente empieza a usar un plan de intención sin efectos. «Envíame» no significa
+entregar al cliente. Emitir exige confirmar la versión concreta del borrador,
+incluidas líneas, y revalidarla dentro de la transacción. Una inteligencia nueva
+no sustituye adaptadores, permisos ni evidencia real del proveedor. La ampliación
+a otros dominios debe entrar en observación detrás de un flag apagado.
+
 ## Identificar antes de enviar un documento (2026-09-10)
 
 Es preferible pedir número a enviar otra factura. El contexto procede de una

@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-10 — Precio final, emisión contextual y media real
+
+- Baseline de3b33d: CI 34465469977 success.
+- 69 pruebas de conversación, WhatsApp, seguridad conversacional y fiabilidad OK.
+- Matriz de 20 tickets (IVA 0/4/10/21, cinco importes): total exacto conservado
+  también al emitir y suma de líneas coherente. Sin cambios en emitidas previas.
+- «Emitir y envíame el PDF» solicita confirmación y envía al titular, no al cliente.
+  Negación no propone emisión; destino ambiguo pregunta. Cita desconocida no usa
+  foco reciente. La huella se vuelve a comprobar bajo transacción de emisión.
+- Diagnóstico real por SSH: ID Meta presente, no numérico por espacio final;
+  al normalizarlo, generación/subida del PDF #30 del negocio 2 confirmada por Meta.
+  No se emitió, modificó ni envió al cliente ese documento; conserva sus 99,99 €.
+- CI completo del candidato y entrega al teléfono pendientes.
+
 ## 2026-09-10 — Seguimiento de la prueba real: orden compuesta
 
 - Baseline ea9e9a3: CI 34464472031, 792 pruebas OK; health/ready verificados.

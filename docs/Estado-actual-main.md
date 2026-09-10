@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 10-sep — Núcleo de planificación de emisión y diagnóstico real
+
+Nuevo plan sin efectos separa emitir/descargar/entregar. La emisión confirma una
+versión concreta de borrador y líneas dentro de la transacción. Precio final de
+una línea conserva céntimos. Un espacio final en el ID Meta causaba el fallo de
+subida: reproducido y confirmado con subida real normalizando el ID, sin enviar.
+El alcance y los siguientes dominios están en `Agente-operativo-fiable.md`; no es
+todavía un agente universal. Sin migración ni modificación de facturas emitidas.
+
 ## 10-sep — Seguimiento de orden compuesta por WhatsApp
 
 La captura real confirmó que no se vuelve a enviar una demo, pero expuso un

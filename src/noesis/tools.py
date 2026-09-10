@@ -360,8 +360,10 @@ def _crear_factura(
         0 if invoice_type == "F2" and irpf is None
         else biz.get("default_irpf", 0) if irpf is None else irpf
     )
+    gross_total = None
     if importe_incluye_iva and not lineas:
         gross = Decimal(str(base))
+        gross_total = gross
         divisor = (
             Decimal("1") + Decimal(str(rate)) / Decimal("100")
             - Decimal(str(irpf_rate)) / Decimal("100")
@@ -373,7 +375,7 @@ def _crear_factura(
         ))
     inv = db.add_invoice(c["id"], concepto, base, vat_rate=rate,
                          irpf_rate=irpf_rate, business_id=business_id,
-                         invoice_type=invoice_type, lines=lineas)
+                         invoice_type=invoice_type, lines=lineas, gross_total=gross_total)
     if invoice_type == "F2" and not db._fits_simplified_invoice(inv["total"]):
         db.delete_invoice(inv["id"], business_id)
         raise ValueError(

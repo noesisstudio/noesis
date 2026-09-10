@@ -2,6 +2,11 @@
 
 ## Facturación conversacional — 10-sep
 
+- [x] Reproducir espacio en ID de Meta con subida real, sin entregar ni emitir.
+- [x] Conservar precio final y confirmar versión de borrador antes de emitir.
+- [ ] Extender contrato estructurado a otros dominios en observación: alcance y
+  criterios en `Agente-operativo-fiable.md`, no prometer comprensión universal.
+
 - [x] Reproducir captura nueva: «crear y adjuntar» no busca una factura previa;
   «F2 Jana» completa búsqueda y «créalo» mantiene rechazo fiscal explícito.
 

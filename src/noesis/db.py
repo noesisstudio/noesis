@@ -5375,7 +5375,7 @@ def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
                 invoice_type: str = "F1", series_id: int | None = None,
                 operation_date: str | None = None, notes: str | None = None,
                 payment_method: str | None = None,
-                legal_mention: str | None = None) -> dict:
+                legal_mention: str | None = None, gross_total=None) -> dict:
     """Crea una factura calculando IVA y retención de IRPF.
 
     Total = base + IVA − IRPF retenido (así sale el importe que el cliente paga).
@@ -5390,6 +5390,20 @@ def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
         fallback_vat=vat_rate,
     )
     totals = _invoice_totals(normalized, irpf_rate)
+    if gross_total is not None:
+        gross = Decimal(str(gross_total)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if len(normalized) != 1 or not gross.is_finite() or gross <= 0:
+            raise ValueError("El precio final requiere una única línea positiva.")
+        # Repartir el céntimo residual del precio final sin cambiar el importe
+        # acordado. Solo la creación IVA incluido usa esta vía explícita.
+        difference = gross - Decimal(str(totals["total"]))
+        if abs(difference) > Decimal("0.01"):
+            raise ValueError("El precio final no coincide con el desglose calculado.")
+        if difference and normalized[0]['vat_rate'] == 0:
+            raise ValueError("Revisa el redondeo del precio final sin IVA antes de guardar.")
+        normalized[0]["vat_amount"] = float(Decimal(str(normalized[0]["vat_amount"])) + difference)
+        normalized[0]["total"] = float(Decimal(str(normalized[0]["total"])) + difference)
+        totals = _invoice_totals(normalized, irpf_rate)
     concept = normalized[0]["description"]
     if len(normalized) > 1:
         concept = f"{concept} y {len(normalized) - 1} línea(s) más"
@@ -6687,6 +6701,11 @@ def issue_invoice(
         ).fetchall()]
         if not lines:
             raise ValueError("La factura no contiene ninguna línea.")
+        from .conversation_plan import expected_invoice, invoice_fingerprint
+        expectation = expected_invoice.get()
+        if expectation and expectation[:2] == (business_id, invoice_id) and expectation[2]:
+            if invoice_fingerprint(inv, lines) != expectation[2]:
+                raise ValueError("La factura cambió desde la confirmación. Revísala antes de emitir.")
         totals = _invoice_totals(lines, inv.get("irpf_rate") or 0)
         for key in ("base", "vat_amount", "irpf_amount", "total"):
             if Decimal(str(totals[key])).quantize(Decimal("0.01")) != Decimal(
