@@ -2093,7 +2093,25 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             _finish_inbound_message(message_id, claimed_ids)
             continue
 
-        if _is_owner_pdf_request(text):
+        # Una creación seguida de descarga no es una búsqueda de algo existente.
+        selection_key = f"pdf-selection:{phone}"
+        creation_key = f"invoice-request:{phone}"
+        selection = db.get_pending_action(business["id"], selection_key)
+        if selection and re.fullmatch(r"(?:f2|ticket|tiquet|factura)\s+(?:de\s+)?[a-z ]+", _searchable_text(text)):
+            customer = re.sub(r"^(?:f2|ticket|tiquet|factura)\s+(?:de\s+)?", "", _searchable_text(text))
+            text = f"pásame el PDF del ticket de {customer}"
+        db.clear_pending_action(business["id"], selection_key)
+        if re.fullmatch(r"(?:crealo|creala|fes ho|hazlo)", _searchable_text(text)):
+            previous = db.get_pending_action(business["id"], creation_key)
+            if previous:
+                text = json.loads(previous["payload"])["text"]
+        creation = bool(re.match(r"^(?:crea\w*|hazme|fes\w*|prepara\w*)\s+", _searchable_text(text))
+                        and re.search(r"\b(?:factura|ticket|tiquet)\b", _searchable_text(text)))
+        create_and_pdf = creation and _is_owner_pdf_request(text)
+        if create_and_pdf:
+            text = re.split(r"\s+(?:y|i)\s+(?:envi\w*|mand\w*|pas\w*|pass\w*|adjunt\w*)\b", text, maxsplit=1, flags=re.I)[0].strip()
+
+        if _is_owner_pdf_request(text) and not creation:
             if message.get("reply_to") and not re.search(r"\b(?:factura|ticket|tiquet)\s*#?\s*\d+", text, re.I):
                 key = hashlib.sha256(message["reply_to"].encode()).hexdigest()
                 ref = db.get_pending_action(business["id"], f"invoice-message:{phone}:{key}")
@@ -2107,7 +2125,10 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                     text = f"pásame factura {json.loads(ref['payload'])['invoice_id']} en PDF"
             pdf_result = _send_owner_invoice_pdf(business, phone, text)
             if not pdf_result["sent"]:
+                if not pdf_result.get("invoice_id") and re.search(r"\bf2\b", _searchable_text(text)):
+                    pdf_result["reply"] = "F2 significa ticket simplificado, no identifica por sí solo un documento. " + pdf_result["reply"]
                 send(phone, pdf_result["reply"], business_id=business["id"])
+                db.set_pending_action(business["id"], selection_key, "pdf_selection", {}, ttl_minutes=10)
             results.append({
                 "phone": phone,
                 "business_id": business["id"],
@@ -2151,8 +2172,14 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
         )
         if len(chat_result.get("invoice_ids", [])) == 1:
             _remember_invoice(business["id"], phone, chat_result["invoice_ids"][0])
+            db.clear_pending_action(business["id"], creation_key)
         elif "invoice_ids" in chat_result:
             db.clear_pending_action(business["id"], f"invoice-focus:{phone}")
+            # Solo conservar rechazos fiscales explícitos, nunca reintentar una
+            # creación de resultado incierto tras un fallo del proveedor.
+            if creation and "400" in chat_result.get("reply", ""):
+                db.set_pending_action(business["id"], creation_key, "invoice_request",
+                                      {"text": text}, ttl_minutes=10)
         reply = chat_result.get("reply", "")
         if _claims_unsent_attachment(reply):
             reply = (
@@ -2171,6 +2198,12 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
         send(phone, reply, business_id=business["id"],
              invoice_id=(chat_result["invoice_ids"][0]
                          if len(chat_result.get("invoice_ids", [])) == 1 else None))
+        if create_and_pdf and len(chat_result.get("invoice_ids", [])) == 1:
+            pdf_result = _send_owner_invoice_pdf(
+                business, phone, f"pásame factura {chat_result['invoice_ids'][0]} en PDF"
+            )
+            if not pdf_result["sent"]:
+                send(phone, pdf_result["reply"], business_id=business["id"])
         results.append({
             "phone": phone,
             "business_id": business["id"],

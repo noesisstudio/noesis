@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-10 — Seguimiento de la prueba real: orden compuesta
+
+- Baseline ea9e9a3: CI 34464472031, 792 pruebas OK; health/ready verificados.
+- Nuevas regresiones: crear ticket 200 € para Jana y adjuntar su borrador sin
+  emitir; crear ticket 520 € y «créalo» mantienen el rechazo fiscal; «F2 Jana»
+  completa la selección PDF sin llamar al modelo ni escoger otro cliente.
+- 35 pruebas de conversación/WhatsApp OK. Meta simulado, no prueba de entrega
+  real. El límite fiscal no cambia. CI del nuevo commit pendiente.
+- Segundo conjunto: conversación, seguridad conversacional y fiabilidad,
+  47 pruebas OK en 27,708 s. Ruff, puerta documental y diff-check OK.
+
 ## 2026-09-10 — Tickets, contexto y PDF real
 
 - `tests.test_invoice_conversation`: 13 pruebas OK. PDF real extraído para

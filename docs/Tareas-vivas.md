@@ -2,6 +2,9 @@
 
 ## Facturación conversacional — 10-sep
 
+- [x] Reproducir captura nueva: «crear y adjuntar» no busca una factura previa;
+  «F2 Jana» completa búsqueda y «créalo» mantiene rechazo fiscal explícito.
+
 - [x] Eliminar fallback de cliente desconocido a factura demo o última emitida.
 - [x] PDF real de borrador marcado, sin emitir por pedir una descarga.
 - [x] Contexto reciente/citas nuevas verificables; preguntar si no consta.

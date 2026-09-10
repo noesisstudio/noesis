@@ -16,6 +16,49 @@ class InvoiceConversationTestCase(unittest.TestCase):
     tearDown = fixtures.BackendTestCase.tearDown
     make_business = fixtures.BackendTestCase.make_business
 
+    def test_create_ticket_and_pdf_uses_new_draft_not_existing_demo(self):
+        biz, client = self.make_business('Creación compuesta')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        old = self.invoice(biz, client, issued=True)
+        with patch.object(whatsapp, 'send'), \
+             patch.object(whatsapp, '_upload_owner_draft_pdf', return_value='12345'), \
+             patch.object(whatsapp, '_post_to_meta', return_value='wamid-created') as post:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'compound-new',
+                'text': 'Creame un tiquet para jana 200€ concepto aire acondicionado y enviam pdf'})
+        draft = db.list_invoices(biz['id'])[0]
+        self.assertNotEqual(draft['id'], old['id'])
+        self.assertEqual(draft['status'], 'borrador')
+        self.assertEqual(draft['client_name'].lower(), 'jana')
+        self.assertEqual(draft['concept'], 'aire acondicionado')
+        self.assertEqual(draft['total'], 200)
+        self.assertIn(str(draft['id']), post.call_args.args[0]['document']['filename'])
+
+    def test_screenshot_over_limit_creation_and_crealo_keep_fiscal_reason(self):
+        biz, client = self.make_business('Rechazo con contexto')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        self.invoice(biz, client, issued=True)
+        with patch.object(whatsapp, 'send') as send, patch.object(whatsapp, '_post_to_meta') as post:
+            for number, text in enumerate((
+                'Creame un tiquet para jana 520€ concepto aire acondicionado y enviam pdf', 'Crealo'
+            )):
+                whatsapp.handle_inbound({'from': '34600111222', 'id': f'limit-{number}', 'text': text})
+                self.assertIn('400', send.call_args.args[1])
+                self.assertNotIn('No encuentro', send.call_args.args[1])
+        post.assert_not_called()
+        self.assertEqual(len(db.list_invoices(biz['id'])), 1)
+
+    def test_pdf_clarification_f2_jana_preserves_download_intent(self):
+        biz, client = self.make_business('Selección F2')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        self.invoice(biz, client, issued=True)
+        jana = db.add_client('Jana', business_id=biz['id'])
+        wanted = self.invoice(biz, jana, issued=True)
+        with patch.object(whatsapp, 'send'), patch.object(whatsapp, '_post_to_meta', return_value='wamid-jana') as post:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'f2-ask', 'text': 'Pasame factura f2 en pdf'})
+            post.assert_not_called()
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'f2-select', 'text': 'F2 jana'})
+        self.assertIn(f'/invoices/{wanted["id"]}/pdf', post.call_args.args[0]['document']['link'])
+
     def invoice(self, business, client, amount=100, issued=False):
         inv = db.add_invoice(client['id'], 'Reparación real', amount,
                              business_id=business['id'], invoice_type='F2')

@@ -1,5 +1,12 @@
 # Mapa de código
 
+## Orden compuesta y aclaraciones — 10-sep
+
+`whatsapp._handle_inbound` separa creación/adjunto y enlaza el PDF solo al recibo
+real. Claves `pdf-selection` e `invoice-request` por teléfono/negocio, TTL diez
+minutos, sin reintento de creaciones inciertas. `nlu._parse_simplified_sale`
+reconoce crear un ticket para cliente e importe seguido de «concepto».
+
 ## Selección documental y recibos de ejecución — 10-sep
 
 `tools.execution_receipts` conserva resultados por contexto de ejecución;

@@ -1,5 +1,13 @@
 # Estado actual del producto
 
+## 10-sep — Seguimiento de orden compuesta por WhatsApp
+
+La captura real confirmó que no se vuelve a enviar una demo, pero expuso un
+segundo fallo: «crear y enviar PDF» entraba en búsqueda. Corregido con creación
+primero y entrega únicamente del ID real. «F2 Jana» conserva intención de buscar;
+«créalo» tras rechazo fiscal conserva la explicación, no inventa un resultado.
+Sin migración ni ampliación del límite fiscal. Pendiente validar entrega física.
+
 ## 10-sep — Candidato de fiabilidad de facturas por WhatsApp
 
 Se elimina el fallback a la última factura cuando el cliente pedido no existe.

@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-09-10 — Crear y adjuntar en la misma petición
+
+La prueba real del founder mostró que la búsqueda PDF interceptaba «créame un
+tiquet… y envíame PDF». Se prioriza creación, se separa la entrega y solo se
+adjunta el ID efectivamente devuelto. `nlu.py` acepta «créame un tiquet para…
+importe concepto…» como venta, sin cambiar tickets recibidos a gastos.
+`whatsapp.py` conserva diez minutos la selección PDF y únicamente rechazos
+fiscales explícitos para «créalo»; nunca reintenta un resultado incierto.
+F2 se explica como tipo, no número. Pruebas: tres regresiones con las frases de
+la captura y casos válidos; 35 pruebas de conversación/WhatsApp OK.
+Riesgo medio, sin migraciones ni cambios fiscales. Meta simulado; entrega física
+pendiente. Rollback: revertir este commit; claves de contexto separadas caducan.
+
 ## 2026-09-10 — Identidad del PDF y conversación verificable
 
 Objetivo: impedir que pedir un cliente desconocido envíe la última factura demo.

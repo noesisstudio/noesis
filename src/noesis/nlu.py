@@ -201,6 +201,11 @@ def _add_tax_rates(norm: str, args: dict) -> None:
 
 def _parse_simplified_sale(text: str, norm: str) -> dict | None:
     """Interpreta solo tickets DE VENTA; una foto o un ticket suelto sigue siendo gasto."""
+    # «Créame un tiquet para Jana» es una venta explícita, no un gasto recibido.
+    if re.match(r"^(?:crea\w*|hazme|fes\w*|prepara\w*)\s+(?:un\s+)?(?:ticket|tiquet)\b", norm):
+        text = re.sub(r"\b(ticket|tiquet)\b(?!\s+de\s+(?:venta|venda))", "ticket de venta", text, count=1, flags=re.I)
+        text = re.sub(r"\bconcepto\b", "por", text, flags=re.I)
+        norm = _norm(text)
     explicit = bool(
         re.search(r"\b(?:ticket|tiquet)\s+de\s+(?:venta|venda)\b", norm)
         or "factura simplificada" in norm
