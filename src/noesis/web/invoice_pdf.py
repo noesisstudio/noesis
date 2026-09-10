@@ -206,6 +206,12 @@ def build_invoice_pdf(invoice_id: int, business_id: int) -> bytes | None:
     pdf.set_line_width(0.2)
     pdf.ln(8)
 
+    if inv.get("status") == "borrador":
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_text_color(*INK)
+        pdf.cell(0, 7, "BORRADOR - PENDIENTE DE EMISION", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
+
     # --- Cliente ---
     pdf.set_text_color(*MUTED)
     pdf.set_font("Helvetica", "B", 9)

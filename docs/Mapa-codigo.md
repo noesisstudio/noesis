@@ -1,5 +1,16 @@
 # Mapa de código
 
+## Selección documental y recibos de ejecución — 10-sep
+
+`tools.execution_receipts` conserva resultados por contexto de ejecución;
+`web/chat.handle` renderiza creaciones de factura desde ellos.
+`agent._refresh_conversation` sincroniza el historial, incluidos turnos locales.
+`web/whatsapp._invoice_for_owner_pdf` no usa fallback ante referencias desconocidas.
+`_remember_invoice`/`_remember_invoice_message` reutilizan pending_actions con
+claves separadas y TTL (teléfono y hash del ID Meta). `_upload_owner_draft_pdf`
+sube el PDF marcado; las emitidas conservan el portal existente. Sustituye la
+restricción histórica «solo emitidas» descrita más abajo.
+
 ## Variantes lingüísticas y capacidad PDF — 10-sep
 
 `web/whatsapp.py::_is_owner_pdf_request` reconoce familias de verbos castellanas,

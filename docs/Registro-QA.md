@@ -1,5 +1,24 @@
 ﻿# Registro de QA
 
+## 2026-09-10 — Tickets, contexto y PDF real
+
+- `tests.test_invoice_conversation`: 13 pruebas OK. PDF real extraído para
+  verificar cliente, importe y marca de borrador. Transporte Meta simulado.
+- Cliente/número inexistente no recupera una demo; ambigüedad pide selección;
+  último emitido se distingue del último borrador. Aislamiento negocio/teléfono,
+  caducidad y cita verificada frente a cita antigua desconocida.
+- Flujo crear ticket → «emítela» → «sí» → «imprímela» envía la factura correcta.
+  Creación inventada y error F2 no se anuncian como éxito; NIF del emisor exigido.
+- Multipart conserva bytes reales y valida media ID. No acredita entrega física.
+- Pantalla/endpoints de facturación: `ProfessionalInvoicingHttpTestCase`, OK.
+  Demo/archivo/OCR: 6 pruebas OK tras sustituir la selección accidental de la
+  primera factura por una proyección realmente visible del período. Ruff,
+  Bandit high/high, detector de secretos y dos pruebas Node, OK.
+- Regresión completa: 792 pruebas en 636,708 s; 791 OK y una dependencia del
+  orden accidental en la prueba de demo. Corregida la selección del fixture y
+  repetido su módulo completo: 6/6 OK (23,561 s). El resto de código probado no
+  cambió durante esa ejecución. CI debe repetir la suite sobre el commit final.
+
 ## 2026-09-10 — SEO y GEO: nombre único, llms.txt y FAQ de /preguntas
 
 - Contratos nuevos en `test_seo.py`: `/llms.txt` responde Markdown sin

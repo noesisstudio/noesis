@@ -147,7 +147,7 @@ async function newInvoice(initial=null){
     seriesSelect.innerHTML = series.filter(s => s.document_type === wanted && s.active)
       .map(s => `<option value="${s.id}">${esc(s.name)} · ${esc(s.prefix_template)}</option>`).join('');
     el('nf-type-help').textContent = typeSelect.value === 'F2'
-      ? 'Para importes de hasta 400 €; no exige NIF del cliente.'
+      ? 'Ticket: hasta 400 € IVA incluido. No exige NIF del cliente en el caso general; sí el NIF del emisor.'
       : 'Requiere los datos fiscales completos del cliente.';
   };
   if(initial) typeSelect.value=initial.invoice_type||'F1';
@@ -344,6 +344,7 @@ function render(f) {
       <div class="fx-main"><b>${esc(i.client_name||'—')}</b>
         ${i.number ? `<span class="meta">· ${esc(i.number)}</span>` : ''}</div>
       <div class="meta">${esc(i.concept)}</div>
+      <div class="meta">${i.invoice_type==='F2'?'Ticket · factura simplificada':i.invoice_type==='F1'?'Factura completa':'Factura rectificativa'}</div>
       ${i.rectified_number ? `<div class="meta rectification-ref">Rectifica ${esc(i.rectified_number)}</div>` : ''}
     </td>
     <td class="t-right num" title="Base ${eur(i.base)} + IVA ${eur(i.vat_amount)}${i.irpf_amount ? ' − IRPF '+eur(i.irpf_amount) : ''}">

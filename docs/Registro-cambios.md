@@ -1,5 +1,20 @@
 ﻿# Registro de cambios
 
+## 2026-09-10 — Identidad del PDF y conversación verificable
+
+Objetivo: impedir que pedir un cliente desconocido envíe la última factura demo.
+Áreas: `web/whatsapp.py`, `web/chat.py`, `agent.py`, `tools.py`, `db.py`,
+`web/invoice_pdf.py`, `templates/facturas.html` y pruebas conversacionales.
+La resolución exige referencia inequívoca o contexto reciente de teléfono/negocio.
+Las citas nuevas se vinculan al ID Meta; las antiguas sin asociación piden número.
+El borrador usa su PDF real marcado, se sube a Meta y no se emite. Las respuestas
+de creación usan resultados reales; el agente recarga también los turnos locales.
+Pruebas: 13 regresiones nuevas con base/PDF reales y Meta simulado; regresión
+general en Registro-QA. Límite: entrega física pendiente. F2 conserva el límite
+general de 400 € IVA incluido, sin presumir excepciones sectoriales de 3.000 €.
+Riesgo medio: selección documental/conversación. Rollback: revertir commit, sin
+migración ni reescritura fiscal. Memoria aditiva con TTL 30 minutos/24 horas.
+
 ## 2026-09-10 — SEO y GEO: un solo nombre, llms.txt y FAQ de /preguntas
 
 Objetivo: que buscadores y asistentes de IA reconozcan una única entidad y lean

@@ -1,5 +1,16 @@
 # Tareas vivas
 
+## Facturación conversacional — 10-sep
+
+- [x] Eliminar fallback de cliente desconocido a factura demo o última emitida.
+- [x] PDF real de borrador marcado, sin emitir por pedir una descarga.
+- [x] Contexto reciente/citas nuevas verificables; preguntar si no consta.
+- [x] Pruebas de creación inventada, error F2, aislamiento y flujo completo.
+- [ ] Tras publicar: ticket nuevo en WhatsApp real, comprobar nombre/importe
+  del PDF y responder a una cita nueva; validar también fallo real del proveedor.
+- [ ] Asesoría: validar excepciones F2 hasta 3.000 € antes de ampliar el límite
+  general; no activar por la palabra «ticket».
+
 ## SEO y GEO — 10-sep
 
 - [x] Un solo nombre público, «Bynoesis», en títulos, descripciones, FAQ y demo.

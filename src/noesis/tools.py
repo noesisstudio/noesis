@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+from contextvars import ContextVar
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -21,6 +22,9 @@ from .adapters import invoicing
 
 _provider = invoicing.get_provider()
 log = logging.getLogger("noesis.tools")
+
+# Recibos de ejecución del turno: contexto aislado, nunca texto inventado por IA.
+execution_receipts: ContextVar[list | None] = ContextVar("execution_receipts", default=None)
 
 
 TOOLS: list[dict] = [
@@ -715,4 +719,7 @@ def run_tool(
     except Exception:  # noqa: BLE001
         log.exception("Fallo ejecutando la herramienta %s.", name)
         result = {"error": f"No se pudo ejecutar {name}. Inténtalo de nuevo."}
+    receipts = execution_receipts.get()
+    if receipts is not None:
+        receipts.append({"tool": name, "business_id": business_id, "result": result})
     return json.dumps(result, ensure_ascii=False, default=str)

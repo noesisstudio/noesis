@@ -8,6 +8,7 @@ Bynoesis conserva la respuesta y las órdenes rutinarias locales.
 from __future__ import annotations
 
 import json
+import re
 import logging
 import threading
 from datetime import date, datetime
@@ -1061,7 +1062,33 @@ def handle(
                 call = turn["tool_call"]
                 result = json.loads(run_tool(call["name"], call["args"], business_id, channel=channel))
             else:
-                result = _handle(business_id, message, page, channel=channel, actor_phone=actor_phone)
+                from ..tools import execution_receipts
+                receipts = []
+                receipt_token = execution_receipts.set(receipts)
+                try:
+                    result = _handle(business_id, message, page, channel=channel, actor_phone=actor_phone)
+                finally:
+                    execution_receipts.reset(receipt_token)
+                invoice_receipts = [r for r in receipts if r["business_id"] == business_id
+                                    and r["tool"] in {"crear_factura", "preparar_factura_trabajo"}]
+                if invoice_receipts and not state.get("proposal"):
+                    result["reply"] = "\n\n".join(
+                        nlu.format_reply(r["tool"], r["result"]) for r in invoice_receipts
+                    )
+                    result["invoice_ids"] = [r["result"]["factura"]["id"]
+                                             for r in invoice_receipts
+                                             if r["result"].get("factura") and not r["result"].get("error")]
+                elif str(result.get("source", "")).startswith("ia"):
+                    reply_norm = nlu._norm(result.get("reply", ""))
+                    if re.search(r"\b(factura|ticket|tiquet)\b", reply_norm) and re.search(
+                        r"\b(emitid[oa]|emes[ao]?|emesa|guardad[oa]|guardat|cread[oa]|creat|"
+                        r"preparad[oa]|preparat|registrad[oa]|registrat)\b", reply_norm
+                    ) and not receipts:
+                        result["reply"] = (
+                            "No tengo una ejecución verificada de esa factura o ticket en este turno. "
+                            "Indica su número para consultarlo, o cliente, concepto e importe para preparar un borrador."
+                        )
+                        result["invoice_ids"] = []
             if state.get("proposal"):
                 result = {**state["proposal"], "source": "local"}
         finally:

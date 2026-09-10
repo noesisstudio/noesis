@@ -5964,7 +5964,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
 
     def test_generic_assistant_cannot_claim_an_attachment_it_did_not_send(self):
         business, client = self._connected_business("Sin adjuntos inventados")
-        invoice = db.add_invoice(
+        db.add_invoice(
             client["id"], "Trabajo", 50, business_id=business["id"]
         )
         replies = []
@@ -5982,7 +5982,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
             })
 
         self.assertIn("No he adjuntado ningún archivo", replies[-1])
-        self.assertIn(f"factura #{invoice['id']}", replies[-1])
+        self.assertIn("indica el número de factura", replies[-1])
         self.assertNotIn("Ya tienes", replies[-1])
 
     def test_generic_assistant_cannot_deny_real_pdf_delivery_capability(self):

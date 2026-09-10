@@ -3,6 +3,18 @@
 Lo que hace que las facturas sean **legales y correctas**. Crítico: una factura mal
 hecha le crea un problema con Hacienda al cliente.
 
+## Ticket y datos fiscales (revisado 10-sep-2026)
+
+La simplificada admite el caso general hasta 400 € IVA incluido sin NIF/domicilio
+del destinatario; el NIF del emisor sí es obligatorio. Una factura completa de
+operación interior sujeta exige los datos del cliente, también si es particular.
+Para deducir IVA con simplificada deben constar NIF/domicilio del destinatario y
+cuota separada. El art. 4 contempla hasta 3.000 € en operaciones enumeradas,
+incluidos ciertos servicios a domicilio, pero el producto no presume que toda
+reforma cumple esa excepción: conserva el límite general hasta validación.
+Fuentes: [AEAT](https://sede.agenciatributaria.gob.es/Sede/iva/facturacion-registro/facturacion-iva/tipos-factura.html),
+[RD 1619/2012, arts. 4, 6 y 7](https://www.boe.es/eli/es/rd/2012/11/30/1619).
+
 ## IVA
 - General **21%**, reducido **10%**, superreducido **4%** y tipo **0%**.
 - Configurable por negocio (por defecto) y por factura. Implementado.

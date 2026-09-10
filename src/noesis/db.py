@@ -5924,9 +5924,9 @@ def list_invoices(business_id, status=None, *, client_id=None,
     if client_id is not None:
         q += " AND i.client_id=?"
         params.append(client_id)
-    q += " ORDER BY i.created_at DESC"
+    q += " ORDER BY i.created_at DESC, i.id DESC"
     if limit is not None:
-        q += ", i.id DESC LIMIT ? OFFSET ?"
+        q += " LIMIT ? OFFSET ?"
         params.extend([limit, offset])
     with get_conn() as conn:
         return [
@@ -6671,6 +6671,13 @@ def issue_invoice(
                     " Si es un particular, puedes emitirla como factura"
                     " simplificada: hasta 400 € no necesita NIF ni domicilio"
                     " del cliente."
+                )
+            elif solo_falta_el_cliente:
+                aviso += (
+                    " Es una factura completa: también requiere esos datos si el cliente "
+                    "es un particular. El límite general del ticket sin identificación "
+                    "del destinatario es 400 € IVA incluido; las excepciones sectoriales "
+                    "no se aplican automáticamente."
                 )
             raise ValueError(aviso)
         lines = [dict(row) for row in conn.execute(

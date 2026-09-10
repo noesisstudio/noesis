@@ -2,6 +2,14 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Identificar antes de enviar un documento (2026-09-10)
+
+Es preferible pedir número a enviar otra factura. El contexto procede de una
+acción real del negocio, caduca y queda limitado al teléfono. El texto del modelo
+no demuestra que una factura exista. Descargar un borrador no es emitirlo: se
+marca como tal, sin registro fiscal ni cambio de estado. No se amplía el límite
+F2 general sin decisión fiscal validada sobre las excepciones.
+
 ## Un solo nombre público y una ficha para asistentes de IA (2026-09-10)
 
 El founder fija **Bynoesis** como único nombre en la web pública. Buscadores y

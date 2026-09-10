@@ -26,6 +26,16 @@ _MUTATING_TOOLS = {
 }
 
 
+def _refresh_conversation(agent) -> None:
+    """Incluye también los turnos resueltos localmente entre llamadas al modelo."""
+    history = db.list_assistant_messages(agent.business_id, limit=24)
+    if history:
+        if history[-1].get("role") == "user":
+            history = history[:-1]
+        agent.messages = [{"role": row["role"], "content": row["content"]}
+                          for row in history if row.get("role") in {"user", "assistant"}]
+
+
 class PartialAgentExecutionError(RuntimeError):
     """El proveedor falló después de que una herramienta pudiera haber escrito."""
 
@@ -212,6 +222,7 @@ class NoesisAgent:
             pass
 
     def _send_locked(self, user_text: str) -> str:
+        _refresh_conversation(self)
         if len(self.messages) > 32:
             self.messages = self.messages[-24:]
             while self.messages and self.messages[0].get("role") != "user":
@@ -224,6 +235,7 @@ class NoesisAgent:
             tool for tool in TOOLS
             if tool["name"] not in {"enviar_factura", "registrar_pago"}
         ]
+        allowed_tools = {tool["name"] for tool in safe_tools}
         for _round in range(6):
             started = time.monotonic()
             resp = self.client.messages.create(
@@ -247,9 +259,11 @@ class NoesisAgent:
             tool_results = []
             for block in resp.content:
                 if block.type == "tool_use":
-                    if block.name in _MUTATING_TOOLS:
+                    if block.name in allowed_tools and block.name in _MUTATING_TOOLS:
                         self._mutated_in_send = True
-                    output = run_tool(block.name, block.input, self.business_id)
+                    output = (run_tool(block.name, block.input, self.business_id)
+                              if block.name in allowed_tools else
+                              json.dumps({"error": "La herramienta no está autorizada."}))
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": block.id,
@@ -339,6 +353,7 @@ class OpenAICompatibleNoesisAgent:
             pass
 
     def _send_locked(self, user_text: str) -> str:
+        _refresh_conversation(self)
         if len(self.messages) > 32:
             self.messages = self.messages[-24:]
             while self.messages and self.messages[0].get("role") != "user":

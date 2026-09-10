@@ -1,5 +1,15 @@
 # Estado actual del producto
 
+## 10-sep — Candidato de fiabilidad de facturas por WhatsApp
+
+Se elimina el fallback a la última factura cuando el cliente pedido no existe.
+El PDF usa el documento identificado; ante ambigüedad pregunta. Adjunta borradores
+marcados sin emitirlos. «Imprímela» entrega el PDF, no accede a una impresora.
+Contexto reciente por negocio/teléfono, citas nuevas verificables y creaciones
+anunciadas desde resultados reales de herramientas. El agente incorpora turnos
+locales al historial. Sin migración, esquema 55. Pendiente cierre de regresión,
+publicación y comprobación con móvil real.
+
 ## 10-sep — SEO y GEO: un nombre y una ficha para asistentes
 
 Enviado a main; falta verificar en producción. La web pública deja de alternar «Noesis» y

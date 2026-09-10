@@ -2,13 +2,13 @@
   "state_date": "2026-09-10",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 779,
+  "verified_test_count": 792,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Release de lenguaje PDF verificada. El candidato del 10-sep conecta Facturas con el archivo documental mediante una proyeccion sin copias y mejora estados y avance de Proyectos; requiere publicacion y gesto tactil en Safari/iPhone real. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS son artefactos no provisionados. Siguen pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
+    "pending_after_deploy": "Baseline 88adfa3 verificada en health/ready con esquema 55 (documentos/proyectos y SEO). Candidato del 10-sep: identidad PDF, borradores y continuidad conversacional; pendiente publicacion y prueba en WhatsApp real. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS no provisionados. Pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -62,6 +62,7 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
+    "invoice_conversation_candidate_2026_09_10": "exact_reference_no_latest_fallback_unknown_customer_asks_draft_real_pdf_watermark_meta_upload_no_issue_phone_scoped_expiring_focus_verified_meta_reply_mapping_tool_execution_receipts_and_local_turn_history_refresh_13_new_regressions_real_phone_validation_pending_no_migration",
     "supervised_learning_candidate": "code_deployed_default_off_requires_review_flag_explicit_post_success_approval_exact_tenant_rules_never_system_prompt_invoice_clarification_content_free_event_report_no_retraining_no_schema_change",
     "conversation_review_candidate": "code deployed, disabled by default; the review flag enables tenant and actor scoped single-use proposals, corrections, explicit clients and stale-data guards; no schema change",
     "private_voice_candidate": "authenticated_bounded_private_cpu_whisper_service_no_external_fallback_real_synthetic_small_model_http_transcription_verified_windows_MKL_workaround_linux_build_real_corpus_hosting_and_pilot_pending",

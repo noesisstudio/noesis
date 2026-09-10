@@ -248,7 +248,17 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
                     client.get(f"/gestoria/cliente/{business_id}").status_code,
                     200,
                 )
-                generated_invoice = db.list_invoices(business_id)[0]
+                # Seleccionar una proyección del período, no asumir que la primera
+                # factura contable carece de un original subido que la sustituya.
+                archive = gestoria_workspace.document_archive(
+                    business_id, year=date.today().year,
+                    quarter=(date.today().month - 1) // 3 + 1,
+                )
+                generated_document = next(
+                    item for item in archive['documents']
+                    if item['source_type'] == 'generated_invoice'
+                )
+                generated_invoice = db.get_invoice(generated_document['invoice_id'], business_id)
                 generated_page = client.get(
                     f"/gestoria/cliente/{business_id}",
                     params={
