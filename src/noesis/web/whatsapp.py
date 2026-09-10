@@ -797,13 +797,6 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
     )
 
 
-_PDF_SEND_VERBS = (
-    "envia", "enviam", "enviame", "enviamela", "enviamelo", "adjunta",
-    "adjuntame", "pasa", "pasame", "pasamela", "pasamelo", "passa",
-    "passam", "passamel", "manda", "mandame", "mandamela", "mandamelo",
-)
-
-
 def _searchable_text(value: str | None) -> str:
     plain = unicodedata.normalize("NFKD", str(value or ""))
     ascii_text = plain.encode("ascii", "ignore").decode().lower()
@@ -813,19 +806,22 @@ def _searchable_text(value: str | None) -> str:
 def _is_owner_pdf_request(text: str) -> bool:
     """Reconoce una petición de adjunto sin delegarla a una IA generativa."""
     normalized = _searchable_text(text)
-    verb = next(
-        (item for item in _PDF_SEND_VERBS
-         if re.search(rf"\b{re.escape(item)}\b", normalized)),
-        None,
+    action = re.search(
+        r"\b(?:envi\w*|pass\w*|pas\w*|mand\w*|adjunt\w*)\b", normalized
     )
-    named_document = re.search(
-        r"\b(factura|ticket|tiquet|documento|document)\b", normalized
+    context = re.search(
+        r"\b(?:factura|ticket|tiquet|documento|document|fitxer|fichero|archivo)\b",
+        normalized,
     )
-    pronoun_request = verb in {
-        "enviamela", "enviamelo", "pasamela", "pasamelo", "passamel",
-        "mandamela", "mandamelo",
-    }
-    return bool(re.search(r"\bpdf\b", normalized) and verb and (named_document or pronoun_request))
+    direct_pronoun = re.search(
+        r"\b(?:envi|pass|pas|mand|adjunt)\w*(?:me|melo|mela|mel)\b", normalized
+    )
+    here = re.search(r"\b(?:aqui|chat|xat)\b", normalized)
+    return bool(
+        re.search(r"\bpdf\b", normalized)
+        and action
+        and (context or direct_pronoun or here)
+    )
 
 
 def _claims_unsent_attachment(reply: str) -> bool:
@@ -840,6 +836,23 @@ def _claims_unsent_attachment(reply: str) -> bool:
             or re.search(r"\b(te lo|te l|ja te l|ya te lo) he enviad[oa]\b", normalized)
         )
     )
+
+
+def _claims_false_pdf_limit(reply: str) -> bool:
+    """Impide que la IA niegue una capacidad de adjunto disponible en runtime."""
+    normalized = _searchable_text(reply)
+    denial = re.search(
+        r"\b(?:no puedo|no puc|no podem|no puede|no pot|no es posible|"
+        r"no se puede)\b",
+        normalized,
+    )
+    file_reference = re.search(
+        r"\b(?:pdf|fitxer|fichero|archivo|documento)\b", normalized
+    )
+    delivery_reference = re.search(
+        r"\b(?:envi\w*|adjunt\w*|gener\w*|compart\w*)\b", normalized
+    )
+    return bool(denial and file_reference and delivery_reference)
 
 
 def _invoice_for_owner_pdf(business_id: int, text: str) -> tuple[dict | None, str | None]:
@@ -2008,6 +2021,13 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 "No he adjuntado ningún archivo. El texto anterior no era una "
                 "confirmación válida de envío. Para recibir el PDF real aquí, "
                 f"escribe «pásame la factura{reference} en PDF»."
+            )
+        elif _claims_false_pdf_limit(reply):
+            reply = (
+                "Sí puedo enviarte aquí el PDF real de una factura o ticket ya "
+                "emitido. Escribe, por ejemplo, «pásame el último ticket en PDF» "
+                "o indica su número o cliente. Si todavía es un borrador, primero "
+                "te pediré que confirmes su emisión."
             )
         if config.ASSISTANT_REVIEW_ENABLED and db.get_pending_action(business["id"], f"wa:{phone}"):
             db.clear_pending_action(business["id"], phone)

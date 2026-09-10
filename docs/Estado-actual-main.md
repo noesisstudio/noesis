@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 10-sep — corregida la petición real de PDF en catalán/castellano mixto
+
+El envío de PDF ya existía, pero una lista lingüística demasiado literal dejaba
+fuera «Passame…» y «No pots enviar…?». Esas expresiones ahora se resuelven antes
+del modelo generativo y envían al titular el último ticket/factura emitido de su
+negocio. Además, el texto generado ya no puede afirmar que Bynoesis carece de esa
+capacidad. No hay migración ni cambio en facturación o permisos; falta validar la
+frase contra Meta real después del despliegue.
+
 ## 9-sep — PDF real solicitado desde el chat de WhatsApp
 
 La petición «envíame/pásame el ticket en PDF» ya no queda en manos del texto

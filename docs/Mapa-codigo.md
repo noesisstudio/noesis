@@ -1,5 +1,13 @@
 # Mapa de código
 
+## Variantes lingüísticas y capacidad PDF — 10-sep
+
+`web/whatsapp.py::_is_owner_pdf_request` reconoce familias de verbos castellanas,
+catalanas y mixtas junto a PDF y contexto de entrega; evita mantener una lista
+frágil de frases completas. `_claims_false_pdf_limit` es la segunda defensa: si
+`chat.handle` niega enviar o generar PDF, reemplaza la salida por la capacidad
+real, sin fingir que se adjuntó nada. Contratos en `WhatsappMediaTestCase`.
+
 ## PDF reactivo por WhatsApp — 9-sep
 
 `web/whatsapp.py` reconoce localmente solicitudes de factura/ticket PDF antes de

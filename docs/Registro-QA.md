@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-10 — regresión de las frases reales de PDF
+
+- Reproducidas literalmente «Passame el pdf del tiquet» y «No pots enviar el pdf
+  per aqui?» contra un ticket emitido: ambas toman la ruta determinista y producen
+  un payload Meta `document`, sin respuesta textual inventada.
+- Añadida regresión para una respuesta generativa que afirma «No puc generar ni
+  enviar fitxers PDF»: la defensa la sustituye por la capacidad y límites reales.
+- `WhatsappMediaTestCase`: **19 pruebas, OK**. Regresión completa: **773 pruebas
+  Python en 641,095 s, OK**. Ruff, puerta documental, Bandit high/high y
+  `git diff --check` verdes. No se llamó a Meta real ni se tocó ninguna cuenta.
+
 ## 2026-09-09 — PDF real al titular por WhatsApp
 
 - Caso reproducido: una respuesta de chat podía decir «PDF adjunto» sin realizar

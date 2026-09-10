@@ -1,5 +1,13 @@
 # Tareas vivas
 
+## Lenguaje real de PDF — 10-sep
+
+- [x] Reproducir y cubrir «Passame el pdf del tiquet» y «No pots enviar el pdf per
+  aqui?» sin delegarlas al modelo generativo.
+- [x] Impedir que el modelo niegue el envío real de PDF por WhatsApp.
+- [ ] Repetir ambas frases en el número sandbox/real tras publicar y comprobar que
+  WhatsApp muestra el adjunto, no únicamente un estado HTTP aceptado por Meta.
+
 ## Entrega de PDF y voz — 9-sep
 
 - [x] Interceptar peticiones de PDF al titular antes de la IA y enviar documento

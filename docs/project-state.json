@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-09-09",
+  "state_date": "2026-09-10",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 771,
+  "verified_test_count": 773,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Release 086039e0b538 verificado el 8-sep: Railway success, health y ready, esquema 55, 14 paginas, 8 cabeceras, CI completo y humo PostgreSQL verdes. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS son artefactos no provisionados. Siguen pendientes proveedores reales, concurrencia del candidato, movil fisico, restauracion externa, legal y piloto."
+    "pending_after_deploy": "Release b96dea83be57 verificado el 9-sep: Railway success, health y ready, esquema 55, 14 paginas, 8 cabeceras, CI completo y humo PostgreSQL verdes. El candidato del 10-sep amplia el lenguaje real de peticion de PDF y aun requiere publicacion y prueba humana en Meta. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS son artefactos no provisionados. Siguen pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

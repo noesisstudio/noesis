@@ -1,5 +1,25 @@
 ﻿# Registro de cambios
 
+## 2026-09-10 — lenguaje real para pedir PDF por WhatsApp
+
+Objetivo: corregir la reproducción exacta de producción «Passame el pdf del
+tiquet» y «No pots enviar el pdf per aqui?». La primera versión reconocía una
+lista cerrada de verbos y omitía la variante mixta `passame` y el infinitivo
+`enviar`; ambas frases caían en el chat generativo, que podía negar una capacidad
+que el canal ya tiene. El detector pasa a reconocer familias lingüísticas de
+enviar, pasar, mandar y adjuntar, manteniendo como condiciones PDF y contexto de
+documento, pronombre directo o entrega «aquí».
+
+Se añade una defensa independiente que sustituye cualquier negación generativa
+de envío/generación de PDF por una explicación veraz de la capacidad real y sus
+límites: documento emitido, mismo negocio y confirmación previa si es borrador.
+No cambia facturación, permisos, esquema, enlaces ni el adaptador Meta. Pruebas:
+las dos frases reales envían un `document`; una respuesta simulada que niega la
+capacidad queda bloqueada; clase WhatsApp completa en verde. Riesgo: una frase
+con PDF, verbo y contexto se interpreta como solicitud de entrega al propio
+titular; no modifica ni remite al cliente. Rollback: revertir este commit, sin
+migración ni datos que deshacer.
+
 ## 2026-09-09 — el PDF pedido por WhatsApp es un adjunto real
 
 Objetivo: corregir el caso real «envíame/pásame el ticket en PDF». Hasta ahora la

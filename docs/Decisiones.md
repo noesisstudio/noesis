@@ -2,6 +2,14 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Las capacidades del canal no dependen del texto generativo (2026-09-10)
+
+Las expresiones naturales o mixtas para pedir un PDF se clasifican localmente por
+familias lingüísticas antes de entrar en la IA. Como defensa, el texto generativo
+no puede negar una capacidad que el adaptador tiene ni declarar una entrega que
+no ocurrió. La operación sigue limitada al titular vinculado, al mismo negocio y
+a documentos emitidos; ampliar lenguaje no amplía permisos ni autonomía.
+
 ## Un adjunto se confirma únicamente después de que Meta lo acepte (2026-09-09)
 
 Una respuesta generativa no puede representar una entrega. Las peticiones de PDF

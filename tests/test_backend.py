@@ -5912,6 +5912,35 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertIn("no lo está", replies[-1])
         self.assertIn(f"/invoices/{ticket['id']}/pdf", replies[-1])
 
+    def test_owner_pdf_accepts_real_mixed_catalan_spanish_phrases(self):
+        business, client = self._connected_business("PDF lenguaje real")
+        ticket = db.add_invoice(
+            client["id"], "Reparación", 100, invoice_type="F2",
+            business_id=business["id"],
+        )
+        ticket = db.issue_invoice(ticket["id"], business["id"])
+        phrases = (
+            "Passame el pdf del tiquet",
+            "No pots enviar el pdf per aqui?",
+        )
+        with (
+            patch.object(whatsapp, "_post_to_meta", return_value="wamid-document") as post,
+            patch.object(whatsapp, "send") as send,
+        ):
+            for index, phrase in enumerate(phrases):
+                with self.subTest(phrase=phrase):
+                    result = whatsapp.handle_inbound({
+                        "from": "34600111222",
+                        "id": f"wamid-owner-real-language-{index}",
+                        "text": phrase,
+                    })
+                    self.assertTrue(result["results"][0]["invoice_pdf"])
+                    self.assertTrue(result["results"][0]["sent"])
+                    self.assertEqual(result["results"][0]["invoice_id"], ticket["id"])
+
+        self.assertEqual(post.call_count, len(phrases))
+        send.assert_not_called()
+
     def test_owner_pdf_never_presents_a_draft_as_final(self):
         business, client = self._connected_business("PDF borrador")
         draft = db.add_invoice(
@@ -5955,6 +5984,33 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertIn("No he adjuntado ningún archivo", replies[-1])
         self.assertIn(f"factura #{invoice['id']}", replies[-1])
         self.assertNotIn("Ya tienes", replies[-1])
+
+    def test_generic_assistant_cannot_deny_real_pdf_delivery_capability(self):
+        self._connected_business("Capacidad PDF real")
+        replies = []
+        with (
+            patch.object(
+                whatsapp.chat, "handle",
+                return_value={
+                    "reply": (
+                        "No puc generar ni enviar fitxers PDF reals pel WhatsApp; "
+                        "ho has de fer des de l'aplicació."
+                    )
+                },
+            ),
+            patch.object(
+                whatsapp, "send",
+                side_effect=lambda phone, text, **kw: replies.append(text),
+            ),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222",
+                "id": "wamid-false-pdf-limit",
+                "text": "Quines coses pots fer amb els meus documents?",
+            })
+
+        self.assertIn("Sí puedo enviarte aquí el PDF real", replies[-1])
+        self.assertNotIn("No puc", replies[-1])
 
     def test_pdf_document_is_saved_to_papers(self):
         business, _ = self._connected_business("PDFs WhatsApp")
