@@ -1,11 +1,11 @@
-"""Núcleo compartido de la automatización de Facebook de Noesis.
+"""Núcleo compartido de la automatización de Facebook de Bynoesis.
 
 Aquí vive todo lo que comparten el publicador (`publicar.py`) y la revisión del
 domingo (`revision.py`): el calendario editorial, el cálculo de qué toca cada día,
 las credenciales y las llamadas a la Graph API de Meta.
 
 Solo biblioteca estándar, como el resto del proyecto. No importa nada de
-`src/noesis/`: esto promociona Noesis, no forma parte del producto que se vende.
+`src/noesis/`: esto promociona Bynoesis, no forma parte del producto que se vende.
 """
 
 from __future__ import annotations

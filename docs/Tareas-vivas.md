@@ -34,10 +34,19 @@
 - [x] Un solo nombre público, «Bynoesis», en títulos, descripciones, FAQ y demo.
 - [x] `/llms.txt` generado desde catálogo, contacto y estado del alta.
 - [x] FAQPage en `/preguntas` desde la misma fuente que las 16 respuestas visibles.
-- [ ] Publicar con autorización del founder y comprobar `/llms.txt` y `/preguntas`
-  en producción; validar la segunda en la prueba de resultados enriquecidos.
-- [ ] Founder: Bing Webmaster Tools → «Importar desde Google Search Console»
-  y confirmar que el sitemap aparece enviado.
+- [x] Publicado en `88adfa3` y comprobado: `/llms.txt` 200 sin `noindex`,
+  `/preguntas` con FAQPage de 16 y portada sin «Noesis».
+- [x] Bing Webmaster importado desde Search Console; sitemap en Success con 14 URLs.
+  Search Console: sitemap Correcto (14) e indexación pedida para `/`,
+  `/preguntas` y `/autonomos` para renovar el título antiguo «Noesis».
+- [x] Cola de Facebook con el nombre Bynoesis antes de conectar la página.
+- [x] Founder: borradas en Bing las seis URLs enviadas por error como sitemap.
+- [ ] En 1-2 semanas: comprobar que «bynoesis» muestra el título nuevo y revisar
+  en Search Console las 20 páginas indexadas frente a las 14 del sitemap.
+- [ ] Validar `/preguntas` en validator.schema.org (Google ya no muestra FAQ
+  enriquecida a la mayoría de sitios; el marcado sirve para comprensión).
+- [ ] Marca: consultar en la OEPM «Bynoesis» frente a las «Noesis» de software
+  existentes y decidir su registro con asesoría.
 - [ ] Decidir contenido nuevo: páginas por oficio y guía Veri*Factu 2027. Sin
   cifras, testimonios ni fichas de valoraciones hasta tener evidencia real.
 - [ ] Fichas externas (LinkedIn, directorios de software) con los mismos datos

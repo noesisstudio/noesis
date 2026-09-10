@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "descripcion": "Cola editorial de la pagina de Facebook de Noesis. Se publica una pieza cada 'cadencia_dias' dias a partir de 'ancla', en orden. Al terminar la cola, el ciclo vuelve a empezar; la revision del domingo avisa varias semanas antes de que eso ocurra. Reglas: sin clientes ni cifras inventadas, sin prometer presentacion fiscal, sin vender la IA como argumento y sin precios (los precios viven en la web).",
+  "descripcion": "Cola editorial de la pagina de Facebook de Bynoesis. Se publica una pieza cada 'cadencia_dias' dias a partir de 'ancla', en orden. Al terminar la cola, el ciclo vuelve a empezar; la revision del domingo avisa varias semanas antes de que eso ocurra. Reglas: sin clientes ni cifras inventadas, sin prometer presentacion fiscal, sin vender la IA como argumento y sin precios (los precios viven en la web).",
   "cadencia_dias": 3,
   "ancla": "2026-09-09",
   "publicaciones": [
     {
       "id": "F01",
       "pilar": "piloto",
-      "titulo": "Qué es Noesis",
-      "texto": "Noesis lleva la oficina mientras tú haces el trabajo.\n\nEs un copiloto de negocio por WhatsApp para autónomos de servicios: fontanería, electricidad, reformas, climatización, limpieza, mantenimiento y jardinería.\n\nLe hablas como le hablarías a alguien de tu equipo. Le cuentas lo que ha pasado en el día y lo convierte en agenda, en clientes, en presupuestos y en facturas preparadas.\n\nLo que toca dinero, impuestos o a un cliente lo confirmas tú. Noesis prepara; tú decides.\n\nEstamos en piloto con autónomos de servicios. Si te interesa, entra y cuéntanos a qué te dedicas.",
+      "titulo": "Qué es Bynoesis",
+      "texto": "Bynoesis lleva la oficina mientras tú haces el trabajo.\n\nEs un copiloto de negocio por WhatsApp para autónomos de servicios: fontanería, electricidad, reformas, climatización, limpieza, mantenimiento y jardinería.\n\nLe hablas como le hablarías a alguien de tu equipo. Le cuentas lo que ha pasado en el día y lo convierte en agenda, en clientes, en presupuestos y en facturas preparadas.\n\nLo que toca dinero, impuestos o a un cliente lo confirmas tú. Bynoesis prepara; tú decides.\n\nEstamos en piloto con autónomos de servicios. Si te interesa, entra y cuéntanos a qué te dedicas.",
       "enlace": "https://bynoesis.com/solicitar-acceso"
     },
     {
@@ -29,7 +29,7 @@
       "id": "F04",
       "pilar": "producto",
       "titulo": "El parte del día",
-      "texto": "Al final del día, Noesis te da el parte.\n\nQué ha pasado hoy, qué ha quedado a medias, quién te debe dinero y qué conviene cerrar mañana. En un mensaje, sin abrir ningún programa.\n\nNo es un panel lleno de gráficos que no vas a mirar. Es lo que le preguntarías a alguien que te lleva la oficina: «¿cómo vamos?».",
+      "texto": "Al final del día, Bynoesis te da el parte.\n\nQué ha pasado hoy, qué ha quedado a medias, quién te debe dinero y qué conviene cerrar mañana. En un mensaje, sin abrir ningún programa.\n\nNo es un panel lleno de gráficos que no vas a mirar. Es lo que le preguntarías a alguien que te lleva la oficina: «¿cómo vamos?».",
       "enlace": ""
     },
     {
@@ -43,7 +43,7 @@
       "id": "F06",
       "pilar": "confianza",
       "titulo": "No sustituimos a tu gestoría",
-      "texto": "Noesis no sustituye a tu gestoría. Le quita trabajo de encima.\n\nLas facturas, los tickets y los documentos le llegan ordenados, clasificados y revisables, en vez de en una carpeta con prisa el día 29.\n\nLa fiscalidad la lleva quien está preparado y responde por ella. Nosotros nos ocupamos de que le llegue todo, a tiempo y sin tener que perseguirte.\n\nSi llevas una gestoría y quieres ver cómo encaja, hablamos.",
+      "texto": "Bynoesis no sustituye a tu gestoría. Le quita trabajo de encima.\n\nLas facturas, los tickets y los documentos le llegan ordenados, clasificados y revisables, en vez de en una carpeta con prisa el día 29.\n\nLa fiscalidad la lleva quien está preparado y responde por ella. Nosotros nos ocupamos de que le llegue todo, a tiempo y sin tener que perseguirte.\n\nSi llevas una gestoría y quieres ver cómo encaja, hablamos.",
       "enlace": "https://bynoesis.com/gestorias"
     },
     {
@@ -64,14 +64,14 @@
       "id": "F09",
       "pilar": "producto",
       "titulo": "Le hablas y se agenda",
-      "texto": "«Agenda a Marta el martes a las diez para revisar la caldera.»\n\nEso es todo lo que escribes. Noesis crea la cita, la conecta con el cliente y te la recuerda antes.\n\nSin abrir un calendario, sin rellenar seis campos y sin aprender ninguna pantalla nueva. Le hablas como le hablarías a alguien del equipo, por texto o por audio.\n\nSi algo no le queda claro, te lo pregunta antes de guardarlo.",
+      "texto": "«Agenda a Marta el martes a las diez para revisar la caldera.»\n\nEso es todo lo que escribes. Bynoesis crea la cita, la conecta con el cliente y te la recuerda antes.\n\nSin abrir un calendario, sin rellenar seis campos y sin aprender ninguna pantalla nueva. Le hablas como le hablarías a alguien del equipo, por texto o por audio.\n\nSi algo no le queda claro, te lo pregunta antes de guardarlo.",
       "enlace": ""
     },
     {
       "id": "F10",
       "pilar": "confianza",
       "titulo": "Tú confirmas lo que toca dinero",
-      "texto": "Noesis prepara. Tú confirmas.\n\nNada que toque dinero, impuestos o a un cliente sale sin que tú digas que sí. Ni una factura enviada por su cuenta, ni un aviso de cobro a tu mejor cliente, ni un precio decidido sin ti.\n\nPrepara el trabajo pesado y te lo deja listo para revisar en segundos. La última palabra es siempre tuya.\n\nUn copiloto no es alguien que te quita el volante.",
+      "texto": "Bynoesis prepara. Tú confirmas.\n\nNada que toque dinero, impuestos o a un cliente sale sin que tú digas que sí. Ni una factura enviada por su cuenta, ni un aviso de cobro a tu mejor cliente, ni un precio decidido sin ti.\n\nPrepara el trabajo pesado y te lo deja listo para revisar en segundos. La última palabra es siempre tuya.\n\nUn copiloto no es alguien que te quita el volante.",
       "enlace": ""
     },
     {
@@ -92,14 +92,14 @@
       "id": "F13",
       "pilar": "producto",
       "titulo": "Una foto y el ticket deja de ser un papel",
-      "texto": "Le mandas la foto del ticket del almacén y se acabó el papel.\n\nNoesis lo lee, lo guarda con su fecha y su importe y lo deja donde tiene que estar. Cuando llegue el trimestre, tu gestoría lo tiene sin pedírtelo.\n\nSi el ticket está arrugado, borroso o no acaba de entenderlo, no se lo inventa: te lo deja pendiente de confirmar.\n\nPreferimos preguntarte a colarte un número que no es.",
+      "texto": "Le mandas la foto del ticket del almacén y se acabó el papel.\n\nBynoesis lo lee, lo guarda con su fecha y su importe y lo deja donde tiene que estar. Cuando llegue el trimestre, tu gestoría lo tiene sin pedírtelo.\n\nSi el ticket está arrugado, borroso o no acaba de entenderlo, no se lo inventa: te lo deja pendiente de confirmar.\n\nPreferimos preguntarte a colarte un número que no es.",
       "enlace": ""
     },
     {
       "id": "F14",
       "pilar": "confianza",
       "titulo": "Quiénes estamos detrás",
-      "texto": "Somos Xavier y Miquel, y estamos construyendo Noesis.\n\nVimos lo mismo en casi todos los negocios con los que trabajamos: se termina a las siete y a las diez se sigue con facturas, tickets y mensajes sin contestar.\n\nUno viene de cuentas y arquitectura de software; el otro, de dirección de empresas y procesos. Así que en vez de imaginarnos el problema, preguntamos a quien lo vive y lo estamos construyendo con ellos.\n\nAquí no hay un equipo enorme ni una máquina de marketing. Hay dos personas que contestan.",
+      "texto": "Somos Xavier y Miquel, y estamos construyendo Bynoesis.\n\nVimos lo mismo en casi todos los negocios con los que trabajamos: se termina a las siete y a las diez se sigue con facturas, tickets y mensajes sin contestar.\n\nUno viene de cuentas y arquitectura de software; el otro, de dirección de empresas y procesos. Así que en vez de imaginarnos el problema, preguntamos a quien lo vive y lo estamos construyendo con ellos.\n\nAquí no hay un equipo enorme ni una máquina de marketing. Hay dos personas que contestan.",
       "enlace": "https://bynoesis.com/equipo"
     },
     {
@@ -120,14 +120,14 @@
       "id": "F17",
       "pilar": "producto",
       "titulo": "La factura preparada, tú la envías",
-      "texto": "«Cierra la reparación de Marta.»\n\nNoesis coge el trabajo, sus horas y sus materiales y te deja la factura preparada, con sus impuestos calculados y su numeración correcta.\n\nTú la miras. Si está bien, se envía. Si no, la corriges antes.\n\nLa parte lenta la hace él. La parte que tiene consecuencias la firmas tú.",
+      "texto": "«Cierra la reparación de Marta.»\n\nBynoesis coge el trabajo, sus horas y sus materiales y te deja la factura preparada, con sus impuestos calculados y su numeración correcta.\n\nTú la miras. Si está bien, se envía. Si no, la corriges antes.\n\nLa parte lenta la hace él. La parte que tiene consecuencias la firmas tú.",
       "enlace": "https://bynoesis.com/autonomos"
     },
     {
       "id": "F18",
       "pilar": "confianza",
       "titulo": "Tus datos son tuyos",
-      "texto": "Hablemos de tus datos, que es un tema serio.\n\nTus clientes, tus facturas y tus documentos son tuyos. Puedes exportarlos cuando quieras y llevártelos si un día decides que esto no es para ti.\n\nCada negocio está separado del resto: nadie ve lo que hay en tu cuenta. Y lo que se resuelve dentro de Noesis no sale fuera; si en algún momento hiciera falta un servicio externo, se pide permiso, se dice para qué y se puede decir que no.\n\nSin letra pequeña ni datos secuestrados para que no te vayas.",
+      "texto": "Hablemos de tus datos, que es un tema serio.\n\nTus clientes, tus facturas y tus documentos son tuyos. Puedes exportarlos cuando quieras y llevártelos si un día decides que esto no es para ti.\n\nCada negocio está separado del resto: nadie ve lo que hay en tu cuenta. Y lo que se resuelve dentro de Bynoesis no sale fuera; si en algún momento hiciera falta un servicio externo, se pide permiso, se dice para qué y se puede decir que no.\n\nSin letra pequeña ni datos secuestrados para que no te vayas.",
       "enlace": "https://bynoesis.com/privacidad"
     },
     {
@@ -148,14 +148,14 @@
       "id": "F21",
       "pilar": "producto",
       "titulo": "Te avisa antes de que se te pase",
-      "texto": "Los cobros no se pierden por mala fe. Se pierden por olvido.\n\nNoesis vigila lo que has facturado y lo que ha entrado, y te avisa antes de que un cobro se enfríe: «esta factura lleva 30 días, ¿le escribo un recordatorio?».\n\nEl mensaje lo apruebas tú y sale con tu tono, no con el de un robot de recobros.\n\nCobrar a tiempo no va de perseguir. Va de no olvidarse.",
+      "texto": "Los cobros no se pierden por mala fe. Se pierden por olvido.\n\nBynoesis vigila lo que has facturado y lo que ha entrado, y te avisa antes de que un cobro se enfríe: «esta factura lleva 30 días, ¿le escribo un recordatorio?».\n\nEl mensaje lo apruebas tú y sale con tu tono, no con el de un robot de recobros.\n\nCobrar a tiempo no va de perseguir. Va de no olvidarse.",
       "enlace": ""
     },
     {
       "id": "F22",
       "pilar": "confianza",
       "titulo": "Cuando duda, pregunta",
-      "texto": "Lo más importante que hace Noesis es reconocer cuándo no está seguro.\n\nSi un ticket está borroso, si un mensaje se puede entender de dos maneras o si un importe no cuadra, no rellena el hueco con lo que le parece: te lo deja marcado como pendiente y te pregunta.\n\nUna herramienta que se inventa un número no te ahorra trabajo. Te lo cambia por revisar todo dos veces.\n\nPreferimos una pregunta a tiempo que un error ordenado.",
+      "texto": "Lo más importante que hace Bynoesis es reconocer cuándo no está seguro.\n\nSi un ticket está borroso, si un mensaje se puede entender de dos maneras o si un importe no cuadra, no rellena el hueco con lo que le parece: te lo deja marcado como pendiente y te pregunta.\n\nUna herramienta que se inventa un número no te ahorra trabajo. Te lo cambia por revisar todo dos veces.\n\nPreferimos una pregunta a tiempo que un error ordenado.",
       "enlace": ""
     },
     {
@@ -176,14 +176,14 @@
       "id": "F25",
       "pilar": "producto",
       "titulo": "Quién te da trabajo de verdad",
-      "texto": "Tu cartera de clientes es tu activo más importante y casi nunca se mira.\n\nNoesis te la enseña en una lectura corta: quién te factura más, quién lleva meses sin llamar, quién tiene un presupuesto aceptado sin fecha y si hay algún cliente del que dependes demasiado.\n\nNo son gráficos para adornar. Son las tres o cuatro llamadas que deberías hacer esta semana.",
+      "texto": "Tu cartera de clientes es tu activo más importante y casi nunca se mira.\n\nBynoesis te la enseña en una lectura corta: quién te factura más, quién lleva meses sin llamar, quién tiene un presupuesto aceptado sin fecha y si hay algún cliente del que dependes demasiado.\n\nNo son gráficos para adornar. Son las tres o cuatro llamadas que deberías hacer esta semana.",
       "enlace": ""
     },
     {
       "id": "F26",
       "pilar": "confianza",
       "titulo": "Sin ERP y sin curso de tres horas",
-      "texto": "No queremos que aprendas otro programa.\n\nLa mayoría de herramientas de gestión mueren igual: se instalan con ilusión, se rellenan dos semanas y se abandonan porque mantenerlas al día es otro trabajo más.\n\nPor eso Noesis vive donde ya estás: en WhatsApp. Sin menús que memorizar, sin campos obligatorios y sin curso de tres horas para dar de alta un cliente.\n\nSi hace falta un manual para usarlo, el problema es la herramienta, no tú.",
+      "texto": "No queremos que aprendas otro programa.\n\nLa mayoría de herramientas de gestión mueren igual: se instalan con ilusión, se rellenan dos semanas y se abandonan porque mantenerlas al día es otro trabajo más.\n\nPor eso Bynoesis vive donde ya estás: en WhatsApp. Sin menús que memorizar, sin campos obligatorios y sin curso de tres horas para dar de alta un cliente.\n\nSi hace falta un manual para usarlo, el problema es la herramienta, no tú.",
       "enlace": ""
     },
     {
@@ -204,7 +204,7 @@
       "id": "F29",
       "pilar": "producto",
       "titulo": "Saber si un trabajo grande va bien a tiempo",
-      "texto": "En un trabajo largo, el margen no se pierde al final.\n\nSe pierde por el camino: materiales que no estaban previstos y horas que nadie apuntó.\n\nNoesis lleva el presupuesto, los costes y el avance en el mismo sitio, y te dice a media obra si sigues dentro de lo que calculaste o si ya te has salido.\n\nEnterarte a mitad todavía te deja margen para hablar con el cliente. Enterarte al facturar, no.",
+      "texto": "En un trabajo largo, el margen no se pierde al final.\n\nSe pierde por el camino: materiales que no estaban previstos y horas que nadie apuntó.\n\nBynoesis lleva el presupuesto, los costes y el avance en el mismo sitio, y te dice a media obra si sigues dentro de lo que calculaste o si ya te has salido.\n\nEnterarte a mitad todavía te deja margen para hablar con el cliente. Enterarte al facturar, no.",
       "enlace": ""
     },
     {
@@ -232,7 +232,7 @@
       "id": "F33",
       "pilar": "producto",
       "titulo": "Una nota de voz entre trabajo y trabajo",
-      "texto": "No hace falta que te sientes a escribir nada.\n\nEntre un trabajo y otro, mandas una nota de voz: lo que has hecho, el material que has puesto y qué queda pendiente. Noesis lo escucha, lo ordena y lo deja registrado en el cliente y en el trabajo que toca.\n\nCuando llegues a casa, eso ya está hecho. No te espera para que lo pases a limpio.\n\nLa mejor herramienta administrativa es la que puedes usar con las manos sucias.",
+      "texto": "No hace falta que te sientes a escribir nada.\n\nEntre un trabajo y otro, mandas una nota de voz: lo que has hecho, el material que has puesto y qué queda pendiente. Bynoesis lo escucha, lo ordena y lo deja registrado en el cliente y en el trabajo que toca.\n\nCuando llegues a casa, eso ya está hecho. No te espera para que lo pases a limpio.\n\nLa mejor herramienta administrativa es la que puedes usar con las manos sucias.",
       "enlace": ""
     },
     {
@@ -260,7 +260,7 @@
       "id": "F37",
       "pilar": "producto",
       "titulo": "La agenda ordenada por zonas",
-      "texto": "Tres visitas en un día pueden ser tres horas de furgoneta o una.\n\nNoesis mira tu agenda del día y te propone el orden que menos te hace cruzar la ciudad, con cada cita conectada a su cliente y a su trabajo.\n\nTú decides si te encaja: hay clientes que solo pueden a una hora y eso no lo sabe ningún programa.\n\nEl tiempo que no pasas conduciendo es tiempo que puedes facturar o que te devuelve la tarde.",
+      "texto": "Tres visitas en un día pueden ser tres horas de furgoneta o una.\n\nBynoesis mira tu agenda del día y te propone el orden que menos te hace cruzar la ciudad, con cada cita conectada a su cliente y a su trabajo.\n\nTú decides si te encaja: hay clientes que solo pueden a una hora y eso no lo sabe ningún programa.\n\nEl tiempo que no pasas conduciendo es tiempo que puedes facturar o que te devuelve la tarde.",
       "enlace": ""
     },
     {
@@ -302,7 +302,7 @@
       "id": "F43",
       "pilar": "piloto",
       "titulo": "Buscamos autónomos para el piloto",
-      "texto": "Buscamos autónomos de servicios para el piloto de Noesis.\n\nQué buscamos: fontanería, electricidad, reformas, climatización, limpieza, mantenimiento, jardinería y oficios parecidos. Que trabajes de verdad y tengas poco tiempo. Eso es todo.\n\nQué pides tú: entrar, usarlo en tu día a día y decirnos qué te sobra y qué te falta.\n\nQué pones: un rato de tu tiempo y sinceridad. No hace falta tarjeta durante la prueba y tus datos son exportables desde el primer día.",
+      "texto": "Buscamos autónomos de servicios para el piloto de Bynoesis.\n\nQué buscamos: fontanería, electricidad, reformas, climatización, limpieza, mantenimiento, jardinería y oficios parecidos. Que trabajes de verdad y tengas poco tiempo. Eso es todo.\n\nQué pides tú: entrar, usarlo en tu día a día y decirnos qué te sobra y qué te falta.\n\nQué pones: un rato de tu tiempo y sinceridad. No hace falta tarjeta durante la prueba y tus datos son exportables desde el primer día.",
       "enlace": "https://bynoesis.com/solicitar-acceso"
     },
     {
@@ -315,8 +315,8 @@
     {
       "id": "F45",
       "pilar": "confianza",
-      "titulo": "Lo que Noesis no hace",
-      "texto": "Decir lo que una herramienta no hace también es información útil.\n\nNoesis no presenta tus impuestos: prepara la información y tu gestoría hace su trabajo.\n\nNo decide precios por ti ni envía nada a un cliente sin que lo apruebes.\n\nNo es un ERP con cincuenta pantallas ni pretende serlo.\n\nY no funciona solo: funciona porque le cuentas lo que pasa, igual que se lo contarías a alguien de tu equipo.\n\nPrometer menos y cumplirlo nos parece mejor negocio.",
+      "titulo": "Lo que Bynoesis no hace",
+      "texto": "Decir lo que una herramienta no hace también es información útil.\n\nBynoesis no presenta tus impuestos: prepara la información y tu gestoría hace su trabajo.\n\nNo decide precios por ti ni envía nada a un cliente sin que lo apruebes.\n\nNo es un ERP con cincuenta pantallas ni pretende serlo.\n\nY no funciona solo: funciona porque le cuentas lo que pasa, igual que se lo contarías a alguien de tu equipo.\n\nPrometer menos y cumplirlo nos parece mejor negocio.",
       "enlace": ""
     },
     {
@@ -330,14 +330,14 @@
       "id": "F47",
       "pilar": "piloto",
       "titulo": "Si llevas una gestoría",
-      "texto": "Si llevas una gestoría, esto también va contigo.\n\nPersigues a los mismos clientes cada trimestre para conseguir los mismos documentos. No porque no quieran dártelos, sino porque los tienen repartidos por la furgoneta, el móvil y el correo.\n\nNoesis les ordena el material según lo van generando y te lo deja llegar revisable, en su sitio y a tiempo. Tú sigues decidiendo y respondiendo de lo tuyo.\n\nSi te interesa verlo, escríbenos y te lo enseñamos sin compromiso.",
+      "texto": "Si llevas una gestoría, esto también va contigo.\n\nPersigues a los mismos clientes cada trimestre para conseguir los mismos documentos. No porque no quieran dártelos, sino porque los tienen repartidos por la furgoneta, el móvil y el correo.\n\nBynoesis les ordena el material según lo van generando y te lo deja llegar revisable, en su sitio y a tiempo. Tú sigues decidiendo y respondiendo de lo tuyo.\n\nSi te interesa verlo, escríbenos y te lo enseñamos sin compromiso.",
       "enlace": "https://bynoesis.com/gestorias"
     },
     {
       "id": "F48",
       "pilar": "piloto",
       "titulo": "Escríbenos",
-      "texto": "Haz tu trabajo; Noesis te ordena el negocio.\n\nSi te has visto reflejado en algo de lo que publicamos aquí —la segunda jornada, el ticket perdido, la factura que se olvidó—, escríbenos.\n\nNo hay comercial, ni llamada de veinte minutos, ni presentación. Nos cuentas a qué te dedicas y te decimos claramente si Noesis te sirve ahora o todavía no.\n\nContestamos nosotros dos.",
+      "texto": "Haz tu trabajo; Bynoesis te ordena el negocio.\n\nSi te has visto reflejado en algo de lo que publicamos aquí —la segunda jornada, el ticket perdido, la factura que se olvidó—, escríbenos.\n\nNo hay comercial, ni llamada de veinte minutos, ni presentación. Nos cuentas a qué te dedicas y te decimos claramente si Bynoesis te sirve ahora o todavía no.\n\nContestamos nosotros dos.",
       "enlace": "https://bynoesis.com/contacto"
     }
   ]

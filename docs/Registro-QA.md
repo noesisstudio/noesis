@@ -83,6 +83,24 @@
 - Segundo conjunto: conversación, seguridad conversacional y fiabilidad,
   47 pruebas OK en 27,708 s. Ruff, puerta documental y diff-check OK.
 
+## 2026-09-10 — Facebook con Bynoesis y verificación externa del SEO
+
+- `tests.test_facebook`: **22 pruebas OK** tras cambiar 17 menciones; el texto más
+  largo (F01) queda en 577 de 1.200 caracteres y la primera línea más larga en
+  115 de 130.
+  `calendario.json` y `project-state.json` son JSON válidos; 0 «Noesis» en
+  `facebook/`; Ruff y puerta documental verdes. La simulación de la prueba no
+  publica: sin `FACEBOOK_PAGE_ID`/`FACEBOOK_PAGE_TOKEN` el publicador queda en pausa.
+- Producción `88adfa3`, comprobada desde fuera tras el despliegue: `/ready`
+  esquema 55, `/llms.txt` 200 `text/markdown` sin `X-Robots-Tag` y con precios del
+  catálogo, `/preguntas` FAQPage (16) + BreadcrumbList, 0 «Noesis» en portada.
+- Capturas del founder: Bing Webmaster con `sitemap.xml` Success (14 URLs) y seis
+  URLs de página enviadas por error como sitemap, que el founder eliminó después;
+  Search Console con sitemap
+  Correcto (14), 20 páginas indexadas y reindexación solicitada.
+- No probado: publicación real en Facebook, título renovado en Google ni menciones
+  en asistentes de IA; dependen de terceros y del tiempo de rastreo.
+
 ## 2026-09-10 — Tickets, contexto y PDF real
 
 - `tests.test_invoice_conversation`: 13 pruebas OK. PDF real extraído para

@@ -94,6 +94,27 @@ la captura y casos válidos; 35 pruebas de conversación/WhatsApp OK.
 Riesgo medio, sin migraciones ni cambios fiscales. Meta simulado; entrega física
 pendiente. Rollback: revertir este commit; claves de contexto separadas caducan.
 
+## 2026-09-10 — Facebook con el nombre Bynoesis y SEO verificado
+
+Objetivo: aplicar a la cola de Facebook la decisión de nombre público único antes
+de conectar la página, y dejar constancia de la verificación del SEO/GEO de
+`88adfa3`. Las 48 piezas de `facebook/calendario.json` decían «Noesis» 17 veces
+(p. ej. «Qué es Noesis»); publicarlas cada 3 días repetiría el nombre que Google
+confunde con otras empresas de software.
+
+Áreas: `facebook/calendario.json` (títulos, textos y descripción), docstrings de
+`facebook/nucleo.py` y `facebook/publicar.py` y `facebook/README.md`. Los `id` no
+cambian: el publicador identifica cada pieza por `id` y consulta la página antes de
+escribir, así que ninguna se repite. Enlaces a bynoesis.com intactos. No toca
+`src/noesis/` ni la web.
+
+Verificación de producción de `88adfa3`: `/ready` esquema 55; `/llms.txt` 200
+`text/markdown` sin `X-Robots-Tag`; `/preguntas` con FAQPage de 16; portada sin
+«Noesis». Founder: Bing importado desde Search Console con sitemap en Success
+(14 URLs); Search Console con sitemap Correcto (14) e indexación pedida para `/`,
+`/preguntas` y `/autonomos`. Pruebas y límites en Registro-QA. Riesgo: bajo, solo
+texto editorial aún no publicado. Rollback: revertir este commit.
+
 ## 2026-09-10 — Identidad del PDF y conversación verificable
 
 Objetivo: impedir que pedir un cliente desconocido envíe la última factura demo.

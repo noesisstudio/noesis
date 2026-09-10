@@ -1,6 +1,6 @@
 # Automatización de Facebook
 
-Publica en la página de Facebook de Noesis **una pieza cada 3 días**, sin que
+Publica en la página de Facebook de Bynoesis **una pieza cada 3 días**, sin que
 nadie tenga que entrar a hacerlo. Tú solo lees el informe que llega **cada
 domingo** y compruebas que no hay avisos.
 
@@ -29,7 +29,7 @@ la página. Por eso no hay commits automáticos y no se dispara ningún desplieg
 
 
 Hazlo una sola vez. Necesitas ser administrador de la página de Facebook de
-Noesis (configuración de la página en `branding/redes-sociales/facebook/`).
+Bynoesis (configuración de la página en `branding/redes-sociales/facebook/`).
 
 1. Entra en <https://developers.facebook.com/apps> y crea una app de tipo
    **Empresa** (o reutiliza la que ya uses con Meta). Apunta el **identificador de

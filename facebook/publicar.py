@@ -1,4 +1,4 @@
-"""Publica en la página de Facebook de Noesis lo que toque hoy.
+"""Publica en la página de Facebook de Bynoesis lo que toque hoy.
 
 Se ejecuta todos los días desde GitHub Actions, pero solo publica cuando el día
 cae en la cadencia del calendario (cada 3 días desde el ancla). No guarda estado
@@ -28,7 +28,7 @@ def _dia(valor: str) -> date:
 
 
 def _argumentos(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Publicador de Facebook de Noesis.")
+    parser = argparse.ArgumentParser(description="Publicador de Facebook de Bynoesis.")
     parser.add_argument("--fecha", type=_dia, default=None, help="simula otro día (YYYY-MM-DD).")
     parser.add_argument("--simulacro", action="store_true", help="enseña qué haría, sin publicar.")
     parser.add_argument("--forzar", action="store_true", help="publica aunque hoy no toque.")

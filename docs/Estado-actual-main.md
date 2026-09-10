@@ -46,12 +46,14 @@ publicación y comprobación con móvil real.
 
 ## 10-sep — SEO y GEO: un nombre y una ficha para asistentes
 
-Enviado a main; falta verificar en producción. La web pública deja de alternar «Noesis» y
+Publicado en `88adfa3` y verificado en producción. La web pública deja de alternar «Noesis» y
 «Bynoesis»: títulos, descripciones, FAQ, CTA y demo usan solo Bynoesis. Nuevo
 `/llms.txt` con qué es, para quién, qué no hace, precios del catálogo y páginas;
 sin `noindex` ni recuento de visita. `/preguntas` publica FAQPage de sus 16
 respuestas desde la misma fuente que el HTML y según voz/OCR/alta reales. Sin
-migración ni cambios en gestiones; esquema 55. Bing sigue sin conectar.
+migración ni cambios en gestiones; esquema 55. Bing importado desde Search
+Console (sitemap Success, 14 URLs) y reindexación pedida en Google para renovar
+el título antiguo «Noesis». La cola de Facebook también usa ya Bynoesis.
 
 ## 10-sep — Facturas y Documentos comparten la misma fuente
 
