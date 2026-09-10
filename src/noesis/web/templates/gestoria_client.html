@@ -84,11 +84,11 @@
     <div class="gestoria-document-list">
       {% if not documents %}<div class="gestoria-empty small"><b>No hay documentos en este filtro.</b><p>Prueba otro tipo o cambia de trimestre.</p></div>{% endif %}
       {% for item in documents %}
-      <a class="gestoria-file-row {{ 'selected' if preview_document and preview_document.id == item.id }}" href="?year={{ selected_year }}&quarter={{ selected_quarter }}&section=documentos&view={{ workspace.document_view }}&doc={{ item.id }}">
+      <a class="gestoria-file-row {{ 'selected' if preview_document and preview_document.archive_key == item.archive_key }}" href="?year={{ selected_year }}&quarter={{ selected_quarter }}&section=documentos&view={{ workspace.document_view }}&doc={{ item.archive_key }}">
         <span class="gestoria-file-kind">{{ 'PDF' if item.mime == 'application/pdf' else 'IMG' if item.mime and item.mime.startswith('image/') else 'DOC' }}</span>
-        <span class="gestoria-file-main"><b>{{ item.filename }}</b><small>{{ item.kind|replace('_',' ') }}{% if item.client_name %} · {{ item.client_name }}{% endif %}{% if item.project_name %} · {{ item.project_name }}{% endif %}</small></span>
+        <span class="gestoria-file-main"><b>{{ item.filename }}</b><small>{{ item.kind|replace('_',' ') }} · {{ 'Generado por Bynoesis' if item.source_type == 'generated_invoice' else 'Archivo subido' }}{% if item.client_name %} · {{ item.client_name }}{% endif %}{% if item.project_name %} · {{ item.project_name }}{% endif %}</small></span>
         <span class="gestoria-file-date">{{ item.effective_on }}</span>
-        <span class="badge {{ 'b-amber' if item.doc_status == 'pendiente_revisar' else 'b-green' }}">{{ 'Revisar' if item.doc_status == 'pendiente_revisar' else 'Validado' if item.doc_status == 'validado' else item.doc_status|replace('_',' ') }}</span>
+        <span class="badge {{ 'b-gray' if item.record_status == 'borrador' else 'b-amber' if item.record_status in ['enviada','parcial'] or item.doc_status == 'pendiente_revisar' else 'b-green' }}">{{ 'Borrador' if item.record_status == 'borrador' else 'Emitida' if item.record_status == 'enviada' else 'Cobro parcial' if item.record_status == 'parcial' else 'Cobrada' if item.record_status == 'cobrada' else 'Revisar' if item.doc_status == 'pendiente_revisar' else 'Validado' if item.doc_status == 'validado' else item.doc_status|replace('_',' ') }}</span>
       </a>
       {% endfor %}
     </div>
@@ -98,10 +98,11 @@
       <div class="gestoria-preview-head"><div><span class="eyebrow">Vista previa</span><h3>{{ preview_document.filename }}</h3></div><a href="?year={{ selected_year }}&quarter={{ selected_quarter }}&section=documentos&view={{ workspace.document_view }}" aria-label="Cerrar vista previa">Cerrar</a></div>
       {% if preview_document.previewable %}
       <div class="gestoria-preview-canvas"><img src="/gestoria/cliente/{{ business.id }}/documento/{{ preview_document.id }}/preview" alt="Primera página de {{ preview_document.filename }}"></div>
+      {% elif preview_document.source_type == 'generated_invoice' %}<div class="gestoria-empty small"><b>PDF generado desde Facturas.</b><p>Siempre se abre desde el registro contable actual, sin una copia desactualizada.</p></div>
       {% else %}<div class="gestoria-empty small"><b>Sin vista previa para este formato.</b><p>Puedes abrir el archivo original de forma segura.</p></div>{% endif %}
       <div class="gestoria-preview-meta"><span>Fecha <b>{{ preview_document.effective_on }}</b></span><span>Tipo <b>{{ preview_document.kind|replace('_',' ') }}</b></span>{% if preview_document.ocr_amount is not none %}<span>Importe leído <b>{{ '%.2f'|format(preview_document.ocr_amount) }} €</b></span>{% endif %}</div>
-      <a class="btn gestoria-full" target="_blank" rel="noopener" href="/gestoria/cliente/{{ business.id }}/documento/{{ preview_document.id }}">Abrir original</a>
-      {% if preview_document.doc_status == 'pendiente_revisar' %}
+      <a class="btn gestoria-full" target="_blank" rel="noopener" href="{{ '/gestoria/cliente/' ~ business.id ~ '/factura/' ~ preview_document.invoice_id if preview_document.source_type == 'generated_invoice' else '/gestoria/cliente/' ~ business.id ~ '/documento/' ~ preview_document.id }}">{{ 'Abrir PDF' if preview_document.source_type == 'generated_invoice' else 'Abrir original' }}</a>
+      {% if preview_document.doc_status == 'pendiente_revisar' and preview_document.source_type != 'generated_invoice' %}
       <form class="gestoria-review-form" method="post" action="/gestoria/cliente/{{ business.id }}/documento/{{ preview_document.id }}/revisar">
         <input type="hidden" name="year" value="{{ selected_year }}"><input type="hidden" name="quarter" value="{{ selected_quarter }}"><input type="hidden" name="view" value="{{ workspace.document_view }}">
         <div class="grid g2"><div><label class="fld">Tipo</label><select class="input" name="kind">{% for key,label in [('documento','Documento'),('ticket','Ticket'),('factura_recibida','Factura recibida'),('factura_emitida','Factura emitida'),('contrato','Contrato'),('albaran','Albarán'),('presupuesto','Presupuesto')] %}<option value="{{ key }}" {{ 'selected' if preview_document.kind == key }}>{{ label }}</option>{% endfor %}</select></div>

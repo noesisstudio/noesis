@@ -533,7 +533,7 @@ def portfolio(request: Request, q: str = "", year: int | None = None,
 @router.get("/gestoria/cliente/{business_id}", response_class=HTMLResponse)
 def client_detail(request: Request, business_id: int, year: int | None = None,
                   quarter: int | None = None, view: str = "todos",
-                  doc: int | None = None, section: str = "resumen"):
+                  doc: str | None = None, section: str = "resumen"):
     allowed = _business_for(request, business_id)
     if not allowed:
         return RedirectResponse("/gestoria/login", status_code=303)
@@ -549,8 +549,14 @@ def client_detail(request: Request, business_id: int, year: int | None = None,
         business_id, year=selected_year, quarter=selected_quarter,
         document_view=view,
     )
+    document_key = None
+    if doc:
+        document_key = f"document:{doc}" if doc.isdigit() else doc
+        if not document_key.startswith(("document:", "invoice:")):
+            document_key = None
     preview_document = next(
-        (item for item in workspace["documents"] if item["id"] == doc), None
+        (item for item in workspace["documents"]
+         if item["archive_key"] == document_key), None
     )
     return TEMPLATES.TemplateResponse(request, "gestoria_client.html", {
         "account": account, "business": business,
@@ -565,6 +571,28 @@ def client_detail(request: Request, business_id: int, year: int | None = None,
         "clients": db.list_clients(business_id),
         "projects": db.list_projects(business_id),
         "gestoria_read_only": not db.subscription_allows_access(business),
+    })
+
+
+@router.get("/gestoria/cliente/{business_id}/factura/{invoice_id}")
+def invoice_file(request: Request, business_id: int, invoice_id: int):
+    """PDF reproducible para una gestoría con acceso explícito al negocio."""
+    if not _business_for(request, business_id):
+        return JSONResponse({"error": "no autorizado"}, status_code=403)
+    from ..invoice_pdf import build_invoice_pdf
+
+    data = build_invoice_pdf(invoice_id, business_id)
+    invoice = db.get_invoice(invoice_id, business_id)
+    if data is None or not invoice:
+        return JSONResponse({"error": "Factura no encontrada."}, status_code=404)
+    visible = invoice.get("number") or invoice_id
+    safe_name = "".join(
+        char if str(char).isalnum() or char in "._-" else "_"
+        for char in f"factura_{visible}.pdf"
+    )[:120]
+    return Response(data, media_type="application/pdf", headers={
+        "Content-Disposition": f'inline; filename="{safe_name}"',
+        "Cache-Control": "private, no-store",
     })
 
 

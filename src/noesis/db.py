@@ -8235,7 +8235,9 @@ def cash_forecast(business_id, days: int = 30) -> dict:
 
 
 # -------------------------------------------------------------- Proyectos ---
-PROJECT_STATUSES = {"planificado", "en_curso", "pausado", "terminado"}
+PROJECT_STATUSES = {
+    "planificado", "en_curso", "pausado", "terminado", "cancelado",
+}
 PROJECT_ENTRY_KINDS = {"material", "horas", "subcontrata", "otro"}
 PROJECT_TASK_KINDS = {"tarea", "checklist", "incidencia"}
 PROJECT_TASK_STATUSES = {"pendiente", "en_curso", "hecha", "bloqueada"}
@@ -8468,7 +8470,9 @@ def get_project(project_id: int, business_id: int) -> dict | None:
 
 def project_summary(business_id: int) -> dict:
     projects = list_projects(business_id)
-    active = [p for p in projects if p["status"] != "terminado"]
+    active = [
+        p for p in projects if p["status"] not in {"terminado", "cancelado"}
+    ]
     budget = round(sum(float(p["budget"]) for p in active), 2)
     cost = round(sum(float(p["actual_cost"]) for p in active), 2)
     progress = (

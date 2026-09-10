@@ -1,5 +1,16 @@
 # Tareas vivas
 
+## Coherencia documental y Proyectos — 10-sep
+
+- [x] Mostrar en Documentos las facturas generadas desde web o WhatsApp sin
+  duplicar ficheros ni fuentes de verdad.
+- [x] Mantener borradores visibles pero fuera de ingresos, y evitar duplicar una
+  factura cuando ya existe un original vinculado.
+- [x] Limitar avance de proyecto a 0–100 en cliente y servidor, y hacer visibles
+  sus estados, incluido Cancelado sin pérdida de historial.
+- [ ] Validar ergonomía del deslizador y controles en Safari/iPhone físico durante
+  el piloto; la prueba automatizada no sustituye el gesto táctil real.
+
 ## Lenguaje real de PDF — 10-sep
 
 - [x] Reproducir y cubrir «Passame el pdf del tiquet» y «No pots enviar el pdf per

@@ -317,7 +317,8 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
 - `src/noesis/web/templates/base.html`: capa persistente de Bynoesis: lectura real de
   la sección, siguiente paso con motivo, preguntas contextuales y conversación.
 - `src/noesis/web/routers/projects.py`: proyectos, trabajos vinculados, tareas,
-  equipo, horas y costes.
+  equipo, horas y costes. `db.py` limita el avance a 0–100 y separa finalizados y
+  cancelados del resumen activo sin borrar su historial.
 - `src/noesis/web/routers/portal.py`: portales privados de cliente, gestoría y
   trabajador; incluye parte de campo y conformidad.
 - `src/noesis/db.py`: `job_materials`, `job_updates`, `job_completions` y
@@ -339,7 +340,9 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   `templates/documentos.html`: archivo documental común para titular y gestoría.
   Deriva fecha efectiva, período y grupo una vez; el panel normal añade navegación,
   entrada rápida, carpetas responsive, búsqueda, revisión y primera página privada
-  bajo demanda sin duplicar ficheros.
+  bajo demanda sin duplicar ficheros. Proyecta también cada factura como PDF
+  reproducible desde su registro contable; un original ya vinculado sustituye esa
+  proyección para que siempre exista una sola representación.
 - `src/noesis/web/routers/account.py`: alta por prueba o contratación, sesión,
   Google OAuth, configuración operativa, checkout y cuenta. El recorrido se reanuda
   en el paso exacto, incluye la identidad completa de facturas y termina en una

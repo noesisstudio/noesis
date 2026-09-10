@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -386,6 +387,102 @@ class PlatformTestCase(unittest.TestCase):
         self.assertEqual(detail["margin"], 7480)
         self.assertEqual(detail["members"][0]["worker_name"], "Pau")
         self.assertIsNone(db.get_project(project["id"], self.other["id"]))
+
+    def test_project_progress_is_bounded_and_cancelled_projects_are_closed(self):
+        project = db.add_project("Obra cancelable", 2500, business_id=self.bid)
+        with self.assertRaisesRegex(ValueError, "entre 0 y 100"):
+            db.update_project(project["id"], business_id=self.bid, progress=101)
+        with self.assertRaisesRegex(ValueError, "entre 0 y 100"):
+            db.update_project(project["id"], business_id=self.bid, progress=-1)
+
+        cancelled = db.update_project(
+            project["id"], business_id=self.bid, progress=37,
+            status="cancelado",
+        )
+        self.assertEqual(cancelled["status"], "cancelado")
+        self.assertEqual(cancelled["progress"], 37)
+        summary = db.project_summary(self.bid)
+        self.assertEqual(summary["active_count"], 0)
+        self.assertEqual(summary["budget"], 0)
+
+    def test_project_page_uses_bounded_slider_and_visible_states(self):
+        template = (
+            Path(__file__).parents[1]
+            / "src" / "noesis" / "web" / "templates" / "proyectos.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('type="range" min="0" max="100"', template)
+        self.assertIn('data-status="cancelado"', template)
+        self.assertIn("saveProjectState('terminado')", template)
+
+    def test_document_archive_projects_generated_invoices_without_copies(self):
+        from noesis import gestoria_workspace
+        from noesis.documents import repo as docrepo
+
+        db.update_fiscal(
+            self.bid, nif="B12345678",  # pragma: allowlist secret
+            address="Calle Taller 1",
+        )
+        client = db.add_client(
+            "Marta", nif="12345678Z", address="Calle Cliente 2",
+            business_id=self.bid,
+        )
+        draft = db.add_invoice(
+            client["id"], "Aire acondicionado", 580,
+            business_id=self.bid,
+        )
+        issued = db.add_invoice(
+            client["id"], "Mantenimiento", 100,
+            business_id=self.bid,
+        )
+        issued = db.issue_invoice(issued["id"], self.bid)
+        db.update_fiscal(
+            self.other["id"], nif="B87654321",  # pragma: allowlist secret
+            address="Calle Ajena 1",
+        )
+        foreign_client = db.add_client(
+            "Ajeno", nif="X1234567L", address="Calle Ajena 2",
+            business_id=self.other["id"],
+        )
+        foreign = db.add_invoice(
+            foreign_client["id"], "No debe aparecer", 900,
+            business_id=self.other["id"],
+        )
+        db.issue_invoice(foreign["id"], self.other["id"])
+
+        today = date.today()
+        archive = gestoria_workspace.document_archive(
+            self.bid, year=today.year, quarter=(today.month - 1) // 3 + 1,
+        )
+        generated = {
+            item["invoice_id"]: item for item in archive["documents"]
+            if item["source_type"] == "generated_invoice"
+        }
+        self.assertEqual(set(generated), {draft["id"], issued["id"]})
+        self.assertEqual(archive["document_counts"]["ingresos"], 2)
+        self.assertEqual(archive["document_counts"]["pendientes"], 1)
+        self.assertEqual(generated[draft["id"]]["record_status"], "borrador")
+        self.assertEqual(
+            generated[issued["id"]]["file_url"],
+            f"/api/{self.bid}/invoices/{issued['id']}/pdf",
+        )
+
+        # Si hay un original vinculado, el archivo lo representa una sola vez.
+        uploaded = docrepo.add(
+            self.bid, filename="factura-original.pdf",
+            stored_name="factura-original.pdf", mime="application/pdf", size=4,
+            kind="factura_emitida", client_id=client["id"],
+            invoice_id=issued["id"],
+        )
+        replaced = gestoria_workspace.document_archive(
+            self.bid, year=today.year, quarter=(today.month - 1) // 3 + 1,
+        )
+        representations = [
+            item for item in replaced["documents"]
+            if item.get("invoice_id") == issued["id"]
+        ]
+        self.assertEqual(len(representations), 1)
+        self.assertEqual(representations[0]["id"], uploaded["id"])
+        self.assertEqual(representations[0]["source_type"], "uploaded_document")
 
     def test_project_cross_tenant_relations_are_rejected(self):
         foreign_client = db.add_client("Privado", business_id=self.other["id"])

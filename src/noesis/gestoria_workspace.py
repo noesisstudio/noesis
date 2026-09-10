@@ -129,6 +129,14 @@ def _period_documents(business_id: int, period: dict, *, view: str) -> list[dict
             continue
         item["effective_on"] = str(effective or "")[:10]
         item["group"] = _document_group(item)
+        item["archive_key"] = f"document:{item['id']}"
+        item["source_type"] = "uploaded_document"
+        item["file_url"] = (
+            f"/api/{business_id}/documents/{item['id']}/file"
+        )
+        item["preview_url"] = (
+            f"/api/{business_id}/documents/{item['id']}/preview"
+        )
         item["previewable"] = (
             str(item.get("mime") or "").startswith("image/")
             or item.get("mime") == "application/pdf"
@@ -138,7 +146,73 @@ def _period_documents(business_id: int, period: dict, *, view: str) -> list[dict
         if view not in {"todos", "pendientes"} and item["group"] != view:
             continue
         out.append(item)
-    return out
+
+    # Las facturas creadas por Bynoesis ya tienen un PDF reproducible desde su
+    # registro contable. Se proyectan en el archivo sin duplicar ni el fichero ni
+    # los metadatos. Si existe un original subido y vinculado, ese documento es la
+    # representación visible y se evita una segunda fila.
+    linked_invoice_ids = {
+        int(item["invoice_id"])
+        for item in out
+        if item.get("invoice_id") is not None
+    }
+    for invoice_id, invoice in invoices.items():
+        if invoice_id in linked_invoice_ids:
+            continue
+        effective = invoice.get("issued_at") or invoice.get("created_at")
+        if not _in_period(effective, period):
+            continue
+        invoice_type = str(invoice.get("invoice_type") or "F1").upper()
+        document_name = (
+            "Ticket" if invoice_type == "F2" else
+            "Rectificativa" if invoice_type.startswith("R") else
+            "Factura"
+        )
+        visible_number = invoice.get("number") or f"borrador-{invoice_id}"
+        item = {
+            "id": None,
+            "archive_key": f"invoice:{invoice_id}",
+            "source_type": "generated_invoice",
+            "invoice_id": invoice_id,
+            "expense_id": None,
+            "received_invoice_id": None,
+            "client_id": invoice.get("client_id"),
+            "client_name": invoice.get("client_name"),
+            "project_name": None,
+            "kind": "factura_emitida",
+            "group": "ingresos",
+            "filename": f"{document_name} {visible_number}.pdf",
+            "mime": "application/pdf",
+            "size": 0,
+            "note": invoice.get("concept"),
+            "ocr_text": None,
+            "ocr_amount": invoice.get("total"),
+            "confidence": None,
+            "doc_status": (
+                "pendiente_revisar"
+                if invoice.get("status") == "borrador" else "validado"
+            ),
+            "record_status": invoice.get("status"),
+            "effective_on": str(effective or "")[:10],
+            "created_at": invoice.get("created_at"),
+            "previewable": False,
+            "file_url": f"/api/{business_id}/invoices/{invoice_id}/pdf",
+            "preview_url": None,
+            "read_only": True,
+        }
+        if view == "pendientes" and item["doc_status"] != "pendiente_revisar":
+            continue
+        if view not in {"todos", "pendientes"} and item["group"] != view:
+            continue
+        out.append(item)
+    return sorted(
+        out,
+        key=lambda item: (
+            str(item.get("effective_on") or ""),
+            str(item.get("archive_key") or ""),
+        ),
+        reverse=True,
+    )
 
 
 def _filter_documents(documents: list[dict], view: str) -> list[dict]:
@@ -350,7 +424,7 @@ def portfolio_snapshot(business_id: int, *, year: int, quarter: int) -> dict:
         and item.get("received_invoice_id") is None
     )]
     attention = (
-        len({int(item["id"]) for item in pending + unlinked})
+        len({str(item["archive_key"]) for item in pending + unlinked})
         + period["missing_receipts"] + period["missing_received_originals"]
     )
     profile = db.get_gestoria_fiscal_profile(business_id)

@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Una fuente contable, varias vistas coherentes (2026-09-10)
+
+Facturas es la fuente de verdad de las ventas y Documentos su archivo transversal,
+no otra contabilidad. Una factura se proyecta como documento descargable sin copiar
+su PDF ni sus metadatos; si existe un original subido y vinculado, este ocupa su
+lugar. Un borrador puede verse y revisarse en el archivo, pero no se transforma en
+ingreso antes de emitirse. Motivo: cada pantalla debe reflejar el mismo hecho de
+negocio sin crear sincronizaciones frágiles ni duplicados.
+
+Cancelar un proyecto es un cierre operativo distinto de finalizarlo: conserva
+costes, tareas e historial y lo excluye de los agregados activos, pero no inventa
+un 100% de avance. La palabra elegida en producto es «Cancelado», no «Fracasado»,
+porque describe el estado sin juzgar el resultado del autónomo.
+
 ## Las capacidades del canal no dependen del texto generativo (2026-09-10)
 
 Las expresiones naturales o mixtas para pedir un PDF se clasifican localmente por

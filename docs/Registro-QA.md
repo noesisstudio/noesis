@@ -1,5 +1,25 @@
 ﻿# Registro de QA
 
+## 2026-09-10 — Facturas, Documentos y avance de Proyectos
+
+- Facturas en borrador y emitidas se proyectan en el archivo del mismo negocio y
+  trimestre con enlace al PDF original; una factura ajena no aparece.
+- Un original subido y vinculado sustituye la proyección virtual en vez de crear
+  dos documentos. El portal de gestoría usa la clave de archivo y acepta ambos
+  tipos sin asumir un ID físico.
+- El servidor rechaza avances menores de 0 o mayores de 100; la interfaz usa un
+  `range` 0–100 y estados visibles. Cancelado queda fuera del resumen activo sin
+  borrar costes ni historial.
+- Pruebas focalizadas: `PlatformTestCase` (29), `ShowcaseAndPdfOcrTestCase` (6) y
+  archivo privado del titular (1), verdes. Ruff y `git diff --check`, verdes.
+- Regresión completa: **776 pruebas en 575,523 s, OK**. Ruff, detector de secretos,
+  Bandit high/high, compilación, puerta documental y `git diff --check`, verdes.
+- Navegador real aislado con Edge/Chromium: Documentos mostró 13 filas y 7 facturas
+  generadas; Proyectos mostró cinco estados, guardó 73% y mantuvo máximo 100. Sin
+  errores de consola ni desbordamiento horizontal a 1440 o 390 px. No se han
+  enviado mensajes, facturas ni documentos a proveedores reales; Safari/iPhone
+  físico continúa siendo una comprobación de piloto.
+
 ## 2026-09-10 — regresión de las frases reales de PDF
 
 - Reproducidas literalmente «Passame el pdf del tiquet» y «No pots enviar el pdf

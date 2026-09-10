@@ -1,5 +1,25 @@
 ﻿# Registro de cambios
 
+## 2026-09-10 — archivo documental conectado y control claro de proyectos
+
+Objetivo: eliminar la contradicción por la que Facturas mostraba documentos
+generados desde web o WhatsApp mientras el Archivo aparecía vacío. El archivo
+ahora proyecta las facturas del registro contable y enlaza su PDF reproducible,
+sin crear otra fila de datos ni otra copia física que pueda quedar desactualizada.
+Los borradores aparecen como pendientes, pero no se convierten en ingresos
+contables; si una factura ya tiene un original subido y vinculado, solo se muestra
+esa representación. La misma proyección sirve al titular y a la gestoría y sigue
+aislada por `business_id` y período.
+
+Proyectos sustituye el campo numérico de avance por un deslizador accesible de 0 a
+100, conserva validación en servidor y presenta los estados como controles visibles:
+planificado, en curso, en pausa, finalizado y cancelado. Finalizar fija el 100%;
+cancelar conserva historial y costes, pero deja de contar el proyecto como activo.
+No hay migración ni dependencia nueva. Pruebas específicas cubren límites,
+aislamiento, no duplicación, proyección y portal profesional; la regresión completa
+y publicación se consignan en `Registro-QA.md`. Rollback: revertir este commit;
+no hay datos que transformar.
+
 ## 2026-09-10 — lenguaje real para pedir PDF por WhatsApp
 
 Objetivo: corregir la reproducción exacta de producción «Passame el pdf del

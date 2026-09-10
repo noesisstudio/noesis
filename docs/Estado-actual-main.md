@@ -1,5 +1,17 @@
 # Estado actual del producto
 
+## 10-sep — Facturas y Documentos comparten la misma fuente
+
+El Archivo ya incluye los PDFs reproducibles de todas las facturas del período,
+tanto si nacieron en web como en WhatsApp. No se duplican blobs ni registros: una
+edición válida en Facturas se refleja al volver a abrir Documentos, y un original
+subido que ya está vinculado evita una segunda fila. Los borradores se distinguen
+como pendientes y siguen sin computar como ingreso hasta emitirse.
+
+Proyectos ofrece un control visible de estado y un deslizador limitado a 0–100.
+Se añade Cancelado como cierre que conserva trazabilidad y se separa de los activos;
+Finalizado continúa fijando el avance al 100%. Sin migración ni cambio de permisos.
+
 ## 10-sep — corregida la petición real de PDF en catalán/castellano mixto
 
 El envío de PDF ya existía, pero una lista lingüística demasiado literal dejaba

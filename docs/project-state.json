@@ -2,13 +2,13 @@
   "state_date": "2026-09-10",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 773,
+  "verified_test_count": 776,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Release b96dea83be57 verificado el 9-sep: Railway success, health y ready, esquema 55, 14 paginas, 8 cabeceras, CI completo y humo PostgreSQL verdes. El candidato del 10-sep amplia el lenguaje real de peticion de PDF y aun requiere publicacion y prueba humana en Meta. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS son artefactos no provisionados. Siguen pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
+    "pending_after_deploy": "Release de lenguaje PDF verificada. El candidato del 10-sep conecta Facturas con el archivo documental mediante una proyeccion sin copias y mejora estados y avance de Proyectos; requiere publicacion y gesto tactil en Safari/iPhone real. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS son artefactos no provisionados. Siguen pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -88,7 +88,8 @@
     "voice_language_selection": "groq_and_private_whisper_auto_detect_language_by_default_with_optional_explicit_iso_639_1_hint_instead_of_forcing_spanish",
     "document_context": "web_and_whatsapp_validate_client_project_and_invoice_inside_the_same_business_caption_or_invoice_customer_only_links_on_unambiguous_match",
     "inbound_document_email": "schema_52_disabled_by_default_single_hostinger_catch_all_with_one_128_bit_opaque_route_per_business_fail_closed_recipient_resolution_content_free_message_deduplication_shared_document_validation_ocr_and_classification_exact_existing_customer_match_or_editable_owner_confirmed_new_customer_never_accounting_from_email",
-    "owner_document_archive": "same_effective_date_period_and_grouping_rules_as_gestoria_year_quarter_income_expense_ticket_pending_other_horizontal_quick_upload_mobile_responsive_folder_navigation_search_status_and_private_bounded_preview_opened_on_demand",
+    "owner_document_archive": "same_effective_date_period_and_grouping_rules_as_gestoria_year_quarter_income_expense_ticket_pending_other_generated_invoices_projected_from_accounting_without_pdf_or_metadata_copies_uploaded_linked_original_wins_one_representation_horizontal_quick_upload_mobile_responsive_folder_navigation_search_status_and_private_bounded_preview_opened_on_demand",
+    "project_control": "server_bounded_zero_to_one_hundred_progress_accessible_slider_visible_planned_active_paused_finished_cancelled_states_finished_forces_complete_cancelled_preserves_history_and_is_excluded_from_active_summary",
     "gestoria_portfolio": "schema_41_professional_multi_business_workspace_with_explicit_fiscal_profile_and_five_separate_task_views_summary_documents_taxes_periods_requests_quarter_and_year_context_safe_inline_first_page_preview_explainable_tax_drafts_and_versioned_packages_without_filing_or_money_authority_read_only_forms_return_to_the_same_human_workspace_instead_of_raw_json",
     "gestoria_mfa": "schema_47_optional_totp_second_factor_derived_without_reversible_database_seed_atomic_counter_anti_replay_eight_single_use_80_bit_recovery_codes_stored_only_as_hash_password_plus_shared_rate_limit_for_enrolment_regeneration_and_disable_codes_render_once_without_session_cookie_persistence",
     "commercial_showcase": "schema_40_two_real_logins_inside_the_product_owner_and_gestoria_plus_real_customer_portal_all_populated_connected_and_server_side_read_only_external_delivery_and_automations_blocked_safe_local_query_only_assistant_without_history_or_writes_document_kinds_repaired_idempotently_into_income_expense_ticket_pending_and_other_folders_public_demo_credential_explicitly_allowlisted_not_a_production_secret_mobile_demo_badge_is_readable_and_client_portal_dates_are_humanized",

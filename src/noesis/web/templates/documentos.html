@@ -157,6 +157,8 @@ const KINDS = { documento:'Por confirmar', ticket:'Ticket', contrato:'Contrato',
 const STATUS = { pendiente_revisar:['Pendiente','b-amber'], revisado:['Revisado','b-green'],
   enviado_gestoria:['En gestoría','b-blue'], validado:['Validado','b-green'],
   rechazado:['Rechazado','b-red'], duplicado:['Duplicado','b-gray'] };
+const INVOICE_STATUS = { borrador:['Borrador','b-gray'], enviada:['Emitida','b-amber'],
+  parcial:['Cobro parcial','b-amber'], cobrada:['Cobrada','b-green'] };
 let reviewDocId = null;
 let documentSearchTimer = null;
 let DOCUMENT_ARCHIVE = {documents:[], document_counts:{}};
@@ -166,7 +168,7 @@ let selectedUploadFile = null;
 let reviewClientResolution = null;
 const DOCUMENT_VIEWS = [
   {key:'todos', label:'Todo el archivo', caption:'Vista completa'},
-  {key:'ingresos', label:'Ingresos', caption:'Facturas emitidas'},
+  {key:'ingresos', label:'Ingresos', caption:'Facturas generadas'},
   {key:'gastos', label:'Gastos', caption:'Facturas recibidas'},
   {key:'tickets', label:'Tickets', caption:'Compras simplificadas'},
   {key:'pendientes', label:'Por revisar', caption:'Necesitan confirmación'},
@@ -244,7 +246,7 @@ function scheduleDocumentSearch() {
 async function renderList() {
   const year=el('d-year').value, quarter=el('d-quarter').value;
   DOCUMENT_ARCHIVE = await api(`/document-archive?year=${encodeURIComponent(year)}&quarter=${encodeURIComponent(quarter)}&view=${encodeURIComponent(DOCUMENT_VIEW)}`);
-  if (!DOCUMENT_ARCHIVE.documents.some(item=>item.id===selectedDocumentId)) {
+  if (!DOCUMENT_ARCHIVE.documents.some(item=>item.archive_key===selectedDocumentId)) {
     selectedDocumentId = null;
   }
   paintDocuments();
@@ -256,10 +258,10 @@ function selectDocumentView(view) {
   renderList();
 }
 
-function showPreview(id) {
-  selectedDocumentId = id;
+function showPreview(key) {
+  selectedDocumentId = key;
   paintDocuments();
-  const document = DOCUMENT_ARCHIVE.documents.find(item=>item.id===id);
+  const document = DOCUMENT_ARCHIVE.documents.find(item=>item.archive_key===key);
   if (document) openDocumentPreview(document);
 }
 
@@ -282,32 +284,41 @@ function paintDocuments() {
   el('d-hint').textContent = `${period} · ${counts.todos||0} documento(s)${(counts.pendientes||0)?` · ${counts.pendientes} por revisar`:''}`;
 
   el('d-body').innerHTML = shown.map(d => {
-    const st = STATUS[d.doc_status] || STATUS.revisado;
+    const generated=d.source_type==='generated_invoice';
+    const st = generated
+      ? (INVOICE_STATUS[d.record_status] || STATUS.revisado)
+      : (STATUS[d.doc_status] || STATUS.revisado);
     const importe = d.ocr_amount ? eur(d.ocr_amount) : '—';
     const actions = [];
-    if (d.doc_status === 'pendiente_revisar') {
-      actions.push(`<button class="btn sm" onclick="confirmKind(${d.id}, '${esc(d.kind)}')">Confirmar tipo</button>`);
-    }
-    if (!d.received_invoice_id && !d.expense_id) {
-      actions.push(`<button class="btn sm" title="Volver a clasificar" onclick="classifyDoc(${d.id})">Reclasificar</button>`);
-      if (['documento','factura_recibida','factura_emitida','proveedor'].includes(d.kind)) {
-        actions.push(`<button class="btn sm" title="Extraer datos de factura" onclick="readDoc(${d.id})">Extraer datos</button>`);
+    if (generated) {
+      actions.push(`<a class="btn sm primary" href="${esc(d.file_url)}" target="_blank" rel="noopener">Abrir PDF</a>`);
+      actions.push(`<a class="btn sm" href="/b/${BIZ}/facturas">Ver en Facturas</a>`);
+    } else {
+      if (d.doc_status === 'pendiente_revisar') {
+        actions.push(`<button class="btn sm" onclick="confirmKind(${d.id}, '${esc(d.kind)}')">Confirmar tipo</button>`);
       }
+      if (!d.received_invoice_id && !d.expense_id) {
+        actions.push(`<button class="btn sm" title="Volver a clasificar" onclick="classifyDoc(${d.id})">Reclasificar</button>`);
+        if (['documento','factura_recibida','factura_emitida','proveedor'].includes(d.kind)) {
+          actions.push(`<button class="btn sm" title="Extraer datos de factura" onclick="readDoc(${d.id})">Extraer datos</button>`);
+        }
+      }
+      if (d.kind === 'ticket' && !d.expense_id) {
+        actions.push(`<button class="btn sm" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">Crear gasto</button>`);
+      }
+      if (d.doc_status !== 'enviado_gestoria' && d.doc_status !== 'validado') {
+        actions.push(`<button class="btn sm" title="Marcar como enviado a gestoría" onclick="setStatus(${d.id},'enviado_gestoria')">Enviar a gestoría</button>`);
+      }
+      actions.push(`<button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button>`);
     }
-    if (d.kind === 'ticket' && !d.expense_id) {
-      actions.push(`<button class="btn sm" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">Crear gasto</button>`);
-    }
-    if (d.doc_status !== 'enviado_gestoria' && d.doc_status !== 'validado') {
-      actions.push(`<button class="btn sm" title="Marcar como enviado a gestoría" onclick="setStatus(${d.id},'enviado_gestoria')">Enviar a gestoría</button>`);
-    }
-    actions.push(`<button class="iconbtn" title="Borrar" onclick="delDoc(${d.id})">${TRASH}</button>`);
     const proposed=d.proposed_client_status==='pending'&&d.proposed_client_name
       ?`Cliente por confirmar: ${d.proposed_client_name}`:'';
     const context=[d.client_name,d.project_name,proposed].filter(Boolean).map(esc).join(' · ');
-    return `<article class="document-file-row ${selectedDocumentId===d.id?'selected':''}">
-      <button class="document-file-open" onclick="showPreview(${d.id})" aria-label="Previsualizar ${esc(d.filename)}">
+    const source=generated?'Generado por Bynoesis':'Archivo subido';
+    return `<article class="document-file-row ${selectedDocumentId===d.archive_key?'selected':''}">
+      <button class="document-file-open" onclick="showPreview('${d.archive_key}')" aria-label="Previsualizar ${esc(d.filename)}">
         <span class="document-file-kind">${d.mime==='application/pdf'?'PDF':String(d.mime||'').startsWith('image/')?'IMG':'DOC'}</span>
-        <span class="document-file-main"><b>${esc(d.filename)}</b><small>${esc(KINDS[d.kind]||d.kind)}${context?` · ${context}`:''}</small></span>
+        <span class="document-file-main"><b>${esc(d.filename)}</b><small>${esc(KINDS[d.kind]||d.kind)} · ${source}${context?` · ${context}`:''}</small></span>
       </button>
       <div class="document-file-facts"><span>${esc(d.effective_on||dateIso(d.created_at))}</span><b>${importe}</b></div>
       <div class="document-file-state"><span class="badge ${st[1]}">${st[0]}</span>${d.doc_status==='pendiente_revisar'&&d.confidence?`<small>Lectura ${Math.round(d.confidence)}% · por confirmar</small>`:''}</div>
@@ -318,19 +329,23 @@ function paintDocuments() {
     emptyState('Nada por aquí', query ? 'No encuentro documentos con esas palabras.' : filter ? 'No hay documentos en este estado.' :
       'Sube un PDF o haz una foto de un ticket para empezar.', '#subir', 'Subir documento');
   el('d-workspace').style.display=shown.length?'grid':'none';
-  if (!shown.some(item=>item.id===selectedDocumentId)) selectedDocumentId=null;
+  if (!shown.some(item=>item.archive_key===selectedDocumentId)) selectedDocumentId=null;
 }
 
 function documentPreviewMarkup(d) {
-  const st=STATUS[d.doc_status]||STATUS.revisado;
+  const generated=d.source_type==='generated_invoice';
+  const st=generated?(INVOICE_STATUS[d.record_status]||STATUS.revisado):(STATUS[d.doc_status]||STATUS.revisado);
   const context=[d.client_name&&`Cliente: ${d.client_name}`,d.project_name&&`Proyecto: ${d.project_name}`].filter(Boolean);
+  const fileUrl=d.file_url||`/api/${BIZ}/documents/${d.id}/file`;
+  const previewUrl=d.preview_url||`/api/${BIZ}/documents/${d.id}/preview`;
   return `<div class="document-preview-head">
       <div><div class="kicker">Vista previa</div><h3>${esc(d.filename)}</h3></div>
-      <a href="/api/${BIZ}/documents/${d.id}/file" target="_blank" rel="noopener">Abrir original ↗</a>
+      <a href="${esc(fileUrl)}" target="_blank" rel="noopener">${generated?'Abrir PDF':'Abrir original'} ↗</a>
     </div>
-    ${d.previewable?`<div class="document-preview-canvas"><img src="/api/${BIZ}/documents/${d.id}/preview" alt="Primera página de ${esc(d.filename)}" onerror="this.parentElement.innerHTML='<span>No se pudo generar la vista previa.</span>'"></div>`:
-      '<div class="document-preview-canvas unavailable"><span>Este formato se abre desde el original.</span></div>'}
+    ${d.previewable?`<div class="document-preview-canvas"><img src="${esc(previewUrl)}" alt="Primera página de ${esc(d.filename)}" onerror="this.parentElement.innerHTML='<span>No se pudo generar la vista previa.</span>'"></div>`:
+      `<div class="document-preview-canvas unavailable"><span>${generated?'Este PDF se genera siempre desde la factura original, sin guardar una copia desactualizada.':'Este formato se abre desde el original.'}</span></div>`}
     <div class="document-preview-meta"><span>Tipo<b>${esc(KINDS[d.kind]||d.kind)}</b></span><span>Fecha<b>${esc(d.effective_on||dateIso(d.created_at))}</b></span><span>Estado<b>${st[0]}</b></span>${d.ocr_amount?`<span>Importe leído<b>${eur(d.ocr_amount)}</b></span>`:''}</div>
+    <div class="document-preview-origin">${generated?'Documento generado desde Facturas. Cualquier cambio válido se refleja aquí automáticamente.':'Documento recibido por web, WhatsApp o correo.'}</div>
     ${context.length?`<div class="document-preview-context">${context.map(value=>`<span>${esc(value)}</span>`).join('')}</div>`:''}
     ${d.review_note?`<p class="meta">${esc(d.review_note)}</p>`:''}`;
 }

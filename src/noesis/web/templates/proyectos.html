@@ -12,7 +12,7 @@
     <div class="project-summary-reading"><span>Lectura de Bynoesis</span><p id="pj-reading">Revisando tus proyectos…</p></div>
   </section>
   <section class="home-panel project-list-panel">
-    <header><div><span class="panel-kicker">Todos</span><h2>Proyectos</h2></div><select id="pj-filter" aria-label="Filtrar proyectos" onchange="renderProjects()"><option value="active">Activos</option><option value="all">Todos</option><option value="terminado">Terminados</option></select></header>
+    <header><div><span class="panel-kicker">Todos</span><h2>Proyectos</h2></div><select id="pj-filter" aria-label="Filtrar proyectos" onchange="renderProjects()"><option value="active">Activos</option><option value="all">Todos</option><option value="closed">Finalizados y cancelados</option></select></header>
     <div id="project-list" class="project-list"><p class="muted">Cargando proyectos…</p></div>
   </section>
 </div>
@@ -21,9 +21,28 @@
   <button class="project-back" type="button" onclick="closeProject()">← Volver a proyectos</button>
   <div class="project-detail-head">
     <div><div class="kicker" id="pd-client">Proyecto</div><h1 id="pd-name">—</h1><p id="pd-location"></p></div>
-    <div class="project-detail-actions"><select id="pd-status" aria-label="Estado del proyecto" onchange="saveProjectState()"><option value="planificado">Planificado</option><option value="en_curso">En curso</option><option value="pausado">Pausado</option><option value="terminado">Terminado</option></select><button class="btn" type="button" onclick="editProgress()">Actualizar avance</button></div>
   </div>
-  <div class="project-progress"><span><b id="pd-progress-label">0%</b> completado</span><div><i id="pd-progress-bar"></i></div></div>
+  <section class="project-control" aria-label="Estado y avance del proyecto">
+    <div class="project-state-control">
+      <div><span class="project-control-label">Estado del proyecto</span><small>Indica en qué punto está el trabajo.</small></div>
+      <div class="project-state-options" id="pd-status-options" role="group" aria-label="Estado del proyecto">
+        <button type="button" data-status="planificado" onclick="saveProjectState('planificado')">Planificado</button>
+        <button type="button" data-status="en_curso" onclick="saveProjectState('en_curso')">En curso</button>
+        <button type="button" data-status="pausado" onclick="saveProjectState('pausado')">En pausa</button>
+        <button type="button" data-status="terminado" onclick="saveProjectState('terminado')">Finalizado</button>
+        <button type="button" data-status="cancelado" onclick="saveProjectState('cancelado')">Cancelado</button>
+      </div>
+    </div>
+    <div class="project-progress-control">
+      <label for="pd-progress-range"><span class="project-control-label">Avance real</span><output id="pd-progress-label" for="pd-progress-range">0%</output></label>
+      <input id="pd-progress-range" type="range" min="0" max="100" step="1" value="0"
+             oninput="previewProjectProgress(this.value)" onchange="saveProjectProgress(this.value)"
+             aria-describedby="pd-progress-help pd-progress-feedback">
+      <div class="project-progress-scale" id="pd-progress-help"><span>0</span><span>25</span><span>50</span><span>75</span><span>100%</span></div>
+      <div class="project-progress"><div><i id="pd-progress-bar"></i></div></div>
+      <p class="project-control-feedback" id="pd-progress-feedback" aria-live="polite">Arrastra la línea; se guarda al soltar.</p>
+    </div>
+  </section>
   <section class="project-detail-summary">
     <div><span>Presupuesto</span><strong id="pd-budget">—</strong></div>
     <div><span>Gastado</span><strong id="pd-cost">—</strong><small id="pd-cost-pct">—</small></div>
@@ -48,7 +67,7 @@ const PROJECT_CLIENTS = {{ clients|tojson }};
 const PROJECT_WORKERS = {{ workers|tojson }};
 let PROJECTS = [];
 let CURRENT_PROJECT = null;
-const STATUS_LABEL = {planificado:'Planificado',en_curso:'En curso',pausado:'Pausado',terminado:'Terminado'};
+const STATUS_LABEL = {planificado:'Planificado',en_curso:'En curso',pausado:'En pausa',terminado:'Finalizado',cancelado:'Cancelado'};
 
 async function loadProjects(){
   const data = await api('/projects');
@@ -67,7 +86,9 @@ async function loadProjects(){
 
 function renderProjects(){
   const mode = el('pj-filter').value;
-  const rows = PROJECTS.filter(p=>mode==='all' || (mode==='active' ? p.status!=='terminado' : p.status==='terminado'));
+  const rows = PROJECTS.filter(p=>mode==='all' || (mode==='active'
+    ? !['terminado','cancelado'].includes(p.status)
+    : mode==='closed' ? ['terminado','cancelado'].includes(p.status) : p.status===mode));
   if (!rows.length){
     el('project-list').innerHTML = `<div class="project-empty"><img src="/static/noesis-mark.svg" alt=""><h3>${PROJECTS.length ? 'No hay proyectos en este filtro' : 'Aún no hay proyectos'}</h3><p>${PROJECTS.length ? 'Cambia el filtro para ver el resto.' : 'Controla una instalación, reforma u obra desde el presupuesto hasta el margen final.'}</p>${PROJECTS.length ? '' : '<button class="btn" onclick="newProject()">Crear primer proyecto</button>'}</div>`;
     return;
@@ -77,7 +98,7 @@ function renderProjects(){
     <span class="project-row-progress"><i><b style="width:${p.progress}%"></b></i><small>${p.progress}% completado</small></span>
     <span><small>Presupuesto</small><b>${eur(p.budget)}</b></span><span><small>Coste</small><b>${eur(p.actual_cost)}</b></span>
     <span class="project-margin ${p.margin < 0 ? 'negative' : ''}"><small>Margen</small><b>${eur(p.margin)}</b></span>
-    <span class="badge ${p.status==='terminado'?'b-green':p.status==='pausado'?'b-amber':'b-gray'}">${STATUS_LABEL[p.status]}</span>
+    <span class="badge ${p.status==='terminado'?'b-green':p.status==='cancelado'?'b-red':p.status==='pausado'?'b-amber':'b-gray'}">${STATUS_LABEL[p.status]}</span>
   </button>`).join('');
 }
 
@@ -103,12 +124,18 @@ function closeProject(){ el('project-detail').hidden=true; el('projects-index').
 function renderProjectDetail(){
   const p=CURRENT_PROJECT;
   el('pd-name').textContent=p.name; el('pd-client').textContent=p.client_name || 'Proyecto sin cliente'; el('pd-location').textContent=p.location || 'Sin ubicación';
-  el('pd-status').value=p.status; el('pd-progress-label').textContent=`${p.progress}%`; el('pd-progress-bar').style.width=`${p.progress}%`;
+  document.querySelectorAll('#pd-status-options [data-status]').forEach(button=>{
+    const active=button.dataset.status===p.status;
+    button.classList.toggle('active',active); button.setAttribute('aria-pressed',String(active));
+  });
+  el('pd-progress-range').value=p.progress; el('pd-progress-label').textContent=`${p.progress}%`; el('pd-progress-bar').style.width=`${p.progress}%`;
   el('pd-budget').textContent=eur(p.budget); el('pd-cost').textContent=eur(p.actual_cost); el('pd-cost-pct').textContent=`${p.cost_pct}% del presupuesto`;
   el('pd-margin').textContent=eur(p.margin); el('pd-margin-note').textContent=p.margin<0?'Presupuesto superado':'Todavía disponible';
   el('pd-hours').textContent=num(p.actual_hours); el('pd-hours-plan').textContent=p.planned_hours?`de ${num(p.planned_hours)} previstas`:'sin previsión inicial';
   const expected=p.budget*(p.progress/100), deviation=p.actual_cost-expected;
-  el('pd-reading').textContent=p.missing_hourly_cost_worker_ids.length ? 'Hay horas fichadas sin coste por hora. Añádelo en Equipo asignado para que el margen sea real.'
+  el('pd-reading').textContent=p.status==='cancelado' ? 'Este proyecto está cancelado. Conservo sus costes, documentos e historial para que no pierdas el contexto.'
+    : p.status==='terminado' ? `Proyecto finalizado. El margen registrado es ${eur(p.margin)}.`
+    : p.missing_hourly_cost_worker_ids.length ? 'Hay horas fichadas sin coste por hora. Añádelo en Equipo asignado para que el margen sea real.'
     : p.margin<0 ? `Este proyecto supera el presupuesto en ${eur(Math.abs(p.margin))}. Revisa los últimos costes.`
     : p.progress && deviation>p.budget*.1 ? `El gasto va ${eur(deviation)} por delante del avance. Conviene revisar materiales y horas.`
     : `Va dentro de presupuesto. Quedan ${eur(p.margin)} antes de consumir el margen disponible.`;
@@ -126,8 +153,34 @@ function renderProjectDetail(){
     : `<div class="project-mini-empty">No hay tareas pendientes para el equipo.</div>`;
 }
 
-async function saveProjectState(){ try{CURRENT_PROJECT=await apiPatch(`/projects/${CURRENT_PROJECT.id}`,{status:el('pd-status').value}); renderProjectDetail(); await loadProjects();}catch(e){alert(e.message);} }
-function editProgress(){formModal({title:'Actualizar avance',submitLabel:'Guardar avance',fields:[{name:'progress',label:'Porcentaje completado',type:'number',value:CURRENT_PROJECT.progress,placeholder:'0–100'}],onSubmit:async v=>{try{CURRENT_PROJECT=await apiPatch(`/projects/${CURRENT_PROJECT.id}`,{progress:v.progress}); renderProjectDetail(); await loadProjects();}catch(e){alert(e.message);}}});}
+function previewProjectProgress(value){
+  const progress=Math.max(0,Math.min(100,Number(value)||0));
+  el('pd-progress-label').textContent=`${progress}%`; el('pd-progress-bar').style.width=`${progress}%`;
+  el('pd-progress-feedback').textContent='Suelta para guardar este avance.';
+}
+async function saveProjectProgress(value){
+  const previous=CURRENT_PROJECT.progress;
+  el('pd-progress-range').disabled=true;
+  try{
+    CURRENT_PROJECT=await apiPatch(`/projects/${CURRENT_PROJECT.id}`,{progress:Number(value)});
+    renderProjectDetail(); el('pd-progress-feedback').textContent=`Avance guardado: ${CURRENT_PROJECT.progress}%.`;
+    await loadProjects();
+  }catch(e){
+    el('pd-progress-range').value=previous; previewProjectProgress(previous);
+    el('pd-progress-feedback').textContent=e.message;
+  }finally{el('pd-progress-range').disabled=false;}
+}
+async function saveProjectState(status){
+  const buttons=[...document.querySelectorAll('#pd-status-options [data-status]')];
+  buttons.forEach(button=>button.disabled=true);
+  try{
+    CURRENT_PROJECT=await apiPatch(`/projects/${CURRENT_PROJECT.id}`,{status});
+    renderProjectDetail();
+    el('pd-progress-feedback').textContent=status==='terminado'?'Proyecto finalizado y avance completado al 100%.':'Estado actualizado.';
+    await loadProjects();
+  }catch(e){alert(e.message);renderProjectDetail();}
+  finally{buttons.forEach(button=>button.disabled=false);}
+}
 function addEntry(){formModal({title:'Añadir coste u horas',submitLabel:'Añadir al proyecto',fields:[
   {name:'kind',label:'Tipo',options:[{value:'material',label:'Material'},{value:'horas',label:'Horas de trabajo'},{value:'subcontrata',label:'Subcontrata'},{value:'otro',label:'Otro'}]},
   {name:'description',label:'Descripción',placeholder:'Tubería multicapa / Horas de montaje'},

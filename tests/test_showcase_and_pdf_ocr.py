@@ -100,8 +100,8 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
         self.assertEqual(
             archive["document_counts"],
             {
-                "todos": 6, "ingresos": 1, "gastos": 2,
-                "tickets": 1, "pendientes": 2, "otros": 2,
+                "todos": 13, "ingresos": 8, "gastos": 2,
+                "tickets": 1, "pendientes": 3, "otros": 2,
             },
         )
         self.assertGreaterEqual(
@@ -248,6 +248,22 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
                     client.get(f"/gestoria/cliente/{business_id}").status_code,
                     200,
                 )
+                generated_invoice = db.list_invoices(business_id)[0]
+                generated_page = client.get(
+                    f"/gestoria/cliente/{business_id}",
+                    params={
+                        "section": "documentos",
+                        "doc": f"invoice:{generated_invoice['id']}",
+                    },
+                )
+                self.assertEqual(generated_page.status_code, 200)
+                self.assertIn("PDF generado desde Facturas", generated_page.text)
+                generated_pdf = client.get(
+                    f"/gestoria/cliente/{business_id}/factura/"
+                    f"{generated_invoice['id']}"
+                )
+                self.assertEqual(generated_pdf.status_code, 200)
+                self.assertEqual(generated_pdf.headers["content-type"], "application/pdf")
                 pending = next(
                     item for item in docrepo.list_for_business(business_id)
                     if item["doc_status"] == "pendiente_revisar"
