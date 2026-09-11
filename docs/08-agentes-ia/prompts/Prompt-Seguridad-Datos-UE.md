@@ -196,8 +196,8 @@ apartado no aplica a este producto, escribe que no aplica y por qué.
 ## Cómo se usó aquí
 
 Este prompt se ejecutó el 2026-09-08 sobre el repositorio Noesis. El resultado es
-la carpeta [`docs/cumplimiento/`](../cumplimiento/README.md), cuyo documento de
-entrada es [`Plan-Datos-Servidores-Copias`](../cumplimiento/Plan-Datos-Servidores-Copias.md).
+la carpeta [`docs/05-legal-y-rgpd/cumplimiento/`](../../05-legal-y-rgpd/cumplimiento/README.md), cuyo documento de
+entrada es [`Plan-Datos-Servidores-Copias`](../../05-legal-y-rgpd/cumplimiento/Plan-Datos-Servidores-Copias.md).
 
 - Creado: 2026-09-08 · Última revisión: 2026-09-08 · Próxima revisión: 2027-09-08
 - Responsable: founder (Xavier).

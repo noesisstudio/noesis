@@ -1,4 +1,4 @@
-"""Genera docs/Estado-Bynoesis.xlsx: el estado de cada pieza, en una hoja de cálculo.
+"""Genera docs/03-whatsapp-e-integraciones/Estado-Bynoesis.xlsx: el estado de cada pieza, en una hoja de cálculo.
 
 El vault de Obsidian explica el porqué de las cosas; esta hoja sirve para lo
 otro: mirar de un vistazo qué está hecho, qué bloquea y qué falta, y poder
@@ -23,7 +23,7 @@ from xml.sax.saxutils import escape
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-OUTPUT = ROOT / "docs" / "Estado-Bynoesis.xlsx"
+OUTPUT = ROOT / "docs" / "03-whatsapp-e-integraciones" / "Estado-Bynoesis.xlsx"
 
 # Estilos: 0 normal, 1 cabecera, 2 texto con ajuste, 3 negrita, 4 número.
 HEADER, WRAP, BOLD, NUMBER = 1, 2, 3, 4
@@ -292,7 +292,7 @@ def _sheet_meta() -> tuple[str, list[list], list[int]]:
             "no sale ni un mensaje. El readiness ya lo marca como bloqueante.",
             "Verificar la empresa, dar de alta el número, generar token "
             "permanente y suscribir el webhook al campo messages.",
-            ".env · docs/Conectar-APIs.md sección 4",
+            ".env · docs/03-whatsapp-e-integraciones/Conectar-APIs.md sección 4",
         ],
         [
             "Versión de la Graph API", "REVISAR", "Baja",
@@ -310,7 +310,7 @@ def _sheet_meta() -> tuple[str, list[list], list[int]]:
             "gratis dentro de una ventana de atención abierta.",
             "Rehacer el cálculo de margen con la tarifa vigente en España antes "
             "de fijar precios sobre el número de avisos.",
-            "docs/Unit-economics-y-cerebro-interno.md",
+            "docs/06-negocio-y-finanzas/Unit-economics-y-cerebro-interno.md",
         ],
     ]
     return "Meta (WhatsApp)", rows, [34, 12, 11, 62, 52, 40]

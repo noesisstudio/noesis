@@ -45,4 +45,4 @@ Se registran **todas**, se notifiquen o no (art. 33.5).
 
 | Fecha | Documento | Cambio | Responsable |
 |---|---|---|---|
-| 2026-09-08 | Toda la carpeta `docs/cumplimiento/` | Creación inicial a partir del plan de datos, servidores y copias | Founder |
+| 2026-09-08 | Toda la carpeta `docs/05-legal-y-rgpd/cumplimiento/` | Creación inicial a partir del plan de datos, servidores y copias | Founder |

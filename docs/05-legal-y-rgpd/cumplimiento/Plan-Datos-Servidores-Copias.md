@@ -262,7 +262,7 @@ firma de los DPA siguen siendo tarea externa pendiente.
 ### Documentación creada hoy con este plan
 
 ```text
-docs/cumplimiento/
+docs/05-legal-y-rgpd/cumplimiento/
 ├── README.md                          índice y cadencia de revisión
 ├── Plan-Datos-Servidores-Copias.md    este documento
 ├── RAT-Registro-actividades.md        art. 30, como responsable y como encargado

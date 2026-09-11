@@ -1,5 +1,23 @@
 ﻿# Registro de cambios
 
+## 2026-09-11 — `docs/` ordenada por temas
+
+Petición del founder: ordenar la documentación. 86 archivos pasan de la raíz de
+`docs/` a nueve carpetas temáticas numeradas (producto, técnico, WhatsApp e
+integraciones, seguridad, legal/RGPD con `cumplimiento/`, negocio, marketing,
+agentes IA con `handoffs/` y `prompts/`, histórico). El núcleo vivo sigue en la
+raíz porque lo leen CI (`check_project_truth.py`), `production_check.py` y los
+agentes. Se reescriben los enlaces relativos, las rutas `docs/...` de `AGENTS.md`,
+`README.md`, `facebook/` y los scripts (`check_cumplimiento.py`,
+`build_estado_xlsx.py`, `build_modelo_economico.py`, playbook). `Inicio.md`
+explica la estructura. No se toca `src/`: los comentarios de `db.py` y
+`billing.py` que citan `docs/Fiscalidad.md` y `docs/Unit-economics-y-cerebro-interno.md`
+se corregirán con el próximo cambio de producto. Esta bitácora y `Registro-QA`
+conservan las rutas antiguas por ser históricas. Los PDF enlazados entre sí
+(`Ruta-legal`) necesitan reimprimirse desde su HTML ya corregido.
+Pruebas: 0 enlaces relativos rotos, `check_cumplimiento` y `check_project_truth`
+OK. Riesgo bajo, solo documentación y rutas de scripts. Rollback: revertir commit.
+
 ## 2026-09-10 — Plan de emisión, céntimos y diagnóstico real de Meta
 
 La captura mostró 100 → 99,99 €, fallo de subida y pérdida de «emitir y envíame».

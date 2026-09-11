@@ -4,7 +4,7 @@
 > dos auditorías: [[RGPD-estado-y-plan]] (código y textos publicados) y
 > [[Servidores-y-residencia-de-datos]] (dónde viven los datos). Para las obligaciones
 > y las tres rutas completas, [`Ruta-legal.pdf`](Ruta-legal.pdf); para el calendario,
-> [`Plan-60-dias.pdf`](Plan-60-dias.pdf). Aquí no se explica el
+> [`Plan-60-dias.pdf`](../06-negocio-y-finanzas/Plan-60-dias.pdf). Aquí no se explica el
 > porqué: se explica **qué hacer, quién lo hace y cómo saber que está cerrado**.
 > Fecha: **3 de septiembre de 2026**.
 

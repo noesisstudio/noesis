@@ -4,7 +4,7 @@ Carpeta de cumplimiento de Noesis. Documenta **dónde vive cada dato, en qué
 infraestructura, cómo se copia y qué obligaciones europeas lo condicionan**.
 
 Se generó el 2026-09-08 ejecutando
-[`docs/prompts/Prompt-Seguridad-Datos-UE`](../prompts/Prompt-Seguridad-Datos-UE.md)
+[`docs/08-agentes-ia/prompts/Prompt-Seguridad-Datos-UE`](../../08-agentes-ia/prompts/Prompt-Seguridad-Datos-UE.md)
 sobre el repositorio. No es una plantilla genérica: cada documento se apoya en lo
 que hay implementado en `src/noesis/` a esa fecha.
 
@@ -46,11 +46,11 @@ que hay implementado en `src/noesis/` a esa fecha.
 
 ## Relación con el resto de la documentación
 
-- `docs/Seguridad-operativa.md` — amenazas y controles técnicos del producto. Esta
+- `docs/04-seguridad-y-datos/Seguridad-operativa.md` — amenazas y controles técnicos del producto. Esta
   carpeta no lo duplica: lo complementa con la parte de datos, infraestructura y
   obligaciones legales.
-- `docs/Despliegue.md` — cómo se despliega hoy.
-- `docs/Fiscalidad.md` — Veri*Factu y obligaciones de facturación.
+- `docs/02-tecnico/Despliegue.md` — cómo se despliega hoy.
+- `docs/05-legal-y-rgpd/Fiscalidad.md` — Veri*Factu y obligaciones de facturación.
 - `web/templates/privacidad.html`, `terminos.html`, `cookies.html` y
   `encargado-tratamiento.html` — lo que ve el cliente. **Si cambia un subencargado
   o una retención aquí, hay que cambiarlo también ahí**, o el cliente podrá alegar

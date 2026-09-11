@@ -9,7 +9,7 @@ Este documento cubre **lo que [`Ruta-legal.pdf`](Ruta-legal.pdf) no trata**: si
 constituir sociedad o darse de alta como autónomo, los trámites de constitución en
 orden de dependencia y cuánto cuesta arrancar. Las obligaciones del producto
 —Veri\*Factu, Meta, protección de datos, Reglamento de IA— y las tres rutas para
-resolverlas están allí, y el calendario en [`Plan-60-dias.pdf`](Plan-60-dias.pdf).
+resolverlas están allí, y el calendario en [`Plan-60-dias.pdf`](../06-negocio-y-finanzas/Plan-60-dias.pdf).
 
 ---
 
@@ -28,7 +28,7 @@ y fecha de inscripción. Un autónomo **no aparece en ningún registro que Meta 
 consultar**: su expediente depende por completo de que un revisor acepte un
 certificado de situación censal de la AEAT como prueba de existencia.
 
-Esto no lo hace imposible, lo hace **frágil**. Y [`Meta-Verificacion.pdf`](Meta-Verificacion.pdf)
+Esto no lo hace imposible, lo hace **frágil**. Y [`Meta-Verificacion.pdf`](../03-whatsapp-e-integraciones/Meta-Verificacion.pdf)
 ya documenta el coste de la fragilidad: Meta no compromete plazo, los tres motivos
 de rechazo más frecuentes son datos incompletos, documentos ilegibles y datos
 legales que no coinciden, y **cada rechazo reinicia el reloj**.
@@ -181,7 +181,7 @@ viva desde el 29-jul-2025, no en 2027, y falta la declaración responsable.
 
 ## 3. Dónde encaja esto en el calendario
 
-**El plan de ejecución con fechas es [`Plan-60-dias.pdf`](Plan-60-dias.pdf).** Aquí
+**El plan de ejecución con fechas es [`Plan-60-dias.pdf`](../06-negocio-y-finanzas/Plan-60-dias.pdf).** Aquí
 solo queda lo que ese plan da por hecho: la cadena de dependencias legales que decide
 cuándo se puede cobrar.
 
@@ -201,7 +201,7 @@ identidad legal del producto y el encargo al abogado.
 
 Una versión anterior de este documento decía que la verificación de empresa y la
 revisión de la aplicación de Meta no estaban en el camino crítico, apoyándose en
-[`Meta-Verificacion.pdf`](Meta-Verificacion.pdf). **[`Ruta-legal.pdf`](Ruta-legal.pdf)
+[`Meta-Verificacion.pdf`](../03-whatsapp-e-integraciones/Meta-Verificacion.pdf). **[`Ruta-legal.pdf`](Ruta-legal.pdf)
 sostiene lo contrario y su argumento es mejor:** el `Standard access` solo alcanza a
 los activos del propio negocio, así que la WABA de un cliente —aunque la conceda a
 mano— exige `Advanced access` y, con él, App Review.

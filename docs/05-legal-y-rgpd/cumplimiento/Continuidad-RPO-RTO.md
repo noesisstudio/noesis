@@ -56,7 +56,7 @@ tiempos de recuperación es una promesa sin respaldo.
    permitidos.
 6. Volver a conectar webhooks: Stripe y Meta apuntan a la URL antigua y hay que
    reconfigurarlos, con firma nueva.
-7. Recorrer la puerta de salida a piloto de `docs/Seguridad-operativa.md`.
+7. Recorrer la puerta de salida a piloto de `docs/04-seguridad-y-datos/Seguridad-operativa.md`.
 8. Comunicar a los clientes qué pasó, qué datos se vieron afectados y qué ventana
    de información se perdió. Con hechos, no con eufemismos.
 

@@ -150,7 +150,7 @@ No publicado; no se ha localizado el nuevo commit de teléfono del socio.
 
 Correcciones móviles, teléfono titular en admin, consumo por cuenta/proveedor/modelo
 y revisión conservadora en WhatsApp. Sin publicar. Alcance y pendientes en
-[revisión de frentes](Revision-frentes-2026-09-07.md). No es gasto completo por empleado.
+[revisión de frentes](09-historico/Revision-frentes-2026-09-07.md). No es gasto completo por empleado.
 
 > Lectura humana del estado. La fuente verificable para migración, pruebas, precios,
 > política de suscripción y publicación es [`project-state.json`](project-state.json).

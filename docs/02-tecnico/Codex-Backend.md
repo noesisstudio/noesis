@@ -2,10 +2,10 @@
 
 > **Documento histórico de ejecución.** Conserva el contexto de 2026-07-03, pero
 > sus migraciones, pruebas y pendientes ya no son estado actual. Usar
-> [`project-state.json`](project-state.json), [[Tareas-vivas]], [[Mapa-codigo]] y
+> [`project-state.json`](../project-state.json), [[Tareas-vivas]], [[Mapa-codigo]] y
 > [[Conectar-APIs]] antes de actuar.
 
-> Documento para Codex. Léelo junto a [`AGENTS.md`](../AGENTS.md) antes de empezar.
+> Documento para Codex. Léelo junto a [`AGENTS.md`](../../AGENTS.md) antes de empezar.
 > Estado histórico a 2026-07-03: `main` desplegado en Railway + Postgres. El dominio
 > canónico vigente se consulta en `project-state.json`. CI verde, 79 tests,
 > última migración aplicada: **10** (`datos_cobro`).
@@ -150,7 +150,7 @@ PR aparte sin mezclar con funcionalidad, para que el diff sea revisable.
 ## Después de estas tareas: el plan WhatsApp
 
 Cerrada la cola T1-T5 (T1-T3 ya entregadas), la siguiente prioridad de producto es
-[`WhatsApp-Cerebro.md`](WhatsApp-Cerebro.md): router de mèdia entrante,
+[`WhatsApp-Cerebro.md`](../03-whatsapp-e-integraciones/WhatsApp-Cerebro.md): router de mèdia entrante,
 confirmaciones borrador→SÍ, informes de cierre del día, foto/PDF por WhatsApp e
 histórico importado. El diseño ya está decidido allí; no re-pensar, ejecutar.
 

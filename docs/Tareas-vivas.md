@@ -139,7 +139,7 @@
 - Cola duradera para media, paginación del resto de listados, roles internos y contexto documental reciente.
 - Revisar navegación administrativa por seis apartados y fichas; candidato local.
 - Voz, acuerdos/regiones, variables de marca y copia externa siguen pendientes.
-- Cal.com aplazado. Detalle en [revisión de frentes](Revision-frentes-2026-09-07.md).
+- Cal.com aplazado. Detalle en [revisión de frentes](09-historico/Revision-frentes-2026-09-07.md).
 
 > Único listado vivo de pendientes. La fotografía verificable está en
 > [`project-state.json`](project-state.json); planes y traspasos no duplican estados.
@@ -147,7 +147,7 @@
 ## P0 — publicar y pilotar con seguridad
 
 - [ ] Ejecutar los seis P0 de
-  [`cumplimiento/Plan-Datos-Servidores-Copias`](cumplimiento/Plan-Datos-Servidores-Copias.md):
+  [`cumplimiento/Plan-Datos-Servidores-Copias`](05-legal-y-rgpd/cumplimiento/Plan-Datos-Servidores-Copias.md):
   bucket de copias en un segundo proveedor europeo con credencial de solo
   escritura, versionado y bloqueo de objetos, cifrado en cliente antes de subir,
   primer simulacro de restauración externa cronometrado (hoy RPO y RTO son

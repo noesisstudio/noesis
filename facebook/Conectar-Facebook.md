@@ -24,7 +24,7 @@ de Facebook de siempre**; la primera vez aceptas las condiciones de desarrollado
 ya está. Es gratis.
 
 Y probablemente ya la tienes: la guía de WhatsApp del proyecto
-([`docs/Conectar-APIs.md`](../docs/Conectar-APIs.md)) ya hace crear una app de Meta
+([`docs/03-whatsapp-e-integraciones/Conectar-APIs.md`](../docs/03-whatsapp-e-integraciones/Conectar-APIs.md)) ya hace crear una app de Meta
 para copiar su clave secreta a `WHATSAPP_APP_SECRET`. **Si ese paso está hecho,
 reutiliza esa misma app** y sáltate el paso 1.
 
@@ -106,7 +106,7 @@ desarrollo. «Otro» deja la app limpia y esos permisos disponibles sin revisió
 | API de Threads | Otra red |
 | Juego instantáneo | Otro producto |
 | Inicio de sesión con Facebook | Sirve para que **un cliente** entre en Bynoesis con su cuenta de Facebook. No es esto |
-| Conectar con clientes por WhatsApp | Interesa, pero es **otro trámite**: exige porfolio empresarial y va por [`docs/Conectar-APIs.md`](../docs/Conectar-APIs.md) |
+| Conectar con clientes por WhatsApp | Interesa, pero es **otro trámite**: exige porfolio empresarial y va por [`docs/03-whatsapp-e-integraciones/Conectar-APIs.md`](../docs/03-whatsapp-e-integraciones/Conectar-APIs.md) |
 
 **Cuidado con «Crea una aplicación sin un caso de uso»**, que está en esa misma
 lista y suena a lo mismo. Da un identificador pelado, sin permisos ni productos, y

@@ -2,7 +2,7 @@
 
 > Copia esta plantilla para cada traspaso (Fable→Codex, Fable→Opus, Codex→Fable…).
 > El handoff debe poder leerse **sin acceso a la conversación que lo originó**.
-> Guárdalo como `docs/handoffs/AAAA-MM-DD-<tarea>.md` o como descripción del PR.
+> Guárdalo como `docs/08-agentes-ia/handoffs/AAAA-MM-DD-<tarea>.md` o como descripción del PR.
 > Contexto general del método: [[Metodo-operativo-Fable]].
 
 ---

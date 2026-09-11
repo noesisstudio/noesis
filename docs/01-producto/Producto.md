@@ -71,7 +71,7 @@ Detalle, fuentes, escala y supuestos editables en
 **Reparto de módulos** (decidido 2026-07): equipo + fichaje + **gestoría
 conectada** + análisis entran en Negocio (es lo que hace recomendable el plan
 medio); el **recepcionista de llamadas 24/7** (100 min/mes incluidos, ver
-`docs/Recepcionista-llamadas.md`) es el gancho exclusivo de Premium, y
+`docs/01-producto/Recepcionista-llamadas.md`) es el gancho exclusivo de Premium, y
 cuando salga de beta se ofrecerá como add-on de +15 €/mes en Negocio, de modo
 que las llamadas se autofinancian y no rompen el margen del 80%.
 

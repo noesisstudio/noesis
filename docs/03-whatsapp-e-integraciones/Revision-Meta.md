@@ -36,7 +36,7 @@ cobro. Justo la parte que el founder llama «el punto más diferencial».
 **No se ha arreglado por decisión de alcance**: repartir el texto en huecos cambia
 la redacción de lo que él recibe cada mañana, y esa redacción es producto, no
 implementación. Lo que sí está hecho es dejarlo listo para decidir:
-[`whatsapp_templates.py`](../src/noesis/whatsapp_templates.py) ya contiene los
+[`whatsapp_templates.py`](../../src/noesis/whatsapp_templates.py) ya contiene los
 cuerpos redactados, aprobables y con el mismo contenido de hoy repartido en
 valores de una línea.
 

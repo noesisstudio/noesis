@@ -894,11 +894,11 @@ La decisión recomendada a los socios es:
 
 - [`Producto.md`](Producto.md): posicionamiento y principio WhatsApp para hacer,
   SaaS para ver, entender, decidir y controlar.
-- [`project-state.json`](project-state.json): estado verificable del producto,
+- [`project-state.json`](../project-state.json): estado verificable del producto,
   esquema y validaciones todavía pendientes.
-- [`Tareas-vivas.md`](Tareas-vivas.md): piloto, métricas y guardarraíles operativos.
+- [`Tareas-vivas.md`](../Tareas-vivas.md): piloto, métricas y guardarraíles operativos.
 - [`Piloto-operativo.md`](Piloto-operativo.md): puerta de salida y recorrido real.
-- [`PRODUCT_PRINCIPLES.md`](design/PRODUCT_PRINCIPLES.md): jerarquía de producto y
+- [`PRODUCT_PRINCIPLES.md`](../design/PRODUCT_PRINCIPLES.md): jerarquía de producto y
   promesa de reducir ruido mental.
 - `src/noesis/db.py`: eventos, acciones del asistente y permisos existentes.
 - `src/noesis/web/scheduler.py`: resúmenes y automatizaciones periódicas actuales.

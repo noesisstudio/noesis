@@ -1,6 +1,6 @@
 """Genera el modelo economico de Bynoesis en xlsx.
 
-Todas las cifras proceden de docs/Unit-economics-y-cerebro-interno.md y de
+Todas las cifras proceden de docs/06-negocio-y-finanzas/Unit-economics-y-cerebro-interno.md y de
 analysis/build_unit_economics.mjs (fechadas 15/07/2026). Lo que no consta en el
 repositorio se deja como celda PENDIENTE: no se inventa ningun dato.
 """
@@ -1306,7 +1306,7 @@ ws.merge_cells("A18:D21")
 # --- Guardar ---------------------------------------------------------------
 DEFAULT_OUT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "docs", "Bynoesis-Modelo-Economico.xlsx",
+    "docs", "06-negocio-y-finanzas", "Bynoesis-Modelo-Economico.xlsx",
 )
 out = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OUT
 for s in wb.worksheets:

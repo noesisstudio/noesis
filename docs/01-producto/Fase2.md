@@ -22,7 +22,7 @@ y degrada con elegancia cuando falta una clave externa (mismo patrón que WhatsA
 - **Stripe** (cobrar de verdad): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
   `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` y sus tres
   equivalentes `_ANNUAL`.
-  Webhook → `POST /webhook/stripe`. Guía paso a paso: `docs/Despliegue.md`,
+  Webhook → `POST /webhook/stripe`. Guía paso a paso: `docs/02-tecnico/Despliegue.md`,
   sección "Activar Stripe". Sin esto, el alta entra en prueba y el cobro se
   gestiona a mano.
 - **Email** (reset de contraseña): `SMTP_HOST/PORT/USER/PASS/FROM`. Sin esto, el

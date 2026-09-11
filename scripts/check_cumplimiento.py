@@ -18,7 +18,7 @@ from datetime import date
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-CARPETA = RAIZ / "docs" / "cumplimiento"
+CARPETA = RAIZ / "docs" / "05-legal-y-rgpd" / "cumplimiento"
 
 # Documento -> meses máximos sin revisar. 0 = revisión continua, no caduca.
 PLAZOS: dict[str, int] = {

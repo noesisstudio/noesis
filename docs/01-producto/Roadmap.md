@@ -2,7 +2,7 @@
 
 > Dirección estable por etapas. No contiene números vivos de migración, tests,
 > commits o despliegues. La verdad verificable está en
-> [`project-state.json`](project-state.json) y el trabajo inmediato en
+> [`project-state.json`](../project-state.json) y el trabajo inmediato en
 > [[Tareas-vivas]].
 
 Principio rector: **publicar, conectar y pilotar antes de ampliar alcance**.

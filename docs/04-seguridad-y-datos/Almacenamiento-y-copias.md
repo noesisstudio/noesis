@@ -5,7 +5,7 @@
 > ocurre, dónde y con qué comando se comprueba.
 >
 > Las decisiones de arquitectura, proveedor y obligaciones legales están en
-> [`cumplimiento/Plan-Datos-Servidores-Copias`](cumplimiento/Plan-Datos-Servidores-Copias.md).
+> [`cumplimiento/Plan-Datos-Servidores-Copias`](../05-legal-y-rgpd/cumplimiento/Plan-Datos-Servidores-Copias.md).
 > Este documento no las repite: describe la implementación.
 
 ## 1. Las tres capas de almacenamiento
@@ -32,14 +32,14 @@ cada despliegue.
 
 Un autónomo hace una foto de un ticket y la sube por WhatsApp o por la web:
 
-1. **Validación** ([`documents/validation.py`](../src/noesis/documents/validation.py)):
+1. **Validación** ([`documents/validation.py`](../../src/noesis/documents/validation.py)):
    extensión en la allowlist (PDF, JPG, PNG, WEBP, HEIC), firma real del archivo,
    tamaño máximo `NOESIS_MAX_UPLOAD_MB` (15 MB), límite de páginas de PDF y de
    píxeles de imagen. Se rechaza el PDF con contenido activo.
-2. **Antivirus** ([`documents/malware.py`](../src/noesis/documents/malware.py)): si
+2. **Antivirus** ([`documents/malware.py`](../../src/noesis/documents/malware.py)): si
    `NOESIS_CLAMAV_HOST` está configurado, el contenido viaja en memoria al daemon
    privado por `INSTREAM`. **No se escribe en disco antes del veredicto.**
-3. **Escritura en disco** ([`documents/storage.py:52`](../src/noesis/documents/storage.py#L52)):
+3. **Escritura en disco** ([`documents/storage.py:52`](../../src/noesis/documents/storage.py#L52)):
 
    ```text
    {NOESIS_DOCS_PATH}/{business_id}/{uuid}.{ext}
@@ -49,7 +49,7 @@ Un autónomo hace una foto de un ticket y la sube por WhatsApp o por la web:
    usuario: no hay forma de salirse de la carpeta. Cada negocio tiene su
    subdirectorio, así que el aislamiento existe también a nivel de sistema de
    archivos, no solo en las consultas.
-4. **Metadatos en la base** (tabla `documents`, [`migrations.py:228`](../src/noesis/migrations.py#L228)):
+4. **Metadatos en la base** (tabla `documents`, [`migrations.py:228`](../../src/noesis/migrations.py#L228)):
    `business_id`, `client_id`, `invoice_id`, `filename` original, `stored_name`,
    `mime`, `size`, `note`, `created_at` y **`ocr_text`**.
 
@@ -59,7 +59,7 @@ cualquier volcado de la base lleva su contenido en texto plano.
 
 ## 3. Qué hace el sistema de copias
 
-Cada noche, `run_backup()` ([`web/backups.py`](../src/noesis/web/backups.py))
+Cada noche, `run_backup()` ([`web/backups.py`](../../src/noesis/web/backups.py))
 ejecuta cuatro pasos. El scheduler lo lanza una sola vez al día mediante
 `claim_scheduled_run`, así que dos instancias no duplican trabajo.
 
@@ -78,21 +78,21 @@ No se da una copia por buena sin restaurarla:
   fichero SQLite temporal), se comprueban las tablas clave y se comparan los
   recuentos con el origen. El esquema temporal se destruye después.
 - **Documentos**: se abre el ZIP, se comprueba su integridad, se recalcula el
-  sha256 de cada archivo y se compara con el manifiesto ([`backups.py:491`](../src/noesis/web/backups.py#L491)).
+  sha256 de cada archivo y se compara con el manifiesto ([`backups.py:491`](../../src/noesis/web/backups.py#L491)).
   Si falta uno o cambia un hash, la copia se marca como fallida.
 
 El resultado queda en la tabla `backup_runs` (migración 8) y lo lee el centro CISO
-de `/admin` ([`security_center.py:68`](../src/noesis/security_center.py#L68)): si
+de `/admin` ([`security_center.py:68`](../../src/noesis/security_center.py#L68)): si
 la última copia correcta tiene más de 48 horas, baja la nota y avisa.
 
 ### 3.3 Rotar
 
-`KEEP = 14` ([`backups.py:41`](../src/noesis/web/backups.py#L41)): se conservan las
+`KEEP = 14` ([`backups.py:41`](../../src/noesis/web/backups.py#L41)): se conservan las
 14 copias diarias más recientes de cada tipo y se borran las anteriores.
 
 ### 3.4 Subir fuera
 
-`_upload_offsite()` ([`backups.py:522`](../src/noesis/web/backups.py#L522)) firma la
+`_upload_offsite()` ([`backups.py:522`](../../src/noesis/web/backups.py#L522)) firma la
 petición con AWS Signature V4 y sube a cualquier almacén compatible con S3.
 Comportamiento exacto:
 
@@ -131,8 +131,8 @@ silencio**: no dan error, solo se descubren el día que hay que restaurar.
 
 | # | Problema | Dónde | Arreglo |
 |---|---|---|---|
-| 1 | `.env.example` documenta `NOESIS_BACKUP_DIR=/backups`, fuera del volumen montado en `/data`. Copiado tal cual al panel, **las copias se borran en cada despliegue**. El valor por defecto del código (`/data/backups`) sí es correcto: la variable explícita lo empeora | `.env.example`, [`config.py:497`](../src/noesis/config.py#L497) | Poner `/data/backups` o borrar la línea |
-| 2 | `NOESIS_DOCS_PATH` vacía significa `./uploads` dentro del contenedor: **los documentos desaparecen en cada despliegue**. Todo depende de que la variable esté puesta en el panel | [`config.py:112`](../src/noesis/config.py#L112) | Documentar `/data/uploads` y verificarlo al arrancar |
+| 1 | `.env.example` documenta `NOESIS_BACKUP_DIR=/backups`, fuera del volumen montado en `/data`. Copiado tal cual al panel, **las copias se borran en cada despliegue**. El valor por defecto del código (`/data/backups`) sí es correcto: la variable explícita lo empeora | `.env.example`, [`config.py:497`](../../src/noesis/config.py#L497) | Poner `/data/backups` o borrar la línea |
+| 2 | `NOESIS_DOCS_PATH` vacía significa `./uploads` dentro del contenedor: **los documentos desaparecen en cada despliegue**. Todo depende de que la variable esté puesta en el panel | [`config.py:112`](../../src/noesis/config.py#L112) | Documentar `/data/uploads` y verificarlo al arrancar |
 | 3 | Nada valida esas rutas. `/ready`, `production_check`, `readiness` e `integration_check` comprueban esquema y release, no almacenamiento | — | Comprobación de existencia, escritura y persistencia al arrancar |
 | 4 | Las copias viven en el mismo volumen que los originales, y son completas: con `KEEP = 14`, el volumen necesita **unas 15 veces** el tamaño del corpus documental. Al llenarse, fallan las subidas **y** las copias a la vez | `backups.py` | Copia externa (P0 del plan) y vigilancia de espacio libre |
 | 5 | No hay cuota por negocio ni control de espacio en disco | — | Cuota por plan; alerta al 80 % del volumen |
@@ -145,9 +145,9 @@ diferencia, los más urgentes: el resto degrada el servicio, esos dos lo vacían
 ## 6. Lo que este documento no cubre
 
 - Dónde **debería** estar alojado todo esto, con qué proveedor y bajo qué
-  jurisdicción: [`cumplimiento/Plan-Datos-Servidores-Copias`](cumplimiento/Plan-Datos-Servidores-Copias.md).
+  jurisdicción: [`cumplimiento/Plan-Datos-Servidores-Copias`](../05-legal-y-rgpd/cumplimiento/Plan-Datos-Servidores-Copias.md).
 - Cuánto tiempo se conserva cada dato y cómo se borra:
-  [`cumplimiento/Politica-de-retencion`](cumplimiento/Politica-de-retencion.md).
+  [`cumplimiento/Politica-de-retencion`](../05-legal-y-rgpd/cumplimiento/Politica-de-retencion.md).
 - Qué hacer cuando hay que restaurar de verdad:
-  [`cumplimiento/Continuidad-RPO-RTO`](cumplimiento/Continuidad-RPO-RTO.md).
+  [`cumplimiento/Continuidad-RPO-RTO`](../05-legal-y-rgpd/cumplimiento/Continuidad-RPO-RTO.md).
 - Amenazas y controles del producto: [`Seguridad-operativa`](Seguridad-operativa.md).

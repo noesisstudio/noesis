@@ -232,7 +232,7 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   Qwen3 8B para evaluación; no expone el modelo ni lo convierte en un SLA.
 - `analysis/build_unit_economics.mjs`: genera el modelo editable de costes, márgenes,
   escala, sensibilidad de IA y controles; fuente narrativa en
-  `docs/Analisis-unit-economics.ipynb`.
+  `docs/06-negocio-y-finanzas/Analisis-unit-economics.ipynb`.
 - `docs/project-state.json`: fuente de verdad legible por máquinas para versión de
   esquema, pruebas, precios, publicación, política de suscripción y validaciones
   externas pendientes.
@@ -475,7 +475,7 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
 - `templates/oficios.html` + `routers/invoicing.py`: la pantalla de plantillas por
   oficio. Muestra cada partida con su IVA, si es material o mano de obra y cuáles
   tiene ya el negocio; carga la plantilla sin duplicar lo existente.
-- `scripts/build_estado_xlsx.py`: genera `docs/Estado-Bynoesis.xlsx` leyendo los
+- `scripts/build_estado_xlsx.py`: genera `docs/03-whatsapp-e-integraciones/Estado-Bynoesis.xlsx` leyendo los
   módulos reales, sin dependencias — un `.xlsx` es un zip de XML y se escribe a
   mano. Vuelve a ejecutarlo cuando cambien las plantillas o los catálogos.
 - `src/noesis/web/routers/finance.py`: tesorería, conciliación CSV confirmada por el

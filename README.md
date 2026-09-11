@@ -57,7 +57,7 @@ noesis-web        # → http://127.0.0.1:8000
 ```
 
 - Demo comercial dentro del producto: autónomo y gestoría con datos ficticios
-  conectados, más portal de cliente. Ver [`docs/Demo-comercial.md`](docs/Demo-comercial.md).
+  conectados, más portal de cliente. Ver [`docs/01-producto/Demo-comercial.md`](docs/01-producto/Demo-comercial.md).
 - CLI de prueba (chat tipo WhatsApp): `py -m noesis`.
 - La IA es opcional: sin `ANTHROPIC_API_KEY` en `.env`, el chat funciona con el
   cerebro local. Sin `DATABASE_URL` usa SQLite local.
@@ -75,5 +75,5 @@ noesis-web        # → http://127.0.0.1:8000
 
 Manual para agentes de IA en [`AGENTS.md`](AGENTS.md) · visión y decisiones en
 [`docs/Inicio.md`](docs/Inicio.md) · conexión de servicios en
-[`docs/Conectar-APIs.md`](docs/Conectar-APIs.md) · roadmap en
-[`docs/Roadmap.md`](docs/Roadmap.md).
+[`docs/03-whatsapp-e-integraciones/Conectar-APIs.md`](docs/03-whatsapp-e-integraciones/Conectar-APIs.md) · roadmap en
+[`docs/01-producto/Roadmap.md`](docs/01-producto/Roadmap.md).

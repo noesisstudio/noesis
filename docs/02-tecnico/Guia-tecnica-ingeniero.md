@@ -2,7 +2,7 @@
 
 > **Propósito.** Documento de entrada para una persona de ingeniería que necesite entender Bynoesis de extremo a extremo: web, datos, cerebro, automatizaciones, WhatsApp, seguridad y dependencias externas.
 >
-> **Foto del código:** 20-07-2026 · esquema 33 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
+> **Foto del código:** 20-07-2026 · esquema 33 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](../project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.
 
 ## 1. Qué es el sistema
 
@@ -47,7 +47,7 @@ flowchart LR
 | Veri*Factu/AEAT | Registro, QR, XML, cola y cliente de remisión | Certificado, entorno AEAT y validación fiscal externa |
 | Backups externos | Proceso y soporte S3-compatible | Restauración real auditada |
 
-No se debe presentar una fila de la segunda columna como “integración activa” hasta completar la tercera. Las pendientes exactas viven en [`Tareas-vivas.md`](Tareas-vivas.md) y las credenciales, callbacks y pruebas en [`Conectar-APIs.md`](Conectar-APIs.md).
+No se debe presentar una fila de la segunda columna como “integración activa” hasta completar la tercera. Las pendientes exactas viven en [`Tareas-vivas.md`](../Tareas-vivas.md) y las credenciales, callbacks y pruebas en [`Conectar-APIs.md`](../03-whatsapp-e-integraciones/Conectar-APIs.md).
 
 ## 3. Arranque local y comprobaciones básicas
 
@@ -62,7 +62,7 @@ noesis-web                   # http://127.0.0.1:8000
 - Demo comercial dentro del producto, si está activado `NOESIS_SEED_DEMO`: dos
   accesos reales —autónomo y gestoría—, una cartera multiempresa y un portal de
   cliente, todos con datos ficticios y escritura bloqueada. Credenciales y
-  activación en [`Demo-comercial.md`](Demo-comercial.md). En local se prepara con
+  activación en [`Demo-comercial.md`](../01-producto/Demo-comercial.md). En local se prepara con
   `python -m noesis.demo`.
 - CLI de conversación: `python -m noesis`.
 - Sin `DATABASE_URL`, se usa SQLite; con `DATABASE_URL`, Postgres.
@@ -334,7 +334,7 @@ La tabla de ejecuciones programadas impide duplicados entre réplicas. Cuando un
 - `invoicing.py` conserva una frontera interna, pero el único proveedor es el motor
   nativo de Bynoesis: numeración, PDF y Veri*Factu no se delegan.
 
-La ingeniería debe tratar esta zona como sensible: no modificar numeración, inmutabilidad, cálculos o borrados sin revisar [`Fiscalidad.md`](Fiscalidad.md), pruebas y criterio de asesoría.
+La ingeniería debe tratar esta zona como sensible: no modificar numeración, inmutabilidad, cálculos o borrados sin revisar [`Fiscalidad.md`](../05-legal-y-rgpd/Fiscalidad.md), pruebas y criterio de asesoría.
 
 ## 12. Seguridad, privacidad y observabilidad
 
@@ -383,12 +383,12 @@ Para Railway, `railway.json` aplica migraciones en predeploy, arranca Uvicorn y 
 
 ## 15. Recorrido recomendado para la primera hora
 
-1. Leer [`AGENTS.md`](../AGENTS.md), `project-state.json`, [`Estado-actual-main.md`](Estado-actual-main.md) y [`Tareas-vivas.md`](Tareas-vivas.md).
+1. Leer [`AGENTS.md`](../../AGENTS.md), `project-state.json`, [`Estado-actual-main.md`](../Estado-actual-main.md) y [`Tareas-vivas.md`](../Tareas-vivas.md).
 2. Arrancar local y recorrer: `/`, login demo, Inicio, Clientes, Trabajos, Proyectos, Facturas, Documentos, Equipo, Asistente y Ajustes.
 3. Seguir un caso completo en código: `routers/projects.py` → `db.py` → plantilla → `tools.py` → `web/chat.py`.
 4. Leer el recorrido de WhatsApp en `webhooks.py` y `web/whatsapp.py`, después el scheduler y la outbox.
 5. Ejecutar tests y revisar `tests/test_backend.py` y `tests/postgres_smoke.py` como especificación ejecutable de invariantes.
-6. Consultar [`IA-local.md`](IA-local.md), [`Despliegue.md`](Despliegue.md), [`Fiscalidad.md`](Fiscalidad.md) y [`Decisiones.md`](Decisiones.md) antes de tocar esas áreas sensibles.
+6. Consultar [`IA-local.md`](IA-local.md), [`Despliegue.md`](Despliegue.md), [`Fiscalidad.md`](../05-legal-y-rgpd/Fiscalidad.md) y [`Decisiones.md`](../Decisiones.md) antes de tocar esas áreas sensibles.
 
 ## 16. Preguntas operativas que deben resolverse antes del piloto
 

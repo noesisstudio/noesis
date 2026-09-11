@@ -1,7 +1,7 @@
 # WhatsApp como centro de operaciones — diseño para ejecutar
 
 > **Documento histórico de diseño e implementación.** No usar sus fases o números
-> de migración como estado vivo. Consultar [`project-state.json`](project-state.json),
+> de migración como estado vivo. Consultar [`project-state.json`](../project-state.json),
 > [[Tareas-vivas]] y [[Conectar-APIs]] para saber qué está construido y qué falta
 > validar con Meta.
 

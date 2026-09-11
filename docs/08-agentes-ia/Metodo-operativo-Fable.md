@@ -5,15 +5,15 @@
 > criterio con el que se ha ordenado este producto, explicado para que **Opus pueda
 > revisar estrategia** y **Codex pueda ejecutar código** sin reinterpretar el
 > proyecto desde cero. Si trabajas en este repo y solo puedes leer dos documentos,
-> lee [`AGENTS.md`](../AGENTS.md) y este.
+> lee [`AGENTS.md`](../../AGENTS.md) y este.
 >
 > Se actualiza cuando cambia el criterio general (ver §9, protocolo de continuidad).
 > Última revisión de continuidad: **2026-07-20**.
 >
 > **Dirección de producto y diseño (fijada 2026-07-08):** la piel y el lenguaje de
-> Bynoesis se rigen por `docs/design/` — [`PRODUCT_PRINCIPLES.md`](design/PRODUCT_PRINCIPLES.md)
-> (la frase pilar, el modelo mente/cuerpo y las seis leyes), [`DESIGN.md`](design/DESIGN.md),
-> [`UX_COPY.md`](design/UX_COPY.md) y [`STYLE_TOKENS.json`](design/STYLE_TOKENS.json).
+> Bynoesis se rigen por `docs/design/` — [`PRODUCT_PRINCIPLES.md`](../design/PRODUCT_PRINCIPLES.md)
+> (la frase pilar, el modelo mente/cuerpo y las seis leyes), [`DESIGN.md`](../design/DESIGN.md),
+> [`UX_COPY.md`](../design/UX_COPY.md) y [`STYLE_TOKENS.json`](../design/STYLE_TOKENS.json).
 > Antes de tocar cualquier pantalla o copy, léelos.
 
 ---
@@ -216,7 +216,7 @@ Codex ejecuta sin desviarse de la arquitectura. Reglas de trabajo:
   con sus criterios de aceptación. Verificar que se está en `main`, actualizado y
   limpio, salvo que el founder haya pedido expresamente una rama/PR.
 - **Qué existe y dónde**: el mapa vivo es [[Mapa-codigo]]; la versión de esquema y
-  las pruebas están únicamente en [`project-state.json`](project-state.json). Las
+  las pruebas están únicamente en [`project-state.json`](../project-state.json). Las
   rutas viven en `web/routers/`, los datos en `db.py` + `migrations.py`, documentos
   en `documents/`, IA en `agent.py` / `nlu.py` / `web/chat.py` y proveedores en
   `adapters/`.

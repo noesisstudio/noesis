@@ -22,7 +22,7 @@ están en `docs/`, empezando por [`docs/Inicio.md`](docs/Inicio.md).
 Copiloto de negocio por WhatsApp para autónomos de servicios: fontanería,
 electricidad, reformas, limpieza, jardinería y similares. Gestiona agenda, clientes,
 cobros, documentos, proyectos y facturas para quitar ruido mental. Detalle en
-[`docs/Producto.md`](docs/Producto.md).
+[`docs/01-producto/Producto.md`](docs/01-producto/Producto.md).
 
 ## 2. Cómo arrancar
 
@@ -35,12 +35,12 @@ noesis-web
 
 - Demo comercial real: `python -m noesis.demo` crea un autónomo, una cartera de
   gestoría y un portal de cliente conectados y de solo lectura. Accesos y activación
-  en [`docs/Demo-comercial.md`](docs/Demo-comercial.md).
+  en [`docs/01-producto/Demo-comercial.md`](docs/01-producto/Demo-comercial.md).
 - CLI de chat: `py -m noesis`.
 - Sin proveedor de IA, el producto funciona con `nlu.py`. Un servicio privado se
-  configura según [`docs/IA-local.md`](docs/IA-local.md); la IA externa requiere
+  configura según [`docs/02-tecnico/IA-local.md`](docs/02-tecnico/IA-local.md); la IA externa requiere
   `ANTHROPIC_API_KEY` y consentimiento por negocio.
-- Credenciales, callbacks y pruebas externas: [`docs/Conectar-APIs.md`](docs/Conectar-APIs.md).
+- Credenciales, callbacks y pruebas externas: [`docs/03-whatsapp-e-integraciones/Conectar-APIs.md`](docs/03-whatsapp-e-integraciones/Conectar-APIs.md).
 
 ## 3. Arquitectura resumida
 
@@ -74,7 +74,7 @@ Archivos clave:
 3. Rutinas y cálculos en local. Solo el contenido no resuelto puede llegar a un
    proveedor externo autorizado.
 4. Toda lectura/escritura filtra por `business_id`; rutas `/b/` y `/api/` con sesión.
-5. IVA 21/10/4/0 e IRPF. Total = base + IVA - IRPF. Ver `docs/Fiscalidad.md`.
+5. IVA 21/10/4/0 e IRPF. Total = base + IVA - IRPF. Ver `docs/05-legal-y-rgpd/Fiscalidad.md`.
 6. Marca: `#14463b`, `#2e8b74`, `#f4f1e8`; usar variables de `app.css`.
 7. Facturación, pagos, email, voz, IA y extracción detrás de adaptadores.
 8. Bynoesis prepara; el autónomo confirma dinero, fiscalidad y acciones irreversibles.
@@ -122,6 +122,6 @@ fusionar código sin actualizar la foto y el registro de QA.
 
 ## 8. Criterio heredable
 
-El método está en [`docs/Metodo-operativo-Fable.md`](docs/Metodo-operativo-Fable.md).
-Los traspasos usan [`docs/AI_HANDOFF_TEMPLATE.md`](docs/AI_HANDOFF_TEMPLATE.md) y
+El método está en [`docs/08-agentes-ia/Metodo-operativo-Fable.md`](docs/08-agentes-ia/Metodo-operativo-Fable.md).
+Los traspasos usan [`docs/08-agentes-ia/AI_HANDOFF_TEMPLATE.md`](docs/08-agentes-ia/AI_HANDOFF_TEMPLATE.md) y
 las dudas del founder viven en [`docs/Preguntas-abiertas.md`](docs/Preguntas-abiertas.md).

@@ -923,8 +923,8 @@ def add_sources(doc: Document):
     add_title(doc, "Fuentes y límites", "Qué sostiene este manual y qué debe validarse con mercado real")
     add_heading(doc, "Fuentes internas", 1)
     for item in (
-        "docs/Producto.md y docs/design/PRODUCT_PRINCIPLES.md — propósito, experiencia y confirmación humana.",
-        "docs/Estrategia-Marketing.html — ICP, pilotos, fases y guardarraíles de adquisición.",
+        "docs/01-producto/Producto.md y docs/design/PRODUCT_PRINCIPLES.md — propósito, experiencia y confirmación humana.",
+        "docs/07-marketing/Estrategia-Marketing.html — ICP, pilotos, fases y guardarraíles de adquisición.",
         "docs/project-state.json — capacidades verificadas y validaciones externas pendientes.",
         "branding/BRAND_GUIDE.md y branding/redes-sociales/ — identidad y configuración de canales.",
     ):

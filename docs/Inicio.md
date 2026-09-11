@@ -3,6 +3,26 @@
 Mapa de contenido (MOC) del proyecto. Abre esta carpeta como *vault* en Obsidian y
 usa la vista de grafo para navegar.
 
+## Cómo está ordenada la carpeta
+
+| Carpeta | Qué contiene |
+|---|---|
+| `docs/` (raíz) | Núcleo vivo: este índice, `project-state.json`, estado, tareas, bitácoras, decisiones, arquitectura y mapa de código. Sus rutas son fijas: las usan la CI, la comprobación de producción y los agentes. |
+| `01-producto/` | Qué es Bynoesis, plan maestro, roadmap, retención, demo y piloto. |
+| `02-tecnico/` | Guía de ingeniería, despliegue, IA local, fiabilidad conversacional y diagnóstico. |
+| `03-whatsapp-e-integraciones/` | WhatsApp, Meta, Google, correo y la guía única de credenciales. |
+| `04-seguridad-y-datos/` | Seguridad operativa, permisos, almacenamiento, copias y residencia de datos. |
+| `05-legal-y-rgpd/` | Ruta legal, constitución, fiscalidad, RGPD y `cumplimiento/` (RAT, EIPD, brechas...). |
+| `06-negocio-y-finanzas/` | Primer euro, plan a 60 días, unit economics, costes, modelo económico y mercado. |
+| `07-marketing/` | Estrategia, manual maestro, calendario, guiones y publicación en redes. |
+| `08-agentes-ia/` | Método de trabajo, plantilla y archivo de traspasos, prompts. |
+| `09-historico/` | Auditorías, revisiones y fotos fechadas que ya no son estado actual. |
+| `design/` | Sistema de diseño (principios, tokens, copy). |
+| `qa/` | Capturas de evidencia citadas en `Registro-QA`. |
+
+Documento nuevo: al tema que le toque, nunca suelto en la raíz. Los enlaces
+`[[Nombre]]` de Obsidian funcionan esté donde esté el archivo.
+
 ## Mapa
 - [[Estado-actual-main]] — única fotografía viva de lo construido y publicado.
 - [[Tareas-vivas]] — único listado vivo de pendientes y prioridades.
@@ -18,17 +38,17 @@ usa la vista de grafo para navegar.
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
 - [[Arquitectura]] — cómo está construido el sistema.
-- [`Permisos-y-acceso.pdf`](Permisos-y-acceso.pdf) — las cuatro identidades, qué
+- [`Permisos-y-acceso.pdf`](04-seguridad-y-datos/Permisos-y-acceso.pdf) — las cuatro identidades, qué
   puede hacer cada una, cómo se da y se quita acceso, y cómo cumple el RGPD.
 - [[Seguridad-operativa]] — amenazas, controles, secretos, incidentes y puerta de
   salida segura al piloto.
 - [[Almacenamiento-y-copias]] — foto técnica de dónde vive cada archivo, qué hace
   exactamente el sistema de copias y sus siete puntos débiles conocidos.
-- [`cumplimiento/`](cumplimiento/README.md) — dónde se almacena cada dato, en qué
+- [`cumplimiento/`](05-legal-y-rgpd/cumplimiento/README.md) — dónde se almacena cada dato, en qué
   servidores, cómo se hacen las copias y qué exige la normativa europea: registro
   del art. 30, retención, subencargados y transferencias, riesgos, brechas,
   derechos y continuidad con RPO/RTO. El prompt que lo generó está en
-  [`prompts/Prompt-Seguridad-Datos-UE`](prompts/Prompt-Seguridad-Datos-UE.md).
+  [`prompts/Prompt-Seguridad-Datos-UE`](08-agentes-ia/prompts/Prompt-Seguridad-Datos-UE.md).
 - [[RGPD-Registro-actividades]] — inventario vivo de tratamientos como responsable
   y como encargado, con categorías, bases, destinatarios y controles.
 - [[RGPD-Matriz-proveedores]] — rol, datos, activación y evidencia contractual que
@@ -37,26 +57,26 @@ usa la vista de grafo para navegar.
   resolución y prueba de las solicitudes de derechos y baja.
 - [[RGPD-Procedimiento-brechas]] — contención, evaluación, comunicaciones y cierre
   de incidentes con datos personales.
-- [`Diagnostico.pdf`](Diagnostico.pdf) — cuando algo falla, dónde mirar: las siete
+- [`Diagnostico.pdf`](02-tecnico/Diagnostico.pdf) — cuando algo falla, dónde mirar: las siete
   piezas, las cuatro puertas de una petición, síntomas y causas, y qué preguntar.
-- [`Diagnostico-tecnico.pdf`](Diagnostico-tecnico.pdf) — lo mismo con el archivo, la
+- [`Diagnostico-tecnico.pdf`](02-tecnico/Diagnostico-tecnico.pdf) — lo mismo con el archivo, la
   función y la tabla al lado, más cómo levantar el proyecto desde cero.
 - [[Guia-tecnica-ingeniero]] — entrada técnica de extremo a extremo para ingeniería:
   web, datos, cerebro, automatizaciones, WhatsApp y despliegue.
-- [`WhatsApp-Como-funciona.pdf`](WhatsApp-Como-funciona.pdf) — el canal multicanal
+- [`WhatsApp-Como-funciona.pdf`](03-whatsapp-e-integraciones/WhatsApp-Como-funciona.pdf) — el canal multicanal
   explicado sin código: los dos tipos de número, por qué el receptor decide antes
   que el remitente, qué ve cada rol y qué falta por validar.
-- [`Meta-Verificacion.pdf`](Meta-Verificacion.pdf) — qué hay que completar de
+- [`Meta-Verificacion.pdf`](03-whatsapp-e-integraciones/Meta-Verificacion.pdf) — qué hay que completar de
   verdad en Meta y qué se puede ignorar: los dos caminos, por qué la revisión de
   la aplicación no hace falta todavía, y cómo verificar cada pieza.
-- [`WhatsApp-Puesta-en-marcha.pdf`](WhatsApp-Puesta-en-marcha.pdf) — runbook visual
+- [`WhatsApp-Puesta-en-marcha.pdf`](03-whatsapp-e-integraciones/WhatsApp-Puesta-en-marcha.pdf) — runbook visual
   para llevar Meta Cloud API del número de prueba a clientes reales: canal central,
   alta de números comerciales, plantillas y prueba con dos negocios. El `.html` del
   mismo nombre es la fuente: se edita ahí y se reimprime el PDF.
-- [`Conectar-Correo.pdf`](Conectar-Correo.pdf) — guía del correo saliente con
+- [`Conectar-Correo.pdf`](03-whatsapp-e-integraciones/Conectar-Correo.pdf) — guía del correo saliente con
   Brevo: por qué un servidor no puede enviar solo, autenticar el dominio para no
   caer en spam, las dos variables y la prueba de aceptación.
-- [`Conectar-Google.pdf`](Conectar-Google.pdf) — guía completa del acceso con
+- [`Conectar-Google.pdf`](03-whatsapp-e-integraciones/Conectar-Google.pdf) — guía completa del acceso con
   Google: por qué bloquea hoy el panel de administración, los cinco pasos en la
   consola, las dos variables, la prueba de aceptación y los errores típicos.
 - [`facebook/Conectar-Facebook.html`](../facebook/Conectar-Facebook.html) — guía
@@ -69,26 +89,26 @@ usa la vista de grafo para navegar.
   credenciales, solo lectura y activación segura.
 - [[IA-local]] — servicio privado, enrutamiento y límites de IA.
 - [[Analisis-coste-IA.ipynb]] — cálculo reproducible de coste y autoalojamiento.
-- [`Bynoesis-Modelo-Economico.xlsx`](Bynoesis-Modelo-Economico.xlsx) — modelo vivo:
+- [`Bynoesis-Modelo-Economico.xlsx`](06-negocio-y-finanzas/Bynoesis-Modelo-Economico.xlsx) — modelo vivo:
   supuestos, unit economics, escenarios, proyección a 24 meses, sensibilidad,
   capacidad de soporte, captación y KPIs del piloto. Se regenera con
   `python analysis/build_modelo_economico.py`.
-- [`Estrategia-Marketing.pdf`](Estrategia-Marketing.pdf) — a quién vendemos, con qué
+- [`Estrategia-Marketing.pdf`](07-marketing/Estrategia-Marketing.pdf) — a quién vendemos, con qué
   mensaje, por qué canales, cuánto podemos pagar por un cliente, dónde entra la IA
   y las vías de escape con sus criterios de parada.
-- [`Marketing-Bynoesis.pdf`](Marketing-Bynoesis.pdf) — **manual maestro de marketing**:
+- [`Marketing-Bynoesis.pdf`](07-marketing/Marketing-Bynoesis.pdf) — **manual maestro de marketing**:
   consolida la estrategia, la marca, las 24 piezas de contenido con su gancho, copy,
   CTA y métrica, la producción, la publicación en Instagram y Facebook, la medición
   y los criterios de parada. Sustituye a `Estrategia-Marketing` y `Publicar-en-redes`.
-- [`Publicar-en-redes.pdf`](Publicar-en-redes.pdf) — manual operativo de publicación
+- [`Publicar-en-redes.pdf`](07-marketing/Publicar-en-redes.pdf) — manual operativo de publicación
   en Instagram y Facebook. Su contenido está incorporado al manual maestro.
-- [`Ruta-legal.pdf`](Ruta-legal.pdf) — qué falta para poder cobrar el primer euro:
+- [`Ruta-legal.pdf`](05-legal-y-rgpd/Ruta-legal.pdf) — qué falta para poder cobrar el primer euro:
   Veri*Factu como productor, App Review de Meta, AI Act y protección de datos; tres
   rutas completas con su coste y el material para encargar las revisiones.
-- [`Plan-60-dias.pdf`](Plan-60-dias.pdf) — el plan de ejecución que pone fecha a todo
+- [`Plan-60-dias.pdf`](06-negocio-y-finanzas/Plan-60-dias.pdf) — el plan de ejecución que pone fecha a todo
   lo anterior: cuatro frentes en paralelo, nueve semanas y una puerta de salida por
   semana.
-- [`Estado-Bynoesis.xlsx`](Estado-Bynoesis.xlsx) — estado de cada pieza en hoja de cálculo:
+- [`Estado-Bynoesis.xlsx`](03-whatsapp-e-integraciones/Estado-Bynoesis.xlsx) — estado de cada pieza en hoja de cálculo:
   canal de Meta, plantillas y catálogos por oficio. Se regenera con
   `python scripts/build_estado_xlsx.py`.
 - [[Constitucion-y-primer-euro]] — la pieza que `Ruta-legal` no cubre: S.L. o
@@ -112,7 +132,7 @@ usa la vista de grafo para navegar.
 - [[Metodo-operativo-Fable]] — el criterio de trabajo, heredable por Opus y Codex.
 - [[Preguntas-abiertas]] — dudas que esperan respuesta del founder.
 - [[Estado-traspaso-MVP]] — estado real y traspaso entre agentes.
-- [`AI_HANDOFF_TEMPLATE.md`](AI_HANDOFF_TEMPLATE.md) — plantilla de traspaso.
+- [`AI_HANDOFF_TEMPLATE.md`](08-agentes-ia/AI_HANDOFF_TEMPLATE.md) — plantilla de traspaso.
 
 ## Estado en una frase
 

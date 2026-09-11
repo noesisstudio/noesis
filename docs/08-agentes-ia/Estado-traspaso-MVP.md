@@ -235,4 +235,4 @@ Notas: el coste de IA ya está minimizado (cerebro local gratis + respaldo en Ha
 3. Probar el ciclo completo con un negocio real y anotar fricciones.
 4. Dar de alta 3-5 autónomos del mismo perfil para el piloto.
 
-Ver también: `docs/Roadmap.md`, `docs/Arquitectura.md`, `docs/Producto.md`.
+Ver también: `docs/01-producto/Roadmap.md`, `docs/Arquitectura.md`, `docs/01-producto/Producto.md`.

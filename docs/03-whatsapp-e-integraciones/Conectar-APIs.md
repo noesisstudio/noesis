@@ -167,7 +167,7 @@ NOESIS_RESET_DB=false
 
 Railway inyecta `PORT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_PUBLIC_DOMAIN` y el SHA del
 commit. Tras el despliegue hay que aplicar la versión de esquema indicada en
-[`project-state.json`](project-state.json), comprobar `GET /health`, `GET /ready`
+[`project-state.json`](../project-state.json), comprobar `GET /health`, `GET /ready`
 y verificar que ambos responden con el release esperado y que `/ready` muestra la
 migración vigente. Después se ejecutan:
 
@@ -200,7 +200,7 @@ modifica la base activa.
 
 Para crear las dos cuentas comerciales dentro del producto, activar
 `NOESIS_SEED_DEMO=true` durante un despliegue y seguir
-[`Demo-comercial.md`](Demo-comercial.md). No es una credencial ni una base aparte;
+[`Demo-comercial.md`](../01-producto/Demo-comercial.md). No es una credencial ni una base aparte;
 la migración 40 marca esas empresas como solo lectura. Después puede volver a
 `false` sin borrar los registros.
 
@@ -659,4 +659,4 @@ tarea aprobada, adaptador, pruebas y política de permisos.
 
 Una integración se marca conectada solo con evidencia de la prueba, no porque sus
 variables existan. El resultado se registra en [[Registro-QA]] y el estado verificable
-en [`project-state.json`](project-state.json).
+en [`project-state.json`](../project-state.json).
