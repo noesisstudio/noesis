@@ -171,6 +171,26 @@ class ReadinessTestCase(unittest.TestCase):
         self.assertEqual(by_area["alta pública"]["status"], "warning")
         self.assertFalse(report["ready"])
 
+    def test_company_provider_is_warned_to_publish_registry_data(self):
+        casos = (
+            ("B12345678", "", True),
+            ("B12345678", "Registro Mercantil de Barcelona, tomo 1, hoja B-1", False),
+            ("12345678Z", "", False),
+            ("", "", False),
+        )
+        for nif, registro, avisa in casos:
+            with (
+                self.subTest(nif=nif, registro=registro),
+                patch.dict(os.environ, {}, clear=True),
+                patch.object(config, "LEGAL_NIF", nif),
+                patch.object(config, "LEGAL_REGISTRY", registro),
+            ):
+                report = readiness.collect_readiness(check_database=False)
+                areas = {item["area"]: item for item in report["checks"]}
+                self.assertEqual("datos registrales" in areas, avisa)
+                if avisa:
+                    self.assertEqual(areas["datos registrales"]["status"], "warning")
+
     def test_open_production_requires_operational_services(self):
         with (
             patch.dict(os.environ, {}, clear=True),

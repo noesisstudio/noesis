@@ -104,6 +104,13 @@ def collect_readiness(*, check_database: bool = True) -> dict:
             "NOESIS_LEGAL_ADDRESS y NOESIS_LEGAL_EMAIL; revisión profesional pendiente."
         ) if not legal_ok else "",
     ))
+    if config.legal_registry_missing():
+        checks.append(ReadinessCheck(
+            "datos registrales", "warning",
+            "El prestador es una sociedad y no publica sus datos registrales.",
+            "Completa NOESIS_LEGAL_REGISTRY con Registro Mercantil, tomo, folio, "
+            "hoja e inscripción; el aviso legal los muestra al configurarla.",
+        ))
     provider_legal_ok = config.legal_provider_context_ready()
     checks.append(ReadinessCheck(
         "proveedores legales",

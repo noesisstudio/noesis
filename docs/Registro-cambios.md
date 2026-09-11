@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-09-11 — Preparar el cambio a S.L., webhook y voz
+
+Objetivo: que el paso de la identidad legal a la S.L. sea solo configuración y
+cerrar tres fallos. Áreas: `config.py` (`NOESIS_LEGAL_DOCUMENT_VERSION` validada,
+`legal_registry_missing`), `readiness.py` (aviso «datos registrales»),
+`routers/webhooks.py` (token de verificación vacío rechazado, `compare_digest`,
+`text/plain`), `web/whatsapp.py` (`_audio_to_text` captura un transcriptor privado
+mal configurado), `.env.example`, pruebas y la lista «El día del NIF» en
+`Constitucion-y-primer-euro`. Pruebas en Registro-QA. Sin migraciones.
+Riesgo bajo: el aviso no bloquea; si `WHATSAPP_VERIFY_TOKEN` faltara en desarrollo,
+la verificación de Meta ahora devuelve 403. Rollback: revertir el commit.
+
 ## 2026-09-11 — `docs/` ordenada por temas
 
 Petición del founder: ordenar la documentación. 86 archivos pasan de la raíz de

@@ -283,6 +283,23 @@ class SecurityHardeningTestCase(unittest.TestCase):
                 None, None, 302, "Found", {}, "https://evil.example/internal"
             )
 
+    def test_whatsapp_verification_never_accepts_an_empty_token(self):
+        url = "/webhook/whatsapp?hub.mode=subscribe&hub.challenge=reto"
+        with patch.object(config, "LOG_REQUESTS", False), TestClient(server.app) as client:
+            with (
+                patch.object(config, "IS_PRODUCTION", True),
+                patch.dict("os.environ", {"WHATSAPP_VERIFY_TOKEN": ""}),
+            ):
+                vacio = client.get(url + "&hub.verify_token=")
+            with patch.dict("os.environ", {"WHATSAPP_VERIFY_TOKEN": "secreto-meta"}):
+                erroneo = client.get(url + "&hub.verify_token=otro")
+                correcto = client.get(url + "&hub.verify_token=secreto-meta")
+        self.assertEqual(vacio.status_code, 403)
+        self.assertEqual(erroneo.status_code, 403)
+        self.assertEqual(correcto.status_code, 200)
+        self.assertEqual(correcto.text, "reto")
+        self.assertTrue(correcto.headers["content-type"].startswith("text/plain"))
+
 
 class FiscalInvariantTestCase(unittest.TestCase):
     @settings(max_examples=80, deadline=None)

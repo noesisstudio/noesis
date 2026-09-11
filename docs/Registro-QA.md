@@ -1,5 +1,21 @@
 ﻿# Registro de QA
 
+## 2026-09-11 — Preparación de la S.L., webhook y voz
+
+- Suite completa local sobre 2c05db5 (antes de estos cambios): 800 pruebas,
+  799 OK en 2.631 s. Falla `test_owner_pdf_never_presents_a_draft_as_final` solo
+  en el equipo del founder: su `.env` tiene token real de Meta y la prueba subía
+  el PDF del borrador a Meta (sin enviar mensaje). En CI no hay credenciales.
+  Corregido aislándola de `_TOKEN`/`_PHONE_ID`; el envío del borrador marcado ya
+  lo cubre `test_invoice_conversation`.
+- Nuevas: verificación de webhook Meta con token vacío/erróneo/correcto; aviso de
+  datos registrales para NIF de sociedad, autónomo y vacío; transcriptor privado
+  mal configurado devuelve `None` sin descargar el audio.
+- Dirigidas tras los cambios: WhatsApp media + conversación de facturas +
+  multicanal 47 OK; voz privada + readiness + seguridad 33 OK. Ruff OK.
+- No ejecutado: suite completa sobre el commit final, CI, despliegue ni Meta real.
+  Imagen de `infra/whisper` sin construir (no hay Docker local).
+
 ## 2026-09-10 — Precio final, emisión contextual y media real
 
 - Baseline de3b33d: CI 34465469977 success.

@@ -5948,7 +5948,13 @@ class WhatsappMediaTestCase(unittest.TestCase):
             business_id=business["id"],
         )
         replies = []
+        # Sin credenciales: la subida del borrador falla y nunca se presenta como
+        # enviado. Con el `.env` de un desarrollador subiría un PDF real a Meta.
+        # El envío correcto del borrador marcado se prueba en
+        # test_invoice_conversation.
         with (
+            patch.object(whatsapp, "_TOKEN", ""),
+            patch.object(whatsapp, "_PHONE_ID", ""),
             patch.object(whatsapp, "_post_to_meta") as post,
             patch.object(whatsapp, "send",
                          side_effect=lambda phone, text, **kw: replies.append(text)),

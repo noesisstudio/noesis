@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import os
@@ -64,8 +65,18 @@ def whatsapp_verify(request: Request):
     # Verificación del webhook de Meta: devuelve el challenge solo si el token coincide.
     params = request.query_params
     expected = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
-    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == expected:
-        return Response(content=params.get("hub.challenge", ""))
+    # Un token vacío nunca verifica: si faltara la variable, `hub.verify_token=`
+    # vacío coincidiría con ella. Comparación en tiempo constante.
+    if (
+        expected
+        and params.get("hub.mode") == "subscribe"
+        and hmac.compare_digest(
+            params.get("hub.verify_token", "").encode(), expected.encode()
+        )
+    ):
+        return Response(
+            content=params.get("hub.challenge", ""), media_type="text/plain"
+        )
     if not expected and not config.IS_PRODUCTION:
         return Response(content=params.get("hub.challenge", "ok"))
     return JSONResponse({"error": "token inválido"}, status_code=403)

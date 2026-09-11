@@ -197,6 +197,33 @@ Por eso el **NIF provisional del modelo 036** es el hito que más desbloquea de 
 el proceso: llega pocos días después de la escritura y abre a la vez Stripe, la
 identidad legal del producto y el encargo al abogado.
 
+### El día del NIF: pasar Bynoesis a la S.L.
+
+Todo es configuración en Railway; no hace falta tocar código. Los datos deben ser
+**idénticos, carácter por carácter**, en Railway, Stripe, Meta y Google: Meta
+rechaza la verificación cuando el nombre o el domicilio no coinciden.
+
+1. En Railway (servicio web), con la razón social exacta de la escritura:
+   `NOESIS_LEGAL_NAME` («Bynoesis S.L.» o la denominación concedida),
+   `NOESIS_LEGAL_NIF` (el provisional sirve), `NOESIS_LEGAL_ADDRESS` (domicilio
+   social), `NOESIS_LEGAL_EMAIL` y, en cuanto la inscripción esté hecha,
+   `NOESIS_LEGAL_REGISTRY` («Registro Mercantil de …, tomo …, folio …, hoja …,
+   inscripción 1.ª»). Con un NIF de sociedad y sin datos registrales,
+   `noesis-doctor` avisa: la LSSI obliga a publicarlos.
+2. `NOESIS_LEGAL_DOCUMENT_VERSION` con la fecha del cambio (AAAA-MM-DD): cambia la
+   «Última actualización» de aviso legal, términos y cumplimiento y la versión que
+   queda registrada al aceptar los términos.
+3. Comprobar `/aviso-legal`, `/privacidad`, `/terminos` y `/encargado-tratamiento`
+   en producción y ejecutar `noesis-doctor --strict`.
+4. Stripe: cuenta a nombre de la S.L. (o cambio de titular de la existente) antes de
+   crear los precios live. Meta Business Manager y la pantalla de consentimiento
+   OAuth de Google con la misma razón social y dominio `bynoesis.com`.
+5. Si ya hay cuentas reales que aceptaron los textos con el titular anterior,
+   avisarlas del cambio de responsable por correo: el aviso automático (punto 3.5
+   de [[RGPD-QUE-HACER]]) todavía no existe.
+6. Firmar en la escritura la cesión a la S.L. del código, la marca y el dominio
+   (bloque E): si no, el activo principal sigue a nombre personal.
+
 ### Corrección sobre Meta
 
 Una versión anterior de este documento decía que la verificación de empresa y la

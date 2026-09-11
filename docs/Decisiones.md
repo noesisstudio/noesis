@@ -2,6 +2,16 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Cambio de titular sin tocar código y pruebas sin credenciales (2026-09-11)
+
+El founder constituye la S.L. la semana del 14-sep. La identidad legal ya salía
+de entorno; ahora también la fecha de los textos (`NOESIS_LEGAL_DOCUMENT_VERSION`)
+y `noesis-doctor` avisa si un NIF de sociedad no publica datos registrales (LSSI
+art. 10). Es aviso y no bloqueo para no tumbar producción durante la inscripción.
+Una prueba de WhatsApp subía un PDF real a Meta con el `.env` del desarrollador:
+las pruebas nunca deben depender de credenciales locales. La verificación del
+webhook de Meta no acepta un token vacío.
+
 ## Separar comprensión, autorización y ejecución (2026-09-10)
 
 El agente empieza a usar un plan de intención sin efectos. «Envíame» no significa

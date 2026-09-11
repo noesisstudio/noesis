@@ -73,6 +73,13 @@ class PrivateVoiceTests(unittest.TestCase):
                 transcription.get_transcriber()
             groq.assert_not_called()
 
+    def test_misconfigured_private_voice_does_not_break_whatsapp_webhook(self):
+        from noesis.web import whatsapp
+        with patch.dict(os.environ, {"NOESIS_PRIVATE_WHISPER_TOKEN": "short"}), \
+             patch.object(whatsapp, "_download_media") as download:
+            self.assertIsNone(whatsapp._audio_to_text("123"))
+        download.assert_not_called()
+
     def test_model_busy_is_rejected(self):
         with patch.object(private_voice._busy, "locked", return_value=True):
             self.assertEqual(self.client.post("/transcribe", headers=self.headers, content=b"audio").status_code, 429)

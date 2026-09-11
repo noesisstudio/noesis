@@ -279,7 +279,15 @@ LEGAL_NIF = os.getenv("NOESIS_LEGAL_NIF", "").strip().upper()
 LEGAL_ADDRESS = os.getenv("NOESIS_LEGAL_ADDRESS", "").strip()
 LEGAL_EMAIL = os.getenv("NOESIS_LEGAL_EMAIL", "").strip().lower()
 LEGAL_REGISTRY = os.getenv("NOESIS_LEGAL_REGISTRY", "").strip()
-LEGAL_DOCUMENT_VERSION = "2026-09-03"
+# Fecha de los textos legales. Se guarda al aceptar términos y se publica como
+# «Última actualización»; al cambiar el titular (p. ej. de autónomo a S.L.) se
+# actualiza junto a la identidad. Un valor que no sea AAAA-MM-DD se ignora.
+_LEGAL_DOCUMENT_VERSION_DEFAULT = "2026-09-03"
+LEGAL_DOCUMENT_VERSION = os.getenv(
+    "NOESIS_LEGAL_DOCUMENT_VERSION", _LEGAL_DOCUMENT_VERSION_DEFAULT
+).strip()
+if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", LEGAL_DOCUMENT_VERSION):
+    LEGAL_DOCUMENT_VERSION = _LEGAL_DOCUMENT_VERSION_DEFAULT
 # Buzón que se enseña en la web. El de respaldo es el del dominio propio, no una
 # cuenta personal: aparece en el pie, en la política de cookies y en contacto, y
 # tres direcciones distintas en un mismo sitio restan credibilidad.
@@ -312,6 +320,22 @@ PUBLIC_SIGNUP_ENABLED = env_bool(
 def legal_identity_ready() -> bool:
     """True cuando los cuatro datos legales mínimos están configurados."""
     return all((LEGAL_NAME, LEGAL_NIF, LEGAL_ADDRESS, LEGAL_EMAIL))
+
+
+# Primera letra del NIF de una persona jurídica o entidad (no persona física/NIE).
+_ENTITY_NIF_LETTERS = frozenset("ABCDEFGHJNPQRSUVW")
+
+
+def legal_registry_missing() -> bool:
+    """True si el prestador es una sociedad y no publica sus datos registrales.
+
+    La LSSI (art. 10) exige a una S.L. mostrar su inscripción en el Registro
+    Mercantil; a un autónomo no. Se deduce de la letra inicial del NIF.
+    """
+    return (
+        LEGAL_NIF[:1] in _ENTITY_NIF_LETTERS and not LEGAL_REGISTRY
+        if LEGAL_NIF else False
+    )
 
 
 def legal_provider_context_ready() -> bool:

@@ -692,7 +692,13 @@ def _audio_to_text(audio_id: str) -> str | None:
     """Descarga el audio y lo transcribe con Whisper local."""
     from ..adapters import transcription
 
-    transcriber = transcription.get_transcriber()
+    try:
+        transcriber = transcription.get_transcriber()
+    except ValueError as exc:
+        # Servicio privado mal configurado: se responde como audio no entendido
+        # en vez de romper el webhook y provocar reintentos de Meta.
+        log.warning("Transcriptor de voz mal configurado: %s", exc)
+        return None
     if transcriber is None:
         return None
     data = _download_media(audio_id)

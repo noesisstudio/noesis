@@ -1,5 +1,5 @@
 {
-  "state_date": "2026-09-10",
+  "state_date": "2026-09-11",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
   "verified_test_count": 795,
@@ -8,7 +8,7 @@
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Baseline 88adfa3 verificada en health/ready con esquema 55 (documentos/proyectos y SEO). Candidato del 10-sep: identidad PDF, borradores y continuidad conversacional; pendiente publicacion y prueba en WhatsApp real. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS no provisionados. Pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
+    "pending_after_deploy": "Baseline 88adfa3 verificada en health/ready con esquema 55 (documentos/proyectos y SEO). Candidato del 10-sep: identidad PDF, borradores y continuidad conversacional; pendiente publicacion y prueba en WhatsApp real. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS no provisionados. Candidato local del 11-sep: identidad legal de S.L. configurable, aviso de datos registrales, webhook Meta sin token vacio y voz mal configurada sin romper el webhook; sin push. Pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
