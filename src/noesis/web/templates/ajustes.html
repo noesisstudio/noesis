@@ -94,12 +94,21 @@
         <div id="whatsapp-preference-msg" class="meta" role="status"></div>
       {% elif wa is defined %}
         <p style="margin-top:0">Conecta tu WhatsApp para dar órdenes a Bynoesis desde el móvil.</p>
-        <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener">
-          Abrir WhatsApp y vincular mi número
+        {% if wa.link %}
+        <div class="lrow"><span>Número de Bynoesis</span><b class="connect-copy">{{ wa.number_display }}</b></div>
+        <div class="lrow"><span>Mensaje que debes enviar</span><b class="connect-copy">{{ wa.message }}</b></div>
+        <a class="btn primary full" href="{{ wa.link }}" target="_blank" rel="noopener" style="margin-top:12px">
+          Abrir WhatsApp con el mensaje preparado
         </a>
         <p class="meta" style="margin:10px 0 0;text-align:center">
-          Envía el mensaje preparado. Código temporal: <b>{{ wa.code }}</b>
+          Envíalo tal cual desde el móvil que quieres vincular. El código caduca en {{ wa.minutes }} minutos.
         </p>
+        {% else %}
+        <p class="meta" style="margin:0">
+          Tu mensaje de vinculación es <b class="connect-copy">{{ wa.message }}</b>. El número oficial
+          de Bynoesis aún no está activo: podrás enviarlo en cuanto lo esté.
+        </p>
+        {% endif %}
       {% else %}
         <p style="margin-top:0">
           WhatsApp no está conectado en esta demostración. La vista es de solo lectura

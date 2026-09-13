@@ -1,5 +1,24 @@
 ﻿# Registro de QA
 
+## 2026-09-13 — Conexión de WhatsApp y revisión móvil
+
+- Producción, sin cambios desplegados: Lighthouse 12 móvil de la portada
+  99/96/96/100 (LCP 1,9 s, CLS 0,002). PageSpeed Insights no se pudo usar por
+  cuota agotada. Puppeteer con Chrome local a 360 y 390 px en 11 páginas públicas:
+  ningún desbordamiento horizontal. Encontrados: contraste 3,7:1 en antetítulos,
+  enlaces del pie de 19 px y casilla de consentimiento de 13 px.
+- Nuevas en `test_whatsapp_multichannel.py`: número normalizado, visible y
+  mensaje exacto en el enlace; sin número oficial no hay `wa.me` roto.
+- Dirigidas: WhatsApp multicanal + web pública 24 OK; backend filtrado
+  (whatsapp/onboarding/ajustes/settings/connect) 68 OK. Ruff OK.
+  `check_project_truth` OK.
+- Local a 390 px: pantalla de conexión con número sin desbordar; sin número, 0
+  enlaces wa.me; antetítulo rgb(35,112,93) y del bloque oscuro rgb(159,214,189);
+  enlace del pie de 31 px; casilla de 20 px; aviso de cookies visible con 0
+  peticiones a Google antes de aceptar.
+- No ejecutado: suite completa, CI, móvil físico, pantalla de Ajustes en
+  navegador (solo la plantilla del alta) ni vinculación real con Meta.
+
 ## 2026-09-13 — Google Analytics con consentimiento
 
 - Nuevas en `test_public_marketing.py`: sin ID no hay Google en la CSP, ni aviso,

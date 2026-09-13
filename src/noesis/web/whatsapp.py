@@ -71,8 +71,21 @@ _PALABRA_CLAVE = "BYNOESIS"
 _PALABRAS_CLAVE = frozenset({"BYNOESIS", "NOESIS"})
 
 
+def _visible_number(digits: str) -> str:
+    """«34612345678» → «+34 612 345 678»: tal y como se busca en la agenda."""
+    if digits.startswith("34") and len(digits) == 11:
+        local = digits[2:]
+        return f"+34 {local[:3]} {local[3:6]} {local[6:]}"
+    return f"+{digits}" if digits else ""
+
+
 def start_link(business_id: int) -> dict:
-    """Genera un código de vinculación y el enlace wa.me para enviarlo."""
+    """Genera un código de vinculación y el enlace wa.me para enviarlo.
+
+    Devuelve también el número y el mensaje exactos para enseñarlos en pantalla:
+    quien conecta debe ver a qué número escribe y qué texto envía, no solo un botón.
+    Sin número oficial no hay enlace: wa.me sin destino abre un chat que no llega.
+    """
     code = secrets.token_hex(3).upper()
     code_hash = hashlib.sha256(code.encode()).hexdigest()
     expires = (
@@ -80,9 +93,18 @@ def start_link(business_id: int) -> dict:
     ).isoformat(timespec="seconds")
     db.create_whatsapp_link(code_hash, business_id, expires)
     text = f"{_PALABRA_CLAVE} {code}"
-    number = NOESIS_NUMBER or "TUNUMERO"
-    link = f"https://wa.me/{number}?text={text.replace(' ', '%20')}"
-    return {"code": code, "link": link, "number": NOESIS_NUMBER}
+    digits = "".join(char for char in NOESIS_NUMBER if char.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    link = f"https://wa.me/{digits}?text={text.replace(' ', '%20')}" if digits else ""
+    return {
+        "code": code,
+        "message": text,
+        "link": link,
+        "number": digits,
+        "number_display": _visible_number(digits),
+        "minutes": _CODE_TTL // 60,
+    }
 
 
 def _revive_link(code_hash: str, business_id: int) -> None:

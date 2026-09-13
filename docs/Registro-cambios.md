@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-09-13 — Conexión de WhatsApp con número y mensaje exactos; ajustes móviles
+
+Petición del founder: al conectar WhatsApp debe verse a qué número se escribe y
+el mensaje completo, no solo un botón y un código. `web/whatsapp.py`
+(`start_link` devuelve `message`, `number` en dígitos, `number_display`
+«+34 612 345 678» y `minutes`; sin número oficial ya no genera `wa.me/TUNUMERO`),
+`whatsapp_connect.html` y `ajustes.html` enseñan los dos pasos. Revisión móvil de la web
+publicada (Lighthouse móvil portada: 99/96/96/100; sin desbordamiento horizontal
+a 360 y 390 px en 11 páginas) y correcciones en `app.css`: antetítulos con
+contraste AA (#23705d, claro en el bloque final oscuro), zona de toque de 31 px en
+el pie móvil y casilla de consentimiento de 20 px. Sin migraciones. Riesgo bajo.
+Rollback: revertir el commit.
+
 ## 2026-09-13 — Google Analytics con aviso de cookies
 
 Petición del founder: poder consultar la web en Google Analytics. Áreas:

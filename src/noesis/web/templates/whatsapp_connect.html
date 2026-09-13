@@ -48,8 +48,18 @@
         {% endif %}
 
         {% if business.whatsapp_status != 'conectado' %}
-        <a class="btn green full" href="{{ wa.link }}" target="_blank" rel="noopener">Abrir WhatsApp con mi código</a>
-        <p class="connect-code">Código: <b>{{ wa.code }}</b>{% if not wa.number %}<span>El número oficial aún depende de la activación de Meta. Puedes terminar el alta y conectarlo después.</span>{% endif %}</p>
+        {% if wa.link %}
+        <ol class="connect-steps connect-exact">
+          <li><b>1</b><span>Escribe desde tu móvil al número de Bynoesis
+            <strong class="connect-value">{{ wa.number_display }}</strong></span></li>
+          <li><b>2</b><span>Envía exactamente este mensaje, con el código incluido
+            <strong class="connect-value">{{ wa.message }}</strong></span></li>
+        </ol>
+        <a class="btn green full" href="{{ wa.link }}" target="_blank" rel="noopener">Abrir WhatsApp con el mensaje preparado</a>
+        <p class="connect-code"><span>Si WhatsApp no se abre, guarda {{ wa.number_display }} y escríbele «{{ wa.message }}». El código caduca en {{ wa.minutes }} minutos.</span></p>
+        {% else %}
+        <p class="connect-code">Tu mensaje de vinculación: <b>{{ wa.message }}</b><span>El número oficial de Bynoesis aún depende de la activación de Meta. Puedes terminar el alta y conectarlo después.</span></p>
+        {% endif %}
         {% endif %}
 
         <div class="onboarding-review-actions">

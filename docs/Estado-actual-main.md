@@ -1,5 +1,13 @@
 # Estado actual del producto
 
+## 13-sep — WhatsApp: número y mensaje exactos al conectar; revisión móvil
+
+La pantalla de conexión (alta y Ajustes) muestra el número de Bynoesis completo
+y el mensaje exacto «BYNOESIS código». Sin `NOESIS_WHATSAPP_NUMBER` ya no ofrece
+un enlace roto. La web pública en móvil no desborda a 360/390 px. Contraste de
+antetítulos, zona de toque del pie y casilla del formulario corregidos. Pendiente
+publicar y comprobarlo en un móvil real.
+
 ## 13-sep — Google Analytics opcional con aviso de cookies
 
 La web pública puede usar GA4 si se define `NOESIS_GA_MEASUREMENT_ID`. Sin la

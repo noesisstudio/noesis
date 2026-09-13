@@ -1459,7 +1459,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .text-link span { transition:transform .15s ease; }
 .text-link:hover span { transform:translateX(3px); }
 .light-link { color:#fff; }
-.eyebrow, .hero-kicker { display:block; color:var(--brand-2); font-size:11px; font-weight:800;
+/* #23705d en vez de --brand-2: a 11px sobre el crema, #2e8b74 daba 3,7:1 y AA pide 4,5:1. */
+.eyebrow, .hero-kicker { display:block; color:#23705d; font-size:11px; font-weight:800;
   letter-spacing:.105em; text-transform:uppercase; }
 .light-eyebrow { color:#9fd6bd; }
 .section-heading { max-width:690px; margin-bottom:38px; }
@@ -1904,6 +1905,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .public-final-cta { width:min(var(--public-max), calc(100% - 40px)); margin:88px auto 0; padding:28px 34px;
   display:flex; align-items:center; justify-content:space-between; gap:35px; background:var(--brand); border-radius:12px; color:#fff; }
 .public-final-cta h2 { color:#fff; font-size:30px; margin:6px 0 5px; }
+.public-final-cta .eyebrow { color:#9fd6bd; }
 .public-final-cta p { color:rgba(255,255,255,.7); margin:0; }
 .public-final-cta-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .public-final-cta .btn.ghost { color:#fff; border-color:rgba(255,255,255,.35); background:rgba(255,255,255,.08); }
@@ -1939,6 +1941,12 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .public-footer-col b { color:var(--brand); margin-bottom:5px; }
 .public-footer-col a { color:var(--muted); }
 .public-footer-col a:hover { color:var(--brand); }
+/* En móvil los enlaces del pie tenían 19px de alto: se amplía la zona de toque sin
+   alargar la columna, porque el hueco entre enlaces pasa a formar parte del enlace. */
+@media (max-width:760px) {
+  .public-footer-col { gap:0; }
+  .public-footer-col a, .public-footer-col .cookie-settings-link { padding:6px 0; }
+}
 .public-footer-bottom { display:flex; justify-content:space-between; gap:20px; margin-top:45px; padding-top:20px;
   border-top:1px solid var(--border); color:var(--faint); font-size:11.5px; }
 
@@ -2098,7 +2106,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .public-auth-form .input, .public-auth-form select { min-height:46px; background:#fbfaf7; border-color:var(--border-strong); }
 .public-auth-form .input:focus, .public-auth-form select:focus { background:#fff; border-color:var(--brand-2); box-shadow:0 0 0 3px rgba(46,139,116,.12); }
 .auth-consent { display:flex; align-items:flex-start; gap:9px; color:var(--muted); font-size:11.5px; line-height:1.5; cursor:pointer; }
-.auth-consent input { margin-top:3px; }
+/* 20px: la casilla nativa (13px) era difícil de marcar con el dedo. */
+.auth-consent input { width:20px; height:20px; margin:0; flex-shrink:0; accent-color:var(--brand); }
 .auth-consent a, .login-links a, .auth-error a { color:var(--brand); text-decoration:underline; text-underline-offset:2px; }
 .auth-error, .auth-success { padding:11px 13px; margin-bottom:17px; border-radius:8px; color:var(--red); background:var(--red-soft); font-size:12.5px; }
 .auth-success { color:var(--green); background:var(--green-soft); }
@@ -2211,6 +2220,11 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .connect-code { margin:14px 0 20px; color:var(--muted); text-align:center; font-size:11.5px; }
 .connect-code b { color:var(--brand); user-select:all; }
 .connect-code span { display:block; margin-top:5px; color:var(--faint); }
+/* Número y mensaje exactos, grandes y seleccionables de un toque para copiarlos. */
+.connect-exact { margin:6px 0 16px; text-align:left; }
+.connect-value { display:block; margin-top:4px; color:var(--brand); font-size:17px; font-weight:750;
+  letter-spacing:.02em; user-select:all; overflow-wrap:anywhere; }
+.connect-copy { user-select:all; overflow-wrap:anywhere; }
 .whatsapp-auth-layout .public-auth-panel form { margin-top:10px; }
 .onboarding-operations-center { align-items:start; }
 .onboarding-operations-card { max-width:880px; }

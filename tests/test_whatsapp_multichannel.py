@@ -31,6 +31,26 @@ class WhatsappMultichannelTestCase(unittest.TestCase):
     def business(self, name: str) -> dict:
         return db.create_business(name, f"{name.lower()}@example.com")
 
+    def test_link_shows_exact_number_and_message(self):
+        business = self.business("Fontaneria")
+        with patch.object(whatsapp, "NOESIS_NUMBER", "+34 612 34 56 78"):
+            wa = whatsapp.start_link(business["id"])
+        self.assertEqual(wa["number"], "34612345678")
+        self.assertEqual(wa["number_display"], "+34 612 345 678")
+        self.assertEqual(wa["message"], f"BYNOESIS {wa['code']}")
+        self.assertEqual(
+            wa["link"], f"https://wa.me/34612345678?text=BYNOESIS%20{wa['code']}"
+        )
+        self.assertEqual(wa["minutes"], 30)
+
+    def test_link_without_official_number_is_not_a_broken_wa_me(self):
+        business = self.business("Electricidad")
+        with patch.object(whatsapp, "NOESIS_NUMBER", ""):
+            wa = whatsapp.start_link(business["id"])
+        self.assertEqual(wa["link"], "")
+        self.assertEqual(wa["number_display"], "")
+        self.assertTrue(wa["message"].startswith("BYNOESIS "))
+
     @staticmethod
     def payload(
         message_id: str, recipient_id: str, sender: str, text: str,
