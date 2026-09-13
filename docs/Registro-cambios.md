@@ -1,5 +1,16 @@
 ﻿# Registro de cambios
 
+## 2026-09-13 — Guía de instalación para clientes
+
+Petición del founder: los clientes creían que había que configurar Meta. Nueva
+`docs/01-producto/Guia-instalacion-clientes.html`: qué no hace falta, alta en
+cinco pasos con los textos reales de pantalla, vinculación con «BYNOESIS código»,
+opciones (Ajustes, cambio de móvil, equipo, número comercial con nuestro equipo),
+problemas con las respuestas reales del bot y guion para grabar el vídeo.
+`routers/team.py`: el mensaje de vinculación del trabajador pasa de «NOESIS
+EQUIPO» a «BYNOESIS EQUIPO»; el webhook sigue aceptando las dos. Riesgo bajo.
+Rollback: revertir el commit.
+
 ## 2026-09-13 — Conexión de WhatsApp con número y mensaje exactos; ajustes móviles
 
 Petición del founder: al conectar WhatsApp debe verse a qué número se escribe y

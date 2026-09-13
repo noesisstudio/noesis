@@ -1,0 +1,347 @@
+<title>Conecta Bynoesis a tu WhatsApp</title>
+<meta name="description" content="Guía para clientes: alta en Bynoesis y conexión de WhatsApp en cinco minutos, sin configurar nada en Meta.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root {
+    --ground: #f4f1e8;
+    --surface: #fffdf8;
+    --ink: #15211c;
+    --muted: #56645e;
+    --line: #e2dccb;
+    --brand: #14463b;
+    --accent: #23705d;
+    --accent-soft: #e4efe9;
+    --bubble-out: #d9f2e3;
+    --bubble-in: #ffffff;
+    --chat-ground: #ece5d8;
+    --warn: #7a5a14;
+    --warn-soft: #f6eed8;
+    --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --sans: "Inter", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1d19; --surface: #142823; --ink: #e7eee9; --muted: #a3b4ac;
+      --line: #2a403a; --brand: #cfe7dc; --accent: #9fd6bd; --accent-soft: #1b3a31;
+      --bubble-out: #1f5646; --bubble-in: #1c302a; --chat-ground: #0b1714;
+      --warn: #e7c98f; --warn-soft: #2e2716;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1d19; --surface: #142823; --ink: #e7eee9; --muted: #a3b4ac;
+    --line: #2a403a; --brand: #cfe7dc; --accent: #9fd6bd; --accent-soft: #1b3a31;
+    --bubble-out: #1f5646; --bubble-in: #1c302a; --chat-ground: #0b1714;
+    --warn: #e7c98f; --warn-soft: #2e2716;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--ground); color: var(--ink); font: 400 16px/1.65 var(--sans); padding-inline: 20px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 56px; }
+  h1, h2, h3 { font-family: var(--serif); color: var(--brand); font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3rem); line-height: 1.08; letter-spacing: -.01em; }
+  h2 { font-size: 1.65rem; line-height: 1.2; }
+  h3 { font-size: 1.15rem; line-height: 1.3; }
+  p { margin: 0; max-width: 65ch; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  .label { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .muted { color: var(--muted); }
+  code, .msg { font-family: var(--mono); }
+  .stack { display: grid; gap: 14px; }
+
+  /* Cabecera */
+  header.intro { display: grid; gap: 16px; }
+  .brandline { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--brand); }
+  .brandline svg { width: 26px; height: 26px; }
+  .lede { font-size: 1.12rem; color: var(--muted); }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: .92rem; color: var(--muted); padding: 0; margin: 4px 0 0; list-style: none; }
+  .facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* Lo que no necesitas */
+  .notneeded { background: var(--brand); color: #f4f1e8; border-radius: 14px; padding: 26px 28px; display: grid; gap: 14px; }
+  :root[data-theme="dark"] .notneeded { background: var(--accent-soft); color: var(--ink); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .notneeded { background: var(--accent-soft); color: var(--ink); } }
+  .notneeded h2 { color: inherit; font-size: 1.4rem; }
+  .notneeded ul { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 20px; }
+  .notneeded li { display: flex; gap: 10px; align-items: baseline; }
+  .notneeded li::before { content: "✕"; font-size: .8rem; opacity: .7; }
+  .notneeded p { opacity: .9; }
+
+  /* Antes de empezar */
+  .checklist { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .checklist li { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .checklist small { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+
+  /* Pasos */
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 40px; counter-reset: paso; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 0 18px; counter-increment: paso; }
+  .step::before { content: counter(paso); grid-row: 1 / span 20; width: 44px; height: 44px; border-radius: 50%;
+    display: grid; place-items: center; font: 600 1.1rem var(--serif); color: var(--brand); border: 1.5px solid var(--accent); }
+  .step > * + * { margin-top: 12px; }
+  .screen { font-size: .88rem; color: var(--muted); }
+  .screen b { color: var(--ink); font-weight: 600; }
+  .fields { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; }
+  .fields b { color: var(--ink); font-weight: 600; }
+  .btnref { display: inline-block; font-size: .88rem; font-weight: 600; padding: 3px 10px; border-radius: 7px; background: var(--accent-soft); color: var(--brand); white-space: nowrap; }
+  .note { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 12px 14px; font-size: .92rem; }
+
+  /* Simulación del chat */
+  .phone { background: var(--chat-ground); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; max-width: 380px; }
+  .phone-top { background: var(--surface); display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .phone-top .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; }
+  :root[data-theme="dark"] .phone-top .avatar { background: #14463b; }
+  .phone-top .avatar svg { width: 18px; height: 18px; }
+  .phone-top b { display: block; font-size: .95rem; line-height: 1.2; }
+  .phone-top span { font-size: .78rem; color: var(--muted); font-family: var(--mono); }
+  .chat { display: grid; gap: 8px; padding: 14px; }
+  .bubble { max-width: 86%; padding: 8px 11px 6px; border-radius: 10px; font-size: .92rem; line-height: 1.45; box-shadow: 0 1px 0 rgba(0,0,0,.06); }
+  .bubble.out { justify-self: end; background: var(--bubble-out); border-top-right-radius: 3px; }
+  .bubble.in { justify-self: start; background: var(--bubble-in); border-top-left-radius: 3px; }
+  .bubble .msg { font-weight: 700; letter-spacing: .03em; }
+  .bubble time { display: block; text-align: right; font-size: .7rem; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .example { font-size: .78rem; color: var(--muted); }
+
+  /* Ejemplos de uso */
+  .asks { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .asks li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+  .asks q { font-weight: 600; quotes: "«" "»"; }
+  .asks span { font-size: .86rem; color: var(--muted); }
+
+  /* Opcionales */
+  details { border-top: 1px solid var(--line); padding: 16px 0; }
+  details:last-of-type { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; align-items: baseline; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 1.3rem; color: var(--accent); line-height: 1; }
+  details[open] summary::after { content: "−"; }
+  summary small { display: block; font: 400 .88rem var(--sans); color: var(--muted); margin-top: 2px; }
+  details .body { display: grid; gap: 12px; padding-top: 12px; }
+
+  /* Problemas */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; min-width: 520px; }
+  th { text-align: left; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 0 12px 8px 0; border-bottom: 1px solid var(--line); }
+  td { vertical-align: top; padding: 12px 12px 12px 0; border-bottom: 1px solid var(--line); }
+  td:first-child { width: 46%; }
+  td .msg { font-size: .84rem; display: block; color: var(--ink); }
+
+  /* Guion */
+  .script { border: 1.5px dashed var(--accent); border-radius: 14px; padding: 26px 24px; display: grid; gap: 18px; }
+  .scenes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+  .scenes li { display: grid; grid-template-columns: 64px 1fr; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .scenes time { font-family: var(--mono); font-size: .85rem; color: var(--accent); font-variant-numeric: tabular-nums; padding-top: 2px; }
+  .scenes p + p { margin-top: 4px; }
+  .say { font-style: italic; }
+  .tips { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); }
+
+  footer { font-size: .88rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+
+  @media (max-width: 480px) {
+    .wrap { padding-block: 32px 56px; gap: 44px; }
+    .step { grid-template-columns: 34px 1fr; gap: 0 12px; }
+    .step::before { width: 34px; height: 34px; font-size: .95rem; }
+    .notneeded, .script { padding: 22px 18px; }
+    .scenes li { grid-template-columns: 1fr; gap: 2px; }
+  }
+</style>
+
+<main class="wrap">
+  <header class="intro">
+    <div class="brandline">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#2e8b74" d="M12 1.5c.7 5.6 4.9 9.8 10.5 10.5-5.6.7-9.8 4.9-10.5 10.5C11.3 16.9 7.1 12.7 1.5 12 7.1 11.3 11.3 7.1 12 1.5z"/></svg>
+      Bynoesis
+    </div>
+    <span class="label">Guía de instalación</span>
+    <h1>Conecta Bynoesis a tu WhatsApp</h1>
+    <p class="lede">Creas tu cuenta, dejas lista la factura y mandas un mensaje desde tu móvil. Con eso ya puedes pedirle a Bynoesis facturas, gastos y cobros por WhatsApp.</p>
+    <ul class="facts">
+      <li><b>5–10 min</b> de principio a fin</li>
+      <li><b>1 mensaje</b> para conectar WhatsApp</li>
+      <li><b>14 días</b> de prueba desde que entras</li>
+    </ul>
+  </header>
+
+  <section class="notneeded" aria-labelledby="no-hace-falta">
+    <h2 id="no-hace-falta">No tienes que configurar nada en Meta</h2>
+    <p>La conexión con WhatsApp ya la tenemos hecha nosotros. Tú solo escribes a Bynoesis desde tu WhatsApp de siempre.</p>
+    <ul>
+      <li>Crear una cuenta de Meta o Facebook Business</li>
+      <li>Pasarte a WhatsApp Business</li>
+      <li>Cambiar de número o comprar otro</li>
+      <li>Instalar ninguna aplicación</li>
+    </ul>
+  </section>
+
+  <section class="stack" aria-labelledby="antes">
+    <h2 id="antes">Ten esto a mano</h2>
+    <ul class="checklist">
+      <li><span>El móvil con el WhatsApp que usarás con Bynoesis</span><small>imprescindible</small></li>
+      <li><span>El correo con el que pediste acceso</span><small>imprescindible</small></li>
+      <li><span>Tu NIF o DNI y tu dirección fiscal</span><small>para las facturas</small></li>
+      <li><span>IBAN o Bizum, y tu logotipo</span><small>opcional</small></li>
+    </ul>
+  </section>
+
+  <section class="stack" aria-labelledby="pasos">
+    <h2 id="pasos">Paso a paso</h2>
+    <ol class="steps">
+      <li class="step">
+        <h3>Entra con tu invitación</h3>
+        <p>Te llega un correo con el asunto <b>«Tu acceso a Bynoesis ya está listo»</b>. Pulsa el enlace y elige tu contraseña: mínimo 12 caracteres.</p>
+        <p class="muted">El enlace dura 7 días. Tus 14 días de prueba empiezan ese mismo día. Si no ves el correo, mira en Promociones o en Spam.</p>
+      </li>
+
+      <li class="step">
+        <h3>Cuéntale cómo es tu negocio</h3>
+        <p class="screen">Pantalla <b>«¿Cómo funciona tu negocio?»</b></p>
+        <ul class="fields">
+          <li><b>A qué te dedicas</b> y cuántas personas trabajáis</li>
+          <li><b>Qué quieres resolver primero</b>: facturar, cobrar, ordenar gastos…</li>
+          <li>Cómo quieres que te acompañe y tu provincia</li>
+        </ul>
+        <p>Pulsa <span class="btnref">Continuar con facturas y avisos</span>.</p>
+      </li>
+
+      <li class="step">
+        <h3>Deja tus facturas listas</h3>
+        <p class="screen">Pantalla <b>«¿Cómo quieres trabajar?»</b></p>
+        <ul class="fields">
+          <li><b>NIF o DNI</b> y <b>dirección fiscal</b>: los dos son obligatorios</li>
+          <li>IVA e IRPF habituales y cuándo vence una factura</li>
+          <li>Logotipo, color y texto al pie para que la factura parezca tuya</li>
+          <li>IBAN o Bizum, los avisos que quieres recibir y tu gestoría, si tienes</li>
+        </ul>
+        <p>Pulsa <span class="btnref">Guardar y continuar</span>. Todo esto se puede cambiar después en Ajustes.</p>
+      </li>
+
+      <li class="step">
+        <h3>Conecta WhatsApp con un mensaje</h3>
+        <p class="screen">Pantalla <b>«Así queda tu negocio»</b>, apartado <b>Conecta WhatsApp</b></p>
+        <p>Verás dos datos: <b>el número de Bynoesis</b> y <b>el mensaje exacto</b> que tienes que enviarle, con tu código.</p>
+        <ul class="fields">
+          <li><b>Si estás en el móvil:</b> pulsa <span class="btnref">Abrir WhatsApp con el mensaje preparado</span> y envíalo tal cual.</li>
+          <li><b>Si estás en el ordenador:</b> coge el móvil, escribe al número que ves en pantalla y copia el mensaje exacto.</li>
+        </ul>
+        <div class="phone" role="img" aria-label="Ejemplo de chat: envías BYNOESIS seguido de tu código y Bynoesis responde que WhatsApp está conectado">
+          <div class="phone-top">
+            <div class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#f4f1e8" d="M12 1.5c.7 5.6 4.9 9.8 10.5 10.5-5.6.7-9.8 4.9-10.5 10.5C11.3 16.9 7.1 12.7 1.5 12 7.1 11.3 11.3 7.1 12 1.5z"/></svg></div>
+            <div><b>Bynoesis</b><span>+34 6XX XXX XXX</span></div>
+          </div>
+          <div class="chat">
+            <div class="bubble out"><span class="msg">BYNOESIS A1B2C3</span><time>09:41 ✓✓</time></div>
+            <div class="bubble in">WhatsApp conectado a Fontanería García. Ya puedes pedirme cosas: «¿qué tengo hoy?», «factura a Juan 95 €»…<time>09:41</time></div>
+          </div>
+        </div>
+        <p class="example">Número, código y negocio de ejemplo. Usa los que te aparecen en tu pantalla.</p>
+        <p>Vuelve a la web y pulsa <span class="btnref">Ya lo he enviado · comprobar</span>.</p>
+        <p class="note">Envía el mensaje desde el móvil que vas a usar con Bynoesis: queda vinculado ese número. El código caduca a los 30 minutos y no hay que cambiarle nada, ni añadir espacios ni texto.</p>
+      </li>
+
+      <li class="step">
+        <h3>Guarda el contacto y pídele algo</h3>
+        <p>Guarda el número como <b>Bynoesis</b> para encontrarlo rápido. Ya puedes escribirle igual que a una persona:</p>
+        <ul class="asks">
+          <li><q>¿Qué tengo hoy?</q><span>Tu día: trabajos, cobros y avisos</span></li>
+          <li><q>Factura 450 € más IVA a Juan por la reparación</q><span>Prepara el borrador y tú lo revisas</span></li>
+          <li><q>Guarda este gasto</q><span>Con la foto del ticket adjunta</span></li>
+          <li><q>¿Qué facturas tengo pendientes?</q><span>Lo que te deben, por cliente</span></li>
+        </ul>
+        <p class="muted">Bynoesis prepara, pero no emite, cobra ni envía nada sin que tú lo confirmes.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stack" aria-labelledby="despues">
+    <h2 id="despues">Si lo necesitas más adelante</h2>
+    <div>
+      <details>
+        <summary><span>Conectar WhatsApp otro día<small>Si pulsaste «Conectarlo más adelante»</small></span></summary>
+        <div class="body">
+          <p>Entra en la web y ve a <b>Ajustes → WhatsApp privado con Bynoesis</b>. Verás el mismo número y un mensaje con un código nuevo. Envíalo desde tu móvil igual que en el paso 4.</p>
+        </div>
+      </details>
+      <details>
+        <summary><span>Cambiar de móvil o de número<small>Para vincular otro teléfono</small></span></summary>
+        <div class="body">
+          <p>En <b>Ajustes → WhatsApp privado con Bynoesis</b>, pulsa <span class="btnref">Desconectar este número</span>. Después, conecta el nuevo con un código nuevo. Si solo cambias de teléfono y mantienes el número, no tienes que hacer nada.</p>
+        </div>
+      </details>
+      <details>
+        <summary><span>Que tus trabajadores fichen y manden gastos<small>Plan Negocio</small></span></summary>
+        <div class="body">
+          <p>En <b>Equipo</b>, añade a la persona y comparte con ella su enlace de acceso. Ahí aparece un mensaje con su código, parecido a este, que tiene que enviar desde <b>su</b> móvil al mismo número de Bynoesis:</p>
+          <p><code>BYNOESIS EQUIPO 12 4821</code></p>
+          <p>Bynoesis le responde <i>«Hola, Ana. Tu WhatsApp ya está vinculado. Escribe ENTRADA, PAUSA, REANUDAR o SALIDA.»</i> Sus gastos te llegan pendientes y no cuentan hasta que tú los aceptas. No ve tus márgenes salvo que se lo permitas.</p>
+        </div>
+      </details>
+      <details>
+        <summary><span>Un WhatsApp de empresa para tus clientes<small>Opcional · lo configuramos contigo</small></span></summary>
+        <div class="body">
+          <p>Esto es otra cosa: un número al que te escriban tus clientes para pedir presupuesto o confirmar una cita. Este sí pasa por Meta, pero <b>lo hacemos nosotros contigo</b>, en una llamada.</p>
+          <p class="note">No des de baja ni cambies ningún número por tu cuenta. Antes de tocar nada, te diremos qué número conviene usar. No lo necesitas para empezar a usar Bynoesis.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="stack" aria-labelledby="problemas">
+    <h2 id="problemas">Si algo no sale</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Lo que ves</th><th scope="col">Qué hacer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Bynoesis te responde:<span class="msg">Ese código no es válido o ha caducado.</span></td>
+            <td>Han pasado más de 30 minutos o el mensaje se cambió al enviarlo. Recarga la pantalla para ver un código nuevo y envíalo sin tocar nada.</td>
+          </tr>
+          <tr>
+            <td>En la web: <b>«Aún no ha llegado el código»</b></td>
+            <td>Comprueba en WhatsApp que el mensaje salió (dos marcas ✓✓). Espera unos segundos y pulsa otra vez <span class="btnref">Ya lo he enviado · comprobar</span>.</td>
+          </tr>
+          <tr>
+            <td>Al pulsar el botón, WhatsApp no se abre</td>
+            <td>Pasa en ordenadores sin WhatsApp. Hazlo desde el móvil: escribe al número de la pantalla y copia el mensaje.</td>
+          </tr>
+          <tr>
+            <td>Bynoesis te responde:<span class="msg">Tu cuenta está en modo consulta.</span></td>
+            <td>La prueba ha terminado. Activa un plan en <b>Suscripción</b> y genera un código nuevo.</td>
+          </tr>
+          <tr>
+            <td>Te dice que ese teléfono ya está vinculado a otra cuenta</td>
+            <td>Un número solo puede estar en una empresa a la vez. Escríbenos y lo resolvemos.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>¿Sigues atascado? Escríbenos a <a href="mailto:info@bynoesis.com">info@bynoesis.com</a> y te ayudamos a conectarlo.</p>
+  </section>
+
+  <section class="script" aria-labelledby="guion">
+    <span class="label">Para quien graba el vídeo</span>
+    <h2 id="guion">Guion del vídeo de instalación</h2>
+    <p class="muted">Unos 3 minutos. Pantalla del ordenador y del móvil a la vez en el paso de WhatsApp.</p>
+    <ol class="scenes">
+      <li><time>0:00</time><div><p><b>Apertura, a cámara</b></p><p class="say">«Conectar Bynoesis son cinco minutos y no tienes que tocar nada de Meta ni de Facebook. Te lo enseño.»</p></div></li>
+      <li><time>0:15</time><div><p><b>Correo de invitación → contraseña</b></p><p class="say">«Te llega este correo. Pulsas el enlace y eliges tu contraseña.»</p></div></li>
+      <li><time>0:35</time><div><p><b>Tu negocio</b>: rellenar rápido, sin leer cada campo</p><p class="say">«Le cuentas a qué te dedicas y qué quieres resolver primero.»</p></div></li>
+      <li><time>1:00</time><div><p><b>Facturas</b>: NIF y dirección, y enseñar el logotipo</p><p class="say">«Con esto tus facturas ya salen con tus datos y tu marca.»</p></div></li>
+      <li><time>1:35</time><div><p><b>Conectar WhatsApp</b>: señalar el número y el mensaje, y cambiar al móvil</p><p class="say">«Aquí tienes el número de Bynoesis y el mensaje exacto. Lo mando desde mi móvil tal cual.»</p></div></li>
+      <li><time>2:10</time><div><p><b>Respuesta «WhatsApp conectado»</b> y pulsar «Comprobar»</p><p class="say">«Ya está conectado. Le pido lo primero: ¿qué tengo hoy?»</p></div></li>
+      <li><time>2:35</time><div><p><b>Primera factura por WhatsApp</b>: borrador y revisión</p><p class="say">«Me prepara el borrador y yo decido cuándo emitirlo.»</p></div></li>
+      <li><time>2:55</time><div><p><b>Cierre</b></p><p class="say">«Si lo dejas para luego, lo tienes en Ajustes. Y si te atascas, escríbenos.»</p></div></li>
+    </ol>
+    <h3>Antes de grabar</h3>
+    <ul class="tips">
+      <li>Publica primero la versión nueva de la pantalla de WhatsApp, la que enseña el número y el mensaje. Si no, el vídeo mostrará la antigua.</li>
+      <li>Usa una cuenta de prueba con datos ficticios: nada de NIF, IBAN ni clientes reales.</li>
+      <li>Tapa o recorta tu número personal en la grabación del móvil.</li>
+      <li>Activa «No molestar» en el móvil y pon el navegador al 125 % de zoom para que se lea en pantallas pequeñas.</li>
+      <li>El código caduca a los 30 minutos: genera uno justo antes de grabar ese paso.</li>
+    </ul>
+  </section>
+
+  <footer>Bynoesis · Guía de instalación para clientes · septiembre de 2026</footer>
+</main>

@@ -258,7 +258,9 @@ def api_worker_link(business_id: int, worker_id: int):
     token = db.get_or_create_worker_token(business_id, worker_id)
     if not token:
         return JSONResponse({"error": "No se pudo crear el enlace."}, status_code=400)
-    command = f"NOESIS EQUIPO {business_id} {worker['access_code']}"
+    # Marca vigente. whatsapp._try_worker_link sigue aceptando «NOESIS» por los
+    # enlaces antiguos que alguien tenga guardados.
+    command = f"BYNOESIS EQUIPO {business_id} {worker['access_code']}"
     return {
         "url": f"{config.BASE_URL}/t/{token}",
         "path": f"/t/{token}",

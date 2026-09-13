@@ -1,5 +1,14 @@
 ﻿# Registro de QA
 
+## 2026-09-13 — Guía de instalación y mensaje de equipo con la marca
+
+- Guía contrastada con el código: asunto y caducidad de la invitación (7 días),
+  campos de `onboarding_setup`/`onboarding_preferences`, pantalla de conexión,
+  respuestas reales de `_try_link` y `_try_worker_link`, y texto de `equipo.html`.
+- `team.py` emite «BYNOESIS EQUIPO»; `_try_worker_link` acepta ambas marcas.
+- WhatsApp multicanal 9 OK; `-k "worker or team or equipo"` 15 OK. Ruff OK.
+- No ejecutado: suite completa, CI, vinculación real de un trabajador con Meta.
+
 ## 2026-09-13 — Conexión de WhatsApp y revisión móvil
 
 - Producción, sin cambios desplegados: Lighthouse 12 móvil de la portada
