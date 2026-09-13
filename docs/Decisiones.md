@@ -2,6 +2,18 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Google Analytics, pero solo con permiso y fuera del panel (2026-09-13)
+
+El founder quiere poder controlar la web desde Google Analytics. Esto revisa la
+decisión del 30-jul, que no lo usaba, aunque el recuento propio se mantiene y
+funciona para todo el mundo. Para respetar las razones de entonces: el ID va en
+una variable y sin ella no cambia nada. Si se configura, no se carga nada de
+Google hasta pulsar «Aceptar». Rechazar pesa lo mismo, como pide la AEPD, y la
+decisión se puede cambiar desde el pie. La CSP abre Google solo en rutas públicas:
+el panel, la API y los portales con datos de clientes siguen sin terceros. Van
+desactivadas las señales publicitarias. Las políticas de cookies y privacidad
+declaran Google solo cuando el ID está puesto, para que el texto siga siendo cierto.
+
 ## Cambio de titular sin tocar código y pruebas sin credenciales (2026-09-11)
 
 El founder constituye la S.L. la semana del 14-sep. La identidad legal ya salía
@@ -451,6 +463,9 @@ queda anotada como pendiente de una mirada humana.
 
 
 ## Las visitas se cuentan en nuestro servidor, no con Google Analytics (2026-07-30)
+
+> Revisada el 2026-09-13: se añade Google Analytics opcional y con consentimiento
+> (ver la decisión de esa fecha). El recuento propio descrito aquí sigue vigente.
 
 Hacía falta saber cuánta gente entra en la web y por dónde llega. La respuesta
 inmediata era Google Analytics, o alguna de las alternativas respetuosas tipo

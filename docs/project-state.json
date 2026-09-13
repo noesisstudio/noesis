@@ -1,5 +1,5 @@
 {
-  "state_date": "2026-09-11",
+  "state_date": "2026-09-13",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
   "verified_test_count": 795,
@@ -52,7 +52,8 @@
     "asset_delivery": "static_files_immutable_year_long_cache_in_production_versioned_by_query_and_chart_library_loaded_only_when_the_demo_is_reached",
     "contact_booking": "verified_cal_com_agenda_una_llamada_con_nosotros_embed_only_after_page_scoped_explicit_permission_revocable_local_adapter_source_origin_namespace_checks_adaptive_height_csp_cal_frames_only_on_contact_no_actual_booking_submitted",
     "access_request_form": "public_site_layout_short_form_name_email_phone_trade_optional_message_plan_travels_hidden_from_pricing",
-    "visitor_measurement": "own_daily_page_views_preserved_gestorias_public_route_counted_private_gestoria_excluded_additive_public_event_counters_reserved_namespace_excluded_from_views_fixed_event_and_page_only_no_identity_cookie_or_booking_details_admin_marketing_separates_both_bounded_fail_open_endpoint_no_migration"
+    "visitor_measurement": "own_daily_page_views_preserved_gestorias_public_route_counted_private_gestoria_excluded_additive_public_event_counters_reserved_namespace_excluded_from_views_fixed_event_and_page_only_no_identity_cookie_or_booking_details_admin_marketing_separates_both_bounded_fail_open_endpoint_no_migration",
+    "google_analytics": "2026-09-13: GA4 opcional por NOESIS_GA_MEASUREMENT_ID (validado G-XXXX). Vacio = sin aviso ni Google. Con valor: aviso con Aceptar/Rechazar del mismo peso, gtag solo tras aceptar (sin senales publicitarias), decision 12 meses en localStorage, revocable desde el pie y /cookies borrando _ga; CSP abre Google solo en rutas publicas. Politicas de cookies y privacidad condicionadas al ID. Pendiente: founder crea la propiedad GA4 y define la variable en Railway; verificar en produccion."
   },
   "authentication": {
     "local_access": "available_with_atomic_non_enumerating_recovery_new_link_invalidates_previous_one_use_hashed_reset_and_session_revocation_commit_together_and_security_events_are_content_free",

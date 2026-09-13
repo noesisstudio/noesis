@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-13 — Google Analytics con consentimiento
+
+- Nuevas en `test_public_marketing.py`: sin ID no hay Google en la CSP, ni aviso,
+  ni script, ni `_ga` en `/cookies`. Con ID, el HTML no carga ningún script remoto,
+  el aviso sale oculto hasta que decide el JS, la CSP pública incluye Google y la
+  de `/b/`, `/api/` y `/gestoria` no (sin seguir redirecciones). `/cookies` declara
+  `_ga_<ID>`, `/privacidad` declara Google Analytics y solo se acepta formato GA4
+  (se rechazan UA, GTM e inyección en la CSP).
+- Dirigidas: web pública + seguridad + comprobador de producción + backend filtrado
+  (public/csp/security/cookie/production): 42 OK. Ruff OK. `node --check` del JS
+  OK. `check_project_truth` OK.
+- No ejecutado: suite completa, CI, prueba visual del aviso en navegador,
+  despliegue ni GA real (falta la propiedad y la variable en Railway).
+
 ## 2026-09-11 — Preparación de la S.L., webhook y voz
 
 - Suite completa local sobre 2c05db5 (antes de estos cambios): 800 pruebas,

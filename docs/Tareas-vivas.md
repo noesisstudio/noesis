@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## Google Analytics — 13-sep
+
+- [x] Aviso de cookies con Aceptar/Rechazar; GA4 solo tras aceptar y revocable.
+- [x] CSP de Google solo en rutas públicas; políticas condicionadas al ID.
+- [ ] Founder: crear en analytics.google.com una propiedad GA4 con flujo web
+  `https://bynoesis.com` y copiar su ID de medición (`G-...`).
+- [ ] Founder: poner `NOESIS_GA_MEASUREMENT_ID=G-...` en las variables de Railway.
+- [ ] Tras desplegar: aceptar el aviso en producción y ver la visita en «Tiempo
+  real» de GA; rechazar y comprobar que no hay peticiones a Google.
+
 ## Facturación conversacional — 10-sep
 
 - [x] Reproducir espacio en ID de Meta con subida real, sin entregar ni emitir.

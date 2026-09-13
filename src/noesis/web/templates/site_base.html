@@ -136,6 +136,7 @@
         <a href="/cookies">Cookies</a>
         <a href="/terminos">Términos</a>
         <a href="/encargado-tratamiento">Encargado del tratamiento</a>
+        {% if ga_measurement_id %}<button type="button" class="cookie-settings-link" data-cookie-settings hidden>Preferencias de cookies</button>{% endif %}
       </div>
     </div>
     <div class="public-footer-bottom">
@@ -143,6 +144,18 @@
       <span>Hecho para autónomos y pequeños equipos de servicios.</span>
     </div>
   </footer>
+  {% if ga_measurement_id %}
+  {# Oculto hasta que public-analytics.js comprueba que aún no hay decisión. Sin JS no hay analítica. #}
+  <section class="cookie-banner" data-cookie-banner hidden aria-labelledby="cookie-banner-title">
+    <h2 id="cookie-banner-title">¿Nos ayudas a mejorar la web?</h2>
+    <p>Con tu permiso usamos Google Analytics para saber qué páginas son útiles. Si no aceptas, no se carga nada de Google. Puedes cambiarlo cuando quieras. <a href="/cookies">Más información</a></p>
+    <div class="cookie-banner-actions">
+      <button type="button" class="btn primary" data-cookie-reject>Rechazar</button>
+      <button type="button" class="btn primary" data-cookie-accept>Aceptar</button>
+    </div>
+  </section>
+  <script src="/static/public-analytics.js?v={{ asset_v }}" data-ga-id="{{ ga_measurement_id }}" defer></script>
+  {% endif %}
   <script src="/static/public-site.js?v={{ asset_v }}" defer></script>
   <script src="/static/public-marketing.js?v={{ asset_v }}" defer></script>
   {% block page_scripts %}{% endblock %}

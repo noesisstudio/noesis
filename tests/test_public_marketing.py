@@ -115,6 +115,44 @@ class PublicMarketingTests(unittest.TestCase):
             self.assertIn("frame-src 'none';", page.headers["content-security-policy"])
             self.assertNotIn('src="/static/public-calendar.js', page.text)
 
+    def test_without_measurement_id_there_is_no_google_or_banner(self):
+        for path in ("/", "/cookies", "/privacidad"):
+            page = self.http.get(path)
+            self.assertNotIn("google", page.headers["content-security-policy"], path)
+            self.assertNotIn("data-cookie-banner", page.text, path)
+            self.assertNotIn("public-analytics.js", page.text, path)
+        self.assertNotIn("_ga", self.http.get("/cookies").text)
+
+    def test_analytics_waits_for_consent_and_stays_out_of_private_zones(self):
+        with (
+            patch.object(config, "GA_MEASUREMENT_ID", "G-TEST1234"),
+            patch.dict(TEMPLATES.env.globals, {"ga_measurement_id": "G-TEST1234"}),
+        ):
+            home = self.http.get("/")
+            cookies = self.http.get("/cookies").text
+            privacy = self.http.get("/privacidad").text
+            # Sin seguir redirecciones: el destino (acceso) es público y sí puede llevar GA.
+            private = [self.http.get(path, follow_redirects=False)
+                       for path in ("/b/1/resumen", "/api/x", "/gestoria")]
+        # Google no aparece como script en el HTML: lo inserta el JS tras «Aceptar».
+        self.assertNotRegex(home.text, r'<script[^>]+src="https://')
+        self.assertRegex(home.text, r'<section class="cookie-banner" data-cookie-banner hidden')
+        self.assertIn('data-ga-id="G-TEST1234"', home.text)
+        self.assertIn("data-cookie-reject", home.text)
+        csp = home.headers["content-security-policy"]
+        self.assertIn("script-src 'self' 'unsafe-inline' https://*.googletagmanager.com;", csp)
+        self.assertIn("https://*.google-analytics.com", csp)
+        self.assertIn("_ga_TEST1234", cookies)
+        self.assertIn("Preferencias de cookies", cookies)
+        self.assertIn("Google Analytics", privacy)
+        for response in private:
+            self.assertNotIn("google", response.headers["content-security-policy"])
+
+    def test_measurement_id_must_be_a_ga4_id(self):
+        self.assertEqual(config._ga_measurement_id(" g-abc1234 "), "G-ABC1234")
+        for raw in ("", "UA-1234-1", "G-12", "G-ABC'; script-src *", "GTM-ABC123"):
+            self.assertEqual(config._ga_measurement_id(raw), "", raw)
+
     def test_interactions_are_separate_from_visits(self):
         db.record_page_view("/autonomos")
         response = self.post_event({"event": "hero_demo_started", "page": "/"})

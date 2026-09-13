@@ -306,3 +306,16 @@
       inset 0 1px 0 rgba(234, 243, 239, .07);
   }
 }
+/* Aviso de cookies. Solo existe con Google Analytics configurado. Aceptar y
+   rechazar tienen el mismo peso visual, como pide la guía de la AEPD. */
+.public-site .cookie-banner { position: fixed; z-index: 90; left: 16px; bottom: 16px; width: min(440px, calc(100% - 32px));
+  padding: 18px 20px; background: var(--surface); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: 0 14px 36px rgba(10, 43, 37, .18); }
+.public-site .cookie-banner h2 { margin: 0 0 6px; font-size: 16px; color: var(--brand); }
+.public-site .cookie-banner p { margin: 0 0 14px; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.public-site .cookie-banner a { color: var(--brand); text-decoration: underline; }
+.public-site .cookie-banner-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.public-site .cookie-banner-actions .btn { flex: 1 1 120px; justify-content: center; }
+.public-site .cookie-settings-link { padding: 0; border: 0; background: none; font: inherit; color: var(--muted);
+  text-align: left; cursor: pointer; }
+.public-site .cookie-settings-link:hover { color: var(--brand); }

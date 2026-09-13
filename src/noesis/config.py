@@ -296,6 +296,21 @@ PUBLIC_CONTACT_EMAIL = os.getenv(
 ).strip().lower()
 # Número expresamente preparado y verificado para demostraciones públicas.
 PUBLIC_WHATSAPP_DEMO_PHONE = os.getenv("NOESIS_PUBLIC_WHATSAPP_DEMO_PHONE", "").strip()
+
+
+def _ga_measurement_id(raw: str) -> str:
+    """Solo acepta un ID de Google Analytics 4 (``G-XXXXXXX``); lo demás lo apaga.
+
+    El valor acaba dentro de la CSP y de un atributo HTML: un formato estricto
+    evita que una variable mal pegada abra la política o rompa la página.
+    """
+    value = (raw or "").strip().upper()
+    return value if re.fullmatch(r"G-[A-Z0-9]{4,20}", value) else ""
+
+
+# Google Analytics de la web pública. Vacío = no hay aviso de cookies ni ninguna
+# petición a Google. Con valor, solo se carga tras aceptar en el aviso.
+GA_MEASUREMENT_ID = _ga_measurement_id(os.getenv("NOESIS_GA_MEASUREMENT_ID", ""))
 # Buzón donde caen las solicitudes de acceso. Tiene variable propia para que no
 # dependa del correo del administrador ni del de contacto público: quien atiende
 # las solicitudes no tiene por qué ser quien administra el sistema.

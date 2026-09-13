@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 13-sep — Google Analytics opcional con aviso de cookies
+
+La web pública puede usar GA4 si se define `NOESIS_GA_MEASUREMENT_ID`. Sin la
+variable no cambia nada. Con ella aparece un aviso con Aceptar y Rechazar, y Google
+solo se carga tras aceptar. La decisión se puede cambiar en el pie y en `/cookies`.
+La CSP abre Google solo en rutas públicas. Las políticas de cookies y privacidad
+lo declaran solo cuando está activo. El recuento propio sigue igual. Sin migración.
+Pendiente: propiedad GA4 y variable en Railway, y verificar en producción.
+
 ## 10-sep — Núcleo de planificación de emisión y diagnóstico real
 
 Nuevo plan sin efectos separa emitir/descargar/entregar. La emisión confirma una

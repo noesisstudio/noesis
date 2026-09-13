@@ -25,7 +25,8 @@ def _asset_version() -> str:
     """Versiona assets por fecha de modificacion para romper cache tras despliegues."""
     paths = [HERE / "static" / name for name in
              ("app.css", "app.js", "admin-workspace.css", "admin-workspace.js",
-              "public-site.js", "public-marketing.css", "public-marketing.js", "public-calendar.js")]
+              "public-site.js", "public-marketing.css", "public-marketing.js", "public-calendar.js",
+              "public-analytics.js")]
     try:
         return str(int(max(p.stat().st_mtime for p in paths if p.exists())))
     except ValueError:
@@ -38,6 +39,8 @@ TEMPLATES.env.globals["asset_v"] = _asset_version()
 TEMPLATES.env.globals["base_url"] = config.BASE_URL
 TEMPLATES.env.globals["public_signup_available"] = config.public_signup_available()
 TEMPLATES.env.globals["public_contact_email"] = config.PUBLIC_CONTACT_EMAIL
+# Vacío: la web pública no pinta aviso de cookies ni carga Google Analytics.
+TEMPLATES.env.globals["ga_measurement_id"] = config.GA_MEASUREMENT_ID
 TEMPLATES.env.globals["voice_available"] = transcription.available()
 TEMPLATES.env.globals["ocr_available"] = (
     ocr.available() or bool(config.ANTHROPIC_API_KEY)

@@ -51,6 +51,8 @@ abierta por el mensaje entrante. Tests en `WhatsappMediaTestCase`.
 demuestran tres casos sin ejecutar operaciones. `public_product_demo.html` conserva
 el panel previo; `public_testimonials.html` no muestra nada sin contenido aprobado.
 `public-calendar.js` conecta el iframe solo tras permiso y valida sus mensajes.
+`public-analytics.js` muestra el aviso de cookies si hay `NOESIS_GA_MEASUREMENT_ID`
+y solo inserta Google Analytics tras «Aceptar». Retirar el permiso borra `_ga`.
 `routers/pages.py` recibe contadores acotados; `db.public_interactions_summary`
 separa `@event:` de visitas; `admin` muestra ambos. Sin tablas nuevas. CSP en
 `server.py` permite Cal.com solo en Contacto. Los contratos están en

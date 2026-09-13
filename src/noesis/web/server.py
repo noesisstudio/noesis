@@ -243,6 +243,10 @@ async def canonical_public_host(request: Request, call_next):
     return await call_next(request)
 
 
+# Zonas con sesión o tokens de cliente: sin caché y sin terceros en la CSP.
+_PRIVATE_ZONES = ("/b/", "/api/", "/admin", "/gestoria", "/p/", "/g/", "/t/")
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -269,19 +273,29 @@ async def security_headers(request: Request, call_next):
         and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml", "/llms.txt"}
     ):
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
-    # Única excepción: calendario consentido en Contacto. Sin scripts remotos.
+    # Excepciones: calendario consentido en Contacto y, si está configurado, Google
+    # Analytics en la web pública. El script de Google solo lo inserta
+    # public-analytics.js tras aceptar el aviso; la CSP únicamente lo permite. Las
+    # zonas con datos de clientes nunca abren la política a Google.
     frame_source = "https://cal.com" if path == "/contacto" else "'none'"
+    private_zone = path != "/gestorias" and path.startswith(_PRIVATE_ZONES)
+    ga_script, ga_connect, ga_img = "", "", ""
+    if config.GA_MEASUREMENT_ID and not private_zone:
+        ga_script = " https://*.googletagmanager.com"
+        ga_connect = (" https://*.google-analytics.com https://*.analytics.google.com"
+                      " https://*.googletagmanager.com")
+        ga_img = " https://*.google-analytics.com https://*.googletagmanager.com"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; img-src 'self' data:; font-src 'self'; "
-        "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
-        f"connect-src 'self'; object-src 'none'; frame-src {frame_source}; "
+        f"default-src 'self'; img-src 'self' data:{ga_img}; font-src 'self'; "
+        f"style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'{ga_script}; "
+        f"connect-src 'self'{ga_connect}; object-src 'none'; frame-src {frame_source}; "
         "frame-ancestors 'none'; base-uri 'self'; "
         "form-action 'self' https://checkout.stripe.com"
     )
     if config.IS_PRODUCTION:
         response.headers["Content-Security-Policy-Report-Only"] = (
-            "default-src 'self'; img-src 'self' data:; font-src 'self'; "
-            "style-src 'self'; script-src 'self'; connect-src 'self'; "
+            f"default-src 'self'; img-src 'self' data:{ga_img}; font-src 'self'; "
+            f"style-src 'self'; script-src 'self'{ga_script}; connect-src 'self'{ga_connect}; "
             f"object-src 'none'; frame-src {frame_source}; frame-ancestors 'none'; "
             "base-uri 'self'; form-action 'self' https://checkout.stripe.com"
         )
@@ -289,7 +303,7 @@ async def security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-    if request.url.path.startswith(("/b/", "/api/", "/admin", "/gestoria", "/p/", "/g/", "/t/")):
+    if request.url.path.startswith(_PRIVATE_ZONES):
         response.headers["Cache-Control"] = "no-store"
     if request.url.path.startswith(("/gestoria", "/p/", "/g/", "/t/")):
         response.headers["Referrer-Policy"] = "no-referrer"

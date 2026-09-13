@@ -1,17 +1,19 @@
 {% extends "site_base.html" %}
 {% block page_title %}Política de cookies{% endblock %}
-{% block meta_description %}Cookies de sesión de Bynoesis y calendario opcional de Cal.com, que solo se carga con tu permiso. Recuentos propios de navegación sin identificadores.{% endblock %}
+{% block meta_description %}Cookies de sesión de Bynoesis{% if ga_measurement_id %}, Google Analytics solo si lo aceptas{% endif %} y calendario opcional de Cal.com, que solo se carga con tu permiso.{% endblock %}
 {% block final_cta %}{% endblock %}
 {% block content %}
 <div class="legal-wrap legal">
     <h1>Política de cookies</h1>
-    <p class="updated">Última actualización: 9 de septiembre de 2026</p>
+    <p class="updated">Última actualización: {% if ga_measurement_id %}13{% else %}9{% endif %} de septiembre de 2026</p>
 
     <div class="note">
-      Bynoesis está diseñado para usar <b>el mínimo de cookies posible</b>. Hoy solo emplea
-      una cookie técnica imprescindible, que está <b>exenta de consentimiento</b> según la
-      guía de la Agencia Española de Protección de Datos. En Contacto puedes permitir
-      por separado la carga del calendario de Cal.com. No se carga por la mera visita.
+      Bynoesis está diseñado para usar <b>el mínimo de cookies posible</b>. La cookie técnica
+      de sesión está <b>exenta de consentimiento</b> según la guía de la Agencia Española de
+      Protección de Datos.{% if ga_measurement_id %} Las cookies de analítica de Google solo se
+      instalan si pulsas «Aceptar» en el aviso de cookies; si rechazas o no decides, no se
+      carga nada de Google.{% endif %} En Contacto puedes permitir por separado la carga del
+      calendario de Cal.com. No se carga por la mera visita.
     </div>
 
     <h2>1. Qué es una cookie</h2>
@@ -28,10 +30,43 @@
           usar tu cuenta.</td>
         <td>Hasta cerrar sesión o que caduque</td>
       </tr>
+      {% if ga_measurement_id %}
+      <tr>
+        <td><code>_ga</code> (Google Analytics)</td>
+        <td>Analítica / solo con consentimiento</td>
+        <td>Distinguir de forma seudónima un navegador de otro para contar visitantes y
+          visitas a la web pública. Titular: Google Ireland Limited.</td>
+        <td>2 años</td>
+      </tr>
+      <tr>
+        <td><code>_ga_{{ ga_measurement_id[2:] }}</code> (Google Analytics)</td>
+        <td>Analítica / solo con consentimiento</td>
+        <td>Mantener el estado de la visita en curso. Titular: Google Ireland Limited.</td>
+        <td>2 años</td>
+      </tr>
+      <tr>
+        <td><code>bynoesis-analytics-consent</code> (almacenamiento local, no cookie)</td>
+        <td>Técnica / necesaria</td>
+        <td>Recordar si aceptaste o rechazaste la analítica para no preguntarte en cada página.</td>
+        <td>12 meses</td>
+      </tr>
+      {% endif %}
     </table>
+    {% if ga_measurement_id %}
+    <p>Bynoesis no usa cookies de publicidad y no elabora perfiles con tu navegación. Si
+      aceptas la analítica, Google Analytics mide qué páginas se visitan y desde dónde
+      llegas, con las señales publicitarias y de personalización de Google desactivadas.
+      Google puede tratar esos datos en Estados Unidos al amparo del Marco de Privacidad
+      de Datos UE-EE. UU.; consulta la
+      <a href="https://policies.google.com/technologies/partner-sites?hl=es" target="_blank" rel="noopener noreferrer">información de Google</a>.
+      El panel de clientes y los portales no cargan Google Analytics.</p>
+    <p><button type="button" class="btn primary" data-cookie-settings hidden>Cambiar preferencias de cookies</button></p>
+    <p>El calendario externo puede utilizar sus propias cookies cuando autorizas su carga.</p>
+    {% else %}
     <p>Bynoesis no instala cookies propias de analítica ni publicidad y no elabora
       perfiles con tu navegación. El calendario externo puede utilizar sus propias
       cookies cuando autorizas su carga.</p>
+    {% endif %}
 
     <p>En <a href="/contacto#reserva">Contacto</a>, «Permitir y ver calendario» conecta
       con Cal.com dentro de la página. Antes de pulsarlo no hay peticiones a Cal.com.
@@ -46,16 +81,21 @@
     <p>Sí contamos <b>cuántas veces se ve cada página</b>, para saber qué parte de la web
       resulta útil. Ese recuento lo hacemos en nuestro propio servidor y guardamos
       únicamente tres datos: la página, el día y el sitio desde el que llegaste, si venías
-      de otro. <b>No guardamos tu dirección IP, tu navegador ni ningún identificador</b>, no
-      instalamos nada en tu equipo para medir y no usamos un proveedor externo de
-      analítica. Estos contadores no contienen identificadores ni permiten reconstruir
-      un recorrido individual. Son independientes del calendario opcional.</p>
+      de otro. <b>No guardamos tu dirección IP, tu navegador ni ningún identificador</b> y
+      no instalamos nada en tu equipo para este recuento. Estos contadores no contienen
+      identificadores ni permiten reconstruir un recorrido individual. Funcionan aunque
+      rechaces la analítica y son independientes del calendario opcional.</p>
     <p>Contamos también interacciones como pulsar una prueba, ver una demostración o
       recibir del calendario la señal de reserva. Solo guardamos día, página y nombre
       de la acción; nunca el correo, la fecha de la cita ni el identificador de reserva.
       Estos contadores no se enlazan entre visitas ni con tu cuenta.</p>
 
     <h2>3. Cómo gestionarlas</h2>
+    {% if ga_measurement_id %}
+    <p>Puedes aceptar o retirar la analítica en cualquier momento con «Preferencias de
+      cookies», en el pie de cada página. Al rechazarla borramos las cookies de Google
+      Analytics de este sitio y dejamos de cargarlo.</p>
+    {% endif %}
     <p>Puedes borrar o bloquear las cookies desde la configuración de tu navegador. Ten en
       cuenta que si bloqueas la cookie de sesión, no podrás mantener la sesión iniciada en
       Bynoesis.</p>

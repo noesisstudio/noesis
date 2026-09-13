@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-09-13 — Google Analytics con aviso de cookies
+
+Petición del founder: poder consultar la web en Google Analytics. Áreas:
+`config.py` (`NOESIS_GA_MEASUREMENT_ID`, solo formato GA4), `web/deps.py`,
+`web/server.py` (la CSP añade dominios de Google solo con ID y fuera de zonas
+privadas; prefijos en `_PRIVATE_ZONES`), `static/public-analytics.js` (nuevo),
+`site_base.html` (aviso y «Preferencias de cookies» en el pie), `cookies.html`,
+`privacidad.html`, `public-marketing.css`, `.env.example` y pruebas. Sin ID todo
+queda como antes. El recuento propio de visitas se mantiene. Sin migraciones.
+Límite externo: hace falta crear la propiedad GA4 y poner la variable en Railway.
+Riesgo bajo; si algo falla, vaciar la variable apaga aviso, script y CSP sin
+desplegar código. Rollback: revertir el commit.
+
 ## 2026-09-11 — Preparar el cambio a S.L., webhook y voz
 
 Objetivo: que el paso de la identidad legal a la S.L. sea solo configuración y
