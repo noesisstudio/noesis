@@ -1,5 +1,13 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Prueba SEO: /preguntas tiene 15 respuestas
+
+La suite completa fallaba en `test_seo.py`
+(`test_every_faq_answer_is_marked_up_exactly_as_it_is_shown`): esperaba 16 FAQ y hay
+15 desde que Veri*Factu salió de la web pública ese mismo día. Solo se actualiza la
+prueba; el producto no cambia. Prueba OK (15 subtests). Riesgo nulo. Rollback:
+revertir el commit.
+
 ## 2026-09-14 — Notas de voz: Groq listo para activar
 
 Petición del founder: incorporar audio, activando las notas de voz con Groq. La
