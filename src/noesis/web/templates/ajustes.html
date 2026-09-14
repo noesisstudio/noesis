@@ -110,7 +110,7 @@
         </p>
         {% endif %}
         <form method="post" action="/b/{{ business.id }}/whatsapp-phone" style="margin-top:16px">
-          <label class="fld" for="wa-phone">¿Prefieres escribir tu número? <span class="hint">sin código</span></label>
+          <label class="fld" for="wa-phone">Tu número de móvil</label>
           {% if request.query_params.get('ok') == 'wa-phone' %}
           <div class="banner" style="margin-bottom:10px">Número guardado. Ahora escribe «hola» a Bynoesis desde ese móvil y responde SÍ para conectarlo. Tienes 24 horas.</div>
           {% elif request.query_params.get('error') == 'wa-phone' %}

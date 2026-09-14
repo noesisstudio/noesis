@@ -1,5 +1,11 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Etiqueta del móvil en Ajustes
+
+Petición del founder: la etiqueta «¿Prefieres escribir tu número? sin código»
+confundía. Pasa a «Tu número de móvil». Solo texto en `ajustes.html`. Riesgo
+mínimo. Rollback: revertir el commit.
+
 ## 2026-09-14 — Vincular WhatsApp escribiendo el móvil y códigos que no caducan al recargar
 
 Petición del founder: un cliente que eligió «más adelante» no tenía dónde poner su
