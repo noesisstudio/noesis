@@ -1,5 +1,15 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Veri*Factu fuera de Cumplimiento y Términos (textos archivados)
+
+Petición del founder: quitar Veri*Factu también de las páginas legales sin perder
+el texto. `cumplimiento.html` pierde la sección «2. Facturación electrónica y
+Verifactu» y renumera las siguientes (2–5); `terminos.html` dice «cumplimiento de la
+normativa fiscal» en vez de «(incluida Verifactu)». Los textos originales quedan en
+`docs/05-legal-y-rgpd/Verifactu-textos-archivados.md` con instrucciones para
+restaurarlos. Solo texto. Riesgo mínimo. Rollback: revertir el commit o copiar los
+textos del archivo.
+
 ## 2026-09-14 — Veri*Factu fuera de la web pública y «Próximamente» en la app
 
 Petición del founder: Veri*Factu aún no está disponible, así que la web pública no
