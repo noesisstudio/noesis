@@ -1,0 +1,283 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guion del vídeo de la plataforma Bynoesis</title>
+<meta name="description" content="Guion interno para grabar el vídeo que enseña Bynoesis con la demo comercial: preparación, accesos, escenas con tiempos, qué decir y qué señalar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root {
+    --ground: #f4f1e8;
+    --surface: #fffdf8;
+    --ink: #15211c;
+    --muted: #56645e;
+    --line: #e2dccb;
+    --brand: #14463b;
+    --accent: #23705d;
+    --accent-soft: #e4efe9;
+    --warn: #7a5a14;
+    --warn-soft: #f6eed8;
+    --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --sans: "Inter", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1d19; --surface: #142823; --ink: #e7eee9; --muted: #a3b4ac;
+      --line: #2a403a; --brand: #cfe7dc; --accent: #9fd6bd; --accent-soft: #1b3a31;
+      --warn: #e7c98f; --warn-soft: #2e2716;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1d19; --surface: #142823; --ink: #e7eee9; --muted: #a3b4ac;
+    --line: #2a403a; --brand: #cfe7dc; --accent: #9fd6bd; --accent-soft: #1b3a31;
+    --warn: #e7c98f; --warn-soft: #2e2716;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--ground); color: var(--ink); font: 400 16px/1.65 var(--sans); padding-inline: 20px; }
+  .wrap { max-width: 780px; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 56px; }
+  h1, h2, h3 { font-family: var(--serif); color: var(--brand); font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3rem); line-height: 1.08; letter-spacing: -.01em; }
+  h2 { font-size: 1.65rem; line-height: 1.2; }
+  h3 { font-size: 1.15rem; line-height: 1.3; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  code { font-family: var(--mono); font-size: .88em; background: var(--accent-soft); color: var(--brand); padding: 1px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+  .label { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .muted { color: var(--muted); }
+  .stack { display: grid; gap: 14px; }
+
+  header.intro { display: grid; gap: 16px; }
+  .brandline { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--brand); }
+  .brandline svg { width: 26px; height: 26px; }
+  .lede { font-size: 1.12rem; color: var(--muted); }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: .92rem; color: var(--muted); padding: 0; margin: 4px 0 0; list-style: none; }
+  .facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .note { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 12px 14px; font-size: .92rem; }
+  .checklist { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  .checklist li { padding: 11px 0; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
+  .checklist small { color: var(--muted); font-size: .86rem; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; min-width: 560px; }
+  th { text-align: left; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 0 12px 8px 0; border-bottom: 1px solid var(--line); }
+  td { vertical-align: top; padding: 11px 12px 11px 0; border-bottom: 1px solid var(--line); }
+
+  .scenes { list-style: none; margin: 0; padding: 0; display: grid; }
+  .scene { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .scene:last-child { border-bottom: 1px solid var(--line); }
+  .scene time { font-family: var(--mono); font-size: .9rem; color: var(--accent); font-variant-numeric: tabular-nums; padding-top: 3px; }
+  .scene-body { display: grid; gap: 10px; }
+  .where { font-size: .86rem; color: var(--muted); }
+  .where b { color: var(--ink); font-weight: 600; }
+  .say { font-family: var(--serif); font-size: 1.08rem; line-height: 1.5; color: var(--ink); border-left: 3px solid var(--accent); padding-left: 14px; font-style: italic; }
+  .point { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; font-size: .94rem; }
+  .point b { color: var(--ink); font-weight: 600; }
+  .insert { background: var(--accent-soft); border-radius: 12px; padding: 16px 18px; }
+  .insert .label { display: block; margin-bottom: 4px; }
+
+  .tips { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); }
+  .tips b { color: var(--ink); font-weight: 600; }
+  footer { font-size: .88rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+
+  @media (max-width: 520px) {
+    .wrap { padding-block: 32px 56px; gap: 44px; }
+    .scene { grid-template-columns: 1fr; gap: 6px; }
+  }
+</style>
+
+<main class="wrap">
+  <header class="intro">
+    <div class="brandline">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#2e8b74" d="M12 1.5c.7 5.6 4.9 9.8 10.5 10.5-5.6.7-9.8 4.9-10.5 10.5C11.3 16.9 7.1 12.7 1.5 12 7.1 11.3 11.3 7.1 12 1.5z"/></svg>
+      Bynoesis
+    </div>
+    <span class="label">Guion interno · no se publica</span>
+    <h1>Vídeo: así es Bynoesis por dentro</h1>
+    <p class="lede">Un recorrido por un negocio que ya lleva meses usando Bynoesis: el día, las obras, los clientes, el dinero, los papeles, la gestoría y lo que ve el cliente final.</p>
+    <ul class="facts">
+      <li><b>5–6 min</b> de vídeo</li>
+      <li><b>3 accesos</b>: autónomo, gestoría y cliente</li>
+      <li><b>100 %</b> datos ficticios</li>
+    </ul>
+  </header>
+
+  <section class="stack" aria-labelledby="preparar">
+    <h2 id="preparar">Antes de grabar</h2>
+    <ul class="checklist">
+      <li><span>En Railway, <code>NOESIS_SEED_DEMO=true</code> y reiniciar el servicio.</span><small>Crea la demo si no existe. Después se puede volver a poner en <code>false</code>: los datos se quedan.</small></li>
+      <li><span>Entrar una vez con cada acceso y recorrer las pantallas del guion.</span><small>Así compruebas que todo carga y no te llevas sorpresas grabando.</small></li>
+      <li><span>Tener grabado el trozo de WhatsApp con la cuenta del vídeo de instalación.</span><small>La demo es de solo lectura y no usa WhatsApp: ese trozo se monta en la escena 7.</small></li>
+      <li><span>Tres ventanas preparadas: normal, privada y otra privada.</span><small>Autónomo, gestoría y portal del cliente, para no cerrar sesión delante de la cámara.</small></li>
+    </ul>
+    <p class="note">Los trabajos de «hoy» se crean con la fecha del día en que se sembró la demo. Si la demo se creó otro día, esos trabajos aparecerán como pasados: revisa Inicio y Trabajos antes de grabar y, si no cuadra, adapta la frase de la escena 2.</p>
+  </section>
+
+  <section class="stack" aria-labelledby="accesos">
+    <h2 id="accesos">Accesos</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Quién</th><th scope="col">Dónde</th><th scope="col">Usuario</th><th scope="col">Contraseña</th></tr></thead>
+        <tbody>
+          <tr><td>Autónomo<br><span class="muted">Reformas y Fontanería Delta SL · Demo</span></td><td><code>bynoesis.com/login</code></td><td><code>demo.autonomo@bynoesis.com</code></td><td><code>NoesisDemo2026!</code></td></tr>
+          <tr><td>Gestoría<br><span class="muted">Gestoría Mirall · Demo</span></td><td><code>bynoesis.com/gestoria/login</code></td><td><code>demo.gestoria@bynoesis.com</code></td><td><code>NoesisDemo2026!</code></td></tr>
+          <tr><td>Cliente final<br><span class="muted">Comunidad Aragó 121</span></td><td><code>bynoesis.com/demo/cliente</code></td><td colspan="2" class="muted">Enlace privado, sin contraseña</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="stack" aria-labelledby="guion">
+    <h2 id="guion">Guion, escena a escena</h2>
+    <p class="muted">Cada escena dice dónde estar, qué decir y qué señalar con el ratón. Las frases son una guía: dilas con tus palabras.</p>
+    <ol class="scenes">
+
+      <li class="scene"><time>0:00</time><div class="scene-body">
+        <h3>1. Apertura, a cámara</h3>
+        <p class="say">«Te enseño cómo se ve un negocio de reformas que lleva meses con Bynoesis. Todo lo que vas a ver son datos de ejemplo.»</p>
+      </div></li>
+
+      <li class="scene"><time>0:20</time><div class="scene-body">
+        <h3>2. El parte del día</h3>
+        <p class="where">Cuenta del autónomo → menú <b>Inicio</b></p>
+        <p class="say">«Nada más entrar, Bynoesis te dice lo importante de hoy: qué trabajos tienes y qué dinero te deben.»</p>
+        <ul class="point">
+          <li>Trabajos del día: <b>Marta García</b> 9:30, <b>Bar El Rincón</b> 11:30, <b>Comunidad Aragó 121</b> 13:00 y <b>Laura Soler</b> 17:30.</li>
+          <li>Lo pendiente de cobrar y lo que ya ha vencido.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>0:50</time><div class="scene-body">
+        <h3>3. Trabajos</h3>
+        <p class="where">Menú <b>Trabajos</b></p>
+        <p class="say">«Aquí tienes la agenda: quién, dónde y cuándo. Y cada trabajo puede ir unido a una obra.»</p>
+        <ul class="point">
+          <li><b>Instalación de sanitarios</b>, asignado a Pau y unido al proyecto del baño.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>1:10</time><div class="scene-body">
+        <h3>4. Una obra con números</h3>
+        <p class="where">Menú <b>Proyectos</b> → <b>Reforma integral del baño 2ºA</b></p>
+        <p class="say">«Una obra de 8.000 €. Veo cómo va, cuántas horas llevamos, qué material se ha comprado y si sigo ganando dinero.»</p>
+        <ul class="point">
+          <li>Avance del <b>46 %</b> y <b>112 horas</b> previstas.</li>
+          <li>Equipo: <b>Pau Martínez</b> (oficial) y <b>Núria Vidal</b> (ayudante).</li>
+          <li>Costes: sanitarios y grifería <b>1.640 €</b> y 31 horas de demolición.</li>
+          <li>Tareas: confirmar la mampara e instalar sanitarios.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>1:50</time><div class="scene-body">
+        <h3>5. Clientes y posibles clientes</h3>
+        <p class="where">Menú <b>Clientes</b> → ficha de <b>Comunidad Aragó 121</b>; después <b>CRM</b></p>
+        <p class="say">«En la ficha del cliente está todo lo suyo. Y en el CRM, a quién tengo que llamar hoy para no perder un trabajo.»</p>
+        <ul class="point">
+          <li>Presupuesto enviado: <b>Fase final: mampara, pintura y puesta en marcha</b>, 1.850 €.</li>
+          <li>CRM: <b>Jordi — caldera nueva</b> toca hoy; <b>Comunidad Nàpols 88</b> tiene el seguimiento atrasado.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>2:30</time><div class="scene-body">
+        <h3>6. Facturas y cobros</h3>
+        <p class="where">Menú <b>Facturas</b>; después <b>Cobros</b></p>
+        <p class="say">«Cada factura dice en qué punto está: cobrada, pendiente, cobrada a medias o vencida. Lo que se retrasa, lo ves enseguida.»</p>
+        <ul class="point">
+          <li><b>Carlos Ruiz</b>: cobrada.</li>
+          <li><b>Comunidad Aragó 121</b>: 2.000 € cobrados de la fase 1 (4.500 € + IVA al 10 %).</li>
+          <li><b>Bar El Rincón</b>: 240 € sin cobrar desde hace semanas.</li>
+          <li><b>Inmobiliaria Vallès</b>: con retención de IRPF del 15 %.</li>
+          <li><b>Laura Soler</b>: borrador todavía sin emitir.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>3:10</time><div class="scene-body">
+        <h3>7. Pedirlo por WhatsApp <span class="muted">(inserto)</span></h3>
+        <div class="insert">
+          <span class="label">Montar aquí el trozo grabado con la cuenta de instalación</span>
+          <p>Móvil a pantalla completa: escribes <b>«Factura 450 € más IVA a Juan por la reparación»</b> y Bynoesis responde con el borrador para revisar.</p>
+        </div>
+        <p class="say">«Y todo esto no hace falta hacerlo desde el ordenador. Se lo pides por WhatsApp, te prepara el borrador y tú decides cuándo emitirlo.»</p>
+      </div></li>
+
+      <li class="scene"><time>3:40</time><div class="scene-body">
+        <h3>8. Cómo va el negocio</h3>
+        <p class="where">Menú <b>Caja</b>; después <b>Análisis</b> y <b>Costes</b></p>
+        <p class="say">«Los últimos meses de un vistazo: lo que entra, lo que se va y en qué se va.»</p>
+        <ul class="point">
+          <li>Evolución de ingresos y gastos de los últimos cinco meses.</li>
+          <li>Gastos por tipo: combustible, cuota de autónomos, seguros, renting de la furgoneta…</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>4:05</time><div class="scene-body">
+        <h3>9. Los papeles, ordenados</h3>
+        <p class="where">Menú <b>Documentos</b></p>
+        <p class="say">«Tickets, facturas de proveedores y contratos en un sitio. Si algo no está claro, queda pendiente de revisar en vez de inventarse el dato.»</p>
+        <ul class="point">
+          <li><b>ticket-ferreteria.jpg</b>: pendiente de revisar porque el total no está claro.</li>
+          <li><b>caldera-roca.pdf</b>: ya enviado a la gestoría.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>4:30</time><div class="scene-body">
+        <h3>10. El equipo</h3>
+        <p class="where">Menú <b>Equipo</b></p>
+        <p class="say">«Cada persona del equipo ve sus trabajos y ficha, sin ver los números del negocio.»</p>
+        <ul class="point">
+          <li><b>Pau Martínez</b> y <b>Núria Vidal</b>.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>4:45</time><div class="scene-body">
+        <h3>11. La gestoría</h3>
+        <p class="where">Ventana privada → <code>/gestoria/login</code> con <b>demo.gestoria@bynoesis.com</b></p>
+        <p class="say">«Tu gestoría entra por su lado. Ve tus papeles ordenados por trimestre y te pide lo que falta, sin correos ni llamadas.»</p>
+        <ul class="point">
+          <li>Dos empresas en la cartera: <b>Reformas y Fontanería Delta</b> y <b>Electricidad Montseny</b>.</li>
+          <li>Solicitud respondida: faltaba la factura de la caldera de Roca y ya está subida.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>5:15</time><div class="scene-body">
+        <h3>12. Lo que ve tu cliente</h3>
+        <p class="where">Otra ventana privada → <code>/demo/cliente</code></p>
+        <p class="say">«Y tu cliente recibe un enlace privado para ver su presupuesto y descargarse sus facturas.»</p>
+        <ul class="point">
+          <li>Presupuesto de la fase final y la factura de la fase 1, con su PDF.</li>
+        </ul>
+      </div></li>
+
+      <li class="scene"><time>5:35</time><div class="scene-body">
+        <h3>13. Cierre, a cámara</h3>
+        <p class="say">«Eso es Bynoesis: tu negocio ordenado y por WhatsApp. Si quieres verlo con tus propios datos, escríbenos.»</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section class="stack" aria-labelledby="cuidado">
+    <h2 id="cuidado">Qué no decir en el vídeo</h2>
+    <ul class="tips">
+      <li><b>Veri*Factu:</b> no decir que está activo ni certificado. Está preparado, pero la conexión con la AEAT aún no está validada.</li>
+      <li><b>Notas de voz y lectura de fotos:</b> no presentarlas como funciones probadas si no se enseñan funcionando de verdad.</li>
+      <li><b>Impuestos:</b> lo que calcula es orientativo; quien presenta es la gestoría.</li>
+      <li><b>Pagos:</b> Bynoesis no cobra ni mueve dinero sin que el titular lo confirme.</li>
+    </ul>
+  </section>
+
+  <section class="stack" aria-labelledby="consejos">
+    <h2 id="consejos">Consejos de grabación</h2>
+    <ul class="tips">
+      <li>Navegador al <b>125 %</b> de zoom y ventana a pantalla completa, para que se lea en el móvil.</li>
+      <li>Mover el ratón despacio y parar un segundo sobre cada dato que nombras.</li>
+      <li>Las páginas de la demo llevan la etiqueta <b>«Demo · solo lectura»</b>: se puede dejar, porque da confianza, o recortarla al montar.</li>
+      <li>No intentar crear ni cambiar nada en la demo: saldrá el aviso de solo lectura.</li>
+      <li>Grabar escena a escena; es más fácil repetir una sola que el vídeo entero.</li>
+    </ul>
+  </section>
+
+  <footer>Bynoesis · Guion interno del vídeo de la plataforma · septiembre de 2026 · Datos sacados de <code>src/noesis/demo.py</code></footer>
+</main>

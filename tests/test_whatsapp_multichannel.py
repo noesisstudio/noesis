@@ -192,6 +192,27 @@ class WhatsappMultichannelTestCase(unittest.TestCase):
             db.get_business(business["id"])["whatsapp_status"], "conectado"
         )
 
+    def test_code_copied_before_reloading_settings_still_links(self):
+        business = self.business("Recarga")
+        copiado = whatsapp.start_link(business["id"])
+        whatsapp.start_link(business["id"])  # el titular recarga Ajustes
+        respuesta = whatsapp._try_link("34600111222", f"BYNOESIS {copiado['code']}")
+        self.assertIn("WhatsApp conectado", respuesta)
+
+    def test_phone_typed_in_settings_links_after_yes_from_that_phone(self):
+        business = self.business("Sin código")
+        db.expect_whatsapp_phone(business["id"], "600 111 222")
+        with patch.object(whatsapp, "send") as send:
+            whatsapp.handle_inbound({"from": "34600111222", "id": "exp-1", "text": "hola"})
+            self.assertIn("responde SÍ", send.call_args.args[1])
+            self.assertEqual(db.get_business(business["id"])["whatsapp_status"], "no_conectado")
+            whatsapp.handle_inbound({"from": "34600999888", "id": "exp-2", "text": "sí"})
+            self.assertIn("no está dado de alta", send.call_args.args[1])
+            whatsapp.handle_inbound({"from": "34600111222", "id": "exp-3", "text": "sí"})
+            self.assertIn("WhatsApp conectado", send.call_args.args[1])
+        self.assertEqual(db.get_business(business["id"])["whatsapp_status"], "conectado")
+        self.assertIsNone(db.business_expecting_whatsapp_phone("600111222"))
+
     def test_link_points_to_the_business_that_already_holds_the_phone(self):
         primero = self.business("Primero")
         segundo = self.business("Segundo")

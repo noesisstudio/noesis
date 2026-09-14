@@ -1,5 +1,43 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Vincular WhatsApp escribiendo el móvil y códigos que no caducan al recargar
+
+Petición del founder: un cliente que eligió «más adelante» no tenía dónde poner su
+número y el código de Ajustes le decía «no válido». Causa: `db.create_whatsapp_link`
+borraba los códigos anteriores del negocio en cada visita a Ajustes, así que
+recargar invalidaba el código copiado. Ahora solo borra caducados y conserva los
+cinco últimos. Nuevo campo en Ajustes («¿Prefieres escribir tu número?») →
+`POST /b/{id}/whatsapp-phone` (`routers/account.py`) guarda el móvil esperado 24 h
+en `whatsapp_pending_actions` (sin migración). En `web/whatsapp.py`, si ese móvil
+escribe sin estar dado de alta, se le pregunta y solo un SÍ desde él lo vincula
+(evita apuntar un teléfono ajeno); aplica los mismos conflictos de identidad.
+Riesgo bajo. Diagnóstico: filas `kind='whatsapp_expected_phone'`. Rollback:
+revertir el commit.
+
+## 2026-09-14 — WhatsApp: tickets grandes, últimos tickets en PDF y negritas
+
+Petición del founder a partir de una conversación real. `web/whatsapp.py`:
+`queue_text` traduce `**negrita**` a `*negrita*` (salían asteriscos literales);
+«muéstrame los 3 últimos tickets y mándamelos en PDF» lista hasta 5 tickets o
+facturas y adjunta sus PDF reales sin pasar por la IA; un ticket de más de 400 €
+deja un pendiente `factura_completa` y el SÍ prepara un borrador F1 con los mismos
+datos (emitir sigue pidiendo confirmación); «vale, pero quiero que me crees este
+ticket» repite la explicación en vez de caer a la IA. `web/chat.py`: «el último
+cliente» se resuelve con el cliente de la última factura (antes creaba una ficha con
+ese texto); oferta de factura completa; el fallo de IA externa responde con órdenes
+que funcionan. `tools.py`: el límite de 400 € con precio final se comprueba antes de
+crear el cliente. Riesgo bajo. Diagnóstico: pendientes `factura_completa` y claves
+`invoice-request:`. Rollback: revertir el commit.
+
+## 2026-09-14 — Guion del vídeo de la plataforma
+
+Petición del founder: grabar un vídeo que enseñe Bynoesis por dentro, además del de
+instalación. Nuevo `docs/01-producto/Guion-video-plataforma.html` (interno): preparación
+con `NOESIS_SEED_DEMO`, accesos de la demo comercial, 13 escenas con tiempos, frase,
+pantalla y datos a señalar sacados de `src/noesis/demo.py`, inserto de WhatsApp con la
+cuenta de instalación y qué no prometer (Veri*Factu, voz/OCR, impuestos, pagos). Solo
+documentación; no toca `src/noesis/`. Riesgo nulo. Rollback: borrar el archivo.
+
 ## 2026-09-14 — Aviso de cookies sin nombrar a Google Analytics
 
 Petición del founder: el aviso habla de cookies, no de la herramienta. En

@@ -2399,6 +2399,29 @@ class ExpensePhotoHttpTestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 303)
 
+    def test_settings_accepts_owner_phone_without_code_and_isolated(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Móvil escrito")
+        other, _ = self.make_business("Otra cuenta")
+        with patch.object(server, "start_scheduler", lambda: None), \
+                TestClient(server.app) as client:
+            self._login(client, business)
+            page = client.get(f"/b/{business['id']}/ajustes")
+            self.assertIn("Guardar mi número", page.text)
+            bad = client.post(f"/b/{business['id']}/whatsapp-phone",
+                              data={"phone": "12"}, follow_redirects=False)
+            self.assertIn("error=wa-phone", bad.headers["location"])
+            ok = client.post(f"/b/{business['id']}/whatsapp-phone",
+                             data={"phone": "600 111 222"}, follow_redirects=False)
+            self.assertIn("ok=wa-phone", ok.headers["location"])
+            foreign = client.post(f"/b/{other['id']}/whatsapp-phone",
+                                  data={"phone": "600 333 444"}, follow_redirects=False)
+            self.assertNotIn("ok=wa-phone", foreign.headers.get("location", ""))
+        self.assertEqual(db.business_expecting_whatsapp_phone("34600111222"), business["id"])
+        self.assertIsNone(db.business_expecting_whatsapp_phone("600333444"))
+
     def test_photo_returns_draft_and_confirmation_links_document(self):
         from starlette.testclient import TestClient
         from noesis.documents import repo as docrepo, service as docservice

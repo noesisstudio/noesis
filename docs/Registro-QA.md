@@ -1,5 +1,32 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Vincular WhatsApp escribiendo el móvil
+
+- Nuevas: código copiado antes de recargar Ajustes sigue vinculando; móvil escrito
+  → «hola» pregunta, SÍ desde otro móvil no vincula, SÍ desde ese móvil conecta y
+  limpia el pendiente (`test_whatsapp_multichannel.py`); Ajustes muestra el campo,
+  rechaza formato inválido, guarda el válido y no permite guardarlo en otra cuenta
+  (`test_backend.py`).
+- Conversación + multicanal: 35 OK; prueba web 1 OK. Ruff OK.
+- Suite completa: 815 OK, 1 fallo ajeno ya registrado
+  (`test_linking_accepts_the_old_keyword_after_the_rename`).
+- No ejecutado: WhatsApp real ni revisión visual del formulario en móvil.
+
+## 2026-09-14 — WhatsApp: tickets grandes, últimos tickets en PDF y negritas
+
+- Nuevas en `test_invoice_conversation.py` con la conversación real: ticket de
+  3.000 € para «el último cliente» → oferta de factura completa sin crear cliente
+  ni documento; insistencia → misma explicación; SÍ → borrador F1 de 3.000 € para
+  el cliente real. «Muéstrame los 3 últimos tickets y mándamelos en PDF» → lista y
+  3 adjuntos de los tickets más recientes. Negrita `**x**` → `*x*`.
+- `test_invoice_conversation.py` + `test_whatsapp_multichannel.py`: 33 OK. Ruff OK.
+  `check_project_truth` OK.
+- Suite completa: 813 OK, 1 fallo ajeno ya registrado
+  (`test_linking_accepts_the_old_keyword_after_the_rename`).
+- No ejecutado: WhatsApp real ni el fallo de la IA externa en producción (la causa
+  de «no puedo usar la IA externa» está en el proveedor o su configuración, no se
+  ha diagnosticado aquí).
+
 ## 2026-09-14 — Texto del aviso de cookies
 
 - Web pública + seguridad (`test_public_marketing.py`, `test_security_hardening.py`):

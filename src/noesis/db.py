@@ -11793,16 +11793,49 @@ def update_whatsapp_delivery(
 
 
 def create_whatsapp_link(code_hash: str, business_id: int, expires_at: str) -> None:
+    # Cada visita a Ajustes genera un código. Borrar los anteriores invalidaba el
+    # que el titular ya había copiado al recargar la página; se conservan los
+    # últimos cinco vigentes.
     with get_conn() as conn:
-        conn.execute(
-            "DELETE FROM whatsapp_links WHERE business_id=? OR expires_at<?",
-            (business_id, _now()),
-        )
+        conn.execute("DELETE FROM whatsapp_links WHERE expires_at<?", (_now(),))
         conn.execute(
             "INSERT INTO whatsapp_links (code_hash, business_id, expires_at, created_at) "
             "VALUES (?, ?, ?, ?)",
             (code_hash, business_id, expires_at, _now()),
         )
+        conn.execute(
+            "DELETE FROM whatsapp_links WHERE business_id=? AND code_hash NOT IN ("
+            "SELECT code_hash FROM whatsapp_links WHERE business_id=? "
+            "ORDER BY created_at DESC LIMIT 5)",
+            (business_id, business_id),
+        )
+
+
+_EXPECTED_PHONE_KIND = "whatsapp_expected_phone"
+
+
+def _expected_phone_key(phone: str) -> str:
+    return f"wa-expected:{normalize_phone(phone)}"
+
+
+def expect_whatsapp_phone(business_id: int, phone: str) -> None:
+    """Anota el móvil que el titular escribió en la web; se vincula cuando confirme."""
+    set_pending_action(business_id, _expected_phone_key(phone), _EXPECTED_PHONE_KIND,
+                       {"phone": phone}, ttl_minutes=24 * 60)
+
+
+def business_expecting_whatsapp_phone(phone: str) -> int | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT business_id FROM whatsapp_pending_actions "
+            "WHERE phone=? AND kind=? AND expires_at>=? ORDER BY id DESC LIMIT 1",
+            (_expected_phone_key(phone), _EXPECTED_PHONE_KIND, _now()),
+        ).fetchone()
+        return row["business_id"] if row else None
+
+
+def clear_expected_whatsapp_phone(business_id: int, phone: str) -> None:
+    clear_pending_action(business_id, _expected_phone_key(phone))
 
 
 def consume_whatsapp_link(code_hash: str) -> int | None:

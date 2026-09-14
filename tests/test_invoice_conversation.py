@@ -114,6 +114,49 @@ class InvoiceConversationTestCase(unittest.TestCase):
         post.assert_not_called()
         self.assertEqual(len(db.list_invoices(biz['id'])), 1)
 
+    def test_screenshot_ticket_over_limit_offers_full_invoice_for_last_client(self):
+        biz, client = self.make_business('Ticket grande')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        self.invoice(biz, client, issued=True)
+        clients_before = len(db.list_clients(biz['id']))
+        with patch.object(whatsapp, 'send') as send, patch.object(whatsapp, '_post_to_meta') as post:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'big-1',
+                'text': 'creame un ticket para el ultimo cliente que he hecho de 3000 euros totales'})
+            reply = send.call_args.args[1]
+            self.assertIn('400', reply)
+            self.assertIn('factura completa', reply)
+            self.assertIn(client['name'], reply)
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'big-2',
+                'text': 'vale, pero quiero que me crees este ticket'})
+            self.assertIn('no me lo puedo saltar', send.call_args.args[1])
+            self.assertEqual(len(db.list_invoices(biz['id'])), 1)
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'big-3', 'text': 'sí'})
+            self.assertIn('Factura #', send.call_args.args[1])
+        post.assert_not_called()
+        self.assertEqual(len(db.list_clients(biz['id'])), clients_before)
+        draft = db.list_invoices(biz['id'])[0]
+        self.assertEqual((draft['invoice_type'], draft['status'], draft['total'], draft['client_id']),
+                         ('F1', 'borrador', 3000, client['id']))
+
+    def test_last_three_tickets_are_listed_and_sent_as_pdf(self):
+        biz, client = self.make_business('Últimos tickets')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        tickets = [self.invoice(biz, client, 50 + n, issued=True) for n in range(4)]
+        with patch.object(whatsapp, 'send') as send, \
+             patch.object(whatsapp, '_post_to_meta', return_value='wamid-last') as post:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'last-3',
+                'text': 'mustrame los 3 ultimos tickets y mandamelos en pdf'})
+        self.assertIn('últimos 3 tickets', send.call_args_list[0].args[1])
+        links = [call.args[0]['document']['link'] for call in post.call_args_list]
+        self.assertEqual(len(links), 3)
+        for ticket in tickets[1:]:
+            self.assertTrue(any(f'/invoices/{ticket["id"]}/pdf' in link for link in links))
+        self.assertIsNone(whatsapp._recent_documents_request('pásame la última factura en PDF'))
+
+    def test_web_markdown_bold_becomes_whatsapp_bold(self):
+        self.assertEqual(whatsapp.whatsapp_markup('facturado **0,00 €** y **“ver documentos”**'),
+                         'facturado *0,00 €* y *“ver documentos”*')
+
     def test_pdf_clarification_f2_jana_preserves_download_intent(self):
         biz, client = self.make_business('Selección F2')
         db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
