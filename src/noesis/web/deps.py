@@ -26,7 +26,7 @@ def _asset_version() -> str:
     paths = [HERE / "static" / name for name in
              ("app.css", "app.js", "admin-workspace.css", "admin-workspace.js",
               "public-site.js", "public-marketing.css", "public-marketing.js", "public-calendar.js",
-              "public-analytics.js")]
+              "public-analytics.js", "public-video.js")]
     try:
         return str(int(max(p.stat().st_mtime for p in paths if p.exists())))
     except ValueError:
@@ -41,6 +41,8 @@ TEMPLATES.env.globals["public_signup_available"] = config.public_signup_availabl
 TEMPLATES.env.globals["public_contact_email"] = config.PUBLIC_CONTACT_EMAIL
 # Vacío: la web pública no pinta aviso de cookies ni carga Google Analytics.
 TEMPLATES.env.globals["ga_measurement_id"] = config.GA_MEASUREMENT_ID
+# Vacío: /bienvenida no ofrece vídeo y las políticas no mencionan YouTube.
+TEMPLATES.env.globals["welcome_video_id"] = config.WELCOME_VIDEO_ID
 TEMPLATES.env.globals["voice_available"] = transcription.available()
 TEMPLATES.env.globals["ocr_available"] = (
     ocr.available() or bool(config.ANTHROPIC_API_KEY)

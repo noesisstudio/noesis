@@ -368,6 +368,19 @@ def site_page(request: Request):
     })
 
 
+@router.get("/bienvenida", response_class=HTMLResponse)
+def bienvenida(request: Request):
+    """Guía para quien ya tiene acceso: se enlaza desde el correo de invitación.
+
+    No está en ``_INDEXABLES``: recibe ``noindex`` y no sale en el sitemap.
+    """
+    return TEMPLATES.TemplateResponse(request, "site_bienvenida.html", {
+        "site_active": "bienvenida",
+        "business_id": request.session.get("bid"),
+        "welcome_video_id": config.WELCOME_VIDEO_ID,
+    })
+
+
 @router.get("/sw.js")
 def service_worker():
     # Servido desde la raiz para que el service worker controle toda la app (scope /).

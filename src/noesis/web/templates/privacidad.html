@@ -106,6 +106,9 @@
       <tr><td>{{ backup_provider_name }}</td><td>Copia de seguridad externa cifrada</td><td>{{ backup_provider_region }}</td></tr>
       {% endif %}
       <tr><td>Cal.com</td><td>Agenda y reserva, al permitir el calendario en Contacto o abrir voluntariamente su enlace</td><td>Según la política de Cal.com</td></tr>
+      {% if welcome_video_id %}
+      <tr><td>YouTube (Google Ireland Limited)</td><td>Reproducir el vídeo de bienvenida, solo si pulsas «Ver el vídeo» en Bienvenida o abres voluntariamente su enlace</td><td>UE / EE. UU.; Marco de Privacidad de Datos UE-EE. UU.</td></tr>
+      {% endif %}
       {% if ga_measurement_id %}
       <tr><td>Google Analytics (Google Ireland Limited)</td><td>Medir el uso de la web pública, solo si aceptas la analítica en el aviso de cookies. No se usa en el panel ni en los portales</td><td>UE / EE. UU.; Marco de Privacidad de Datos UE-EE. UU.</td></tr>
       {% endif %}

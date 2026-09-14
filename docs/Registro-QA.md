@@ -1,5 +1,25 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Página /bienvenida y vídeo de YouTube inerte
+
+- Nuevas en `test_public_marketing.py`: `/bienvenida` noindex por cabecera y meta,
+  fuera del sitemap, sin guion ni YouTube sin variable; con vídeo, sin iframe ni
+  scripts remotos en el HTML, `frame-src` a youtube-nocookie solo en esa ruta y
+  YouTube declarado en cookies y privacidad; validador de ID/enlace de YouTube.
+  La página entra también en metadatos y enlaces internos. 18 OK.
+- Seguridad + backend filtrados (csp/security/public/cookie/robots/sitemap/frame):
+  38 OK. Ruff OK. `node --check` de `public-video.js` y tests Node 2 OK.
+  `check_project_truth` OK.
+- Suite completa: 810 OK, 1 fallo ajeno:
+  `test_linking_accepts_the_old_keyword_after_the_rename` falla igual en
+  `baaaae1` sin estos cambios (sin número oficial `start_link` ya no genera enlace).
+- Chrome local vía CDP con móvil de 390 px: `scrollWidth` 390 con y sin vídeo
+  (corregido antes un desbordamiento por la tabla dentro del grid); al pulsar
+  «Ver el vídeo» aparece el iframe youtube-nocookie y se oculta el aviso.
+  Escritorio 1280 px revisado por captura.
+- No ejecutado: reproducción real del vídeo (no hay vídeo), móvil físico, CI ni
+  producción.
+
 ## 2026-09-13 — Guía de instalación y mensaje de equipo con la marca
 
 - Guía contrastada con el código: asunto y caducidad de la invitación (7 días),

@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Bienvenida de clientes — 14-sep
+
+- [x] Página `/bienvenida` con la guía para clientes, sin indexar y sin guion interno.
+- [x] Vídeo de YouTube inerte hasta pulsar; CSP y políticas solo con variable.
+- [ ] Founder: grabar el vídeo con el guion de `Guia-instalacion-clientes.html`
+  cuando la pantalla nueva de WhatsApp esté publicada.
+- [ ] Founder: subirlo a YouTube como «oculto» y poner su enlace en
+  `NOESIS_WELCOME_VIDEO_ID` en Railway.
+- [ ] Enlazar `https://bynoesis.com/bienvenida` desde el correo «Tu acceso a
+  Bynoesis ya está listo» (o en uno que salga justo después).
+- [ ] Tras desplegar: abrir la página en un móvil real y reproducir el vídeo.
+
 ## Google Analytics — 13-sep
 
 - [x] Aviso de cookies con Aceptar/Rechazar; GA4 solo tras aceptar y revocable.

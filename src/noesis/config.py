@@ -311,6 +311,41 @@ def _ga_measurement_id(raw: str) -> str:
 # Google Analytics de la web pública. Vacío = no hay aviso de cookies ni ninguna
 # petición a Google. Con valor, solo se carga tras aceptar en el aviso.
 GA_MEASUREMENT_ID = _ga_measurement_id(os.getenv("NOESIS_GA_MEASUREMENT_ID", ""))
+
+
+def _youtube_video_id(raw: str) -> str:
+    """Acepta el ID de un vídeo de YouTube o su enlace; lo demás lo apaga.
+
+    Se admite el enlace tal cual se copia de YouTube (``youtu.be/…``,
+    ``watch?v=…`` o ``shorts/…``). El valor acaba en un atributo HTML y activa
+    una excepción de la CSP: solo pasan los 11 caracteres de un ID real.
+    """
+    from urllib.parse import parse_qs, urlsplit
+
+    value = (raw or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{11}", value):
+        try:
+            parts = urlsplit(value)
+        except ValueError:
+            return ""
+        host = (parts.hostname or "").lower().removeprefix("www.").removeprefix("m.")
+        path = parts.path.strip("/")
+        if parts.scheme not in {"http", "https"}:
+            return ""
+        if host == "youtu.be":
+            value = path
+        elif host == "youtube.com" and path == "watch":
+            value = parse_qs(parts.query).get("v", [""])[0]
+        elif host == "youtube.com" and path.startswith(("shorts/", "embed/", "live/")):
+            value = path.split("/", 1)[1]
+        else:
+            return ""
+    return value if re.fullmatch(r"[A-Za-z0-9_-]{11}", value) else ""
+
+
+# Vídeo de bienvenida para clientes en /bienvenida. Vacío = la página muestra los
+# pasos sin vídeo. Con valor, YouTube solo se conecta al pulsar «Ver el vídeo».
+WELCOME_VIDEO_ID = _youtube_video_id(os.getenv("NOESIS_WELCOME_VIDEO_ID", ""))
 # Buzón donde caen las solicitudes de acceso. Tiene variable propia para que no
 # dependa del correo del administrador ni del de contacto público: quien atiende
 # las solicitudes no tiene por qué ser quien administra el sistema.

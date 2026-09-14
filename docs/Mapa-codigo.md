@@ -57,6 +57,10 @@ y solo inserta Google Analytics tras «Aceptar». Retirar el permiso borra `_ga`
 separa `@event:` de visitas; `admin` muestra ambos. Sin tablas nuevas. CSP en
 `server.py` permite Cal.com solo en Contacto. Los contratos están en
 `test_public_marketing.py` y dos tests Node sin red. Detalle: [[Rediseño-web-2026-09-09]].
+`/bienvenida` (`site_bienvenida.html`) es la guía para clientes que ya tienen
+acceso: fuera de `_INDEXABLES`, con el bloque `robots` de `site_base.html` en
+noindex. `public-video.js` inserta el iframe de youtube-nocookie.com solo al
+pulsar; `config.WELCOME_VIDEO_ID` activa vídeo, CSP y menciones legales.
 
 ## Aprendizaje supervisado — 8-sep
 

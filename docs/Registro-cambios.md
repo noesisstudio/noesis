@@ -1,5 +1,24 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Página /bienvenida con vídeo para clientes
+
+Petición del founder: enviar a cada cliente nuevo un correo con un enlace a una
+guía y a un vídeo de instalación, en vez de un HTML adjunto (los clientes de
+correo lo marcan como sospechoso y en el móvil no se abre bien). Nueva ruta
+pública `/bienvenida` (`routers/pages.py`) con `site_bienvenida.html`: la guía de
+`Guia-instalacion-clientes.html` sin el guion de grabación, que sigue solo en docs.
+Queda fuera de `_INDEXABLES`: `X-Robots-Tag` y `<meta robots>` noindex y fuera del
+sitemap (`site_base.html` gana el bloque `robots`). Vídeo por
+`NOESIS_WELCOME_VIDEO_ID` (`config._youtube_video_id` acepta el ID o el enlace
+copiado de YouTube; lo demás lo apaga). Sin variable: aviso «muy pronto» y cero
+referencias a YouTube. Con variable: `static/public-video.js` crea el iframe de
+youtube-nocookie.com solo al pulsar «Ver el vídeo»; la CSP abre `frame-src` a ese
+origen únicamente en `/bienvenida` (`server.py`). `cookies.html` y
+`privacidad.html` declaran YouTube solo si hay vídeo. Estilos en
+`public-marketing.css`. Sin migraciones. Riesgo bajo. Límite externo: grabar y
+subir el vídeo (oculto) y poner la variable en Railway. Rollback: revertir el
+commit o vaciar la variable para quitar el vídeo sin desplegar.
+
 ## 2026-09-13 — Guía de instalación para clientes
 
 Petición del founder: los clientes creían que había que configurar Meta. Nueva
