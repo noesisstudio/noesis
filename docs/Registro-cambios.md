@@ -1,5 +1,11 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Título de /bienvenida
+
+Petición del founder: el `<h1>` de `site_bienvenida.html` pasa de «Empieza con
+Bynoesis en diez minutos.» a «Vamos a dejarlo todo listo.». Solo texto; sin
+cambios de ruta, CSP ni pruebas. Riesgo mínimo. Rollback: revertir el commit.
+
 ## 2026-09-14 — Página /bienvenida con vídeo para clientes
 
 Petición del founder: enviar a cada cliente nuevo un correo con un enlace a una

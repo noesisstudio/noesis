@@ -1,5 +1,11 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Título de /bienvenida
+
+- `test_public_marketing.py` tras cambiar el `<h1>` (un solo `<h1>`, título y
+  metadatos únicos): 18 OK. `check_project_truth` OK. No ejecutado: suite
+  completa ni revisión visual (solo cambia el texto del título).
+
 ## 2026-09-14 — Página /bienvenida y vídeo de YouTube inerte
 
 - Nuevas en `test_public_marketing.py`: `/bienvenida` noindex por cabecera y meta,
