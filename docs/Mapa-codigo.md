@@ -72,6 +72,15 @@ Persistencia existente: `business_memories`, `whatsapp_pending_actions` con pref
 `learn:`/`clarify:`, `product_events`. API GET de informe en `routers/assistant.py`.
 Sin esquema nuevo; flags dependientes y apagados. Véase el runbook de aprendizaje.
 
+## Notas de voz con Groq — 14-sep
+
+`adapters/transcription.py` elige el transcriptor en este orden: Whisper privado
+(`NOESIS_PRIVATE_WHISPER_URL`), Groq (`GROQ_API_KEY`) y faster-whisper local.
+`GroqWhisperProvider` comparte con el privado `_NoRedirect` y valida el tamaño, el
+formato (`GROQ_EXTENSIONS`) y la longitud antes y después de llamar. Lo usan
+`routers/assistant.py` (`/api/{id}/chat/audio`) y `web/whatsapp.py`
+(`_audio_to_text`); `readiness.py` nombra el proveedor con el mismo orden.
+
 ## Confirmación conversacional y voz privada — 8-sep
 
 `action_review.py` intercepta herramientas en `chat.handle`, fija identidad y

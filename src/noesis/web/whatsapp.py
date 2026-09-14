@@ -734,7 +734,7 @@ def _download_media(media_id: str, max_bytes: int | None = None) -> bytes | None
 
 
 def _audio_to_text(audio_id: str) -> str | None:
-    """Descarga el audio y lo transcribe con Whisper local."""
+    """Descarga el audio y lo transcribe con el transcriptor configurado."""
     from ..adapters import transcription
 
     try:

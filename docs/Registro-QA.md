@@ -1,5 +1,26 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Notas de voz con Groq
+
+- Nuevas en `test_backend.py` (`TranscriptionChainTestCase`): Groq usa el opener
+  sin redirecciones; nombre fijo `audio.webm` aunque el navegador mande cabeceras
+  inyectadas; audio vacío, grande, `.exe` o sin extensión se rechaza sin llamar a
+  Groq; 429 «saturado», 401 «HTTP 401», respuesta >64 KiB y transcripción larga dan
+  error; nota de WhatsApp descargada → Groq → texto, y Groq sin red → `None` sin
+  romper el webhook. En `test_conversation_safety.py`: `/chat/audio` por Groq
+  transcribe, propone sin guardar y un 429 devuelve 422 sin gasto. Adaptadas a
+  `build_opener` las de idioma de `test_integration_check.py`.
+- Voz (transcripción, integraciones, voz privada, seguridad conversacional): 52 OK.
+- Con clave simulada: `/preguntas` responde «Sí» a notas de voz, `/privacidad` y
+  `/encargado-tratamiento` 200 con Groq, y `collect_readiness` dice «disponible con
+  Groq Whisper». Formatos, modelo `whisper-large-v3-turbo` y mínimo de 10 s
+  contrastados con la documentación de Groq (sin `.opus`).
+- Suite completa: 822 OK y 1 fallo ajeno al audio: `test_seo` esperaba 16 FAQ y
+  hay 15 desde que Veri*Factu salió de la web; corregido en commit aparte.
+  Ruff y `check_project_truth` OK.
+- No ejecutado: llamada real a Groq (no hay clave), WhatsApp real, catalán real,
+  ruido ni Safari/iPhone grabando.
+
 ## 2026-09-14 — Admin: eliminar solicitudes de acceso de prueba
 
 - Nueva en `test_access_requests.py`: un usuario no admin no borra nada; admin ve

@@ -332,9 +332,11 @@ def collect_readiness(*, check_database: bool = True) -> dict:
         ))
 
     voice_ok = transcription.available()
+    # Mismo orden que transcription.get_transcriber().
     voice_provider = (
+        "Whisper privado" if os.getenv("NOESIS_PRIVATE_WHISPER_URL") else
         "Groq Whisper" if config.GROQ_API_KEY else
-        "Whisper privado" if voice_ok else ""
+        "Whisper local"
     )
     checks.append(ReadinessCheck(
         "audio",

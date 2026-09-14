@@ -167,31 +167,36 @@ class IntegrationCheckTestCase(unittest.TestCase):
 
 
 class MultilingualTranscriptionTestCase(unittest.TestCase):
-    def _response(self):
+    def _opener(self):
         response = MagicMock()
         response.read.return_value = b'{"text":"feina acabada"}'
-        return response
+        response.__enter__.return_value = response
+        opener = MagicMock()
+        opener.open.return_value = response
+        return opener
 
     def test_groq_auto_detects_language_by_default(self):
+        opener = self._opener()
         with (
             patch.object(config, "GROQ_API_KEY", "key"),
             patch.object(config, "WHISPER_LANGUAGE", ""),
-            patch("urllib.request.urlopen", return_value=self._response()) as request,
+            patch("urllib.request.build_opener", return_value=opener),
         ):
             transcription.GroqWhisperProvider().transcribe(b"audio", "nota.ogg")
 
-        body = request.call_args.args[0].data
+        body = opener.open.call_args.args[0].data
         self.assertNotIn(b'name="language"', body)
 
     def test_groq_accepts_an_explicit_language_hint(self):
+        opener = self._opener()
         with (
             patch.object(config, "GROQ_API_KEY", "key"),
             patch.object(config, "WHISPER_LANGUAGE", "ca"),
-            patch("urllib.request.urlopen", return_value=self._response()) as request,
+            patch("urllib.request.build_opener", return_value=opener),
         ):
             transcription.GroqWhisperProvider().transcribe(b"audio", "nota.ogg")
 
-        body = request.call_args.args[0].data
+        body = opener.open.call_args.args[0].data
         self.assertIn(b'name="language"', body)
         self.assertIn(b"\r\n\r\nca\r\n", body)
 

@@ -1,5 +1,19 @@
 # Tareas vivas
 
+## Notas de voz con Groq — 14-sep
+
+Decisión del founder: activar la voz con Groq. Pasos en
+[Conectar-APIs §6](03-whatsapp-e-integraciones/Conectar-APIs.md).
+
+- [x] Proveedor Groq reforzado: sin redirecciones con la clave, formatos admitidos,
+  tamaño, respuesta acotada y errores sin datos; pruebas web y WhatsApp por Groq.
+- [ ] Founder: aceptar y archivar el DPA/condiciones de Groq (RGPD 1.0) **antes**
+  de poner la clave.
+- [ ] Founder: crear la clave en console.groq.com y poner `GROQ_API_KEY` en Railway.
+- [ ] Tras reiniciar: `noesis-integrations-check --network` y preparación en verde.
+- [ ] Prueba real: nota de voz en el asistente web y en WhatsApp, en castellano y
+  catalán, con una orden de dinero que pida SÍ.
+
 ## Bienvenida de clientes — 14-sep
 
 - [x] Página `/bienvenida` con la guía para clientes, sin indexar y sin guion interno.
@@ -90,7 +104,7 @@
 - [x] Impedir que una respuesta generativa confirme un adjunto inexistente.
 - [x] Diagnóstico remoto de voz: ningún transcriptor está configurado.
 - [ ] Provisionar y validar Whisper privado o configurar Groq antes de anunciar
-  notas de voz como capacidad disponible.
+  notas de voz como capacidad disponible. 14-sep: elegido Groq, ver arriba.
 - [ ] Prueba humana del adjunto contra el número real después del despliegue.
 
 ## Rediseño público — 9-sep, publicación autorizada

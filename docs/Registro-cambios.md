@@ -1,5 +1,26 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Notas de voz: Groq listo para activar
+
+Petición del founder: incorporar audio, activando las notas de voz con Groq. La
+grabación web, la recepción por WhatsApp y el adaptador ya existían; producción no
+transcribía porque no hay clave. Antes de ponerla se refuerza `GroqWhisperProvider`
+(`adapters/transcription.py`): no sigue redirecciones con la clave (antes usaba
+`urlopen`, que las sigue conservando `Authorization`), rechaza audio vacío, mayor
+de `NOESIS_MAX_AUDIO_BYTES` o de formato que Groq no admite antes de llamar, envía
+un nombre fijo `audio.<ext>` en vez del que manda el navegador (evita inyectar
+cabeceras en el multipart), acota la respuesta a 64 KiB y la transcripción a
+`MAX_CHAT_CHARS`, y convierte los HTTP de error en mensajes sin cuerpo (429 dice
+«saturado»). `_NoRedirect` pasa a compartirse con el proveedor privado. `readiness.py`
+nombra el proveedor en el mismo orden que `get_transcriber()` (antes decía «Whisper
+privado» con el modelo local). Comentarios obsoletos en `routers/assistant.py` y
+`web/whatsapp.py`. Guía paso a paso en `Conectar-APIs.md` §6. Sin migración.
+Límite externo: falta archivar el DPA de Groq (RGPD 1.0) y poner `GROQ_API_KEY` en
+Railway; privacidad, encargado y `/preguntas` ya se adaptan solos a la clave.
+Riesgo: si Groq rechaza un formato que el navegador etiqueta distinto, la nota da
+«no he podido entender» y se pide texto. Diagnóstico: logs «Fallo transcribiendo
+audio: … HTTP nnn». Rollback: borrar `GROQ_API_KEY` o revertir el commit.
+
 ## 2026-09-14 — Admin: eliminar solicitudes de acceso de prueba
 
 Petición del founder: las solicitudes de prueba («prova», «asf»…) no son clientes y

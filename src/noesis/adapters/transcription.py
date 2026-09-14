@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import tempfile
 import threading
+import urllib.request
 from urllib.parse import urlsplit
 from typing import Protocol
 
@@ -92,6 +93,25 @@ class LocalWhisperProvider:
                 pass
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Una nota de voz con credenciales nunca se reenvía a otra dirección."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+# Formatos que admite Groq. WhatsApp manda ogg (opus dentro); la web, webm, m4a u ogg.
+GROQ_EXTENSIONS = {"flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"}
+
+
+def _groq_filename(filename: str) -> str:
+    """Nombre fijo con extensión admitida: el del navegador no entra en la cabecera."""
+    extension = os.path.splitext(os.path.basename(filename or ""))[1].lstrip(".").lower()
+    if extension not in GROQ_EXTENSIONS:
+        raise ValueError("Formato de audio no admitido.")
+    return f"audio.{extension}"
+
+
 class GroqWhisperProvider:
     """Transcripción vía la API de Groq (Whisper). Coste ~0,002 €/min.
 
@@ -103,13 +123,15 @@ class GroqWhisperProvider:
 
     def transcribe(self, audio: bytes, filename: str = "audio.ogg") -> str:
         import json as _json
-        import urllib.request
+        import urllib.error
         import uuid
 
         from .. import config
 
+        if not audio or len(audio) > config.MAX_AUDIO_BYTES:
+            raise ValueError("Audio vacío o demasiado grande.")
+        name = _groq_filename(filename)
         boundary = uuid.uuid4().hex
-        name = os.path.basename(filename) or "audio.ogg"
         parts = []
         fields = [
             ("model", config.GROQ_WHISPER_MODEL),
@@ -137,8 +159,21 @@ class GroqWhisperProvider:
                 "Content-Type": f"multipart/form-data; boundary={boundary}",
             },
         )
-        response = urllib.request.urlopen(request, timeout=60).read()
-        return str(_json.loads(response).get("text") or "").strip()
+        try:
+            with urllib.request.build_opener(_NoRedirect).open(request, timeout=60) as response:
+                raw = response.read(65537)
+        except urllib.error.HTTPError as exc:
+            # Solo el código: el cuerpo de un error podría repetir datos del audio.
+            if exc.code == 429:
+                raise ValueError("El servicio de voz está saturado. Inténtalo en unos segundos.") from None
+            raise ValueError(f"El servicio de voz rechazó la nota (HTTP {exc.code}).") from None
+        if len(raw) > 65536:
+            raise ValueError("Respuesta de transcripción demasiado grande.")
+        text = _json.loads(raw).get("text")
+        text = text.strip() if isinstance(text, str) else ""
+        if len(text) > config.MAX_CHAT_CHARS:
+            raise ValueError("La transcripción es demasiado larga.")
+        return text
 
 
 class PrivateWhisperProvider:
@@ -154,17 +189,12 @@ class PrivateWhisperProvider:
 
     def transcribe(self, audio: bytes, filename: str = "audio") -> str:
         import json
-        import urllib.request
         from .. import config
 
         if not audio or len(audio) > config.MAX_AUDIO_BYTES:
             raise ValueError("Audio vacío o demasiado grande.")
         request = urllib.request.Request(self.url + "/transcribe", data=audio, headers={"Authorization": "Bearer " + self.token, "Content-Type": "application/octet-stream"})
-        # Nunca seguir redirecciones con una nota de voz y credenciales.
-        class NoRedirect(urllib.request.HTTPRedirectHandler):
-            def redirect_request(self, req, fp, code, msg, headers, newurl):
-                return None
-        with urllib.request.build_opener(NoRedirect).open(request, timeout=150) as response:
+        with urllib.request.build_opener(_NoRedirect).open(request, timeout=150) as response:
             raw = response.read(65537)
         if len(raw) > 65536:
             raise ValueError("Respuesta de transcripción demasiado grande.")

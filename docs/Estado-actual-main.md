@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 14-sep — Notas de voz listas para activar con Groq
+
+El founder elige Groq para transcribir. El código está listo y reforzado: sin
+redirecciones con la clave, formatos y tamaños validados y errores sin datos. La web
+y WhatsApp tienen prueba completa pasando por Groq con la red simulada. En
+producción la voz sigue apagada hasta archivar el DPA de Groq y poner
+`GROQ_API_KEY` en Railway. Al hacerlo aparecen solos el micrófono, la respuesta de
+`/preguntas` y Groq en las políticas. Pasos en `Conectar-APIs.md` §6.
+
 ## 14-sep — Página de bienvenida para clientes
 
 `/bienvenida` reúne la guía de instalación para enviarla por correo junto al
