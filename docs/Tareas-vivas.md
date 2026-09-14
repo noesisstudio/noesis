@@ -4,9 +4,9 @@
 
 - [x] Aviso de cookies con Aceptar/Rechazar; GA4 solo tras aceptar y revocable.
 - [x] CSP de Google solo en rutas públicas; políticas condicionadas al ID.
-- [ ] Founder: crear en analytics.google.com una propiedad GA4 con flujo web
+- [x] Founder: crear en analytics.google.com una propiedad GA4 con flujo web
   `https://bynoesis.com` y copiar su ID de medición (`G-...`).
-- [ ] Founder: poner `NOESIS_GA_MEASUREMENT_ID=G-...` en las variables de Railway.
+- [x] Founder: poner `NOESIS_GA_MEASUREMENT_ID=G-...` en las variables de Railway.
 - [ ] Tras desplegar: aceptar el aviso en producción y ver la visita en «Tiempo
   real» de GA; rechazar y comprobar que no hay peticiones a Google.
 
@@ -24,7 +24,7 @@
 - [x] PDF real de borrador marcado, sin emitir por pedir una descarga.
 - [x] Contexto reciente/citas nuevas verificables; preguntar si no consta.
 - [x] Pruebas de creación inventada, error F2, aislamiento y flujo completo.
-- [ ] Tras publicar: ticket nuevo en WhatsApp real, comprobar nombre/importe
+- [ ] En WhatsApp real: crear un ticket nuevo, comprobar nombre/importe
   del PDF y responder a una cita nueva; validar también fallo real del proveedor.
 - [ ] Asesoría: validar excepciones F2 hasta 3.000 € antes de ampliar el límite
   general; no activar por la palabra «ticket».

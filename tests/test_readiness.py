@@ -173,8 +173,8 @@ class ReadinessTestCase(unittest.TestCase):
 
     def test_company_provider_is_warned_to_publish_registry_data(self):
         casos = (
-            ("B12345678", "", True),
-            ("B12345678", "Registro Mercantil de Barcelona, tomo 1, hoja B-1", False),
+            ("B12345678", "", True),  # pragma: allowlist secret -- NIF ficticio
+            ("B12345678", "Registro Mercantil de Barcelona, tomo 1, hoja B-1", False),  # pragma: allowlist secret -- NIF ficticio
             ("12345678Z", "", False),
             ("", "", False),
         )

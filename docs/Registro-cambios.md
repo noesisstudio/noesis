@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Recupera la puerta de calidad tras reorganizar la documentación
+
+Revisión de los cinco commits incorporados del 11 y 13 de septiembre. La CI no
+llegaba a ejecutar la suite porque `.secrets.baseline` conservaba la ruta anterior
+de un documento movido y un NIF inequívocamente ficticio de una prueba se detectaba
+como secreto. Se actualiza únicamente la ruta de las dos excepciones ya auditadas y
+se documenta el NIF de prueba en línea; no se excluyen archivos ni detectores, no se
+añaden credenciales y no cambia el producto ni el esquema. Pruebas: detector de
+secretos, análisis estático, pruebas dirigidas de WhatsApp, facturas, voz, seguridad,
+web pública y suite completa. Riesgo mínimo. Rollback: revertir este commit; la CI
+volvería a detenerse antes de las pruebas.
+
 ## 2026-09-13 — Guía de instalación para clientes
 
 Petición del founder: los clientes creían que había que configurar Meta. Nueva

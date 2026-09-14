@@ -1,14 +1,14 @@
 {
-  "state_date": "2026-09-13",
+  "state_date": "2026-09-14",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 795,
+  "verified_test_count": 808,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
     "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Baseline 88adfa3 verificada en health/ready con esquema 55 (documentos/proyectos y SEO). Candidato del 10-sep: identidad PDF, borradores y continuidad conversacional; pendiente publicacion y prueba en WhatsApp real. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS no provisionados. Candidato local del 11-sep: identidad legal de S.L. configurable, aviso de datos registrales, webhook Meta sin token vacio y voz mal configurada sin romper el webhook; sin push. Pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto."
+    "pending_after_deploy": "Produccion verificada en 22cb025 con esquema 55: identidad y adjuntos PDF, continuidad conversacional, datos legales configurables, webhook Meta endurecido, fallo controlado de voz, conexion WhatsApp explicita y GA4 consentido. Main contiene despues solo cambios editoriales de Facebook y branding pendientes de aprobacion de despliegue, sin cambio de runtime. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS no provisionados. Pendientes prueba fisica de WhatsApp y movil, restauracion externa, proveedores, revision legal y piloto."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

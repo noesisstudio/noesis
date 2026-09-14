@@ -5608,7 +5608,10 @@ class WhatsappMediaTestCase(unittest.TestCase):
         # instrucciones antiguas no puede quedarse sin poder vincular su teléfono.
         business, _ = self.make_business("Renombrada")
 
-        enlace = whatsapp.start_link(business["id"])
+        # La prueba valida las dos palabras de vinculación; el enlace solo existe
+        # cuando hay un número oficial configurado, como ocurre en producción.
+        with patch.object(whatsapp, "NOESIS_NUMBER", "+34 612 345 678"):
+            enlace = whatsapp.start_link(business["id"])
         self.assertTrue(enlace["link"])
         self.assertIn("BYNOESIS", enlace["link"].replace("%20", " "))
 
@@ -5618,7 +5621,8 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertNotIn("no es válido", respuesta)
 
         # Y la antigua también, con un código nuevo.
-        otro = whatsapp.start_link(business["id"])
+        with patch.object(whatsapp, "NOESIS_NUMBER", "+34 612 345 678"):
+            otro = whatsapp.start_link(business["id"])
         vieja = whatsapp._try_link("34600111333", f"NOESIS {otro['code']}")
         self.assertIsNotNone(vieja)
         self.assertNotIn("no es válido", vieja)

@@ -5,8 +5,8 @@
 La pantalla de conexión (alta y Ajustes) muestra el número de Bynoesis completo
 y el mensaje exacto «BYNOESIS código». Sin `NOESIS_WHATSAPP_NUMBER` ya no ofrece
 un enlace roto. La web pública en móvil no desborda a 360/390 px. Contraste de
-antetítulos, zona de toque del pie y casilla del formulario corregidos. Pendiente
-publicar y comprobarlo en un móvil real.
+antetítulos, zona de toque del pie y casilla del formulario corregidos. Publicado
+en `22cb025`; pendiente comprobar la conexión en un móvil real.
 
 ## 13-sep — Google Analytics opcional con aviso de cookies
 
@@ -15,7 +15,9 @@ variable no cambia nada. Con ella aparece un aviso con Aceptar y Rechazar, y Goo
 solo se carga tras aceptar. La decisión se puede cambiar en el pie y en `/cookies`.
 La CSP abre Google solo en rutas públicas. Las políticas de cookies y privacidad
 lo declaran solo cuando está activo. El recuento propio sigue igual. Sin migración.
-Pendiente: propiedad GA4 y variable en Railway, y verificar en producción.
+Activo y verificado visualmente en producción: el aviso aparece y «Rechazar» lo
+cierra sin cargar Google. Pendiente confirmar una visita aceptada en Tiempo real
+de GA4 y revisar la retirada tras una carga real.
 
 ## 10-sep — Núcleo de planificación de emisión y diagnóstico real
 
@@ -41,8 +43,8 @@ El PDF usa el documento identificado; ante ambigüedad pregunta. Adjunta borrado
 marcados sin emitirlos. «Imprímela» entrega el PDF, no accede a una impresora.
 Contexto reciente por negocio/teléfono, citas nuevas verificables y creaciones
 anunciadas desde resultados reales de herramientas. El agente incorpora turnos
-locales al historial. Sin migración, esquema 55. Pendiente cierre de regresión,
-publicación y comprobación con móvil real.
+locales al historial. Publicado, sin migración y con esquema 55. La regresión local
+completa queda en 808 pruebas; pendiente comprobación con WhatsApp y móvil reales.
 
 ## 10-sep — SEO y GEO: un nombre y una ficha para asistentes
 

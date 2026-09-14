@@ -1,5 +1,23 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Revisión de los cambios incorporados del 11 y 13 de septiembre
+
+- Incorporación fast-forward de `main` remoto, sin conflictos ni divergencias.
+- Revisados los cambios de webhook Meta, fallo controlado de voz, conexión de
+  WhatsApp, GA4 consentido, CSP pública/privada, datos registrales y ajustes móviles.
+- Corregida la causa por la que la CI se detenía en `detect-secrets`: dos excepciones
+  auditadas seguían ligadas a la ruta antigua de un documento reorganizado y el NIF
+  ficticio de una prueba no estaba marcado como tal. La protección sigue activa.
+- Dirigidas: 78 pruebas Python y 2 pruebas Node correctas; Ruff y
+  `check_project_truth` correctos. La primera suite completa descubrió una prueba
+  dependiente del `.env`: esperaba un enlace `wa.me` aunque no fijaba el número
+  oficial. El contrato del producto era correcto; la prueba ahora declara el número
+  que necesita. Suite completa final: **808 pruebas OK en 586,744 s**. Detector de
+  secretos, Ruff, `check_project_truth`, `git diff --check`, 22 pruebas de Facebook
+  y las 2 pruebas Node correctos. Producción: `/health` devuelve `22cb025f59c5`,
+  esquema 55; revisión visual de portada, rechazo de cookies y login correcta. El
+  panel y el chat privado no se pudieron recorrer sin iniciar una sesión real.
+
 ## 2026-09-13 — Guía de instalación y mensaje de equipo con la marca
 
 - Guía contrastada con el código: asunto y caducidad de la invitación (7 días),
