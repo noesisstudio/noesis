@@ -110,7 +110,7 @@
         </p>
         {% endif %}
         <form method="post" action="/b/{{ business.id }}/whatsapp-phone" style="margin-top:16px">
-          <label class="fld" for="wa-phone">Tu número de móvil</label>
+          <label class="fld" for="wa-phone">¿Prefieres escribir tu número? <span class="hint">sin código</span></label>
           {% if request.query_params.get('ok') == 'wa-phone' %}
           <div class="banner" style="margin-bottom:10px">Número guardado. Ahora escribe «hola» a Bynoesis desde ese móvil y responde SÍ para conectarlo. Tienes 24 horas.</div>
           {% elif request.query_params.get('error') == 'wa-phone' %}
@@ -375,6 +375,7 @@
 <div class="card" id="verifactu" style="margin-top:16px">
   <div class="card-h">
     <h2>Registro Veri*Factu nativo</h2>
+    <span class="badge b-amber">Próximamente</span>
     {% if business.verifactu_enabled %}
       <span class="badge b-green">registro activo</span>
     {% elif verifactu_ready %}
@@ -384,6 +385,10 @@
     {% endif %}
   </div>
   <div class="card-b">
+    <p class="muted" style="margin-top:0">
+      Veri*Factu llegará próximamente a Bynoesis. Mientras tanto emites tus facturas
+      con normalidad; te avisaremos cuando la conexión con la AEAT esté disponible.
+    </p>
     <form method="post" action="/b/{{ business.id }}/verifactu">
       <label class="lrow" style="align-items:flex-start;cursor:pointer">
         <span>

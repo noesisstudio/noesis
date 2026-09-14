@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Veri*Factu fuera de la web pública
+
+- Páginas públicas renderizadas con TestClient (`/`, `/autonomos`, `/gestorias`,
+  `/precios`, `/preguntas`, `/contacto`, `/equipo`, `/llms.txt`): 200 y ninguna
+  mención a Veri*Factu ni AEAT.
+- Web pública, seguridad y backend filtrado (public/marketing/security/verifactu/
+  ajustes/llms/preguntas/móvil en Ajustes): 70 OK. `check_project_truth` OK.
+- Se mantiene `test_backend` que exige Veri*Factu en Facturas y «Remisión AEAT
+  desactivada» en Ajustes: la app conserva la función marcada como próximamente.
+- No ejecutado: suite completa ni revisión visual de la insignia «Próximamente».
+
 ## 2026-09-14 — Vincular WhatsApp escribiendo el móvil
 
 - Nuevas: código copiado antes de recargar Ajustes sigue vinculando; móvil escrito

@@ -16,7 +16,6 @@ FAQS = [
     ("¿Puedo hacer facturas desde WhatsApp?", "Sí. Indicas el cliente, el concepto y el importe. Bynoesis prepara un borrador con los datos de tu negocio. Revisas el resultado y confirmas antes de emitir o enviar. Si la referencia del cliente no es clara, hay que aclararla."),
     ("¿Bynoesis sustituye a mi gestoría?", "No. Tu gestoría conserva el criterio fiscal. Si la conectas, puede revisar la documentación por empresa y período, pedir lo que falta y consultar borradores fiscales. Bynoesis no presenta impuestos por ti."),
     ("¿Para qué autónomos está pensado?", "Para profesionales de servicios como instaladores, electricistas, fontaneros, mantenimiento, reformas, limpieza y jardinería. No necesitas un equipo: puedes empezar trabajando por tu cuenta."),
-    ("¿Cómo funciona Bynoesis con Veri*Factu?", "El código incluye registros de facturación, huellas encadenadas y QR tributario. La conexión con la AEAT requiere configuración y validación antes de su uso real. No anunciamos una certificación de la AEAT ni una garantía fiscal universal."),
     ("¿Bynoesis pertenece a WhatsApp o Meta?", "No. Bynoesis es un producto independiente que utiliza WhatsApp como canal de gestión. WhatsApp es una marca de sus respectivos titulares."),
 ]
 
@@ -56,8 +55,7 @@ def question_groups(*, voice_available: bool, ocr_available: bool,
             ("¿Bynoesis envía o paga sin preguntarme?", "No. Preparar no es autorizar. Enviar facturas, reclamar cobros, mover citas o cualquier acción irreversible requiere el nivel de permiso definido y, en los casos sensibles, tu confirmación."),
         ]},
         {"id": "legalidad", "label": "Facturación y legalidad", "title": "Trabajar en regla", "questions": [
-            ("¿Puedo emitir facturas correctas antes de activar Veri*Factu?", "Sí, para los casos actualmente soportados: factura completa o simplificada, series correlativas, fecha, emisor, destinatario cuando corresponde, conceptos, IVA, IRPF y total. Bynoesis bloquea la emisión si faltan datos obligatorios. Operaciones exentas, no sujetas o internacionales requieren todavía revisión específica con la gestoría."),
-            ("¿Está adaptado a Veri*Factu?", "El registro, la huella, el QR, la cola y la conexión técnica están preparados, pero no se activan como servicio definitivo sin certificado y pruebas con la AEAT. Según el calendario vigente, la adaptación es obligatoria desde el 1 de enero de 2027 para sociedades y desde el 1 de julio de 2027 para el resto de empresas y autónomos."),
+            ("¿Puedo emitir facturas correctas?", "Sí, para los casos actualmente soportados: factura completa o simplificada, series correlativas, fecha, emisor, destinatario cuando corresponde, conceptos, IVA, IRPF y total. Bynoesis bloquea la emisión si faltan datos obligatorios. Operaciones exentas, no sujetas o internacionales requieren todavía revisión específica con la gestoría."),
             ("¿Calcula IVA e IRPF?", "Sí, aplicando las reglas configuradas en cada documento. Bynoesis no presenta una estimación fiscal como definitiva: tu gestoría valida la presentación."),
             ("¿Sustituye a mi gestoría?", "No. Ordena y prepara el trabajo administrativo. La gestoría mantiene el criterio profesional en las decisiones fiscales delicadas."),
         ]},

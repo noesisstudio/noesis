@@ -275,7 +275,6 @@ Bynoesis es un producto independiente: no pertenece a WhatsApp ni a Meta. Funcio
 
 - No presenta impuestos ni sustituye a la gestoría.
 - No emite, envía ni paga sin la confirmación del titular.
-- Veri*Factu: el registro, la huella encadenada y el QR están preparados; la conexión con la AEAT se activa tras certificado y pruebas. Bynoesis no declara una certificación de la AEAT.
 
 ## Precios
 
@@ -289,7 +288,7 @@ El pago anual da 12 meses de acceso por el precio de 11. {acceso}
 - [Autónomos]({base}/autonomos): un día de trabajo con Bynoesis.
 - [Gestorías]({base}/gestorias): el espacio profesional para despachos.
 - [Precios]({base}/precios): planes y qué incluye cada uno.
-- [Preguntas frecuentes]({base}/preguntas): WhatsApp, Veri*Factu, datos y equipo.
+- [Preguntas frecuentes]({base}/preguntas): WhatsApp, facturación, datos y equipo.
 - [Equipo]({base}/equipo): quién construye Bynoesis.
 - [Contacto]({base}/contacto): demo con el equipo.
 - [Cumplimiento]({base}/cumplimiento): dónde están los datos y cómo se protegen.

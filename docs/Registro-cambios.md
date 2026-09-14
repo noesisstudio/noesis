@@ -1,5 +1,19 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Veri*Factu fuera de la web pública y «Próximamente» en la app
+
+Petición del founder: Veri*Factu aún no está disponible, así que la web pública no
+lo anuncia. Quitado de `landing.html` (bloque «Fiscalidad, con criterio»),
+`site_precios.html` (plan y ventaja «sin coste extra»), descripción de
+`site_preguntas.html`, preguntas de `public_marketing.py` (FAQ de portada y
+«¿Está adaptado a Veri*Factu?»; /preguntas pasa de 16 a 15 respuestas), `llms.txt`
+(`routers/pages.py`) y el botón «XML AEAT» de la demo pública. Dentro de la app,
+`ajustes.html` marca la tarjeta con «Próximamente» y un aviso, y `suscripcion.html`
+dice «Veri*Factu próximamente». Sin cambios de lógica: el registro sigue igual para
+quien lo tenga activo. `cumplimiento.html` y `terminos.html` no se tocan (textos
+legales sobre la normativa). La etiqueta del móvil vuelve a «¿Prefieres escribir tu
+número? sin código» a petición del founder. Riesgo bajo. Rollback: revertir el commit.
+
 ## 2026-09-14 — Etiqueta del móvil en Ajustes
 
 Petición del founder: la etiqueta «¿Prefieres escribir tu número? sin código»
