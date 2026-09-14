@@ -1,5 +1,14 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Texto del aviso de cookies
+
+- Web pública + seguridad (`test_public_marketing.py`, `test_security_hardening.py`):
+  32 OK; test Node de la web pública 1 OK; `check_project_truth` OK. Ninguna prueba
+  dependía del texto anterior; la lógica de consentimiento no cambia.
+- Antes del cambio, en producción con Chrome vía CDP: aviso visible y 0 peticiones
+  a Google; al aceptar, `gtag/js` y `page_view` de `https://bynoesis.com/` en 0,5 s.
+- No ejecutado: suite completa ni revisión visual del texto nuevo.
+
 ## 2026-09-14 — Título de /bienvenida
 
 - `test_public_marketing.py` tras cambiar el `<h1>` (un solo `<h1>`, título y

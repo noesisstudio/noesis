@@ -1,5 +1,14 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Aviso de cookies sin nombrar a Google Analytics
+
+Petición del founder: el aviso habla de cookies, no de la herramienta. En
+`site_base.html` el título pasa a «Esta web usa cookies» y el texto dice que se
+usan cookies de analítica propias y de terceros, solo si se acepta y revocables.
+Primera capa según la guía de la AEPD: finalidad, terceros y enlace a `/cookies`,
+que sigue detallando Google Analytics, sus cookies y la transferencia. Sin cambios
+de lógica, CSP ni políticas. Riesgo mínimo. Rollback: revertir el commit.
+
 ## 2026-09-14 — Título de /bienvenida
 
 Petición del founder: el `<h1>` de `site_bienvenida.html` pasa de «Empieza con
