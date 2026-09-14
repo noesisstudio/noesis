@@ -1,5 +1,15 @@
 ﻿# Registro de QA
 
+## 2026-09-14 — Admin: eliminar solicitudes de acceso de prueba
+
+- Nueva en `test_access_requests.py`: un usuario no admin no borra nada; admin ve
+  «Eliminar todas las descartadas», el borrado masivo quita las descartadas y sus
+  avisos en `email_outbox`, el borrado por fila quita una nueva, y una solicitud
+  contactada con correo parecido (`axf` frente a `a_f`) conserva su aviso
+  (comodín `_` escapado). 14 OK. Ruff OK.
+- No ejecutado: borrado en producción (lo hace el founder desde /admin), PostgreSQL
+  real del `LIKE ... ESCAPE` ni suite completa.
+
 ## 2026-09-14 — Veri*Factu fuera de la web pública
 
 - Páginas públicas renderizadas con TestClient (`/`, `/autonomos`, `/gestorias`,

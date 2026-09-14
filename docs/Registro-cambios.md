@@ -1,5 +1,19 @@
 ﻿# Registro de cambios
 
+## 2026-09-14 — Admin: eliminar solicitudes de acceso de prueba
+
+Petición del founder: las solicitudes de prueba («prova», «asf»…) no son clientes y
+no deben existir en ningún sitio. `db.delete_access_requests` borra solicitudes por
+id o todas las de un estado, junto con el aviso por correo al equipo que copiaba
+nombre, correo y teléfono (`email_outbox`, patrón `LIKE` escapado). Nunca borra
+una solicitud dada de alta ni enlazada a un negocio. Rutas solo admin
+`POST /admin/solicitudes/{id}/eliminar` y `/admin/solicitudes/eliminar-descartadas`
+con evento de seguridad sin datos personales (solo el número). `admin.html`: botón
+«Eliminar» por fila y «Eliminar todas las descartadas», ambos con confirmación.
+Borrado irreversible por diseño. Límites: no alcanza copias de seguridad, logs de
+Railway ni correos ya entregados al buzón del equipo. Rollback del código: revertir
+el commit (los datos borrados no vuelven).
+
 ## 2026-09-14 — Veri*Factu fuera de Cumplimiento y Términos (textos archivados)
 
 Petición del founder: quitar Veri*Factu también de las páginas legales sin perder

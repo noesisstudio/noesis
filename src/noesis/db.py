@@ -10600,6 +10600,36 @@ def update_access_request(
     return get_access_request(request_id)
 
 
+def delete_access_requests(*, request_id: int | None = None,
+                           status: str | None = None) -> int:
+    """Borra solicitudes de prueba y los avisos por correo que copiaron sus datos.
+
+    Nunca borra una solicitud ya dada de alta: queda enlazada a un negocio real.
+    """
+    if (request_id is None) == (status is None):
+        raise ValueError("Indica una solicitud o un estado.")
+    query = "SELECT id, email FROM access_requests WHERE business_id IS NULL AND status<>'alta'"
+    params: list = []
+    if request_id is not None:
+        query += " AND id=?"
+        params.append(int(request_id))
+    else:
+        query += " AND status=?"
+        params.append(status)
+    with get_conn() as conn:
+        rows = conn.execute(query, params).fetchall()
+        for row in rows:
+            # El aviso al equipo repite nombre, correo y teléfono en su cuerpo.
+            pattern = "%Correo: " + re.sub(r"([\\%_])", r"\\\1", row["email"]) + "\n%"
+            conn.execute(
+                "DELETE FROM email_outbox WHERE business_id IS NULL "
+                "AND subject LIKE 'Nueva solicitud de %' AND text_body LIKE ? ESCAPE '\\'",
+                (pattern,),
+            )
+            conn.execute("DELETE FROM access_requests WHERE id=?", (row["id"],))
+    return len(rows)
+
+
 def count_access_requests_since(email: str, since: str) -> int:
     """Solicitudes recientes del mismo correo: frena envíos repetidos."""
     with get_conn() as conn:

@@ -619,6 +619,35 @@ def admin_request_status(request: Request, request_id: int, status: str = Form(.
     return RedirectResponse("/admin#solicitudes", status_code=303)
 
 
+def _delete_requests(request: Request, **selector) -> RedirectResponse:
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    deleted = db.delete_access_requests(**selector)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.access_requests_deleted", area="admin", severity="warning",
+        actor_user_id=user["id"], subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"deleted": deleted},
+    )
+    request.session["admin_success"] = (
+        f"Eliminada(s) {deleted} solicitud(es) y sus avisos por correo."
+        if deleted else "No había solicitudes que eliminar."
+    )
+    return RedirectResponse("/admin#solicitudes", status_code=303)
+
+
+@router.post("/admin/solicitudes/eliminar-descartadas")
+def admin_delete_discarded_requests(request: Request):
+    """Borra de verdad las solicitudes descartadas (pruebas internas)."""
+    return _delete_requests(request, status="descartada")
+
+
+@router.post("/admin/solicitudes/{request_id}/eliminar")
+def admin_delete_request(request: Request, request_id: int):
+    return _delete_requests(request, request_id=request_id)
+
+
 @router.post("/admin/costes")
 def admin_add_cost(
     request: Request,
