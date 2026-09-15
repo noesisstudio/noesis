@@ -814,6 +814,16 @@ def _handle(
     actor_phone: str | None = None,
 ) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
+    from .. import local_invoice, action_review
+    if local_invoice.enabled() and action_review.context.get() is not None:
+        if channel == "web":
+            reference = local_invoice.reference_response(business_id, action_review.context.get()["actor"], message)
+            if reference is not None:
+                return reference
+        plan = local_invoice.parse(message)
+        if plan:
+            result = json.loads(run_tool("crear_factura", plan.arguments(), business_id, channel=channel))
+            return {"reply": result.get("reply") or result.get("error") or "Revisa la propuesta.", "source": "local"}
     refusal = nlu.safety_refusal(message)
     if refusal:
         return {"reply": refusal, "source": "local"}
@@ -1183,6 +1193,12 @@ def handle(
                 result = {**state["proposal"], "source": "local"}
         finally:
             action_review.context.reset(token)
+    from .. import local_invoice
+    if local_invoice.enabled() and len(result.get("invoice_ids", [])) == 1:
+        try:
+            local_invoice.remember_invoice(business_id, actor, result["invoice_ids"][0])
+        except Exception:  # noqa: BLE001 - no repetir una factura porque falle su foco
+            log.warning("No se pudo conservar el foco del documento; no se repite la operación.")
     if learning.enabled():
         if str(result.get("source", "")).startswith("ia") and not result.get("confirmation_required"):
             result["reply"] += "\n\nNo he guardado cambios ni enviado nada en esta respuesta."

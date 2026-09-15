@@ -2188,7 +2188,11 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             reviewed = db.get_pending_action(business["id"], f"wa:{phone}")
             if reviewed or nlu.safety_refusal(text):
                 reply = chat.handle(business["id"], text, channel="whatsapp", actor_phone=phone)
-                send(phone, reply.get("reply", ""), business_id=business["id"])
+                invoice_ids = reply.get("invoice_ids", [])
+                invoice_id = invoice_ids[0] if len(invoice_ids) == 1 else None
+                if invoice_id:
+                    _remember_invoice(business["id"], phone, invoice_id)
+                send(phone, reply.get("reply", ""), business_id=business["id"], invoice_id=invoice_id)
                 results.append({"business_id": business["id"], "reviewed": True})
                 _finish_inbound_message(message_id, claimed_ids)
                 continue

@@ -119,12 +119,18 @@ def _period_documents(business_id: int, period: dict, *, view: str) -> list[dict
         if item.get("invoice_id") in invoices:
             linked = invoices[int(item["invoice_id"])]
             effective = linked.get("issued_at") or linked.get("created_at")
+            item["ocr_amount"] = linked.get("total")
+            item["record_url"] = f"/b/{business_id}/facturas"
         elif item.get("expense_id") in expenses:
             linked = expenses[int(item["expense_id"])]
             effective = linked.get("spent_on") or linked.get("created_at")
+            item["ocr_amount"] = linked.get("amount")
+            item["record_url"] = f"/b/{business_id}/costes"
         elif item.get("received_invoice_id") in received:
             linked = received[int(item["received_invoice_id"])]
             effective = linked.get("issued_on") or linked.get("created_at")
+            item["ocr_amount"] = linked.get("total")
+            item["record_url"] = f"/b/{business_id}/costes"
         if not _in_period(effective, period):
             continue
         item["effective_on"] = str(effective or "")[:10]

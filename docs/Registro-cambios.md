@@ -1,5 +1,52 @@
 ﻿# Registro de cambios
 
+## 2026-09-15 — Documentos: revisión manual y lotes PDF con varias facturas
+
+Sin publicación. Reporte del socio: una factura quedaba «en revisión» sin poder
+cerrarla y lo subido en Documentos no aparecía en Facturas/Costes. Causas: si la
+lectura automática fallaba, la pantalla no abría el formulario; «Confirmar tipo» y
+«Es una factura mía» solo clasificaban el archivo, sin crear registro contable; y
+las acciones quedaban ocultas hasta seleccionar la fila. Cambios: revisión manual
+siempre disponible, acción visible «Revisar y gestionar», textos que distinguen
+archivar de registrar, enlace «Ver registro contable» con el importe real ligado
+y separación de un PDF con varias facturas por rangos de páginas elegidos por el
+usuario (`documents/pdf_batch.py`, rutas `/documents/{id}/split`). El original se
+conserva y se marca como lote no contabilizable; cada parte queda pendiente de
+revisión, sin importes heredados. `db.add_expense/add_received_invoice` impiden
+contabilizar el lote o un documento ya ligado a otra factura. Sin migración: el
+lote se registra en `document_classifications` con `method='pdf_batch'`.
+Una factura propia emitida fuera de Bynoesis se archiva; no se convierte en
+factura nativa (numeración/Verifactu). Pruebas: `tests/test_pdf_batch.py` (9),
+smoke HTTP con sesión 13/13 y suite completa de 856 pruebas correcta. Riesgo: rangos mal indicados por el usuario (se exige
+partición completa y confirmación). Rollback: revertir el bloque; los documentos
+separados son archivos normales y el original sigue intacto.
+
+## 2026-09-15 — Piloto local de propuestas y correcciones de factura
+
+Sin publicación. Planes locales tipados de líneas netas con IVA explícito,
+corrección de cantidad/precio/cliente antes de confirmar, foco PDF web aislado y
+confirmación de emisión con huella transaccional. Áreas: `local_invoice`,
+`action_review`, `db`, chat/WhatsApp, configuración y corpus. Reutiliza calculadora
+nativa y pendientes, sin migración ni dependencias. Flag apagado y exige revisión.
+Sin modelo privado, aprendizaje automático ni cambios en datos de producción.
+50 pruebas dirigidas correctas; suite general final de 847 pruebas correcta.
+Smoke HTTP con PDF real, Ruff, Bandit, secretos, dependencias y dos suites JS
+correctos. Detalles y límites de la validación en `Registro-QA.md`.
+Riesgo: gramática limitada y semántica de SÍ vigente; no prometer agente universal.
+Rollback: desactivar flag, descartar/caducar propuestas; no restaurar tablas.
+Guía: `02-tecnico/Cerebro-local-piloto.md`.
+
+## 2026-09-15 — Primera barrera del cerebro propio
+
+Candidato local sin publicación. `intent_safety.py` inspecciona sin red ni
+escrituras signos negativos y órdenes con varias cantidades; `nlu.py` detiene
+su interpretación parcial. Corrige «cliente llamado», «cliente:» y conectores
+fiscales residuales en nombres. Conserva IVA explícito incluido en gastos o pide
+aclaración. Ocho pruebas sintéticas incluyen SQLite temporal y desglose del gasto.
+No hay migración, modelo nuevo, cambios de permisos o activación de aprendizaje.
+Riesgo: abstenciones conservadoras; varias líneas requieren aún formulario.
+Rollback: revertir este bloque, sin restaurar datos. QA en `Registro-QA.md`.
+
 ## 2026-09-15 — Integra los cambios del socio con la recuperación de CI
 
 Se combinan localmente los diez commits publicados por el socio desde `baaaae1`

@@ -197,14 +197,47 @@ async def api_document_to_expense(business_id: int, doc_id: int, request: Reques
 def api_document_draft(business_id: int, doc_id: int):
     """Borrador de factura extraído por IA. Nunca crea registros: solo propone."""
     from ...documents import service as docservice
+    from ...documents import repo as docrepo
+    doc = docrepo.get(doc_id, business_id)
+    if not doc:
+        return JSONResponse({"error": "Documento no encontrado."}, status_code=404)
+    if docrepo.is_batch_source(doc_id, business_id):
+        return JSONResponse({"error": "Este PDF es un lote. Revisa sus facturas individuales.", "batch": True}, status_code=409)
+    if any(doc.get(key) for key in ("invoice_id", "received_invoice_id", "expense_id")):
+        return JSONResponse({"error": "El documento ya está vinculado. Revisa el registro en Facturas o Costes."}, status_code=409)
     draft = docservice.invoice_draft(business_id, doc_id)
     if draft is None:
         return JSONResponse(
             {"error": "No se pudo leer el documento automáticamente. "
                       "Queda pendiente de revisión manual.",
-             "pending": True},
+             "pending": True, "manual": True,
+             "direction": "emitida" if doc["kind"] == "factura_emitida" else "desconocida"},
             status_code=200)
     return draft
+
+
+@router.get("/api/{business_id}/documents/{doc_id}/split")
+def api_pdf_batch_info(business_id: int, doc_id: int):
+    from ...documents import pdf_batch
+    try:
+        return pdf_batch.inspect(business_id, doc_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.post("/api/{business_id}/documents/{doc_id}/split")
+async def api_pdf_batch_split(business_id: int, doc_id: int, request: Request):
+    from ...documents import pdf_batch
+    from ..deps import _read_json
+    from starlette.concurrency import run_in_threadpool
+    try:
+        body = await _read_json(request)
+        if body.get("confirmed") is not True:
+            raise ValueError("Confirma qué páginas pertenecen a cada factura.")
+        result = await run_in_threadpool(pdf_batch.split, business_id, doc_id, body.get("ranges"))
+        return JSONResponse(result, status_code=200 if result["ok"] else 409)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
 
 
 @router.post("/api/{business_id}/documents/{doc_id}/client-candidate/confirm")

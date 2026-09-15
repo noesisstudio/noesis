@@ -2,6 +2,22 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Piloto local acotado y calculadora única (2026-09-15)
+
+Ampliar `action_review` y las tablas existentes, no crear un agente paralelo con
+otra contabilidad. La gramática admite solo planes completos; el flag local exige
+revisión y se mantiene apagado. No activar aprendizaje ni inferencia privada sin
+evaluación. La corrección sustituye la versión pendiente, no una factura emitida.
+Alcance y riesgos: `02-tecnico/Cerebro-local-piloto.md`.
+
+## Cerebro propio por etapas (2026-09-15)
+
+El founder aprueba avanzar sobre el SaaS existente. Primera entrega: integridad
+y regresiones antes de ampliar autonomía. Se conservan aprendizaje apagado y
+adaptador privado existente. Sin inferencia provisionada ni proveedores nuevos.
+Las órdenes no representables se detienen; comprensión multilínea y planes de
+corrección siguen pendientes. Sin cambios de permisos ni datos históricos.
+
 ## Google Analytics, pero solo con permiso y fuera del panel (2026-09-13)
 
 El founder quiere poder controlar la web desde Google Analytics. Esto revisa la

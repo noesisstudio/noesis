@@ -225,6 +225,44 @@ def latest_classification(doc_id: int, business_id: int) -> dict | None:
     return dict(row) if row else None
 
 
+def is_batch_source(doc_id: int, business_id: int) -> bool:
+    """Un lote original no puede contabilizarse además de sus facturas."""
+    with _conn() as conn:
+        return conn.execute(
+            "SELECT id FROM document_classifications WHERE document_id=? "
+            "AND business_id=? AND method='pdf_batch' LIMIT 1",
+            (doc_id, business_id),
+        ).fetchone() is not None
+
+
+def register_pdf_batch(doc_id: int, business_id: int, plan: str) -> None:
+    """Fija los rangos bajo bloqueo; los reintentos no pueden solaparlos."""
+    with _conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
+        doc = conn.execute(
+            "SELECT * FROM documents WHERE id=? AND business_id=?" + lock,
+            (doc_id, business_id),
+        ).fetchone()
+        if not doc or any(doc[key] for key in ("invoice_id", "received_invoice_id", "expense_id")):
+            raise ValueError("Documento no disponible o ya contabilizado.")
+        previous = conn.execute(
+            "SELECT reason FROM document_classifications WHERE document_id=? "
+            "AND business_id=? AND method='pdf_batch' ORDER BY id LIMIT 1",
+            (doc_id, business_id),
+        ).fetchone()
+        if previous:
+            if previous["reason"] != plan:
+                raise ValueError("Este lote ya tiene otros rangos confirmados. Reutiliza los rangos originales para evitar duplicados.")
+            return
+        conn.execute(
+            "INSERT INTO document_classifications (business_id, document_id, "
+            "detected_kind, confidence, method, reason, created_at) "
+            "VALUES (?, ?, 'documento', 100, 'pdf_batch', ?, ?)",
+            (business_id, doc_id, plan, _now()),
+        )
+
+
 def list_pending_review(business_id: int) -> list[dict]:
     with _conn() as conn:
         return [dict(r) for r in conn.execute(
@@ -250,7 +288,9 @@ def list_for_business(
     q = ("SELECT d.*, c.name AS client_name, p.name AS project_name, "
          "dc.proposed_name AS proposed_client_name, "
          "dc.proposed_nif AS proposed_client_nif, "
-         "dc.status AS proposed_client_status "
+         "dc.status AS proposed_client_status, "
+         "EXISTS (SELECT 1 FROM document_classifications bc WHERE bc.document_id=d.id "
+         "AND bc.business_id=d.business_id AND bc.method='pdf_batch') AS is_batch_source "
          "FROM documents d "
          "LEFT JOIN clients c ON c.id = d.client_id "
          "AND c.business_id=d.business_id "

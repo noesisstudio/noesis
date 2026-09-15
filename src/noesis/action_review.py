@@ -9,7 +9,7 @@ import json
 from contextvars import ContextVar
 from decimal import Decimal, ROUND_HALF_UP
 
-from . import db, nlu
+from . import db, nlu, local_invoice
 
 context: ContextVar[dict | None] = ContextVar("action_review", default=None)
 READS = {
@@ -59,8 +59,6 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
                 snapshot["client"] = {k: existing.get(k) for k in ("id", "name", "nif")}
                 lines.append(f"Reutilizaré la ficha existente: {existing['name']} · #{existing['id']}")
     if tool in {"crear_factura", "crear_presupuesto"}:
-        if args.get("lineas"):
-            raise ValueError("Revisa la factura de varias líneas en Facturas antes de guardarla.")
         business = db.get_business(bid) or {}
         vat = args.get("iva")
         vat = business.get("default_vat", 21) if vat is None else vat
@@ -70,6 +68,20 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
         args.update(iva=vat, irpf=irpf)
         if vat not in (0, 4, 10, 21) or irpf not in (0, 7, 15):
             raise ValueError("Revisa los tipos de IVA e IRPF en la factura.")
+        if args.get("lineas"):
+            if not local_invoice.enabled() or tool != "crear_factura" or args.get("importe_incluye_iva"):
+                raise ValueError("Revisa la factura de varias líneas en Facturas antes de guardarla.")
+            normalized_lines = db._normalize_invoice_lines(args["lineas"], fallback_vat=vat)
+            totals = db._invoice_totals(normalized_lines, irpf)
+            if args.get("tipo_factura") == "F2" and not db._fits_simplified_invoice(totals["total"]):
+                raise ValueError("El total supera el límite del ticket. Prepara una factura completa.")
+            args["base"] = totals["base"]
+            snapshot["calculation"] = {"lines": normalized_lines, "totals": totals}
+            for line in normalized_lines:
+                lines.append(f"{line['position']}. {line['description']}: {line['quantity']:g} × {nlu._eur(line['unit_price'])} · base {nlu._eur(line['base'])} · IVA {line['vat_rate']:g}%")
+            lines.append(f"Base: {nlu._eur(totals['base'])} · IVA: {nlu._eur(totals['vat_amount'])} · IRPF: {nlu._eur(totals['irpf_amount'])}")
+            lines.append(f"Total: {nlu._eur(totals['total'])}")
+            return "\n".join(lines), snapshot
         base = Decimal(str(args.get("base", 0)))
         if not base.is_finite() or base <= 0:
             raise ValueError("El importe debe ser positivo y válido.")
@@ -104,7 +116,7 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
     return "\n".join(lines), snapshot
 
 
-def propose(bid: int, tool: str, args: dict) -> dict | None:
+def propose(bid: int, tool: str, args: dict, *, expected_id: int | None = None) -> dict | None:
     state = context.get()
     if state is None or tool in READS:
         return None
@@ -115,10 +127,18 @@ def propose(bid: int, tool: str, args: dict) -> dict | None:
         # Los IDs del modelo no son autoridad: se resuelven desde el nombre.
         args.pop("cliente_id", None)
         preview, snapshot = _preview(bid, tool, args)
-        row = db.set_pending_action(bid, state["actor"], "reviewed_tool", {"tool": tool, "args": args, "snapshot": snapshot, "preview": preview})
+        payload = {"tool": tool, "args": args, "snapshot": snapshot, "preview": preview}
+        if expected_id is None:
+            row = db.set_pending_action(bid, state["actor"], "reviewed_tool", payload)
+        else:
+            row = db.revise_pending_action(bid, state["actor"], expected_id, payload)
+            if not row:
+                raise ValueError("La propuesta cambió o ya se confirmó. Vuelve a pedirla; no he repetido nada.")
         reply = preview + "\n\nNo he guardado cambios. Responde SÍ para confirmar, NO para descartar o «corregir:» seguido de la orden completa."
         result = {"confirmation_required": True, "reply": reply, "proposal_id": row["id"]}
     except (ValueError, TypeError, ArithmeticError) as exc:
+        if expected_id is not None:
+            db.discard_pending_action_version(bid, state["actor"], expected_id)
         result = {"error": str(exc), "reply": str(exc)}
     state["proposal"] = result
     return result
@@ -130,6 +150,22 @@ def respond(bid: int, actor: str, text: str) -> dict | None:
     yes = norm in {"si", "confirmo", "confirmar", "si, confirmar"}
     no = norm in {"no", "descartar", "ahora no"}
     if not yes and not no:
+        if local_invoice.enabled():
+            pending = db.get_pending_action(bid, actor)
+            if pending and pending["kind"] == "reviewed_tool":
+                payload = json.loads(pending["payload"])
+                if payload.get("tool") == "crear_factura":
+                    try:
+                        revised = local_invoice.revise(text, payload["args"])
+                    except (ValueError, ArithmeticError) as exc:
+                        db.discard_pending_action_version(bid, actor, pending["id"])
+                        return {"reply": str(exc) + " La propuesta anterior queda descartada.", "source": "local"}
+                    if revised is not None:
+                        token = context.set({"actor": actor})
+                        try:
+                            return {**propose(bid, "crear_factura", revised, expected_id=pending["id"]), "source": "local"}
+                        finally:
+                            context.reset(token)
         return None
     pending = db.get_pending_action(bid, actor)
     if not pending or pending["kind"] != "reviewed_tool":
@@ -149,8 +185,20 @@ def respond(bid: int, actor: str, text: str) -> dict | None:
         if current != payload["snapshot"]:
             raise ValueError("Los datos han cambiado desde la propuesta. Vuelve a pedir la operación para revisarlos.")
         from .tools import run_tool
-        result = json.loads(run_tool(payload["tool"], args, bid, channel="whatsapp" if actor.startswith("wa:") else "web"))
+        from .conversation_plan import expected_invoice, invoice_fingerprint
+        expected = None
+        if payload["tool"] == "enviar_factura":
+            invoice = current["invoice"]
+            expected = (bid, invoice["id"], invoice_fingerprint(invoice, current["lines"]))
+        token = expected_invoice.set(expected)
+        try:
+            result = json.loads(run_tool(payload["tool"], args, bid, channel="whatsapp" if actor.startswith("wa:") else "web"))
+        finally:
+            expected_invoice.reset(token)
         outcome = "failed" if result.get("error") or result.get("ok") is False else "completed"
-        return {"reply": nlu.format_reply(payload["tool"], result), "source": "local", "action_result": outcome, "proposal_id": pending["id"]}
+        response = {"reply": nlu.format_reply(payload["tool"], result), "source": "local", "action_result": outcome, "proposal_id": pending["id"]}
+        if outcome == "completed" and result.get("factura"):
+            response["invoice_ids"] = [result["factura"]["id"]]
+        return response
     except (ValueError, TypeError) as exc:
         return {"reply": str(exc) + " No he repetido la operación.", "source": "local", "action_result": "failed"}

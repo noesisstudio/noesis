@@ -1,5 +1,31 @@
 # Estado actual del producto
 
+## 15-sep — Documentos: revisión manual y PDF con varias facturas
+
+Candidato sin push. Documentos abre siempre la revisión manual aunque falle la
+lectura, muestra «Revisar y gestionar» sin seleccionar la fila y separa un PDF con
+varias facturas por rangos de páginas. El original queda como lote no
+contabilizable; cada parte se revisa y registra por separado (recibidas → Costes).
+Archivar como factura propia no crea factura nativa; se explica en pantalla.
+
+## 15-sep — Piloto local de líneas, correcciones y foco de factura
+
+Candidato sin push ni despliegue. Nuevo `NOESIS_LOCAL_PLANNER_ENABLED=false`,
+dependiente de revisión, prepara facturas multilínea de gramática acotada y permite
+corregir cantidad/precio/cliente antes de SÍ. Reutiliza cálculo y tablas existentes.
+Foco PDF web por actor y huella de emisión comprobada dentro del motor nativo.
+Alcance y limitaciones: `02-tecnico/Cerebro-local-piloto.md`. No es modelo privado
+ni aprendizaje activado. Suite final: 847 pruebas correctas; smoke HTTP con PDF
+real e identidad aislada correcto. Pendientes PostgreSQL y piloto físico.
+
+## 15-sep — Cerebro propio: contención monetaria local
+
+Candidato sin push: barrera sin red para negativos y varias cantidades que el
+parser simple no representa. Corrige nombres con «llamado» y el conector fiscal
+«con IVA»; conserva el IVA incluido explícito en gastos. No es comprensión
+multilínea ni un modelo privado desplegado.
+Pruebas en `Registro-QA.md`; continuación en `Tareas-vivas.md`.
+
 ## 14-sep — Notas de voz listas para activar con Groq
 
 El founder elige Groq para transcribir. El código está listo y reforzado: sin

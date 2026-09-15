@@ -134,7 +134,8 @@
     <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
       <button class="btn primary" id="r-confirm-received" onclick="confirmReceived()">Confirmar como factura recibida</button>
       <button class="btn primary" id="r-confirm-client" style="display:none" onclick="confirmClientCandidate()">Crear cliente y relacionar</button>
-      <button class="btn" id="r-mark-issued" onclick="markKind('factura_emitida')">Es una factura mía (emitida)</button>
+      <button class="btn" id="r-mark-issued" onclick="markKind('factura_emitida')">Archivar como factura propia</button>
+      <button class="btn" onclick="markKind('documento')">Marcar revisado (solo archivo)</button>
       <button class="btn" onclick="hideReview()">Cancelar</button>
     </div>
     <div id="r-msg" class="meta" style="margin-top:10px"></div>
@@ -245,12 +246,20 @@ function scheduleDocumentSearch() {
 
 async function renderList() {
   const year=el('d-year').value, quarter=el('d-quarter').value;
-  DOCUMENT_ARCHIVE = await api(`/document-archive?year=${encodeURIComponent(year)}&quarter=${encodeURIComponent(quarter)}&view=${encodeURIComponent(DOCUMENT_VIEW)}`);
+  const version=++documentLoadVersion;
+  let archive;
+  try { archive = await api(`/document-archive?year=${encodeURIComponent(year)}&quarter=${encodeURIComponent(quarter)}&view=${encodeURIComponent(DOCUMENT_VIEW)}`); }
+  catch(e) { if(version===documentLoadVersion) el('d-msg').textContent=e.message; return; }
+  if(version!==documentLoadVersion) return;
+  DOCUMENT_ARCHIVE = archive;
   if (!DOCUMENT_ARCHIVE.documents.some(item=>item.archive_key===selectedDocumentId)) {
     selectedDocumentId = null;
   }
   paintDocuments();
 }
+
+let documentLoadVersion = 0;
+window.addEventListener('pageshow', event=>{if(event.persisted) renderList();});
 
 function selectDocumentView(view) {
   DOCUMENT_VIEW = DOCUMENT_VIEWS.some(item=>item.key===view) ? view : 'todos';
@@ -294,16 +303,20 @@ function paintDocuments() {
       actions.push(`<a class="btn sm primary" href="${esc(d.file_url)}" target="_blank" rel="noopener">Abrir PDF</a>`);
       actions.push(`<a class="btn sm" href="/b/${BIZ}/facturas">Ver en Facturas</a>`);
     } else {
-      if (d.doc_status === 'pendiente_revisar') {
+      if (d.doc_status === 'pendiente_revisar' && !d.is_batch_source) {
         actions.push(`<button class="btn sm" onclick="confirmKind(${d.id}, '${esc(d.kind)}')">Confirmar tipo</button>`);
       }
-      if (!d.received_invoice_id && !d.expense_id) {
+      if (!d.received_invoice_id && !d.expense_id && !d.invoice_id && !d.is_batch_source) {
         actions.push(`<button class="btn sm" title="Volver a clasificar" onclick="classifyDoc(${d.id})">Reclasificar</button>`);
-        if (['documento','factura_recibida','factura_emitida','proveedor'].includes(d.kind)) {
-          actions.push(`<button class="btn sm" title="Extraer datos de factura" onclick="readDoc(${d.id})">Extraer datos</button>`);
+        if (['documento','factura_recibida','factura_emitida','proveedor','ticket'].includes(d.kind)) {
+          actions.push(`<button class="btn sm" title="Leer o completar manualmente" onclick="readDoc(${d.id})">Revisar datos</button>`);
         }
       }
-      if (d.kind === 'ticket' && !d.expense_id) {
+      if (d.mime==='application/pdf' && !d.invoice_id && !d.received_invoice_id && !d.expense_id) {
+        actions.push(`<button class="btn sm" onclick="splitPdf(${d.id})">${d.is_batch_source?'Reanudar separación':'Separar facturas'}</button>`);
+      }
+      if (d.record_url) actions.push(`<a class="btn sm" href="${esc(d.record_url)}">Ver registro contable</a>`);
+      if (d.kind === 'ticket' && !d.expense_id && !d.invoice_id && !d.received_invoice_id && !d.is_batch_source) {
         actions.push(`<button class="btn sm" title="Convertir en gasto" onclick="toExpense(${d.id}, ${d.ocr_amount || 'null'})">Crear gasto</button>`);
       }
       if (d.doc_status !== 'enviado_gestoria' && d.doc_status !== 'validado') {
@@ -314,7 +327,7 @@ function paintDocuments() {
     const proposed=d.proposed_client_status==='pending'&&d.proposed_client_name
       ?`Cliente por confirmar: ${d.proposed_client_name}`:'';
     const context=[d.client_name,d.project_name,proposed].filter(Boolean).map(esc).join(' · ');
-    const source=generated?'Generado por Bynoesis':'Archivo subido';
+    const source=generated?'Generado por Bynoesis':d.is_batch_source?'Lote original · no se contabiliza':'Archivo subido';
     return `<article class="document-file-row ${selectedDocumentId===d.archive_key?'selected':''}">
       <button class="document-file-open" onclick="showPreview('${d.archive_key}')" aria-label="Previsualizar ${esc(d.filename)}">
         <span class="document-file-kind">${d.mime==='application/pdf'?'PDF':String(d.mime||'').startsWith('image/')?'IMG':'DOC'}</span>
@@ -322,7 +335,7 @@ function paintDocuments() {
       </button>
       <div class="document-file-facts"><span>${esc(d.effective_on||dateIso(d.created_at))}</span><b>${importe}</b></div>
       <div class="document-file-state"><span class="badge ${st[1]}">${st[0]}</span>${d.doc_status==='pendiente_revisar'&&d.confidence?`<small>Lectura ${Math.round(d.confidence)}% · por confirmar</small>`:''}</div>
-      <div class="document-file-actions">${actions.join(' ')}</div>
+      <details class="document-file-controls"><summary>Revisar y gestionar</summary><div class="document-file-actions">${actions.join(' ')}</div></details>
     </article>`;
   }).join('');
   el('d-empty').innerHTML = shown.length ? '' :
@@ -431,11 +444,7 @@ async function readDoc(id) {
   let draft;
   try { draft = await apiPost(`/documents/${id}/draft`, {}); }
   catch (e) { el('d-msg').textContent = e.message; return; }
-  if (draft.pending) {
-    el('d-msg').textContent = draft.error;
-    renderList();
-    return;
-  }
+  if (draft.pending) el('d-msg').textContent = 'No hay lectura automática. Puedes completar y revisar los datos manualmente.';
   reviewDocId = id;
   const emitted=draft.direction==='emitida';
   reviewClientResolution=draft.client_resolution||null;
@@ -456,7 +465,7 @@ async function readDoc(id) {
     el('r-msg').textContent = 'Revisa antes de guardar: ' + draft.validation_issues.join(' ');
   }
   el('r-confirm-received').style.display=emitted?'none':'';
-  el('r-mark-issued').style.display=emitted?'none':'';
+  el('r-mark-issued').style.display='';
   el('r-confirm-client').style.display=(emitted&&reviewClientResolution?.status==='pending')?'':'none';
   if(emitted&&reviewClientResolution?.status==='confirmed') {
     el('r-msg').textContent=`Cliente relacionado: ${reviewClientResolution.client_name||draft.customer}.`;
@@ -519,11 +528,12 @@ async function confirmReceived() {
     total: el('r-total').value ? parseFloat(el('r-total').value) : null,
   };
   if (!body.total) { msg.textContent = 'El total es obligatorio.'; return; }
+  if (!confirm('¿Confirmas que este archivo contiene una sola factura de proveedor y que los datos corresponden a ella? Se registrará en Costes, no en Facturas emitidas.')) return;
   try { await apiPost('/received-invoices', body); }
   catch (e) { msg.textContent = e.message; return; }
   msg.textContent = '';
   hideReview();
-  el('d-msg').textContent = 'Factura recibida registrada y ligada al documento.';
+  el('d-msg').textContent = 'Factura recibida registrada en Costes y ligada al documento. No es una factura emitida ni un ingreso.';
   renderList();
 }
 
@@ -532,7 +542,33 @@ async function markKind(kind) {
   try { await apiPost(`/documents/${reviewDocId}/review`, { kind, doc_status: 'revisado' }); }
   catch (e) { el('r-msg').textContent = e.message; return; }
   hideReview();
+  el('d-msg').textContent = 'Archivo revisado. Esta acción no crea una factura ni modifica ingresos o gastos.';
   renderList();
+}
+
+async function splitPdf(id) {
+  let info;
+  try { info=await api(`/documents/${id}/split`); }
+  catch(e) { el('d-msg').textContent=e.message; return; }
+  let busy=false;
+  formModal({
+    title:`Separar lote de ${info.pages} páginas`, submitLabel:'Separar y conservar original',
+    fields:[{name:'ranges',label:'Páginas de cada factura, separadas por punto y coma. Ejemplo: 1-2; 3; 4-5',value:info.ranges||'',required:true}],
+    onSubmit:async values=>{
+      if(busy) return;
+      if(!confirm('Revisa el PDF original antes de continuar. ¿Estos rangos incluyen todas las páginas y agrupan una factura completa por cada parte? No se registrarán importes automáticamente.')) return;
+      busy=true;
+      el('d-msg').textContent='Separando el PDF. Conservaremos el original.';
+      try {
+      const response=await fetch(`/api/${BIZ}/documents/${id}/split`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ranges:values.ranges,confirmed:true})});
+      const result=await response.json();
+      await renderList();
+      if(!response.ok) throw new Error((result.error||'No se pudo separar el lote.')+(result.documents?.length?` Partes disponibles: ${result.documents.map(d=>'#'+d.id).join(', ')}.`:''));
+      el('d-msg').textContent=`${result.documents.length} facturas disponibles para revisión individual. Original conservado; ningún importe registrado automáticamente.`;
+      } catch(e) { el('d-msg').textContent=e.message; }
+      finally { busy=false; }
+    }
+  });
 }
 
 async function setStatus(id, doc_status) {

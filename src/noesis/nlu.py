@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from datetime import date, datetime, timedelta
+from .intent_safety import inspect_money_intent
 
 _WEEKDAYS = {
     "lunes": 0, "martes": 1, "miercoles": 2, "jueves": 3,
@@ -102,6 +103,9 @@ NEED_REVIEW = "__need_review__"
 
 def safety_refusal(text: str) -> str | None:
     """Una orden negativa o destructiva nunca se interpreta como un alta."""
+    risk = inspect_money_intent(text)
+    if risk:
+        return risk.reply
     norm = _norm(text)
     if re.search(r"\b(borra\w*|elimina\w*|anula\w*|cancela\w*|esborra\w*|suprime\w*)\b", norm):
         return ("No he cambiado nada. Para borrar, anular o cancelar un registro, "
@@ -142,7 +146,7 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
       - "factura a Juan 95 euros"                          (sin concepto explícito)
     """
     # Los impuestos son campos separados, nunca parte del cliente o concepto.
-    text = re.sub(r"\s+(?:IVA|IRPF)\s*(?:(?:del|al)\s*)?(?:incluido|inclos|\d+(?:[.,]\d+)?\s*%?)", "", text, flags=re.I).strip(" ,.")
+    text = re.sub(r"\s+(?:(?:con|más|mas)\s+)?(?:IVA|IRPF)\s*(?:(?:del|al)\s*)?(?:incluido|inclos|\d+(?:[.,]\d+)?\s*%?)", "", text, flags=re.I).strip(" ,.")
     # Variante frecuente: "factura a Juan de 100 euros". Debe resolverse antes
     # del patrón con concepto para que el 100 no se parta en "1" + "00".
     m = re.search(
@@ -286,11 +290,11 @@ def parse(text: str) -> tuple[str, dict] | None:
     # rol e invitación segura y no se concede desde una frase incompleta.
     party = re.search(
         r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+(?:un|una)?\s*"
-        r"(cliente|proveedor)\s+(.+?)\s*$",
+        r"(cliente|proveedor)\s*:?\s+(.+?)\s*$",
         text, re.I,
     )
     if party:
-        name = party.group(2).strip(" ,.")
+        name = re.sub(r"^(?:llamad[oa]|que se llama)\s+", "", party.group(2), flags=re.I).strip(" ,.")
         return (
             "crear_cliente" if _norm(party.group(1)) == "cliente" else "crear_proveedor",
             {"nombre": name},
@@ -367,7 +371,14 @@ def parse(text: str) -> tuple[str, dict] | None:
         if amount is not None:
             cm = re.search(r"(?:en|de|por)\s+([a-záéíóúñ ]+)", text, re.I)
             concepto = cm.group(1).strip() if cm else "Gasto"
-            return ("registrar_gasto", {"concepto": concepto, "importe": amount})
+            args = {"concepto": concepto, "importe": amount}
+            if re.search(r"\biva\b", norm):
+                rate = re.search(r"\biva\s*(?:incluido|inclos)?\s*(?:del|al)?\s*(0|4|10|21)(?![\d.,])\s*%?", norm)
+                if (not rate or not re.search(r"\b(?:incluido|inclos)\b", norm)
+                        or re.search(r"\b(?:no\s+incluido|sin\s+iva|mas\s+iva)\b", norm)):
+                    return (NEED_REVIEW, {"reply": "Para conservar el IVA del gasto, dime el importe final con IVA incluido y su porcentaje. No he registrado el gasto."})
+                args["iva"] = int(rate.group(1))
+            return ("registrar_gasto", args)
 
     # --- Agenda: "agenda a Marta el jueves por la mañana en Badalona"
     if re.search(r"\b(agenda|agendame|apunta|apuntame|cita|reserva)\b", norm):

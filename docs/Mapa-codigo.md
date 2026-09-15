@@ -1,5 +1,27 @@
 # Mapa de código
 
+## Lotes PDF en Documentos — 15-sep
+
+`documents/pdf_batch.py`: `inspect` y `split` separan un PDF por rangos exhaustivos
+con `pypdf`, reutilizando `service.upload` (hash, validación) y reintento sin
+duplicados. `repo.register_pdf_batch`/`is_batch_source` usan
+`document_classifications.method='pdf_batch'`. Rutas en `web/routers/documents.py`;
+UI `splitPdf` en `templates/documentos.html`. Corpus: `tests/test_pdf_batch.py`.
+
+## Planificador local de factura — 15-sep
+
+`local_invoice.py`: planes tipados sin efectos, gramática neta ES/CA, revisiones
+acotadas y foco por actor. `action_review.py` reutiliza normalizador y totales de
+`db.py`; `revise_pending_action` reemplaza una versión de forma transaccional sin
+ampliar caducidad. El flag exige revisión y queda apagado. Guía:
+`02-tecnico/Cerebro-local-piloto.md`; corpus: `tests/test_local_invoice.py`.
+
+## Inspección monetaria local — 15-sep
+
+`intent_safety.inspect_money_intent` devuelve riesgo tipado sin efectos ni red.
+`nlu.safety_refusal` lo aplica antes de interpretar. No sustituye validadores de
+herramientas ni autoriza al devolver None. Corpus: `tests/test_intent_safety.py`.
+
 ## Plan de emisión y confirmación de versión — 10-sep
 
 `conversation_plan.InvoicePlan` interpreta sin efectos; `invoice_fingerprint`

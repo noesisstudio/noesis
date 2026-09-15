@@ -1,5 +1,31 @@
 # Tareas vivas
 
+## Documentos: conectividad con Facturas/Costes — 15-sep
+
+- [x] Revisión manual cuando falla la lectura automática y acciones visibles en móvil.
+- [x] Separar un PDF con varias facturas por rangos, conservando el original.
+- [x] Impedir contabilizar el lote o duplicar un documento ya ligado.
+- [ ] Prueba visual en navegador y móvil físico con sesión real del socio.
+- [ ] Sugerir rangos automáticamente (detección de cabeceras por página); hoy los
+  indica el usuario.
+- [ ] Decidir con el founder cómo importar facturas emitidas históricas a Facturas
+  sin romper numeración ni Verifactu; hoy solo se archivan.
+
+## Cerebro propio y simulacro — 15-sep
+
+- [x] Candidato local: contención de negativos y varias cantidades; nombres con
+  «llamado», «cliente:» y conectores fiscales; IVA incluido en gastos y ocho regresiones.
+- [x] Piloto local desactivado: líneas netas con IVA explícito, correcciones de
+  cantidad/precio/cliente y propuesta versionada común a ambos canales.
+- [ ] Ampliar gramática multilínea y correcciones a otros dominios; no hay
+  comprensión universal ni flujos compuestos. Ver `02-tecnico/Cerebro-local-piloto.md`.
+- [ ] Conciliar lecturas económicas y validar aritmética/duplicados de recibidas.
+- [x] Candidato: foco PDF web por actor, emisión propuesta y huella transaccional.
+- [ ] Flujos compuestos PDF y prueba física de WhatsApp.
+- [ ] Evaluar modelo privado contra corpus reservado, sin autoentrenamiento ni
+  activación por defecto. Conservar aislamiento de datos y permisos.
+- [ ] Revisar candidato, suite y PostgreSQL antes de publicar; sin deploy nuevo.
+
 ## Notas de voz con Groq — 14-sep
 
 Decisión del founder: activar la voz con Groq. Pasos en

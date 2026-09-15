@@ -682,6 +682,9 @@ body.companion-open .companion-scrim { opacity:1; pointer-events:auto; }
 .document-file-actions { grid-column:1/-1; display:none; gap:6px; justify-content:flex-end;
   padding-top:8px; border-top:1px dashed var(--border); }
 .document-file-row.selected .document-file-actions { display:flex; flex-wrap:wrap; }
+.document-file-controls { grid-column:1/-1; }
+.document-file-controls summary { cursor:pointer; color:var(--brand); font-weight:700; padding:10px 0; }
+.document-file-controls .document-file-actions { display:flex; flex-wrap:wrap; justify-content:flex-start; }
 .document-preview-overlay { padding:18px; }
 .document-preview-modal { position:relative; max-width:900px; max-height:calc(100vh - 36px);
   overflow:auto; padding:0; }

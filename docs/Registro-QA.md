@@ -1,5 +1,63 @@
 ﻿# Registro de QA
 
+## 2026-09-15 — Documentos: revisión manual y lotes PDF
+
+- `tests.test_pdf_batch` (9), `test_local_invoice` y `test_intent_safety`: 33
+  pruebas dirigidas correctas.
+- Smoke HTTP con `TestClient`, base SQLite temporal y sesión real: 13/13 — ruta de
+  separación denegada sin sesión y a otro negocio, página Documentos 200 con
+  «Revisar y gestionar», revisión manual cuando falla la lectura, separación sin
+  confirmar rechazada, 3 páginas → 2 partes, original bloqueado para borrador y
+  para contabilizar, parte registrada como recibida y archivo con importe 121 y
+  enlace a Costes.
+- Suite completa: **856 pruebas correctas en 601,986 s**
+  (`PYTHON_DOTENV_DISABLED=1`, `unittest discover -s tests -q`). Ruff, `git diff
+  --check` y `check_project_truth.py` correctos.
+- Sin inspección visual en navegador (no se introducen contraseñas en formularios
+  desde el agente) ni móvil físico. PostgreSQL no validado. Sin push ni despliegue.
+
+## 2026-09-15 — Piloto local de factura y correcciones
+
+- 50 pruebas dirigidas correctas: 16 nuevas del planificador, 8 de barreras y 26
+  de seguridad conversacional. Incluyen líneas reales guardadas, corrección de
+  130,08 a 145,20, doble confirmación concurrente, aislamiento, caducidad, PDF web
+  y entrada WhatsApp con transporte simulado. Sin APIs de IA.
+- Ruff global y Bandit global de severidad/confianza altas: correctos.
+- Detector de secretos sobre todos los archivos modificados/nuevos y las dos
+  suites JavaScript públicas: correctos. `pip-audit --local`: sin vulnerabilidades
+  conocidas en dependencias auditables; excluye el propio paquete local Noesis.
+- Medición orientativa del parser puro: 10.000 interpretaciones del ejemplo en
+  0,447 s (0,045 ms de media), sin base de datos ni red. No es latencia del chat
+  completo ni prueba de carga concurrente. Un primer intento no arrancó por un
+  fallo del host PowerShell; repetido correctamente con Windows PowerShell.
+- Smoke HTTP adicional con `TestClient` y base temporal: `/health`, `/ready`,
+  login, propuesta/corrección/SÍ por `/api/{id}/chat`, borrador persistido de
+  145,20 €, descarga con cabecera PDF real y páginas Facturas/Documentos/Asistente
+  con respuesta 200. PDF denegado a otro negocio y tras logout. Scheduler apagado,
+  proveedores de IA deshabilitados; no es inspección visual ni envío Meta.
+- Suite general de la versión final: **847 pruebas correctas en 736,830 s**
+  (`PYTHON_DOTENV_DISABLED=1`, `python -m unittest discover -s tests -q`).
+  Los errores/avisos de proveedores y publicaciones de Facebook de la salida son
+  escenarios simulados. PostgreSQL no disponible local; no validado. Tampoco
+  entrega física Meta ni modelo privado.
+- Ningún push, commit, despliegue, migración ni cambio de datos de producción.
+
+## 2026-09-15 — Candidato: inspección monetaria sin efectos
+
+- Ocho pruebas nuevas correctas (`test_intent_safety`): variantes de signo,
+  cantidades, referencias, nombres y chat con SQLite temporal sin altas tras
+  rechazo y desglose de gasto 121 = base 100 + IVA 21. Ruff dirigido y
+  `git diff --check` correctos. Bandit dirigido y compilación correctos.
+- Sobre la versión final: 26 pruebas de seguridad conversacional, 2 de recorrido
+  de cliente y 8 seleccionadas por `-k nlu`, todas correctas además de las 8 nuevas.
+- Suite completa de la primera versión del bloque: 827 pruebas correctas en
+  701,770 s. Las últimas correcciones de nombres/IVA y ampliación de pruebas se
+  validaron después con los grupos dirigidos anteriores; no se atribuye esa
+  ejecución completa a la versión final. Repetir la suite final antes del push.
+- Sin tráfico a proveedores en pruebas nuevas. Sin PostgreSQL ni WhatsApp físico
+  validados en este bloque. La prueba de ambos canales ejercita `_handle`, no
+  acredita transporte Meta ni todos sus atajos. Sin push ni despliegue.
+
 ## 2026-09-15 — Integración y regresión de los diez cambios del socio
 
 - Integrado localmente `origin/main` (`8797dd1`) sobre el commit de recuperación

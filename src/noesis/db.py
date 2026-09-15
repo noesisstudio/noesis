@@ -8786,7 +8786,7 @@ def add_expense(
             conn.execute("BEGIN IMMEDIATE")
             lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
             document = conn.execute(
-                "SELECT id, expense_id FROM documents "
+                "SELECT id, expense_id, received_invoice_id, invoice_id FROM documents "
                 "WHERE id=? AND business_id=?" + lock,
                 (document_id, business_id),
             ).fetchone()
@@ -8794,6 +8794,14 @@ def add_expense(
                 raise ValueError("Documento no encontrado.")
             if document["expense_id"] is not None:
                 raise ValueError("Este documento ya está vinculado a un gasto.")
+            if document["received_invoice_id"] is not None or document["invoice_id"] is not None:
+                raise ValueError("Este documento ya está vinculado a una factura.")
+            if conn.execute(
+                "SELECT id FROM document_classifications WHERE document_id=? "
+                "AND business_id=? AND method='pdf_batch' LIMIT 1",
+                (document_id, business_id),
+            ).fetchone():
+                raise ValueError("Este PDF es un lote. Registra sus facturas individuales, no el original.")
         row = conn.execute(
             "INSERT INTO expenses (business_id, concept, amount, vat_rate, category, "
             "spent_on, project_id, created_at) "
@@ -8955,7 +8963,7 @@ def add_received_invoice(total, supplier_id=None, number=None, concept=None,
             conn.execute("BEGIN IMMEDIATE")
             lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
             document = conn.execute(
-                "SELECT id, received_invoice_id, expense_id FROM documents "
+                "SELECT id, received_invoice_id, expense_id, invoice_id FROM documents "
                 "WHERE id=? AND business_id=?" + lock,
                 (document_id, business_id),
             ).fetchone()
@@ -8964,6 +8972,14 @@ def add_received_invoice(total, supplier_id=None, number=None, concept=None,
             if document["received_invoice_id"] is not None:
                 raise ValueError(
                     "Este documento ya está vinculado a una factura recibida.")
+            if document["invoice_id"] is not None:
+                raise ValueError("Este documento ya está vinculado a una factura emitida.")
+            if conn.execute(
+                "SELECT id FROM document_classifications WHERE document_id=? "
+                "AND business_id=? AND method='pdf_batch' LIMIT 1",
+                (document_id, business_id),
+            ).fetchone():
+                raise ValueError("Este PDF es un lote. Registra sus facturas individuales, no el original.")
             if document["expense_id"] is not None:
                 raise ValueError("Este documento ya está vinculado a un gasto.")
         else:
@@ -11586,6 +11602,36 @@ def set_pending_action(business_id, phone, kind, payload: dict,
         new_id = row["id"]
     return {"id": new_id, "business_id": business_id, "phone": phone,
             "kind": kind, "payload": body, "expires_at": expires}
+
+
+def revise_pending_action(business_id, phone, expected_id: int, payload: dict) -> dict | None:
+    """Sustituye una propuesta viva por otra versión, sin resucitar confirmadas.
+
+    El nuevo ID invalida cualquier confirmación/corrección que leyera la anterior.
+    Conserva la caducidad original y reclama la versión bajo transacción.
+    """
+    with get_conn() as conn:
+        previous = conn.execute(
+            "DELETE FROM whatsapp_pending_actions WHERE id=? AND business_id=? "
+            "AND phone=? AND kind='reviewed_tool' AND expires_at>=? RETURNING expires_at",
+            (expected_id, business_id, phone, _now()),
+        ).fetchone()
+        if not previous:
+            return None
+        row = conn.execute(
+            "INSERT INTO whatsapp_pending_actions "
+            "(business_id, phone, kind, payload, expires_at, created_at) "
+            "VALUES (?, ?, 'reviewed_tool', ?, ?, ?) RETURNING id",
+            (business_id, phone, json.dumps(payload, ensure_ascii=False), previous["expires_at"], _now()),
+        ).fetchone()
+        return {"id": row["id"]}
+
+
+def discard_pending_action_version(business_id, phone, expected_id: int) -> None:
+    """Un error de una versión antigua no descarta una propuesta posterior."""
+    with get_conn() as conn:
+        conn.execute("DELETE FROM whatsapp_pending_actions WHERE id=? AND business_id=? AND phone=?",
+                     (expected_id, business_id, phone))
 
 
 def get_pending_action(business_id, phone) -> dict | None:

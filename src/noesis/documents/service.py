@@ -56,7 +56,7 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
            client_id: int | None = None, invoice_id: int | None = None,
            project_id: int | None = None,
            note: str | None = None, run_ocr: bool = True,
-           auto_classify: bool = False) -> dict:
+           auto_classify: bool = False, pending_review: bool = False) -> dict:
     """Valida y guarda un documento. Si es imagen y hay OCR, intenta leer el importe.
 
     Lanza UploadError con un mensaje claro si el archivo no es válido.
@@ -169,7 +169,7 @@ def upload(business_id: int, filename: str, data: bytes, *, kind: str = "documen
             mime=storage.mime_for(filename), size=len(data), kind=kind,
             client_id=client_id, invoice_id=invoice_id, project_id=project_id, note=note,
             ocr_text=ocr_text, ocr_amount=ocr_amount,
-            doc_status="pendiente_revisar" if auto_classify else "revisado",
+            doc_status="pendiente_revisar" if auto_classify or pending_review else "revisado",
             content_sha256=content_sha256,
         )
     except db.IntegrityError as exc:
@@ -439,6 +439,8 @@ def confirm_received_invoice(business_id: int, doc_id: int, *, total,
     doc = repo.get(doc_id, business_id)
     if not doc:
         raise UploadError("Documento no encontrado.")
+    if repo.is_batch_source(doc_id, business_id):
+        raise ValueError("Este PDF es un lote. Revisa y registra las facturas individuales.")
     if supplier_id is None and (supplier_name or supplier_nif):
         known = db.find_supplier(business_id, nif=supplier_nif,
                                  name=supplier_name)

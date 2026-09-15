@@ -50,6 +50,8 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 # Piloto explícito: revisión común antes de las escrituras conversacionales.
 ASSISTANT_REVIEW_ENABLED = env_bool("NOESIS_ASSISTANT_REVIEW_ENABLED", False)
 ASSISTANT_LEARNING_ENABLED = env_bool("NOESIS_ASSISTANT_LEARNING_ENABLED", False)
+# Piloto local: exige además revisión; no activa proveedores ni aprendizaje.
+LOCAL_PLANNER_ENABLED = env_bool("NOESIS_LOCAL_PLANNER_ENABLED", False)
 MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
 # El agente principal puede usar una tarifa distinta al fallback. Cero evita
 # inventar coste si no se ha revisado el precio del modelo elegido.
