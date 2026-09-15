@@ -1,5 +1,13 @@
 ﻿# Registro de QA
 
+## 2026-09-15 — Nombres de cliente que se tomaban por órdenes
+
+- `tests.test_client_name_rules` (3 nuevas): «Carla Borràs» crea la ficha tras SÍ,
+  los verbos de borrado siguen bloqueados y «a nombre de Carla» resuelve «Carla».
+- Junto con `test_conversation_safety`, `test_intent_safety`, `test_learning` y
+  `test_customer_simulation`: 58 pruebas correctas. Ruff correcto.
+- Suite completa delegada en la CI del push. Sin cambios de esquema ni de IA.
+
 ## 2026-09-15 — Documentos: revisión manual y lotes PDF
 
 - `tests.test_pdf_batch` (9), `test_local_invoice` y `test_intent_safety`: 33

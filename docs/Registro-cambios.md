@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-09-15 — Nombres de cliente que se tomaban por órdenes
+
+Reporte del founder: «crea cliente Carla Borràs» se bloqueaba como si fuera
+«borrar», y «factura a nombre de Carla» buscaba un cliente llamado «nombre de
+Carla». `nlu.safety_refusal` detecta ahora verbos conjugados (borra, bórralo,
+elimina, cancela…) en vez de cualquier palabra que empiece igual, y
+`_limpiar_cliente` quita «a nombre de» / «a nom de». Pruebas:
+`tests/test_client_name_rules.py` (3) y 58 pruebas de reglas conversacionales
+correctas; Ruff correcto. Riesgo: una conjugación poco habitual de «borrar» deja
+de frenarse en local; el chat sigue sin ofrecer ninguna herramienta de borrado.
+Rollback: revertir el commit.
+
 ## 2026-09-15 — Documentos: revisión manual y lotes PDF con varias facturas
 
 Sin publicación. Reporte del socio: una factura quedaba «en revisión» sin poder

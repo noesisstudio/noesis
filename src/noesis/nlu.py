@@ -107,7 +107,11 @@ def safety_refusal(text: str) -> str | None:
     if risk:
         return risk.reply
     norm = _norm(text)
-    if re.search(r"\b(borra\w*|elimina\w*|anula\w*|cancela\w*|esborra\w*|suprime\w*)\b", norm):
+    # Verbos conjugados, no prefijos: «Carla Borràs» o «Cancelas» son nombres.
+    if re.search(
+        r"\b(borr(?:a|ar|ame|alo|ala|alos|alas|ad)|elimin(?:a|ar|ame|alo|ala|alos|alas|ad)|"
+        r"anul(?:a|ar|alo|ala|ad)|cancel(?:a|ar|ame|alo|ala|ad)|esborr(?:a|ar|eu)|"
+        r"suprim(?:e|ir|elo|ela|id))\b", norm):
         return ("No he cambiado nada. Para borrar, anular o cancelar un registro, "
                 "ábrelo en su apartado y revisa la acción concreta.")
     if re.search(r"^(?:por favor[, ]+)?(cambia\w*|modifica\w*|mueve|reprograma\w*|rectifica\w*)\b", norm):
@@ -133,7 +137,9 @@ _CONECTORES_FINALES = ("de", "del", "por", "per", "para", "a", "en", "d")
 
 def _limpiar_cliente(nombre: str) -> str:
     """Quita los conectores que se cuelan al final de un nombre dictado."""
-    partes = str(nombre or "").strip().split()
+    # «factura a nombre de Carla» / «a nom de Carla»: el cliente es Carla.
+    nombre = re.sub(r"^(?:a\s+)?nom(?:bre)?\s+(?:de\s+|d')", "", str(nombre or "").strip(), flags=re.I)
+    partes = nombre.split()
     while partes and partes[-1].lower().strip(",.") in _CONECTORES_FINALES:
         partes.pop()
     return " ".join(partes).strip(" ,.")
