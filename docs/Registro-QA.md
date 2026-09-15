@@ -1,5 +1,14 @@
 ﻿# Registro de QA
 
+## 2026-09-15 — Groq bloqueado por Cloudflare
+
+- Reproducido contra `api.groq.com` real con clave falsa: `Python-urllib` → 403
+  «error code: 1010»; con `User-Agent` propio → 401 «Invalid API Key». Con el
+  arreglo, `GroqWhisperProvider` real devuelve «HTTP 401» (llega a Groq).
+- `test_groq_provider_parses_response` exige `GROQ_USER_AGENT`. Voz: 52 OK. Ruff OK.
+- No ejecutado: transcripción con la clave real (solo está en Railway); lo valida
+  el founder con una nota tras el despliegue.
+
 ## 2026-09-14 — Notas de voz con Groq
 
 - Nuevas en `test_backend.py` (`TranscriptionChainTestCase`): Groq usa el opener
