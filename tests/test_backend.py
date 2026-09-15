@@ -6439,6 +6439,9 @@ class TranscriptionChainTestCase(unittest.TestCase):
         self.assertEqual(text, "factura a Carlos de 100")
         # La clave nunca viaja a otra dirección por una redirección.
         build.assert_called_once_with(transcription._NoRedirect)
+        # Sin agente propio, Cloudflare devuelve 403 «error code: 1010».
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.get_header("User-agent"), transcription.GROQ_USER_AGENT)
 
     def test_groq_provider_sends_a_fixed_safe_filename(self):
         from noesis.adapters import transcription

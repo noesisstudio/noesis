@@ -102,6 +102,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 # Formatos que admite Groq. WhatsApp manda ogg (opus dentro); la web, webm, m4a u ogg.
 GROQ_EXTENSIONS = {"flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"}
+GROQ_USER_AGENT = "Bynoesis/1.0 (+https://bynoesis.com)"
 
 
 def _groq_filename(filename: str) -> str:
@@ -157,6 +158,9 @@ class GroqWhisperProvider:
             headers={
                 "Authorization": f"Bearer {config.GROQ_API_KEY}",
                 "Content-Type": f"multipart/form-data; boundary={boundary}",
+                # Cloudflare, delante de Groq, rechaza el agente por defecto de
+                # urllib con 403 «error code: 1010» antes de mirar la clave.
+                "User-Agent": GROQ_USER_AGENT,
             },
         )
         try:

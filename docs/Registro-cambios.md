@@ -13,6 +13,18 @@ con Groq, Meta, correo, Stripe, vídeo y móvil. Riesgo de integración bajo; no
 publicado. Rollback: revertir el commit de fusión para volver a las dos líneas
 separadas sin reescribir su historia.
 
+## 2026-09-15 — Notas de voz: Cloudflare bloqueaba las llamadas a Groq
+
+Síntoma del founder: con `GROQ_API_KEY` en Railway, toda nota de voz respondía
+«no he podido transcribirla». Causa: Cloudflare, delante de `api.groq.com`, rechaza
+el agente por defecto `Python-urllib` con 403 «error code: 1010» antes de mirar la
+clave. `GroqWhisperProvider` no enviaba `User-Agent`; la comprobación de
+integraciones sí lo hace, por eso no lo detectaba. Reproducido contra Groq real sin
+clave válida: agente por defecto → 403 1010, agente propio → 401. Cambio:
+`GROQ_USER_AGENT` en `adapters/transcription.py` y prueba que exige la cabecera.
+Riesgo bajo. Diagnóstico: logs «Fallo transcribiendo audio: … HTTP 403».
+Rollback: revertir el commit (vuelve el bloqueo).
+
 ## 2026-09-14 — Prueba SEO: /preguntas tiene 15 respuestas
 
 La suite completa fallaba en `test_seo.py`
