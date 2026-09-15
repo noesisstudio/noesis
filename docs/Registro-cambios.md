@@ -1,5 +1,22 @@
 ﻿# Registro de cambios
 
+## 2026-09-15 — Preguntas para el abogado TIC, en docs y al día
+
+Objetivo: tener en el repositorio la lista de preguntas para la revisión jurídica,
+que hasta ahora solo existía como página publicada del 9-sep, y alinearla con lo
+que hace hoy el producto. Nuevo `docs/05-legal-y-rgpd/Preguntas-abogado-TIC.md`,
+enlazado desde `Inicio.md`; la página compartible se actualiza con el mismo
+contenido.
+
+Cambios de contenido comprobados contra el código y producción del 15-sep: 05 nombra
+a Groq; 06 pasa de «quitar homologado» (ya retirado) a validar la web sin Veri*Factu;
+07 pide un plazo concreto para la «antelación razonable» del contrato antes de
+activar Groq; 11 recoge que el titular publicado es persona física con NIF personal;
+17 confirma que sigue sin avisarse de que es IA; 21 pasa del contador propio al
+aviso de Google Analytics. Nuevas: 22 (paso a S.L.) y 23 (marca «Bynoesis» frente a
+las «Noesis» de software). Sin cambios en `src/` ni textos legales. Riesgo nulo;
+rollback: revertir este commit.
+
 ## 2026-09-15 — Nombres de cliente que se tomaban por órdenes
 
 Reporte del founder: «crea cliente Carla Borràs» se bloqueaba como si fuera

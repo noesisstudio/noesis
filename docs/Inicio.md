@@ -105,6 +105,9 @@ Documento nuevo: al tema que le toque, nunca suelto en la raíz. Los enlaces
 - [`Ruta-legal.pdf`](05-legal-y-rgpd/Ruta-legal.pdf) — qué falta para poder cobrar el primer euro:
   Veri*Factu como productor, App Review de Meta, AI Act y protección de datos; tres
   rutas completas con su coste y el material para encargar las revisiones.
+- [[Preguntas-abogado-TIC]] — las 23 preguntas para la reunión con el abogado TIC,
+  con el contexto de cada una y cómo reconocer una respuesta útil; actualizadas al
+  código del 15-sep (Groq, Analytics, paso a S.L. y marca).
 - [`Plan-60-dias.pdf`](06-negocio-y-finanzas/Plan-60-dias.pdf) — el plan de ejecución que pone fecha a todo
   lo anterior: cuatro frentes en paralelo, nueve semanas y una puerta de salida por
   semana.

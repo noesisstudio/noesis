@@ -98,7 +98,10 @@ Decisión del founder: activar la voz con Groq. Pasos en
 - [ ] Validar `/preguntas` en validator.schema.org (Google ya no muestra FAQ
   enriquecida a la mayoría de sitios; el marcado sirve para comprensión).
 - [ ] Marca: consultar en la OEPM «Bynoesis» frente a las «Noesis» de software
-  existentes y decidir su registro con asesoría.
+  existentes y decidir su registro con asesoría (pregunta 23 de
+  `05-legal-y-rgpd/Preguntas-abogado-TIC.md`).
+- [ ] Founder: enviar a la abogada TIC las 23 preguntas y los textos publicados, y
+  pedir presupuesto cerrado con el alcance escrito.
 - [ ] Decidir contenido nuevo: páginas por oficio y guía Veri*Factu 2027. Sin
   cifras, testimonios ni fichas de valoraciones hasta tener evidencia real.
 - [ ] Fichas externas (LinkedIn, directorios de software) con los mismos datos
