@@ -259,7 +259,8 @@ class SeoTestCase(unittest.TestCase):
         self.assertIsNotNone(bloque, "/preguntas no lleva datos estructurados")
         grafo = json.loads(bloque.group(1))["@graph"]
         faq = next(item for item in grafo if item["@type"] == "FAQPage")
-        self.assertEqual(len(faq["mainEntity"]), 16)
+        # 15 desde que Veri*Factu salió de la web pública (14-sep-2026).
+        self.assertEqual(len(faq["mainEntity"]), 15)
         for pregunta in faq["mainEntity"]:
             with self.subTest(pregunta=pregunta["name"]):
                 self.assertIn(f"<summary>{pregunta['name']}</summary>", html)

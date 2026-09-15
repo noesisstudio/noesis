@@ -1,22 +1,126 @@
 ﻿# Registro de QA
 
-## 2026-09-14 — Revisión de los cambios incorporados del 11 y 13 de septiembre
+## 2026-09-15 — Integración y regresión de los diez cambios del socio
 
-- Incorporación fast-forward de `main` remoto, sin conflictos ni divergencias.
-- Revisados los cambios de webhook Meta, fallo controlado de voz, conexión de
-  WhatsApp, GA4 consentido, CSP pública/privada, datos registrales y ajustes móviles.
-- Corregida la causa por la que la CI se detenía en `detect-secrets`: dos excepciones
-  auditadas seguían ligadas a la ruta antigua de un documento reorganizado y el NIF
-  ficticio de una prueba no estaba marcado como tal. La protección sigue activa.
-- Dirigidas: 78 pruebas Python y 2 pruebas Node correctas; Ruff y
-  `check_project_truth` correctos. La primera suite completa descubrió una prueba
-  dependiente del `.env`: esperaba un enlace `wa.me` aunque no fijaba el número
-  oficial. El contrato del producto era correcto; la prueba ahora declara el número
-  que necesita. Suite completa final: **808 pruebas OK en 586,744 s**. Detector de
-  secretos, Ruff, `check_project_truth`, `git diff --check`, 22 pruebas de Facebook
-  y las 2 pruebas Node correctos. Producción: `/health` devuelve `22cb025f59c5`,
-  esquema 55; revisión visual de portada, rechazo de cookies y login correcta. El
-  panel y el chat privado no se pudieron recorrer sin iniciar una sesión real.
+- Integrado localmente `origin/main` (`8797dd1`) sobre el commit de recuperación
+  de CI `471dc11`; los únicos conflictos estaban en este registro, el registro de
+  cambios y `project-state.json`. No hubo conflictos en código ni plantillas.
+- Revisados permisos y aislamiento de la vinculación manual de WhatsApp, entrega
+  de PDF reales, límite general de 400 € para facturas simplificadas, continuidad
+  conversacional, endurecimiento de Groq, borrado administrativo de solicitudes,
+  página de bienvenida, CSP, textos públicos y retirada pública de Veri*Factu.
+- Dirigidas: 128 pruebas correctas. Suite completa combinada: **823 pruebas OK en
+  775,379 s**. Detector de secretos, Ruff, `check_project_truth` y
+  `git diff --check` correctos.
+- Los mensajes de fallo de Meta, Stripe, SMTP, AEAT, voz y backups observados en la
+  suite son escenarios simulados que verifican reintentos, idempotencia y fallo
+  seguro; no son fallos de la ejecución.
+- No ejecutado: Groq, Meta WhatsApp, correo, Stripe ni YouTube reales; tampoco
+  revisión en móvil físico. No se ha hecho push ni se ha iniciado un despliegue.
+
+## 2026-09-14 — Notas de voz con Groq
+
+- Nuevas en `test_backend.py` (`TranscriptionChainTestCase`): Groq usa el opener
+  sin redirecciones; nombre fijo `audio.webm` aunque el navegador mande cabeceras
+  inyectadas; audio vacío, grande, `.exe` o sin extensión se rechaza sin llamar a
+  Groq; 429 «saturado», 401 «HTTP 401», respuesta >64 KiB y transcripción larga dan
+  error; nota de WhatsApp descargada → Groq → texto, y Groq sin red → `None` sin
+  romper el webhook. En `test_conversation_safety.py`: `/chat/audio` por Groq
+  transcribe, propone sin guardar y un 429 devuelve 422 sin gasto. Adaptadas a
+  `build_opener` las de idioma de `test_integration_check.py`.
+- Voz (transcripción, integraciones, voz privada, seguridad conversacional): 52 OK.
+- Con clave simulada: `/preguntas` responde «Sí» a notas de voz, `/privacidad` y
+  `/encargado-tratamiento` 200 con Groq, y `collect_readiness` dice «disponible con
+  Groq Whisper». Formatos, modelo `whisper-large-v3-turbo` y mínimo de 10 s
+  contrastados con la documentación de Groq (sin `.opus`).
+- Suite completa: 822 OK y 1 fallo ajeno al audio: `test_seo` esperaba 16 FAQ y
+  hay 15 desde que Veri*Factu salió de la web; corregido en commit aparte.
+  Ruff y `check_project_truth` OK.
+- No ejecutado: llamada real a Groq (no hay clave), WhatsApp real, catalán real,
+  ruido ni Safari/iPhone grabando.
+
+## 2026-09-14 — Admin: eliminar solicitudes de acceso de prueba
+
+- Nueva en `test_access_requests.py`: un usuario no admin no borra nada; admin ve
+  «Eliminar todas las descartadas», el borrado masivo quita las descartadas y sus
+  avisos en `email_outbox`, el borrado por fila quita una nueva, y una solicitud
+  contactada con correo parecido (`axf` frente a `a_f`) conserva su aviso
+  (comodín `_` escapado). 14 OK. Ruff OK.
+- No ejecutado: borrado en producción (lo hace el founder desde /admin), PostgreSQL
+  real del `LIKE ... ESCAPE` ni suite completa.
+
+## 2026-09-14 — Veri*Factu fuera de la web pública
+
+- Páginas públicas renderizadas con TestClient (`/`, `/autonomos`, `/gestorias`,
+  `/precios`, `/preguntas`, `/contacto`, `/equipo`, `/llms.txt`): 200 y ninguna
+  mención a Veri*Factu ni AEAT.
+- Web pública, seguridad y backend filtrado (public/marketing/security/verifactu/
+  ajustes/llms/preguntas/móvil en Ajustes): 70 OK. `check_project_truth` OK.
+- Se mantiene `test_backend` que exige Veri*Factu en Facturas y «Remisión AEAT
+  desactivada» en Ajustes: la app conserva la función marcada como próximamente.
+- No ejecutado: suite completa ni revisión visual de la insignia «Próximamente».
+
+## 2026-09-14 — Vincular WhatsApp escribiendo el móvil
+
+- Nuevas: código copiado antes de recargar Ajustes sigue vinculando; móvil escrito
+  → «hola» pregunta, SÍ desde otro móvil no vincula, SÍ desde ese móvil conecta y
+  limpia el pendiente (`test_whatsapp_multichannel.py`); Ajustes muestra el campo,
+  rechaza formato inválido, guarda el válido y no permite guardarlo en otra cuenta
+  (`test_backend.py`).
+- Conversación + multicanal: 35 OK; prueba web 1 OK. Ruff OK.
+- Suite completa: 815 OK, 1 fallo ajeno ya registrado
+  (`test_linking_accepts_the_old_keyword_after_the_rename`).
+- No ejecutado: WhatsApp real ni revisión visual del formulario en móvil.
+
+## 2026-09-14 — WhatsApp: tickets grandes, últimos tickets en PDF y negritas
+
+- Nuevas en `test_invoice_conversation.py` con la conversación real: ticket de
+  3.000 € para «el último cliente» → oferta de factura completa sin crear cliente
+  ni documento; insistencia → misma explicación; SÍ → borrador F1 de 3.000 € para
+  el cliente real. «Muéstrame los 3 últimos tickets y mándamelos en PDF» → lista y
+  3 adjuntos de los tickets más recientes. Negrita `**x**` → `*x*`.
+- `test_invoice_conversation.py` + `test_whatsapp_multichannel.py`: 33 OK. Ruff OK.
+  `check_project_truth` OK.
+- Suite completa: 813 OK, 1 fallo ajeno ya registrado
+  (`test_linking_accepts_the_old_keyword_after_the_rename`).
+- No ejecutado: WhatsApp real ni el fallo de la IA externa en producción (la causa
+  de «no puedo usar la IA externa» está en el proveedor o su configuración, no se
+  ha diagnosticado aquí).
+
+## 2026-09-14 — Texto del aviso de cookies
+
+- Web pública + seguridad (`test_public_marketing.py`, `test_security_hardening.py`):
+  32 OK; test Node de la web pública 1 OK; `check_project_truth` OK. Ninguna prueba
+  dependía del texto anterior; la lógica de consentimiento no cambia.
+- Antes del cambio, en producción con Chrome vía CDP: aviso visible y 0 peticiones
+  a Google; al aceptar, `gtag/js` y `page_view` de `https://bynoesis.com/` en 0,5 s.
+- No ejecutado: suite completa ni revisión visual del texto nuevo.
+
+## 2026-09-14 — Título de /bienvenida
+
+- `test_public_marketing.py` tras cambiar el `<h1>` (un solo `<h1>`, título y
+  metadatos únicos): 18 OK. `check_project_truth` OK. No ejecutado: suite
+  completa ni revisión visual (solo cambia el texto del título).
+
+## 2026-09-14 — Página /bienvenida y vídeo de YouTube inerte
+
+- Nuevas en `test_public_marketing.py`: `/bienvenida` noindex por cabecera y meta,
+  fuera del sitemap, sin guion ni YouTube sin variable; con vídeo, sin iframe ni
+  scripts remotos en el HTML, `frame-src` a youtube-nocookie solo en esa ruta y
+  YouTube declarado en cookies y privacidad; validador de ID/enlace de YouTube.
+  La página entra también en metadatos y enlaces internos. 18 OK.
+- Seguridad + backend filtrados (csp/security/public/cookie/robots/sitemap/frame):
+  38 OK. Ruff OK. `node --check` de `public-video.js` y tests Node 2 OK.
+  `check_project_truth` OK.
+- Suite completa: 810 OK, 1 fallo ajeno:
+  `test_linking_accepts_the_old_keyword_after_the_rename` falla igual en
+  `baaaae1` sin estos cambios (sin número oficial `start_link` ya no genera enlace).
+- Chrome local vía CDP con móvil de 390 px: `scrollWidth` 390 con y sin vídeo
+  (corregido antes un desbordamiento por la tabla dentro del grid); al pulsar
+  «Ver el vídeo» aparece el iframe youtube-nocookie y se oculta el aviso.
+  Escritorio 1280 px revisado por captura.
+- No ejecutado: reproducción real del vídeo (no hay vídeo), móvil físico, CI ni
+  producción.
 
 ## 2026-09-13 — Guía de instalación y mensaje de equipo con la marca
 

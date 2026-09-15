@@ -341,6 +341,12 @@ def _ver_agenda(business_id, fecha):
     return {"fecha": fecha, "n": len(jobs), "trabajos": jobs}
 
 
+_TICKET_LIMIT_ERROR = (
+    "El ticket supera el límite general de 400 € IVA incluido. "
+    "Prepara una factura completa con los datos fiscales del cliente."
+)
+
+
 def _crear_factura(
     business_id, concepto, base, cliente=None, iva=None, irpf=None,
     tipo_factura="F1", importe_incluye_iva=False, lineas=None, cliente_id=None,
@@ -354,6 +360,11 @@ def _crear_factura(
         if invoice_type != "F2":
             raise ValueError("Indica el cliente de la factura completa.")
         client_name = "Cliente de mostrador"
+    # Un precio final conocido se rechaza antes de tocar clientes: un ticket
+    # inválido no puede dejar una ficha nueva como efecto secundario.
+    if (invoice_type == "F2" and importe_incluye_iva and not lineas
+            and not db._fits_simplified_invoice(base)):
+        raise ValueError(_TICKET_LIMIT_ERROR)
     c = _reviewed_client(business_id, client_name, cliente_id)
     rate = biz.get("default_vat", 21) if iva is None else iva
     irpf_rate = (
@@ -378,10 +389,7 @@ def _crear_factura(
                          invoice_type=invoice_type, lines=lineas, gross_total=gross_total)
     if invoice_type == "F2" and not db._fits_simplified_invoice(inv["total"]):
         db.delete_invoice(inv["id"], business_id)
-        raise ValueError(
-            "El ticket supera el límite general de 400 € IVA incluido. "
-            "Prepara una factura completa con los datos fiscales del cliente."
-        )
+        raise ValueError(_TICKET_LIMIT_ERROR)
     msg = (f"Borrador listo: {inv['total']:.2f} € (base {inv['base']:.2f} "
            f"+ IVA {inv['vat_amount']:.2f}")
     if inv["irpf_amount"]:

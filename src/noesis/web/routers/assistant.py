@@ -108,7 +108,7 @@ async def api_chat(business_id: int, request: Request):
 
 @router.post("/api/{business_id}/chat/audio")
 async def api_chat_audio(business_id: int, request: Request, audio: UploadFile = File(...)):
-    # Nota de voz -> texto (Whisper local, sin coste por uso) -> cerebro local.
+    # Nota de voz -> texto (Whisper privado, Groq o local) -> cerebro local.
     from ...adapters import transcription
     actor_id = f"{request.session.get('uid')}:{request.session.get('sv', 0)}"
     def audio_error(message: str, status: int):

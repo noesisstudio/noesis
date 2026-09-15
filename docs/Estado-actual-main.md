@@ -1,5 +1,23 @@
 # Estado actual del producto
 
+## 14-sep — Notas de voz listas para activar con Groq
+
+El founder elige Groq para transcribir. El código está listo y reforzado: sin
+redirecciones con la clave, formatos y tamaños validados y errores sin datos. La web
+y WhatsApp tienen prueba completa pasando por Groq con la red simulada. En
+producción la voz sigue apagada hasta archivar el DPA de Groq y poner
+`GROQ_API_KEY` en Railway. Al hacerlo aparecen solos el micrófono, la respuesta de
+`/preguntas` y Groq en las políticas. Pasos en `Conectar-APIs.md` §6.
+
+## 14-sep — Página de bienvenida para clientes
+
+`/bienvenida` reúne la guía de instalación para enviarla por correo junto al
+vídeo. No se indexa ni sale en el sitemap. Sin `NOESIS_WELCOME_VIDEO_ID` muestra
+los pasos y un aviso de que el vídeo llega pronto. Con la variable, YouTube solo se
+carga al pulsar «Ver el vídeo» y las políticas de cookies y privacidad lo declaran.
+Pendiente: grabar el vídeo, subirlo como oculto, poner la variable en Railway y
+enlazar la página desde el correo de invitación.
+
 ## 13-sep — WhatsApp: número y mensaje exactos al conectar; revisión móvil
 
 La pantalla de conexión (alta y Ajustes) muestra el número de Bynoesis completo

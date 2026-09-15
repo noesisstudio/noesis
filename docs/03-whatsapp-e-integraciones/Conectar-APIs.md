@@ -481,14 +481,38 @@ latencia, concurrencia, RAM y caídas con el corpus real ES/CA.
 
 ## 6. Audio: Groq Whisper o transcripción local
 
-Si Railway no tiene memoria suficiente para `faster-whisper`, conectar Groq:
+Decisión del founder (14-sep-2026): las notas de voz se activan con **Groq**. El
+código está listo; solo falta la clave. Pasos, en este orden:
 
-```dotenv
-GROQ_API_KEY=<secreto>
-GROQ_WHISPER_MODEL=whisper-large-v3-turbo
-# Vacío para detectar automáticamente catalán, castellano o inglés.
-NOESIS_WHISPER_LANGUAGE=
-```
+1. **Antes de nada, lo legal.** Aceptar y guardar el DPA/condiciones de Groq y sus
+   garantías de transferencia (EE. UU.) en la carpeta de cumplimiento, y marcarlo en
+   `docs/05-legal-y-rgpd/RGPD-QUE-HACER.md` (punto 1.0). Sin eso, no poner la clave.
+2. En [console.groq.com](https://console.groq.com) → *API Keys* → *Create API Key*.
+   Nombre: `bynoesis-produccion`. Copiarla una vez; no pegarla en chats ni en el repo.
+3. En Railway, servicio `web` → *Variables*:
+
+   ```dotenv
+   GROQ_API_KEY=<secreto>
+   GROQ_WHISPER_MODEL=whisper-large-v3-turbo
+   # Vacío para detectar automáticamente catalán, castellano o inglés.
+   NOESIS_WHISPER_LANGUAGE=
+   ```
+
+   No definir `NOESIS_PRIVATE_WHISPER_URL`: si existe, manda sobre Groq.
+4. Railway reinicia el servicio. El botón de micrófono del asistente, la respuesta
+   de `/preguntas` sobre notas de voz y Groq en `/privacidad` y
+   `/encargado-tratamiento` aparecen solos al arrancar.
+5. `noesis-integrations-check --network` debe dar «Clave Groq y modelo Whisper
+   comprobados». `/admin` → preparación debe mostrar «Transcripción de voz
+   disponible con Groq Whisper».
+6. Prueba real: nota de voz «¿qué tengo hoy?» desde el asistente web y desde el
+   WhatsApp vinculado; después «gasté 20 euros en gasolina» y confirmar que pide SÍ.
+
+Lo que hace el código: solo formatos que admite Groq (ogg, webm, m4a, mp3, mp4,
+mpeg, mpga, wav y flac), máximo `NOESIS_MAX_AUDIO_BYTES` (12 MiB), nunca sigue
+redirecciones con la clave, no registra el cuerpo de los errores y, si Groq falla,
+contesta que escribas la orden sin romper el webhook. Groq cobra un mínimo de 10 s
+por nota. Para retirarlo, borrar `GROQ_API_KEY` y reiniciar.
 
 Probar audio corto/largo, catalán/castellano, silencio, formato no admitido y límite
 de tamaño. Si se usa local, instalar el extra `audio`, persistir el modelo en

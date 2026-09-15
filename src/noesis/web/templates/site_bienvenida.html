@@ -1,0 +1,190 @@
+{% extends "site_base.html" %}
+{% block page_title %}Bienvenida: empieza con Bynoesis y conecta tu WhatsApp{% endblock %}
+{% block meta_description %}Guía para clientes de Bynoesis: vídeo y pasos para crear tu cuenta, dejar lista la factura y conectar WhatsApp sin configurar nada en Meta.{% endblock %}
+{# Se envía por correo a quien ya tiene acceso: no aporta nada en buscadores. #}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="welcome-wrap">
+  <section class="welcome-hero">
+    <span class="eyebrow">Bienvenida</span>
+    <h1>Vamos a dejarlo todo listo.</h1>
+    <p>Creas tu cuenta, dejas lista la factura y mandas un mensaje desde tu móvil. Con eso ya puedes pedirle a Bynoesis facturas, gastos y cobros por WhatsApp.</p>
+    <ul class="welcome-facts">
+      <li><b>5–10 min</b> de principio a fin</li>
+      <li><b>1 mensaje</b> para conectar WhatsApp</li>
+      <li><b>14 días</b> de prueba desde que entras</li>
+    </ul>
+  </section>
+
+  <section class="welcome-video-section" id="video" aria-labelledby="video-title">
+    <h2 id="video-title">Míralo antes de empezar</h2>
+    {% if welcome_video_id %}
+    <div class="welcome-video" data-welcome-video data-video-id="{{ welcome_video_id }}">
+      <div class="welcome-video-consent" data-video-consent>
+        <button type="button" class="welcome-video-play" data-video-play><span aria-hidden="true">▶</span> Ver el vídeo</button>
+        <p>Al pulsar se carga el reproductor de YouTube (Google), que puede usar sus propias cookies. Antes no se conecta nada. <a href="/cookies">Más información</a></p>
+        <p><a href="https://www.youtube.com/watch?v={{ welcome_video_id }}" target="_blank" rel="noopener noreferrer">Prefiero abrirlo en YouTube →</a></p>
+      </div>
+      <div class="welcome-video-mount" data-video-mount></div>
+    </div>
+    {% else %}
+    <div class="welcome-video is-pending">
+      <div class="welcome-video-consent">
+        <p><b>El vídeo estará aquí muy pronto.</b></p>
+        <p>Mientras tanto, los cinco pasos de abajo son todo lo que necesitas.</p>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="welcome-notneeded" aria-labelledby="no-hace-falta">
+    <h2 id="no-hace-falta">No tienes que configurar nada en Meta</h2>
+    <p>La conexión con WhatsApp ya la tenemos hecha nosotros. Tú solo escribes a Bynoesis desde tu WhatsApp de siempre. No hace falta:</p>
+    <ul>
+      <li>Crear una cuenta de Meta o Facebook Business</li>
+      <li>Pasarte a WhatsApp Business</li>
+      <li>Cambiar de número o comprar otro</li>
+      <li>Instalar ninguna aplicación</li>
+    </ul>
+  </section>
+
+  <section class="welcome-stack" aria-labelledby="antes">
+    <h2 id="antes">Ten esto a mano</h2>
+    <ul class="welcome-checklist">
+      <li><span>El móvil con el WhatsApp que usarás con Bynoesis</span><small>imprescindible</small></li>
+      <li><span>El correo con el que pediste acceso</span><small>imprescindible</small></li>
+      <li><span>Tu NIF o DNI y tu dirección fiscal</span><small>para las facturas</small></li>
+      <li><span>IBAN o Bizum, y tu logotipo</span><small>opcional</small></li>
+    </ul>
+  </section>
+
+  <section class="welcome-stack" aria-labelledby="pasos">
+    <h2 id="pasos">Paso a paso</h2>
+    <ol class="welcome-steps">
+      <li class="welcome-step">
+        <h3>Entra con tu invitación</h3>
+        <p>Te llega un correo con el asunto <b>«Tu acceso a Bynoesis ya está listo»</b>. Pulsa el enlace y elige tu contraseña: mínimo 12 caracteres.</p>
+        <p class="welcome-muted">El enlace dura 7 días. Tus 14 días de prueba empiezan ese mismo día. Si no ves el correo, mira en Promociones o en Spam.</p>
+      </li>
+
+      <li class="welcome-step">
+        <h3>Cuéntale cómo es tu negocio</h3>
+        <p class="welcome-screen">Pantalla <b>«¿Cómo funciona tu negocio?»</b></p>
+        <ul class="welcome-fields">
+          <li><b>A qué te dedicas</b> y cuántas personas trabajáis</li>
+          <li><b>Qué quieres resolver primero</b>: facturar, cobrar, ordenar gastos…</li>
+          <li>Cómo quieres que te acompañe y tu provincia</li>
+        </ul>
+        <p>Pulsa <span class="welcome-btnref">Continuar con facturas y avisos</span>.</p>
+      </li>
+
+      <li class="welcome-step">
+        <h3>Deja tus facturas listas</h3>
+        <p class="welcome-screen">Pantalla <b>«¿Cómo quieres trabajar?»</b></p>
+        <ul class="welcome-fields">
+          <li><b>NIF o DNI</b> y <b>dirección fiscal</b>: los dos son obligatorios</li>
+          <li>IVA e IRPF habituales y cuándo vence una factura</li>
+          <li>Logotipo, color y texto al pie para que la factura parezca tuya</li>
+          <li>IBAN o Bizum, los avisos que quieres recibir y tu gestoría, si tienes</li>
+        </ul>
+        <p>Pulsa <span class="welcome-btnref">Guardar y continuar</span>. Todo esto se puede cambiar después en Ajustes.</p>
+      </li>
+
+      <li class="welcome-step">
+        <h3>Conecta WhatsApp con un mensaje</h3>
+        <p class="welcome-screen">Pantalla <b>«Así queda tu negocio»</b>, apartado <b>Conecta WhatsApp</b></p>
+        <p>Verás dos datos: <b>el número de Bynoesis</b> y <b>el mensaje exacto</b> que tienes que enviarle, con tu código.</p>
+        <ul class="welcome-fields">
+          <li><b>Si estás en el móvil:</b> pulsa <span class="welcome-btnref">Abrir WhatsApp con el mensaje preparado</span> y envíalo tal cual.</li>
+          <li><b>Si estás en el ordenador:</b> coge el móvil, escribe al número que ves en pantalla y copia el mensaje exacto.</li>
+        </ul>
+        <div class="welcome-phone" role="img" aria-label="Ejemplo de chat: envías BYNOESIS seguido de tu código y Bynoesis responde que WhatsApp está conectado">
+          <div class="welcome-phone-top">
+            <img src="/static/noesis-mark.svg" alt="" width="32" height="32">
+            <div><b>Bynoesis</b><span>+34 6XX XXX XXX</span></div>
+          </div>
+          <div class="welcome-chat">
+            <div class="welcome-bubble out"><span class="welcome-msg">BYNOESIS A1B2C3</span><time>09:41 ✓✓</time></div>
+            <div class="welcome-bubble in">WhatsApp conectado a Fontanería García. Ya puedes pedirme cosas: «¿qué tengo hoy?», «factura a Juan 95 €»…<time>09:41</time></div>
+          </div>
+        </div>
+        <p class="welcome-example">Número, código y negocio de ejemplo. Usa los que te aparecen en tu pantalla.</p>
+        <p>Vuelve a la web y pulsa <span class="welcome-btnref">Ya lo he enviado · comprobar</span>.</p>
+        <p class="welcome-note">Envía el mensaje desde el móvil que vas a usar con Bynoesis: queda vinculado ese número. El código caduca a los 30 minutos y no hay que cambiarle nada, ni añadir espacios ni texto.</p>
+      </li>
+
+      <li class="welcome-step">
+        <h3>Guarda el contacto y pídele algo</h3>
+        <p>Guarda el número como <b>Bynoesis</b> para encontrarlo rápido. Ya puedes escribirle igual que a una persona:</p>
+        <ul class="welcome-asks">
+          <li><q>¿Qué tengo hoy?</q><span>Tu día: trabajos, cobros y avisos</span></li>
+          <li><q>Factura 450 € más IVA a Juan por la reparación</q><span>Prepara el borrador y tú lo revisas</span></li>
+          <li><q>Guarda este gasto</q><span>Con la foto del ticket adjunta</span></li>
+          <li><q>¿Qué facturas tengo pendientes?</q><span>Lo que te deben, por cliente</span></li>
+        </ul>
+        <p class="welcome-muted">Bynoesis prepara, pero no emite, cobra ni envía nada sin que tú lo confirmes.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="welcome-stack" aria-labelledby="despues">
+    <h2 id="despues">Si lo necesitas más adelante</h2>
+    <div class="public-accordion">
+      <details>
+        <summary>Conectar WhatsApp otro día</summary>
+        <p>Entra en la web y ve a <b>Ajustes → WhatsApp privado con Bynoesis</b>. Verás el mismo número y un mensaje con un código nuevo. Envíalo desde tu móvil igual que en el paso 4.</p>
+      </details>
+      <details>
+        <summary>Cambiar de móvil o de número</summary>
+        <p>En <b>Ajustes → WhatsApp privado con Bynoesis</b>, pulsa <span class="welcome-btnref">Desconectar este número</span>. Después, conecta el nuevo con un código nuevo. Si solo cambias de teléfono y mantienes el número, no tienes que hacer nada.</p>
+      </details>
+      <details>
+        <summary>Que tus trabajadores fichen y manden gastos (plan Negocio)</summary>
+        <p>En <b>Equipo</b>, añade a la persona y comparte con ella su enlace de acceso. Ahí aparece un mensaje con su código, parecido a <span class="welcome-msg">BYNOESIS EQUIPO 12 4821</span>, que tiene que enviar desde <b>su</b> móvil al mismo número de Bynoesis. Sus gastos te llegan pendientes y no cuentan hasta que tú los aceptas. No ve tus márgenes salvo que se lo permitas.</p>
+      </details>
+      <details>
+        <summary>Un WhatsApp de empresa para tus clientes</summary>
+        <p>Es otra cosa: un número al que te escriban tus clientes para pedir presupuesto o confirmar una cita. Este sí pasa por Meta, pero <b>lo configuramos contigo</b>, en una llamada. No des de baja ni cambies ningún número por tu cuenta: antes te diremos qué número conviene usar. No lo necesitas para empezar.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="welcome-stack" aria-labelledby="problemas">
+    <h2 id="problemas">Si algo no sale</h2>
+    <div class="welcome-table-wrap">
+      <table class="welcome-table">
+        <thead><tr><th scope="col">Lo que ves</th><th scope="col">Qué hacer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Bynoesis te responde: <span class="welcome-msg">Ese código no es válido o ha caducado.</span></td>
+            <td>Han pasado más de 30 minutos o el mensaje se cambió al enviarlo. Recarga la pantalla para ver un código nuevo y envíalo sin tocar nada.</td>
+          </tr>
+          <tr>
+            <td>En la web: <b>«Aún no ha llegado el código»</b></td>
+            <td>Comprueba en WhatsApp que el mensaje salió (dos marcas ✓✓). Espera unos segundos y pulsa otra vez <span class="welcome-btnref">Ya lo he enviado · comprobar</span>.</td>
+          </tr>
+          <tr>
+            <td>Al pulsar el botón, WhatsApp no se abre</td>
+            <td>Pasa en ordenadores sin WhatsApp. Hazlo desde el móvil: escribe al número de la pantalla y copia el mensaje.</td>
+          </tr>
+          <tr>
+            <td>Bynoesis te responde: <span class="welcome-msg">Tu cuenta está en modo consulta.</span></td>
+            <td>La prueba ha terminado. Activa un plan en <b>Suscripción</b> y genera un código nuevo.</td>
+          </tr>
+          <tr>
+            <td>Te dice que ese teléfono ya está vinculado a otra cuenta</td>
+            <td>Un número solo puede estar en una empresa a la vez. Escríbenos y lo resolvemos.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="team-contact" aria-labelledby="welcome-help-title">
+    <div><span class="eyebrow">¿Te has atascado?</span><h2 id="welcome-help-title">Escríbenos y lo conectamos contigo.</h2><p>Cuéntanos en qué paso estás. Te respondemos y, si hace falta, lo hacemos juntos en una llamada.</p></div>
+    <a class="btn primary" href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a>
+  </section>
+</div>
+{% endblock %}
+{% block final_cta %}{% endblock %}
+{% block page_scripts %}{% if welcome_video_id %}<script src="/static/public-video.js?v={{ asset_v }}" defer></script>{% endif %}{% endblock %}

@@ -319,3 +319,88 @@
 .public-site .cookie-settings-link { padding: 0; border: 0; background: none; font: inherit; color: var(--muted);
   text-align: left; cursor: pointer; }
 .public-site .cookie-settings-link:hover { color: var(--brand); }
+
+/* --- /bienvenida: guía para clientes que ya tienen acceso ------------------ */
+/* Una columna de lectura. El vídeo es la única pieza oscura, como la demo de la
+   portada; el chat de ejemplo reproduce WhatsApp sin cargar nada externo. */
+.public-site .welcome-wrap { width: min(760px, calc(100% - 40px)); margin-inline: auto; padding-block: 44px 72px; display: grid; gap: 56px; }
+.public-site .welcome-wrap h2 { font-family: var(--serif); color: var(--brand); font-weight: 500; font-size: clamp(26px, 3vw, 32px); line-height: 1.2; margin: 0; }
+.public-site .welcome-wrap h3 { font-size: 18px; color: var(--brand); margin: 0; }
+.public-site .welcome-wrap p { margin: 0; line-height: 1.65; }
+.public-site .welcome-hero { display: grid; gap: 14px; }
+.public-site .welcome-hero h1 { font-family: var(--serif); font-size: clamp(38px, 5vw, 58px); line-height: 1.05; font-weight: 500; letter-spacing: -.03em; color: var(--brand); margin: 0; }
+.public-site .welcome-hero > p { font-size: 18px; color: var(--muted); max-width: 60ch; }
+.public-site .welcome-facts { display: flex; flex-wrap: wrap; gap: 6px 24px; padding: 0; margin: 4px 0 0; list-style: none; color: var(--muted); font-size: 15px; }
+.public-site .welcome-facts b { color: var(--text); font-variant-numeric: tabular-nums; }
+.public-site .welcome-stack, .public-site .welcome-video-section { display: grid; gap: 16px; }
+/* Sin minmax(0, …) la tabla (min-width 520px) ensancha la columna y desborda el móvil. */
+.public-site .welcome-wrap, .public-site .welcome-stack, .public-site .welcome-video-section { grid-template-columns: minmax(0, 1fr); }
+.public-site .welcome-muted, .public-site .welcome-example { color: var(--muted); }
+.public-site .welcome-example { font-size: 13px; }
+
+.public-site .welcome-video { position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 14px; overflow: hidden; background: #0a2b25; color: #eaf3ef; box-shadow: 0 18px 44px rgba(10, 43, 37, .20); }
+.public-site .welcome-video-consent { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 24px; text-align: center; }
+.public-site .welcome-video-consent p { max-width: 46ch; font-size: 14px; color: #a7c2b9; }
+.public-site .welcome-video-consent b { color: #eaf3ef; font-size: 17px; }
+.public-site .welcome-video-consent a { color: #8fd6bd; text-decoration: underline; }
+.public-site .welcome-video-play { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px 26px; border: 0; border-radius: 999px; background: #eaf3ef; color: #0a2b25; font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
+.public-site .welcome-video-play:hover { background: #fff; }
+.public-site .welcome-video-play:focus-visible { outline-color: #8fd6bd; }
+.public-site .welcome-video-mount iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+.public-site .welcome-notneeded { background: var(--brand); color: #f4f1e8; border-radius: 14px; padding: 28px; display: grid; gap: 14px; }
+.public-site .welcome-wrap .welcome-notneeded h2 { color: inherit; font-size: 24px; }
+.public-site .welcome-notneeded p { opacity: .92; }
+.public-site .welcome-notneeded ul { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 20px; }
+.public-site .welcome-notneeded li { display: flex; gap: 10px; align-items: baseline; }
+.public-site .welcome-notneeded li::before { content: "✕"; font-size: 12px; opacity: .75; }
+
+.public-site .welcome-checklist { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+.public-site .welcome-checklist li { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.public-site .welcome-checklist small { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+.public-site .welcome-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 44px; counter-reset: paso; }
+.public-site .welcome-step { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 18px; counter-increment: paso; }
+.public-site .welcome-step::before { content: counter(paso); grid-row: 1 / span 20; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font: 500 19px var(--serif); color: var(--brand); border: 1.5px solid var(--brand-2, #2e8b74); }
+.public-site .welcome-step > * { grid-column: 2; }
+.public-site .welcome-step > * + * { margin-top: 12px; }
+.public-site .welcome-screen { font-size: 14px; color: var(--muted); }
+.public-site .welcome-screen b { color: var(--text); }
+.public-site .welcome-fields { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 5px; }
+.public-site .welcome-fields b { color: var(--text); }
+.public-site .welcome-btnref { display: inline-block; font-size: 14px; font-weight: 650; padding: 2px 10px; border-radius: 7px; background: var(--brand-soft); color: var(--brand); }
+.public-site .welcome-note { background: #f6eed8; color: #5f4610; border-radius: 10px; padding: 12px 14px; font-size: 14.5px; }
+.public-site .welcome-msg { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 700; letter-spacing: .02em; }
+
+.public-site .welcome-phone { background: #ece5d8; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; max-width: 380px; }
+.public-site .welcome-phone-top { background: white; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.public-site .welcome-phone-top img { width: 32px; height: 32px; border-radius: 50%; background: var(--brand-soft); padding: 5px; }
+.public-site .welcome-phone-top b { display: block; font-size: 15px; line-height: 1.2; }
+.public-site .welcome-phone-top span { font-size: 12px; color: var(--muted); }
+.public-site .welcome-chat { display: grid; gap: 8px; padding: 14px; }
+.public-site .welcome-bubble { max-width: 86%; padding: 8px 11px 6px; border-radius: 10px; font-size: 14.5px; line-height: 1.45; box-shadow: 0 1px 0 rgba(0, 0, 0, .06); }
+.public-site .welcome-bubble.out { justify-self: end; background: #d9f2e3; border-top-right-radius: 3px; }
+.public-site .welcome-bubble.in { justify-self: start; background: white; border-top-left-radius: 3px; }
+.public-site .welcome-bubble time { display: block; text-align: right; font-size: 11px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+.public-site .welcome-asks { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.public-site .welcome-asks li { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+.public-site .welcome-asks q { font-weight: 650; quotes: "«" "»"; }
+.public-site .welcome-asks span { font-size: 13.5px; color: var(--muted); }
+
+.public-site .welcome-table-wrap { overflow-x: auto; }
+.public-site .welcome-table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 520px; }
+.public-site .welcome-table th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0 12px 8px 0; border-bottom: 1px solid var(--border); }
+.public-site .welcome-table td { vertical-align: top; padding: 12px 12px 12px 0; border-bottom: 1px solid var(--border); }
+.public-site .welcome-table td:first-child { width: 46%; }
+.public-site .welcome-table td .welcome-msg { display: block; font-size: 13px; margin-top: 2px; }
+@media (max-width: 760px) {
+  .public-site .welcome-wrap { width: calc(100% - 36px); padding-block: 26px 56px; gap: 44px; }
+  .public-site .welcome-hero > p { font-size: 16px; }
+  .public-site .welcome-step { grid-template-columns: 34px minmax(0, 1fr); column-gap: 12px; }
+  .public-site .welcome-step::before { width: 34px; height: 34px; font-size: 16px; }
+  .public-site .welcome-notneeded { padding: 22px 18px; }
+  .public-site .welcome-video { aspect-ratio: auto; min-height: 260px; }
+  .public-site .welcome-video:has(iframe) { aspect-ratio: 16 / 9; min-height: 0; }
+  .public-site .welcome-checklist li { grid-template-columns: 1fr; gap: 2px; }
+}

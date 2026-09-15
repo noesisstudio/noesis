@@ -273,11 +273,17 @@ async def security_headers(request: Request, call_next):
         and path not in {"/favicon.ico", "/robots.txt", "/sitemap.xml", "/llms.txt"}
     ):
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
-    # Excepciones: calendario consentido en Contacto y, si está configurado, Google
-    # Analytics en la web pública. El script de Google solo lo inserta
-    # public-analytics.js tras aceptar el aviso; la CSP únicamente lo permite. Las
-    # zonas con datos de clientes nunca abren la política a Google.
-    frame_source = "https://cal.com" if path == "/contacto" else "'none'"
+    # Excepciones: calendario consentido en Contacto, vídeo de bienvenida al pulsar
+    # y, si está configurado, Google Analytics en la web pública. El script de
+    # Google solo lo inserta public-analytics.js tras aceptar el aviso; la CSP
+    # únicamente lo permite. Las zonas con datos de clientes nunca abren la
+    # política a Google.
+    if path == "/contacto":
+        frame_source = "https://cal.com"
+    elif path == "/bienvenida" and config.WELCOME_VIDEO_ID:
+        frame_source = "https://www.youtube-nocookie.com"
+    else:
+        frame_source = "'none'"
     private_zone = path != "/gestorias" and path.startswith(_PRIVATE_ZONES)
     ga_script, ga_connect, ga_img = "", "", ""
     if config.GA_MEASUREMENT_ID and not private_zone:

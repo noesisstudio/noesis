@@ -224,6 +224,12 @@
 
   <div class="card">
     {% if access_requests %}
+    {% if access_requests | selectattr('status', 'equalto', 'descartada') | list %}
+    <form method="post" action="/admin/solicitudes/eliminar-descartadas" style="padding:14px 16px 0"
+          onsubmit="return confirm('¿Eliminar para siempre todas las solicitudes descartadas y sus avisos por correo? No se puede deshacer.')">
+      <button class="btn sm danger" type="submit">Eliminar todas las descartadas</button>
+    </form>
+    {% endif %}
     <div class="table-wrap">
       <table class="requests-table">
         <thead><tr><th>Solicitante</th><th>Negocio</th><th>Contacto</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -259,6 +265,12 @@
               <form method="post" action="/admin/solicitudes/{{ req.id }}/estado">
                 <input type="hidden" name="status" value="descartada">
                 <button class="btn sm" type="submit">Descartar</button>
+              </form>
+              {% endif %}
+              {% if req.status != 'alta' and not req.business_id %}
+              <form method="post" action="/admin/solicitudes/{{ req.id }}/eliminar"
+                    onsubmit="return confirm('¿Eliminar para siempre esta solicitud? No se puede deshacer.')">
+                <button class="btn sm danger" type="submit">Eliminar</button>
               </form>
               {% endif %}
             </td>

@@ -1,16 +1,162 @@
 ﻿# Registro de cambios
 
-## 2026-09-14 — Recupera la puerta de calidad tras reorganizar la documentación
+## 2026-09-15 — Integra los cambios del socio con la recuperación de CI
 
-Revisión de los cinco commits incorporados del 11 y 13 de septiembre. La CI no
-llegaba a ejecutar la suite porque `.secrets.baseline` conservaba la ruta anterior
-de un documento movido y un NIF inequívocamente ficticio de una prueba se detectaba
-como secreto. Se actualiza únicamente la ruta de las dos excepciones ya auditadas y
-se documenta el NIF de prueba en línea; no se excluyen archivos ni detectores, no se
-añaden credenciales y no cambia el producto ni el esquema. Pruebas: detector de
-secretos, análisis estático, pruebas dirigidas de WhatsApp, facturas, voz, seguridad,
-web pública y suite completa. Riesgo mínimo. Rollback: revertir este commit; la CI
-volvería a detenerse antes de las pruebas.
+Se combinan localmente los diez commits publicados por el socio desde `baaaae1`
+con `471dc11`, que corrige exclusivamente la puerta de secretos y una prueba
+dependiente del entorno. La integración conserva la vinculación manual de
+WhatsApp, los PDF recientes, la reconducción segura de tickets superiores a 400 €,
+Groq, la limpieza administrativa y los cambios públicos/legal. No cambia el
+esquema. Pruebas: 128 dirigidas y suite completa de 823, detector de secretos,
+Ruff, verdad documental y diff correctos. Límites externos: faltan pruebas reales
+con Groq, Meta, correo, Stripe, vídeo y móvil. Riesgo de integración bajo; no se ha
+publicado. Rollback: revertir el commit de fusión para volver a las dos líneas
+separadas sin reescribir su historia.
+
+## 2026-09-14 — Prueba SEO: /preguntas tiene 15 respuestas
+
+La suite completa fallaba en `test_seo.py`
+(`test_every_faq_answer_is_marked_up_exactly_as_it_is_shown`): esperaba 16 FAQ y hay
+15 desde que Veri*Factu salió de la web pública ese mismo día. Solo se actualiza la
+prueba; el producto no cambia. Prueba OK (15 subtests). Riesgo nulo. Rollback:
+revertir el commit.
+
+## 2026-09-14 — Notas de voz: Groq listo para activar
+
+Petición del founder: incorporar audio, activando las notas de voz con Groq. La
+grabación web, la recepción por WhatsApp y el adaptador ya existían; producción no
+transcribía porque no hay clave. Antes de ponerla se refuerza `GroqWhisperProvider`
+(`adapters/transcription.py`): no sigue redirecciones con la clave (antes usaba
+`urlopen`, que las sigue conservando `Authorization`), rechaza audio vacío, mayor
+de `NOESIS_MAX_AUDIO_BYTES` o de formato que Groq no admite antes de llamar, envía
+un nombre fijo `audio.<ext>` en vez del que manda el navegador (evita inyectar
+cabeceras en el multipart), acota la respuesta a 64 KiB y la transcripción a
+`MAX_CHAT_CHARS`, y convierte los HTTP de error en mensajes sin cuerpo (429 dice
+«saturado»). `_NoRedirect` pasa a compartirse con el proveedor privado. `readiness.py`
+nombra el proveedor en el mismo orden que `get_transcriber()` (antes decía «Whisper
+privado» con el modelo local). Comentarios obsoletos en `routers/assistant.py` y
+`web/whatsapp.py`. Guía paso a paso en `Conectar-APIs.md` §6. Sin migración.
+Límite externo: falta archivar el DPA de Groq (RGPD 1.0) y poner `GROQ_API_KEY` en
+Railway; privacidad, encargado y `/preguntas` ya se adaptan solos a la clave.
+Riesgo: si Groq rechaza un formato que el navegador etiqueta distinto, la nota da
+«no he podido entender» y se pide texto. Diagnóstico: logs «Fallo transcribiendo
+audio: … HTTP nnn». Rollback: borrar `GROQ_API_KEY` o revertir el commit.
+
+## 2026-09-14 — Admin: eliminar solicitudes de acceso de prueba
+
+Petición del founder: las solicitudes de prueba («prova», «asf»…) no son clientes y
+no deben existir en ningún sitio. `db.delete_access_requests` borra solicitudes por
+id o todas las de un estado, junto con el aviso por correo al equipo que copiaba
+nombre, correo y teléfono (`email_outbox`, patrón `LIKE` escapado). Nunca borra
+una solicitud dada de alta ni enlazada a un negocio. Rutas solo admin
+`POST /admin/solicitudes/{id}/eliminar` y `/admin/solicitudes/eliminar-descartadas`
+con evento de seguridad sin datos personales (solo el número). `admin.html`: botón
+«Eliminar» por fila y «Eliminar todas las descartadas», ambos con confirmación.
+Borrado irreversible por diseño. Límites: no alcanza copias de seguridad, logs de
+Railway ni correos ya entregados al buzón del equipo. Rollback del código: revertir
+el commit (los datos borrados no vuelven).
+
+## 2026-09-14 — Veri*Factu fuera de Cumplimiento y Términos (textos archivados)
+
+Petición del founder: quitar Veri*Factu también de las páginas legales sin perder
+el texto. `cumplimiento.html` pierde la sección «2. Facturación electrónica y
+Verifactu» y renumera las siguientes (2–5); `terminos.html` dice «cumplimiento de la
+normativa fiscal» en vez de «(incluida Verifactu)». Los textos originales quedan en
+`docs/05-legal-y-rgpd/Verifactu-textos-archivados.md` con instrucciones para
+restaurarlos. Solo texto. Riesgo mínimo. Rollback: revertir el commit o copiar los
+textos del archivo.
+
+## 2026-09-14 — Veri*Factu fuera de la web pública y «Próximamente» en la app
+
+Petición del founder: Veri*Factu aún no está disponible, así que la web pública no
+lo anuncia. Quitado de `landing.html` (bloque «Fiscalidad, con criterio»),
+`site_precios.html` (plan y ventaja «sin coste extra»), descripción de
+`site_preguntas.html`, preguntas de `public_marketing.py` (FAQ de portada y
+«¿Está adaptado a Veri*Factu?»; /preguntas pasa de 16 a 15 respuestas), `llms.txt`
+(`routers/pages.py`) y el botón «XML AEAT» de la demo pública. Dentro de la app,
+`ajustes.html` marca la tarjeta con «Próximamente» y un aviso, y `suscripcion.html`
+dice «Veri*Factu próximamente». Sin cambios de lógica: el registro sigue igual para
+quien lo tenga activo. `cumplimiento.html` y `terminos.html` no se tocan (textos
+legales sobre la normativa). La etiqueta del móvil vuelve a «¿Prefieres escribir tu
+número? sin código» a petición del founder. Riesgo bajo. Rollback: revertir el commit.
+
+## 2026-09-14 — Etiqueta del móvil en Ajustes
+
+Petición del founder: la etiqueta «¿Prefieres escribir tu número? sin código»
+confundía. Pasa a «Tu número de móvil». Solo texto en `ajustes.html`. Riesgo
+mínimo. Rollback: revertir el commit.
+
+## 2026-09-14 — Vincular WhatsApp escribiendo el móvil y códigos que no caducan al recargar
+
+Petición del founder: un cliente que eligió «más adelante» no tenía dónde poner su
+número y el código de Ajustes le decía «no válido». Causa: `db.create_whatsapp_link`
+borraba los códigos anteriores del negocio en cada visita a Ajustes, así que
+recargar invalidaba el código copiado. Ahora solo borra caducados y conserva los
+cinco últimos. Nuevo campo en Ajustes («¿Prefieres escribir tu número?») →
+`POST /b/{id}/whatsapp-phone` (`routers/account.py`) guarda el móvil esperado 24 h
+en `whatsapp_pending_actions` (sin migración). En `web/whatsapp.py`, si ese móvil
+escribe sin estar dado de alta, se le pregunta y solo un SÍ desde él lo vincula
+(evita apuntar un teléfono ajeno); aplica los mismos conflictos de identidad.
+Riesgo bajo. Diagnóstico: filas `kind='whatsapp_expected_phone'`. Rollback:
+revertir el commit.
+
+## 2026-09-14 — WhatsApp: tickets grandes, últimos tickets en PDF y negritas
+
+Petición del founder a partir de una conversación real. `web/whatsapp.py`:
+`queue_text` traduce `**negrita**` a `*negrita*` (salían asteriscos literales);
+«muéstrame los 3 últimos tickets y mándamelos en PDF» lista hasta 5 tickets o
+facturas y adjunta sus PDF reales sin pasar por la IA; un ticket de más de 400 €
+deja un pendiente `factura_completa` y el SÍ prepara un borrador F1 con los mismos
+datos (emitir sigue pidiendo confirmación); «vale, pero quiero que me crees este
+ticket» repite la explicación en vez de caer a la IA. `web/chat.py`: «el último
+cliente» se resuelve con el cliente de la última factura (antes creaba una ficha con
+ese texto); oferta de factura completa; el fallo de IA externa responde con órdenes
+que funcionan. `tools.py`: el límite de 400 € con precio final se comprueba antes de
+crear el cliente. Riesgo bajo. Diagnóstico: pendientes `factura_completa` y claves
+`invoice-request:`. Rollback: revertir el commit.
+
+## 2026-09-14 — Guion del vídeo de la plataforma
+
+Petición del founder: grabar un vídeo que enseñe Bynoesis por dentro, además del de
+instalación. Nuevo `docs/01-producto/Guion-video-plataforma.html` (interno): preparación
+con `NOESIS_SEED_DEMO`, accesos de la demo comercial, 13 escenas con tiempos, frase,
+pantalla y datos a señalar sacados de `src/noesis/demo.py`, inserto de WhatsApp con la
+cuenta de instalación y qué no prometer (Veri*Factu, voz/OCR, impuestos, pagos). Solo
+documentación; no toca `src/noesis/`. Riesgo nulo. Rollback: borrar el archivo.
+
+## 2026-09-14 — Aviso de cookies sin nombrar a Google Analytics
+
+Petición del founder: el aviso habla de cookies, no de la herramienta. En
+`site_base.html` el título pasa a «Esta web usa cookies» y el texto dice que se
+usan cookies de analítica propias y de terceros, solo si se acepta y revocables.
+Primera capa según la guía de la AEPD: finalidad, terceros y enlace a `/cookies`,
+que sigue detallando Google Analytics, sus cookies y la transferencia. Sin cambios
+de lógica, CSP ni políticas. Riesgo mínimo. Rollback: revertir el commit.
+
+## 2026-09-14 — Título de /bienvenida
+
+Petición del founder: el `<h1>` de `site_bienvenida.html` pasa de «Empieza con
+Bynoesis en diez minutos.» a «Vamos a dejarlo todo listo.». Solo texto; sin
+cambios de ruta, CSP ni pruebas. Riesgo mínimo. Rollback: revertir el commit.
+
+## 2026-09-14 — Página /bienvenida con vídeo para clientes
+
+Petición del founder: enviar a cada cliente nuevo un correo con un enlace a una
+guía y a un vídeo de instalación, en vez de un HTML adjunto (los clientes de
+correo lo marcan como sospechoso y en el móvil no se abre bien). Nueva ruta
+pública `/bienvenida` (`routers/pages.py`) con `site_bienvenida.html`: la guía de
+`Guia-instalacion-clientes.html` sin el guion de grabación, que sigue solo en docs.
+Queda fuera de `_INDEXABLES`: `X-Robots-Tag` y `<meta robots>` noindex y fuera del
+sitemap (`site_base.html` gana el bloque `robots`). Vídeo por
+`NOESIS_WELCOME_VIDEO_ID` (`config._youtube_video_id` acepta el ID o el enlace
+copiado de YouTube; lo demás lo apaga). Sin variable: aviso «muy pronto» y cero
+referencias a YouTube. Con variable: `static/public-video.js` crea el iframe de
+youtube-nocookie.com solo al pulsar «Ver el vídeo»; la CSP abre `frame-src` a ese
+origen únicamente en `/bienvenida` (`server.py`). `cookies.html` y
+`privacidad.html` declaran YouTube solo si hay vídeo. Estilos en
+`public-marketing.css`. Sin migraciones. Riesgo bajo. Límite externo: grabar y
+subir el vídeo (oculto) y poner la variable en Railway. Rollback: revertir el
+commit o vaciar la variable para quitar el vídeo sin desplegar.
 
 ## 2026-09-13 — Guía de instalación para clientes
 

@@ -172,6 +172,29 @@ def _try_link(from_phone: str, text: str) -> str | None:
     )
 
 
+def _link_expected_phone(from_phone: str, text: str, business_id: int) -> str:
+    """Vincula el móvil que el titular escribió en la web, tras un SÍ desde él.
+
+    El SÍ evita que alguien apunte un teléfono ajeno y reciba sus mensajes.
+    """
+    business = db.get_business(business_id) or {}
+    name = business.get("name") or "tu negocio"
+    if not _is_yes(text):
+        return (f"Hola 👋 Este WhatsApp está pendiente de conectarse a «{name}» en "
+                "Bynoesis. Si es tu negocio, responde SÍ y lo conecto.")
+    if not db.subscription_allows_access(business):
+        return ("Tu cuenta está en modo consulta. Activa un plan desde la web para "
+                "conectar WhatsApp.")
+    try:
+        db.set_whatsapp_status(business_id, "conectado", phone=from_phone)
+    except ValueError as exc:
+        return str(exc)
+    db.clear_expected_whatsapp_phone(business_id, from_phone)
+    db.record_product_event(business_id, "whatsapp_connected")
+    return (f"WhatsApp conectado a {name}. Ya puedes pedirme cosas: "
+            "«¿qué tengo hoy?», «factura a Juan 95 €»…")
+
+
 def _try_worker_link(from_phone: str, text: str) -> dict | None:
     """Liga ``BYNOESIS EQUIPO <negocio> <código>`` al teléfono remitente."""
     parts = (text or "").strip().split()
@@ -711,7 +734,7 @@ def _download_media(media_id: str, max_bytes: int | None = None) -> bytes | None
 
 
 def _audio_to_text(audio_id: str) -> str | None:
-    """Descarga el audio y lo transcribe con Whisper local."""
+    """Descarga el audio y lo transcribe con el transcriptor configurado."""
     from ..adapters import transcription
 
     try:
@@ -967,6 +990,74 @@ def _invoice_for_owner_pdf(business_id: int, text: str, phone: str | None = None
     if len(invoices) == 1:
         return invoices[0], None
     return None, _invoice_choices(invoices)
+
+
+def _insists_on_request(normalized: str) -> bool:
+    """«Vale, pero quiero que me crees este ticket» repite la petición anterior."""
+    return bool(
+        re.search(r"\b(?:quiero|necesito|igualmente|aun asi|de todas formas|da igual)\b", normalized)
+        and re.search(r"\b(?:ticket|tiquet|factura|crea\w*|hazlo|hazme)\b", normalized)
+    )
+
+
+_COUNT_WORDS = {"dos": 2, "tres": 3, "cuatro": 4, "cinco": 5}
+
+
+def _recent_documents_request(text: str) -> tuple[int, str, bool] | None:
+    """«Muéstrame los 3 últimos tickets y mándamelos en PDF» → (3, "ticket", True)."""
+    normalized = _searchable_text(text)
+    if not re.search(r"\bultim[oa]s?\b", normalized):
+        return None
+    kind = re.search(r"\b(tickets?|tiquets?|facturas?)\b", normalized)
+    if not kind:
+        return None
+    number = re.search(r"\b(\d{1,2}|dos|tres|cuatro|cinco)\b", normalized)
+    plural = kind.group(1).endswith("s")
+    if not (number or plural):
+        return None  # «la última factura» sigue su flujo de un solo documento
+    count = 3
+    if number:
+        count = _COUNT_WORDS.get(number.group(1)) or int(number.group(1))
+    label = "factura" if kind.group(1).startswith("factura") else "ticket"
+    return max(1, min(count, 5)), label, bool(re.search(r"\bpdf\b", normalized))
+
+
+def _send_recent_documents(business: dict, phone: str, count: int, label: str, pdf: bool) -> dict:
+    """Lista los últimos tickets o facturas y, si se pide, adjunta sus PDFs reales."""
+    invoices = [
+        i for i in db.list_invoices(business["id"], limit=100)
+        if (i.get("invoice_type") == "F2") == (label == "ticket")
+    ][:count]
+    plural = "tickets" if label == "ticket" else "facturas"
+    if not invoices:
+        send(phone, f"No encuentro {plural} en tu cuenta. No he enviado nada.",
+             business_id=business["id"])
+        return {"business_id": business["id"], "recent_documents": 0}
+    lines = [f"Tus últimos {len(invoices)} {plural}:" if len(invoices) > 1
+             else f"Solo tienes este {label}:"]
+    for i in invoices:
+        when = str(i.get("issued_at") or i.get("created_at") or "")[:10]
+        lines.append(f"• #{i['id']} · {i.get('client_name') or 'cliente'} · "
+                     f"{_eur(i['total'])} · {i.get('number') or 'borrador'}"
+                     + (f" · {when}" if when else ""))
+    if pdf:
+        lines.append("\nTe adjunto los PDF a continuación.")
+    send(phone, "\n".join(lines), business_id=business["id"])
+    sent = 0
+    if pdf:
+        failures = []
+        for i in invoices:
+            attachment = _send_owner_invoice_pdf(business, phone, f"factura {i['id']}")
+            if attachment["sent"]:
+                sent += 1
+            else:
+                failures.append(attachment["reply"])
+        if failures:
+            send(phone, "\n".join(failures), business_id=business["id"])
+    if len(invoices) == 1:
+        _remember_invoice(business["id"], phone, invoices[0]["id"])
+    return {"business_id": business["id"], "recent_documents": len(invoices),
+            "invoice_pdf": pdf, "sent": sent}
 
 
 def _invoice_choices(invoices: list[dict]) -> str:
@@ -1243,6 +1334,15 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
             f"Hecho ✅ Factura {invoice['number']} emitida y PDF preparado. "
             f"Puedes revisarlo aquí iniciando sesión: {delivery['owner_pdf_url']}"
         )
+    if kind == "factura_completa":
+        from .. import tools
+        result = json.loads(tools.run_tool(
+            "crear_factura", payload, business["id"], channel="whatsapp",
+        ))
+        if result.get("factura") and not result.get("error"):
+            _remember_invoice(business["id"], phone, result["factura"]["id"])
+            db.clear_pending_action(business["id"], f"invoice-request:{phone}")
+        return nlu.format_reply("crear_factura", result)
     if kind == "chat_action":
         return chat.handle(
             business["id"], str(payload.get("text") or ""), channel="whatsapp"
@@ -2036,6 +2136,14 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             continue
 
         business = identity["business"]
+        expected_business = None if business or worker else db.business_expecting_whatsapp_phone(phone)
+        if expected_business:
+            send(phone, _link_expected_phone(phone, text, expected_business),
+                 business_id=expected_business)
+            results.append({"phone": phone, "business_id": expected_business,
+                            "expected_phone": True})
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
         if not business:
             send(
                 phone,
@@ -2186,15 +2294,24 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             customer = re.sub(r"^(?:f2|ticket|tiquet|factura)\s+(?:de\s+)?", "", _searchable_text(text))
             text = f"pásame el PDF del ticket de {customer}"
         db.clear_pending_action(business["id"], selection_key)
-        if re.fullmatch(r"(?:crealo|creala|fes ho|hazlo)", _searchable_text(text)):
+        insisted = False
+        searchable = _searchable_text(text)
+        if re.fullmatch(r"(?:crealo|creala|fes ho|hazlo)", searchable) or _insists_on_request(searchable):
             previous = db.get_pending_action(business["id"], creation_key)
             if previous:
                 text = json.loads(previous["payload"])["text"]
+                insisted = True
         creation = bool(re.match(r"^(?:crea\w*|hazme|fes\w*|prepara\w*)\s+", _searchable_text(text))
                         and re.search(r"\b(?:factura|ticket|tiquet)\b", _searchable_text(text)))
         create_and_pdf = creation and _is_owner_pdf_request(text)
         if create_and_pdf:
             text = re.split(r"\s+(?:y|i)\s+(?:envi\w*|mand\w*|pas\w*|pass\w*|adjunt\w*)\b", text, maxsplit=1, flags=re.I)[0].strip()
+
+        recent = None if creation else _recent_documents_request(text)
+        if recent:
+            results.append(_send_recent_documents(business, phone, *recent))
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
 
         if _is_owner_pdf_request(text) and not creation:
             if message.get("reply_to") and not re.search(r"\b(?:factura|ticket|tiquet)\s*#?\s*\d+", text, re.I):
@@ -2265,7 +2382,14 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             if creation and "400" in chat_result.get("reply", ""):
                 db.set_pending_action(business["id"], creation_key, "invoice_request",
                                       {"text": text}, ttl_minutes=10)
+        if chat_result.get("full_invoice_offer"):
+            # El SÍ solo prepara un borrador F1 con los mismos datos; emitir
+            # sigue necesitando su propia confirmación.
+            db.set_pending_action(business["id"], phone, "factura_completa",
+                                  chat_result["full_invoice_offer"], ttl_minutes=30)
         reply = chat_result.get("reply", "")
+        if insisted and chat_result.get("full_invoice_offer"):
+            reply = "Te entiendo, pero ese límite no me lo puedo saltar. " + reply
         if _claims_unsent_attachment(reply):
             reply = (
                 "No he adjuntado ningún archivo. El texto anterior no era una "
@@ -2463,6 +2587,11 @@ def process_outbox(
     return processed
 
 
+def whatsapp_markup(text: str) -> str:
+    """Traduce la negrita Markdown de la web (**x**) a la de WhatsApp (*x*)."""
+    return re.sub(r"\*\*(.+?)\*\*", r"*\1*", str(text or ""), flags=re.S)
+
+
 def queue_text(
     to: str,
     text: str,
@@ -2478,7 +2607,7 @@ def queue_text(
         connection_id=connection_id,
         to_phone=to,
         message_type="text",
-        text_body=text,
+        text_body=whatsapp_markup(text),
         idempotency_key=idempotency_key,
         max_attempts=config.WHATSAPP_MAX_ATTEMPTS,
         now=point.isoformat(timespec="seconds"),

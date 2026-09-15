@@ -45,7 +45,7 @@ class PublicMarketingTests(unittest.TestCase):
 
     def test_public_routes_metadata_and_schema_are_consistent(self):
         titles = set()
-        for path in ("/", "/autonomos", "/gestorias", "/contacto", "/preguntas"):
+        for path in ("/", "/autonomos", "/gestorias", "/contacto", "/preguntas", "/bienvenida"):
             with self.subTest(path=path):
                 response = self.http.get(path)
                 self.assertEqual(response.status_code, 200)
@@ -153,6 +153,49 @@ class PublicMarketingTests(unittest.TestCase):
         for raw in ("", "UA-1234-1", "G-12", "G-ABC'; script-src *", "GTM-ABC123"):
             self.assertEqual(config._ga_measurement_id(raw), "", raw)
 
+    def test_welcome_page_is_not_indexed_and_has_no_video_without_id(self):
+        page = self.http.get("/bienvenida")
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(page.headers["x-robots-tag"], "noindex, nofollow")
+        self.assertIn('<meta name="robots" content="noindex, nofollow">', page.text)
+        self.assertNotIn("/bienvenida", self.http.get("/sitemap.xml").text)
+        # El guion de grabación es interno: vive en docs, no en la página del cliente.
+        self.assertNotIn("Guion", page.text)
+        self.assertNotIn("youtube", page.text.lower())
+        self.assertNotIn("public-video.js", page.text)
+        self.assertIn("frame-src 'none';", page.headers["content-security-policy"])
+        self.assertNotIn("YouTube", self.http.get("/cookies").text)
+
+    def test_welcome_video_waits_for_click_and_csp_is_scoped(self):
+        video = "dQw4w9WgXcQ"
+        with (
+            patch.object(config, "WELCOME_VIDEO_ID", video),
+            patch.dict(TEMPLATES.env.globals, {"welcome_video_id": video}),
+        ):
+            page = self.http.get("/bienvenida")
+            home = self.http.get("/")
+            cookies = self.http.get("/cookies").text
+            privacy = self.http.get("/privacidad").text
+        self.assertNotIn("<iframe", page.text)
+        self.assertNotRegex(page.text, r'<(script|img)[^>]+src="https://')
+        self.assertIn(f'data-video-id="{video}"', page.text)
+        self.assertIn("public-video.js", page.text)
+        self.assertIn("frame-src https://www.youtube-nocookie.com;",
+                      page.headers["content-security-policy"])
+        self.assertIn("frame-src 'none';", home.headers["content-security-policy"])
+        self.assertIn("YouTube", cookies)
+        self.assertIn("YouTube", privacy)
+
+    def test_welcome_video_accepts_youtube_id_or_link_only(self):
+        for raw in ("dQw4w9WgXcQ", " https://youtu.be/dQw4w9WgXcQ ",
+                    "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3",
+                    "https://youtube.com/shorts/dQw4w9WgXcQ"):
+            self.assertEqual(config._youtube_video_id(raw), "dQw4w9WgXcQ", raw)
+        for raw in ("", "corto", "https://evil.example/watch?v=dQw4w9WgXcQ",
+                    "dQw4w9WgXcQ'; frame-src *", "javascript:alert(1)",
+                    "https://www.youtube.com/watch?v=dQw4w9W"):
+            self.assertEqual(config._youtube_video_id(raw), "", raw)
+
     def test_interactions_are_separate_from_visits(self):
         db.record_page_view("/autonomos")
         response = self.post_event({"event": "hero_demo_started", "page": "/"})
@@ -179,7 +222,7 @@ class PublicMarketingTests(unittest.TestCase):
         from urllib.parse import urlsplit
 
         cache = {}
-        for source in ("/", "/autonomos", "/gestorias", "/contacto"):
+        for source in ("/", "/autonomos", "/gestorias", "/contacto", "/bienvenida"):
             page = self.http.get(source).text
             self.assertNotIn('id="testimonials-title"', page)
             for raw in re.findall(r'href="([^"]+)"', page):

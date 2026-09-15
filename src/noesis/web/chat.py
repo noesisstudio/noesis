@@ -719,6 +719,92 @@ def page_brief(business_id: int, page: str) -> dict | None:
             "focus": _page_focus(page, state)}
 
 
+_LAST_CLIENT_RE = re.compile(
+    r"^(?:(?:el|al|la|mi|mis)\s+)?ultim[oa]s?\s+client[ea]s?\b"
+)
+
+
+def _resolve_last_client(business_id: int, args: dict) -> str | None:
+    """Sustituye «el último cliente» por su ficha real; nunca crea esa ficha.
+
+    Devuelve una respuesta cuando no hay a quién referirse.
+    """
+    if not _LAST_CLIENT_RE.match(nlu._norm(str(args.get("cliente") or ""))):
+        return None
+    latest = db.list_invoices(business_id, limit=1)
+    client = db.get_client(latest[0]["client_id"], business_id) if latest else None
+    if not client:
+        clients = db.list_clients(business_id)
+        client = max(clients, key=lambda c: c["id"]) if clients else None
+    if not client:
+        return ("Aún no tienes clientes guardados. Dime su nombre y lo preparo; "
+                "no he creado nada.")
+    args["cliente"] = client["name"]
+    return None
+
+
+def _full_invoice_offer(business_id: int, args: dict, channel: str) -> dict | None:
+    """Un ticket por encima del límite se reconduce a factura completa en borrador."""
+    business = db.get_business(business_id) or {}
+    base = float(args.get("base") or 0)
+    if args.get("importe_incluye_iva"):
+        gross = base
+    else:
+        rate = args.get("iva")
+        rate = float(business.get("default_vat") or 21) if rate is None else float(rate)
+        gross = round(base * (1 + rate / 100), 2)
+    if db._fits_simplified_invoice(gross):
+        return None
+    amount = _eur(gross) + (" IVA incluido" if args.get("importe_incluye_iva") else "")
+    lines = [
+        f"No puedo hacerlo como ticket: un ticket (factura simplificada) solo vale "
+        f"hasta 400 € IVA incluido y este es de **{_eur(gross)}**. Es la norma de "
+        "facturación, no una limitación de Bynoesis. No he creado nada.",
+        "",
+    ]
+    client = str(args.get("cliente") or "").strip()
+    if not client:
+        lines.append(
+            "Lo que sí puedo hacer es prepararlo como **factura completa**. "
+            f"Dime a qué cliente, por ejemplo: «factura a Marta por reforma {amount}»."
+        )
+        return {"reply": "\n".join(lines), "source": "local", "invoice_ids": []}
+    lines.append(
+        f"Lo que sí puedo hacer: preparar una **factura completa** para {client} "
+        f"por {amount}, en borrador."
+    )
+    if channel == "whatsapp":
+        lines.append("Responde **SÍ** y la dejo lista. Para emitirla te pediré "
+                     "después el NIF y la dirección del cliente.")
+    else:
+        lines.append(f"Escribe «factura a {client} por {args.get('concepto') or 'Servicio'} "
+                     f"{amount}» y la dejo lista.")
+    return {
+        "reply": "\n".join(lines),
+        "source": "local",
+        "invoice_ids": [],
+        "full_invoice_offer": {**args, "tipo_factura": "F1"},
+    }
+
+
+def _ai_unavailable_reply(channel: str) -> str:
+    examples = [
+        "• «Factura a Marta por reparar la caldera 120 euros»",
+        "• «Gasté 45 euros en gasolina»",
+        "• «¿Quién me debe?»",
+    ]
+    if channel == "whatsapp":
+        examples[1:1] = [
+            "• «Últimos 3 tickets en PDF»",
+            "• «Pásame la factura 12 en PDF»",
+        ]
+    return (
+        "No he sabido interpretar esa frase y ahora mismo la IA avanzada no está "
+        "disponible. No he guardado ni enviado nada.\n\n"
+        "Estas órdenes funcionan siempre:\n" + "\n".join(examples)
+    )
+
+
 def _handle(
     business_id: int,
     message: str,
@@ -789,6 +875,14 @@ def _handle(
             rate = float(business.get("default_vat") or 21)
             args["base"] = round(float(args["base"]) / (1 + rate / 100), 2)
             args["iva"] = rate
+        if tool in {"crear_factura", "crear_presupuesto", "agendar_trabajo"}:
+            unresolved = _resolve_last_client(business_id, args)
+            if unresolved:
+                return {"reply": unresolved, "source": "local"}
+        if tool == "crear_factura" and args.get("tipo_factura") == "F2":
+            offer = _full_invoice_offer(business_id, args, channel)
+            if offer:
+                return offer
         ledger_channel = "whatsapp" if channel == "whatsapp" else "web"
         result = json.loads(
             run_tool(tool, args, business_id, channel=ledger_channel)
@@ -924,11 +1018,7 @@ def _handle(
                                  "reciente antes de intentarlo otra vez.",
                         "source": "local",
                     }
-        return {
-            "reply": "Ahora mismo no puedo usar la IA externa. "
-                     "Las órdenes habituales siguen disponibles.",
-            "source": "local",
-        }
+        return {"reply": _ai_unavailable_reply(channel), "source": "local"}
 
     from .. import learning
     if learning.enabled():

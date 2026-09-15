@@ -1064,6 +1064,19 @@ def update_payment_reminders(
     )
 
 
+@router.post("/b/{business_id}/whatsapp-phone")
+def expect_whatsapp_phone(business_id: int, phone: str = Form("")):
+    """Alternativa al código: el titular escribe su móvil y confirma desde él."""
+    target = f"/b/{business_id}/ajustes"
+    if not whatsapp.recipient_phone(phone):
+        return RedirectResponse(f"{target}?error=wa-phone#whatsapp-conexion", status_code=303)
+    if db.whatsapp_phone_conflict(phone, business_id):
+        return RedirectResponse(f"{target}?error=wa-phone-used#whatsapp-conexion", status_code=303)
+    db.expect_whatsapp_phone(business_id, phone.strip())
+    db.record_product_event(business_id, "whatsapp_phone_expected")
+    return RedirectResponse(f"{target}?ok=wa-phone#whatsapp-conexion", status_code=303)
+
+
 @router.post("/b/{business_id}/whatsapp-reports")
 def update_whatsapp_reports(
     business_id: int,

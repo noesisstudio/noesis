@@ -159,6 +159,55 @@ class AccessRequestTestCase(unittest.TestCase):
         self.assertIn("error=throttle", respuesta.headers["location"])
         self.assertEqual(db.list_access_requests(), [])
 
+    # -------------------------------------------------------------- borrado --
+    def test_admin_deletes_discarded_test_requests_and_their_notifications(self):
+        def notify(req):
+            db.enqueue_email_message(
+                business_id=None, to_email=config.ADMIN_EMAIL,
+                subject=f"Nueva solicitud de acceso: {req['name']}",
+                text_body=f"Nombre: {req['name']}\nCorreo: {req['email']}\nTeléfono: —",
+            )
+        junk = [db.create_access_request("Prova", "prova@gmail.com", phone="654832459"),
+                db.create_access_request("asf", "a_f@gmail.com")]
+        keep = db.create_access_request("Cliente real", "real@ejemplo.com")
+        similar = db.create_access_request("Parecido", "axf@gmail.com")
+        for req in (*junk, keep, similar):
+            notify(req)
+        for req in (*junk, similar):
+            db.update_access_request(req["id"], status="descartada")
+        # Una descartada que no se borra por id, para verificar el borrado masivo.
+        db.update_access_request(similar["id"], status="contactada")
+        admin_business, _ = db.create_account(
+            "Bynoesis", config.ADMIN_EMAIL, auth.hash_password("clave-larga-admin"), "software",
+        )
+        intruder_business, _ = db.create_account(
+            "Ajeno", "ajeno@ejemplo.com", auth.hash_password("clave-larga-ajena"), "software",
+        )
+
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            http.post("/login", data={"email": "ajeno@ejemplo.com",
+                                      "password": "clave-larga-ajena"},  # pragma: allowlist secret
+                      follow_redirects=False)
+            http.post("/admin/solicitudes/eliminar-descartadas", follow_redirects=False)
+            self.assertEqual(len(db.list_access_requests()), 4)
+            http.post("/logout", follow_redirects=False)
+            http.cookies.clear()
+            http.post("/login", data={"email": config.ADMIN_EMAIL,
+                                      "password": "clave-larga-admin"},  # pragma: allowlist secret
+                      follow_redirects=False)
+            self.assertIn("Eliminar todas las descartadas", http.get("/admin").text)
+            response = http.post("/admin/solicitudes/eliminar-descartadas", follow_redirects=False)
+            self.assertEqual(response.status_code, 303)
+            http.post(f"/admin/solicitudes/{keep['id']}/eliminar", follow_redirects=False)
+
+        self.assertEqual({r["email"] for r in db.list_access_requests()}, {"axf@gmail.com"})
+        with db.get_conn() as conn:
+            rows = conn.execute("SELECT text_body FROM email_outbox").fetchall()
+        bodies = [row["text_body"] for row in rows]
+        self.assertEqual(len(bodies), 1)
+        self.assertIn("axf@gmail.com", bodies[0])
+
     # -------------------------------------------------------------- aprobación --
     def test_approval_creates_account_without_a_password_anyone_knows(self):
         request = db.create_access_request(

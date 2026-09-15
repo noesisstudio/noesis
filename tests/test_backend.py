@@ -2399,6 +2399,29 @@ class ExpensePhotoHttpTestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 303)
 
+    def test_settings_accepts_owner_phone_without_code_and_isolated(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business("Móvil escrito")
+        other, _ = self.make_business("Otra cuenta")
+        with patch.object(server, "start_scheduler", lambda: None), \
+                TestClient(server.app) as client:
+            self._login(client, business)
+            page = client.get(f"/b/{business['id']}/ajustes")
+            self.assertIn("Guardar mi número", page.text)
+            bad = client.post(f"/b/{business['id']}/whatsapp-phone",
+                              data={"phone": "12"}, follow_redirects=False)
+            self.assertIn("error=wa-phone", bad.headers["location"])
+            ok = client.post(f"/b/{business['id']}/whatsapp-phone",
+                             data={"phone": "600 111 222"}, follow_redirects=False)
+            self.assertIn("ok=wa-phone", ok.headers["location"])
+            foreign = client.post(f"/b/{other['id']}/whatsapp-phone",
+                                  data={"phone": "600 333 444"}, follow_redirects=False)
+            self.assertNotIn("ok=wa-phone", foreign.headers.get("location", ""))
+        self.assertEqual(db.business_expecting_whatsapp_phone("34600111222"), business["id"])
+        self.assertIsNone(db.business_expecting_whatsapp_phone("600333444"))
+
     def test_photo_returns_draft_and_confirmation_links_document(self):
         from starlette.testclient import TestClient
         from noesis.documents import repo as docrepo, service as docservice
@@ -6391,21 +6414,121 @@ class TranscriptionChainTestCase(unittest.TestCase):
             self.assertIsInstance(provider, transcription.GroqWhisperProvider)
             self.assertTrue(transcription.available())
 
+    @staticmethod
+    def _groq_opener(raw: bytes):
+        response = MagicMock()
+        response.read.return_value = raw
+        response.__enter__.return_value = response
+        opener = MagicMock()
+        opener.open.return_value = response
+        return opener
+
     def test_groq_provider_parses_response(self):
         from noesis.adapters import transcription
 
-        response = MagicMock()
-        response.read.return_value = json.dumps(
+        opener = self._groq_opener(json.dumps(
             {"text": " factura a Carlos de 100 "}
-        ).encode()
+        ).encode())
         with (
             patch.object(config, "GROQ_API_KEY", "clave"),
-            patch("urllib.request.urlopen", return_value=response),
+            patch("urllib.request.build_opener", return_value=opener) as build,
         ):
             text = transcription.GroqWhisperProvider().transcribe(
                 b"audio", "voz.ogg"
             )
         self.assertEqual(text, "factura a Carlos de 100")
+        # La clave nunca viaja a otra dirección por una redirección.
+        build.assert_called_once_with(transcription._NoRedirect)
+
+    def test_groq_provider_sends_a_fixed_safe_filename(self):
+        from noesis.adapters import transcription
+
+        opener = self._groq_opener(b'{"text":"hola"}')
+        with (
+            patch.object(config, "GROQ_API_KEY", "clave"),
+            patch("urllib.request.build_opener", return_value=opener),
+        ):
+            transcription.GroqWhisperProvider().transcribe(
+                b"audio", 'x"\r\nContent-Type: text/html; a.WEBM'
+            )
+        body = opener.open.call_args.args[0].data
+        self.assertIn(b'filename="audio.webm"', body)
+        self.assertNotIn(b"text/html", body)
+
+    def test_groq_provider_rejects_before_calling_groq(self):
+        from noesis.adapters import transcription
+
+        with (
+            patch.object(config, "GROQ_API_KEY", "clave"),
+            patch.object(config, "MAX_AUDIO_BYTES", 10),
+            patch("urllib.request.build_opener") as build,
+        ):
+            for audio, name in ((b"", "voz.ogg"), (b"x" * 11, "voz.ogg"),
+                                (b"audio", "voz.exe"), (b"audio", "sin-extension")):
+                with self.subTest(name=name, size=len(audio)):
+                    with self.assertRaises(ValueError):
+                        transcription.GroqWhisperProvider().transcribe(audio, name)
+        build.assert_not_called()
+
+    def test_whatsapp_voice_note_is_transcribed_through_groq(self):
+        from noesis.adapters import transcription
+
+        opener = self._groq_opener(b'{"text":"que tengo hoy"}')
+        with (
+            patch.dict(os.environ, {"NOESIS_PRIVATE_WHISPER_URL": ""}),
+            patch.object(config, "GROQ_API_KEY", "clave"),
+            patch.object(whatsapp, "_download_media", return_value=b"OggS-voz"),
+            patch("urllib.request.build_opener", return_value=opener) as build,
+        ):
+            self.assertEqual(whatsapp._audio_to_text("123"), "que tengo hoy")
+        build.assert_called_once_with(transcription._NoRedirect)
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.full_url, transcription.GroqWhisperProvider.ENDPOINT)
+        self.assertIn(b'filename="audio.ogg"', request.data)
+        self.assertIn(b"OggS-voz", request.data)
+
+        # Groq caído o clave revocada: se pide texto, el webhook no se rompe.
+        failing = MagicMock()
+        failing.open.side_effect = OSError("sin red")
+        with (
+            patch.dict(os.environ, {"NOESIS_PRIVATE_WHISPER_URL": ""}),
+            patch.object(config, "GROQ_API_KEY", "clave"),
+            patch.object(whatsapp, "_download_media", return_value=b"OggS-voz"),
+            patch("urllib.request.build_opener", return_value=failing),
+        ):
+            self.assertIsNone(whatsapp._audio_to_text("123"))
+
+    def test_groq_provider_errors_are_safe(self):
+        import urllib.error
+
+        from noesis.adapters import transcription
+
+        def failing(code):
+            opener = MagicMock()
+            opener.open.side_effect = urllib.error.HTTPError(
+                transcription.GroqWhisperProvider.ENDPOINT, code, "error",
+                {}, None,
+            )
+            return opener
+
+        with patch.object(config, "GROQ_API_KEY", "clave"):
+            with patch("urllib.request.build_opener", return_value=failing(429)):
+                with self.assertRaisesRegex(ValueError, "saturado"):
+                    transcription.GroqWhisperProvider().transcribe(b"audio", "voz.ogg")
+            with patch("urllib.request.build_opener", return_value=failing(401)):
+                with self.assertRaisesRegex(ValueError, "HTTP 401"):
+                    transcription.GroqWhisperProvider().transcribe(b"audio", "voz.ogg")
+            with patch("urllib.request.build_opener",
+                       return_value=self._groq_opener(b"x" * 65537)):
+                with self.assertRaisesRegex(ValueError, "demasiado grande"):
+                    transcription.GroqWhisperProvider().transcribe(b"audio", "voz.ogg")
+            with (
+                patch.object(config, "MAX_CHAT_CHARS", 5),
+                patch("urllib.request.build_opener",
+                      return_value=self._groq_opener(b'{"text":"demasiado largo"}')),
+            ):
+                with self.assertRaisesRegex(ValueError, "demasiado larga"):
+                    transcription.GroqWhisperProvider().transcribe(b"audio", "voz.ogg")
 
 
 class GestoriaTestCase(unittest.TestCase):

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block page_title %}Software de gestión por WhatsApp para autónomos{% endblock %} | Bynoesis</title>
   <meta name="description" content="{% block meta_description %}Bynoesis ordena trabajos, clientes, documentos, facturas y cobros desde WhatsApp para autónomos y pequeños negocios de servicios.{% endblock %}">
-  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="robots" content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <meta name="theme-color" content="#14463b">
@@ -147,8 +147,8 @@
   {% if ga_measurement_id %}
   {# Oculto hasta que public-analytics.js comprueba que aún no hay decisión. Sin JS no hay analítica. #}
   <section class="cookie-banner" data-cookie-banner hidden aria-labelledby="cookie-banner-title">
-    <h2 id="cookie-banner-title">¿Nos ayudas a mejorar la web?</h2>
-    <p>Con tu permiso usamos Google Analytics para saber qué páginas son útiles. Si no aceptas, no se carga nada de Google. Puedes cambiarlo cuando quieras. <a href="/cookies">Más información</a></p>
+    <h2 id="cookie-banner-title">Esta web usa cookies</h2>
+    <p>Usamos cookies de analítica, propias y de terceros, para saber qué páginas son útiles. Solo se activan si aceptas y puedes cambiarlo cuando quieras. <a href="/cookies">Más información</a></p>
     <div class="cookie-banner-actions">
       <button type="button" class="btn primary" data-cookie-reject>Rechazar</button>
       <button type="button" class="btn primary" data-cookie-accept>Aceptar</button>

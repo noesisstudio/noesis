@@ -7,7 +7,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from starlette.requests import Request
 from starlette.datastructures import UploadFile
 
@@ -219,6 +219,35 @@ class ConversationSafetyTests(unittest.TestCase):
         with patch.object(db, "subscription_allows_access", return_value=False):
             result = self.say("sí")
         self.assertIn("modo consulta", result["reply"])
+        self.assertEqual(db.list_expenses(self.bid), [])
+
+    def test_http_audio_goes_through_groq_and_its_errors_stay_generic(self):
+        import os
+        import urllib.error
+
+        from noesis.adapters import transcription
+        from noesis.web.routers.assistant import api_chat_audio
+
+        request = Request({"type": "http", "session": {"uid": 7, "sv": 1}})
+        response = MagicMock()
+        response.read.return_value = json.dumps({"text": "gasté 35 euros en gasolina"}).encode()
+        response.__enter__.return_value = response
+        opener = MagicMock()
+        opener.open.return_value = response
+        with (
+            patch.dict(os.environ, {"NOESIS_PRIVATE_WHISPER_URL": ""}),
+            patch.object(config, "GROQ_API_KEY", "clave"),
+            patch("urllib.request.build_opener", return_value=opener),
+        ):
+            result = asyncio.run(api_chat_audio(self.bid, request, UploadFile(filename="nota-de-voz.webm", file=BytesIO(b"webm-voz"))))
+            self.assertEqual(result["transcription"], "gasté 35 euros en gasolina")
+            self.assertIn("No he guardado", result["reply"])
+            self.assertIn(b'filename="audio.webm"', opener.open.call_args.args[0].data)
+            self.assertEqual(db.list_expenses(self.bid), [])
+
+            opener.open.side_effect = urllib.error.HTTPError(transcription.GroqWhisperProvider.ENDPOINT, 429, "error", {}, None)
+            failed = asyncio.run(api_chat_audio(self.bid, request, UploadFile(filename="nota-de-voz.webm", file=BytesIO(b"webm-voz"))))
+        self.assertEqual(failed.status_code, 422)
         self.assertEqual(db.list_expenses(self.bid), [])
 
     def test_http_audio_preview_then_text_confirm_and_error_clears_proposal(self):
