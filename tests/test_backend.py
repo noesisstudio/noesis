@@ -5655,18 +5655,19 @@ class WhatsappMediaTestCase(unittest.TestCase):
 
     def test_photo_creates_draft_and_yes_confirms_once(self):
         from noesis.adapters import extraction
+        from noesis.web import whatsapp_documents
 
         business, _ = self._connected_business("Fotos WhatsApp")
-        extracted = {
-            "concept": "Material eléctrico", "amount": 43.20,
-            "vat_rate": 21, "date": "2026-07-02", "supplier": "Ferretería",
-        }
+        reading = {"documents": [{
+            "kind": "ticket", "concept": "Material eléctrico", "total": 43.20,
+            "vat_rate": 21, "issued_on": "2026-07-02", "supplier": "Ferretería",
+        }], "statement": None, "source": "ia"}
         replies = []
         with (
             patch.object(whatsapp, "_download_media",
                          return_value=TINY_JPEG),
-            patch.object(extraction, "extract_expense",
-                         return_value=extracted),
+            patch.object(whatsapp_documents, "_ai_allowed", return_value=True),
+            patch.object(extraction, "read_document", return_value=reading),
             patch.object(whatsapp, "send",
                          side_effect=lambda phone, text, **kw:
                          replies.append(text)),
@@ -5676,8 +5677,8 @@ class WhatsappMediaTestCase(unittest.TestCase):
                 "image_id": "media-1", "image_mime": "image/jpeg",
             })
             self.assertTrue(result["results"][0]["ingested"])
-            self.assertIn("¿Lo apunto como gasto?", replies[-1])
-            # El gasto NO existe aún: solo hay borrador pendiente.
+            self.assertIn("Responde *SÍ* para apuntarlo como gasto", replies[-1])
+            # El gasto NO existe aún: solo hay una revisión pendiente.
             self.assertEqual(db.list_expenses(business["id"]), [])
 
             whatsapp.handle_inbound({
@@ -5687,7 +5688,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(len(expenses), 1)
         self.assertEqual(expenses[0]["amount"], 43.20)
         self.assertIn("Apuntado ✅", replies[-1])
-        # La pendiente se consumió: repetir SÍ no duplica.
+        # La revisión se consumió: repetir SÍ no duplica.
         with patch.object(whatsapp, "send",
                           side_effect=lambda phone, text, **kw:
                           replies.append(text)):
@@ -5699,16 +5700,18 @@ class WhatsappMediaTestCase(unittest.TestCase):
     def test_repeated_photo_is_reread_without_leaking_an_internal_id(self):
         from noesis.adapters import extraction
         from noesis.documents import repo as docrepo
+        from noesis.web import whatsapp_documents
 
         business, _ = self._connected_business("Foto repetida")
         replies = []
-        extracted = {
-            "concept": "Material", "amount": 25.5, "vat_rate": 21,
-            "date": None, "supplier": "Ferretería",
-        }
+        reading = {"documents": [{
+            "kind": "ticket", "concept": "Material", "total": 25.5, "vat_rate": 21,
+            "supplier": "Ferretería",
+        }], "statement": None, "source": "ia"}
         with (
             patch.object(whatsapp, "_download_media", return_value=TINY_JPEG),
-            patch.object(extraction, "extract_expense", return_value=extracted),
+            patch.object(whatsapp_documents, "_ai_allowed", return_value=True),
+            patch.object(extraction, "read_document", return_value=reading),
             patch.object(
                 whatsapp, "send",
                 side_effect=lambda phone, text, **kw: replies.append(text),
@@ -5734,15 +5737,16 @@ class WhatsappMediaTestCase(unittest.TestCase):
 
     def test_photo_no_discards_and_unknown_phone_gets_invite(self):
         from noesis.adapters import extraction
+        from noesis.web import whatsapp_documents
 
         business, _ = self._connected_business("Fotos No")
         replies = []
+        reading = {"documents": [{"kind": "ticket", "concept": "x", "total": 10}],
+                   "statement": None, "source": "ia"}
         with (
             patch.object(whatsapp, "_download_media", return_value=TINY_PNG),
-            patch.object(extraction, "extract_expense", return_value={
-                "concept": "x", "amount": 10, "vat_rate": None,
-                "date": None, "supplier": None,
-            }),
+            patch.object(whatsapp_documents, "_ai_allowed", return_value=True),
+            patch.object(extraction, "read_document", return_value=reading),
             patch.object(whatsapp, "send",
                          side_effect=lambda phone, text, **kw:
                          replies.append(text)),
@@ -6145,30 +6149,36 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertIn("vuelto a leer", replies[-1])
         self.assertNotIn("ya estaba guardado como documento", replies[-1])
 
-    def test_multiple_document_pdf_is_kept_without_partial_invoice_or_duplicate(self):
+    def test_multiple_document_pdf_is_reviewed_one_by_one_without_duplicates(self):
         from noesis.adapters import extraction
         from noesis.documents import repo as docrepo, service
+        from noesis.web import whatsapp_documents
 
         business, _ = self._connected_business("Varias facturas")
-        proposal = {"kind": "documento", "confidence": 0, "method": "ia",
-                    "multiple_documents": True, "reason": "Envíalos por separado."}
+        reading = {"documents": [
+            {"kind": "factura_recibida", "number": "A-1", "supplier": "Uno", "total": 10.0},
+            {"kind": "factura_recibida", "number": "B-2", "supplier": "Dos", "total": 20.0},
+        ], "statement": None, "source": "ia"}
         replies = []
         message = {"from": "34600111222", "id": "multiple-1",
                    "media_document_id": "multi", "media_document_mime": "application/pdf",
                    "media_document_filename": "varias.pdf"}
         with (
             patch.object(whatsapp, "_download_media", return_value=b"%PDF-1.4 multiple"),
-            patch.object(extraction, "classify_document", return_value=proposal),
+            patch.object(whatsapp_documents, "_ai_allowed", return_value=True),
+            patch.object(extraction, "read_document", return_value=reading),
             patch.object(service, "invoice_draft") as draft,
             patch.object(whatsapp, "send", side_effect=lambda phone, text, **kw: replies.append(text)),
         ):
             first = whatsapp.handle_inbound(message)["results"][0]
             second = whatsapp.handle_inbound({**message, "id": "multiple-2"})["results"][0]
         draft.assert_not_called()
-        self.assertFalse(first["pending"])
-        self.assertFalse(second["pending"])
+        self.assertTrue(first["pending"])
+        self.assertTrue(second["already_stored"])
         self.assertEqual(len(docrepo.list_for_business(business["id"])), 1)
-        self.assertIn("por separado", replies[-1])
+        # Nada se registra hasta que el titular confirma cada factura.
+        self.assertEqual(db.list_received_invoices(business["id"]), [])
+        self.assertIn("2 facturas", replies[-1])
 
     def test_whatsapp_pdf_caption_links_the_right_project_and_client(self):
         from fpdf import FPDF
@@ -6203,23 +6213,21 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertIn("Lo he asociado a Instalación Hotel Mar", replies[-1])
 
     def test_pdf_received_invoice_is_classified_and_confirmed_by_whatsapp(self):
+        from noesis.web import whatsapp_documents
+
         business, _ = self._connected_business("Factura PDF")
         replies = []
-        classification = {
-            "kind": "factura_recibida", "confidence": 94,
-            "reason": "El negocio figura como receptor.", "method": "ia",
-        }
-        draft = {
-            "number": "P-44", "issued_on": "2026-07-01", "due_on": None,
-            "supplier": "Ferretería Sol", "supplier_nif": SUPPLIER_NIF,
-            "customer": business["name"], "customer_nif": None,
-            "base": 100, "vat_rate": 21, "vat_amount": 21,
+        reading = {"documents": [{
+            "kind": "factura_recibida", "number": "P-44", "issued_on": "2026-07-01",
+            # NIF con dígito de control válido: uno inválido bloquearía el SÍ.
+            "supplier": "Ferretería Sol", "supplier_nif": "A81948077",  # pragma: allowlist secret
+            "customer": business["name"], "base": 100, "vat_rate": 21, "vat_amount": 21,
             "irpf_amount": 0, "total": 121, "confidence": 92,
-        }
+        }], "statement": None, "source": "ia"}
         with (
             patch.object(whatsapp, "_download_media", return_value=b"%PDF-1.4 factura"),
-            patch.object(extraction, "classify_document", return_value=classification),
-            patch.object(extraction, "extract_invoice", return_value=draft),
+            patch.object(whatsapp_documents, "_ai_allowed", return_value=True),
+            patch.object(extraction, "read_document", return_value=reading),
             patch.object(whatsapp, "send",
                          side_effect=lambda phone, text, **kw: replies.append(text)),
         ):
@@ -6229,9 +6237,11 @@ class WhatsappMediaTestCase(unittest.TestCase):
                 "media_document_mime": "application/pdf",
                 "media_document_filename": "proveedor.pdf",
             })
-            pending = db.get_pending_action(business["id"], "34600111222")
-            self.assertEqual(pending["kind"], "factura_recibida")
-            self.assertIn("¿La registro?", replies[-1])
+            pending = db.get_pending_action(
+                business["id"], whatsapp_documents.review_key("34600111222")
+            )
+            self.assertEqual(pending["kind"], "doc_review")
+            self.assertIn("Responde *SÍ* para guardarla", replies[-1])
             whatsapp.handle_inbound({
                 "from": "34600111222", "id": "wamid-pdf-smart-2", "text": "sí",
             })
@@ -6239,7 +6249,6 @@ class WhatsappMediaTestCase(unittest.TestCase):
         self.assertEqual(len(received), 1)
         self.assertEqual(received[0]["total"], 121)
         self.assertIn("Hecho", replies[-1])
-
 
 class WhatsappReportsTestCase(unittest.TestCase):
     setUp = BackendTestCase.setUp

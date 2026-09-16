@@ -1,5 +1,30 @@
 # Mapa de código
 
+## Lectura y revisión de documentos — 16-sep
+
+`documents/local_reader.py`: lectura determinista del texto de un documento, sin red.
+Enmascara fechas, porcentajes, NIF y teléfonos antes de buscar importes; resuelve
+etiquetas (`total`, `base imponible`, `IVA`, `IRPF`) por segmentos de línea y admite
+tablas de cabecera/valores; detecta desglose por tipo cuando una línea contiene el
+tipo y sus dos importes; decide emisor y receptor por etiquetas de cliente antes que
+por orden. También lee extractos (filas con número, fecha e importe) y agrupa varias
+facturas por página.
+
+`documents/review.py`: estado de la propuesta. `derive` completa solo lo que se
+deduce con certeza aritmética y lo marca como calculado; `apply_correction` entiende
+frases cortas del titular y `_reconcile` descarta lo leído cuando choca con lo que él
+dice; `evaluate` decide si se puede confirmar; `render` redacta el resumen.
+
+`documents/reading.py`: combina la lectura de IA (`extraction.read_document`, una
+sola llamada que devuelve todas las facturas y el extracto) con la local; rellena
+huecos y guarda un conflicto de total en vez de elegir uno.
+
+`web/whatsapp_documents.py`: la conversación. `ingest` guarda, lee, separa el PDF con
+`pdf_batch` cuando las páginas son fiables y abre la cola en la acción pendiente
+`doc-review:{teléfono}`; `handle_reply` interpreta SÍ, NO, TODAS, correcciones y
+órdenes ajenas (que devuelve a su camino). `_register` crea gasto o factura recibida
+reutilizando `service`, y comprueba duplicados antes. `web/whatsapp.py` solo delega.
+
 ## Lotes PDF en Documentos — 15-sep
 
 `documents/pdf_batch.py`: `inspect` y `split` separan un PDF por rangos exhaustivos

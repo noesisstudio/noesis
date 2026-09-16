@@ -1,5 +1,23 @@
 # Tareas vivas
 
+## Lectura y revisión de documentos por WhatsApp — 16-sep
+
+- [x] Una sola lectura por documento (IA + texto local) con desacuerdos visibles.
+- [x] Lector local sin IA: total, base, varios tipos de IVA, IRPF, número, fechas,
+  NIF validado, proveedor, extractos y separación por páginas.
+- [x] Correcciones en el chat; el SÍ solo se acepta cuando las cifras cuadran.
+- [x] PDF con varias facturas separado y revisado una a una; extracto contrastado
+  con lo registrado; duplicados detectados por proveedor y número o importe y fecha.
+- [ ] Probar con documentos reales del founder: fotos de tickets, PDF de proveedor
+  escaneado y un extracto de verdad. Medir aciertos antes de prometer precisión.
+- [ ] Validar en WhatsApp real (Meta) el recorrido completo: foto → corrección → SÍ.
+- [ ] Decidir si el mismo lector se usa en la web y en el correo entrante; hoy
+  conservan el recorrido anterior.
+- [ ] Revisar con el piloto si `NOESIS_EXTRACTION_MODEL` debe subir de Haiku a un
+  modelo mayor por calidad de lectura.
+- [ ] Dos SÍ seguidos en una cola: el segundo confirma la siguiente factura aunque
+  el titular no haya visto su resumen. Medir en el piloto si molesta.
+
 ## Documentos: conectividad con Facturas/Costes — 15-sep
 
 - [x] Revisión manual cuando falla la lectura automática y acciones visibles en móvil.

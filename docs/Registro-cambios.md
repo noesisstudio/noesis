@@ -1,5 +1,44 @@
 ﻿# Registro de cambios
 
+## 2026-09-16 — Documentos por WhatsApp: una lectura, y correcciones en el chat
+
+Objetivo: el founder reporta que el motor principal se atasca siempre en el mismo
+sitio. Al revisar el código había seis callejones sin salida: una lectura con cifras
+que no cuadran mandaba a Documentos; cualquier respuesta que no fuera SÍ o NO se
+ignoraba; una clasificación por debajo del 65 % de confianza cerraba el paso; un
+ticket sin importe pedía un gasto suelto sin vincular al justificante; un PDF con
+varias facturas se descartaba entero («envíalos por separado») y toda la lectura
+dependía de la IA externa, sin usar el texto que ya extraen pypdf o Tesseract.
+
+Áreas nuevas: `documents/local_reader.py` (lectura determinista del texto: total,
+base, IVA incluido con varios tipos, IRPF, número, fechas, NIF con dígito de control,
+proveedor, extractos y separación por páginas), `documents/review.py` (estado de la
+revisión, correcciones en lenguaje corto, cálculo de lo deducible y validación),
+`documents/reading.py` (combina IA y texto y conserva el desacuerdo en vez de elegir
+a escondidas) y `web/whatsapp_documents.py` (la conversación, la cola de varias
+facturas, la separación del PDF, los extractos y el control de duplicados).
+Modificados: `adapters/extraction.py` (`read_document`, una sola llamada que
+devuelve todas las facturas del archivo y su extracto), `documents/pdf_text.py`
+(texto por página), `documents/service.py` (`resolve_supplier` y
+`record_received_invoice` para filas sin archivo propio), `config.py`
+(`NOESIS_EXTRACTION_MODEL`) y `web/whatsapp.py` (delegación de la ingesta y enganche
+de las respuestas de revisión).
+
+Qué no cambia: nada se contabiliza sin un SÍ; una lectura incoherente sigue sin
+poder confirmarse (decisión del 7-sep), pero ahora se corrige en el propio chat;
+el documento no cambia de tipo hasta la confirmación; el original de un lote sigue
+sin poder contabilizarse; la web y el correo entrante conservan su recorrido.
+
+Pruebas: dos baterías nuevas, `test_document_reading.py` (33 casos con textos
+realistas: factura española, ticket catalán con efectivo y cambio, dos tipos de IVA,
+IRPF, tabla de cabecera y valores, teléfonos que no son importes, factura propia,
+extracto y PDF de tres facturas) y `test_whatsapp_documents.py` (10 recorridos
+completos con base de datos real). Actualizadas las de `test_backend.py` y
+`test_admin_usage.py` que fijaban los callejones antiguos, conservando su intención
+de seguridad. Riesgo: medio, toca la entrada de documentos del canal principal;
+queda detrás de la confirmación humana y sin migración. Rollback: revertir este
+commit; no hay datos que deshacer.
+
 ## 2026-09-15 — Preguntas para el abogado TIC, en docs y al día
 
 Objetivo: tener en el repositorio la lista de preguntas para la revisión jurídica,

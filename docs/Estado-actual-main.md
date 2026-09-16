@@ -1,5 +1,20 @@
 # Estado actual del producto
 
+## 16-sep — Documentos por WhatsApp: una lectura y correcciones en el chat
+
+Candidato sin publicar. Una foto o un PDF se leen una sola vez: la IA consentida y
+el texto local (pypdf o Tesseract) se combinan y, si los totales no coinciden, se
+pregunta en vez de elegir. Sin IA disponible, el lector local propone total, base,
+IVA (también con varios tipos), IRPF, número, fechas, NIF validado y proveedor.
+
+La revisión ocurre en el propio WhatsApp: «total 45,20», «proveedor Leroy Merlin»,
+«IVA 10», «IRPF 15», «fecha 12/09», «es un gasto». Lo que dice el titular sustituye
+a lo leído y lo deducible se marca como calculado. Un SÍ solo se acepta cuando las
+cifras cuadran; si no, se dice exactamente qué falta. Un PDF con varias facturas se
+separa en documentos propios y se revisan una a una o con TODAS; un extracto se
+contrasta con lo registrado y no duplica. Nada se contabiliza sin confirmación y el
+tipo del documento no cambia hasta ese SÍ. Sin migración; esquema 55.
+
 ## 15-sep — Documentos: revisión manual y PDF con varias facturas
 
 Candidato sin push. Documentos abre siempre la revisión manual aunque falle la

@@ -139,54 +139,66 @@ class AdminUsageTests(unittest.TestCase):
             self.assertIs(extraction._message(client, business_id=self.business,
                                              model="test"), response)
 
-    def test_whatsapp_does_not_promote_low_confidence_invoice(self):
+    def test_whatsapp_reading_does_not_promote_a_document_before_the_owner_confirms(self):
         from noesis.web import whatsapp
-        from noesis.documents import service
+        from noesis.documents import reading, repo, service
 
-        document = {"id": 99, "kind": "documento", "classification": {
-            "kind": "factura_recibida", "applied_kind": "documento", "confidence": 40}}
+        document = {"id": 99, "kind": "documento"}
+        proposal = {"documents": [{"kind": "factura_recibida", "confidence": 40,
+                                   "total": 121.0, "supplier": "Proveedor"}],
+                    "statement": None, "source": "ia", "page_count": 1}
         with (patch.object(whatsapp, "_download_media", return_value=b"%PDF-test"),
               patch.object(service, "upload", return_value=document),
               patch.object(service, "associate_context", return_value={}),
+              patch.object(reading, "read", return_value=proposal),
               patch.object(service, "invoice_draft") as draft,
+              patch.object(repo, "set_review") as set_review,
               patch.object(whatsapp, "send") as send):
             result = whatsapp._ingest_document({"id": self.business}, "34600000000", {
                 "media_document_id": "test", "media_document_mime": "application/pdf"})
         draft.assert_not_called()
-        self.assertEqual(result["classification"], "documento")
-        self.assertIn("pendiente de revisar", send.call_args.args[1])
+        # Se abre una revisión, pero el tipo del documento no cambia sin el SÍ.
+        self.assertTrue(result["pending"])
+        self.assertTrue(all("kind" not in call.kwargs for call in set_review.call_args_list))
+        self.assertEqual(db.list_received_invoices(self.business), [])
+        self.assertIn("Responde *SÍ*", send.call_args.args[1])
 
-    def test_uncertain_photo_is_not_reinterpreted_as_expense(self):
+    def test_uncertain_photo_is_not_recorded_as_expense_without_the_owner(self):
         from noesis.web import whatsapp
-        from noesis.documents import service
+        from noesis.documents import reading, service
 
-        document = {"id": 99, "kind": "documento", "classification": {
-            "kind": "factura_recibida", "applied_kind": "documento", "confidence": 40}}
+        document = {"id": 99, "kind": "documento"}
+        nothing = {"documents": [], "statement": None, "source": "ninguno", "page_count": 1}
         with (patch.object(whatsapp, "_download_media", return_value=b"image"),
               patch.object(service, "upload", return_value=document),
               patch.object(service, "associate_context", return_value={}),
+              patch.object(reading, "read", return_value=nothing),
               patch.object(extraction, "extract_expense") as expense,
               patch.object(service, "invoice_draft") as draft,
-              patch.object(whatsapp, "send")):
+              patch.object(whatsapp, "send") as send):
             result = whatsapp._ingest_image({"id": self.business}, "34600000000",
                                             {"image_id": "test"})
         expense.assert_not_called()
         draft.assert_not_called()
-        self.assertFalse(result["pending"])
+        self.assertTrue(result["pending"])
+        self.assertEqual(db.list_expenses(self.business), [])
+        self.assertIn("Escríbeme el total", send.call_args.args[1])
 
     def test_unreadable_received_invoice_is_not_called_issued(self):
         from noesis.web import whatsapp
-        from noesis.documents import service
+        from noesis.documents import reading, service
 
-        document = {"id": 99, "kind": "factura_recibida", "classification": {
-            "kind": "factura_recibida", "applied_kind": "factura_recibida"}}
+        document = {"id": 99, "kind": "documento"}
+        partial = {"documents": [{"kind": "factura_recibida", "supplier": "Proveedor"}],
+                   "statement": None, "source": "ia", "page_count": 1}
         with (patch.object(whatsapp, "_download_media", return_value=b"image"),
               patch.object(service, "upload", return_value=document),
               patch.object(service, "associate_context", return_value={}),
-              patch.object(service, "invoice_draft", return_value=None),
+              patch.object(reading, "read", return_value=partial),
               patch.object(whatsapp, "send") as send):
             result = whatsapp._ingest_image({"id": self.business}, "34600000000",
                                             {"image_id": "test"})
-        self.assertFalse(result["pending"])
-        self.assertIn("no la he registrado", send.call_args.args[1])
+        self.assertTrue(result["pending"])
+        self.assertIn("Me falta el total", send.call_args.args[1])
         self.assertNotIn("emitida por ti", send.call_args.args[1])
+        self.assertEqual(db.list_received_invoices(self.business), [])

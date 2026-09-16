@@ -9,8 +9,12 @@ MAX_TEXT_CHARS = 24_000
 MAX_STREAM_BYTES = 8 * 1024 * 1024
 
 
-def extract(data: bytes) -> str | None:
-    """Lee texto embebido sin ejecutar contenido ni intentar OCR de imágenes."""
+def extract_pages(data: bytes) -> list[str] | None:
+    """Texto embebido por página, sin ejecutar contenido ni intentar OCR de imágenes.
+
+    Conserva la posición de cada página (vacía si no tiene texto) para poder separar
+    un PDF con varias facturas sin confundir qué página es cuál.
+    """
     try:
         from pypdf import PdfReader, filters
 
@@ -27,19 +31,23 @@ def extract(data: bytes) -> str | None:
         reader = PdfReader(BytesIO(data), strict=True)
         if reader.is_encrypted:
             return None
-        chunks: list[str] = []
+        pages: list[str] = []
         remaining = MAX_TEXT_CHARS
         for index, page in enumerate(reader.pages):
-            if index >= MAX_PAGES:
+            if index >= MAX_PAGES or remaining <= 0:
                 break
-            text = (page.extract_text() or "").strip()
-            if not text:
-                continue
-            chunks.append(text[:remaining])
-            remaining -= len(chunks[-1])
-            if remaining <= 0:
-                break
-        result = "\n".join(chunks).strip()
-        return result or None
+            text = (page.extract_text() or "").strip()[:remaining]
+            pages.append(text)
+            remaining -= len(text)
+        return pages if any(pages) else None
     except Exception:  # PDF inválido, cifrado o no extraíble: revisión manual.
         return None
+
+
+def extract(data: bytes) -> str | None:
+    """Lee texto embebido sin ejecutar contenido ni intentar OCR de imágenes."""
+    pages = extract_pages(data)
+    if not pages:
+        return None
+    result = "\n".join(page for page in pages if page).strip()
+    return result or None

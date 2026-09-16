@@ -424,6 +424,35 @@ def confirm_client_candidate(
     return client
 
 
+def resolve_supplier(business_id: int, *, name: str | None = None,
+                     nif: str | None = None) -> int | None:
+    """Proveedor existente por NIF o nombre exacto; si no existe y hay nombre, se crea."""
+    from .. import db
+
+    if not (name or nif):
+        return None
+    known = db.find_supplier(business_id, nif=nif, name=name)
+    if known:
+        return known["id"]
+    if name:
+        return db.add_supplier(name, nif=nif, business_id=business_id)["id"]
+    return None
+
+
+def record_received_invoice(business_id: int, *, total,
+                            supplier_name: str | None = None,
+                            supplier_nif: str | None = None,
+                            note: str | None = None, **fields) -> dict:
+    """Factura recibida confirmada que no tiene archivo propio (fila de un extracto
+    o varias facturas en una misma página). El original sigue en Documentos."""
+    from .. import db
+
+    supplier_id = resolve_supplier(business_id, name=supplier_name, nif=supplier_nif)
+    return db.add_received_invoice(
+        total, supplier_id=supplier_id, note=note, business_id=business_id, **fields
+    )
+
+
 def confirm_received_invoice(business_id: int, doc_id: int, *, total,
                              supplier_name: str | None = None,
                              supplier_nif: str | None = None,
@@ -441,14 +470,8 @@ def confirm_received_invoice(business_id: int, doc_id: int, *, total,
         raise UploadError("Documento no encontrado.")
     if repo.is_batch_source(doc_id, business_id):
         raise ValueError("Este PDF es un lote. Revisa y registra las facturas individuales.")
-    if supplier_id is None and (supplier_name or supplier_nif):
-        known = db.find_supplier(business_id, nif=supplier_nif,
-                                 name=supplier_name)
-        if known:
-            supplier_id = known["id"]
-        elif supplier_name:
-            supplier_id = db.add_supplier(
-                supplier_name, nif=supplier_nif, business_id=business_id)["id"]
+    if supplier_id is None:
+        supplier_id = resolve_supplier(business_id, name=supplier_name, nif=supplier_nif)
     received = db.add_received_invoice(
         total, supplier_id=supplier_id, document_id=doc_id,
         business_id=business_id, **fields)

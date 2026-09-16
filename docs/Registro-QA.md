@@ -1,5 +1,36 @@
 ﻿# Registro de QA
 
+## 2026-09-16 — Lectura de documentos y revisión por WhatsApp
+
+- `tests/test_document_reading.py` y `tests/test_whatsapp_documents.py`: **33 pruebas
+  OK**. El lector local acierta número, fechas, NIF, base, IVA, IRPF y total en una
+  factura española; ignora EFECTIU y CANVI de un ticket catalán; suma dos tipos de
+  IVA sin inventar un tipo único; lee una tabla con cabecera y valores en líneas
+  distintas; no confunde teléfonos, fechas ni NIF con importes; identifica una
+  factura propia como emitida; lista las filas de un extracto y separa por páginas
+  un PDF de tres facturas.
+- Correcciones: «no, el total es 54,20» sustituye lo leído y recalcula base e IVA;
+  «total 121 y proveedor Hijos y Nietos S.L.» conserva el nombre con su « y »;
+  «irpf 15, iva 21» calcula ambos; un NIF con dígito de control inválido bloquea el
+  SÍ hasta corregirlo o quitarlo; «fecha 12/09» elige el año sensato; un texto que no
+  es una corrección no cambia nada.
+- Recorridos de WhatsApp con base de datos real: foto ilegible → el titular escribe
+  «45,20 gasolinera Repsol» → SÍ → gasto vinculado al justificante, y repetir SÍ no
+  duplica; factura que no cuadra → SÍ rechazado con el motivo → «el total es 121» →
+  SÍ → factura recibida vinculada; PDF de dos facturas separado en dos documentos y
+  registrado con TODAS; extracto que salta la factura ya registrada; una orden
+  distinta pasa al asistente y la revisión sigue esperando; una confirmación más
+  reciente de otro flujo no la absorbe la revisión; duplicada no se registra dos
+  veces y el documento queda como duplicado; factura propia se archiva sin reemitir.
+- Existentes del flujo: `WhatsappMediaTestCase`, `test_admin_usage`,
+  `test_received_invoices`, `test_reliability_guards`, `test_inbound_email` y
+  `test_pdf_batch`: **73 pruebas OK**. Ruff y `git diff --check` verdes.
+- Regresión completa: **892 pruebas Python en 226,8 s, OK** (856 previas más 36
+  nuevas). Ruff y puerta documental verdes.
+- No probado: Meta real, IA real (la lectura con Anthropic va simulada), OCR con
+  Tesseract (no está instalado en este Mac), PostgreSQL ni documentos escaneados
+  reales. La precisión con fotos de verdad sigue sin medirse.
+
 ## 2026-09-15 — Nombres de cliente que se tomaban por órdenes
 
 - `tests.test_client_name_rules` (3 nuevas): «Carla Borràs» crea la ficha tras SÍ,

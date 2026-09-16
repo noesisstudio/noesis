@@ -1445,9 +1445,8 @@ def _execute_collection(business: dict, payload: dict) -> str:
 
 
 def _ingest_image(business: dict, phone: str, message: dict) -> dict:
-    """Foto entrante → clasificación única + borrador confirmable."""
-    from ..adapters import extraction
-    from ..documents import service as docservice
+    """Foto entrante: se guarda, se lee una vez y se revisa con el titular por chat."""
+    from . import whatsapp_documents
 
     max_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
     data = _download_media(message["image_id"], max_bytes=max_bytes)
@@ -1470,180 +1469,16 @@ def _ingest_image(business: dict, phone: str, message: dict) -> dict:
             business_id=business["id"],
         )
         return {"phone": phone, "media": "image", "ingested": False}
-    already_stored = False
-    try:
-        document = docservice.upload(
-            business["id"],
-            f"whatsapp-documento{ext}",
-            data,
-            kind="documento",
-            note="Recibido por WhatsApp",
-            run_ocr=True,
-            auto_classify=True,
-        )
-    except docservice.DuplicateDocument as exc:
-        document = docservice.reclassify(business["id"], exc.existing_id)
-        if not document:
-            send(
-                phone,
-                "Ya tenía esta foto, pero no he podido volver a leerla. "
-                "Revísala en Documentos.",
-                business_id=business["id"],
-            )
-            return {"phone": phone, "media": "image", "ingested": False}
-        already_stored = True
-    except docservice.UploadError as exc:
-        send(phone, str(exc), business_id=business["id"])
-        return {"phone": phone, "media": "image", "ingested": False}
-
-    classification = document.get("classification") or {}
-    context = docservice.associate_context(
-        business["id"], document["id"], message.get("caption")
+    return whatsapp_documents.ingest(
+        business, phone, message, data=data, filename=f"whatsapp-documento{ext}",
+        mime=mime, media="image",
+        notify=lambda text: send(phone, text, business_id=business["id"]),
     )
-    context_note = (
-        f" Lo he asociado a {context['label']}." if context.get("matched")
-        else " Hay varias coincidencias: revisa el cliente o proyecto en Documentos."
-        if context.get("ambiguous") else ""
-    )
-    if classification.get("multiple_documents"):
-        send(phone, classification["reason"], business_id=business["id"])
-        return {"phone": phone, "media": "image", "ingested": True,
-                "pending": False, "document_id": document["id"]}
-    detected_kind = classification.get("applied_kind") or document.get("kind") or "documento"
-    if detected_kind == "documento" and classification.get("kind") in {
-        "factura_recibida", "factura_emitida", "contrato", "presupuesto", "albaran",
-    }:
-        send(phone, "He guardado la foto, pero no tengo confianza suficiente en el "
-             "tipo de documento. Revísala en Documentos antes de registrarla."
-             + context_note, business_id=business["id"])
-        return {"phone": phone, "media": "image", "ingested": True,
-                "pending": False, "document_id": document["id"],
-                "classification": "documento"}
-    if detected_kind in {"factura_recibida", "factura_emitida"}:
-        draft = docservice.invoice_draft(business["id"], document["id"])
-        if draft and draft.get("direction") == "emitida":
-            context = docservice.associate_context(
-                business["id"], document["id"], message.get("caption"),
-                customer=draft.get("customer"),
-                customer_nif=draft.get("customer_nif"),
-            )
-            if context.get("matched"):
-                context_note = f" Lo he asociado a {context['label']}."
-        if detected_kind == "factura_recibida" and draft and draft.get("total"):
-            unsafe_reply = _unsafe_invoice_draft_reply(draft)
-            if unsafe_reply:
-                send(phone, unsafe_reply + context_note, business_id=business["id"])
-                return {
-                    "phone": phone, "media": "image", "ingested": True,
-                    "pending": False, "document_id": document["id"],
-                    "classification": detected_kind,
-                    "already_stored": already_stored,
-                    "requires_review": True,
-                }
-            payload = {**draft, "document_id": document["id"]}
-            db.set_pending_action(business["id"], phone, "factura_recibida", payload)
-            send(
-                phone,
-                f"📄 Parece una factura recibida de "
-                f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
-                "¿La guardo como factura de proveedor? Responde SÍ o NO."
-                + context_note
-                + (" (Ya la tenía archivada; la he vuelto a leer.)"
-                   if already_stored else ""),
-                business_id=business["id"],
-            )
-            return {"phone": phone, "media": "image", "ingested": True,
-                    "pending": True, "document_id": document["id"],
-                    "classification": detected_kind,
-                    "already_stored": already_stored}
-        send(
-            phone,
-            ("Ya tenía esta foto archivada y la he vuelto a leer. "
-             if already_stored else "He guardado la foto. ")
-            + ("Parece una factura emitida por ti, así que no "
-             "la reemitiré ni la meteré en Veri*Factu. Revísala en Documentos para "
-             "confirmar que es histórica." if detected_kind == "factura_emitida"
-             else "Parece una factura recibida, pero no he "
-             "podido preparar un borrador válido. Revísala en Documentos; no la he registrado.")
-            + context_note,
-            business_id=business["id"],
-        )
-        return {"phone": phone, "media": "image", "ingested": True,
-                "pending": False, "document_id": document["id"],
-                "classification": detected_kind,
-                "already_stored": already_stored}
-
-    if detected_kind in {"contrato", "presupuesto", "albaran", "proveedor"}:
-        labels = {"contrato": "un contrato", "presupuesto": "un presupuesto",
-                  "albaran": "un albarán", "proveedor": "un documento de proveedor"}
-        send(
-            phone,
-            ("📎 Ya tenía esta foto y la he vuelto a leer. " if already_stored
-             else "📎 Foto guardada. ")
-            + f"Parece {labels[detected_kind]}. Lo he dejado pendiente "
-            "de tu confirmación en Documentos." + context_note,
-            business_id=business["id"],
-        )
-        return {"phone": phone, "media": "image", "ingested": True,
-                "pending": False, "document_id": document["id"],
-                "classification": detected_kind,
-                "already_stored": already_stored}
-
-    fields = None
-    if _extraction_budget_ok(business["id"]):
-        fields = extraction.extract_expense(
-            data, mime, business_id=business["id"],
-            allow_external=db.integration_enabled(
-                business["id"], "ai_external",
-                available=bool(config.ANTHROPIC_API_KEY),
-            ),
-        )
-    db.record_product_event(
-        business["id"], "media_ingested",
-        json.dumps({"type": "image", "extracted": bool(fields),
-                    "classification": detected_kind},
-                   separators=(",", ":")),
-    )
-    if fields and fields.get("amount"):
-        payload = {**fields, "document_id": document["id"]}
-        db.set_pending_action(business["id"], phone, "gasto", payload)
-        concept = fields.get("concept") or fields.get("supplier") or "ticket"
-        detail = f"📄 He leído el ticket: {concept} — {_eur(fields['amount'])}"
-        if fields.get("vat_rate") is not None:
-            detail += f" (IVA {fields['vat_rate']} %)"
-        if fields.get("date"):
-            detail += f", del {fields['date']}"
-        send(
-            phone,
-            detail + ". ¿Lo apunto como gasto? Responde SÍ o NO." + context_note
-            + (" (Ya la tenía archivada; la he vuelto a leer.)"
-               if already_stored else ""),
-            business_id=business["id"],
-        )
-        return {
-            "phone": phone, "media": "image", "ingested": True,
-            "pending": True, "document_id": document["id"],
-            "already_stored": already_stored,
-        }
-    send(
-        phone,
-        ("Ya tenía esta foto archivada y la he vuelto a leer, pero no he podido "
-         if already_stored else "He guardado la foto en tus papeles, pero no he podido ")
-        + "leer el "
-        "importe. Dímelo en un mensaje (ej.: «gasto 25,50 ferretería») o "
-        "complétalo desde la web." + context_note,
-        business_id=business["id"],
-    )
-    return {
-        "phone": phone, "media": "image", "ingested": True,
-        "pending": False, "document_id": document["id"],
-        "already_stored": already_stored,
-    }
 
 
 def _ingest_document(business: dict, phone: str, message: dict) -> dict:
-    """PDF entrante → clasificación y, si procede, factura recibida confirmable."""
-    from ..documents import service as docservice
+    """PDF entrante: se guarda, se leen todas sus facturas y se revisan por chat."""
+    from . import whatsapp_documents
 
     mime = message.get("media_document_mime") or ""
     filename = message.get("media_document_filename") or "documento.pdf"
@@ -1666,86 +1501,11 @@ def _ingest_document(business: dict, phone: str, message: dict) -> dict:
         return {"phone": phone, "media": "document", "ingested": False}
     if not filename.lower().endswith(".pdf"):
         filename += ".pdf"
-    try:
-        document = docservice.upload(
-            business["id"], filename, data,
-            kind="documento", note="Recibido por WhatsApp", run_ocr=True,
-            auto_classify=True,
-        )
-        already_stored = False
-    except docservice.DuplicateDocument as exc:
-        # Reenviar el mismo papel es la forma natural de pedir «míralo otra vez».
-        # Antes se contestaba «ya estaba guardado» y ahí moría: un documento que se
-        # archivó sin IA disponible no había manera de volver a clasificarlo.
-        document = docservice.reclassify(business["id"], exc.existing_id)
-        if not document:
-            send(phone, str(exc), business_id=business["id"])
-            return {"phone": phone, "media": "document", "ingested": False}
-        already_stored = True
-    except docservice.UploadError as exc:
-        send(phone, str(exc), business_id=business["id"])
-        return {"phone": phone, "media": "document", "ingested": False}
-    classification = document.get("classification") or {}
-    context = docservice.associate_context(
-        business["id"], document["id"], message.get("caption")
+    return whatsapp_documents.ingest(
+        business, phone, message, data=data, filename=filename,
+        mime="application/pdf", media="document",
+        notify=lambda text: send(phone, text, business_id=business["id"]),
     )
-    context_note = (
-        f" Lo he asociado a {context['label']}." if context.get("matched")
-        else " Hay varias coincidencias: revisa el cliente o proyecto en Documentos."
-        if context.get("ambiguous") else ""
-    )
-    if classification.get("multiple_documents"):
-        send(phone, classification["reason"], business_id=business["id"])
-        return {"phone": phone, "media": "document", "ingested": True,
-                "pending": False, "document_id": document["id"],
-                "already_stored": already_stored, "classification": "documento"}
-    kind = classification.get("applied_kind") or document.get("kind") or "documento"
-    if kind == "factura_recibida":
-        draft = docservice.invoice_draft(business["id"], document["id"])
-        if draft and draft.get("total"):
-            unsafe_reply = _unsafe_invoice_draft_reply(draft)
-            if unsafe_reply:
-                send(phone, unsafe_reply + context_note, business_id=business["id"])
-                return {
-                    "phone": phone, "media": "document", "ingested": True,
-                    "pending": False, "document_id": document["id"],
-                    "already_stored": already_stored, "classification": kind,
-                    "requires_review": True,
-                }
-            db.set_pending_action(
-                business["id"], phone, "factura_recibida",
-                {**draft, "document_id": document["id"]},
-            )
-            send(
-                phone,
-                f"📄 He leído «{filename}»: parece una factura recibida de "
-                f"{draft.get('supplier') or 'un proveedor'} por {_eur(draft['total'])}. "
-                "¿La registro? Responde SÍ o NO." + context_note
-                + (" (Ya lo tenía archivado; lo he vuelto a leer.)"
-                   if already_stored else ""),
-                business_id=business["id"],
-            )
-            return {"phone": phone, "media": "document", "ingested": True,
-                    "pending": True, "document_id": document["id"],
-                    "already_stored": already_stored, "classification": kind}
-    labels = {"factura_emitida": "factura emitida histórica", "presupuesto": "presupuesto",
-              "contrato": "contrato", "albaran": "albarán", "proveedor": "documento de proveedor"}
-    reading = labels.get(kind)
-    send(
-        phone,
-        (f"📎 Ya tenía «{filename}» archivado y lo he vuelto a leer. "
-         if already_stored else f"📎 Guardado «{filename}» en tus papeles. ")
-        + (f"Parece {reading}; confírmalo en Documentos." if reading
-           else "No consigo decidir el tipo; te lo dejo pendiente de revisar "
-                "en Documentos.")
-        + context_note,
-        business_id=business["id"],
-    )
-    return {
-        "phone": phone, "media": "document", "ingested": True,
-        "document_id": document["id"], "already_stored": already_stored,
-        "classification": kind,
-    }
 
 
 def _message_job_id(message: dict) -> int | None:
@@ -2196,6 +1956,19 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 results.append({"business_id": business["id"], "reviewed": True})
                 _finish_inbound_message(message_id, claimed_ids)
                 continue
+        # Revisión de una foto o PDF: correcciones, SÍ, NO o TODAS. Si el mensaje
+        # es otra orden, sigue su camino y la revisión espera.
+        from . import whatsapp_documents
+        document_reply = whatsapp_documents.handle_reply(business, phone, text)
+        if document_reply is not None:
+            send(phone, document_reply, business_id=business["id"])
+            results.append({
+                "phone": phone, "business_id": business["id"],
+                "document_review": True,
+            })
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
+
         pending = db.get_pending_action(business["id"], phone)
         if pending and _is_yes(text):
             confirmed_reply = _execute_pending(business, phone, pending)

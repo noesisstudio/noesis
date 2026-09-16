@@ -65,6 +65,9 @@ MODEL_OUTPUT_USD_PER_MTOK = float(
 # frase). Haiku minimiza el coste: el 90% se resuelve gratis en local y solo lo
 # realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
 FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
+# Lectura de facturas, tickets y extractos. Por defecto el mismo modelo barato; si
+# en el piloto lee mal documentos reales se puede subir a uno mayor sin tocar código.
+EXTRACTION_MODEL = os.getenv("NOESIS_EXTRACTION_MODEL", "").strip() or FALLBACK_MODEL
 # Segundo nivel privado opcional. Acepta servidores con contrato OpenAI-compatible
 # (Ollama, llama.cpp o vLLM). Si falta, Bynoesis pasa a la IA externa consentida.
 LOCAL_AI_BASE_URL = os.getenv("NOESIS_LOCAL_AI_BASE_URL", "").strip()

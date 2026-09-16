@@ -1,8 +1,8 @@
 {
-  "state_date": "2026-09-15",
+  "state_date": "2026-09-16",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 55,
-  "verified_test_count": 856,
+  "verified_test_count": 892,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -66,6 +66,7 @@
     "gestoria_access_recovery": "schema_51_separate_one_use_hashed_tokens_non_enumerating_email_flow_previous_links_invalidated_credential_change_is_atomic_all_prior_sessions_are_revoked_and_existing_mfa_is_preserved"
   },
   "internal_capabilities": {
+    "whatsapp_document_reading_candidate_2026_09_16": "unpublished_no_schema_single_reading_per_document_ai_plus_local_text_disagreement_surfaced_not_resolved_silently_local_reader_without_network_reads_total_base_multi_rate_vat_irpf_number_dates_checksum_validated_tax_ids_supplier_statements_and_page_split_chat_review_accepts_short_corrections_owner_value_overrides_reading_derived_values_marked_calculated_yes_only_when_arithmetic_checks_pass_multi_invoice_pdf_split_into_own_documents_statement_rows_matched_against_registered_invoices_duplicates_detected_by_supplier_and_number_or_amount_and_date_nothing_recorded_and_no_kind_promoted_without_owner_confirmation",
     "client_name_rule_fix_2026_09_15": "delete_guard_matches_conjugated_verbs_not_prefixes_so_surnames_like_borras_are_names_a_nombre_de_prefix_removed_from_client_three_regressions",
     "document_pdf_batch_candidate_2026_09_15": "unpublished_no_schema_user_chosen_exhaustive_page_ranges_original_preserved_as_non_accountable_batch_children_pending_review_hash_dedup_resume_manual_review_when_extraction_fails_visible_actions_linked_record_amount_and_url_nine_regressions_http_smoke_visual_and_physical_mobile_pending",
     "local_invoice_planner_candidate_2026_09_15": "unpublished_default_off_requires_review_net_multiline_es_ca_typed_no_effect_proposals_native_calculation_actor_tenant_scoped_corrections_cas_expiry_web_pdf_focus_issue_transaction_fingerprint_sixteen_regressions_no_private_model_no_auto_learning_postgres_meta_physical_pending",

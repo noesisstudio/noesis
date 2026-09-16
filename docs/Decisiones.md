@@ -2,6 +2,28 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Una lectura incoherente se corrige en el chat, no en otra pantalla (2026-09-16)
+
+La decisión del 7-sep sigue en pie: una lectura que no cuadra no se confirma con un
+«sí». Lo que cambia es la salida. Mandar al titular a Documentos desde WhatsApp era
+un callejón sin salida en el motor principal del producto: la mitad de las lecturas
+acababan ahí. Ahora la corrección ocurre en la misma conversación, con frases cortas
+y explícitas, y el SÍ solo se acepta cuando las cifras cuadran.
+
+Cuando el titular corrige un importe y choca con lo leído, manda el titular: se
+descarta el dato leído que no ha tocado y se recalcula. Lo deducible por aritmética
+se completa y se marca como calculado; nunca se rellena un dato que no se deduce.
+
+Leer es una sola operación por documento, no clasificar y extraer por separado: dos
+llamadas podían contradecirse y una lista de facturas se descartaba entera. La IA y
+el texto local se contrastan y un desacuerdo de total se pregunta, no se resuelve a
+escondidas. El texto local funciona sin IA, sin red y sin coste.
+
+Un PDF con varias facturas se separa en documentos propios cuando sus páginas son
+fiables, para que cada factura conserve su original; si no lo son, se revisan sin
+separar y el original no se contabiliza. De un extracto solo se toma el total, se
+avisa de que el IVA necesita la factura original y no se registra lo ya registrado.
+
 ## Piloto local acotado y calculadora única (2026-09-15)
 
 Ampliar `action_review` y las tablas existentes, no crear un agente paralelo con
