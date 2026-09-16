@@ -1,5 +1,18 @@
 # Estado actual del producto
 
+## 16-sep — Agenda en lenguaje normal y fallo de IA visible
+
+Candidato sin publicar. «Añade un trabajo para mañana a las 12» ya se entiende: el
+cerebro local admite añade, agrega, pon, crea, programa y mete con trabajo, cita,
+visita, servicio o aviso, y separa fecha, cliente y tarea. Como un trabajo necesita
+cliente, cuando falta se conserva la fecha y se pregunta solo el nombre; responder
+«Marta López» lo crea. Un «sí» no completa nada y otra orden distinta sigue su curso.
+
+Ajustes muestra el último fallo de la ayuda avanzada (tipo de error y fecha), que
+antes solo se veía en el chat como «no está disponible». El modelo de respaldo pasa a
+`claude-haiku-4-5`, sin sufijo de fecha; si esa variable está definida en Railway,
+hay que corregirla allí también. Sin migración; esquema 55.
+
 ## 16-sep — Documentos por WhatsApp: una lectura y correcciones en el chat
 
 Candidato sin publicar. Una foto o un PDF se leen una sola vez: la IA consentida y

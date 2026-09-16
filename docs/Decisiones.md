@@ -2,6 +2,28 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Entender a medias y preguntar lo que falta (2026-09-16)
+
+Una orden que se entiende en parte no se descarta entera. Si «añade un trabajo para
+mañana a las 12» trae fecha pero no cliente —y la base de datos exige cliente—, la
+fecha se conserva y se pregunta solo el nombre. El cerebro local tiene que cubrir las
+órdenes corrientes: delegar en la IA lo que es una regla simple deja el producto sin
+red cuando el proveedor falla, que es justo lo que ocurrió.
+
+La pregunta no relaja ninguna garantía: un «sí» no completa un trabajo, la pendiente
+caduca en 30 minutos, está aislada por actor y negocio, y cualquier otra orden sigue
+su camino sin que la revisión la absorba.
+
+## Los identificadores de modelo van sin fecha y los fallos se ven (2026-09-16)
+
+Un modelo escrito con sufijo de fecha (`claude-haiku-4-5-20251001`) puede dejar de
+resolverse y entonces toda llamada devuelve 404. Se usa la forma vigente sin fecha.
+
+Y un fallo del proveedor deja de ser invisible: Ajustes muestra el tipo de error y
+cuándo ocurrió. Antes solo se veía «la IA avanzada no está disponible» en el chat, sin
+poder distinguir una clave inválida, un modelo inexistente o el límite del plan. Se
+muestra el tipo de error, nunca la clave ni el contenido del mensaje.
+
 ## Una lectura incoherente se corrige en el chat, no en otra pantalla (2026-09-16)
 
 La decisión del 7-sep sigue en pie: una lectura que no cuadra no se confirma con un

@@ -805,6 +805,60 @@ def _ai_unavailable_reply(channel: str) -> str:
     )
 
 
+_JOB_PENDING_TTL = 30
+_JOB_CLIENT_ANSWER = re.compile(
+    r"(?:(?:es\s+)?(?:para|con|de|a)\s+)?"
+    r"([A-Za-zÁ-ÿ][\wÁ-ÿ'’.\-]*(?:\s+[A-Za-zÁ-ÿ][\wÁ-ÿ'’.\-]*){0,3})",
+    re.I,
+)
+
+
+def _job_pending_key(actor: str | None) -> str | None:
+    return f"agenda-cliente:{actor}" if actor else None
+
+
+def _human_when(value: str) -> str:
+    """«mañana a las 12:00» a partir de la fecha que ya interpretó el cerebro."""
+    from datetime import date as _date, datetime as _datetime
+
+    text = str(value or "")
+    try:
+        moment = _datetime.fromisoformat(text) if "T" in text else None
+        day = moment.date() if moment else _date.fromisoformat(text[:10])
+    except ValueError:
+        return text
+    today = _date.today()
+    if day == today:
+        label = "hoy"
+    elif (day - today).days == 1:
+        label = "mañana"
+    else:
+        label = f"el {day.strftime('%d/%m/%Y')}"
+    return f"{label} a las {moment.strftime('%H:%M')}" if moment else label
+
+
+def _job_client_answer(message: str) -> str | None:
+    """Una respuesta que solo nombra a alguien completa el trabajo pendiente."""
+    text = str(message or "").strip().strip(".!¡?¿,")
+    if not text or len(text) > 60:
+        return None
+    match = _JOB_CLIENT_ANSWER.fullmatch(text)
+    if not match:
+        return None
+    candidate = nlu._limpiar_cliente(match.group(1))
+    folded = nlu._norm(candidate)
+    if not candidate or folded in {
+        "si", "no", "vale", "ok", "gracias", "hoy", "manana", "nada", "espera",
+    }:
+        return None
+    if re.search(
+        r"\b(?:factura|gasto|trabajo|cita|agenda|pdf|cobro|presupuesto|cliente|resumen)\b",
+        folded,
+    ):
+        return None
+    return candidate
+
+
 def _handle(
     business_id: int,
     message: str,
@@ -812,6 +866,7 @@ def _handle(
     *,
     channel: str = "web",
     actor_phone: str | None = None,
+    actor: str | None = None,
 ) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
     from .. import local_invoice, action_review
@@ -827,6 +882,30 @@ def _handle(
     refusal = nlu.safety_refusal(message)
     if refusal:
         return {"reply": refusal, "source": "local"}
+
+    # Un trabajo al que solo le faltaba el cliente se completa con su nombre a secas,
+    # sin obligar a repetir la orden entera.
+    pending_key = _job_pending_key(actor)
+    if pending_key:
+        waiting = db.get_pending_action(business_id, pending_key)
+        if waiting and waiting.get("kind") == "agenda_cliente":
+            cliente = _job_client_answer(message)
+            if cliente:
+                try:
+                    pending_args = json.loads(waiting["payload"])
+                except (TypeError, ValueError):
+                    pending_args = None
+                db.clear_pending_action(business_id, pending_key)
+                if pending_args:
+                    pending_args["cliente"] = cliente
+                    result = json.loads(run_tool(
+                        "agendar_trabajo", pending_args, business_id,
+                        channel="whatsapp" if channel == "whatsapp" else "web",
+                    ))
+                    return {
+                        "reply": nlu.format_reply("agendar_trabajo", result),
+                        "source": "local",
+                    }
     if page and any(x in norm for x in (
             "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
             "explica esta", "explicame esta", "que es esto")):
@@ -873,6 +952,23 @@ def _handle(
                          "Hazlo desde Equipo para que reciba una invitación segura; "
                          "no crearé una contraseña ni daré permisos desde un mensaje incompleto.",
                 "source": "local",
+            }
+        if tool == nlu.NEED_JOB_CLIENT:
+            # La fecha entendida se conserva; solo se pregunta lo que falta.
+            if pending_key:
+                db.set_pending_action(
+                    business_id, pending_key, "agenda_cliente", args,
+                    ttl_minutes=_JOB_PENDING_TTL,
+                )
+            return {
+                "reply": (
+                    f"He entendido: {args.get('descripcion') or 'Trabajo'} "
+                    f"{_human_when(args.get('fecha_hora') or '')}. "
+                    "Me falta el cliente: dime su nombre («Marta López») y lo agendo. "
+                    "No he creado nada."
+                ),
+                "source": "local",
+                "clarification_kind": "job_client",
             }
         if tool == "__need_date__":
             return {"reply": "Te lo puedo agendar, pero me falta el día. Dímelo como lo dirías por WhatsApp: "
@@ -1166,7 +1262,8 @@ def handle(
                 receipts = []
                 receipt_token = execution_receipts.set(receipts)
                 try:
-                    result = _handle(business_id, message, page, channel=channel, actor_phone=actor_phone)
+                    result = _handle(business_id, message, page, channel=channel,
+                                     actor_phone=actor_phone, actor=actor)
                 finally:
                     execution_receipts.reset(receipt_token)
                 invoice_receipts = [r for r in receipts if r["business_id"] == business_id

@@ -1,5 +1,26 @@
 ﻿# Registro de QA
 
+## 2026-09-16 — Agenda en lenguaje normal y fallo de IA visible
+
+- `tests/test_agenda_orders.py`: **10 pruebas OK**. Parseo de «añade / agrega / pon /
+  créame / programa un trabajo o una cita para mañana a las 12»; cliente escrito
+  después de la fecha; orden sin fecha que pregunta solo el día; y que factura,
+  gasto, alta de cliente y consulta de agenda siguen sin caer en la agenda.
+- Conversación sobre base de datos real: la fecha se conserva y se pregunta el
+  cliente; «Marta López» crea el trabajo a las 12:00 y no lo duplica al repetirlo;
+  un «sí» no crea nada ni inventa un cliente; la descripción sobrevive a la
+  pregunta; y «cuánto llevo facturado» no se toma por un nombre.
+- Fallo propio cazado por estas pruebas: «para cambiar el termo» creaba un cliente
+  llamado «cambiar». Corregido descartando infinitivos en minúscula y cubierto.
+- `test_field_workflow.py`: **8 pruebas OK**, con una nueva que comprueba que el
+  último fallo del proveedor de IA aparece en Ajustes, en ámbar y sin claves.
+- Suites del chat y del cerebro local (conversación, simulación de cliente,
+  intención, aprendizaje, campo, factura local y ledger): **98 pruebas OK**.
+- Regresión completa: **904 pruebas Python en 229,7 s, OK**. Ruff, puerta documental
+  y `git diff --check` verdes.
+- No probado: la clave de Anthropic (este equipo no tiene credenciales ni `ant`), el
+  recorrido visual de Ajustes con un fallo real y la agenda por WhatsApp real.
+
 ## 2026-09-16 — El número de factura salía del importe
 
 - Fallo encontrado al leer una factura de ejemplo con el motor recién publicado:

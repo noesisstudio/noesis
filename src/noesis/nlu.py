@@ -99,6 +99,77 @@ HELP = "__help__"
 NEED_INVOICE = "__need_invoice__"
 NEED_USER_INVITE = "__need_user_invite__"
 NEED_REVIEW = "__need_review__"
+NEED_DATE = "__need_date__"
+# Un trabajo necesita cliente en la base de datos. Cuando la orden trae la fecha
+# pero no el cliente, se pregunta solo eso en vez de descartar toda la frase.
+NEED_JOB_CLIENT = "__need_job_client__"
+
+# «Añade un trabajo para mañana a las 12» era una orden corriente que no se
+# entendía: solo se reconocían agenda/apunta/cita/reserva y siempre con cliente.
+_AGENDA_DIRECT = r"\b(?:agenda|agendame|agendar|apunta|apuntame|apuntar|cita|citas|reserva|reservar)\b"
+_AGENDA_VERB = (
+    r"\b(?:agenda\w*|apunta\w*|anade|anadir|anademe|agrega\w*|pon|ponme|poner|"
+    r"crea\w*|programa\w*|mete|meter|reserva\w*|afegeix|afegir|posa|posar)\b"
+)
+_AGENDA_NOUN = r"\b(?:trabajo|trabajos|treball|treballs|cita|citas|visita|visites|visitas|servicio|aviso|faena|encargo)\b"
+# Palabras con las que empieza una fecha: «para mañana» no nombra a un cliente.
+_AGENDA_NOT_A_NAME = (
+    r"^(?:hoy|manana|dema|pasado|el|la|los|las|proxim\w*|este|esta|lunes|martes|"
+    r"miercoles|jueves|viernes|sabado|domingo|a\s+las|por\s+la|de\s+la|dia|"
+    r"semana|mes|un|una|\d)"
+)
+
+
+def _is_agenda_order(norm: str) -> bool:
+    if re.search(_AGENDA_NOUN, norm) and re.search(_AGENDA_VERB, norm):
+        return True
+    return bool(re.search(_AGENDA_DIRECT, norm))
+
+
+def _looks_like_task(value: str) -> bool:
+    """«para cambiar el termo» describe el trabajo; «para Marta» es el cliente.
+
+    Un infinitivo en minúscula es tarea. La minúscula importa: «Oscar» también
+    termina en -ar y es un nombre, así que una palabra capitalizada nunca se
+    descarta por su terminación.
+    """
+    first = value.strip().split(" ")[0] if value.strip() else ""
+    if not first or first[:1].isupper():
+        return False
+    return bool(re.fullmatch(r"\w{3,}(?:ar|er|ir)(?:se)?", _norm(first)))
+
+
+def _agenda_client(text: str) -> str | None:
+    """Nombre tras «a/con/para» que no sea una fecha, una tarea ni el sustantivo."""
+    for match in re.finditer(
+        r"\b(?:a|con|para|per\s+a)\s+(.+?)"
+        r"(?=\s+(?:hoy|mañana|demà|pasado|el|la|los|las|próximo|proxima|a las|por la|en|para|de)\b|[,;]|$)",
+        text, re.I,
+    ):
+        candidate = _limpiar_cliente(match.group(1))
+        folded = _norm(candidate)
+        if not candidate or len(candidate) > 60 or not folded:
+            continue
+        if re.match(_AGENDA_NOT_A_NAME, folded) or re.search(_AGENDA_NOUN, folded):
+            continue
+        if _looks_like_task(candidate) or not re.search(r"[a-z]", folded):
+            continue
+        return candidate
+    return None
+
+
+def _agenda_description(text: str, cliente: str | None) -> str:
+    """Primer «para …» que describa una tarea; se corta en el siguiente «para»."""
+    for match in re.finditer(r"\b(?:para|de)\s+(.+?)(?=\s+para\b|\s+en\s+|[,;]|$)", text, re.I):
+        value = match.group(1).strip()
+        folded = _norm(value)
+        if (not value or value == cliente or len(value) > 200
+                or re.match(_AGENDA_NOT_A_NAME, folded)
+                or re.search(_AGENDA_NOUN, folded)):
+            continue
+        if _looks_like_task(value) or value != cliente:
+            return value
+    return "Trabajo"
 
 
 def safety_refusal(text: str) -> str | None:
@@ -386,26 +457,29 @@ def parse(text: str) -> tuple[str, dict] | None:
                 args["iva"] = int(rate.group(1))
             return ("registrar_gasto", args)
 
-    # --- Agenda: "agenda a Marta el jueves por la mañana en Badalona"
-    if re.search(r"\b(agenda|agendame|apunta|apuntame|cita|reserva)\b", norm):
+    # --- Agenda: «agenda a Marta el jueves por la mañana en Badalona» y también
+    # «añade un trabajo para mañana a las 12», que antes no se entendía.
+    if _is_agenda_order(norm):
         fecha = parse_date(text)
-        # Nombre tras "a/con/para": 1ª palabra siempre, 2ª solo si va en mayúscula
-        # (así "Marta el jueves" captura "Marta", no "Marta el").
-        cm = re.search(r"\b(?:agenda|agendame|apunta|apuntame|cita|reserva)\s+(?:a|con|para)\s+(.+?)(?=\s+(?:hoy|mañana|demà|el|pasado|a las|por la|para|en)\b|$)", text, re.I)
-        cliente = None
-        if cm:
-            cliente = cm.group(1)
-            cliente = cliente.strip()
+        cliente = _agenda_client(text)
         zona = None
         zm = re.search(r"\ben\s+([A-Za-záéíóúñ ]+)$", text.strip())
         if zm:
             zona = zm.group(1).strip()
+        descripcion = _agenda_description(text, cliente)
         if cliente and fecha:
-            description = re.search(r"\s+para\s+(.+?)(?=\s+en\s+|$)", text, re.I)
             return ("agendar_trabajo", {
-                "cliente": cliente, "descripcion": description.group(1).strip() if description else "Trabajo", "fecha_hora": fecha,
+                "cliente": cliente, "descripcion": descripcion, "fecha_hora": fecha,
                 **({"zona": zona} if zona else {}),
             })
+        if fecha:
+            # La fecha se conserva: solo falta a quién, y eso se pregunta.
+            return (NEED_JOB_CLIENT, {
+                "fecha_hora": fecha, "descripcion": descripcion,
+                **({"zona": zona} if zona else {}),
+            })
+        if cliente:
+            return (NEED_DATE, {"cliente": cliente})
         return (NEED_REVIEW, {"reply": "Me falta el cliente o una fecha válida. Dime, por ejemplo: «agenda a Marta López mañana a las 10 para reparar la caldera». No he creado ninguna cita."})
 
     # --- Ver agenda de hoy

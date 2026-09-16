@@ -546,6 +546,10 @@ def page(request: Request, business_id: int, page: str):
         context["ai_external_preference"] = (
             ai_setting.get("mode") != "disabled"
         )
+        # Un fallo del proveedor solo se veía en el chat como «la IA avanzada no
+        # está disponible». Aquí se dice qué falló: clave, modelo o límite.
+        context["ai_last_error"] = str(ai_setting.get("last_error") or "").strip()
+        context["ai_last_checked_at"] = ai_setting.get("last_checked_at")
         context["assistant_memories"] = db.list_memories(business_id)
         context["automation_permissions"] = db.automation_catalog(business_id)
         context["automation_mode_labels"] = db.AUTOMATION_MODE_LABELS

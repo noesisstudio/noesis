@@ -208,6 +208,26 @@ class FieldWorkflowTestCase(unittest.TestCase):
             db.integration_setting(self.other["id"], "banking"), None
         )
 
+    def test_the_last_ai_failure_is_visible_in_settings(self):
+        # Un fallo del proveedor solo se veía en el chat como «la IA avanzada no
+        # está disponible»: no había forma de saber si era la clave, el modelo o
+        # el límite. Ajustes muestra ahora el tipo de error, sin datos ni claves.
+        from unittest.mock import patch
+
+        from noesis import config
+
+        db.update_integration_setting(self.business["id"], "ai_external", "enabled")
+        db.record_integration_result(self.business["id"], "ai_external", "NotFoundError")
+        with patch.object(config, "ANTHROPIC_API_KEY", "sk-ant-de-prueba"):  # pragma: allowlist secret
+            catalog = {item["key"]: item for item in db.integration_catalog(
+                self.business["id"]
+            )}
+        ai = catalog["ai_external"]
+        self.assertEqual(ai["state"], "connected")
+        self.assertIn("NotFoundError", ai["detail"])
+        self.assertEqual(ai["last_error"], "NotFoundError")
+        self.assertEqual(ai["status_tone"], "amber")
+
     def test_operational_health_explains_business_queues(self):
         message = db.enqueue_whatsapp_message(
             business_id=self.business["id"], to_phone="34600111222",

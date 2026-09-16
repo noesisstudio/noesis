@@ -1,5 +1,24 @@
 # Mapa de código
 
+## Agenda por lenguaje natural y estado de la IA — 16-sep
+
+`nlu.py`: `_is_agenda_order` acepta verbo + sustantivo («añade un trabajo») además
+de los verbos directos; `_agenda_client` descarta fechas, el propio sustantivo y las
+tareas (`_looks_like_task`: infinitivo en minúscula, para no confundir «cambiar» con
+un nombre y respetar «Oscar»); `_agenda_description` toma el «para/de …» correcto
+cortando en el siguiente «para». Constantes nuevas `NEED_DATE` y `NEED_JOB_CLIENT`.
+
+`web/chat.py`: `_handle` recibe el actor y, con `NEED_JOB_CLIENT`, guarda la fecha en
+la pendiente `agenda-cliente:{actor}` (30 min) y pregunta el cliente;
+`_job_client_answer` acepta solo un nombre (rechaza sí/no y palabras de otras
+órdenes) y completa el trabajo con `agendar_trabajo`. `_human_when` traduce la fecha
+ISO a «mañana a las 12:00».
+
+`db.integration_catalog` añade al detalle de la IA su último fallo y lo pinta en
+ámbar; `routers/pages.py` pasa `ai_last_error`/`ai_last_checked_at` a `ajustes.html`,
+que lo muestra bajo el interruptor. El catálogo, por sí solo, no se dibuja en ninguna
+pantalla: lo consume `value_ledger`.
+
 ## Lectura y revisión de documentos — 16-sep
 
 `documents/local_reader.py`: lectura determinista del texto de un documento, sin red.

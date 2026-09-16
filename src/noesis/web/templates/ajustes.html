@@ -812,6 +812,17 @@
           onchange="saveAiPreference(this)">
       </label>
       <div id="ai-preference-msg" class="meta" role="status"></div>
+      {% if ai_last_error %}
+      {# Sin esto, un fallo del proveedor solo se veía en el chat como «no está
+         disponible» y no había forma de saber si era la clave, el modelo o el límite. #}
+      <p class="meta" style="margin-top:8px">
+        ⚠️ La ayuda avanzada falló en su último intento: <b>{{ ai_last_error }}</b>{% if ai_last_checked_at %}
+        <span class="muted">({{ ai_last_checked_at }})</span>{% endif %}.
+        Bynoesis siguió funcionando con su cerebro local y no dejó nada a medias.
+        Si se repite, revisa en el servidor la clave del proveedor, el modelo
+        configurado y el saldo de esa cuenta.
+      </p>
+      {% endif %}
     </div>
   </div>
 

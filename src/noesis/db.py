@@ -2080,6 +2080,13 @@ def integration_catalog(business_id: int) -> list[dict]:
                 f"Quedan {credits['remaining']} de {credits['limit']} consultas este mes"
                 if active else "El cerebro local sigue funcionando"
             )
+            # Sin esto, un fallo del proveedor solo se veía en el chat como «la IA
+            # avanzada no está disponible» y no había forma de saber si era la
+            # clave, el modelo o el límite. Es el tipo de error, sin datos ni claves.
+            last_error = str(setting.get("last_error") or "").strip()
+            if active and last_error:
+                detail += f" · Último fallo del proveedor: {last_error}"
+                tone = "amber"
         elif key == "email":
             active = available
             state = "connected" if active else "unavailable"

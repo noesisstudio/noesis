@@ -64,7 +64,10 @@ MODEL_OUTPUT_USD_PER_MTOK = float(
 # Modelo BARATO para el respaldo del chat (cuando el cerebro local no entiende la
 # frase). Haiku minimiza el coste: el 90% se resuelve gratis en local y solo lo
 # realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
-FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
+# Identificador sin sufijo de fecha: es la forma vigente del modelo. Una versión
+# fechada puede dejar de resolverse y entonces toda llamada devuelve 404, que en el
+# chat se ve como «la IA avanzada no está disponible».
+FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5")
 # Lectura de facturas, tickets y extractos. Por defecto el mismo modelo barato; si
 # en el piloto lee mal documentos reales se puede subir a uno mayor sin tocar código.
 EXTRACTION_MODEL = os.getenv("NOESIS_EXTRACTION_MODEL", "").strip() or FALLBACK_MODEL

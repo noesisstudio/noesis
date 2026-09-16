@@ -1,5 +1,20 @@
 # Tareas vivas
 
+## Agenda y estado de la IA — 16-sep
+
+- [x] Órdenes de agenda en lenguaje normal; fecha conservada y cliente preguntado.
+- [x] Último fallo del proveedor de IA visible en Ajustes.
+- [x] Modelo de respaldo sin sufijo de fecha en código y `.env.example`.
+- [ ] **Founder: Railway no está desplegando.** Producción sigue en `5a597a0`
+  después de varias subidas. Revisar Deployments y el enlace con GitHub.
+- [ ] Founder: comprobar la clave de Anthropic contra
+  `https://api.anthropic.com/v1/models/claude-haiku-4-5` y corregir
+  `NOESIS_FALLBACK_MODEL` en Railway si tiene el identificador con fecha.
+- [ ] Tras desplegar: repetir «añade un trabajo para mañana a las 12» en la web y en
+  WhatsApp, y mirar Ajustes para ver si queda algún fallo de IA registrado.
+- [ ] Ampliar la agenda a rangos («de 9 a 11»), recurrencias y cambio de cita; hoy
+  solo se crea un trabajo con fecha y hora.
+
 ## Lectura y revisión de documentos por WhatsApp — 16-sep
 
 - [x] Una sola lectura por documento (IA + texto local) con desacuerdos visibles.

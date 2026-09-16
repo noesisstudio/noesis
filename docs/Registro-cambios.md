@@ -1,5 +1,36 @@
 ﻿# Registro de cambios
 
+## 2026-09-16 — Agenda en lenguaje normal y el fallo de la IA, visible
+
+Objetivo: el founder envía «añade un trabajo para mañana a las 12» y recibe «no he
+sabido interpretar esa frase y ahora mismo la IA avanzada no está disponible». Dos
+problemas distintos en la misma pantalla.
+
+**Agenda.** El cerebro local solo reconocía agenda/apunta/cita/reserva y exigía
+cliente en la misma frase. Ahora `nlu.py` admite además añade, agrega, pon, crea,
+programa y mete con trabajo, cita, visita, servicio o aviso; distingue «para mañana»
+(fecha) de «para Marta» (cliente) y «para cambiar el termo» (tarea, por el
+infinitivo en minúscula: «Oscar» sigue siendo un nombre). Como la base de datos
+exige cliente, cuando la orden trae fecha pero no cliente se devuelve
+`NEED_JOB_CLIENT`: `web/chat.py` guarda la fecha entendida en una acción pendiente
+por actor (30 minutos) y pregunta solo el nombre; responder «Marta López» crea el
+trabajo. Un «sí» nunca lo completa, y una orden distinta sigue su camino.
+
+**IA.** El mensaje de disculpa solo aparece cuando la llamada al proveedor se
+intentó y falló, pero ninguna pantalla decía por qué. `db.integration_catalog` y
+Ajustes muestran ahora el último fallo (tipo de error, sin datos ni claves) y
+`routers/pages.py` lo pasa a la plantilla. Además, el modelo de respaldo estaba
+configurado como `claude-haiku-4-5-20251001`: la referencia oficial de la API usa
+identificadores sin sufijo de fecha, y una versión fechada que deja de resolverse
+devuelve 404 en todas las llamadas. Corregido en `config.py` y `.env.example` a
+`claude-haiku-4-5`; **si la variable está puesta en Railway, manda la de Railway**.
+
+Pruebas: `tests/test_agenda_orders.py` (10 casos: parseo de las variantes, cliente
+frente a tarea, conversación completa en base de datos real, el «sí» que no
+completa y la orden ajena que no se convierte en nombre) y una regresión nueva en
+`test_field_workflow.py` para el fallo visible en Ajustes. Riesgo: medio-bajo; toca
+el cerebro local y una pantalla. Sin migración. Rollback: revertir este commit.
+
 ## 2026-09-16 — «TOTAL FACTURA 508,20» ya no numera la factura
 
 Objetivo: corregir un fallo encontrado al leer una factura de ejemplo con el motor
