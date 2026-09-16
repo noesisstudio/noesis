@@ -1,5 +1,25 @@
 # Tareas vivas
 
+## Modelo económico y canal comercial — 16-sep
+
+- [x] Modelo con bajas, vida del cliente, LTV, coste de canal y caja a 36 meses,
+  apoyado en los costes por plan de julio: [[Canal-comercial-y-comisiones]].
+- [ ] **Founder: aprobar o corregir la estructura de comisión propuesta** (una
+  mensualidad al alta más 10 % durante doce meses, con devolución si la cuenta cae
+  antes del cuarto mes). Sin esta aprobación no se promete nada a nadie ni se
+  construye la atribución, según la decisión del 2026-08-07.
+- [ ] Founder: decidir si se cobra cuota de implantación de 99 €, bonificada en
+  contratación anual. Es lo que hace que captar no consuma caja.
+- [ ] Founder: fijar los tramos por volumen para gestorías, distintos del porcentaje
+  individual de un comercial.
+- [ ] Preguntar a la abogada por la calificación como contrato de agencia (Ley
+  12/1992) y la indemnización por clientela antes de firmar con ningún comercial.
+- [ ] Tras aprobar la estructura: código de referido en el alta, origen guardado en
+  la cuenta e informe mensual de liquidación por comercial. Hoy no existe nada de eso
+  en `src/noesis/`.
+- [ ] Medir en el piloto el churn real a 30/60/90 días y los minutos de soporte por
+  cuenta nueva; son los dos supuestos que sostienen todo el modelo.
+
 ## Agenda y estado de la IA — 16-sep
 
 - [x] Órdenes de agenda en lenguaje normal; fecha conservada y cliente preguntado.

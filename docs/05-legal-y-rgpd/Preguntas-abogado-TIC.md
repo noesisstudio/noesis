@@ -214,6 +214,21 @@ software «Noesis» que operan en España?**
 - Buena respuesta: **clases concretas** (software y servicios en la nube) y una
   valoración del riesgo, o la derivación a un agente de marcas.
 
+## I · Vender con comerciales a comisión
+
+**24. Vamos a pagar comisión a comerciales autónomos que nos traigan clientes. ¿Es un
+contrato de agencia, y pueden reclamarnos indemnización por clientela al terminarlo?**
+*(clave)*
+- Contexto: propuesta todavía sin firmar, en
+  [[Canal-comercial-y-comisiones]]: una mensualidad al alta más un 10 % durante doce
+  meses, con devolución si la cuenta se da de baja antes del cuarto mes. Se liquida
+  contra factura del comercial y solo sobre lo cobrado. También habrá gestorías que
+  traigan carteras enteras de autónomos.
+- Buena respuesta: **qué hace que un acuerdo se califique como agencia en la práctica**,
+  con independencia del título del contrato; si cabe redactarlo como mediación mercantil
+  sin ese efecto; y qué orden de magnitud tendría la indemnización por clientela de la
+  Ley 12/1992 con estas cifras.
+
 ---
 
 ## Lo administrativo, antes de despedirte
@@ -232,6 +247,8 @@ software «Noesis» que operan en España?**
 - [ ] Quién garantiza la base jurídica de los mensajes al cliente final.
 - [ ] **Plazo concreto** para avisar de un nuevo subencargado antes de activar Groq.
 - [ ] Lista de lo que hay que rehacer al pasar a **S.L.**
+- [ ] Criterio sobre si el acuerdo con comerciales es **contrato de agencia**, y con qué
+  redacción se evita la indemnización por clientela.
 - [ ] Registro de actividades **archivado**, no como plantilla.
 - [ ] La lista de lo que el informe **no** cubre.
 

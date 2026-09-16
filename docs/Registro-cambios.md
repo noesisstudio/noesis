@@ -1,5 +1,36 @@
 ﻿# Registro de cambios
 
+## 2026-09-16 — El modelo económico incorpora bajas, caja y canal comercial
+
+Objetivo: el founder no está satisfecho con el modelo financiero y quiere añadir
+comerciales. El análisis del 15/07/2026 calcula bien lo que cuesta servir una cuenta,
+pero no cuánto cuesta conseguirla, cuánto dura ni cuánta caja hace falta hasta el
+break-even; y asume un único modo de vender, el propio founder.
+
+`docs/06-negocio-y-finanzas/Canal-comercial-y-comisiones.md` añade esas capas sin
+tocar los precios adoptados ni los costes por plan: reproduce primero el punto de
+partida (ARPU 43,00 €, contribución 29,36 €, break-even 120 cuentas) para apoyarse en
+[[Unit-economics-y-cerebro-interno]] en lugar de sustituirlo, y sobre él calcula vida
+media, LTV, cinco estructuras de comisión, el efecto de una cuota de implantación y la
+curva de caja a 36 meses. El modelo interactivo está publicado en
+https://claude.ai/artifact/TzMmpTQRpCoaAKFSXANSNt.
+
+Tres hallazgos cambian la estrategia de canal: un comercial a sueldo exige 280 cuentas
+activas suyas solo para cubrirse, así que el canal debe ser comisión pura o prescriptor;
+el soporte cuesta más del triple que la infraestructura en el plan Autónomo, de modo que
+el canal no escala mientras el soporte por cuenta no baje; y una cuota de implantación
+de 99 € cubre la comisión del alta y convierte la captación en caja neutra.
+
+**Nada está decidido.** La decisión del 2026-08-07 reserva al founder porcentaje,
+duración, devoluciones y liquidación, así que el documento es una propuesta. Quedan dos
+riesgos abiertos: la posible calificación como contrato de agencia, con su indemnización
+por clientela, que pasa a las preguntas para la abogada; y que hoy no existe en
+`src/noesis/` forma de atribuir un alta a un comercial, que no se construirá hasta que
+la estructura esté aprobada.
+
+Cambio solo de documentación: sin efecto en `src/noesis/`, sin migración y sin pruebas
+nuevas. Las cifras se recalcularon con el mismo método del notebook de julio.
+
 ## 2026-09-16 — Agenda en lenguaje normal y el fallo de la IA, visible
 
 Objetivo: el founder envía «añade un trabajo para mañana a las 12» y recibe «no he
