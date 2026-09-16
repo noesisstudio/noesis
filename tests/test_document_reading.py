@@ -171,6 +171,20 @@ class LocalReaderTests(unittest.TestCase):
         self.assertEqual([doc["pages"] for doc in result["documents"]], [[1, 1], [2, 2], [3, 3]])
         self.assertEqual([float(doc["total"]) for doc in result["documents"]], [121.0, 242.0, 363.0])
 
+    def test_total_factura_does_not_become_the_invoice_number(self):
+        # Con una factura real del founder: «FACTURA N 2026-118» no se reconocía
+        # (el patrón exigía la «º» voladita) y entonces la palabra «FACTURA» de
+        # «TOTAL FACTURA 508,20» numeraba el documento como «508».
+        fields = read_fields(
+            "SUMINISTROS LEVANTE SA\nCIF A81948077\nFACTURA N 2026-118\n"
+            "Fecha 14/09/2026\nBase imponible 420,00\nIVA 21% 88,20\n"
+            "TOTAL FACTURA 508,20"
+        )
+        self.assertEqual(fields["number"], "2026-118")
+        self.assertEqual(float(fields["total"]), 508.2)
+        solo_total = read_fields("FERRETERIA\nCIF A81948077\nTOTAL FACTURA 508,20")
+        self.assertIsNone(solo_total["number"])
+
     def test_unlabelled_amounts_are_marked_as_a_guess_that_blocks_confirmation(self):
         fields = read_fields("Material 10,00\nMano de obra 25,00")
         self.assertEqual(fields["guessed"], ["total"])

@@ -1,5 +1,22 @@
 ﻿# Registro de cambios
 
+## 2026-09-16 — «TOTAL FACTURA 508,20» ya no numera la factura
+
+Objetivo: corregir un fallo encontrado al leer una factura de ejemplo con el motor
+recién publicado. El número salía «508». Dos causas encadenadas: la etiqueta
+«FACTURA N 2026-118» no se reconocía porque el patrón exigía la «º» voladita, y al
+no encontrar número, la palabra «factura» de «TOTAL FACTURA 508,20» servía de
+etiqueta y capturaba la parte entera del importe.
+
+Área: `documents/local_reader.py`. Se acepta «N» sin voladita, se ignora la etiqueta
+cuando viene precedida de total, importe, suma o subtotal, y se descarta cualquier
+candidato que continúe en «,20», porque entonces es una cifra. Sin cambios en la
+conversación, la contabilidad ni el esquema.
+
+Pruebas: regresión nueva en `test_document_reading.py` con la factura que falló y
+con un texto que solo tiene «TOTAL FACTURA», donde el número debe quedar vacío.
+Riesgo: bajo, lectura local. Rollback: revertir este commit.
+
 ## 2026-09-16 — Documentos por WhatsApp: una lectura, y correcciones en el chat
 
 Objetivo: el founder reporta que el motor principal se atasca siempre en el mismo

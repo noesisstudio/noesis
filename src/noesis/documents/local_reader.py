@@ -80,13 +80,15 @@ _INCLUDED_TAX = re.compile(r"\b(?:iva|impuestos)\s+(?:incluido|incluidos|inclos|
 _ISSUE_CONTEXT = re.compile(r"\b(?:fecha|data|emision|emisio|expedicion|expedicio|date|fra\.?|factura)\b")
 _DUE_CONTEXT = re.compile(r"\b(?:venc\w*|vto\.?|due|fecha\s+limite|pagar\s+antes|forma\s+de\s+pago\s+hasta)\b")
 _NUMBER_LABEL = re.compile(
-    r"(?:\bfactura(?:\s+simplificada|\s+rectificativa)?\s*(?:n\.?\s*[o°]\.?|num(?:ero)?\.?|#)?"
-    r"|\bfra\.?\s*(?:n\.?\s*[o°]\.?)?|\binvoice\s*(?:no\.?|number|#)?"
-    r"|\b(?:ticket|tiquet)\s*(?:n\.?\s*[o°]\.?|num(?:ero)?\.?|#)"
+    r"(?:\bfactura(?:\s+simplificada|\s+rectificativa)?\s*(?:n\.?\s*[o°]?\.?|num(?:ero)?\.?|#)?"
+    r"|\bfra\.?\s*(?:n\.?\s*[o°]?\.?)?|\binvoice\s*(?:no\.?|number|#)?"
+    r"|\b(?:ticket|tiquet)\s*(?:n\.?\s*[o°]?\.?|num(?:ero)?\.?|#)"
     r"|\bn\.?\s*[o°]\.?\s*(?:de\s+)?(?:factura|fra|documento|document|ticket|tiquet)"
     r"|\bnum(?:ero)?\.?\s*(?:de\s+)?(?:factura|fra|documento|document|ticket))"
     r"\s*[:#.]?\s*([a-z0-9][a-z0-9/_.-]{0,28})"
 )
+# «TOTAL FACTURA 508,20» no numera nada: ahí «factura» va detrás de un importe.
+_TOTAL_BEFORE_LABEL = re.compile(r"(?:total|importe|import|suma|subtotal)\s*$")
 _GENERIC_NUMBER_LABEL = re.compile(r"(?:\bn\.?\s*[o°]\.?|\bnum(?:ero)?\.?|\bref(?:erencia)?\.?)\s*[:#]\s*([a-z0-9][a-z0-9/_.-]{0,28})")
 _STATEMENT_WORDS = re.compile(
     r"\b(?:extracto|extracte|relacion\s+de\s+facturas|relacio\s+de\s+factures|estado\s+de\s+cuenta"
@@ -383,6 +385,11 @@ def _document_number(lines: list[str]) -> str | None:
             for match in pattern.finditer(folded):
                 raw = match.group(1).strip("./-_")
                 if not re.search(r"\d", raw) or len(raw) < 1:
+                    continue
+                if _TOTAL_BEFORE_LABEL.search(folded[:match.start()]):
+                    continue
+                # Un candidato que continúa en «,20» es la parte entera de un importe.
+                if re.match(r"[.,]\d", folded[match.end(1):match.end(1) + 2]):
                     continue
                 if _NUMERIC_DATE.fullmatch(raw) or _ISO_DATE.fullmatch(raw):
                     continue
