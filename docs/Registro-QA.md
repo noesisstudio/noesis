@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-16 — El número de factura salía del importe
+
+- Fallo encontrado al leer una factura de ejemplo con el motor recién publicado:
+  «FACTURA N 2026-118» no se reconocía (el patrón exigía la «º» voladita) y la
+  palabra «factura» de «TOTAL FACTURA 508,20» numeraba el documento como «508».
+- Regresión añadida con esa factura y con un texto que solo tiene «TOTAL FACTURA»,
+  donde el número debe quedar vacío. Comprobados a mano «FACTURA Nº: F-2026/0153»,
+  «FACTURA SIMPLIFICADA T-0098812» y «Factura n.º 41», que siguen leyéndose bien.
+- Dirigidas de lectura y WhatsApp: **34 pruebas OK**. Regresión completa: **893
+  pruebas Python en 225,2 s, OK**. Ruff y puerta documental verdes.
+
 ## 2026-09-16 — Lectura de documentos y revisión por WhatsApp
 
 - `tests/test_document_reading.py` y `tests/test_whatsapp_documents.py`: **33 pruebas
