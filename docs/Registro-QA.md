@@ -16,6 +16,20 @@
   `test_reliability_guards`: 38 OK. Ruff OK.
 - Suite completa antes del cambio: 823 OK (44 min en Windows). La pasada con el
   cambio está en marcha al cerrar esta entrada; se anota el resultado al terminar.
+- Camino real de lectura probado sin proveedor: respuesta cruda del modelo (JSON
+  entre ```), parseo y borrador; se comprueba además que el prompt pide los tres
+  campos nuevos y que las cifras cuadran (solo avisa de los NIF inventados).
+- `max_tokens` de la extracción sube de 600 a 700 por los campos añadidos: un
+  JSON cortado no se lee y dejaría el documento pendiente sin motivo.
+- Intento de prueba real contra Anthropic con una factura sintética: **no se pudo**.
+  La `ANTHROPIC_API_KEY` del `.env` local devuelve 401 (AuthenticationError). El
+  fallo se degrada bien: sin lectura, documento en «pendiente de revisar», sin
+  romper la pantalla. Falta repetirlo con una clave válida o en producción.
+- Revisión legal (RAT, contrato de encargado, política de privacidad y EIPD): el
+  alta no añade categoría de datos, destinatario ni finalidad; anotada en
+  `05-legal-y-rgpd/cumplimiento/Registro-de-evidencias.md`.
+- No ejecutado: lectura real contra Anthropic con una factura de verdad, ni la
+  pantalla en un navegador real.
 - No ejecutado: lectura real contra Anthropic con una factura de verdad (las
   pruebas parchean la extracción), ni la pantalla en un navegador real.
 ## 2026-09-16 — Agenda en lenguaje normal y fallo de IA visible

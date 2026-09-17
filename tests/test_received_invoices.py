@@ -391,6 +391,62 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
                 self.assertIn(foreign.status_code, {400, 403, 404})
         self.assertEqual(db.list_clients(self.other["id"]), [])
 
+    def test_model_answer_reaches_the_draft_with_the_contact_fields(self):
+        """Camino real de lectura: respuesta cruda del modelo -> borrador."""
+        respuesta = (
+            '```json\n{"number": "2026/041", "issued_on": "2026-09-16", '
+            '"due_on": null, "supplier": "Reformas Norte", '
+            '"supplier_nif": "B11111111", '
+            '"customer": "Comunidad de Propietarios El Pino", '
+            '"customer_nif": "H44444444", '
+            '"customer_address": "Avenida del Pino 21, 3o 2a\\n08840 '
+            'Viladecans (Barcelona)", '
+            '"customer_email": "Administracion@ElPino-ejemplo.es", '
+            '"customer_phone": "931 55 44 33", "base": 500, "vat_rate": 21, '
+            '"vat_amount": 105, "irpf_amount": 0, "total": 605, '
+            '"confidence": 94}\n```'
+        )
+
+        class _Bloque:
+            type = "text"
+            text = respuesta
+
+        class _Uso:
+            input_tokens = 1200
+            output_tokens = 180
+
+        class _Respuesta:
+            content = [_Bloque()]
+            usage = _Uso()
+
+        class _Mensajes:
+            def create(self, **kwargs):
+                _Mensajes.enviado = kwargs
+                return _Respuesta()
+
+        class _Cliente:
+            def __init__(self, **kwargs):
+                self.messages = _Mensajes()
+
+        with patch.object(config, "ANTHROPIC_API_KEY", "clave"), \
+                patch.object(extraction.anthropic, "Anthropic", _Cliente):
+            draft = extraction.extract_invoice(b"imagen", "image/png")
+
+        # Lo que se pide al modelo y lo que se entiende de su respuesta.
+        prompt = _Mensajes.enviado["messages"][0]["content"][1]["text"]
+        for clave in ("customer_address", "customer_email", "customer_phone"):
+            self.assertIn(clave, prompt)
+        self.assertEqual(
+            draft["customer_address"],
+            "Avenida del Pino 21, 3o 2a 08840 Viladecans (Barcelona)",
+        )
+        self.assertEqual(draft["customer_email"],
+                         "administracion@elpino-ejemplo.es")
+        self.assertEqual(draft["customer_phone"], "931554433")
+        self.assertEqual(draft["total"], 605)
+        # Las cifras cuadran: lo único que se avisa son los NIF inventados.
+        self.assertTrue(all("NIF" in issue for issue in draft["validation_issues"]))
+
     def test_validated_invoice_cleans_customer_contact_data(self):
         result = extraction._validated_invoice({
             "number": "F-4", "supplier": "Proveedor", "total": 121,
