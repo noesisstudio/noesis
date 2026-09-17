@@ -1,5 +1,15 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — Tareas vivas: dos pendientes que ya estaban hechos
+
+Al sincronizar los once commits del 17-sep, dos tareas contradecían al código y a
+producción. «Mostrar en Ajustes el último error del proveedor de IA» se abrió de
+nuevo como pendiente, pero `ajustes.html` lo enseña desde `aa0f402`. «Railway no está
+desplegando» quedó abierta aunque ese mismo commit se publicó tras el despliegue
+manual, y `/ready` responde hoy con `c48a0ca`. Se marcan como hechas con su
+referencia. Suite completa (938 pruebas), ruff y `check_project_truth.py` en verde.
+Solo documentación.
+
 ## 2026-09-17 — Modelo economico v3: el negocio como es
 
 Petición del founder: «hazlo más realista», sobre el libro que subió editado

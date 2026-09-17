@@ -42,8 +42,8 @@
   y comprobar que una frase libre deja de dar ese mensaje.
 - [ ] Founder: mandar una nota de voz en el asistente web y mirar si tu burbuja
   muestra el texto transcrito; si lo muestra, Groq funciona.
-- [ ] Mostrar en Ajustes el último error del proveedor de IA: hoy se guarda en
-  `integration_settings.last_error` y no se enseña en ninguna pantalla.
+- [x] Último error del proveedor de IA visible en Ajustes (hecho el 16-sep en
+  `aa0f402`: `routers/pages.py` lo pasa y `ajustes.html` lo muestra bajo el interruptor).
 
 ## Descargas en Excel — 17-sep
 
@@ -95,8 +95,8 @@
 - [x] Órdenes de agenda en lenguaje normal; fecha conservada y cliente preguntado.
 - [x] Último fallo del proveedor de IA visible en Ajustes.
 - [x] Modelo de respaldo sin sufijo de fecha en código y `.env.example`.
-- [ ] **Founder: Railway no está desplegando.** Producción sigue en `5a597a0`
-  después de varias subidas. Revisar Deployments y el enlace con GitHub.
+- [x] Railway vuelve a desplegar: `aa0f402` quedó publicado el 16-sep tras el
+  despliegue manual del founder.
 - [ ] Founder: comprobar la clave de Anthropic contra
   `https://api.anthropic.com/v1/models/claude-haiku-4-5` y corregir
   `NOESIS_FALLBACK_MODEL` en Railway si tiene el identificador con fecha.
