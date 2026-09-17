@@ -1,5 +1,26 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — Guía de primeros clientes, escalado a 5.000 y costes por etapa
+
+Objetivo: el founder quiere conseguir los primeros autónomos por boca a boca en su
+zona, empezar antes de constituir la empresa y tener una ruta de crecimiento con sus
+costes. `docs/06-negocio-y-finanzas/Ruta-a-5000-autonomos.html` reúne tres guías: los
+primeros cinco pilotos paso a paso (lista de 40 nombres, entrevista sobre el pasado,
+piloto de ocho semanas con fecha de fin y carta de intención); qué se puede hacer sin
+identidad legal y en qué orden constituir; y cinco etapas hasta 5.000 cuentas con
+canal, equipo y puerta de salida, más el gasto mensual de cada una.
+
+Se apoya en el Plan de 60 días, el Plan del primer euro, el runbook del piloto, los
+costes por cuenta de julio (3,72 € de media) y los modelos del 16 y 17 de septiembre.
+Dos cifras ordenan el crecimiento: con 5.000 cuentas y un 4 % de bajas hacen falta
+200 altas al mes solo para no encoger, y el soporte a 12 minutos por cuenta exigiría
+unas 8 personas frente a 3,5 a 4 minutos. Sueldos, caja por etapa, tiempos y embudo
+son estimaciones marcadas como tales. Publicada en
+https://claude.ai/artifact/6byvhGpxDJBq9NVx2q9XFh.
+
+La prospección de Lleida ciudad (OpenStreetMap) queda en `outputs/`, ignorada por git:
+contiene datos de contacto y no se versiona. Solo documentación.
+
 ## 2026-09-17 — Tareas vivas: dos pendientes que ya estaban hechos
 
 Al sincronizar los once commits del 17-sep, dos tareas contradecían al código y a

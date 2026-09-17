@@ -1,5 +1,18 @@
 # Tareas vivas
 
+## Primeros clientes — 17-sep
+
+- [x] Guía de primeros clientes, escalado y costes: `Ruta-a-5000-autonomos.html`.
+- [ ] Founder: confirmar la zona de arranque. Propuesta: pilotos en Lleida ciudad y
+  el Segrià (3) y en un pueblo a menos de 30 minutos (2); en la etapa 2, primero pueblos.
+- [ ] Founder: lista de 40 nombres y cinco cafés con fecha.
+- [ ] Founder: pregunta escrita a la asesoría sobre el piloto gratuito y el RD 1007/2023.
+- [ ] Founder: decidir el precio de fundador (propuesta: Negocio al precio de Autónomo
+  durante 12 meses).
+- [ ] Ampliar la prospección con búsqueda manual o la API oficial de Google Places; la
+  base de OpenStreetMap recoge 74 fichas y pocos oficios. Contactar en persona o por
+  presentación, no con mensajes comerciales sin consentimiento.
+
 ## Modelo economico v3 — 17-sep
 
 - [x] Libro realista: founder con coste, horas como límite, cohortes con bajas,

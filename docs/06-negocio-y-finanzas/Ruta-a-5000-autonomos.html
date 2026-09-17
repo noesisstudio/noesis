@@ -1,0 +1,538 @@
+<title>Ruta a 5.000 autónomos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#f2f5f4; --surface:#ffffff; --surface-2:#e9efed;
+    --ink:#0d1b1d; --ink-2:#3a4f4d; --muted:#667b79;
+    --line:#d7e0dd; --line-strong:#b9c8c4;
+    --teal:#0d6560; --teal-soft:#e0eeeb;
+    --money:#1c6b4c; --loss:#a3412a;
+    --gold:#836411; --gold-soft:#f5eedb;
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0a1415; --surface:#111e1f; --surface-2:#172828;
+      --ink:#e7efec; --ink-2:#b0c2be; --muted:#829794;
+      --line:#213335; --line-strong:#2f4548;
+      --teal:#4fcbbd; --teal-soft:#132e2d;
+      --money:#5cc08c; --loss:#e07a5f;
+      --gold:#d3b263; --gold-soft:#2a2415;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0a1415; --surface:#111e1f; --surface-2:#172828;
+    --ink:#e7efec; --ink-2:#b0c2be; --muted:#829794;
+    --line:#213335; --line-strong:#2f4548;
+    --teal:#4fcbbd; --teal-soft:#132e2d;
+    --money:#5cc08c; --loss:#e07a5f;
+    --gold:#d3b263; --gold-soft:#2a2415;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;font-size:16px;line-height:1.6}
+  .wrap{max-width:900px;margin:0 auto;padding-left:20px;padding-right:20px;padding-block:40px 80px}
+  h1,h2,h3{font-family:"Newsreader",Georgia,serif;font-weight:600;text-wrap:balance;margin:0}
+  h1{font-size:clamp(2.1rem,5vw,3rem);line-height:1.08;letter-spacing:-.01em}
+  h2{font-size:clamp(1.55rem,3.4vw,2rem);line-height:1.15}
+  h3{font-size:1.15rem;line-height:1.3}
+  p{margin:0}
+  .eyebrow{font-size:.74rem;text-transform:uppercase;letter-spacing:.14em;color:var(--teal);font-weight:600}
+  .lede{color:var(--ink-2);font-size:1.1rem;max-width:62ch}
+  .num,td.n,th.n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  a{color:var(--teal)}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  header.top{display:flex;flex-direction:column;gap:14px;margin-bottom:26px}
+  .stamp{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:.84rem;border-top:1px solid var(--line);padding-top:12px}
+
+  nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:34px}
+  nav.toc a{font-size:.86rem;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 12px}
+  nav.toc a:hover{border-color:var(--teal)}
+  nav.toc .k{font-family:"IBM Plex Mono",monospace;color:var(--teal);margin-right:6px}
+
+  .today{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:46px;display:flex;flex-direction:column;gap:12px}
+  .today ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:8px 22px}
+  @media (max-width:640px){.today ul{grid-template-columns:1fr}}
+  .today li{font-size:.92rem;color:var(--ink-2);display:flex;gap:8px;align-items:baseline}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;position:relative;top:-1px}
+  .dot.ok{background:var(--money)} .dot.no{background:var(--loss)} .dot.wait{background:var(--gold)}
+  .today .punch{font-family:"Newsreader",Georgia,serif;font-size:1.2rem;color:var(--ink)}
+
+  section.part{margin-top:64px;display:flex;flex-direction:column;gap:18px}
+  .part-head{display:flex;flex-direction:column;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
+  .part-head .eyebrow{color:var(--muted)}
+  .dek{color:var(--ink-2);max-width:66ch}
+  .prose p{max-width:68ch;color:var(--ink-2)}
+  .prose p + p{margin-top:10px}
+  .prose strong{color:var(--ink)}
+
+  ol.steps{list-style:none;margin:8px 0 0;padding:0;counter-reset:paso;display:flex;flex-direction:column;gap:26px}
+  ol.steps > li{counter-increment:paso;display:grid;grid-template-columns:48px 1fr;gap:14px}
+  ol.steps > li::before{content:counter(paso);font-family:"Newsreader",Georgia,serif;font-size:1.9rem;line-height:1;color:var(--teal);font-weight:600}
+  .step{display:flex;flex-direction:column;gap:9px;min-width:0}
+  .step p{color:var(--ink-2);max-width:68ch}
+  .step p strong{color:var(--ink)}
+  .step ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--ink-2);max-width:68ch}
+  .step ul strong{color:var(--ink)}
+
+  .script{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:0 var(--radius) var(--radius) 0;padding:14px 16px;font-family:"Newsreader",Georgia,serif;font-size:1.05rem;line-height:1.55;color:var(--ink)}
+  .script .who{display:block;font-family:"IBM Plex Sans",sans-serif;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;font-weight:600}
+
+  .note{background:var(--gold-soft);border-left:3px solid var(--gold);border-radius:0 var(--radius) var(--radius) 0;padding:13px 16px;font-size:.92rem;color:var(--ink-2)}
+  .note strong{color:var(--ink)}
+  .note.calm{background:var(--teal-soft);border-left-color:var(--teal)}
+
+  .tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+  table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:560px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line-strong);vertical-align:bottom}
+  tbody tr:last-child td{border-bottom:none}
+  tr.total td{font-weight:600;border-top:1px solid var(--line-strong);background:var(--surface-2)}
+  tr.result td{font-weight:600}
+  .pos{color:var(--money)} .neg{color:var(--loss)}
+  td .sub{display:block;font-size:.78rem;color:var(--muted);font-weight:400}
+
+  .funnel{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  @media (max-width:640px){.funnel{grid-template-columns:repeat(3,1fr)}}
+  .funnel div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px}
+  .funnel b{font-family:"IBM Plex Mono",monospace;font-size:1.4rem;color:var(--teal);font-weight:600}
+  .funnel span{font-size:.76rem;color:var(--ink-2);line-height:1.3}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:700px){.twocol{grid-template-columns:1fr}}
+  .box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+  .box h3{font-size:1.05rem}
+  .box ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.92rem;color:var(--ink-2)}
+  .box.yes{border-top:3px solid var(--money)} .box.wait{border-top:3px solid var(--gold)}
+
+  .stages{display:flex;flex-direction:column;gap:18px}
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .stage-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;padding:14px 18px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+  .stage-head h3{font-size:1.25rem}
+  .stage-head .range{font-family:"IBM Plex Mono",monospace;font-size:.84rem;color:var(--teal);font-weight:600}
+  .stage-body{padding:14px 18px 16px;display:grid;grid-template-columns:150px 1fr;gap:9px 16px}
+  @media (max-width:640px){.stage-body{grid-template-columns:1fr;gap:2px 0}.stage-body dd{margin-bottom:10px}}
+  .stage-body dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding-top:3px}
+  .stage-body dd{margin:0;font-size:.93rem;color:var(--ink-2)}
+  .stage-body dd strong{color:var(--ink)}
+  .gate{grid-column:1/-1;margin-top:6px;padding:10px 12px;border-radius:8px;background:var(--teal-soft);font-size:.9rem;color:var(--ink)}
+  .gate b{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--teal);margin-right:6px}
+
+  .truths{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:700px){.truths{grid-template-columns:1fr}}
+  .truth{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+  .truth .big{font-family:"IBM Plex Mono",monospace;font-size:1.7rem;font-weight:600;color:var(--loss);line-height:1.1}
+  .truth p{font-size:.92rem;color:var(--ink-2)}
+
+  ul.donts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+  ul.donts li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 14px;font-size:.94rem;color:var(--ink-2)}
+  ul.donts li strong{color:var(--ink)}
+
+  .week{background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:22px 22px;margin-top:64px;display:flex;flex-direction:column;gap:12px}
+  .week h2{color:var(--paper)}
+  .week ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+  .week li{color:var(--paper)}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.84rem;max-width:80ch;display:flex;flex-direction:column;gap:8px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Bynoesis · clientes y crecimiento</span>
+    <h1>Del primer café a 5.000 autónomos</h1>
+    <p class="lede">Cómo conseguir los primeros cinco sin tener todavía la empresa montada, cómo pasar de uno a 5.000 por etapas y cuánto cuesta cada escalón. Parte de dónde estás hoy, no de un manual de startups.</p>
+    <div class="stamp">
+      <span>17 de septiembre de 2026</span>
+      <span>Precios 29 / 49 / 99 € + IVA</span>
+      <span>Las cifras marcadas como estimación son supuestos, no datos</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Partes de la guía">
+    <a href="#primeros"><span class="k">1</span>Los primeros cinco</a>
+    <a href="#antes"><span class="k">2</span>Vender antes de la empresa</a>
+    <a href="#escalar"><span class="k">3</span>De 1 a 5.000</a>
+    <a href="#costes"><span class="k">4</span>Lo que cuesta cada etapa</a>
+    <a href="#no"><span class="k">5</span>Lo que no hay que hacer</a>
+  </nav>
+
+  <div class="today">
+    <span class="eyebrow">Dónde estás hoy</span>
+    <ul>
+      <li><span class="dot ok"></span>Producto desplegado y con 938 pruebas en verde.</li>
+      <li><span class="dot ok"></span>Altas públicas cerradas, que es lo correcto por ahora.</li>
+      <li><span class="dot no"></span>Sin identidad legal que Meta o Stripe puedan verificar.</li>
+      <li><span class="dot no"></span>Verificación de empresa en Meta rechazada.</li>
+      <li><span class="dot wait"></span>Ningún cliente de pago; el piloto sigue pendiente.</li>
+      <li><span class="dot wait"></span>Modelo v3: 44 cuentas para equilibrar con tu retirada.</li>
+    </ul>
+    <p class="punch">Lo que falta no es código. Son cinco personas usándolo de verdad.</p>
+  </div>
+
+  <!-- ============ PARTE 1 ============ -->
+  <section class="part" id="primeros">
+    <div class="part-head">
+      <span class="eyebrow">Parte 1</span>
+      <h2>Los primeros cinco, paso a paso</h2>
+      <p class="dek">En esta fase no vendes un programa. Buscas cinco autónomos que te dejen ver cómo trabajan y te digan en qué falla Bynoesis. Si lo planteas así, casi todos te dicen que sí.</p>
+    </div>
+
+    <p class="prose"><span>Este es el embudo aproximado que conviene esperar. Es un orden de magnitud, no un dato medido: sirve para saber que <strong>40 nombres no es exagerar</strong>.</span></p>
+    <div class="funnel" role="list">
+      <div role="listitem"><b>40</b><span>nombres en la lista</span></div>
+      <div role="listitem"><b>20</b><span>cafés o llamadas</span></div>
+      <div role="listitem"><b>8</b><span>con problema de verdad</span></div>
+      <div role="listitem"><b>5</b><span>aceptan el piloto</span></div>
+      <div role="listitem"><b>3</b><span>lo usan solos</span></div>
+      <div role="listitem"><b>2</b><span>pagarían</span></div>
+    </div>
+
+    <ol class="steps">
+      <li><div class="step">
+        <h3>Elige una zona y dos oficios</h3>
+        <p>El producto sirve a cualquier autónomo de servicios, pero el piloto no. Concéntrate en <strong>tu comarca</strong> y en <strong>dos oficios</strong> para que los cinco pilotos se parezcan entre sí y los fallos se repitan. Así sabrás qué arreglar.</p>
+        <p>Recomendación: <strong>instaladores</strong> (fontanería, electricidad, climatización) y <strong>reformas</strong>. Son los que más presupuestos hacen, más facturas emiten y más cobros persiguen: el ciclo entero de Bynoesis en una semana normal.</p>
+      </div></li>
+
+      <li><div class="step">
+        <h3>Haz una lista de 40 nombres, de más cercano a más frío</h3>
+        <p>Por este orden, porque cada nivel cuesta el doble de convencer que el anterior:</p>
+        <ul>
+          <li><strong>Tu círculo.</strong> Todo el que haya trabajado en tu casa, en la de tus padres o en la de un amigo. Busca en tus correos y en WhatsApp las facturas y presupuestos de los últimos tres años.</li>
+          <li><strong>El círculo de tu círculo.</strong> Pregunta a diez conocidos: «¿a quién llamas cuando se te rompe algo?». Te darán nombres con una recomendación incluida.</li>
+          <li><strong>Los almacenes de material.</strong> Distribuidores de fontanería, electricidad y ferreterías industriales. Entre las 7 y las 9 de la mañana todo el oficio de la comarca pasa por ese mostrador, y el dueño los conoce a todos. Pídele que te presente a dos o tres.</li>
+          <li><strong>Google Maps.</strong> Busca «fontanero» o «electricista» más el nombre de tu pueblo. Los que tienen entre 5 y 30 reseñas, un móvil y ninguna web son justo tu cliente: pequeños, y el que contesta es el dueño.</li>
+          <li><strong>Plataformas de encargos.</strong> Los perfiles de autónomos en portales donde se piden presupuestos. Si pagan por conseguir clientes, ya invierten en su negocio.</li>
+          <li><strong>Gestorías de la zona.</strong> Todavía no como canal, sino para una sola pregunta: «¿qué cliente autónomo te trae los papeles hechos un desastre?». Te presentarán justo a los que más lo necesitan, y la gestoría lo agradecerá.</li>
+          <li><strong>Gremios, ayuntamiento y cámara de comercio.</strong> Promoción económica y los gremios de instaladores organizan charlas. Más adelante serán un canal; ahora sirven para conocer caras.</li>
+        </ul>
+      </div></li>
+
+      <li><div class="step">
+        <h3>Pide un café, no una demo</h3>
+        <p>El primer mensaje no vende nada. Pide veinte minutos para entender cómo trabaja. Escríbelo en catalán si es la lengua de la persona.</p>
+        <div class="script"><span class="who">Mensaje de WhatsApp</span>Hola, Jordi. Soy Xavier; me pasó tu contacto Marta. Estoy montando una herramienta para autónomos de oficios y, antes de venderla a nadie, quiero entender cómo lleváis los presupuestos, las facturas y los cobros. ¿Te invito a un café 20 minutos esta semana? No te voy a vender nada.</div>
+        <p>Si hay alguien que os presente, nómbralo en la primera frase. Es lo que más sube la tasa de respuesta.</p>
+      </div></li>
+
+      <li><div class="step">
+        <h3>En el café, pregunta por el pasado, nunca por el futuro</h3>
+        <p>«¿Lo usarías?» siempre recibe un sí, y ese sí no vale nada. Lo que vale es lo que ya ha pasado:</p>
+        <ul>
+          <li>«¿Cómo hiciste el último presupuesto? ¿Cuánto tardaste?»</li>
+          <li>«¿Cuánto dinero te deben ahora mismo? ¿Quién?»</li>
+          <li>«¿Cuándo haces las facturas: el mismo día, el viernes, a final de mes?»</li>
+          <li>«¿Qué te pide la gestoría cada trimestre y cómo se lo mandas?»</li>
+          <li>«¿Qué usas hoy? ¿Qué dejaste de usar, y por qué?»</li>
+        </ul>
+        <p><strong>Apunta sus palabras exactas.</strong> Cómo llama a un presupuesto, a un albarán o a una factura pendiente. Ese vocabulario vale oro para la web, los anuncios y las páginas por oficio, y solo se consigue así.</p>
+        <p>Enseña Bynoesis solo al final, y solo a quien haya descrito un problema real. Para enseñarlo usa la cuenta de demostración, nunca datos de otro cliente.</p>
+      </div></li>
+
+      <li><div class="step">
+        <h3>Propón un piloto con fecha de fin y contrapartidas</h3>
+        <div class="script"><span class="who">La propuesta, en persona</span>Está construido y funciona. Te propongo usarlo gratis ocho semanas en tu trabajo real. A cambio te pido tres cosas: que lo uses de verdad, quince minutos a la semana para contarme qué falla, y poder contar tus cifras si te va bien. Si al final quieres seguir, entras a precio de fundador.</div>
+        <p>Deja la propuesta por escrito en una hoja que diga:</p>
+        <ul>
+          <li>Que es <strong>gratis</strong> y <strong>cuándo acaba</strong>. Un piloto sin fecha de fin es un regalo sin fin.</li>
+          <li>Qué datos trata Bynoesis y el <strong>contrato de encargado del tratamiento</strong>, que ya tienes publicado. Que sea gratis no te libra del RGPD.</li>
+          <li>Qué está desactivado mientras tanto (la facturación con registro fiscal, ver la parte 2).</li>
+          <li>Que puede irse cuando quiera <strong>y llevarse sus datos</strong>.</li>
+          <li>El permiso para usar sus cifras y su nombre. <strong>Pídelo ahora:</strong> dentro de dos meses es incómodo.</li>
+        </ul>
+        <div class="note"><strong>Decisión tuya: el precio de fundador.</strong> Una opción coherente con el catálogo actual es dar el plan Negocio (49 €) al precio de Autónomo (29 €) durante doce meses. Así no te inventas un precio nuevo, y el piloto nota que ha sido de los primeros.</div>
+      </div></li>
+
+      <li><div class="step">
+        <h3>El alta la haces tú, con él delante</h3>
+        <p>Una hora por piloto, en persona o por videollamada. No le mandes un enlace y le desees suerte:</p>
+        <ul>
+          <li>Configurar su negocio y cargar el catálogo de su oficio.</li>
+          <li>Conectar su WhatsApp y que mande el primer mensaje delante de ti.</li>
+          <li>Meter dos clientes suyos reales y un trabajo de esta semana.</li>
+          <li>Decirle cómo avisarte cuando algo falle, y dejarle claro que quieres que te avise.</li>
+        </ul>
+      </div></li>
+
+      <li><div class="step">
+        <h3>Ocho semanas con un ritmo fijo</h3>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Cuándo</th><th>Qué haces</th><th>Qué miras</th></tr></thead>
+            <tbody>
+              <tr><td>Día 3</td><td>Llamada de cinco minutos</td><td>¿Ha vuelto a entrar solo? Si no, ¿qué le frenó?</td></tr>
+              <tr><td>Semana 2</td><td>Primera medición</td><td>Qué usa de verdad y qué no abre nunca</td></tr>
+              <tr><td>Semana 4</td><td>Arreglas las tres fricciones más repetidas</td><td>Las que se repiten en varios pilotos, no la queja más ruidosa</td></tr>
+              <tr><td>Semana 6</td><td>La pregunta del precio</td><td>«Si esto costara 29 € al mes, ¿seguirías?» Y observa si duda</td></tr>
+              <tr><td>Semana 8</td><td>Cierre</td><td>Sigue a precio de fundador o se va con sus datos. Sin prórrogas</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Mide lo que ya recoge el runbook del piloto: minutos ahorrados, trabajos sin facturar, cobros recuperados, uso semanal y minutos de soporte que te pide cada uno. <strong>Los minutos de soporte son la cifra más importante</strong> de toda esta guía; la parte 3 explica por qué.</p>
+      </div></li>
+
+      <li><div class="step">
+        <h3>El sí que cuenta es el que lleva tarjeta</h3>
+        <p>Un «me encanta» no es una venta. En la semana 8, a quien quiera seguir le pides que firme una carta de intención con el precio de fundador, y le cobras en cuanto Stripe esté en real. Si tres de cinco firman, ya tienes lo que necesitas para montar la empresa con sentido.</p>
+        <div class="note calm"><strong>Puerta de salida de la parte 1:</strong> tres pilotos usan Bynoesis solos dos semanas seguidas, sin que tú toques nada por ellos, y al menos dos firman la carta de intención.</div>
+      </div></li>
+    </ol>
+  </section>
+
+  <!-- ============ PARTE 2 ============ -->
+  <section class="part" id="antes">
+    <div class="part-head">
+      <span class="eyebrow">Parte 2</span>
+      <h2>Vender antes de tener la empresa montada</h2>
+      <p class="dek">Se puede avanzar mucho sin S.L., pero no cobrar. La clave es hacer ahora todo lo que no exige identidad legal y montar la empresa justo cuando la demanda ya está probada.</p>
+    </div>
+
+    <div class="twocol">
+      <div class="box yes">
+        <h3>Puedes hacerlo ya</h3>
+        <ul>
+          <li>La lista, los cafés y las entrevistas.</li>
+          <li>Pilotos gratis con la cuenta en solo lectura fiscal: agenda, clientes, presupuestos, gastos, documentos y WhatsApp. Es la mayor parte del producto.</li>
+          <li>Cartas de intención con el precio de fundador, sin cobrar.</li>
+          <li>Lista de espera y contenido orgánico.</li>
+          <li>Preguntar por escrito a la asesoría y al abogado.</li>
+        </ul>
+      </div>
+      <div class="box wait">
+        <h3>Necesitas la identidad legal</h3>
+        <ul>
+          <li><strong>Cobrar:</strong> Stripe en real exige un titular verificado.</li>
+          <li><strong>WhatsApp sin límites:</strong> la verificación de empresa de Meta contrasta tu NIF con registros públicos.</li>
+          <li><strong>Emitir facturas con registro fiscal</strong> y la declaración responsable de Veri*Factu.</li>
+          <li><strong>Firmar con gestorías</strong> y con comerciales.</li>
+        </ul>
+      </div>
+    </div>
+
+    <ol class="steps">
+      <li><div class="step">
+        <h3>Esta semana: la pregunta a la asesoría</h3>
+        <p>Por escrito y con respuesta razonada: <strong>¿un piloto sin contraprestación constituye comercialización a efectos del RD 1007/2023?</strong> De ella depende si los pilotos pueden emitir facturas o no.</p>
+        <p>Mientras no la tengas por escrito, la respuesta operativa es no: el piloto arranca igual, pero con la facturación fiscal apagada.</p>
+      </div></li>
+      <li><div class="step">
+        <h3>Durante el piloto: WhatsApp con lo que ya tienes</h3>
+        <p>Tus pilotos escriben al <strong>número central de Bynoesis</strong>. Ese número es tuyo y funciona con el acceso que Meta ya te dio. Sin la verificación de empresa hay un límite de conversaciones, pero con cinco pilotos no lo vas a notar.</p>
+        <p>Si todavía usas el número de prueba de Meta, ten en cuenta que solo admite una lista corta de destinatarios registrados. Compruébalo en el panel antes de dar de alta al quinto piloto.</p>
+      </div></li>
+      <li><div class="step">
+        <h3>Cuando tres digan que sí: montar la empresa</h3>
+        <p>El Plan del primer euro recomienda una <strong>S.L.</strong>, con un coste de <strong>1.800 a 2.700 € el primer año</strong>. Aparece en el Registro Mercantil, y eso es lo que hace sólida la verificación de Meta. Además limita tu responsabilidad y es lo que una gestoría espera firmar.</p>
+        <p>Montarla <em>después</em> de tener las cartas de intención no es tacañería: pagas la S.L. con la prueba de que hay a quién cobrar. Cuéntale el calendario a la asesoría, porque la constitución tarda de 20 a 30 días.</p>
+        <div class="note"><strong>Si te das de alta como autónomo mientras tanto:</strong> existe una cuota reducida para el primer año (80 €/mes en 2025). Confirma con la gestoría la cuota vigente y si te conviene, porque como autónomo la verificación de Meta es mucho más frágil.</div>
+      </div></li>
+      <li><div class="step">
+        <h3>Con la S.L. constituida: abrir el cobro, en orden</h3>
+        <ul>
+          <li>Verificación de empresa en Meta con el NIF de la S.L., escrito igual que en la escritura.</li>
+          <li>Stripe en real con los seis precios.</li>
+          <li>Declaración responsable de Veri*Factu y revisión legal de los textos.</li>
+          <li>Cobrar a los pilotos que firmaron. Ese es tu primer euro.</li>
+        </ul>
+      </div></li>
+    </ol>
+  </section>
+
+  <!-- ============ PARTE 3 ============ -->
+  <section class="part" id="escalar">
+    <div class="part-head">
+      <span class="eyebrow">Parte 3</span>
+      <h2>De 1 a 5.000, en cinco etapas</h2>
+      <p class="dek">Cada etapa tiene un canal, un equipo y una puerta de salida. No se pasa a la siguiente por fecha, sino cuando se cumple la puerta. Saltarse una suele costar más de lo que ahorra.</p>
+    </div>
+
+    <p class="prose"><span>Para situarte: en España hay unos 3,3 millones de afiliados al régimen de autónomos. 5.000 cuentas serían más o menos el 0,15 %. El mercado no es el límite; <strong>el límite son tus horas y el soporte</strong>.</span></p>
+
+    <div class="truths">
+      <div class="truth">
+        <span class="eyebrow">La verdad incómoda n.º 1</span>
+        <span class="big num">200 altas/mes</span>
+        <p>Es lo que necesitas con 5.000 cuentas y un 4 % de bajas mensuales <strong>solo para no encoger</strong>. Con 1.000 cuentas son 40. Bajar las bajas vale tanto como vender.</p>
+      </div>
+      <div class="truth">
+        <span class="eyebrow">La verdad incómoda n.º 2</span>
+        <span class="big num">8 personas</span>
+        <p>Es lo que cuesta atender 5.000 cuentas si cada una pide 12 minutos de soporte al mes, como supone el modelo. Con 4 minutos bastan 3,5. <strong>El producto tiene que explicarse solo</strong> antes de crecer.</p>
+      </div>
+    </div>
+
+    <div class="stages">
+      <article class="stage">
+        <div class="stage-head"><h3>Etapa 1 · Los pilotos</h3><span class="range">0 → 5 cuentas · meses 0–2</span></div>
+        <dl class="stage-body">
+          <dt>Dónde</dt><dd>Tu comarca, dos oficios.</dd>
+          <dt>Cómo captas</dt><dd>Tu círculo, los almacenes de material y Google Maps. La parte 1 entera.</dd>
+          <dt>Quién trabaja</dt><dd>Tú. Nadie más.</dd>
+          <dt>Qué construir</dt><dd><strong>Nada nuevo.</strong> Solo las tres fricciones que se repitan.</dd>
+          <dd class="gate"><b>Puerta</b>3 pilotos usan Bynoesis solos dos semanas seguidas y 2 firman la carta de intención.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>Etapa 2 · Los primeros de pago</h3><span class="range">5 → 50 cuentas · meses 2–9</span></div>
+        <dl class="stage-body">
+          <dt>Dónde</dt><dd>La misma comarca y las de al lado.</dd>
+          <dt>Cómo captas</dt><dd><strong>Referidos:</strong> un mes gratis para el que recomienda y para el recomendado. <strong>Gestorías:</strong> 3 a 5 de la zona que ya reciban el paquete trimestral de un cliente tuyo. <strong>Charlas</strong> en el gremio. <strong>Ficha de Google</strong> con reseñas de los pilotos. Las 24 piezas de contenido que ya tienes escritas.</dd>
+          <dt>Quién trabaja</dt><dd>Tú, con tu retirada dentro del modelo desde que la caja lo permita.</dd>
+          <dt>Qué construir</dt><dd>S.L., Stripe en real, Meta verificado, correo saliente y un alta que funcione sin ti.</dd>
+          <dd class="gate"><b>Puerta</b>50 cuentas de pago, bajas por debajo del 5 % a partir del cuarto mes, al menos un 30 % de las altas por recomendación, y resultado a cero o positivo con tu retirada.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>Etapa 3 · La provincia</h3><span class="range">50 → 250 cuentas · meses 9–18</span></div>
+        <dl class="stage-body">
+          <dt>Dónde</dt><dd>Toda la provincia y los oficios de al lado: limpieza, jardinería, mantenimiento.</dd>
+          <dt>Cómo captas</dt><dd><strong>Páginas por oficio y por población</strong> para aparecer en búsquedas locales. Entre 10 y 20 gestorías que recomienden, todavía sin contrato. <strong>Casos con cifras reales</strong> de los pilotos. Cámara de comercio y ferias locales.</dd>
+          <dt>Quién trabaja</dt><dd>Tú y una persona de soporte a media jornada.</dd>
+          <dt>Qué construir</dt><dd>Que el producto se explique solo: bajar de 12 a 7 minutos de soporte por cuenta. Alta y primer mes sin acompañamiento.</dd>
+          <dd class="gate"><b>Puerta</b>250 cuentas, soporte de 7 minutos por cuenta o menos, sabes de dónde viene el 60 % de las altas y has medido lo que cuesta conseguir cada una.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>Etapa 4 · Cataluña</h3><span class="range">250 → 1.000 cuentas · meses 18–36</span></div>
+        <dl class="stage-body">
+          <dt>Dónde</dt><dd>Cataluña, en catalán y en castellano.</dd>
+          <dt>Cómo captas</dt><dd><strong>Comerciales a comisión</strong> con la estructura propuesta en el canal comercial, ya con las bajas medidas. <strong>Programa de gestorías</strong> con tramos por volumen. Acuerdos con gremios provinciales. <strong>Primeros anuncios</strong> en búsquedas, siempre con el coste por alta medido.</dd>
+          <dt>Quién trabaja</dt><dd>Tú, dos personas de soporte, una de desarrollo y una responsable de ventas y gestorías.</dd>
+          <dt>Qué construir</dt><dd>Número de WhatsApp propio por cliente (el acceso avanzado de Meta), liquidación de comisiones y panel para gestorías con muchos clientes.</dd>
+          <dd class="gate"><b>Puerta</b>1.000 cuentas, bajas por debajo del 3 %, lo que deja cada cliente triplica lo que cuesta conseguirlo en el canal de pago, y el equipo funciona un mes entero sin ti.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>Etapa 5 · España</h3><span class="range">1.000 → 5.000 cuentas · meses 36–60</span></div>
+        <dl class="stage-body">
+          <dt>Dónde</dt><dd>Por comunidades, una detrás de otra, copiando lo que funcionó en Cataluña.</dd>
+          <dt>Cómo captas</dt><dd>Acuerdos con <strong>asociaciones de autónomos</strong> de ámbito estatal y con <strong>cadenas de distribución de material</strong>. Publicidad a escala donde el coste por alta esté probado. Alta completamente automática.</dd>
+          <dt>Quién trabaja</dt><dd>Un equipo de unas 14 personas: soporte, desarrollo, ventas y gestorías, operaciones y producto.</dd>
+          <dt>Qué construir</dt><dd>Lo que genere confianza institucional ante gestorías grandes y asociaciones: seguridad certificada y auditorías.</dd>
+          <dd class="gate"><b>Decisión</b>Llegar aquí sin inversión es un plan de unos cinco años. Con inversión puede ser en tres, no en uno. Esta etapa es la única donde tiene sentido plantearla.</dd>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ PARTE 4 ============ -->
+  <section class="part" id="costes">
+    <div class="part-head">
+      <span class="eyebrow">Parte 4</span>
+      <h2>Lo que cuesta cada etapa</h2>
+      <p class="dek">Gasto mensual al final de cada etapa, con 43 € de cuota media y 3,72 € de coste técnico por cuenta (Stripe, WhatsApp, IA, audio, documentos y almacenamiento, del análisis de julio). Sin IVA y antes del impuesto de sociedades.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>€ al mes</th>
+            <th class="n">1 · Pilotos<br>5</th>
+            <th class="n">2 · De pago<br>50</th>
+            <th class="n">3 · Provincia<br>250</th>
+            <th class="n">4 · Cataluña<br>1.000</th>
+            <th class="n">5 · España<br>5.000</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Ingresos</td><td class="n">0</td><td class="n">2.150</td><td class="n">10.750</td><td class="n">43.000</td><td class="n">215.000</td></tr>
+          <tr><td>Coste técnico por cuenta<span class="sub">3,72 € por cuenta</span></td><td class="n">19</td><td class="n">186</td><td class="n">931</td><td class="n">3.725</td><td class="n">18.625</td></tr>
+          <tr><td>Servidores y dominio</td><td class="n">30</td><td class="n">50</td><td class="n">120</td><td class="n">400</td><td class="n">1.500</td></tr>
+          <tr><td>Herramientas</td><td class="n">40</td><td class="n">60</td><td class="n">150</td><td class="n">500</td><td class="n">2.000</td></tr>
+          <tr><td>Gestoría y asesoría</td><td class="n">—</td><td class="n">150</td><td class="n">200</td><td class="n">400</td><td class="n">1.000</td></tr>
+          <tr><td>Seguro de responsabilidad civil</td><td class="n">—</td><td class="n">40</td><td class="n">60</td><td class="n">100</td><td class="n">250</td></tr>
+          <tr><td>Legal y cumplimiento continuo</td><td class="n">—</td><td class="n">—</td><td class="n">100</td><td class="n">500</td><td class="n">2.750</td></tr>
+          <tr><td>Tu cuota de autónomo<span class="sub">desde la etapa 4, en nómina</span></td><td class="n">80</td><td class="n">320</td><td class="n">320</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>Tu sueldo o retirada</td><td class="n">—</td><td class="n">1.200</td><td class="n">2.000</td><td class="n">3.000</td><td class="n">4.000</td></tr>
+          <tr><td>Equipo<span class="sub">coste empresa</span></td><td class="n">—</td><td class="n">—</td><td class="n">1.300</td><td class="n">12.700</td><td class="n">44.600</td></tr>
+          <tr><td>Captación: contenido y anuncios</td><td class="n">—</td><td class="n">150</td><td class="n">800</td><td class="n">4.000</td><td class="n">25.000</td></tr>
+          <tr><td>Comisiones de comerciales<span class="sub">40 % de las altas por canal</span></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">2.360</td><td class="n">10.114</td></tr>
+          <tr><td>Oficina o coworking</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">300</td><td class="n">1.500</td></tr>
+          <tr class="total"><td>Gasto total</td><td class="n">169</td><td class="n">2.156</td><td class="n">5.981</td><td class="n">27.985</td><td class="n">111.339</td></tr>
+          <tr class="result"><td>Resultado mensual</td><td class="n neg">−169</td><td class="n">−6</td><td class="n pos">+4.769</td><td class="n pos">+15.015</td><td class="n pos">+103.661</td></tr>
+          <tr><td>Margen sobre ingresos</td><td class="n">—</td><td class="n">0 %</td><td class="n">44 %</td><td class="n">35 %</td><td class="n">48 %</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Quién compone el equipo</th><th class="n">Coste empresa/mes</th><th>Etapa</th></tr></thead>
+        <tbody>
+          <tr><td>Soporte a media jornada</td><td class="n">1.300</td><td>3</td></tr>
+          <tr><td>2 de soporte, 1 de desarrollo, 1 de ventas y gestorías</td><td class="n">12.700</td><td>4</td></tr>
+          <tr><td>6 de soporte, 3 de desarrollo, 2 de ventas, 2 de operaciones, 1 de producto</td><td class="n">44.600</td><td>5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose"><span>Sueldos de referencia (estimación): soporte 2.600 €, desarrollo 4.200 €, ventas 3.300 €, operaciones 3.000 € y producto 3.800 € al mes de coste para la empresa, cotizaciones incluidas. Contrasta cada puesto con ofertas reales de tu zona antes de contratar. Seis personas de soporte con 5.000 cuentas solo alcanzan si el soporte baja de unos 9 minutos por cuenta.</span></p>
+
+    <h3 style="margin-top:14px">Pagos únicos al montar la empresa</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Concepto</th><th class="n">Coste</th><th>De dónde sale</th></tr></thead>
+        <tbody>
+          <tr><td>S.L. nueva, primer año completo</td><td class="n">1.800–2.700 €</td><td>Plan del primer euro</td></tr>
+          <tr><td>Revisión del abogado TIC</td><td class="n">1.000–3.000 €</td><td>Estimación: pide presupuesto cerrado</td></tr>
+          <tr><td>Consulta escrita a la asesoría fiscal</td><td class="n">100–300 €</td><td>Estimación</td></tr>
+          <tr><td>Registro de la marca «Bynoesis»</td><td class="n">~150 € por clase</td><td>Estimación: tasas oficiales de la OEPM</td></tr>
+          <tr><td>Certificado digital de representante</td><td class="n">~17 €</td><td>Plan de 60 días</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:14px">La caja que conviene tener antes de cada etapa</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Etapa</th><th class="n">Caja (estimación)</th><th>Para qué</th></tr></thead>
+        <tbody>
+          <tr><td>1 · Pilotos</td><td class="n">500–1.000 €</td><td>Consulta a la asesoría, desplazamientos, cafés y dos meses de estructura</td></tr>
+          <tr><td>2 · Primeros de pago</td><td class="n">5.000–8.000 €</td><td>S.L., abogado, marca y tres meses de estructura antes de equilibrar</td></tr>
+          <tr><td>3 · Provincia</td><td class="n">~6.000 €</td><td>Tres meses de la media jornada de soporte y del contenido, antes de que se paguen solos</td></tr>
+          <tr><td>4 · Cataluña</td><td class="n">40.000–50.000 €</td><td>Contratar antes de tener los ingresos: tres meses del equipo nuevo y las comisiones</td></tr>
+          <tr><td>5 · España</td><td class="n">Autofinanciada o una ronda</td><td>Crecer con beneficios es más lento; acelerar exige inversión</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note calm"><strong>La regla que ordena todos los costes:</strong> un gasto fijo nuevo entra cuando la etapa anterior ya lo paga dos meses seguidos, o cuando la caja cubre tres meses de ese gasto. Nunca por la fecha del calendario.</div>
+  </section>
+
+  <!-- ============ PARTE 5 ============ -->
+  <section class="part" id="no">
+    <div class="part-head">
+      <span class="eyebrow">Parte 5</span>
+      <h2>Lo que no hay que hacer</h2>
+    </div>
+    <ul class="donts">
+      <li><strong>No pagar publicidad antes de tener 50 clientes.</strong> Con menos, no sabes a quién dirigirla ni qué decir, y quemas caja comprando visitas.</li>
+      <li><strong>No constituir la S.L. antes de que tres pilotos digan que pagarían.</strong> Pero sí preguntar ya a la asesoría: esa respuesta tarda y no cuesta nada pedirla.</li>
+      <li><strong>No dejar el piloto sin fecha de fin.</strong> Gratis para siempre enseña que lo que haces no vale nada.</li>
+      <li><strong>No construir funciones nuevas durante el piloto.</strong> Solo las tres fricciones que más se repitan.</li>
+      <li><strong>No firmar con comerciales antes de medir las bajas.</strong> Toda comisión depende de cuánto dura un cliente, y hoy eso es una suposición.</li>
+      <li><strong>No abrir otra provincia antes de dominar la tuya.</strong> Un fontanero recomienda a otro fontanero de su zona, no a uno de Sevilla.</li>
+    </ul>
+  </section>
+
+  <div class="week">
+    <span class="eyebrow" style="color:var(--teal-soft)">Esta semana</span>
+    <h2>Tres cosas, y ninguna es programar</h2>
+    <ol>
+      <li>Escribe la lista de 40 nombres, empezando por quien haya trabajado en tu casa.</li>
+      <li>Manda a la asesoría la pregunta del piloto gratuito y el RD 1007/2023.</li>
+      <li>Consigue cinco cafés con fecha y hora esta semana o la que viene.</li>
+    </ol>
+  </div>
+
+  <div class="foot">
+    <p>Se apoya en el Plan de 60 días, el Plan del primer euro, el runbook del piloto, el análisis de costes de julio, el canal comercial del 16 de septiembre y el modelo económico v3. Los costes técnicos por cuenta y los precios salen de esos documentos. Los sueldos, la caja por etapa, los pagos marcados como estimación, los tiempos de cada etapa y el embudo son supuestos: el piloto y las primeras 50 cuentas los sustituyen por datos.</p>
+    <p>Esto no es asesoramiento legal ni fiscal. Las cuestiones sobre forma jurídica, cuota de autónomos y Veri*Factu las confirma tu asesoría.</p>
+  </div>
+</div>
