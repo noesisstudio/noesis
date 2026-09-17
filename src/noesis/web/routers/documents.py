@@ -259,6 +259,9 @@ async def api_document_client_candidate_confirm(
             doc_id,
             name=body.get("name"),
             nif=body.get("nif"),
+            address=body.get("address"),
+            email=body.get("email"),
+            phone=body.get("phone"),
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)

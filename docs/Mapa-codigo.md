@@ -1,5 +1,17 @@
 # Mapa de código
 
+## Cliente de una factura emitida con sus datos de contacto — 17-sep
+
+`extraction._validated_invoice` añade `customer_address`, `customer_email` y
+`customer_phone` con validación propia (`_one_line`, `_contact_email`,
+`_contact_phone`); el prompt los pide en una sola línea. `documents/service.py` los
+traslada al borrador y `confirm_client_candidate` los pasa a
+`db.confirm_document_client_candidate`, que solo los escribe en el INSERT de un
+cliente nuevo (`_short_field` acota y normaliza). La ruta
+`/documents/{id}/client-candidate/confirm` acepta los tres campos del formulario.
+`documentos.html` los muestra en `#r-client-contact` únicamente cuando la factura
+es emitida y la propuesta está pendiente. Sin esquema nuevo: `clients` ya tenía
+las columnas.
 ## Agenda por lenguaje natural y estado de la IA — 16-sep
 
 `nlu.py`: `_is_agenda_order` acepta verbo + sustantivo («añade un trabajo») además

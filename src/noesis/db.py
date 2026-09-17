@@ -3325,6 +3325,12 @@ def _normalise_nif(value: str | None) -> str:
     return re.sub(r"[^A-Z0-9]", "", str(value or "").upper())
 
 
+def _short_field(value: str | None, max_length: int) -> str | None:
+    """Texto de contacto acotado: en blanco se guarda como vacío, no como ''."""
+    text = " ".join(str(value or "").split())[:max_length]
+    return text or None
+
+
 def resolve_client_identity(
     business_id: int, *, name: str | None = None, nif: str | None = None
 ) -> dict | None:
@@ -3445,11 +3451,17 @@ def confirm_document_client_candidate(
     *,
     name: str | None = None,
     nif: str | None = None,
+    address: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
 ) -> dict:
     """Confirma en una transacción el cliente propuesto y enlaza el documento.
 
     El bloqueo del negocio serializa dos confirmaciones simultáneas para evitar
     dos altas del mismo NIF dentro de la misma cuenta.
+
+    Dirección, correo y teléfono solo se guardan en un alta nueva: una ficha que
+    ya existe la mantiene el titular, y una factura vieja no la va a pisar.
     """
     now = _now()
     with get_conn() as conn:
@@ -3512,10 +3524,12 @@ def confirm_document_client_candidate(
             client_id = matches[0]["id"]
         else:
             created = conn.execute(
-                "INSERT INTO clients (business_id, name, nif, created_at) "
-                "VALUES (?, ?, ?, ?) RETURNING id",
+                "INSERT INTO clients (business_id, name, nif, address, email, "
+                "phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
                 (
-                    business_id, proposed_name, proposed_nif, now,
+                    business_id, proposed_name, proposed_nif,
+                    _short_field(address, 200), _short_field(email, 120),
+                    _short_field(phone, 20), now,
                 ),
             ).fetchone()
             client_id = created["id"]

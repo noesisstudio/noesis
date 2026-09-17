@@ -1,5 +1,13 @@
 # Estado actual del producto
 
+## 17-sep — Adjuntar una factura deja al cliente listo para facturarle
+
+Si subes a Documentos una factura emitida por ti y el cliente no está dado de alta,
+la lectura propone ahora también su dirección, correo y teléfono. Los ves y los
+corriges antes de aceptar, y al pulsar «Crear cliente y relacionar» la ficha nace
+con esos datos: ya se le puede emitir una factura completa sin volver a escribirlos.
+Si el cliente ya existía, sus datos no se tocan. Nada se crea sin tu clic, y sin la
+IA externa autorizada no hay propuesta, igual que antes.
 ## 16-sep — Agenda en lenguaje normal y fallo de IA visible
 
 Candidato sin publicar. «Añade un trabajo para mañana a las 12» ya se entiende: el

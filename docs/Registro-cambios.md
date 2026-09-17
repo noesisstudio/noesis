@@ -1,5 +1,29 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — El cliente de una factura emitida entra con sus datos de contacto
+
+Petición del founder: al adjuntar una factura de un cliente que no está dado de
+alta, que se pueda crear la ficha con sus datos. La propuesta de cliente ya existía
+(`document_client_candidates`, botón «Crear cliente y relacionar» en Documentos),
+pero solo guardaba nombre y NIF, así que la ficha nacía sin dirección y no servía
+para facturarle. Ahora `adapters/extraction.py` pide también `customer_address`
+(en una línea), `customer_email` y `customer_phone`, y los valida sin inventarlos:
+la dirección se aplana a una línea de 200 caracteres, el correo debe tener forma de
+correo y el teléfono solo se acepta con 7-15 dígitos (un «Factura 2026» del papel
+se descarta). El panel de revisión los muestra editables únicamente cuando la
+factura es emitida y el cliente es nuevo, y `confirm_document_client_candidate`
+los guarda **solo en un alta nueva**: una ficha existente conserva la suya, porque
+una factura antigua no puede pisar lo que el titular ya corrigió. Si algún dato
+falta, el mensaje de confirmación lo dice en vez de dejarlo mudo. Nada se crea sin
+el clic del titular. Sin migración: `clients` ya tenía `address`, `email` y `phone`;
+esquema 55. Áreas: `adapters/extraction.py`, `db.py`, `documents/service.py`,
+`web/routers/documents.py`, `templates/documentos.html`. Límite externo: la lectura
+necesita la IA externa autorizada en el negocio; sin clave no hay propuesta, como
+antes. RGPD: son datos que ya constan en una factura del propio negocio y el
+documento completo ya viajaba al encargado; no se abre ninguna vía nueva ni se
+envía nada más. Riesgo bajo. Diagnóstico: si la ficha nace vacía, mirar si la
+lectura devolvió `customer_address` (log de extracción) o si el cliente ya existía.
+Rollback: revertir el commit; las fichas ya creadas se quedan como están.
 ## 2026-09-16 — El modelo económico incorpora bajas, caja y canal comercial
 
 Objetivo: el founder no está satisfecho con el modelo financiero y quiere añadir

@@ -344,6 +344,75 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
         self.assertIsNone(result["issued_on"])
         self.assertIsNone(result["confidence"])
 
+    def test_client_contact_fields_travel_from_documentos_to_the_ficha(self):
+        from starlette.testclient import TestClient
+
+        from noesis.web import auth, server
+
+        document = docservice.upload(
+            self.business["id"], "factura-emitida.jpg", TINY_JPEG, run_ocr=False
+        )
+        db.propose_document_client(
+            self.business["id"], document["id"],
+            name="Comunidad del Pino", nif="H44444444",
+        )
+        password = "Prueba-segura-123!"  # pragma: allowlist secret
+        db.create_user(
+            "clientes@example.com", auth.hash_password(password),
+            self.business["id"],
+        )
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                logged = client.post("/login", data={
+                    "email": "clientes@example.com", "password": password,
+                }, follow_redirects=False)
+                self.assertEqual(logged.status_code, 303)
+                page = client.get(f"/b/{self.business['id']}/documentos")
+                for field in ("r-client-address", "r-client-email",
+                              "r-client-phone"):
+                    self.assertIn(field, page.text)
+                body = {"name": "Comunidad del Pino", "nif": "H44444444",
+                        "address": "Calle Larga 4 08001 Barcelona",
+                        "email": "admin@pino.example", "phone": "+34931234567"}
+                response = client.post(
+                    f"/api/{self.business['id']}/documents/{document['id']}"
+                    "/client-candidate/confirm", json=body,
+                )
+                self.assertEqual(response.status_code, 200)
+                created = response.json()["client"]
+                self.assertEqual(created["address"],
+                                 "Calle Larga 4 08001 Barcelona")
+                self.assertEqual(created["email"], "admin@pino.example")
+                self.assertEqual(created["phone"], "+34931234567")
+                foreign = client.post(
+                    f"/api/{self.other['id']}/documents/{document['id']}"
+                    "/client-candidate/confirm", json=body,
+                )
+                self.assertIn(foreign.status_code, {400, 403, 404})
+        self.assertEqual(db.list_clients(self.other["id"]), [])
+
+    def test_validated_invoice_cleans_customer_contact_data(self):
+        result = extraction._validated_invoice({
+            "number": "F-4", "supplier": "Proveedor", "total": 121,
+            "customer": "Comunidad del Mar",
+            "customer_address": "  Calle Larga 4\n  08001   Barcelona ",
+            "customer_email": "ADMIN@Comunidad.es",
+            "customer_phone": "+34 931 234 567",
+        })
+        self.assertEqual(result["customer_address"],
+                         "Calle Larga 4 08001 Barcelona")
+        self.assertEqual(result["customer_email"], "admin@comunidad.es")
+        self.assertEqual(result["customer_phone"], "+34931234567")
+
+        basura = extraction._validated_invoice({
+            "number": "F-5", "supplier": "Proveedor", "total": 121,
+            "customer_address": "   ", "customer_email": "no-es-un-correo",
+            "customer_phone": "Factura 2026",
+        })
+        self.assertIsNone(basura["customer_address"])
+        self.assertIsNone(basura["customer_email"])
+        self.assertIsNone(basura["customer_phone"])
+
     def test_validated_invoice_warns_on_arithmetic_dates_and_spanish_nif(self):
         result = extraction._validated_invoice({
             "number": "F-2", "supplier": "Proveedor",

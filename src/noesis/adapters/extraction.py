@@ -11,6 +11,7 @@ from datetime import date
 import json
 import logging
 import math
+import re
 import time
 
 import anthropic
@@ -134,8 +135,35 @@ def _validated_result(raw: dict | None) -> dict | None:
 
 PDF_MIME = "application/pdf"
 _INVOICE_FIELDS = ("number", "issued_on", "due_on", "supplier", "supplier_nif",
-                   "customer", "customer_nif", "base", "vat_rate",
+                   "customer", "customer_nif", "customer_address",
+                   "customer_email", "customer_phone", "base", "vat_rate",
                    "vat_amount", "irpf_amount", "total", "confidence")
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _one_line(value, max_length: int) -> str | None:
+    """Una dirección leída de una factura llega con saltos de línea y columnas."""
+    text = _short_text(value, max_length * 2)
+    if not text:
+        return None
+    return " ".join(text.split())[:max_length] or None
+
+
+def _contact_email(value) -> str | None:
+    text = (_short_text(value, 120) or "").lower()
+    return text if _EMAIL_RE.match(text) else None
+
+
+def _contact_phone(value) -> str | None:
+    """Solo dígitos y prefijo. Una cifra suelta del papel no es un teléfono."""
+    text = _short_text(value, 40)
+    if not text:
+        return None
+    cleaned = re.sub(r"[^\d+]", "", text)
+    digits = re.sub(r"\D", "", cleaned)
+    if not 7 <= len(digits) <= 15:
+        return None
+    return cleaned[:20]
 
 
 def _money(value, *, allow_zero: bool = False) -> float | None:
@@ -184,6 +212,9 @@ def _invoice_fields(raw: dict) -> dict:
         "supplier_nif": _short_text(raw.get("supplier_nif"), 20),
         "customer": _short_text(raw.get("customer"), 200),
         "customer_nif": _short_text(raw.get("customer_nif"), 20),
+        "customer_address": _one_line(raw.get("customer_address"), 200),
+        "customer_email": _contact_email(raw.get("customer_email")),
+        "customer_phone": _contact_phone(raw.get("customer_phone")),
         "base": _money(raw.get("base"), allow_zero=True),
         "vat_rate": int(vat_rate) if vat_rate is not None else None,
         "vat_amount": _money(raw.get("vat_amount"), allow_zero=True),
@@ -223,6 +254,9 @@ def extract_invoice(
         "claves: number (número de factura), issued_on (fecha de emisión "
         "YYYY-MM-DD), due_on (vencimiento YYYY-MM-DD), supplier (nombre del "
         "emisor), supplier_nif, customer (nombre del receptor), customer_nif, "
+        "customer_address (dirección fiscal del receptor en una sola línea, con "
+        "calle, código postal y población), customer_email (correo del receptor), "
+        "customer_phone (teléfono del receptor), "
         "base (base imponible como número), vat_rate (solo 0, 4, 10 o 21), "
         "vat_amount (cuota de IVA), irpf_amount (retención IRPF, 0 si no hay), "
         "total (total de la factura), confidence (0-100, tu confianza global). "

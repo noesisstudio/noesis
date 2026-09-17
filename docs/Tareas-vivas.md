@@ -1,5 +1,14 @@
-# Tareas vivas
+﻿# Tareas vivas
 
+## Cliente desde una factura adjunta — 17-sep
+
+- [x] La lectura extrae dirección, correo y teléfono del receptor, validados.
+- [x] Campos editables en la revisión y alta solo con confirmación del titular.
+- [x] Una ficha que ya existe conserva sus datos de contacto.
+- [ ] Probar en producción con una factura real de un cliente nuevo y comprobar
+  que la dirección leída sirve para emitirle una factura completa.
+- [ ] Si la dirección llega partida en varias líneas del PDF, revisar si conviene
+  separar código postal y población en campos propios.
 ## Modelo económico y canal comercial — 16-sep
 
 - [x] Modelo con bajas, vida del cliente, LTV, coste de canal y caja a 36 meses,

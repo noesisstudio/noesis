@@ -406,12 +406,16 @@ def confirm_client_candidate(
     *,
     name: str | None = None,
     nif: str | None = None,
+    address: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
 ) -> dict:
     """Alta o reutilización confirmada del cliente leído en una factura emitida."""
     from .. import db
 
     client = db.confirm_document_client_candidate(
-        doc_id, business_id, name=name, nif=nif
+        doc_id, business_id, name=name, nif=nif,
+        address=address, email=email, phone=phone,
     )
     db.record_product_event(
         business_id,

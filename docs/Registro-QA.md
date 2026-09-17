@@ -1,5 +1,23 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Datos de contacto del cliente leídos en la factura
+
+- Nuevas en `test_received_invoices.py`: `_validated_invoice` aplana una dirección
+  con saltos de línea, pasa el correo a minúsculas, deja el teléfono en dígitos y
+  prefijo, y descarta dirección vacía, correo sin forma de correo y un teléfono que
+  en realidad es texto; y desde el navegador, Documentos trae los tres campos y la
+  confirmación autenticada deja la ficha con dirección, correo y teléfono, mientras
+  el mismo envío desde otro negocio se rechaza y no crea nada allí.
+- Nuevas en `test_inbound_email.py`: la lectura propone sin dar de alta (cero
+  clientes hasta confirmar) y la ficha nace con los tres datos; un cliente que ya
+  existe conserva su dirección, su correo y su teléfono aunque la factura traiga
+  otros, y no se duplica.
+- Módulos afectados: `test_inbound_email`, `test_received_invoices` y
+  `test_reliability_guards`: 38 OK. Ruff OK.
+- Suite completa antes del cambio: 823 OK (44 min en Windows). La pasada con el
+  cambio está en marcha al cerrar esta entrada; se anota el resultado al terminar.
+- No ejecutado: lectura real contra Anthropic con una factura de verdad (las
+  pruebas parchean la extracción), ni la pantalla en un navegador real.
 ## 2026-09-16 — Agenda en lenguaje normal y fallo de IA visible
 
 - `tests/test_agenda_orders.py`: **10 pruebas OK**. Parseo de «añade / agrega / pon /

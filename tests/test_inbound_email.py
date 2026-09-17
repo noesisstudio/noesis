@@ -144,6 +144,76 @@ class InboundEmailTestCase(unittest.TestCase):
             client["id"],
         )
 
+    def test_confirmed_client_keeps_the_contact_data_read_on_the_invoice(self):
+        document = docrepo.add(
+            self.business["id"],
+            filename="factura-emitida.pdf",
+            stored_name="issued-contact.pdf",
+            mime="application/pdf",
+            size=10,
+            kind="factura_emitida",
+            doc_status="pendiente_revisar",
+        )
+        with patch.object(
+            service, "file_bytes",
+            return_value=(b"pdf", "application/pdf", "x.pdf"),
+        ), patch(
+            "noesis.adapters.extraction.extract_invoice",
+            return_value={
+                "supplier": "Taller Norte",
+                "supplier_nif": "B11111111",
+                "customer": "Comunidad del Pino",
+                "customer_nif": "H44444444",
+                "customer_address": "Calle Larga 4 08001 Barcelona",
+                "customer_email": "admin@pino.example",
+                "customer_phone": "+34931234567",
+                "number": "F-19",
+                "total": 121,
+                "confidence": 95,
+            },
+        ):
+            draft = service.invoice_draft(self.business["id"], document["id"])
+
+        # La lectura propone, no da de alta: la ficha nace al confirmar.
+        self.assertEqual(draft["customer_address"],
+                         "Calle Larga 4 08001 Barcelona")
+        self.assertEqual(db.list_clients(self.business["id"]), [])
+
+        client = service.confirm_client_candidate(
+            self.business["id"], document["id"],
+            address=draft["customer_address"], email=draft["customer_email"],
+            phone=draft["customer_phone"],
+        )
+        self.assertEqual(client["address"], "Calle Larga 4 08001 Barcelona")
+        self.assertEqual(client["email"], "admin@pino.example")
+        self.assertEqual(client["phone"], "+34931234567")
+
+    def test_existing_client_keeps_its_own_contact_data(self):
+        existing = db.add_client(
+            "Hotel Antiguo", nif="B55555555", address="Plaza Vieja 1",
+            email="reservas@antiguo.example", phone="+34911111111",
+            business_id=self.business["id"],
+        )
+        document = docrepo.add(
+            self.business["id"], filename="factura.pdf",
+            stored_name="issued-existing.pdf", mime="application/pdf", size=10,
+            kind="factura_emitida",
+        )
+        db.propose_document_client(
+            self.business["id"], document["id"],
+            name="Hotel Antiguo", nif="B55555555",
+        )
+        client = service.confirm_client_candidate(
+            self.business["id"], document["id"],
+            address="Otra Calle 9", email="otro@antiguo.example",
+            phone="+34999999999",
+        )
+        self.assertEqual(client["id"], existing["id"])
+        self.assertEqual(client["address"], "Plaza Vieja 1")
+        self.assertEqual(client["email"], "reservas@antiguo.example")
+        self.assertEqual(client["phone"], "+34911111111")
+        self.assertEqual(len(db.list_clients(self.business["id"])), 1)
+
     def test_known_nif_is_linked_without_creating_a_duplicate(self):
         client = db.add_client(
             "Hotel Antiguo", nif="B33333333", business_id=self.business["id"]
