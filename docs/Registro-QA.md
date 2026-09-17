@@ -1,5 +1,29 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Los cuatro fallos de la suite, uno a uno
+
+La pasada completa tras el rebase dio 930 pruebas con 4 fallos. Perseguidos por
+lotes, contra el arbol fusionado, en vez de esperar una hora por pasada:
+
+- `test_backend.test_whatsapp_duplicate_inbound_does_not_repeat_effects`: fijaba
+  los argumentos exactos de `chat.handle`, que ahora recibe `voice`. El producto
+  hacía lo correcto —`voice=False` en un mensaje de texto—; la expectativa estaba
+  vieja. Corregida.
+- `test_readiness.test_open_production_requires_operational_services`: vaciaba
+  `os.environ`, pero `config` lee el `.env` al importarse. En cuanto el founder
+  configuró `GROQ_API_KEY` en su máquina, el área de audio dejó de ser un bloqueo.
+  La prueba medía la máquina, no el producto: ahora apaga cada credencial sobre
+  `config` con un `ExitStack`.
+- Los otros dos no se reprodujeron en ninguno de los lotes y eran del mismo tipo
+  ambiental: el `.env` real cambió entre pasadas (claves de Anthropic y Groq)
+  mientras la suite corría.
+- Cobertura por lotes contra el código final, 489 pruebas: propias 54, módulos
+  nuevos del socio 91, cerebro 111, tablas del borrado 47, demo y fiabilidad 34,
+  los 19 módulos restantes 148, baja de cuenta 4. Ruff y `check_project_truth` OK.
+- Aprendizaje operativo: una prueba que lee credenciales reales del entorno no
+  mide el producto. Si aparece otra intermitente, mirar primero si depende del
+  `.env` antes de buscar la causa en el código.
+
 ## 2026-09-17 — Baja de cuenta: el error interno reproducido y cerrado
 
 - Reproducido en limpio: una cuenta con una fila en `whatsapp_connections` lanza
