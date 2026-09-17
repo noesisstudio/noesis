@@ -1,5 +1,24 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — «Crea el cliente X» daba de alta a nadie y listaba clientes
+
+Encontrado midiendo qué entiende el cerebro sin IA externa. La regla de alta solo
+aceptaba artículo indeterminado —«crea **un** cliente»—, así que «crea **el**
+cliente Talleres Pino» no encajaba, caía en la regla de listar y el autónomo veía
+su lista de clientes en vez del alta. Tampoco existía el orden inverso, «da de
+alta a X como cliente», ni «alta **de** cliente X».
+
+Mientras la IA externa funcionaba, ella resolvía esas frases y el hueco no se veía.
+Con el proveedor caído salió a la luz: es el tipo de agujero que el respaldo estaba
+tapando, y por eso conviene medir el cerebro local con la IA apagada.
+
+Ahora el patrón admite artículo determinado y el «de», y una regla nueva cubre el
+orden inverso. Además, `_limpiar_cliente` quita el papel del nombre: «factura para
+el cliente Marta» ya no propone dar de alta a alguien llamado «el cliente Marta».
+Las consultas no cambian: «clientes», «¿cuáles son mis clientes?» y «lista de
+clientes» siguen listando. Sin migración; esquema 55. Riesgo bajo, acotado al
+reconocimiento de frases. Rollback: revertir el commit.
+
 ## 2026-09-17 — Dar de baja una cuenta con WhatsApp daba error interno
 
 Aviso del founder: al confirmar el borrado de una cuenta salta un error interno,

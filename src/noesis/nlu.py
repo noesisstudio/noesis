@@ -210,6 +210,10 @@ def _limpiar_cliente(nombre: str) -> str:
     """Quita los conectores que se cuelan al final de un nombre dictado."""
     # «factura a nombre de Carla» / «a nom de Carla»: el cliente es Carla.
     nombre = re.sub(r"^(?:a\s+)?nom(?:bre)?\s+(?:de\s+|d')", "", str(nombre or "").strip(), flags=re.I)
+    # «factura para el cliente Marta» no da de alta a nadie llamado «el cliente
+    # Marta»: la palabra que describe el papel no forma parte del nombre.
+    nombre = re.sub(r"^(?:el|la|els|les|l')\s+(?:client[ea]?|proveedor[a]?)\s+",
+                    "", nombre, flags=re.I)
     partes = nombre.split()
     while partes and partes[-1].lower().strip(",.") in _CONECTORES_FINALES:
         partes.pop()
@@ -366,10 +370,28 @@ def parse(text: str) -> tuple[str, dict] | None:
     # una relación comercial. El acceso de una persona, en cambio, exige correo,
     # rol e invitación segura y no se concede desde una frase incompleta.
     party = re.search(
-        r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+(?:un|una)?\s*"
+        # El artículo determinado entra igual que el indeterminado: «crea el
+        # cliente Talleres Pino» se decía tan a menudo como «un cliente», y
+        # antes caía en la regla de listar clientes sin dar de alta a nadie.
+        r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+"
+        # «alta de cliente X» se dice tanto como «alta cliente X».
+        r"(?:de\s+)?(?:un|una|el|la|los|las)?\s*"
         r"(cliente|proveedor)\s*:?\s+(.+?)\s*$",
         text, re.I,
     )
+    if not party:
+        # Orden inverso: primero el nombre y después el papel.
+        inversa = re.search(
+            r"\b(?:da|dar)\s+de\s+alta\s+(?:a\s+)?(.+?)\s+como\s+"
+            r"(cliente|proveedor)\b",
+            text, re.I,
+        )
+        if inversa:
+            return (
+                "crear_cliente" if _norm(inversa.group(2)) == "cliente"
+                else "crear_proveedor",
+                {"nombre": inversa.group(1).strip(" ,.")},
+            )
     if party:
         name = re.sub(r"^(?:llamad[oa]|que se llama)\s+", "", party.group(2), flags=re.I).strip(" ,.")
         return (

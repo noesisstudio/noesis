@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Alta de cliente hablando: ocho formas de pedirlo
+
+- Nuevas en `test_client_signup_orders.py` (4): ocho maneras de pedir un alta
+  —artículo determinado e indeterminado, «alta de cliente», «que se llama» y el
+  orden inverso «da de alta a X como cliente»— crean el cliente; las mismas formas
+  funcionan para proveedor; cuatro consultas habituales siguen listando y no dan de
+  alta; y la palabra que describe el papel no acaba dentro del nombre.
+- Módulos del cerebro tras el cambio: `test_client_name_rules`, `test_intent_safety`,
+  `test_agenda_orders`, `test_local_invoice`, `test_conversation_safety` e
+  `test_invoice_conversation`: 87 OK. Ruff OK.
+- **Suite completa sobre el árbol fusionado: 934 OK, cero fallos** (3 h 16 min en
+  Windows con el `.env` real). Es la pasada que cierra el rebase con el socio.
+- No ejecutado: probar las frases nuevas por WhatsApp real.
+
 ## 2026-09-17 — Los cuatro fallos de la suite, uno a uno
 
 La pasada completa tras el rebase dio 930 pruebas con 4 fallos. Perseguidos por
