@@ -1,5 +1,16 @@
 # Mapa de código
 
+## Hojas de cálculo y gasto del mes — 17-sep
+
+`web/xlsx.py` escribe `.xlsx` con `zipfile` y XML: `build_sheet(headers, rows)`
+decide el tipo por valor (número, fecha ISO o `date`, texto en `inlineStr`),
+`_escape` quita los caracteres que XML no admite y `_workbook_xml` sanea el nombre
+de hoja. `web/reports.py` construye las filas una vez con sus tipos y las comparte
+entre CSV y Excel; `work_reports.build_clockin_xlsx` hace lo mismo con la jornada.
+`db.month_billing` suma ahora las `received_invoices` del mes junto a `expenses` y
+publica el desglose; `db.expenses_by_category` las agrega por categoría. Sin
+esquema nuevo ni dependencias.
+
 ## Cliente de una factura emitida con sus datos de contacto — 17-sep
 
 `extraction._validated_invoice` añade `customer_address`, `customer_email` y

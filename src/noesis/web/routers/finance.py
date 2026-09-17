@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 from ... import banking, db
-from .. import chat, reports
+from .. import chat, reports, xlsx
 from ..deps import _read_json
 
 router = APIRouter()
@@ -331,6 +331,36 @@ def report_costs(business_id: int):
 @router.get("/api/{business_id}/reports/invoices.csv")
 def report_invoices(business_id: int):
     return _csv_response(reports.invoices_csv(business_id), "noesis_facturas.csv")
+
+
+@router.get("/api/{business_id}/reports/received.csv")
+def report_received(business_id: int):
+    return _csv_response(reports.received_invoices_csv(business_id),
+                         "noesis_facturas_recibidas.csv")
+
+
+def _xlsx_response(payload: bytes, filename: str) -> Response:
+    return Response(
+        content=payload, media_type=xlsx.MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/api/{business_id}/reports/costs.xlsx")
+def report_costs_xlsx(business_id: int):
+    return _xlsx_response(reports.costs_xlsx(business_id), "noesis_costes.xlsx")
+
+
+@router.get("/api/{business_id}/reports/invoices.xlsx")
+def report_invoices_xlsx(business_id: int):
+    return _xlsx_response(reports.invoices_xlsx(business_id),
+                          "noesis_facturas.xlsx")
+
+
+@router.get("/api/{business_id}/reports/received.xlsx")
+def report_received_xlsx(business_id: int):
+    return _xlsx_response(reports.received_invoices_xlsx(business_id),
+                          "noesis_facturas_recibidas.xlsx")
 
 
 

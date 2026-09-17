@@ -8,6 +8,7 @@
        sin trabajar más: cada euro que ahorras es beneficio limpio.</p>
   </div>
   <div class="page-actions">
+    <a class="btn" href="/api/{{ business.id }}/reports/costs.xlsx">Descargar Excel</a>
     <a class="btn" href="/api/{{ business.id }}/reports/costs.csv">Descargar CSV</a>
     <a class="btn primary" href="#registrar-gasto">Registrar gasto</a>
   </div>
@@ -64,7 +65,9 @@
 
 <div class="card" style="margin-top:16px">
   <div class="card-h"><h2>Facturas recibidas</h2>
-    <span class="hint">de proveedores · <a href="/b/{{ business.id }}/documentos">añadir desde Documentos</a></span></div>
+    <span class="hint">de proveedores · <a href="/b/{{ business.id }}/documentos">añadir desde Documentos</a>
+      · <a href="/api/{{ business.id }}/reports/received.xlsx">Excel</a>
+      · <a href="/api/{{ business.id }}/reports/received.csv">CSV</a></span></div>
   <div class="card-b table-pad" style="padding-top:6px">
     <div class="table-wrap">
       <table>
@@ -99,7 +102,11 @@ async function load() {
   el('c-ratio').className = 'val ' + (ratio > 65 ? 'red' : ratio > 45 ? 'amber' : 'green');
 
   const ex = await api('/expenses');
-  el('c-count').textContent = ex.length + ' gasto(s) este mes';
+  // El mes cuenta lo que suma la cifra de arriba: gastos apuntados a mano y
+  // facturas de proveedor confirmadas.
+  el('c-count').textContent = s.received_count
+    ? `${s.expense_count} gasto(s) y ${s.received_count} factura(s) de proveedor este mes`
+    : `${s.expense_count} gasto(s) este mes`;
   const avg = ex.length ? ex.reduce((a,b)=>a+b.amount,0)/ex.length : 0;
   el('c-avg').textContent = eur(avg);
 

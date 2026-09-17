@@ -197,3 +197,47 @@ def build_clockin_pdf(data: dict) -> bytes:
         "de los Trabajadores.",
     )
     return bytes(pdf.output())
+
+
+def build_clockin_xlsx(data: dict) -> bytes:
+    """Misma jornada que el CSV, en una hoja con tipos y filtro."""
+    from . import xlsx
+
+    headers = [
+        "Trabajador", "Dia", "Hora original", "Hora efectiva", "Accion",
+        "Estado", "Horas del dia", "Ubicacion", "Precision (m)", "Origen",
+        "Sello SHA256", "Sello anterior", "Motivo de la correccion",
+    ]
+    rows: list[list] = []
+    for day in data["days"]:
+        for event in day["events"]:
+            effective_at = event.get("effective_at") or event["at"]
+            rows.append([
+                data["worker"]["name"],
+                day["day"],
+                str(event["at"])[11:19],
+                str(effective_at)[11:19] if not event.get("annulled") else "",
+                event["action"],
+                event.get("correction_status") or "original",
+                round(float(day["hours"]), 2),
+                _location(event),
+                event.get("accuracy") if event.get("accuracy") is not None else "",
+                event["source"],
+                event["seal"],
+                event.get("prev_seal") or "",
+                event.get("correction_reason") or "",
+            ])
+    integrity = data["integrity"]
+    rows.append([])
+    rows.append([
+        "integridad",
+        "VALIDA" if integrity["valid"] else "ALTERADA",
+        f"{integrity['checked']} registros verificados",
+        integrity.get("broken_at") or "",
+    ])
+    rows.append([
+        "nota",
+        "Los fichajes originales son inalterables. Las correcciones se "
+        "conservan en un registro de auditoria separado.",
+    ])
+    return xlsx.build_sheet(headers, rows, title="Jornada")

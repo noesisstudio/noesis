@@ -1,5 +1,21 @@
 ﻿# Tareas vivas
 
+## Descargas en Excel — 17-sep
+
+- [x] Escritura de `.xlsx` con la biblioteca estándar, con tipos, filtro y anchos.
+- [x] Costes, Facturas, facturas recibidas y jornada del equipo.
+- [x] Abierto y verificado con Excel real (fechas, sumas, filtro, sin reparación).
+- [ ] Founder: abrir uno descargado desde el navegador y, si usa alguno, probarlo
+  en LibreOffice o Google Sheets.
+- [ ] Si hace falta, exportar también presupuestos, clientes y agenda.
+
+## Coherencia del gasto — 17-sep
+
+- [x] El mes suma las facturas de proveedor confirmadas, con desglose.
+- [x] El gráfico por categorías las incluye.
+- [ ] Founder: confirmar que la nueva cifra de gasto del mes es la que espera, y
+  avisar si algún papel está apuntado dos veces (gasto manual + factura recibida).
+
 ## Cliente desde una factura adjunta — 17-sep
 
 - [x] La lectura extrae dirección, correo y teléfono del receptor, validados.

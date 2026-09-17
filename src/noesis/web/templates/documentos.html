@@ -550,12 +550,30 @@ async function confirmReceived() {
     total: el('r-total').value ? parseFloat(el('r-total').value) : null,
   };
   if (!body.total) { msg.textContent = 'El total es obligatorio.'; return; }
+  // Suyo: confirmación explícita de que va a Costes y no a Facturas emitidas.
   if (!confirm('¿Confirmas que este archivo contiene una sola factura de proveedor y que los datos corresponden a ella? Se registrará en Costes, no en Facturas emitidas.')) return;
-  try { await apiPost('/received-invoices', body); }
+  let creada;
+  try { creada = await apiPost('/received-invoices', body); }
   catch (e) { msg.textContent = e.message; return; }
   msg.textContent = '';
   hideReview();
-  el('d-msg').textContent = 'Factura recibida registrada en Costes y ligada al documento. No es una factura emitida ni un ingreso.';
+  // El archivo ordena por la fecha de la factura, no por la de subida: si es de
+  // otro trimestre, el documento saldría de la vista y parecería perdido.
+  const fecha = (creada && creada.issued_on) || body.issued_on || '';
+  let aviso = 'Factura recibida registrada en Costes y ligada al documento. No es una factura emitida ni un ingreso.';
+  if (/^\d{4}-\d{2}/.test(fecha)) {
+    const anio = fecha.slice(0, 4);
+    const trimestre = String(Math.floor((parseInt(fecha.slice(5, 7), 10) - 1) / 3) + 1);
+    if (anio !== el('d-year').value || trimestre !== el('d-quarter').value) {
+      const tieneAnio = [...el('d-year').options].some(o => o.value === anio);
+      if (tieneAnio) el('d-year').value = anio;
+      el('d-quarter').value = trimestre;
+      aviso += tieneAnio
+        ? ` Se archiva en T${trimestre} ${anio}, la fecha de la factura: te llevo ahí.`
+        : ` Se archiva en T${trimestre} ${anio}, fuera de los años que lista el archivo.`;
+    }
+  }
+  el('d-msg').textContent = aviso;
   renderList();
 }
 

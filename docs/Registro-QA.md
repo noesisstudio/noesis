@@ -1,5 +1,33 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Excel, recorrido del panel y coherencia del gasto
+
+- **Excel abierto con Excel de verdad** (COM en Windows): el archivo abre sin aviso
+  de reparación, la hoja se llama «Facturas emitidas», la cabecera sale en negrita,
+  `16/09/2026` es una fecha (`NumberFormat dd/mm/aaaa`), `SUMA(F2:F3)` da 847 sobre
+  las celdas generadas, el autofiltro queda activo y un texto que empieza por `=`
+  se muestra tal cual con `HasFormula = False`.
+- Nuevas en `test_xlsx_reports.py` (8): el paquete lleva las seis piezas que Excel
+  exige y todas parsean; números, fechas y vacíos conservan tipo; el texto del
+  usuario no puede volverse fórmula ni romper el XML (incluidos caracteres de
+  control que un OCR puede colar); el nombre de hoja se recorta a lo que Excel
+  admite; el mismo dato da el mismo archivo; cada informe solo lleva su negocio;
+  un negocio vacío descarga una hoja válida; y con sesión, la ruta devuelve el
+  `content-type` de Excel, el nombre del archivo y los datos, mientras otro negocio
+  recibe 403/404.
+- Nuevas en `test_cost_totals.py` (7): una recibida confirmada aparece en el mes;
+  gastos manuales y recibidas suman sin mezclarse; sin base declarada no se inventa
+  IVA soportado; otro mes y otro negocio quedan fuera; el gráfico por categorías
+  las cuenta y agrupa las que no traen categoría; la cifra del mes coincide con
+  `tax_quarter`; y Facturas, vacío, enlaza a las recibidas.
+- **Recorrido completo del panel** con una cuenta con datos: 20 páginas privadas,
+  30 APIs y 19 páginas públicas, todas 200. Sin errores.
+- Módulos afectados ejecutados: `test_xlsx_reports` 8 OK, `test_cost_totals` 7 OK,
+  `test_received_invoices` y `test_inbound_email` verdes. Ruff OK.
+- No ejecutado: abrir el `.xlsx` en LibreOffice, Google Sheets, Numbers o Excel de
+  móvil; descargar desde un navegador real; y la lectura contra Anthropic (la clave
+  local sigue caducada).
+
 ## 2026-09-17 — Datos de contacto del cliente leídos en la factura
 
 - Nuevas en `test_received_invoices.py`: `_validated_invoice` aplana una dirección

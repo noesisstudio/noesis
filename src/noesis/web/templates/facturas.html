@@ -8,6 +8,7 @@
        cobrada por completo, con PDF y CSV siempre a mano.</p>
   </div>
   <div class="page-actions">
+    <a class="btn" href="/api/{{ business.id }}/reports/invoices.xlsx">Descargar Excel</a>
     <a class="btn" href="/api/{{ business.id }}/reports/invoices.csv">Descargar CSV</a>
     {% if business.verifactu_enabled %}
     <a class="btn" href="/api/{{ business.id }}/verifactu/export.xml">XML AEAT</a>
@@ -373,7 +374,9 @@ function render(f) {
     el('f-empty').innerHTML = `<div class="empty-state">
       <b>Tu primera factura, en un minuto</b>
       <span>Elige el cliente, el concepto y el importe. Bynoesis calcula el IVA y el IRPF, y queda en borrador hasta que la emitas.</span>
-      <br><button class="btn primary sm" onclick="newInvoice()">Crear mi primera factura</button></div>`;
+      <br><button class="btn primary sm" onclick="newInvoice()">Crear mi primera factura</button>
+      <div class="meta" style="margin-top:12px">Aquí solo están las facturas que emites tú.
+        Las de tus proveedores viven en <a href="/b/${BIZ}/costes">Costes → Facturas recibidas</a>.</div></div>`;
   } else {
     el('f-empty').innerHTML = emptyState('Sin facturas en este estado',
       'Cambia el filtro o crea una nueva factura.', '', '');

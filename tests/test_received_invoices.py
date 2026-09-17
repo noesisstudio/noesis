@@ -389,6 +389,10 @@ class ReceivedInvoicesTestCase(unittest.TestCase):
                     "/client-candidate/confirm", json=body,
                 )
                 self.assertIn(foreign.status_code, {400, 403, 404})
+                # Al confirmar una recibida con fecha de otro trimestre, el
+                # archivo salta a ese período en vez de esconder el documento.
+                self.assertIn("Se archiva en T", page.text)
+                self.assertIn("d-quarter').value = trimestre", page.text)
         self.assertEqual(db.list_clients(self.other["id"]), [])
 
     def test_model_answer_reaches_the_draft_with_the_contact_fields(self):

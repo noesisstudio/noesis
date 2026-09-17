@@ -9591,17 +9591,35 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
                 (business_id, f"{month}%"),
             ).fetchall()
         ]
+        # Una factura de proveedor confirmada es gasto del negocio igual que un
+        # ticket apuntado a mano. El trimestre fiscal ya las sumaba; el mes no,
+        # y por eso Costes podía decir 0 € con facturas recibidas registradas.
+        received_rows = [
+            dict(row) for row in conn.execute(
+                "SELECT * FROM received_invoices WHERE business_id=? "
+                "AND CAST(COALESCE(issued_on, created_at) AS TEXT) LIKE ?",
+                (business_id, f"{month}%"),
+            ).fetchall()
+        ]
     invoiced = sum(item["total"] for item in invoices)
     invoiced_collected = sum(item["paid_amount"] for item in invoices)
     revenue_base = sum(item["base"] for item in invoices)
     pending = sum(item["remaining_amount"] for item in invoices)
     vat_output = sum(item["vat_amount"] for item in invoices)
-    expenses = sum(item["amount"] for item in expense_rows)
-    expense_base = sum(
+    manual_expenses = sum(item["amount"] for item in expense_rows)
+    manual_base = sum(
         item["amount"] / (1 + (item.get("vat_rate") or 0) / 100)
         if item.get("vat_rate") else item["amount"]
         for item in expense_rows
     )
+    received_expenses = sum(item["total"] for item in received_rows)
+    # Si la recibida no trae base, su total es lo único cierto: no se inventa.
+    received_base = sum(
+        item["base"] if item.get("base") is not None else item["total"]
+        for item in received_rows
+    )
+    expenses = manual_expenses + received_expenses
+    expense_base = manual_base + received_base
     vat_input = expenses - expense_base
     return {
         "month": month,
@@ -9617,12 +9635,23 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         "vat_input": round(vat_input, 2),
         "vat_estimated": round(vat_output - vat_input, 2),
         "expenses": round(expenses, 2),
+        # Desglose para que la pantalla pueda decir de dónde sale cada euro.
+        "expenses_manual": round(manual_expenses, 2),
+        "expenses_received": round(received_expenses, 2),
+        "expense_count": len(expense_rows),
+        "received_count": len(received_rows),
         "expense_base": round(expense_base, 2),
         "estimated_profit": round(revenue_base - expense_base, 2),
     }
 
 
 def expenses_by_category(business_id) -> list[dict]:
+    """Gasto por categoría contando también las facturas de proveedor.
+
+    Una recibida sin categoría se agrupa como «Facturas de proveedor» en vez de
+    caer en «Sin categoría» junto a los tickets sueltos: así se ve de un vistazo
+    qué parte del gasto viene de papel confirmado.
+    """
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT COALESCE(NULLIF(category,''),'Sin categoría') AS category, "
@@ -9630,7 +9659,24 @@ def expenses_by_category(business_id) -> list[dict]:
             "WHERE business_id=? GROUP BY category ORDER BY total DESC",
             (business_id,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        recibidas = conn.execute(
+            "SELECT COALESCE(NULLIF(category,''),'Facturas de proveedor') "
+            "AS category, SUM(total) AS total, COUNT(*) AS n "
+            "FROM received_invoices WHERE business_id=? GROUP BY category",
+            (business_id,),
+        ).fetchall()
+    total_por_categoria: dict[str, dict] = {}
+    for fila in list(rows) + list(recibidas):
+        actual = total_por_categoria.setdefault(
+            fila["category"], {"category": fila["category"], "total": 0, "n": 0}
+        )
+        actual["total"] += float(fila["total"] or 0)
+        actual["n"] += int(fila["n"] or 0)
+    return sorted(
+        ({**item, "total": round(item["total"], 2)}
+         for item in total_por_categoria.values()),
+        key=lambda item: item["total"], reverse=True,
+    )
 
 
 def income_by_client(business_id, limit: int = 8) -> list[dict]:

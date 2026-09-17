@@ -314,6 +314,7 @@ async function openClockins(workerId) {
       <div class="modal-b">
         <div class="row" style="margin:12px 0">
           <a class="btn sm" href="/api/${BIZ}/workers/${workerId}/report?format=pdf" target="_blank">Informe PDF</a>
+          <a class="btn sm" href="/api/${BIZ}/workers/${workerId}/report?format=xlsx">Informe Excel</a>
           <a class="btn sm" href="/api/${BIZ}/workers/${workerId}/report?format=csv">Informe CSV</a>
         </div>
         <div class="clock-admin-list">${data.items.length ? data.items.map(item => `

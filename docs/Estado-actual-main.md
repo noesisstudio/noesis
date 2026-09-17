@@ -1,5 +1,18 @@
 # Estado actual del producto
 
+## 17-sep — Descargas en Excel y el gasto ya cuadra entre pantallas
+
+Costes y Facturas tienen botón «Descargar Excel», las facturas recibidas se pueden
+descargar por primera vez (Excel y CSV) y el informe de jornada también sale en
+Excel. Los archivos llevan importes como números y fechas como fechas, así que se
+suman y ordenan sin arreglar nada; probado abriéndolos con Excel.
+
+Además, el gasto del mes ya incluye las facturas de proveedor confirmadas. Antes
+Costes podía decir «0 €» mientras Impuestos contaba esas mismas facturas. **La
+cifra de gasto y el margen que ves cambian**, y ahora coinciden con el trimestre
+fiscal. Al confirmar una factura con fecha de otro trimestre, el archivo de
+Documentos te lleva a ese período en vez de esconder el documento.
+
 ## 17-sep — Adjuntar una factura deja al cliente listo para facturarle
 
 Si subes a Documentos una factura emitida por ti y el cliente no está dado de alta,

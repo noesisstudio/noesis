@@ -1,5 +1,45 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — Descargas en Excel y el gasto deja de contarse a medias
+
+Petición del founder: revisión de la aplicación y descargas en `.xlsx`.
+
+**Excel.** Nuevo `web/xlsx.py`: un `.xlsx` es un ZIP con XML, así que se escribe
+con la biblioteca estándar (`zipfile`) en vez de traer `openpyxl` y `lxml` por un
+archivo de dos kilobytes. Genera una hoja con cabecera en negrita, filtro, anchos
+de columna y **tipos reales**: los importes son números y las fechas son fechas, de
+modo que el autónomo o su gestoría pueden sumar y ordenar sin tocar nada. El texto
+del usuario va en celdas `inlineStr`, que Excel nunca evalúa, así que no hace falta
+la comilla que sí lleva el CSV. Rutas nuevas `reports/costs.xlsx`,
+`reports/invoices.xlsx` y `reports/received.xlsx`, botón «Descargar Excel» en
+Costes y Facturas, enlaces Excel/CSV en la tarjeta de facturas recibidas (antes no
+se podían descargar de ninguna forma) e informe de jornada en `?format=xlsx`.
+
+**Coherencia del gasto.** `db.month_billing` sumaba solo la tabla `expenses`, así
+que Costes y el Resumen podían decir «0 € de gasto este mes» con facturas de
+proveedor confirmadas, mientras `tax_quarter` ya las contaba. Ahora el mes suma
+también las recibidas del período y devuelve el desglose (`expenses_manual`,
+`expenses_received`, `expense_count`, `received_count`); una recibida sin base
+declarada aporta su total y cero IVA soportado, sin inventar la base.
+`expenses_by_category` incluye las recibidas, agrupando las que no traen categoría
+como «Facturas de proveedor». **Esto cambia la cifra de gasto y el margen que ves
+en pantalla**: ahora coincide con el trimestre fiscal, que es el criterio que ya
+estaba en producción.
+
+**Dos trampas de la pantalla.** Al confirmar una factura recibida con fecha de otro
+trimestre, el documento salía de la vista del archivo sin avisar: ahora el archivo
+salta a ese período y lo dice. Y Facturas, vacío, explica que ahí solo están las
+que emites tú y enlaza a Costes → Facturas recibidas.
+
+Áreas: `web/xlsx.py` (nuevo), `web/reports.py`, `web/work_reports.py`,
+`web/routers/finance.py`, `web/routers/team.py`, `db.py`, `templates/costes.html`,
+`templates/facturas.html`, `templates/documentos.html`, `templates/equipo.html`.
+Sin migración; esquema 55. Sin dependencias nuevas. Riesgo: medio en la cifra de
+gasto (cambia lo que el founder ve, no los datos); bajo en el resto. Diagnóstico:
+si un gasto aparece dos veces, mirar si el mismo papel está a la vez como gasto
+manual y como factura recibida. Rollback: revertir el commit; los `.xlsx` ya
+descargados siguen abriéndose.
+
 ## 2026-09-17 — El cliente de una factura emitida entra con sus datos de contacto
 
 Petición del founder: al adjuntar una factura de un cliente que no está dado de

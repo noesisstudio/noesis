@@ -288,7 +288,9 @@ def api_worker_report(
         return JSONResponse({"error": str(exc)}, status_code=400)
     if data is None:
         return JSONResponse({"error": "Trabajador no encontrado."}, status_code=404)
-    from ..work_reports import build_clockin_csv, build_clockin_pdf
+    from ..work_reports import (
+        build_clockin_csv, build_clockin_pdf, build_clockin_xlsx,
+    )
     safe_name = "".join(
         character if character.isalnum() else "_"
         for character in data["worker"]["name"].lower()
@@ -301,6 +303,18 @@ def api_worker_report(
             headers={
                 "Content-Disposition": (
                     f'attachment; filename="jornada_{safe_name}_{start}_{end}.csv"'
+                )
+            },
+        )
+    if format.lower() == "xlsx":
+        from ..xlsx import MEDIA_TYPE
+
+        return Response(
+            content=build_clockin_xlsx(data),
+            media_type=MEDIA_TYPE,
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="jornada_{safe_name}_{start}_{end}.xlsx"'
                 )
             },
         )
