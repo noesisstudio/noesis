@@ -133,7 +133,8 @@ async def api_chat_audio(business_id: int, request: Request, audio: UploadFile =
     if not text:
         return audio_error("El audio estaba vacío o no se entendió.", 422)
     result = await run_in_threadpool(
-        lambda: chat.handle(business_id, text, channel="audio", actor_id=actor_id)
+        lambda: chat.handle(business_id, text, channel="audio",
+                            actor_id=actor_id, voice=True)
     )
     return {"transcription": text, **result}
 

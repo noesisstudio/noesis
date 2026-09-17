@@ -2147,7 +2147,8 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             continue
 
         chat_result = chat.handle(
-            business["id"], text, channel="whatsapp", actor_phone=phone
+            business["id"], text, channel="whatsapp", actor_phone=phone,
+            voice=bool(audio_id),
         )
         if len(chat_result.get("invoice_ids", [])) == 1:
             _remember_invoice(business["id"], phone, chat_result["invoice_ids"][0])

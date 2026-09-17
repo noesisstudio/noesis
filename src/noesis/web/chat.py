@@ -787,7 +787,7 @@ def _full_invoice_offer(business_id: int, args: dict, channel: str) -> dict | No
     }
 
 
-def _ai_unavailable_reply(channel: str) -> str:
+def _ai_unavailable_reply(channel: str, heard: str | None = None) -> str:
     examples = [
         "• «Factura a Marta por reparar la caldera 120 euros»",
         "• «Gasté 45 euros en gasolina»",
@@ -798,8 +798,17 @@ def _ai_unavailable_reply(channel: str) -> str:
             "• «Últimos 3 tickets en PDF»",
             "• «Pásame la factura 12 en PDF»",
         ]
+    # Con una nota de voz hay dos fallos posibles —oír mal o no entender la
+    # orden— y el mismo mensaje para ambos hace pensar que no se oye nada. Al
+    # repetir lo transcrito, el autónomo distingue uno del otro de un vistazo.
+    escuchado = ""
+    if heard:
+        limpio = " ".join(str(heard).split())[:160]
+        if limpio:
+            escuchado = f"He entendido esto de tu nota de voz: «{limpio}».\n\n"
     return (
-        "No he sabido interpretar esa frase y ahora mismo la IA avanzada no está "
+        escuchado
+        + "No he sabido interpretar esa frase y ahora mismo la IA avanzada no está "
         "disponible. No he guardado ni enviado nada.\n\n"
         "Estas órdenes funcionan siempre:\n" + "\n".join(examples)
     )
@@ -867,6 +876,7 @@ def _handle(
     channel: str = "web",
     actor_phone: str | None = None,
     actor: str | None = None,
+    voice: bool = False,
 ) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
     from .. import local_invoice, action_review
@@ -1124,7 +1134,8 @@ def _handle(
                                  "reciente antes de intentarlo otra vez.",
                         "source": "local",
                     }
-        return {"reply": _ai_unavailable_reply(channel), "source": "local"}
+        return {"reply": _ai_unavailable_reply(channel, message if voice else None),
+                "source": "local"}
 
     from .. import learning
     if learning.enabled():
@@ -1215,6 +1226,7 @@ def handle(
     channel: str = "web",
     actor_phone: str | None = None,
     actor_id: str | None = None,
+    voice: bool = False,
 ) -> dict:
     """Entrada común del acompañante: responde y conserva la relación.
 
@@ -1263,7 +1275,8 @@ def handle(
                 receipt_token = execution_receipts.set(receipts)
                 try:
                     result = _handle(business_id, message, page, channel=channel,
-                                     actor_phone=actor_phone, actor=actor)
+                                     actor_phone=actor_phone, actor=actor,
+                                     voice=voice)
                 finally:
                     execution_receipts.reset(receipt_token)
                 invoice_receipts = [r for r in receipts if r["business_id"] == business_id

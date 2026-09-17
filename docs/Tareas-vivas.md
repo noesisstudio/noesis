@@ -1,5 +1,16 @@
 ﻿# Tareas vivas
 
+## Audio y respaldo de IA — 17-sep
+
+- [x] Localizado el origen real del mensaje: falla el respaldo de IA, no Groq.
+- [x] Al no entender una nota de voz, se repite lo transcrito (web y WhatsApp).
+- [ ] Founder: renovar `ANTHROPIC_API_KEY` en Railway (la del `.env` local da 401)
+  y comprobar que una frase libre deja de dar ese mensaje.
+- [ ] Founder: mandar una nota de voz en el asistente web y mirar si tu burbuja
+  muestra el texto transcrito; si lo muestra, Groq funciona.
+- [ ] Mostrar en Ajustes el último error del proveedor de IA: hoy se guarda en
+  `integration_settings.last_error` y no se enseña en ninguna pantalla.
+
 ## Descargas en Excel — 17-sep
 
 - [x] Escritura de `.xlsx` con la biblioteca estándar, con tipos, filtro y anchos.

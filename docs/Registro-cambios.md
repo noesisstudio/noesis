@@ -1,5 +1,27 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — Una nota de voz que no se entiende dice qué se oyó
+
+Aviso del founder: «no me ha reconocido ni un solo audio» y el mensaje que ve es
+«No he sabido interpretar esa frase y ahora mismo la IA avanzada no está
+disponible». Ese texto **solo aparece con una clave de IA configurada cuyo
+proveedor falla**: sin clave, el asistente responde con el plan del día. Es decir,
+el audio ya está transcrito cuando aparece; el que falla es el respaldo externo.
+La `ANTHROPIC_API_KEY` del `.env` local devuelve 401 contra Anthropic.
+
+Hasta ahora, oír mal y no entender la orden daban el mismo mensaje, y por WhatsApp
+no se devuelve nunca la transcripción, así que era imposible distinguirlos desde
+fuera. `_ai_unavailable_reply` acepta ahora el texto oído y lo repite —acotado a
+160 caracteres— cuando la entrada vino de una nota de voz; `chat.handle` y
+`_handle` reciben `voice`, que marca `routers/assistant.api_chat_audio` y el
+webhook de WhatsApp (`voice=bool(audio_id)`). Escribiendo no cambia nada.
+Comprobado además que una orden transcrita con mayúscula inicial y punto final se
+entiende igual que escrita en minúsculas: la puntuación no era el problema.
+
+Sin migración; esquema 55. Riesgo bajo: solo cambia el texto de una respuesta de
+fallo. Diagnóstico: si el aviso repite bien lo dicho, el fallo es del respaldo de
+IA, no de la transcripción. Rollback: revertir el commit.
+
 ## 2026-09-17 — Descargas en Excel y el gasto deja de contarse a medias
 
 Petición del founder: revisión de la aplicación y descargas en `.xlsx`.

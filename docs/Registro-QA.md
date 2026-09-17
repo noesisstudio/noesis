@@ -1,5 +1,26 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Diagnóstico del audio y aviso con lo transcrito
+
+- Rastreado el mensaje del founder hasta `chat._ai_unavailable_reply`, al que solo
+  se llega con clave configurada y proveedor que lanza excepción. Sin clave el
+  asistente devuelve el plan del día, así que el mensaje **prueba** que la IA
+  externa está fallando en producción.
+- `ANTHROPIC_API_KEY` del `.env` local: 401 AuthenticationError contra Anthropic.
+  No se ha podido leer la de Railway (sin sesión de CLI), así que la coincidencia
+  entre ambas queda por confirmar.
+- Producción responde `/health` y `/ready`: release `aa0f402ad0f3`, esquema 55. Esa
+  release incluye el arreglo del User-Agent de Groq del 15-sep.
+- Probadas 12 frases habituales tal como las devuelve una transcripción (mayúscula
+  inicial, tildes y punto final) contra el cerebro local sin IA externa: las 12 se
+  entienden; ninguna produce el mensaje del founder. La puntuación no influye.
+- Nuevas en `test_voice_feedback.py` (6): el aviso cita lo transcrito solo en voz,
+  recorta a 160 caracteres, ignora una transcripción vacía, conserva los ejemplos
+  propios de WhatsApp, ambos canales marcan la entrada como voz y `voice` es
+  opcional con valor falso por defecto.
+- No ejecutado: transcripción real contra Groq (la `GROQ_API_KEY` local está
+  vacía), ni una nota de voz real en producción.
+
 ## 2026-09-17 — Excel, recorrido del panel y coherencia del gasto
 
 - **Excel abierto con Excel de verdad** (COM en Windows): el archivo abre sin aviso

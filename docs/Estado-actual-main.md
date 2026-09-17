@@ -1,5 +1,16 @@
 # Estado actual del producto
 
+## 17-sep — El audio: el problema no es Groq
+
+El mensaje «no he sabido interpretar…» que aparecía con las notas de voz no viene
+de la transcripción: aparece cuando la frase ya está transcrita, las reglas locales
+no la reconocen y **la IA avanzada falla**. Ese texto solo puede salir con una clave
+configurada cuyo proveedor devuelve error. La clave de Anthropic del entorno local
+está caducada (401), y todo apunta a que en producción pasa lo mismo.
+
+Mientras tanto, cuando no entiende una nota de voz ahora te dice qué ha oído, así
+que se distingue de un vistazo si el fallo es del micrófono o del cerebro.
+
 ## 17-sep — Descargas en Excel y el gasto ya cuadra entre pantallas
 
 Costes y Facturas tienen botón «Descargar Excel», las facturas recibidas se pueden
