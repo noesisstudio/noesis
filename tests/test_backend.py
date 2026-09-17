@@ -1417,7 +1417,7 @@ class BackendTestCase(unittest.TestCase):
         self.assertTrue(duplicate["results"][0]["duplicate"])
         handle.assert_called_once_with(
             business["id"], "resumen", channel="whatsapp",
-            actor_phone="34600111222",
+            actor_phone="34600111222", voice=False,
         )
         send.assert_called_once()
 

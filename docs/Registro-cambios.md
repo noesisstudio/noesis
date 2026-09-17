@@ -1,5 +1,37 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — Dar de baja una cuenta con WhatsApp daba error interno
+
+Aviso del founder: al confirmar el borrado de una cuenta salta un error interno,
+tanto desde el panel de admin como desde la propia cuenta. Reproducido: basta con
+que la cuenta tenga **WhatsApp conectado**. `delete_business_cascade` no borraba
+`whatsapp_connections`, así que el `DELETE FROM businesses` chocaba con su clave
+foránea y la transacción entera se caía con `IntegrityError`. Como las dos rutas
+—titular y admin— acaban en la misma función, fallaban las dos.
+
+Revisando el esquema entero aparecieron **siete** tablas con `business_id` que el
+borrado no tocaba y que apuntan a `businesses` sin `ON DELETE CASCADE`:
+`whatsapp_inbox`, `whatsapp_conversations`, `whatsapp_contacts`,
+`whatsapp_connections`, `worker_submissions`, `support_access_grants` y
+`access_requests`. Todas entran ahora en la lista, en orden de claves foráneas: la
+bandeja antes que documentos y trabajos, los envíos del trabajador antes que
+materiales y proyectos. `document_profiles` y `gestoria_fiscal_profiles` se quedan
+fuera a propósito: ya tienen `ON DELETE CASCADE` y la base de datos las borra sola.
+
+Decisión: la solicitud de acceso ligada a la cuenta se borra con ella. Contiene
+nombre, correo y teléfono de una persona, y conservarla después de ejecutar un
+borrado pedido por esa misma persona contradiría la baja. Lo que sigue sin borrarse
+es lo que no se puede: una cuenta con facturas emitidas o fichajes continúa yendo a
+la baja con conservación legal, como antes.
+
+La prueba nueva es **estructural** a propósito: recorre el esquema y exige que toda
+tabla con `business_id` esté cubierta por el borrado o tenga `ON DELETE CASCADE`.
+Una tabla nueva que se olvide volverá a romper la baja, pero ahora lo dirá la suite
+en vez del founder. Sin migración; esquema 55. Riesgo: medio-alto por ser borrado
+irreversible, mitigado con la prueba de aislamiento entre cuentas. Diagnóstico: si
+vuelve el error, mirar en los logs la tabla que nombra el `IntegrityError`.
+Rollback: revertir el commit (la baja volvería a fallar).
+
 ## 2026-09-17 — Modelo economico v2: bajas, canal y caja, todo por formula
 
 Petición del founder: rehacer el modelo financiero y dejarlo duplicado. El de

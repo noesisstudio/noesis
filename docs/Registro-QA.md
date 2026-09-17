@@ -1,5 +1,23 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Baja de cuenta: el error interno reproducido y cerrado
+
+- Reproducido en limpio: una cuenta con una fila en `whatsapp_connections` lanza
+  `sqlite3.IntegrityError: FOREIGN KEY constraint failed` al darse de baja. Una
+  cuenta sin WhatsApp se borraba bien, por eso no había saltado antes.
+- Barrido del esquema: de 69 tablas con `business_id`, 9 no entraban en el borrado;
+  2 de ellas (`document_profiles`, `gestoria_fiscal_profiles`) tienen `ON DELETE
+  CASCADE` y se borran solas, y las otras 7 rompían la baja.
+- Nuevas en `test_account_deletion.py` (4): la estructural que recorre el esquema y
+  exige cobertura de toda tabla con `business_id`; una cuenta con WhatsApp
+  conectado, contacto, conversación, solicitud de acceso, cliente, gasto y factura
+  recibida se borra entera sin dejar filas; borrar una cuenta no toca a otra; y una
+  cuenta con una factura emitida sigue exigiendo la baja con conservación legal.
+  4 OK. Ruff OK.
+- No ejecutado: la baja contra PostgreSQL real (el orden de claves foráneas es el
+  mismo, pero conviene repetirlo en el smoke de Postgres) ni desde la pantalla de
+  producción.
+
 ## 2026-09-17 — Modelo economico v2 abierto y probado con Excel
 
 - Generado con `py analysis/build_modelo_economico_v2.py`: 7 hojas (Panel,

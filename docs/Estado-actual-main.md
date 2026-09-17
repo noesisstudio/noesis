@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 17-sep — Arreglada la baja de cuenta
+
+Dar de baja una cuenta que tuviera WhatsApp conectado daba un error interno y no
+borraba nada, desde el panel de admin y desde la propia cuenta. Faltaban siete
+tablas en el borrado, empezando por la conexión de WhatsApp. Ya se borra entera, y
+una prueba estructural recorre el esquema para que ninguna tabla nueva vuelva a
+romperlo en silencio. Lo que no cambia: una cuenta con facturas emitidas o fichajes
+sigue yendo a la baja con conservación legal.
+
 ## 17-sep — Modelo economico v2, con bajas, canal y caja
 
 `Bynoesis-Modelo-Economico-v2.xlsx` sustituye en la práctica al de agosto, que se

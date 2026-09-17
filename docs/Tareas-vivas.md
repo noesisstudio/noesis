@@ -1,5 +1,14 @@
 # Tareas vivas
 
+## Baja de cuenta — 17-sep
+
+- [x] Reproducido el error interno y localizadas las siete tablas que faltaban.
+- [x] Prueba estructural que exige cobertura de toda tabla con `business_id`.
+- [ ] Founder: repetir la baja en producción con una cuenta de prueba que tenga
+  WhatsApp conectado, y confirmar que termina sin error.
+- [ ] Añadir la baja completa al smoke de PostgreSQL: el orden de claves foráneas
+  es el mismo, pero ahí no está probado.
+
 ## Modelo economico v2 — 17-sep
 
 - [x] Libro nuevo por fórmula desde una sola hoja de mandos, con el de agosto intacto.

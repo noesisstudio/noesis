@@ -14049,6 +14049,17 @@ def delete_business_cascade(business_id) -> bool:
         for table in (
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
+            # El número propio del negocio y su bandeja: sin esto, cualquier
+            # cuenta que hubiera conectado WhatsApp no se podía dar de baja.
+            # La bandeja va primero porque apunta a documentos y trabajos.
+            "whatsapp_inbox", "whatsapp_conversations", "whatsapp_contacts",
+            "whatsapp_connections",
+            # Los envíos del trabajador apuntan a documentos, materiales,
+            # trabajos, proyectos y al propio trabajador: van antes que todos.
+            "worker_submissions",
+            # Permisos de soporte del titular y su solicitud de acceso: contienen
+            # datos personales y no pueden sobrevivir a la cuenta que los creó.
+            "support_access_grants", "access_requests",
             "email_outbox", "privacy_requests",
             "inbound_email_messages", "inbound_email_routes",
             "verifactu_cancellation_outbox", "verifactu_outbox",
