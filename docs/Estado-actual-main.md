@@ -1,5 +1,17 @@
 # Estado actual del producto
 
+## 17-sep — Modelo economico v2, con bajas, canal y caja
+
+`Bynoesis-Modelo-Economico-v2.xlsx` sustituye en la práctica al de agosto, que se
+conserva por si acaso. Todo lo editable está en la hoja `Panel`: mezcla de planes,
+bajas, CAC, opex, altas al mes y cuota de implantación. Cambia cualquiera y se
+mueven el LTV, el coste del canal y la curva de caja a 36 meses.
+
+Responde a lo que el modelo anterior no podía: cuánto dura un cliente, cuánto
+cuesta conseguirlo, qué se lleva cada estructura de comisión y cuánto dinero hay
+que aguantar hasta el break-even. Lo que no está medido —bajas, CAC y mezcla—
+aparece marcado en rojo: sigue siendo un escenario, no una previsión.
+
 ## 17-sep — El audio: el problema no es Groq
 
 El mensaje «no he sabido interpretar…» que aparecía con las notas de voz no viene

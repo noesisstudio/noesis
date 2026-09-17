@@ -1,5 +1,16 @@
 # Mapa de código
 
+## Modelo economico v2 — 17-sep
+
+`analysis/build_modelo_economico_v2.py` genera
+`docs/06-negocio-y-finanzas/Bynoesis-Modelo-Economico-v2.xlsx` con openpyxl (extra
+`analysis`, no es dependencia del producto). `PLANES` guarda las cifras ancla del
+15/07/2026; `panel()` escribe las celdas editables y devuelve sus referencias, que
+el resto de hojas usan para construir fórmulas. Las constantes `UE_FILA_MEDIA`,
+`CANAL_FILA_D`, `CAJA_FILA_BREAKEVEN`, `CAJA_FILA_MINIMA` y `CAJA_TABLA_INICIO`
+fijan las filas que unas hojas referencian en otras, con aserciones que rompen la
+generación si el maquetado se desplaza. El generador de agosto sigue en su sitio.
+
 ## Hojas de cálculo y gasto del mes — 17-sep
 
 `web/xlsx.py` escribe `.xlsx` con `zipfile` y XML: `build_sheet(headers, rows)`

@@ -1,5 +1,24 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Modelo economico v2 abierto y probado con Excel
+
+- Generado con `py analysis/build_modelo_economico_v2.py`: 7 hojas (Panel,
+  Unit_Economics, Vida_y_LTV, Canal_Comision, Implantacion, Caja_36m,
+  Fuentes_y_pendientes). Ruff OK.
+- Abierto con Excel real: sin aviso de reparación y sin celdas de error.
+  Reproduce las cifras verificadas del 15/07/2026 —ARPU 43,00 €, contribución
+  29,36 €, break-even 120 cuentas— y las del 16/09 —comisiones A 43 € / 5,9 %,
+  B 86 € / 11,7 %, C 215 € / 29,3 %, D 94,60 € / 12,9 %, E 111,80 € / 15,2 %, y
+  280 cuentas para cubrir un comercial a sueldo.
+- Prueba de que el modelo está vivo: cambiando solo la celda de bajas del 4 % al
+  8 %, la vida media pasa de 25 a 12,5 meses, el LTV de 734,10 € a 367,05 € (la
+  cifra que publica el análisis para esa tasa) y el break-even de caja del mes 13
+  al 21. Caja mínima: −15.938 € con 4 %, −16.503 € con 8 %.
+- El generador falla con una aserción si el maquetado desplaza las filas que unas
+  hojas referencian en otras, en vez de escribir un libro con referencias rotas.
+- No ejecutado: abrir el libro en LibreOffice o Google Sheets, y contrastar con el
+  modelo interactivo enlazado en `Canal-comercial-y-comisiones.md`.
+
 ## 2026-09-17 — Diagnóstico del audio y aviso con lo transcrito
 
 - Rastreado el mensaje del founder hasta `chat._ai_unavailable_reply`, al que solo

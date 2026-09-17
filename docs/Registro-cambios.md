@@ -1,5 +1,36 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — Modelo economico v2: bajas, canal y caja, todo por formula
+
+Petición del founder: rehacer el modelo financiero y dejarlo duplicado. El de
+agosto (`Bynoesis-Modelo-Economico.xlsx`, 17 hojas) **se conserva intacto**; el
+nuevo vive en `Bynoesis-Modelo-Economico-v2.xlsx` y lo genera
+`analysis/build_modelo_economico_v2.py`.
+
+Qué cambia. Primero, una sola hoja de mandos: todo lo editable está en `Panel` y
+el resto son fórmulas que apuntan allí, así que cambiar la mezcla de planes o las
+bajas mueve el libro entero, incluida la curva de caja. Segundo, incorpora las
+cuatro capas que `Canal-comercial-y-comisiones.md` (16/09) identificó como
+ausentes: bajas y vida del cliente, coste de adquisición, canal comercial con sus
+cinco estructuras de comisión y caja mes a mes a 36 meses. Siete hojas en vez de
+diecisiete, pero ninguna decorativa.
+
+Las cifras ancla del 15/07/2026 no se tocan: precio, coste de software y
+contribución por plan entran como dato verificado y lo demás se deriva. El bloque
+intermedio —soporte, onboarding, fijo y comisiones— se calcula por diferencia
+dentro del libro, porque el análisis publica el total y no su desglose: inventar
+uno habría sido más cómodo y menos cierto. La hoja `Fuentes_y_pendientes` marca en
+rojo lo que **no** está medido: bajas, CAC y mezcla de planes.
+
+Verificado abriendo el libro con Excel: reproduce ARPU 43,00 €, contribución
+29,36 €, break-even 120 cuentas, las cinco comisiones (43 / 86 / 215 / 94,60 /
+111,80 €) y las 280 cuentas que necesitaría un comercial a sueldo. Y responde:
+subiendo las bajas del 4 % al 8 %, la vida cae a 12,5 meses, el LTV a 367,05 € —la
+cifra exacta del análisis— y el break-even de caja pasa del mes 13 al 21.
+
+Sin efecto en producto ni en código de `src/`. Riesgo nulo: es documentación de
+apoyo a una decisión que sigue sin tomarse. Rollback: borrar el archivo v2.
+
 ## 2026-09-17 — Una nota de voz que no se entiende dice qué se oyó
 
 Aviso del founder: «no me ha reconocido ni un solo audio» y el mensaje que ve es

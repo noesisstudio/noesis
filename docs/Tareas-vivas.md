@@ -1,4 +1,16 @@
-﻿# Tareas vivas
+# Tareas vivas
+
+## Modelo economico v2 — 17-sep
+
+- [x] Libro nuevo por fórmula desde una sola hoja de mandos, con el de agosto intacto.
+- [x] Bajas, vida y LTV; cinco estructuras de comisión; cuota de implantación;
+  caja mes a mes a 36 meses.
+- [x] Verificado con Excel: reproduce las cifras del 15/07 y del 16/09, y reacciona
+  al cambiar un supuesto.
+- [ ] Founder: revisar si los supuestos por defecto (bajas 4 %, CAC 150 €, altas 10
+  al mes) son los que quiere usar para decidir sobre el canal.
+- [ ] Tras el piloto: sustituir bajas, CAC y mezcla por datos medidos y volver a
+  generar el libro. Hasta entonces, ninguna comisión debería firmarse.
 
 ## Audio y respaldo de IA — 17-sep
 
