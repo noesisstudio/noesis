@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
+from contextlib import ExitStack
 from unittest.mock import patch
 
 from noesis import config, readiness
@@ -192,13 +193,23 @@ class ReadinessTestCase(unittest.TestCase):
                     self.assertEqual(areas["datos registrales"]["status"], "warning")
 
     def test_open_production_requires_operational_services(self):
-        with (
-            patch.dict(os.environ, {}, clear=True),
-            patch.object(config, "IS_PRODUCTION", True),
-            patch.object(config, "PUBLIC_SIGNUP_ENABLED", True),
-            patch.object(config, "ADMIN_REQUIRE_GOOGLE_OAUTH", False),
-            patch.object(config, "ANTHROPIC_API_KEY", ""),
-        ):
+        # `config` lee el `.env` al importarse, así que vaciar `os.environ` no
+        # basta: si la máquina de quien ejecuta la prueba tiene configurado un
+        # proveedor, su área deja de ser un bloqueo y la prueba falla sin que
+        # nada del producto haya cambiado. Se apaga cada credencial una a una.
+        credenciales = {
+            "ANTHROPIC_API_KEY": "", "GROQ_API_KEY": "", "BREVO_API_KEY": "",
+            "COMPAT_AI_API_KEY": "", "COMPAT_AI_BASE_URL": "",
+            "COMPAT_AI_MODEL": "", "COMPAT_AI_PROVIDER": "",
+            "CLAMAV_HOST": "", "WHISPER_LANGUAGE": "",
+        }
+        with ExitStack() as pila:
+            pila.enter_context(patch.dict(os.environ, {}, clear=True))
+            for nombre, valor in (
+                ("IS_PRODUCTION", True), ("PUBLIC_SIGNUP_ENABLED", True),
+                ("ADMIN_REQUIRE_GOOGLE_OAUTH", False), *credenciales.items(),
+            ):
+                pila.enter_context(patch.object(config, nombre, valor))
             report = readiness.collect_readiness(check_database=False)
 
         by_area = {item["area"]: item for item in report["checks"]}
