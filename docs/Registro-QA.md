@@ -1,5 +1,25 @@
 ﻿# Registro de QA
 
+## 2026-09-17 — Modelo economico v3 abierto y probado con Excel
+
+- Generado con `py analysis/build_modelo_economico_v3.py`: 5 hojas (Panel,
+  Horas_del_founder, Rampa_36m, Escenarios, Que_es_dato_y_que_no). Ruff OK.
+- Dos errores propios detectados **porque Excel se negó a abrir el libro**, no por
+  el parser: `beginsWith` no es un operador válido de una regla «CellIs» (se
+  sustituye por una regla de fórmula) y el formato condicional no puede mirar a
+  otra hoja (se añade un espejo local de las horas). El ZIP y el XML eran válidos
+  en ambos casos: abrir el archivo con Excel real es lo único que lo detecta.
+- Abierto con Excel: 5 hojas, sin aviso de reparación. Contribución 37,99 €/cuenta
+  —cuadra con ARPU 43 € menos 3 % de impagos menos 3,73 € de coste medio—, y los
+  tres equilibrios salen en 5, 13 y 44 cuentas con estructura 160 €, cuota 300 € y
+  retirada 1.200 €.
+- La rampa se comporta: mes 1 con 5 altas consume 17,5 h (15 de venta y 2,5 de
+  soporte); en el mes 18 el soporte ocupa 58,2 de 60 horas y las altas bajan de 10
+  a 7 sin que ninguna palanca comercial cambie. Es el límite de capacidad
+  funcionando.
+- No ejecutado: contrastar con LibreOffice o Google Sheets, y validar los supuestos
+  con datos reales (no hay clientes de pago).
+
 ## 2026-09-17 — Alta de cliente hablando: ocho formas de pedirlo
 
 - Nuevas en `test_client_signup_orders.py` (4): ocho maneras de pedir un alta

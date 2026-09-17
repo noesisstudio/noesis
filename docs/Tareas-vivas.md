@@ -1,5 +1,18 @@
 # Tareas vivas
 
+## Modelo economico v3 — 17-sep
+
+- [x] Libro realista: founder con coste, horas como límite, cohortes con bajas,
+  prueba gratis e impagos.
+- [ ] Founder: revisar las siete partidas de estructura del Panel con las facturas
+  reales (servidores, herramientas, gestoría, seguro) y la cuota de autónomos.
+- [ ] Founder: decidir la retirada mensual. Es la cifra que convierte el proyecto
+  en un trabajo, y de ella salen las 44 cuentas de equilibrio.
+- [ ] Founder: estimar honestamente las horas al mes que puedes dedicar a vender y
+  atender. Es la palanca que más mueve la rampa.
+- [ ] Tras el piloto: sustituir bajas, minutos de soporte y horas por alta por lo
+  medido. Con esas tres, el resto del modelo deja de ser un escenario.
+
 ## Baja de cuenta — 17-sep
 
 - [x] Reproducido el error interno y localizadas las siete tablas que faltaban.

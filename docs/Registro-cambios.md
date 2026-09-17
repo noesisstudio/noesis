@@ -1,5 +1,40 @@
 ﻿# Registro de cambios
 
+## 2026-09-17 — Modelo economico v3: el negocio como es
+
+Petición del founder: «hazlo más realista», sobre el libro que subió editado
+(`docs/01-producto/Noesis-Modelo-Economico.xlsx`, con opex 500 € y plataforma 7 €).
+Nuevo libro `Bynoesis-Modelo-Economico-v3.xlsx`, generado por
+`analysis/build_modelo_economico_v3.py`. Los dos anteriores se conservan.
+
+Cinco cosas lo hacían irreal, y las cinco están corregidas:
+
+**El founder no costaba nada.** Un equilibrio de 17 cuentas con 500 € de opex
+describe un negocio donde nadie cobra. Ahora la retirada y la cuota de autónomos
+son palancas visibles y hay **tres equilibrios**: cubrir la estructura (5 cuentas),
+cubrir estructura y cuota (13) y pagarte 1.200 € al mes (44).
+
+**El tiempo era infinito.** Las altas ya no son una constante: salen de las horas
+que quedan tras atender a la cartera. La rampa se frena sola —en el mes 18 el
+soporte ocupa 58 de 60 horas y las altas caen de 10 a 7—, que es la curva real de
+un negocio de una persona. El mercado no es el límite; las horas sí.
+
+**El soporte se contaba dos veces.** El libro anterior lo cobraba a 25 €/hora *y*
+además habría que pagar al founder. Aquí el soporte del founder consume capacidad,
+no caja, y solo se vuelve dinero cuando hay que contratar; la hoja de horas dice
+cuántas cuentas extra hacen falta para pagar esa contratación.
+
+**Nadie se iba nunca.** La proyección a 24 meses tenía la casilla de bajas vacía y
+calculaba cero bajas durante dos años. Ahora hay cohortes por edad, con bajas más
+altas los tres primeros meses (8 %) que después (4 %).
+
+**Se cobraba el primer mes entero.** Ahora descuenta los catorce días de prueba y
+un 3 % de recibos que no se cobran.
+
+Resultado con los supuestos base: contribución 37,99 €/cuenta, primer mes en
+positivo el 10, caja mínima −3.596 € y 148 cuentas al mes 36. Sin efecto en
+producto ni en `src/`. Rollback: borrar el archivo v3.
+
 ## 2026-09-17 — «Crea el cliente X» daba de alta a nadie y listaba clientes
 
 Encontrado midiendo qué entiende el cerebro sin IA externa. La regla de alta solo
