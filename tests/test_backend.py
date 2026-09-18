@@ -1237,7 +1237,7 @@ class BackendTestCase(unittest.TestCase):
             retention_required=True,
         )
 
-        self.assertEqual(migrations.current_version(), 55)
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
         self.assertEqual(migrations.downgrade(54), 54)
         self.assertIsNotNone(db.get_business(business["id"]))
         with db.get_conn() as conn:
@@ -1246,7 +1246,7 @@ class BackendTestCase(unittest.TestCase):
                 "WHERE type='table' AND name='privacy_requests'"
             ).fetchone()
         self.assertIsNone(table)
-        self.assertEqual(migrations.upgrade(55), 55)
+        self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
         self.assertEqual(db.list_privacy_requests(business_id=business["id"]), [])
 
     def test_concurrent_privacy_request_is_still_one_open_case(self):

@@ -1,5 +1,63 @@
 # Mapa de código
 
+## Supuestos económicos editables — 18-sep
+
+`economics.EDITABLE` es un catálogo de 47 campos que gobierna **tres cosas a la vez**:
+qué pinta el formulario de `/admin/economia`, qué acepta el guardado y qué límites se
+aplican. Mantener esas tres listas separadas es como se acaba teniendo un campo que la
+web deja escribir y el modelo ignora en silencio; `tests/test_economia_panel.py` lo
+impide con dos pruebas estructurales —todo campo editable existe en el modelo y todo
+campo editable mueve alguna cifra—.
+
+Cada entrada declara grupo, tipo (`escalar` o `plan`, este último con un valor por
+plan), mínimo, máximo, paso, unidad y nota. `coerce()` convierte y acota sin lanzar
+nunca: un campo mal escrito se ignora y conserva el valor anterior. `apply_saved()`
+mezcla lo guardado sobre los valores de fábrica y `form_groups()` arma el formulario
+marcando lo que está tocado.
+
+La persistencia es la migración **56** (`economy_assumptions`): clave, valor en JSON,
+quién y cuándo. Guarda solo lo que se desvía del valor de fábrica —volver a la cifra
+original borra la fila—, así que la tabla es a la vez el estado y la auditoría de qué
+se ha tocado. `db.save_economy_assumptions` valida con el mismo `coerce` del
+formulario; `db.reset_economy_assumptions` vacía la tabla y devuelve todo a fábrica.
+
+El orden de precedencia dentro de `build_report` es: valores de fábrica, encima lo
+guardado, y encima las palancas de la URL. Así mover un deslizador para probar algo no
+pisa lo que el founder dejó guardado.
+
+## Economía en el producto — 18-sep
+
+El modelo económico ya no vive solo en `analysis/`. Tres módulos nuevos, ninguno con
+dependencias fuera de la biblioteca estándar:
+
+- `src/noesis/economics.py`: el modelo. `ASSUMPTIONS` son los supuestos de
+  planificación y `LEVERS` las palancas que el panel deja mover, con sus límites;
+  `with_levers()` las acota antes de nada. `build_report()` devuelve economía por
+  plan, medias ponderadas, los tres equilibrios, capacidad en horas, rampa de 36
+  meses con cohortes y la comparación entre lo real y lo supuesto. Dos ideas lo
+  ordenan: supuesto y dato nunca se mezclan, y hay **dos contribuciones** —en caja
+  mientras atiende el founder, cargada cuando el soporte lo paga alguien— porque
+  cobrar el soporte y además pagar una retirada contaría su tiempo dos veces.
+- `src/noesis/officedocs.py`: escribe `.docx` y `.xlsx` con `zipfile` y XML. Un
+  documento de Office es un ZIP con unos cuantos XML, así que no hace falta
+  `python-docx` ni `openpyxl` en producción. El alcance es corto a propósito
+  —títulos, párrafos, tablas, saltos de página y formatos de número— y esa es la
+  línea a partir de la cual convendría una librería de verdad.
+- `src/noesis/economics_docs.py`: los dos documentos de dos páginas a partir de un
+  informe.
+
+`db.economy_timeline(months)` da la serie mensual de cartera, conexiones, ingreso y
+coste real del libro CFO; lo que no puede reconstruir lo deja en `None` en vez de
+rellenarlo con ceros.
+
+En `web/routers/admin.py`, cuatro rutas detrás de `_is_admin`: `/admin/economia`
+(página), `/admin/economia/datos` (JSON que recalcula al mover una palanca) y las dos
+descargas. El recálculo va al servidor a propósito: una copia del modelo en
+JavaScript daría dos modelos que se separarían al primer cambio. La vista usa
+`templates/admin_economia.html` con `static/admin-economia.css` y
+`static/admin-economia.js`, que solo pinta —los gráficos son SVG propio, sin CDN— y
+mantiene los enlaces de descarga sincronizados con las palancas de la pantalla.
+
 ## Modelo economico base — 18-sep
 
 `analysis/build_modelo_economico.py` genera

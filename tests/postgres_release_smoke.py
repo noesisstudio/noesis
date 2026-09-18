@@ -41,6 +41,8 @@ def _snapshot() -> dict:
 
 def _rollback() -> None:
     original = _snapshot()
+    assert migrations.downgrade(55) == 55
+    assert _snapshot() == original
     assert migrations.downgrade(54) == 54
     assert _snapshot() == original
     assert migrations.downgrade(53) == 53
@@ -48,6 +50,8 @@ def _rollback() -> None:
     assert migrations.upgrade(54) == 54
     assert _snapshot() == original
     assert migrations.upgrade(55) == 55
+    assert _snapshot() == original
+    assert migrations.upgrade() == migrations.LATEST_VERSION
     assert _snapshot() == original
     # La guardia fiscal debe seguir funcionando tras todo el ciclo.
     emitted = next(i for i in original["invoices"] if i["status"] in {"enviada", "parcial", "cobrada"})

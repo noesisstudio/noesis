@@ -1,5 +1,124 @@
 ﻿# Registro de cambios
 
+## 2026-09-18 — Los costes se editan en la web y se guardan
+
+Petición del founder: «un modelo donde ponga los costes y sea editable en una página
+web». El panel de economía de esta misma mañana tenía deslizadores, pero los costes
+seguían escritos en el código: para cambiar la cuota de la gestoría había que tocar un
+archivo, y nada se guardaba.
+
+**Migración 56, `economy_assumptions`.** Una tabla de clave y valor con quién lo
+cambió y cuándo. Guarda **solo lo que se desvía del valor de fábrica**: volver a la
+cifra original borra la fila, así que la tabla dice qué está tocado de verdad y
+restaurar devuelve el valor por defecto sin tener que acordarse de cuál era. El valor
+va en JSON porque un supuesto puede ser un número (la gestoría) o tres (el precio de
+cada plan).
+
+**47 campos editables en seis grupos**, desde la página: estructura (plataforma,
+herramientas, gestoría, seguro, publicidad, cuota de autónomos, retirada, caja
+inicial), comportamiento del cliente, tu tiempo, precio y uso de cada plan, tarifas de
+proveedores y canal. Los campos tocados se distinguen de los de fábrica de un vistazo
+y enseñan el valor original al lado.
+
+**Un solo catálogo gobierna las tres cosas**: qué campos pinta el formulario, qué
+acepta el guardado y qué límites se aplican. Tener esas listas separadas es como se
+acaba teniendo un campo que la web deja escribir y el modelo ignora en silencio —y de
+hecho pasó: `pct_anual` entró en el catálogo sin existir en el modelo, y la prueba
+estructural nueva lo cazó antes de subirlo.
+
+**Lo que se escribe manda en todo**: la página, los tres equilibrios, la rampa de caja
+y las dos descargas de Word y Excel. Un campo mal escrito se ignora y conserva el
+valor anterior en vez de tumbar el guardado entero; uno fuera de rango se acota; una
+clave que no existe no entra. Si la mezcla de planes deja de sumar 100 %, se avisa en
+vez de dejar que el ingreso medio quede mal en silencio.
+
+De paso, tres pruebas fijaban «55» como última migración a mano, así que añadir una
+las rompía siempre. Ahora usan `migrations.LATEST_VERSION`, y el smoke de release de
+PostgreSQL recorre también la escalera de la migración nueva en los dos sentidos.
+
+- **Áreas/archivos:** `src/noesis/migrations.py` (migración 56);
+  `src/noesis/db.py` (`economy_assumptions`, `save_economy_assumptions`,
+  `reset_economy_assumptions`, `economy_assumptions_audit`);
+  `src/noesis/economics.py` (`EDITABLE`, `GRUPOS`, `coerce`, `apply_saved`,
+  `form_groups`); `src/noesis/web/routers/admin.py` (dos rutas nuevas);
+  `admin_economia.html` y `admin-economia.css`; `tests/test_backend.py`,
+  `tests/test_value_ledger.py` y `tests/postgres_release_smoke.py` (dejan de fijar
+  el número de migración a mano).
+- **Pruebas:** `tests/test_economia_panel.py`, 25 casos. Ruff OK. Suite completa OK.
+- **Límites externos:** ninguno. Sin dependencias nuevas.
+- **Riesgo:** medio-bajo. Hay migración (56) y es reversible: el `downgrade` borra
+  la tabla y no toca nada más, comprobado en los dos sentidos. Todo detrás de
+  `_is_admin` y sin relación con datos de clientes.
+- **Diagnóstico:** si una cifra de la página no cuadra, mirar la tabla de auditoría
+  al final del formulario: dice qué supuesto está cambiado, a qué valor y desde
+  cuándo. Si algo se edita y no mueve nada, la prueba `test_editing_a_field_actually
+  _moves_the_model` lo señala por nombre.
+- **Rollback:** revertir el commit y bajar a la migración 55.
+
+## 2026-09-18 — El modelo economico entra en el producto: panel, Word y Excel
+
+Petición del founder: dejar de usar «el sistema antiguo». Que lo esencial quepa en
+un Word y un Excel de dos páginas, que el resto viva en el panel de administración
+junto a los márgenes y los costes, y que la página de costes sea moderna, dinámica y
+ligada a la cuenta de administrador, no otra hoja de cálculo.
+
+**El modelo deja de vivir en una hoja.** `src/noesis/economics.py` calcula en Python
+lo mismo que `analysis/build_modelo_economico.py`: coste por plan driver a driver,
+las dos contribuciones, los tres equilibrios, la capacidad en horas, las cohortes con
+bajas y la caja a 36 meses. Hasta ahora, para saber el margen había que abrir un
+archivo. `tests/test_economia_panel.py` fija las cifras ancla del 15/07/2026 al
+céntimo, así que el modelo del producto no puede separarse de los libros sin que
+salte.
+
+**Página nueva `/admin/economia`**, con la sesión de administrador que ya existía
+(`_is_admin`: sesión, admin y opcionalmente Google OAuth). Seis palancas —retirada,
+horas, bajas, minutos de soporte, altas objetivo y cuota de implantación— recalculan
+el modelo entero. **El cálculo vuelve al servidor a propósito**: una copia en
+JavaScript daría una página más rápida y dos modelos que se separarían al primer
+cambio, que es justo el fallo que este trabajo venía a corregir. Gráficos en SVG
+propio, sin CDN ni librerías.
+
+**Word y Excel de dos páginas, con los datos de hoy.** `/admin/economia/resumen.docx`
+y `.xlsx` se generan en el momento y respetan las palancas que haya en pantalla.
+`src/noesis/officedocs.py` los escribe con `zipfile` y XML: un .docx y un .xlsx no
+son más que un ZIP con unos cuantos XML dentro, así que **no entra ninguna
+dependencia nueva en producción**. Meter `python-docx` y `openpyxl` en Railway por
+dos descargas no compensaba (regla 2 de AGENTS.md). Office no avisa de un XML mal
+formado con un error legible, avisa con «archivo dañado», así que las pruebas abren
+lo generado y revisan cada parte.
+
+**Evolución de la cartera y las conexiones.** `db.economy_timeline()` da la serie
+mensual de altas, cuentas, cuentas de pago, conexiones de WhatsApp, ingreso y coste
+real del libro. Responde a la única pregunta que importa al escalar: si el coste
+crece más rápido que la cartera. Las conexiones se cuentan por su fecha de alta
+acumulada, no reconstruidas desde el estado de hoy, que mentiría sobre el pasado.
+
+**Lo real no tapa lo supuesto.** Cuando hay datos, la página los pone al lado del
+supuesto con la desviación, y el modelo se sigue calculando con el supuesto. Esa
+diferencia es lo que el piloto tiene que corregir; sustituir una cifra por la otra en
+silencio la escondería.
+
+Un fallo propio encontrado por una prueba: `economy_timeline(0)` devolvía doce meses
+porque `months or 12` convierte el cero en doce en vez de acotarlo.
+
+Los cuatro libros de `analysis/` **se conservan donde estaban**, como pidió el
+founder; dejan de ser la fuente para mirar el margen, pero siguen sirviendo para
+trabajar con calma.
+
+- **Áreas/archivos:** `src/noesis/economics.py`, `src/noesis/economics_docs.py` y
+  `src/noesis/officedocs.py` (nuevos); `src/noesis/db.py` (`economy_timeline`);
+  `src/noesis/web/routers/admin.py` (cuatro rutas); `src/noesis/web/deps.py`;
+  `src/noesis/web/templates/admin_economia.html`, `static/admin-economia.css` y
+  `static/admin-economia.js` (nuevos); enlace desde `admin.html`.
+- **Pruebas:** `tests/test_economia_panel.py`, 17 casos. Ruff OK. Suite completa OK.
+- **Límites externos:** ninguno nuevo. Sin dependencias nuevas.
+- **Riesgo:** bajo. Todo lo nuevo está detrás de `_is_admin` y no toca datos de
+  clientes; `economy_timeline` solo lee. Sin migración; esquema 55.
+- **Diagnóstico:** si una cifra de la página no cuadra con los libros de
+  `analysis/`, la prueba de cifras ancla dice cuál de los dos se movió. Si una
+  descarga sale corrupta, mirar el XML de la parte que nombre Office.
+- **Rollback:** revertir el commit; el panel y los libros quedan como estaban.
+
 ## 2026-09-18 — El modelo base: tres equilibrios en vez de uno, y el tiempo como límite
 
 Petición del founder: mejorar el libro base con los supuestos y el break-even

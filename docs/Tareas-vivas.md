@@ -1,5 +1,39 @@
 # Tareas vivas
 
+## Costes editables — 18-sep
+
+- [x] Los 47 supuestos del modelo se editan y se guardan desde `/admin/economia`,
+  con auditoría de qué se cambió y cuándo, y restauración a valores de fábrica.
+- [ ] Founder: **escribir las facturas reales** en el grupo «Lo que sale de tu
+  bolsillo cada mes». Mientras estén los valores por defecto (plataforma 7 €,
+  herramientas 40 €, gestoría 60 €, seguro 30 €, cuota 300 €), los tres equilibrios
+  siguen siendo un escenario y no una cifra de tu negocio.
+- [ ] Founder: confirmar la caja inicial, que ahora también se edita ahí.
+- [ ] Founder: revisar el formulario en un navegador. Se ha probado con pruebas
+  automáticas, no a ojo, y la base de desarrollo está vacía.
+- [ ] Al desplegar: la migración 56 se aplica sola, pero conviene mirar `/ready`
+  después para confirmar que el esquema llega a 56 en producción.
+
+## Economía en el panel — 18-sep
+
+- [x] Modelo en el producto (`economics.py`), página `/admin/economia` con palancas,
+  y Word y Excel de dos páginas generados con los datos de hoy, sin dependencias
+  nuevas.
+- [ ] Founder: **abrir el Word y el Excel descargados con Office real** y confirmar
+  que no piden reparación. Están escritos a mano con `zipfile`; las pruebas los abren
+  con `python-docx` y `openpyxl`, pero eso no es Office.
+- [ ] Founder: revisar la página en un navegador. La base de desarrollo está vacía,
+  así que las tablas de evolución se han visto sin datos.
+- [ ] Founder: cargar en el libro de costes las facturas reales (plataforma,
+  herramientas, gestoría, seguro). Hasta que haya al menos un mes cargado, la
+  columna «real» de la página sigue vacía y todo es escenario.
+- [ ] Decidir si los cuatro libros de `analysis/` se archivan. Hoy se conservan
+  donde estaban, pero ya no son la fuente para mirar el margen y conviene que eso
+  quede claro para quien los abra.
+- [ ] Tras el piloto: sustituir bajas, minutos de soporte por cuenta y horas por alta
+  por lo medido. Son las tres cifras que más mueven el resultado y ninguna está
+  medida; la página las señala una a una.
+
 ## Modelo economico base — 18-sep
 
 - [x] Libro base al día: tres equilibrios, dos contribuciones, cohortes con bajas,

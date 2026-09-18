@@ -4122,6 +4122,30 @@ def _downgrade_privacy_requests(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS privacy_requests")
 
 
+def _upgrade_economy_assumptions(conn) -> None:
+    """Supuestos economicos editables desde el panel, con quien y cuando.
+
+    Hasta ahora los supuestos del modelo estaban escritos en el codigo: para
+    cambiar la cuota de la gestoria o la retirada habia que tocar un archivo. Esta
+    tabla guarda solo lo que el founder cambia; lo que no toca sigue viniendo del
+    valor por defecto, asi que borrar una fila devuelve la cifra original. El valor
+    va en JSON porque un supuesto puede ser un numero (la gestoria) o tres (el
+    precio de cada plan).
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS economy_assumptions ("
+        "key TEXT PRIMARY KEY, "
+        "value TEXT NOT NULL, "
+        f"updated_by_user_id {t['ref']} REFERENCES users(id) ON DELETE SET NULL, "
+        f"updated_at {t['timestamp']} NOT NULL)"
+    )
+
+
+def _downgrade_economy_assumptions(conn) -> None:
+    conn.execute("DROP TABLE IF EXISTS economy_assumptions")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4205,6 +4229,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (55, "solicitudes_privacidad",
      _upgrade_privacy_requests,
      _downgrade_privacy_requests),
+    (56, "supuestos_economicos",
+     _upgrade_economy_assumptions,
+     _downgrade_economy_assumptions),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bynoesis · Economía</title>
+  <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  <link rel="stylesheet" href="/static/admin-workspace.css?v={{ asset_v }}">
+  <link rel="stylesheet" href="/static/admin-economia.css?v={{ asset_v }}">
+</head>
+<body class="admin-workspace">
+{% set admin_scope = 'company' %}
+{% set admin_views = [('resumen','Dirección','Prioridades y visión global'),('cuentas','Cuentas y soporte','Titulares, acceso y seguimiento'),('captacion','Marketing y ventas','Adquisición y solicitudes'),('finanzas','Finanzas y consumo','Ingresos, costes y uso'),('operaciones','Operaciones','Entregas e incidencias'),('ingenieria','Ingeniería y seguridad','Sistemas y continuidad'),('privacidad','Administración legal','Derechos y bajas')] %}
+{% include 'admin_navigation.html' %}
+
+<main class="admin-wrap eco" data-eco-root>
+  <div class="admin-topbar">
+    <div><span class="admin-product-label">Bynoesis / Economía</span><span class="admin-environment">Modelo con datos reales</span></div>
+    <div class="admin-top-actions">
+      <a class="btn sm" href="/admin">← Panel</a>
+      <a class="btn sm" href="/admin/economia/resumen.docx" data-eco-download="docx">Word (2 páginas)</a>
+      <a class="btn sm" href="/admin/economia/resumen.xlsx" data-eco-download="xlsx">Excel (2 hojas)</a>
+      <form method="post" action="/logout"><button class="btn sm" type="submit">Salir</button></form>
+    </div>
+  </div>
+
+  <header class="admin-view-head" id="admin-content" tabindex="-1">
+    <div class="kicker">Centro de mando</div>
+    <h1>Economía</h1>
+    <p>Lo que cuesta servir una cuenta, lo que deja y cuántas hacen falta. Con los datos de la base, no con una hoja aparte.</p>
+    <p class="admin-freshness">Lectura del sistema: <time>{{ admin_as_of }}</time> · las descargas se generan en el momento con estas mismas cifras.</p>
+  </header>
+
+  {% if admin_error %}<div class="admin-note error" role="alert">{{ admin_error }}</div>{% endif %}
+  {% if admin_success %}<div class="admin-note success" role="status">{{ admin_success }}</div>{% endif %}
+
+  {# ---------- El parte: una frase, que es lo que se recuerda ---------- #}
+  <section class="card eco-parte">
+    <div class="card-b">
+      <p class="eco-verdict" data-eco-parte></p>
+      <p class="meta">{{ report.observado.aviso }}</p>
+    </div>
+  </section>
+
+  {# ---------- Palancas ---------- #}
+  <section class="card" id="palancas">
+    <div class="card-h">
+      <div><div class="kicker">Lo que decides tú</div><h2>Palancas</h2></div>
+      <button class="btn sm" type="button" data-eco-reset>Volver a la base</button>
+    </div>
+    <div class="card-b">
+      <p class="meta">Cuatro cifras que no decide el mercado. Al moverlas se recalcula el modelo entero en el servidor: no hay una segunda copia del cálculo que se pueda desviar de esta.</p>
+      <div class="eco-levers">
+        {% set a = report.assumptions %}
+        <div class="eco-lever">
+          <label for="lv-retirada">Lo que quieres cobrar al mes <b data-eco-out="retirada"></b></label>
+          <input type="range" id="lv-retirada" data-eco-lever="retirada" min="0" max="3000" step="50" value="{{ a.retirada }}">
+          <small>Sin esta línea, el equilibrio no significa nada.</small>
+        </div>
+        <div class="eco-lever">
+          <label for="lv-horas">Horas al mes para vender y atender <b data-eco-out="horas_mes"></b></label>
+          <input type="range" id="lv-horas" data-eco-lever="horas_mes" min="10" max="160" step="5" value="{{ a.horas_mes }}">
+          <small>Las que quedan después de construir producto.</small>
+        </div>
+        <div class="eco-lever">
+          <label for="lv-churn">Bajas a partir del 4.º mes <b data-eco-out="churn_maduro"></b></label>
+          <input type="range" id="lv-churn" data-eco-lever="churn_maduro" min="0.005" max="0.15" step="0.005" value="{{ a.churn_maduro }}">
+          <small>Sin medir. Los tres primeros meses van al doble.</small>
+        </div>
+        <div class="eco-lever">
+          <label for="lv-soporte">Soporte por cuenta asentada <b data-eco-out="soporte_medio"></b></label>
+          <input type="range" id="lv-soporte" data-eco-lever="soporte_medio" min="4" max="45" step="0.5" value="{{ report.medias.soporte_min|round(1) }}">
+          <small>La palanca que más cuentas regala sin vender ninguna.</small>
+        </div>
+        <div class="eco-lever">
+          <label for="lv-objetivo">Altas que quieres cerrar al mes <b data-eco-out="objetivo"></b></label>
+          <input type="range" id="lv-objetivo" data-eco-lever="objetivo" min="0" max="25" step="1" value="{{ a.objetivo }}">
+          <small>Solo se cumplen las que caben en tus horas.</small>
+        </div>
+        <div class="eco-lever">
+          <label for="lv-implantacion">Altas que pagan implantación (99 €) <b data-eco-out="pct_implantacion"></b></label>
+          <input type="range" id="lv-implantacion" data-eco-lever="pct_implantacion" min="0" max="1" step="0.05" value="{{ a.pct_implantacion }}">
+          <small>Propuesta del 16/09, sin aprobar: por eso empieza en cero.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ---------- Los tres equilibrios: una escalera, no cuatro tarjetas ---------- #}
+  <section class="card" id="equilibrios">
+    <div class="card-h">
+      <div><div class="kicker">Cuántas cuentas</div><h2>Los tres equilibrios</h2></div>
+    </div>
+    <div class="card-b">
+      <p class="meta">No hay un equilibrio: hay una escalera. Solo el tercer peldaño significa que esto te da de comer; el cuarto es el mismo negocio cuando el soporte ya lo paga otra persona.</p>
+      <ol class="eco-steps" data-eco-steps>
+        {% for nivel in report.equilibrios %}
+        <li class="eco-step{{ ' key' if nivel.clave }}">
+          <span class="eco-tier">{{ loop.index }}</span>
+          <span class="eco-what">{{ nivel.nivel }}<small>{{ '%.0f'|format(nivel.coste) }} € al mes · contribución {{ '%.2f'|format(nivel.contribucion) }} € · {{ nivel.nota }}</small></span>
+          <span class="eco-count">{{ nivel.cuentas if nivel.cuentas is not none else '—' }}<small>cuentas</small></span>
+        </li>
+        {% endfor %}
+      </ol>
+      <div class="eco-note" data-eco-horas></div>
+    </div>
+  </section>
+
+  {# ---------- Caja y horas ---------- #}
+  <section class="card" id="caja">
+    <div class="card-h">
+      <div><div class="kicker">36 meses</div><h2>La caja y tus horas</h2></div>
+      <span class="badge" data-eco-badge></span>
+    </div>
+    <div class="card-b">
+      <p class="meta">Las altas de cada mes salen de las horas que quedan tras atender a la cartera, así que la rampa se frena sola. El punto más bajo de la caja es el dinero que hay que poder aguantar: es la cifra que decide si el plan es financiable.</p>
+      <div class="eco-legend">
+        <span><i class="sw" style="background:var(--brand-2)"></i>Caja acumulada</span>
+        <span><i class="sw box" style="background:#f7e8e3"></i>Meses en rojo</span>
+        <span><i class="sw box" style="background:#e2f1ea"></i>Meses en positivo</span>
+      </div>
+      <figure class="eco-chart"><svg viewBox="0 0 720 250" role="img" aria-label="Caja acumulada a 36 meses" data-eco-svg="caja"></svg><figcaption data-eco-cap="caja"></figcaption></figure>
+      <div class="eco-legend">
+        <span><i class="sw" style="background:var(--brand)"></i>Horas que te ocupa el mes</span>
+        <span><i class="sw dash"></i>Las que tienes</span>
+      </div>
+      <figure class="eco-chart"><svg viewBox="0 0 720 200" role="img" aria-label="Horas ocupadas a 36 meses" data-eco-svg="horas"></svg><figcaption data-eco-cap="horas"></figcaption></figure>
+    </div>
+  </section>
+
+  {# ---------- Supuestos editables: los costes se escriben aqui ---------- #}
+  <section class="card" id="supuestos">
+    <div class="card-h">
+      <div><div class="kicker">Editable y guardado</div><h2>Los costes y los supuestos</h2></div>
+      <span class="badge {{ 'b-green' if tocados else '' }}">{{ tocados }} cambiado{{ '' if tocados == 1 else 's' }} de fábrica</span>
+    </div>
+    <div class="card-b">
+      <p class="meta">Escribe aquí las cifras reales y se guardan. Todo lo de esta página, las dos descargas y los tres equilibrios se recalculan con lo que pongas. Un campo que dejes en su valor original no se guarda: así la tabla dice qué has tocado de verdad y restaurar devuelve la cifra de fábrica sin tener que acordarte de cuál era.</p>
+      <form method="post" action="/admin/economia/supuestos" class="eco-form">
+        {% for grupo in grupos %}
+        <fieldset class="eco-group">
+          <legend>{{ grupo.titulo }}</legend>
+          <p class="eco-group-hint">{{ grupo.descripcion }}</p>
+          <div class="eco-fields">
+            {% for campo in grupo.campos %}
+            <div class="eco-field{{ ' tocado' if campo.tocado }}">
+              <label for="f-{{ campo.clave }}">{{ campo.spec.etiqueta }}
+                <span class="eco-unit">{{ campo.spec.unidad }}</span></label>
+              {% if campo.spec.tipo == 'plan' %}
+              <div class="eco-triple">
+                {% for i in range(3) %}
+                <span>
+                  <small>{{ ['Autónomo','Negocio','Premium'][i] }}</small>
+                  <input type="number" name="{{ campo.clave }}"
+                         id="{% if i == 0 %}f-{{ campo.clave }}{% else %}f-{{ campo.clave }}-{{ i }}{% endif %}"
+                         value="{{ campo.valor[i] }}" step="{{ campo.spec.paso }}"
+                         min="{{ campo.spec.min }}" max="{{ campo.spec.max }}" inputmode="decimal">
+                </span>
+                {% endfor %}
+              </div>
+              {% else %}
+              <input type="number" name="{{ campo.clave }}" id="f-{{ campo.clave }}"
+                     value="{{ campo.valor }}" step="{{ campo.spec.paso }}"
+                     min="{{ campo.spec.min }}" max="{{ campo.spec.max }}" inputmode="decimal">
+              {% endif %}
+              <small class="eco-hint">{{ campo.spec.nota }}{% if campo.tocado %} · de fábrica: {{ campo.defecto }}{% endif %}</small>
+            </div>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% endfor %}
+        <div class="eco-form-actions">
+          <button class="btn primary" type="submit">Guardar los costes</button>
+          <span class="meta">Los porcentajes van en tanto por uno: 0,04 es un 4 %.</span>
+        </div>
+      </form>
+      <form method="post" action="/admin/economia/restaurar" class="eco-restore">
+        <button class="btn sm" type="submit">Restaurar todos los valores de fábrica</button>
+      </form>
+      {% if audit %}
+      <details class="eco-audit">
+        <summary>Qué se ha cambiado y quién ({{ audit|length }})</summary>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Supuesto</th><th>Valor guardado</th><th>Cuándo</th><th>Quién</th></tr></thead>
+          <tbody>
+          {% for a in audit %}
+            <tr><td>{{ a.key }}</td><td class="n">{{ a.value }}</td><td>{{ a.updated_at[:16] }}</td><td>{{ a.quien or '—' }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      </details>
+      {% endif %}
+    </div>
+  </section>
+
+  {# ---------- Evolución real: cartera, conexiones y coste ---------- #}
+  <section class="card" id="evolucion">
+    <div class="card-h">
+      <div><div class="kicker">Últimos 12 meses</div><h2>Evolución de la cartera y las conexiones</h2></div>
+      {% if not timeline.hay_cuentas %}<span class="badge b-amber">todavía sin cuentas</span>{% endif %}
+    </div>
+    <div class="card-b">
+      <p class="meta">Lo que de verdad decide el margen al escalar: si el coste crece más rápido que la cartera. Las conexiones se cuentan por su fecha de alta acumulada, no reconstruidas desde el estado de hoy.</p>
+      {% if timeline.hay_cuentas %}
+      <div class="table-wrap"><table>
+        <thead><tr><th>Mes</th><th>Altas</th><th>Cuentas</th><th>De pago</th><th>Conexiones</th><th>Ingreso</th><th>Coste real</th><th>Coste/cuenta</th></tr></thead>
+        <tbody>
+        {% for f in timeline.filas %}
+          <tr>
+            <td><b>{{ f.mes }}</b></td>
+            <td class="n">{{ f.altas }}</td>
+            <td class="n">{{ f.cuentas }}</td>
+            <td class="n">{{ f.de_pago }}</td>
+            <td class="n">{{ f.conexiones }}{% if f.conexiones_nuevas %} <small class="meta">+{{ f.conexiones_nuevas }}</small>{% endif %}</td>
+            <td class="n">{{ '%.0f'|format(f.mrr) }} €</td>
+            <td class="n">{{ ('%.0f €'|format(f.coste)) if f.coste is not none else '—' }}</td>
+            <td class="n">{{ ('%.2f €'|format(f.coste_por_cuenta)) if f.coste_por_cuenta is not none else '—' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      <p class="meta">{{ timeline.nota }}</p>
+      {% else %}
+      <p class="eco-empty">Todavía no hay cuentas reales, así que no hay serie que dibujar. En cuanto entre la primera, esta tabla se llena sola: la consulta ya está hecha y no hay nada que configurar.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  {# ---------- Lo real frente a lo supuesto ---------- #}
+  <section class="card" id="real">
+    <div class="card-h">
+      <div><div class="kicker">Control</div><h2>Lo real frente a lo supuesto</h2></div>
+      <span class="badge {{ 'b-green' if report.observado.hay_datos else 'b-amber' }}">{{ 'con datos reales' if report.observado.hay_datos else 'todo escenario' }}</span>
+    </div>
+    <div class="card-b">
+      <p class="meta">El dato real no sustituye al supuesto: se pone al lado. Esa diferencia es exactamente lo que el piloto tiene que corregir.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Métrica</th><th>Real hoy</th><th>Supuesto</th><th>Desviación</th><th>De dónde sale</th></tr></thead>
+        <tbody>
+        {% for f in report.observado.filas %}
+          <tr>
+            <td><b>{{ f.etiqueta }}</b></td>
+            <td class="n">{% if f.real is not none %}{{ '%.2f'|format(f.real) }}{% if f.unidad != 'cuentas' %} €{% endif %}{% else %}—{% endif %}</td>
+            <td class="n">{{ '%.2f'|format(f.supuesto) if f.supuesto else '—' }}{% if f.supuesto and f.unidad != 'cuentas' %} €{% endif %}</td>
+            <td class="n">{% if f.desvio is not none %}<b class="{{ 'red' if f.desvio > 0.15 else ('green' if f.desvio < -0.15 else '') }}">{{ '%+.0f'|format(f.desvio * 100) }} %</b>{% else %}—{% endif %}</td>
+            <td><small class="meta">{{ f.nota }}</small></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  {# ---------- Coste por plan ---------- #}
+  <section class="card" id="planes">
+    <div class="card-h">
+      <div><div class="kicker">Driver a driver</div><h2>Lo que cuesta servir una cuenta</h2></div>
+    </div>
+    <div class="card-b">
+      <p class="meta">La única parte del modelo auditable línea a línea: sale de tarifas publicadas de Stripe, Meta, Anthropic, Groq y Railway consultadas el 15/07/2026. Todo lo demás de esta página es un supuesto.</p>
+      <div class="table-wrap"><table data-eco-planes>
+        <thead><tr><th>Concepto</th>{% for p in report.planes %}<th>{{ p.plan }}</th>{% endfor %}<th>Media</th></tr></thead>
+        <tbody>
+        {% for clave, etiqueta in report.lineas %}
+          <tr>
+            <td>{{ etiqueta }}</td>
+            {% for p in report.planes %}<td class="n">{{ '%.2f'|format(p.lineas[clave]) }} €</td>{% endfor %}
+            <td class="n">{{ '%.2f'|format(report.medias_lineas[clave]) }} €</td>
+          </tr>
+        {% endfor %}
+          <tr class="tot">
+            <td><b>Coste de software</b></td>
+            {% for p in report.planes %}<td class="n"><b>{{ '%.2f'|format(p.cogs) }} €</b></td>{% endfor %}
+            <td class="n"><b>{{ '%.2f'|format(report.medias.cogs) }} €</b></td>
+          </tr>
+          <tr><td>Precio de catálogo</td>{% for p in report.planes %}<td class="n">{{ '%.0f'|format(p.precio) }} €</td>{% endfor %}<td class="n">{{ '%.2f'|format(report.medias.arpu) }} €</td></tr>
+          <tr class="hl">
+            <td><b>Contribución en caja</b><small class="meta">mientras atiendes tú</small></td>
+            {% for p in report.planes %}<td class="n"><b>{{ '%.2f'|format(p.contribucion_caja) }} €</b></td>{% endfor %}
+            <td class="n"><b>{{ '%.2f'|format(report.medias.contribucion_caja) }} €</b></td>
+          </tr>
+          <tr>
+            <td>Contribución cargada<small class="meta">soporte y onboarding a {{ '%.0f'|format(report.assumptions.hora_soporte) }} €/h</small></td>
+            {% for p in report.planes %}<td class="n">{{ '%.2f'|format(p.contribucion_cargada) }} €</td>{% endfor %}
+            <td class="n">{{ '%.2f'|format(report.medias.contribucion_cargada) }} €</td>
+          </tr>
+          <tr><td>Minutos de soporte al mes</td>{% for p in report.planes %}<td class="n">{{ '%.0f'|format(p.soporte_min) }}</td>{% endfor %}<td class="n">{{ '%.1f'|format(report.medias.soporte_min) }}</td></tr>
+        </tbody>
+      </table></div>
+      <p class="meta">Vida media {{ '%.1f'|format(report.vida_media) }} meses · LTV {{ '%.0f'|format(report.ltv_caja) }} € · LTV/CAC {{ '%.1f'|format(report.ltv_cac) }}x · recupera el CAC en {{ '%.1f'|format(report.payback) }} meses. Las bajas no están medidas, así que la vida media tampoco.</p>
+    </div>
+  </section>
+
+  <p class="eco-foot">Esta página y las dos descargas calculan lo mismo, en el mismo sitio: <code>src/noesis/economics.py</code>. Los libros de <code>analysis/</code> siguen donde estaban para trabajar con calma, pero ya no son la fuente para mirar el margen.</p>
+</main>
+
+<script src="/static/admin-economia.js?v={{ asset_v }}" defer></script>
+</body>
+</html>

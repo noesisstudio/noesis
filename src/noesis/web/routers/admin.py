@@ -12,7 +12,7 @@ from fastapi.responses import (
     FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response,
 )
 
-from ... import config, db, readiness, security_center
+from ... import config, db, economics, economics_docs, readiness, security_center
 from ...adapters import billing as billing_adapter
 from ...adapters import email as email_adapter
 from .. import auth, backups
@@ -675,6 +675,193 @@ def admin_add_cost(
     except ValueError as exc:
         request.session["admin_error"] = str(exc)
     return RedirectResponse("/admin#finanzas", status_code=303)
+
+
+def _economia_overrides(request: Request) -> dict:
+    """Lee las palancas de la URL. `economics` ya las acota: aquí solo se pasan."""
+    return {key: request.query_params.get(key) for key in economics.LEVERS}
+
+
+def _economia_contexto(request: Request) -> dict:
+    control = db.account_cost_control()
+    observed = {
+        "paying_accounts": control.get("paying_accounts"),
+        "mrr": control.get("revenue_eur"),
+        "observed_cost_eur": (control.get("observed_cost_eur")
+                              if control.get("has_observed_data") else None),
+    }
+    saved = db.economy_assumptions()
+    report = economics.build_report(_economia_overrides(request), observed, saved)
+    return {"report": report, "timeline": db.economy_timeline(12),
+            "control": control, "saved": saved,
+            "grupos": economics.form_groups(report["assumptions"]),
+            "audit": db.economy_assumptions_audit()}
+
+
+@router.get("/admin/economia", response_class=HTMLResponse)
+def admin_economia(request: Request):
+    """Panel económico: el modelo con los datos reales, sin abrir ninguna hoja."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.economia_viewed", area="admin", actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+    )
+    contexto = _economia_contexto(request)
+    return TEMPLATES.TemplateResponse(request, "admin_economia.html", {
+        "report": contexto["report"],
+        "timeline": contexto["timeline"],
+        "control": contexto["control"],
+        "grupos": contexto["grupos"],
+        "audit": contexto["audit"],
+        "tocados": len(contexto["saved"]),
+        "levers": economics.LEVERS,
+        "admin_error": request.session.pop("admin_error", None),
+        "admin_success": request.session.pop("admin_success", None),
+        "admin_as_of": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"),
+    })
+
+
+@router.get("/admin/economia/datos", response_class=JSONResponse)
+def admin_economia_datos(request: Request):
+    """Recalcula el modelo al mover una palanca.
+
+    El cálculo vuelve al servidor a propósito. Duplicarlo en JavaScript daría una
+    página más rápida y dos modelos que se separarían al primer cambio, que es
+    justo el fallo que este trabajo venía a corregir.
+    """
+    if not _is_admin(request):
+        return JSONResponse({"error": "no autorizado"}, status_code=403)
+    report = _economia_contexto(request)["report"]
+    rampa = report["rampa"]
+    return JSONResponse(jsonable_encoder({
+        "medias": report["medias"],
+        "equilibrios": report["equilibrios"],
+        "capacidad": report["capacidad"],
+        "cabe_en_horas": report["cabe_en_horas"],
+        "estructura": report["estructura"],
+        "vida_media": report["vida_media"],
+        "ltv_caja": report["ltv_caja"],
+        "ltv_cac": report["ltv_cac"],
+        "payback": report["payback"],
+        "planes": report["planes"],
+        "rampa": {
+            "mes_positivo": rampa["mes_positivo"],
+            "mes_ahogo": rampa["mes_ahogo"],
+            "caja_minima": rampa["caja_minima"],
+            "cuentas_final": rampa["cuentas_final"],
+            "salida_mensual": rampa["salida_mensual"],
+            "filas": [{"mes": f["mes"], "caja": f["caja"], "horas": f["horas"],
+                       "cuentas": f["cuentas"], "altas": f["altas"],
+                       "objetivo": f["objetivo"], "frenado": f["frenado"],
+                       "resultado": f["resultado"]} for f in rampa["filas"]],
+        },
+        "caja_inicial": report["assumptions"]["caja_inicial"],
+        "horas_mes": report["assumptions"]["horas_mes"],
+        "impagos": report["assumptions"]["impagos"],
+    }))
+
+
+@router.post("/admin/economia/supuestos")
+async def admin_economia_guardar(request: Request):
+    """Guarda los costes y supuestos que el founder escribe en la página.
+
+    Se guarda solo lo que se desvía del valor de fábrica; volver a la cifra
+    original borra la fila. Un campo mal escrito se ignora y conserva el valor
+    anterior en vez de tumbar el guardado entero.
+    """
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    formulario = await request.form()
+    cambios: dict = {}
+    for key, spec in economics.EDITABLE.items():
+        if key not in formulario:
+            continue
+        cambios[key] = (formulario.getlist(key) if spec["tipo"] == "plan"
+                        else formulario.get(key))
+    guardados = db.save_economy_assumptions(cambios, user_id=user["id"])
+    db.record_security_event(
+        "admin.economia_assumptions_saved", area="admin", actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"claves": sorted(guardados)},
+    )
+    mezcla = economics.apply_saved(db.economy_assumptions())["mix"]
+    if abs(sum(mezcla) - 1) > 0.001:
+        request.session["admin_error"] = (
+            "Guardado, pero la mezcla de planes suma "
+            f"{sum(mezcla) * 100:.0f} % en vez de 100 %: el ingreso medio no será "
+            "comparable hasta que cuadre."
+        )
+    else:
+        request.session["admin_success"] = (
+            f"Guardados {len(guardados)} supuesto(s) cambiados respecto al valor "
+            "de fábrica." if guardados else
+            "Todo vuelve a estar en los valores de fábrica.")
+    return RedirectResponse("/admin/economia#supuestos", status_code=303)
+
+
+@router.post("/admin/economia/restaurar")
+def admin_economia_restaurar(request: Request):
+    """Devuelve todos los supuestos a los valores de fábrica."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    borrados = db.reset_economy_assumptions()
+    db.record_security_event(
+        "admin.economia_assumptions_reset", area="admin", actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"borrados": borrados},
+    )
+    request.session["admin_success"] = (
+        f"Restaurados {borrados} supuesto(s) a los valores de fábrica."
+        if borrados else "No había nada cambiado que restaurar.")
+    return RedirectResponse("/admin/economia#supuestos", status_code=303)
+
+
+def _economia_descarga(request: Request, kind: str) -> Response:
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    contexto = _economia_contexto(request)
+    db.record_security_event(
+        f"admin.economia_{kind}_downloaded", area="admin", actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+    )
+    hoy = date.today().isoformat()
+    if kind == "docx":
+        blob = economics_docs.summary_docx(contexto["report"], contexto["timeline"])
+        media = ("application/vnd.openxmlformats-officedocument"
+                 ".wordprocessingml.document")
+    else:
+        blob = economics_docs.summary_xlsx(contexto["report"], contexto["timeline"])
+        media = ("application/vnd.openxmlformats-officedocument"
+                 ".spreadsheetml.sheet")
+    return Response(
+        content=blob, media_type=media,
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="Bynoesis-resumen-economico-{hoy}.{kind}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.get("/admin/economia/resumen.docx")
+def admin_economia_docx(request: Request):
+    """Word de dos páginas con lo esencial, generado con los datos de hoy."""
+    return _economia_descarga(request, "docx")
+
+
+@router.get("/admin/economia/resumen.xlsx")
+def admin_economia_xlsx(request: Request):
+    """Excel de dos hojas con las mismas cifras y formato de número."""
+    return _economia_descarga(request, "xlsx")
 
 
 @router.post("/admin/solicitudes/{request_id}/alta")

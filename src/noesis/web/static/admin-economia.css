@@ -1,0 +1,289 @@
+/* Panel de economía. Se apoya en app.css y admin-workspace.css: aquí solo está
+   lo que esas dos no tienen. Sin colores nuevos, todo sale de las variables de
+   marca (docs/design/STYLE_TOKENS.json). */
+
+.eco .card { margin-bottom: 20px; }
+.eco .n { text-align: right; font-variant-numeric: tabular-nums; }
+.eco td.n small { display: block; }
+
+/* --- El parte: la voz de Bynoesis va en serif, los datos en sans --- */
+.eco-parte { border-left: 3px solid var(--brand-2); }
+.eco-verdict {
+  font-family: var(--serif);
+  font-size: 1.22rem;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0 0 8px;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+.eco-verdict b { color: var(--brand); font-weight: 600; }
+.eco-verdict .red { color: var(--red); }
+
+/* --- Palancas --- */
+.eco-levers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px 26px;
+  margin-top: 14px;
+}
+.eco-lever label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: .82rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.eco-lever label b {
+  font-size: .95rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.eco-lever input[type="range"] {
+  width: 100%;
+  accent-color: var(--brand-2);
+  height: 22px;
+  cursor: pointer;
+}
+.eco-lever input[type="range"]:focus-visible {
+  outline: 2px solid var(--brand-2);
+  outline-offset: 3px;
+}
+.eco-lever small {
+  display: block;
+  font-size: .74rem;
+  color: var(--faint);
+  margin-top: 3px;
+  line-height: 1.35;
+}
+
+/* --- La escalera de equilibrios. El orden significa algo, por eso va numerada
+       y no en tarjetas sueltas. --- */
+.eco-steps { list-style: none; margin: 14px 0 0; padding: 0; }
+.eco-step {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 0 14px;
+  align-items: baseline;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+}
+.eco-step:last-child { border-bottom: 1px solid var(--border); }
+.eco-tier {
+  font-size: .78rem;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.eco-what { font-size: .95rem; color: var(--text); }
+.eco-what small {
+  display: block;
+  font-size: .76rem;
+  color: var(--muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.eco-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.35rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text);
+}
+.eco-count small {
+  font-size: .72rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 5px;
+}
+.eco-step.key {
+  background: var(--brand-soft);
+  border-radius: var(--radius-sm);
+  border-top-color: transparent;
+  margin-inline: -12px;
+  padding-inline: 12px;
+}
+.eco-step.key + .eco-step { border-top-color: var(--border); }
+.eco-step.key .eco-what { font-weight: 600; }
+.eco-step.key .eco-count { color: var(--brand); font-size: 1.7rem; }
+
+/* --- Veredicto de horas --- */
+.eco-note {
+  margin-top: 16px;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: .87rem;
+  line-height: 1.5;
+  background: var(--surface-2);
+  color: var(--text);
+  border-left: 3px solid var(--border-strong);
+}
+.eco-note b { font-weight: 600; }
+.eco-note.ok { background: #e2f1ea; border-left-color: var(--green); }
+.eco-note.warn { background: #f5edd6; border-left-color: var(--amber); }
+.eco-note.bad { background: #f7e8e3; border-left-color: var(--red); }
+
+/* --- Gráficos --- */
+.eco-chart { margin: 4px 0 18px; }
+.eco-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.eco-chart figcaption {
+  font-size: .8rem;
+  color: var(--muted);
+  margin-top: 8px;
+  line-height: 1.45;
+}
+.eco-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 18px;
+  font-size: .76rem;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+.eco-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.eco-legend .sw { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+.eco-legend .sw.box { height: 10px; border-radius: 3px; }
+.eco-legend .sw.dash {
+  background: none;
+  border-top: 2px dashed var(--faint);
+  height: 0;
+}
+
+.eco-empty {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  color: var(--muted);
+  font-size: .87rem;
+  line-height: 1.5;
+  background: var(--surface-2);
+}
+.eco-foot {
+  font-size: .78rem;
+  color: var(--faint);
+  line-height: 1.6;
+  max-width: 76ch;
+  margin: 28px 0 8px;
+}
+.eco-foot code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .72rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.eco tr.tot td { border-top: 1px solid var(--border-strong); }
+.eco tr.hl td { background: var(--brand-soft); }
+.eco .red { color: var(--red); }
+.eco .green { color: var(--green); }
+
+/* Mientras el servidor recalcula, la página se atenúa en vez de dar un salto. */
+.eco[data-eco-busy="1"] .eco-steps,
+.eco[data-eco-busy="1"] .eco-chart,
+.eco[data-eco-busy="1"] .eco-verdict { opacity: .55; transition: opacity .12s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .eco * { transition: none !important; }
+}
+@media (max-width: 520px) {
+  .eco-step { grid-template-columns: 20px 1fr; }
+  .eco-step .eco-count { grid-column: 2; margin-top: 6px; }
+}
+
+/* --- Supuestos editables. Es la parte que el founder toca, así que los campos
+       tocados se distinguen de los de fábrica de un vistazo. --- */
+.eco-form { margin-top: 16px; }
+.eco-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px 16px;
+  margin: 0 0 16px;
+}
+.eco-group legend {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--brand);
+  padding: 0 6px;
+}
+.eco-group-hint {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: 0 0 14px;
+  max-width: 70ch;
+  line-height: 1.45;
+}
+.eco-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px 20px;
+}
+.eco-field { display: flex; flex-direction: column; }
+.eco-field label {
+  font-size: .82rem;
+  color: var(--text);
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.eco-unit { font-size: .72rem; color: var(--faint); white-space: nowrap; }
+.eco-field input[type="number"] {
+  width: 100%;
+  font: inherit;
+  font-size: .92rem;
+  font-variant-numeric: tabular-nums;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+.eco-field input[type="number"]:focus-visible {
+  outline: 2px solid var(--brand-2);
+  outline-offset: 1px;
+  border-color: var(--brand-2);
+}
+.eco-field.tocado input[type="number"] {
+  border-color: var(--brand-2);
+  background: var(--brand-soft);
+}
+.eco-field.tocado label { font-weight: 600; }
+.eco-hint {
+  font-size: .72rem;
+  color: var(--faint);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+.eco-triple { display: flex; gap: 7px; }
+.eco-triple span { flex: 1; display: flex; flex-direction: column; }
+.eco-triple small {
+  font-size: .68rem;
+  color: var(--faint);
+  margin-bottom: 3px;
+}
+.eco-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.eco-restore { margin-top: 14px; }
+.eco-audit { margin-top: 16px; }
+.eco-audit summary {
+  cursor: pointer;
+  font-size: .82rem;
+  color: var(--brand);
+  font-weight: 500;
+}
+.eco-audit .table-wrap { margin-top: 10px; }

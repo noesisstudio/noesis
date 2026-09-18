@@ -12743,6 +12743,184 @@ def account_cost_control(month: str | None = None) -> dict:
     }
 
 
+def economy_assumptions() -> dict:
+    """Supuestos económicos que el founder ha cambiado desde el panel.
+
+    Solo devuelve lo guardado. Lo que no esté aquí lo pone `economics.ASSUMPTIONS`,
+    así que borrar una fila devuelve la cifra de fábrica sin tener que recordarla.
+    """
+    with get_conn() as conn:
+        filas = conn.execute(
+            "SELECT key, value FROM economy_assumptions"
+        ).fetchall()
+    fuera = {}
+    for fila in filas:
+        try:
+            fuera[str(fila["key"])] = json.loads(fila["value"])
+        except (TypeError, ValueError):
+            # Una fila ilegible no debe tumbar el panel: se ignora y manda el
+            # valor de fábrica, que es el comportamiento seguro.
+            continue
+    return fuera
+
+
+def save_economy_assumptions(changes: dict, *, user_id=None) -> dict:
+    """Guarda los supuestos que vengan validados. Devuelve lo que quedó guardado.
+
+    La validación vive en `economics.coerce`, que es la misma que usa el
+    formulario: separar las dos listas es como se acaba teniendo un campo que la
+    web deja escribir y el modelo ignora en silencio.
+    """
+    from .economics import ASSUMPTIONS, EDITABLE, coerce
+
+    ahora = _now()
+    guardados, borrados = {}, []
+    for key, raw in (changes or {}).items():
+        if key not in EDITABLE:
+            continue
+        valor = coerce(key, raw)
+        if valor is None:
+            continue
+        defecto = ASSUMPTIONS[key]
+        iguales = (tuple(valor) == tuple(defecto)
+                   if isinstance(valor, tuple) else
+                   abs(float(valor) - float(defecto)) < 1e-12)
+        if iguales:
+            # Volver al valor de fábrica borra la fila en vez de guardar una copia:
+            # así la tabla dice qué se ha tocado de verdad.
+            borrados.append(key)
+            continue
+        guardados[key] = list(valor) if isinstance(valor, tuple) else valor
+
+    with get_conn() as conn:
+        for key in borrados:
+            conn.execute("DELETE FROM economy_assumptions WHERE key=?", (key,))
+        for key, valor in guardados.items():
+            conn.execute(
+                "INSERT INTO economy_assumptions (key, value, updated_by_user_id, "
+                "updated_at) VALUES (?,?,?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+                "updated_by_user_id=excluded.updated_by_user_id, "
+                "updated_at=excluded.updated_at",
+                (key, json.dumps(valor), user_id, ahora),
+            )
+    return guardados
+
+
+def reset_economy_assumptions() -> int:
+    """Devuelve todos los supuestos a los valores de fábrica. Cuenta lo borrado."""
+    with get_conn() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) AS total FROM economy_assumptions"
+        ).fetchone()["total"]
+        conn.execute("DELETE FROM economy_assumptions")
+    return int(total or 0)
+
+
+def economy_assumptions_audit() -> list[dict]:
+    """Qué se cambió, cuándo y quién, para que el panel lo pueda enseñar."""
+    with get_conn() as conn:
+        filas = conn.execute(
+            "SELECT a.key, a.value, a.updated_at, u.email AS quien "
+            "FROM economy_assumptions a "
+            "LEFT JOIN users u ON u.id = a.updated_by_user_id "
+            "ORDER BY a.updated_at DESC, a.key"
+        ).fetchall()
+    return [{"key": str(f["key"]), "value": f["value"],
+             "updated_at": str(f["updated_at"]), "quien": f["quien"]}
+            for f in filas]
+
+
+def economy_timeline(months: int = 12) -> dict:
+    """Serie mensual del negocio: cartera, conexiones, ingreso y coste real.
+
+    El panel mostraba altas por mes, pero no cómo evoluciona lo que de verdad
+    decide el margen: cuántas cuentas quedan vivas, cuántas están realmente
+    conectadas y qué costó el mes según el libro. Sin las tres juntas no se puede
+    ver si el coste crece más rápido que la cartera, que es la única pregunta que
+    importa al escalar.
+
+    Las conexiones se cuentan por su fecha de alta acumulada, no por el estado de
+    hoy: un histórico reconstruido a partir del estado actual mentiría sobre el
+    pasado. Lo que no se puede reconstruir se deja en ``None`` en vez de rellenarlo.
+    """
+    from .adapters.billing import PLAN_PRICES
+
+    # Ojo con `months or 12`: convertiria un 0 explicito en 12 en vez de acotarlo.
+    months = 12 if months is None else int(months)
+    months = max(1, min(months, 36))
+    today = date.today()
+    point = today.replace(day=1)
+    keys: list[str] = []
+    for _ in range(months):
+        keys.append(point.isoformat()[:7])
+        point = (point - timedelta(days=1)).replace(day=1)
+    keys.reverse()
+
+    with get_conn() as conn:
+        negocios = [dict(row) for row in conn.execute(
+            "SELECT created_at, plan, subscription_status, is_demo FROM businesses"
+        ).fetchall()]
+        conexiones = [str(row["created_at"])[:7] for row in conn.execute(
+            "SELECT created_at FROM whatsapp_connections"
+        ).fetchall() if row["created_at"]]
+        costes = {str(row["period"]): float(row["total"] or 0) for row in conn.execute(
+            "SELECT period, SUM(amount_eur) AS total FROM platform_cost_entries "
+            "GROUP BY period"
+        ).fetchall()}
+
+    reales = [b for b in negocios if not b.get("is_demo")]
+    altas: dict[str, int] = {}
+    for b in reales:
+        key = str(b["created_at"])[:7]
+        if key:
+            altas[key] = altas.get(key, 0) + 1
+    conex_mes: dict[str, int] = {}
+    for key in conexiones:
+        conex_mes[key] = conex_mes.get(key, 0) + 1
+
+    # El plan y el estado solo se conocen a día de hoy, así que el ingreso del mes
+    # se atribuye a las cuentas que ya existían entonces y hoy siguen de pago. Es
+    # una aproximación, y la hoja lo dice: no hay histórico de suscripciones.
+    de_pago = [b for b in reales if b.get("subscription_status") == "active"]
+
+    filas = []
+    acumuladas = conectadas = 0
+    for key in keys:
+        acumuladas += altas.get(key, 0)
+        conectadas += conex_mes.get(key, 0)
+        pago = sum(1 for b in de_pago if str(b["created_at"])[:7] <= key)
+        mrr = sum(
+            float(PLAN_PRICES.get(b.get("plan") or "", 0))
+            for b in de_pago if str(b["created_at"])[:7] <= key
+        )
+        coste = costes.get(key)
+        filas.append({
+            "mes": key,
+            "altas": altas.get(key, 0),
+            "cuentas": acumuladas,
+            "de_pago": pago,
+            "conexiones": conectadas,
+            "conexiones_nuevas": conex_mes.get(key, 0),
+            "mrr": round(mrr, 2),
+            "coste": round(coste, 2) if coste is not None else None,
+            "margen": round(mrr - coste, 2) if coste is not None else None,
+            "coste_por_cuenta": (round(coste / pago, 2)
+                                 if coste is not None and pago else None),
+        })
+    con_coste = [f for f in filas if f["coste"] is not None]
+    return {
+        "meses": keys,
+        "filas": filas,
+        "hay_costes": bool(con_coste),
+        "hay_cuentas": acumuladas > 0,
+        "ultimo": filas[-1] if filas else None,
+        "nota": ("El ingreso de cada mes se atribuye a las cuentas que ya existían "
+                 "entonces y hoy siguen de pago: no hay histórico de suscripciones, "
+                 "así que el pasado se aproxima y no se inventa."),
+    }
+
+
 def admin_overview() -> dict:
     """Cifras globales del negocio Bynoesis (solo para el fundador). NO expone datos
     operativos de cada autónomo, solo metadatos de cuenta y agregados."""

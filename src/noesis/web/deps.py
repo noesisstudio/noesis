@@ -26,7 +26,8 @@ def _asset_version() -> str:
     paths = [HERE / "static" / name for name in
              ("app.css", "app.js", "admin-workspace.css", "admin-workspace.js",
               "public-site.js", "public-marketing.css", "public-marketing.js", "public-calendar.js",
-              "public-analytics.js", "public-video.js")]
+              "public-analytics.js", "public-video.js",
+              "admin-economia.css", "admin-economia.js")]
     try:
         return str(int(max(p.stat().st_mtime for p in paths if p.exists())))
     except ValueError:

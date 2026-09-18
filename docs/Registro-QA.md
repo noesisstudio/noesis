@@ -1,5 +1,75 @@
 ﻿# Registro de QA
 
+## 2026-09-18 — Costes editables: guardado, validación y migración 56
+
+- `tests/test_economia_panel.py` sube a **25 casos** (8 nuevos). Ruff OK.
+  `check_project_truth` OK con esquema 56.
+- **Dos pruebas estructurales nuevas**, que son las que más valor dan aquí:
+  - Todo campo editable existe en el modelo, tiene el tipo correcto y un grupo
+    válido. **Cazó un fallo real antes de subirlo**: `pct_anual` estaba en el
+    catálogo editable sin existir en `ASSUMPTIONS`, así que la página habría
+    reventado con `KeyError` al abrirse.
+  - Todo campo editable **mueve de verdad alguna cifra** del modelo. Al escribirla
+    aparecieron dos casos legítimos que documentan el modelo en vez de esconderlo:
+    el CAC solo mueve LTV/CAC y el *payback* (se amplió la firma), y la cuota de
+    implantación solo entra en caja si alguien la paga, que por defecto es nadie.
+- **Guardado probado de punta a punta**: se escriben gestoría 145, retirada 1.800 y
+  precios 39/59/119, y la cifra viaja a la página, al JSON del modelo y al Excel
+  descargado (`<v>39.0</v>` dentro de la hoja).
+- **Validación**: un campo con texto se ignora y conserva lo que ya estaba bien; un
+  valor fuera de rango se acota al límite; una clave inventada no entra en la tabla.
+  Volver al valor de fábrica **borra la fila** en vez de guardar una copia.
+- **Permisos**: guardar y restaurar redirigen a `/login` sin sesión de administrador
+  y no escriben nada. Ambas acciones quedan en el registro de seguridad.
+- **Mezcla rota**: poner 0,5/0,5/0,5 avisa de que no suma 100 % en vez de dejar el
+  ingreso medio mal en silencio.
+- **Migración 56** verificada en los dos sentidos dentro de la suite; el smoke de
+  PostgreSQL recorre ahora también su escalera.
+- **No ejecutado:** el smoke de PostgreSQL (necesita la base del CI), abrir las
+  descargas con Office real, y revisar la página en un navegador. La base de
+  desarrollo sigue vacía, así que el formulario se ha visto sin cuentas reales.
+
+## 2026-09-18 — Panel de economía, Word y Excel escritos a mano
+
+- `tests/test_economia_panel.py` (nuevo): **17 casos** en tres bloques. Ruff OK sobre
+  `src/` y sobre la prueba. `check_project_truth` OK.
+- **Cifras ancla fijadas al céntimo**, que es lo que impide que el modelo del
+  producto y los libros de `analysis/` se separen sin avisar: coste por plan
+  1,48 / 3,04 / 18,47 €, ARPU 43,00 €, contribución 37,98 € en caja y 28,72 €
+  cargada, equilibrios 4 / 12 / 44 / 57, techo de 198 cuentas, mes 10, caja mínima
+  −3.390 € y vida media 22,2 meses. Si alguien toca un driver, salta.
+- **Word y Excel abiertos y revisados pieza a pieza.** Son ZIPs de XML escritos con
+  `zipfile`, y Office no da un error legible cuando algo falla: dice «archivo
+  dañado». Las pruebas comprueban que existen las partes obligatorias
+  (`[Content_Types].xml`, `_rels/.rels`, `word/document.xml`, `word/styles.xml`;
+  `xl/workbook.xml`, sus rels, `xl/styles.xml` y las dos hojas), que **cada XML
+  parsea**, que hay exactamente un salto de página —o sea, dos páginas— y que los
+  números viajan como números y el texto como `inlineStr`.
+- **Escapado comprobado**: un texto con `&`, comillas y `<etiquetas>` no rompe el
+  documento. Es el fallo que convertiría cualquier nombre de cuenta en un archivo
+  corrupto.
+- **Permisos**: la página, las dos descargas y el endpoint de datos redirigen a
+  `/login` o devuelven 403 sin sesión de administrador. Los cuatro accesos quedan en
+  el registro de seguridad (`admin.economia_viewed`, `admin.economia_docx_downloaded`,
+  `admin.economia_xlsx_downloaded`).
+- **Palancas**: valores absurdos (`-999`, `99999`, texto, vacío, `None`) se acotan y
+  el modelo sigue devolviendo 36 meses de rampa en vez de reventar. Subir la retirada
+  mueve solo el tercer peldaño y no el primero; bajar los minutos de soporte sube el
+  techo de cuentas sin vender ninguna más. Las palancas de la URL llegan hasta el
+  Word descargado.
+- **Un fallo propio encontrado por la prueba**: `economy_timeline(0)` devolvía doce
+  meses porque `months or 12` convierte el cero en doce en vez de acotarlo a uno.
+  Corregido, con la trampa anotada en el código para que no vuelva.
+- **Sin datos no se inventa nada**: con la base vacía la serie deja el coste en
+  `None`, no en cero, y la página dice «Sin cuentas de pago todavía» en vez de pintar
+  ceros que parecerían medidos.
+- Suite completa ejecutada tras los cambios.
+- **No ejecutado:** abrir el Word y el Excel con Word y Excel reales (no hay Office
+  ni LibreOffice en esta máquina; las pruebas usan `python-docx` y `openpyxl` como
+  lectores independientes, que es lo más cerca que se puede llegar sin Office). Ni
+  revisión visual de la página en un navegador, ni el panel con cuentas reales: la
+  base de desarrollo está vacía.
+
 ## 2026-09-18 — Modelo base reescrito: validado sin Excel, con las cautelas de v3
 
 - Generado con `py analysis/build_modelo_economico.py`: 19 hojas. Ruff OK.
