@@ -1,0 +1,939 @@
+<title>Cuándo te paga Bynoesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap">
+<style>
+  /* Tokens de marca — docs/design/STYLE_TOKENS.json. No se inventan colores. */
+  :root {
+    --canvas: #f4f1ea;
+    --surface: #ffffff;
+    --surface-2: #faf8f3;
+    --border: #e2ded2;
+    --border-strong: #d2ccbb;
+    --text: #15211c;
+    --muted: #5d6b66;
+    --faint: #8d968f;
+    --brand: #14463b;
+    --brand-2: #2e8b74;
+    --brand-soft: #e4efe9;
+    --green: #1f8a6d;
+    --green-soft: #e2f1ea;
+    --red: #c0533f;
+    --red-soft: #f7e8e3;
+    --amber: #b7831f;
+    --amber-soft: #f5edd6;
+    --grid: #e6e1d4;
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --r-md: 12px;
+    --r-sm: 10px;
+    --shadow: 0 1px 2px rgba(20, 22, 31, .04), 0 4px 14px rgba(20, 22, 31, .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #101a16;
+      --surface: #17241f;
+      --surface-2: #1d2c26;
+      --border: #2a3b34;
+      --border-strong: #3a4e46;
+      --text: #eef1ec;
+      --muted: #a3b3ab;
+      --faint: #7d8c85;
+      --brand: #8ad9bd;
+      --brand-2: #4fb094;
+      --brand-soft: #1e352d;
+      --green: #4fb28e;
+      --green-soft: #1b3a30;
+      --red: #e2907a;
+      --red-soft: #3d2620;
+      --amber: #d9b165;
+      --amber-soft: #3a2f1a;
+      --grid: #263630;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #101a16;
+    --surface: #17241f;
+    --surface-2: #1d2c26;
+    --border: #2a3b34;
+    --border-strong: #3a4e46;
+    --text: #eef1ec;
+    --muted: #a3b3ab;
+    --faint: #7d8c85;
+    --brand: #8ad9bd;
+    --brand-2: #4fb094;
+    --brand-soft: #1e352d;
+    --green: #4fb28e;
+    --green-soft: #1b3a30;
+    --red: #e2907a;
+    --red-soft: #3d2620;
+    --amber: #d9b165;
+    --amber-soft: #3a2f1a;
+    --grid: #263630;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 44px 72px;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* --- El parte: la voz de Bynoesis va en serif --- */
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(30px, 6vw, 42px);
+    line-height: 1.12;
+    letter-spacing: -.015em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+  }
+  .parte {
+    font-family: var(--serif);
+    font-size: clamp(17px, 2.6vw, 20px);
+    line-height: 1.5;
+    color: var(--text);
+    margin: 0 0 10px;
+    max-width: 62ch;
+  }
+  .parte b { font-weight: 600; color: var(--brand); }
+  .sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+    max-width: 66ch;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: -.01em;
+    margin: 0 0 4px;
+    text-wrap: balance;
+  }
+  .lead {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 20px;
+    max-width: 64ch;
+  }
+  section { margin-top: 52px; }
+  hr.rule {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 52px 0 0;
+  }
+
+  /* --- Palancas --- */
+  .levers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 22px;
+  }
+  .lever label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+  .lever .val {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--brand-2);
+    height: 22px;
+    cursor: pointer;
+  }
+  input[type="range"]:focus-visible,
+  input[type="checkbox"]:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--brand-2);
+    outline-offset: 2px;
+  }
+  .lever .hint {
+    font-size: 12px;
+    color: var(--faint);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .toggle {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .toggle input { margin-top: 3px; accent-color: var(--brand-2); width: 16px; height: 16px; }
+  .toggle b { color: var(--text); font-weight: 600; }
+  .reset {
+    background: none;
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 5px 13px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .reset:hover { color: var(--text); border-color: var(--muted); }
+
+  /* --- Los tres niveles: es una escalera, y el orden significa algo --- */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    gap: 0 16px;
+    align-items: baseline;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: 1px solid var(--border); }
+  .step .tier {
+    font-size: 12px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+    padding-top: 3px;
+  }
+  .step .what { font-size: 15px; }
+  .step .what .cost {
+    display: block;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .step .count {
+    font-variant-numeric: tabular-nums;
+    font-size: 22px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .step .count small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 5px; }
+  .step.key { background: var(--brand-soft); margin-inline: -16px; padding-inline: 16px; border-radius: var(--r-sm); border-color: transparent; }
+  .step.key + .step { border-top-color: var(--border); }
+  .step.key .what { font-weight: 600; }
+  .step.key .count { color: var(--brand); font-size: 28px; }
+  .step.muted-step .count, .step.muted-step .what { color: var(--muted); }
+
+  .verdict {
+    margin-top: 22px;
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    border-radius: var(--r-sm);
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .verdict .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; margin-top: 7px; }
+  .verdict.ok { background: var(--green-soft); color: var(--text); }
+  .verdict.ok .dot { background: var(--green); }
+  .verdict.warn { background: var(--amber-soft); color: var(--text); }
+  .verdict.warn .dot { background: var(--amber); }
+  .verdict.bad { background: var(--red-soft); color: var(--text); }
+  .verdict.bad .dot { background: var(--red); }
+  .verdict b { font-weight: 600; }
+
+  /* --- Gráficos --- */
+  .chart {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 18px 16px 12px;
+  }
+  .chart + .chart { margin-top: 20px; }
+  .chart figcaption {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 10px 2px 0;
+    line-height: 1.45;
+  }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--text);
+    color: var(--canvas);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity .12s;
+    z-index: 3;
+    font-variant-numeric: tabular-nums;
+  }
+  .tip b { font-weight: 600; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 2px 12px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+  .swatch.dash { background: none; border-top: 2px dashed var(--faint); height: 0; }
+
+  /* --- Tablas --- */
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 460px; }
+  th, td { text-align: right; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child { text-align: left; padding-left: 0; }
+  th:last-child, td:last-child { padding-right: 0; }
+  thead th {
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom-color: var(--border-strong);
+  }
+  td.n { font-variant-numeric: tabular-nums; }
+  tr.total td { font-weight: 600; border-bottom-color: var(--border-strong); }
+  tr.spacer td { border: 0; height: 10px; padding: 0; }
+  tr.hl td { background: var(--surface-2); }
+  .tag {
+    display: inline-block;
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .tag.dato { background: var(--brand-soft); color: var(--brand); }
+  .tag.calc { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .tag.sin { background: var(--red-soft); color: var(--red); }
+  .tag.pend { background: var(--amber-soft); color: var(--amber); }
+
+  details {
+    border-top: 1px solid var(--border);
+    padding: 16px 0 0;
+    margin-top: 20px;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--brand);
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "+";
+    font-size: 15px;
+    line-height: 1;
+    width: 17px; height: 17px;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    color: var(--muted);
+    flex: none;
+  }
+  details[open] summary::before { content: "\2212"; }
+  details > *:not(summary) { margin-top: 16px; }
+
+  .foot {
+    margin-top: 44px;
+    font-size: 12.5px;
+    color: var(--faint);
+    line-height: 1.6;
+    max-width: 68ch;
+  }
+  .foot code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+  @media (max-width: 460px) {
+    .step { grid-template-columns: 22px 1fr; }
+    .step .count { grid-column: 2; margin-top: 6px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Bynoesis · modelo económico · 18 sep 2026</p>
+  <h1>¿Cuántas cuentas hasta que esto te pague?</h1>
+  <p class="parte" id="parte"></p>
+  <p class="sub">Con cero clientes de pago, todo lo de abajo es un escenario. Lo único auditable
+    línea a línea es el coste de servir una cuenta; lo demás son supuestos, y los cuatro que más
+    mueven el resultado están aquí como palancas.</p>
+
+  <section>
+    <h2>Mueve lo que decides tú</h2>
+    <p class="lead">Estas cuatro cifras no las decide el mercado. Tres son tuyas y una la
+      descubrirá el piloto.</p>
+    <div class="levers">
+      <div class="lever">
+        <label for="retirada">Lo que quieres cobrar al mes <span class="val num" id="v-retirada"></span></label>
+        <input type="range" id="retirada" min="0" max="2500" step="50" value="1200">
+        <p class="hint">Sin esta línea, el equilibrio no significa nada.</p>
+      </div>
+      <div class="lever">
+        <label for="horas">Horas al mes para vender y atender <span class="val num" id="v-horas"></span></label>
+        <input type="range" id="horas" min="20" max="120" step="5" value="60">
+        <p class="hint">Las que quedan después de construir producto.</p>
+      </div>
+      <div class="lever">
+        <label for="churn">Bajas a partir del 4.º mes <span class="val num" id="v-churn"></span></label>
+        <input type="range" id="churn" min="1" max="10" step="0.5" value="4">
+        <p class="hint">Sin medir. Los tres primeros meses van al doble.</p>
+      </div>
+      <div class="lever">
+        <label for="soporte">Soporte por cuenta asentada <span class="val num" id="v-soporte"></span></label>
+        <input type="range" id="soporte" min="6" max="36" step="0.1" value="18.1">
+        <p class="hint">La palanca que más cuentas regala sin vender ninguna.</p>
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="implantacion">
+        <label for="implantacion">Cobrar la <b>cuota de implantación de 99 €</b> en cada alta.
+          Está propuesta desde el 16/09 y sin aprobar, por eso empieza apagada.</label>
+        <button class="reset" id="reset" type="button">Volver a la base</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Los tres equilibrios</h2>
+    <p class="lead">El libro de agosto daba una sola cifra. No hay un equilibrio: hay una
+      escalera, y cada peldaño significa algo distinto.</p>
+    <div class="steps" id="steps"></div>
+    <div class="verdict" id="verdict"><span class="dot"></span><span id="verdict-text"></span></div>
+  </section>
+
+  <section>
+    <h2>La caja por el camino</h2>
+    <p class="lead">El número de cuentas no dice cuántos meses cuesta llegar ni cuánto dinero
+      hay que poner mientras tanto. Esa es la pregunta que de verdad limita.</p>
+    <figure class="chart">
+      <div class="legend">
+        <span><i class="swatch" style="background: var(--brand-2)"></i> Caja acumulada</span>
+        <span><i class="swatch" style="background: var(--red-soft); height: 10px; border-radius: 3px"></i> Meses en números rojos</span>
+        <span><i class="swatch" style="background: var(--green-soft); height: 10px; border-radius: 3px"></i> Meses en positivo</span>
+      </div>
+      <svg id="svg-caja" viewBox="0 0 720 270" role="img" aria-labelledby="cap-caja"></svg>
+      <div class="tip" id="tip-caja"></div>
+      <figcaption id="cap-caja"></figcaption>
+    </figure>
+    <figure class="chart">
+      <div class="legend">
+        <span><i class="swatch" style="background: var(--brand)"></i> Horas que te ocupa el mes</span>
+        <span><i class="swatch dash"></i> Las que tienes</span>
+      </div>
+      <svg id="svg-horas" viewBox="0 0 720 210" role="img" aria-labelledby="cap-horas"></svg>
+      <div class="tip" id="tip-horas"></div>
+      <figcaption id="cap-horas"></figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Lo que cuesta servir una cuenta</h2>
+    <p class="lead">Esta es la única parte del modelo que se puede auditar línea a línea: sale de
+      tarifas publicadas de Stripe, Meta, Anthropic, Groq y Railway, consultadas el 15/07/2026.
+      Reproduce al céntimo el análisis original.</p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Concepto</th><th>Autónomo</th><th>Negocio</th><th>Premium</th><th>Media</th></tr>
+        </thead>
+        <tbody id="tb-cogs"></tbody>
+      </table>
+    </div>
+    <details>
+      <summary>Por qué hay dos contribuciones y no una</summary>
+      <p class="sub">No son dos opiniones: son dos negocios. Mientras atiendes tú, tu tiempo no sale
+        de la caja, así que la buena es la <b>contribución en caja</b> — y lo que te limita no es el
+        margen, son las horas. En cuanto ese soporte lo paga otra persona, la buena es la
+        <b>cargada</b>, y el equilibrio sube de golpe. El libro de agosto usaba la cargada
+        <em>y además</em> metía una retirada del founder en el opex: contaba tu tiempo dos veces, y
+        por eso el equilibrio salía optimista.</p>
+    </details>
+  </section>
+
+  <section>
+    <h2>Qué es un dato y qué no</h2>
+    <p class="lead">Separar esto es lo único que impide confundir un escenario con una previsión.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Cifra</th><th style="text-align:left">Estado</th><th style="text-align:left">De dónde sale</th></tr></thead>
+        <tbody>
+          <tr><td>Precios 29 / 49 / 99 €</td><td style="text-align:left"><span class="tag dato">Dato</span></td><td style="text-align:left">Decisión del 15/07/2026; coincide con el catálogo del código.</td></tr>
+          <tr><td>Clientes de pago hoy: 0</td><td style="text-align:left"><span class="tag dato">Dato</span></td><td style="text-align:left">Por eso todo esto es prospectivo.</td></tr>
+          <tr><td>Coste de software por cuenta</td><td style="text-align:left"><span class="tag calc">Calculado</span></td><td style="text-align:left">Driver a driver sobre tarifas publicadas.</td></tr>
+          <tr class="hl"><td>Bajas mensuales</td><td style="text-align:left"><span class="tag sin">Sin medir</span></td><td style="text-align:left">La que más mueve el modelo. Al 12 % / 6 % el equilibrio se va del mes 10 al 32.</td></tr>
+          <tr class="hl"><td>Minutos de soporte por cuenta</td><td style="text-align:left"><span class="tag sin">Sin medir</span></td><td style="text-align:left">18,1 ponderados por la mezcla. Solo los 12 del plan Autónomo salen del análisis.</td></tr>
+          <tr class="hl"><td>Horas por alta</td><td style="text-align:left"><span class="tag sin">Sin medir</span></td><td style="text-align:left">El análisis cifra el onboarding en 30-120 min; vender no está medido.</td></tr>
+          <tr><td>Mezcla 55 / 35 / 10</td><td style="text-align:left"><span class="tag sin">Sin medir</span></td><td style="text-align:left">Nadie ha comprado: el reparto real puede ser cualquiera.</td></tr>
+          <tr><td>Estructura y cuota de autónomos</td><td style="text-align:left"><span class="tag pend">Pendiente</span></td><td style="text-align:left">Faltan las facturas reales y la forma jurídica.</td></tr>
+          <tr><td>Caja inicial 4.000 €</td><td style="text-align:left"><span class="tag pend">Pendiente</span></td><td style="text-align:left">El vault cita esa cifra; falta confirmarla.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="rule">
+  <p class="foot">Los tres primeros meses de cada cuenta van al doble de bajas y a 2,5 veces los
+    minutos de soporte; el primer mes descuenta catorce días de prueba y un 3 % de recibos que no
+    se cobran; las altas de cada mes salen de las horas que quedan tras atender a la cartera, no de
+    un objetivo constante. El IVA no aparece: se repercute y se ingresa, así que no es ni ingreso
+    ni gasto. Tampoco hay IRPF ni sociedades: con resultado negativo no hay base, y cuando la haya
+    dependerá de la forma jurídica, que sigue sin decidir.<br><br>
+    Esta página calcula exactamente la misma aritmética que
+    <code>docs/06-negocio-y-finanzas/Bynoesis-Modelo-Economico.xlsx</code>, que genera
+    <code>analysis/build_modelo_economico.py</code>. El libro tiene 19 hojas con el detalle:
+    comisiones de canal, LTV, tarifa anual, sensibilidad y los KPIs que el piloto debe responder.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // --- Modelo. Misma aritmetica que build_modelo_economico.py --------------
+  var BASE = {
+    precio: [29, 49, 99], mix: [0.55, 0.35, 0.10],
+    creditos: [75, 300, 1500], uso: [0.35, 0.40, 0.25], interno: [0.60, 0.60, 0.60],
+    waUtil: [30, 80, 200], audio: [15, 60, 200], docs: [15, 50, 200],
+    docsFuera: [0.20, 0.20, 0.20], almacen: [0.25, 1, 3], voz: [0, 0, 100],
+    soporte: [12, 20, 45], onboarding: [30, 60, 120],
+    eurusd: 1 / 1.1405, stripePay: 0.015, stripeBill: 0.007, stripeFijo: 0.25,
+    waPrecio: 0.0166, haiku: 0.014, qwen: 0.003028, pesoQwen: 0.80,
+    whisper: 0.04, extraccion: 0.012, storage: 0.015, vozMin: 0.11, vozNum: 2,
+    churnNuevo: 0.08, churnMaduro: 0.04, diasPrueba: 14, impagos: 0.03, multNueva: 2.5,
+    horasMes: 60, horasAlta: 3, objetivo: 5, crecimiento: 0.05, horaSoporte: 25,
+    plataforma: 7, herramientas: 40, gestoria: 60, seguro: 30, ads: 0,
+    cuotaAutonomos: 300, retirada: 1200, cajaInicial: 4000,
+    implantacion: 99, pctImplantacion: 0
+  };
+
+  var LINEAS = ["Stripe", "WhatsApp utility", "IA avanzada", "Transcripción",
+                "Extracción externa", "Almacenamiento", "Voz telefónica"];
+
+  function cogsLineas(g, i) {
+    return [
+      g.precio[i] * (g.stripePay + g.stripeBill) + g.stripeFijo,
+      g.waUtil[i] * g.waPrecio,
+      g.creditos[i] * g.uso[i] * (1 - g.interno[i]) *
+        (g.pesoQwen * g.qwen + (1 - g.pesoQwen) * g.haiku) * g.eurusd,
+      g.audio[i] / 60 * g.whisper * g.eurusd,
+      g.docs[i] * g.docsFuera[i] * g.extraccion,
+      g.almacen[i] * g.storage * g.eurusd,
+      g.voz[i] > 0 ? (g.voz[i] * g.vozMin + g.vozNum) * g.eurusd : 0
+    ];
+  }
+
+  function medias(g) {
+    var cogs = [0, 1, 2].map(function (i) {
+      return cogsLineas(g, i).reduce(function (a, b) { return a + b; }, 0);
+    });
+    var w = function (f) { return [0, 1, 2].reduce(function (s, i) { return s + f(i) * g.mix[i]; }, 0); };
+    var arpu = w(function (i) { return g.precio[i]; });
+    var cogsm = w(function (i) { return cogs[i]; });
+    var serv = w(function (i) {
+      return g.soporte[i] / 60 * g.horaSoporte + g.onboarding[i] / 60 * g.horaSoporte / 12;
+    });
+    var minutos = w(function (i) { return g.soporte[i]; });
+    var caja = arpu * (1 - g.impagos) - cogsm;
+    return { cogs: cogs, arpu: arpu, cogsm: cogsm, serv: serv, minutos: minutos,
+             caja: caja, cargada: caja - serv };
+  }
+
+  function rampa(g, m) {
+    var minMadura = m.minutos, minNueva = m.minutos * g.multNueva;
+    var salida = g.plataforma + g.herramientas + g.gestoria + g.seguro + g.ads +
+                 g.cuotaAutonomos + g.retirada;
+    var c = 0, d = 0, e = 0, f = 0, caja = g.cajaInicial;
+    var filas = [], primero = null, ahogo = null, minima = null;
+    for (var mes = 1; mes <= 36; mes++) {
+      var sopPrev = mes > 1 ? ((c + d + e) * minNueva + f * minMadura) / 60 : 0;
+      var libres = Math.max(0, g.horasMes - sopPrev);
+      var objetivo = Math.round(g.objetivo * Math.pow(1 + g.crecimiento, mes - 1));
+      var altas = Math.max(0, Math.min(objetivo, Math.floor(libres / g.horasAlta)));
+      var nc = altas,
+          nd = mes > 1 ? c * (1 - g.churnNuevo) : 0,
+          ne = mes > 1 ? d * (1 - g.churnNuevo) : 0,
+          nf = mes > 1 ? (f + e) * (1 - g.churnMaduro) : 0;
+      c = nc; d = nd; e = ne; f = nf;
+      var cuentas = c + d + e + f;
+      var horas = altas * g.horasAlta + ((c + d + e) * minNueva + f * minMadura) / 60;
+      var facturado = cuentas * m.arpu - altas * m.arpu * g.diasPrueba / 30;
+      var cobrado = facturado * (1 - g.impagos) + altas * g.implantacion * g.pctImplantacion;
+      var resultado = cobrado - cuentas * m.cogsm - salida;
+      caja += resultado;
+      if (primero === null && resultado > 0) primero = mes;
+      if (ahogo === null && horas >= g.horasMes * 0.7) ahogo = mes;
+      minima = minima === null ? caja : Math.min(minima, caja);
+      filas.push({ mes: mes, altas: altas, objetivo: objetivo, cuentas: cuentas,
+                   horas: horas, resultado: resultado, caja: caja });
+    }
+    return { filas: filas, primero: primero, ahogo: ahogo, minima: minima,
+             salida: salida, cuentas36: filas[35].cuentas };
+  }
+
+  // --- Formato -------------------------------------------------------------
+  function eur(n, dec) {
+    return n.toLocaleString("es-ES", { minimumFractionDigits: dec || 0,
+                                       maximumFractionDigits: dec || 0 }) + " €";
+  }
+  function dec1(n) { return n.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function el(id) { return document.getElementById(id); }
+
+  // --- Graficos ------------------------------------------------------------
+  var NS = "http://www.w3.org/2000/svg";
+  function mk(tag, attrs) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function tick(n) {
+    var a = Math.abs(n);
+    if (a >= 1000) return (n / 1000).toLocaleString("es-ES", { maximumFractionDigits: 1 }) + "k";
+    return n.toLocaleString("es-ES", { maximumFractionDigits: 0 });
+  }
+  function nice(max) {
+    if (max <= 0) return 1;
+    var p = Math.pow(10, Math.floor(Math.log10(max)));
+    var r = max / p;
+    var s = r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10;
+    return s * p;
+  }
+
+  function ejes(svg, W, H, PL, PR, PT, PB, yMin, yMax, sufijo) {
+    var pasos = 4, out = [];
+    for (var i = 0; i <= pasos; i++) {
+      var v = yMin + (yMax - yMin) * i / pasos;
+      var y = PT + (H - PT - PB) * (1 - i / pasos);
+      svg.appendChild(mk("line", { x1: PL, x2: W - PR, y1: y, y2: y,
+        stroke: "var(--grid)", "stroke-width": 1 }));
+      var t = mk("text", { x: PL - 9, y: y + 4, "text-anchor": "end", fill: "var(--muted)",
+        "font-size": 11, "font-family": "var(--sans)" });
+      t.textContent = tick(v) + (sufijo || "");
+      svg.appendChild(t);
+      out.push(y);
+    }
+    for (var mes = 6; mes <= 36; mes += 6) {
+      var x = PL + (W - PL - PR) * (mes - 1) / 35;
+      var lt = mk("text", { x: x, y: H - PB + 18, "text-anchor": "middle", fill: "var(--muted)",
+        "font-size": 11, "font-family": "var(--sans)" });
+      lt.textContent = "mes " + mes;
+      svg.appendChild(lt);
+    }
+  }
+
+  function etiqueta(svg, x, y, texto, color, anchor) {
+    var g = mk("g", {});
+    var t = mk("text", { x: x, y: y, "text-anchor": anchor || "middle", fill: color,
+      "font-size": 12, "font-weight": 600, "font-family": "var(--sans)" });
+    t.textContent = texto;
+    g.appendChild(t);
+    svg.appendChild(g);
+  }
+
+  function hover(svg, tipEl, filas, PL, PR, W, xOf, texto) {
+    var cross = mk("line", { y1: 0, y2: 0, stroke: "var(--border-strong)", "stroke-width": 1,
+      opacity: 0, "pointer-events": "none" });
+    svg.appendChild(cross);
+    var punto = mk("circle", { r: 4.5, fill: "var(--surface)", stroke: "var(--brand-2)",
+      "stroke-width": 2, opacity: 0, "pointer-events": "none" });
+    svg.appendChild(punto);
+    var rect = mk("rect", { x: 0, y: 0, width: "100%", height: "100%", fill: "transparent" });
+    svg.appendChild(rect);
+    function mover(ev) {
+      var box = svg.getBoundingClientRect();
+      var px = (ev.clientX - box.left) / box.width * W;
+      var i = Math.round((px - PL) / (W - PL - PR) * 35);
+      i = Math.max(0, Math.min(35, i));
+      var p = xOf(filas[i], i);
+      cross.setAttribute("x1", p.x); cross.setAttribute("x2", p.x);
+      cross.setAttribute("y1", p.top); cross.setAttribute("y2", p.bottom);
+      cross.setAttribute("opacity", 1);
+      punto.setAttribute("cx", p.x); punto.setAttribute("cy", p.y);
+      punto.setAttribute("stroke", p.color); punto.setAttribute("opacity", 1);
+      tipEl.innerHTML = texto(filas[i]);
+      tipEl.style.opacity = 1;
+      var tx = p.x / W * box.width;
+      tipEl.style.left = Math.max(6, Math.min(box.width - tipEl.offsetWidth - 6,
+        tx - tipEl.offsetWidth / 2)) + "px";
+      tipEl.style.top = Math.max(2, p.y / (svg.viewBox.baseVal.height) * box.height - tipEl.offsetHeight - 12) + "px";
+    }
+    rect.addEventListener("mousemove", mover);
+    rect.addEventListener("mouseleave", function () {
+      cross.setAttribute("opacity", 0); punto.setAttribute("opacity", 0); tipEl.style.opacity = 0;
+    });
+  }
+
+  function dibujarCaja(r, g) {
+    var svg = el("svg-caja");
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var W = 720, H = 270, PL = 54, PR = 14, PT = 26, PB = 30;
+    var vals = r.filas.map(function (f) { return f.caja; }).concat([0, g.cajaInicial]);
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var pad = (hi - lo) * 0.12 || 1000;
+    var yMin = Math.min(0, lo - pad), yMax = hi + pad;
+    var Y = function (v) { return PT + (H - PT - PB) * (1 - (v - yMin) / (yMax - yMin)); };
+    var X = function (i) { return PL + (W - PL - PR) * i / 35; };
+
+    ejes(svg, W, H, PL, PR, PT, PB, yMin, yMax, " €");
+    var y0 = Y(0);
+
+    var d = r.filas.map(function (f, i) { return (i ? "L" : "M") + X(i) + " " + Y(f.caja); }).join(" ");
+    var area = d + " L" + X(35) + " " + y0 + " L" + X(0) + " " + y0 + " Z";
+
+    var defs = mk("defs", {});
+    ["arriba", "abajo"].forEach(function (nombre, k) {
+      var cp = mk("clipPath", { id: "cp-" + nombre });
+      cp.appendChild(mk("rect", { x: 0, y: k === 0 ? 0 : y0, width: W,
+        height: k === 0 ? Math.max(0, y0) : Math.max(0, H - y0) }));
+      defs.appendChild(cp);
+    });
+    svg.appendChild(defs);
+    svg.appendChild(mk("path", { d: area, fill: "var(--green-soft)", "clip-path": "url(#cp-arriba)" }));
+    svg.appendChild(mk("path", { d: area, fill: "var(--red-soft)", "clip-path": "url(#cp-abajo)" }));
+    svg.appendChild(mk("line", { x1: PL, x2: W - PR, y1: y0, y2: y0,
+      stroke: "var(--border-strong)", "stroke-width": 1.5 }));
+    svg.appendChild(mk("path", { d: d, fill: "none", stroke: "var(--brand-2)", "stroke-width": 2,
+      "stroke-linejoin": "round", "stroke-linecap": "round" }));
+
+    // Etiquetas directas: solo las dos cifras que deciden algo.
+    var iMin = 0;
+    r.filas.forEach(function (f, i) { if (f.caja < r.filas[iMin].caja) iMin = i; });
+    var xm = X(iMin), ym = Y(r.filas[iMin].caja);
+    svg.appendChild(mk("circle", { cx: xm, cy: ym, r: 4, fill: "var(--red)",
+      stroke: "var(--surface)", "stroke-width": 2 }));
+    etiqueta(svg, Math.min(W - PR - 60, Math.max(PL + 40, xm)), ym + 20,
+      "mínimo " + eur(r.filas[iMin].caja), "var(--red)");
+
+    if (r.primero) {
+      var xp = X(r.primero - 1);
+      svg.appendChild(mk("line", { x1: xp, x2: xp, y1: PT - 8, y2: H - PB,
+        stroke: "var(--brand)", "stroke-width": 1, "stroke-dasharray": "3 3" }));
+      etiqueta(svg, Math.min(W - PR - 4, xp + 6), PT - 12,
+        "mes " + r.primero, "var(--brand)", "start");
+    }
+
+    hover(svg, el("tip-caja"), r.filas, PL, PR, W,
+      function (f, i) {
+        return { x: X(i), y: Y(f.caja), top: PT - 8, bottom: H - PB,
+                 color: f.caja < 0 ? "var(--red)" : "var(--green)" };
+      },
+      function (f) {
+        return "<b>Mes " + f.mes + "</b><br>Caja " + eur(f.caja) +
+               "<br>" + dec1(f.cuentas) + " cuentas · " + f.altas + " altas";
+      });
+  }
+
+  function dibujarHoras(r, g) {
+    var svg = el("svg-horas");
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var W = 720, H = 210, PL = 54, PR = 14, PT = 20, PB = 30;
+    var hi = Math.max(g.horasMes, Math.max.apply(null, r.filas.map(function (f) { return f.horas; })));
+    var yMax = nice(hi * 1.12);
+    var Y = function (v) { return PT + (H - PT - PB) * (1 - v / yMax); };
+    var X = function (i) { return PL + (W - PL - PR) * i / 35; };
+
+    ejes(svg, W, H, PL, PR, PT, PB, 0, yMax, " h");
+
+    svg.appendChild(mk("rect", { x: PL, y: Y(g.horasMes), width: W - PL - PR,
+      height: Math.max(0, Y(g.horasMes * 0.7) - Y(g.horasMes)), fill: "var(--amber-soft)",
+      opacity: 0.55 }));
+    svg.appendChild(mk("line", { x1: PL, x2: W - PR, y1: Y(g.horasMes), y2: Y(g.horasMes),
+      stroke: "var(--faint)", "stroke-width": 2, "stroke-dasharray": "5 4" }));
+    etiqueta(svg, W - PR, Y(g.horasMes) - 7, g.horasMes + " h disponibles", "var(--muted)", "end");
+
+    var d = r.filas.map(function (f, i) { return (i ? "L" : "M") + X(i) + " " + Y(f.horas); }).join(" ");
+    svg.appendChild(mk("path", { d: d, fill: "none", stroke: "var(--brand)", "stroke-width": 2,
+      "stroke-linejoin": "round", "stroke-linecap": "round" }));
+
+    if (r.ahogo) {
+      var xa = X(r.ahogo - 1);
+      svg.appendChild(mk("circle", { cx: xa, cy: Y(r.filas[r.ahogo - 1].horas), r: 4,
+        fill: "var(--amber)", stroke: "var(--surface)", "stroke-width": 2 }));
+      etiqueta(svg, Math.min(W - PR - 70, xa + 8), Y(r.filas[r.ahogo - 1].horas) - 10,
+        "70 % en el mes " + r.ahogo, "var(--amber)", "start");
+    }
+
+    hover(svg, el("tip-horas"), r.filas, PL, PR, W,
+      function (f, i) { return { x: X(i), y: Y(f.horas), top: PT, bottom: H - PB,
+                                 color: "var(--brand)" }; },
+      function (f) {
+        var frenado = f.altas < f.objetivo;
+        return "<b>Mes " + f.mes + "</b><br>" + dec1(f.horas) + " h de " + g.horasMes +
+               "<br>" + f.altas + " altas" + (frenado ? " (querías " + f.objetivo + ")" : "");
+      });
+  }
+
+  // --- Render --------------------------------------------------------------
+  function render() {
+    var g = Object.assign({}, BASE);
+    g.retirada = +el("retirada").value;
+    g.horasMes = +el("horas").value;
+    g.churnMaduro = +el("churn").value / 100;
+    g.churnNuevo = Math.min(0.5, g.churnMaduro * 2);
+    var escala = (+el("soporte").value) / 18.1;
+    g.soporte = BASE.soporte.map(function (v) { return v * escala; });
+    g.pctImplantacion = el("implantacion").checked ? 1 : 0;
+
+    el("v-retirada").textContent = eur(g.retirada);
+    el("v-horas").textContent = g.horasMes + " h";
+    el("v-churn").textContent = dec1(g.churnMaduro * 100) + " %";
+    el("v-soporte").textContent = dec1(+el("soporte").value) + " min";
+
+    var m = medias(g);
+    var r = rampa(g, m);
+    var estructura = g.plataforma + g.herramientas + g.gestoria + g.seguro + g.ads;
+    var techo = Math.floor(g.horasMes / (m.minutos / 60));
+
+    var niveles = [
+      { t: "Cubrir solo la estructura", coste: estructura, base: m.caja,
+        nota: "Servidores, herramientas, gestoría y seguro. No cobras nada.", cls: "muted-step" },
+      { t: "Cubrir estructura y cuota de autónomos", coste: estructura + g.cuotaAutonomos,
+        base: m.caja, nota: "Dejas de poner dinero cada mes. Sigues sin cobrar.", cls: "muted-step" },
+      { t: "Además te pagas lo que quieres cobrar", coste: r.salida, base: m.caja,
+        nota: "El equilibrio de verdad: cuando esto te da de comer.", cls: "key" },
+      { t: "Lo mismo, con el soporte pagado a otra persona", coste: r.salida, base: m.cargada,
+        nota: "La contribución baja de " + eur(m.caja, 2) + " a " + eur(m.cargada, 2) + ".", cls: "muted-step" }
+    ];
+    var equilibrio = Math.ceil(r.salida / m.caja);
+    el("steps").innerHTML = niveles.map(function (n, i) {
+      var c = n.base > 0 ? Math.ceil(n.coste / n.base) : "—";
+      return '<div class="step ' + n.cls + '">' +
+        '<span class="tier num">' + (i + 1) + '</span>' +
+        '<span class="what">' + n.t + '<span class="cost num">' + eur(n.coste) +
+        " al mes · " + n.nota + '</span></span>' +
+        '<span class="count num">' + c + '<small>cuentas</small></span></div>';
+    }).join("");
+
+    var horasEq = equilibrio * m.minutos / 60;
+    var libres = g.horasMes - horasEq;
+    var vd = el("verdict"), vt = el("verdict-text");
+    vd.className = "verdict " + (libres <= 0 ? "bad" : libres < g.horasMes * 0.3 ? "warn" : "ok");
+    vt.innerHTML = libres <= 0
+      ? "<b>No te dan las horas.</b> Atender esas " + equilibrio + " cuentas te costaría " +
+        dec1(horasEq) + " h al mes y solo tienes " + g.horasMes + ": llegarías al equilibrio sin " +
+        "una hora libre para haberlo vendido."
+      : "<b>Cabe en tus horas.</b> Atender esas " + equilibrio + " cuentas te ocuparía " +
+        dec1(horasEq) + " h al mes y te quedarían " + dec1(libres) + " para vender, unas " +
+        Math.floor(libres / g.horasAlta) + " altas. Tu techo absoluto está en " + techo +
+        " cuentas, cuando el soporte se come el mes entero.";
+
+    var falta = r.minima < 0 ? Math.abs(r.minima) : 0;
+    el("parte").innerHTML =
+      "Con lo que hay puesto ahora, <b>" + equilibrio + " cuentas</b> cubren la estructura, la " +
+      "cuota de autónomos y los " + eur(g.retirada) + " que quieres cobrar. " +
+      (r.primero
+        ? "Llegas en el <b>mes " + r.primero + "</b>, y por el camino la caja baja hasta <b>" +
+          eur(r.minima) + "</b>"
+        : "Con estos supuestos <b>no llegas en 36 meses</b>, y la caja baja hasta <b>" +
+          eur(r.minima) + "</b>") +
+      (falta > g.cajaInicial
+        ? " — más de los " + eur(g.cajaInicial) + " que tienes. Así, el plan no es financiable."
+        : falta > 0
+          ? ", dentro de los " + eur(g.cajaInicial) + " que tienes."
+          : ", sin llegar a números rojos.");
+
+    el("cap-caja").textContent = r.primero
+      ? "Primer mes en positivo: el " + r.primero + ". El punto más bajo de la curva es el dinero " +
+        "que hay que poder aguantar, y es la cifra que decide si el plan se puede financiar."
+      : "Con estos supuestos la caja nunca se recupera dentro de los 36 meses.";
+    el("cap-horas").textContent = r.ahogo
+      ? "En el mes " + r.ahogo + " el soporte ya ocupa el 70 % de tus horas. A partir de ahí las " +
+        "altas caen por debajo de lo que te propones, sin que el mercado tenga nada que ver: la " +
+        "rampa se frena sola. Al mes 36 la cartera llega a " + Math.round(r.cuentas36) + " cuentas."
+      : "El soporte no llega a comerse el 70 % de tus horas en 36 meses. La cartera llega a " +
+        Math.round(r.cuentas36) + " cuentas.";
+
+    var filas = [0, 1, 2].map(function (i) { return cogsLineas(g, i); });
+    var html = LINEAS.map(function (lab, k) {
+      var media = [0, 1, 2].reduce(function (s, i) { return s + filas[i][k] * g.mix[i]; }, 0);
+      return "<tr><td>" + lab + "</td>" + [0, 1, 2].map(function (i) {
+        return '<td class="n">' + eur(filas[i][k], 2) + "</td>";
+      }).join("") + '<td class="n">' + eur(media, 2) + "</td></tr>";
+    }).join("");
+    html += '<tr class="total"><td>Coste de software</td>' + [0, 1, 2].map(function (i) {
+      return '<td class="n">' + eur(m.cogs[i], 2) + "</td>";
+    }).join("") + '<td class="n">' + eur(m.cogsm, 2) + "</td></tr>";
+    html += '<tr class="spacer"><td colspan="5"></td></tr>';
+    html += "<tr><td>Precio de catálogo</td>" + [0, 1, 2].map(function (i) {
+      return '<td class="n">' + eur(g.precio[i]) + "</td>";
+    }).join("") + '<td class="n">' + eur(m.arpu, 2) + "</td></tr>";
+    html += '<tr class="hl"><td><b>Contribución en caja</b><br><span style="color:var(--muted);font-size:12px">mientras atiendes tú</span></td>' +
+      [0, 1, 2].map(function (i) {
+        return '<td class="n">' + eur(g.precio[i] * (1 - g.impagos) - m.cogs[i], 2) + "</td>";
+      }).join("") + '<td class="n"><b>' + eur(m.caja, 2) + "</b></td></tr>";
+    html += "<tr><td>Contribución cargada<br><span style=\"color:var(--muted);font-size:12px\">soporte y onboarding a " + eur(g.horaSoporte) + "/h</span></td>" +
+      [0, 1, 2].map(function (i) {
+        return '<td class="n">' + eur(g.precio[i] * (1 - g.impagos) - m.cogs[i] -
+          g.soporte[i] / 60 * g.horaSoporte - g.onboarding[i] / 60 * g.horaSoporte / 12, 2) + "</td>";
+      }).join("") + '<td class="n">' + eur(m.cargada, 2) + "</td></tr>";
+    html += "<tr><td>Minutos de soporte al mes</td>" + [0, 1, 2].map(function (i) {
+      return '<td class="n">' + dec1(g.soporte[i]) + "</td>";
+    }).join("") + '<td class="n">' + dec1(m.minutos) + "</td></tr>";
+    el("tb-cogs").innerHTML = html;
+
+    dibujarCaja(r, g);
+    dibujarHoras(r, g);
+  }
+
+  ["retirada", "horas", "churn", "soporte"].forEach(function (id) {
+    el(id).addEventListener("input", render);
+  });
+  el("implantacion").addEventListener("change", render);
+  el("reset").addEventListener("click", function () {
+    el("retirada").value = 1200; el("horas").value = 60;
+    el("churn").value = 4; el("soporte").value = 18.1;
+    el("implantacion").checked = false;
+    render();
+  });
+  window.addEventListener("resize", render);
+  render();
+})();
+</script>

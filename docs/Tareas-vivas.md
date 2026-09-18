@@ -20,6 +20,10 @@
 - [ ] Tras el piloto: sustituir bajas, minutos de soporte por cuenta y horas por
   alta por lo medido. Son las tres cifras que más mueven el resultado y ninguna
   está medida.
+- [ ] Founder: `Ruta-a-5000-autonomos.html` escala el soporte con **12 min/cuenta** y
+  el modelo base usa **18,1** (los 12 son solo del plan Autónomo; 18,1 es la media
+  ponderada por la mezcla 55/35/10). A 5.000 cuentas eso son ~12 personas de soporte
+  en vez de ~8. Decidir cuál vale y dejar los dos documentos diciendo lo mismo.
 ## Primeros clientes — 17-sep
 
 - [x] Guía de primeros clientes, escalado y costes: `Ruta-a-5000-autonomos.html`.

@@ -45,8 +45,16 @@ Los valores por defecto viven ahora en un único diccionario `D` del que leen a 
 vez la hoja `Supuestos` y la comprobación aritmética que el script imprime al
 terminar, así que no pueden separarse sin que salte.
 
+Además, `docs/06-negocio-y-finanzas/Modelo-economico-interactivo.html`: la misma
+aritmética en una página con cuatro palancas —retirada, horas, bajas y minutos de
+soporte— y la curva de caja a 36 meses, para mover supuestos sin abrir Excel. Usa los
+tokens de `docs/design/STYLE_TOKENS.json`. Verificada contra el libro: reproduce ARPU,
+COGS por plan, las dos contribuciones, los cuatro equilibrios, el mes 10 y los −3.390 €
+de caja mínima. Publicada en https://claude.ai/artifact/AduAVYaKUewQuCtqkroyfN.
+
 - **Áreas/archivos:** `analysis/build_modelo_economico.py` (reescrito),
-  `docs/06-negocio-y-finanzas/Bynoesis-Modelo-Economico.xlsx` (regenerado).
+  `docs/06-negocio-y-finanzas/Bynoesis-Modelo-Economico.xlsx` (regenerado),
+  `docs/06-negocio-y-finanzas/Modelo-economico-interactivo.html` (nuevo).
 - **Pruebas:** ruff; validador estático de 3.655 referencias; 124 combinaciones de
   celdas sin solapes; 24 reglas de formato condicional con operador válido y
   ninguna mirando a otra hoja; comprobación aritmética impresa por el generador,
@@ -59,6 +67,7 @@ terminar, así que no pueden separarse sin que salte.
   COMPROBACION que el script imprime al generarlo; si difieren, el fallo está en la
   fórmula, no en el supuesto.
 - **Rollback:** revertir el commit; el libro v3 sigue intacto.
+
 ## 2026-09-17 — Guía de primeros clientes, escalado a 5.000 y costes por etapa
 
 Objetivo: el founder quiere conseguir los primeros autónomos por boca a boca en su
