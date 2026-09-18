@@ -1,5 +1,64 @@
 ﻿# Registro de cambios
 
+## 2026-09-18 — El modelo base: tres equilibrios en vez de uno, y el tiempo como límite
+
+Petición del founder: mejorar el libro base con los supuestos y el break-even
+puestos al día a partir de todo lo que aprendieron v2 y v3. El base era el único de
+los tres que calcula el coste de servir una cuenta **driver a driver** —créditos de
+IA, mensajes, minutos, documentos, GB— y el único al que le faltaba todo lo demás.
+Ahora tiene las dos cosas: 19 hojas generadas por
+`analysis/build_modelo_economico.py`. Los libros v2 y v3 se conservan.
+
+**El opex era una caja negra.** 3.500 € sin desglosar; el founder los cambió por
+500 € en su copia (17/09) y el equilibrio cayó a 17 cuentas, que describe un negocio
+donde nadie cobra. Ahora la estructura está partida a partida —7 € de plataforma,
+40 de herramientas, 60 de gestoría, 30 de seguro, 0 de publicidad— y hay **tres
+equilibrios**: cubrir la estructura (4 cuentas), cubrir estructura y cuota de
+autónomos (12), y pagarte además 1.200 € al mes (**44**). Un cuarto, con el soporte
+pagado a otra persona, son 57.
+
+**El soporte se contaba dos veces.** Se cobraba a 25 €/hora dentro de la
+contribución y encima habría que pagarle una retirada al founder. El libro publica
+ahora dos contribuciones y dice cuál usar cuándo: **en caja**, 37,98 €, mientras
+atiende el founder —su tiempo es capacidad, no gasto—, y **cargada**, 28,72 €, en
+cuanto ese soporte lo paga alguien. Son dos negocios distintos, no dos opiniones.
+
+**Los minutos de soporte estaban mal ponderados.** v3 usó los 12 minutos del plan
+Autónomo para toda la cartera; con la mezcla 55/35/10 son **18,1**. El techo de
+cuentas que una persona puede atender baja de 300 a **198** (139 en la práctica, al
+70 % de las horas) y las cuentas al mes 36 de la rampa base bajan de 148 a **116**.
+Es la corrección que más mueve la conclusión, y salió de cruzar el driver por plano
+del propio libro con la mezcla que él mismo usa.
+
+**Lo que se ha traído de v2 y v3:** cohortes por edad con bajas del 8 % los tres
+primeros meses y del 4 % después —vida media 22,2 meses, no los 25 de un churn
+plano—, catorce días de prueba, 3 % de recibos no cobrados, las horas del founder
+como freno de las altas, las cinco estructuras de comisión, la cuota de implantación
+y la caja mes a mes a 36 meses. Nada de eso existía en el base.
+
+**Lo que contesta el escenario base:** primer mes en positivo el 10, caja mínima
+−3.390 € contra 4.000 € de caja inicial. El prudente no sobrevive: caja mínima
+−20.989 €. Esa comparación —caja mínima contra caja disponible— es la que decide si
+el plan es financiable, y no aparecía en ninguno de los tres libros anteriores.
+
+Los valores por defecto viven ahora en un único diccionario `D` del que leen a la
+vez la hoja `Supuestos` y la comprobación aritmética que el script imprime al
+terminar, así que no pueden separarse sin que salte.
+
+- **Áreas/archivos:** `analysis/build_modelo_economico.py` (reescrito),
+  `docs/06-negocio-y-finanzas/Bynoesis-Modelo-Economico.xlsx` (regenerado).
+- **Pruebas:** ruff; validador estático de 3.655 referencias; 124 combinaciones de
+  celdas sin solapes; 24 reglas de formato condicional con operador válido y
+  ninguna mirando a otra hoja; comprobación aritmética impresa por el generador,
+  que reproduce al céntimo los COGS del análisis del 15/07/2026.
+- **Límites externos:** ninguno. Sin efecto en producto ni en `src/`.
+- **Riesgo:** nulo; es documentación de apoyo a una decisión que sigue sin tomarse.
+  Lo único sin verificar es abrir el libro con Excel real: no hay Excel ni
+  LibreOffice en esta máquina.
+- **Diagnóstico:** si una cifra del libro no cuadra, compararla con el bloque
+  COMPROBACION que el script imprime al generarlo; si difieren, el fallo está en la
+  fórmula, no en el supuesto.
+- **Rollback:** revertir el commit; el libro v3 sigue intacto.
 ## 2026-09-17 — Guía de primeros clientes, escalado a 5.000 y costes por etapa
 
 Objetivo: el founder quiere conseguir los primeros autónomos por boca a boca en su

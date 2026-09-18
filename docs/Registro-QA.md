@@ -1,5 +1,35 @@
 ﻿# Registro de QA
 
+## 2026-09-18 — Modelo base reescrito: validado sin Excel, con las cautelas de v3
+
+- Generado con `py analysis/build_modelo_economico.py`: 19 hojas. Ruff OK.
+- **No hay Excel ni LibreOffice en esta máquina**, así que la verificación que v3
+  dejó escrita —«abrir el archivo con Excel real es lo único que lo detecta»— no se
+  ha podido repetir. En su lugar, tres validaciones automáticas dirigidas
+  precisamente a los errores que Excel rechazó entonces:
+  - Validador estático propio: **3.655 referencias** recorridas. Ninguna hoja
+    inexistente, ningún paréntesis ni comilla desparejados, ninguna referencia a
+    celda vacía salvo las nueve del embudo de `Ads_Captacion`, vacías a propósito y
+    envueltas en `IFERROR`.
+  - **124 combinaciones de celdas**: sin solapes entre rangos y sin contenido que
+    se pierda dentro de una combinación.
+  - **24 reglas de formato condicional**: todas con operador válido (`cellIs` con
+    comparaciones, `expression` para las dos de texto, un `colorScale`) y ninguna
+    mirando a otra hoja. Son los dos fallos exactos que rompieron v3.
+- Comprobación aritmética: el script recalcula en Python la misma aritmética que
+  las fórmulas e imprime el resultado al generar el libro. Reproduce **al céntimo**
+  los COGS del análisis del 15/07/2026 (1,48 / 3,04 / 18,47 €) y ARPU 43,00 €, que
+  es la prueba de que la cadena de drivers no se rompió al reescribirla.
+- Cuatro fallos propios encontrados y corregidos antes de publicar nada:
+  `CellIsRule` con operador `containsText`, que no existe (sustituido por
+  `FormulaRule`); `TEXT()` con coma decimal en la cadena de formato; una referencia
+  de celda metida dentro de una cadena de texto en la hoja de canal; y tres índices
+  del embudo de `Ads_Captacion` desplazados al insertar una fila nueva. Los tres
+  últimos habrían dado un número plausible pero equivocado, que es el fallo peor.
+- **No ejecutado:** abrir el libro con Excel real y contrastar con LibreOffice o
+  Google Sheets. Y validar cualquier supuesto con datos reales: no hay clientes de
+  pago.
+
 ## 2026-09-17 — Modelo economico v3 abierto y probado con Excel
 
 - Generado con `py analysis/build_modelo_economico_v3.py`: 5 hojas (Panel,

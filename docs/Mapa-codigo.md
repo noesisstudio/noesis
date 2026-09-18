@@ -1,5 +1,34 @@
 # Mapa de código
 
+## Modelo economico base — 18-sep
+
+`analysis/build_modelo_economico.py` genera
+`docs/06-negocio-y-finanzas/Bynoesis-Modelo-Economico.xlsx` con openpyxl (extra
+`analysis`, no es dependencia del producto). Es el libro de referencia: 19 hojas, y
+el único de los tres que calcula el COGS por plan desde sus drivers en vez de
+copiar un total.
+
+Estructura del script. El diccionario `D` del principio es la **única fuente de
+verdad** de los valores por defecto: de él leen tanto la hoja `Supuestos` como la
+comprobación aritmética que el script imprime al terminar, así que un supuesto no
+puede cambiar en un sitio y no en el otro. `construir_supuestos()` escribe las
+celdas editables y rellena `ref` (clave → `Supuestos!$B$41`) y `plan_row` (clave →
+número de fila, con las columnas B/C/D por plan); el resto de hojas construyen sus
+fórmulas a partir de esos dos diccionarios, de modo que reordenar un bloque de
+supuestos no rompe nada. Las constantes `UE_*`, `HF_TECHO`, `R_INI` y `BE_RETIRADA`
+fijan las filas que unas hojas referencian en otras, con aserciones que rompen la
+generación si el maquetado se desplaza.
+
+Las funciones `_cogs_plan()`, `_medias()` y `_rampa()` reproducen en Python la misma
+aritmética que las fórmulas: sirven para la comprobación impresa y para calcular los
+tres escenarios de la hoja `Escenarios`, que se escriben como valores porque una
+hoja de cálculo no puede simular tres futuros a la vez.
+
+Dos cautelas heredadas del QA de v3, que Excel rechaza y openpyxl acepta sin avisar:
+una regla de formato condicional **no puede mirar a otra hoja** (de ahí los espejos
+locales de `Rampa_36m!F6:F9`) y `CellIsRule` solo admite operadores de comparación
+(para texto hay que usar `FormulaRule`). Los libros v2 y v3 siguen en su sitio.
+
 ## Modelo economico v2 — 17-sep
 
 `analysis/build_modelo_economico_v2.py` genera

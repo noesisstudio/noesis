@@ -1,5 +1,25 @@
 # Tareas vivas
 
+## Modelo economico base — 18-sep
+
+- [x] Libro base al día: tres equilibrios, dos contribuciones, cohortes con bajas,
+  horas del founder como límite y caja a 36 meses, sin perder el desglose de costes
+  driver a driver que solo tenía este libro.
+- [ ] Founder: **abrir el libro con Excel** y confirmar que no pide reparación. Es
+  la única verificación que no se ha podido hacer aquí, y en v3 fue la que
+  descubrió dos errores que ninguna comprobación automática vio.
+- [ ] Founder: revisar las cinco partidas de estructura con facturas reales
+  (plataforma 7 €, herramientas 40 €, gestoría 60 €, seguro 30 €) y la cuota de
+  autónomos (300 €). Son PENDIENTE en el libro, no supuestos.
+- [ ] Founder: confirmar la caja inicial. El escenario base baja a −3.390 € y el
+  prudente a −20.989 €: con 4.000 € solo sobrevive el base, y eso es lo que decide
+  si el plan es financiable.
+- [ ] Founder: decidir si la cuota de implantación de 99 € se aprueba. Está en el
+  libro al 0 % a propósito; al 100 % el equilibrio de caja se adelanta del mes 10
+  al 7 y la caja nunca llega a ser negativa.
+- [ ] Tras el piloto: sustituir bajas, minutos de soporte por cuenta y horas por
+  alta por lo medido. Son las tres cifras que más mueven el resultado y ninguna
+  está medida.
 ## Primeros clientes — 17-sep
 
 - [x] Guía de primeros clientes, escalado y costes: `Ruta-a-5000-autonomos.html`.
