@@ -25,6 +25,37 @@ tu abogado, y no es lo que pasa.
 
 ---
 
+## 1 bis. El plan, en siete pasos
+
+Si lo que quieres es que **los correos a gestorías lleguen a bandeja de entrada**,
+esto es lo que hay que hacer, en este orden. Los cinco primeros son gratis y de hoy.
+
+1. **Crea `xavier@bynoesis.com`** en Hostinger y escribe desde ahí. `info@` es una
+   dirección de rol y arrastra un castigo del que no te libra ningún DNS.
+2. **Pon el webmail en texto plano.** En el webmail de Hostinger (Roundcube):
+   *Configuración → Redactar mensajes → Redactar mensajes HTML: **nunca***. Un
+   correo de una persona a otra persona no lleva HTML, y el HTML con una sola
+   imagen o una firma de colores es una señal clásica.
+3. **Calienta el buzón una semana antes de escribir a nadie.** Mándate correos a
+   cuentas tuyas de Gmail, Outlook y Yahoo; si caen en spam, **márcalos «no es
+   spam», muévelos a recibidos y respóndelos desde allí**. Luego diez o quince
+   correos reales a gente que te va a contestar (asesoría, conocidos, proveedores).
+   Cada respuesta es una señal positiva sobre tu dominio.
+4. **Cinco al día como máximo**, uno a uno, cada uno escrito para ese despacho.
+   Nunca en copia oculta, nunca el mismo cuerpo copiado y pegado.
+5. **Cero enlaces, cero adjuntos, asunto en minúsculas y una pregunta al final.**
+   Los guiones del CRM ya salen así, y hay una prueba que impide que alguien les
+   meta un enlace.
+6. **Mide antes de lanzarte.** Manda uno a
+   [mail-tester.com](https://www.mail-tester.com): por debajo de 8/10 hay algo del
+   mensaje que arreglar. Y manda otro a un Gmail tuyo y mira «Mostrar original»:
+   tiene que poner `dkim=pass header.d=bynoesis.com`.
+7. **Responde siempre a quien te responde**, el mismo día. Es lo que más deprisa
+   construye reputación, más que cualquier registro DNS.
+
+Si después de las cuatro semanas de calentamiento siguen cayendo, el problema ya no
+es tuyo: es de por dónde sales. Eso es el apartado 3 bis.
+
 ## 2. Por qué caen entonces: tres causas, por peso
 
 ### 2.1 El dominio tiene tres meses y medio
@@ -111,6 +142,44 @@ Dice qué hay publicado, qué falta y qué pegar. Comprueba **lo publicado**, no
 que hace tu servidor al enviar; para eso está el apartado siguiente.
 
 ---
+
+## 3 bis. Por dónde salen tus correos (y por qué no es tuyo del todo)
+
+`python scripts/check_email_dns.py` sigue los `include` de tu SPF hasta las IP que
+envían de verdad. En tu caso:
+
+```
+148.222.54.0/24 · 148.222.55.0/24 · 189.12.192.0/22   (relay de Hostinger)
+23.83.208.0/20 · 35.85.190.185                        (MailChannels)
+```
+
+Ninguna aparece en Spamhaus, así que **no estás bloqueado**. Pero fíjate en la
+segunda línea: el correo de Hostinger sale por **MailChannels, un relay
+compartido** que usan miles de cuentas de hosting barato. Tu dominio está
+impecable, pero **la reputación de esa IP no es tuya**: la compartes con todo el
+que envíe desde ahí, incluido quien envíe basura.
+
+Eso no se arregla con ningún registro DNS. Se arregla de una sola manera: **saliendo
+por otro sitio**.
+
+### El salto, si lo anterior no basta
+
+Mover el buzón a **Google Workspace** (unos 7 €/mes) o Microsoft 365. Las IP de
+salida de Google tienen de las mejores reputaciones que existen, y una parte de las
+gestorías a las que escribes usa Gmail o Workspace, donde la entrega entre dominios
+de Google es especialmente buena.
+
+Qué hay que cambiar en el DNS —y `check_email_dns.py` lo valida después—:
+
+```
+MX:    1 smtp.google.com          (sustituye a mx1/mx2.hostinger.com)
+SPF:   v=spf1 include:_spf.google.com include:spf.brevo.com ~all
+DKIM:  el registro google._domainkey que te da la consola de Workspace
+```
+
+**Es una decisión de 7 €/mes, no técnica.** Si tu plan para llegar a las gestorías
+depende del correo, es barato. Si vas a usar sobre todo el teléfono, no hace falta:
+con los siete pasos del apartado 1 bis vas servido.
 
 ## 4. La prueba que de verdad vale
 
@@ -201,7 +270,9 @@ reciben respuesta valen más que cien que nadie contesta.
 ## 8. Resumen en cinco líneas
 
 1. Tu SPF, tu DKIM y tu DMARC están bien. **No toques el DNS por esto.**
-2. Caen en spam porque el dominio tiene tres meses y escribes a desconocidos.
+2. Caen en spam porque el dominio tiene tres meses, escribes a desconocidos y sales
+   por un relay compartido. Los siete pasos del apartado 1 bis arreglan lo primero
+   y lo segundo; lo tercero, solo cambiar de proveedor de buzón.
 3. Arregla Brevo igualmente: está a medias y romperá el correo de la aplicación.
 4. Recupera tus informes DMARC, que ahora los recibe Brevo y no tú.
 5. Para captar clientes, el canal es el teléfono. El correo viene después.

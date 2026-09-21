@@ -115,8 +115,46 @@ class GuionesTests(unittest.TestCase):
                                 f"{clave}.{lengua} usa {huecos - self.HUECOS}")
             self.assertIn(guion["canal"], sales.CANALES, clave)
 
+    def test_a_gestoria_gets_the_letter_and_not_the_cold_call(self):
+        # A una gestoría se le escribe; a un fontanero se le llama a las 7:30.
+        # Si alguien cambia el origen, el guion tiene que cambiar con él.
+        ficha = sales.enriquecer({"origen": "gestoria", "estado": "lista",
+                                  "nombre": "Sala Assessories"})
+        self.assertEqual(ficha["guiones"], ["gestoria_pregunta"])
+        self.assertEqual(sales.GUIONES["gestoria_pregunta"]["canal"], "email")
+        frio = sales.enriquecer({"origen": "maps", "estado": "lista", "nombre": "X"})
+        self.assertIn("lista_frio", frio["guiones"])
+
+    def test_the_gestoria_email_asks_instead_of_selling(self):
+        # Vender a un despacho hoy sería prometer un trato que no se puede firmar:
+        # las comisiones no están aprobadas (Canal-comercial-y-comisiones) y no hay
+        # ni S.L. ni Stripe. Además, un correo que pregunta no es comunicación
+        # comercial, que es lo que el art. 21 LSSI restringe.
+        for lengua in ("es", "ca"):
+            texto = sales.GUIONES["gestoria_pregunta"][lengua]
+            self.assertIn("?", texto)
+            for prohibido in ("comisión", "comissió", "descuento", "precio",
+                              "gratis", "oferta"):
+                self.assertNotIn(prohibido, texto.lower(), f"{lengua}/{prohibido}")
+
+    def test_no_script_carries_a_link_or_an_attachment(self):
+        # Un enlace a un dominio de tres meses es lo que más penaliza un filtro de
+        # correo, y en un WhatsApp de primer contacto sobra igual.
+        for clave, guion in sales.GUIONES.items():
+            for lengua in ("es", "ca"):
+                texto = guion[lengua].lower()
+                for prohibido in ("http", "www.", "adjunto", "adjunt"):
+                    self.assertNotIn(prohibido, texto, f"{clave}.{lengua}")
+
     def test_every_state_points_at_scripts_that_exist(self):
         for estado, claves in sales.GUION_POR_ESTADO.items():
+            self.assertIn(estado, sales.ESTADOS, estado)
+            for clave in claves:
+                self.assertIn(clave, sales.GUIONES, clave)
+
+    def test_every_origin_rule_points_at_real_origins_and_scripts(self):
+        for (origen, estado), claves in sales.GUION_POR_ORIGEN.items():
+            self.assertIn(origen, sales.ORIGENES, origen)
             self.assertIn(estado, sales.ESTADOS, estado)
             for clave in claves:
                 self.assertIn(clave, sales.GUIONES, clave)

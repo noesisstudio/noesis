@@ -8,9 +8,12 @@ señale, porque verificar la propiedad no autentica ningún correo.
 """
 import unittest
 
+from unittest.mock import patch
+
 from scripts.check_email_dns import (
     AVISO, FALLO, OK,
-    clave_dkim, revisar_dkim, revisar_dmarc, revisar_spf, spf_autoriza,
+    _primera_ip, clave_dkim, rangos_de_salida, revisar_dkim, revisar_dmarc,
+    revisar_salida, revisar_spf, spf_autoriza,
 )
 
 
@@ -95,6 +98,52 @@ class DmarcTests(unittest.TestCase):
         self.assertEqual(
             niveles(revisar_dmarc(["v=DMARC1; p=none", "v=DMARC1; p=reject"], "x.com")),
             [FALLO])
+
+
+class SalidaTests(unittest.TestCase):
+    """Por dónde salen los correos: la reputación de esa IP no es tuya."""
+
+    def test_it_follows_the_includes_until_the_real_ranges(self):
+        def falso_dig(tipo, nombre):
+            if nombre == "relay.ejemplo.com":
+                return ["v=spf1 ip4:203.0.113.0/24 ip4:198.51.100.5/32 ~all"]
+            return []
+        with patch("scripts.check_email_dns._dig", falso_dig):
+            rangos, incluidos = rangos_de_salida(
+                ["v=spf1 include:relay.ejemplo.com ~all"])
+        self.assertEqual(rangos, ["203.0.113.0/24", "198.51.100.5/32"])
+        self.assertIn("relay.ejemplo.com", incluidos)
+
+    def test_the_shared_relay_is_found_in_the_includes_not_in_the_ips(self):
+        # El fallo que tuvo esto al escribirlo: buscar «mailchannels» entre las IP
+        # no encuentra nada nunca, porque el nombre está en el include.
+        with patch("scripts.check_email_dns._dig", lambda t, n: []):
+            hallazgos = revisar_salida(["23.83.208.0/20"],
+                                       {"relay.mailchannels.net"})
+        self.assertIn("mailchannels", [t for _n, t in hallazgos])
+
+    def test_a_listed_range_is_a_failure(self):
+        with patch("scripts.check_email_dns._dig", lambda t, n: ["127.0.0.2"]):
+            hallazgos = revisar_salida(["203.0.113.0/24"], set())
+        self.assertIn(FALLO, niveles(hallazgos))
+
+    def test_a_clean_range_is_reported_as_clean(self):
+        with patch("scripts.check_email_dns._dig", lambda t, n: []):
+            hallazgos = revisar_salida(["203.0.113.0/24"], set())
+        self.assertEqual(niveles(hallazgos), [OK, OK])
+
+    def test_without_ranges_it_says_so_instead_of_pretending(self):
+        self.assertEqual(niveles(revisar_salida([], set())), [AVISO])
+
+    def test_the_sample_ip_is_inside_the_range_and_not_the_network_address(self):
+        self.assertEqual(_primera_ip("148.222.54.0/24"), "148.222.54.10")
+        self.assertEqual(_primera_ip("189.12.192.0/22"), "189.12.192.10")
+
+    def test_a_single_address_is_sampled_as_itself(self):
+        # Con /32 hay una sola IP: cambiarle el último octeto comprobaría una
+        # dirección que el SPF no autoriza y el resultado no diría nada.
+        self.assertEqual(_primera_ip("35.85.190.185/32"), "35.85.190.185")
+        self.assertEqual(_primera_ip("35.85.190.185"), "35.85.190.185")
 
 
 if __name__ == "__main__":  # pragma: no cover

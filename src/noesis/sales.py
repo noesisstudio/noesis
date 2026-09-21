@@ -278,6 +278,75 @@ GUIONES: dict[str, dict] = {
                "el moment. Des de llavors {novedad}. Si vols t'ho ensenyo en quinze "
                "minuts; i si continua sense ser el moment, no insisteixo més."),
     },
+    "gestoria_pregunta": {
+        "titulo": "Gestoría · primer correo",
+        "cuando": ("Aquí el correo sí es el canal: una gestoría vive en su bandeja "
+                   "de entrada. Pero se pregunta, no se vende: el trato con el "
+                   "despacho como canal llega cuando haya pilotos y S.L."),
+        "canal": "email",
+        "es": ("Buenos días:\n\n"
+               "Me llamo {yo} y estoy montando una herramienta para autónomos de "
+               "oficios —fontaneros, electricistas, reformas— que les ordena las "
+               "facturas y los justificantes de gastos antes de que os lleguen a "
+               "vosotros.\n\n"
+               "Antes de seguir construyéndola quiero entender vuestro lado, y por "
+               "eso os escribo con una sola pregunta: ¿qué es lo que más horas os "
+               "hace perder de un cliente autónomo cada trimestre?\n\n"
+               "Con que me contestéis dos líneas me ayudáis mucho. Y si lo "
+               "preferís por teléfono, decidme cuándo os va bien y os llamo.\n\n"
+               "Gracias,\n{yo} · Bynoesis"),
+        "ca": ("Bon dia:\n\n"
+               "Em dic {yo} i estic fent una eina per a autònoms d'oficis "
+               "—lampistes, electricistes, reformes— que els ordena les factures i "
+               "els justificants de despeses abans que us arribin a vosaltres.\n\n"
+               "Abans de continuar construint-la vull entendre el vostre costat, i "
+               "per això us escric amb una sola pregunta: què és el que us fa "
+               "perdre més hores d'un client autònom cada trimestre?\n\n"
+               "Amb que em contesteu dues línies ja m'ajudeu molt. I si ho "
+               "preferiu per telèfon, digueu-me quan us va bé i us truco.\n\n"
+               "Gràcies,\n{yo} · Bynoesis"),
+    },
+    "gestoria_recordatorio": {
+        "titulo": "Gestoría · segundo correo, a la semana",
+        "cuando": "Una vez, y más corto que el primero. Si no contesta, se llama.",
+        "canal": "email",
+        "es": ("Buenos días:\n\n"
+               "Os escribí la semana pasada y entiendo que no sea lo más urgente. "
+               "Dejo la pregunta por si ahora os pilla mejor: ¿qué cliente autónomo "
+               "os trae los papeles hechos un desastre, y qué os gustaría recibir "
+               "en su lugar?\n\n"
+               "Si no es buen momento, decídmelo y no insisto más.\n\n"
+               "{yo} · Bynoesis"),
+        "ca": ("Bon dia:\n\n"
+               "Us vaig escriure la setmana passada i entenc que no sigui el més "
+               "urgent. Deixo la pregunta per si ara us va millor: quin client "
+               "autònom us porta els papers fets un desastre, i què us agradaria "
+               "rebre al seu lloc?\n\n"
+               "Si no és bon moment, digueu-m'ho i no insisteixo més.\n\n"
+               "{yo} · Bynoesis"),
+    },
+    "gremio_presentacion": {
+        "titulo": "Gremio · pedir una reunión",
+        "cuando": ("Tampoco se vende: se pide entender al sector. El acuerdo con el "
+                   "gremio es de la etapa 3, no de ahora."),
+        "canal": "email",
+        "es": ("Buenos días:\n\n"
+               "Soy {yo}, de {zona}. Estoy desarrollando una herramienta para que "
+               "los instaladores lleven los presupuestos, las facturas y los cobros "
+               "sin pelearse con un programa de gestión.\n\n"
+               "Me gustaría entender de primera mano qué les cuesta más a vuestros "
+               "agremiados en la parte administrativa. ¿Podríamos vernos veinte "
+               "minutos, o me decís con quién sería mejor hablar?\n\n"
+               "Gracias por el tiempo,\n{yo} · Bynoesis"),
+        "ca": ("Bon dia:\n\n"
+               "Sóc en {yo}, de {zona}. Estic desenvolupant una eina perquè els "
+               "instal·ladors portin els pressupostos, les factures i els "
+               "cobraments sense barallar-se amb un programa de gestió.\n\n"
+               "M'agradaria entendre de primera mà què els costa més als vostres "
+               "agremiats en la part administrativa. Ens podríem veure vint minuts, "
+               "o em dieu amb qui seria millor parlar?\n\n"
+               "Gràcies pel temps,\n{yo} · Bynoesis"),
+    },
 }
 
 # Las cinco preguntas del cafe. Todas miran al pasado a proposito: «lo usarias?»
@@ -289,6 +358,17 @@ PREGUNTAS_CAFE = (
     "¿Qué te pide la gestoría cada trimestre y cómo se lo mandas?",
     "¿Qué usas hoy? ¿Qué dejaste de usar, y por qué?",
 )
+
+# A una gestoría y a un gremio se les escribe, no se les llama a las 7:30, y lo
+# que se les pide no es que compren: es información y una presentación. El trato
+# como canal llega en la etapa 2, cuando haya pilotos, S.L. y comisiones aprobadas
+# —hoy no lo están (ver Canal-comercial-y-comisiones)—, así que prometer dinero en
+# este correo sería vender algo que todavía no se puede firmar.
+GUION_POR_ORIGEN = {
+    ("gestoria", "lista"): ("gestoria_pregunta",),
+    ("gestoria", "contactado"): ("gestoria_recordatorio",),
+    ("gremio", "lista"): ("gremio_presentacion",),
+}
 
 GUION_POR_ESTADO = {
     "lista": ("lista_referido", "lista_frio"),
@@ -529,7 +609,9 @@ def enriquecer(prospect: dict) -> dict:
     p["debe_informar"] = bool(not origen["del_interesado"]
                               and not p.get("informado_el")
                               and not p.get("baja"))
-    p["guiones"] = [g for g in GUION_POR_ESTADO.get(estado, ()) if g in GUIONES]
+    claves = (GUION_POR_ORIGEN.get((p.get("origen"), estado))
+              or GUION_POR_ESTADO.get(estado, ()))
+    p["guiones"] = [g for g in claves if g in GUIONES]
     return p
 
 

@@ -1,5 +1,76 @@
 ﻿# Registro de cambios
 
+## 2026-09-21 — Por dónde sale el correo: el dato que faltaba
+
+El founder insistió en lo concreto: que los correos a gestorías lleguen a bandeja
+de entrada. El diagnóstico anterior descartaba el DNS, pero no había mirado **por
+dónde salen físicamente** esos correos, que es la pieza que faltaba.
+
+`check_email_dns.py` sigue ahora los `include:` del SPF hasta las IP que envían de
+verdad y comprueba una muestra de cada rango contra Spamhaus. En `bynoesis.com`:
+tres rangos del relay de Hostinger y dos de **MailChannels**. Ninguno listado, así
+que no hay bloqueo, pero MailChannels es un **relay compartido** que usan miles de
+cuentas de hosting barato: la reputación de esa IP no es suya y no la arregla
+ningún registro DNS. El único arreglo es salir por otro sitio, y el documento deja
+escrita esa decisión (Google Workspace, ~7 €/mes, con los registros exactos) como
+lo que es: una decisión de dinero, no técnica.
+
+El documento incorpora además **el plan en siete pasos** que el founder pedía:
+dirección con nombre propio, webmail en texto plano, una semana de calentamiento
+marcando «no es spam» y respondiendo, cinco correos al día uno a uno, sin enlaces
+ni adjuntos, medición con mail-tester y cabeceras, y responder el mismo día.
+
+**Dos fallos propios que cazaron las pruebas al escribirlo:** el aviso del relay
+compartido buscaba «mailchannels» entre las IP, donde no aparece nunca, en vez de
+entre los `include`; y la IP de muestra cambiaba el último octeto también en los
+rangos `/32`, con lo que comprobaba en Spamhaus una dirección que el SPF no
+autoriza y el resultado no decía nada sobre la que de verdad envía.
+
+- **Áreas/archivos:** `scripts/check_email_dns.py` (`rangos_de_salida`,
+  `revisar_salida`, `_primera_ip`);
+  `docs/03-whatsapp-e-integraciones/Correo-que-no-cae-en-spam.md` (apartados 1 bis
+  y 3 bis).
+- **Pruebas:** `tests/test_email_dns.py` sube a 22 casos (7 nuevos), sin red: la
+  consulta a Spamhaus va simulada. Suite completa 1.025 en verde. Ruff OK.
+- **Riesgo:** nulo. No toca `src/noesis/` salvo los guiones del CRM, sin migración.
+- **Diagnóstico:** si el script dice que un rango está listado, el problema no es
+  del dominio y no se arregla desde el DNS: hay que cambiar de proveedor de buzón.
+
+## 2026-09-21 — Gestorías y gremios: el correo que pregunta, no el que vende
+
+El founder quiere usar el correo en frío para llegar a gestorías. Es la única
+puerta donde el correo es a la vez el canal correcto y algo que funciona —una
+gestoría vive en su bandeja de entrada, al revés que un fontanero—, pero el CRM
+solo tenía guiones de llamada y WhatsApp, pensados para el oficio.
+
+**Tres guiones nuevos, por origen y no por estado.** `GUION_POR_ORIGEN` manda sobre
+`GUION_POR_ESTADO` cuando existe: una gestoría en la lista recibe el correo de la
+pregunta, no el guion de llamada en frío de las 7:30. Igual con los gremios.
+
+**Lo que piden esos correos no es una venta, y es deliberado.** Hoy no hay S.L. con
+la que firmar, ni Stripe con el que liquidar, y las comisiones **no están
+aprobadas** ([[Canal-comercial-y-comisiones]] es una propuesta y la decisión del
+7-ago reserva al founder el porcentaje y la duración). Prometer un trato ahora sería
+vender algo que no se puede firmar. Piden una sola cosa: «¿qué cliente autónomo os
+trae los papeles hechos un desastre?». Esa pregunta trae presentaciones a los
+autónomos que más lo necesitan, no es comunicación comercial —así que no choca con
+el art. 21 LSSI— y genera respuestas, que es lo que construye reputación de correo.
+
+**Dos pruebas de contenido**, que aquí valen más que las de estructura: ningún
+guion puede llevar un enlace ni un adjunto —un enlace a un dominio de tres meses es
+lo que más penaliza un filtro—, y el correo a la gestoría no puede contener
+«comisión», «descuento», «precio», «gratis» ni «oferta». Si alguien lo reescribe
+para vender, salta.
+
+- **Áreas/archivos:** `src/noesis/sales.py` (`GUION_POR_ORIGEN` y tres guiones
+  nuevos; `enriquecer` elige por origen antes que por estado);
+  `docs/06-negocio-y-finanzas/Lista-de-captacion.md` (apartado de gestorías).
+- **Pruebas:** `tests/test_crm_captacion.py` sube a 40 casos (4 nuevos).
+- **Límites externos:** ninguno.
+- **Riesgo:** bajo. Sin migración; solo texto y una regla de selección.
+- **Diagnóstico:** si una ficha enseña el guion equivocado, mirar su `origen`: la
+  regla por origen solo se aplica a los pares declarados en `GUION_POR_ORIGEN`.
+
 ## 2026-09-21 — Por qué el correo cae en spam: no era el DNS
 
 El founder pidió arreglar que sus correos acaben en spam. La respuesta corta es

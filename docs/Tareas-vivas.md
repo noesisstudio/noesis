@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Gestorías como puerta — 21-sep
+
+- [x] Guiones de correo para gestorías y gremios en el CRM, en las dos lenguas,
+  sin enlaces ni adjuntos y pidiendo información en vez de vendiendo.
+- [ ] Founder: dar de alta con origen `Gestoría` las tres del CSV de Lleida (ASLAF,
+  Sala Assessories, Filaco) y buscar diez más. Ninguna tiene teléfono en la ficha:
+  habrá que sacarlo de su web.
+- [ ] Founder: cinco correos al día como mucho, cada uno escrito para ese despacho.
+  La respuesta que buscas es un nombre de cliente, no una reunión comercial.
+- [ ] **No prometer comisiones todavía.** No hay S.L., ni Stripe, ni decisión
+  tomada sobre el porcentaje. Eso es etapa 2.
+
 ## Correo y entregabilidad — 21-sep
 
 - [x] Diagnóstico contra el DNS real: SPF, DKIM y DMARC de `bynoesis.com` están

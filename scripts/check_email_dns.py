@@ -171,6 +171,75 @@ def revisar_dmarc(registros: list[str], dominio: str) -> list[tuple[str, str]]:
     return hallazgos
 
 
+# --------------------------------------------------------------- Por donde sale ---
+def rangos_de_salida(registros: list[str], profundidad: int = 2
+                     ) -> tuple[list[str], set[str]]:
+    """Sigue los `include:` del SPF hasta dar con las IP que envían de verdad.
+
+    Importa porque la reputación de esas IP **no es tuya**: en un hosting
+    compartido sales por el mismo relay que miles de cuentas más, y eso pesa
+    aunque tu dominio esté perfecto.
+    """
+    rangos: list[str] = []
+    pendientes, vistos = list(registros), set()
+    while pendientes and profundidad >= 0:
+        siguientes = []
+        for registro in pendientes:
+            if not registro.lower().startswith("v=spf1"):
+                continue
+            rangos.extend(re.findall(r"ip4:(\S+)", registro))
+            for incluido in re.findall(r"include:(\S+)", registro):
+                if incluido not in vistos:
+                    vistos.add(incluido)
+                    siguientes.extend(_dig("TXT", incluido))
+        pendientes = siguientes
+        profundidad -= 1
+    return rangos, vistos
+
+
+def _primera_ip(rango: str) -> str:
+    """Una IP de muestra que esté **dentro** del rango.
+
+    Con `/32` la muestra tiene que ser esa misma IP: cambiar el último octeto
+    comprobaría una dirección que el SPF no autoriza, y el resultado no diría nada
+    sobre la que de verdad envía.
+    """
+    base, _, mascara = rango.partition("/")
+    partes = base.split(".")
+    # Sin máscara, `ip4:` es una sola dirección: se comprueba tal cual.
+    if len(partes) != 4 or not mascara or int(mascara) > 24:
+        return base
+    partes[3] = "10"  # dentro del rango y sin ser la dirección de red
+    return ".".join(partes)
+
+
+def revisar_salida(rangos: list[str], incluidos: set[str]
+                   ) -> list[tuple[str, str]]:
+    """Mira una muestra de cada rango en Spamhaus. Es una muestra, no un censo."""
+    if not rangos:
+        return [(AVISO, "No he podido averiguar por dónde sale tu correo.")]
+    hallazgos = [(OK, f"Sales por {len(rangos)} rango(s): "
+                      f"{', '.join(rangos[:6])}{'…' if len(rangos) > 6 else ''}.")]
+    listadas = []
+    for rango in rangos[:8]:
+        ip = _primera_ip(rango)
+        invertida = ".".join(reversed(ip.split(".")))
+        if _dig("A", f"{invertida}.zen.spamhaus.org"):
+            listadas.append(rango)
+    if listadas:
+        hallazgos.append((FALLO, "Hay rangos de salida en Spamhaus: "
+                                 f"{', '.join(listadas)}. Tus correos salen por "
+                                 "una infraestructura con mala reputación y no lo "
+                                 "arreglas desde tu dominio."))
+    else:
+        hallazgos.append((OK, "Ninguna muestra de esos rangos aparece en Spamhaus."))
+    # El nombre del relay está en los `include`, no en las IP: buscarlo entre las
+    # IP no encuentra nada nunca.
+    if any("mailchannels" in i.lower() for i in incluidos):
+        hallazgos.append((AVISO, "mailchannels"))
+    return hallazgos
+
+
 # ----------------------------------------------------------------- Salida ---
 def analizar(dominio: str, proveedor: str) -> tuple[list, list]:
     """Devuelve (hallazgos, acciones). Separadas porque se leen distinto."""
@@ -212,6 +281,20 @@ def analizar(dominio: str, proveedor: str) -> tuple[list, list]:
 
     for nivel, texto in revisar_dmarc(_dig("TXT", f"_dmarc.{dominio}"), dominio):
         hallazgos.append(("DMARC", nivel, texto))
+
+    rangos, incluidos = rangos_de_salida(raiz)
+    for nivel, texto in revisar_salida(rangos, incluidos):
+        if texto == "mailchannels":
+            hallazgos.append(("Salida", AVISO,
+                              "Sales por un relay compartido (MailChannels, el que "
+                              "usa el correo de Hostinger). Tu dominio puede estar "
+                              "perfecto y aun así compartes reputación de IP con "
+                              "miles de cuentas de hosting. Si tras calentar el "
+                              "dominio los correos siguen cayendo, el salto que "
+                              "queda es mover el buzón a un proveedor con IP "
+                              "propia bien reputada."))
+        else:
+            hallazgos.append(("Salida", nivel, texto))
 
     return hallazgos, acciones
 

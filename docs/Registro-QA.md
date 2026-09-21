@@ -1,5 +1,42 @@
 ﻿# Registro de QA
 
+## 2026-09-21 — Rastreo de la ruta de salida del correo
+
+- `tests/test_email_dns.py` sube a **22 casos** (7 nuevos). Suite completa
+  **1.025 en verde**. Ruff OK. La consulta a Spamhaus va simulada: la prueba no
+  toca la red ni depende de que un rango siga o no listado mañana.
+- **Dos fallos propios cazados aquí**, y los dos quedan con prueba de regresión:
+  - El aviso del relay compartido buscaba «mailchannels» **entre las IP**, donde no
+    aparece nunca; el nombre está en el `include`. El aviso no salía jamás.
+  - La IP de muestra cambiaba el último octeto también con `/32`, así que
+    comprobaba en Spamhaus una dirección que el SPF **no autoriza**: el resultado
+    no decía nada sobre la que de verdad envía.
+- **Verificado contra el dominio real**: cinco rangos de salida (tres de Hostinger,
+  dos de MailChannels), ninguno listado.
+- **No ejecutado:** la comprobación con un correo real enviado y sus cabeceras, que
+  sigue dependiendo del buzón del founder.
+
+## 2026-09-21 — Guiones por origen: gestorías y gremios
+
+- `tests/test_crm_captacion.py` sube a **40 casos** (4 nuevos). Ruff OK.
+- **Dos pruebas de contenido**, que aquí valen más que las de estructura porque lo
+  que se rompe es el texto que sale hacia una persona:
+  - **Ningún guion puede llevar `http`, `www.` ni la palabra «adjunto»**. Un enlace
+    a un dominio de tres meses es lo que más penaliza un filtro de correo, y en un
+    primer WhatsApp sobra igual.
+  - **El correo a la gestoría no puede contener** «comisión», «comissió»,
+    «descuento», «precio», «gratis» ni «oferta»: prometer un trato hoy sería vender
+    algo que no se puede firmar, porque no hay S.L., ni Stripe, ni decisión tomada
+    sobre el porcentaje. Si alguien lo reescribe para vender, salta la prueba.
+- **Enrutado por origen probado en los dos sentidos**: una gestoría en la lista
+  recibe el correo de la pregunta y **no** el guion de llamada en frío; un contacto
+  de mapas sigue recibiendo los dos guiones de teléfono.
+- **Prueba estructural**: todo par `(origen, estado)` de `GUION_POR_ORIGEN` nombra
+  un origen y un estado que existen, y guiones que existen.
+- **Renderizado real comprobado** con una ficha de gestoría: el correo sale en la
+  página con sus saltos de línea intactos (van en un atributo `data-` y se pintan
+  con `white-space: pre-wrap`), listo para copiar y pegar.
+
 ## 2026-09-21 — Lectura de SPF, DKIM y DMARC
 
 - `tests/test_email_dns.py` (nuevo): **15 casos**, sin red y sin importar el

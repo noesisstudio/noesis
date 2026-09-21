@@ -88,6 +88,34 @@ El movimiento no es mandarles un correo comercial —sería justo lo que la LSSI
 permite—, sino **pedir una reunión o asistir a una charla**. Un gremio que ve una
 herramienta útil para sus agremiados es, más adelante, un canal entero.
 
+### 2.4 bis Gestorías: el correo sí, pero preguntando
+
+Es el único sitio donde el correo en frío es a la vez el canal correcto y algo que
+funciona: **una gestoría vive en su bandeja de entrada**, al revés que un fontanero.
+Pero lo que se pide en ese correo decide si sirve o no.
+
+**Hoy no se les vende.** No hay S.L. con la que firmar, no hay Stripe con el que
+liquidar y **las comisiones no están aprobadas** ([[Canal-comercial-y-comisiones]]
+es una propuesta, no una decisión). Un despacho que dice que sí ahora se habrá
+olvidado cuando puedas cumplir.
+
+**Hoy se les pregunta una sola cosa:** «¿qué cliente autónomo os trae los papeles
+hechos un desastre?». Esa pregunta hace tres cosas a la vez:
+
+1. Te presenta **justo a los autónomos que más necesitan Bynoesis**, con la
+   recomendación de quien les lleva los papeles.
+2. No es comunicación comercial, así que no choca con el artículo 21 de la LSSI.
+3. Genera **respuestas**, que es lo que construye la reputación de tu dominio de
+   correo (ver [[Correo-que-no-cae-en-spam]]).
+
+El guion está escrito en el CRM: da de alta la gestoría con origen `Gestoría` y la
+ficha te da el correo en castellano y en catalán, listo para copiar. Sin enlaces y
+sin adjuntos a propósito.
+
+**La gestoría como canal de verdad es de la etapa 2**, cuando tengas tres pilotos
+con cifras reales que enseñar y algo que firmar. Entonces vuelves a los mismos
+despachos, y ya no llegas de cero: llegas con una conversación empezada.
+
 ### 2.5 Google Maps — el relleno, no la base
 
 Es lo que menos convierte, pero completa la lista. Busca **por pueblo y por
