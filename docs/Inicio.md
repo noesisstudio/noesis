@@ -29,6 +29,9 @@ Documento nuevo: al tema que le toque, nunca suelto en la raíz. Los enlaces
   captan clientes y quién hace qué. No repite cifras vivas: apunta a dónde están.
 - [[Lista-de-captacion]] — de dónde salen los 40 nombres en Lleida y el Segrià, el
   ritmo diario de llamadas y qué se puede hacer y qué no al contactar en frío.
+- [[Correo-que-no-cae-en-spam]] — por qué el correo acaba en spam cuando la
+  autenticación está bien: el diagnóstico real del dominio, los registros que sí
+  faltan, la prueba de cabeceras y cómo escribir un primer contacto que llegue.
 - [[Estado-actual-main]] — única fotografía viva de lo construido y publicado.
 - [[Tareas-vivas]] — único listado vivo de pendientes y prioridades.
 - [[Registro-cambios]] — bitácora cronológica obligatoria: qué cambió, pruebas,

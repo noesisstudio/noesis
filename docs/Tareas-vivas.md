@@ -1,5 +1,24 @@
 # Tareas vivas
 
+## Correo y entregabilidad — 21-sep
+
+- [x] Diagnóstico contra el DNS real: SPF, DKIM y DMARC de `bynoesis.com` están
+  bien. El spam no viene de la autenticación.
+- [x] `scripts/check_email_dns.py` para volver a comprobarlo tras cada cambio.
+- [ ] Founder: **terminar la autenticación de Brevo**. Falta la clave DKIM y el
+  `include:spf.brevo.com` en el SPF que ya existe (nunca en un registro nuevo).
+  Hoy no molesta; romperá el correo de la aplicación en cuanto se active.
+- [ ] Founder: crear `dmarc@bynoesis.com` y añadirlo al `rua` del DMARC. Ahora los
+  informes los recibe Brevo y no tú, así que no ves nada.
+- [ ] Founder: crear una dirección con tu nombre (`xavier@bynoesis.com`) y escribir
+  desde ahí, no desde `info@`.
+- [ ] Founder: mandar un correo de prueba a una cuenta de Gmail y comprobar en
+  «Mostrar original» que DKIM dice `bynoesis.com`. Es la única prueba que vale.
+- [ ] Founder: cuatro semanas de calentamiento con volumen bajo antes de escribir a
+  desconocidos. El dominio se registró el 4-jun-2026 y no tiene historial.
+- [ ] Dentro de 2–3 semanas, con los informes DMARC limpios: pasar a
+  `p=quarantine`. Antes de tener el DKIM de Brevo puesto, no.
+
 ## Captación de clientes — 21-sep
 
 - [x] CRM de la empresa en `/admin/crm` (migración 57): embudo de nueve estados,

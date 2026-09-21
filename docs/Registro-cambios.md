@@ -1,5 +1,48 @@
 ﻿# Registro de cambios
 
+## 2026-09-21 — Por qué el correo cae en spam: no era el DNS
+
+El founder pidió arreglar que sus correos acaben en spam. La respuesta corta es
+que **no había nada roto que arreglar** en la autenticación, y decirlo es la mitad
+del trabajo: cuando el correo cae en spam lo primero que uno toca es el DNS, y casi
+nunca es el DNS.
+
+**Comprobado contra el DNS real de `bynoesis.com`:** SPF único y correcto
+(`include:_spf.mail.hostinger.com ~all`), DKIM de Hostinger publicado con clave RSA
+de 2048 bits, DMARC existente, y el dominio limpio en Spamhaus DBL y SURBL. Los
+correos que escribe desde el webmail salen firmados y alineados.
+
+**Las causas reales son tres, y ninguna es técnica:** el dominio se registró el
+**4 de junio de 2026** y no tiene historial de envío; escribe a gente que nunca le
+ha escrito, que es la señal que más pesa en Gmail; y lo hace desde `info@`, una
+dirección de rol. A eso se suma que está ciego: los informes DMARC van a
+`rua@dmarc.brevo.com`, o sea a Brevo y no a él.
+
+**Lo que sí estaba mal, aunque no cause esto:** Brevo está verificado en el DNS
+(`brevo-code:…`) pero **sin firma DKIM y sin `include` en el SPF**. Verificar la
+propiedad no autentica ningún correo. Hoy no molesta porque la aplicación no manda
+correo real; el día que lo mande —recuperar contraseña, facturas al cliente del
+autónomo, avisos a la gestoría— saldría todo sin autenticar.
+
+`scripts/check_email_dns.py` deja de ser una consulta manual: revisa SPF (uno solo,
+qué autoriza, cómo acaba), DKIM por familias de selectores, DMARC (política, y si
+los informes llegan a una dirección del propio dominio) y la incoherencia concreta
+de estar verificado en Brevo sin firmar por Brevo. Se vuelve a pasar tras cada
+cambio de DNS.
+
+- **Áreas/archivos:** `scripts/check_email_dns.py` (nuevo);
+  `docs/03-whatsapp-e-integraciones/Correo-que-no-cae-en-spam.md` (nuevo, con el
+  diagnóstico, los registros exactos, la prueba de cabeceras y cómo escribir un
+  primer contacto que llegue); `docs/Inicio.md`.
+- **Pruebas:** `tests/test_email_dns.py`, 15 casos sobre las funciones puras, sin
+  red. Ruff OK.
+- **Límites externos:** el script necesita `dig` y salida a internet. No toca
+  `src/noesis/`, así que no hay riesgo de producción.
+- **Riesgo:** nulo. Un script de diagnóstico y documentación.
+- **Diagnóstico:** si el script dice que todo está bien y el correo sigue cayendo,
+  la respuesta está en las cabeceras del mensaje recibido («Mostrar original» en
+  Gmail), no en el DNS. El documento explica qué tiene que poner.
+
 ## 2026-09-21 — El mapa de la empresa, que no existía
 
 Petición del founder: «estructúrame cómo está todo el funcionamiento de la

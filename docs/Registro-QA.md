@@ -1,5 +1,28 @@
 ﻿# Registro de QA
 
+## 2026-09-21 — Lectura de SPF, DKIM y DMARC
+
+- `tests/test_email_dns.py` (nuevo): **15 casos**, sin red y sin importar el
+  runtime de Bynoesis. Suite completa **1.014 en verde**. Ruff OK.
+- **Lo que se fija es el criterio, no el DNS de hoy**, que cambia cuando el founder
+  toque el panel de Hostinger:
+  - **Dos registros SPF se tratan como fallo** aunque los dos parezcan correctos:
+    el resultado real es PERMERROR y falla igual que si no hubiera ninguno. Es el
+    error más caro al añadir un proveedor nuevo, porque parece que lo has hecho bien.
+  - **Un `p=` vacío no cuenta como firma viva.** Hostinger publica
+    `hostingermail-b` y `-c` así mientras rota claves; contarlas diría que todo
+    está firmado cuando solo hay una clave de verdad.
+  - **Verificado en Brevo sin DKIM de Brevo** se señala aparte: el TXT
+    `brevo-code` demuestra propiedad y no autentica ningún correo.
+  - Longitud de clave: ~216 caracteres son 1024 bits (aviso), ~392 son 2048 (ok).
+  - DMARC sin `rua`, o con `rua` que no apunta a una dirección del propio dominio.
+- **Verificado contra el dominio real**: el script reproduce a mano el mismo
+  diagnóstico que se hizo consultando el DNS con `dig`, incluida la mezcla exacta
+  de `bynoesis.com` (SPF y DKIM correctos, Brevo a medias, DMARC ciego).
+- **No ejecutado:** la comprobación de cabeceras reales de un correo enviado, que
+  es la única prueba definitiva y depende del buzón del founder. El script avisa de
+  esa limitación en su propia salida.
+
 ## 2026-09-21 — CRM de captación: lista pegada, embudo y bajas
 
 - `tests/test_crm_captacion.py` (nuevo): **36 casos** en cinco bloques. Suite
