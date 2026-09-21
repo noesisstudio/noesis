@@ -1,5 +1,33 @@
 ﻿# Registro de cambios
 
+## 2026-09-21 — El mapa de la empresa, que no existía
+
+Petición del founder: «estructúrame cómo está todo el funcionamiento de la
+empresa». Había índice (`Inicio.md`), visión de producto (`Plan-maestro`), estado
+auditado (`Estado-actual-main`) y pendientes (`Tareas-vivas`), pero **ningún
+documento explicaba la empresa como máquina**: qué vende, cómo entra el dinero, qué
+bloquea qué y cómo se consiguen clientes, todo en una página.
+
+`docs/06-negocio-y-finanzas/Como-funciona-la-empresa.md` lo junta en once
+apartados: las cinco piezas con su estado y qué desbloquea cada una, qué hace el
+producto y qué está apagado a propósito, el dinero con las tres líneas de
+equilibrio, las cuatro puertas hasta el primer euro, la captación entera, las cinco
+etapas de 0 a 5.000, el reparto de trabajo, lo construido en las dos últimas
+sesiones y los cinco números que deciden y que nadie ha medido.
+
+**No copia cifras que cambian.** Las que aparecen están fechadas y apuntan a
+`/admin/economia`, que es donde se recalculan: un documento que copia números acaba
+mintiendo sin que nadie se entere, y esa es justo la regla de `AGENTS.md`.
+
+- **Áreas/archivos:** `docs/06-negocio-y-finanzas/Como-funciona-la-empresa.md`
+  (nuevo); `docs/Inicio.md` (entra en el mapa, junto a `Lista-de-captacion`, que
+  faltaba del de esta mañana).
+- **Pruebas:** ninguna, no hay código. Comprobado que los doce enlaces `[[...]]` y
+  los tres `.html` referenciados existen.
+- **Riesgo:** nulo. Solo documentación.
+- **Diagnóstico:** si una cifra del mapa no cuadra con `/admin/economia`, manda la
+  página; el documento lleva fecha y dice que son valores de fábrica.
+
 ## 2026-09-21 — El embudo de captación entra en el producto
 
 Petición del founder: «haz el CRM de la empresa y cómo aplicar la búsqueda de

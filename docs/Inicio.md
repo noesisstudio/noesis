@@ -24,6 +24,11 @@ Documento nuevo: al tema que le toque, nunca suelto en la raíz. Los enlaces
 `[[Nombre]]` de Obsidian funcionan esté donde esté el archivo.
 
 ## Mapa
+- [[Como-funciona-la-empresa]] — **empieza aquí si llegas sin contexto**: las cinco
+  piezas de la máquina, el dinero, las cuatro puertas hasta el primer euro, cómo se
+  captan clientes y quién hace qué. No repite cifras vivas: apunta a dónde están.
+- [[Lista-de-captacion]] — de dónde salen los 40 nombres en Lleida y el Segrià, el
+  ritmo diario de llamadas y qué se puede hacer y qué no al contactar en frío.
 - [[Estado-actual-main]] — única fotografía viva de lo construido y publicado.
 - [[Tareas-vivas]] — único listado vivo de pendientes y prioridades.
 - [[Registro-cambios]] — bitácora cronológica obligatoria: qué cambió, pruebas,
