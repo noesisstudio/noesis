@@ -13051,8 +13051,6 @@ def economy_timeline(months: int = 12) -> dict:
     hoy: un histórico reconstruido a partir del estado actual mentiría sobre el
     pasado. Lo que no se puede reconstruir se deja en ``None`` en vez de rellenarlo.
     """
-    from .adapters.billing import PLAN_PRICES
-
     # Ojo con `months or 12`: convertiria un 0 explicito en 12 en vez de acotarlo.
     months = 12 if months is None else int(months)
     months = max(1, min(months, 36))
@@ -13069,11 +13067,12 @@ def economy_timeline(months: int = 12) -> dict:
             "SELECT created_at, plan, subscription_status, is_demo FROM businesses"
         ).fetchall()]
         conexiones = [str(row["created_at"])[:7] for row in conn.execute(
-            "SELECT created_at FROM whatsapp_connections"
+            "SELECT w.created_at FROM whatsapp_connections w "
+            "JOIN businesses b ON b.id=w.business_id WHERE COALESCE(b.is_demo, 0)=0"
         ).fetchall() if row["created_at"]]
         costes = {str(row["period"]): float(row["total"] or 0) for row in conn.execute(
             "SELECT period, SUM(amount_eur) AS total FROM platform_cost_entries "
-            "GROUP BY period"
+            "WHERE source IN ('actual', 'adjustment') GROUP BY period"
         ).fetchall()}
 
     reales = [b for b in negocios if not b.get("is_demo")]
@@ -13086,21 +13085,16 @@ def economy_timeline(months: int = 12) -> dict:
     for key in conexiones:
         conex_mes[key] = conex_mes.get(key, 0) + 1
 
-    # El plan y el estado solo se conocen a día de hoy, así que el ingreso del mes
-    # se atribuye a las cuentas que ya existían entonces y hoy siguen de pago. Es
-    # una aproximación, y la hoja lo dice: no hay histórico de suscripciones.
+    # Solo conocemos el estado actual: nunca proyectarlo hacia el pasado.
     de_pago = [b for b in reales if b.get("subscription_status") == "active"]
 
     filas = []
-    acumuladas = conectadas = 0
+    acumuladas = sum(n for month, n in altas.items() if month < keys[0])
+    conectadas = sum(n for month, n in conex_mes.items() if month < keys[0])
     for key in keys:
         acumuladas += altas.get(key, 0)
         conectadas += conex_mes.get(key, 0)
-        pago = sum(1 for b in de_pago if str(b["created_at"])[:7] <= key)
-        mrr = sum(
-            float(PLAN_PRICES.get(b.get("plan") or "", 0))
-            for b in de_pago if str(b["created_at"])[:7] <= key
-        )
+        pago = len(de_pago) if key == today.isoformat()[:7] else None
         coste = costes.get(key)
         filas.append({
             "mes": key,
@@ -13109,9 +13103,9 @@ def economy_timeline(months: int = 12) -> dict:
             "de_pago": pago,
             "conexiones": conectadas,
             "conexiones_nuevas": conex_mes.get(key, 0),
-            "mrr": round(mrr, 2),
+            "mrr": None,
             "coste": round(coste, 2) if coste is not None else None,
-            "margen": round(mrr - coste, 2) if coste is not None else None,
+            "margen": None,
             "coste_por_cuenta": (round(coste / pago, 2)
                                  if coste is not None and pago else None),
         })
@@ -13122,9 +13116,11 @@ def economy_timeline(months: int = 12) -> dict:
         "hay_costes": bool(con_coste),
         "hay_cuentas": acumuladas > 0,
         "ultimo": filas[-1] if filas else None,
-        "nota": ("El ingreso de cada mes se atribuye a las cuentas que ya existían "
-                 "entonces y hoy siguen de pago: no hay histórico de suscripciones, "
-                 "así que el pasado se aproxima y no se inventa."),
+        "nota": ("Cuentas y conexiones: altas conservadas, incluidas las anteriores al rango; "
+                 "no una foto histórica de cuentas activas. De pago: solo el estado actual. "
+                 "Ingreso y margen pendientes de un histórico verificado de suscripciones "
+                 "y periodicidad; no se sustituyen por precios de catálogo. "
+                 "Costes: solo reales y ajustes, sin previsiones ni cuentas demo."),
     }
 
 

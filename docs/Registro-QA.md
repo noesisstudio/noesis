@@ -97,6 +97,39 @@
   automáticas, no a ojo— ni con una lista real cargada. El smoke de PostgreSQL
   necesita la base del CI; usa `LATEST_VERSION`, así que recorre la 57 sola.
 
+## 2026-09-21 — Publicación verificada
+
+- CI remoto 35578171354 sobre 1dc65aa1a79a: **974 pruebas OK en 402,446 s**,
+  seguridad, JavaScript, verdad del proyecto y ciclos de migración verdes.
+- PostgreSQL 16 efímero: migración histórica, humo funcional, código anterior
+  sobre esquema 56 y rollback del candidato correctos.
+- Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS. Health/ready:
+  release 1dc65aa1a79a, esquema 56. Comprobaciones sin escrituras de negocio.
+- El commit posterior solo documenta esta evidencia, sin modificar runtime.
+  Se omite repetir CI para ese cierre documental; el código desplegado sí pasó CI.
+
+## 2026-09-21 — Revisión de economía y CI
+
+- Suite general: **970 pruebas OK en 738,883 s**. Se ejecutó mientras se completaban
+  los últimos ajustes; después se repitieron los **35 casos de economía** y el nuevo
+  test de secretos, todos OK. Descubrimiento final: **974 casos** (no se presenta
+  como una segunda ejecución completa de los 974).
+- 35 pruebas de economía: cálculo, mezcla válida, persistencia de bajas iniciales,
+  permisos, descargas Word/Excel, saldo negativo y ausencia de equilibrio,
+  histórico sin reconstruir ingresos, altas antiguas, conexiones demo y previsiones.
+- Servidor Uvicorn real sobre 127.0.0.1 y SQLite temporal: health, login,
+  /admin/economia y /admin/economia/datos correctos. Sin servicios externos.
+- Test de la puerta de secretos: huella conocida en línea desplazada aceptada;
+  huella nueva rechazada. Baseline no modificada. Escaneo versionado sin hallazgos.
+- Node: palancas económicas, marketing y calendario correctos. No se redondea
+  ni envía un supuesto guardado hasta que el usuario lo cambia.
+- Ruff, Bandit y git diff --check correctos. SQLite 0 → 56 → 0 → 56 correcto.
+- Limitaciones: no PostgreSQL local disponible, no navegador/móvil físico en esta
+  revisión, sin regenerar el .xlsx histórico ni validar maquetación Office real.
+  Las descargas se verifican como paquetes XML, no como paginación física.
+- Preservación: los tres hashes del contrato MD/HTML/PDF coinciden con la copia
+  previa en stash. HEAD y origin/main siguen en 0bc1e4d20e9d. Sin push/despliegue.
+
 ## 2026-09-18 — Costes editables: guardado, validación y migración 56
 
 - `tests/test_economia_panel.py` sube a **25 casos** (8 nuevos). Ruff OK.

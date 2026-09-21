@@ -217,6 +217,33 @@ el mismo almacén con dos nombres.
   personas distintas). Si el embudo no cuadra, `sales.resumen` cuenta acumulado.
 - **Rollback:** revertir el commit y bajar a la migración 56.
 
+## 2026-09-21 — Publicación del arreglo económico
+
+- Código 1dc65aa1a79a validado primero en rama remota de comprobación y después
+  promovido sin modificaciones a main. CI 35578171354 verde: 974 pruebas,
+  seguridad y PostgreSQL con rollback.
+- Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS, release y esquema 56
+  confirmados por health/ready. Sin operaciones sobre facturas o cuentas.
+- Este commit solo actualiza estado, tareas y evidencia de QA: sin cambios de
+  runtime ni migraciones. No incluye el contrato ni las notas locales del socio.
+- Riesgo/rollback: ninguna alteración funcional en este cierre documental;
+  para el arreglo de código, revertir 1dc65aa sin bajar el esquema.
+
+## 2026-09-21 — Correcciones de economía y puerta de CI
+
+- Objetivo: corregir fallos reproducidos de los tres commits nuevos preservando
+  íntegros el contrato y notas locales del socio.
+- Áreas: economics, economics_docs, serie mensual de db, rutas y JS del panel;
+  fuentes HTML/analítica histórica; humos PostgreSQL y escáner de secretos.
+- Pruebas: regresiones de cálculo, persistencia, permisos, exportaciones, histórico
+  y JS; suite general, Ruff, Bandit y ciclo SQLite. Resultado en Registro-QA.
+- Sin nuevas migraciones, escritura en producción, commit, push o deploy.
+- Riesgo: cambian avisos/cifras internas antes incorrectas. Los ingresos sin
+  periodicidad acreditada quedan desconocidos, no como catálogo mensual.
+- Diagnóstico: comparar /admin/economia/datos y exportaciones con los supuestos.
+  Rollback: revertir solo este bloque de código; no datos ni esquema 56. El
+  contrato no forma parte del arreglo. El .xlsx histórico no se ha regenerado.
+
 ## 2026-09-18 — Los costes se editan en la web y se guardan
 
 Petición del founder: «un modelo donde ponga los costes y sea editable en una página
@@ -403,7 +430,6 @@ de caja mínima. Publicada en https://claude.ai/artifact/AduAVYaKUewQuCtqkroyfN.
   COMPROBACION que el script imprime al generarlo; si difieren, el fallo está en la
   fórmula, no en el supuesto.
 - **Rollback:** revertir el commit; el libro v3 sigue intacto.
-
 ## 2026-09-17 — Guía de primeros clientes, escalado a 5.000 y costes por etapa
 
 Objetivo: el founder quiere conseguir los primeros autónomos por boca a boca en su

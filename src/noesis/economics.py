@@ -303,6 +303,8 @@ def coerce(key: str, raw) -> float | tuple | None:
             if numero is None:
                 return None
             salida.append(_clamp(numero, spec["min"], spec["max"]))
+        if key == "mix" and not math.isclose(sum(salida), 1.0, abs_tol=0.001):
+            return None
         return tuple(salida)
     numero = _numero(raw)
     if numero is None:
@@ -386,10 +388,10 @@ def with_levers(overrides: dict[str, Any] | None = None,
         raw = overrides.get(key)
         if raw is None or raw == "":
             continue
-        try:
-            value = _clamp(float(raw), low, high)
-        except (TypeError, ValueError):
+        number = _numero(raw)
+        if number is None:
             continue
+        value = _clamp(number, low, high)
         if key == "soporte_medio":
             # Se mueve la media ponderada y los tres planes la siguen en proporcion,
             # para no perder que Premium consume casi cuatro veces mas que Autonomo.
@@ -399,8 +401,7 @@ def with_levers(overrides: dict[str, Any] | None = None,
                 data["soporte"] = tuple(v * factor for v in data["soporte"])
             continue
         data[key] = value
-    # Una cartera nueva siempre se va mas que una asentada; el panel solo mueve una.
-    data["churn_nuevo"] = min(0.5, data["churn_maduro"] * 2)
+    # Las bajas nuevas y maduras son supuestos independientes guardados.
     return data
 
 
@@ -577,8 +578,8 @@ def ramp(a: dict[str, Any], med: dict[str, float], meses: int = 36) -> dict[str,
     return {
         "filas": filas, "mes_positivo": primero, "mes_ahogo": ahogo,
         "caja_minima": minima, "cuentas_final": filas[-1]["cuentas"] if filas else 0.0,
-        "salida_mensual": salida, "financiable": (minima or 0) >= 0
-        or abs(minima or 0) <= a["caja_inicial"],
+        "salida_mensual": salida, "financiable": (minima or 0) >= 0,
+        "financiacion_adicional": max(0.0, -(minima or 0)),
     }
 
 
@@ -624,8 +625,9 @@ def build_report(overrides: dict[str, Any] | None = None,
         "cuentas": cuentas_eq, "horas": horas_eq, "libres": libres,
         "altas_posibles": (math.floor(max(0.0, libres) / a["horas_alta"])
                            if a["horas_alta"] > 0 else 0),
-        "estado": "no" if libres <= 0 else ("justo" if libres < a["horas_mes"] * 0.3
-                                            else "si"),
+        "estado": "sin_equilibrio" if cuentas_eq is None else (
+            "no" if libres <= 0 else ("justo" if libres < a["horas_mes"] * 0.3
+                                      else "si")),
     }
     rep["observado"] = _compare(rep, observed or {})
     return rep
@@ -635,7 +637,7 @@ def _compare(rep: dict[str, Any], observed: dict[str, Any]) -> dict[str, Any]:
     """Pone dato y supuesto uno al lado del otro, sin dejar que uno tape al otro."""
     med = rep["medias"]
     cuentas = observed.get("paying_accounts") or 0
-    mrr = observed.get("mrr") or 0.0
+    mrr = observed.get("mrr")
     coste = observed.get("observed_cost_eur")
     filas = []
 
@@ -646,13 +648,13 @@ def _compare(rep: dict[str, Any], observed: dict[str, Any]) -> dict[str, Any]:
         filas.append({"etiqueta": etiqueta, "real": real, "supuesto": supuesto,
                       "unidad": unidad, "desvio": desvio, "nota": nota})
 
-    fila("Cuota media por cuenta", (mrr / cuentas) if cuentas else None, med["arpu"],
+    fila("Cuota media por cuenta", (mrr / cuentas) if cuentas and mrr is not None else None, med["arpu"],
          "€/mes", "Ingreso comprometido entre cuentas de pago.")
-    fila("Coste por cuenta", (coste / cuentas) if (coste and cuentas) else None,
+    fila("Coste por cuenta", (coste / cuentas) if (coste is not None and cuentas) else None,
          med["cogs"], "€/mes",
          "Del libro de costes. Solo cuenta si hay facturas cargadas.")
     fila("Contribucion por cuenta",
-         ((mrr - coste) / cuentas) if (coste is not None and cuentas) else None,
+         ((mrr - coste) / cuentas) if (coste is not None and mrr is not None and cuentas) else None,
          med["contribucion_caja"], "€/mes",
          "Ingreso menos coste observado, antes de impuestos.")
     fila("Cuentas de pago", float(cuentas) if cuentas else None,
@@ -666,6 +668,7 @@ def _compare(rep: dict[str, Any], observed: dict[str, Any]) -> dict[str, Any]:
         "mrr": mrr,
         "aviso": ("Sin cuentas de pago todavia: todo el modelo es un escenario."
                   if not cuentas else
-                  "Las columnas reales salen del libro de costes y de las "
-                  "suscripciones; el supuesto se deja al lado a proposito."),
+                  "Cuentas de pago actuales y costes registrados. El ingreso y la "
+                  "contribucion quedan pendientes de datos verificados de suscripcion "
+                  "y periodicidad; no se deducen del catalogo mensual."),
     }

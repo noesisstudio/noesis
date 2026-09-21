@@ -690,7 +690,8 @@ def _economia_contexto(request: Request) -> dict:
     control = db.account_cost_control()
     observed = {
         "paying_accounts": control.get("paying_accounts"),
-        "mrr": control.get("revenue_eur"),
+        # El catálogo mensual no acredita el ingreso de contratos anuales.
+        "mrr": None,
         "observed_cost_eur": (control.get("observed_cost_eur")
                               if control.get("has_observed_data") else None),
     }
@@ -752,6 +753,8 @@ def admin_economia_datos(request: Request):
         "payback": report["payback"],
         "planes": report["planes"],
         "rampa": {
+            "financiable": rampa["financiable"],
+            "financiacion_adicional": rampa["financiacion_adicional"],
             "mes_positivo": rampa["mes_positivo"],
             "mes_ahogo": rampa["mes_ahogo"],
             "caja_minima": rampa["caja_minima"],
@@ -793,12 +796,10 @@ async def admin_economia_guardar(request: Request):
         request_id=getattr(request.state, "request_id", None),
         metadata={"claves": sorted(guardados)},
     )
-    mezcla = economics.apply_saved(db.economy_assumptions())["mix"]
-    if abs(sum(mezcla) - 1) > 0.001:
+    if "mix" in cambios and economics.coerce("mix", cambios["mix"]) is None:
         request.session["admin_error"] = (
-            "Guardado, pero la mezcla de planes suma "
-            f"{sum(mezcla) * 100:.0f} % en vez de 100 %: el ingreso medio no será "
-            "comparable hasta que cuadre."
+            "La mezcla de planes debe sumar 100 %. Se conserva la mezcla anterior; "
+            "los demás valores válidos se han guardado."
         )
     else:
         request.session["admin_success"] = (

@@ -48,7 +48,7 @@ jobs:
 
       - name: Detectar secrets nous
         shell: bash
-        run: uv run detect-secrets-hook --baseline .secrets.baseline $(git ls-files)
+        run: uv run python scripts/check_secrets.py
 
       - name: Analitzar patrons de seguretat
         run: uv run bandit -r src/noesis -q -lll -iii
@@ -57,7 +57,7 @@ jobs:
         run: uv run ruff check src tests
 
       - name: Validar demostración pública y calendario sin red
-        run: node --test tests/public_marketing.test.cjs tests/public_calendar.test.cjs
+        run: node --test tests/public_marketing.test.cjs tests/public_calendar.test.cjs tests/admin_economia.test.cjs
 
       - name: Validar la font de veritat del projecte
         shell: bash

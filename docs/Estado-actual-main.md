@@ -21,6 +21,30 @@ lista otra vez.
 De dónde salen los nombres en Lleida y el Segrià está en
 `docs/06-negocio-y-finanzas/Lista-de-captacion.md`.
 
+## 21-sep — Economía y CI: publicación verificada
+
+Publicado el código `1dc65aa1a79a` después de validar la misma revisión en
+GitHub Actions [35578171354](https://github.com/noesisstudio/noesis/actions/runs/35578171354):
+974 pruebas, seguridad y humos PostgreSQL correctos, incluido rollback.
+Railway `b88619b7-6da0-4b68-83ab-fec3194a9897` SUCCESS; health/ready confirman
+release y esquema 56. Portada 200, admin sin sesión 303 y datos admin 403.
+Este cierre documental no cambia el runtime y no incluye el contrato del socio.
+
+### Revisión previa a la publicación
+
+Incorporados los tres commits del socio hasta `0bc1e4d20e9d`, release verificada
+en health/ready con esquema 56. Su CI falló por las líneas de la baseline de
+secretos y expectativas antiguas de esquema en PostgreSQL. No se ha desplegado.
+
+Corregidos: caja inicial contada dos veces, bajas nuevas sobrescritas, palancas
+que alteraban valores al abrir, mezcla inválida, coste cero ocultado y viabilidad
+positiva sin equilibrio. El histórico incluye las altas anteriores al rango,
+excluye conexiones demo y costes previstos y no inventa ingresos o suscripciones
+pasadas. No cambia facturación, cobros ni contratos Stripe.
+
+Contrato del socio conservado intacto, incluidas sus notas y copia en stash.
+Sigue pendiente de revisión legal. Pruebas en Registro-QA; límites en Tareas-vivas.
+
 ## 17-sep — Arreglada la baja de cuenta
 
 Dar de baja una cuenta que tuviera WhatsApp conectado daba un error interno y no

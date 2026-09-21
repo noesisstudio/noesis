@@ -2,13 +2,14 @@
   "state_date": "2026-09-21",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 57,
-  "verified_test_count": 1025,
+  "verified_test_count": 1036,
+  "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
-    "pending_after_deploy": "Baseline 88adfa3 verificada en health/ready con esquema 55 (documentos/proyectos y SEO). Candidato del 10-sep: identidad PDF, borradores y continuidad conversacional; pendiente publicacion y prueba en WhatsApp real. Mantener revision conversacional, aprendizaje y ledger apagados hasta piloto. Whisper privado y AWS no provisionados. Candidato local del 11-sep: identidad legal de S.L. configurable, aviso de datos registrales, webhook Meta sin token vacio y voz mal configurada sin romper el webhook; sin push. Pendientes proveedores reales, movil fisico, restauracion externa, legal y piloto. Candidato local del 14-sep: WhatsApp convierte negritas, ofrece factura completa ante tickets >400 EUR y envia los ultimos tickets en PDF; Ajustes permite escribir el movil y vincularlo con SI desde ese WhatsApp, y recargar ya no invalida el codigo. Admin puede eliminar solicitudes de acceso de prueba y sus avisos por correo. Notas de voz 14-sep: el founder elige Groq; proveedor reforzado (sin redirecciones con la clave, formato/tamano/respuesta acotados, errores sin cuerpo) y probado por web y WhatsApp con red simulada. Pendiente DPA de Groq archivado y prueba real; GROQ_API_KEY ya esta en Railway y el 15-sep se corrigio el bloqueo de Cloudflare con User-Agent propio. Candidato local del 17-sep: al leer una factura emitida, el cliente nuevo se puede dar de alta con dirección, correo y teléfono leídos del documento; sin push ni prueba en produccion."
+    "current_repository_candidate_deployed": true,
+    "pending_after_deploy": "Codigo 1dc65aa1a79a publicado y verificado el 21-sep tras CI verde. Pendientes funcionales externos: MRR con periodicidad verificada, revision visual fisica y Office, proveedores reales, restauracion externa, legal y piloto. Mantener aprendizaje, revision conversacional y ledger desactivados hasta validar el piloto. Whisper privado y AWS no provisionados. Contrato local del socio no incluido."
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,

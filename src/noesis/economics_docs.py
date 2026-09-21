@@ -44,12 +44,14 @@ def _parte(rep: dict) -> str:
               if rampa["mes_positivo"] else
               "Con estos supuestos no se llega dentro de 36 meses")
     caja = (f"la caja baja hasta {_eur(minima, 0)}"
-            + (f", mas de los {_eur(a['caja_inicial'], 0)} disponibles: asi el plan no "
-               "es financiable" if falta > a["caja_inicial"]
-               else f", dentro de los {_eur(a['caja_inicial'], 0)} disponibles"))
-    return (f"{_num(cuentas)} cuentas cubren la estructura, la cuota de autonomos y "
-            f"una retirada de {_eur(a['retirada'], 0)} al mes. {cuando}, y por el "
-            f"camino {caja}.")
+            + (f": faltan {_eur(falta, 0)} adicionales a la caja inicial; el plan no "
+               "es financiable" if falta > 0
+               else ": la caja inicial cubre esta proyeccion de 36 meses"))
+    equilibrio = (f"{_num(cuentas)} cuentas cubren la estructura, la cuota de autonomos y "
+                  f"una retirada de {_eur(a['retirada'], 0)} al mes. "
+                  if cuentas is not None else
+                  "No existe equilibrio con una contribucion por cuenta nula o negativa. ")
+    return f"{equilibrio}{cuando}, y por el camino {caja}."
 
 
 def _tabla_equilibrios(rep: dict) -> list[list]:
@@ -97,6 +99,7 @@ def summary_docx(rep: dict, timeline: dict | None = None) -> bytes:
         "si": "Cabe en tus horas, con sitio para seguir vendiendo.",
         "justo": "Cabe, pero justo: casi no queda mes para vender.",
         "no": "No cabe: esa cartera te ocuparia el mes entero.",
+        "sin_equilibrio": "No hay equilibrio: la contribucion por cuenta no es positiva.",
     }[cabe["estado"]]
 
     bloques: list[tuple] = [
@@ -124,7 +127,8 @@ def summary_docx(rep: dict, timeline: dict | None = None) -> bytes:
             ["Soporte por cuenta asentada", f"{cap['soporte_min']:.1f} min"],
             ["Cuentas que se pueden atender en solitario", _num(cap["techo"])],
             ["Techo practico (soporte al 70 % de las horas)", _num(cap["practico"])],
-            ["Horas que exige el equilibrio", f"{cabe['horas']:.1f} h"],
+            ["Horas que exige el equilibrio", f"{cabe['horas']:.1f} h"
+             if cabe["cuentas"] is not None else "No existe equilibrio"],
             ["Veredicto", veredicto],
         ], [58, 42], ["left", "right"]),
         ("p", "La caja por el camino", "Seccion"),
@@ -206,7 +210,8 @@ def summary_xlsx(rep: dict, timeline: dict | None = None) -> bytes:
         [("Soporte por cuenta asentada (min)", X), (round(cap["soporte_min"], 1), N)],
         [("Cuentas que se pueden atender en solitario", X), (cap["techo"], N)],
         [("Techo practico (70 % de las horas)", X), (cap["practico"], N)],
-        [("Horas que exige el equilibrio", X), (round(cabe["horas"], 1), N)],
+        [("Horas que exige el equilibrio", X),
+         (round(cabe["horas"], 1) if cabe["cuentas"] is not None else "Sin equilibrio", N)],
         [("Mes en que deja de perder dinero", X),
          (rampa["mes_positivo"] if rampa["mes_positivo"] else "no llega en 36", N)],
         [("Caja minima", X), (rampa["caja_minima"], EF)],

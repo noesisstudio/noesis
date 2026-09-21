@@ -60,6 +60,18 @@
 - [ ] Tras los primeros cinco pilotos: mirar qué origen los trajo. Es lo único que
   dirá si la prospección de mapas sirve para algo o si todo viene de presentaciones.
 
+## Revisión 21-sep — Antes de publicar
+
+- [x] Diff revisado y CI 35578171354 verde antes de publicar; main en Railway.
+- [x] Humos PostgreSQL sobre esquema 56 en base efímera de CI: correctos,
+  incluida compatibilidad con código anterior y rollback.
+- [ ] Histórico verificado de suscripciones/precio/periodicidad para MRR real;
+  no reconstruirlo con el plan actual y catálogo mensual.
+- [ ] Regenerar el libro de analysis si va a distribuirse: fuente y HTML corregidos,
+  pero el .xlsx anterior no es la fuente del panel y no se ha regenerado.
+- [ ] Revisión jurídica del contrato, decisiones abiertas y costes/retirada/caja
+  reales. No convertir los valores del escenario en hechos.
+
 ## Costes editables — 18-sep
 
 - [x] Los 47 supuestos del modelo se editan y se guardan desde `/admin/economia`,

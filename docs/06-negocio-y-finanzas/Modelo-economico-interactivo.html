@@ -874,11 +874,9 @@
           eur(r.minima) + "</b>"
         : "Con estos supuestos <b>no llegas en 36 meses</b>, y la caja baja hasta <b>" +
           eur(r.minima) + "</b>") +
-      (falta > g.cajaInicial
-        ? " — más de los " + eur(g.cajaInicial) + " que tienes. Así, el plan no es financiable."
-        : falta > 0
-          ? ", dentro de los " + eur(g.cajaInicial) + " que tienes."
-          : ", sin llegar a números rojos.");
+      (falta > 0
+        ? " — faltan " + eur(falta) + " adicionales a la caja inicial. Así, el plan no es financiable."
+        : ", sin llegar a números rojos en estos 36 meses.");
 
     el("cap-caja").textContent = r.primero
       ? "Primer mes en positivo: el " + r.primero + ". El punto más bajo de la curva es el dinero " +
