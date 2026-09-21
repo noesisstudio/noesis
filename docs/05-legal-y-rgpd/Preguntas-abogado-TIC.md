@@ -229,6 +229,37 @@ contrato de agencia, y pueden reclamarnos indemnización por clientela al termin
   sin ese efecto; y qué orden de magnitud tendría la indemnización por clientela de la
   Ley 12/1992 con estas cifras.
 
+## J · Buscar clientes nosotros
+
+**25. Para captar autónomos, ¿podemos llamar por teléfono al número que ellos mismos
+publican como contacto profesional, y guardarlo en nuestro CRM?** *(clave)*
+- Contexto: lista propia de oficios de Lleida y el Segrià, sacada de fichas públicas
+  (mapas, directorios de gremios) y de presentaciones de terceros. Guardamos nombre,
+  teléfono, oficio, población y el origen del dato en `sales_prospects`
+  (`/admin/crm`), con fecha del aviso del art. 14 y baja anotada.
+- Nuestra lectura, a confirmar: art. 19 LOPDGDD (datos de contacto de empresarios
+  individuales) más interés legítimo del art. 6.1.f RGPD, informando en el primer
+  contacto y con baja inmediata.
+- Buena respuesta: **si esa base aguanta**, qué hay que decir literalmente en la
+  primera llamada, y **cuánto tiempo** podemos conservar a quien nunca llegó a ser
+  cliente.
+
+**26. El artículo 21 de la LSSI, ¿nos cierra el WhatsApp y el correo para el primer
+contacto comercial, aunque el destinatario sea una empresa?**
+- Contexto: el primer contacto lo hacemos por teléfono o en persona a propósito. La
+  duda es si una respuesta suya por WhatsApp basta como consentimiento para seguir
+  por ahí, y si la relación de piloto gratuito cuenta como «relación contractual
+  previa» para escribirle después.
+- Buena respuesta: **dónde está la línea** entre responder a quien te escribe y
+  enviar comunicación comercial, por escrito y con un ejemplo de cada.
+
+**27. ¿Qué información hay que darle a alguien cuyo teléfono hemos sacado de una
+ficha pública, y cuándo?**
+- Contexto: art. 14 RGPD. Hoy lo decimos en la primera frase de la llamada y el CRM
+  marca la ficha hasta que está hecho; no mandamos nada por escrito.
+- Buena respuesta: **si la información oral basta** o hace falta un enlace a la
+  política de privacidad, y qué registro hay que poder enseñar si lo reclaman.
+
 ---
 
 ## Lo administrativo, antes de despedirte

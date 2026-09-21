@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import logging
 import secrets
 from datetime import date, datetime, timezone
@@ -12,7 +14,9 @@ from fastapi.responses import (
     FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response,
 )
 
-from ... import config, db, economics, economics_docs, readiness, security_center
+from ... import (
+    config, db, economics, economics_docs, readiness, sales, security_center,
+)
 from ...adapters import billing as billing_adapter
 from ...adapters import email as email_adapter
 from .. import auth, backups
@@ -862,6 +866,223 @@ def admin_economia_docx(request: Request):
 def admin_economia_xlsx(request: Request):
     """Excel de dos hojas con las mismas cifras y formato de número."""
     return _economia_descarga(request, "xlsx")
+
+
+# ============================================== CRM de captacion (Bynoesis) = #
+# El embudo de la empresa: a quien perseguimos nosotros. El CRM de `/b/<id>/crm`
+# es el del autonomo y guarda sus presupuestos; este guarda nuestra lista, y por
+# eso vive detras de `_is_admin` y no lleva `business_id`.
+def _crm_contexto() -> dict:
+    prospectos = db.list_prospects()
+    return {
+        "prospectos": [sales.enriquecer(p) for p in prospectos],
+        "resumen": sales.resumen(prospectos),
+    }
+
+
+@router.get("/admin/crm", response_class=HTMLResponse)
+def admin_crm(request: Request):
+    """La lista, lo que toca hoy y con qué palabras decirlo."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    db.record_security_event(
+        "admin.crm_viewed", area="admin", actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+    )
+    contexto = _crm_contexto()
+    detalle_id = request.query_params.get("contacto")
+    detalle, toques = None, []
+    if detalle_id and detalle_id.isdigit():
+        crudo = db.get_prospect(int(detalle_id))
+        if crudo:
+            detalle = sales.enriquecer(crudo)
+            toques = db.list_sales_touches(int(detalle_id))
+    return TEMPLATES.TemplateResponse(request, "admin_crm.html", {
+        # Con qué nombre se firman los guiones. La base no guarda el nombre de
+        # pila de nadie, así que esto es solo el punto de partida: la página deja
+        # cambiarlo y lo recuerda en el navegador.
+        "yo": user["email"].split("@")[0].split(".")[0].title(),
+        "prospectos": contexto["prospectos"],
+        "resumen": contexto["resumen"],
+        "detalle": detalle,
+        "toques": toques,
+        "estados": sales.ESTADOS,
+        "origenes": sales.ORIGENES,
+        "oficios": sales.OFICIOS,
+        "canales": sales.CANALES,
+        "guiones": sales.GUIONES,
+        "preguntas": sales.PREGUNTAS_CAFE,
+        "hoy": date.today().isoformat(),
+        "admin_error": request.session.pop("admin_error", None),
+        "admin_success": request.session.pop("admin_success", None),
+        "admin_as_of": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"),
+    })
+
+
+@router.post("/admin/crm/nuevo")
+async def admin_crm_nuevo(request: Request):
+    """Alta de uno a mano: el que te encuentras en el pasillo del almacén."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    formulario = await request.form()
+    try:
+        creado = db.add_prospect(
+            nombre=formulario.get("nombre"),
+            oficio=formulario.get("oficio") or None,
+            poblacion=formulario.get("poblacion"),
+            telefono=formulario.get("telefono"),
+            email=formulario.get("email"),
+            origen=formulario.get("origen") or "otro",
+            presentado_por=formulario.get("presentado_por"),
+            nota=formulario.get("nota"),
+            estado="lista",
+            siguiente_el=date.today().isoformat(),
+            siguiente_accion=sales.ESTADOS["lista"]["siguiente"],
+        )
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+        return RedirectResponse("/admin/crm#nuevo", status_code=303)
+    request.session["admin_success"] = (
+        f"{creado['nombre']} entra en la lista. Lo siguiente: el primer contacto.")
+    return RedirectResponse(f"/admin/crm?contacto={creado['id']}", status_code=303)
+
+
+@router.post("/admin/crm/importar")
+async def admin_crm_importar(request: Request):
+    """Pega la lista de nombres tal como la tengas escrita."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    formulario = await request.form()
+    filas = sales.parse_lista(formulario.get("lista") or "")
+    if not filas:
+        request.session["admin_error"] = (
+            "No he entendido ninguna línea. Una persona por línea; el teléfono "
+            "puede ir donde sea.")
+        return RedirectResponse("/admin/crm#importar", status_code=303)
+    resultado = db.import_prospects(
+        filas, origen=formulario.get("origen") or "otro",
+        presentado_por=formulario.get("presentado_por") or None)
+    creados, repetidos = len(resultado["creados"]), len(resultado["repetidos"])
+    request.session["admin_success"] = (
+        f"{creados} contacto(s) nuevos en la lista."
+        + (f" {repetidos} ya estaban y no se han duplicado." if repetidos else ""))
+    return RedirectResponse("/admin/crm", status_code=303)
+
+
+@router.post("/admin/crm/{prospect_id}")
+async def admin_crm_editar(request: Request, prospect_id: int):
+    """Edita la ficha: datos, siguiente paso o nota."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    formulario = await request.form()
+    campos = {c: formulario.get(c) for c in (
+        "nombre", "oficio", "poblacion", "telefono", "email", "origen",
+        "presentado_por", "estado", "siguiente_accion", "siguiente_el", "nota")
+        if c in formulario}
+    if formulario.get("informado") == "si":
+        campos["informado_el"] = date.today().isoformat()
+    try:
+        db.update_prospect(prospect_id, **campos)
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+    else:
+        request.session["admin_success"] = "Ficha guardada."
+    return RedirectResponse(f"/admin/crm?contacto={prospect_id}", status_code=303)
+
+
+@router.post("/admin/crm/{prospect_id}/toque")
+async def admin_crm_toque(request: Request, prospect_id: int):
+    """Anota un contacto y mueve el embudo en la misma operación."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    formulario = await request.form()
+    try:
+        db.add_sales_touch(
+            prospect_id, canal=formulario.get("canal") or "llamada",
+            resumen=formulario.get("resumen") or "",
+            estado_despues=formulario.get("estado_despues") or None,
+            fecha=formulario.get("fecha") or None, user_id=user["id"])
+        if formulario.get("informado") == "si":
+            db.update_prospect(prospect_id, informado_el=date.today().isoformat())
+        if formulario.get("siguiente_el"):
+            db.update_prospect(prospect_id,
+                               siguiente_el=formulario.get("siguiente_el"))
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+    else:
+        request.session["admin_success"] = "Anotado."
+    return RedirectResponse(f"/admin/crm?contacto={prospect_id}", status_code=303)
+
+
+@router.post("/admin/crm/{prospect_id}/baja")
+async def admin_crm_baja(request: Request, prospect_id: int):
+    """Ha dicho que no le llames más. Se anota para no volver a llamarle."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    formulario = await request.form()
+    try:
+        db.prospect_opt_out(prospect_id, formulario.get("motivo") or "")
+    except ValueError as exc:
+        request.session["admin_error"] = str(exc)
+        return RedirectResponse("/admin/crm", status_code=303)
+    db.record_security_event(
+        "admin.crm_opt_out", area="admin", actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"prospect_id": prospect_id},
+    )
+    request.session["admin_success"] = (
+        "Marcado como baja. No vuelve a aparecer en lo que toca hoy, y la lista "
+        "no lo readmite aunque lo vuelvas a pegar.")
+    return RedirectResponse("/admin/crm", status_code=303)
+
+
+@router.post("/admin/crm/{prospect_id}/eliminar")
+def admin_crm_eliminar(request: Request, prospect_id: int):
+    """Supresión de verdad, con su historial: para cuando ejerce ese derecho."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    user = auth.current_user(request)
+    borrado = db.delete_prospect(prospect_id)
+    db.record_security_event(
+        "admin.crm_deleted", area="admin", actor_user_id=user["id"],
+        subject_business_id=user["business_id"],
+        request_id=getattr(request.state, "request_id", None),
+        metadata={"prospect_id": prospect_id, "borrado": borrado},
+    )
+    request.session["admin_success"] = (
+        "Borrado con su historial." if borrado else "Ese contacto ya no estaba.")
+    return RedirectResponse("/admin/crm", status_code=303)
+
+
+@router.get("/admin/crm/export.csv")
+def admin_crm_export(request: Request):
+    """La lista entera en CSV: los datos son tuyos y salen de aquí cuando quieras."""
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    columnas = ("id", "nombre", "oficio", "poblacion", "telefono", "email",
+                "origen", "presentado_por", "estado", "siguiente_accion",
+                "siguiente_el", "informado_el", "baja", "baja_motivo", "nota",
+                "created_at", "updated_at")
+    buffer = io.StringIO()
+    escritor = csv.DictWriter(buffer, fieldnames=columnas, extrasaction="ignore",
+                              delimiter=";")
+    escritor.writeheader()
+    for fila in db.list_prospects():
+        escritor.writerow({c: fila.get(c) for c in columnas})
+    hoy = date.today().isoformat()
+    return Response(
+        # BOM para que Excel en Windows no parta las tildes.
+        content="\ufeff" + buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition":
+                 f'attachment; filename="Bynoesis-captacion-{hoy}.csv"',
+                 "Cache-Control": "no-store"},
+    )
 
 
 @router.post("/admin/solicitudes/{request_id}/alta")

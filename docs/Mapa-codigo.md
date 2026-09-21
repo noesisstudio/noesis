@@ -1,5 +1,38 @@
 # Mapa de código
 
+## CRM de captación — 21-sep
+
+Dos CRM con el mismo nombre y dueños distintos, que es la confusión a evitar al
+tocar esto:
+
+- `db.leads` + `/b/<id>/crm`: **del autónomo**. Sus posibles clientes y sus
+  presupuestos. Filtra por `business_id` como todo lo demás.
+- `sales_prospects` + `sales_touches` + `/admin/crm` (migración **57**): **de
+  Bynoesis**. A quién perseguimos nosotros. **No lleva `business_id`** a propósito:
+  no es de ningún cliente, igual que `economy_assumptions`.
+
+`src/noesis/sales.py` es el catálogo único: `ESTADOS` (nueve, los del piloto, con
+cuántos días tarda en vencer el siguiente paso), `ORIGENES` (con `del_interesado`,
+que decide si hay deber de informar del art. 14), `OFICIOS`, `CANALES`, `GUIONES`
+(castellano y catalán, con huecos `{nombre} {yo} {quien} {oficio} {zona}`) y
+`OBJETIVO` (el embudo de la parte 1 de la Ruta a 5.000). La validación de `db.py`
+lee de ahí: separar las dos listas es como se acaba teniendo un desplegable que
+guarda un estado que el resumen ignora.
+
+`parse_lista()` convierte lo pegado en filas y `db.import_prospects()` las mete sin
+duplicar —por teléfono normalizado y por nombre—. `enriquecer()` añade lo que la
+página necesita y la base no guarda (vencido, días sin tocar, deber de informar,
+qué guiones tocan) y `resumen()` cuenta el embudo **acumulado**: quien está en
+piloto cuenta también en el peldaño de conversaciones.
+
+`db.add_sales_touch()` anota el contacto y mueve el estado en la misma operación, y
+fija la siguiente fecha con `sales.siguiente_fecha()`. Separarlos es como se acaba
+teniendo un embudo que dice «cita puesta» sin que nadie recuerde de qué día era.
+
+`db.prospect_opt_out()` marca la baja y **no borra la fila**: borrarla haría que el
+mismo nombre volviera a entrar en la siguiente lista pegada. Para el derecho de
+supresión está `db.delete_prospect()`, que sí borra ficha e historial.
+
 ## Supuestos económicos editables — 18-sep
 
 `economics.EDITABLE` es un catálogo de 47 campos que gobierna **tres cosas a la vez**:

@@ -15,7 +15,7 @@
 <main class="admin-wrap" data-admin-workspace data-admin-default="{{ 'captacion' if invite else 'resumen' }}">
   <div class="admin-topbar">
     <div><span class="admin-product-label">Bynoesis / Empresa</span><span class="admin-environment">Espacio interno</span></div>
-    <div class="admin-top-actions"><a class="btn sm" href="/admin" data-admin-refresh>Actualizar</a><a class="btn sm" href="/admin/economia">Economía</a>{% if data.businesses %}<a class="btn sm" href="/b/{{ mi_negocio }}/resumen">Abrir mi negocio</a>{% endif %}<form method="post" action="/logout"><button class="btn sm" type="submit">Salir</button></form></div>
+    <div class="admin-top-actions"><a class="btn sm" href="/admin" data-admin-refresh>Actualizar</a><a class="btn sm" href="/admin/crm">Captación</a><a class="btn sm" href="/admin/economia">Economía</a>{% if data.businesses %}<a class="btn sm" href="/b/{{ mi_negocio }}/resumen">Abrir mi negocio</a>{% endif %}<form method="post" action="/logout"><button class="btn sm" type="submit">Salir</button></form></div>
   </div>
   <header class="admin-view-head" id="admin-content" tabindex="-1">
     <div class="kicker">Centro de mando</div><h1 id="admin-view-title">Dirección</h1><p id="admin-view-hint">Prioridades y visión global</p>
@@ -203,7 +203,12 @@
 </div>
 <div id="vista-captacion" data-admin-panel="captacion">
 <div class="admin-context"><b>De la visita a la relación comercial</b><p>Atiende solicitudes y revisa la adquisición. Las visitas son páginas vistas, no personas únicas; no se calcula conversión cruzando períodos distintos.</p><span>Fuentes: contador propio de páginas, solicitudes y cuentas.</span></div>
-<!-- =================  Solicitudes de acceso ================= -->
+<div class="card" style="margin-bottom:18px">
+    <div class="card-h"><div><div class="kicker">Tu embudo</div><h2>Captación de clientes</h2></div><a class="btn primary sm" href="/admin/crm">Abrir el CRM</a></div>
+    <div class="card-b"><p class="meta">La lista de a quién persigues, en qué punto está cada uno, qué toca hoy y con qué palabras decirlo. Las solicitudes de abajo son quien viene solo; esto es lo que sales a buscar tú.</p></div>
+  </div>
+
+  <!-- =================  Solicitudes de acceso ================= -->
   <div class="dept-head" id="solicitudes">
     <div>
       <h2>Solicitudes de acceso</h2>

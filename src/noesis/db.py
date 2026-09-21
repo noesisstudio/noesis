@@ -12831,6 +12831,213 @@ def economy_assumptions_audit() -> list[dict]:
             for f in filas]
 
 
+# ------------------------------------------- Captación comercial (Bynoesis) ---
+# El embudo de la empresa. No lleva `business_id` a propósito: no es de ningún
+# cliente, es de quién perseguimos nosotros. La validación de estados, orígenes y
+# canales vive en `sales.py`, que es la misma que usa el formulario.
+def _prospecto_campos(datos: dict) -> dict:
+    """Limpia y valida lo que llega del formulario o del importador."""
+    from . import sales
+
+    limpio: dict = {}
+    nombre = (datos.get("nombre") or "").strip()
+    if "nombre" in datos:
+        if not nombre or len(nombre) > 200:
+            raise ValueError("El nombre es obligatorio (máx. 200 caracteres).")
+        limpio["nombre"] = nombre
+    for campo, largo in (("poblacion", 120), ("presentado_por", 120),
+                         ("siguiente_accion", 200), ("baja_motivo", 200)):
+        if campo in datos:
+            valor = (datos.get(campo) or "").strip()[:largo]
+            limpio[campo] = valor or None
+    if "nota" in datos:
+        nota = (datos.get("nota") or "").strip()[:2000]
+        limpio["nota"] = nota or None
+    if "telefono" in datos:
+        limpio["telefono"] = sales.normalizar_telefono(datos.get("telefono"))
+    if "email" in datos:
+        correo = (datos.get("email") or "").strip().lower()[:200]
+        limpio["email"] = correo or None
+    if "oficio" in datos:
+        oficio = (datos.get("oficio") or "").strip() or None
+        if oficio and oficio not in sales.OFICIOS:
+            raise ValueError("Oficio desconocido.")
+        limpio["oficio"] = oficio
+    if "origen" in datos:
+        origen = (datos.get("origen") or "otro").strip() or "otro"
+        if origen not in sales.ORIGENES:
+            raise ValueError("Origen desconocido.")
+        limpio["origen"] = origen
+    if "estado" in datos:
+        estado = (datos.get("estado") or "lista").strip() or "lista"
+        if estado not in sales.ESTADOS:
+            raise ValueError("Estado desconocido.")
+        limpio["estado"] = estado
+    for campo, etiqueta in (("siguiente_el", "La fecha de seguimiento"),
+                            ("informado_el", "La fecha del aviso")):
+        if campo in datos:
+            limpio[campo] = _optional_date(datos.get(campo), etiqueta)
+    if "baja" in datos:
+        limpio["baja"] = bool(datos.get("baja"))
+    return limpio
+
+
+def add_prospect(**datos) -> dict:
+    """Mete a alguien en el embudo. Devuelve la fila creada."""
+    campos = _prospecto_campos({"nombre": "", **datos})
+    campos.setdefault("origen", "otro")
+    campos.setdefault("estado", "lista")
+    columnas = list(campos)
+    marcas = ", ".join("?" for _ in columnas)
+    with get_conn() as conn:
+        fila = conn.execute(
+            f"INSERT INTO sales_prospects ({', '.join(columnas)}, created_at) "
+            f"VALUES ({marcas}, ?) RETURNING id",
+            [*[campos[c] for c in columnas], _now()],
+        ).fetchone()
+        return dict(conn.execute("SELECT * FROM sales_prospects WHERE id=?",
+                                 (fila["id"],)).fetchone())
+
+
+def get_prospect(prospect_id) -> dict | None:
+    with get_conn() as conn:
+        fila = conn.execute("SELECT * FROM sales_prospects WHERE id=?",
+                            (prospect_id,)).fetchone()
+        return dict(fila) if fila else None
+
+
+def list_prospects(estado: str | None = None, *, incluir_bajas: bool = True
+                   ) -> list[dict]:
+    """Todo el embudo. Lo vencido primero: es lo que hay que hacer hoy."""
+    consulta = "SELECT * FROM sales_prospects"
+    condiciones, params = [], []
+    if estado:
+        condiciones.append("estado=?")
+        params.append(estado)
+    if not incluir_bajas:
+        condiciones.append("baja=?")
+        params.append(False)
+    if condiciones:
+        consulta += " WHERE " + " AND ".join(condiciones)
+    consulta += (" ORDER BY CASE WHEN siguiente_el IS NULL THEN 1 ELSE 0 END, "
+                 "siguiente_el, created_at DESC")
+    with get_conn() as conn:
+        return [dict(f) for f in conn.execute(consulta, params).fetchall()]
+
+
+def update_prospect(prospect_id, **datos) -> dict:
+    """Cambia lo que venga y deja lo demás como estaba."""
+    if not get_prospect(prospect_id):
+        raise ValueError("Ese contacto no existe.")
+    campos = _prospecto_campos(datos)
+    if not campos:
+        return get_prospect(prospect_id)
+    asignaciones = ", ".join(f"{c}=?" for c in campos)
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE sales_prospects SET {asignaciones}, updated_at=? WHERE id=?",
+            [*campos.values(), _now(), prospect_id])
+    return get_prospect(prospect_id)
+
+
+def add_sales_touch(prospect_id, *, canal: str, resumen: str = "",
+                    estado_despues: str | None = None, fecha=None,
+                    user_id=None) -> dict:
+    """Anota un contacto y, si cambia el estado, lo cambia en la misma operación.
+
+    Van juntos porque separarlos es como se acaba teniendo un embudo que dice
+    «cita puesta» sin que nadie recuerde de qué día era.
+    """
+    from . import sales
+
+    if not get_prospect(prospect_id):
+        raise ValueError("Ese contacto no existe.")
+    if canal not in sales.CANALES:
+        raise ValueError("Canal desconocido.")
+    if estado_despues is not None and estado_despues not in sales.ESTADOS:
+        raise ValueError("Estado desconocido.")
+    cuando = _optional_date(fecha, "La fecha del contacto") or date.today().isoformat()
+    with get_conn() as conn:
+        fila = conn.execute(
+            "INSERT INTO sales_touches (prospect_id, fecha, canal, resumen, "
+            "estado_despues, user_id, created_at) VALUES (?,?,?,?,?,?,?) "
+            "RETURNING id",
+            (prospect_id, cuando, canal, (resumen or "").strip()[:2000] or None,
+             estado_despues, user_id, _now()),
+        ).fetchone()
+        toque = dict(conn.execute("SELECT * FROM sales_touches WHERE id=?",
+                                  (fila["id"],)).fetchone())
+    if estado_despues:
+        update_prospect(prospect_id, estado=estado_despues,
+                        siguiente_el=sales.siguiente_fecha(estado_despues),
+                        siguiente_accion=sales.ESTADOS[estado_despues]["siguiente"])
+    return toque
+
+
+def list_sales_touches(prospect_id) -> list[dict]:
+    with get_conn() as conn:
+        return [dict(f) for f in conn.execute(
+            "SELECT * FROM sales_touches WHERE prospect_id=? "
+            "ORDER BY fecha DESC, id DESC", (prospect_id,)).fetchall()]
+
+
+def import_prospects(filas: list[dict], *, origen: str = "otro",
+                     presentado_por: str | None = None) -> dict:
+    """Carga la lista pegada. No duplica a quien ya está por teléfono o nombre.
+
+    Volver a pegar la lista con tres nombres nuevos tiene que añadir tres, no
+    cuarenta y tres: por eso compara antes de insertar y cuenta lo repetido.
+    """
+    from . import sales
+
+    existentes = list_prospects()
+    por_telefono = {p["telefono"] for p in existentes if p.get("telefono")}
+    por_nombre = {(p["nombre"] or "").strip().lower() for p in existentes}
+    creados, repetidos = [], []
+    for fila in filas:
+        telefono = sales.normalizar_telefono(fila.get("telefono"))
+        nombre = (fila.get("nombre") or "").strip()
+        if not nombre:
+            continue
+        if (telefono and telefono in por_telefono) or nombre.lower() in por_nombre:
+            repetidos.append(nombre)
+            continue
+        creado = add_prospect(
+            nombre=nombre, oficio=fila.get("oficio"),
+            poblacion=fila.get("poblacion"), telefono=telefono,
+            email=fila.get("email"), origen=origen,
+            presentado_por=presentado_por or fila.get("presentado_por"),
+            nota=fila.get("nota"), estado="lista",
+            siguiente_el=date.today().isoformat(),
+            siguiente_accion=sales.ESTADOS["lista"]["siguiente"],
+        )
+        creados.append(creado)
+        if telefono:
+            por_telefono.add(telefono)
+        por_nombre.add(nombre.lower())
+    return {"creados": creados, "repetidos": repetidos}
+
+
+def prospect_opt_out(prospect_id, motivo: str = "") -> dict:
+    """Ha dicho que no le vuelvas a llamar. Se anota y no se le vuelve a llamar.
+
+    La baja no borra la fila a propósito: si se borra, el mismo nombre vuelve a
+    entrar en la siguiente lista que se pegue y se le llama otra vez. Lo que hay
+    que conservar es justamente que dijo que no.
+    """
+    return update_prospect(prospect_id, baja=True, estado="descartado",
+                           baja_motivo=motivo or "Pidió no ser contactado",
+                           siguiente_el=None, siguiente_accion=None)
+
+
+def delete_prospect(prospect_id) -> bool:
+    """Borra de verdad, con su historial. Para cuando ejerce el derecho de supresión."""
+    with get_conn() as conn:
+        conn.execute("DELETE FROM sales_touches WHERE prospect_id=?", (prospect_id,))
+        cur = conn.execute("DELETE FROM sales_prospects WHERE id=?", (prospect_id,))
+    return bool(getattr(cur, "rowcount", 0))
+
+
 def economy_timeline(months: int = 12) -> dict:
     """Serie mensual del negocio: cartera, conexiones, ingreso y coste real.
 

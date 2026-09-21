@@ -4146,6 +4146,72 @@ def _downgrade_economy_assumptions(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS economy_assumptions")
 
 
+def _upgrade_sales_pipeline(conn) -> None:
+    """CRM de captacion de Bynoesis: a quien perseguimos y por donde va.
+
+    Es el embudo de la empresa, no el del autonomo: por eso no lleva
+    `business_id`. El CRM de `leads` es del cliente y guarda sus presupuestos;
+    mezclarlos obligaria a filtrar por negocio una tabla que solo tiene un dueno.
+
+    `sales_touches` guarda cada contacto por separado en vez de ir machacando una
+    nota: lo que dijo en la primera llamada es lo que sirve para la segunda, y
+    ademas deja la prueba de cuando se le informo y cuando pidio la baja.
+    """
+    t = _types(conn.dialect)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS sales_prospects ("
+        f"id {t['id']}, "
+        "nombre TEXT NOT NULL, "
+        "oficio TEXT, "
+        "poblacion TEXT, "
+        "telefono TEXT, "
+        "email TEXT, "
+        "origen TEXT NOT NULL DEFAULT 'otro', "
+        "presentado_por TEXT, "
+        "estado TEXT NOT NULL DEFAULT 'lista', "
+        "siguiente_accion TEXT, "
+        "siguiente_el TEXT, "
+        "informado_el TEXT, "
+        f"baja {t['boolean']} NOT NULL DEFAULT FALSE, "
+        "baja_motivo TEXT, "
+        "nota TEXT, "
+        f"created_at {t['timestamp']} NOT NULL, "
+        f"updated_at {t['timestamp']})"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sales_prospects_estado "
+        "ON sales_prospects(estado)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sales_prospects_siguiente "
+        "ON sales_prospects(siguiente_el)"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS sales_touches ("
+        f"id {t['id']}, "
+        f"prospect_id {t['ref']} NOT NULL "
+        "REFERENCES sales_prospects(id) ON DELETE CASCADE, "
+        "fecha TEXT NOT NULL, "
+        "canal TEXT NOT NULL, "
+        "resumen TEXT, "
+        "estado_despues TEXT, "
+        f"user_id {t['ref']} REFERENCES users(id) ON DELETE SET NULL, "
+        f"created_at {t['timestamp']} NOT NULL)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sales_touches_prospect "
+        "ON sales_touches(prospect_id, fecha)"
+    )
+
+
+def _downgrade_sales_pipeline(conn) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_sales_touches_prospect")
+    conn.execute("DROP TABLE IF EXISTS sales_touches")
+    conn.execute("DROP INDEX IF EXISTS idx_sales_prospects_siguiente")
+    conn.execute("DROP INDEX IF EXISTS idx_sales_prospects_estado")
+    conn.execute("DROP TABLE IF EXISTS sales_prospects")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4232,6 +4298,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (56, "supuestos_economicos",
      _upgrade_economy_assumptions,
      _downgrade_economy_assumptions),
+    (57, "captacion_comercial",
+     _upgrade_sales_pipeline,
+     _downgrade_sales_pipeline),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

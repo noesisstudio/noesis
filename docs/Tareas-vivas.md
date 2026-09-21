@@ -1,5 +1,34 @@
 # Tareas vivas
 
+## Captación de clientes — 21-sep
+
+- [x] CRM de la empresa en `/admin/crm` (migración 57): embudo de nueve estados,
+  importador que traga la lista pegada o una tabla con cabecera, guiones por
+  estado en castellano y catalán, historial de contactos, bajas y CSV.
+- [x] `docs/06-negocio-y-finanzas/Lista-de-captacion.md`: de dónde salen los 40
+  nombres en Lleida y el Segrià, el ritmo diario y qué se puede hacer y qué no.
+- [ ] Founder, **hoy**: pegar `outputs/prospeccion/lleida-ciudad-osm.csv` en el CRM
+  y **reclasificar las 35 fichas de almacenes y ferreterías** con origen `Almacén`.
+  No son clientes: son quien te presenta a diez oficios en una mañana.
+- [ ] Founder, **hoy**: media hora buscando `presupuesto`, `pressupost`, `factura` y
+  `albarán` en tu WhatsApp y tu correo. De ahí salen los diez nombres que más
+  convierten, y no están en ningún CSV.
+- [ ] Founder: cinco llamadas entre las 7:30 y las 8:30, con el guion de la ficha.
+  Entre las 9:00 y las 13:00 está dentro de una pared y dice que no por no poder
+  hablar.
+- [ ] Founder: revisar `/admin/crm` en un navegador. Está probado con pruebas
+  automáticas, no a ojo, y la base de desarrollo está vacía.
+- [ ] Founder: confirmar los datos de contacto de El Gremi (instaladores de Lleida),
+  AGRISEC/COELL y el Gremi de Constructors antes de llamar. Están anotados de una
+  búsqueda, no verificados por teléfono.
+- [ ] Founder: la pregunta al abogado sobre llamada en frío B2B (art. 19 LOPDGDD
+  frente a art. 21 LSSI) está escrita en `Preguntas-abogado-TIC.md`. Mientras no
+  haya respuesta, el primer contacto es **llamada o presencial, nunca WhatsApp**.
+- [ ] Al desplegar: la migración 57 se aplica sola, pero conviene mirar `/ready`
+  después para confirmar que el esquema llega a 57 en producción.
+- [ ] Tras los primeros cinco pilotos: mirar qué origen los trajo. Es lo único que
+  dirá si la prospección de mapas sirve para algo o si todo viene de presentaciones.
+
 ## Costes editables — 18-sep
 
 - [x] Los 47 supuestos del modelo se editan y se guardan desde `/admin/economia`,
@@ -58,6 +87,7 @@
   el modelo base usa **18,1** (los 12 son solo del plan Autónomo; 18,1 es la media
   ponderada por la mezcla 55/35/10). A 5.000 cuentas eso son ~12 personas de soporte
   en vez de ~8. Decidir cuál vale y dejar los dos documentos diciendo lo mismo.
+
 ## Primeros clientes — 17-sep
 
 - [x] Guía de primeros clientes, escalado y costes: `Ruta-a-5000-autonomos.html`.

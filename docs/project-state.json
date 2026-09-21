@@ -1,8 +1,8 @@
 {
-  "state_date": "2026-09-18",
+  "state_date": "2026-09-21",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 56,
-  "verified_test_count": 963,
+  "schema_version": 57,
+  "verified_test_count": 999,
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
@@ -141,7 +141,8 @@
     "quarterly_tax_reads_once": "tax_quarter_loads_invoices_expenses_and_received_invoices_once_and_shares_them_with_the_model_130_recursion_over_previous_quarters_instead_of_rereading_every_table_per_quarter_figures_unchanged_to_the_cent_and_a_test_pins_one_read_per_table",
     "resent_document_is_reread": "resending_the_same_pdf_over_whatsapp_reclassifies_the_stored_document_instead_of_answering_that_it_was_already_saved_and_stopping_so_a_paper_archived_before_the_ai_was_configured_can_still_be_proposed_no_duplicate_row_and_the_reply_says_it_was_already_on_file_instead_of_printing_an_internal_id",
     "multi_invoice_pdf_classification": "multiple_model_entries_are_left_for_separate_review_whatsapp_requests_separate_files_no_partial_invoice_or_expense_extraction_single_document_flows_preserved_real_corpus_pending",
-    "economics_panel_2026_09_18": "El modelo economico vive en src/noesis/economics.py y no solo en analysis/: coste por plan driver a driver, dos contribuciones (en caja mientras atiende el founder, cargada cuando el soporte lo paga alguien), tres equilibrios, capacidad en horas, cohortes con bajas y caja a 36 meses. Pagina /admin/economia detras de _is_admin con seis palancas que recalculan en el servidor (no hay copia del modelo en JavaScript). Descargas .docx y .xlsx de dos paginas generadas al vuelo con officedocs.py usando zipfile y XML: cero dependencias nuevas en produccion. db.economy_timeline da la serie mensual de cartera, conexiones, ingreso y coste real y deja en None lo que no puede reconstruir. Lo real se pone al lado del supuesto y no lo sustituye. Cifras ancla del 15/07/2026 fijadas por tests/test_economia_panel.py (17 casos). Migracion 56 (economy_assumptions): los 47 supuestos del catalogo EDITABLE se editan y se guardan desde /admin/economia; solo se guarda lo que se desvia del valor de fabrica y volver a la cifra original borra la fila. Pendiente: abrir las descargas con Office real y revisar la pagina en un navegador con cuentas reales."
+    "economics_panel_2026_09_18": "El modelo economico vive en src/noesis/economics.py y no solo en analysis/: coste por plan driver a driver, dos contribuciones (en caja mientras atiende el founder, cargada cuando el soporte lo paga alguien), tres equilibrios, capacidad en horas, cohortes con bajas y caja a 36 meses. Pagina /admin/economia detras de _is_admin con seis palancas que recalculan en el servidor (no hay copia del modelo en JavaScript). Descargas .docx y .xlsx de dos paginas generadas al vuelo con officedocs.py usando zipfile y XML: cero dependencias nuevas en produccion. db.economy_timeline da la serie mensual de cartera, conexiones, ingreso y coste real y deja en None lo que no puede reconstruir. Lo real se pone al lado del supuesto y no lo sustituye. Cifras ancla del 15/07/2026 fijadas por tests/test_economia_panel.py (17 casos). Migracion 56 (economy_assumptions): los 47 supuestos del catalogo EDITABLE se editan y se guardan desde /admin/economia; solo se guarda lo que se desvia del valor de fabrica y volver a la cifra original borra la fila. Pendiente: abrir las descargas con Office real y revisar la pagina en un navegador con cuentas reales.",
+    "sales_crm_2026_09_21": "admin_only_company_funnel_nine_states_paste_import_with_dedupe_and_opt_out_bilingual_es_ca_scripts_per_state_touch_log_art14_notice_flag_csv_export_migration_57_no_business_id_no_new_dependencies"
   },
   "ai_route": [
     "reglas_locales",

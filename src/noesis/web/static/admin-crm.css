@@ -1,0 +1,127 @@
+/* CRM de captación. Se apoya en app.css y admin-workspace.css: aquí solo está lo
+   que esas dos no tienen. Sin colores nuevos: todo sale de las variables de marca
+   (docs/design/STYLE_TOKENS.json). */
+
+.crm .card { margin-bottom: 20px; }
+.crm .crm-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.crm td small { display: block; color: var(--faint); font-size: .76rem; }
+
+/* --- El parte: la voz de Bynoesis en serif, como en el panel de economía --- */
+.crm-parte { border-left: 3px solid var(--brand-2); }
+.crm-verdict {
+  font-family: var(--serif);
+  font-size: 1.22rem;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0 0 8px;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+
+/* --- Embudo --- */
+.crm-embudo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 14px 0 6px;
+}
+.crm-paso-cifra {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1.1;
+}
+.crm-paso-cifra span { font-size: .9rem; color: var(--faint); }
+.crm-paso-que { font-size: .8rem; color: var(--muted); margin: 2px 0 6px; }
+.crm-barra {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-2, #e9efed);
+  overflow: hidden;
+}
+.crm-barra i { display: block; height: 100%; background: var(--brand-2); }
+.crm-paso.ok .crm-barra i { background: var(--green, var(--brand-2)); }
+.crm-paso-falta { font-size: .72rem; color: var(--faint); margin-top: 4px; }
+.crm-estados { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+
+/* --- Hoy --- */
+.crm-acciones { white-space: nowrap; display: flex; gap: 6px; }
+.crm-aviso { color: var(--amber, var(--muted)); }
+.crm-frios { margin-top: 10px; }
+.crm-frios a { margin-right: 2px; }
+tr.crm-vencido td:first-child { box-shadow: inset 3px 0 0 var(--brand-2); }
+tr.crm-baja { opacity: .5; }
+
+/* --- Dos columnas que se apilan en el móvil --- */
+.crm-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+.crm-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 14px;
+  margin: 10px 0;
+}
+.crm label { display: block; font-size: .8rem; color: var(--muted); }
+.crm label .input, .crm label select, .crm label textarea { margin-top: 4px; width: 100%; }
+.crm-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.crm-check input { width: auto; }
+.crm h3 { font-size: 1rem; margin: 0 0 4px; }
+
+/* --- Guiones --- */
+.crm-firma { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.crm-firma .input { width: auto; margin-top: 0; }
+.crm-guion {
+  border: 1px solid var(--border, #e2ddd0);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--surface-2, transparent);
+}
+.crm-guion header { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.crm-guion header span { font-size: .72rem; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; }
+.crm-guion-cuando { font-size: .78rem; color: var(--muted); margin: 4px 0 8px; }
+.crm-lenguas { display: flex; gap: 6px; margin-bottom: 8px; }
+.crm-lenguas .btn[aria-pressed="true"] { border-color: var(--brand-2); color: var(--brand); }
+.crm-texto {
+  font-size: .92rem;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  margin: 0;
+}
+.crm-preguntas { margin-top: 14px; }
+.crm-preguntas ol { margin: 6px 0 0; padding-left: 20px; font-size: .88rem; color: var(--muted); }
+.crm-preguntas li { margin-bottom: 4px; }
+
+/* --- Historial --- */
+.crm-historial { margin-top: 20px; }
+.crm-historial ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.crm-historial li {
+  border-left: 2px solid var(--border, #e2ddd0);
+  padding: 0 0 12px 14px;
+  font-size: .88rem;
+}
+.crm-historial li p { margin: 4px 0 0; color: var(--muted); }
+.crm-historial .crm-num { color: var(--faint); margin-right: 6px; }
+
+/* --- Editar y acciones peligrosas --- */
+.crm-editar { margin-top: 18px; }
+.crm-editar summary { cursor: pointer; font-size: .88rem; color: var(--muted); }
+.crm-peligro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #e2ddd0);
+}
+.crm-peligro form { display: flex; gap: 8px; align-items: center; }
+
+/* --- Fuentes --- */
+.crm-fuentes { margin: 10px 0 16px; padding-left: 20px; font-size: .9rem; color: var(--muted); }
+.crm-fuentes li { margin-bottom: 6px; }
+.crm-fuentes b { color: var(--text); }

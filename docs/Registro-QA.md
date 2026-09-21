@@ -1,5 +1,42 @@
 ﻿# Registro de QA
 
+## 2026-09-21 — CRM de captación: lista pegada, embudo y bajas
+
+- `tests/test_crm_captacion.py` (nuevo): **36 casos** en cinco bloques. Suite
+  completa **999 en verde** (963 antes). Ruff OK. `check_project_truth` OK con 57.
+- **El fallo con consecuencias fuera del ordenador está cubierto**: pegar otra vez
+  la lista y volver a llamar a quien ya dijo que no. La prueba marca una baja,
+  vuelve a pegar la misma línea y comprueba que no se crea nada.
+- **Importador probado con lo que de verdad se escribe**: oficio en catalán
+  (`lampista`, `fuster`, `reformes`, `neteja`), teléfono en cuatro formatos
+  (`600112233`, `600 11 22 33`, `+34 600…`, `0034600…`), guiones sueltos que no
+  deben quedarse pegados al nombre, y lo no entendido cayendo en la nota.
+- **Tabla con cabecera probada con las columnas reales** del CSV de prospección
+  (`grupo;actividad;nombre;telefono;web;direccion;mapa;…`): el nombre no acaba
+  siendo «Oficio», la columna desconocida se conserva en la nota, las direcciones
+  de web y mapa no la ensucian, y una fila sin nombre pero con teléfono entra con
+  el dominio de su web. Verificado además contra el archivo real: **74 de 74
+  fichas, 38 con teléfono**, los mismos que cuenta el CSV.
+- **Dos pruebas estructurales**, que son las que más valor dan: todo guion tiene
+  las dos lenguas y **solo huecos que el JavaScript sustituye** (uno nuevo saldría
+  literal en el mensaje al cliente), y todo estado apunta a guiones que existen.
+- **Una prueba de contenido a propósito**: el guion en frío dice de dónde ha salido
+  el número, en las dos lenguas. Es el art. 14 del RGPD y salta si se reescribe.
+- **Embudo**: avanzar a alguien a piloto no vacía el peldaño de conversaciones; una
+  baja desaparece de todos los recuentos; «hoy» trae lo vencido y no lo cerrado.
+- **Permisos**: las seis rutas redirigen a `/login` sin sesión de administrador y
+  no escriben nada. La baja y el borrado quedan en el registro de seguridad.
+- **Migración 57** verificada en los dos sentidos (baja a 56, las dos tablas
+  desaparecen, sube y vuelve a escribir).
+- **Página renderizada con los datos reales**, no con dos filas de prueba: las 74
+  fichas del CSV de Lleida entran como 73 contactos (dos comparten teléfono), la
+  página sale en 95 KB sin romperse con los nombres en catalán, y el aviso del
+  art. 14 marca los 73. **Ahí se vio un fallo de diseño**: «Hoy» pedía 73 llamadas.
+  Corregido a lotes de diez, con prueba propia.
+- **No ejecutado:** revisar la página en un navegador —está probada con pruebas
+  automáticas, no a ojo— ni con una lista real cargada. El smoke de PostgreSQL
+  necesita la base del CI; usa `LATEST_VERSION`, así que recorre la 57 sola.
+
 ## 2026-09-18 — Costes editables: guardado, validación y migración 56
 
 - `tests/test_economia_panel.py` sube a **25 casos** (8 nuevos). Ruff OK.

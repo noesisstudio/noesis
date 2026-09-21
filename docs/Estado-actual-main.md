@@ -1,5 +1,26 @@
 # Estado actual del producto
 
+## 21-sep — El embudo de captación, dentro del producto
+
+`/admin/crm` es el CRM de Bynoesis: la lista de a quién persigues, en qué punto está
+cada uno, qué toca hacer hoy y con qué palabras decirlo, en castellano y en catalán.
+No es el CRM del autónomo —ese sigue en `/b/<id>/crm` con sus presupuestos—: este no
+lleva `business_id` porque no es de ningún cliente.
+
+Los nueve estados son los del piloto, no los de un CRM genérico, y el embudo se mide
+contra el objetivo de la Ruta a 5.000: 40 nombres, 20 conversaciones, 5 pilotos, 2
+cartas de intención. La lista se pega tal como esté escrita —una línea por persona o
+una tabla entera con su cabecera— y no duplica a quien ya esté.
+
+Lo que decide qué se puede hacer con cada contacto es de dónde salió: un teléfono que
+te dio su dueño y uno sacado de una ficha pública no son lo mismo, y la ficha avisa
+mientras no le hayas dicho de dónde tienes su número. Quien pide no ser contactado se
+queda marcado para siempre, precisamente para que no vuelva a entrar al pegar la
+lista otra vez.
+
+De dónde salen los nombres en Lleida y el Segrià está en
+`docs/06-negocio-y-finanzas/Lista-de-captacion.md`.
+
 ## 17-sep — Arreglada la baja de cuenta
 
 Dar de baja una cuenta que tuviera WhatsApp conectado daba un error interno y no

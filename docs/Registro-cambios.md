@@ -1,5 +1,80 @@
 ﻿# Registro de cambios
 
+## 2026-09-21 — El embudo de captación entra en el producto
+
+Petición del founder: «haz el CRM de la empresa y cómo aplicar la búsqueda de
+clientes; quiero empezar a captar desde hoy». El método ya estaba escrito en
+`Ruta-a-5000-autonomos.html` desde el 17-sep; lo que no había era dónde vive la
+lista ni qué toca hacer hoy con ella.
+
+**Página nueva `/admin/crm`**, detrás del mismo `_is_admin` que economía. Es el
+embudo **de Bynoesis**, no el del autónomo: por eso la migración 57 crea
+`sales_prospects` y `sales_touches` **sin `business_id`**. El CRM de `leads`
+guarda los presupuestos de un fontanero; este guarda a qué fontanero perseguimos
+nosotros, y mezclarlos obligaría a filtrar por negocio una tabla que solo tiene un
+dueño.
+
+**Nueve estados que son los del piloto**, no los de un CRM genérico: «interesado»
+no significa nada, «lo usa solo desde hace dos semanas» decide si hay negocio. El
+embudo se mide contra el objetivo de la parte 1 de la Ruta (40 nombres → 20
+conversaciones → 5 pilotos → 2 cartas), y **cuenta acumulado**: quien está en
+piloto ya tuvo su conversación, así que avanzar a la gente no vacía el peldaño de
+atrás. Contarlo por estado actual habría hecho que el embudo pareciera encogerse
+justo cuando va bien.
+
+**La lista se pega tal como está escrita.** `sales.parse_lista` acepta una persona
+por línea con `;`, `,`, tabulador, guion o punto volado; encuentra el teléfono y el
+correo estén donde estén; reconoce el oficio escrito en catalán («lampista»,
+«fuster», «reformes», «neteja»); normaliza los teléfonos a `+34…`; y lo que no
+entiende lo deja en la nota en vez de tirarlo. Pegar la lista dos veces añade solo
+lo nuevo: compara por teléfono normalizado y por nombre.
+
+Si lo pegado es una **tabla con cabecera** respeta las columnas en vez de adivinar,
+que es lo que hace falta para las 74 fichas de `outputs/prospeccion/` y para
+cualquier Excel propio: adivinando, el nombre habría acabado siendo «Oficio» y el
+teléfono, una calle. Una fila sin nombre pero con teléfono entra igual, con el
+dominio de su web por nombre: en la prospección de mapas pasa a menudo y es un
+cliente como cualquier otro.
+
+**Los guiones viven en la ficha, en castellano y en catalán**, uno por estado, con
+los huecos rellenos con los datos de esa persona y un botón de copiar. Un CRM que
+solo guarda nombres se abandona la segunda semana; el que se usa es el que al
+abrirlo ya sabe qué toca decir hoy. Las cinco preguntas del café salen cuando el
+estado es «cita» o «ya hablado», que es cuando sirven.
+
+**El origen del dato manda en lo que se puede hacer con él.** Un teléfono que te
+dio su dueño y uno sacado de una ficha pública no son lo mismo: el segundo obliga
+a decirle en el primer contacto quién eres y de dónde ha salido (art. 14 RGPD).
+`ORIGENES` lleva ese dato, la ficha avisa mientras no esté hecho y el guion en frío
+lo dice literalmente —hay una prueba que salta si alguien reescribe el guion y lo
+quita—. La baja **no borra la fila** a propósito: si se borrara, el mismo nombre
+volvería a entrar en la siguiente lista pegada y se le llamaría otra vez.
+
+**Un fallo de diseño que solo apareció con datos reales.** Al cargar las 74 fichas
+de `outputs/prospeccion/`, «Hoy» pedía 73 llamadas, que no es un día de trabajo: es
+la forma de que no se haga ninguna. Ahora la página pide un lote de diez —cinco
+entre las 7:30 y las 8:30, tres a mediodía y dos por la tarde— y dice cuántos
+quedan detrás. Las 74 fichas entran como 73 contactos: dos comparten teléfono y son
+el mismo almacén con dos nombres.
+
+- **Áreas/archivos:** `src/noesis/migrations.py` (migración 57);
+  `src/noesis/sales.py` (nuevo: estados, orígenes, oficios, guiones, importador y
+  resumen del embudo); `src/noesis/db.py` (`add_prospect`, `list_prospects`,
+  `update_prospect`, `add_sales_touch`, `import_prospects`, `prospect_opt_out`,
+  `delete_prospect`); `src/noesis/web/routers/admin.py` (ocho rutas);
+  `admin_crm.html`, `admin-crm.css`, `admin-crm.js`; enlace desde `admin.html`.
+- **Pruebas:** `tests/test_crm_captacion.py`, 36 casos. Suite completa 999 en
+  verde. Ruff OK. `check_project_truth` OK con esquema 57.
+- **Límites externos:** ninguno. Sin dependencias nuevas.
+- **Riesgo:** bajo. Hay migración (57) y es reversible: el `downgrade` borra las
+  dos tablas y no toca nada más, comprobado en los dos sentidos. Todo detrás de
+  `_is_admin` y sin relación con datos de clientes.
+- **Diagnóstico:** si alguien aparece dos veces, mirar `telefono` en las dos filas:
+  la comparación es por teléfono normalizado y por nombre, y un nombre escrito
+  distinto sin teléfono entra dos veces a propósito (es preferible a fusionar a dos
+  personas distintas). Si el embudo no cuadra, `sales.resumen` cuenta acumulado.
+- **Rollback:** revertir el commit y bajar a la migración 56.
+
 ## 2026-09-18 — Los costes se editan en la web y se guardan
 
 Petición del founder: «un modelo donde ponga los costes y sea editable en una página
