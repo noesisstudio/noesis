@@ -1,6 +1,15 @@
 # Estado actual del producto
 
-## 21-sep — Economía y CI: correcciones locales, sin publicar
+## 21-sep — Economía y CI: publicación verificada
+
+Publicado el código `1dc65aa1a79a` después de validar la misma revisión en
+GitHub Actions [35578171354](https://github.com/noesisstudio/noesis/actions/runs/35578171354):
+974 pruebas, seguridad y humos PostgreSQL correctos, incluido rollback.
+Railway `b88619b7-6da0-4b68-83ab-fec3194a9897` SUCCESS; health/ready confirman
+release y esquema 56. Portada 200, admin sin sesión 303 y datos admin 403.
+Este cierre documental no cambia el runtime y no incluye el contrato del socio.
+
+### Revisión previa a la publicación
 
 Incorporados los tres commits del socio hasta `0bc1e4d20e9d`, release verificada
 en health/ready con esquema 56. Su CI falló por las líneas de la baseline de

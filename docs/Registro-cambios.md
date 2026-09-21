@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-09-21 — Publicación del arreglo económico
+
+- Código 1dc65aa1a79a validado primero en rama remota de comprobación y después
+  promovido sin modificaciones a main. CI 35578171354 verde: 974 pruebas,
+  seguridad y PostgreSQL con rollback.
+- Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS, release y esquema 56
+  confirmados por health/ready. Sin operaciones sobre facturas o cuentas.
+- Este commit solo actualiza estado, tareas y evidencia de QA: sin cambios de
+  runtime ni migraciones. No incluye el contrato ni las notas locales del socio.
+- Riesgo/rollback: ninguna alteración funcional en este cierre documental;
+  para el arreglo de código, revertir 1dc65aa sin bajar el esquema.
+
 ## 2026-09-21 — Correcciones de economía y puerta de CI
 
 - Objetivo: corregir fallos reproducidos de los tres commits nuevos preservando

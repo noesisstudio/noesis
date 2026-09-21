@@ -2,9 +2,9 @@
 
 ## Revisión 21-sep — Antes de publicar
 
-- [ ] Revisar diff y CI verde antes de publicar: main auto-despliega Railway.
-- [ ] Humos PostgreSQL sobre esquema 56 en base efímera. Expectativas corregidas;
-  no equivale a haberlos ejecutado en PostgreSQL local.
+- [x] Diff revisado y CI 35578171354 verde antes de publicar; main en Railway.
+- [x] Humos PostgreSQL sobre esquema 56 en base efímera de CI: correctos,
+  incluida compatibilidad con código anterior y rollback.
 - [ ] Histórico verificado de suscripciones/precio/periodicidad para MRR real;
   no reconstruirlo con el plan actual y catálogo mensual.
 - [ ] Regenerar el libro de analysis si va a distribuirse: fuente y HTML corregidos,

@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-21 — Publicación verificada
+
+- CI remoto 35578171354 sobre 1dc65aa1a79a: **974 pruebas OK en 402,446 s**,
+  seguridad, JavaScript, verdad del proyecto y ciclos de migración verdes.
+- PostgreSQL 16 efímero: migración histórica, humo funcional, código anterior
+  sobre esquema 56 y rollback del candidato correctos.
+- Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS. Health/ready:
+  release 1dc65aa1a79a, esquema 56. Comprobaciones sin escrituras de negocio.
+- El commit posterior solo documenta esta evidencia, sin modificar runtime.
+  Se omite repetir CI para ese cierre documental; el código desplegado sí pasó CI.
+
 ## 2026-09-21 — Revisión de economía y CI
 
 - Suite general: **970 pruebas OK en 738,883 s**. Se ejecutó mientras se completaban
