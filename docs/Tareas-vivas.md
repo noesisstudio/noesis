@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Revisión 21-sep — Antes de publicar
+
+- [ ] Revisar diff y CI verde antes de publicar: main auto-despliega Railway.
+- [ ] Humos PostgreSQL sobre esquema 56 en base efímera. Expectativas corregidas;
+  no equivale a haberlos ejecutado en PostgreSQL local.
+- [ ] Histórico verificado de suscripciones/precio/periodicidad para MRR real;
+  no reconstruirlo con el plan actual y catálogo mensual.
+- [ ] Regenerar el libro de analysis si va a distribuirse: fuente y HTML corregidos,
+  pero el .xlsx anterior no es la fuente del panel y no se ha regenerado.
+- [ ] Revisión jurídica del contrato, decisiones abiertas y costes/retirada/caja
+  reales. No convertir los valores del escenario en hechos.
+
 ## Costes editables — 18-sep
 
 - [x] Los 47 supuestos del modelo se editan y se guardan desde `/admin/economia`,

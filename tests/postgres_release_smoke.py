@@ -25,7 +25,7 @@ def _guard() -> None:
         raise RuntimeError("El rollback de pruebas no admite modo producción.")
     assert not config.VALUE_LEDGER_ENABLED
     assert not config.VALUE_LEDGER_ADMIN_ENABLED
-    assert migrations.current_version() == 55
+    assert migrations.current_version() == migrations.LATEST_VERSION
 
 
 def _snapshot() -> dict:

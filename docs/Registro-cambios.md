@@ -1,5 +1,20 @@
 ﻿# Registro de cambios
 
+## 2026-09-21 — Correcciones de economía y puerta de CI
+
+- Objetivo: corregir fallos reproducidos de los tres commits nuevos preservando
+  íntegros el contrato y notas locales del socio.
+- Áreas: economics, economics_docs, serie mensual de db, rutas y JS del panel;
+  fuentes HTML/analítica histórica; humos PostgreSQL y escáner de secretos.
+- Pruebas: regresiones de cálculo, persistencia, permisos, exportaciones, histórico
+  y JS; suite general, Ruff, Bandit y ciclo SQLite. Resultado en Registro-QA.
+- Sin nuevas migraciones, escritura en producción, commit, push o deploy.
+- Riesgo: cambian avisos/cifras internas antes incorrectas. Los ingresos sin
+  periodicidad acreditada quedan desconocidos, no como catálogo mensual.
+- Diagnóstico: comparar /admin/economia/datos y exportaciones con los supuestos.
+  Rollback: revertir solo este bloque de código; no datos ni esquema 56. El
+  contrato no forma parte del arreglo. El .xlsx histórico no se ha regenerado.
+
 ## 2026-09-18 — Los costes se editan en la web y se guardan
 
 Petición del founder: «un modelo donde ponga los costes y sea editable en una página
@@ -186,7 +201,6 @@ de caja mínima. Publicada en https://claude.ai/artifact/AduAVYaKUewQuCtqkroyfN.
   COMPROBACION que el script imprime al generarlo; si difieren, el fallo está en la
   fórmula, no en el supuesto.
 - **Rollback:** revertir el commit; el libro v3 sigue intacto.
-
 ## 2026-09-17 — Guía de primeros clientes, escalado a 5.000 y costes por etapa
 
 Objetivo: el founder quiere conseguir los primeros autónomos por boca a boca en su

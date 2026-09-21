@@ -1,5 +1,14 @@
 # Mapa de código
 
+## Correcciones económicas y CI — 21-sep
+
+`economics.py` separa bajas nuevas/maduras, valida mezcla y devuelve
+`rampa.financiable` y `financiacion_adicional` con caja inicial ya incluida.
+El JS envía solo palancas cambiadas. `economy_timeline` no inventa MRR ni
+suscripciones pasadas. `scripts/check_secrets.py` conserva detectores/filtros,
+normaliza rutas y compara huellas exactas sin reescribir la baseline ni aceptar
+hallazgos nuevos. CI ejecuta el test JS del panel.
+
 ## Supuestos económicos editables — 18-sep
 
 `economics.EDITABLE` es un catálogo de 47 campos que gobierna **tres cosas a la vez**:

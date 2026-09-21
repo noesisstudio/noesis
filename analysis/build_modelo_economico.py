@@ -1041,8 +1041,8 @@ def construir_rampa():
          "te dieron las horas: es el freno del modelo, y es el hallazgo. «Horas usadas» en "
          "rojo significa que ese mes no te dio la vida. «Mes 1/2/3» son las cuentas por edad y "
          "«Asentadas» las que pasaron de tres meses. La caja minima es la cifra que decide si "
-         "el proyecto sobrevive: es el dinero que hay que tener disponible antes de empezar. Si "
-         "supera la caja inicial, el plan no es financiable tal cual y hay que recortar la "
+         "el proyecto sobrevive: ya incluye la caja inicial. Si resulta negativa, su valor "
+         "absoluto es la financiacion adicional necesaria y hay que recortar la "
          "retirada, subir precio o bajar el soporte por cuenta.", span=16)
 
 
@@ -1192,8 +1192,8 @@ def construir_escenarios():
     fila = nota(ws, 21,
                 f"El escenario prudente no es pesimismo: es el que hay que poder aguantar. Con "
                 f"esos supuestos la caja minima baja a "
-                f"{_es(SIM['Prudente']['caja_min'])} €, muy por encima de los "
-                f"{_es(D['caja_inicial'])} € de caja inicial que cita el vault: el plan "
+                f"{_es(SIM['Prudente']['caja_min'])} €, despues de incluir los "
+                f"{_es(D['caja_inicial'])} € de caja inicial: el plan "
                 f"prudente no es financiable tal cual. Si solo sobrevives en el optimista, el "
                 f"plan no es un plan.", span=6, color=WARN)
 

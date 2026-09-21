@@ -66,11 +66,11 @@
         <div class="eco-lever">
           <label for="lv-churn">Bajas a partir del 4.º mes <b data-eco-out="churn_maduro"></b></label>
           <input type="range" id="lv-churn" data-eco-lever="churn_maduro" min="0.005" max="0.15" step="0.005" value="{{ a.churn_maduro }}">
-          <small>Sin medir. Los tres primeros meses van al doble.</small>
+          <small>Sin medir. Las bajas iniciales se configuran por separado en los supuestos.</small>
         </div>
         <div class="eco-lever">
           <label for="lv-soporte">Soporte por cuenta asentada <b data-eco-out="soporte_medio"></b></label>
-          <input type="range" id="lv-soporte" data-eco-lever="soporte_medio" min="4" max="45" step="0.5" value="{{ report.medias.soporte_min|round(1) }}">
+          <input type="range" id="lv-soporte" data-eco-lever="soporte_medio" min="4" max="45" step="0.5" value="{{ report.medias.soporte_min }}">
           <small>La palanca que más cuentas regala sin vender ninguna.</small>
         </div>
         <div class="eco-lever">
@@ -79,7 +79,7 @@
           <small>Solo se cumplen las que caben en tus horas.</small>
         </div>
         <div class="eco-lever">
-          <label for="lv-implantacion">Altas que pagan implantación (99 €) <b data-eco-out="pct_implantacion"></b></label>
+          <label for="lv-implantacion">Altas que pagan implantación ({{ a.implantacion }} €) <b data-eco-out="pct_implantacion"></b></label>
           <input type="range" id="lv-implantacion" data-eco-lever="pct_implantacion" min="0" max="1" step="0.05" value="{{ a.pct_implantacion }}">
           <small>Propuesta del 16/09, sin aprobar: por eso empieza en cero.</small>
         </div>
@@ -211,9 +211,9 @@
             <td><b>{{ f.mes }}</b></td>
             <td class="n">{{ f.altas }}</td>
             <td class="n">{{ f.cuentas }}</td>
-            <td class="n">{{ f.de_pago }}</td>
+            <td class="n">{{ f.de_pago if f.de_pago is not none else '—' }}</td>
             <td class="n">{{ f.conexiones }}{% if f.conexiones_nuevas %} <small class="meta">+{{ f.conexiones_nuevas }}</small>{% endif %}</td>
-            <td class="n">{{ '%.0f'|format(f.mrr) }} €</td>
+            <td class="n">{{ ('%.0f €'|format(f.mrr)) if f.mrr is not none else '—' }}</td>
             <td class="n">{{ ('%.0f €'|format(f.coste)) if f.coste is not none else '—' }}</td>
             <td class="n">{{ ('%.2f €'|format(f.coste_por_cuenta)) if f.coste_por_cuenta is not none else '—' }}</td>
           </tr>

@@ -52,6 +52,8 @@ class ModeloEconomicoTests(unittest.TestCase):
             defecto = economics.ASSUMPTIONS[key]
             if spec["tipo"] == "plan":
                 movido = [min(spec["max"], float(v) * 2 + 1) for v in defecto]
+                if key == "mix":
+                    movido = [0.2, 0.3, 0.5]
             else:
                 movido = min(spec["max"], float(defecto) * 2 + 1)
             extra = depende.get(key, {})
@@ -101,7 +103,39 @@ class ModeloEconomicoTests(unittest.TestCase):
             self.assertEqual(len(rep["rampa"]["filas"]), 36)
         acotado = economics.with_levers({"churn_maduro": "999"})
         self.assertEqual(acotado["churn_maduro"], 0.30)
-        self.assertEqual(acotado["churn_nuevo"], 0.5)
+        self.assertEqual(acotado["churn_nuevo"], economics.ASSUMPTIONS["churn_nuevo"])
+
+    def test_saved_new_churn_survives_empty_and_unrelated_levers(self):
+        for overrides in ({key: None for key in economics.LEVERS}, {"retirada": "1800"}):
+            rep = economics.build_report(overrides, saved={"churn_nuevo": 0.25})
+            self.assertEqual(rep["assumptions"]["churn_nuevo"], 0.25)
+
+    def test_nonfinite_levers_do_not_change_assumptions(self):
+        for value in ("nan", "inf", "-inf"):
+            self.assertEqual(economics.with_levers({"retirada": value}), economics.ASSUMPTIONS)
+
+    def test_initial_cash_is_not_counted_twice(self):
+        rep = economics.build_report()
+        ramp = rep["rampa"]
+        self.assertFalse(ramp["financiable"])
+        self.assertAlmostEqual(ramp["financiacion_adicional"], -ramp["caja_minima"])
+        funded = economics.build_report(saved={"caja_inicial": 8000})["rampa"]
+        self.assertTrue(funded["financiable"])
+        self.assertEqual(funded["financiacion_adicional"], 0)
+        self.assertIn("adicionales", economics_docs._parte(rep))
+
+    def test_negative_contribution_cannot_fit_the_founder_hours(self):
+        rep = economics.build_report(saved={"precio": [0, 0, 0]})
+        self.assertEqual(rep["cabe_en_horas"]["estado"], "sin_equilibrio")
+        economics_docs.summary_docx(rep)
+        economics_docs.summary_xlsx(rep)
+
+    def test_zero_cost_is_observed_but_unknown_revenue_is_not_zero(self):
+        rep = economics.build_report(observed={"paying_accounts": 2, "observed_cost_eur": 0})
+        rows = rep["observado"]["filas"]
+        self.assertIsNone(rows[0]["real"])
+        self.assertEqual(rows[1]["real"], 0)
+        self.assertIsNone(rows[2]["real"])
 
     def test_raising_the_draw_moves_only_the_third_step(self):
         base = economics.build_report()
@@ -245,6 +279,8 @@ class PanelEconomiaTests(unittest.TestCase):
             client.post("/login", data={"email": "admin@example.com",
                                         "password": password})
             base = client.get("/admin/economia/datos").json()
+            self.assertFalse(base["rampa"]["financiable"])
+            self.assertGreater(base["rampa"]["financiacion_adicional"], 0)
             movido = client.get("/admin/economia/datos?retirada=2400").json()
             self.assertGreater(movido["equilibrios"][2]["cuentas"],
                                base["equilibrios"][2]["cuentas"])
@@ -370,6 +406,9 @@ class PanelEconomiaTests(unittest.TestCase):
                                     data={"mix": ["0.5", "0.5", "0.5"]})
             self.assertIn("100", respuesta.text)
             self.assertIn("mezcla de planes", respuesta.text.lower())
+            self.assertNotIn("mix", db.economy_assumptions())
+            self.assertEqual(economics.build_report(saved={"mix": [0.5, 0.5, 0.5]})[
+                "assumptions"]["mix"], economics.ASSUMPTIONS["mix"])
 
     def test_timeline_marks_what_it_cannot_know_instead_of_guessing(self):
         serie = db.economy_timeline(12)
@@ -391,6 +430,77 @@ class PanelEconomiaTests(unittest.TestCase):
     def test_timeline_range_is_clamped(self):
         self.assertEqual(len(db.economy_timeline(0)["filas"]), 1)
         self.assertEqual(len(db.economy_timeline(999)["filas"]), 36)
+
+    def test_timeline_keeps_older_accounts_and_does_not_invent_history(self):
+        with db.get_conn() as conn:
+            conn.execute("UPDATE businesses SET created_at=?, subscription_status='active' WHERE id=?",
+                         ("2020-01-01", self.business))
+        rows = db.economy_timeline(2)["filas"]
+        self.assertEqual([r["cuentas"] for r in rows], [1, 1])
+        self.assertIsNone(rows[0]["de_pago"])
+        self.assertEqual(rows[-1]["de_pago"], 1)
+        self.assertTrue(all(r["mrr"] is None and r["margen"] is None for r in rows))
+
+    def test_timeline_excludes_forecast_costs(self):
+        month = db.economy_timeline(1)["filas"][0]["mes"]
+        db.add_platform_cost(month, "hosting", "90", source="forecast", note="")
+        self.assertIsNone(db.economy_timeline(1)["filas"][0]["coste"])
+        db.add_platform_cost(month, "hosting", "20", source="actual", note="")
+        self.assertEqual(db.economy_timeline(1)["filas"][0]["coste"], 20)
+
+    def test_timeline_connections_include_older_real_but_not_demo_accounts(self):
+        demo = db.create_business("Demo", "demo@example.com")["id"]
+        with db.get_conn() as conn:
+            conn.execute("UPDATE businesses SET is_demo=1 WHERE id=?", (demo,))
+        db.create_whatsapp_connection(self.business, waba_id="123456", phone_number_id="111111")
+        db.create_whatsapp_connection(demo, waba_id="654321", phone_number_id="222222")
+        with db.get_conn() as conn:
+            conn.execute("UPDATE whatsapp_connections SET created_at=?", ("2020-01-01",))
+        self.assertEqual(db.economy_timeline(1)["filas"][0]["conexiones"], 1)
+
+    def test_saved_churn_survives_page_json_and_downloads(self):
+        contexto, client, password = self._client()
+        with contexto[0], contexto[1], contexto[2], client:
+            client.post("/login", data={"email": "admin@example.com", "password": password})
+            client.post("/admin/economia/supuestos", data={"churn_nuevo": "0.25"})
+            expected = economics.build_report(saved={"churn_nuevo": 0.25})
+            payload = client.get("/admin/economia/datos").json()
+            self.assertAlmostEqual(payload["vida_media"], expected["vida_media"])
+            self.assertEqual(client.get("/admin/economia").status_code, 200)
+            with zipfile.ZipFile(__import__("io").BytesIO(
+                    client.get("/admin/economia/resumen.xlsx").content)) as archive:
+                self.assertIn("<v>0.25</v>", archive.read("xl/worksheets/sheet2.xml").decode())
+
+    def test_http_server_login_page_and_json(self):
+        import socket
+        import threading
+        import time
+
+        import httpx
+        import uvicorn
+        from noesis.web import server
+
+        contexto, _, password = self._client()
+        with contexto[0], contexto[1], contexto[2], socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            app_server = uvicorn.Server(uvicorn.Config(server.app, log_level="error"))
+            thread = threading.Thread(target=app_server.run, kwargs={"sockets": [listener]}, daemon=True)
+            thread.start()
+            try:
+                deadline = time.monotonic() + 10
+                while not app_server.started and thread.is_alive() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(app_server.started)
+                with httpx.Client(base_url=f"http://127.0.0.1:{listener.getsockname()[1]}") as client:
+                    self.assertEqual(client.get("/health").status_code, 200)
+                    login = client.post("/login", data={"email": "admin@example.com", "password": password})
+                    self.assertEqual(login.status_code, 303)
+                    self.assertEqual(client.get("/admin/economia").status_code, 200)
+                    self.assertFalse(client.get("/admin/economia/datos").json()["rampa"]["financiable"])
+            finally:
+                app_server.should_exit = True
+                thread.join(10)
+                self.assertFalse(thread.is_alive())
 
 
 if __name__ == "__main__":

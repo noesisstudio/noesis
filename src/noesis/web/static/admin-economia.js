@@ -14,7 +14,19 @@
   if (!root) return;
   const NS = 'http://www.w3.org/2000/svg';
   const levers = Array.from(document.querySelectorAll('[data-eco-lever]'));
+  // No dejar que el rango o su paso redondeen lo guardado al abrir la página.
+  levers.forEach(el => {
+    const saved = Number(el.getAttribute('value'));
+    el.min = Math.min(Number(el.min), saved);
+    el.max = Math.max(Number(el.max), saved);
+    el.step = 'any';
+    el.value = String(saved);
+  });
   const base = new Map(levers.map(el => [el.dataset.ecoLever, el.value]));
+  const initial = new URLSearchParams(window.location.search);
+  const overrides = new Map(levers.filter(el => initial.has(el.dataset.ecoLever))
+    .map(el => [el.dataset.ecoLever, el.value]));
+  const originalOverrides = new Map(overrides);
   let ultimo = 0;
 
   // ------------------------------------------------------------- formato ---
@@ -39,7 +51,7 @@
 
   function query() {
     const p = new URLSearchParams();
-    levers.forEach(el => p.set(el.dataset.ecoLever, el.value));
+    overrides.forEach((value, key) => p.set(key, value));
     return p;
   }
 
@@ -195,13 +207,15 @@
       const cuando = r.mes_positivo
         ? 'Se llega en el <b>mes ' + r.mes_positivo + '</b>'
         : '<b class="red">No se llega dentro de 36 meses</b>';
-      const caja = falta > d.caja_inicial
-        ? ', y la caja baja hasta <b class="red">' + eur(minima) + '</b>, más de los '
-          + eur(d.caja_inicial) + ' disponibles: así el plan no es financiable.'
-        : ', y la caja baja hasta <b>' + eur(minima) + '</b>, dentro de los '
-          + eur(d.caja_inicial) + ' disponibles.';
-      parte.innerHTML = '<b>' + num(eq.cuentas) + ' cuentas</b> cubren la estructura, '
-        + 'la cuota de autónomos y lo que quieres cobrar. ' + cuando + caja;
+      const caja = falta > 0
+        ? ', y la caja baja hasta <b class="red">' + eur(minima) + '</b>: faltan '
+          + eur(falta) + ' adicionales a la caja inicial. El plan no es financiable.'
+        : ', y la caja mínima queda en <b>' + eur(minima)
+          + '</b>. La caja inicial cubre esta proyección de 36 meses.';
+      parte.innerHTML = (eq.cuentas === null
+        ? '<b>No hay equilibrio con esta contribución por cuenta.</b> '
+        : '<b>' + num(eq.cuentas) + ' cuentas</b> cubren la estructura, '
+          + 'la cuota de autónomos y lo que quieres cobrar. ') + cuando + caja;
     }
 
     const steps = document.querySelector('[data-eco-steps]');
@@ -218,9 +232,11 @@
 
     const nota = document.querySelector('[data-eco-horas]');
     if (nota) {
-      nota.className = 'eco-note ' + (cabe.estado === 'no' ? 'bad'
+      nota.className = 'eco-note ' + (['no', 'sin_equilibrio'].includes(cabe.estado) ? 'bad'
         : cabe.estado === 'justo' ? 'warn' : 'ok');
-      nota.innerHTML = cabe.estado === 'no'
+      nota.innerHTML = cabe.estado === 'sin_equilibrio'
+        ? '<b>No hay equilibrio con estos supuestos.</b> Cada cuenta tiene una contribución nula o negativa; disponer de más horas no lo resuelve.'
+        : cabe.estado === 'no'
         ? '<b>No te dan las horas.</b> Atender esas ' + num(cabe.cuentas)
           + ' cuentas costaría ' + dec(cabe.horas) + ' h al mes y solo tienes '
           + nf(0).format(d.horas_mes) + ': llegarías al equilibrio sin una hora libre '
@@ -235,7 +251,7 @@
 
     const badge = document.querySelector('[data-eco-badge]');
     if (badge) {
-      const ok = (r.caja_minima || 0) >= -d.caja_inicial;
+      const ok = r.financiable;
       badge.textContent = ok ? 'financiable con la caja actual' : 'no financiable';
       badge.className = 'badge ' + (ok ? 'b-green' : 'b-amber');
     }
@@ -281,6 +297,7 @@
       if (marca !== ultimo) return;  // llegó tarde: hay una petición más nueva
       pintar(d);
     } catch (e) {
+      if (marca !== ultimo) return;
       const nota = document.querySelector('[data-eco-horas]');
       if (nota) {
         nota.className = 'eco-note warn';
@@ -294,6 +311,7 @@
 
   let debounce = null;
   function alMover(el) {
+    overrides.set(el.dataset.ecoLever, el.value);
     const salida = document.querySelector('[data-eco-out="' + el.dataset.ecoLever + '"]');
     if (salida) salida.textContent = etiqueta(el.dataset.ecoLever, el.value);
     clearTimeout(debounce);
@@ -309,6 +327,8 @@
   const reset = document.querySelector('[data-eco-reset]');
   if (reset) {
     reset.addEventListener('click', () => {
+      overrides.clear();
+      originalOverrides.forEach((value, key) => overrides.set(key, value));
       levers.forEach(el => {
         el.value = base.get(el.dataset.ecoLever);
         const salida = document.querySelector('[data-eco-out="' + el.dataset.ecoLever + '"]');
