@@ -1,5 +1,25 @@
 ﻿# Registro de QA
 
+## 2026-09-22 — Sonnet 5 en todo, fuera Haiku
+
+- `tests/test_ai_model_config.py` (nuevo): **6 casos**. Suite completa **1.042 en
+  verde**. Ruff OK.
+- **Revisado antes de cambiar**: ninguna llamada a Anthropic usa `temperature`,
+  `top_p` ni `budget_tokens`, que Sonnet 5 rechaza con 400. Solo hay dos puntos de
+  llamada (el agente y `extraction._message`, por el que pasan las cuatro lecturas).
+- **Una prueba existente falló, y era lo esperado**:
+  `test_agent_records_token_usage` tenía escrito a mano `0.000546`, que es 321/45
+  tokens a la tarifa de Haiku. Con la de Sonnet 5 sale exactamente el doble. Ahora
+  calcula con la tarifa configurada y, además, fija que el doble es el doble.
+- **Impacto en el modelo económico calculado** con el supuesto de coste por
+  interacción duplicado: coste medio por cuenta de 3,73 € a 3,82 €, contribución de
+  37,98 € a 37,89 €, y solo el cuarto equilibrio se mueve (57 → 58). No se ha
+  cambiado el valor de fábrica: fijaría otras las cifras ancla del 15/07 que
+  protegen las pruebas; se edita desde `/admin/economia`.
+- **No ejecutado:** ninguna llamada real a Sonnet 5. No hay credenciales de
+  Anthropic en este equipo, y producción puede tener el modelo fijado por variable
+  de entorno en Railway.
+
 ## 2026-09-21 — Rastreo de la ruta de salida del correo
 
 - `tests/test_email_dns.py` sube a **22 casos** (7 nuevos). Suite completa

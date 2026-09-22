@@ -8635,7 +8635,14 @@ class AdminCommandCenterTestCase(unittest.TestCase):
         self.assertEqual(entry["input"], 321)
         self.assertEqual(entry["output"], 45)
         self.assertEqual(entry["providers"], {"anthropic": 1})
-        self.assertAlmostEqual(entry["estimated_cost_usd"], 0.000546)
+        # Se calcula con la tarifa configurada y no con un número fijo: la cifra
+        # escrita a mano era la de Haiku (1/5 USD) y dejó de ser cierta el 22-09 al
+        # pasar a Sonnet 5 (2/10), aunque la aritmética seguía bien.
+        esperado = (321 * config.FALLBACK_INPUT_USD_PER_MTOK
+                    + 45 * config.FALLBACK_OUTPUT_USD_PER_MTOK) / 1_000_000
+        self.assertAlmostEqual(entry["estimated_cost_usd"], esperado)
+        # Y con Sonnet 5 por defecto, el doble de lo que medía con Haiku.
+        self.assertAlmostEqual(esperado, 2 * 0.000546)
 
     def test_local_agent_uses_tools_without_external_credits(self):
         from noesis import agent as agent_module

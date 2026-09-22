@@ -1,8 +1,8 @@
 {
-  "state_date": "2026-09-21",
+  "state_date": "2026-09-22",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 57,
-  "verified_test_count": 1036,
+  "verified_test_count": 1042,
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
   "production": {
     "url": "https://bynoesis.com",
@@ -143,7 +143,8 @@
     "resent_document_is_reread": "resending_the_same_pdf_over_whatsapp_reclassifies_the_stored_document_instead_of_answering_that_it_was_already_saved_and_stopping_so_a_paper_archived_before_the_ai_was_configured_can_still_be_proposed_no_duplicate_row_and_the_reply_says_it_was_already_on_file_instead_of_printing_an_internal_id",
     "multi_invoice_pdf_classification": "multiple_model_entries_are_left_for_separate_review_whatsapp_requests_separate_files_no_partial_invoice_or_expense_extraction_single_document_flows_preserved_real_corpus_pending",
     "economics_panel_2026_09_18": "El modelo economico vive en src/noesis/economics.py y no solo en analysis/: coste por plan driver a driver, dos contribuciones (en caja mientras atiende el founder, cargada cuando el soporte lo paga alguien), tres equilibrios, capacidad en horas, cohortes con bajas y caja a 36 meses. Pagina /admin/economia detras de _is_admin con seis palancas que recalculan en el servidor (no hay copia del modelo en JavaScript). Descargas .docx y .xlsx de dos paginas generadas al vuelo con officedocs.py usando zipfile y XML: cero dependencias nuevas en produccion. db.economy_timeline da la serie mensual de cartera, conexiones, ingreso y coste real y deja en None lo que no puede reconstruir. Lo real se pone al lado del supuesto y no lo sustituye. Cifras ancla del 15/07/2026 fijadas por tests/test_economia_panel.py (17 casos). Migracion 56 (economy_assumptions): los 47 supuestos del catalogo EDITABLE se editan y se guardan desde /admin/economia; solo se guarda lo que se desvia del valor de fabrica y volver a la cifra original borra la fila. Pendiente: abrir las descargas con Office real y revisar la pagina en un navegador con cuentas reales.",
-    "sales_crm_2026_09_21": "admin_only_company_funnel_nine_states_paste_import_with_dedupe_and_opt_out_bilingual_es_ca_scripts_per_state_touch_log_art14_notice_flag_csv_export_migration_57_no_business_id_no_new_dependencies_plus_origin_based_scripts_email_for_gestorias_and_gremios"
+    "sales_crm_2026_09_21": "admin_only_company_funnel_nine_states_paste_import_with_dedupe_and_opt_out_bilingual_es_ca_scripts_per_state_touch_log_art14_notice_flag_csv_export_migration_57_no_business_id_no_new_dependencies_plus_origin_based_scripts_email_for_gestorias_and_gremios",
+    "ai_models_2026_09_22": "claude_sonnet_5_for_agent_fallback_and_extraction_haiku_removed_rates_2_10_usd_thinking_disabled_by_default_railway_env_overrides_code"
   },
   "ai_route": [
     "reglas_locales",

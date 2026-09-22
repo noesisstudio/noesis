@@ -1,5 +1,43 @@
 ﻿# Registro de cambios
 
+## 2026-09-22 — Sonnet 5 en todo y fuera Haiku
+
+Petición del founder: «pon el Sonnet y quita el Haiku». Tres valores por defecto
+cambian en `config.py`: `MODEL` de `claude-sonnet-4-6` a `claude-sonnet-5`, y
+`FALLBACK_MODEL` —del que hereda `EXTRACTION_MODEL`— de `claude-haiku-4-5` a
+`claude-sonnet-5`. Las tarifas por defecto pasan a 2/10 USD por millón en los dos:
+con la de Haiku, el panel de consumo habría medido la mitad de lo que se gasta, y la
+del agente principal estaba a cero, así que no medía nada.
+
+**Lo que no era un cambio de nombre.** Sonnet 5 razona por defecto cuando no se le
+dice nada, y Haiku no. Ese razonamiento cuenta dentro de `max_tokens`, y las cuatro
+lecturas de documentos piden 220, 400, 700 y 3.000: con el razonamiento encendido,
+el JSON saldría cortado y el documento se quedaría «pendiente» sin motivo aparente.
+`config.ai_thinking()` lo apaga por defecto, en el único helper por el que pasan las
+cuatro lecturas (`extraction._message`) y en el agente, y cualquier valor de
+`NOESIS_AI_THINKING` que no sea `adaptive` se trata como apagado, para que un error
+de tecleo no pueda encenderlo.
+
+Comprobado antes de cambiar nada: ninguna llamada a Anthropic usa `temperature`,
+`top_p` ni `budget_tokens`, que Sonnet 5 rechaza con un 400. El `temperature` que
+aparece en `adapters/ai.py` es de la ruta OpenAI-compatible del cerebro local.
+
+- **Áreas/archivos:** `src/noesis/config.py`, `src/noesis/agent.py`,
+  `src/noesis/adapters/extraction.py`, `.env.example`, `docs/Decisiones.md`.
+- **Pruebas:** `tests/test_ai_model_config.py`, 6 casos nuevos: que no vuelva
+  Haiku como valor por defecto, las tarifas nuevas, que una variable de Railway siga
+  mandando, y que el razonamiento solo se enciende con `adaptive` exacto.
+- **Límites externos:** **no se ha probado contra la API real**: no hay
+  credenciales de Anthropic en este equipo.
+- **Riesgo:** medio-bajo. **Si Railway tiene definidas `NOESIS_MODEL` o
+  `NOESIS_FALLBACK_MODEL`, mandan ellas y este cambio no hace nada en producción.**
+- **Diagnóstico:** si tras desplegar el chat dice «la IA avanzada no está
+  disponible», Ajustes muestra el tipo de error del proveedor. Un 404 es un
+  identificador de modelo mal escrito; un 400 es un parámetro que el modelo no
+  acepta.
+- **Rollback:** `NOESIS_MODEL=claude-sonnet-4-6` y
+  `NOESIS_FALLBACK_MODEL=claude-haiku-4-5` en Railway, sin tocar código.
+
 ## 2026-09-21 — Por dónde sale el correo: el dato que faltaba
 
 El founder insistió en lo concreto: que los correos a gestorías lleguen a bandeja

@@ -241,6 +241,7 @@ class NoesisAgent:
             resp = self.client.messages.create(
                 model=self.model,
                 max_tokens=1024,
+                thinking=config.ai_thinking(),
                 system=system,
                 tools=safe_tools,
                 messages=self.messages,

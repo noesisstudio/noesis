@@ -52,25 +52,46 @@ ASSISTANT_REVIEW_ENABLED = env_bool("NOESIS_ASSISTANT_REVIEW_ENABLED", False)
 ASSISTANT_LEARNING_ENABLED = env_bool("NOESIS_ASSISTANT_LEARNING_ENABLED", False)
 # Piloto local: exige además revisión; no activa proveedores ni aprendizaje.
 LOCAL_PLANNER_ENABLED = env_bool("NOESIS_LOCAL_PLANNER_ENABLED", False)
-MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-4-6")
-# El agente principal puede usar una tarifa distinta al fallback. Cero evita
-# inventar coste si no se ha revisado el precio del modelo elegido.
+# Decisión del founder (2026-09-22): Sonnet en todo y fuera Haiku. Sonnet 5 es
+# además más barato por token que el Sonnet 4.6 que había (2/10 frente a 3/15 USD
+# por millón), así que el agente principal abarata y el respaldo encarece el doble.
+MODEL = os.getenv("NOESIS_MODEL", "claude-sonnet-5")
+# Tarifa del agente principal. Es la de Sonnet 5 revisada el 22-09-2026; si se
+# cambia de modelo por variable de entorno, hay que cambiar también estas dos o el
+# coste medido será falso.
 MODEL_INPUT_USD_PER_MTOK = float(
-    os.getenv("NOESIS_MODEL_INPUT_USD_PER_MTOK", "0")
+    os.getenv("NOESIS_MODEL_INPUT_USD_PER_MTOK", "2")
 )
 MODEL_OUTPUT_USD_PER_MTOK = float(
-    os.getenv("NOESIS_MODEL_OUTPUT_USD_PER_MTOK", "0")
+    os.getenv("NOESIS_MODEL_OUTPUT_USD_PER_MTOK", "10")
 )
-# Modelo BARATO para el respaldo del chat (cuando el cerebro local no entiende la
-# frase). Haiku minimiza el coste: el 90% se resuelve gratis en local y solo lo
-# realmente complejo paga, a fracción de céntimo. Cámbialo con NOESIS_FALLBACK_MODEL.
+# Respaldo del chat (cuando el cerebro local no entiende la frase) y lectura de
+# documentos. Era Haiku; ahora el mismo Sonnet que el agente principal, por decisión
+# del founder. El 90 % sigue resolviéndose gratis en local: esto solo lo paga lo
+# realmente complejo. Cámbialo con NOESIS_FALLBACK_MODEL.
 # Identificador sin sufijo de fecha: es la forma vigente del modelo. Una versión
 # fechada puede dejar de resolverse y entonces toda llamada devuelve 404, que en el
 # chat se ve como «la IA avanzada no está disponible».
-FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-haiku-4-5")
-# Lectura de facturas, tickets y extractos. Por defecto el mismo modelo barato; si
-# en el piloto lee mal documentos reales se puede subir a uno mayor sin tocar código.
+FALLBACK_MODEL = os.getenv("NOESIS_FALLBACK_MODEL", "claude-sonnet-5")
+# Lectura de facturas, tickets y extractos. Por defecto el mismo modelo que el
+# respaldo; se puede separar sin tocar código.
 EXTRACTION_MODEL = os.getenv("NOESIS_EXTRACTION_MODEL", "").strip() or FALLBACK_MODEL
+# Sonnet 5 razona por defecto cuando no se le dice nada, y Haiku no lo hacía. Ese
+# razonamiento cuenta dentro de `max_tokens`, y las lecturas de documentos piden
+# entre 220 y 700: pensar se comería el hueco y cortaría el JSON a medias, que en
+# el producto se ve como un documento que se queda «pendiente» sin motivo. Apagado
+# se comporta como antes y cuesta lo mismo por respuesta. Se enciende con
+# NOESIS_AI_THINKING=adaptive, subiendo antes los `max_tokens`.
+AI_THINKING = os.getenv("NOESIS_AI_THINKING", "disabled").strip().lower()
+
+
+def ai_thinking() -> dict:
+    """Parámetro `thinking` para las llamadas a Anthropic.
+
+    Cualquier valor que no sea `adaptive` se trata como apagado: un error de tecleo
+    en la variable no puede encender el razonamiento y cortar los JSON.
+    """
+    return {"type": "adaptive" if AI_THINKING == "adaptive" else "disabled"}
 # Segundo nivel privado opcional. Acepta servidores con contrato OpenAI-compatible
 # (Ollama, llama.cpp o vLLM). Si falta, Bynoesis pasa a la IA externa consentida.
 LOCAL_AI_BASE_URL = os.getenv("NOESIS_LOCAL_AI_BASE_URL", "").strip()
@@ -99,10 +120,10 @@ COMPAT_AI_OUTPUT_USD_PER_MTOK = float(
 # Tarifa del modelo de respaldo, explícita y revisable. Los valores por defecto
 # corresponden a Haiku 4.5 en julio de 2026; si cambia el modelo, deben cambiarse.
 FALLBACK_INPUT_USD_PER_MTOK = float(
-    os.getenv("NOESIS_FALLBACK_INPUT_USD_PER_MTOK", "1")
+    os.getenv("NOESIS_FALLBACK_INPUT_USD_PER_MTOK", "2")
 )
 FALLBACK_OUTPUT_USD_PER_MTOK = float(
-    os.getenv("NOESIS_FALLBACK_OUTPUT_USD_PER_MTOK", "5")
+    os.getenv("NOESIS_FALLBACK_OUTPUT_USD_PER_MTOK", "10")
 )
 BUSINESS_NAME = os.getenv("NOESIS_BUSINESS_NAME", "Mi Negocio")
 

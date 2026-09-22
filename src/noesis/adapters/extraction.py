@@ -27,6 +27,7 @@ _FIELDS = ("concept", "amount", "vat_rate", "date", "supplier")
 def _message(client, *, business_id=None, **kwargs):
     """Mide la llamada aunque después falle el JSON; la observación no la rompe."""
     start = time.monotonic()
+    kwargs.setdefault("thinking", config.ai_thinking())
     response = client.messages.create(**kwargs)
     if business_id is not None:
         try:

@@ -2,6 +2,25 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Sonnet en todo, fuera Haiku (2026-09-22)
+
+Decisión del founder. El agente principal pasa de `claude-sonnet-4-6` a
+`claude-sonnet-5`, y el respaldo del chat y la lectura de documentos, que iban con
+`claude-haiku-4-5`, pasan al mismo Sonnet 5. Sustituye a la regla de las decisiones
+del 15-jul y del 7-ago, que reservaban Haiku como respaldo barato.
+
+El coste se mueve en direcciones opuestas: Sonnet 5 cuesta 2/10 USD por millón de
+tokens frente a los 3/15 de Sonnet 4.6, así que el agente principal **abarata**, y
+frente a los 1/5 de Haiku, así que el respaldo **dobla**. Con el supuesto del
+modelo económico de que el 80 % se resuelve en local, el coste medio por cuenta pasa
+de 3,73 € a 3,82 € al mes y solo se mueve el cuarto equilibrio (57 → 58 cuentas).
+
+Condición que acompaña al cambio: Sonnet 5 **razona por defecto** y Haiku no. Ese
+razonamiento cuenta dentro de `max_tokens`, y la lectura de documentos pide entre
+220 y 700: encendido, cortaría el JSON. Queda apagado por defecto
+(`NOESIS_AI_THINKING=disabled`), que reproduce el comportamiento anterior; se
+enciende con `adaptive` después de subir los `max_tokens` y medirlo.
+
 ## Entender a medias y preguntar lo que falta (2026-09-16)
 
 Una orden que se entiende en parte no se descarta entera. Si «añade un trabajo para

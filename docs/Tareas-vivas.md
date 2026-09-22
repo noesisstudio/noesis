@@ -1,5 +1,19 @@
 # Tareas vivas
 
+## Sonnet 5 en todo — 22-sep
+
+- [x] Valores por defecto a `claude-sonnet-5` (agente, respaldo y lectura de
+  documentos), tarifas a 2/10 USD y razonamiento apagado por defecto.
+- [ ] Founder, **antes de dar esto por hecho**: en Railway → Variables, mirar si
+  existen `NOESIS_MODEL`, `NOESIS_FALLBACK_MODEL`, `NOESIS_EXTRACTION_MODEL` o las
+  tarifas `NOESIS_*_USD_PER_MTOK`. Si existen, **mandan sobre el código**: bórralas o
+  ponlas a `claude-sonnet-5` y 2/10.
+- [ ] Tras desplegar: mandar una frase que el cerebro local no entienda y leer un
+  ticket con foto. Si Ajustes muestra un error del proveedor, un 404 es el nombre
+  del modelo y un 400 un parámetro.
+- [ ] En `/admin/economia`, subir el supuesto de coste por interacción de IA avanzada
+  de 0,014 a 0,028 USD para que el modelo refleje la tarifa de Sonnet 5.
+
 ## Gestorías como puerta — 21-sep
 
 - [x] Guiones de correo para gestorías y gremios en el CRM, en las dos lenguas,
