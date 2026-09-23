@@ -76,9 +76,16 @@ async def api_create_client(business_id: int, request: Request):
     name = (body.get("name") or "").strip()
     if not name:
         return JSONResponse({"error": "El nombre es obligatorio."}, status_code=400)
-    return db.add_client(name, phone=body.get("phone"), address=body.get("address"),
-                         zone=body.get("zone"), nif=body.get("nif"),
-                         email=body.get("email"), business_id=business_id)
+    # Un nombre que la base rechaza es un error del formulario, no del servidor:
+    # sin este `except` salía un 500 y la página de clientes se quedaba muerta,
+    # mientras que la misma alta de proveedor sí devolvía el motivo.
+    try:
+        return db.add_client(name, phone=body.get("phone"),
+                             address=body.get("address"), zone=body.get("zone"),
+                             nif=body.get("nif"), email=body.get("email"),
+                             business_id=business_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
 
 
 @router.post("/api/{business_id}/clients/import")

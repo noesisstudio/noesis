@@ -812,6 +812,15 @@
           onchange="saveAiPreference(this)">
       </label>
       <div id="ai-preference-msg" class="meta" role="status"></div>
+      {% if ai_model %}
+      <p class="meta" style="margin-top:8px">
+        Modelo en uso: <b>{{ ai_model }}</b>.
+        {% if ai_model_is_key_missing %}
+        <span class="muted">Sin clave de proveedor configurada: ahora mismo todo
+        lo resuelve el cerebro local.</span>
+        {% endif %}
+      </p>
+      {% endif %}
       {% if ai_last_error %}
       {# Sin esto, un fallo del proveedor solo se veía en el chat como «no está
          disponible» y no había forma de saber si era la clave, el modelo o el límite. #}

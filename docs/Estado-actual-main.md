@@ -1,5 +1,78 @@
 # Estado actual del producto
 
+## 23-sep — Pedir una factura como se hable
+
+La misma factura se puede pedir de quince maneras y salen las quince: con «a» o
+sin ella, el importe delante o detrás, el concepto marcado con la palabra
+«concepto» —vaya donde vaya en la frase— o sin marcar. Si no se dice el concepto,
+queda «Servicio».
+
+Lo que lo hace posible no es una regla más lista, es **la cartera de clientes**:
+cuando el nombre dictado se traga el concepto («a Reformas Martínez la ventana
+750»), se busca qué parte tiene ficha y lo que sobra pasa a ser el concepto. Con
+dos fichas que encajan no se elige: se pregunta.
+
+Y confirmar admite lenguaje humano: «sí, genera el pdf» vale. Lo que cambie la
+operación —una cifra, un «pero»— no confirma nada y se vuelve a preguntar.
+
+En Ajustes se ve qué modelo de IA hay puesto de verdad, que antes había que
+adivinar porque una variable del servidor manda sobre el código.
+
+
+## 23-sep — Dictar una factura entera de un tirón
+
+Al dictar por voz, el concepto llega pegado al nombre y detrás de un punto:
+«factura a Reformas Martínez. Concepto ventanas 850 euros». Eso ya se entiende: el
+cliente es Reformas Martínez y el concepto, ventanas. Antes el nombre se tragaba la
+frase entera, no reconocía la ficha, y la factura salía a nombre de «Reformas
+Martínez. Concepto ventanas» —que es el nombre fiscal que iría en el PDF— con el
+concepto en «Servicio».
+
+El punto de «S.L.» o el de una inicial («Talleres J. Pino») no parte nada: esos van
+dentro del nombre.
+
+Y si ese cliente todavía no tiene ficha, se ofrece crearla y seguir con la factura
+en el mismo paso: un «sí» basta, y si el nombre estaba mal escrito se dice bien y
+se arregla ahí mismo. Antes era el final de la conversación.
+
+
+## 23-sep — Dar de alta a alguien ya no se rompe por la mitad
+
+Decir «crea el cliente» sin más ya no lista clientes: pregunta cómo se llama y se
+acuerda de que estaba dando de alta a alguien, así que basta contestar «Jordi Mas»
+para terminarlo. Lo mismo con proveedores. Si lo que se dice no puede ser el
+nombre de nadie —un número de teléfono, un nombre de 400 caracteres— lo dice con
+esas palabras y vuelve a preguntar, en vez de guardar una ficha basura o cortar la
+conversación con un error.
+
+El teléfono que se dicta detrás del nombre («Marta Vila, teléfono 611 22 33 44»)
+va a su columna, no al nombre. Y el mismo proveedor escrito de otra manera
+—«materiales sol» frente a «Materiales Sol»— reutiliza la ficha que ya existe en
+vez de crear una segunda, que partía en dos el gasto que ve la gestoría.
+
+En la web, un nombre que la base rechaza devuelve el motivo y no un error del
+servidor: la página de Clientes se quedaba muerta.
+
+
+## 23-sep — Pedir una factura sin tener todos los datos
+
+Pedir «hazme una factura para este cliente, los datos te los paso luego» ya no
+termina en «no he creado nada». Se crea el borrador con lo que se haya entendido y
+Bynoesis dice, con esas palabras, qué le falta. Se completa como se hable: una
+frase suelta en el chat («el importe es 300»), el formulario de Facturas, o dar de
+alta al cliente que el borrador esperaba por su nombre, que se enlaza solo.
+
+Un borrador a medias es visible y editable, pero **no se puede emitir**: en el
+listado sale como «A medias», con lo que falta escrito al lado y sin botón de
+emitir. En cuanto se completa, vuelve a ser un borrador normal con su línea, su
+IVA y su total, y se emite como cualquier otro.
+
+Lo que NO hace, y es deliberado: no crea la ficha del cliente por su cuenta (un
+alta implícita duplica clientes por un error de voz), no adivina de quién hablas si
+hay varios clientes y nadie ha sido nombrado, y no crea nada cuando la frase
+pregunta por una factura que ya existe («necesito la factura de Juan»).
+
+
 ## 21-sep — El embudo de captación, dentro del producto
 
 `/admin/crm` es el CRM de Bynoesis: la lista de a quién persigues, en qué punto está

@@ -3155,8 +3155,14 @@ def get_user_by_email(email) -> dict | None:
 def add_client(name, phone=None, address=None, zone=None, nif=None, email=None,
                *, business_id: int) -> dict:
     name = (name or "").strip()
+    # Los dos motivos se distinguen porque llevan a cosas distintas: uno se
+    # arregla diciendo el nombre y el otro acortándolo. Antes, un nombre de 400
+    # caracteres entraba tal cual en clientes (proveedores sí lo cortaba), y la
+    # ficha quedaba ilegible en listas, PDF y facturas.
     if not name:
         raise ValueError("El nombre del cliente es obligatorio.")
+    if len(name) > 200:
+        raise ValueError("El nombre del cliente es demasiado largo (máx. 200).")
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO clients (business_id, name, phone, address, zone, nif, email, "
@@ -5818,6 +5824,165 @@ def get_invoice_lines(invoice_id: int, business_id: int) -> list[dict]:
         return [dict(row) for row in rows]
 
 
+# --------------------------------------------------- Factura a medias ---
+# Una factura puede empezar sin todos sus datos y decir cuáles le faltan. El
+# contrato vive en `invoices.pending_fields` (migración 58): una lista JSON con
+# `cliente`, `concepto` e `importe`. Mientras quede alguno, la factura existe
+# como borrador pero **no se puede emitir**. Cualquier vía que complete un dato
+# —el chat, la web o una lectura de documento— llama a `complete_invoice_fields`,
+# y la factura final se reconstruye con `update_invoice_draft`, la misma función
+# que valida cualquier otro borrador: no hay un segundo camino que se salte reglas.
+INVOICE_PENDING_ORDER = ("cliente", "concepto", "importe")
+PENDING_CONCEPT = "Pendiente de concepto"
+
+
+def invoice_pending_fields(invoice: dict | None) -> list[str]:
+    """Lo que le falta a una factura, en orden estable. Lista vacía = completa."""
+    if not invoice or not invoice.get("pending_fields"):
+        return []
+    try:
+        pendientes = json.loads(invoice["pending_fields"])
+    except (TypeError, ValueError):
+        return []
+    return [f for f in INVOICE_PENDING_ORDER if f in pendientes]
+
+
+def _partial_totals(base, vat_rate, irpf_rate) -> dict:
+    """Importes provisionales de un borrador a medias, sin líneas todavía."""
+    base = Decimal(str(base or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    vat_rate = Decimal(str(vat_rate if vat_rate is not None else config.DEFAULT_VAT_RATE))
+    irpf_rate = Decimal(str(irpf_rate or 0))
+    vat = (base * vat_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    irpf = (base * irpf_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return {"base": float(base), "vat_rate": float(vat_rate),
+            "vat_amount": float(vat), "irpf_rate": float(irpf_rate),
+            "irpf_amount": float(irpf), "total": float(base + vat - irpf)}
+
+
+def _valid_amount(base) -> float | None:
+    try:
+        value = float(base)
+    except (TypeError, ValueError):
+        return None
+    return round(value, 2) if value > 0 else None
+
+
+def create_partial_invoice(business_id: int, *, client_id=None, client_name=None,
+                           concept=None, base=None, vat_rate=None,
+                           irpf_rate=0) -> dict:
+    """Crea el borrador con lo que se sepa y declara lo que falta.
+
+    Si llegan los tres datos, es una factura normal y va por `add_invoice`.
+    `client_name` sin `client_id` es un nombre dicho que no tiene ficha: se guarda
+    en `recipient_name` para no perderlo, pero no se crea la ficha, porque un alta
+    implícita duplica clientes por errores de voz. Queda pendiente de enlazar.
+    """
+    concept = (concept or "").strip() or None
+    amount = _valid_amount(base)
+    if client_id is not None and not get_client(client_id, business_id):
+        raise ValueError("El cliente no pertenece a este negocio.")
+    if client_id and concept and amount:
+        return add_invoice(client_id, concept, amount,
+                           vat_rate if vat_rate is not None else config.DEFAULT_VAT_RATE,
+                           irpf_rate, business_id=business_id)
+    pendientes = [campo for campo, dato in (("cliente", client_id),
+                                            ("concepto", concept),
+                                            ("importe", amount)) if not dato]
+    totals = _partial_totals(amount, vat_rate, irpf_rate)
+    nombre = (client_name or "").strip()[:200] or None
+    with get_conn() as conn:
+        series = _ensure_default_invoice_series(
+            conn, business_id, _series_document_type("F1"))
+        row = conn.execute(
+            "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
+            "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
+            "series_id, recipient_name, pending_fields, currency, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', 'F1', ?, ?, ?, 'EUR', ?) "
+            "RETURNING id",
+            (business_id, client_id, concept or PENDING_CONCEPT, totals["base"],
+             totals["vat_rate"], totals["vat_amount"], totals["irpf_rate"],
+             totals["irpf_amount"], totals["total"], series["id"],
+             None if client_id else nombre, json.dumps(pendientes), _now()),
+        ).fetchone()
+    return get_invoice(row["id"], business_id)
+
+
+def complete_invoice_fields(invoice_id: int, business_id: int, *, client_id=None,
+                            client_name=None, concept=None, base=None) -> dict:
+    """Rellena lo que falte. Al completarse el último dato, se valida entera."""
+    invoice = get_invoice(invoice_id, business_id)
+    if not invoice:
+        raise ValueError("Factura no encontrada.")
+    if invoice["status"] != "borrador" or invoice.get("number"):
+        raise ValueError("Una factura emitida no puede editarse.")
+    if client_id is not None and not get_client(client_id, business_id):
+        raise ValueError("El cliente no pertenece a este negocio.")
+    nuevo_cliente = client_id or invoice.get("client_id")
+    nuevo_concepto = (concept or "").strip() or (
+        None if invoice["concept"] == PENDING_CONCEPT else invoice["concept"])
+    nuevo_importe = _valid_amount(base) or _valid_amount(invoice.get("base"))
+    pendientes = [campo for campo, dato in (("cliente", nuevo_cliente),
+                                            ("concepto", nuevo_concepto),
+                                            ("importe", nuevo_importe)) if not dato]
+    if not pendientes:
+        # El último dato llega: se construye la factura con la función de siempre.
+        update_invoice_draft(
+            invoice_id, business_id, client_id=nuevo_cliente,
+            lines=[{"description": nuevo_concepto, "quantity": 1,
+                    "unit_price": nuevo_importe, "discount_rate": 0,
+                    "vat_rate": invoice.get("vat_rate") or config.DEFAULT_VAT_RATE}],
+            irpf_rate=invoice.get("irpf_rate") or 0,
+        )
+        with get_conn() as conn:
+            conn.execute(
+                "UPDATE invoices SET pending_fields=NULL, recipient_name=NULL "
+                "WHERE id=? AND business_id=?", (invoice_id, business_id))
+        return get_invoice(invoice_id, business_id)
+    totals = _partial_totals(nuevo_importe, invoice.get("vat_rate"),
+                             invoice.get("irpf_rate"))
+    nombre = (client_name or "").strip()[:200] or invoice.get("recipient_name")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE invoices SET client_id=?, concept=?, base=?, vat_amount=?, "
+            "irpf_amount=?, total=?, recipient_name=?, pending_fields=? "
+            "WHERE id=? AND business_id=? AND status='borrador'",
+            (nuevo_cliente, nuevo_concepto or PENDING_CONCEPT, totals["base"],
+             totals["vat_amount"], totals["irpf_amount"], totals["total"],
+             None if nuevo_cliente else nombre, json.dumps(pendientes),
+             invoice_id, business_id))
+    return get_invoice(invoice_id, business_id)
+
+
+def latest_partial_invoice(business_id: int) -> dict | None:
+    """El borrador a medias más reciente: al que se refiere «el importe es 300»."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM invoices WHERE business_id=? AND status='borrador' "
+            "AND pending_fields IS NOT NULL AND pending_fields NOT IN ('', '[]') "
+            "ORDER BY id DESC LIMIT 1", (business_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def link_partial_invoices_to_client(business_id: int, client: dict) -> list[int]:
+    """Al dar de alta un cliente, enlaza los borradores que lo esperaban por nombre.
+
+    Es lo que hace que «factura a Jordi, ya te paso los datos» + «crea el cliente
+    Jordi» acabe en un borrador con cliente sin pedir nada más.
+    """
+    objetivo = _fold_client_reference(client["name"])
+    enlazadas = []
+    with get_conn() as conn:
+        filas = conn.execute(
+            "SELECT id, recipient_name FROM invoices WHERE business_id=? "
+            "AND status='borrador' AND client_id IS NULL "
+            "AND pending_fields IS NOT NULL", (business_id,)).fetchall()
+    for fila in filas:
+        if fila["recipient_name"] and _fold_client_reference(fila["recipient_name"]) == objetivo:
+            complete_invoice_fields(fila["id"], business_id, client_id=client["id"])
+            enlazadas.append(fila["id"])
+    return enlazadas
+
+
 def update_invoice_draft(
     invoice_id: int,
     business_id: int,
@@ -5880,11 +6045,20 @@ def update_invoice_draft(
             ).fetchone()
             if not series or series["document_type"] != expected_type:
                 raise ValueError("La serie no corresponde al tipo de factura.")
+        # Guardar el borrador desde el formulario lo deja completo por
+        # construcción (cliente válido y líneas validadas arriba), así que deja de
+        # estar a medias. Sin esto, un borrador completado desde la web quedaría
+        # bloqueado para siempre porque `issue_invoice` seguiría viendo huecos.
+        # `recipient_name` se borra a la vez: era el nombre apuntado a mano
+        # mientras no había ficha, y el listado lo muestra por delante del cliente
+        # (`COALESCE(recipient_name, c.name)`). Si se quedara, un borrador que pasa
+        # a ser de Ana seguiría apareciendo a nombre de Pere.
         conn.execute(
             "UPDATE invoices SET client_id=?, concept=?, base=?, vat_rate=?, "
             "vat_amount=?, irpf_rate=?, irpf_amount=?, total=?, invoice_type=?, "
             "series_id=?, operation_date=?, notes=?, payment_method=?, "
-            "legal_mention=? WHERE id=? AND business_id=? AND status='borrador'",
+            "legal_mention=?, pending_fields=NULL, recipient_name=NULL "
+            "WHERE id=? AND business_id=? AND status='borrador'",
             (
                 client_id, concept, totals["base"], totals["vat_rate"],
                 totals["vat_amount"], totals["irpf_rate"],
@@ -6645,6 +6819,13 @@ def issue_invoice(
     ``_issued_at_override`` existe únicamente para construir cuentas demo con
     historia coherente. No se expone en las rutas de producto.
     """
+    pendientes = invoice_pending_fields(get_invoice(invoice_id, business_id))
+    if pendientes:
+        # Un borrador a medias existe para no perder lo dicho, nunca para emitirse
+        # con huecos. Se dice qué falta en vez de un error genérico.
+        raise ValueError(
+            "Esta factura está a medias y no se puede emitir todavía. Falta: "
+            + ", ".join(pendientes) + ".")
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
@@ -8877,13 +9058,16 @@ def _clean_nif(value) -> str | None:
 def add_supplier(name, nif=None, email=None, phone=None, note=None, *,
                  business_id: int) -> dict:
     name = (name or "").strip()
-    if not name or len(name) > 200:
-        raise ValueError("El nombre del proveedor es obligatorio (máx. 200).")
+    if not name:
+        raise ValueError("El nombre del proveedor es obligatorio.")
+    if len(name) > 200:
+        raise ValueError("El nombre del proveedor es demasiado largo (máx. 200).")
     nif = _clean_nif(nif)
     with get_conn() as conn:
-        existing = conn.execute(
-            "SELECT id FROM suppliers WHERE business_id=? AND name=?",
-            (business_id, name)).fetchone()
+        # El duplicado se mira plegando mayúsculas y acentos, como en clientes:
+        # «materiales sol» y «Materiales Sol» son el mismo proveedor, y tenerlo
+        # dos veces parte en dos el gasto de la gestoría.
+        existing = _find_supplier_row_by_name(conn, business_id, name)
         if existing:
             raise ValueError("Ya existe un proveedor con ese nombre.")
         row = conn.execute(
@@ -8913,8 +9097,26 @@ def list_suppliers(business_id) -> list[dict]:
             (business_id,)).fetchall()]
 
 
+def _find_supplier_row_by_name(conn, business_id: int, name: str):
+    """Proveedor cuyo nombre coincide ignorando mayúsculas, acentos y espacios."""
+    objetivo = _fold_client_reference(name)
+    if not objetivo:
+        return None
+    for row in conn.execute(
+            "SELECT * FROM suppliers WHERE business_id=? ORDER BY id",
+            (business_id,)).fetchall():
+        if _fold_client_reference(row["name"]) == objetivo:
+            return row
+    return None
+
+
 def find_supplier(business_id, *, nif=None, name=None) -> dict | None:
-    """Busca proveedor por NIF (prioritario) o nombre exacto, para no duplicar."""
+    """Busca proveedor por NIF (prioritario) o por nombre, para no duplicar.
+
+    El nombre se compara plegado: quien dicta «materiales sol» se refiere al
+    «Materiales Sol» que ya tiene ficha. Comparar exacto creaba un proveedor
+    nuevo por cada forma de escribirlo.
+    """
     nif = _clean_nif(nif)
     with get_conn() as conn:
         if nif:
@@ -8923,13 +9125,9 @@ def find_supplier(business_id, *, nif=None, name=None) -> dict | None:
                 (business_id, nif)).fetchone()
             if row:
                 return dict(row)
-        name = (name or "").strip()
-        if name:
-            row = conn.execute(
-                "SELECT * FROM suppliers WHERE business_id=? AND name=?",
-                (business_id, name)).fetchone()
-            if row:
-                return dict(row)
+        row = _find_supplier_row_by_name(conn, business_id, (name or "").strip())
+        if row:
+            return dict(row)
     return None
 
 

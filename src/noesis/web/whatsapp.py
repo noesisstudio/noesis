@@ -1125,6 +1125,29 @@ def _upload_owner_draft_pdf(data: bytes, filename: str) -> str:
     return media_id
 
 
+def _attach_new_invoice_pdf(business: dict, phone: str, invoice_ids) -> None:
+    """Adjunta el PDF de la factura recién preparada, para verla antes de emitirla.
+
+    Decisión del founder (23-09-2026): al pedir una factura por WhatsApp quiere el
+    PDF ahí mismo «para verificar que es correcta», sin pedirlo aparte. Antes solo
+    salía si la orden incluía «y mándamelo en PDF», y por el camino de la revisión
+    —que es el de producción, donde la factura nace al contestar «sí»— no salía
+    nunca.
+
+    Un borrador a medias no se enseña: todavía no es una factura, y un PDF con
+    «Pendiente de concepto» y 0 € confunde más de lo que ayuda.
+    """
+    if len(invoice_ids or []) != 1:
+        return
+    invoice = db.get_invoice(invoice_ids[0], business["id"])
+    if not invoice or db.invoice_pending_fields(invoice):
+        return
+    resultado = _send_owner_invoice_pdf(
+        business, phone, f"pásame factura {invoice['id']} en PDF")
+    if not resultado.get("sent") and resultado.get("reply"):
+        send(phone, resultado["reply"], business_id=business["id"])
+
+
 def _send_owner_invoice_pdf(business: dict, phone: str, text: str) -> dict:
     """Envía al titular el PDF real como documento reactivo de WhatsApp."""
     invoice, error = _invoice_for_owner_pdf(business["id"], text, phone)
@@ -1953,6 +1976,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 if invoice_id:
                     _remember_invoice(business["id"], phone, invoice_id)
                 send(phone, reply.get("reply", ""), business_id=business["id"], invoice_id=invoice_id)
+                _attach_new_invoice_pdf(business, phone, invoice_ids)
                 results.append({"business_id": business["id"], "reviewed": True})
                 _finish_inbound_message(message_id, claimed_ids)
                 continue
@@ -2185,12 +2209,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
         send(phone, reply, business_id=business["id"],
              invoice_id=(chat_result["invoice_ids"][0]
                          if len(chat_result.get("invoice_ids", [])) == 1 else None))
-        if create_and_pdf and len(chat_result.get("invoice_ids", [])) == 1:
-            pdf_result = _send_owner_invoice_pdf(
-                business, phone, f"pásame factura {chat_result['invoice_ids'][0]} en PDF"
-            )
-            if not pdf_result["sent"]:
-                send(phone, pdf_result["reply"], business_id=business["id"])
+        _attach_new_invoice_pdf(business, phone, chat_result.get("invoice_ids"))
         results.append({
             "phone": phone,
             "business_id": business["id"],

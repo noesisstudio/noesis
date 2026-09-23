@@ -18,16 +18,19 @@
   <meta property="og:title" content="{{ self.page_title() | striptags | trim }} | Bynoesis">
   <meta property="og:description" content="{{ self.meta_description() }}">
   <meta property="og:url" content="{{ base_url }}{{ request.url.path }}">
-  <meta property="og:image" content="{{ base_url }}/static/noesis-product-preview.png">
+  {# Tarjeta hecha para compartir: 1200x630, la proporción que usan Facebook,
+     LinkedIn y WhatsApp. Antes era una captura del panel con el nombre de una
+     cuenta y el de un cliente dentro, recortada por la mitad al compartirla. #}
+  <meta property="og:image" content="{{ base_url }}/static/bynoesis-social-card.png">
   <meta property="og:image:type" content="image/png">
-  <meta property="og:image:width" content="1265">
-  <meta property="og:image:height" content="900">
-  <meta property="og:image:alt" content="Bynoesis, el negocio ordenado en una sola vista">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Bynoesis · Tu negocio, por WhatsApp. Facturas, cobros y agenda para autónomos.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ self.page_title() | striptags | trim }} | Bynoesis">
   <meta name="twitter:description" content="{{ self.meta_description() }}">
-  <meta name="twitter:image" content="{{ base_url }}/static/noesis-product-preview.png">
-  <meta name="twitter:image:alt" content="Bynoesis, el negocio ordenado en una sola vista">
+  <meta name="twitter:image" content="{{ base_url }}/static/bynoesis-social-card.png">
+  <meta name="twitter:image:alt" content="Bynoesis · Tu negocio, por WhatsApp. Facturas, cobros y agenda para autónomos.">
   <link rel="canonical" href="{{ base_url }}{{ request.url.path }}">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <link rel="stylesheet" href="/static/public-marketing.css?v={{ asset_v }}">

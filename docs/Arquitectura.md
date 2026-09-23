@@ -20,7 +20,10 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   quedan protegidas por sesión y `business_id`.
 - `web/templates/landing.html` — página pública de producto en `/` con CTA a login/registro.
 - `web/static/app.css` — sistema de diseño propio (sin Tailwind ni CDNs).
-- `web/static/noesis-product-preview.png` — captura real del panel usada como visual de producto.
+- `web/static/bynoesis-social-card.png` — tarjeta de 1200x630 para la vista previa
+  del enlace (Open Graph). Hecha a propósito, sin capturas del panel: la anterior
+  enseñaba el nombre de una cuenta y el de un cliente al compartir el enlace.
+  Se regenera con `scripts/build_social_card.py`.
 - `web/static/vendor/chart.umd.min.js` — Chart.js servido en local.
 - `nlu.py` — **cerebro local** por reglas (sin coste/API).
 - `web/chat.py` — orquesta reglas → IA privada → IA externa autorizada. Si un nivel

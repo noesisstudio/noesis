@@ -82,12 +82,32 @@ class ConversationSafetyTests(unittest.TestCase):
         self.assertEqual(jobs[0]["description"], "reparar la caldera")
         self.assertEqual(jobs[0]["client_id"], self.client["id"])
 
-    def test_unknown_or_ambiguous_client_never_creates_implicit_record(self):
+    def test_an_unknown_client_is_offered_never_invented(self):
+        # «Martta» es un error de dictado de «Marta». Antes esto era el final del
+        # camino —el «sí» lo contestaba la revisión con «no hay ninguna propuesta
+        # pendiente»— y la orden se perdía. Ahora se ofrece, avisando del parecido
+        # con la ficha que ya existe, pero la ficha sigue sin nacer sola.
+        aviso = self.say("factura a Martta por revisión 100 euros")["reply"]
+        self.assertIn("No tengo ficha", aviso)
+        self.assertIn("Marta López", aviso)  # el parecido, primero
+        self.assertEqual(len(db.list_clients(self.bid)), 1)
+        self.assertEqual(db.list_invoices(self.bid), [])
+
+    def test_saying_the_right_name_reuses_the_record_instead_of_duplicating(self):
         self.say("factura a Martta por revisión 100 euros")
-        self.say("sí")
+        self.say("Marta López")
+        self.assertEqual(len(db.list_clients(self.bid)), 1)
+        self.assertEqual(db.list_invoices(self.bid)[0]["client_id"],
+                         self.client["id"])
+
+    def test_an_ambiguous_client_never_creates_implicit_record(self):
         db.add_client("Marta García", business_id=self.bid)
         result = self.say("factura a Marta por revisión 100 euros")
         self.assertIn("varios clientes", result["reply"])
+        self.assertEqual(db.list_invoices(self.bid), [])
+        self.assertEqual(len(db.list_clients(self.bid)), 2)
+        # Y un «sí» detrás tampoco elige por su cuenta entre las dos.
+        self.say("sí")
         self.assertEqual(db.list_invoices(self.bid), [])
         self.assertEqual(len(db.list_clients(self.bid)), 2)
 

@@ -307,6 +307,21 @@ async function load() {
   [ALL] = await Promise.all([api('/invoices'), loadRecurring(), loadSeries()]);
   render(FILTER);
 }
+// Lo que le falta a un borrador a medias (`pending_fields`, JSON). Lista vacía =
+// factura completa. Un JSON roto se trata como completa para no esconder nada.
+function pendientes(i){
+  if (!i.pending_fields) return [];
+  try { const p = JSON.parse(i.pending_fields); return Array.isArray(p) ? p : []; }
+  catch (e) { return []; }
+}
+// Un nombre apuntado sin ficha no es «falta el cliente»: el dato está dicho, solo
+// falta enlazarlo. `client_name` no sirve para distinguirlo porque el listado ya
+// lo rellena con el nombre apuntado (COALESCE en `list_invoices`); lo que lo dice
+// es que no haya `client_id`.
+function sinFicha(i){ return !i.client_id && !!i.recipient_name; }
+function faltan(i){
+  return pendientes(i).filter(c => !(c === 'cliente' && sinFicha(i)));
+}
 const STATUS_LABEL = { borrador:'Borrador', enviada:'Emitida',
   parcial:'Cobro parcial', cobrada:'Cobrada' };
 function badge(s){ return s==='cobrada'?'b-green':(s==='enviada'||s==='parcial')?'b-amber':'b-gray'; }
@@ -343,6 +358,7 @@ function render(f) {
   el('f-body').innerHTML = rows.map(i => `<tr>
     <td>
       <div class="fx-main"><b>${esc(i.client_name||'—')}</b>
+        ${sinFicha(i) ? `<span class="meta" title="Escribe «crea el cliente ${esc(i.recipient_name)}» y se enlaza solo">· sin ficha</span>` : ''}
         ${i.number ? `<span class="meta">· ${esc(i.number)}</span>` : ''}</div>
       <div class="meta">${esc(i.concept)}</div>
       <div class="meta">${i.invoice_type==='F2'?'Ticket · factura simplificada':i.invoice_type==='F1'?'Factura completa':'Factura rectificativa'}</div>
@@ -352,12 +368,14 @@ function render(f) {
       <b>${eur(i.total)}</b>
       ${i.status==='parcial' ? `<div class="meta">quedan ${eur(i.remaining_amount)}</div>` : ''}
     </td>
-    <td><span class="badge ${badge(i.status)}">${STATUS_LABEL[i.status]||esc(i.status)}</span>
+    <td>${pendientes(i).length
+        ? `<span class="badge b-amber" title="Se completa desde Editar o respondiendo en el chat">A medias</span><div class="meta">falta ${esc(faltan(i).join(', ')) || 'la ficha del cliente'}</div>`
+        : `<span class="badge ${badge(i.status)}">${STATUS_LABEL[i.status]||esc(i.status)}</span>`}
       ${verifactuState(i)}</td>
     <td class="t-right table-actions">
       <a class="btn sm" href="/api/${BIZ}/invoices/${i.id}/pdf" target="_blank">PDF</a>
-      ${['F1','F2'].includes(i.invoice_type)?`<button class="btn sm" onclick="duplicateInvoice(${i.id})">Duplicar</button>`:''}
-      ${i.status==='borrador'?`<button class="btn sm" onclick="send(${i.id})">Emitir</button>`:''}
+      ${['F1','F2'].includes(i.invoice_type)&&!pendientes(i).length?`<button class="btn sm" onclick="duplicateInvoice(${i.id})">Duplicar</button>`:''}
+      ${i.status==='borrador'&&!pendientes(i).length?`<button class="btn sm" onclick="send(${i.id})">Emitir</button>`:''}
       ${i.status==='borrador'&&String(i.invoice_type||'').startsWith('R')?`<button class="btn sm" onclick="editRectifyingDraft(${i.id})">Revisar ajuste</button>`:''}
       ${i.status==='borrador'&&!String(i.invoice_type||'').startsWith('R')?`<button class="btn sm" onclick="newInvoice(${i.id})">Editar</button>`:''}
       ${['enviada','parcial'].includes(i.status)?`<button class="btn sm" onclick="pay(${i.id})">Cobrar</button>`:''}

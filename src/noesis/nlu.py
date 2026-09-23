@@ -97,6 +97,16 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 # --------------------------------------------------------------------------- #
 HELP = "__help__"
 NEED_INVOICE = "__need_invoice__"
+# Factura pedida con datos a medias: se crea el borrador con lo dicho y se declara
+# lo que falta, en vez de pedirlo todo de golpe y tirar lo que sí se entendió.
+PARTIAL_INVOICE = "crear_factura_a_medias"
+# «este cliente», «a él»: el cliente del que se está hablando. Lo resuelve el chat
+# con la conversación; el analizador solo marca que es una referencia.
+CLIENTE_DE_LA_CONVERSACION = "__cliente_de_la_conversacion__"
+# Alta de cliente o proveedor sin nombre utilizable: se pregunta el nombre y se
+# recuerda qué se estaba dando de alta, en vez de listar fichas o soltar el
+# parte del día, que es lo que pasaba antes con «crea el cliente» a secas.
+NEED_PARTY_NAME = "__need_party_name__"
 NEED_USER_INVITE = "__need_user_invite__"
 NEED_REVIEW = "__need_review__"
 NEED_DATE = "__need_date__"
@@ -206,8 +216,115 @@ def safety_refusal(text: str) -> str | None:
 _CONECTORES_FINALES = ("de", "del", "por", "per", "para", "a", "en", "d")
 
 
+# Siglas mercantiles y esas iniciales que llevan punto DENTRO del nombre: en
+# «Reformas Martínez S.L.» o «Talleres J. Pino» ese punto no separa nada.
+_SIGLAS_CON_PUNTO = {"S", "SL", "SA", "SLU", "SAU", "SCP", "SC", "CB", "SCCL",
+                     "SLL", "SAL", "SRL", "CIF", "NIF"}
+# «Concepto: …» dicho a viva voz. Es una marca explícita: lo que va detrás es el
+# concepto de la factura, nunca parte del nombre de quien la recibe.
+_MARCA_DE_CONCEPTO = re.compile(
+    r"\s*[.,;]?\s*\b(?:en\s+concepto\s+de|concepto)\b\s*:?\s+", re.I)
+
+
+# Confirmar es una puerta de dinero, así que por defecto una frase NO confirma.
+# Se acepta un «sí» seguido solo de cortesías o de pedir lo que el producto ya
+# hace al confirmar (el PDF). Cualquier otra cosa —un número, un «pero», un
+# cambio— deja de ser un sí y la frase se vuelve a interpretar.
+_SI_INICIAL = re.compile(
+    r"^(?:si|sii|sip|vale|ok|okey|okay|confirmo|confirmar|correcto|exacto|"
+    r"perfecto|adelante|dale|claro|de acuerdo|eso es|hazlo|hazla|endavant|"
+    r"d'acord|fes-ho)\b")
+# Palabras que pueden acompañar a un sí sin cambiar lo que se confirma.
+_COLA_SIN_ORDEN = re.compile(
+    r"^(?:[\s,.;:!¡]|y|i|tambien|ademes|ademas|por favor|porfa|gracias|"
+    r"confirmo|confirmar|correcto|exacto|perfecto|vale|ok|okey|claro|dale|"
+    r"adelante|hazlo|hazla|generalo|generala|generame|genera|generar|creame|"
+    r"crea|preparame|prepara|mandamelo|mandame|manda|enviamelo|enviame|envia|"
+    r"pasamelo|pasame|pasa|adjuntamelo|adjuntame|adjunta|quiero|necesito|"
+    r"el|la|los|las|lo|me|un|una|su|de|del|"
+    r"pdf|factura|borrador|documento|ahora|ya|porfavor)*$")
+
+
+def es_confirmacion(text: str) -> bool:
+    """¿Esta frase es un «sí» a lo que se acaba de proponer?
+
+    «Sí» a secas lo era; «si, genera el pdf» no, y la orden se perdía: se volvía a
+    interpretar como una petición nueva y la factura no llegaba a existir. Lo que
+    NO se acepta sigue siendo todo lo que pueda cambiar la operación: cifras,
+    «pero», correcciones. Ante la duda, no es un sí.
+    """
+    norm = _norm(text)
+    marca = _SI_INICIAL.match(norm)
+    if not marca:
+        return False
+    cola = norm[marca.end():]
+    if re.search(r"\d", cola):
+        return False  # un número detrás del sí es una corrección, no un sí
+    return bool(_COLA_SIN_ORDEN.fullmatch(cola))
+
+
+def _limpiar_concepto(texto: str) -> str:
+    """Quita los conectores que quedan colgando al final de un concepto.
+
+    «concepto ventana por 750 euros» deja «ventana por»: ese «por» introduce el
+    importe, no forma parte de lo que se factura.
+    """
+    partes = str(texto or "").strip(" ,.;:").split()
+    while partes and partes[-1].lower().strip(",.;:") in _CONECTORES_FINALES:
+        partes.pop()
+    return " ".join(partes).strip(" ,.;:")
+
+
+def _partir_nombre(nombre: str) -> tuple[str, str]:
+    """Separa el nombre de quien factura de la frase que se le pegó detrás.
+
+    Un nombre no lleva dentro una frase entera: «Reformas Martínez. Concepto
+    ventanas» son dos cosas, el cliente y el concepto. Al dictar por voz esa
+    frase es la natural, y tragársela entera acababa buscando —y creando— una
+    ficha llamada «Reformas Martínez. Concepto ventanas», que no existe y que en
+    una factura emitida sale como nombre fiscal.
+
+    No corta el punto de las siglas («S.L.») ni el de una inicial («J. Pino»),
+    que sí forman parte del nombre. Devuelve `(nombre, lo que venía detrás)`.
+    """
+    texto = str(nombre or "").strip()
+    marca = _MARCA_DE_CONCEPTO.search(texto)
+    if marca and marca.start() > 0:
+        return (_recortar(texto[:marca.start()]),
+                texto[marca.end():].strip(" ,.;:"))
+    for corte in re.finditer(r"\.\s+", texto):
+        previas = texto[:corte.start()].split()
+        anterior = previas[-1] if previas else ""
+        clave = anterior.replace(".", "").upper()
+        if len(clave) <= 1 or clave in _SIGLAS_CON_PUNTO:
+            continue  # el punto va dentro del nombre, no lo parte
+        return (_recortar(texto[:corte.start()]),
+                texto[corte.end():].strip(" ,.;:"))
+    # La coma y los dos puntos cierran el nombre igual que el punto: «para
+    # Reformas Martínez, ventana, 750» son tres cosas, no un nombre larguísimo.
+    # La coma de la forma societaria («Reformas Martínez, S.L.») no cierra nada.
+    for coma in re.finditer(r"[,:]\s*", texto):
+        siguiente = texto[coma.end():].split()
+        primera = siguiente[0].replace(".", "").rstrip(",").upper() if siguiente else ""
+        if primera in _SIGLAS_CON_PUNTO:
+            continue  # «Reformas Martínez, S.L.»: esa coma es del nombre
+        return (_recortar(texto[:coma.start()]),
+                texto[coma.end():].strip(" ,.;:"))
+    return (texto, "")
+
+
+def _recortar(nombre: str) -> str:
+    """Quita la puntuación de los bordes sin comerse el punto de «S.L.»."""
+    limpio = nombre.strip(" ,;:")
+    ultima = limpio.split()[-1] if limpio.split() else ""
+    if ultima.replace(".", "").upper() in _SIGLAS_CON_PUNTO:
+        return limpio
+    return limpio.strip(" ,.;:")
+
+
 def _limpiar_cliente(nombre: str) -> str:
     """Quita los conectores que se cuelan al final de un nombre dictado."""
+    nombre, _ = _partir_nombre(nombre)
     # «factura a nombre de Carla» / «a nom de Carla»: el cliente es Carla.
     nombre = re.sub(r"^(?:a\s+)?nom(?:bre)?\s+(?:de\s+|d')", "", str(nombre or "").strip(), flags=re.I)
     # «factura para el cliente Marta» no da de alta a nadie llamado «el cliente
@@ -220,6 +337,49 @@ def _limpiar_cliente(nombre: str) -> str:
     return " ".join(partes).strip(" ,.")
 
 
+def _factura_sin_preposicion(text: str, norm: str) -> dict | None:
+    """«Factura reformas martinez ventana 750»: sin «a», sin «por», con importe."""
+    if re.search(r"\b(?:a|para|per\s+a|por|per)\b", norm):
+        return None  # con esas preposiciones lo resuelven los órdenes de siempre
+    importe = re.search(rf"({_AMOUNT_RE})\s*(?:€|euros?|eur\b)?", text, re.I)
+    if not importe:
+        return None
+    valor = _amount_value(importe.group(1))
+    if valor <= 0:
+        return None
+    resto = (text[:importe.start()] + " " + text[importe.end():])
+    resto = re.sub(r"^\s*(?:hazme|haz|crea\w*|prepara\w*|ponme|pon|quiero|"
+                   r"necesito|genera\w*|monta\w*|fes\w*|una|un|la|el)\b", "",
+                   resto.strip(), flags=re.I)
+    resto = re.sub(r"^\s*(?:una|un|la|el)?\s*factur\w*\s*", "", resto.strip(),
+                   flags=re.I)
+    resto = re.sub(r"\s*\b(?:euros?|eur|€|mas iva|más iva|con iva)\b\s*", " ",
+                   resto, flags=re.I)
+    # Una preposición suelta al principio no forma parte del nombre de nadie.
+    resto = re.sub(r"^\s*(?:de|del|a|para|per)\b\s*", "", resto.strip(),
+                   flags=re.I).strip(" ,.;:")
+    if not resto or not re.search(r"[^\W\d_]", resto, re.UNICODE):
+        return None
+    cliente, concepto = _cliente_y_concepto(resto, "Servicio")
+    if not cliente:
+        return None
+    return {"cliente": cliente, "concepto": concepto, "base": valor}
+
+
+def _cliente_y_concepto(crudo: str, concepto: str) -> tuple[str, str]:
+    """Nombre del cliente y concepto, con la frase pegada detrás repartida.
+
+    Cuando el dictado pega el concepto al nombre («a Reformas Martínez. Concepto
+    ventanas 850»), lo que iba detrás es el concepto de verdad; antes se perdía y
+    la factura salía como «Servicio» a nombre de la frase entera.
+    """
+    nombre, resto = _partir_nombre(crudo)
+    limpio = _limpiar_cliente(nombre) or _limpiar_cliente(crudo)
+    if resto and concepto in ("", "Servicio"):
+        concepto = resto
+    return (limpio, concepto)
+
+
 def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
     """Parser flexible para facturas y presupuestos. Acepta varios órdenes naturales:
       - "factura a Juan por reparación de grifo 95 euros"  (concepto antes de importe)
@@ -227,7 +387,38 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
       - "factura a Juan 95 euros"                          (sin concepto explícito)
     """
     # Los impuestos son campos separados, nunca parte del cliente o concepto.
-    text = re.sub(r"\s+(?:(?:con|más|mas)\s+)?(?:IVA|IRPF)\s*(?:(?:del|al)\s*)?(?:incluido|inclos|\d+(?:[.,]\d+)?\s*%?)", "", text, flags=re.I).strip(" ,.")
+    # Los impuestos son campos aparte, nunca parte del cliente ni del concepto.
+    # El sufijo es opcional a propósito: «750 euros más IVA» deja «más IVA» suelto
+    # al final, y sin quitarlo acababa siendo el concepto de la factura.
+    text = re.sub(
+        r"\s+(?:(?:con|más|mas|sin|\+)\s+)?(?:IVA|IRPF)\s*(?:(?:del|al)\s*)?"
+        r"(?:incluido|inclos|\d+(?:[.,]\d+)?\s*%?)?",
+        " ", text, flags=re.I).strip(" ,.")  # un espacio, no vacío: si no, pega
+    text = re.sub(r"\s{2,}", " ", text)      # «euros mas iva concepto» → «eurosconcepto»
+    # Si se dice «concepto», eso ES el concepto y manda sobre cualquier otra
+    # lectura. Sin esto, «factura a reformas martinez concepto ventana por 750»
+    # metía «concepto ventana» dentro del nombre del cliente, y cuando no lo
+    # metía, partía el concepto por la mitad («cambio de grifo» se quedaba en
+    # «grifo», porque el «de» parecía el separador del importe).
+    marca = _MARCA_DE_CONCEPTO.search(text)
+    if marca:
+        cabeza, cola = text[:marca.start()], text[marca.end():]
+        patron = rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?"
+        en_cola = re.search(patron, cola, re.I)
+        en_cabeza = re.search(patron, cabeza, re.I)
+        importe = en_cola or en_cabeza
+        if importe:
+            # El importe puede ir antes o después de «concepto»: «por 750 euros
+            # concepto ventana» se dice tanto como «concepto ventana por 750».
+            concepto = _limpiar_concepto(cola[:en_cola.start()] if en_cola else cola)
+            recorte = cabeza[:en_cabeza.start()] if en_cabeza else cabeza
+            quien = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+)$",
+                              recorte, re.I)
+            cliente = _limpiar_cliente(quien.group(1)) if quien else ""
+            if concepto and cliente:
+                return {"cliente": cliente, "concepto": concepto,
+                        "base": _amount_value(importe.group(1))}
+
     # Variante frecuente: "factura a Juan de 100 euros". Debe resolverse antes
     # del patrón con concepto para que el 100 no se parta en "1" + "00".
     m = re.search(
@@ -236,29 +427,33 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
         text, re.I,
     )
     if m:
-        return {
-            "cliente": _limpiar_cliente(m.group(1)),
-            "concepto": "Servicio",
-            "base": _amount_value(m.group(2)),
-        }
+        cliente, concepto = _cliente_y_concepto(m.group(1), "Servicio")
+        return {"cliente": cliente, "concepto": concepto,
+                "base": _amount_value(m.group(2))}
     # Orden 1: verbo a CLIENTE por CONCEPTO IMPORTE
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+(?:por|de|per)\s+(.+?)[,]?\s*"
                   rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?$", text, re.I)
     if m:
-        return {"cliente": _limpiar_cliente(m.group(1)), "concepto": m.group(2).strip(),
+        cliente, concepto = _cliente_y_concepto(m.group(1), m.group(2).strip())
+        return {"cliente": cliente, "concepto": concepto,
                 "base": _amount_value(m.group(3))}
     # Orden 2: verbo a CLIENTE IMPORTE por CONCEPTO
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
                   rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?\s+"
                   r"(?:por|de|per)\s+(.+)", text, re.I)
     if m:
-        return {"cliente": _limpiar_cliente(m.group(1)), "concepto": m.group(3).strip(),
+        cliente, concepto = _cliente_y_concepto(m.group(1), m.group(3).strip())
+        return {"cliente": cliente, "concepto": concepto,
                 "base": _amount_value(m.group(2))}
-    # Orden 3: verbo a CLIENTE IMPORTE (sin concepto, "Servicio" por defecto)
+    # Orden 3: verbo a CLIENTE IMPORTE [CONCEPTO]. Lo que quede detrás del
+    # importe es el concepto: «a Juan 750 euros ventana» lo dice mucha gente.
     m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+"
-                  rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?(?:\s|$)", text, re.I)
+                  rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?(?:\s|$)(.*)$", text, re.I)
     if m:
-        return {"cliente": _limpiar_cliente(m.group(1)), "concepto": "Servicio",
+        cola = _limpiar_concepto(re.sub(r"^\s*(?:de|por|per|en)\s+", "",
+                                        m.group(3) or "", flags=re.I))
+        cliente, concepto = _cliente_y_concepto(m.group(1), cola or "Servicio")
+        return {"cliente": cliente, "concepto": concepto,
                 "base": _amount_value(m.group(2))}
     # Orden 4: verbo IMPORTE a CLIENTE por CONCEPTO.
     m = re.search(
@@ -267,12 +462,154 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
         text, re.I,
     )
     if m:
-        return {
-            "cliente": _limpiar_cliente(m.group(2)),
-            "concepto": (m.group(3) or "Servicio").strip(),
-            "base": _amount_value(m.group(1)),
-        }
+        cliente, concepto = _cliente_y_concepto(
+            m.group(2), (m.group(3) or "Servicio").strip())
+        return {"cliente": cliente, "concepto": concepto,
+                "base": _amount_value(m.group(1))}
     return None
+
+
+# Lo que dice alguien que deja la factura para luego. Nada de esto es un cliente ni
+# un concepto: «factura para Jordi, los datos te los paso luego» no tiene concepto
+# «los datos».
+_RELLENO_NO_DATO = re.compile(
+    r"\b(?:datos?|luego|despues|mas tarde|ahora|invent\w*|pasare|paso|pondre|"
+    r"pongo|medias|rellen\w*|complet\w*|ya te|te lo|te los|nadie|alguien)\b"
+)
+_REFERENCIA_CLIENTE = re.compile(
+    r"\b(?:este|ese|esta|esa|dicho|dicha|mismo|misma|aquel|aquella|aquest|aqueix)"
+    r"\s+client[ea]s?\b"
+    r"|\b(?:para|a|per\s+a)\s+(?:el|ella|ell)\s*(?:[,.;]|$|\s+(?:por|de|y|que)\b)"
+)
+# Verbos que piden crear. Sin uno de estos, «factura» es una consulta y no se crea
+# nada: pedir datos por error era inofensivo, crear un borrador por error no.
+_VERBO_CREAR_FACTURA = re.compile(
+    r"\b(?:hazme|haz|hacer|crea|crear|creame|genera|generar|prepara|preparame|"
+    r"preparar|pon|ponme|anade|añade|añademe|apunta|apuntame|nueva|nuevo|quiero|"
+    r"necesito|monta|montame|fes|fes-me|crea'm)\b"
+)
+_CONSULTA_FACTURA = re.compile(
+    r"\b(?:que|cual|cuales|cuanto|cuanta|cuantas|esta|estan|pagad\w*|cobrad\w*|"
+    r"ver|veo|ensena\w*|muestra\w*|envia\w*|manda\w*|borra\w*|elimina\w*|anula\w*|"
+    r"rectifica\w*|emite|emitir|pendiente)\b"
+)
+# «la factura de Juan», «la factura del mes pasado», «la factura nº 12»: se habla de
+# una que YA existe. Ahí «necesito» o «quiero» no piden crear nada, y crear un
+# borrador vacío sería inventarse una factura: peor que el fallo que se corrige. El
+# determinante indefinido («una factura», «factura a Juan») sí es una orden de crear.
+_FACTURA_EXISTENTE = re.compile(
+    r"\b(?:la|las|esa|esas|esta|estas|mi|mis|su|sus)\s+factur\w*\s+(?:de|del)\b"
+    r"|\bfactur\w*\s*(?:n[ºo°]|num\w*|#)\s*\d+"
+)
+# Un importe lo cambia todo: «la factura de Juan» pregunta por una que existe,
+# pero «hazme la factura de Juan: ventana, 750 euros» la está pidiendo. Nadie
+# dice un precio para preguntar por una factura que ya tiene.
+_LLEVA_IMPORTE = re.compile(
+    rf"({_AMOUNT_RE})\s*(?:€|euros?|eur\b)|\b(?:importe|precio|base)\b")
+# Una factura recurrente se configura en Facturas, no es un borrador suelto: crear
+# uno aquí dejaría al autónomo creyendo que ya se repite sola.
+_FACTURA_RECURRENTE = re.compile(r"\b(?:recurrent\w*|periodic\w*|cada\s+mes)\b")
+
+
+def _limpio_o_nada(valor: str | None) -> str | None:
+    """Descarta lo que no es un dato: relleno, números sueltos, trozos vacíos."""
+    valor = (valor or "").strip(" ,.;:")
+    if not valor or len(valor) > 160:
+        return None
+    if _RELLENO_NO_DATO.search(_norm(valor)) or re.fullmatch(r"[\d\s.,€]+", valor):
+        return None
+    return valor
+
+
+def parse_partial_invoice(text: str) -> dict:
+    """Extrae de una petición de factura lo que haya, aunque falten datos.
+
+    Devuelve solo las claves que ha entendido de verdad: `cliente`, `concepto` y
+    `base`. Una clave ausente es un dato pendiente, no un error.
+    """
+    norm = _norm(text)
+    limpio = re.sub(r"\s+(?:(?:con|más|mas)\s+)?(?:IVA|IRPF)\s*(?:(?:del|al)\s*)?"
+                    r"(?:incluido|inclos|\d+(?:[.,]\d+)?\s*%?)", "", text,
+                    flags=re.I)
+    args: dict = {}
+    if _REFERENCIA_CLIENTE.search(norm):
+        args["cliente"] = CLIENTE_DE_LA_CONVERSACION
+    else:
+        m = re.search(
+            r"fact[uú]ra\w*\s+(?:\w+\s+){0,2}?(?:a|para|per\s+a)\s+"
+            rf"(.+?)(?=\s*,|\s+(?:por|per|y|que|con)\s|\s+(?:de\s+)?{_AMOUNT_RE}|$)",
+            limpio, re.I)
+        if m:
+            cliente = _limpio_o_nada(_limpiar_cliente(m.group(1)))
+            if cliente:
+                args["cliente"] = cliente
+    m = re.search(rf"\s(?:por|per)\s+(.+?)(?=\s*,|\s+(?:de\s+)?{_AMOUNT_RE}|\s+y\s|$)",
+                  limpio, re.I)
+    if m:
+        concepto = _limpio_o_nada(m.group(1))
+        if concepto:
+            args["concepto"] = concepto
+    importe = re.search(rf"({_AMOUNT_RE})\s*(?:€|euros?|eur\b)", limpio, re.I) or \
+        re.search(rf"(?:de|por|son)\s+({_AMOUNT_RE})\b", limpio, re.I)
+    if importe:
+        valor = _amount_value(importe.group(1))
+        if valor > 0:
+            args["base"] = valor
+    return args
+
+
+_TELEFONO_RE = re.compile(r"(\+?\d[\d\s.\-]{7,}\d)")
+# Lo que viene detrás del nombre cuando alguien dicta la ficha entera de un tirón.
+_DATO_DE_CONTACTO = re.compile(
+    r"\b(?:tel[eé]fono|telf?|m[oó]vil|whatsapp|correo|email|e-mail|nif|cif|dni|"
+    r"direcci[oó]n|domicilio|calle|avenida|zona)\b", re.I)
+
+
+def parse_party_name(raw: str) -> tuple[str | None, str | None]:
+    """Separa el nombre de la ficha de los datos de contacto que lo acompañan.
+
+    «Jordi Mas, teléfono 600 12 34 56» es un cliente llamado Jordi Mas con un
+    teléfono, no un cliente llamado «Jordi Mas, teléfono 600 12 34 56». Devuelve
+    `(None, None)` cuando lo que queda no puede ser el nombre de nadie —solo
+    cifras o signos—, para preguntar en vez de crear una ficha basura.
+    """
+    # `_recortar` quita la puntuación de los bordes sin comerse el punto final de
+    # «S.L.», que es parte del nombre y sale así en la factura.
+    texto = _recortar((raw or "").strip())
+    if not texto:
+        return (None, None)
+    # Lo dictado detrás de un punto o de una coma no es parte del nombre: «crear
+    # cliente Reformas Martínez. Concierto Ventanas» da de alta a Reformas
+    # Martínez. Lo que se corta NO se tira: ahí es donde viene el teléfono en
+    # «Jordi Mas, teléfono 600 12 34 56», y perderlo sería cambiar un fallo por
+    # otro.
+    texto, cortado = _partir_nombre(texto)
+    telefono = None
+    if cortado and _DATO_DE_CONTACTO.search(cortado):
+        encontrado = _TELEFONO_RE.search(cortado)
+        if encontrado:
+            telefono = re.sub(r"[\s.\-]", "", encontrado.group(1))
+    # La coma ya la ha resuelto `_partir_nombre`, que sabe distinguir la de
+    # «Reformas Martínez, S.L.» —parte del nombre fiscal, y va en la factura— de
+    # la que introduce los datos. Aquí solo queda la palabra que los anuncia
+    # («con teléfono …»).
+    corte = re.search(r";|\s+(?:con|y)\s+(?=" + _DATO_DE_CONTACTO.pattern + ")",
+                      texto, re.I)
+    if corte and _DATO_DE_CONTACTO.search(texto[corte.start():]):
+        cola = texto[corte.start():]
+        texto = texto[:corte.start()].strip(" ,.;:")
+        encontrado = _TELEFONO_RE.search(cola)
+        if encontrado:
+            telefono = re.sub(r"[\s.\-]", "", encontrado.group(1))
+    elif corte:
+        texto = texto[:corte.start()].strip(" ,.;:")
+    if len(texto) > 200:
+        # Se devuelve tal cual: la base explica que es demasiado largo, y
+        # recortarlo a escondidas daría de alta a alguien que no existe.
+        return (texto, telefono)
+    if not re.search(r"[^\W\d_]", texto, re.UNICODE):
+        return (None, telefono)
+    return (texto, telefono)
 
 
 def _add_tax_rates(norm: str, args: dict) -> None:
@@ -335,6 +672,20 @@ def _parse_simplified_sale(text: str, norm: str) -> dict | None:
     return args
 
 
+def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
+    """Alta de cliente o proveedor con el nombre ya separado de sus datos."""
+    tipo = "cliente" if _norm(papel) == "cliente" else "proveedor"
+    limpio, telefono = parse_party_name(nombre)
+    if not limpio:
+        # Un «cliente» que es solo un número de teléfono no es el nombre de
+        # nadie: se pregunta en vez de dejar una ficha llamada «600123456».
+        return (NEED_PARTY_NAME, {"tipo": tipo, "motivo": "sin_nombre"})
+    args: dict = {"nombre": limpio}
+    if telefono and tipo == "cliente":
+        args["telefono"] = telefono
+    return (f"crear_{tipo}", args)
+
+
 def parse(text: str) -> tuple[str, dict] | None:
     norm = _norm(text)
 
@@ -387,17 +738,18 @@ def parse(text: str) -> tuple[str, dict] | None:
             text, re.I,
         )
         if inversa:
-            return (
-                "crear_cliente" if _norm(inversa.group(2)) == "cliente"
-                else "crear_proveedor",
-                {"nombre": inversa.group(1).strip(" ,.")},
-            )
+            return _party_intent(inversa.group(2), inversa.group(1))
     if party:
-        name = re.sub(r"^(?:llamad[oa]|que se llama)\s+", "", party.group(2), flags=re.I).strip(" ,.")
-        return (
-            "crear_cliente" if _norm(party.group(1)) == "cliente" else "crear_proveedor",
-            {"nombre": name},
-        )
+        name = re.sub(r"^(?:llamad[oa]|que se llama)\s+", "", party.group(2), flags=re.I)
+        return _party_intent(party.group(1), name)
+    # «Crea el cliente» o «nuevo proveedor» a secas. Antes no casaba con nada de
+    # aquí y acababa listando clientes o dando el parte del día: la orden se
+    # perdía entera por faltar una palabra.
+    sin_nombre = re.match(
+        r"(?:crea|crear|creame|anade|anademe|nuevo|nueva|alta)\s+(?:de\s+)?"
+        r"(?:un|una|el|la)?\s*(cliente|proveedor)\s*$", norm)
+    if sin_nombre:
+        return (NEED_PARTY_NAME, {"tipo": sin_nombre.group(1)})
     if re.search(
         r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+(?:un|una)?\s*usuario\b",
         norm,
@@ -428,7 +780,8 @@ def parse(text: str) -> tuple[str, dict] | None:
 
     # --- Facturar un trabajo ya cerrado sin reescribir cliente ni concepto ---
     work_invoice = re.search(
-        r"\b(?:factura|facturar)\s+(?:el\s+)?(?:trabajo|treball)\s*#?\s*(\d+)\b", norm
+        r"\b(?:factura|facturar)\s+(?:(?:el|del)\s+)?(?:trabajo|treball)\s*#?\s*(\d+)\b",
+        norm
     )
     if work_invoice:
         return ("preparar_factura_trabajo", {
@@ -460,6 +813,42 @@ def parse(text: str) -> tuple[str, dict] | None:
             if "iva incluido" in norm or "iva inclos" in norm:
                 args["importe_incluye_iva"] = True
             return ("crear_factura", args)
+        # «factura a Jordi…» / «factura para Jordi…» al principio: ahí «factura»
+        # es el verbo facturar en imperativo, que es tan orden como «hazme».
+        # «Factura a Jordi…» y también «factura reformas martinez ventana 750»:
+        # ahí «factura» es el verbo facturar en imperativo. Sin preposición solo
+        # se acepta si lleva importe, que es lo que distingue una orden de una
+        # pregunta suelta.
+        imperativo = (re.match(r"(?:factura|facturar|facturame|factura'm)\s+"
+                               r"(?:a|para|per\s+a)\b", norm)
+                      or (re.match(r"(?:factura|facturar|facturame)\s+\S", norm)
+                          and _LLEVA_IMPORTE.search(norm)))
+        pide_crear = ((_VERBO_CREAR_FACTURA.search(norm) or imperativo)
+                      and not _CONSULTA_FACTURA.search(norm)
+                      and not _FACTURA_RECURRENTE.search(norm)
+                      and (not _FACTURA_EXISTENTE.search(norm)
+                           or _LLEVA_IMPORTE.search(norm)))
+        # Se pide una factura, hay importe, pero no se ha dicho «a» ni «por»:
+        # «factura reformas martinez ventana 750». Lo que queda tras quitar el
+        # verbo y el importe es el cliente y el concepto pegados; los separa la
+        # cartera en `chat._split_client_with_the_ledger`. Intentarlo y dejar que
+        # el libro de clientes decida vale más que contestar «no te entiendo».
+        # «Factura reformas martinez ventana 750», sin unidad detrás del número.
+        # Aquí el filtro lo pone la propia frase: si al quitar el verbo y la cifra
+        # no queda ninguna palabra, no era una orden («factura 12» no lo es).
+        suelta = bool(re.match(r"(?:factura|facturar|facturame)\s+\S", norm)
+                      and not _CONSULTA_FACTURA.search(norm)
+                      and not _FACTURA_EXISTENTE.search(norm)
+                      and not _FACTURA_RECURRENTE.search(norm))
+        if pide_crear or suelta:
+            suelto = _factura_sin_preposicion(text, norm)
+            if suelto:
+                _add_tax_rates(norm, suelto)
+                return ("crear_factura", {**suelto, "tipo_factura": "F1"})
+        if pide_crear:
+            args = parse_partial_invoice(text)
+            _add_tax_rates(norm, args)
+            return (PARTIAL_INVOICE, args)
         if re.search(r"\b(?:hazme|crea|crear|nueva|quiero|necesito|prepara|factura)\b", norm):
             return (NEED_INVOICE, {})
 
@@ -602,6 +991,11 @@ def format_reply(tool: str, result: dict) -> str:
     if tool == "crear_cliente":
         client = result["cliente"]
         suffix = " Ya existía; he reutilizado su ficha." if result.get("existing") else ""
+        enlazadas = result.get("facturas_enlazadas") or []
+        if enlazadas:
+            suffix += (" Lo he enlazado al borrador "
+                       + ", ".join(f"#{n}" for n in enlazadas)
+                       + " que lo esperaba.")
         return f"Cliente guardado: **{client['name']}**.{suffix}"
     if tool == "crear_proveedor":
         supplier = result["proveedor"]

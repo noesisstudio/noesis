@@ -185,4 +185,8 @@ class LocalInvoiceTests(unittest.TestCase):
                 whatsapp.handle_inbound({"from": "34600111222", "id": f"local-{index}", "text": text})
         invoice = db.list_invoices(self.bid)[0]
         self.assertEqual(invoice["total"], 145.2)
-        self.assertEqual(send.call_args.kwargs["invoice_id"], invoice["id"])
+        # Tras confirmar salen dos mensajes: la respuesta y el PDF del borrador
+        # (o el aviso de que no se pudo adjuntar, como aquí, sin credenciales).
+        # El foco viaja en la respuesta, que no tiene por qué ser la última.
+        focos = [llamada.kwargs.get("invoice_id") for llamada in send.call_args_list]
+        self.assertIn(invoice["id"], focos)

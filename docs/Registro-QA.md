@@ -1,5 +1,103 @@
 ﻿# Registro de QA
 
+## 2026-09-23 — Quince maneras de pedir la misma factura
+
+- Suite completa **1.110 en verde**. Ruff OK. Node OK.
+- **Se midió antes de arreglar**: 15 frases naturales, 9 fallaban. Después, 15/15.
+  El corpus queda en `tests/test_nombre_dictado.py` para que no se pueda perder.
+- **El contrapeso también está probado**: 11 frases que hablan de facturas sin
+  pedir ninguna («¿la factura de Juan está pagada?», «factura 12») siguen sin
+  crear nada. Ser tolerante no puede significar inventarse facturas.
+- **Cuatro fallos propios cazados al probarlo**, cada uno con prueba: el concepto
+  se quedaba en «mas iva»; quitar los impuestos pegaba las palabras de al lado; la
+  coma que cierra el nombre se comía el teléfono que venía detrás; y «Reformas
+  Martínez, S.L.» perdía el «S.L.», que es el nombre fiscal de la factura.
+- **No ejecutado:** nada contra WhatsApp real ni contra el dictado de voz de Meta.
+
+
+## 2026-09-23 — PDF automático de la factura por WhatsApp
+
+- `tests/test_invoice_conversation.py` sube a **27 casos** (3 nuevos). Suite
+  completa **PDFTOTAL en verde**. Ruff OK.
+- **Comprobado antes de escribir código** que el envío ya existía: evitó construir
+  una cola de documentos en paralelo. La migración que se había empezado para eso
+  se revirtió y el esquema se quedó en 58, verificado.
+- **Los dos caminos están cubiertos**, y el de la revisión es el que importa
+  porque es el de producción: la factura nace al contestar «sí».
+- **No ejecutado:** el envío real. Sin credenciales de Meta aquí, la subida del
+  PDF y el envío van simulados en las pruebas.
+
+
+## 2026-09-23 — Vista previa del enlace
+
+- `tests/test_seo.py` sube a **15 casos** (1 nuevo). Suite completa **1.095 en
+  verde**. Ruff OK.
+- **Comprobado que la imagen vieja no se usaba en ninguna otra parte** antes de
+  retirarla: solo estaba en `og:image` y `twitter:image`.
+- **La tarjeta se ha mirado a ojo** además de por pruebas: marca, reclamo, dominio
+  y nada más. Sin cifras ni nombres inventados, que es lo que hay que evitar en
+  algo que se comparte.
+- **No ejecutado:** la vista previa real en Facebook o WhatsApp. Hasta que no esté
+  desplegado y se pida releerla en el depurador de Meta, seguirá saliendo la
+  imagen cacheada.
+
+
+## 2026-09-23 — El nombre dictado por voz
+
+- `tests/test_nombre_dictado.py` (nuevo): **13 casos**. Suite completa **1.095
+  en verde**. Ruff OK.
+- **Reproducido primero con la frase literal de la captura**, no leyendo código, y
+  vuelto a pasar después: la conversación entera termina con la factura #1 a
+  nombre de «Reformas Martínez» y concepto «ventanas».
+- **Descartado lo que el founder creía**: los acentos ya funcionaban.
+  `resolve_client_reference` pliega acentos, mayúsculas y espacios; queda con
+  prueba para que no se vuelva a dudar.
+- **El modo de romper esto está cubierto**: «Reformas Martínez S.L.», «Talleres J.
+  Pino» y «Construcciones M. A. Ribó» no se parten por sus puntos.
+- **Dos fallos propios del arreglo, cazados al probarlo**: crear la ficha pasando
+  por la revisión pedía confirmar dos veces lo mismo (ahora va directo, porque el
+  «sí» ya es la confirmación), y el «sí» se lo comía la revisión antes de llegar
+  al sitio; se atiende antes.
+- **No ejecutado:** nada contra WhatsApp real. La transcripción de voz la hace
+  Meta y no se puede simular aquí.
+
+
+## 2026-09-23 — Altas de clientes y proveedores
+
+- `tests/test_alta_de_ficha.py` (nuevo): **19 casos**. Suite completa **1.079
+  en verde**. Ruff OK.
+- **Los siete fallos se reprodujeron primero** con una batería de frases contra el
+  chat real, no leyendo código, y se volvieron a pasar después del arreglo.
+- **Un fallo propio del arreglo, cazado al probarlo**: contestar «qué facturas
+  tengo pendientes» mientras se esperaba un nombre creaba un cliente llamado así.
+  El filtro ahora exige que parezca un nombre —sin interrogación, pocas palabras,
+  ninguna del vocabulario de otras órdenes— y ante la duda no da de alta a nadie.
+- **Las dos rutas web se prueban de verdad**, llamando a la vista: `POST
+  /api/{id}/clients` y el alta desde el formulario de factura devuelven 400 con el
+  motivo. Antes la primera devolvía 500.
+- **No ejecutado:** las páginas de Clientes y Proveedores en un navegador.
+
+
+## 2026-09-23 — Órdenes de factura a medias
+
+- `tests/test_orden_a_medias.py` (nuevo): **18 casos**, de ellos 5 escritos para los
+  fallos propios encontrados al revisar el diseño. Suite completa **1.060 en
+  verde**. Ruff OK.
+- **Probado end-to-end por los dos canales**: en WhatsApp, «crea el cliente Jordi
+  Mas» → «hazme una factura para este cliente» → «concepto: reforma del baño» →
+  «300 euros» → «emitir factura 1» deja la factura **2026/0001** por 363,00 €. En
+  web, la misma secuencia con el mismo resultado.
+- **Dos pruebas existentes cambian a propósito**: `test_customer_simulation` y
+  `test_backend` daban por bueno que «hazme una factura» no creara nada. Ahora se
+  fija lo contrario, y además que «necesito la factura de Juan» siga sin crear.
+- **Comprobado que no rompe lo de al lado**: el PDF de un borrador a medias se
+  genera sin fallar, borrarlo funciona, y el botón de duplicar se esconde porque
+  duplicar un borrador sin cliente ni importe solo daba un error en pantalla.
+- **No ejecutado:** revisión visual del listado en un navegador. El aviso «sin
+  ficha» y el badge «A medias» están probados por los datos que recibe la página
+  (`client_id`, `recipient_name`, `pending_fields`), no a ojo.
+
+
 ## 2026-09-22 — Sonnet 5 en todo, fuera Haiku
 
 - `tests/test_ai_model_config.py` (nuevo): **6 casos**. Suite completa **1.042 en

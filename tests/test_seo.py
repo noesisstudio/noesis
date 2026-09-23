@@ -283,6 +283,35 @@ class SeoTestCase(unittest.TestCase):
                 with self.subTest(ruta=ruta):
                     self.assertIsNone(re.search(r"\bNoesis\b", http.get(ruta).text))
 
+    def test_the_shared_link_shows_a_card_made_for_it(self):
+        """Lo que se ve al pegar bynoesis.com en WhatsApp, Facebook o LinkedIn.
+
+        Era una captura del panel: enseñaba el nombre de una cuenta y el de un
+        cliente, y salía recortada por la mitad porque 1265x900 no es la
+        proporción que usan esas redes. Y si la imagen devuelve 404, el enlace se
+        comparte sin vista previa y nadie se entera.
+        """
+        import re
+        import struct
+
+        scheduler, client = self._client()
+        with scheduler, client as http:
+            portada = http.get("/").text
+            imagen = re.search(r'property="og:image" content="([^"]+)"', portada)
+            ancho = re.search(r'property="og:image:width" content="(\d+)"', portada)
+            alto = re.search(r'property="og:image:height" content="(\d+)"', portada)
+            self.assertIsNotNone(imagen)
+            ruta = "/" + imagen.group(1).split("/", 3)[-1]
+            self.assertNotIn("product-preview", ruta)  # nunca una captura del panel
+            respuesta = http.get(ruta)
+
+        self.assertEqual(respuesta.status_code, 200, ruta)
+        # Las medidas declaradas tienen que ser las del archivo: si no, la red
+        # recorta por donde quiere. Se leen del IHDR del PNG, sin dependencias.
+        real_ancho, real_alto = struct.unpack(">II", respuesta.content[16:24])
+        self.assertEqual((real_ancho, real_alto), (1200, 630))
+        self.assertEqual((int(ancho.group(1)), int(alto.group(1))), (1200, 630))
+
 
 if __name__ == "__main__":
     unittest.main()

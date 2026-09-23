@@ -52,7 +52,9 @@ class CustomerSimulationTestCase(unittest.TestCase):
             "cómo van mis proyectos": "ver_proyectos",
             "qué puedes hacer sin preguntarme": "ver_control_noesis",
             "crear usuario Paco": nlu.NEED_USER_INVITE,
-            "hazme una factura": nlu.NEED_INVOICE,
+            # Antes era NEED_INVOICE: pedía los tres datos y no creaba nada. Ahora
+            # crea el borrador a medias (decisión del 22-09-2026).
+            "hazme una factura": nlu.PARTIAL_INVOICE,
         }
         for message, expected in corpus.items():
             with self.subTest(message=message):

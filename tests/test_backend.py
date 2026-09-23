@@ -1589,7 +1589,11 @@ class BackendTestCase(unittest.TestCase):
                          ("crear_cliente", {"nombre": "Ana Ruiz"}))
         self.assertEqual(nlu.parse("nuevo proveedor Materiales Sol"),
                          ("crear_proveedor", {"nombre": "Materiales Sol"}))
-        self.assertEqual(nlu.parse("hazme una factura"), (nlu.NEED_INVOICE, {}))
+        # Desde el 22-09-2026 una factura sin datos crea el borrador a medias en
+        # vez de no crear nada; «la factura de X» sigue siendo una consulta.
+        self.assertEqual(nlu.parse("hazme una factura"), (nlu.PARTIAL_INVOICE, {}))
+        self.assertEqual(nlu.parse("necesito la factura de Juan"),
+                         (nlu.NEED_INVOICE, {}))
 
         party_business, _ = self.make_business("Altas por chat")
         created_client = chat.handle(party_business["id"], "crear cliente Ana Ruiz")
@@ -1600,8 +1604,15 @@ class BackendTestCase(unittest.TestCase):
         self.assertIn("Proveedor guardado", created_supplier["reply"])
         self.assertEqual(len(db.list_clients(party_business["id"])), 2)
         self.assertEqual(len(db.list_suppliers(party_business["id"])), 1)
+        # Una factura sin datos ya no se rechaza: se crea el borrador a medias y se
+        # dice qué falta. Con dos clientes y ninguno nombrado, no se adivina.
         incomplete = chat.handle(party_business["id"], "hazme una factura")
-        self.assertIn("cliente, concepto e importe", incomplete["reply"])
+        for falta in ("el cliente", "el concepto", "el importe"):
+            self.assertIn(falta, incomplete["reply"])
+        borrador = db.list_invoices(party_business["id"])[0]
+        self.assertIsNone(borrador["client_id"])
+        self.assertEqual(db.invoice_pending_fields(borrador),
+                         ["cliente", "concepto", "importe"])
 
         business, _ = self.make_business()
         chat.handle(business["id"], "factura a Juan por reparación 100 euros")

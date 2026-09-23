@@ -147,7 +147,10 @@ def propose(bid: int, tool: str, args: dict, *, expected_id: int | None = None) 
 def respond(bid: int, actor: str, text: str) -> dict | None:
     """Consume una propuesta exacta; no interpreta de nuevo lo confirmado."""
     norm = nlu._norm(text)
-    yes = norm in {"si", "confirmo", "confirmar", "si, confirmar"}
+    # «si, genera el pdf» es un sí: antes no lo era, la propuesta se quedaba sin
+    # confirmar y la frase se reinterpretaba como una petición nueva. Lo que
+    # cambie la operación —una cifra, un «pero»— sigue sin ser un sí.
+    yes = nlu.es_confirmacion(text)
     no = norm in {"no", "descartar", "ahora no"}
     if not yes and not no:
         if local_invoice.enabled():

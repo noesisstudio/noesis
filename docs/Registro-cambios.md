@@ -1,5 +1,239 @@
 ﻿# Registro de cambios
 
+## 2026-09-23 — Decirlo de otra manera ya no cuesta un error
+
+El founder, después de media mañana peleándose con el chat: «yo lo quiero poder
+hacer de cualquier manera, si no es el concepto me das un error todo el rato».
+Antes de tocar nada se midió: se cogió **la misma factura dicha de quince maneras
+naturales** y **fallaban nueve**. No era una impresión suya.
+
+**El cambio de fondo: quien sabe dónde acaba el nombre de un cliente no es una
+regla, es la cartera.** Ninguna expresión regular puede decidir si «Reformas
+Martínez la ventana» es un nombre largo o un nombre y un concepto. La cartera sí:
+si «Reformas Martínez» tiene ficha y el nombre entero no, lo que sobra es el
+concepto (`chat._split_client_with_the_ledger`, del trozo más largo al más corto
+para que gane la ficha más específica). Con dos fichas que encajan no corta: eso se
+pregunta. Quedan **quince de quince**, y las once frases que hablan de facturas sin
+pedir ninguna siguen sin crear nada, que es el contrapeso obligatorio de ser
+tolerante.
+
+**«Concepto» manda esté donde esté.** El founder lo dijo con sus palabras: «donde
+diga concepto, lo de después es el concepto; si no dice nada, Servicio». Antes solo
+valía si iba antes del importe; «por 750 euros más IVA concepto ventana» daba
+«Servicio». De paso se vio que quitar las palabras de impuestos pegaba las de al
+lado: «euros mas iva concepto» se quedaba en «eurosconcepto».
+
+**«Si, genera el pdf» es un sí.** La confirmación comparaba contra una lista
+cerrada (`si`, `confirmo`, …), así que cualquier añadido la invalidaba: la
+propuesta se quedaba sin confirmar, la frase se reinterpretaba y la factura no
+llegaba a existir. `nlu.es_confirmacion` acepta un sí con cortesías o pidiendo el
+PDF, y **sigue rechazando** todo lo que cambie la operación: una cifra, un «pero»,
+una corrección. Por defecto no confirma: es una puerta de dinero.
+
+**Ajustes dice qué modelo hay puesto.** Una variable del servidor manda sobre el
+código, así que desde fuera no había forma de saberlo y había que fiarse. Ahora se
+lee en la tarjeta de la IA.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`, `src/noesis/web/chat.py`,
+  `src/noesis/action_review.py`, `src/noesis/web/routers/pages.py`,
+  `src/noesis/web/templates/ajustes.html`.
+- **Pruebas:** `tests/test_nombre_dictado.py` sube a 25 casos con los dos corpus
+  (quince maneras y once frases que no crean nada) y los de confirmación;
+  `tests/test_conversation_safety.py` fija que un cliente desconocido se ofrece y
+  no se inventa, y que con varias fichas un «sí» no elige por su cuenta.
+- **Límites externos:** el dictado lo transcribe WhatsApp. Nada probado contra
+  WhatsApp real.
+- **Riesgo:** medio-alto. Toca cómo se lee cualquier orden de factura. El
+  contrapeso está en pruebas: once frases que no deben crear nada, y la regla de
+  que sin ficha no se corta el nombre a ciegas.
+- **Diagnóstico:** `nlu.parse("…")` dice qué entiende y
+  `chat._split_client_with_the_ledger` qué hace la cartera con ello.
+- **Rollback:** sin migración; revertir los archivos basta.
+
+## 2026-09-23 — La factura llega en PDF sin tener que pedirlo
+
+Petición del founder: «al generar la factura, genérame el PDF en el WhatsApp para
+verificar que es correcta». Revisado antes de construir nada: **el envío del PDF
+real ya estaba montado** (`_send_owner_invoice_pdf` sube el borrador a Meta y lo
+manda como documento). Lo que fallaba era cuándo se dispara.
+
+- Solo salía si la orden incluía «y mándamelo en PDF» (`_is_owner_pdf_request`).
+- Y por el **camino de la revisión** —el de producción, donde la factura nace al
+  contestar «sí»— no salía nunca, ni pidiéndolo.
+
+Ahora hay un único sitio, `_attach_new_invoice_pdf`, al que llaman los dos
+caminos: cuando se acaba de preparar una factura, su PDF se adjunta. Un borrador a
+medias no se manda, porque todavía no es una factura y un PDF con «Pendiente de
+concepto» y 0 € confunde más de lo que ayuda.
+
+**Se empezó por el camino equivocado y se deshizo:** se llegó a escribir una
+migración 59 para meter documentos en la cola `whatsapp_outbox` antes de ver que el
+envío ya existía y no pasa por esa cola. Se revirtió entera; el esquema sigue en 58.
+
+- **Áreas/archivos:** `src/noesis/web/whatsapp.py`.
+- **Pruebas:** `tests/test_invoice_conversation.py`, 3 casos nuevos: llega sin
+  pedirlo, llega también cuando la factura nace de un «sí», y un borrador a medias
+  no se manda.
+- **Límites externos:** **no probado contra WhatsApp real.** No hay credenciales de
+  Meta en este equipo; las pruebas simulan la subida y el envío. Si en producción
+  falla la subida, el mensaje lo dice y da el enlace para abrirla con sesión, que
+  es lo que ya hacía.
+- **Riesgo:** bajo-medio. Es un mensaje más por cada factura creada desde WhatsApp;
+  dentro de la ventana de 24 h no abre conversación nueva.
+- **Rollback:** revertir el archivo; nada persistido cambia.
+
+## 2026-09-23 — Al compartir bynoesis.com se veía el panel de una cuenta
+
+El founder pegó el enlace en Facebook y la vista previa era **una captura del
+panel**: «Hola, mk consults», un cliente llamado Marta García, los importes del
+mes y la marca antigua «Noesis». Además salía recortada por la mitad, porque
+1265x900 no es la proporción que usan Facebook, LinkedIn ni WhatsApp.
+
+Tres problemas en una sola imagen: enseñaba el nombre de una cuenta y el de un
+cliente cada vez que alguien compartía el enlace, contradecía el nombre de la
+marca del propio título, y se recortaba. Ahora hay una tarjeta hecha a propósito,
+1200x630, con la marca, el reclamo de la portada y **ningún dato**: ni cifras, ni
+nombres, ni pantallas. La captura del panel se retira del repositorio; no se usaba
+en ningún otro sitio.
+
+- **Áreas/archivos:** `src/noesis/web/templates/site_base.html`,
+  `src/noesis/web/static/bynoesis-social-card.png` (nuevo),
+  `scripts/build_social_card.py` (nuevo, regenera la tarjeta),
+  `src/noesis/web/static/noesis-product-preview.png` (retirado),
+  `docs/Arquitectura.md`.
+- **Pruebas:** `tests/test_seo.py` gana un caso: la imagen que declara la portada
+  responde 200, mide 1200x630 de verdad y las medidas declaradas coinciden con las
+  del archivo. Un 404 ahí deja el enlace sin vista previa y no se entera nadie.
+- **Límites externos:** **Facebook y WhatsApp cachean la vista previa.** Tras
+  desplegar hay que pedir que la relean en
+  https://developers.facebook.com/tools/debug/ con «Scrape Again»; si no, seguirá
+  saliendo la imagen vieja durante días.
+- **Riesgo:** bajo. Solo afecta a metadatos y a un archivo estático.
+- **Rollback:** el PNG anterior sigue en el historial de git.
+
+## 2026-09-23 — «Reformas Martínez. Concepto ventanas» no es el nombre de nadie
+
+Caso real del founder por WhatsApp. Dictó «hazme una factura a Reformas Martínez.
+Concepto ventanas 850 euros» y recibió «No encuentro un cliente inequívoco llamado
+"Reformas Martínez. Concierto Ventanas"». Contestó «sí» y no pasó nada. Él lo leyó
+como un problema de acentos. **No lo era**: los acentos ya se plegaban —está
+probado— y el fallo eran otros dos, encadenados:
+
+**1. El nombre se tragaba la frase entera.** Al dictar, «Concepto ventanas» llega
+detrás de un punto, y «concepto» salió transcrito como «concierto». El cerebro
+tomaba «Reformas Martínez. Concierto Ventanas» como el nombre del cliente, así que
+no reconocía la ficha; y cuando sí creaba la factura, la emitía a nombre de esa
+frase con el concepto en «Servicio». En una factura emitida, eso es el nombre
+fiscal del destinatario. Ahora el punto que separa frases corta el nombre y lo que
+va detrás es el concepto —se llame «concepto» o «concierto», no hay que
+adivinarlo—. El punto de las siglas («Reformas Martínez S.L.») y el de una inicial
+(«Talleres J. Pino») no cortan, que sería el error contrario.
+
+**2. El «sí» no hacía nada.** Con la revisión encendida, un cliente sin ficha era
+el final del camino, y el «sí» lo contestaba la revisión con «no hay ninguna
+propuesta pendiente de confirmar». Ahora se ofrece crear la ficha y seguir con la
+orden en un solo paso, y si el nombre estaba mal escrito basta decirlo bien. La
+ficha sigue sin nacer sola: hace falta el sí, porque un alta implícita duplica
+clientes por errores de voz.
+
+- **Áreas/archivos:** `src/noesis/nlu.py` (`_partir_nombre`, `_cliente_y_concepto`,
+  `parse_party_name`), `src/noesis/web/chat.py`.
+- **Pruebas:** `tests/test_nombre_dictado.py` (nuevo, 13 casos), con la frase
+  literal de la captura y la conversación entera hasta la factura.
+- **Límites externos:** el dictado lo transcribe WhatsApp; «concierto» por
+  «concepto» no se puede arreglar desde aquí, solo dejar de estorbar.
+- **Riesgo:** medio. Toca cómo se lee el nombre del cliente en TODAS las órdenes
+  (factura, presupuesto, agenda, alta). Las siglas y las iniciales están cubiertas
+  con prueba porque son el modo de romperlo.
+- **Diagnóstico:** `nlu._partir_nombre("…")` dice exactamente dónde corta.
+- **Rollback:** sin migración; revertir los dos archivos basta.
+
+## 2026-09-23 — Dar de alta un cliente o un proveedor sin que un fallo lo corte
+
+El founder lo señaló como la zona con más errores: «si hay un error, el código se
+centra en el error y no funciona nada más». Era literal. Siete fallos reales,
+reproducidos uno a uno antes de tocar nada:
+
+| Lo que se decía | Lo que pasaba | Lo que pasa ahora |
+|---|---|---|
+| «crea el cliente» | listaba clientes; el alta se perdía | pregunta el nombre y lo recuerda |
+| «nuevo proveedor» | soltaba el parte del día entero | pregunta el nombre y lo recuerda |
+| «crea el cliente Jordi Mas, teléfono 600…» | ficha llamada así, con el teléfono dentro | cliente «Jordi Mas» y el teléfono en su columna |
+| «crea el cliente 600123456» | ficha llamada «600123456» | dice que eso no es un nombre y pregunta |
+| «nuevo proveedor materiales sol» | **segundo** proveedor junto a «Materiales Sol» | reutiliza la ficha que ya existe |
+| nombre de 400 caracteres | en clientes entraba tal cual; en proveedores, «es obligatorio (máx. 200)» aunque sí se había dicho | los dos lo rechazan diciendo que es demasiado largo |
+| alta fallida en la web | **error 500** y la página de clientes muerta | 400 con el motivo |
+
+El patrón de fondo era el mismo en todos: **el fallo era el final de la
+conversación**. Ahora un alta que no se puede completar deja una pendiente de 30
+minutos (`alta-ficha:{actor}`) y la siguiente frase con un nombre a secas la
+termina, igual que ya hacían la agenda y la factura a medias. Una pregunta no se
+toma por nombre: «qué facturas tengo pendientes» durante un alta creaba un cliente
+con ese nombre —fallo propio de este diseño, cazado al probarlo y con prueba— y
+ahora se contesta la pregunta sin tocar el alta, que sigue viva.
+
+- **Áreas/archivos:** `src/noesis/nlu.py` (`NEED_PARTY_NAME`, `parse_party_name`),
+  `src/noesis/db.py` (`add_client`, `add_supplier`, `find_supplier`),
+  `src/noesis/tools.py`, `src/noesis/web/chat.py`,
+  `src/noesis/web/routers/clients.py`, `src/noesis/web/routers/invoicing.py`.
+- **Pruebas:** `tests/test_alta_de_ficha.py` (nuevo, 19 casos), corpus de frases
+  reales con las dos rutas de la web incluidas.
+- **Límites externos:** ninguno; no toca proveedores externos.
+- **Riesgo:** medio-bajo. El límite de 200 caracteres en clientes es nuevo: las
+  fichas ya guardadas no se tocan, pero una importación con nombres larguísimos
+  ahora se rechaza en vez de entrar.
+- **Diagnóstico:** `nlu.parse("crea el cliente X")` dice qué entiende y
+  `nlu.parse_party_name("X, teléfono 600…")` cómo separa nombre y teléfono.
+- **Rollback:** sin migración; revertir los archivos basta.
+
+## 2026-09-23 — Una orden a medias ya no tira lo que se entendió
+
+«Hazme una factura para este cliente, los datos te los paso luego» no creaba nada:
+el cerebro exigía cliente, concepto e importe a la vez y, si faltaba uno, descartaba
+también los que sí se habían dicho. Ahora se guarda el borrador con lo entendido y
+se declara lo que falta (`invoices.pending_fields`, migración 58); se completa con
+una frase suelta, desde el formulario de la web o al dar de alta el cliente que
+esperaba por su nombre. **Emitir sigue bloqueado mientras quede un hueco**, y el
+listado marca esos borradores como «A medias» sin botón de emitir.
+
+**Cuatro fallos propios del diseño, cazados al revisarlo y con prueba cada uno:**
+
+- «Necesito **la** factura de Juan» y «quiero **la** factura del mes pasado» creaban
+  un borrador vacío: son preguntas por una factura que ya existe. Inventarse una
+  factura es peor que el fallo que se corregía. El determinante definido seguido de
+  «de/del», y «factura nº 12», vuelven a ser consulta. «Prepara la factura del
+  trabajo 3» pasa a facturar ese trabajo, que es lo que se pedía. «Crea una factura
+  recurrente» tampoco crea un borrador suelto: se configura en Facturas.
+- «Para este cliente» sin haber nombrado a nadie cogía el cliente más reciente: una
+  factura a nombre de otra persona. Solo se da por hecho si el negocio tiene un
+  único cliente; con varios, el cliente queda pendiente.
+- El aviso «sin ficha» del listado no salía nunca: preguntaba por `client_name`, que
+  `list_invoices` ya rellena con el nombre apuntado (`COALESCE`). Ahora mira
+  `client_id`, y «falta cliente» no se repite cuando el nombre ya está dicho.
+- Editar desde la web un borrador que tenía nombre apuntado dejaba ese nombre por
+  delante del cliente asignado: una factura de Ana seguía saliendo a nombre de Pere.
+  `update_invoice_draft` limpia `recipient_name` al asignar ficha.
+
+Con el piloto guiado encendido (`NOESIS_ASSISTANT_LEARNING_ENABLED`) manda su
+conversación paso a paso, que pide los datos de uno en uno y espera un «sí»: si no,
+la misma orden dejaba dos facturas.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`, `src/noesis/db.py`,
+  `src/noesis/migrations.py`, `src/noesis/tools.py`, `src/noesis/web/chat.py`,
+  `src/noesis/web/templates/facturas.html`.
+- **Pruebas:** `tests/test_orden_a_medias.py` (nuevo, 18 casos) es el corpus de
+  frases reales que fallaron; cuando una nueva falle en producción, se añade allí.
+- **Límites externos:** no se ha probado a ojo en un navegador; el listado está
+  cubierto por pruebas de datos, no visuales.
+- **Riesgo:** medio. Toca el camino por el que se crean facturas. Lo que se crea es
+  siempre un borrador sin número, nunca una factura emitida.
+- **Diagnóstico:** si una frase crea un borrador que no debía, el culpable es
+  `nlu._VERBO_CREAR_FACTURA` frente a `_CONSULTA_FACTURA`/`_FACTURA_EXISTENTE`;
+  `nlu.parse("…")` lo dice en una línea. Si un borrador no se deja emitir,
+  `db.invoice_pending_fields(factura)` dice qué falta.
+- **Rollback:** la migración 58 baja sola; en SQLite la columna se conserva, es
+  nullable y no molesta.
+
 ## 2026-09-22 — Sonnet 5 en todo y fuera Haiku
 
 Petición del founder: «pon el Sonnet y quita el Haiku». Tres valores por defecto

@@ -743,6 +743,43 @@ def _resolve_last_client(business_id: int, args: dict) -> str | None:
     return None
 
 
+def _split_client_with_the_ledger(business_id: int, args: dict) -> None:
+    """Corta el nombre por donde dice la cartera, no por donde adivina una regla.
+
+    Al hablar, el concepto se pega al nombre: «a Reformas Martínez la ventana
+    750». Ninguna regla sabe dónde acaba un nombre propio —«la ventana» podría
+    ser parte de él—, pero la cartera sí: si «Reformas Martínez» tiene ficha y el
+    nombre entero no, lo que sobra es el concepto. Se prueba del trozo más largo
+    al más corto, así que gana siempre la ficha más específica.
+
+    Sin esto, el nombre entero no encontraba a nadie y la conversación moría en
+    «no encuentro un cliente inequívoco llamado …», que es el error que más veces
+    ha visto el founder.
+    """
+    crudo = str(args.get("cliente") or "").strip()
+    if not crudo or args.get("cliente_id"):
+        return
+    try:
+        if db.resolve_client_reference(crudo, business_id):
+            return  # el nombre entero ya es de alguien: no hay nada que cortar
+    except ValueError:
+        return  # varias fichas encajan: eso se resuelve preguntando, no cortando
+    palabras = crudo.split()
+    for corte in range(len(palabras) - 1, 0, -1):
+        try:
+            ficha = db.resolve_client_reference(" ".join(palabras[:corte]), business_id)
+        except ValueError:
+            continue
+        if not ficha:
+            continue
+        args["cliente"] = ficha["name"]
+        args["cliente_id"] = ficha["id"]
+        resto = nlu._limpiar_concepto(" ".join(palabras[corte:]))
+        if resto and str(args.get("concepto") or "") in ("", "Servicio"):
+            args["concepto"] = resto
+        return
+
+
 def _full_invoice_offer(business_id: int, args: dict, channel: str) -> dict | None:
     """Un ticket por encima del límite se reconduce a factura completa en borrador."""
     business = db.get_business(business_id) or {}
@@ -826,6 +863,188 @@ def _job_pending_key(actor: str | None) -> str | None:
     return f"agenda-cliente:{actor}" if actor else None
 
 
+# ------------------------------------------------------- Factura a medias ---
+# «Hazme una factura para este cliente, ya te paso los datos» crea el borrador con
+# lo dicho y declara lo que falta (`invoices.pending_fields`). Nunca responde «no
+# he creado nada» por un dato ausente: lo que se entendió se guarda, y lo que falta
+# se completa después con una frase suelta, desde la web o al dar de alta el
+# cliente. Emitir sigue bloqueado mientras falte algo (`db.issue_invoice`).
+_PENDIENTE_LEGIBLE = {"cliente": "el cliente", "concepto": "el concepto",
+                      "importe": "el importe"}
+
+
+def _invoice_pending_key(actor: str | None) -> str | None:
+    return f"factura-a-medias:{actor}" if actor else None
+
+
+def _client_from_conversation(business_id: int) -> dict | None:
+    """El cliente del que se está hablando: el último nombrado en la conversación.
+
+    «Crea el cliente Jordi Mas» seguido de «hazme una factura para este cliente»
+    se refiere a Jordi Mas. Se recorren los mensajes recientes del más nuevo al más
+    viejo y gana el primer cliente del negocio que aparezca; si en un mismo mensaje
+    salen dos, el nombre más largo (evita que «Jordi» gane a «Jordi Mas»).
+
+    Si no se ha nombrado a nadie, solo se da por hecho cuando el negocio tiene un
+    único cliente. Con varios no se adivina: se devuelve None y el cliente queda
+    pendiente. Adivinar aquí acaba en una factura a nombre de otra persona, que es
+    un error mucho más caro que preguntar.
+    """
+    clientes = db.list_clients(business_id)
+    if not clientes:
+        return None
+    plegados = [(db._fold_client_reference(c["name"]), c) for c in clientes]
+    for mensaje in reversed(db.list_assistant_messages(business_id, limit=20)):
+        texto = f" {db._fold_client_reference(mensaje.get('content'))} "
+        vistos = [c for nombre, c in plegados if nombre and f" {nombre} " in texto]
+        if vistos:
+            return max(vistos, key=lambda c: len(c["name"]))
+    return clientes[0] if len(clientes) == 1 else None
+
+
+def _client_args(business_id: int, nombre: str | None) -> dict:
+    """Traduce el nombre dicho a ficha, sin crear fichas implícitas.
+
+    Si no hay ficha inequívoca, el nombre se guarda en el borrador y queda
+    pendiente de enlazar: un alta implícita duplica clientes por errores de voz.
+    """
+    if not nombre:
+        return {}
+    if nombre == nlu.CLIENTE_DE_LA_CONVERSACION:
+        cliente = _client_from_conversation(business_id)
+        return {"client_id": cliente["id"]} if cliente else {}
+    cliente = db.resolve_client_reference(nombre, business_id)
+    return {"client_id": cliente["id"]} if cliente else {"client_name": nombre}
+
+
+def _lista(items: list[str]) -> str:
+    """«a», «a y b», «a, b y c»: como se escribe, no «a y b y c»."""
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " y " + items[-1]
+
+
+def _partial_invoice_reply(business_id: int, invoice: dict, channel: str,
+                           nuevo: bool = True) -> str:
+    faltan = db.invoice_pending_fields(invoice)
+    cliente = db.get_client(invoice["client_id"], business_id) if invoice.get("client_id") else None
+    numero = invoice["id"]
+    para = f" para **{cliente['name']}**" if cliente else ""
+    if not faltan:
+        return "\n".join([
+            f"Borrador **#{numero}** completo{para}: {invoice['concept']}, "
+            f"{_eur(invoice['base'])} de base, **{_eur(invoice['total'])}** en total.",
+            f"Revísalo y, cuando quieras emitirlo, escribe «emitir factura {numero}».",
+        ])
+    lineas = [(f"He creado el borrador **#{numero}**{para}." if nuevo
+               else f"Apuntado en el borrador **#{numero}**{para}.")]
+    # Un nombre dicho sin ficha no es «falta el cliente»: el dato ya está, solo
+    # falta enlazarlo. Pedirlo otra vez sería exactamente el error que se corrige.
+    apuntado = invoice.get("recipient_name") if not cliente else None
+    if apuntado:
+        lineas.append(
+            f"El cliente es **{apuntado}**, que aún no tiene ficha: cuando digas "
+            f"«crea el cliente {apuntado}» lo enlazo solo.")
+    pendientes = [f for f in faltan if not (f == "cliente" and apuntado)]
+    if pendientes:
+        ejemplos = {"cliente": "«el cliente es …»",
+                    "concepto": "«concepto: reforma del baño»",
+                    "importe": "«el importe es 300»"}
+        lineas.append("Queda a medias: falta "
+                      + _lista([f"**{_PENDIENTE_LEGIBLE[f]}**" for f in pendientes]) + ".")
+        lineas.append(("Pásamelo cuando lo tengas" if len(pendientes) == 1
+                       else "Pásamelos cuando los tengas")
+                      + ", por ejemplo "
+                      + _lista([ejemplos[f] for f in pendientes])
+                      + ", y lo completo.")
+    lineas.append("Mientras falte algo no se puede emitir.")
+    return "\n".join(lineas)
+
+
+_AMOUNT = nlu._AMOUNT_RE
+
+
+def _parse_invoice_completion(message: str, faltan: list[str]) -> dict:
+    """Lee un dato suelto para completar el borrador a medias.
+
+    Solo con marca explícita («el importe es…», «concepto: …», «el cliente es…») o,
+    si falta el importe, una cantidad sola («300 euros»). Una frase cualquiera
+    no se toma por dato: «el cliente es muy pesado» no tiene importe ni sale sola.
+    """
+    texto = message.strip()
+    datos: dict = {}
+    corte = r"(?=\s*[,;.]|\s+y\s+(?:el\s+|la\s+)?(?:cliente|concepto|importe|precio)|$)"
+    m = re.search(r"\bcliente\s*(?:es|ser[aá]|:)\s*(.+?)" + corte, texto, re.I)
+    if m:
+        datos["cliente"] = nlu._limpio_o_nada(nlu._limpiar_cliente(m.group(1)))
+    m = re.search(r"\bconcepto\s*(?:es|ser[aá]|:)?\s*(.+?)" + corte, texto, re.I)
+    if m:
+        datos["concepto"] = nlu._limpio_o_nada(m.group(1))
+    m = re.search(rf"\b(?:importe|precio|total|base)\s*(?:es|son|ser[aá]|de|:)?\s*({_AMOUNT})",
+                  texto, re.I) or re.search(rf"^(?:son|es|ser[aá]n?)\s+({_AMOUNT})", texto, re.I)
+    if not m and "importe" in faltan:
+        m = re.fullmatch(rf"\s*({_AMOUNT})\s*(?:€|euros?|eur)?\s*\.?\s*", texto, re.I)
+    if m:
+        valor = nlu._amount_value(m.group(1))
+        if valor > 0:
+            datos["base"] = valor
+    return {k: v for k, v in datos.items() if v}
+
+
+def _create_partial_invoice(business_id: int, args: dict, actor: str | None,
+                            channel: str) -> dict:
+    campos = _client_args(business_id, args.get("cliente"))
+    try:
+        invoice = db.create_partial_invoice(
+            business_id, concept=args.get("concepto"), base=args.get("base"),
+            vat_rate=args.get("iva"), irpf_rate=args.get("irpf") or 0, **campos)
+    except ValueError as exc:
+        return {"reply": f"No he podido preparar el borrador: {exc}", "source": "local"}
+    clave = _invoice_pending_key(actor)
+    if clave and db.invoice_pending_fields(invoice):
+        db.set_pending_action(business_id, clave, "factura_a_medias",
+                              {"invoice_id": invoice["id"]}, ttl_minutes=120)
+    return {"reply": _partial_invoice_reply(business_id, invoice, channel),
+            "source": "local", "invoice_ids": [invoice["id"]]}
+
+
+def _complete_from_message(business_id: int, message: str, actor: str | None,
+                           channel: str) -> dict | None:
+    """Si hay un borrador a medias esperando y el mensaje trae un dato, lo rellena."""
+    clave = _invoice_pending_key(actor)
+    if not clave:
+        return None
+    esperando = db.get_pending_action(business_id, clave)
+    if not esperando or esperando.get("kind") != "factura_a_medias":
+        return None
+    try:
+        invoice_id = int(json.loads(esperando["payload"])["invoice_id"])
+    except (TypeError, ValueError, KeyError):
+        db.clear_pending_action(business_id, clave)
+        return None
+    invoice = db.get_invoice(invoice_id, business_id)
+    faltan = db.invoice_pending_fields(invoice)
+    if not faltan:
+        db.clear_pending_action(business_id, clave)
+        return None
+    datos = _parse_invoice_completion(message, faltan)
+    if not datos:
+        return None
+    campos = _client_args(business_id, datos.get("cliente"))
+    try:
+        invoice = db.complete_invoice_fields(
+            invoice_id, business_id, concept=datos.get("concepto"),
+            base=datos.get("base"), **campos)
+    except ValueError as exc:
+        return {"reply": f"No he podido completar el borrador #{invoice_id}: {exc}",
+                "source": "local"}
+    if db.invoice_pending_fields(invoice):
+        db.set_pending_action(business_id, clave, "factura_a_medias",
+                              {"invoice_id": invoice_id}, ttl_minutes=120)
+    else:
+        db.clear_pending_action(business_id, clave)
+    return {"reply": _partial_invoice_reply(business_id, invoice, channel, nuevo=False),
+            "source": "local", "invoice_ids": [invoice_id]}
+
+
 def _human_when(value: str) -> str:
     """«mañana a las 12:00» a partir de la fecha que ya interpretó el cerebro."""
     from datetime import date as _date, datetime as _datetime
@@ -844,6 +1063,215 @@ def _human_when(value: str) -> str:
     else:
         label = f"el {day.strftime('%d/%m/%Y')}"
     return f"{label} a las {moment.strftime('%H:%M')}" if moment else label
+
+
+# ----------------------------------------------------------- Alta de ficha ---
+# Dar de alta un cliente o un proveedor es lo que más veces sale mal: se dicta sin
+# el nombre, con el teléfono pegado detrás, o con un nombre imposible. Antes
+# cualquiera de esas cosas terminaba la conversación —listando fichas, soltando el
+# parte del día o con un error crudo— y había que reescribir la orden entera. Ahora
+# se pregunta lo que falta, se recuerda qué se estaba dando de alta y la siguiente
+# frase con un nombre a secas lo termina.
+_ALTA_TTL_MINUTOS = 30
+_NO_ES_UN_NOMBRE = {"si", "no", "vale", "ok", "gracias", "nada", "espera",
+                    "luego", "ninguno", "ninguna", "da igual", "olvidalo"}
+
+
+def _motivo(error: str) -> str:
+    """El motivo legible de un error de herramienta, sin el nombre interno."""
+    limpio = re.sub(r"^Par[áa]metros inv[áa]lidos para \w+:\s*", "", str(error or ""))
+    return limpio if limpio.endswith((".", "!", "?")) else limpio + "."
+
+
+def _party_pending_key(actor: str | None) -> str | None:
+    return f"alta-ficha:{actor}" if actor else None
+
+
+# Palabras que descartan un mensaje como nombre de ficha: quien contesta «qué
+# facturas tengo pendientes» está preguntando, no bautizando a nadie. Basta una
+# para no tomarlo por nombre; un apellido no es ninguna de estas.
+_NO_ES_NOMBRE_RE = re.compile(
+    r"\b(?:factura\w*|gasto\w*|trabajo\w*|cita\w*|agenda\w*|cobro\w*|pago\w*|"
+    r"presupuesto\w*|cliente\w*|proveedor\w*|resumen\w*|impuesto\w*|pdf|"
+    r"documento\w*|ticket\w*|albaran\w*|euros?|que|cual\w*|cuant\w*|como|donde|"
+    r"cuando|quien|porque|tengo|tienes|hay|dime|ensename|muestrame)\b")
+
+
+def _party_name_answer(message: str) -> tuple[str | None, str | None]:
+    """Un mensaje que solo trae un nombre completa el alta que estaba esperando.
+
+    Se exige que parezca un nombre y no una frase: sin interrogación, pocas
+    palabras y ninguna del vocabulario de otras órdenes. Ante la duda no se da de
+    alta a nadie; una ficha llamada «qué facturas tengo pendientes» es peor que
+    volver a preguntar.
+    """
+    texto = str(message or "").strip()
+    if "?" in texto or "¿" in texto:
+        return (None, None)
+    texto = texto.strip(".!¡")
+    if not texto or len(texto) > 210 or len(texto.split()) > 8:
+        return (None, None)
+    plegado = nlu._norm(texto)
+    if plegado in _NO_ES_UN_NOMBRE or _NO_ES_NOMBRE_RE.search(plegado):
+        return (None, None)
+    if nlu.parse(texto) is not None:
+        # Es otra orden reconocida, no el nombre que se pedía.
+        return (None, None)
+    return nlu.parse_party_name(texto)
+
+
+def _ask_party_name(business_id: int, tipo: str, actor: str | None,
+                    motivo: str = "") -> dict:
+    clave = _party_pending_key(actor)
+    if clave:
+        db.set_pending_action(business_id, clave, "alta_ficha", {"tipo": tipo},
+                              ttl_minutes=_ALTA_TTL_MINUTOS)
+    ejemplo = ("«Talleres Pino»" if tipo == "proveedor" else "«Jordi Mas»")
+    if motivo == "sin_nombre":
+        cabecera = (f"Eso no me sirve como nombre de {tipo}: un teléfono o un "
+                    f"número no identifican una ficha.")
+    else:
+        cabecera = f"Vale, doy de alta un {tipo}."
+    return {
+        "reply": f"{cabecera} ¿Cómo se llama? Dime solo el nombre, por ejemplo "
+                 f"{ejemplo}. No he creado nada todavía.",
+        "source": "local",
+        "clarification_kind": f"alta_{tipo}",
+    }
+
+
+def _party_error_reply(business_id: int, tipo: str, actor: str | None,
+                       error: str) -> dict:
+    """Un alta que falla deja la puerta abierta: se dice qué pasa y se sigue.
+
+    Sin esto, el fallo era el final de la conversación: el mensaje llevaba el
+    motivo técnico y nada más, y había que volver a escribir la orden entera.
+    """
+    clave = _party_pending_key(actor)
+    if clave:
+        db.set_pending_action(business_id, clave, "alta_ficha", {"tipo": tipo},
+                              ttl_minutes=_ALTA_TTL_MINUTOS)
+    return {
+        "reply": f"No he dado de alta ese {tipo}: {error} "
+                 f"Dime solo el nombre y lo guardo; el resto de la ficha "
+                 f"(teléfono, NIF, dirección) se rellena después desde su página.",
+        "source": "local",
+    }
+
+
+# ------------------------------------------- Orden a nombre de un desconocido ---
+# Con la revisión encendida, pedir una factura para alguien sin ficha era el final
+# del camino: «no encuentro un cliente inequívoco… crea primero su ficha», y un
+# «sí» detrás no hacía nada. Ahora se ofrece crearla y seguir con la orden, que es
+# lo que se estaba pidiendo. La ficha sigue sin nacer sola: hay que decir que sí.
+def _order_pending_key(actor: str | None) -> str | None:
+    return f"alta-y-orden:{actor}" if actor else None
+
+
+def _parecidos(business_id: int, nombre: str) -> list[str]:
+    """Fichas que se parecen al nombre dicho, por si es un error de dictado.
+
+    «Martta» por «Marta» es el caso que hay que cazar antes de crear nada: un «sí»
+    distraído deja dos fichas de la misma persona y el historial partido en dos.
+    """
+    from difflib import SequenceMatcher
+
+    objetivo = db._fold_client_reference(nombre)
+    if not objetivo:
+        return []
+    puntuados = []
+    for ficha in db.list_clients(business_id):
+        plegado = db._fold_client_reference(ficha["name"])
+        if not plegado:
+            continue
+        # Se compara con el nombre entero y con cada palabra suelta: «Martta» se
+        # parece a «Marta» aunque la ficha sea «Marta López», que es justo el
+        # caso que hay que cazar.
+        parecido = max(SequenceMatcher(None, objetivo, trozo).ratio()
+                       for trozo in (plegado, *plegado.split()))
+        if parecido >= 0.8:
+            puntuados.append((parecido, ficha["name"]))
+    puntuados.sort(key=lambda par: (-par[0], par[1]))
+    return [nombre_ficha for _, nombre_ficha in puntuados[:2]]
+
+
+def _ask_to_create_the_client(business_id: int, tool: str, args: dict,
+                              nombre: str, actor: str | None) -> dict:
+    clave = _order_pending_key(actor)
+    if clave:
+        db.set_pending_action(business_id, clave, "alta_y_orden",
+                              {"tool": tool, "args": args},
+                              ttl_minutes=_ALTA_TTL_MINUTOS)
+    que = {"crear_factura": "la factura", "crear_presupuesto": "el presupuesto",
+           "agendar_trabajo": "el trabajo"}.get(tool, "la orden")
+    lineas = [f"No tengo ficha de **{nombre}**."]
+    parecidos = _parecidos(business_id, nombre)
+    if parecidos:
+        # El parecido va primero y el «sí» después: lo más probable es que sea un
+        # error de dictado, no un cliente nuevo con un nombre casi igual.
+        lineas.append("¿Querías decir " + _lista([f"**{p}**" for p in parecidos])
+                      + "? Si es eso, dime el nombre bueno y lo uso.")
+    lineas.append(f"Si **{nombre}** es correcto, contesta **sí** y creo su ficha y "
+                  f"sigo con {que}."
+                  + ("" if parecidos else " Si está mal escrito, dime el nombre bueno."))
+    lineas.append("No he creado nada todavía.")
+    return {"reply": " ".join(lineas), "source": "local"}
+
+
+def _client_without_record(business_id: int, args: dict) -> str | None:
+    """Nombre dicho que no tiene ficha. `None` si la tiene o si hay varias."""
+    nombre = str(args.get("cliente") or "").strip()
+    if not nombre or args.get("cliente_id"):
+        return None
+    try:
+        if db.resolve_client_reference(nombre, business_id):
+            return None
+    except ValueError:
+        # Varias fichas encajan: eso lo resuelve el mensaje de siempre, que las
+        # enumera. Crear una más sería justo lo contrario de lo que hace falta.
+        return None
+    return nombre
+
+
+def _finish_order_for_a_new_client(business_id: int, message: str,
+                                   actor: str | None, channel: str) -> dict | None:
+    """Un «sí» —o el nombre corregido— crea la ficha y sigue con la orden."""
+    clave = _order_pending_key(actor)
+    if not clave:
+        return None
+    esperando = db.get_pending_action(business_id, clave)
+    if not esperando or esperando.get("kind") != "alta_y_orden":
+        return None
+    try:
+        guardado = json.loads(esperando["payload"])
+        tool, args = guardado["tool"], dict(guardado["args"])
+    except (TypeError, ValueError, KeyError):
+        db.clear_pending_action(business_id, clave)
+        return None
+    if nlu.es_confirmacion(message):
+        nombre = str(args.get("cliente") or "").strip()
+    else:
+        corregido, _ = _party_name_answer(message)
+        if not corregido:
+            return None  # ni un sí ni un nombre: que siga su camino normal
+        nombre = corregido
+        args["cliente"] = nombre
+    try:
+        cliente = (db.resolve_client_reference(nombre, business_id)
+                   or db.add_client(nombre, business_id=business_id))
+    except ValueError as exc:
+        return _party_error_reply(business_id, "cliente", actor, _motivo(str(exc)))
+    args["cliente"] = cliente["name"]
+    args["cliente_id"] = cliente["id"]
+    db.clear_pending_action(business_id, clave)
+    resultado = json.loads(run_tool(tool, args, business_id, channel=channel))
+    if resultado.get("error"):
+        return {"reply": f"He guardado la ficha de **{args['cliente']}**, pero la "
+                         f"orden no ha salido: {_motivo(resultado['error'])}",
+                "source": "local"}
+    return {"reply": f"Ficha de **{args['cliente']}** creada.\n\n"
+                     + nlu.format_reply(tool, resultado),
+            "source": "local"}
 
 
 def _job_client_answer(message: str) -> str | None:
@@ -879,7 +1307,7 @@ def _handle(
     voice: bool = False,
 ) -> dict:
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
-    from .. import local_invoice, action_review
+    from .. import local_invoice, action_review, learning
     if local_invoice.enabled() and action_review.context.get() is not None:
         if channel == "web":
             reference = local_invoice.reference_response(business_id, action_review.context.get()["actor"], message)
@@ -892,6 +1320,34 @@ def _handle(
     refusal = nlu.safety_refusal(message)
     if refusal:
         return {"reply": refusal, "source": "local"}
+
+    completado = _complete_from_message(business_id, message, actor, channel)
+    if completado:
+        return completado
+
+    # Un alta a la que solo le faltaba el nombre se completa con el nombre a secas.
+    alta_key = _party_pending_key(actor)
+    if alta_key:
+        esperando = db.get_pending_action(business_id, alta_key)
+        if esperando and esperando.get("kind") == "alta_ficha":
+            try:
+                tipo = json.loads(esperando["payload"])["tipo"]
+            except (TypeError, ValueError, KeyError):
+                tipo = None
+            nombre, telefono = _party_name_answer(message) if tipo else (None, None)
+            if tipo and nombre:
+                args = {"nombre": nombre}
+                if telefono and tipo == "cliente":
+                    args["telefono"] = telefono
+                result = json.loads(run_tool(
+                    f"crear_{tipo}", args, business_id,
+                    channel="whatsapp" if channel == "whatsapp" else "web"))
+                if result.get("error"):
+                    return _party_error_reply(business_id, tipo, actor,
+                                              _motivo(result["error"]))
+                db.clear_pending_action(business_id, alta_key)
+                return {"reply": nlu.format_reply(f"crear_{tipo}", result),
+                        "source": "local"}
 
     # Un trabajo al que solo le faltaba el cliente se completa con su nombre a secas,
     # sin obligar a repetir la orden entera.
@@ -949,6 +1405,15 @@ def _handle(
             return {"reply": "Abre la factura en Facturas para revisar y registrar el cobro. No he cambiado su estado.", "source": "local"}
         if tool == nlu.HELP:
             return {"reply": _coach_reply(business_id, message), "source": "local"}
+        if tool == nlu.PARTIAL_INVOICE and not learning.enabled():
+            return _create_partial_invoice(business_id, args, actor, channel)
+        if tool == nlu.PARTIAL_INVOICE:
+            # Con el piloto guiado encendido manda su conversación paso a paso: pide
+            # cliente, concepto e importe de uno en uno y espera un «sí» antes de
+            # escribir nada. Recoge los mismos datos con más cuidado, así que crear
+            # aquí un borrador a medias dejaría dos facturas por la misma orden.
+            args = {}
+            tool = nlu.NEED_INVOICE
         if tool == nlu.NEED_INVOICE:
             return {
                 "reply": "Claro. Dime **cliente, concepto e importe**; por ejemplo: "
@@ -956,6 +1421,9 @@ def _handle(
                 "source": "local",
                 "clarification_kind": "invoice",
             }
+        if tool == nlu.NEED_PARTY_NAME:
+            return _ask_party_name(business_id, args.get("tipo") or "cliente",
+                                   actor, args.get("motivo", ""))
         if tool == nlu.NEED_USER_INVITE:
             return {
                 "reply": "Para dar acceso a alguien necesito su correo y el rol. "
@@ -995,6 +1463,14 @@ def _handle(
             unresolved = _resolve_last_client(business_id, args)
             if unresolved:
                 return {"reply": unresolved, "source": "local"}
+            _split_client_with_the_ledger(business_id, args)
+            # Con la revisión encendida, un cliente sin ficha era un error sin
+            # salida. Sin ella, la ficha se crea sola como hasta ahora.
+            if config.ASSISTANT_REVIEW_ENABLED:
+                sin_ficha = _client_without_record(business_id, args)
+                if sin_ficha:
+                    return _ask_to_create_the_client(business_id, tool, args,
+                                                     sin_ficha, actor)
         if tool == "crear_factura" and args.get("tipo_factura") == "F2":
             offer = _full_invoice_offer(business_id, args, channel)
             if offer:
@@ -1003,6 +1479,13 @@ def _handle(
         result = json.loads(
             run_tool(tool, args, business_id, channel=ledger_channel)
         )
+        if result.get("error") and tool in {"crear_cliente", "crear_proveedor"}:
+            return _party_error_reply(business_id, tool.split("_", 1)[1], actor,
+                                      _motivo(result["error"]))
+        if tool in {"crear_cliente", "crear_proveedor"} and not result.get("error"):
+            clave = _party_pending_key(actor)
+            if clave:
+                db.clear_pending_action(business_id, clave)
         return {"reply": nlu.format_reply(tool, result), "source": "local"}
 
     # Marco común para el segundo nivel, sea privado o externo.
@@ -1254,8 +1737,14 @@ def handle(
     message = turn["message"]
     if "reply" in turn and enabled:
         db.clear_pending_action(business_id, actor)
-    result = {"reply": turn["reply"], "source": "local", "needs_clarification": turn.get("needs_clarification", False)} if "reply" in turn else (
-        action_review.respond(business_id, actor, message) if enabled else None)
+    # Un «sí» a «no tengo ficha de X, ¿la creo?» se atiende aquí, antes que la
+    # revisión: si no, contesta «no hay ninguna propuesta pendiente de confirmar»
+    # y la orden se pierde. Es el fallo que se veía en WhatsApp.
+    seguido = _finish_order_for_a_new_client(
+        business_id, message, actor,
+        "whatsapp" if channel == "whatsapp" else "web") if enabled else None
+    result = seguido or ({"reply": turn["reply"], "source": "local", "needs_clarification": turn.get("needs_clarification", False)} if "reply" in turn else (
+        action_review.respond(business_id, actor, message) if enabled else None))
     if result is None:
         if enabled:
             # Cualquier nueva orden invalida la anterior, incluso si la corrección

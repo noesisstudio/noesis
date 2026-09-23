@@ -163,6 +163,122 @@ cliente nuevo (`_short_field` acota y normaliza). La ruta
 `documentos.html` los muestra en `#r-client-contact` únicamente cuando la factura
 es emitida y la propuesta está pendiente. Sin esquema nuevo: `clients` ya tenía
 las columnas.
+## PDF de la factura recién creada — 23-sep
+
+`web/whatsapp.py`: `_attach_new_invoice_pdf` es el único sitio que decide si se
+adjunta el PDF de una factura recién preparada, y lo llaman los dos caminos de
+`_handle_inbound`: el normal y el de la revisión (donde la factura nace al
+contestar «sí», y donde antes no salía nunca). Reutiliza `_send_owner_invoice_pdf`,
+que ya existía: sube el borrador a Meta con `_upload_owner_draft_pdf` y lo manda
+como documento con la leyenda «BORRADOR #id». No manda nada si el borrador está a
+medias (`db.invoice_pending_fields`). Los documentos **no pasan por
+`whatsapp_outbox`**: se publican directos, así que la cola sigue siendo solo de
+texto y plantillas.
+
+## Pedir la factura como se hable — 23-sep
+
+`nlu.py`: `_MARCA_DE_CONCEPTO` se busca en toda la frase y el importe puede estar
+antes o después de ella, así que «concepto» manda esté donde esté. El stripper de
+impuestos sustituye por un espacio (sustituir por vacío pegaba «euros» con la
+palabra siguiente). `_factura_sin_preposicion` atiende «factura reformas martinez
+ventana 750», sin «a» ni «por»: quita verbo e importe y deja el resto para que lo
+separe la cartera; si al quitarlos no queda ninguna palabra, no era una orden
+(«factura 12» no lo es). `es_confirmacion` decide si una frase es un sí: exige un
+afirmativo al principio y que detrás solo haya cortesías o la petición del PDF;
+cualquier cifra o palabra de cambio lo invalida. La usan `action_review.respond` y
+`chat._finish_order_for_a_new_client`, que antes tenían cada una su lista.
+
+`web/chat.py`: `_split_client_with_the_ledger` corta el nombre por donde dice la
+cartera. Se llama justo antes de despachar `crear_factura`, `crear_presupuesto` y
+`agendar_trabajo`.
+
+`routers/pages.py` y `ajustes.html`: la tarjeta de la IA muestra
+`config.FALLBACK_MODEL` y avisa si no hay clave de proveedor.
+
+## El nombre dictado y el cliente sin ficha — 23-sep
+
+`nlu.py`: `_partir_nombre` decide dónde acaba el nombre y empieza la frase. Corta en
+la marca explícita `concepto`/`en concepto de` y, si no la hay, en el primer punto
+seguido de espacio cuyo token anterior no sea una inicial de una letra ni una sigla
+de `_SIGLAS_CON_PUNTO` (S.L., S.A., C.B., …). `_recortar` quita la puntuación de los
+bordes sin comerse el punto final de «S.L.». `_limpiar_cliente` lo aplica, así que
+lo heredan todas las órdenes; `_cliente_y_concepto` reparte lo que sobra al concepto
+cuando el parser no encontró uno, y `parse_party_name` corta igual en las altas.
+
+`web/chat.py`: `_client_without_record` mira si el nombre dicho tiene ficha
+—devuelve `None` cuando encajan varias, que ya se resuelve enumerándolas—;
+`_ask_to_create_the_client` guarda la pendiente `alta-y-orden:{actor}` con la orden
+entera y pregunta; `_finish_order_for_a_new_client` acepta un «sí» o el nombre
+corregido, crea la ficha **llamando a `db` directamente** (pasarla otra vez por la
+revisión pedía confirmar dos veces lo mismo) y ejecuta la orden guardada. Se invoca
+desde `handle` **antes** de `action_review.respond`: si no, la revisión contesta «no
+hay ninguna propuesta pendiente» y la orden se pierde.
+
+## Alta de cliente y proveedor — 23-sep
+
+`nlu.py`: `NEED_PARTY_NAME` es el alta sin nombre utilizable («crea el cliente» a
+secas, o un nombre que solo son cifras). `parse_party_name` separa el nombre de los
+datos dictados detrás —corta en la coma o en el «con teléfono…» y devuelve el
+teléfono en limpio— y devuelve `(None, None)` cuando lo que queda no puede ser el
+nombre de nadie. `_party_intent` reúne las dos entradas («crea el cliente X» y «da
+de alta a X como proveedor») en un solo sitio.
+
+`web/chat.py`: `_ask_party_name` pregunta y guarda la pendiente `alta-ficha:{actor}`
+(30 min); `_party_name_answer` acepta la respuesta solo si parece un nombre (sin
+interrogación, ocho palabras como mucho, ninguna del vocabulario de otras órdenes) y
+`_party_error_reply` deja la pendiente puesta cuando el alta falla, que es lo que
+convierte un error en algo que se puede arreglar hablando. `_motivo` quita el nombre
+interno de la herramienta del mensaje de error.
+
+`db.py`: `add_client` gana el límite de 200 que ya tenía `add_supplier`, y los dos
+distinguen «falta el nombre» de «es demasiado largo», porque se arreglan de forma
+distinta. `_find_supplier_row_by_name` pliega mayúsculas y acentos, y lo usan tanto
+`find_supplier` como el control de duplicados de `add_supplier`.
+
+`tools.py`: `_crear_cliente` acepta `telefono` y lo rellena si la ficha existía sin
+él; un teléfono ya guardado no se pisa desde una frase.
+
+`routers/clients.py` y `routers/invoicing.py`: las dos altas de cliente por web
+devuelven 400 con el motivo. Sin ese `except ValueError`, el nuevo límite de nombre
+habría salido como un 500.
+
+## Factura a medias — 23-sep
+
+`migrations.py` 58 añade `invoices.pending_fields`: lista JSON con lo que falta
+(`cliente`, `concepto`, `importe`). NULL o `[]` es una factura completa.
+
+`db.py`: `create_partial_invoice` crea el borrador con lo que haya —si llegan los
+tres datos delega en `add_invoice` y no hay nada especial—; `complete_invoice_fields`
+rellena huecos y, al caer el último, reconstruye la factura con
+`update_invoice_draft`, la misma función que valida cualquier borrador, para que no
+exista un segundo camino que se salte reglas; `invoice_pending_fields` lee la lista;
+`latest_partial_invoice` es a la que se refiere «el importe es 300»;
+`link_partial_invoices_to_client` enlaza por nombre al dar de alta el cliente.
+`issue_invoice` se niega a emitir mientras quede un hueco y dice cuál.
+`update_invoice_draft` limpia `pending_fields` y `recipient_name` al guardar desde
+la web: el nombre apuntado a mano manda sobre el del cliente en
+`list_invoices` (`COALESCE(recipient_name, c.name)`) y, si se quedara, la factura
+seguiría saliendo a nombre de quien ya no es.
+
+`nlu.py`: `PARTIAL_INVOICE` y `parse_partial_invoice` extraen lo que haya sin exigir
+los tres datos. Tres guardias deciden que una frase crea: `_VERBO_CREAR_FACTURA`
+(hace falta un verbo de crear), `_CONSULTA_FACTURA` y `_FACTURA_EXISTENTE`
+(determinante definido + «de/del», o «factura nº 12»: se habla de una que ya
+existe). `_FACTURA_RECURRENTE` deja las recurrentes fuera, que se configuran en
+Facturas.
+
+`web/chat.py`: `_create_partial_invoice` guarda la pendiente
+`factura-a-medias:{actor}` (120 min) y `_complete_from_message`, lo primero de
+`_handle`, rellena el hueco cuando el mensaje trae un dato marcado («el importe
+es…») o, si solo falta el importe, una cantidad sola. `_client_from_conversation`
+resuelve «este cliente» con los últimos 20 mensajes y **no adivina**: con varios
+clientes y nadie nombrado, el cliente queda pendiente. Con el piloto guiado
+encendido manda su conversación paso a paso y esto no se activa.
+
+`facturas.html`: `pendientes()`, `sinFicha()` y `faltan()` pintan el badge «A
+medias», esconden Emitir y Duplicar, y distinguen «falta el cliente» de «el nombre
+está dicho pero no tiene ficha» mirando `client_id`, no `client_name`.
+
 ## Agenda por lenguaje natural y estado de la IA — 16-sep
 
 `nlu.py`: `_is_agenda_order` acepta verbo + sustantivo («añade un trabajo») además

@@ -1,5 +1,90 @@
 # Tareas vivas
 
+## Entender la orden como se hable — 23-sep
+
+- [x] 15 formas naturales de pedir la misma factura: las 15 salen. Antes fallaban 9.
+- [x] «Concepto» manda esté donde esté en la frase; sin él, «Servicio».
+- [x] «Si, genera el pdf» confirma; «sí, pero 500 euros» no.
+- [x] Ajustes muestra el modelo de IA configurado.
+- [ ] Founder: en Railway → Variables, mirar `NOESIS_MODEL`,
+  `NOESIS_FALLBACK_MODEL` y `NOESIS_EXTRACTION_MODEL`. Si existen y no ponen
+  `claude-sonnet-5`, mandan ellas sobre el código. Tras desplegar se ve en Ajustes.
+- [ ] Cuando una frase real vuelva a fallar, añadirla al corpus de
+  `tests/test_nombre_dictado.py` con lo que se esperaba. Ese archivo es el que
+  impide que el mismo fallo vuelva.
+
+
+## PDF de la factura por WhatsApp — 23-sep
+
+- [x] El PDF del borrador se adjunta al crear la factura, sin pedirlo, también
+  cuando nace de un «sí» con la revisión encendida.
+- [ ] Founder, **al desplegar**: pedir una factura por WhatsApp y comprobar que
+  llega el PDF. Es lo único que lo prueba: aquí no hay credenciales de Meta.
+- [ ] Si el PDF no llega pero sí el texto, el fallo está en la subida a Meta: el
+  mensaje lo dirá y dará el enlace con sesión. Mirar el log por
+  «No se pudo adjuntar borrador».
+
+
+## Vista previa del enlace — 23-sep
+
+- [x] Tarjeta propia de 1200x630 con la marca y el reclamo. Fuera la captura del
+  panel, que enseñaba el nombre de una cuenta y el de un cliente.
+- [ ] Founder, **en cuanto esté desplegado**: pedir a Meta que relea el enlace en
+  https://developers.facebook.com/tools/debug/ («Scrape Again»). Facebook y
+  WhatsApp cachean la vista previa y hasta entonces seguirá la imagen vieja.
+- [ ] Founder: comprobarlo también pegando el enlace en un chat de WhatsApp y en
+  LinkedIn, que cachean por su cuenta.
+- [ ] Si alguna vez se quiere enseñar el producto en la tarjeta, que sea una
+  pantalla dibujada a propósito, nunca una captura de una cuenta real.
+
+
+## Nombre dictado por voz — 23-sep
+
+- [x] El punto que separa frases corta el nombre del cliente; el de «S.L.» y el de
+  una inicial, no. Lo que va detrás pasa a ser el concepto.
+- [x] Un cliente sin ficha se ofrece crear y se sigue con la orden; el «sí» ya no
+  se lo come la revisión.
+- [ ] Founder: probarlo dictando de verdad por WhatsApp. La transcripción la hace
+  Meta y aquí solo se puede simular el texto que llega.
+- [ ] Founder: si en producción quedó alguna ficha con un nombre raro del tipo
+  «Reformas Martínez. Concierto Ventanas», bórrala desde Clientes. El arreglo evita
+  las nuevas, no limpia las viejas.
+- [ ] Cuando una frase dictada vuelva a fallar, añadirla a
+  `tests/test_nombre_dictado.py` con lo que se esperaba.
+
+
+## Altas de clientes y proveedores — 23-sep
+
+- [x] Siete fallos reales de la zona de altas, reproducidos y corregidos con
+  prueba: alta sin nombre, teléfono dentro del nombre, nombre que es un número,
+  proveedor duplicado por mayúsculas, nombres sin límite en clientes, error que no
+  decía qué pasaba, y el 500 de la web.
+- [x] Un alta que falla deja la pendiente puesta: la siguiente frase con un nombre
+  la termina.
+- [ ] Founder: probar en el navegador las páginas de Clientes y Proveedores. Lo
+  probado automáticamente es la respuesta de la API, no la pantalla.
+- [ ] Founder: si alguna vez importaste clientes con nombres larguísimos, ahora la
+  importación los rechazará en vez de meterlos. Las fichas ya guardadas no se tocan.
+- [ ] Cuando una frase de alta falle en producción, añadirla a
+  `tests/test_alta_de_ficha.py` con lo que se esperaba.
+
+
+## Factura a medias — 23-sep
+
+- [x] El borrador guarda lo entendido y declara lo que falta; se completa por chat,
+  por el formulario o al dar de alta el cliente. Emitir bloqueado mientras falte algo.
+- [x] Cinco fallos propios corregidos con prueba: preguntas que creaban borradores,
+  el cliente adivinado, el aviso «sin ficha» que no salía nunca, el nombre apuntado
+  que sobrevivía al asignar ficha, y el archivo de pruebas que dejaba `config`
+  parcheado y tumbaba 14 pruebas ajenas al correr la suite entera.
+- [ ] Founder: probarlo a ojo en el navegador. El listado está cubierto por pruebas
+  de datos, no visuales: mira que «A medias» se vea bien y que no salga Emitir.
+- [ ] Al desplegar: la migración 58 se aplica sola; confirmar en `/ready` que el
+  esquema llega a 58.
+- [ ] Cuando una frase real falle en producción, añadirla a
+  `tests/test_orden_a_medias.py` con lo que se esperaba. Ese archivo es el corpus.
+
+
 ## Sonnet 5 en todo — 22-sep
 
 - [x] Valores por defecto a `claude-sonnet-5` (agente, respaldo y lectura de

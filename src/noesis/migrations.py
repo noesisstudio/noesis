@@ -4212,6 +4212,27 @@ def _downgrade_sales_pipeline(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS sales_prospects")
 
 
+def _upgrade_invoice_pending_fields(conn) -> None:
+    """Una factura puede empezar a medias y decir qué le falta.
+
+    Antes, pedir «hazme una factura para este cliente, los datos te los paso
+    luego» no creaba nada: el cerebro exigía cliente, concepto e importe a la vez y,
+    si faltaba uno, tiraba también los que sí se habían dicho. `pending_fields`
+    guarda en JSON la lista de lo que falta (`cliente`, `concepto`, `importe`).
+    NULL o lista vacía es una factura completa. Cualquier vía que complete un dato
+    —el chat, la web o una lectura de documento— lo quita de la lista, y emitir
+    queda bloqueado mientras quede alguno.
+    """
+    if "pending_fields" not in _column_names(conn, "invoices"):
+        conn.execute("ALTER TABLE invoices ADD COLUMN pending_fields TEXT")
+
+
+def _downgrade_invoice_pending_fields(conn) -> None:
+    # En SQLite se conserva la columna: es nullable y no molesta al revertir.
+    if conn.dialect != "sqlite":
+        conn.execute("ALTER TABLE invoices DROP COLUMN IF EXISTS pending_fields")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4301,6 +4322,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     (57, "captacion_comercial",
      _upgrade_sales_pipeline,
      _downgrade_sales_pipeline),
+    (58, "factura_a_medias",
+     _upgrade_invoice_pending_fields,
+     _downgrade_invoice_pending_fields),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

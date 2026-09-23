@@ -169,6 +169,63 @@ class InvoiceConversationTestCase(unittest.TestCase):
             whatsapp.handle_inbound({'from': '34600111222', 'id': 'f2-select', 'text': 'F2 jana'})
         self.assertIn(f'/invoices/{wanted["id"]}/pdf', post.call_args.args[0]['document']['link'])
 
+    def test_a_new_invoice_arrives_with_its_pdf_without_being_asked(self):
+        """Decisión del founder (23-09): quiere verla antes de emitirla.
+
+        Antes el PDF solo salía si la orden decía «y mándamelo en PDF», así que
+        la factura se preparaba a ciegas.
+        """
+        biz, _ = self.make_business('PDF sin pedirlo')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        db.add_client('Reformas Martinez', business_id=biz['id'])
+        with patch.object(whatsapp, 'send'), \
+             patch.object(whatsapp, '_upload_owner_draft_pdf', return_value='9911'), \
+             patch.object(whatsapp, '_post_to_meta', return_value='wamid-auto') as post:
+            whatsapp.handle_inbound({
+                'from': '34600111222', 'id': 'pdf-auto-1',
+                'text': 'haz una factura a reformas martinez concepto ventana por 750 euros'})
+        borrador = db.list_invoices(biz['id'])[0]
+        self.assertEqual(borrador['concept'], 'ventana')
+        documento = post.call_args.args[0]
+        self.assertEqual(documento['type'], 'document')
+        self.assertEqual(documento['document']['id'], '9911')
+        self.assertIn(str(borrador['id']), documento['document']['filename'])
+        self.assertIn('BORRADOR', documento['document']['caption'])
+
+    def test_the_pdf_also_arrives_when_the_invoice_is_born_from_a_yes(self):
+        # Con la revisión encendida —lo de producción— la factura nace al
+        # confirmar, y ese camino no adjuntaba el PDF ni pidiéndolo.
+        from noesis import config
+
+        biz, _ = self.make_business('PDF tras confirmar')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        db.add_client('Reformas Martinez', business_id=biz['id'])
+        with patch.object(config, 'ASSISTANT_REVIEW_ENABLED', True), \
+             patch.object(whatsapp, 'send'), \
+             patch.object(whatsapp, '_upload_owner_draft_pdf', return_value='9912'), \
+             patch.object(whatsapp, '_post_to_meta', return_value='wamid-si') as post:
+            whatsapp.handle_inbound({
+                'from': '34600111222', 'id': 'pdf-review-1',
+                'text': 'haz una factura a reformas martinez concepto ventana por 750 euros'})
+            self.assertEqual(db.list_invoices(biz['id']), [])  # solo propuesta
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'pdf-review-2',
+                                     'text': 'sí'})
+        borrador = db.list_invoices(biz['id'])[0]
+        self.assertEqual(borrador['concept'], 'ventana')
+        self.assertEqual(post.call_args.args[0]['document']['id'], '9912')
+
+    def test_a_half_finished_draft_is_not_sent_as_a_pdf(self):
+        # Un borrador a medias no es una factura todavía: un PDF con «Pendiente
+        # de concepto» y 0 € confunde más de lo que ayuda.
+        biz, _ = self.make_business('Sin PDF a medias')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        with patch.object(whatsapp, 'send'), \
+             patch.object(whatsapp, '_post_to_meta', return_value='wamid-no') as post:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'pdf-medias-1',
+                                     'text': 'hazme una factura'})
+        self.assertTrue(db.list_invoices(biz['id']))
+        post.assert_not_called()
+
     def invoice(self, business, client, amount=100, issued=False):
         inv = db.add_invoice(client['id'], 'Reparación real', amount,
                              business_id=business['id'], invoice_type='F2')

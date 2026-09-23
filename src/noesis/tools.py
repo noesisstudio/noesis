@@ -192,7 +192,8 @@ TOOLS: list[dict] = [
         "description": "Crea o reutiliza un cliente por su nombre, sin generar documentos.",
         "input_schema": {
             "type": "object",
-            "properties": {"nombre": {"type": "string"}},
+            "properties": {"nombre": {"type": "string"},
+                           "telefono": {"type": "string"}},
             "required": ["nombre"],
         },
     },
@@ -324,10 +325,23 @@ def _agendar_trabajo(business_id, cliente, descripcion, fecha_hora, zona=None,
     return {"ok": True, "trabajo": job, "cliente": c}
 
 
-def _crear_cliente(business_id, nombre):
+def _crear_cliente(business_id, nombre, telefono=None):
     before = db.resolve_client_reference(nombre, business_id)
-    client = before or db.add_client(nombre, business_id=business_id)
-    return {"ok": True, "cliente": client, "existing": bool(before)}
+    client = before or db.add_client(nombre, phone=telefono, business_id=business_id)
+    if before and telefono and not before.get("phone"):
+        # La ficha existía sin teléfono y ahora se ha dicho: se completa en vez
+        # de perderlo. Un teléfono ya guardado no se pisa desde una frase.
+        db.update_client(client["id"], business_id=business_id, phone=telefono)
+        client = db.get_client(client["id"], business_id) or client
+    # Los borradores a medias que esperaban a este cliente por su nombre quedan
+    # enlazados en el mismo paso: «factura para Jordi, ya te paso los datos» +
+    # «crea el cliente Jordi» no debe obligar a volver a pedir la factura.
+    try:
+        enlazadas = db.link_partial_invoices_to_client(business_id, client)
+    except ValueError:
+        enlazadas = []
+    return {"ok": True, "cliente": client, "existing": bool(before),
+            "facturas_enlazadas": enlazadas}
 
 
 def _crear_proveedor(business_id, nombre):

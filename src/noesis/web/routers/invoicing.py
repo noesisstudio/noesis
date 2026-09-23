@@ -87,9 +87,14 @@ async def api_create_invoice(business_id: int, request: Request):
                 {"error": "Indica un cliente para la factura."}, status_code=400
             )
         existing = db.find_client(new_name, business_id)
-        client_id = existing["id"] if existing else db.add_client(
-            new_name, business_id=business_id
-        )["id"]
+        try:
+            client_id = existing["id"] if existing else db.add_client(
+                new_name, business_id=business_id
+            )["id"]
+        except ValueError as exc:
+            # El cliente nuevo se crea desde el formulario de la factura: si su
+            # nombre no vale, se dice aquí en vez de devolver un 500.
+            return JSONResponse({"error": str(exc)}, status_code=400)
     try:
         client_id = int(client_id)
         invoice = db.add_invoice(
