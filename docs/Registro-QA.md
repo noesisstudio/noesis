@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-23 — Catalán, proyectos y límites numéricos
+
+- `tests/test_ordenes_del_dia.py` sube a **23 casos**. Suite completa **1.138 en
+  verde**. Ruff OK.
+- **Medido antes de tocar**: 8 consultas en catalán, funcionaba 1. Después, 8.
+- **Cada idioma es el contrapeso del otro**: la misma prueba comprueba las ocho en
+  catalán y las seis equivalentes en castellano, porque añadir un idioma es la
+  forma más fácil de romper el otro. Pasó dos veces durante el trabajo.
+- **Límites numéricos revisados**: 0 €, importes negativos, 99.999.999 y las dos
+  formas de escribir decimales. Los negativos y el cero ya se rechazaban; no se
+  tocó nada.
+- **No ejecutado:** proyectos y documentos siguen sin barrido de corpus.
+
+
 ## 2026-09-23 — Tickets, envíos y consultas
 
 - `tests/test_ordenes_del_dia.py` sube a **18 casos**. Ruff OK.

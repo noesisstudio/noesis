@@ -202,6 +202,73 @@ class ConsultasTests(unittest.TestCase):
                 self.assertEqual(nlu.parse(frase)[0], "ver_cobros_pendientes")
 
 
+class CatalanTests(unittest.TestCase):
+    """El producto se vende en Lleida y se habla catalán a diario.
+
+    Barrido del 23-09: de ocho consultas en catalán funcionaba **una**, y «demà»
+    no se reconocía como fecha, así que ninguna orden de agenda en catalán
+    encontraba día. Las órdenes de factura sí funcionaban; las preguntas, no.
+    """
+
+    def test_the_questions_work_in_catalan(self):
+        for frase, herramienta in (
+            ("quant em deuen", "ver_cobros_pendientes"),
+            ("qui em deu diners", "ver_cobros_pendientes"),
+            ("factures pendents de cobrament", "ver_cobros_pendientes"),
+            ("què tinc avui", "ver_agenda"),
+            ("quins treballs tinc demà", "ver_agenda"),
+            ("com vaig d'impostos", "ver_impuestos"),
+            ("quant he facturat aquest mes", "resumen_negocio"),
+            ("ensenyam els meus clients", "listar_clientes"),
+        ):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], herramienta)
+
+    def test_the_spanish_questions_still_work(self):
+        # El contrapeso obligatorio: añadir un idioma no puede romper el otro.
+        for frase, herramienta in (
+            ("cuánto me deben", "ver_cobros_pendientes"),
+            ("qué tengo hoy", "ver_agenda"),
+            ("qué trabajos tengo mañana", "ver_agenda"),
+            ("cómo voy de impuestos", "ver_impuestos"),
+            ("cuánto he facturado este mes", "resumen_negocio"),
+            ("enséñame mis clientes", "listar_clientes"),
+        ):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], herramienta)
+
+    def test_catalan_dates_and_weekdays(self):
+        # «Demà» no era una fecha: la agenda en catalán no funcionaba nunca.
+        for frase in ("agenda a Jordi Mas demà a les 10",
+                      "agenda a Jordi Mas dijous a les 9"):
+            with self.subTest(frase=frase):
+                herramienta, datos = nlu.parse(frase)
+                self.assertEqual(herramienta, "agendar_trabajo")
+                self.assertEqual(datos["cliente"], "Jordi Mas")
+                self.assertIn("T", datos["fecha_hora"])
+
+    def test_catalan_orders_that_write(self):
+        self.assertEqual(nlu.parse("he gastat 35 euros en gasolina"),
+                         ("registrar_gasto", {"concepto": "gasolina",
+                                              "importe": 35.0}))
+        self.assertEqual(nlu.parse("crea el client Jordi Mas"),
+                         ("crear_cliente", {"nombre": "Jordi Mas"}))
+        self.assertEqual(nlu.parse("la factura 1 ja està cobrada"),
+                         ("registrar_pago", {"factura_id": 1}))
+
+    def test_the_role_is_read_by_its_root_not_by_the_exact_word(self):
+        # «client» iba a proveedores porque se comparaba con la palabra exacta.
+        for frase, herramienta in (
+            ("crea el client Jordi Mas", "crear_cliente"),
+            ("crea el cliente Jordi Mas", "crear_cliente"),
+            ("crea el proveidor Materials Sol", "crear_proveedor"),
+            ("nuevo proveedor Materiales Sol", "crear_proveedor"),
+            ("da de alta a Jordi como client", "crear_cliente"),
+        ):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], herramienta)
+
+
 class VozTests(unittest.TestCase):
     """Una nota de voz no llega escrita como un mensaje tecleado.
 

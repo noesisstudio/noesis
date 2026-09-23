@@ -17,6 +17,9 @@ from .intent_safety import inspect_money_intent
 _WEEKDAYS = {
     "lunes": 0, "martes": 1, "miercoles": 2, "jueves": 3,
     "viernes": 4, "sabado": 5, "domingo": 6,
+    # Catalán: el producto se vende en Lleida y se habla en catalán a diario.
+    "dilluns": 0, "dimarts": 1, "dimecres": 2, "dijous": 3,
+    "divendres": 4, "dissabte": 5, "diumenge": 6,
 }
 
 # Importe dictado en formato español: 1200, 1.200, 1.200,50 o 95,50.
@@ -195,11 +198,11 @@ def parse_date(text: str, base: date | None = None) -> str | None:
     base = base or date.today()
     norm = _norm(text)
     day: date | None = None
-    if "pasado manana" in norm:
+    if "pasado manana" in norm or "despus dema" in norm or "passat dema" in norm:
         day = base + timedelta(days=2)
-    elif re.search(r"\bmanana\b", norm.replace("por la manana", "")):
+    elif re.search(r"\b(?:manana|dema)\b", norm.replace("por la manana", "")):
         day = base + timedelta(days=1)
-    if "hoy" in norm:
+    if re.search(r"\b(?:hoy|avui)\b", norm):
         day = base
     for name, wd in _WEEKDAYS.items():
         if re.search(rf"\b{name}\b", norm):
@@ -279,8 +282,10 @@ def _agenda_client(text: str) -> str | None:
         # «con» corta además de introducir: sin él, «apúntame mañana a las 10 con
         # Jordi Mas» se lo tragaba entero desde el «a» de «a las» y el nombre
         # quedaba dentro, así que se pedía el cliente teniéndolo delante.
-        r"(?=\s+(?:hoy|mañana|demà|pasado|el|la|los|las|próximo|proxima|a las|"
-        r"por la|en|para|de|con)\b|[,;]|$)",
+        r"(?=\s+(?:hoy|avui|mañana|demà|dema|pasado|passat|el|la|los|las|"
+        r"próximo|proxima|a las|a les|per|por la|en|para|de|con|"
+        r"dilluns|dimarts|dimecres|dijous|divendres|dissabte|diumenge)\b"
+        r"|[,;]|$)",
         text, re.I,
     ):
         candidate = _limpiar_cliente(match.group(1))
@@ -815,7 +820,7 @@ def _parse_simplified_sale(text: str, norm: str) -> dict | None:
 
 def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
     """Alta de cliente o proveedor con el nombre ya separado de sus datos."""
-    tipo = "cliente" if _norm(papel) == "cliente" else "proveedor"
+    tipo = "cliente" if _norm(papel).startswith("client") else "proveedor"
     limpio, telefono = parse_party_name(nombre)
     if not limpio:
         # Un «cliente» que es solo un número de teléfono no es el nombre de
@@ -843,8 +848,9 @@ def parse(text: str) -> tuple[str, dict] | None:
     # Se compara contra `norm`, sin acentos: contra el texto crudo, «qué trabajos
     # tengo mañana» no encajaba con «que.*trabajos» por la tilde y la orden se
     # perdía entera.
-    if re.search(r"(?:que\b.*\b(?:trabajos|citas|tengo)\b.*|agenda (?:de|para) )"
-                 r"(?:hoy|manana|dema)", norm):
+    if re.search(r"(?:(?:que|quins|quines|quin)\b.*"
+                 r"\b(?:trabajos|citas|tengo|treballs|feines|tinc)\b.*"
+                 r"|agenda (?:de|para|per) )(?:hoy|avui|manana|dema)", norm):
         when = parse_date(text)
         if when:
             return ("ver_agenda", {"fecha": when[:10]})
@@ -886,14 +892,15 @@ def parse(text: str) -> tuple[str, dict] | None:
         r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+"
         # «alta de cliente X» se dice tanto como «alta cliente X».
         r"(?:de\s+)?(?:un|una|el|la|los|las)?\s*"
-        r"(cliente|proveedor)\s*:?\s+(.+?)\s*$",
+        # «client» y «proveïdor» en catalán se dicen tanto como en castellano.
+        r"(client\w*|proveedor\w*|prove[ïi]dor\w*)\s*:?\s+(.+?)\s*$",
         text, re.I,
     )
     if not party:
         # Orden inverso: primero el nombre y después el papel.
         inversa = re.search(
             r"\b(?:da|dar)\s+de\s+alta\s+(?:a\s+)?(.+?)\s+como\s+"
-            r"(cliente|proveedor)\b",
+            r"(client\w*|proveedor\w*|prove[ïi]dor\w*)\b",
             text, re.I,
         )
         if inversa:
@@ -1040,7 +1047,9 @@ def parse(text: str) -> tuple[str, dict] | None:
     _VERBO_GASTO = (r"(?:registra|registrar|registrame|apunta|apuntame|anota|"
                     r"anotame|anade|anademe|añade|pon|ponme|mete|meteme)")
     _NOMBRE_GASTO = (r"(?:gastos?\b|gaste\b|he gastado\b|me he gastado\b|"
-                     r"compre\b|he comprado\b|ticket\b|tiquet\b|recibo\b)")
+                     r"compre\b|he comprado\b|ticket\b|tiquet\b|recibo\b|"
+                     # Catalán: «he gastat 35 euros» no registraba nada.
+                     r"despesa\b|he gastat\b|m'he gastat\b|he comprat\b|rebut\b)")
     es_gasto = bool(
         re.match(rf"(?:{_VERBO_GASTO}\s+(?:un[oa]?\s+)?)?{_NOMBRE_GASTO}", norm)
         # «apunta 20 euros de material»: con el verbo y el importe basta, no hace
@@ -1106,7 +1115,9 @@ def parse(text: str) -> tuple[str, dict] | None:
 
     # --- Cobros pendientes
     if re.search(r"(cobr|por cobrar|quien me debe|pendiente de cobro|me deben|"
-                 r"deudas?|sin cobrar|impagad|moroso|facturas? pendientes?)", norm):
+                 r"deudas?|sin cobrar|impagad|moroso|facturas? pendientes?|"
+                 # Catalán: «quant em deuen», «qui em deu diners», «deutes».
+                 r"em deuen|em deu\b|qui em deu|deutes?|per cobrar|sense cobrar)", norm):
         return ("ver_cobros_pendientes", {})
 
     # --- Operativa conectada
@@ -1122,7 +1133,7 @@ def parse(text: str) -> tuple[str, dict] | None:
     # --- Impuestos: va antes del resumen porque "como va mi iva" casa con ambos y
     # la pregunta fiscal es la concreta. El resumen del mes no responde al 303.
     if re.search(r"(\biva\b|\birpf\b|impuesto|hacienda|modelo\s*(303|130)|"
-                 r"trimestral|declaracion)", norm):
+                 r"trimestral|declaracion|impost|isenda|declaracio)", norm):
         args: dict = {}
         trimestre = re.search(r"\b([1-4])\s*(?:t\b|er\s+trimestre|º?\s*trimestre)", norm)
         if trimestre:
@@ -1134,11 +1145,14 @@ def parse(text: str) -> tuple[str, dict] | None:
 
     # --- Resumen / ingresos
     if re.search(r"(cuanto.*facturad|ingresos|resumen|como va|como voy|que tal va|"
-                 r"balance|beneficio|facturacion|este mes|mis numeros|cuanto llevo)", norm):
+                 r"balance|beneficio|facturacion|este mes|mis numeros|cuanto llevo|"
+                 # Catalán: «quant he facturat», «com va», «aquest mes».
+                 r"quant.*facturat|ingressos|com va|com vaig|com anem|benefici|"
+                 r"facturacio|aquest mes|els meus numeros|quant porto)", norm):
         return ("resumen_negocio", {})
 
     # --- Clientes
-    if re.search(r"\bclientes?\b", norm):
+    if re.search(r"\bclients?\b|\bclientes\b", norm):
         return ("listar_clientes", {})
 
     return None

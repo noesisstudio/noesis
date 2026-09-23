@@ -1,5 +1,35 @@
 ﻿# Registro de cambios
 
+## 2026-09-23 — El catalán, que estaba a medias
+
+Barrido de las zonas que faltaban. El hallazgo grande: **de ocho consultas en
+catalán funcionaba una**. Las órdenes que escriben (factura, gasto, cobro) sí
+iban; las preguntas, no. Y «demà» no se reconocía como fecha, así que **ninguna
+orden de agenda en catalán encontraba día**, ni con «demà» ni con los días de la
+semana, que no estaban en la tabla.
+
+Añadido a las consultas: «quant em deuen», «qui em deu», «deutes», «per cobrar»,
+«què tinc avui», «quins treballs tinc demà», «com vaig d'impostos», «quant he
+facturat aquest mes», «els meus clients». A las fechas: «demà», «passat demà»,
+«avui» y los siete días en catalán. A los gastos: «he gastat», «despesa»,
+«rebut». Y «client» y «proveïdor» en las altas.
+
+**Dos fallos propios al añadirlo, cazados al probar y con prueba cada uno:** «crea
+el client» acababa creando un **proveedor**, porque el papel se comparaba con la
+palabra exacta («cliente») en vez de por su raíz; y al reordenar el patrón, «crea
+el cliente» en castellano dejó de funcionar un momento.
+
+**Comprobado y sin tocar:** una factura de 0 € ya se rechaza en la base, no crea
+nada y dice por qué. Ahí no había fallo.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`.
+- **Pruebas:** `tests/test_ordenes_del_dia.py` sube a 23 casos con la clase de
+  catalán, que lleva dentro el contrapeso: las mismas preguntas en castellano.
+- **Límites externos:** ninguno.
+- **Riesgo:** medio. Se toca el patrón de casi todas las consultas; por eso cada
+  una se prueba en los dos idiomas.
+- **Rollback:** sin migración; revertir el archivo basta.
+
 ## 2026-09-23 — Tickets, envíos y consultas: cuatro fallos más del barrido
 
 Siguiendo el barrido por las zonas que quedaban sin medir.

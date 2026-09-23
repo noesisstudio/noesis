@@ -1,5 +1,16 @@
 # Tareas vivas
 
+## Catalán — 23-sep
+
+- [x] Las ocho consultas del barrido funcionan en catalán, y las castellanas
+  siguen funcionando (probado en la misma prueba).
+- [x] «Demà», «avui» y los siete días de la semana en catalán son fechas válidas.
+- [ ] Founder: si algún cliente tuyo habla catalán, prueba «quant em deuen» y
+  «agenda a X demà a les 10». Antes no hacían nada.
+- [ ] Sin barrer todavía: proyectos (el nombre se queda con la preposición
+  delante: «abre un proyecto de reforma» guarda «de reforma») y documentos.
+
+
 ## Tickets y consultas — 23-sep
 
 - [x] Un ticket de 40 € ya no se guarda como 0,00 € con concepto «4».
