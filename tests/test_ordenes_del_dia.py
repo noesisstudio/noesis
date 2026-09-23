@@ -144,6 +144,67 @@ class AgendaTests(_Base):
         self.assertEqual(datos["descripcion"], "reparar la caldera")
 
 
+class VozTests(unittest.TestCase):
+    """Una nota de voz no llega escrita como un mensaje tecleado.
+
+    Al dictar, el importe viene en letra («trescientos euros») y la hora también
+    («a las diez»). Antes el importe no se veía —la orden entera se caía— y la
+    hora caía en un respaldo que agendaba a las 9:00 **sin avisar**, que es peor
+    que no entenderla: te apunta la cita a otra hora y no te enteras.
+    """
+
+    def test_amounts_said_out_loud(self):
+        for dicho, esperado in (
+            ("gasté treinta y cinco euros en gasolina", 35.0),
+            ("apunta veinte euros de material", 20.0),
+            ("gasté cuarenta y siete euros con cincuenta en la ferretería", 47.5),
+        ):
+            with self.subTest(dicho=dicho):
+                self.assertEqual(nlu.parse(dicho)[1]["importe"], esperado)
+        for dicho, esperado in (
+            ("hazme una factura a Jordi Mas por reforma trescientos euros", 300.0),
+            ("hazme una factura a Jordi Mas por reforma setecientos cincuenta euros",
+             750.0),
+            ("hazme una factura a Jordi Mas por obra mil doscientos euros", 1200.0),
+            ("hazme una factura a Jordi Mas por obra cien euros", 100.0),
+        ):
+            with self.subTest(dicho=dicho):
+                self.assertEqual(nlu.parse(dicho)[1]["base"], esperado)
+
+    def test_a_name_that_sounds_like_a_number_is_left_alone(self):
+        # El contrapeso: solo se traducen las cifras pegadas a «euros», o un
+        # cliente llamado «Tres Torres» se convertiría en «3 Torres».
+        self.assertEqual(nlu._cifras_dictadas("factura a Tres Torres por obra 300 euros"),
+                         "factura a Tres Torres por obra 300 euros")
+        self.assertEqual(nlu._cifras_dictadas("crea el cliente Ochoa"),
+                         "crea el cliente Ochoa")
+
+    def test_times_said_out_loud(self):
+        for dicho, esperado in (
+            ("agenda a Jordi Mas mañana a las diez", "T10:00"),
+            ("cita con Jordi Mas mañana a las nueve y media", "T09:30"),
+            ("agenda a Jordi Mas mañana a las once menos cuarto", "T10:45"),
+            ("agenda a Jordi Mas mañana a las doce y cuarto", "T12:15"),
+            # «de la tarde» son las 17:00, no las 5 de la madrugada.
+            ("agenda a Jordi Mas mañana a las cinco de la tarde", "T17:00"),
+            ("agenda a Jordi Mas mañana a las 8 de la tarde", "T20:00"),
+            # Y lo que ya funcionaba sigue igual.
+            ("agenda a Jordi Mas mañana a las 10", "T10:00"),
+            ("agenda a Jordi Mas mañana por la tarde", "T16:00"),
+            ("agenda a Jordi Mas mañana", "T09:00"),
+        ):
+            with self.subTest(dicho=dicho):
+                self.assertTrue(nlu.parse(dicho)[1]["fecha_hora"].endswith(esperado),
+                                nlu.parse(dicho)[1]["fecha_hora"])
+
+    def test_tomorrow_is_a_day_not_an_hour(self):
+        # La raíz del fallo: «mañana» (el día) y «por la mañana» (la hora) valían
+        # lo mismo, así que cualquier hora dicha en letra se perdía y quedaban
+        # las 9:00.
+        self.assertEqual(nlu._parse_time("manana a las diez"), (10, 0))
+        self.assertEqual(nlu._parse_time("por la manana"), (9, 0))
+
+
 class CobrosTests(_Base):
     REVISION = True  # como en producción: el dinero se confirma
 

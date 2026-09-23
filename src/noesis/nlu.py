@@ -32,6 +32,93 @@ def _norm(s: str) -> str:
     return _strip_accents(s.lower()).strip().strip("¿?¡!.")
 
 
+# --------------------------------------------------- Números dictados ---
+# Al dictar, el importe llega escrito en letra: «trescientos euros». El cerebro no
+# veía ningún número y la orden entera se caía —«gasté treinta y cinco euros en
+# gasolina» no registraba nada—, que es buena parte del «no me detecta el audio».
+# Solo se traducen las cifras que van justo antes de «euros»: así un cliente
+# llamado «Tres Torres» o «Ochoa» sigue siendo quien es.
+_UNIDADES = {
+    "cero": 0, "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4,
+    "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10,
+    "once": 11, "doce": 12, "trece": 13, "catorce": 14, "quince": 15,
+    "dieciseis": 16, "diecisiete": 17, "dieciocho": 18, "diecinueve": 19,
+    "veinte": 20, "veintiuno": 21, "veintiun": 21, "veintiuna": 21,
+    "veintidos": 22, "veintitres": 23, "veinticuatro": 24, "veinticinco": 25,
+    "veintiseis": 26, "veintisiete": 27, "veintiocho": 28, "veintinueve": 29,
+    "treinta": 30, "cuarenta": 40, "cincuenta": 50, "sesenta": 60,
+    "setenta": 70, "ochenta": 80, "noventa": 90,
+    "cien": 100, "ciento": 100, "doscientos": 200, "doscientas": 200,
+    "trescientos": 300, "trescientas": 300, "cuatrocientos": 400,
+    "cuatrocientas": 400, "quinientos": 500, "quinientas": 500,
+    "seiscientos": 600, "seiscientas": 600, "setecientos": 700,
+    "setecientas": 700, "ochocientos": 800, "ochocientas": 800,
+    "novecientos": 900, "novecientas": 900,
+    # Catalán: el producto también habla catalán y se dicta igual de a menudo.
+    "u": 1, "quatre": 4, "cinc": 5, "sis": 6, "set": 7, "vuit": 8, "nou": 9,
+    "deu": 10, "onze": 11, "dotze": 12, "tretze": 13, "catorze": 14,
+    "quinze": 15, "setze": 16, "disset": 17, "divuit": 18, "dinou": 19,
+    "vint": 20, "trenta": 30, "quaranta": 40, "cinquanta": 50, "seixanta": 60,
+    "setanta": 70, "vuitanta": 80, "noranta": 90, "cent": 100, "cents": 100,
+    "centes": 100,
+}
+_MULTIPLICADOR = {"mil": 1000, "millon": 1000000, "millones": 1000000,
+                  "milions": 1000000, "milio": 1000000}
+_PALABRA_NUMERO = set(_UNIDADES) | set(_MULTIPLICADOR) | {"y", "i"}
+
+
+def _numero_en_letra(palabras: list[str]) -> int | None:
+    """«treinta y cinco» → 35. `None` si la secuencia no es un número entero."""
+    total = parcial = 0
+    visto = False
+    for palabra in palabras:
+        if palabra in ("y", "i"):
+            continue
+        if palabra in _MULTIPLICADOR:
+            factor = _MULTIPLICADOR[palabra]
+            # «mil» a secas vale 1000; «dos mil», 2000.
+            total += (parcial or 1) * factor
+            parcial = 0
+            visto = True
+            continue
+        if palabra not in _UNIDADES:
+            return None
+        parcial += _UNIDADES[palabra]
+        visto = True
+    return (total + parcial) if visto else None
+
+
+def _cifras_dictadas(text: str) -> str:
+    """Pasa a cifras los importes dichos en letra, y solo esos.
+
+    «Gasté treinta y cinco euros» → «Gasté 35 euros». Se exige que la secuencia
+    termine justo antes de «euros» (o «con cincuenta» de céntimos) para no tocar
+    nombres propios que suenan a número.
+    """
+    if not re.search(r"\b(?:euros?|eur|€)\b", text, re.I):
+        return text
+
+    def reemplazo(match: re.Match) -> str:
+        palabras = _norm(match.group("cifra")).split()
+        valor = _numero_en_letra(palabras)
+        if valor is None or valor <= 0:
+            return match.group(0)
+        centimos = match.group("centimos")
+        if centimos:
+            sueltos = _numero_en_letra(_norm(centimos).split())
+            if sueltos is not None and 0 < sueltos < 100:
+                return f"{valor},{sueltos:02d}{match.group('unidad')}"
+        return f"{valor}{match.group('unidad')}"
+
+    palabra = "|".join(sorted(_PALABRA_NUMERO, key=len, reverse=True))
+    return re.sub(
+        rf"\b(?P<cifra>(?:(?:{palabra})\s+)*(?:{palabra}))"
+        rf"(?P<unidad>\s*(?:€|euros?|eur\b))"
+        rf"(?:\s+(?:con|amb|y|i)\s+(?P<centimos>(?:(?:{palabra})\s*)+?))?"
+        r"(?=\s|$|[,.;])",
+        reemplazo, text, flags=re.I)
+
+
 def _parse_amount(text: str) -> float | None:
     m = re.search(rf"({_AMOUNT_RE})\s*(?:€|euros?|eur\b)", text, re.I)
     if not m:
@@ -51,19 +138,55 @@ def _amount_value(value: str) -> float:
 
 
 def _parse_time(norm: str) -> tuple[int, int] | None:
-    m = re.search(r"a las (\d{1,2})(?:[:h](\d{2}))?(?:\s*y media)?", norm)
+    """La hora de una orden, dicha con cifras o en letra.
+
+    Antes solo leía cifras, así que «mañana a las diez» no encontraba hora y caía
+    en el respaldo de «por la mañana»: agendaba a las 9:00 **sin avisar**, que es
+    peor que no entenderlo. Se acepta además «y media», «y cuarto», «menos
+    cuarto» y «de la tarde», que es como se dicta una hora hablando.
+    """
+    horas = "|".join(sorted((p for p, v in _UNIDADES.items() if 1 <= v <= 23),
+                            key=len, reverse=True))
+    m = re.search(
+        rf"\ba\s+l(?:a|as|es)\s+(?P<h>\d{{1,2}}|{horas})"
+        rf"(?:\s*[:h.]\s*(?P<mn>\d{{2}}))?"
+        rf"(?P<frac>\s+(?:y\s+(?:media|mitja|cuarto|quart)|menos\s+cuarto|"
+        rf"menys\s+quart))?"
+        rf"(?P<parte>\s+(?:de\s+la|del|de\s+l|por\s+la|a\s+la)\s*"
+        rf"(?:manana|mati|tarde|vespre|noche|nit|mediodia|migdia))?",
+        norm)
     if m:
-        h = int(m.group(1))
-        mn = int(m.group(2)) if m.group(2) else (30 if "y media" in norm else 0)
-        return (h, mn) if 0 <= h <= 23 and 0 <= mn <= 59 else None
-    if "manana" in norm:
+        crudo = m.group("h")
+        hora = int(crudo) if crudo.isdigit() else _UNIDADES.get(crudo, -1)
+        minuto = int(m.group("mn")) if m.group("mn") else 0
+        fraccion = m.group("frac") or ""
+        if "media" in fraccion or "mitja" in fraccion:
+            minuto = 30
+        elif "menos" in fraccion or "menys" in fraccion:
+            hora, minuto = hora - 1, 45
+        elif "cuarto" in fraccion or "quart" in fraccion:
+            minuto = 15
+        parte = m.group("parte") or ""
+        # «a las cinco de la tarde» son las 17:00, no las 5 de la madrugada.
+        if re.search(r"tarde|vespre|noche|nit", parte) and 1 <= hora <= 11:
+            hora += 12
+        elif re.search(r"mediodia|migdia", parte) and hora == 12:
+            hora = 12
+        if 0 <= hora <= 23 and 0 <= minuto <= 59:
+            return (hora, minuto)
+        return None
+    # Sin hora explícita, el momento del día da una por defecto. «Por la mañana»
+    # es una hora; «mañana» a secas es el día siguiente, y antes valían igual.
+    if re.search(r"\b(?:por|de)\s+la\s+manana\b|\bal\s+mati\b", norm):
         return 9, 0
-    if "mediodia" in norm:
+    if re.search(r"mediodia|migdia", norm):
         return 12, 0
-    if "tarde" in norm:
+    if re.search(r"\btardes?\b|\bvespre\b", norm):
         return 16, 0
-    if "noche" in norm:
+    if re.search(r"\bnoche\b|\bnit\b", norm):
         return 19, 0
+    if re.search(r"\bmanana\b", norm):
+        return 9, 0  # «mañana» sin hora: a primera hora, como hasta ahora
     return None
 
 
@@ -703,6 +826,9 @@ def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
 
 
 def parse(text: str) -> tuple[str, dict] | None:
+    # Lo primero: pasar a cifras los importes dictados en letra. Todo lo que
+    # viene detrás busca números, y una nota de voz los trae escritos.
+    text = _cifras_dictadas(text)
     norm = _norm(text)
 
     refusal = safety_refusal(text)

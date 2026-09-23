@@ -1,5 +1,38 @@
 ﻿# Registro de cambios
 
+## 2026-09-23 — El audio: los números y las horas se dicen, no se teclean
+
+«Sigue mejorando el audio», «que funcione de forma directa». Mirando qué pasa
+**después** de transcribir —que es donde se rompía— aparecen dos fallos de raíz, y
+ninguno está en la transcripción.
+
+**El importe dictado llega en letra.** Se dice «trescientos euros» y la
+transcripción escribe eso mismo. El cerebro buscaba dígitos, no encontraba importe
+y la orden se caía entera: «gasté treinta y cinco euros en gasolina» no registraba
+nada. `_cifras_dictadas` traduce los números dichos, con céntimos incluidos
+(«cuarenta y siete euros con cincuenta» → 47,50) y en catalán. **Solo traduce lo
+que va pegado a «euros»**, para que un cliente llamado «Tres Torres» no acabe
+siendo «3 Torres».
+
+**La hora dictada agendaba a otra hora y sin avisar**, que es peor que no
+entenderla. «Mañana a las diez» apuntaba a las 9:00. La causa: `_parse_time` solo
+leía cifras, así que la hora en letra no se encontraba y caía en un respaldo donde
+«mañana» (el día) valía lo mismo que «por la mañana» (la hora). Ahora lee la hora
+en letra, «y media», «y cuarto», «menos cuarto» y «de la tarde» —«a las cinco de
+la tarde» son las 17:00—, y el respaldo distingue el día del momento del día.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`.
+- **Pruebas:** `tests/test_ordenes_del_dia.py` gana la clase de voz: importes
+  dichos en factura, gasto y presupuesto; nueve formas de decir una hora; y el
+  contrapeso de que un nombre que suena a número no se toca.
+- **Límites externos:** la transcripción la hace Whisper (Groq o privado). Esto
+  arregla lo que pasa con el texto que llega, no la calidad de la transcripción.
+- **Riesgo:** medio-bajo. La traducción de cifras exige la palabra «euros» al
+  lado, y el cambio de hora está cubierto con nueve formas probadas.
+- **Diagnóstico:** `nlu._cifras_dictadas("…")` y `nlu._parse_time("…")` se pueden
+  probar sueltos y dicen exactamente qué entienden.
+- **Rollback:** sin migración; revertir el archivo basta.
+
 ## 2026-09-23 — Barrido: las órdenes de cada día, dichas como se hablan
 
 Encargo del founder: «hay muchos errores y no funciona del todo bien». En vez de

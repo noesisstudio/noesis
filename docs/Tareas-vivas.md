@@ -1,5 +1,16 @@
 # Tareas vivas
 
+## Audio dictado — 23-sep
+
+- [x] Importes en letra («trescientos euros», con céntimos y en catalán).
+- [x] Horas en letra, «y media», «menos cuarto» y «de la tarde». Y «mañana» el día
+  ya no se confunde con «por la mañana» la hora, que agendaba a las 9:00 callado.
+- [ ] Founder: **`GROQ_API_KEY` en Railway**. Sigue siendo lo primero: sin ella no
+  se transcribe ninguna nota de voz y nada de esto llega a usarse.
+- [ ] Founder: revisa en la agenda si hay citas viejas a las 9:00 que dictaste a
+  otra hora. Esto evita las nuevas; las que ya están, no las corrige.
+
+
 ## Barrido de órdenes — 23-sep
 
 - [x] Gastos 9/9, agenda 5/6, cobros 6/6, presupuestos 3/3.

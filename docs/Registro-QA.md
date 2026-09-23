@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-23 — Audio: importes y horas dictados
+
+- `tests/test_ordenes_del_dia.py` sube a **12 casos**. Suite completa **1.127 en
+  verde**. Ruff OK.
+- **Se buscó donde nadie había mirado**: no en la transcripción, sino en el texto
+  que llega después. Ahí estaban los dos fallos, y el de la hora era silencioso.
+- **Nueve formas de decir una hora** probadas, incluidas «menos cuarto» y «de la
+  tarde», más las tres que ya funcionaban para que no se rompan.
+- **El contrapeso está probado**: «Tres Torres» y «Ochoa» no se convierten en
+  números, porque solo se traduce lo pegado a «euros».
+- **No ejecutado:** ninguna nota de voz real; no hay credenciales de transcripción
+  en este equipo. Lo probado es el texto tal y como llega transcrito.
+
+
 ## 2026-09-23 — Barrido de las cuatro zonas
 
 - `tests/test_ordenes_del_dia.py` (nuevo): **8 casos** con 20 frases dentro. Suite
