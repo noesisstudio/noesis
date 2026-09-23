@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## Proyectos y documentos — 23-sep
+
+- [x] El nombre del proyecto ya no se queda con la preposición delante, y el
+  importe no necesita «de» ni «por» para entenderse.
+- [x] Preguntar por los documentos funciona en los dos idiomas.
+- [ ] Founder: mira en Proyectos si hay alguno llamado «de …» o «para …» de antes.
+- [ ] Sin corpus todavía: el circuito real de documentos (foto o PDF entrantes),
+  que necesita credenciales de extracción para probarse de verdad.
+
+
 ## Catalán — 23-sep
 
 - [x] Las ocho consultas del barrido funcionan en catalán, y las castellanas

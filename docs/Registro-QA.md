@@ -1,5 +1,18 @@
 ﻿# Registro de QA
 
+## 2026-09-23 — Proyectos y documentos
+
+- `tests/test_ordenes_del_dia.py` sube a **29 casos**. Suite completa **1.144 en
+  verde**. Ruff OK. Node OK.
+- **Cierra el barrido del día**: quedaban estas dos zonas sin medir.
+- **El patrón que más se ha repetido hoy**, y que conviene recordar: pedir crear
+  algo y recibir una lista de lo que ya hay. Pasaba con clientes, con proveedores
+  y con proyectos, siempre por el mismo motivo: el patrón de creación no encajaba
+  y el de consulta sí.
+- **No ejecutado:** el circuito real de documentos (foto o PDF entrantes) sigue
+  sin corpus: necesita credenciales de extracción que no hay en este equipo.
+
+
 ## 2026-09-23 — Catalán, proyectos y límites numéricos
 
 - `tests/test_ordenes_del_dia.py` sube a **23 casos**. Suite completa **1.138 en

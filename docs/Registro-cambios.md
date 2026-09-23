@@ -1,5 +1,29 @@
 ﻿# Registro de cambios
 
+## 2026-09-23 — Proyectos y documentos: las dos zonas que faltaban
+
+Cierre del barrido. Los fallos son de la misma familia que los anteriores: pedir
+algo y recibir una lista, o guardar el nombre con la preposición dentro.
+
+**Proyectos.** «Abre un proyecto de reforma» guardaba un proyecto llamado **«de
+reforma»**. Y «crea el proyecto Casa Roca 12000 euros» **no creaba nada**: el
+patrón exigía «de» o «por» delante del importe, así que sin ese conector no
+encajaba y la orden acababa **listando** los proyectos que ya había. Pedías crear
+y te enseñaba una lista. Igual con «crea un proyecto» a secas, que ahora pregunta
+nombre y presupuesto.
+
+**Documentos.** Solo se entendía «documentos pendientes». «Qué documentos tengo» y
+«pásame los documentos» no hacían nada, ni en castellano ni en catalán.
+
+En las dos zonas queda probado el contrapeso: un cliente llamado «Documentos SL» se
+crea bien y una factura con concepto «documentos» no se confunde con una consulta;
+y listar proyectos sigue listando.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`.
+- **Pruebas:** `tests/test_ordenes_del_dia.py` sube a 29 casos.
+- **Riesgo:** bajo. Patrones más amplios en zonas de consulta, con contrapeso.
+- **Rollback:** sin migración; revertir el archivo basta.
+
 ## 2026-09-23 — El catalán, que estaba a medias
 
 Barrido de las zonas que faltaban. El hallazgo grande: **de ocho consultas en

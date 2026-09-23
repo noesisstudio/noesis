@@ -923,17 +923,32 @@ def parse(text: str) -> tuple[str, dict] | None:
         return (NEED_USER_INVITE, {})
 
     # --- Crear proyecto sencillo, local y sin IA
-    if "proyect" in norm and re.search(r"\b(crea|crear|nuevo|abre)\b", norm):
+    if re.search(r"proyect|project", norm) and re.search(
+            r"\b(crea|crear|creame|nuevo|nueva|abre|abrir|monta|obre)\b", norm):
+        # El conector antes del importe es opcional: «el proyecto Casa Roca 12000
+        # euros» no encajaba y acababa listando proyectos en vez de crear uno.
         m = re.search(
-            r"(?:proyecto|obra)\s+(.+?)\s+(?:de|por|presupuesto)\s+"
-            r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?(?:\s|$)",
+            rf"(?:proyecto|projecte|obra)\s+(.+?)\s+(?:(?:de|por|per|presupuesto|"
+            rf"pressupost)\s+)?({_AMOUNT_RE})\s*(?:€|euros?|eur)?(?:\s|$)",
             text, re.I,
         )
         if m:
-            return ("crear_proyecto", {
-                "nombre": m.group(1).strip(),
-                "presupuesto": float(m.group(2).replace(",", ".")),
-            })
+            # «Abre un proyecto de reforma» no se llama «de reforma»: la
+            # preposición introduce el nombre, no forma parte de él.
+            nombre = re.sub(r"^\s*(?:de|del|para|per\s+a|per|a|el|la|un|una|"
+                            r"els|les)\b\s*", "", m.group(1).strip(), flags=re.I)
+            nombre = _limpiar_concepto(nombre)
+            if nombre:
+                return ("crear_proyecto", {
+                    "nombre": nombre,
+                    "presupuesto": _amount_value(m.group(2)),
+                })
+        # Se pide crear un proyecto pero no se dice cuál: se pregunta, en vez de
+        # listar los que ya hay, que es lo que pasaba antes.
+        return (NEED_REVIEW, {"reply": (
+            "Para abrir un proyecto necesito **cómo se llama** y **el "
+            "presupuesto**. Por ejemplo: «crea el proyecto Casa Roca 12.000 "
+            "euros». No he creado nada.")})
 
     # --- Crear presupuesto: acepta varios órdenes naturales ---
     if "presupuest" in norm or "pressupost" in norm:
@@ -1125,7 +1140,16 @@ def parse(text: str) -> tuple[str, dict] | None:
         return ("ver_proyectos", {})
     if re.search(r"(equipo|trabajadores?|quien ha fichado|fichajes? de hoy)", norm):
         return ("ver_equipo", {})
-    if re.search(r"(documentos?|papeles?|tickets?).*(pendient|revis)", norm):
+    # «Qué documentos tengo» o «pásame los papeles» preguntan por lo mismo que
+    # «documentos pendientes», y antes solo se entendía la segunda forma: el
+    # resto no hacía nada. En catalán, «documents» y «papers».
+    if (re.search(r"(documentos?|documents?|papeles?|papers?|tickets?|tiquets?)"
+                  r".*(pendient|revis)", norm)
+            or re.search(r"\b(?:que|quins|quines|cuantos|quants)\b.*"
+                         r"\b(documentos?|documents?|papeles?|papers?)\b", norm)
+            or re.search(r"\b(?:pasame|passa\w*|ensename|ensenya\w*|muestra\w*|"
+                         r"mostra\w*|dame|veure|ver)\b.*"
+                         r"\b(documentos?|documents?|papeles?|papers?)\b", norm)):
         return ("ver_documentos_pendientes", {})
     if re.search(r"(gestoria|gestor).*(pide|solicitud|pendient)", norm):
         return ("ver_solicitudes_gestoria", {})

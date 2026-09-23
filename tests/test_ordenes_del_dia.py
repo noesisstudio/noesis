@@ -269,6 +269,58 @@ class CatalanTests(unittest.TestCase):
                 self.assertEqual(nlu.parse(frase)[0], herramienta)
 
 
+class ProyectosYDocumentosTests(unittest.TestCase):
+    """Las dos zonas que quedaban sin barrer."""
+
+    def test_the_project_name_has_no_preposition_stuck_in_front(self):
+        # «Abre un proyecto de reforma» guardaba un proyecto llamado «de reforma».
+        for frase, nombre in (
+            ("crea un proyecto reforma cocina de 5000 euros", "reforma cocina"),
+            ("abre un proyecto de reforma por 5000 euros", "reforma"),
+            ("nuevo proyecto para Jordi Mas de 5000 euros", "Jordi Mas"),
+        ):
+            with self.subTest(frase=frase):
+                herramienta, datos = nlu.parse(frase)
+                self.assertEqual(herramienta, "crear_proyecto")
+                self.assertEqual(datos["nombre"], nombre)
+                self.assertEqual(datos["presupuesto"], 5000.0)
+
+    def test_the_connector_before_the_budget_is_optional(self):
+        # «El proyecto Casa Roca 12000 euros» acababa LISTANDO proyectos en vez
+        # de crear uno: sin «de» o «por» delante del importe no encajaba.
+        herramienta, datos = nlu.parse("crea el proyecto Casa Roca 12000 euros")
+        self.assertEqual(herramienta, "crear_proyecto")
+        self.assertEqual(datos["nombre"], "Casa Roca")
+        self.assertEqual(datos["presupuesto"], 12000.0)
+
+    def test_asking_to_create_one_without_saying_which(self):
+        herramienta, datos = nlu.parse("crea un proyecto")
+        self.assertEqual(herramienta, nlu.NEED_REVIEW)
+        self.assertIn("presupuesto", datos["reply"])
+        self.assertIn("No he creado nada", datos["reply"])
+
+    def test_listing_projects_still_lists(self):
+        for frase in ("qué proyectos tengo", "cómo van mis proyectos"):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], "ver_proyectos")
+
+    def test_asking_for_the_documents(self):
+        # Solo se entendía «documentos pendientes»; el resto no hacía nada.
+        for frase in ("pásame los documentos", "qué documentos tengo",
+                      "documentos pendientes de revisar", "cuántos papeles tengo",
+                      "quins documents tinc", "ensenyam els papers"):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], "ver_documentos_pendientes")
+
+    def test_the_word_document_inside_another_order_is_left_alone(self):
+        # El contrapeso: un cliente o un concepto pueden llamarse así.
+        self.assertEqual(nlu.parse("crea el cliente Documentos SL"),
+                         ("crear_cliente", {"nombre": "Documentos SL"}))
+        self.assertEqual(
+            nlu.parse("hazme una factura a Juan por documentos 100 euros")[1]["concepto"],
+            "documentos")
+
+
 class VozTests(unittest.TestCase):
     """Una nota de voz no llega escrita como un mensaje tecleado.
 
