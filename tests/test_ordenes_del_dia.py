@@ -144,6 +144,64 @@ class AgendaTests(_Base):
         self.assertEqual(datos["descripcion"], "reparar la caldera")
 
 
+class TicketYEnvioTests(_Base):
+    """Tickets y órdenes sobre una factura que ya existe."""
+
+    def test_a_ticket_without_a_concept_is_not_worth_zero_euros(self):
+        # «Hazme un ticket de 40 euros» creaba un ticket de 0,00 € con concepto
+        # «4»: el patrón partía el «40» en «4» y «0». Dato corrupto, no
+        # malentendido.
+        _, datos = nlu.parse("hazme un ticket de 40 euros")
+        self.assertEqual(datos["base"], 40.0)
+        self.assertEqual(datos["concepto"], "Venta")
+        self.assertEqual(datos["tipo_factura"], "F2")
+
+    def test_the_ticket_keeps_its_concept_and_client(self):
+        for frase, concepto in (
+            ("ticket de venta por cambiar el grifo 40 euros", "cambiar el grifo"),
+            ("hazme un ticket a Juan por reparación 40 euros", "reparación"),
+        ):
+            with self.subTest(frase=frase):
+                _, datos = nlu.parse(frase)
+                self.assertEqual(datos["base"], 40.0)
+                self.assertEqual(datos["concepto"], concepto)
+
+    def test_sending_an_invoice_is_not_the_same_as_issuing_it(self):
+        # Emitir le pone número definitivo y la cuenta para Hacienda: no se
+        # adivina. Antes esto contestaba «dime cliente, concepto e importe».
+        respuesta = self.wa("envía la factura 3")
+        self.assertIn("emitir factura 3", respuesta)
+        self.assertNotIn("concepto e importe", respuesta)
+        self.assertEqual(db.list_invoices(self.bid), [])
+
+    def test_naming_an_invoice_never_offers_to_create_another(self):
+        # El patrón de fondo que provocaba duplicados: cualquier frase que
+        # nombre una factura por su número habla de una que ya existe.
+        for frase in ("pásame la factura 3", "pásame factura 3 en PDF",
+                      "qué pasa con la factura 3"):
+            with self.subTest(frase=frase):
+                respuesta = self.wa(frase)
+                self.assertNotIn("concepto e importe", respuesta)
+                self.assertEqual(db.list_invoices(self.bid), [])
+
+
+class ConsultasTests(unittest.TestCase):
+    def test_asking_what_is_on_the_agenda(self):
+        # «Qué trabajos tengo mañana» no encajaba por la tilde de «qué»: se
+        # comparaba contra el texto con acentos en vez de contra el normalizado.
+        for frase in ("qué trabajos tengo mañana", "qué tengo hoy",
+                      "agenda de mañana", "que citas tengo hoy"):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], "ver_agenda")
+
+    def test_asking_what_is_pending_is_not_a_payment(self):
+        # Contestaba con la explicación del cobro parcial a una pregunta.
+        for frase in ("qué facturas tengo pendientes de cobro", "cuánto me deben",
+                      "quién me debe dinero"):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[0], "ver_cobros_pendientes")
+
+
 class VozTests(unittest.TestCase):
     """Una nota de voz no llega escrita como un mensaje tecleado.
 

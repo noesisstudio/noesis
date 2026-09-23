@@ -570,7 +570,9 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
         return {"cliente": cliente, "concepto": concepto,
                 "base": _amount_value(m.group(2))}
     # Orden 1: verbo a CLIENTE por CONCEPTO IMPORTE
-    m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+(?:por|de|per)\s+(.+?)[,]?\s*"
+    # El `\s+` antes del importe no es cosmético: con `\s*` el grupo perezoso se
+    # comía parte de la cifra («40» → concepto «4», importe «0»).
+    m = re.search(verb_re + r"\s+(?:a|para|per\s+a)\s+(.+?)\s+(?:por|de|per)\s+(.+?)[,]?\s+"
                   rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?$", text, re.I)
     if m:
         cliente, concepto = _cliente_y_concepto(m.group(1), m.group(2).strip())
@@ -783,7 +785,7 @@ def _parse_simplified_sale(text: str, norm: str) -> dict | None:
         patterns = (
             verb + rf"\s+({_AMOUNT_RE})\s*(?:€|euros?|eur)\s+"
             r"(?:por|de|per)\s+(.+)$",
-            verb + r"\s+(?:por|de|per)\s+(.+?)[,]?\s*"
+            verb + r"\s+(?:por|de|per)\s+(.+?)[,]?\s+"
             rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?$",
         )
         first = re.search(patterns[0], text, re.I)
@@ -838,7 +840,11 @@ def parse(text: str) -> tuple[str, dict] | None:
         rate = re.search(rf"\b{field}\s*(?:(?:del|al)\s*)?(\d+(?:[.,]\d+)?)(?![\w.,])", norm)
         if rate and float(rate.group(1).replace(",", ".")) not in allowed:
             return (NEED_REVIEW, {"reply": "El tipo fiscal indicado no está admitido. Revisa IVA e IRPF en Facturas; no he sustituido el porcentaje por otro."})
-    if re.search(r"(?:que.*(?:trabajos|citas).*|agenda de )(hoy|mañana|demà)", text, re.I):
+    # Se compara contra `norm`, sin acentos: contra el texto crudo, «qué trabajos
+    # tengo mañana» no encajaba con «que.*trabajos» por la tilde y la orden se
+    # perdía entera.
+    if re.search(r"(?:que\b.*\b(?:trabajos|citas|tengo)\b.*|agenda (?:de|para) )"
+                 r"(?:hoy|manana|dema)", norm):
         when = parse_date(text)
         if when:
             return ("ver_agenda", {"fecha": when[:10]})
@@ -849,7 +855,12 @@ def parse(text: str) -> tuple[str, dict] | None:
     # masculino. Quedaban sin entender y, peor, se ofrecía crear una factura
     # nueva a quien acababa de decir que ya le habían pagado una.
     _COBRADA = r"\b(?:pagad[oa]s?|cobrad[oa]s?|liquidad[oa]s?|saldad[oa]s?|pago|cobro)\b"
-    if re.search(_COBRADA, norm) and "factura" in norm:
+    _PREGUNTA_DE_COBROS = (r"\b(?:que|cuales|cuantas|cuanto|quien|ver|veo|"
+                           r"ensename|muestrame|dime|listar?|pendientes?)\b")
+    if (re.search(_COBRADA, norm) and "factura" in norm
+            # «Qué facturas tengo pendientes de cobro» es una pregunta, no un
+            # cobro: antes contestaba con la explicación del cobro parcial.
+            and not re.search(_PREGUNTA_DE_COBROS, norm)):
         paid = re.search(r"\bfactura\s*#?\s*(\d+)\b", norm)
         hecho = re.search(r"\b(?:pagad[oa]s?|cobrad[oa]s?|liquidad[oa]s?|saldad[oa]s?)\b", norm)
         if paid and hecho and not re.search(r"\b(parcial|parte|euros|eur)\b|€", norm):
@@ -951,6 +962,28 @@ def parse(text: str) -> tuple[str, dict] | None:
     )
     if issue:
         return ("enviar_factura", {"factura_id": int(issue.group(1))})
+
+    # «Envía la factura 3» no es lo mismo que «emitir la factura 3»: emitir le
+    # pone número definitivo y la cuenta para Hacienda, y eso no se adivina.
+    # Antes esta frase caía en «dime cliente, concepto e importe», o sea que se
+    # ofrecía CREAR otra factura a quien pedía mandar una que ya existe.
+    entrega = re.search(
+        # «Pásame la factura 3» queda fuera a propósito: eso es pedir el PDF
+        # para uno mismo, y tiene su propio camino en WhatsApp.
+        r"\b(?:envia\w*|enviale|manda\w*|mandale|remite|entrega\w*)\s+"
+        r"(?:le\s+)?(?:la\s+|el\s+)?(?:factura|tiquet|ticket)\s*#?\s*(\d{1,9})\b",
+        norm)
+    if entrega:
+        numero = int(entrega.group(1))
+        return (NEED_REVIEW, {"reply": (
+            f"¿Quieres **emitir** la factura {numero} o **entregársela al "
+            f"cliente**? No es lo mismo: emitir le pone número definitivo y la "
+            f"cuenta para Hacienda.\n\n"
+            f"• Para emitirla: «emitir factura {numero}».\n"
+            f"• Para emitirla y que le llegue al cliente: «emitir y enviar "
+            f"factura {numero}».\n"
+            f"• Si ya está emitida y solo quieres reenviarla, hazlo desde "
+            f"Facturas.\n\nNo he cambiado nada.")})
 
     # --- Crear factura: acepta varios órdenes naturales ---
     if "factura" in norm:

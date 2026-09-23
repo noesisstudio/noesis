@@ -1,5 +1,39 @@
 ﻿# Registro de cambios
 
+## 2026-09-23 — Tickets, envíos y consultas: cuatro fallos más del barrido
+
+Siguiendo el barrido por las zonas que quedaban sin medir.
+
+**Un ticket de 40 € valía 0,00 €.** «Hazme un ticket de 40 euros» creaba un ticket
+de **0,00 € con concepto «4»**: el grupo perezoso del patrón partía el «40» en «4»
+e importe «0». No era un malentendido, era un dato corrupto en la contabilidad. La
+causa está en un `\s*` donde tenía que haber un `\s+`, y estaba en dos patrones.
+
+**«Envía la factura 3» ofrecía crear otra factura.** Y aquí no se podía adivinar:
+`enviar_factura` **emite** —número definitivo, cuenta para Hacienda—, mientras que
+entregársela al cliente es otra cosa. Ahora se pregunta cuál de las dos y se dan
+las palabras exactas de cada una.
+
+**La raíz de la familia entera de duplicados.** Cualquier frase que nombre una
+factura **por su número** habla de una que ya existe, así que ofrecer crear otra
+está siempre mal. `NEED_INVOICE` lo mira ahora: si hay número, responde qué se
+puede hacer con esa factura en vez de pedir cliente, concepto e importe.
+
+**Dos consultas que no funcionaban.** «Qué trabajos tengo mañana» no hacía nada
+porque el patrón se comparaba contra el texto **con acentos**: «qué» no encajaba
+con «que». Y «qué facturas tengo pendientes de cobro» contestaba la explicación
+del cobro parcial, a una pregunta.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`, `src/noesis/web/chat.py`.
+- **Pruebas:** `tests/test_ordenes_del_dia.py` sube a 18 casos con las clases de
+  tickets, envío y consultas.
+- **Límites externos:** ninguno.
+- **Riesgo:** bajo. Son patrones más estrictos y respuestas más precisas; nada
+  nuevo se escribe en la base.
+- **Diagnóstico:** `nlu.parse("hazme un ticket de 40 euros")` tiene que dar base
+  40.0, no 0.0.
+- **Rollback:** sin migración; revertir los archivos basta.
+
 ## 2026-09-23 — El audio: los números y las horas se dicen, no se teclean
 
 «Sigue mejorando el audio», «que funcione de forma directa». Mirando qué pasa

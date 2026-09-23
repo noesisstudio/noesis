@@ -1,5 +1,14 @@
 # Tareas vivas
 
+## Tickets y consultas — 23-sep
+
+- [x] Un ticket de 40 € ya no se guarda como 0,00 € con concepto «4».
+- [x] Nombrar una factura por su número nunca ofrece crear otra.
+- [ ] Founder: **revisa en Facturas si hay tickets a 0,00 €** de haber dicho
+  «hazme un ticket de X euros». Esto evita los nuevos; los que ya estén, no.
+- [ ] Zonas todavía sin barrer: documentos (fotos y PDF) y proyectos.
+
+
 ## Audio dictado — 23-sep
 
 - [x] Importes en letra («trescientos euros», con céntimos y en catalán).

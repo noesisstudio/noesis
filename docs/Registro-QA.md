@@ -1,5 +1,17 @@
 ﻿# Registro de QA
 
+## 2026-09-23 — Tickets, envíos y consultas
+
+- `tests/test_ordenes_del_dia.py` sube a **18 casos**. Ruff OK.
+- **El hallazgo con más daño del barrido entero**: un ticket de 40 € guardado como
+  0,00 € con concepto «4». Los demás fallos del día impedían hacer algo; este
+  escribía mal en la contabilidad sin avisar.
+- **Se comprobó que emitir y entregar no son lo mismo** antes de mapear «envía la
+  factura N»: `tools._enviar_factura` emite. Por eso se pregunta en vez de elegir.
+- **Verificado que no rompe lo de al lado**: «emitir factura 3», «emitir y enviar
+  factura 3» y «pásame factura 3 en PDF» siguen por su camino de siempre.
+
+
 ## 2026-09-23 — Audio: importes y horas dictados
 
 - `tests/test_ordenes_del_dia.py` sube a **12 casos**. Suite completa **1.127 en

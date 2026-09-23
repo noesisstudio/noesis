@@ -1415,6 +1415,21 @@ def _handle(
             args = {}
             tool = nlu.NEED_INVOICE
         if tool == nlu.NEED_INVOICE:
+            # Si se ha nombrado una factura por su número, se está hablando de
+            # una que ya existe: ofrecer crear otra es el camino directo a los
+            # duplicados, y era lo que se contestaba a «marca la factura 3 como
+            # pagada» o «pásame la factura 3».
+            citada = re.search(r"factura\s*#?\s*(\d{1,9})\b", nlu._norm(message))
+            if citada:
+                numero = int(citada.group(1))
+                return {
+                    "reply": (f"No sé qué quieres hacer con la factura {numero}. "
+                              f"Puedo:\n• «emitir factura {numero}»\n"
+                              f"• «la factura {numero} está cobrada»\n"
+                              f"• «pásame factura {numero} en PDF»\n\n"
+                              "No he creado ni cambiado nada."),
+                    "source": "local",
+                }
             return {
                 "reply": "Claro. Dime **cliente, concepto e importe**; por ejemplo: "
                          "«factura a Ana por reparar el termo 120 euros».",
