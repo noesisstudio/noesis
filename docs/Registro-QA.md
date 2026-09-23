@@ -1,5 +1,20 @@
 ﻿# Registro de QA
 
+## 2026-09-23 — Barrido de las cuatro zonas
+
+- `tests/test_ordenes_del_dia.py` (nuevo): **8 casos** con 20 frases dentro. Suite
+  completa **1.123 en verde**. Ruff OK.
+- **Se midió antes de tocar nada**: 21 frases, 10 fallaban. Después, 17 de 21, y
+  las cuatro restantes se dejan a conciencia (sin verbo o sin referencia).
+- **Los cobros se probaron en la configuración de producción** (revisión
+  encendida), que es distinta de la de por defecto: con la revisión apagada el
+  cobro por chat está bloqueado a propósito y el barrido lo marcaba como fallo.
+- **Cada arreglo lleva su contrapeso probado**: una factura no acaba como gasto,
+  cortar la descripción por la fecha no se come la tarea, y un cobro parcial sigue
+  necesitando revisión en Facturas.
+- **No ejecutado:** nada contra WhatsApp real.
+
+
 ## 2026-09-23 — Erratas en el nombre y notas de voz
 
 - Suite completa **1.115 en verde**. Ruff OK.

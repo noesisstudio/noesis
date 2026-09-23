@@ -1,5 +1,45 @@
 ﻿# Registro de cambios
 
+## 2026-09-23 — Barrido: las órdenes de cada día, dichas como se hablan
+
+Encargo del founder: «hay muchos errores y no funciona del todo bien». En vez de
+arreglar de una en una, se midió: **21 frases naturales repartidas en cuatro zonas,
+fallaban 10**. Después del barrido quedan cuatro, y las cuatro a propósito.
+
+**Cobros, 0 de 4 → 6 de 6. El más dañino de todos.** El patrón exigía «pagado» o
+«cobrado» en masculino, y una factura es femenina: «la factura 1 está cobrada» y
+«marca la factura 1 como pagada» no se entendían. Y lo peor no era eso, sino la
+respuesta: «dime cliente, concepto e importe». Se ofrecía **crear otra factura** a
+quien acababa de decir que ya le habían pagado esa. De ahí salen duplicados.
+
+**Gastos, 5 de 8 → 9 de 9.** La lista de verbos era corta —«pon un gasto…»,
+«anota…», «mete…» no entraban— y esas frases acababan en la agenda o en el parte
+del día. Además el concepto se quedaba con la preposición pegada («gasolina de») y,
+cuando iba delante del importe («compré material por 120»), se perdía entero y el
+gasto se llamaba «Gasto».
+
+**Agenda, 3 de 6 → 5 de 6.** «Apúntame mañana a las 10 con Jordi Mas» pedía el
+cliente teniéndolo delante: la primera coincidencia se tragaba el «con» desde el
+«a» de «a las», y ya no quedaba para buscar el nombre. Y la descripción del trabajo
+se quedaba con el nombre y la fecha dentro («Jordi Mas mañana a las 10»).
+
+**Lo que queda sin entender, y por qué se deja así.** «35 euros de gasolina» sin
+verbo puede ser un gasto o la respuesta a otra cosa, y escribir dinero adivinando
+no compensa. «Tengo que ir a casa de X mañana» no lleva verbo de agenda. «Ya me ha
+pagado Jordi Mas» no dice qué factura. Las tres caen en la IA avanzada, que sí las
+entiende: no son callejones sin salida.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`.
+- **Pruebas:** `tests/test_ordenes_del_dia.py` (nuevo, 8 casos) con los tres
+  corpus y su contrapeso: una factura no se toma por gasto, cortar por la fecha no
+  se come la tarea, y un cobro parcial sigue yendo a revisión.
+- **Límites externos:** ninguno.
+- **Riesgo:** medio. Los verbos nuevos de gasto («pon», «apunta») también abren
+  facturas y citas; por eso el gasto sin la palabra «gasto» exige que la frase no
+  hable de facturar ni de citas, y está probado.
+- **Diagnóstico:** `nlu.parse("…")` dice a qué zona va cada frase.
+- **Rollback:** sin migración; revertir el archivo basta.
+
 ## 2026-09-23 — Una letra de más no puede costar una ficha nueva
 
 Dos quejas del founder, las dos de la misma familia: «por un tilde o una letra me

@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## Barrido de órdenes — 23-sep
+
+- [x] Gastos 9/9, agenda 5/6, cobros 6/6, presupuestos 3/3.
+- [x] Decir que una factura está cobrada ya no ofrece crear otra.
+- [ ] Founder: si en tu base hay facturas duplicadas de haber dicho «está
+  cobrada» y que te ofreciera crear una nueva, bórralas desde Facturas.
+- [ ] Zonas todavía sin barrer con corpus: tickets F2, documentos y proyectos.
+  El método es el de `tests/test_ordenes_del_dia.py`: medir primero, luego tocar.
+
+
 ## Erratas y notas de voz — 23-sep
 
 - [x] Una errata o un acento reutilizan la ficha del cliente en vez de crear otra.

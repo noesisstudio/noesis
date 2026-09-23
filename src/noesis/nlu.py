@@ -153,7 +153,11 @@ def _agenda_client(text: str) -> str | None:
     """Nombre tras «a/con/para» que no sea una fecha, una tarea ni el sustantivo."""
     for match in re.finditer(
         r"\b(?:a|con|para|per\s+a)\s+(.+?)"
-        r"(?=\s+(?:hoy|mañana|demà|pasado|el|la|los|las|próximo|proxima|a las|por la|en|para|de)\b|[,;]|$)",
+        # «con» corta además de introducir: sin él, «apúntame mañana a las 10 con
+        # Jordi Mas» se lo tragaba entero desde el «a» de «a las» y el nombre
+        # quedaba dentro, así que se pedía el cliente teniéndolo delante.
+        r"(?=\s+(?:hoy|mañana|demà|pasado|el|la|los|las|próximo|proxima|a las|"
+        r"por la|en|para|de|con)\b|[,;]|$)",
         text, re.I,
     ):
         candidate = _limpiar_cliente(match.group(1))
@@ -170,7 +174,14 @@ def _agenda_client(text: str) -> str | None:
 
 def _agenda_description(text: str, cliente: str | None) -> str:
     """Primer «para …» que describa una tarea; se corta en el siguiente «para»."""
-    for match in re.finditer(r"\b(?:para|de)\s+(.+?)(?=\s+para\b|\s+en\s+|[,;]|$)", text, re.I):
+    # La fecha no describe el trabajo: «para Jordi Mas mañana a las 10» dejaba la
+    # cita llamada «Jordi Mas mañana a las 10». Se corta en la marca de tiempo,
+    # pero NO en cualquier artículo, o «reparar la caldera» perdería la caldera.
+    _HASTA_LA_FECHA = (
+        r"(?=\s+para\b|\s+en\s+|[,;]|$"
+        r"|\s+(?:hoy|mañana|demà|pasado|a\s+las\b|por\s+la\b"
+        r"|el\s+(?:lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo))\b)")
+    for match in re.finditer(r"\b(?:para|de)\s+(.+?)" + _HASTA_LA_FECHA, text, re.I):
         value = match.group(1).strip()
         folded = _norm(value)
         if (not value or value == cliente or len(value) > 200
@@ -349,7 +360,8 @@ def _factura_sin_preposicion(text: str, norm: str) -> dict | None:
         return None
     resto = (text[:importe.start()] + " " + text[importe.end():])
     resto = re.sub(r"^\s*(?:hazme|haz|crea\w*|prepara\w*|ponme|pon|quiero|"
-                   r"necesito|genera\w*|monta\w*|fes\w*|una|un|la|el)\b", "",
+                   r"necesito|genera\w*|monta\w*|fes\w*|apunta\w*|anota\w*|"
+                   r"mete\w*|anade\w*|añade\w*|una|un|la|el)\b", "",
                    resto.strip(), flags=re.I)
     resto = re.sub(r"^\s*(?:una|un|la|el)?\s*factur\w*\s*", "", resto.strip(),
                    flags=re.I)
@@ -359,6 +371,10 @@ def _factura_sin_preposicion(text: str, norm: str) -> dict | None:
     resto = re.sub(r"^\s*(?:de|del|a|para|per)\b\s*", "", resto.strip(),
                    flags=re.I).strip(" ,.;:")
     if not resto or not re.search(r"[^\W\d_]", resto, re.UNICODE):
+        return None
+    if re.search(r"\bfactur\w*\b", _norm(resto)):
+        # Si después de quitar verbo e importe todavía se habla de una factura,
+        # no se ha separado limpiamente y lo que queda no es el nombre de nadie.
         return None
     cliente, concepto = _cliente_y_concepto(resto, "Servicio")
     if not cliente:
@@ -702,9 +718,15 @@ def parse(text: str) -> tuple[str, dict] | None:
             return ("ver_agenda", {"fecha": when[:10]})
     # Un cobro no crea una factura. Los pagos parciales necesitan importe explícito
     # y se revisan en Facturas mientras el contrato de esta orden sea saldo total.
-    if re.search(r"\b(pagado|cobrado|pago|cobro)\b", norm) and "factura" in norm:
+    # Una factura es femenina: «la factura 1 está cobrada» y «marca la factura 1
+    # como pagada» son la forma natural de decirlo, y el patrón solo aceptaba el
+    # masculino. Quedaban sin entender y, peor, se ofrecía crear una factura
+    # nueva a quien acababa de decir que ya le habían pagado una.
+    _COBRADA = r"\b(?:pagad[oa]s?|cobrad[oa]s?|liquidad[oa]s?|saldad[oa]s?|pago|cobro)\b"
+    if re.search(_COBRADA, norm) and "factura" in norm:
         paid = re.search(r"\bfactura\s*#?\s*(\d+)\b", norm)
-        if paid and re.search(r"\b(pagado|cobrado)\b", norm) and not re.search(r"\b(parcial|parte|euros|eur)\b|€", norm):
+        hecho = re.search(r"\b(?:pagad[oa]s?|cobrad[oa]s?|liquidad[oa]s?|saldad[oa]s?)\b", norm)
+        if paid and hecho and not re.search(r"\b(parcial|parte|euros|eur)\b|€", norm):
             return ("registrar_pago", {"factura_id": int(paid.group(1))})
         return (NEED_REVIEW, {"reply": "Para registrar un cobro parcial, abre la factura e indica el importe recibido. No he cambiado su estado."})
 
@@ -854,11 +876,36 @@ def parse(text: str) -> tuple[str, dict] | None:
 
     # --- Registrar gasto: "gasto 45 en gasolina", "gasté 45 de material",
     #     "me he gastado 45", "compré 30 de tornillos", "ticket de 12"
-    if re.match(r"(?:(?:registra|registrar|apunta|añade|anade)\s+(?:un\s+)?)?(?:gasto\b|gaste\b|he gastado\b|me he gastado\b|compre\b|ticket\b|recibo\b)", norm):
+    # La lista de verbos era corta («pon un gasto…», «anota…» y «mete…» no
+    # entraban) y sin ellos la frase acababa en la agenda o en el parte del día.
+    _VERBO_GASTO = (r"(?:registra|registrar|registrame|apunta|apuntame|anota|"
+                    r"anotame|anade|anademe|añade|pon|ponme|mete|meteme)")
+    _NOMBRE_GASTO = (r"(?:gastos?\b|gaste\b|he gastado\b|me he gastado\b|"
+                     r"compre\b|he comprado\b|ticket\b|tiquet\b|recibo\b)")
+    es_gasto = bool(
+        re.match(rf"(?:{_VERBO_GASTO}\s+(?:un[oa]?\s+)?)?{_NOMBRE_GASTO}", norm)
+        # «apunta 20 euros de material»: con el verbo y el importe basta, no hace
+        # falta decir «gasto». No se toma por gasto si la frase habla de facturar
+        # o de citas, que son otras cosas con importe.
+        or (re.match(rf"{_VERBO_GASTO}\s+(?:un[oa]?\s+)?{_AMOUNT_RE}", norm)
+            and not re.search(r"\b(?:factura\w*|presupuesto\w*|cliente\w*|"
+                              r"cobr\w+|trabajo\w*|cita\w*|agenda\w*)\b", norm))
+    )
+    if es_gasto:
         amount = _parse_amount(text)
         if amount is not None:
             cm = re.search(r"(?:en|de|por)\s+([a-záéíóúñ ]+)", text, re.I)
-            concepto = cm.group(1).strip() if cm else "Gasto"
+            # «pon un gasto de gasolina de 35 euros» dejaba el concepto en
+            # «gasolina de»: el conector que introduce el importe no es concepto.
+            concepto = _limpiar_concepto(cm.group(1)) if cm else ""
+            if not concepto:
+                # «compré material por 120 euros»: el concepto va delante del
+                # importe y sin preposición. Es lo que queda entre el verbo y la
+                # cifra, que antes se perdía y el gasto se llamaba «Gasto».
+                medio = re.match(rf"\s*\w+\s+(.+?)\s+(?:por|de|en)?\s*{_AMOUNT_RE}",
+                                 text, re.I)
+                concepto = _limpiar_concepto(medio.group(1)) if medio else ""
+            concepto = concepto or "Gasto"
             args = {"concepto": concepto, "importe": amount}
             if re.search(r"\biva\b", norm):
                 rate = re.search(r"\biva\s*(?:incluido|inclos)?\s*(?:del|al)?\s*(0|4|10|21)(?![\d.,])\s*%?", norm)
