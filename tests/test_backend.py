@@ -5778,13 +5778,51 @@ class WhatsappMediaTestCase(unittest.TestCase):
             })
             self.assertIn("no está dado de alta", replies[-1])
 
+    def test_a_failed_voice_note_says_which_of_the_four_things_went_wrong(self):
+        """Los cuatro fallos de una nota de voz llevan a cosas distintas.
+
+        Antes los cuatro daban el mismo «no he podido transcribirla», así que era
+        imposible saber si había que activar el servicio, repetir la nota o
+        escribir la orden. El founder lo vivió como «por una mínima cosa no me
+        detecta el audio».
+        """
+        business, _ = self._connected_business("Voz que falla")
+        vistos = {}
+        for motivo in (whatsapp._VOZ_SIN_SERVICIO, whatsapp._VOZ_MAL_CONFIGURADA,
+                       whatsapp._VOZ_SIN_DESCARGA, whatsapp._VOZ_NO_ENTENDIDA):
+            with self.subTest(motivo=motivo):
+                replies = []
+                with (
+                    patch.object(whatsapp, "_audio_to_text",
+                                 return_value=(None, motivo)),
+                    patch.object(whatsapp, "send",
+                                 side_effect=lambda phone, text, **kw:
+                                 replies.append(text)),
+                ):
+                    resultado = whatsapp.handle_inbound({
+                        "from": "34600111222", "id": f"wamid-voz-{motivo}",
+                        "audio_id": f"audio-{motivo}",
+                    })
+                self.assertEqual(resultado["results"][0]["voice_reason"], motivo)
+                self.assertEqual(len(replies), 1)
+                vistos[motivo] = replies[0]
+                # Siempre queda una salida: escribirlo.
+                self.assertIn("texto", replies[0])
+        # Cuatro motivos, cuatro mensajes distintos: si no, no sirve de nada.
+        self.assertEqual(len(set(vistos.values())), 4)
+        self.assertIn("no están activadas", vistos[whatsapp._VOZ_SIN_SERVICIO])
+        self.assertIn("descargar", vistos[whatsapp._VOZ_SIN_DESCARGA])
+        # Y el fallo queda anotado para poder verlo sin probar a ciegas.
+        anotado = db.integration_setting(business["id"], "voice")
+        self.assertEqual(anotado["last_error"], whatsapp._VOZ_NO_ENTENDIDA)
+
     def test_voice_money_order_requires_confirmation(self):
         business, _ = self._connected_business("Voz Dinero")
         replies = []
         handled = []
         with (
             patch.object(whatsapp, "_audio_to_text",
-                         return_value="hazle una factura a Carlos de 100"),
+                         return_value=("hazle una factura a Carlos de 100", None)),
             patch.object(whatsapp.chat, "handle",
                          side_effect=lambda bid, text, **kwargs:
                          handled.append(text) or {"reply": "hecho"}),
@@ -6503,7 +6541,7 @@ class TranscriptionChainTestCase(unittest.TestCase):
             patch.object(whatsapp, "_download_media", return_value=b"OggS-voz"),
             patch("urllib.request.build_opener", return_value=opener) as build,
         ):
-            self.assertEqual(whatsapp._audio_to_text("123"), "que tengo hoy")
+            self.assertEqual(whatsapp._audio_to_text("123"), ("que tengo hoy", None))
         build.assert_called_once_with(transcription._NoRedirect)
         request = opener.open.call_args.args[0]
         self.assertEqual(request.full_url, transcription.GroqWhisperProvider.ENDPOINT)
@@ -6519,7 +6557,10 @@ class TranscriptionChainTestCase(unittest.TestCase):
             patch.object(whatsapp, "_download_media", return_value=b"OggS-voz"),
             patch("urllib.request.build_opener", return_value=failing),
         ):
-            self.assertIsNone(whatsapp._audio_to_text("123"))
+            # El motivo importa: «mal configurada» lleva a mirar la clave, no a
+            # repetir la nota de voz más despacio.
+            self.assertEqual(whatsapp._audio_to_text("123"),
+                             (None, whatsapp._VOZ_MAL_CONFIGURADA))
 
     def test_groq_provider_errors_are_safe(self):
         import urllib.error

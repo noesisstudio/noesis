@@ -1,5 +1,21 @@
 ﻿# Registro de QA
 
+## 2026-09-23 — Erratas en el nombre y notas de voz
+
+- Suite completa **1.115 en verde**. Ruff OK.
+- **Corpus de erratas probado**: cinco formas de escribir mal «Reformas Martinez»
+  reutilizan su ficha; cuatro nombres distintos siguen creando ficha aparte; «Ann»
+  con «Ana» en cartera no se corrige; y con dos fichas parecidas se pregunta.
+- **Los cuatro motivos de voz** se prueban por el webhook entero, comprobando que
+  dan cuatro mensajes **distintos**, que todos ofrecen escribir la orden, y que el
+  motivo queda anotado.
+- **Un fallo propio al probarlo**: la tolerancia se traga un artículo suelto al
+  cortar el nombre («…martinez la» se parece a «…martinez»), así que el concepto
+  pierde el «la». Solo puede absorber tres caracteres, o sea un artículo o una
+  preposición, nunca una palabra con significado. Queda escrito en la prueba.
+- **No ejecutado:** ninguna nota de voz real. La transcripción va simulada.
+
+
 ## 2026-09-23 — Quince maneras de pedir la misma factura
 
 - Suite completa **1.110 en verde**. Ruff OK. Node OK.

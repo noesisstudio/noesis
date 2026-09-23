@@ -144,6 +144,39 @@ class FichasSanasTests(_Base):
         with self.assertRaisesRegex(ValueError, "obligatorio"):
             db.add_supplier("", business_id=self.bid)
 
+    def test_a_typo_reuses_the_client_instead_of_duplicating_it(self):
+        """«Por un tilde o una letra me pone un cliente nuevo», dijo el founder.
+
+        Al dictar y al teclear eso pasa constantemente, y cada vez partía en dos
+        el historial del mismo cliente.
+        """
+        db.add_client("Reformas Martinez", business_id=self.bid)
+        for dicho in ("Reformas Martines", "Reformas Martínez", "reformas martinz",
+                      "Reformas Martinezz", "REFORMAS MARTINES"):
+            with self.subTest(dicho=dicho):
+                hallado = db.resolve_client_reference(dicho, self.bid)
+                self.assertEqual(hallado and hallado["name"], "Reformas Martinez")
+
+    def test_a_different_person_is_still_a_different_person(self):
+        # El contrapeso: tolerar erratas no puede acabar facturando a otro.
+        for nombre in ("Reformas Martinez", "Ana"):
+            db.add_client(nombre, business_id=self.bid)
+        for distinto in ("Construcciones Vila", "Pedro Sanchez", "Ema",
+                         "Reformas Garcia"):
+            with self.subTest(distinto=distinto):
+                self.assertIsNone(db.resolve_client_reference(distinto, self.bid))
+
+    def test_a_short_name_is_not_corrected_by_one_letter(self):
+        # En nombres cortos una letra sí cambia de persona: «Ana» y «Ann».
+        db.add_client("Ana", business_id=self.bid)
+        self.assertIsNone(db.resolve_client_reference("Ann", self.bid))
+
+    def test_with_two_similar_records_it_asks_instead_of_choosing(self):
+        db.add_client("Reformas Martinez", business_id=self.bid)
+        db.add_client("Reformas Martinex", business_id=self.bid)
+        with self.assertRaisesRegex(ValueError, "se parece a varios"):
+            db.resolve_client_reference("Reformas Martines", self.bid)
+
     def test_the_same_supplier_written_differently_is_not_duplicated(self):
         self.di("nuevo proveedor Materiales Sol")
         self.di("nuevo proveedor materiales sol")

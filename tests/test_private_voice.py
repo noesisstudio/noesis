@@ -77,7 +77,8 @@ class PrivateVoiceTests(unittest.TestCase):
         from noesis.web import whatsapp
         with patch.dict(os.environ, {"NOESIS_PRIVATE_WHISPER_TOKEN": "short"}), \
              patch.object(whatsapp, "_download_media") as download:
-            self.assertIsNone(whatsapp._audio_to_text("123"))
+            self.assertEqual(whatsapp._audio_to_text("123"),
+                             (None, whatsapp._VOZ_MAL_CONFIGURADA))
         download.assert_not_called()
 
     def test_model_busy_is_rejected(self):

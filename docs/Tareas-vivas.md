@@ -1,5 +1,19 @@
 # Tareas vivas
 
+## Erratas y notas de voz — 23-sep
+
+- [x] Una errata o un acento reutilizan la ficha del cliente en vez de crear otra.
+  Con dos fichas parecidas se pregunta.
+- [x] Las notas de voz dicen cuál de los cuatro fallos ha sido, y queda anotado.
+- [ ] Founder: en Railway, comprobar si existe **`GROQ_API_KEY`**. Empieza por G y
+  queda justo encima de lo que se ve en la captura de variables. **Sin ella
+  ninguna nota de voz se transcribe**, y eso explicaría que no funcione nunca en
+  vez de «por una mínima cosa».
+- [ ] Founder: si ya tienes clientes duplicados de antes (el mismo con dos fichas),
+  esto evita los nuevos pero no junta los viejos. Hay que fusionarlos a mano desde
+  Clientes.
+
+
 ## Entender la orden como se hable — 23-sep
 
 - [x] 15 formas naturales de pedir la misma factura: las 15 salen. Antes fallaban 9.

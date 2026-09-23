@@ -733,8 +733,33 @@ def _download_media(media_id: str, max_bytes: int | None = None) -> bytes | None
         return None
 
 
-def _audio_to_text(audio_id: str) -> str | None:
-    """Descarga el audio y lo transcribe con el transcriptor configurado."""
+# Una nota de voz puede fallar por cuatro motivos distintos y llevan a cosas
+# distintas: que no haya transcriptor configurado no es lo mismo que no
+# entenderse. Antes los cuatro daban el mismo «no he podido transcribirla», así
+# que era imposible saber si había que activar algo, repetir el audio o escribir.
+_VOZ_SIN_SERVICIO = "sin_servicio"
+_VOZ_MAL_CONFIGURADA = "mal_configurada"
+_VOZ_SIN_DESCARGA = "sin_descarga"
+_VOZ_NO_ENTENDIDA = "no_entendida"
+
+_VOZ_EXPLICACION = {
+    _VOZ_SIN_SERVICIO: (
+        "Las notas de voz todavía no están activadas en tu cuenta, así que esta "
+        "no la he podido leer. Escríbeme la orden en texto y la hago igual."),
+    _VOZ_MAL_CONFIGURADA: (
+        "El servicio que transcribe las notas de voz está mal configurado y no ha "
+        "respondido. Escríbeme la orden en texto; queda avisado en Ajustes."),
+    _VOZ_SIN_DESCARGA: (
+        "No he podido descargar tu nota de voz de WhatsApp. Vuelve a enviarla, o "
+        "escríbeme la orden en texto."),
+    _VOZ_NO_ENTENDIDA: (
+        "He recibido tu nota de voz pero no he entendido lo que decía. Repítela "
+        "más despacio o escríbeme la orden en texto."),
+}
+
+
+def _audio_to_text(audio_id: str) -> tuple[str | None, str | None]:
+    """Transcribe la nota de voz. Devuelve `(texto, motivo del fallo)`."""
     from ..adapters import transcription
 
     try:
@@ -743,17 +768,20 @@ def _audio_to_text(audio_id: str) -> str | None:
         # Servicio privado mal configurado: se responde como audio no entendido
         # en vez de romper el webhook y provocar reintentos de Meta.
         log.warning("Transcriptor de voz mal configurado: %s", exc)
-        return None
+        return (None, _VOZ_MAL_CONFIGURADA)
     if transcriber is None:
-        return None
+        return (None, _VOZ_SIN_SERVICIO)
     data = _download_media(audio_id)
     if not data:
-        return None
+        return (None, _VOZ_SIN_DESCARGA)
     try:
-        return transcriber.transcribe(data, "voz.ogg")
+        texto = transcriber.transcribe(data, "voz.ogg")
     except Exception as exc:  # noqa: BLE001
         log.warning("Fallo transcribiendo audio: %s", exc)
-        return None
+        return (None, _VOZ_MAL_CONFIGURADA)
+    if not (texto or "").strip():
+        return (None, _VOZ_NO_ENTENDIDA)
+    return (texto, None)
 
 
 # ------------------------------------- Confirmaciones y mèdia entrante --
@@ -1821,7 +1849,8 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 continue
 
         if audio_id and not text:
-            text = _audio_to_text(audio_id) or ""
+            text, motivo_voz = _audio_to_text(audio_id)
+            text = text or ""
             if not text:
                 business = (
                     db.get_business(connection["business_id"])
@@ -1830,15 +1859,24 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 if business and config.ASSISTANT_REVIEW_ENABLED:
                     db.clear_pending_action(business["id"], f"wa:{phone}")
                     db.clear_pending_action(business["id"], phone)
+                if business and motivo_voz:
+                    # Queda anotado para poder verlo en Ajustes en vez de
+                    # deducirlo probando notas de voz una detrás de otra.
+                    try:
+                        db.record_integration_result(
+                            business["id"], "voice", motivo_voz)
+                    except Exception:  # noqa: BLE001 - avisar nunca puede romper
+                        log.exception("No se pudo anotar el fallo de voz.")
                 send(
                     phone,
-                    "He recibido tu nota de voz pero no he podido transcribirla. "
-                    "Escríbeme la orden en texto, por favor.",
+                    _VOZ_EXPLICACION.get(motivo_voz or "",
+                                         _VOZ_EXPLICACION[_VOZ_NO_ENTENDIDA]),
                     business_id=business["id"] if business else None,
                     connection_id=connection["id"] if connection else None,
                 )
                 results.append({
                     "phone": phone, "audio": True, "transcribed": False,
+                    "voice_reason": motivo_voz,
                 })
                 _finish_inbound_message(message_id, claimed_ids)
                 continue

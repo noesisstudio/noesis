@@ -3305,6 +3305,38 @@ def resolve_client_reference(name, business_id) -> dict | None:
             f"Hay varios clientes que encajan con «{name}»: {options}. "
             "Indica el nombre completo."
         )
+    return _casi_el_mismo(reference, clients, name)
+
+
+# Un carácter de más o de menos no puede costar una ficha nueva. «Reformas
+# Martines» por «Reformas Martinez», «Martta» por «Marta»: al dictar y al teclear
+# eso pasa constantemente, y cada vez partía en dos el historial de un cliente.
+# El listón es alto (0.9) y exige que solo una ficha se parezca: con dos, no se
+# elige, porque equivocarse de cliente en una factura es peor que preguntar.
+_PARECIDO_MINIMO = 0.9
+
+
+def _casi_el_mismo(referencia: str, clients: list[dict], dicho: str) -> dict | None:
+    """La misma ficha escrita con un error de dictado o de teclado."""
+    from difflib import SequenceMatcher
+
+    if len(referencia) < 5:
+        return None  # en nombres cortos, una letra sí cambia de persona
+    cercanos = []
+    for client in clients:
+        candidato = _fold_client_reference(client["name"])
+        if not candidato or abs(len(candidato) - len(referencia)) > 3:
+            continue
+        if SequenceMatcher(None, referencia, candidato).ratio() >= _PARECIDO_MINIMO:
+            cercanos.append(client)
+    if len(cercanos) == 1:
+        return cercanos[0]
+    if len(cercanos) > 1:
+        options = ", ".join(client["name"] for client in cercanos[:5])
+        raise ValueError(
+            f"«{dicho}» se parece a varios clientes: {options}. "
+            "Indica el nombre completo."
+        )
     return None
 
 

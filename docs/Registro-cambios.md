@@ -1,5 +1,41 @@
 ﻿# Registro de cambios
 
+## 2026-09-23 — Una letra de más no puede costar una ficha nueva
+
+Dos quejas del founder, las dos de la misma familia: «por un tilde o una letra me
+pone un cliente nuevo» y «por una mínima cosa no me detecta el audio».
+
+**Clientes duplicados por una errata.** `resolve_client_reference` comparaba
+plegando acentos y mayúsculas, pero exacto: «Reformas Martines» por «Reformas
+Martinez» no encajaba y caía directo en crear ficha nueva. Cada errata partía en
+dos el historial del mismo cliente. Ahora, antes de rendirse, busca la ficha casi
+igual (`_casi_el_mismo`): listón 0.9, diferencia de longitud de tres caracteres
+como mucho, y nombres de menos de cinco letras excluidos, porque ahí una letra sí
+cambia de persona. **Con dos fichas parecidas no elige: pregunta**, que
+equivocarse de cliente en una factura es peor que preguntar.
+
+**Notas de voz: cuatro fallos, un solo mensaje.** Que no haya transcriptor
+configurado, que esté mal configurado, que no se pueda descargar el audio y que no
+se entienda lo dicho son cuatro cosas distintas que llevan a cuatro acciones
+distintas, y las cuatro contestaban «no he podido transcribirla». Era imposible
+saber si había que activar algo, repetir la nota o escribir. Ahora cada una dice
+lo suyo y queda anotada en la integración `voice`, visible en Ajustes.
+
+- **Áreas/archivos:** `src/noesis/db.py`, `src/noesis/web/whatsapp.py`.
+- **Pruebas:** corpus de erratas en `tests/test_alta_de_ficha.py` (reutiliza la
+  ficha) con su contrapeso (un cliente distinto sigue siendo distinto, un nombre
+  corto no se corrige, dos parecidas preguntan), y en `tests/test_backend.py` que
+  los cuatro motivos de voz dan cuatro mensajes distintos y todos dejan salida.
+- **Límites externos:** la transcripción depende de `GROQ_API_KEY` o de un Whisper
+  privado. Si no hay ninguno, **ninguna** nota de voz se transcribe nunca; ahora
+  el mensaje lo dice en vez de culpar al audio.
+- **Riesgo:** medio. Tolerar erratas puede unir dos clientes que se llamen casi
+  igual; por eso el listón es alto y con dos parecidas no se elige. El contrapeso
+  está en pruebas.
+- **Diagnóstico:** `db.resolve_client_reference("nombre", id)` dice a quién
+  resuelve o pregunta. El motivo del fallo de voz queda en Ajustes.
+- **Rollback:** sin migración; revertir los archivos basta.
+
 ## 2026-09-23 — Decirlo de otra manera ya no cuesta un error
 
 El founder, después de media mañana peleándose con el chat: «yo lo quiero poder
