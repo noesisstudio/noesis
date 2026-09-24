@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — El nombre que el dictado corta
+
+- Suite completa **1.148 en verde**. Ruff OK.
+- **Reproducido primero con la conversación entera** (revisión encendida, como en
+  producción): «hazme una factura a reforma 300 euros» + «sí» creaba la ficha
+  «reforma» junto a «Reformas Martinez». Después del arreglo, la factura sale
+  directa a nombre de «Reformas Martinez» y la cartera se queda con una ficha.
+- **Los tres escenarios probados**: nombre cortado (usa la ficha), nombre parecido
+  pero distinto (el «sí» usa la buena), y cliente nuevo de verdad (se crea).
+- **Un caso se rechaza a conciencia**: «Juam» por «Juan» no se corrige. En nombres
+  de cuatro letras una letra cambia de persona.
+- **No ejecutado:** ninguna nota de voz real; se prueba el texto ya transcrito.
+
+
 ## 2026-09-23 — Proyectos y documentos
 
 - `tests/test_ordenes_del_dia.py` sube a **29 casos**. Suite completa **1.144 en

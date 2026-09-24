@@ -1197,25 +1197,34 @@ def _parecidos(business_id: int, nombre: str) -> list[str]:
 
 def _ask_to_create_the_client(business_id: int, tool: str, args: dict,
                               nombre: str, actor: str | None) -> dict:
+    """Pregunta antes de crear una ficha, con el «sí» del lado seguro.
+
+    Cuando hay una ficha parecida, **«sí» significa esa ficha**, no crear una
+    nueva. Al revés era una trampa: se enseñaba la sugerencia, la persona
+    contestaba «sí» pensando en ella y se acababa creando el duplicado. Crear una
+    ficha casi igual a una que existe tiene que costar un acto explícito.
+    """
+    parecidos = _parecidos(business_id, nombre)
+    sugerencia = parecidos[0] if parecidos else None
     clave = _order_pending_key(actor)
     if clave:
         db.set_pending_action(business_id, clave, "alta_y_orden",
-                              {"tool": tool, "args": args},
+                              {"tool": tool, "args": args,
+                               "sugerencia": sugerencia},
                               ttl_minutes=_ALTA_TTL_MINUTOS)
     que = {"crear_factura": "la factura", "crear_presupuesto": "el presupuesto",
            "agendar_trabajo": "el trabajo"}.get(tool, "la orden")
-    lineas = [f"No tengo ficha de **{nombre}**."]
-    parecidos = _parecidos(business_id, nombre)
-    if parecidos:
-        # El parecido va primero y el «sí» después: lo más probable es que sea un
-        # error de dictado, no un cliente nuevo con un nombre casi igual.
-        lineas.append("¿Querías decir " + _lista([f"**{p}**" for p in parecidos])
-                      + "? Si es eso, dime el nombre bueno y lo uso.")
-    lineas.append(f"Si **{nombre}** es correcto, contesta **sí** y creo su ficha y "
-                  f"sigo con {que}."
-                  + ("" if parecidos else " Si está mal escrito, dime el nombre bueno."))
-    lineas.append("No he creado nada todavía.")
-    return {"reply": " ".join(lineas), "source": "local"}
+    if sugerencia:
+        return {"reply": (
+            f"No tengo ficha de **{nombre}**. ¿Es **{sugerencia}**? "
+            f"Contesta **sí** y uso esa ficha para {que}.\n\n"
+            f"Si de verdad es un cliente nuevo, dime «crea el cliente {nombre}» "
+            f"y lo doy de alta. No he creado nada todavía."),
+            "source": "local"}
+    return {"reply": (
+        f"No tengo ficha de **{nombre}**. Si el nombre es correcto, contesta "
+        f"**sí** y creo su ficha y sigo con {que}. Si está mal escrito, dime el "
+        f"nombre bueno. No he creado nada todavía."), "source": "local"}
 
 
 def _client_without_record(business_id: int, args: dict) -> str | None:
@@ -1245,11 +1254,14 @@ def _finish_order_for_a_new_client(business_id: int, message: str,
     try:
         guardado = json.loads(esperando["payload"])
         tool, args = guardado["tool"], dict(guardado["args"])
+        sugerencia = guardado.get("sugerencia")
     except (TypeError, ValueError, KeyError):
         db.clear_pending_action(business_id, clave)
         return None
     if nlu.es_confirmacion(message):
-        nombre = str(args.get("cliente") or "").strip()
+        # Con una ficha parecida delante, «sí» es esa ficha. Crear un duplicado
+        # exige decir «crea el cliente X», que es un acto aparte.
+        nombre = sugerencia or str(args.get("cliente") or "").strip()
     else:
         corregido, _ = _party_name_answer(message)
         if not corregido:

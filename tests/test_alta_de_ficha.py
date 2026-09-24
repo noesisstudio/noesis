@@ -157,6 +157,28 @@ class FichasSanasTests(_Base):
                 hallado = db.resolve_client_reference(dicho, self.bid)
                 self.assertEqual(hallado and hallado["name"], "Reformas Martinez")
 
+    def test_a_name_the_dictation_cut_short_finds_the_client(self):
+        """Caso real del founder, 24-09: «si el audio coge reforma me hace un
+        cliente nuevo».
+
+        Al dictar, la transcripción se come el apellido o una letra final:
+        «Reformas Martinez» llega como «reforma». Comparar solo el nombre entero
+        lo descartaba por diferencia de longitud, así que nacía una ficha nueva y
+        el historial del cliente quedaba partido en dos.
+        """
+        db.add_client("Reformas Martinez", business_id=self.bid)
+        for dicho in ("reforma", "reformas", "Reformas", "martinez",
+                      "Reformas Martines"):
+            with self.subTest(dicho=dicho):
+                hallado = db.resolve_client_reference(dicho, self.bid)
+                self.assertEqual(hallado and hallado["name"], "Reformas Martinez")
+
+    def test_a_dictated_invoice_with_a_cut_name_creates_no_second_record(self):
+        db.add_client("Reformas Martinez", business_id=self.bid)
+        self.di("hazme una factura a reforma 300 euros")
+        self.assertEqual([c["name"] for c in db.list_clients(self.bid)],
+                         ["Reformas Martinez"])
+
     def test_a_different_person_is_still_a_different_person(self):
         # El contrapeso: tolerar erratas no puede acabar facturando a otro.
         for nombre in ("Reformas Martinez", "Ana"):

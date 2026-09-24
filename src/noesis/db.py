@@ -3325,9 +3325,19 @@ def _casi_el_mismo(referencia: str, clients: list[dict], dicho: str) -> dict | N
     cercanos = []
     for client in clients:
         candidato = _fold_client_reference(client["name"])
-        if not candidato or abs(len(candidato) - len(referencia)) > 3:
+        if not candidato:
             continue
-        if SequenceMatcher(None, referencia, candidato).ratio() >= _PARECIDO_MINIMO:
+        # Se compara con el nombre entero y con sus principios de palabra:
+        # «reforma» tiene que encontrar a «Reformas Martinez», que es lo que pasa
+        # cuando el dictado se come el apellido o una letra. Comparar solo el
+        # nombre completo lo descartaba por diferencia de longitud.
+        trozos = [candidato]
+        palabras = candidato.split()
+        for cuantas in range(1, len(palabras)):
+            trozos.append(" ".join(palabras[:cuantas]))
+        if any(abs(len(t) - len(referencia)) <= 3
+               and SequenceMatcher(None, referencia, t).ratio() >= _PARECIDO_MINIMO
+               for t in trozos):
             cercanos.append(client)
     if len(cercanos) == 1:
         return cercanos[0]

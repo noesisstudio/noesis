@@ -1,5 +1,16 @@
 # Tareas vivas
 
+## Nombre cortado por el dictado — 24-sep
+
+- [x] «Reforma» encuentra a «Reformas Martinez»: se compara también contra los
+  principios de palabra, no solo contra el nombre entero.
+- [x] Con una ficha parecida delante, «sí» usa **esa ficha**. Crear un duplicado
+  exige decir «crea el cliente X».
+- [ ] Founder: ya lo dijiste ayer y sigue pendiente. **Junta a mano los clientes
+  duplicados que ya tengas** (por ejemplo «reforma» y «Reformas Martinez»): esto
+  evita los nuevos, no arregla los viejos.
+
+
 ## Proyectos y documentos — 23-sep
 
 - [x] El nombre del proyecto ya no se queda con la preposición delante, y el

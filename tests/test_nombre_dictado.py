@@ -321,6 +321,29 @@ class ClienteSinFichaTests(_Base):
         self.assertEqual(db.list_invoices(self.bid)[0]["client_name"],
                          "Reformas López")
 
+    def test_with_a_similar_record_the_yes_means_that_record(self):
+        """El «sí» tiene que estar del lado seguro.
+
+        Antes se enseñaba «¿querías decir Reformas Martinez?» y, si contestabas
+        «sí» —que es lo que hace cualquiera—, se creaba el duplicado igual. La
+        sugerencia se veía pero el «sí» la ignoraba.
+        """
+        db.add_client("Reformas Martinez", business_id=self.bid)
+        pregunta = self.wa("hazme una factura a Reformas Martines Hermanos 300 euros")
+        self.assertIn("Reformas Martinez", pregunta)
+        self.wa("sí")
+        self.assertEqual([c["name"] for c in db.list_clients(self.bid)],
+                         ["Reformas Martinez"])
+
+    def test_a_genuinely_new_client_can_still_be_created(self):
+        # El contrapeso: poner el «sí» del lado seguro no puede impedir dar de
+        # alta a un cliente que de verdad es nuevo.
+        db.add_client("Reformas Martinez", business_id=self.bid)
+        self.wa("hazme una factura a Construcciones Vila 300 euros")
+        self.wa("sí")
+        self.assertIn("Construcciones Vila",
+                      [c["name"] for c in db.list_clients(self.bid)])
+
     def test_no_record_is_born_without_a_yes(self):
         self.wa("hazme una factura a Reformas Martínez 850 euros")
         self.assertEqual(db.list_clients(self.bid), [])

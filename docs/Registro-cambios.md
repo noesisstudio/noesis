@@ -1,5 +1,41 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — «Si el audio coge reforma, me hace un cliente nuevo»
+
+Caso real del founder por WhatsApp. Dicta una factura para «Reformas Martinez», la
+transcripción se come el apellido y llega «reforma»: nacía una ficha nueva y el
+historial del cliente quedaba partido en dos. Eran **dos fallos encadenados**.
+
+**El primero: «reforma» no encontraba a «Reformas Martinez».** Curiosamente
+«reformas» en plural sí: fallaba por una sola «s». La tolerancia a erratas
+comparaba únicamente contra el **nombre entero**, y «reforma» (7 caracteres) frente
+a «reformas martinez» (17) se descartaba por diferencia de longitud antes de
+mirar el parecido. Ahora se compara también contra los principios de palabra del
+nombre, que es exactamente lo que se come el dictado.
+
+**El segundo, y es de diseño propio, de ayer.** Se enseñaba la sugerencia buena
+—«¿querías decir Reformas Martinez?»— pero el texto decía «si reforma es correcto,
+contesta sí», así que un «sí», que es lo que contesta cualquiera, **creaba el
+duplicado igual**. La sugerencia se veía y el «sí» la ignoraba: una trampa. Ahora,
+cuando hay una ficha parecida, **«sí» significa esa ficha**, y crear una casi igual
+exige decir «crea el cliente X». Crear un duplicado tiene que costar un acto
+explícito; reutilizar, no.
+
+- **Áreas/archivos:** `src/noesis/db.py`, `src/noesis/web/chat.py`.
+- **Pruebas:** corpus del nombre cortado en `tests/test_alta_de_ficha.py`
+  («reforma», «reformas», «martinez», «Reformas Martines» → la misma ficha) y el
+  sentido del «sí» en `tests/test_nombre_dictado.py`, con su contrapeso: un
+  cliente que de verdad es nuevo se sigue creando con un «sí» normal.
+- **Dos pruebas de seguridad cambian a propósito**: «Martta» ya no hace falta
+  preguntarla, se reconoce como «Marta López» y la propuesta la nombra antes de
+  confirmar. La regla de fondo —ninguna ficha nace sola— sigue probada, ahora con
+  un nombre que no se parece a ninguno.
+- **Riesgo:** medio. Reconocer un nombre cortado puede unir dos clientes que
+  empiecen igual; por eso hace falta un parecido de 0.9, como mucho tres
+  caracteres de diferencia, y con dos fichas parecidas se pregunta en vez de
+  elegir. Los nombres de menos de cinco letras no se corrigen.
+- **Rollback:** sin migración; revertir los dos archivos basta.
+
 ## 2026-09-23 — Proyectos y documentos: las dos zonas que faltaban
 
 Cierre del barrido. Los fallos son de la misma familia que los anteriores: pedir

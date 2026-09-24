@@ -82,23 +82,28 @@ class ConversationSafetyTests(unittest.TestCase):
         self.assertEqual(jobs[0]["description"], "reparar la caldera")
         self.assertEqual(jobs[0]["client_id"], self.client["id"])
 
-    def test_an_unknown_client_is_offered_never_invented(self):
-        # «Martta» es un error de dictado de «Marta». Antes esto era el final del
-        # camino —el «sí» lo contestaba la revisión con «no hay ninguna propuesta
-        # pendiente»— y la orden se perdía. Ahora se ofrece, avisando del parecido
-        # con la ficha que ya existe, pero la ficha sigue sin nacer sola.
-        aviso = self.say("factura a Martta por revisión 100 euros")["reply"]
-        self.assertIn("No tengo ficha", aviso)
-        self.assertIn("Marta López", aviso)  # el parecido, primero
+    def test_a_dictation_typo_uses_the_record_it_already_has(self):
+        # «Martta» es un error de dictado de «Marta». No se crea una ficha nueva:
+        # se reconoce la que existe y la propuesta la nombra, para poder verlo
+        # antes de confirmar. Es el caso que el founder vio con «reforma» por
+        # «Reformas Martinez», que le partía el historial en dos.
+        propuesta = self.say("factura a Martta por revisión 100 euros")["reply"]
+        self.assertIn("Marta López", propuesta)
         self.assertEqual(len(db.list_clients(self.bid)), 1)
-        self.assertEqual(db.list_invoices(self.bid), [])
-
-    def test_saying_the_right_name_reuses_the_record_instead_of_duplicating(self):
-        self.say("factura a Martta por revisión 100 euros")
-        self.say("Marta López")
+        self.assertEqual(db.list_invoices(self.bid), [])  # aún sin confirmar
+        self.say("sí")
         self.assertEqual(len(db.list_clients(self.bid)), 1)
         self.assertEqual(db.list_invoices(self.bid)[0]["client_id"],
                          self.client["id"])
+
+    def test_a_client_that_resembles_nobody_is_offered_never_invented(self):
+        # Sin ficha parecida sí se pregunta, y la ficha no nace hasta el «sí».
+        aviso = self.say("factura a Construcciones Vila por obra 100 euros")["reply"]
+        self.assertIn("No tengo ficha", aviso)
+        self.assertEqual(len(db.list_clients(self.bid)), 1)
+        self.assertEqual(db.list_invoices(self.bid), [])
+        self.say("sí")
+        self.assertEqual(len(db.list_clients(self.bid)), 2)
 
     def test_an_ambiguous_client_never_creates_implicit_record(self):
         db.add_client("Marta García", business_id=self.bid)
